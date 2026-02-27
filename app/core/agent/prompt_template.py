@@ -1,10 +1,12 @@
 from jinja2 import Template as Jinja2Template
 
 
-def render_prompt_jinja2_template(tmpl: str, char: str, user: str) -> str:
-    """Render Jinja2 template for prompt, which has {{ char }} and {{ user }}"""
+def render_prompt_jinja2_template(
+    tmpl: str, char: str, user: str, **kwargs: str
+) -> str:
+    """Render Jinja2 template for prompt; supports {{ char }}, {{ user }}, and any extra variables via kwargs."""
     jinja2_template = Jinja2Template(tmpl)
-    rendered_prompt = jinja2_template.render(char=char, user=user)
+    rendered_prompt = jinja2_template.render(char=char, user=user, **kwargs)
     return rendered_prompt
 
 

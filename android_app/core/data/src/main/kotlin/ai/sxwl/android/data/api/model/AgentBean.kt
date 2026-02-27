@@ -37,6 +37,7 @@ data class AgentInfo(
     @Json(name = "follower_count") val followerCount: Int = 0,
     @Json(name = "connector_count") val connectorCount: Int = 0,
     @Json(name = "deleted_at") val deletedAt: Long? = null,
+    val features: Features? = null,
 ) : Parcelable {
     // 本地使用的属性数据，非接口字段
     var isDeleted: Boolean = false // 标记该agent是否被服务端已经删除
@@ -78,7 +79,37 @@ data class AgentInfo(
             createdAt.toLongOrNull()?.let {
                 System.currentTimeMillis().milliseconds - it.seconds <= 30.days
             } ?: false
+
+    /**
+     * 当 agent 使用 minimax/minimax-m2-her 时，聊天中动作描述用 *...* 标记而非括号。 “double asterisk” 为模型侧命名，实际为单星号对
+     * *...*（** 不参与匹配）。 从 settings.llm_config.model 读取。
+     */
+    fun useDoubleAsteriskActionMarker(): Boolean {
+        val llmConfig = settings?.get("llm_config") as? Map<*, *> ?: return false
+        val model = llmConfig["model"] as? String ?: return false
+        return model == LLM_MODEL_MINIMAX_M2_HER
+    }
+
+    companion object {
+        /** llm_config.model 值：此模型使用 *...* 作为动作描述标记。 */
+        private const val LLM_MODEL_MINIMAX_M2_HER = "minimax/minimax-m2-her"
+    }
 }
+
+@Parcelize
+@JsonClass(generateAdapter = true)
+data class Features(
+    @Json(name = "festival_memories") val festivalMemories: List<FestivalMemory> = emptyList()
+) : Parcelable
+
+@Parcelize
+@JsonClass(generateAdapter = true)
+data class FestivalMemory(
+    @Json(name = "memory_id") val memoryId: Long? = null,
+    @Json(name = "festival_date") val festivalDate: String = "",
+    @Json(name = "festival_name") val festivalName: String? = null,
+    val memory: String = "",
+) : Parcelable
 
 @Parcelize
 @JsonClass(generateAdapter = true)

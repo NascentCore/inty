@@ -3,6 +3,7 @@ import {
   Card,
   Button,
   Input,
+  InputNumber,
   Upload,
   Select,
   Row,
@@ -35,14 +36,16 @@ import modelCacheService from "../services/modelCache";
 import type {
   Agent,
   AgentCreateRequest,
-  OpenRouterModel,
+  AgentUpdateRequest,
   AvatarCropData,
+  ExclusivePhotoItem,
+  OpenRouterModel,
 } from "../types";
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import ScoreSelector from "../components/common/ScoreSelector";
 import { useAgents } from "../hooks/useAgents";
-import AgentInfoDisplay from "../components/common/AgentInfoDisplay";
+import AgentDetailModal from "../components/common/AgentDetailModal";
 import { generateRandomName } from "../utils/nameGenerator";
 import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
@@ -85,6 +88,7 @@ export const AgentManagePage: React.FC = () => {
   const [backgroundAnimatedFilter, setBackgroundAnimatedFilter] =
     useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [creatorFilter, setCreatorFilter] = useState<string>("admin");
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -392,6 +396,19 @@ export const AgentManagePage: React.FC = () => {
       );
     }
 
+    // 创建者类型筛选
+    if (creatorFilter !== "all") {
+      filteredAgents = filteredAgents.filter((agent) => {
+        const isSuperuser = agent.creator?.is_superuser ?? false;
+        if (creatorFilter === "admin") {
+          return isSuperuser;
+        } else if (creatorFilter === "non-admin") {
+          return !isSuperuser;
+        }
+        return true;
+      });
+    }
+
     setLocalAgents(filteredAgents);
     setPagination((prev) => ({
       ...prev,
@@ -405,6 +422,7 @@ export const AgentManagePage: React.FC = () => {
     tagFilter,
     backgroundAnimatedFilter,
     sourceFilter,
+    creatorFilter,
   ]);
 
   useEffect(() => {
@@ -768,16 +786,17 @@ export const AgentManagePage: React.FC = () => {
 
       setSaveLoading(true);
 
+      const score = values.score;
+      const comment = values.comment;
+
       // 从 values 中排除 UI 状态字段，只保留需要提交的数据
-      const {
-        score,
-        comment,
-        main_prompt_select,
-        mode_prompt_select,
-        main_prompt_display,
-        mode_prompt_display,
-        ...otherValues
-      } = values;
+      const otherValues = { ...values };
+      delete otherValues.score;
+      delete otherValues.comment;
+      delete otherValues.main_prompt_select;
+      delete otherValues.mode_prompt_select;
+      delete otherValues.main_prompt_display;
+      delete otherValues.mode_prompt_display;
 
       const agentData: AgentCreateRequest = {
         ...otherValues,
@@ -873,16 +892,17 @@ export const AgentManagePage: React.FC = () => {
       const values = await editForm.validateFields();
       setSaveLoading(true);
 
+      const score = values.score;
+      const comment = values.comment;
+
       // 从 values 中排除 UI 状态字段，只保留需要提交的数据
-      const {
-        score,
-        comment,
-        main_prompt_select,
-        mode_prompt_select,
-        main_prompt_display,
-        mode_prompt_display,
-        ...otherValues
-      } = values;
+      const otherValues = { ...values };
+      delete otherValues.score;
+      delete otherValues.comment;
+      delete otherValues.main_prompt_select;
+      delete otherValues.mode_prompt_select;
+      delete otherValues.main_prompt_display;
+      delete otherValues.mode_prompt_display;
 
       const updateData = {
         ...otherValues,
@@ -955,6 +975,10 @@ export const AgentManagePage: React.FC = () => {
         updateData.background_animated = "";
       }
 
+      if (agentCopy?.exclusive_photos) {
+        updateData.exclusive_photos = agentCopy.exclusive_photos;
+      }
+
       // 使用 useAgents hook 的 updateAgent 进行优化更新
       const updatedAgent = await updateAgentFromHook(
         currentAgent.id,
@@ -1012,13 +1036,19 @@ export const AgentManagePage: React.FC = () => {
           );
 
           // 直接调用 API，使用 replace_background_images 参数来替换而非追加
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const updatePayload: AgentUpdateRequest & {
+            replace_background_images: boolean;
+          } = {
+            background_images: filteredImages,
+            replace_background_images: true,
+          };
+
           const updatedAgent = (await api
             .getIntyClient()
-            .api.v1.ai.agents.update(currentAgent.id, {
-              background_images: filteredImages,
-              replace_background_images: true,
-            } as any)) as unknown as Agent;
+            .api.v1.ai.agents.update(
+              currentAgent.id,
+              updatePayload,
+            )) as unknown as Agent;
 
           if (updatedAgent) {
             setCurrentAgent({
@@ -1079,6 +1109,7 @@ export const AgentManagePage: React.FC = () => {
       ...agent,
       extensions: agent.extensions ? { ...agent.extensions } : undefined,
       background_animated: agent.background_animated,
+      exclusive_photos: agent.exclusive_photos ?? [],
     });
 
     // 预填表单 - 使用 setTimeout 确保 Modal 完全渲染后再设置表单值
@@ -1710,6 +1741,150 @@ export const AgentManagePage: React.FC = () => {
           onRefresh={handleRefreshModels}
           onValuesChange={isEdit ? handleFormChange : undefined}
         />
+
+        {/* 专属角色照（仅编辑模式） */}
+        {isEdit && (
+          <>
+            <Divider>专属角色照</Divider>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                运营上传的专属角色照，每项含照片、文案、解锁所需 credit。
+              </div>
+              <List
+                locale={{ emptyText: "暂无专属照，可点击下方按钮上传" }}
+                dataSource={agentCopy?.exclusive_photos ?? []}
+                renderItem={(item: ExclusivePhotoItem, index: number) => (
+                  <List.Item
+                    key={index}
+                    actions={[
+                      <Popconfirm
+                        key="del"
+                        title="确定删除该条？"
+                        onConfirm={() => {
+                          if (!agentCopy) return;
+                          const next = (
+                            agentCopy.exclusive_photos ?? []
+                          ).filter((_, i) => i !== index);
+                          setAgentCopy({
+                            ...agentCopy,
+                            exclusive_photos: next,
+                          });
+                        }}
+                      >
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                        >
+                          删除
+                        </Button>
+                      </Popconfirm>,
+                    ]}
+                  >
+                    <Row gutter={12} align="middle" style={{ width: "100%" }}>
+                      <Col flex="80px">
+                        <img
+                          src={item.image_url}
+                          alt=""
+                          style={{
+                            width: 64,
+                            height: 64,
+                            objectFit: "cover",
+                            borderRadius: 4,
+                          }}
+                        />
+                      </Col>
+                      <Col flex="1">
+                        <Input
+                          placeholder="文案"
+                          value={item.caption}
+                          onChange={(e) => {
+                            if (!agentCopy) return;
+                            const next = [
+                              ...(agentCopy.exclusive_photos ?? []),
+                            ];
+                            next[index] = {
+                              ...next[index],
+                              caption: e.target.value,
+                            };
+                            setAgentCopy({
+                              ...agentCopy,
+                              exclusive_photos: next,
+                            });
+                          }}
+                          style={{ marginBottom: 6 }}
+                        />
+                        <InputNumber
+                          min={0}
+                          placeholder="解锁 credit"
+                          value={item.credits_required}
+                          onChange={(val) => {
+                            if (!agentCopy || val == null) return;
+                            const next = [
+                              ...(agentCopy.exclusive_photos ?? []),
+                            ];
+                            next[index] = {
+                              ...next[index],
+                              credits_required: Number(val),
+                            };
+                            setAgentCopy({
+                              ...agentCopy,
+                              exclusive_photos: next,
+                            });
+                          }}
+                          style={{ width: "100%" }}
+                        />
+                      </Col>
+                    </Row>
+                  </List.Item>
+                )}
+              />
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith("image/");
+                  if (!isImage) {
+                    message.error("只能上传图片");
+                    return false;
+                  }
+                  (async () => {
+                    try {
+                      const res = await api.agents.uploadAvatar(file, false);
+                      const url = res?.url ?? res?.data?.url;
+                      if (!url || !agentCopy) return;
+                      const newItem: ExclusivePhotoItem = {
+                        image_url: url,
+                        caption: "",
+                        credits_required: 0,
+                      };
+                      setAgentCopy({
+                        ...agentCopy,
+                        exclusive_photos: [
+                          ...(agentCopy.exclusive_photos ?? []),
+                          newItem,
+                        ],
+                      });
+                      message.success("已添加，请填写文案与解锁 credit");
+                    } catch (err) {
+                      logError("上传图片失败");
+                    }
+                  })();
+                  return false;
+                }}
+              >
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  style={{ width: "100%" }}
+                >
+                  上传并添加一张专属照
+                </Button>
+              </Upload>
+            </div>
+          </>
+        )}
       </>
     );
   };
@@ -1787,6 +1962,16 @@ export const AgentManagePage: React.FC = () => {
                 <Option value="all">全部</Option>
                 <Option value="USER_CREATED">用户创建</Option>
                 <Option value="AUTO_GENERATED">自动生成</Option>
+              </Select>
+              <Select
+                placeholder="筛选创建者"
+                style={{ width: 140 }}
+                value={creatorFilter}
+                onChange={(value) => setCreatorFilter(value)}
+              >
+                <Option value="admin">管理员创建</Option>
+                <Option value="non-admin">非管理员创建</Option>
+                <Option value="all">全部</Option>
               </Select>
               <Button
                 icon={<ReloadOutlined />}
@@ -1936,6 +2121,19 @@ export const AgentManagePage: React.FC = () => {
                             >
                               {agent.intro}
                             </p>
+                            {agent.creator &&
+                              !agent.creator.is_superuser &&
+                              agent.creator.email && (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: "11px",
+                                    color: "#999",
+                                  }}
+                                >
+                                  创建者: {agent.creator.email}
+                                </div>
+                              )}
                             <div
                               style={{
                                 marginTop: 8,
@@ -1980,7 +2178,7 @@ export const AgentManagePage: React.FC = () => {
                               )}
                               {agent.tags && agent.tags.length > 0 && (
                                 <>
-                                  {agent.tags.slice(0, 2).map((tag, index) => (
+                                  {agent.tags.map((tag, index) => (
                                     <Tag
                                       key={index}
                                       color="geekblue"
@@ -1989,14 +2187,6 @@ export const AgentManagePage: React.FC = () => {
                                       {tag}
                                     </Tag>
                                   ))}
-                                  {agent.tags.length > 2 && (
-                                    <Tag
-                                      color="default"
-                                      style={{ fontSize: "11px" }}
-                                    >
-                                      +{agent.tags.length - 2}
-                                    </Tag>
-                                  )}
                                 </>
                               )}
                             </div>
@@ -2112,38 +2302,19 @@ export const AgentManagePage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 智能体详情模态框 */}
-      <Modal
-        title="角色详情"
+      <AgentDetailModal
         open={detailModalVisible}
-        onCancel={() => {
+        agent={currentAgent}
+        onClose={() => {
           setDetailModalVisible(false);
           setCurrentAgent(null);
         }}
-        footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            关闭
-          </Button>,
-          <Button
-            key="edit"
-            type="primary"
-            onClick={() => {
-              setDetailModalVisible(false);
-              if (currentAgent) showEditModal(currentAgent);
-            }}
-          >
-            编辑
-          </Button>,
-        ]}
-        width={800}
-      >
-        {currentAgent && (
-          <AgentInfoDisplay
-            agent={currentAgent}
-            onDeleteBackgroundImage={handleDeleteBackgroundImage}
-          />
-        )}
-      </Modal>
+        onEdit={(agent) => {
+          setDetailModalVisible(false);
+          showEditModal(agent);
+        }}
+        onDeleteBackgroundImage={handleDeleteBackgroundImage}
+      />
 
       {/* 生成背景视频模态框 */}
       <Modal

@@ -99,7 +99,11 @@ def _generate_markdown_report(
 
         lines.append(f"---")
         lines.append("")
-        user_label = user.nickname or user.email or result.user_id[:8] if user else result.user_id[:8]
+        user_label = (
+            user.nickname or user.email or result.user_id[:8]
+            if user
+            else result.user_id[:8]
+        )
         lines.append(f"## 用户: {user_label}")
         lines.append("")
 
@@ -160,7 +164,9 @@ def _generate_markdown_report(
     lines.append("1. **个性化程度**：有记忆的回复是否更能体现对用户的了解？")
     lines.append("2. **情感连接**：有记忆的回复是否更能建立情感联系？")
     lines.append("3. **对话连贯性**：记忆是否帮助角色更好地理解用户的需求和偏好？")
-    lines.append("4. **实用建议**：基于测试结果，记忆提示词的提取和使用有哪些改进空间？")
+    lines.append(
+        "4. **实用建议**：基于测试结果，记忆提示词的提取和使用有哪些改进空间？"
+    )
     lines.append("")
 
     return "\n".join(lines)
@@ -185,23 +191,29 @@ def _generate_raw_data(
             "user_id": result.user_id,
             "user_email": result.user_email,
             "agent_name": result.agent_name,
-            "memory": {
-                "summary_for_prompt": memory.summary_for_prompt if memory else None,
-                "full_analysis": memory.full_analysis if memory else None,
-                "chat_history_length": memory.chat_history_length if memory else 0,
-            } if memory else None,
+            "memory": (
+                {
+                    "summary_for_prompt": memory.summary_for_prompt if memory else None,
+                    "full_analysis": memory.full_analysis if memory else None,
+                    "chat_history_length": memory.chat_history_length if memory else 0,
+                }
+                if memory
+                else None
+            ),
             "conversations": [],
         }
 
         for j, (with_mem, without_mem) in enumerate(
             zip(result.responses_with_memory, result.responses_without_memory)
         ):
-            user_data["conversations"].append({
-                "question_index": j,
-                "question": with_mem.question,
-                "response_with_memory": with_mem.response,
-                "response_without_memory": without_mem.response,
-            })
+            user_data["conversations"].append(
+                {
+                    "question_index": j,
+                    "question": with_mem.question,
+                    "response_with_memory": with_mem.response,
+                    "response_without_memory": without_mem.response,
+                }
+            )
 
         data["users"].append(user_data)
 
@@ -281,7 +293,9 @@ def regenerate_report_from_json(results_dir: Path) -> Path:
                 user_id=user_data["user_id"],
                 user_email=user_data.get("user_email"),
                 agent_name=user_data.get("agent_name", "Unknown"),
-                memory_summary=mem_data.get("summary_for_prompt", "") if mem_data else "",
+                memory_summary=(
+                    mem_data.get("summary_for_prompt", "") if mem_data else ""
+                ),
                 responses_with_memory=responses_with,
                 responses_without_memory=responses_without,
             )

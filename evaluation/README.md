@@ -100,7 +100,7 @@ git push
 脚本还会：
 
 - 检测并尝试释放 `:3000` 端口
-- 构建 `evaluation/inty_sdk`（包含手动安装 `tsc-multi`）
+- 构建 `evaluation/inty_sdk`（含通过 npm 安装的 `tsc-multi`）
 
 ## 目录与页面
 
@@ -139,7 +139,7 @@ git push
 
 - 端口被占用：`http://localhost:3000` 必须使用 3000 端口；`evaluation/start.sh` 会尝试终止占用进程
 - Node/npm 未安装：脚本提供 nvm 自动安装选项；在 CI/服务器环境请自行安装
-- `tsc-multi` 安装失败：脚本已通过 tarball 手动安装（见 `evaluation/start.sh`）
+- `tsc-multi` 安装失败：依赖来自 npm，构建时会执行 `yarn add -D tsc-multi`（见 `evaluation/build.sh`）
 
 ## 与后端集成（代码位置）
 

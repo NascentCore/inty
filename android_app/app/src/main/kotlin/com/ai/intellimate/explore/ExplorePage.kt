@@ -47,6 +47,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.IntelliMateCtaButton
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.delay
 
@@ -60,7 +61,7 @@ fun ExplorePage(
     navController: NavController,
     modifier: Modifier = Modifier,
     innerPadding: PaddingValues,
-    onClickAgent: (AgentInfo) -> Unit,
+    onClickAgent: (AgentInfo, String) -> Unit,
     viewModel: ExploreViewModel = viewModel(),
     /** 外部重置信号（来自底部导航栏双击），当值变化时触发滚动到顶部并刷新 */
     externalResetSignal: Int = 0,
@@ -121,6 +122,12 @@ fun ExplorePage(
                     }
                 },
             )
+
+            CreateIMateEntryBanner(
+                modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                onClick = { navController.navigate(Routes.Creat.createRole("")) },
+            )
+            Spacer(modifier = Modifier.height(UiConfigs.Spacing.Small))
 
             var isRefreshing by remember { mutableStateOf(false) }
             var refreshStartTime by remember { mutableLongStateOf(0L) }
@@ -197,11 +204,27 @@ fun ExplorePage(
                 onClickAgent = { agent ->
                     //                    showSearchOverlay = false
                     //                    viewModel.resetSearchState()
-                    onClickAgent(agent)
+                    onClickAgent(agent, "search")
                 },
             )
         }
     }
+}
+
+/**
+ * Explore 页顶部「Create your own iMate」横幅 CTA。
+ *
+ * 使用场景：作为创建 iMate 的主入口，固定展示在 Explore 顶部工具栏下方，便于用户在浏览推荐角色时立即进入创建流程。
+ * 预期视觉效果：与全局 CTA 一致的横向渐变全宽按钮，文案为 "Create your own iMate"。
+ * 可配置项：[modifier] 用于外层布局控制；[onClick] 处理点击后的导航行为。
+ */
+@Composable
+private fun CreateIMateEntryBanner(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    IntelliMateCtaButton(
+        text = stringResource(R.string.me_create_character_banner_title),
+        onClick = onClick,
+        modifier = modifier,
+    )
 }
 
 @Composable

@@ -5,6 +5,13 @@ import ai.sxwl.android.utils.TimeUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
+/** 单条业务动作（如 subscription_popup），用于 chat completions。 注意：biz action 仍处于探索阶段，尚未确定使用。 */
+@JsonClass(generateAdapter = true)
+data class BizAction(
+    @Json(name = "action_type") val actionType: String = "none",
+    val message: String = "",
+)
+
 @JsonClass(generateAdapter = true)
 data class SendMsgResponse(
     val code: Int? = null,
@@ -14,6 +21,9 @@ data class SendMsgResponse(
     data class SentMsgRspData(
         val error_code: String? = null,
         val description: String? = null,
+        val user_message_id: Long = 0,
+        /** biz action：探索阶段，尚未确定使用。 */
+        @Json(name = "business_actions") val businessActions: List<BizAction> = emptyList(),
         val choices: List<Choice> = listOf(),
         val created: Int = 0,
         val id: String = "",
@@ -28,6 +38,14 @@ data class SendMsgReq(
     val messages: List<MsgInfo> = listOf(),
     val model: String = "chatbot",
     val stream: Boolean = false,
+    @Json(name = "time_context") val timeContext: UserTimeContext? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class UserTimeContext(
+    @Json(name = "local_time") val localTime: String,
+    val timezone: String,
+    @Json(name = "utc_offset_minutes") val utcOffsetMinutes: Int,
 )
 
 @JsonClass(generateAdapter = true)
@@ -81,6 +99,12 @@ data class MsgInfo(
     val localMsgId: String = "${System.nanoTime()}_${role}_${content.hashCode()}",
     // 本地状态：用户反馈（like/dislike）- 不序列化
     val userFeedback: UserFeedback? = null,
+    val type: String? = null,
+    @Json(name = "festival_memory_id") val festivalMemoryId: Long? = null,
+    @Json(name = "media_url") val mediaUrl: String? = null,
+    val price: Int = 0,
+    @Json(name = "is_locked") val unPurchased: Boolean = true,
+    val caption: String? = null
 ) {
 
     fun isOpening(): Boolean {
@@ -117,6 +141,7 @@ data class MsgInfo(
         val agentId: String? = null,
         @Json(name = "is_voice") val isVoice: Boolean = false,
         val isOpening: Boolean = false,
+        val voice_session_id: String? = null,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
     ) {
         @JsonClass(generateAdapter = true)

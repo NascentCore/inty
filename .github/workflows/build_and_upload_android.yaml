@@ -1,4 +1,4 @@
-name: Release - 内测轨道 GPlay 商店构建上传
+name: Release - IntelliMate GPlay 内测轨道 
 
 on:
   # push:
@@ -75,36 +75,59 @@ jobs:
           changesNotSentForReview: false
 
       - name: Create and push tag
+        id: tag
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           TAG_NAME="${SHORT_SHA}-android"
-          
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
           echo "Creating tag: $TAG_NAME for commit: $SHORT_SHA"
-          
+
           # 检查 tag 是否已存在
           if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
             echo "Tag $TAG_NAME already exists; skipping creation."
             exit 0
           fi
-          
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "$TAG_NAME"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin "$TAG_NAME"
-          
+
           echo "Successfully created and pushed tag: $TAG_NAME"
+
+      - name: Create pre-release and upload AAB
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          AAB_PATH="android_app/app/build/outputs/bundle/release/app-release.aab"
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG_NAME already exists; uploading AAB only."
+            gh release upload "$TAG_NAME" "$AAB_PATH" --clobber
+            exit 0
+          fi
+
+          NOTES="IntelliMate 内测构建，提交 \`${TAG_NAME%-android}\`。"
+          gh release create "$TAG_NAME" "$AAB_PATH" \
+            --prerelease \
+            --title "IntelliMate 内测 $TAG_NAME" \
+            --notes "$NOTES"
 
       - name: Publish upload summary
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TAG_NAME="${SHORT_SHA}-android"
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          SHORT_SHA="${TAG_NAME%-android}"
           ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
           {
             echo "## 上传产物摘要"
             echo
             echo "- 提交短 SHA: \`$SHORT_SHA\`"
             echo "- Tag: \`$TAG_NAME\`"
             echo "- AAB 路径: \`android_app/app/build/outputs/bundle/release/app-release.aab\`"
-            echo "- GitHub Artifacts 下载: [查看并下载 AAB]($ARTIFACT_URL)"
+            echo "- GitHub Artifacts: [查看并下载 AAB]($ARTIFACT_URL)"
+            echo "- Pre-release（含 AAB）: [$TAG_NAME]($RELEASE_URL)"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,10 +1,15 @@
 package com.ai.intellimate.ui.components
 
+import ai.sxwl.android.data.R
+import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.design.theme.brushes
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +17,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,17 +32,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shimmer 占位符组件 用于图片加载时的占位效果 */
+/**
+ * Shimmer 占位符组件，用于图片加载时的占位效果。
+ *
+ * @param showSpeedUpButton 是否显示「Speed Up」按钮；已订阅用户应传 false 以隐藏该按钮。
+ */
 @Composable
 fun ShimmerPlaceholder(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 8.dp,
     showLoadingDots: Boolean = false,
+    showSpeedUpButton: Boolean = true,
+    onVipSpeedUpClick: () -> Unit = {},
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
     val alpha by
@@ -94,6 +112,7 @@ fun ShimmerPlaceholder(
                         )
                     }
                 }
+
                 // "Image generating..." 文字
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -102,7 +121,50 @@ fun ShimmerPlaceholder(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Normal,
                 )
+
+                Spacer(Modifier.height(16.dp))
+
+                if (showSpeedUpButton) {
+                    SpeedUpButton(onClick = onVipSpeedUpClick)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun SpeedUpButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        border = BorderStroke(width = 1.dp, brush = MaterialTheme.brushes.gradientBrush4),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = Color.Transparent,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(com.ai.intellimate.R.drawable.ic_premium_tag),
+                contentDescription = "vip",
+                modifier = Modifier.size(24.dp, 12.dp),
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                text = stringResource(com.ai.intellimate.R.string.speed_up),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun SpeedUpButtonPreview() {
+    IntelliMateTheme { SpeedUpButton(onClick = {}) }
 }

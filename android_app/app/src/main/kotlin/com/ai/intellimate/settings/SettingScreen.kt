@@ -1,30 +1,44 @@
 package com.ai.intellimate.settings
 
 // import com.ai.intellimate.vip.VipCenterActivity
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -138,6 +152,12 @@ fun SettingScreen(
 
                 Spacer(Modifier.height(16.dp))
                 DebugBoostPointsEntry()
+
+                Spacer(Modifier.height(16.dp))
+                DebugVipStatus()
+
+                Spacer(Modifier.height(16.dp))
+                DebugFcmTokenEntry()
             }
 
             // 对话框
@@ -152,6 +172,82 @@ fun SettingScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun DebugVipStatus() {
+    SettingsItemGroup(modifier = Modifier.padding(12.dp)) {
+        Column(Modifier.fillMaxWidth()) {
+            val vipStatus by BillingRepository.debugVipStatus.collectAsState()
+
+            Text(
+                text = "Vip订阅状态",
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    onClick = { BillingRepository.setDebugVipStatus(null) },
+                    selected = vipStatus == null,
+                    label = { Text("同步后端") },
+                )
+
+                FilterChip(
+                    onClick = {
+                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = true))
+                    },
+                    selected = vipStatus?.isSubscribed == true,
+                    label = { Text("订阅") },
+                )
+
+                FilterChip(
+                    onClick = {
+                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false))
+                    },
+                    selected = vipStatus?.isSubscribed == false,
+                    label = { Text("非订阅") },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Debug 下展示当前设备 FCM Token，支持长按复制。
+ *
+ * 使用范围：仅 build type 为 debug 时在 Me → Settings 页展示，位于现有 Debug 区块（后端切换、Boost、Vip 状态）下方。 预期效果：进入设置后异步拉取
+ * FCM token，展示为一行文案（加载中 / Unavailable / token 字符串），长按可复制 token 到剪贴板并提示已复制。 无入参，无可配置项。
+ */
+@Composable
+private fun DebugFcmTokenEntry() {
+    val context = LocalContext.current
+    var token by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { token = runCatching { FirebaseManager.registerFCM() }.getOrElse { "" } }
+    val title = stringResource(R.string.settings_debug_fcm_token)
+    val content =
+        when {
+            token == null -> stringResource(R.string.settings_debug_fcm_token_loading)
+            token.isNullOrBlank() -> stringResource(R.string.settings_user_id_unavailable)
+            else -> token!!
+        }
+    val tokenToCopy = token
+    SettingsItemGroup {
+        SettingsArrowItem(
+            item = SettingsItemData.CommonItemData(title = title, content = content, arrow = false),
+            isInGroup = true,
+            onLongClick = {
+                if (!tokenToCopy.isNullOrBlank()) {
+                    ClipboardUtils.copyToClipboard(context, label = title, text = tokenToCopy)
+                    ToastUtils.showShort(R.string.toast_copied_to_clipboard)
+                }
+            },
+        )
     }
 }
 
@@ -314,7 +410,7 @@ private fun SupportAndHelpSection(
                     //                    SubsManageActivity.launch(context)
                     navController.navigate(Routes.Me.SubsManagement)
                 } else {
-                    navController.navigate(Routes.Me.VipCenter)
+                    navController.navigate(Routes.Me.vipCenter("settings"))
                 }
             },
         )
@@ -426,20 +522,20 @@ private fun mailTo(context: Context, email: String) {
     }
 }
 
-/** Debug 环境 Boost Points 测试入口（仅 debug 可见） */
+/** Debug 环境 Credits 测试入口（仅 debug 可见） */
 @Composable
 private fun DebugBoostPointsEntry() {
     SettingsItemGroup {
         SettingsArrowItem(
             item =
                 SettingsItemData.CommonItemData(
-                    title = "Add 10000 Boost Points (Debug)",
-                    content = "Click to add 10000 boost points for testing",
+                    title = "Add 10000 Credits (Debug)",
+                    content = "Click to add 10000 credits for testing",
                 ),
             isInGroup = true,
             onItemClick = {
                 BoostManager.requestManualPoints(10000)
-                ToastUtils.showShort("Added 10000 boost points!")
+                ToastUtils.showShort("Added 10000 credits!")
             },
         )
     }

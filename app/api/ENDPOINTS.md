@@ -6,9 +6,11 @@
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/` | GET | `app/main.py` |
-| `/evaluation` | GET | `app/main.py` |
-| `/evaluation/{path:path}` | GET | `app/main.py` |
+| `/` | GET | `backend/inty/main.py` |
+| `/evaluation` | GET | `backend/inty/main.py` |
+| `/evaluation/{path:path}` | GET | `backend/inty/main.py` |
+
+> 注：当设置 `INTY_API_ONLY=true`（例如使用 `backend/inty/start.sh --api-only`）时，不会注册 `/evaluation` 与 `/evaluation/{path:path}` 这两个 web UI 端点。
 
 ## API v1 端点 (`/api/v1`)
 
@@ -44,15 +46,8 @@
 | `/api/v1/ai/agents/{agent_id}` | PUT | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/generate-background-animated` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/generate_background` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/text-to-image` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/creator/{creator_id}/stats` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/import-character-card` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/import-character-card-file` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/export-character-card` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/{agent_id}/character-card` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/validate-character-card` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/character-card/features` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/models/openrouter` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/image-generation/config` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/prompts/available` | GET | `app/api/v1/endpoints/agents.py` |
@@ -60,10 +55,8 @@
 
 > **关于 `/recommend` 端点的行为说明**：
 >
-> - 该端点只返回**超级用户**（`is_superuser=True`）创建的角色，不会返回普通用户创建的角色
-> - **普通用户**调用时：只返回超级用户创建的**公开**（`visibility=PUBLIC`）角色
-> - **超级用户**调用时：返回所有超级用户创建的**公开和私有**角色，包括其他超级用户创建的私有角色
-> - 无论调用者身份如何，都不会返回普通用户创建的私有角色
+> - 该端点只返回**超级用户**（`is_superuser=True`）创建的**公开**（`visibility=PUBLIC`）角色
+> - 不返回私有角色，也不返回普通用户创建的角色；调用者身份不影响结果
 
 ### 聊天 (Chat)
 
@@ -96,6 +89,18 @@
 | `/api/v1/chats/agents/{agent_id}/clear-messages` | POST | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/{agent_id}/generate-image` | POST | `app/api/v1/endpoints/chats.py` |
 
+> **节日记忆提示消息（与 Android App 的接口约定）**：
+>
+> 类型为 `festival_memory_prompt` 的消息在以下响应中返回：
+> - **POST** `/api/v1/chat/completions/{agent_id}` 的 `data.choices[].message`
+> - **GET** `/api/v1/chats/agents/{agent_id}/messages` 的 `messages[]`
+>
+> 同一条消息可能同时包含：
+> - **顶层** `festival_memory_id`（snake_case，整型）：对应 memory 表主键，**客户端应以该字段为准**，与普通 AI 消息的 `id` 用法一致。
+> - **meta_data 内** `festivalMemoryId`（camelCase）：来自写入 chat_history 时存储的 meta_data，透传未改，仅作兼容。
+>
+> Android App 解析时请优先使用顶层 `festival_memory_id`。
+
 ### 图片 (Images)
 
 | 路径 | 方法 | 实现文件 |
@@ -119,6 +124,9 @@
 | `/api/v1/report/upload-image` | POST | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/` | POST | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/` | GET | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}` | GET | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}` | DELETE | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}/github-issue` | PUT | `app/api/v1/endpoints/report.py` |
 
 ### 设置 (Settings)
 
@@ -153,6 +161,8 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v1/version/check` | POST | `app/api/v1/endpoints/version.py` |
+
+> **`/api/v1/version/check` 行为说明**：该端点会将客户端上报的 Android 应用版本代码（Header `appVersionCode`）写入 `users.last_android_app_version_code`，用于 **push worker 的 feature gating**（worker 可根据该值决定是否发送或如何构造 push）。字段命名为 Android 专用，因后端未来可能服务 iOS 应用。
 
 ### 角色主题 (Character Themes)
 
@@ -213,28 +223,10 @@
 | `/api/v1/evaluation/user-analytics/user-sessions-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/stats` | GET | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/reports` | GET | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/image-generation-failures` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
 
-## API v2 端点 (`/api/v2`)
-
-### 聊天 (Chat)
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v2/chat/completions/{agent_id}` | POST | `app/api/v2/endpoints/chat.py` |
-
-### AI 角色 (Agents)
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/api/v2/ai/agents/recommend` | GET | `app/api/v2/endpoints/agents.py` |
-
-> **关于 `/recommend` 端点的行为说明**：
->
-> - 该端点只返回**超级用户**（`is_superuser=True`）创建的角色，不会返回普通用户创建的角色
-> - **普通用户**调用时：只返回超级用户创建的**公开**（`visibility=PUBLIC`）角色
-> - **超级用户**调用时：返回所有超级用户创建的**公开和私有**角色，包括其他超级用户创建的私有角色
-> - 无论调用者身份如何，都不会返回普通用户创建的私有角色

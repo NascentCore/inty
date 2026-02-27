@@ -95,6 +95,24 @@ object TimeUtils {
     }
 
     /**
+     * 将UTC时间字符串转换为本地时间（UI 展示用，美国常用格式）
+     *
+     * @param utcString UTC时间字符串（ISO 8601）
+     * @return 格式化后的本地时间字符串，格式为 MM/dd/yyyy h:mm a（如 02/06/2026 3:04 PM）
+     */
+    fun convertUtcToLocalFullForDisplay(utcString: String): String {
+        if (utcString.isBlank()) return ""
+
+        return runCatching {
+                val instant = Instant.parse(utcString)
+                val systemZone = ZoneId.systemDefault()
+                val localDateTime = instant.atZone(systemZone)
+                localDateTime.format(DateTimeFormatter.ofPattern("MM/dd/yyyy h:mm a", Locale.US))
+            }
+            .getOrNull() ?: ""
+    }
+
+    /**
      * 将ISO 8601格式的时间字符串转换为毫秒时间戳
      *
      * @param isoTimeString ISO 8601格式的时间字符串

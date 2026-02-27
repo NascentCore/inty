@@ -1,6 +1,19 @@
 # IntelliMate Android app
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `android_app/`。
+- Update docs/CHANGE_LOGS.md in PR that add or modify user-facing features and/or beahaviors
+- 新功能要添加 firebase 埋点来收集用户使用数据。
+- 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
+  [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
+- 试用 [Room Database](https://developer.android.com/training/data-storage/room?hl=zh-cn) 在本地完成持久化数据存储
+- 从后端拿到的数据结构中忽略不理解的数据类型，而不是报错，比如聊天消息类型出现了 AI User 以外的类型，直接忽略，这样在后端发布新功能时更加具有容错性。
+- 为用户可见的 UI 元素取中英文对照名字，方便开发人员指代功能
+
+## Design
+
+- 主题主要分文颜色、字体、形状三大类，定义在 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Theme.kt`
+- 颜色：使用MaterialTheme.colorScheme获取颜色，如MaterialTheme.colorScheme.primary获取主题色
+- 字体：使用MaterialTheme.typography获取字体style，如Text(style = MaterialTheme.typography.titleMedium)
+- 形状：使用MaterialTheme.shapes获取组件形状，如Surface(shape = MaterialTheme.shapes.medium)
 
 ## 功能
 
@@ -9,16 +22,14 @@
 
 ## 一般指示
 
-- 颜色常亮写入 `android_app/core/design/src/main/kotlin/ai/sxwl/android/design/theme/Color.kt`，不要直接使用 Hex 值、如 `0xFAB...` 之类的 RGB 颜色值
-- 界面元素尺寸、大小写入 `android_app/app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
-- URL 定义为常量写入 `app/src/main/kotlin/com/ai/intellimate/ui/ui_configs.kt`
+- When referring to concepts in Kotlin code, use the language conventions, and remind the user about that, so the user can understand what it refers to
+- 颜色从MaterialTheme.colorScheme中根据具体作用取值，不应该直接使用具体颜色数值
+- 界面元素尺寸、大小写入 `android_app/app/src/main/res/values/dimens.xml`，不要直接使用数字值、如 `10.sp` `10.dp` 之类的
 - 用户可见的字符写入 `android_app/app/src/main/res/values/strings.xml`
   并以资源 ID 的形式在代码中使用
 - 无需使用 linter 检查修改代码
 - 对我提出的指示、完成基础要求，不要处理未提及的复杂场景，不要使用 defensive programming
 - 优先使用 material 3 icons 和其他来自 material 3 的素材 https://fonts.google.com/icons?icon.query=generate&icon.size=24&icon.color=%231f1f1f&icon.platform=android
-- 代码注释使用简体中文
-- 默认日志登记是 debug
 - 新增 UI Composeable 组件要有详细的注释说明其使用范围场景和预期视觉效果，及可配置项；关键配置项要编写为输入参数
 
 ## 适用范围与平台约束
@@ -49,3 +60,7 @@
 - 禁止使用魔法值（如 `10.dp`）——将 UI 常量定义在 `core/design` token 或 `MaterialTheme` 中，通过入参传递并提供合理默认值。
 - 容器组件应转发 padding/shape/间距；默认配色/字重基于 `MaterialTheme.colorScheme/typography` 或自定义 `CompositionLocal`。
 - Activity/组件需要提供清晰的 `launch`/`onNavigate` 入参，避免在组件内部持有上下文。
+
+## Android Studio
+
+- 图片转换为 webp 格式：https://developer.android.com/studio/write/convert-webp?hl=zh-cn

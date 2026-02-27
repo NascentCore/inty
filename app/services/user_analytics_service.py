@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from loguru import logger
 from sqlalchemy import text
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 500  # 默认每批数量，可通过 user_analytics_report.batch_size 覆盖
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -28,6 +28,10 @@ class UserAnalyticsService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+        uar = getattr(
+            global_config_loaded_from_config_yaml, "user_analytics_report", None
+        )
+        self._batch_size = getattr(uar, "batch_size", BATCH_SIZE)
 
     async def get_new_users(
         self,
@@ -112,6 +116,102 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_chat_agent_info(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
+        """按 chat_id 批量查询 chat 对应的 user_id、agent_name，用于热门角色等仅需有活动 chat 的场景。"""
+        if not chat_ids:
+            return []
+        out: List[Dict[str, Any]] = []
+        for batch in _batch_list(chat_ids, self._batch_size):
+            placeholders = ",".join([f":chat_id_{i}" for i in range(len(batch))])
+            query = text(f"""
+                SELECT c.id as chat_id, c.user_id, a.name as agent_name
+                FROM chats c
+                INNER JOIN agents a ON c.agent_id = a.id AND a.deleted_at IS NULL
+                WHERE c.id::text IN ({placeholders}) AND c.is_active = true
+            """)
+            params = {f"chat_id_{i}": cid for i, cid in enumerate(batch)}
+            result = await self.db.execute(query, params)
+            for row in result.fetchall():
+                out.append(
+                    {
+                        "chat_id": row[0],
+                        "user_id": row[1],
+                        "agent_name": row[2],
+                    }
+                )
+        return out
+
+    async def get_active_session_ids_on_date(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+    ) -> Set[str]:
+        """查询在指定日期范围内有消息的 session_id 集合（排除 festival_memory_prompt）。
+
+        用于日报等单日统计时先缩小范围，只对当日有活动的 session 做后续批量聚合。
+        """
+        query = text("""
+            SELECT DISTINCT session_id::text
+            FROM chat_history
+            WHERE created_at >= :activity_start_date
+              AND created_at < :activity_end_date
+              AND (meta_data->>'messageType' IS NULL
+                   OR meta_data->>'messageType' != 'festival_memory_prompt')
+        """)
+        result = await self.db.execute(
+            query,
+            {
+                "activity_start_date": activity_start_date,
+                "activity_end_date": activity_end_date,
+            },
+        )
+        return {row[0] for row in result.fetchall()}
+
+    async def get_generated_images_on_date(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+    ) -> List[Dict[str, Any]]:
+        """查询指定日期范围内的生图列表（用于日报展示）"""
+        # 关键步骤：按日报传入的 UTC 日期边界查询，避免“最近 1 天”导致跨日报口径不一致。
+        query = text("""
+            SELECT
+                id,
+                session_id::text as session_id,
+                REPLACE(
+                    meta_data->'generated_image'->>'image_url',
+                    'gs://',
+                    'https://storage.googleapis.com/'
+                ) as image_url,
+                meta_data,
+                created_at
+            FROM chat_history
+            WHERE meta_data->'generated_image' IS NOT NULL
+              AND meta_data->'generated_image'->>'image_url' IS NOT NULL
+              AND deleted_at IS NULL
+              AND created_at >= :activity_start_date
+              AND created_at < :activity_end_date
+            ORDER BY created_at DESC
+        """)
+        result = await self.db.execute(
+            query,
+            {
+                "activity_start_date": activity_start_date,
+                "activity_end_date": activity_end_date,
+            },
+        )
+        rows = result.fetchall()
+        return [
+            {
+                "id": row[0],
+                "session_id": row[1],
+                "image_url": row[2],
+                "meta_data": row[3] or {},
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+            for row in rows
+        ]
+
     async def _query_session_message_counts(
         self,
         session_ids: List[str],
@@ -127,7 +227,7 @@ class UserAnalyticsService:
 
         session_to_counts: Dict[str, tuple] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
@@ -142,6 +242,7 @@ class UserAnalyticsService:
                     WHERE session_id::text IN ({placeholders})
                       AND created_at >= :activity_start_date
                       AND created_at < :activity_end_date
+                      AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
                     GROUP BY session_id
                 """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
@@ -157,6 +258,7 @@ class UserAnalyticsService:
                         ) as non_opening_count
                     FROM chat_history
                     WHERE session_id::text IN ({placeholders})
+                      AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
                     GROUP BY session_id
                 """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
@@ -173,12 +275,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """查询对话轮数统计（按Session）
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
+            active_session_ids: 若提供，仅统计这些 session（与注册范围取交集），用于日报缩小范围
         """
         chats_query = text("""
             SELECT c.id
@@ -208,6 +312,17 @@ class UserAnalyticsService:
             chat_id: generate_session_id(chat_id) for chat_id in chat_ids
         }
         session_ids = list(chat_to_session.values())
+
+        if active_session_ids is not None:
+            session_ids = [s for s in session_ids if s in active_session_ids]
+            chat_to_session = {
+                cid: sid
+                for cid, sid in chat_to_session.items()
+                if sid in active_session_ids
+            }
+            logger.info(
+                f"get_conversation_rounds: 限定当日有活动的 session 后共 {len(session_ids)} 个"
+            )
 
         if not session_ids:
             logger.info("get_conversation_rounds: 没有生成有效的 session_ids")
@@ -259,7 +374,7 @@ class UserAnalyticsService:
 
         session_to_count: Dict[str, int] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
@@ -313,12 +428,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """查询对话轮数分布（按用户）
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
+            active_session_ids: 若提供，仅统计这些 session，用于日报缩小范围
         """
         chats_query = text("""
             SELECT
@@ -349,6 +466,19 @@ class UserAnalyticsService:
         }
         session_ids = list(chat_to_session.values())
 
+        if active_session_ids is not None:
+            chat_records = [
+                (user_id, chat_id)
+                for user_id, chat_id in chat_records
+                if chat_to_session[chat_id] in active_session_ids
+            ]
+            session_ids = [s for s in session_ids if s in active_session_ids]
+            chat_to_session = {
+                cid: sid
+                for cid, sid in chat_to_session.items()
+                if sid in active_session_ids
+            }
+
         if not session_ids:
             return []
 
@@ -368,6 +498,103 @@ class UserAnalyticsService:
             {"user_id": user_id, "total_rounds": total_rounds}
             for user_id, total_rounds in user_to_total_rounds.items()
         ]
+
+    async def get_popular_agents(
+        self,
+        register_start_date: datetime,
+        register_end_date: datetime,
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+        limit: int = 20,
+        active_session_ids: Optional[Set[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """获取热门角色排行（Top N）
+
+        当传入 active_session_ids 时，仅基于有活动的 chat 查询 (user_id, agent_name)，
+        避免全量 get_user_chat_activity 在副本上超时。
+        """
+        from collections import defaultdict
+
+        rounds_data = await self.get_conversation_rounds(
+            register_start_date,
+            register_end_date,
+            activity_start_date,
+            activity_end_date,
+            active_session_ids=active_session_ids,
+        )
+        chat_to_rounds = {
+            item["chat_id"]: item["message_count_excluding_opening"]
+            for item in rounds_data
+        }
+
+        if active_session_ids is not None:
+            chat_ids = list(dict.fromkeys([r["chat_id"] for r in rounds_data]))
+            activity_data = await self.get_chat_agent_info(chat_ids)
+        else:
+            activity_data = await self.get_user_chat_activity(
+                register_start_date, register_end_date
+            )
+
+        agent_stats: Dict[str, Dict[str, Any]] = defaultdict(
+            lambda: {
+                "users": set(),
+                "rounds": 0,
+                "sessions": [],
+                "total_chats": set(),
+            }
+        )
+
+        for item in activity_data:
+            if item["chat_id"] and item["agent_name"]:
+                agent_name = item["agent_name"]
+                agent_stats[agent_name]["total_chats"].add(item["chat_id"])
+
+        for item in activity_data:
+            if item["chat_id"] and item["agent_name"]:
+                agent_name = item["agent_name"]
+                rounds = chat_to_rounds.get(item["chat_id"], 0)
+                if rounds > 0:
+                    agent_stats[agent_name]["users"].add(item["user_id"])
+                    agent_stats[agent_name]["rounds"] += rounds
+                    agent_stats[agent_name]["sessions"].append(rounds)
+
+        result = []
+        for agent_name, stats in agent_stats.items():
+            user_count = len(stats["users"])
+            total_rounds = stats["rounds"]
+            sessions = stats["sessions"]
+            active_sessions = len(sessions)
+            total_sessions = len(stats["total_chats"])
+
+            avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
+            sessions_ge_5 = sum(1 for r in sessions if r >= 5)
+            sessions_ge_10 = sum(1 for r in sessions if r >= 10)
+            pct_sessions_ge_5 = (
+                (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
+            )
+            pct_sessions_ge_10 = (
+                (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
+            )
+            open_rate = (
+                (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
+            )
+
+            result.append(
+                {
+                    "agent_name": agent_name,
+                    "user_count": user_count,
+                    "total_rounds": total_rounds,
+                    "avg_rounds_per_user": round(avg_rounds_per_user, 2),
+                    "pct_sessions_ge_5": round(pct_sessions_ge_5, 2),
+                    "pct_sessions_ge_10": round(pct_sessions_ge_10, 2),
+                    "total_sessions": total_sessions,
+                    "active_sessions": active_sessions,
+                    "open_rate": round(open_rate, 2),
+                }
+            )
+
+        result.sort(key=lambda x: x["user_count"], reverse=True)
+        return result[:limit]
 
     async def get_voice_usage(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
         """查询语音使用统计"""
@@ -404,7 +631,7 @@ class UserAnalyticsService:
 
         session_to_voice_count: Dict[str, int] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
             query = text(f"""
                 SELECT 
@@ -435,12 +662,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
         """计算统计数据
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围
             activity_start_date/activity_end_date: 活跃日期范围（用于生图统计等）
+            active_session_ids: 若提供，仅统计这些 session，用于日报缩小范围
         """
         # 生图统计使用活跃日期范围，如果未提供则使用注册日期范围
         img_start = activity_start_date or register_start_date
@@ -458,6 +687,7 @@ class UserAnalyticsService:
             register_end_date,
             activity_start_date,
             activity_end_date,
+            active_session_ids=active_session_ids,
         )
 
         # 辅助函数：查询语音通话（Live Chat）统计
@@ -668,7 +898,7 @@ class UserAnalyticsService:
         session_to_chat = {v: k for k, v in chat_to_session.items()}
         data = []
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
             query = text(f"""
                 SELECT
@@ -700,34 +930,21 @@ class UserAnalyticsService:
 
         return data
 
-    async def get_users_hitting_chat_limit(
+    async def _get_users_hitting_chat_limit_single_day(
         self,
         activity_start_date: datetime,
         activity_end_date: datetime,
-        guest_limit: Optional[int] = None,
-        google_limit: Optional[int] = None,
+        guest_limit: int,
+        google_limit: int,
     ) -> List[Dict[str, Any]]:
-        """查询按日统计达到聊天限制的用户（使用活跃日期范围）"""
+        """单日「达到聊天限制用户」查询，供 get_users_hitting_chat_limit 按天调用以减轻周报单次查询压力。"""
         from datetime import timedelta
 
-        if guest_limit is None:
-            guest_limit = (
-                global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
-            )
-        if google_limit is None:
-            google_limit = (
-                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
-            )
-
-        # 计算查询范围：需要提前24小时来获取活跃用户
         query_start_date = activity_start_date - timedelta(hours=24)
         end_date_minus_one_day = activity_end_date - timedelta(days=1)
-
-        # 将 datetime 转换为 date 字符串用于 SQL
         start_date_str = activity_start_date.date().isoformat()
         end_date_minus_one_day_str = end_date_minus_one_day.date().isoformat()
 
-        # 先检查 subscription_usage 表中是否有数据
         check_query = text("""
             SELECT COUNT(*) as count
             FROM subscription_usage
@@ -743,15 +960,9 @@ class UserAnalyticsService:
             },
         )
         usage_count = check_result.scalar() or 0
-        logger.debug(f"subscription_usage 表中符合条件的记录数: {usage_count}")
-
         if usage_count == 0:
-            logger.info(
-                f"subscription_usage 表中没有符合条件的聊天使用记录，返回空结果"
-            )
             return []
 
-        # 构建 SQL 查询，将日期字符串和整数限制直接嵌入（已验证是安全的）
         query = text(f"""
             WITH date_series AS (
                 SELECT generate_series(
@@ -802,41 +1013,92 @@ class UserAnalyticsService:
             WHERE chat_count_24h >= limit_value
             ORDER BY check_date, user_id
         """)
-        try:
-            result = await self.db.execute(
-                query,
-                {
-                    "activity_end_date": activity_end_date,
-                    "query_start_date": query_start_date,
-                },
+        result = await self.db.execute(
+            query,
+            {
+                "activity_end_date": activity_end_date,
+                "query_start_date": query_start_date,
+            },
+        )
+        rows = result.fetchall()
+        return [
+            {
+                "date": (
+                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                ),
+                "user_id": row[1],
+                "auth_type": row[2],
+                "nickname": row[3],
+                "email": row[4],
+                "chat_count_24h": row[5],
+                "limit_value": row[6],
+            }
+            for row in rows
+        ]
+
+    async def get_users_hitting_chat_limit(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+        guest_limit: Optional[int] = None,
+        google_limit: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """查询按日统计达到聊天限制的用户（使用活跃日期范围）。
+
+        多日范围（如周报）时按天分别查询再合并，避免单条大 SQL 超时。
+        """
+        from datetime import timedelta
+
+        if guest_limit is None:
+            guest_limit = (
+                global_config_loaded_from_config_yaml.app.limits.guest_user_chat_24h_limit
             )
-            rows = result.fetchall()
-            logger.debug(f"查询到 {len(rows)} 个达到限制的用户记录")
-            return [
-                {
-                    "date": (
-                        row[0].isoformat()
-                        if isinstance(row[0], datetime)
-                        else str(row[0])
-                    ),
-                    "user_id": row[1],
-                    "auth_type": row[2],
-                    "nickname": row[3],
-                    "email": row[4],
-                    "chat_count_24h": row[5],
-                    "limit_value": row[6],
-                }
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error(f"查询达到限制的用户失败: {str(e)}")
-            logger.error(
-                f"查询参数: activity_start_date={activity_start_date}, "
-                f"activity_end_date={activity_end_date}, "
-                f"guest_limit={guest_limit}, google_limit={google_limit}"
+        if google_limit is None:
+            google_limit = (
+                global_config_loaded_from_config_yaml.app.limits.free_user_chat_24h_limit
             )
-            logger.exception(e)
-            return []
+
+        range_days = (activity_end_date - activity_start_date).days
+        if range_days <= 1:
+            try:
+                return await self._get_users_hitting_chat_limit_single_day(
+                    activity_start_date,
+                    activity_end_date,
+                    guest_limit,
+                    google_limit,
+                )
+            except Exception:
+                logger.exception(
+                    "查询达到限制的用户失败: activity_start_date=%s, activity_end_date=%s",
+                    activity_start_date,
+                    activity_end_date,
+                )
+                try:
+                    await self.db.rollback()
+                except Exception:
+                    pass
+                return []
+
+        all_results: List[Dict[str, Any]] = []
+        for i in range(range_days):
+            day_start = activity_start_date + timedelta(days=i)
+            day_end = day_start + timedelta(days=1)
+            try:
+                day_results = await self._get_users_hitting_chat_limit_single_day(
+                    day_start, day_end, guest_limit, google_limit
+                )
+                all_results.extend(day_results)
+            except Exception:
+                logger.exception(
+                    "查询达到限制的用户失败（单日）: day_start=%s, day_end=%s",
+                    day_start,
+                    day_end,
+                )
+                try:
+                    await self.db.rollback()
+                except Exception:
+                    pass
+        return all_results
 
     async def get_agent_analytics(
         self,
@@ -974,12 +1236,14 @@ class UserAnalyticsService:
         register_end_date: datetime,
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
+        active_session_ids: Optional[Set[str]] = None,
     ) -> List[Dict[str, Any]]:
         """查询用户会话详情（聚合数据）
 
         参数:
             register_start_date/register_end_date: 用户注册日期范围，筛选用户
             activity_start_date/activity_end_date: 活跃日期范围，筛选消息时间
+            active_session_ids: 若提供，仅统计这些 session，用于日报缩小范围
         """
         chats_query = text("""
             SELECT
@@ -1015,6 +1279,19 @@ class UserAnalyticsService:
             chat_id: generate_session_id(chat_id) for chat_id in chat_ids
         }
         session_ids = list(chat_to_session.values())
+
+        if active_session_ids is not None:
+            chat_records = [
+                row
+                for row in chat_records
+                if chat_to_session[row[5]] in active_session_ids
+            ]
+            session_ids = [s for s in session_ids if s in active_session_ids]
+            chat_to_session = {
+                cid: sid
+                for cid, sid in chat_to_session.items()
+                if sid in active_session_ids
+            }
 
         if not session_ids:
             return []
@@ -1064,7 +1341,7 @@ class UserAnalyticsService:
         session_to_msg_count: Dict[str, int] = {}
         session_to_voice_count: Dict[str, int] = {}
 
-        for batch in _batch_list(session_ids):
+        for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
@@ -1235,6 +1512,34 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_user_generated_images_count(self, user_id: str) -> int:
+        """获取用户总的生图数"""
+        try:
+            from sqlalchemy import select
+
+            from app.models.resource import Resource, ResourceType
+
+            # 查询所有符合条件的资源
+            query = select(Resource).where(
+                Resource.user_id == user_id,
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+            )
+            result = await self.db.execute(query)
+            resources = result.scalars().all()
+
+            # 统计有 generation_prompt 的图片
+            count = 0
+            for resource in resources:
+                metadata = resource.resource_metadata or {}
+                if metadata.get("generation_prompt"):
+                    count += 1
+
+            return count
+        except Exception as e:
+            logger.warning(f"获取用户生图数失败: {str(e)}")
+            return 0
+
     async def get_user_today_stats(self, user_id: str) -> Dict[str, Any]:
         """获取用户当日统计"""
         from datetime import timedelta
@@ -1247,9 +1552,11 @@ class UserAnalyticsService:
 
         chat_ids = await self.get_user_chat_ids(user_id)
         if not chat_ids:
+            total_generated_images = await self.get_user_generated_images_count(user_id)
             return {
                 "today_message_count": 0,
                 "today_session_count": 0,
+                "total_generated_images": total_generated_images,
             }
 
         session_ids = [generate_session_id(chat_id) for chat_id in chat_ids]
@@ -1274,9 +1581,12 @@ class UserAnalyticsService:
         result = await self.db.execute(query, params)
         row = result.fetchone()
 
+        total_generated_images = await self.get_user_generated_images_count(user_id)
+
         return {
             "today_message_count": row[1] if row else 0,
             "today_session_count": row[0] if row else 0,
+            "total_generated_images": total_generated_images,
         }
 
     async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
@@ -1371,11 +1681,12 @@ class UserAnalyticsService:
         """获取指定会话的对话历史"""
         session_id = generate_session_id(chat_id)
 
-        # 先获取总数
+        # 先获取总数（排除记忆提取型消息）
         count_query = text("""
             SELECT COUNT(*)
             FROM chat_history
             WHERE session_id::text = :session_id
+              AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
         """)
         count_result = await self.db.execute(count_query, {"session_id": session_id})
         total = count_result.scalar() or 0
@@ -1396,6 +1707,7 @@ class UserAnalyticsService:
                 meta_data
             FROM chat_history
             WHERE session_id::text = :session_id
+              AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
             ORDER BY created_at ASC
             LIMIT :limit OFFSET :offset
         """)
@@ -1483,6 +1795,7 @@ class UserAnalyticsService:
               AND created_at < :end_date
               AND meta_data->>'llm_invoke_time' IS NOT NULL
               AND deleted_at IS NULL
+              AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
             GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC')
             ORDER BY hour
         """)
@@ -1632,3 +1945,221 @@ class UserAnalyticsService:
             "avg_duration_per_user": avg_duration_per_user,
             "avg_duration_per_session": avg_duration_per_session,
         }
+
+    async def get_image_generation_failure_analytics(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        top_n_reasons: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        生图失败与兜底分析（只读，适合在 replica 上执行）。
+        返回：summary、fallback_stats、failures_by_type、failures_by_reason、
+        daily_trend、failures_by_agent。
+        """
+        # 1) 总体 + 兜底
+        summary_query = text("""
+            SELECT
+                COUNT(*) as total_requests,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures,
+                COUNT(*) FILTER (WHERE extra_data->>'success' IS NULL OR extra_data->>'success' = '') as unknown_status,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND (extra_data->>'is_matched' IS NULL OR extra_data->>'is_matched' = 'false')) as new_generation,
+                COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND extra_data->>'is_matched' = 'true') as fallback_used
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date
+              AND usage_date < :end_date
+        """)
+        r = await self.db.execute(
+            summary_query, {"start_date": start_date, "end_date": end_date}
+        )
+        row = r.fetchone()
+        if not row:
+            return _empty_image_failure_analytics()
+
+        total_requests = row[0] or 0
+        total_success = row[1] or 0
+        total_failures = row[2] or 0
+        unknown_status = row[3] or 0
+        new_generation = row[4] or 0
+        fallback_used = row[5] or 0
+        success_rate = (
+            (total_success / total_requests * 100) if total_requests > 0 else 0.0
+        )
+        fallback_ratio_success = (
+            (fallback_used / total_success * 100) if total_success > 0 else 0.0
+        )
+        fallback_ratio_requests = (
+            (fallback_used / total_requests * 100) if total_requests > 0 else 0.0
+        )
+
+        summary = {
+            "total_requests": total_requests,
+            "total_success": total_success,
+            "total_failures": total_failures,
+            "unknown_status": unknown_status,
+            "success_rate": round(success_rate, 2),
+            "failure_rate": (
+                round((total_failures / total_requests * 100), 2)
+                if total_requests > 0
+                else 0.0
+            ),
+        }
+        fallback_stats = {
+            "new_generation": new_generation,
+            "fallback_used": fallback_used,
+            "fallback_ratio_of_success_pct": round(fallback_ratio_success, 2),
+            "fallback_ratio_of_requests_pct": round(fallback_ratio_requests, 2),
+        }
+
+        # 2) 失败类型
+        type_query = text("""
+            SELECT extra_data->>'failure_type' as failure_type, COUNT(*) as count
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date AND usage_date < :end_date
+              AND (extra_data->>'success' = 'false' OR extra_data->>'success' IS NULL)
+            GROUP BY extra_data->>'failure_type'
+            ORDER BY count DESC
+        """)
+        r = await self.db.execute(
+            type_query, {"start_date": start_date, "end_date": end_date}
+        )
+        failures_by_type = [
+            {"failure_type": (row[0] or "unknown"), "count": row[1]}
+            for row in r.fetchall()
+        ]
+
+        # 3) 失败原因 Top N
+        reason_query = text("""
+            SELECT extra_data->>'failure_reason' as failure_reason,
+                   extra_data->>'failure_type' as failure_type,
+                   COUNT(*) as count
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date AND usage_date < :end_date
+              AND (extra_data->>'success' = 'false' OR extra_data->>'success' IS NULL)
+              AND extra_data->>'failure_reason' IS NOT NULL
+            GROUP BY extra_data->>'failure_reason', extra_data->>'failure_type'
+            ORDER BY count DESC
+            LIMIT :top_n
+        """)
+        r = await self.db.execute(
+            reason_query,
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+                "top_n": top_n_reasons,
+            },
+        )
+        failures_by_reason = [
+            {
+                "failure_reason": (row[0] or "")[:500],
+                "failure_type": row[1] or "unknown",
+                "count": row[2],
+            }
+            for row in r.fetchall()
+        ]
+
+        # 4) 按日趋势
+        daily_query = text("""
+            SELECT DATE(usage_date AT TIME ZONE 'UTC') as date,
+                   COUNT(*) as total_requests,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'true') as total_success,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'false') as total_failures,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND (extra_data->>'is_matched' IS NULL OR extra_data->>'is_matched' = 'false')) as new_generation,
+                   COUNT(*) FILTER (WHERE extra_data->>'success' = 'true' AND extra_data->>'is_matched' = 'true') as fallback_used
+            FROM subscription_usage
+            WHERE usage_type = 'image_generation'
+              AND usage_date >= :start_date AND usage_date < :end_date
+            GROUP BY DATE(usage_date AT TIME ZONE 'UTC')
+            ORDER BY date
+        """)
+        r = await self.db.execute(
+            daily_query, {"start_date": start_date, "end_date": end_date}
+        )
+        daily_trend = []
+        for row in r.fetchall():
+            total = row[1] or 0
+            daily_trend.append(
+                {
+                    "date": row[0].isoformat() if row[0] else None,
+                    "total_requests": total,
+                    "total_success": row[2] or 0,
+                    "total_failures": row[3] or 0,
+                    "new_generation": row[4] or 0,
+                    "fallback_used": row[5] or 0,
+                    "success_rate": (
+                        round((row[2] or 0) / total * 100, 2) if total > 0 else 0.0
+                    ),
+                }
+            )
+
+        # 5) 按 Agent 失败率（请求数>=5）
+        agent_query = text("""
+            SELECT su.extra_data->>'agent_id' as agent_id,
+                   a.name as agent_name,
+                   COUNT(*) as total_requests,
+                   COUNT(*) FILTER (WHERE su.extra_data->>'success' = 'true') as total_success,
+                   COUNT(*) FILTER (WHERE su.extra_data->>'success' = 'false') as total_failures
+            FROM subscription_usage su
+            LEFT JOIN agents a ON su.extra_data->>'agent_id' = a.id::text
+            WHERE su.usage_type = 'image_generation'
+              AND su.usage_date >= :start_date AND su.usage_date < :end_date
+              AND su.extra_data->>'agent_id' IS NOT NULL
+            GROUP BY su.extra_data->>'agent_id', a.name
+            HAVING COUNT(*) >= 5
+            ORDER BY total_requests DESC
+        """)
+        r = await self.db.execute(
+            agent_query, {"start_date": start_date, "end_date": end_date}
+        )
+        failures_by_agent = []
+        for row in r.fetchall():
+            total = row[2] or 0
+            failures_by_agent.append(
+                {
+                    "agent_id": row[0],
+                    "agent_name": row[1] or "Unknown",
+                    "total_requests": total,
+                    "total_success": row[3] or 0,
+                    "total_failures": row[4] or 0,
+                    "failure_rate": (
+                        round((row[4] or 0) / total * 100, 2) if total > 0 else 0.0
+                    ),
+                }
+            )
+
+        return {
+            "summary": summary,
+            "fallback_stats": fallback_stats,
+            "failures_by_type": failures_by_type,
+            "failures_by_reason": failures_by_reason,
+            "daily_trend": daily_trend,
+            "failures_by_agent": failures_by_agent,
+        }
+
+
+def _empty_image_failure_analytics() -> Dict[str, Any]:
+    """无数据时的生图失败分析空结构"""
+    return {
+        "summary": {
+            "total_requests": 0,
+            "total_success": 0,
+            "total_failures": 0,
+            "unknown_status": 0,
+            "success_rate": 0.0,
+            "failure_rate": 0.0,
+        },
+        "fallback_stats": {
+            "new_generation": 0,
+            "fallback_used": 0,
+            "fallback_ratio_of_success_pct": 0.0,
+            "fallback_ratio_of_requests_pct": 0.0,
+        },
+        "failures_by_type": [],
+        "failures_by_reason": [],
+        "daily_trend": [],
+        "failures_by_agent": [],
+    }

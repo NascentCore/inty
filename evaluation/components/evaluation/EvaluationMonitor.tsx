@@ -91,8 +91,10 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
         try {
           const sessionResults = await api.sessions.getResults(propSession.id);
           setResults(sessionResults);
-        } catch (err: any) {
-          setError(err.message || "加载结果失败");
+        } catch (err: unknown) {
+          const errMessage =
+            err instanceof Error ? err.message : "加载结果失败";
+          setError(errMessage);
         } finally {
           setLoading(false);
         }
@@ -105,13 +107,7 @@ export const EvaluationMonitor: React.FC<EvaluationMonitorProps> = ({
       setLoading(hookLoading);
       setError(hookError);
     }
-  }, [
-    propSession?.id,
-    propSession?.status,
-    hookResults,
-    hookLoading,
-    hookError,
-  ]);
+  }, [propSession, hookResults, hookLoading, hookError]);
 
   // 自动刷新逻辑 - 当传入session且需要自动刷新时
   useEffect(() => {

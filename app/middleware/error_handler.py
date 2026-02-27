@@ -3,11 +3,11 @@ import logging
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from jose.exceptions import JWTError
+from jose.exceptions import JWTError, ExpiredSignatureError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -49,13 +49,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 async def jwt_exception_handler(request: Request, exc: JWTError):
-    """Handle JWT errors"""
-    logger.error(f"=== JWT认证错误 (401错误) ===")
-    logger.error(f"请求方法: {request.method}")
-    logger.error(f"请求URL: {request.url}")
-    logger.error(f"JWT错误: {str(exc)}")
-    logger.error(f"JWT错误类型: {type(exc).__name__}")
-    logger.error(f"=== JWT错误详情结束 ===")
+    """Handle JWT errors. Expired tokens are logged as WARNING to reduce error log noise."""
+    if isinstance(exc, ExpiredSignatureError):
+        logger.warning(
+            f"JWT已过期 (401): {request.method} {request.url.path} - {type(exc).__name__}: {exc}"
+        )
+    else:
+        logger.error(f"=== JWT认证错误 (401错误) ===")
+        logger.error(f"请求方法: {request.method}")
+        logger.error(f"请求URL: {request.url}")
+        logger.error(f"JWT错误: {str(exc)}")
+        logger.error(f"JWT错误类型: {type(exc).__name__}")
+        logger.error(f"=== JWT错误详情结束 ===")
 
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,

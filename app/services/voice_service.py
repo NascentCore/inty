@@ -18,11 +18,14 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.voice.tts_api import (
     TTS_PROVIDER_ELEVENLABS,
     TTS_PROVIDER_GEMINI,
+    VOICE_ID_PREFIX_ELEVENLABS,
+    VOICE_ID_PREFIX_GEMINI,
     ElevenLabsTTSAPI,
     GeminiTTSAPI,
     TTSRequest,
     get_gemini_voices,
     is_gemini_voice,
+    parse_voice_id,
 )
 from app.services.gcs_service import GCSService
 
@@ -127,9 +130,26 @@ class VoiceService:
                 )
                 return None
 
-        # 清理文本内容，移除心理和动作描写
+        # Resolve voice_id so we know whether to skip cleaning (prompted Gemini
+        # uses full text with parentheticals for delivery).
+        _voice_id_for_decision = voice_id
+        if not _voice_id_for_decision:
+            _voice_id_for_decision = (
+                GENDER_VOICE_MAPPING.get(agent_gender)
+                if agent_gender
+                else self.config.voice_id
+            )
+        use_prompted_gemini = (
+            is_gemini_voice(_voice_id_for_decision)
+            and global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
+        )
+        voice_id = _voice_id_for_decision
+
+        # 清理文本内容，移除心理和动作描写（prompted Gemini 不清理，保留括号内舞台说明）
         original_text = text
-        text = self._clean_text_for_voice(text)
+        if not use_prompted_gemini:
+            logger.debug(f"清理文本: {text}")
+            text = self._clean_text_for_voice(text)
 
         if not text.strip():
             logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
@@ -145,20 +165,11 @@ class VoiceService:
             text = text[: self.config.max_text_length]
 
         try:
-            # 确定使用的voice_id
             if not voice_id:
-                # 根据性别选择默认音色ID
-                voice_id = (
-                    GENDER_VOICE_MAPPING.get(agent_gender)
-                    if agent_gender
-                    else self.config.voice_id
+                logger.warning(
+                    f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
                 )
-
-                if not voice_id:
-                    logger.warning(
-                        f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
-                    )
-                    return None
+                return None
 
             model = model or self.config.model
 
@@ -332,7 +343,16 @@ class VoiceService:
             )
 
             if use_gemini:
-                tts_result = await self.gemini_tts_api.synthesize(req)
+                use_prompted = (
+                    global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
+                )
+                if use_prompted:
+                    tts_result = (
+                        await self.gemini_tts_api.synthesize_with_roleplay_prompt(req)
+                    )
+                else:
+                    tts_result = await self.gemini_tts_api.synthesize(req)
+                logger.debug(f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}")
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
                     logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
@@ -584,8 +604,10 @@ class VoiceService:
             for voice in voices_response.voices:
                 voice_dict = voice.model_dump()
 
-                # 添加 provider 字段，标识音色来源
+                # 添加 provider 字段，标识音色来源；voice_id 带 11labs/ 前缀
                 voice_dict["provider"] = TTS_PROVIDER_ELEVENLABS
+                raw_id = voice_dict.get("voice_id", "")
+                voice_dict["voice_id"] = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw_id}"
 
                 # 根据category和is_owner确定source和voice_type
                 voice_category = voice_dict.get("category", "unknown")
@@ -676,6 +698,8 @@ class VoiceService:
                 voice_dict = voice.model_dump()
                 voice_dict["source"] = "shared"  # 标记为共享音色
                 voice_dict["provider"] = TTS_PROVIDER_ELEVENLABS  # 添加 provider 字段
+                raw_id = voice_dict.get("voice_id", "")
+                voice_dict["voice_id"] = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw_id}"
                 voices_list.append(voice_dict)
 
             logger.debug(f"获取到 {len(voices_list)} 个共享音色")
@@ -689,27 +713,32 @@ class VoiceService:
     async def get_voice_info(self, voice_id: str) -> Optional[Dict[str, Any]]:
         """
         获取特定语音的信息
-        支持从 Gemini 预置音色、ElevenLabs 常规音色和共享音色中查找
-
-        Args:
-            voice_id: 语音ID
-
-        Returns:
-            语音信息
+        支持从 Gemini 预置音色、ElevenLabs 常规音色和共享音色中查找。
+        支持带前缀（google/xxx、11labs/xxx）与无前缀（兼容旧数据）的 voice_id。
         """
-        # 0. 先检查是否为 Gemini 预置音色
-        if is_gemini_voice(voice_id):
+        prefix, raw = parse_voice_id(voice_id)
+
+        # 0. Gemini 预置音色（带 google/ 前缀或无前缀且 is_gemini_voice）
+        if prefix == VOICE_ID_PREFIX_GEMINI or (
+            prefix == "" and is_gemini_voice(voice_id)
+        ):
             gemini_voices = get_gemini_voices()
+            lookup_id = (
+                voice_id
+                if prefix == VOICE_ID_PREFIX_GEMINI
+                else f"{VOICE_ID_PREFIX_GEMINI}/{raw}"
+            )
             for voice in gemini_voices:
-                if voice["voice_id"] == voice_id:
+                if voice["voice_id"] == lookup_id:
                     logger.debug(f"从 Gemini 预置音色中找到 voice_id: {voice_id}")
                     return voice
             logger.debug(f"voice_id {voice_id} 匹配 Gemini 格式但未在预置列表中找到")
 
         try:
-            # 1. 尝试从 ElevenLabs 常规音色中获取（用户音色 + 预置音色）
-            voice = await self.tts_api.get_voice(voice_id)
+            # 1. ElevenLabs 常规音色（用 raw 调 API，返回时统一为 11labs/ 前缀）
+            voice = await self.tts_api.get_voice(raw)
             voice_dict = voice.model_dump()
+            voice_dict["voice_id"] = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw}"
             voice_dict["source"] = "regular"
             voice_dict["provider"] = TTS_PROVIDER_ELEVENLABS
             logger.debug(f"从常规音色中找到 voice_id: {voice_id}")
@@ -718,20 +747,18 @@ class VoiceService:
             logger.debug(f"从常规音色中获取 {voice_id} 失败: {str(e)}")
 
         try:
-            # 2. 如果常规音色中没有，尝试从共享音色中搜索
+            # 2. 共享音色：用 raw 搜索，匹配带前缀的 voice_id
             logger.debug(f"尝试从共享音色中搜索 voice_id: {voice_id}")
-            shared_voices = await self._search_shared_voices(
-                search=voice_id, page_size=50
-            )
-
-            # 在搜索结果中查找精确匹配的voice_id
+            shared_voices = await self._search_shared_voices(search=raw, page_size=50)
+            prefixed_id = f"{VOICE_ID_PREFIX_ELEVENLABS}/{raw}"
             for voice in shared_voices:
-                if voice.get("voice_id") == voice_id:
+                if (
+                    voice.get("voice_id") == prefixed_id
+                    or voice.get("voice_id") == voice_id
+                ):
                     logger.debug(f"从共享音色中找到 voice_id: {voice_id}")
                     return voice
-
             logger.debug(f"在共享音色中也未找到 voice_id: {voice_id}")
-
         except Exception as e:
             logger.error(f"从共享音色中搜索 {voice_id} 异常: {str(e)}")
 

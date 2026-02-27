@@ -1,10 +1,13 @@
 package ai.sxwl.android.data.store
 
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 
 /** 全局设置状态管理器 用于在多个Compose屏幕之间同步设置状态 */
 object SettingStateManager {
@@ -15,11 +18,17 @@ object SettingStateManager {
 
     // Keep Talking按钮显示状态
     private val _showKeepTalkingFlow = MutableStateFlow(IntySetting.isShowKeepTalking())
-    val showKeepTalkingFlow: StateFlow<Boolean> = _showKeepTalkingFlow.asStateFlow()
+    val showKeepTalkingFlow: Flow<Boolean> =
+        _showKeepTalkingFlow.combine(VipStatusHelper.vipStatus) { isShow, vipStatus ->
+            isShow && vipStatus.isSubscribed
+        }
 
     // 自动播放语音消息状态
     private val _autoPlayAudioFlow = MutableStateFlow(IntySetting.isAutoPlayAudio())
-    val autoPlayAudioFlow: StateFlow<Boolean> = _autoPlayAudioFlow.asStateFlow()
+    val autoPlayAudioFlow: Flow<Boolean> =
+        _autoPlayAudioFlow.combine(VipStatusHelper.vipStatus) { autoPlay, vipStatus ->
+            autoPlay && vipStatus.isSubscribed
+        }
 
     // 自动播放背景动画状态
     private val _autoPlayAnimationFlow = MutableStateFlow(IntySetting.isAutoPlayAnimation())

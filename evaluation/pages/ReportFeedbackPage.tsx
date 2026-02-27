@@ -17,17 +17,35 @@ import {
   Descriptions,
   message,
   Empty,
+  Input,
 } from "antd";
-import { ReloadOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  ReloadOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  CopyOutlined,
+  EditOutlined,
+  SaveOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { reportApi } from "../services/api";
 import { formatUtcTimeRaw } from "../utils/dateUtils";
+import { buildReporterInfoRows } from "../utils/reportReporterInfo";
 import type {
   ReportItem,
   ReportTargetType,
   ReportStatus,
   ReportType,
 } from "../types";
+import {
+  REPORT_IMAGE_PREVIEW_SIZE,
+  REPORT_IMAGE_PREVIEW_STYLE,
+} from "../utils/reportImagePreview";
+import {
+  isValidGithubIssueUrl,
+  normalizeGithubIssueUrlInput,
+} from "../utils/reportGithubIssue";
 
 const { Option } = Select;
 
@@ -76,6 +94,15 @@ const TYPE_LABELS: Record<ReportType, string> = {
   FEEDBACK: "反馈",
 };
 
+/** 生成该举报详情的永久链接（用于分享或书签） */
+function getReportDetailUrl(reportId: string): string {
+  const base =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}`
+      : "";
+  return `${base}#report-feedback?reportId=${encodeURIComponent(reportId)}`;
+}
+
 export const ReportFeedbackPage: React.FC = () => {
   // 筛选状态
   const [reportType, setReportType] = useState<ReportType | undefined>(
@@ -98,6 +125,9 @@ export const ReportFeedbackPage: React.FC = () => {
   // 详情弹窗状态
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ReportItem | null>(null);
+  const [githubIssueDraft, setGithubIssueDraft] = useState("");
+  const [isEditingGithubIssue, setIsEditingGithubIssue] = useState(false);
+  const [savingGithubIssue, setSavingGithubIssue] = useState(false);
 
   // 加载数据
   const loadData = useCallback(async () => {
@@ -126,10 +156,96 @@ export const ReportFeedbackPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // 查看详情
+  // 永久链接：若 URL 中带有 reportId，则拉取该举报并自动打开详情弹窗
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#report-feedback")) return;
+    const params = new URLSearchParams(hash.split("?")[1] || "");
+    const reportId = params.get("reportId");
+    if (!reportId) return;
+    reportApi
+      .get(reportId)
+      .then((item) => {
+        setSelectedItem(item);
+        setDetailVisible(true);
+      })
+      .catch((err) => {
+        console.error("根据链接加载举报详情失败:", err);
+        message.error("无法加载该举报，可能已被删除或链接无效");
+      });
+  }, []);
+
+  useEffect(() => {
+    setGithubIssueDraft(selectedItem?.github_issue || "");
+    setIsEditingGithubIssue(false);
+  }, [selectedItem?.id, selectedItem?.github_issue]);
+
+  // 查看详情：打开弹窗并同步 URL hash，使当前地址即为该举报的永久链接
   const handleViewDetail = (record: ReportItem) => {
     setSelectedItem(record);
     setDetailVisible(true);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", getReportDetailUrl(record.id));
+    }
+  };
+
+  const copyReportLink = async (reportId: string) => {
+    const url = getReportDetailUrl(reportId);
+    try {
+      await navigator.clipboard.writeText(url);
+      message.success("链接已复制到剪贴板");
+    } catch {
+      message.error("复制失败，请手动复制链接");
+    }
+  };
+
+  const handleStartEditGithubIssue = () => {
+    if (!selectedItem) {
+      return;
+    }
+    setGithubIssueDraft(selectedItem.github_issue || "");
+    setIsEditingGithubIssue(true);
+  };
+
+  const handleCancelEditGithubIssue = () => {
+    setGithubIssueDraft(selectedItem?.github_issue || "");
+    setIsEditingGithubIssue(false);
+  };
+
+  const handleSaveGithubIssue = async () => {
+    if (!selectedItem) {
+      return;
+    }
+    const normalizedGithubIssueUrl =
+      normalizeGithubIssueUrlInput(githubIssueDraft);
+    if (
+      normalizedGithubIssueUrl &&
+      !isValidGithubIssueUrl(normalizedGithubIssueUrl)
+    ) {
+      message.error("请输入有效的 GitHub issue 链接");
+      return;
+    }
+
+    setSavingGithubIssue(true);
+    try {
+      const updatedItem = await reportApi.updateGithubIssue(
+        selectedItem.id,
+        normalizedGithubIssueUrl,
+      );
+      setSelectedItem(updatedItem);
+      setData((prev) =>
+        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+      );
+      setGithubIssueDraft(updatedItem.github_issue || "");
+      setIsEditingGithubIssue(false);
+      message.success("GitHub issue 链接已保存");
+    } catch (error) {
+      console.error("保存 GitHub issue 链接失败:", error);
+      message.error("保存失败，请检查链接格式");
+    } finally {
+      setSavingGithubIssue(false);
+    }
   };
 
   const deleteRecord = async (record: ReportItem) => {
@@ -350,7 +466,14 @@ export const ReportFeedbackPage: React.FC = () => {
       <Modal
         title="举报/反馈详情"
         open={detailVisible}
-        onCancel={() => setDetailVisible(false)}
+        onCancel={() => {
+          setDetailVisible(false);
+          setIsEditingGithubIssue(false);
+          if (typeof window !== "undefined") {
+            const base = `${window.location.origin}${window.location.pathname}`;
+            window.history.replaceState(null, "", `${base}#report-feedback`);
+          }
+        }}
         footer={null}
         width={700}
       >
@@ -358,6 +481,58 @@ export const ReportFeedbackPage: React.FC = () => {
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="ID" span={2}>
               {selectedItem.id}
+            </Descriptions.Item>
+            <Descriptions.Item label="永久链接" span={2}>
+              <Space.Compact style={{ width: "100%" }}>
+                <Input
+                  readOnly
+                  value={getReportDetailUrl(selectedItem.id)}
+                  style={{ fontSize: 12 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<CopyOutlined />}
+                  onClick={() => copyReportLink(selectedItem.id)}
+                >
+                  复制链接
+                </Button>
+              </Space.Compact>
+            </Descriptions.Item>
+            <Descriptions.Item label="GitHub Issue" span={2}>
+              <Space.Compact style={{ width: "100%" }}>
+                <Input
+                  value={githubIssueDraft}
+                  readOnly={!isEditingGithubIssue}
+                  onChange={(event) => setGithubIssueDraft(event.target.value)}
+                  placeholder="https://github.com/<owner>/<repo>/issues/<number>"
+                />
+                {isEditingGithubIssue ? (
+                  <>
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      onClick={handleSaveGithubIssue}
+                      loading={savingGithubIssue}
+                    >
+                      保存
+                    </Button>
+                    <Button
+                      icon={<CloseOutlined />}
+                      onClick={handleCancelEditGithubIssue}
+                      disabled={savingGithubIssue}
+                    >
+                      取消
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={handleStartEditGithubIssue}
+                  >
+                    修改
+                  </Button>
+                )}
+              </Space.Compact>
             </Descriptions.Item>
             <Descriptions.Item label="类型">
               <Tag color={TYPE_COLORS[selectedItem.report_type || "REPORT"]}>
@@ -384,6 +559,18 @@ export const ReportFeedbackPage: React.FC = () => {
             <Descriptions.Item label="举报人ID" span={2}>
               {selectedItem.reporter_id}
             </Descriptions.Item>
+            <Descriptions.Item label="举报人信息" span={2}>
+              <Space direction="vertical" size={2}>
+                {buildReporterInfoRows(selectedItem.reporter_user_info).map(
+                  (row) => (
+                    <div key={row.label}>
+                      <span style={{ color: "#666" }}>{row.label}：</span>
+                      <span>{row.value}</span>
+                    </div>
+                  ),
+                )}
+              </Space>
+            </Descriptions.Item>
             <Descriptions.Item label="原因" span={2}>
               <Space wrap>
                 {selectedItem.reason_codes.map((code) => (
@@ -407,9 +594,9 @@ export const ReportFeedbackPage: React.FC = () => {
                       <Image
                         key={index}
                         src={url}
-                        width={100}
-                        height={100}
-                        style={{ objectFit: "cover" }}
+                        width={REPORT_IMAGE_PREVIEW_SIZE}
+                        height={REPORT_IMAGE_PREVIEW_SIZE}
+                        style={REPORT_IMAGE_PREVIEW_STYLE}
                       />
                     ))}
                   </Space>

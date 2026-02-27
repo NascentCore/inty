@@ -10,7 +10,7 @@ import httpx
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class ScoringService:
@@ -46,7 +46,7 @@ class ScoringService:
             )
 
             if not llm_response:
-                return {"success": False, "error": "评分模型调用失败"}
+                return {"success": False, "error": "Scoring model call failed"}
 
             # 解析评分结果
             scoring_result = self._parse_scoring_response(llm_response)
@@ -199,7 +199,7 @@ class ScoringService:
 
             # 验证必要字段
             if "overall_score" not in result:
-                raise ValueError("缺少overall_score字段")
+                raise ValueError("Missing overall_score field")
 
             # 确保分数在有效范围内
             overall_score = float(result["overall_score"])
@@ -236,7 +236,7 @@ class ScoringService:
                 return {
                     "overall_score": overall_score,
                     "detailed_scores": {},
-                    "reason": "评分解析失败，使用提取的数字分数",
+                    "reason": "Scoring parse failed; using extracted numeric score",
                 }
             except:
                 pass
@@ -245,7 +245,10 @@ class ScoringService:
         return {
             "overall_score": 5.0,
             "detailed_scores": {},
-            "reason": f"评分解析失败，使用默认分数。原始响应: {response[:200]}...",
+            "reason": (
+                "Scoring parse failed; using default score. "
+                f"Raw response: {response[:200]}..."
+            ),
         }
 
     async def get_available_models(self) -> List[Dict[str, Any]]:
@@ -531,16 +534,20 @@ class ScoringService:
         suggestions = []
 
         if len(criteria.strip()) < 50:
-            issues.append("评分标准过于简短，建议提供更详细的评分指导")
+            issues.append(
+                "Scoring criteria is too short; consider providing more detailed guidance"
+            )
 
         if "分" not in criteria and "评" not in criteria:
-            issues.append("评分标准应该明确提及评分相关词汇")
+            issues.append("Scoring criteria should explicitly mention scoring terms")
 
         if not re.search(r"\d+.*分", criteria):
-            suggestions.append("建议在评分标准中明确分数范围，如'1-10分'")
+            suggestions.append(
+                "Consider specifying a score range in the criteria, e.g., '1-10'"
+            )
 
         if "维度" not in criteria and "方面" not in criteria:
-            suggestions.append("建议在评分标准中明确评分维度")
+            suggestions.append("Consider specifying scoring dimensions in the criteria")
 
         return {
             "is_valid": len(issues) == 0,

@@ -3,10 +3,15 @@ package com.ai.intellimate.messages
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ConversationItem
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
-import ai.sxwl.android.design.theme.AppColors
+import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.design.theme.brushes
+import ai.sxwl.android.design.theme.textOnLightSurface
 import ai.sxwl.android.design.ui.HeartRedDot
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.TimeUtils
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,10 +37,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -56,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -65,7 +71,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -173,15 +181,26 @@ private fun MessageTabContent(
     onOpenSubscription: () -> Unit,
 ) {
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val vipStatus by VipStatusHelper.vipStatus.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        MessagesSubscriptionBanner(
-            modifier =
-                Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-            titleText = stringResource(R.string.messages_premium_banner_title),
-            ctaText = stringResource(R.string.messages_premium_banner_cta),
-            onClick = onOpenSubscription,
-        )
+        if (!vipStatus.isSubscribed) {
+            MessagesSubscriptionBanner(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+                titleText = stringResource(R.string.messages_premium_banner_title),
+                ctaText = stringResource(R.string.messages_premium_banner_cta),
+                onClick = {
+                    onOpenSubscription()
+
+                    FirebaseManager.Events.CONVERSATIONS_PAGE_CLICK.logEvent(
+                        "click_type" to "MessagesSubscriptionBanner"
+                    )
+                },
+            )
+        }
+
         Spacer(Modifier.height(UiConfigs.Spacing.Medium))
         MessagesTabSwitcher(
             selectedTab = selectedTab,
@@ -252,67 +271,76 @@ private fun MessagesSubscriptionBanner(
     Box(
         modifier =
             modifier
-                .height(UiConfigs.MessagesPage.PremiumBanner.Height)
                 .clip(RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CornerRadius))
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    AppColors.PremiumBannerGradientStart,
-                                    AppColors.PremiumBannerGradientEnd,
-                                )
-                        )
-                )
+                .drawBehind {
+                    drawRect(
+                        brush =
+                            Brush.horizontalGradient(listOf(Color(0xFFC3D5FB), Color(0xFFC567F5)))
+                    )
+                }
                 .clickable(onClick = onClick)
-                .padding(
-                    horizontal = UiConfigs.MessagesPage.PremiumBanner.ContentHorizontalPadding,
-                    vertical = UiConfigs.MessagesPage.PremiumBanner.ContentVerticalPadding,
-                )
+                .padding(vertical = 12.dp)
     ) {
-        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(
-                    text = titleText,
-                    fontSize = UiConfigs.MessagesPage.PremiumBanner.TitleFontSize,
-                    lineHeight = UiConfigs.MessagesPage.PremiumBanner.TitleLineHeight,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.width(UiConfigs.Spacing.Medium))
+        Column(
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.textOnLightSurface,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+
+            Spacer(Modifier.height(UiConfigs.Spacing.Small))
+
             Row(
                 modifier =
-                    Modifier.clip(
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clip(
                             RoundedCornerShape(UiConfigs.MessagesPage.PremiumBanner.CtaCornerRadius)
                         )
-                        .background(AppColors.PremiumBannerCtaBackground)
+                        .background(brush = MaterialTheme.brushes.gradientBrush4)
                         .padding(
                             horizontal = UiConfigs.MessagesPage.PremiumBanner.CtaHorizontalPadding,
                             vertical = UiConfigs.MessagesPage.PremiumBanner.CtaVerticalPadding,
                         ),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.EmojiEvents,
+                    painter = painterResource(R.drawable.icon_messages_subscription),
                     contentDescription = null,
-                    tint = AppColors.PremiumBannerCtaForeground,
-                    modifier = Modifier.size(UiConfigs.MessagesPage.PremiumBanner.CtaIconSize),
+                    tint = MaterialTheme.colorScheme.textOnLightSurface,
+                    modifier = Modifier.size(14.dp, 10.dp),
                 )
                 Spacer(Modifier.width(UiConfigs.MessagesPage.PremiumBanner.CtaIconTextSpacing))
                 Text(
                     text = ctaText,
-                    fontSize = UiConfigs.MessagesPage.PremiumBanner.CtaTextSize,
-                    lineHeight = UiConfigs.MessagesPage.PremiumBanner.CtaLineHeight,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.PremiumBannerCtaForeground,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.textOnLightSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun MessagesSubscriptionBannerPreview() {
+    IntelliMateTheme() {
+        MessagesSubscriptionBanner(
+            modifier =
+                Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
+            titleText = stringResource(R.string.messages_premium_banner_title),
+            ctaText = stringResource(R.string.messages_premium_banner_cta),
+            onClick = {},
+        )
     }
 }
 

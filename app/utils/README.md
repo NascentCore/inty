@@ -12,7 +12,7 @@
 
 - 目录用途: 提供与第三方/多模态能力的适配与通用实用工具。
 - 关键文件:
-  - `openai_client.py`/`gemini.py`/`langchain.py`: 多家模型与工具生态的封装，供服务层统一调用。
+  - `openai_client.py`/`gemini.py`/`langchain.py`: 多家模型与工具生态的封装，供服务层统一调用；抽取类调用（如 `chat_completion_for_extraction`）统一使用 `LLMConfig`（`app.api.types.llm_config`）传参。
   - `image.py`/`image_upload.py`: 图片处理与上传。
   - `crop_avatar.py`: 头像裁剪相关脚本与可视化流程示例。
   - `utils/cascades`: OpenCV 模型资源引用。

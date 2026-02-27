@@ -41,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.ai.intellimate.R
+import com.ai.intellimate.utils.NetworkErrorHandler
 import java.io.File
 
 /**
@@ -156,8 +157,16 @@ fun ImagePickItem(
                                     )
                                     .also { cameraLauncher.launch(it) }
                         } catch (error: Throwable) {
+                            // #region agent log
+                            val msg = error.localizedMessage.orEmpty()
+                            NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                                "H",
+                                "ChatMessageItems.kt:camera",
+                                msg,
+                            )
+                            // #endregion
                             LogUtils.e(error.localizedMessage)
-                            ToastUtils.showShort(error.localizedMessage.orEmpty())
+                            ToastUtils.showShort(msg)
                         }
                     },
                     colors =

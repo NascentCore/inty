@@ -2,7 +2,7 @@ app:
   debug: true
   environment: dev
   limits:
-    free_user_chat_24h_limit: 500
+    free_user_chat_24h_limit: 20
     guest_user_chat_24h_limit: 1
     free_user_voice_24h_limit: 500
     guest_user_voice_24h_limit: 1
@@ -13,9 +13,11 @@ app:
     free_user_agent_creation_24h_limit: 500
     subscribed_user_agent_creation_24h_limit: 10
   gcp_service_account_key: "inty-backend-key.json"
+  min_app_version_code_for_festival_memory: 3345
 
 sentry:
-  dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
+  # dev-inty/default
+  dsn: "https://43877f17f1d13e7e2847d7fa994b5fd9@o4510350447411200.ingest.us.sentry.io/4510871322034176"
   enabled: true
   traces_sample_rate: 1.0  # 开发环境使用 100% 采样率以便调试
 
@@ -26,17 +28,17 @@ security:
 
 database:
   host: "10.41.177.3"
-  port: 5432
   user: postgres
   password: "sxwl666A!"
   db: "inty-dev"
-  pool_size: 50
-  max_overflow: 20
+  pool_size: 20
+  max_overflow: 10
   pool_timeout: 10
   pool_recycle: 3600
   pool_pre_ping: true
   connect_timeout: 5
   command_timeout: 30
+  replica_host: "10.41.177.17"
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
@@ -51,18 +53,21 @@ verification:
 
 logging:
   level: "DEBUG"
-  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{extra[request_id]}</cyan> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 
 firebase:
   service_account_path: "inty-firebase-key.json"
 
 agent:
+  # 测试用 API key，每周上限 $10，inty-dev API key，intellimate-dev project
   api_key: "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"
-  # inty-dev api key personal access token
-  langchain_api_key: "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"
+  # intellimate-dev project, inty-dev api key, personal access token
+  langchain_api_key: "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"
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
-  free_user_chat_image_model: "gemini"
-  sub_user_chat_image_model: "gemini"
+  free_user_chat_image_model: "Seedream V4.5 Edit"
+  sub_user_chat_image_model: "Seedream V4.5 Edit"
+  vertex_ai_location: "global"
+  # 测试环境量小，就全部追踪
+  langsmith_text_chat_sample_rate: 1.0
 
 google_play:
   package_name: "com.ai.intellimate"
@@ -73,7 +78,7 @@ google_play:
   fallback_tracks: [internal]
   # 当前生产环境版本代码（设置为正数时直接使用，不调用 Google Play API，避免配额消耗）
   # 设置为 0 时从 Google Play API 动态获取
-  current_version_code: 2949
+  current_version_code: 3173
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
@@ -105,4 +110,12 @@ gemini_live:
   sub_user_max_session_duration: 300  # 订阅用户单次会话最大时长（秒）
 
 fal:
-  api_key: c5403f4b-1171-4b13-80ef-684802b2c3c9:26b324871f439642e5a375481e01cd25
+  # inty-dev API Key FAL.AI
+  api_key: e5d909a2-5707-455a-bd91-1777531504b8:7e7cc84b6ebcb998a51cb830f77f2c13
+
+tts:
+  use_gemini_prompted_tts: true
+
+surprise_snap:
+  enabled_since: "2026-02-24T08:00:00"
+  trigger_rounds: [2,4,7,11]

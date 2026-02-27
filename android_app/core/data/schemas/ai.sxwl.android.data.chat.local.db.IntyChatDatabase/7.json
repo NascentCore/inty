@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 7,
+    "identityHash": "78a8875679e6eb5f18c1755870537c62",
+    "entities": [
+      {
+        "tableName": "message",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `indexId` TEXT NOT NULL, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `isSending` INTEGER NOT NULL, `agentId` TEXT NOT NULL, `isVoice` INTEGER NOT NULL, `isOpening` INTEGER NOT NULL, `voiceSessionId` TEXT, `generate_image_imageUrl` TEXT, `generate_image_width` INTEGER, `generate_image_height` INTEGER, PRIMARY KEY(`id`, `agentId`, `indexId`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "indexId",
+            "columnName": "indexId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "audioUrl",
+            "columnName": "audioUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userVote",
+            "columnName": "userVote",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isSending",
+            "columnName": "isSending",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metaData.agentId",
+            "columnName": "agentId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metaData.isVoice",
+            "columnName": "isVoice",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metaData.isOpening",
+            "columnName": "isOpening",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "metaData.voiceSessionId",
+            "columnName": "voiceSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "metaData.generatedImage.imageUrl",
+            "columnName": "generate_image_imageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "metaData.generatedImage.width",
+            "columnName": "generate_image_width",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "metaData.generatedImage.height",
+            "columnName": "generate_image_height",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id",
+            "agentId",
+            "indexId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_message_agentId",
+            "unique": false,
+            "columnNames": [
+              "agentId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_message_agentId` ON `${TABLE_NAME}` (`agentId`)"
+          },
+          {
+            "name": "index_message_indexId",
+            "unique": false,
+            "columnNames": [
+              "indexId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_message_indexId` ON `${TABLE_NAME}` (`indexId`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '78a8875679e6eb5f18c1755870537c62')"
+    ]
+  }
+}

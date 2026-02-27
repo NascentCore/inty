@@ -5,12 +5,13 @@ from typing import Optional
 
 from loguru import logger
 from sqlalchemy import and_, func, text, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from typing_extensions import deprecated
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.uuid import get_new_user_id
 from app.models import User
 from app.models.chat import Chat
@@ -159,8 +160,19 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
             k: v for k, v in update_data.items() if v is not None and v != ""
         }
 
+        user_photo_changed = (
+            "user_photo" in update_data and update_data["user_photo"] != user.user_photo
+        )
+        selfie_persona_feature_enabled = (
+            global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
+        )
+
         for field, value in update_data.items():
             setattr(user, field, value)
+
+        if user_photo_changed:
+            # 自拍更新后先清空旧结论，避免出现与当前自拍不一致的旧画像结论。
+            user.selfie_persona_summary = None
 
         await db.commit()
         await db.refresh(user)
@@ -169,11 +181,31 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         cache_service.invalidate_user_info(user_id)
         logger.debug(f"已清除用户 {user_id} 的缓存信息")
 
+        if selfie_persona_feature_enabled and user_photo_changed and user.user_photo:
+            from app.services.selfie_persona_service import selfie_persona_service
+
+            selfie_persona_service.enqueue_selfie_persona_inference(
+                user_id=user_id,
+                user_photo_url=user.user_photo,
+            )
+
         return user
     except Exception as e:
         logger.error(f"Failed to update user information: {str(e)}")
         logger.error(f"Error stack: {traceback.format_exc()}")
         raise e
+
+
+async def update_user_last_android_app_version_code(
+    db: AsyncSession, user_id: str, version_code: int
+) -> None:
+    """Update the user's last reported Android app version code. Used for push-worker feature gating."""
+    await db.execute(
+        update(User)
+        .where(User.id == user_id)
+        .values(last_android_app_version_code=version_code)
+    )
+    await db.commit()
 
 
 def generate_avatar_path(user_id: str, filename: str) -> str:
@@ -189,48 +221,73 @@ def generate_avatar_path(user_id: str, filename: str) -> str:
 GENDER_DISPLAY_MAP = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
 
 
-async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
+async def get_user_display_name_for_prompt(db: AsyncSession, user_id: str) -> str:
     """
-    构建用户信息文本块，用于图片生成提示词。
-    优先从缓存读取，未命中时查询数据库并写回缓存。
-
-    Returns:
-        格式化的用户信息块（如 "##User Information\\nName: xxx\\n..."），
-        若用户不存在或无有效信息则返回空字符串。
+    获取用于提示词渲染的用户显示名（如 personality/scenario 中的 {{ user }}）。
+    用于图片生成等需要与 char 一起渲染 Jinja2 模板的场景。
     """
-    cached = cache_service.get_user_info(user_id)
-    if cached is not None:
-        return cached
-
+    if not user_id:
+        return "the user"
     try:
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
+        if user and user.nickname and user.nickname.strip():
+            return user.nickname.strip()
+    except SQLAlchemyError as e:
+        logger.debug("get_user_display_name_for_prompt: user_id={}, error={}", user_id, e)
+    return "the user"
 
-        if not user:
-            cache_service.set_user_info(user_id, "", ttl=60)
-            return ""
 
-        parts = []
-        if user.nickname:
-            parts.append(f"Name: {user.nickname}")
-        if user.gender:
-            parts.append(
-                f"Gender: {GENDER_DISPLAY_MAP.get(user.gender.value, user.gender.value)}"
-            )
-        if user.age_group:
-            parts.append(f"Age: {user.age_group}")
-        if user.description:
-            parts.append(f"Description: {user.description}")
+async def build_user_info_prompt_block(db: AsyncSession, user_id: str) -> str:
+    """
+    构建用户信息文本块，用于图片生成提示词。
+    优先从缓存读取基础块，未命中时查询数据库并写回缓存；再追加 ##User Memory（不缓存）。
+    """
+    from app.services.memory_service import get_user_memory_for_prompt_async
 
-        user_info_text = "##User Information\n" + "\n".join(parts) if parts else ""
-        cache_service.set_user_info(user_id, user_info_text)
-        return user_info_text
+    selfie_persona_feature_enabled = (
+        global_config_loaded_from_config_yaml.app.features.enable_selfie_persona_summary
+    )
+    cached = cache_service.get_user_info(user_id)
+    if cached is not None:
+        user_info_text = cached
+    else:
+        user_info_text = ""
+        try:
+            stmt = select(User).where(User.id == user_id)
+            result = await db.execute(stmt)
+            user = result.scalars().first()
 
-    except Exception as e:
-        logger.error(f"构建用户信息块失败: user_id={user_id}, error={e}")
-        cache_service.set_user_info(user_id, "", ttl=30)
-        return ""
+            if not user:
+                cache_service.set_user_info(user_id, "", ttl=60)
+            else:
+                parts = []
+                if user.nickname:
+                    parts.append(f"Name: {user.nickname}")
+                if user.gender:
+                    parts.append(
+                        f"Gender: {GENDER_DISPLAY_MAP.get(user.gender.value, user.gender.value)}"
+                    )
+                if user.age_group:
+                    parts.append(f"Age: {user.age_group}")
+                if user.description:
+                    parts.append(f"Description: {user.description}")
+                if selfie_persona_feature_enabled and user.selfie_persona_summary:
+                    parts.append(f"Selfie Persona: {user.selfie_persona_summary}")
+                user_info_text = (
+                    "##User Information\n" + "\n".join(parts) if parts else ""
+                )
+                cache_service.set_user_info(user_id, user_info_text)
+
+        except Exception as e:
+            logger.error(f"构建用户信息块失败: user_id={user_id}, error={e}")
+            cache_service.set_user_info(user_id, "", ttl=30)
+
+    memory_text = await get_user_memory_for_prompt_async(db, user_id)
+    if memory_text:
+        user_info_text = (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+    return user_info_text
 
 
 async def register_device_token(

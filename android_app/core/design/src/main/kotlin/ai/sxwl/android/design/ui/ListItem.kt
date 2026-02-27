@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -44,6 +45,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+/** 设置项内容/副标题文字在深色背景上的不透明度，用于与主题 onSurface 组合保证可读性 */
+private const val SETTINGS_ITEM_CONTENT_ALPHA = 0.9f
 
 /** 应用项目封装的items */
 @Composable
@@ -102,6 +106,7 @@ fun SettingsCheckBoxItem(
 @Composable
 fun SettingsSwitchItem(
     item: SettingsItemData.SwitchItemData,
+    showVip: Boolean = false,
     fontLight: Boolean = false, // 使用字重小一点
     isInGroup: Boolean = false,
     horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
@@ -150,33 +155,47 @@ fun SettingsSwitchItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = Color(0x8CFFFFFF),
+                    color =
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = SETTINGS_ITEM_CONTENT_ALPHA
+                        ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
         Spacer(Modifier.width(8.dp))
-        // 如果提供了图标资源，使用Image；否则使用Switch
-        if (openedIconRes != null && closedIconRes != null) {
-            Image(
-                painter = painterResource(if (item.checked) openedIconRes else closedIconRes),
-                contentDescription = null,
-            )
-        } else {
-            Switch(
-                checked = item.checked,
-                onCheckedChange = onCheckChanged,
-                colors =
-                    SwitchDefaults.colors()
-                        .copy(
-                            checkedTrackColor = Color(0xFF62C18E),
-                            uncheckedTrackColor = Color(0xFF43394F),
-                            uncheckedBorderColor = Color.Transparent,
-                            disabledCheckedBorderColor = Color.Transparent,
-                            disabledUncheckedBorderColor = Color.Transparent,
-                        ),
-            )
+
+        Box() {
+            // 如果提供了图标资源，使用Image；否则使用Switch
+            if (openedIconRes != null && closedIconRes != null) {
+                Image(
+                    painter = painterResource(if (item.checked) openedIconRes else closedIconRes),
+                    contentDescription = null,
+                )
+            } else {
+                Switch(
+                    checked = item.checked,
+                    onCheckedChange = onCheckChanged,
+                    colors =
+                        SwitchDefaults.colors()
+                            .copy(
+                                checkedTrackColor = Color(0xFF62C18E),
+                                uncheckedTrackColor = Color(0xFF43394F),
+                                uncheckedBorderColor = Color.Transparent,
+                                disabledCheckedBorderColor = Color.Transparent,
+                                disabledUncheckedBorderColor = Color.Transparent,
+                            ),
+                )
+            }
+
+            if (showVip) {
+                Image(
+                    painter = painterResource(R.drawable.ic_vip_badge),
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.TopEnd).size(24.dp, 12.dp),
+                )
+            }
         }
     }
 }
@@ -279,7 +298,10 @@ fun SettingsArrowItem(
                         fontSize = 14.sp,
                         lineHeight = 22.sp,
                         fontWeight = FontWeight(400),
-                        color = Color(0x8CFFFFFF),
+                        color =
+                            MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = SETTINGS_ITEM_CONTENT_ALPHA
+                            ),
                         maxLines = contentMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Right,
@@ -292,7 +314,10 @@ fun SettingsArrowItem(
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight(400),
-                    color = Color(0x8CFFFFFF),
+                    color =
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = SETTINGS_ITEM_CONTENT_ALPHA
+                        ),
                     maxLines = contentMaxLines,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Right,
@@ -428,7 +453,7 @@ fun SettingsIconArrowItem(item: SettingsItemData.IconItemData, onItemClick: () -
             fontSize = 14.sp,
             lineHeight = 22.sp,
             fontWeight = FontWeight(400),
-            color = Color(0x8CFFFFFF),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = SETTINGS_ITEM_CONTENT_ALPHA),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Right,

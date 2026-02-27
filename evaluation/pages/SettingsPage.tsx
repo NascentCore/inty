@@ -14,33 +14,12 @@ import {
 import { SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import { chatImageApi } from "../services/api";
 
-// 消息生图模型选项
+// 消息生图模型：仅允许 models_catalog 中的四个 nickname
 const CHAT_IMAGE_MODEL_OPTIONS = [
-  {
-    value: "gemini",
-    label: "Gemini 2.5 Flash Image",
-    description: "Google 高质量图像生成模型",
-  },
-  {
-    value: "fal-ai/z-image/turbo/image-to-image",
-    label: "fal-ai/z-image/turbo/image-to-image",
-    description: "Tongyi-MAI 超快速 6B 参数模型",
-  },
-  {
-    value: "fal-ai/flux/dev/image-to-image",
-    label: "FLUX Dev (fal.ai)",
-    description: "FLUX 开发版 image-to-image 模型",
-  },
-  {
-    value: "fal-ai/stable-diffusion-v3-medium/image-to-image",
-    label: "SD v3 Medium (fal.ai)",
-    description: "Stable Diffusion v3 中型模型",
-  },
-  {
-    value: "fal-ai/gpt-image-1.5/edit",
-    label: "fal-ai/gpt-image-1.5/edit",
-    description: "GPT Image 1.5 编辑模型",
-  },
+  { value: "Nano Banana", label: "Nano Banana", description: "Gemini 2.5 Flash Image" },
+  { value: "Nano Banana Pro", label: "Nano Banana Pro", description: "Gemini 3 Pro Image Preview" },
+  { value: "Seedream V4.5 Edit", label: "Seedream V4.5 Edit", description: "fal.ai Seedream 编辑" },
+  { value: "Z Image Turbo Image to Image", label: "Z Image Turbo Image to Image", description: "fal.ai Z-Image image-to-image" },
 ];
 
 const { Title, Text } = Typography;
@@ -54,6 +33,21 @@ export const SettingsPage: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+    return fallback;
+  };
 
   // 加载配置
   const loadConfig = async () => {
@@ -69,8 +63,8 @@ export const SettingsPage: React.FC = () => {
         });
         message.success("配置加载成功");
       }
-    } catch (error: any) {
-      message.error(`加载配置失败: ${error.message || "未知错误"}`);
+    } catch (error: unknown) {
+      message.error(`加载配置失败: ${getErrorMessage(error, "未知错误")}`);
       console.error("加载配置失败:", error);
     } finally {
       setLoading(false);
@@ -92,11 +86,15 @@ export const SettingsPage: React.FC = () => {
           sub_user_chat_image_model: response.sub_user_chat_image_model,
         });
       }
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "errorFields" in error
+      ) {
         message.error("请检查表单填写");
       } else {
-        message.error(`保存配置失败: ${error.message || "未知错误"}`);
+        message.error(`保存配置失败: ${getErrorMessage(error, "未知错误")}`);
         console.error("保存配置失败:", error);
       }
     } finally {
@@ -173,16 +171,17 @@ export const SettingsPage: React.FC = () => {
             </Form.Item>
 
             <Divider orientation="left">消息生图模型配置</Divider>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 16 }}
+            >
+              使用 models_catalog 中的模型 nickname（仅允许：Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
+            </Text>
 
             <Form.Item
               name="free_user_chat_image_model"
-              label="免费用户模型"
-              rules={[{ required: true, message: "请选择免费用户模型" }]}
-              extra={
-                <Text type="secondary">
-                  免费用户消息生图使用的模型（fal.ai 模型成本更低、速度更快）
-                </Text>
-              }
+              label="免费用户 - 模型"
+              rules={[{ required: true, message: "请选择模型" }]}
             >
               <Select
                 placeholder="选择免费用户模型"
@@ -202,13 +201,8 @@ export const SettingsPage: React.FC = () => {
 
             <Form.Item
               name="sub_user_chat_image_model"
-              label="订阅用户模型"
-              rules={[{ required: true, message: "请选择订阅用户模型" }]}
-              extra={
-                <Text type="secondary">
-                  订阅用户消息生图使用的模型（推荐使用 Gemini 高质量模型）
-                </Text>
-              }
+              label="订阅用户 - 模型"
+              rules={[{ required: true, message: "请选择模型" }]}
             >
               <Select
                 placeholder="选择订阅用户模型"

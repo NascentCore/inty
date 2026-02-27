@@ -110,7 +110,7 @@ object AgentService {
                 paramsBuilder.category(agentInfo.category)
             }
             if (agentInfo.prompt.isNotEmpty()) {
-                paramsBuilder.prompt(agentInfo.prompt)
+                paramsBuilder.personality(agentInfo.prompt)
             }
             if (agentInfo.tags != null && agentInfo.tags.isNotEmpty()) {
                 paramsBuilder.tags(agentInfo.tags.filterNotNull())
@@ -162,7 +162,7 @@ object AgentService {
                 paramsBuilder.category(agentInfo.category)
             }
             if (agentInfo.prompt.isNotEmpty()) {
-                paramsBuilder.prompt(agentInfo.prompt)
+                paramsBuilder.personality(agentInfo.prompt)
             }
             if (agentInfo.tags != null && agentInfo.tags.isNotEmpty()) {
                 paramsBuilder.tags(agentInfo.tags.filterNotNull())
@@ -437,7 +437,7 @@ object AgentService {
                 id = "mock_christmas_1",
                 name = "# Merry Christmas",
                 description =
-                    "Ready for some holiday magic? Meet our brand-new Christmas-themed AI companion—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
+                    "Ready for some holiday magic? Meet our brand-new Christmas-themed iMate—sparkly, cheerful, and here to light up your winter feed. Come take a look and get into the festive spirit!",
                 agents = agentsForTheme1,
                 isChristmas = true,
             ),
@@ -445,7 +445,7 @@ object AgentService {
                 id = "mock_theme_2",
                 name = "# Winter Wonderland",
                 description =
-                    "Explore the magical world of winter with our special winter-themed characters.",
+                    "Explore the magical world of winter with our special winter-themed iMates.",
                 agents = agentsForTheme2,
                 isChristmas = false,
             ),
@@ -457,8 +457,8 @@ object AgentService {
         return (1..count).map { index ->
             AgentInfo(
                 id = "mock_agent_$index",
-                name = "Character $index",
-                intro = "This is a mock character for testing purposes.",
+                name = "iMate $index",
+                intro = "This is a mock iMate for testing purposes.",
                 avatar = "",
                 background = "",
                 category = "Mock",

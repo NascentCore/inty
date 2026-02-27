@@ -1,6 +1,6 @@
 package com.ai.intellimate.chat.ui
 
-import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,14 +106,14 @@ private fun ImageGenerateButton(onClick: () -> Unit, modifier: Modifier = Modifi
 /** 消息卡片底部操作栏（like, dislike, recall） */
 @Composable
 internal fun MessageActionBar(
-    message: MsgInfo,
+    message: MessageEntity,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onRecall: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isLiked = message.userFeedback == MsgInfo.UserFeedback.LIKE
-    val isDisliked = message.userFeedback == MsgInfo.UserFeedback.DISLIKE
+    val isLiked = message.userVote == MessageEntity.UserVote.LIKE
+    val isDisliked = message.userVote == MessageEntity.UserVote.DISLIKE
 
     // like/dislike互斥，但不影响recall和keep talking的状态
     Row(

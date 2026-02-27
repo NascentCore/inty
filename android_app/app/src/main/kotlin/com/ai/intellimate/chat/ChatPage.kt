@@ -4,9 +4,15 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
+import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
+import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -28,25 +34,25 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,8 +77,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.paging.ItemSnapshotList
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
-import com.ai.intellimate.audio.OpeningPlayState
+import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
@@ -88,6 +97,7 @@ import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
 import com.ai.intellimate.chat.uistate.ChatUIState
+import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.profile.ModifyProfileViewModel
 import com.ai.intellimate.ui.ChatDialogData
@@ -113,81 +123,58 @@ sealed class ChatMessageItem {
 }
 
 /**
- * 将消息列表分组，连续的语音消息会被分组 包括用户和AI的消息：如果AI消息是语音消息，前一条用户消息也会被包含在语音组中
+ * 将原始消息列表按「普通消息 / 语音消息组」分组，返回用于 LazyColumn 的 MessageItem 列表。 连续的用户+AI
+ * 语音对话会合并为一组（CallMessageIndexs），其余为单条 MessageIndex。 某条 message 为 null（如 Paging
+ * placeholder）时按普通空消息处理。
  *
- * @param messages 原始消息列表（倒序，最新的在前）
- * @return 分组后的消息项列表（保持倒序）
+ * 索引约定：MessageIndex.index 与 CallMessageIndexs.messages 中的每个值均为 messages 的下标， 与 LazyPagingItems
+ * 同序，渲染时用 messages[item.index] / messages[it] 取对应消息。
+ *
+ * @param messages 原始消息（倒序，新消息在前），getOrNull 可能返回 null（placeholder）
+ * @return 分组后的消息项列表，索引均指向 messages 中的位置
  */
-private fun groupVoiceMessages(messages: List<MsgInfo>): List<ChatMessageItem> {
-    if (messages.isEmpty()) return emptyList()
+private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<MessageItem> {
+    val result = mutableListOf<MessageItem>()
+    val currentVoiceGroupIndices = mutableListOf<Int>()
+    var voiceSessionId: String? = null
 
-    val result = mutableListOf<ChatMessageItem>()
-    var currentVoiceGroup = mutableListOf<MsgInfo>()
-    var groupIndex = 0
-    var i = 0
-
-    while (i < messages.size) {
-        val message = messages[i]
-
-        // 检查是否是AI的语音消息
-        if (message.role == "assistant" && message.isVoiceMessage()) {
-            // 如果下一条消息（更早的消息）是用户消息，将其也加入语音组
-            if (i + 1 < messages.size && messages[i + 1].role == "user") {
-                // 在倒序列表中，先添加的是最新的消息对，后添加的是更早的消息对
-                // 所以需要先添加用户消息，再添加AI语音消息（保持倒序）
-                currentVoiceGroup.add(messages[i + 1]) // 用户消息
-                currentVoiceGroup.add(message) // AI语音消息
-                i += 2 // 跳过这两条消息
-
-                // 继续检查是否还有连续的语音对话（下一条AI消息是否也是语音消息）
-                while (
-                    i < messages.size &&
-                        messages[i].role == "assistant" &&
-                        messages[i].isVoiceMessage() &&
-                        i + 1 < messages.size &&
-                        messages[i + 1].role == "user"
-                ) {
-                    // 继续添加连续的语音对话（更早的消息对）
-                    currentVoiceGroup.add(messages[i + 1]) // 用户消息
-                    currentVoiceGroup.add(messages[i]) // AI语音消息
-                    i += 2
-                }
-            } else {
-                // 没有下一条用户消息，只添加AI语音消息
-                currentVoiceGroup.add(message)
-                i++
+    messages.forEachIndexed { index, info ->
+        if (info == null) {
+            if (currentVoiceGroupIndices.isNotEmpty()) {
+                result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+                currentVoiceGroupIndices.clear()
             }
+            result.add(MessageItem.MessageIndex(index))
         } else {
-            // 不是AI语音消息，先处理之前的语音组（如果有）
-            if (currentVoiceGroup.isNotEmpty()) {
-                // 反转语音组，使其按时间顺序（更早的消息在前，更新的消息在后）
-                // 在倒序列表中，currentVoiceGroup 的顺序是：[用户3, AI3, 用户2, AI2]
-                // 反转后应该是：[用户2, AI2, 用户3, AI3]（按时间顺序）
-                currentVoiceGroup.reverse()
-                result.add(
-                    ChatMessageItem.VoiceMessageGroup(
-                        messages = currentVoiceGroup.toList(),
-                        groupId = "voice_group_$groupIndex",
-                    )
-                )
-                currentVoiceGroup.clear()
-                groupIndex++
+            if (info.isVoice) {
+
+                if (voiceSessionId != info.metaData.voiceSessionId) {
+                    if (currentVoiceGroupIndices.isNotEmpty()) {
+                        result.add(
+                            MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed())
+                        )
+                        currentVoiceGroupIndices.clear()
+                    }
+
+                    voiceSessionId = info.metaData.voiceSessionId
+                }
+
+                currentVoiceGroupIndices.add(index)
+            } else if (info.role == "user" && currentVoiceGroupIndices.isNotEmpty()) {
+                currentVoiceGroupIndices.add(index)
+            } else if (currentVoiceGroupIndices.isNotEmpty()) {
+                result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+                result.add(MessageItem.MessageIndex(index))
+                currentVoiceGroupIndices.clear()
+            } else {
+                result.add(MessageItem.MessageIndex(index))
             }
-            // 添加普通消息
-            result.add(ChatMessageItem.NormalMessage(message))
-            i++
         }
     }
 
-    // 处理最后剩余的语音组
-    if (currentVoiceGroup.isNotEmpty()) {
-        currentVoiceGroup.reverse()
-        result.add(
-            ChatMessageItem.VoiceMessageGroup(
-                messages = currentVoiceGroup.toList(),
-                groupId = "voice_group_$groupIndex",
-            )
-        )
+    if (currentVoiceGroupIndices.isNotEmpty()) {
+        result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
+        currentVoiceGroupIndices.clear()
     }
 
     return result
@@ -218,13 +205,13 @@ internal fun ChatPage(
     isGuideVisible: Boolean = false,
     shouldShowBoostSheetOnOpen: Boolean = false,
     debugAgentIndex: Int? = null,
+    fromPage: String? = null,
+    refreshMessageCount: Int = 0,
 ) {
 
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
-    val isQueryMsgsCompleted by chatViewModel.isQueryMsgsCompleted.collectAsState()
-    val chatMessages by chatViewModel.msgs.collectAsState()
 
     // 用户自建私有角色不展示 Boost 相关功能
     val shouldShowBoostUi = agentInfo?.isUserCreatedPrivateRole() != true
@@ -246,21 +233,31 @@ internal fun ChatPage(
             }
         ToastUtils.showShort(messageRes)
     }
-
-    val hasLoadingMessage =
-        remember(chatMessages) {
-            chatMessages.any { msg ->
-                val hasGeneratedImage = msg.hasGeneratedImage()
-                val generatedImageUrl = msg.getGeneratedImageUrl()
-                msg.content == "loading_animation" &&
-                    !hasGeneratedImage &&
-                    generatedImageUrl != "loading"
+    val messages = chatViewModel.messages.collectAsLazyPagingItems()
+    val agent by chatViewModel.agentFlow.collectAsState()
+    val messageItems by
+        remember(isCurrentPage) {
+            LogUtils.d("Chat Message预处理 消息数=${messages.itemSnapshotList.size}")
+            derivedStateOf {
+                proFixMessages(messages.itemSnapshotList) +
+                    listOf(MessageItem.Opening, MessageItem.Intro)
             }
         }
 
+    val hasLoadingMessage by remember {
+        derivedStateOf {
+            messages.itemSnapshotList.any { msg ->
+                msg != null &&
+                    msg.content == "loading_animation" &&
+                    !msg.hasGeneratedImage() &&
+                    msg.getGeneratedImageUrl() != "loading"
+            }
+        }
+    }
+
     // 获取开关状态用于页面曝光事件和 UI 显示
-    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState()
-    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState()
+    val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState(false)
+    val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
     val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
@@ -270,6 +267,19 @@ internal fun ChatPage(
     val lastReportedKey = remember(agentInfo?.id) { mutableStateOf<String?>(null) }
     // 记录上一个 Agent ID，用于判断是否从其他 agent 滑动而来（HorizontalPager 场景）
     val previousAgentId = remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        chatViewModel.vipRequest.collect {
+            navController.navigate(Routes.Me.vipCenter("chat_vip_request"))
+        }
+    }
+
+    LaunchedEffect(refreshMessageCount, isCurrentPage) {
+        if (isCurrentPage && refreshMessageCount > 0) {
+            LogUtils.d("chatPage: refreshCount = $refreshMessageCount")
+            chatViewModel.loadRecentMessages(refreshMessageCount)
+        }
+    }
 
     LaunchedEffect(
         isCurrentPage,
@@ -313,6 +323,7 @@ internal fun ChatPage(
                 FirebaseManager.logEvent(
                     FirebaseManager.Events.CHAT_PAGE_VIEW,
                     FirebaseManager.safeEventParams(
+                        "from_page" to (fromPage ?: "unknown"),
                         "page_source" to pageSource,
                         "agent_id" to (agentInfo?.id ?: "unknown"),
                         "agent_name" to (agentInfo?.name ?: "unknown"),
@@ -363,20 +374,17 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(chatViewModel) {
-        chatViewModel.queryMsgs()
-        chatViewModel.initVoiceService(context)
-    }
+    LaunchedEffect(chatViewModel) { chatViewModel.initVoiceService(context) }
 
-    LifecycleResumeEffect(isCurrentPage) {
-        chatViewModel.syncLatestMessages()
-        onPauseOrDispose { chatViewModel.pauseVoicePlayback() }
-    }
+    LifecycleResumeEffect(isCurrentPage) { onPauseOrDispose { chatViewModel.pauseVoicePlayback() } }
 
     DisposableEffect(chatViewModel, isCurrentPage) {
+        val wasCurrentPage = isCurrentPage
         onDispose {
-            if (!isCurrentPage) {
+            if (!wasCurrentPage) {
                 chatViewModel.resetVoicePlayback()
+            } else {
+                chatViewModel.clearForMomentExposureCycle()
             }
         }
     }
@@ -408,18 +416,36 @@ internal fun ChatPage(
     var showMorePanel by remember { mutableStateOf(false) }
     var morePanelHeight by remember { mutableStateOf(0.dp) }
     var showPremiumDialog by remember { mutableStateOf(false) }
+    var isVoiceInputActive by remember { mutableStateOf(false) }
 
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
 
-    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG) {
-        agentInfo?.let {
+    if (
+        uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
+            showBackButton &&
+            messages.loadState.refresh is LoadState.NotLoading
+    ) {
+        agentInfo?.let { agent ->
             VipAgentUnlockDialog(
-                agent = it,
+                agent = agent,
                 unlockByCredits = chatViewModel::chatUnlockByCredits,
-                unlockBySub = { navController.navigate(Routes.Me.VipCenter) },
-                onDismissRequest = { navController.navigateUp() },
+                unlockBySub = {
+                    FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
+                        "agent_id" to agent.id,
+                        "unlock_method" to "subscription",
+                    )
+                    navController.navigate(Routes.Me.vipCenter("chat_vip_agent_unlock"))
+                },
+                onDismissRequest = {
+                    navController.navigateUp()
+
+                    FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
+                        "agent_id" to agent.id,
+                        "unlock_method" to "close_dialog",
+                    )
+                },
             )
         }
     }
@@ -494,162 +520,99 @@ internal fun ChatPage(
             }
 
             Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                Spacer(Modifier.height(48.dp))
+                // 键盘弹起或语音输入激活时隐藏顶部栏，把视觉面积留给角色展示
+                if (!isKeyboardVisible && !isVoiceInputActive) {
+                    Spacer(Modifier.height(48.dp))
 
-                agentInfo?.let { info ->
-                    ChatTopBar(
-                        navController,
-                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
-                        agentInfo = info,
-                        fontSize = 15.sp,
-                        avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
-                        earnedPoints = null,
-                        onClickCall = {
-                            scope.launch {
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    onCall()
-                                }
-                            }
-                        },
-                        onClickMore = {
-                            scope.launch {
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    if (drawerState.value == DrawerValue.Closed) {
-                                        drawerState.value = DrawerValue.Open
+                    agentInfo?.let { info ->
+                        ChatTopBar(
+                            navController,
+                            modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                            agentInfo = info,
+                            fontSize = 15.sp,
+                            avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
+                            earnedPoints = null,
+                            showBackButton = showBackButton,
+                            onClickCall = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "call",
+                                    "agent_id" to agent?.agentId,
+                                    "agent_name" to agent?.name,
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                )
+
+                                scope.launch {
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
                                     } else {
-                                        drawerState.value = DrawerValue.Closed
+                                        onCall()
+                                    }
+                                }
+                            },
+                            onClickMore = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "sidebar",
+                                    "agent_id" to agent?.agentId,
+                                    "agent_name" to agent?.name,
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                )
+                                scope.launch {
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        if (drawerState.value == DrawerValue.Closed) {
+                                            drawerState.value = DrawerValue.Open
+                                        } else {
+                                            drawerState.value = DrawerValue.Closed
+                                        }
+                                    }
+                                }
+                            },
+                        )
+
+                        if (isDebugMode && debugAgentIndex != null) {
+                            Spacer(Modifier.height(8.dp))
+                            DebugAgentIndexBadge(
+                                modifier = Modifier.padding(start = 18.dp),
+                                index = debugAgentIndex,
+                                agentName = info.name,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    if (
+                        agentInfo != null &&
+                            !vipStatus.isSubscribed &&
+                            UiConfigs.ChatPage.showSubscriptionButton
+                    ) {
+                        PremiumModelTag(
+                            onClick = {
+                                scope.launch {
+                                    if (agentInfo?.isDeleted == true) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        showPremiumDialog = true
                                     }
                                 }
                             }
-                        },
-                    )
-
-                    if (isDebugMode && debugAgentIndex != null) {
-                        Spacer(Modifier.height(8.dp))
-                        DebugAgentIndexBadge(
-                            modifier = Modifier.padding(start = 18.dp),
-                            index = debugAgentIndex,
-                            agentName = info.name,
                         )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                if (
-                    agentInfo != null &&
-                        !vipStatus.isSubscribed &&
-                        UiConfigs.ChatPage.showSubscriptionButton
-                ) {
-                    PremiumModelTag(
-                        onClick = {
-                            scope.launch {
-                                if (agentInfo?.isDeleted == true) {
-                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                } else {
-                                    showPremiumDialog = true
-                                }
+                        Spacer(Modifier.height(8.dp))
+                        if (showPremiumDialog) {
+                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                                navController.navigate(Routes.Me.vipCenter("chat_premium_dialog"))
+                                //
+                                // VipCenterActivity.launch(context,
+                                // VipCenterActivity.CHAT_PAGE)
                             }
+                            showPremiumDialog = false
                         }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    if (showPremiumDialog) {
-                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.VipCenter)
-                            //
-                            // VipCenterActivity.launch(context,
-                            // VipCenterActivity.CHAT_PAGE)
-                        }
-                        showPremiumDialog = false
                     }
                 }
-
-                val chatMessages by chatViewModel.msgs.collectAsState()
-                val isLoadingMore by chatViewModel.isLoadingMore.collectAsState()
-                val hasMoreMessages by chatViewModel.hasMoreMessages.collectAsState()
-
-                // 使用 remember 管理每个语音消息组的展开状态（在 Composable 作用域中）
-                // 当 agentId 变化时重置展开状态
-                val expandedGroups =
-                    remember(agentInfo?.id) { mutableStateOf<Set<String>>(emptySet()) }
-
-                val layoutInfo = listState.layoutInfo
-                val visibleItemsForUi = layoutInfo.visibleItemsInfo
-                val totalItemsForUi = layoutInfo.totalItemsCount
-                val lastVisibleIndexForUi = visibleItemsForUi.maxOfOrNull { it.index } ?: -1
-                val hasEnoughDataForUi =
-                    totalItemsForUi > visibleItemsForUi.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                val isNearTopForUi =
-                    totalItemsForUi > 0 &&
-                        lastVisibleIndexForUi >= (totalItemsForUi - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                val hasScrolledForUi =
-                    listState.firstVisibleItemIndex > 0 ||
-                        listState.firstVisibleItemScrollOffset > 0
-                val showLoadMoreUi =
-                    hasMoreMessages &&
-                        (isLoadingMore ||
-                            (hasEnoughDataForUi && isNearTopForUi && hasScrolledForUi))
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
-
-                // 判断是否需要播放开场白语音（移到LazyColumn外部）
-                val shouldDelayShowOpening =
-                    remember(
-                        agentInfo?.id,
-                        agentInfo?.opening_audio_url,
-                        isQueryMsgsCompleted,
-                        isCurrentPage,
-                        isGuideVisible,
-                        chatMessages.size,
-                    ) {
-                        agentInfo?.let { agent ->
-                            val actualChatMessages =
-                                chatMessages.filter { !it.isOpening() && it.role != "system" }
-                            val isOnlyOpeningMessage = actualChatMessages.isEmpty()
-                            val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agent.id)
-                            val safeAgentId = agent.id
-                            val audioUrl = agent.opening_audio_url
-
-                            // 判断是否需要自动播放开场白语音
-                            agent.opening.isNotEmpty() &&
-                                isOnlyOpeningMessage &&
-                                !hasPlayedOpening &&
-                                isQueryMsgsCompleted &&
-                                safeAgentId.isNotEmpty() &&
-                                audioUrl.isNotEmpty() &&
-                                IntySetting.isAutoPlayAudio() &&
-                                !isGuideVisible
-                        } ?: false
-                    }
-
-                // 控制开场白显示状态（移到LazyColumn外部）
-                var showOpeningItem by remember(agentInfo?.id) { mutableStateOf(false) }
-
-                // 如果需要延迟显示，延迟1.5秒后显示（移到LazyColumn外部）
-                LaunchedEffect(
-                    shouldDelayShowOpening,
-                    isQueryMsgsCompleted,
-                    isCurrentPage,
-                    agentInfo?.id,
-                ) {
-                    if (agentInfo?.id == null || !isQueryMsgsCompleted) {
-                        showOpeningItem = false
-                        return@LaunchedEffect
-                    }
-
-                    if (isCurrentPage) {
-                        if (shouldDelayShowOpening) {
-                            // 如果需要播放语音，先隐藏，延迟1.5秒后显示
-                            delay(1000)
-                        }
-
-                        showOpeningItem = true
-                    }
-                }
-
                 // 非全屏模式下，先添加空白区域
                 if (!chatListFullScreen) {
                     Spacer(Modifier.weight(UiConfigs.ChatPage.chatListBlankZone))
@@ -669,7 +632,7 @@ internal fun ChatPage(
                 BoxWithConstraints(modifier = lazyColumnModifier) {
                     val density = LocalDensity.current
                     val chatViewHeight = remember {
-                        with(density) { (maxHeight - 32.dp).roundToPx() }
+                        with(density) { (maxHeight - 48.dp).roundToPx() }
                     }
 
                     LazyColumn(
@@ -703,240 +666,99 @@ internal fun ChatPage(
                             }
                         }
 
-                        val showIntroOpeningTop =
-                            isQueryMsgsCompleted && ((!hasMoreMessages) || chatMessages.isEmpty())
-                        val filteredChatMessages = chatMessages.filter { !it.isOpening() }
-                        // 直接在 Composable 作用域中处理，不使用 runCatching
-                        if (filteredChatMessages.isNotEmpty()) {
-                            val messagesCopy = filteredChatMessages.toList()
-                            val items =
-                                messagesCopy.filter {
-                                    !(it.role == "user" && it.content == "continue")
+                        itemsIndexed(
+                            items = messageItems,
+                            key = { index, item ->
+                                when (item) {
+                                    is MessageItem.Opening -> "opening"
+                                    is MessageItem.Intro -> "intro"
+                                    is MessageItem.MessageIndex ->
+                                        messages.peek(item.index)?.let { "${it.id}${it.indexId}" }
+                                            ?: index
+                                    is MessageItem.CallMessageIndexs ->
+                                        messages.peek(item.messages.first())?.let {
+                                            "${it.id}${it.indexId}"
+                                        } ?: index
                                 }
-                            if (items.isNotEmpty()) {
-                                // 将消息分组，连续的语音消息会被分组
-                                val groupedItems = groupVoiceMessages(items)
-
-                                itemsIndexed(
-                                    groupedItems,
-                                    key = { index, item ->
-                                        when (item) {
-                                            is ChatMessageItem.NormalMessage -> {
-                                                item.message.localMsgId.ifEmpty {
-                                                    "${index}_${item.message.role}_${item.message.content.hashCode()}_${index}"
-                                                }
-                                            }
-                                            is ChatMessageItem.VoiceMessageGroup -> {
-                                                item.groupId
-                                            }
-                                        }
-                                    },
-                                ) { index, item ->
-                                    // 直接在 Composable 作用域中处理，不使用 runCatching
-                                    when (item) {
-                                        is ChatMessageItem.NormalMessage -> {
-                                            if (index < groupedItems.size) {
-                                                val message = item.message
-                                                val hasGeneratedImage = message.hasGeneratedImage()
-                                                val isImageMessage =
-                                                    message.content.isEmpty() && hasGeneratedImage
-                                                // latest 消息用于控制 ChatItem 内部的操作区（如
-                                                // 👍/👎、生图入口等）
-                                                // 这里需要包含“纯图片消息”（content 为空但有
-                                                // generated image），否则图片预览下方无法显示
-                                                // 👍/👎
-                                                val isLatestAssistantMessageForActions =
-                                                    index == 0 &&
-                                                        message.role == "assistant" &&
-                                                        message.content != "loading_animation" &&
-                                                        !message.isOpening()
-
-                                                ChatItem(
-                                                    navController,
-                                                    message,
-                                                    isCurrentPage = isCurrentPage,
-                                                    chatViewModel = chatViewModel,
-                                                    isLatestMessage =
-                                                        isLatestAssistantMessageForActions,
-                                                    isGuideVisible = isGuideVisible,
-                                                    messageFontSizeSp = chatFontSizeSp,
-                                                )
-                                            }
-                                        }
-                                        is ChatMessageItem.VoiceMessageGroup -> {
-                                            val isExpanded =
-                                                expandedGroups.value.contains(item.groupId)
-
-                                            if (isExpanded) {
-                                                // 展开状态：将所有消息放在一个大气泡容器中
-                                                // 由于是倒序列表，需要将消息反转以按时间顺序显示（最早的在上）
-                                                val chronologicalMessages = item.messages.reversed()
-
-                                                VoiceChatHistoryExpandedContainer(
-                                                    messages = item.messages,
-                                                    onCollapse = {
-                                                        listState.requestScrollToItem(
-                                                            index +
-                                                                if (showIntroOpeningTop) 2
-                                                                else
-                                                                    0 +
-                                                                        if (showLoadMoreUi) 1
-                                                                        else 0,
-                                                            -chatViewHeight,
-                                                        )
-                                                        expandedGroups.value -= item.groupId
-                                                    },
-                                                ) {
-                                                    chronologicalMessages.forEachIndexed {
-                                                        msgIndex,
-                                                        message ->
-                                                        val hasGeneratedImage =
-                                                            message.hasGeneratedImage()
-                                                        val isImageMessage =
-                                                            message.content.isEmpty() &&
-                                                                hasGeneratedImage
-                                                        // 展开状态下不显示操作按钮
-                                                        val isLatestAssistantMessageForActions =
-                                                            false
-
-                                                        ChatItem(
-                                                            navController,
-                                                            message,
-                                                            isCurrentPage = isCurrentPage,
-                                                            chatViewModel = chatViewModel,
-                                                            isLatestMessage =
-                                                                isLatestAssistantMessageForActions,
-                                                            isGuideVisible = isGuideVisible,
-                                                            messageFontSizeSp = chatFontSizeSp,
-                                                        )
-                                                        // 消息之间添加间距，最后一条不添加
-                                                        if (
-                                                            msgIndex <
-                                                                chronologicalMessages.size - 1
-                                                        ) {
-                                                            Spacer(Modifier.height(12.dp))
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                // 折叠状态：显示折叠提示
-                                                VoiceChatHistoryCollapsed(
-                                                    messages = item.messages,
-                                                    onClick = {
-                                                        listState.requestScrollToItem(
-                                                            index +
-                                                                if (showIntroOpeningTop) 2
-                                                                else
-                                                                    0 +
-                                                                        if (showLoadMoreUi) 1
-                                                                        else 0,
-                                                            -chatViewHeight,
-                                                        )
-                                                        expandedGroups.value += item.groupId
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
+                            },
+                        ) { index, item ->
+                            when (item) {
+                                is MessageItem.Intro -> {
+                                    AgentInfoChatCard(agent?.intro.orEmpty())
                                     Spacer(Modifier.height(16.dp))
                                 }
-                            }
-                        }
-
-                        if (showIntroOpeningTop) {
-                            item {
-                                agentInfo?.let { agent ->
-                                    val shouldShowOpening = agent.opening.isNotEmpty()
-                                    if (shouldShowOpening && showOpeningItem) {
-                                        Column {
-                                            val openingMessage =
-                                                MsgInfo(
-                                                    content = agent.opening,
-                                                    role = "assistant",
-                                                    meta_data =
-                                                        MsgInfo.MsgMetaData(
-                                                            agentId = agent.id,
-                                                            isOpening = true,
-                                                        ),
-                                                    audio_url = agent.opening_audio_url,
-                                                )
-
-                                            Spacer(Modifier.height(16.dp))
-                                            ChatItem(
-                                                navController,
-                                                openingMessage,
-                                                isCurrentPage = isCurrentPage,
-                                                chatViewModel = chatViewModel,
-                                                isGuideVisible = isGuideVisible,
-                                                messageFontSizeSp = chatFontSizeSp,
-                                            )
-                                            Spacer(Modifier.height(16.dp))
+                                is MessageItem.Opening -> {
+                                    val isOnlyOpeningMessage by remember {
+                                        derivedStateOf {
+                                            messages.itemSnapshotList.isEmpty() &&
+                                                messages.loadState.isIdle
                                         }
                                     }
-                                }
-                            }
-                            item {
-                                agentInfo?.intro?.let { info ->
-                                    if (info.isNotEmpty()) {
-                                        AgentInfoChatCard(info)
+                                    val openingMessage =
+                                        MessageEntity(
+                                            id = "",
+                                            content = agent?.opening.orEmpty(),
+                                            role = "assistant",
+                                            audioUrl = agent?.openingAudioUrl,
+                                            metaData =
+                                                MessageEntity.MetaData(
+                                                    agentId = agent?.agentId.orEmpty(),
+                                                    isOpening = true,
+                                                ),
+                                        )
+
+                                    Column {
                                         Spacer(Modifier.height(16.dp))
+                                        ChatItem(
+                                            navController,
+                                            item = openingMessage,
+                                            isOnlyOpeningMessage = isOnlyOpeningMessage,
+                                            isCurrentPage = isCurrentPage,
+                                            chatViewModel = chatViewModel,
+                                            isGuideVisible = isGuideVisible,
+                                            messageFontSizeSp = chatFontSizeSp,
+                                        )
                                     }
                                 }
-                            }
-                        }
+                                is MessageItem.MessageIndex -> {
+                                    val message = messages[item.index]
 
-                        if (showLoadMoreUi) {
-                            item {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(60.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (isLoadingMore) {
-                                        CircularProgressIndicator(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.width(24.dp).height(24.dp),
+                                    if (message != null) {
+                                        ChatItem(
+                                            navController,
+                                            item = message,
+                                            agentName = agent?.name,
+                                            isOnlyOpeningMessage = false,
+                                            isCurrentPage = isCurrentPage,
+                                            chatViewModel = chatViewModel,
+                                            isLatestMessage = index == 0,
+                                            isGuideVisible = isGuideVisible,
+                                            messageFontSizeSp = chatFontSizeSp,
                                         )
                                     } else {
-                                        Text(
-                                            text = "Pull to load more",
-                                            color =
-                                                MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.6f
-                                                ),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
+                                        Spacer(Modifier.height(50.dp))
                                     }
+                                }
+                                is MessageItem.CallMessageIndexs -> {
+                                    CallMessages(
+                                        messages = item.messages.map { messages[it] },
+                                        navController = navController,
+                                        chatViewModel = chatViewModel,
+                                        isCurrentPage = isCurrentPage,
+                                        isGuideVisible = isGuideVisible,
+                                        messageFontSizeSp = chatFontSizeSp,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onCollapseChange = {
+                                            listState.requestScrollToItem(
+                                                index + 2,
+                                                -chatViewHeight,
+                                            )
+                                        },
+                                    )
                                 }
                             }
                         }
                     }
-                }
-
-                LaunchedEffect(hasMoreMessages, isLoadingMore, chatMessages.size) {
-                    snapshotFlow {
-                            listState.firstVisibleItemIndex to
-                                listState.firstVisibleItemScrollOffset
-                        }
-                        .collect { (firstVisibleIndex, scrollOffset) ->
-                            delay(100)
-                            val layoutInfo = listState.layoutInfo
-                            val visibleItems = layoutInfo.visibleItemsInfo
-                            val totalItemsCount = layoutInfo.totalItemsCount
-                            val lastVisibleIndex = visibleItems.maxOfOrNull { it.index } ?: 0
-
-                            val hasEnoughData =
-                                totalItemsCount > visibleItems.size + LOAD_MORE_MIN_EXTRA_ITEMS
-                            val isNearTop =
-                                totalItemsCount > 0 &&
-                                    lastVisibleIndex >=
-                                        (totalItemsCount - LOAD_MORE_NEAR_TOP_THRESHOLD)
-                            val hasScrolled = firstVisibleIndex > 0 || scrollOffset > 0
-                            val shouldLoadMore = hasEnoughData && isNearTop && hasScrolled
-
-                            if (shouldLoadMore && hasMoreMessages && !isLoadingMore) {
-                                chatViewModel.loadMoreMessages()
-                            }
-                        }
                 }
 
                 if (agentInfo?.isDeleted == true) {
@@ -960,28 +782,55 @@ internal fun ChatPage(
                             morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
                         else bottomPadding
 
-                    if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT) {
-                        Button(
-                            onClick = chatViewModel::chatUnlockByCredits,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .fillMaxWidth()
-                                .height(50.dp)
+                    if (
+                        uiState.vipAgentLockType == ChatUIState.VipAgentLockType.INPUT ||
+                            (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
+                                !showBackButton)
+                    ) {
+                        val inputConfig = UiConfigs.ChatPage.ChatInput
+                        val unlockCost = BoostConfig.UNLOCK_VIP_AGENT_COST
+                        Box(
+                            modifier =
+                                Modifier.padding(
+                                        start = inputConfig.HorizontalPadding,
+                                        top = inputConfig.TopPadding,
+                                        end = inputConfig.HorizontalPadding,
+                                        bottom = inputConfig.BottomSpacerHeight,
+                                    )
+                                    .fillMaxWidth()
+                                    .height(inputConfig.MinHeight)
+                                    .clip(RoundedCornerShape(inputConfig.CornerRadius))
+                                    .background(AppColors.DarkPurpleOverlay60)
+                                    .noRippleClickable { chatViewModel.chatUnlockByCredits() },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text("Unlock by credits")
+                            Text(
+                                text =
+                                    stringResource(R.string.unlock_with_credits_price, unlockCost),
+                                color = Color.White,
+                                fontSize = 14.sp,
+                            )
                         }
                     } else {
                         CompositionLocalProvider(
                             LocalDensity provides
-                                    Density(
-                                        density = LocalDensity.current.density,
-                                        fontScale = 1f, // 核心：禁用字体缩放
-                                    )
+                                Density(
+                                    density = LocalDensity.current.density,
+                                    fontScale = 1f, // 核心：禁用字体缩放
+                                )
                         ) {
                             ChatInput(
                                 chatViewModel = chatViewModel,
                                 onSendMessage = { chatViewModel.sendMsg() },
                                 onToggleMorePanel = {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "more",
+                                        "agent_id" to agent?.agentId,
+                                        "agent_name" to agent?.name,
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    )
+
                                     showMorePanel = !showMorePanel
                                     focusManager.clearFocus()
                                 },
@@ -996,6 +845,7 @@ internal fun ChatPage(
                                     }
                                     onInputFocusChange(focused)
                                 },
+                                onVoiceInputActiveChange = { isVoiceInputActive = it },
                             )
                         }
                     }
@@ -1038,25 +888,28 @@ internal fun ChatPage(
                 Spacer(modifier = bottomSpaceModifier)
             }
 
-            val chatMessagesForButton by chatViewModel.msgs.collectAsState()
-            val hasLatestAssistantMessage =
-                chatMessagesForButton.firstOrNull { msg ->
-                    val hasGeneratedImage = msg.hasGeneratedImage()
-                    val isImageMessage = msg.content.isEmpty() && hasGeneratedImage
-                    msg.role == "assistant" &&
-                        msg.content != "loading_animation" &&
-                        !isImageMessage &&
-                        !msg.isOpening()
-                } != null
-
-            val hasLoadingMessageForButton =
-                chatMessagesForButton.any { msg ->
-                    val hasGeneratedImage = msg.hasGeneratedImage()
-                    val generatedImageUrl = msg.getGeneratedImageUrl()
-                    msg.content == "loading_animation" &&
-                        !hasGeneratedImage &&
-                        generatedImageUrl != "loading"
+            val hasLatestAssistantMessage by remember {
+                derivedStateOf {
+                    messages.itemSnapshotList.firstOrNull { msg ->
+                        msg != null &&
+                            msg.role == "assistant" &&
+                            msg.content != "loading_animation" &&
+                            !(msg.content.isEmpty() && msg.hasGeneratedImage()) &&
+                            !msg.isOpening
+                    } != null
                 }
+            }
+
+            val hasLoadingMessageForButton by remember {
+                derivedStateOf {
+                    messages.itemSnapshotList.any { msg ->
+                        msg != null &&
+                            msg.content == "loading_animation" &&
+                            !msg.hasGeneratedImage() &&
+                            msg.getGeneratedImageUrl() != "loading"
+                    }
+                }
+            }
 
             // Keep Talking 按钮显示逻辑：
             // 1. 用户开启了 Keep Talking 功能
@@ -1161,7 +1014,19 @@ internal fun ChatPage(
                         .padding(bottom = keepTalkingButtonBaseBottomOffset),
                 visible = showKeepTalkingButton,
                 enabled = isKeepTalkingEnabled,
-                onClick = { chatViewModel.sendKeepTalkingMessage() },
+                onClick = {
+                    if (
+                        messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0
+                    ) {
+                        if (uiState.vipAgentLockType == ChatUIState.VipAgentLockType.NONE) {
+                            chatViewModel.sendKeepTalkingMessage()
+                        } else {
+                            ToastUtils.showShort(R.string.str_character_not_unlocked)
+                        }
+                    } else {
+                        ToastUtils.showShort(R.string.str_please_wait_loading)
+                    }
+                },
             )
         }
 
@@ -1179,6 +1044,7 @@ internal fun ChatPage(
                 }
         }
 
+        val hasUserMessages by chatViewModel.hasUserMessagesInChat.collectAsState()
         if (showMorePanel) {
             ChatMorePanel(
                 navController,
@@ -1193,6 +1059,18 @@ internal fun ChatPage(
                         try {
                             chatViewModel.reset()
                             resetSuccess = true
+                            if (!VipStatusHelper.isUserVip()) {
+                                ToastUtils.showShort(
+                                    R.string.credits_deducted,
+                                    BoostConfig.CHAT_RESET_COST,
+                                )
+                            }
+                        } catch (e: BoostException) {
+                            if (e.error == BoostError.NotEnoughPoints) {
+                                ToastUtils.showShort(R.string.credits_not_enough)
+                            } else {
+                                ToastUtils.showShort(R.string.reset_failed_msg)
+                            }
                         } catch (_: Throwable) {
                             ToastUtils.showShort(R.string.reset_failed_msg)
                         }
@@ -1202,11 +1080,11 @@ internal fun ChatPage(
                     showMorePanel = false
                     onCall()
                 },
+                hasUserMessages = hasUserMessages,
             )
         }
 
         ChatSettingsDrawer(
-            chatViewModel = chatViewModel,
             agentInfo = agentInfo,
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
@@ -1234,7 +1112,7 @@ internal fun ChatPage(
         // UI 效果：
         // - 显示角色信息（头像、名称）
         // - 显示可用积分（availablePoints）和积分投入滑块（100 pts 步长）
-        // - 提供 "Boost now" 按钮确认投入积分
+        // - 提供 "Hype now" 按钮确认投入积分
         // 交互流程：
         // - onBoostConfirmed: 用户确认投入积分 → 调用 BoostManager.boostAgent() → 成功后插入系统消息到聊天流 → 关闭弹窗
         // - onDismiss: 用户点击外部区域或取消按钮 → 直接关闭弹窗
@@ -1249,6 +1127,13 @@ internal fun ChatPage(
                         scope.launch {
                             try {
                                 val result = BoostManager.boostAgent(info, points)
+                                ToastUtils.showShort(
+                                    context.getString(
+                                        R.string.boost_toast_success_points,
+                                        result.pointsSpent,
+                                        info.name,
+                                    )
+                                )
                                 chatViewModel.appendBoostSystemMessage(
                                     agent = info,
                                     points = result.pointsSpent,
@@ -1283,7 +1168,7 @@ internal fun ChatPage(
         }
     }
 
-    LaunchedEffect(agentInfo?.id, isCurrentPage, shouldAutoFocusInput) {
+    LaunchedEffect(agentInfo?.id, isCurrentPage, shouldAutoFocusInput, messages.loadState.refresh) {
         if (!isCurrentPage) return@LaunchedEffect
 
         if (showMorePanel || agentInfo == null) {
@@ -1292,7 +1177,10 @@ internal fun ChatPage(
             return@LaunchedEffect
         }
 
-        if (shouldAutoFocusInput) {
+        if (
+            shouldAutoFocusInput &&
+                (messages.loadState.refresh is LoadState.NotLoading || messages.itemCount > 0)
+        ) {
             delay(50)
             inputFocusRequester.requestFocus()
         } else {
@@ -1329,35 +1217,53 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
 /** 聊天消息受限的dialog */
 @Composable
 private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatViewModel) {
-    val showDialog by chatViewModel.showLimitDialog.collectAsState()
-    //    val context = LocalContext.current
-    if (showDialog) {
-        val data =
-            ChatDialogData(
-                R.drawable.img_unlimit_dialog_bg,
-                stringResource(R.string.str_unlimit_dialog_content),
-                stringResource(R.string.str_unlimit_btn_text),
-            )
-        UnlimitChatDialog(
-            data,
-            onCancel = { chatViewModel.dismissDialog() },
-            onSure = {
-                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.CHAT_PAGE)
-                }
-                chatViewModel.dismissDialog()
-            },
-            onMoreInfo = {
-                if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.CHAT_PAGE)
-                }
-                chatViewModel.dismissDialog()
-            },
-        )
+    val dialogType by chatViewModel.showChatLimitDialog.collectAsState()
+    dialogType?.let { type ->
+        when (type) {
+            ChatViewModel.ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                val data =
+                    ChatDialogData(
+                        R.drawable.img_unlimit_dialog_bg,
+                        stringResource(R.string.str_unlimit_dialog_content),
+                        stringResource(R.string.str_unlimit_btn_text),
+                    )
+                UnlimitChatDialog(
+                    data,
+                    onCancel = { chatViewModel.dismissChatLimitDialog() },
+                    onSure = {
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
+                        }
+                        chatViewModel.dismissChatLimitDialog()
+                    },
+                    onMoreInfo = {
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
+                        }
+                        chatViewModel.dismissChatLimitDialog()
+                    },
+                )
+            }
+            ChatViewModel.ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED -> {
+                AlertDialog(
+                    onDismissRequest = { chatViewModel.dismissChatLimitDialog() },
+                    confirmButton = {
+                        TextButton(onClick = { chatViewModel.dismissChatLimitDialog() }) {
+                            Text(
+                                text =
+                                    stringResource(R.string.chat_subscriber_limit_reached_confirm)
+                            )
+                        }
+                    },
+                    title = {
+                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_title))
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_content))
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -1393,9 +1299,9 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.VipCenter)
-                            //                            VipCenterActivity.launch(context,
-                            // VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(
+                                Routes.Me.vipCenter("chat_image_generation_dialog")
+                            )
                         }
                     }
 
@@ -1407,9 +1313,9 @@ private fun ShowImageGenerationDialog(navController: NavController, chatViewMode
                 when (data.errorType) {
                     ChatViewModel.ImageGenerationErrorType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
                         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.VipCenter)
-                            //                            VipCenterActivity.launch(context,
-                            // VipCenterActivity.CHAT_PAGE)
+                            navController.navigate(
+                                Routes.Me.vipCenter("chat_image_generation_dialog")
+                            )
                         }
                     }
 

@@ -1,22 +1,18 @@
 import asyncio
+import random
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
 
-# LangSmith 导入 - 如果失败则禁用追踪
-try:
-    import langsmith as ls
+import langsmith as ls
 
-    LANGSMITH_AVAILABLE = True
-except ImportError:
-    ls = None
-    LANGSMITH_AVAILABLE = False
 from loguru import logger
 from openai import (
     APIConnectionError,
@@ -32,17 +28,22 @@ from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
-from app.core.config import Environment, global_config_loaded_from_config_yaml
+from app.core.agent.agent_prompt_configs import (
+    INTELLIMATE_AGENT_ID,
+    INTELLIMATE_AGENT_NAME,
+    get_agent_prompt_override,
+)
+from app.core.config import Environment, global_config_loaded_from_config_yaml as global_config
 from app.models import chat_history
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
     get_base_openai_client,
     langchain_message_to_openai_message,
-    wrap_client_with_langsmith,
 )
+from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
-# 圣诞节季节性提示词：放在角色人设（personality/scenario/message_example）最后
+# 圣诞节季节性提示词：放在角色设定（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
 During this period, {{char}} naturally notices small Christmas details around them 
 (e.g., colder weather, office decorations, holiday coffee cups, gift ideas, city lights, end-of-year emotions).
@@ -55,24 +56,89 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
-# 这与 android app 中使用的 agent ID 和 name 一致。
-INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
-INTELLIMATE_AGENT_NAME = "IntelliMate"
+MINUTES_PER_HOUR = 60
+USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##User Time Context"
+USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
+    "- This time reflects the user's local time, not the assistant's.",
+    "- Use it only as context for the user's situation and daily rhythm.",
+    "- Do not claim to need sleep or be offline.",
+]
+CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
+
+
+def _should_trace() -> bool:
+    sample_rate = global_config.agent.langsmith_text_chat_sample_rate
+    rand = random.random()
+    logger.debug(f"LangSmith text chat sample rate: {sample_rate}, random: {rand}")
+    return rand < sample_rate
+
+
+class UserTimeContext(TypedDict, total=False):
+    local_time: str
+    timezone: str
+    utc_offset_minutes: int
+
+
 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
+INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX = "##IntelliMate Change Logs\n"
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
+INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
 
 
-@lru_cache(maxsize=1)
-def _load_intellimate_user_manual() -> str:
+def _load_prompt_markdown_content(path: Path) -> str:
     # 如果失败，则希望立即失败，这属于编码中的逻辑错误，不应该隐藏掉。
-    # docs/INTELLIMATE.md 约定：拷贝时，以 ">" 开头的文本行会被删除掉。
-    raw = INTELLIMATE_USER_MANUAL_PATH.read_text(encoding="utf-8")
+    # 约定：拷贝时，以 ">" 开头的文本行会被删除掉。
+    raw = path.read_text(encoding="utf-8")
     filtered_lines = [
         line for line in raw.splitlines() if not line.lstrip().startswith(">")
     ]
     return "\n".join(filtered_lines).strip()
+
+
+@lru_cache(maxsize=1)
+def _load_intellimate_user_manual() -> str:
+    return _load_prompt_markdown_content(INTELLIMATE_USER_MANUAL_PATH)
+
+
+@lru_cache(maxsize=1)
+def _load_intellimate_change_logs() -> str:
+    return _load_prompt_markdown_content(INTELLIMATE_CHANGE_LOGS_PATH)
+
+
+def _format_utc_offset_minutes(offset_minutes: int) -> str:
+    sign = "+" if offset_minutes >= 0 else "-"
+    total_minutes = abs(offset_minutes)
+    hours, minutes = divmod(total_minutes, MINUTES_PER_HOUR)
+    return f"UTC{sign}{hours:02d}:{minutes:02d}"
+
+
+def _build_user_time_context_prompt(
+    user_time_context: Optional[UserTimeContext],
+) -> Optional[str]:
+    if not user_time_context:
+        return None
+
+    lines = [USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE]
+
+    local_time = user_time_context.get("local_time")
+    if local_time:
+        lines.append(f"- User local time: {local_time}")
+
+    timezone = user_time_context.get("timezone")
+    if timezone:
+        lines.append(f"- User timezone: {timezone}")
+
+    utc_offset_minutes = user_time_context.get("utc_offset_minutes")
+    if isinstance(utc_offset_minutes, int):
+        lines.append(f"- UTC offset: {_format_utc_offset_minutes(utc_offset_minutes)}")
+
+    if len(lines) == 1:
+        return None
+
+    lines.extend(USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE)
+    return "\n".join(lines)
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -88,48 +154,47 @@ def get_agent_model_config(agent_data: dict) -> dict:
         模型配置字典
     """
     model_config = {}
-
     # 首先尝试从settings.llm_config获取
     if agent_data.get("settings"):
-        model_config = agent_data["settings"].get("llm_config", {})
+        model_config = agent_data["settings"].get("llm_config", {}) or {}
         # 向后兼容：也检查旧的model_config字段
+        # TODO: 清理数据库中的 model_config 字段；然后删除该分支
         if not model_config and "model_config" in agent_data["settings"]:
-            model_config = agent_data["settings"]["model_config"]
-
-    # 如果没有自定义配置，使用默认配置
-    if not model_config:
-        model_config = {
-            "model": global_config_loaded_from_config_yaml.agent.model,
-            "api_key": global_config_loaded_from_config_yaml.agent.api_key,
-            "base_url": global_config_loaded_from_config_yaml.agent.base_url,
-            "temperature": getattr(
-                global_config_loaded_from_config_yaml.agent, "temperature", 0.5
-            ),
-            "max_tokens": getattr(
-                global_config_loaded_from_config_yaml.agent, "max_tokens", 1000
-            ),
-            "top_p": getattr(global_config_loaded_from_config_yaml.agent, "top_p", 1.0),
-            "frequency_penalty": getattr(
-                global_config_loaded_from_config_yaml.agent, "frequency_penalty", 0.0
-            ),
-            "presence_penalty": getattr(
-                global_config_loaded_from_config_yaml.agent, "presence_penalty", 0.0
-            ),
-        }
-    else:
-        # 如果有自定义配置，但某些字段为空，则使用默认配置补充
-        if not model_config.get("base_url"):
-            model_config["base_url"] = (
-                global_config_loaded_from_config_yaml.agent.base_url
-            )
-        if not model_config.get("api_key"):
-            model_config["api_key"] = (
-                global_config_loaded_from_config_yaml.agent.api_key
-            )
-        if not model_config.get("model"):
-            model_config["model"] = global_config_loaded_from_config_yaml.agent.model
-
+            legacy = agent_data["settings"]["model_config"]
+            model_config = legacy if isinstance(legacy, dict) else {}
     return model_config
+
+
+def build_agent_from_data(agent_id: str, agent_data: dict) -> "Agent":
+    """
+    从 agent_data 构建 Agent 实例，供创建与重新加载共用。
+
+    Args:
+        agent_id: Agent ID
+        agent_data: Agent 数据（含 name、settings、main_prompt 等）
+
+    Returns:
+        构造好的 Agent 实例
+    """
+    model_config = get_agent_model_config(agent_data)
+    description = agent_data.get("description", "")
+    agent_name = agent_data.get("name", f"Agent_{agent_id[:8]}")
+    return Agent(
+        agent_id=agent_id,
+        name=agent_name,
+        model_config=model_config,
+        description=description,
+        main_prompt=agent_data.get("main_prompt", ""),
+        mode_prompt=agent_data.get("mode_prompt", ""),
+        personality=agent_data.get("personality", ""),
+        scenario=agent_data.get("scenario", ""),
+        message_example=agent_data.get("message_example", ""),
+        creator_notes=agent_data.get("creator_notes", ""),
+        tags=agent_data.get("tags", []),
+        character_version=agent_data.get("character_version", "1.0"),
+        extensions=agent_data.get("extensions", {}),
+        intro=agent_data.get("intro", ""),
+    )
 
 
 # 全局连接池
@@ -144,21 +209,21 @@ def get_sync_engine():
         from sqlalchemy import create_engine
 
         _sync_engine = create_engine(
-            global_config_loaded_from_config_yaml.database.url,
-            pool_size=global_config_loaded_from_config_yaml.database.pool_size
+            global_config.database.url,
+            pool_size=global_config.database.pool_size
             // 2,  # 同步引擎使用一半的连接池
-            max_overflow=global_config_loaded_from_config_yaml.database.max_overflow,
-            pool_timeout=global_config_loaded_from_config_yaml.database.pool_timeout,
-            pool_recycle=global_config_loaded_from_config_yaml.database.pool_recycle,
-            pool_pre_ping=global_config_loaded_from_config_yaml.database.pool_pre_ping,
+            max_overflow=global_config.database.max_overflow,
+            pool_timeout=global_config.database.pool_timeout,
+            pool_recycle=global_config.database.pool_recycle,
+            pool_pre_ping=global_config.database.pool_pre_ping,
             connect_args={
-                "connect_timeout": global_config_loaded_from_config_yaml.database.connect_timeout,
+                "connect_timeout": global_config.database.connect_timeout,
                 "options": "-c jit=off -c application_name=inty_sync",
             },
             echo=False,  # 禁用SQL日志
         )
         logger.info(
-            f"全局同步数据库引擎已初始化 - pool_size: {global_config_loaded_from_config_yaml.database.pool_size // 2}"
+            f"全局同步数据库引擎已初始化 - pool_size: {global_config.database.pool_size // 2}"
         )
     return _sync_engine
 
@@ -168,15 +233,15 @@ def get_connection_pool():
     global _connection_pool
     if _connection_pool is None:
         _connection_pool = ConnectionPool(
-            global_config_loaded_from_config_yaml.database.url,
-            min_size=global_config_loaded_from_config_yaml.database.pool_size
+            global_config.database.url,
+            min_size=global_config.database.pool_size
             // 4,  # 最小连接数
-            max_size=global_config_loaded_from_config_yaml.database.pool_size,  # 最大连接数
+            max_size=global_config.database.pool_size,  # 最大连接数
             max_idle=300,  # 连接最大空闲时间（秒）
             max_lifetime=1800,  # 连接最大生命周期（秒）
         )
         logger.info(
-            f"初始化数据库连接池: min_size={global_config_loaded_from_config_yaml.database.pool_size // 4}, max_size={global_config_loaded_from_config_yaml.database.pool_size}"
+            f"初始化数据库连接池: min_size={global_config.database.pool_size // 4}, max_size={global_config.database.pool_size}"
         )
     return _connection_pool
 
@@ -202,7 +267,7 @@ class Agent:
         main_prompt: str = "",
         mode_prompt: str = "",
         output_format_prompt: str = "",
-        # 角色卡相关参数
+        # 角色设定相关参数
         personality: str = "",
         scenario: str = "",
         message_example: str = "",
@@ -229,7 +294,7 @@ class Agent:
         self.mode_prompt = mode_prompt
         self.output_format_prompt = output_format_prompt
 
-        # 角色卡相关属性
+        # 角色设定相关属性
         self.personality = personality
         self.scenario = scenario
         self.message_example = message_example
@@ -239,7 +304,7 @@ class Agent:
         self.extensions = extensions or {}
         self.intro = intro
 
-        # 更新agent数据以包含所有信息
+        # 更新agent数据以包含所有信息（与 self.tags / self.extensions 保持一致，不存 None）
         self._agent_data = {
             "id": agent_id,
             "name": name,
@@ -251,9 +316,9 @@ class Agent:
             "scenario": scenario,
             "message_example": message_example,
             "creator_notes": creator_notes,
-            "tags": tags,
+            "tags": self.tags,
             "character_version": character_version,
-            "extensions": extensions,
+            "extensions": self.extensions,
             "intro": intro,
         }
 
@@ -261,58 +326,23 @@ class Agent:
         self._executor = ThreadPoolExecutor(
             max_workers=min(
                 32,
-                (global_config_loaded_from_config_yaml.database.pool_size or 20) // 2,
+                (global_config.database.pool_size or 20) // 2,
             ),
             thread_name_prefix=f"agent-{agent_id}",
         )
 
-        # 使用配置中的模型设置
-        model_name = model_config.get(
-            "model", global_config_loaded_from_config_yaml.agent.model
-        )
-        api_key = model_config.get(
-            "api_key", global_config_loaded_from_config_yaml.agent.api_key
-        )
-        base_url = model_config.get(
-            "base_url", global_config_loaded_from_config_yaml.agent.base_url
-        )
-
-        # 提取模型参数
-        temperature = model_config.get(
-            "temperature",
-            getattr(global_config_loaded_from_config_yaml.agent, "temperature", 0.5),
-        )
-        max_tokens = model_config.get(
-            "max_tokens",
-            getattr(global_config_loaded_from_config_yaml.agent, "max_tokens", 1000),
-        )
-        top_p = model_config.get("top_p")
-        frequency_penalty = model_config.get("frequency_penalty")
-        presence_penalty = model_config.get("presence_penalty")
-
-        # 构建ChatOpenAI参数
-        chat_params = {
-            "model": model_name,
-            "openai_api_key": api_key,
-            "openai_api_base": base_url,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
-        # 只有当参数不为None时才添加
-        if top_p is not None:
-            chat_params["top_p"] = top_p
-        if frequency_penalty is not None:
-            chat_params["frequency_penalty"] = frequency_penalty
-        if presence_penalty is not None:
-            chat_params["presence_penalty"] = presence_penalty
+        # 使用配置中的模型设置（model/temperature/max_tokens 等由 self.model_config 在 chat 时读取）
+        # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用全局 client（app.utils.openai_client.get_base_openai_client）
 
     def _is_intellimate_official(self) -> bool:
         return self.agent_id == INTELLIMATE_AGENT_ID
 
     def _get_effective_main_prompt(self) -> str:
+        override = get_agent_prompt_override(self.agent_id, self.name)
+        if override is not None and override.main_prompt is not None:
+            return override.main_prompt
         # 如果配置为强制使用默认提示词，则直接返回默认值
-        if global_config_loaded_from_config_yaml.agent.force_default_prompts:
+        if global_config.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
         # 否则优先使用Agent配置的提示词
         if self.main_prompt:
@@ -326,8 +356,11 @@ class Agent:
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
 
     def _get_effective_mode_prompt(self) -> str:
+        override = get_agent_prompt_override(self.agent_id, self.name)
+        if override is not None and override.mode_prompt is not None:
+            return override.mode_prompt
         # 如果配置为强制使用默认提示词，则直接返回默认值
-        if global_config_loaded_from_config_yaml.agent.force_default_prompts:
+        if global_config.agent.force_default_prompts:
             return prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
         # 否则优先使用Agent配置的提示词
         if self.mode_prompt:
@@ -347,7 +380,10 @@ class Agent:
         )
 
     def build_system_messages(
-        self, user_profile: str, chat_settings: models.chat_settings.ChatSettings
+        self,
+        user_profile: str,
+        chat_settings: models.chat_settings.ChatSettings,
+        user_time_context: Optional[UserTimeContext] = None,
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
         user_name = self._extract_user_name_from_profile(user_profile)
@@ -363,32 +399,48 @@ class Agent:
         # logger.debug(f"角色是否用户创建: {is_char_user_created}")
 
         main_prompt = self._get_effective_main_prompt()
-        rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=main_prompt, char=self.name, user=user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_main_prompt))
+        if main_prompt:
+            rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=main_prompt, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_main_prompt))
 
         character_messages = self._build_character_context(user_name=user_name)
         system_messages.extend(character_messages)
 
-        if chat_settings and chat_settings.premium_mode:
+        override = get_agent_prompt_override(self.agent_id, self.name)
+        if override is not None and override.mode_prompt is not None:
+            mode_prompt = override.mode_prompt
+        elif chat_settings and chat_settings.premium_mode:
             logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
             mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
         else:
             logger.debug(f"Using normal mode prompt")
             mode_prompt = self._get_effective_mode_prompt()
-        rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
-            tmpl=mode_prompt, char=self.name, user=user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_mode_prompt))
+        if mode_prompt:
+            rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=mode_prompt, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
         if chat_settings and chat_settings.style_prompt:
+            logger.debug(f"Using style prompt: {chat_settings.style_prompt} for agent: {self.agent_id} user: {user_name}")
             system_messages.append(SystemMessage(content=chat_settings.style_prompt))
 
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
-        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+        if (
+            user_time_context
+            and global_config.app.features.experimental_enable_chat_with_user_time_context
+        ):
+            user_time_context_prompt = _build_user_time_context_prompt(
+                user_time_context
+            )
+            if user_time_context_prompt:
+                system_messages.append(SystemMessage(content=user_time_context_prompt))
+
+        if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
             )
@@ -396,7 +448,10 @@ class Agent:
 
         if self.intro:
             system_messages.append(
-                SystemMessage(content="##Introduction\n" + self.intro)
+                SystemMessage(
+                    content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
+                    + self.intro
+                )
             )
 
         if self._is_intellimate_official():
@@ -406,12 +461,75 @@ class Agent:
                     content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
                 )
             )
+            change_logs = _load_intellimate_change_logs()
+            system_messages.append(
+                SystemMessage(
+                    content=INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs
+                )
+            )
+
+        return system_messages
+
+    def build_system_messages_for_intellimate_official_assistant(
+        self,
+        user_profile: str,
+        chat_settings: models.chat_settings.ChatSettings,
+        user_time_context: Optional[UserTimeContext] = None,
+    ) -> List[SystemMessage]:
+        """构建官方 IntelliMate 助手的系统消息列表；与 build_system_messages 在官方角色时的组装顺序一致，不含 main/mode prompt。"""
+        user_name = self._extract_user_name_from_profile(user_profile)
+        system_messages: List[SystemMessage] = []
+
+        character_messages = self._build_character_context(user_name=user_name)
+        system_messages.extend(character_messages)
+
+        if chat_settings and chat_settings.style_prompt:
+            system_messages.append(SystemMessage(content=chat_settings.style_prompt))
+
+        if user_profile:
+            system_messages.append(SystemMessage(content=user_profile))
+
+        if (
+            user_time_context
+            and global_config.app.features.experimental_enable_chat_with_user_time_context
+        ):
+            user_time_context_prompt = _build_user_time_context_prompt(
+                user_time_context
+            )
+            if user_time_context_prompt:
+                system_messages.append(SystemMessage(content=user_time_context_prompt))
+
+        if global_config.agent.enable_christmas_prompt:
+            rendered_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_prompt))
+
+        system_messages.append(
+            SystemMessage(
+                content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
+                + self.intro
+            )
+        )
+
+        user_manual = _load_intellimate_user_manual()
+        system_messages.append(
+            SystemMessage(
+                content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
+            )
+        )
+        change_logs = _load_intellimate_change_logs()
+        system_messages.append(
+            SystemMessage(
+                content=INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs
+            )
+        )
 
         return system_messages
 
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
-        构建角色卡上下文信息，每个字段作为独立的system message，支持模板渲染
+        构建角色设定上下文信息，每个字段作为独立的 system message，支持模板渲染
         """
         context_messages = []
 
@@ -433,7 +551,7 @@ class Agent:
             )
             context_messages.append(SystemMessage(content=rendered_prompt))
 
-        if global_config_loaded_from_config_yaml.agent.enable_christmas_prompt:
+        if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, char=self.name, user=user_name
             )
@@ -454,10 +572,10 @@ class Agent:
         if not user_profile:
             return None
 
+        import re
+
         try:
             # 尝试从用户profile中提取Name字段
-            import re
-
             name_match = re.search(r"Name:\s*([^\n]+)", user_profile)
             if name_match:
                 return name_match.group(1).strip()
@@ -468,9 +586,8 @@ class Agent:
             )
             if chinese_name_match:
                 return chinese_name_match.group(1).strip()
-
-        except Exception as e:
-            logger.error(f"提取用户名失败: {str(e)}")
+        except (AttributeError, TypeError) as e:
+            logger.error(f"提取用户名失败: {e!s}")
 
         return None
 
@@ -479,93 +596,77 @@ class Agent:
         with self._last_used_lock:
             self.last_used = time.time()
 
-    def _get_wrapped_client(self, chat_name: str, labels: dict) -> OpenAI:
-        """
-        为每次请求创建带 LangSmith 包装的 OpenAI 客户端
-
-        注意：不缓存 wrapped client，因为：
-        1. chat_name 包含用户名，每个用户不同
-        2. LangSmith wrapper 持有 trace 上下文，缓存会导致 trace 嵌套污染
-        3. 底层 HTTP 连接池在 base_client 中复用，性能不受影响
-
-        Args:
-            chat_name: 聊天名称，用于LangSmith追踪
-            labels: 元数据标签
-
-        Returns:
-            包装后的OpenAI客户端
-        """
-        base_client = get_base_openai_client()
-        return wrap_client_with_langsmith(base_client, chat_name, labels)
+    def _chat_extra_body(self, user_id: str) -> Dict[str, Any]:
+        """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), user (tracking)."""
+        return {
+            "generation_config": {"thinking_budget": 0},
+            "user": user_id,
+        }
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
-        同步获取用户profile信息（优化版本 - 使用全局缓存）
+        同步获取用户profile信息（优化版本 - 使用全局缓存），并追加 ##User Memory。
         """
-        # 检查全局缓存
         cached_user_info = cache_service.get_user_info(user_id)
         if cached_user_info is not None:
             logger.debug(f"从全局缓存获取用户信息: {user_id}")
-            return cached_user_info
-
-        try:
-            # 使用全局同步数据库引擎（避免重复创建）
-            sync_engine = get_sync_engine()
-
-            with sync_engine.connect() as conn:
-                # 查询用户基本信息
-                query = text(
-                    """
-                    SELECT nickname, gender, age_group, description, system_language 
-                    FROM users 
-                    WHERE id = :user_id
-                """
-                )
-                result = conn.execute(query, {"user_id": user_id})
-                row = result.fetchone()
-
-                if not row:
-                    logger.debug(f"用户 {user_id} 不存在")
-                    user_info_text = ""
-                    cache_service.set_user_info(user_id, user_info_text, ttl=60)
-                    return user_info_text
-
-                # 构建用户信息字符串
-                user_info_parts = []
-                nickname, gender, age_group, description, system_language = row
-
-                if nickname:
-                    user_info_parts.append(f"Name: {nickname}")
-                if gender:
-                    gender_map = {"MALE": "Male", "FEMALE": "Female", "OTHER": "Other"}
-                    user_info_parts.append(f"Gender: {gender_map.get(gender, gender)}")
-                if age_group:
-                    user_info_parts.append(f"Age: {age_group}")
-                if description:
-                    user_info_parts.append(f"Description: {description}")
-                # if system_language:
-                #     user_info_parts.append(f"Language: {system_language}")
-
-                if user_info_parts:
-                    user_info_text = "##User Information\n" + "\n".join(user_info_parts)
-                else:
-                    user_info_text = ""
-
-                cache_service.set_user_info(user_id, user_info_text)
-
-                if user_info_text:
-                    logger.debug(
-                        f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}..."
-                    )
-
-                return user_info_text
-
-        except Exception as e:
-            logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
+            user_info_text = cached_user_info
+        else:
             user_info_text = ""
-            cache_service.set_user_info(user_id, user_info_text, ttl=30)
-            return user_info_text
+            try:
+                sync_engine = get_sync_engine()
+                with sync_engine.connect() as conn:
+                    query = text("""
+                        SELECT nickname, gender, age_group, description, system_language 
+                        FROM users 
+                        WHERE id = :user_id
+                    """)
+                    result = conn.execute(query, {"user_id": user_id})
+                    row = result.fetchone()
+
+                    if not row:
+                        logger.debug(f"用户 {user_id} 不存在")
+                        cache_service.set_user_info(user_id, user_info_text, ttl=60)
+                    else:
+                        user_info_parts = []
+                        nickname, gender, age_group, description, system_language = row
+                        if nickname:
+                            user_info_parts.append(f"Name: {nickname}")
+                        if gender:
+                            gender_map = {
+                                "MALE": "Male",
+                                "FEMALE": "Female",
+                                "OTHER": "Other",
+                            }
+                            user_info_parts.append(
+                                f"Gender: {gender_map.get(gender, gender)}"
+                            )
+                        if age_group:
+                            user_info_parts.append(f"Age: {age_group}")
+                        if description:
+                            user_info_parts.append(f"Description: {description}")
+                        if user_info_parts:
+                            user_info_text = "##User Information\n" + "\n".join(
+                                user_info_parts
+                            )
+                        cache_service.set_user_info(user_id, user_info_text)
+                        if user_info_text:
+                            logger.debug(
+                                f"成功获取用户 {user_id} 的基本信息: {user_info_text[:100]}..."
+                            )
+            except Exception as e:
+                logger.error(f"获取用户 {user_id} 基本信息失败: {str(e)}")
+                cache_service.set_user_info(user_id, user_info_text, ttl=30)
+
+        from app.services.memory_service import get_user_memory_for_prompt_sync
+
+        memory_text = get_user_memory_for_prompt_sync(user_id)
+        if memory_text:
+            user_info_text = (
+                (user_info_text or "") + "\n\n##User Memory\n" + memory_text
+            )
+        return user_info_text
 
     # 特殊值，表示返回全部消息
     MAX_MESSAGES_ALL = 0
@@ -608,6 +709,72 @@ class Agent:
                 recent_messages = [history_messages[start_index]] + recent_messages[:-1]
 
         return recent_messages
+
+    def _build_date_system_prompt(self, date_iso: str) -> str:
+        return "\n".join(
+            [
+                CONVERSATION_DATE_SYSTEM_PROMPT_TITLE,
+                f"- Date: {date_iso}",
+                "- The following messages happened on this date.",
+            ]
+        )
+
+    def _extract_message_date_iso(self, message: BaseMessage) -> Optional[str]:
+        additional_kwargs = getattr(message, "additional_kwargs", None) or {}
+        created_at_raw = additional_kwargs.get("created_at")
+        if not isinstance(created_at_raw, str) or not created_at_raw.strip():
+            return None
+
+        normalized_created_at = created_at_raw.strip().replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized_created_at).date().isoformat()
+        except ValueError:
+            logger.warning(f"无法解析消息 created_at: {created_at_raw}")
+            return None
+
+    def _build_messages_with_date_system_prompts(
+        self,
+        history_messages: List[BaseMessage],
+        current_messages: List[BaseMessage],
+        now_utc: Optional[datetime] = None,
+    ) -> List[BaseMessage]:
+        """
+        仅为“当天”注入一次日期 system message，位置是当天第一条消息之前。
+        """
+        if not history_messages and not current_messages:
+            return []
+
+        current_time_utc = now_utc if now_utc is not None else datetime.now(timezone.utc)
+        current_date_iso = current_time_utc.date().isoformat()
+
+        all_messages = history_messages + current_messages
+        if not all_messages:
+            return []
+
+        first_today_index: Optional[int] = None
+        history_count = len(history_messages)
+        for index, message in enumerate(all_messages):
+            if index < history_count:
+                message_date_iso = self._extract_message_date_iso(message)
+            else:
+                # 当前请求里的消息统一视为“今天”的消息
+                message_date_iso = current_date_iso
+            if message_date_iso == current_date_iso:
+                first_today_index = index
+                break
+
+        if first_today_index is None:
+            return all_messages
+
+        messages_with_date_prompts: List[BaseMessage] = []
+        for index, message in enumerate(all_messages):
+            if index == first_today_index:
+                messages_with_date_prompts.append(
+                    SystemMessage(content=self._build_date_system_prompt(current_date_iso))
+                )
+            messages_with_date_prompts.append(message)
+
+        return messages_with_date_prompts
 
     def _is_retryable_error(self, error: Exception) -> bool:
         """
@@ -681,21 +848,22 @@ class Agent:
         last_error = None
 
         # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
-        enable_tracing = (
-            LANGSMITH_AVAILABLE
-            and global_config_loaded_from_config_yaml.app.environment
-            != Environment.TEST
-        )
+        enable_tracing = global_config.app.environment != Environment.TEST
+        normalized_labels = normalize_langsmith_metadata(labels) if enable_tracing else {}
+        trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
+            should_trace = (
+                enable_tracing and _should_trace()
+            )
             try:
-                if enable_tracing:
+                if should_trace:
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
-                        name=chat_name or f"{user_id}:{self.name}",
+                        name=trace_name,
                         run_type="llm",
                         inputs={"messages": openai_messages, "model": model},
-                        metadata=labels or {},
+                        metadata=normalized_labels,
                     ) as run:
                         response = client.chat.completions.create(
                             messages=openai_messages,
@@ -736,7 +904,7 @@ class Agent:
                                 }
                             )
                 else:
-                    # 测试环境：直接调用 API，不使用 LangSmith 追踪
+                    # 未采样或 tracing 关闭时，直接调用 API。
                     response = client.chat.completions.create(
                         messages=openai_messages,
                         model=model,
@@ -815,6 +983,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -851,7 +1020,10 @@ class Agent:
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                all_messages = recent_history + messages
+                all_messages = self._build_messages_with_date_system_prompts(
+                    history_messages=recent_history,
+                    current_messages=messages,
+                )
                 logger.debug(f"all_messages: {all_messages}")
 
                 # 保存原始用户消息到历史记录
@@ -873,7 +1045,7 @@ class Agent:
                 }
 
                 system_messages = self.build_system_messages(
-                    user_profile, chat_settings
+                    user_profile, chat_settings, user_time_context
                 )
 
                 messages: list[BaseMessage] = system_messages + all_messages
@@ -894,31 +1066,36 @@ class Agent:
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                default_model = global_config_loaded_from_config_yaml.agent.model
                 default_temperature = (
-                    global_config_loaded_from_config_yaml.agent.temperature
+                    global_config.agent.temperature
                 )
                 default_max_tokens = (
-                    global_config_loaded_from_config_yaml.agent.max_tokens
+                    global_config.agent.max_tokens
                 )
-                default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+                default_top_p = global_config.agent.top_p
 
-                # 获取或创建wrapped client（性能优化：复用客户端）
-                client_start = time.time()
-                client = self._get_wrapped_client(chat_name, labels)
-                client_time = time.time() - client_start
-                logger.debug(
-                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                client = get_base_openai_client()
 
                 # API调用（带重试机制）
+                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
                 api_start = time.time()
-                model_name = model_override or self.model_config.get(
-                    "model", default_model
-                )
+                agent_model = self.model_config.get("model")
+                model_name = agent_model or model_override
+                if model_name is None:
+                    raise ValueError(
+                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
+                    )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
+                model_source = (
+                    "agent_config"
+                    if (agent_model and model_name == agent_model)
+                    else "override"
+                )
+                logger.debug(
+                    f"chat completion LLM config: agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+                )
 
                 try:
                     response = self._call_openai_api_with_retry(
@@ -928,15 +1105,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body={
-                            # This only works for Gemini models.
-                            "generation_config": {
-                                "thinking_budget": 0,
-                            },
-                            # This appears on Open Router Client User ID field.
-                            # can be used to track end user's usage.
-                            "user": user_id,
-                        },
+                        extra_body=self._chat_extra_body(user_id),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -985,6 +1154,16 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                if (
+                    response is None
+                    or not getattr(response, "choices", None)
+                    or len(response.choices) == 0
+                ):
+                    logger.error(
+                        f"LLM 返回无 choices - Agent: {self.agent_id}, User: {user_id}, "
+                        f"Session: {session_id}, Model: {model_name}"
+                    )
+                    raise ValueError("LLM returned no choices")
                 finish_reason = response.choices[0].finish_reason
                 response_text = response.choices[0].message.content
 
@@ -1007,18 +1186,23 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body={
-                            "generation_config": {
-                                "thinking_budget": 0,
-                            },
-                            "user": user_id,
-                        },
+                        extra_body=self._chat_extra_body(user_id),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
                         chat_name=chat_name,
                         labels=labels,
                     )
+                    if (
+                        retry_response is None
+                        or not getattr(retry_response, "choices", None)
+                        or len(retry_response.choices) == 0
+                    ):
+                        logger.error(
+                            f"LLM 重试返回无 choices - Agent: {self.agent_id}, "
+                            f"Session: {session_id}, Model: {model_name}"
+                        )
+                        raise ValueError("LLM returned no choices on retry")
                     retry_finish_reason = retry_response.choices[0].finish_reason
                     retry_response_text = retry_response.choices[0].message.content
 
@@ -1055,9 +1239,9 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录（包含LLM调用时间）
+                # 保存AI响应到历史记录（包含LLM调用时间），并返回插入后的 message id 供调用方使用
                 save_response_start = time.time()
-                chat_history_service.add_ai_message_sync(
+                ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
                     agent_id=self.agent_id,
@@ -1068,7 +1252,7 @@ class Agent:
                     f"AI响应保存耗时: {save_response_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                return response_text
+                return (response_text, ai_message_id)
             except Exception as e:
                 # 增强的错误日志记录
                 error_context = {
@@ -1111,6 +1295,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -1148,7 +1333,10 @@ class Agent:
                 )
 
                 # 注意：这里不保存用户消息到历史记录
-                all_messages = recent_history + messages
+                all_messages = self._build_messages_with_date_system_prompts(
+                    history_messages=recent_history,
+                    current_messages=messages,
+                )
                 logger.debug(f"all_messages: {all_messages}")
 
                 # 如果 user_profile 为 None，自动获取
@@ -1166,7 +1354,7 @@ class Agent:
                 }
 
                 system_messages = self.build_system_messages(
-                    user_profile, chat_settings
+                    user_profile, chat_settings, user_time_context
                 )
 
                 messages_list: list[BaseMessage] = system_messages + all_messages
@@ -1187,31 +1375,36 @@ class Agent:
                 logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                default_model = global_config_loaded_from_config_yaml.agent.model
                 default_temperature = (
-                    global_config_loaded_from_config_yaml.agent.temperature
+                    global_config.agent.temperature
                 )
                 default_max_tokens = (
-                    global_config_loaded_from_config_yaml.agent.max_tokens
+                    global_config.agent.max_tokens
                 )
-                default_top_p = global_config_loaded_from_config_yaml.agent.top_p
+                default_top_p = global_config.agent.top_p
 
-                # 获取或创建wrapped client（性能优化：复用客户端）
-                client_start = time.time()
-                client = self._get_wrapped_client(chat_name, labels)
-                client_time = time.time() - client_start
-                logger.debug(
-                    f"客户端获取耗时: {client_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+                client = get_base_openai_client()
 
                 # API调用（使用统一的重试和 trace 逻辑）
+                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
                 api_start = time.time()
-                model_name = model_override or self.model_config.get(
-                    "model", default_model
-                )
+                agent_model = self.model_config.get("model")
+                model_name = agent_model or model_override
+                if model_name is None:
+                    raise ValueError(
+                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
+                    )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
+                model_source = (
+                    "agent_config"
+                    if (agent_model and model_name == agent_model)
+                    else "override"
+                )
+                logger.debug(
+                    f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+                )
 
                 response = self._call_openai_api_with_retry(
                     client=client,
@@ -1220,15 +1413,7 @@ class Agent:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     top_p=top_p,
-                    extra_body={
-                        # This only works for Gemini models.
-                        "generation_config": {
-                            "thinking_budget": 0,
-                        },
-                        # This appears on Open Router Client User ID field.
-                        # can be used to track end user's usage.
-                        "user": user_id,
-                    },
+                    extra_body=self._chat_extra_body(user_id),
                     user_id=user_id,
                     max_retries=3,
                     initial_delay=1.0,
@@ -1245,6 +1430,16 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
+                if (
+                    response is None
+                    or not getattr(response, "choices", None)
+                    or len(response.choices) == 0
+                ):
+                    logger.error(
+                        f"LLM 返回无 choices（推送消息） - Agent: {self.agent_id}, "
+                        f"Session: {session_id}"
+                    )
+                    raise ValueError("LLM returned no choices")
                 response_text = response.choices[0].message.content
                 response_process_time = time.time() - response_process_start
                 logger.debug(
@@ -1270,6 +1465,7 @@ class Agent:
         messages: List[HumanMessage],
         user_profile: str = None,
         chat_settings: models.chat_settings.ChatSettings = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
     ) -> str:
         """
@@ -1302,6 +1498,7 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                user_time_context,
                 model_override,
             )
             return result
@@ -1311,16 +1508,19 @@ class Agent:
             )
             raise
 
-    @deprecated("替换为流式消息输出，需要调整大模型 API 调用，输出方式等")
+    # TODO：替换为流式消息输出，需要调整大模型 API 调用，输出方式等
     async def chat(
         self,
         user_id: str,
         session_id: str,
         messages: List[HumanMessage],
         chat_settings: models.chat_settings.ChatSettings = None,
+        user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
-    ) -> str:
-        """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里"""
+    ) -> Tuple[str, Optional[int]]:
+        """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里。
+        成功时返回 (响应文本, 插入的 AI 消息 ID)；异常时抛出。
+        """
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
 
         self._update_last_used()
@@ -1341,53 +1541,13 @@ class Agent:
                 messages,
                 user_profile,
                 chat_settings,
+                user_time_context,
                 model_override,
             )
             return result
         except Exception as e:
             logger.error(f"异步聊天失败 - Agent: {self.agent_id}, Error: {str(e)}")
             raise
-
-    def get_final_prompt(self) -> str:
-        """
-        获取最终渲染的提示词
-
-        Returns:
-            渲染后的完整提示词
-        """
-        # 构建示例输入来展示完整提示词
-        example_input = {
-            "messages": [HumanMessage(content="示例消息")],
-            "user_profile": "Name: 示例用户\nGender: Other\n[示例用户信息]",
-            "user_id": "example_user_id",
-        }
-
-        try:
-            # 通过Runnable生成示例提示词
-            formatted_prompt = self.prompt_runnable.invoke(example_input)
-            if hasattr(formatted_prompt, "messages"):
-                return "\n\n".join(
-                    [
-                        msg.content
-                        for msg in formatted_prompt.messages
-                        if hasattr(msg, "content")
-                    ]
-                )
-            else:
-                return str(formatted_prompt)
-        except Exception as e:
-            logger.error(f"生成提示词示例失败: {str(e)}")
-            # 回退到简单的组合提示词
-            fallback_parts = []
-            main_prompt = self._get_effective_main_prompt()
-            if main_prompt:
-                fallback_parts.append(main_prompt)
-            if self.personality:
-                fallback_parts.append(f"[角色性格]\n{self.personality}")
-            mode_prompt = self._get_effective_mode_prompt()
-            if mode_prompt:
-                fallback_parts.append(mode_prompt)
-            return "\n\n".join(fallback_parts) if fallback_parts else "AI助手"
 
     def cleanup(self):
         """清理资源"""
@@ -1494,7 +1654,7 @@ class AgentManager:
 
         agent_id = agent_data.get("id")
         if not agent_id:
-            raise ValueError("agent_data必须包含'id'字段")
+            raise ValueError("agent_data must include the 'id' field")
         logger.debug(f"请求获取Agent实例 - Agent ID: {agent_id}")
 
         # 首先尝试读取现有Agent（使用读锁）
@@ -1543,42 +1703,19 @@ class AgentManager:
                         self._agent_locks.pop(oldest_agent_id, None)
 
                 # 创建新的Agent实例
-                model_config = get_agent_model_config(agent_data)
-                logger.debug(f"model_config: {model_config}")
-
-                description = agent_data.get("description", "")
-
-                agent_name = agent_data.get("name", f"Agent_{agent_id[:8]}")
+                agent = build_agent_from_data(agent_id, agent_data)
+                logger.debug(f"model_config: {agent.model_config}")
                 logger.info(
-                    f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent_name}"
+                    f"创建新的Agent实例 - Agent ID: {agent_id}, Name: {agent.name}"
                 )
 
                 try:
-                    agent = Agent(
-                        agent_id=agent_id,
-                        name=agent_name,
-                        model_config=model_config,
-                        description=description,
-                        # 主提示词和模式提示词参数
-                        main_prompt=agent_data.get("main_prompt", ""),
-                        mode_prompt=agent_data.get("mode_prompt", ""),
-                        # 角色卡相关参数
-                        personality=agent_data.get("personality", ""),
-                        scenario=agent_data.get("scenario", ""),
-                        message_example=agent_data.get("message_example", ""),
-                        creator_notes=agent_data.get("creator_notes", ""),
-                        tags=agent_data.get("tags", []),
-                        character_version=agent_data.get("character_version", "1.0"),
-                        extensions=agent_data.get("extensions", {}),
-                        intro=agent_data.get("intro", ""),
-                    )
-
                     # 验证创建的Agent实例的agent_id
                     if agent.agent_id != agent_id:
                         logger.error(
                             f"错误：创建的Agent实例ID不匹配！期望: {agent_id}, 实际: {agent.agent_id}"
                         )
-                        raise ValueError(f"Agent实例创建失败: ID不匹配")
+                        raise ValueError("Agent instance creation failed: ID mismatch")
 
                     self.agents[agent_id] = agent
                     logger.info(f"成功创建并缓存Agent实例 - Agent ID: {agent_id}")
@@ -1612,7 +1749,7 @@ class AgentManager:
                     # 主提示词和模式提示词字段
                     "main_prompt": getattr(agent_db, "main_prompt", ""),
                     "mode_prompt": getattr(agent_db, "mode_prompt", ""),
-                    # 角色卡相关字段
+                    # 角色设定相关字段
                     "personality": getattr(agent_db, "personality", ""),
                     "scenario": getattr(agent_db, "scenario", ""),
                     "message_example": getattr(agent_db, "message_example", ""),
@@ -1717,31 +1854,7 @@ class AgentManager:
                     del self.agents[agent_id]
 
                 try:
-                    # 创建新的Agent实例
-                    model_config = get_agent_model_config(agent_data)
-
-                    description = agent_data.get("description", "")
-
-                    agent_name = agent_data.get("name", f"Agent_{agent_id[:8]}")
-                    agent = Agent(
-                        agent_id=agent_id,
-                        name=agent_name,
-                        model_config=model_config,
-                        description=description,
-                        # 主提示词和模式提示词参数
-                        main_prompt=agent_data.get("main_prompt", ""),
-                        mode_prompt=agent_data.get("mode_prompt", ""),
-                        # 角色卡相关参数
-                        personality=agent_data.get("personality", ""),
-                        scenario=agent_data.get("scenario", ""),
-                        message_example=agent_data.get("message_example", ""),
-                        creator_notes=agent_data.get("creator_notes", ""),
-                        tags=agent_data.get("tags", []),
-                        character_version=agent_data.get("character_version", "1.0"),
-                        extensions=agent_data.get("extensions", {}),
-                        intro=agent_data.get("intro", ""),
-                    )
-
+                    agent = build_agent_from_data(agent_id, agent_data)
                     self.agents[agent_id] = agent
                     logger.info(f"Agent重新加载成功: {agent_id}")
                     return True
@@ -1749,22 +1862,6 @@ class AgentManager:
                 except Exception as e:
                     logger.error(f"重新加载Agent失败 {agent_id}: {str(e)}")
                     return False
-
-    def get_agent_prompt(self, agent_id: str) -> Optional[str]:
-        """
-        获取指定Agent的最终提示词
-
-        Args:
-            agent_id: Agent ID
-
-        Returns:
-            最终渲染的提示词，如果Agent不存在则返回None
-        """
-        with self._read_lock:
-            if agent_id in self.agents:
-                agent = self.agents[agent_id]
-                return agent.get_final_prompt()
-        return None
 
     def stop(self):
         """停止Agent管理器并清理所有资源"""

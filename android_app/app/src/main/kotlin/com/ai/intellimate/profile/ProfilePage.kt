@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,7 +65,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -165,97 +165,94 @@ internal fun ProfilePage(
         // 背景图区域
         ProfileHeaderBg(modifier = Modifier.fillMaxWidth(), userPhoto = userProfile.userPhoto)
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header 区域 - 固定显示（不随列表滚动折叠）
-            ProfileHeader(
-                navController,
-                modifier = Modifier,
-                userProfile = userProfile,
-                context = context,
-                vipStatus = vipStatus,
-                editProfileLauncher = editProfileLauncher,
-                appUpdateTips = appUpdateTips,
-            )
-
-            // LazyGrid 区域
-            if (validDrafts.isEmpty() && agents.isEmpty()) {
-                AgentsEmptyUI(modifier = Modifier.fillMaxWidth())
-            } else {
-                Spacer(Modifier.height(UiConfigs.MePage.EmptyStateContentSpacing))
-
-                // Detect when user scrolls to bottom
-                LaunchedEffect(listState) {
-                    snapshotFlow { listState.layoutInfo.visibleItemsInfo }
-                        .collect { visibleItems ->
-                            val lastVisibleItem = visibleItems.lastOrNull()
-                            val totalItems = listState.layoutInfo.totalItemsCount
-                            // Trigger 3 items before end
-                            if (
-                                lastVisibleItem != null &&
-                                    lastVisibleItem.index >= totalItems - 3 &&
-                                    !isLoading &&
-                                    agents.isNotEmpty()
-                            ) {
-                                onLoadMore()
-                            }
-                        }
-                }
-
-                LazyVerticalGrid(
-                    state = listState,
-                    modifier =
-                        Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
-                    columns = GridCells.Fixed(2),
-                    contentPadding =
-                        PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
-                    verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
-                ) {
-                    // 显示所有草稿卡片
-                    if (validDrafts.isNotEmpty() && onClickDraft != null) {
-                        validDrafts.forEach { draft ->
-                            item(key = "draft_${draft.id}") {
-                                DraftAgentCard(
-                                    modifier =
-                                        Modifier.noRippleClickable { onClickDraft(draft.id) },
-                                    draft = draft,
-                                    onDeleteDraft = onDeleteDraft,
-                                )
-                            }
+            // Detect when user scrolls to bottom
+            LaunchedEffect(listState) {
+                snapshotFlow { listState.layoutInfo.visibleItemsInfo }
+                    .collect { visibleItems ->
+                        val lastVisibleItem = visibleItems.lastOrNull()
+                        val totalItems = listState.layoutInfo.totalItemsCount
+                        // Trigger 3 items before end
+                        if (
+                            lastVisibleItem != null &&
+                                lastVisibleItem.index >= totalItems - 3 &&
+                                !isLoading &&
+                                agents.isNotEmpty()
+                        ) {
+                            onLoadMore()
                         }
                     }
+            }
 
-                    runCatching {
-                            if (agents.isNotEmpty()) {
-                                itemsIndexed(
-                                    items = agents,
-                                    key = { index, agent -> "${agent.id}_$index" },
-                                ) { index, agent ->
-                                    MyAgentCard(
-                                        navController,
-                                        modifier =
-                                            Modifier.noRippleClickable { onClickAgent(agent) },
-                                        agentInfo = agent,
-                                        onEditAgent = onEditAgent,
-                                        onDeleteAgent = onDeleteAgent,
-                                    )
-                                }
-                            }
+            LazyVerticalGrid(
+                state = listState,
+                modifier = Modifier.padding(horizontal = UiConfigs.MePage.GridHorizontalPadding),
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(bottom = UiConfigs.MePage.GridContentBottomPadding),
+                horizontalArrangement =
+                    Arrangement.spacedBy(UiConfigs.MePage.GridHorizontalSpacing),
+                verticalArrangement = Arrangement.spacedBy(UiConfigs.MePage.GridVerticalSpacing),
+            ) {
+                item("header", span = { GridItemSpan(2) }) {
+                    // Header 区域 - 固定显示（不随列表滚动折叠）
+                    ProfileHeader(
+                        navController,
+                        modifier = Modifier.fillMaxWidth(),
+                        userProfile = userProfile,
+                        context = context,
+                        vipStatus = vipStatus,
+                        editProfileLauncher = editProfileLauncher,
+                        appUpdateTips = appUpdateTips,
+                    )
+                }
+
+                // LazyGrid 区域
+                if (validDrafts.isEmpty() && agents.isEmpty()) {
+                    item(span = { GridItemSpan(2) }) {
+                        AgentsEmptyUI(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { navController.navigate(Routes.Creat.createRole("")) },
+                        )
+                    }
+                }
+
+                // 显示所有草稿卡片
+                if (validDrafts.isNotEmpty() && onClickDraft != null) {
+                    validDrafts.forEach { draft ->
+                        item(key = "draft_${draft.id}") {
+                            DraftAgentCard(
+                                modifier = Modifier.noRippleClickable { onClickDraft(draft.id) },
+                                draft = draft,
+                                onDeleteDraft = onDeleteDraft,
+                            )
                         }
-                        .onFailure { it.printStackTrace() }
+                    }
+                }
 
-                    // Loading indicator when loading more (only show when there's no data)
-                    if (isLoading && agents.isEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            Box(
-                                modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator(
-                                    color = Color.White,
-                                    modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
-                                )
-                            }
+                if (agents.isNotEmpty()) {
+                    itemsIndexed(items = agents, key = { index, agent -> "${agent.id}_$index" }) {
+                        index,
+                        agent ->
+                        MyAgentCard(
+                            navController,
+                            modifier = Modifier.noRippleClickable { onClickAgent(agent) },
+                            agentInfo = agent,
+                            onEditAgent = onEditAgent,
+                            onDeleteAgent = onDeleteAgent,
+                        )
+                    }
+                }
+
+                // Loading indicator when loading more (only show when there's no data)
+                if (isLoading && agents.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier.padding(UiConfigs.Padding.ScreenHorizontal),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(UiConfigs.MePage.TopIconsRow.Size),
+                            )
                         }
                     }
                 }
@@ -298,17 +295,13 @@ private fun ProfileHeader(
             onCancel = { showSubscribeDialog = false },
             onSure = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.Me.vipCenter("profile_upgrade"))
                 }
                 showSubscribeDialog = false
             },
             onMoreInfo = {
                 if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                    VipCenterActivity.launch(context,
-                    // VipCenterActivity.PROFILE_UPGRADE)
+                    navController.navigate(Routes.Me.vipCenter("profile_upgrade"))
                 }
                 showSubscribeDialog = false
             },
@@ -347,53 +340,59 @@ private fun ProfileHeader(
 
             Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
-            AsyncImage(
-                modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.DiscordInvite.toUri())
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
-                            }
-                        }
-                    },
-                model = R.drawable.ic_discord,
-                contentDescription = stringResource(R.string.me_icons_row_discord),
-            )
-
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
-
-            AsyncImage(
-                modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
-                                    )
-                                // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
-                            }
-                        }
-                    },
-                model = R.drawable.ic_whatsapp,
-                contentDescription = stringResource(R.string.me_icons_row_whatsapp),
-            )
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
+            /*
+             * 按需求临时隐藏：
+             * - 右上角 Discord 入口图标
+             * - 右上角 WhatsApp 入口图标
+             */
+            // AsyncImage(
+            //     modifier =
+            //         Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
+            //             val currentTime = System.currentTimeMillis()
+            //             if (AntiClick.isValidClick(lastClickTime)) {
+            //                 lastClickTime = currentTime
+            //                 try {
+            //                     val intent =
+            //                         Intent(Intent.ACTION_VIEW,
+            // UiConfigs.Urls.DiscordInvite.toUri())
+            //                     // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+            //                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            //                     context.startActivity(intent)
+            //                 } catch (e: Exception) {
+            //                     ToastUtils.showLargeText(e.toString())
+            //                 }
+            //             }
+            //         },
+            //     model = R.drawable.ic_discord,
+            //     contentDescription = stringResource(R.string.me_icons_row_discord),
+            // )
+            //
+            // Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
+            //
+            // AsyncImage(
+            //     modifier =
+            //         Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
+            //             val currentTime = System.currentTimeMillis()
+            //             if (AntiClick.isValidClick(lastClickTime)) {
+            //                 lastClickTime = currentTime
+            //                 try {
+            //                     val intent =
+            //                         Intent(
+            //                             Intent.ACTION_VIEW,
+            //                             UiConfigs.Urls.WhatsAppGroupInvite.toUri(),
+            //                         )
+            //                     // 确保新的 Activity 不在当前任务栈中启动，这通常是一个良好的实践
+            //                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            //                     context.startActivity(intent)
+            //                 } catch (e: Exception) {
+            //                     ToastUtils.showLargeText(e.toString())
+            //                 }
+            //             }
+            //         },
+            //     model = R.drawable.ic_whatsapp,
+            //     contentDescription = stringResource(R.string.me_icons_row_whatsapp),
+            // )
+            // Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.Spacing))
 
             Icon(
                 modifier =
@@ -425,15 +424,12 @@ private fun ProfileHeader(
                 contentDescription = stringResource(R.string.me_icons_row_settings),
                 tint = Color.White,
             )
-            Spacer(Modifier.width(UiConfigs.MePage.TopIconsRow.RightPadding))
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
 
         // 头像和昵称 - 固定显示（不随列表上划变化）
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
-
             Box(
                 modifier =
                     Modifier.size(UiConfigs.MePage.AvatarFullSize)
@@ -508,25 +504,9 @@ private fun ProfileHeader(
                 model = R.drawable.icon_edit,
                 contentDescription = null,
             )
-
-            Spacer(Modifier.width(UiConfigs.Padding.ScreenHorizontal))
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
-
-        // Daily Rewards Banner - 固定显示（不随上划隐藏）
-        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
-        DailyRewardsBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
-            onClick = {
-                val currentTime = System.currentTimeMillis()
-                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
-                lastDailyRewardsClickTime = currentTime
-                navController.navigate(Routes.Me.CheckIn)
-            },
-        )
-
-        Spacer(Modifier.height(12.dp))
 
         // VIP Banner - 固定显示
         Box(
@@ -537,28 +517,38 @@ private fun ProfileHeader(
                 status = currentVipStatus.subscriptionStatus,
                 purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
                 expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
-                onClick = {
-                    navController.navigate(Routes.Me.VipCenter)
-                    //                        VipCenterActivity.launch(context,
-                    // VipCenterActivity.PROFILE_UPGRADE)
-                },
+                onClick = { navController.navigate(Routes.Me.vipCenter("profile_upgrade")) },
             )
         }
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
         VibeModeBanner(
-            modifier = Modifier.padding(horizontal = UiConfigs.Padding.ScreenHorizontal),
             isSubscribed = isSubscribed,
             onRequestSubscribe = { showSubscribeDialog = true },
         )
 
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        // Daily Rewards Banner - 固定显示（不随上划隐藏）
+        var lastDailyRewardsClickTime by remember { mutableLongStateOf(0L) }
+        DailyRewardsBanner(
+            onClick = {
+                val currentTime = System.currentTimeMillis()
+                if (!AntiClick.isValidClick(lastDailyRewardsClickTime)) return@DailyRewardsBanner
+                lastDailyRewardsClickTime = currentTime
+                navController.navigate(Routes.Me.CheckIn)
+            }
+        )
+
         if (appUpdateTips) {
             Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
-            NewVersionBanner(
-                modifier =
-                    Modifier.fillMaxWidth().padding(horizontal = UiConfigs.Padding.ScreenHorizontal)
-            )
+            NewVersionBanner(modifier = Modifier.fillMaxWidth())
         }
+
+        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
+        CreateCharacterBanner(
+            title = stringResource(R.string.me_create_character_banner_title),
+            onClick = { navController.navigate(Routes.Creat.createRole("")) },
+        )
 
         Spacer(Modifier.height(UiConfigs.MePage.BottomSpacing))
     }
@@ -988,23 +978,22 @@ private fun MyAgentCard(
 }
 
 private object DailyRewardsBannerStyle {
-    val Height = 76.dp
-    val Shape = RoundedCornerShape(16.dp)
-    val BorderWidth = 1.dp
-    val BorderColor = Color.White.copy(alpha = 0.12f)
+    /** 最小高度，保证内容紧凑；实际高度随文字内容自适应 */
+    val MinHeight = 56.dp
+    val Shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
+    val BorderWidth = UiConfigs.MePage.VibeMode.BorderWidth
+    /** 可点击状态边框色，与 Vibe Mode 未打开时一致 */
+    val BorderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
     val TitleColor = Color.White
     val SubtitleColor = Color.White.copy(alpha = 0.7f)
-    val DisabledAlpha = 0.6f
+    const val DISABLED_ALPHA = 0.6f
     val DisabledBorderColor = Color.White.copy(alpha = 0.08f)
     val DisabledTitleColor = Color.White.copy(alpha = 0.75f)
     val DisabledSubtitleColor = Color.White.copy(alpha = 0.55f)
     val TitleSize = 18.sp
     val SubtitleSize = 14.sp
-    val HorizontalPadding = 16.dp
-    val VerticalPadding = 14.dp
-    val IllustrationHeight = 64.dp
-    val IllustrationWidth = 92.dp
-    val BackgroundGradientColors = listOf(Color(0xFF9756FF), Color(0xFFEF56FF))
+    /** 可点击状态背景渐变，与 Vibe Mode 未打开时一致 */
+    val BackgroundGradientColors = listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
     val DisabledBackgroundGradientColors = listOf(Color(0xFF5D5D62), Color(0xFF3A3A3E))
     val ProgressColor = Color(0xFFFF6B6B)
     val DisabledProgressColor = Color.White.copy(alpha = 0.35f)
@@ -1033,13 +1022,15 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
 
     val backgroundBrush =
         remember(hasCheckedInToday) {
-            Brush.linearGradient(
-                colors =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledBackgroundGradientColors
-                    else DailyRewardsBannerStyle.BackgroundGradientColors,
-                start = Offset.Zero,
-                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-            )
+            if (hasCheckedInToday) {
+                Brush.linearGradient(
+                    colors = DailyRewardsBannerStyle.DisabledBackgroundGradientColors,
+                    start = Offset.Zero,
+                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+                )
+            } else {
+                Brush.horizontalGradient(DailyRewardsBannerStyle.BackgroundGradientColors)
+            }
         }
 
     val clickableModifier = Modifier.noRippleClickable(onClick = onClick)
@@ -1048,7 +1039,7 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(DailyRewardsBannerStyle.Height)
+                .heightIn(min = DailyRewardsBannerStyle.MinHeight)
                 .clip(DailyRewardsBannerStyle.Shape)
                 .background(backgroundBrush)
                 .border(
@@ -1059,10 +1050,10 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     shape = DailyRewardsBannerStyle.Shape,
                 )
                 .then(clickableModifier)
-                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledAlpha else 1f)
+                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
                 .padding(
-                    horizontal = DailyRewardsBannerStyle.HorizontalPadding,
-                    vertical = DailyRewardsBannerStyle.VerticalPadding,
+                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1077,7 +1068,6 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 text =
                     stringResource(
@@ -1089,7 +1079,7 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     else DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -1130,8 +1120,20 @@ private fun VibeModeBanner(
     isSubscribed: Boolean,
     onRequestSubscribe: () -> Unit,
 ) {
-    var vibeEnabled by rememberSaveable(isSubscribed) { mutableStateOf(false) }
+    var vibeEnabled by remember { mutableStateOf(IntySetting.isVibeModeEnabled()) }
     val isActive = isSubscribed && vibeEnabled
+
+    // 持久化 Vibe Mode 状态
+    LaunchedEffect(vibeEnabled, isSubscribed) {
+        if (isSubscribed) {
+            IntySetting.setVibeModeEnabled(vibeEnabled)
+        } else {
+            // 如果用户未订阅，确保 Vibe Mode 被禁用
+            if (vibeEnabled) {
+                vibeEnabled = false
+            }
+        }
+    }
 
     val backgroundBrush =
         when {
@@ -1151,7 +1153,7 @@ private fun VibeModeBanner(
                 )
         }
 
-    val shape = RoundedCornerShape(UiConfigs.MePage.VibeMode.CornerRadius)
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
     val borderColor =
         if (isActive) Color.White.copy(alpha = 0.45f)
         else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
@@ -1183,7 +1185,10 @@ private fun VibeModeBanner(
                 color = borderColor,
                 shape = shape,
             )
-            .padding(UiConfigs.MePage.VibeMode.InnerPadding)
+            .padding(
+                horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
+            )
 
     Row(
         modifier =
@@ -1208,7 +1213,6 @@ private fun VibeModeBanner(
             )
 
             if (!isActive) {
-                Spacer(Modifier.height(UiConfigs.Spacing.Small))
                 Text(
                     text = stringResource(R.string.vibe_mode_subtitle),
                     color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
@@ -1220,24 +1224,65 @@ private fun VibeModeBanner(
 
         Spacer(Modifier.width(UiConfigs.MePage.VibeMode.ContentSpacing))
 
-        val switchWrapperModifier =
-            if (isSubscribed) {
-                Modifier
-            } else {
-                Modifier.clickable(onClick = onRequestSubscribe)
-            }
-
         val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
 
-        Box(modifier = switchWrapperModifier) {
+        Box {
             Switch(
                 checked = isActive,
-                onCheckedChange = { checked -> vibeEnabled = checked },
+                onCheckedChange = { checked ->
+                    if (isSubscribed) {
+                        vibeEnabled = checked
+                    }
+                },
                 enabled = isSubscribed,
                 colors = switchColors,
                 modifier = Modifier.semantics { contentDescription = toggleContentDescription },
             )
+            // 未订阅时在开关上叠加透明可点击层，确保点击开关与点击横幅一致：跳转会员中心
+            if (!isSubscribed) {
+                Box(modifier = Modifier.matchParentSize().clickable(onClick = onRequestSubscribe))
+            }
         }
+    }
+}
+
+/** 创建角色引导 Banner - Me 页最后一个横幅，点击跳转创建角色页。 样式与 Vibe Mode、Daily Check-in 等区块横幅一致：圆角、边框、渐变背景、单行标题。 */
+@Composable
+private fun CreateCharacterBanner(
+    modifier: Modifier = Modifier,
+    title: String,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
+    val backgroundBrush =
+        Brush.horizontalGradient(listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd))
+    val borderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(backgroundBrush)
+                .border(
+                    width = UiConfigs.MePage.VibeMode.BorderWidth,
+                    color = borderColor,
+                    shape = shape,
+                )
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
+                ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = UiConfigs.Typography.ButtonLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

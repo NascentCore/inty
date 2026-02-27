@@ -23,7 +23,7 @@ class MultiStageCharacterGenerator:
     """Runs a deterministic multistage pipeline for character creation."""
 
     def __init__(self, gemini_client: GeminiClient | None = None):
-        self.logger = logging.getLogger(__name__)
+        self.from loguru import logger
         self.client = gemini_client or GeminiClient()
 
     def generate(

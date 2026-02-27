@@ -5,12 +5,15 @@ import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
+import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 private const val TAG = "DebugBackendSettings"
 
@@ -25,8 +28,12 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val buildType: String,
         // 当前生效的后端地址
         val activeBaseUrl: String,
+        // 手动 Debug Mode 状态
+        val debugModeEnabled: Boolean,
         // Remix 按钮可见性（仅在 debug 构建中有效）
         val remixButtonVisible: Boolean,
+        // 用户时间上下文上报（仅在 debug 构建中有效）
+        val userTimeContextReportingEnabled: Boolean,
     )
 
     val quickPresets =
@@ -47,11 +54,16 @@ class DebugBackendSettingsViewModel : ViewModel() {
 
     private fun createInitialState(): UiState {
         val activeBaseUrl = NetworkConfig.getBaseUrl()
+        val debugModeEnabled = AppUtils.isDebugMode()
         val remixButtonVisible = getRemixButtonEffectiveVisibility()
+        val userTimeContextReportingEnabled =
+            DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
         return UiState(
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
+            debugModeEnabled = debugModeEnabled,
             remixButtonVisible = remixButtonVisible,
+            userTimeContextReportingEnabled = userTimeContextReportingEnabled,
         )
     }
 
@@ -105,6 +117,24 @@ class DebugBackendSettingsViewModel : ViewModel() {
         _uiState.update { it.copy(remixButtonVisible = defaultVisibility) }
         // 通知全局状态变化
         RemixButtonVisibilityManager.updateVisibility(defaultVisibility)
+    }
+
+    fun setDebugModeEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(debugModeEnabled = enabled) }
+        viewModelScope.launch {
+            runCatching { AppUtils.setDebugMode(enabled) }
+                .onFailure { error ->
+                    LogUtils.e(TAG, "Failed to persist debug mode", error)
+                    _uiState.update { it.copy(debugModeEnabled = AppUtils.isDebugMode()) }
+                }
+        }
+    }
+
+    fun toggleUserTimeContextReporting() {
+        val current = _uiState.value.userTimeContextReportingEnabled
+        val updated = !current
+        DebugBackendEndpointStore.persistUserTimeContextReportingEnabled(updated)
+        _uiState.update { it.copy(userTimeContextReportingEnabled = updated) }
     }
 }
 

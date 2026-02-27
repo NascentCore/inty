@@ -25,23 +25,32 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
                     type = NavType.BoolType
                     defaultValue = false
                 },
+                navArgument("fromPage") {
+                    type = NavType.StringType
+                    defaultValue = null
+                    nullable = true
+                },
             ),
     ) { backStackEntry ->
         val agentId = backStackEntry.arguments?.getString("agentId")
         val showBoost = backStackEntry.arguments?.getBoolean("showBoost")
         val shouldAutoFocusInput = backStackEntry.arguments?.getBoolean("shouldAutoFocusInput")
         val isDeleted = backStackEntry.arguments?.getBoolean("isDeleted") ?: false
+        val refreshCount = backStackEntry.savedStateHandle.get<Int>("messageCount") ?: 1
+
         LaunchedEffect(agentId) {
             val agent = AgentStore.getAgent(agentId = agentId)
             if (agentId != null) {
                 if (agent != null) {
                     if (isDeleted) agent.isDeleted = true
-                    chatViewModel.setAgentInfo(agent, true)
+                    chatViewModel.setAgentInfo(agent)
                 } else {
                     chatViewModel.clearAllData()
                     chatViewModel.setAgentID(agentId)
                 }
             }
+
+            backStackEntry.savedStateHandle.remove<Int>("messageCount")
         }
 
         ChatScreen(
@@ -51,6 +60,8 @@ fun NavGraphBuilder.chatGraph(navController: NavController, chatViewModel: ChatV
             shouldShowBoostSheetOnOpen = showBoost == true,
             shouldAutoFocusInput = shouldAutoFocusInput ?: true,
             onCall = { agentId?.let { navController.navigate(Routes.Chat.voiceCall(it)) } },
+            fromPage = backStackEntry.arguments?.getString("fromPage"),
+            refreshMessageCount = refreshCount,
         )
     }
 }

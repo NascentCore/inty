@@ -32,7 +32,7 @@ alembic upgrade head
 启动推送服务：
 
 ```bash
-python -m app.services.push_worker
+python -m backend.push_worker.main
 ```
 
 或使用 systemd/supervisor 等进程管理器。
@@ -46,7 +46,7 @@ python -m app.services.push_worker
 ```bash
 docker build \
   --build-arg CONFIG_FILE=devops/config.yaml.dev \
-  -f docker/Dockerfile.push-worker \
+  -f devops/docker/Dockerfile.push-worker \
   -t inty-push-worker:latest .
 ```
 
@@ -78,7 +78,7 @@ docker run -d \
 ## 服务架构
 
 ```
-push_worker.py (入口)
+backend/push_worker/main.py (入口)
     ↓
 push_scheduler_service.py (定时任务调度)
     ↓
@@ -102,6 +102,7 @@ push_notification_service.py (核心逻辑)
 - **10 分钟推送**：每 5 分钟检查一次，推送距离最后消息 10 分钟的聊天
 - **30 分钟推送**：每 10 分钟检查一次，推送距离最后消息 30 分钟的聊天
 - **2 小时推送**：每 30 分钟检查一次，推送距离最后消息 2 小时的聊天
+- **节日记忆通知**（可选，`festival_memory_enabled`）：每 15 分钟扫描未投递且未发过 system notification 的节日记忆，发送 FCM；点击进入该角色 Love Journal 并定位到对应记忆条目。`push_type = "festival_memory"`，`stage = "festival"`。
 
 ## 注意事项
 

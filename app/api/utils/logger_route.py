@@ -13,6 +13,7 @@ import sentry_sdk
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from fastapi import HTTPException
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -136,25 +137,48 @@ class LoggerRoute(APIRoute):
                     return response
                 except Exception as e:
                     duration = time.time() - start_time
+                    # 401 鉴权失败（含 JWT 过期、未带 token）为预期情况，降级为 WARNING 减少 error 日志噪音
+                    is_401 = (
+                        isinstance(e, HTTPException)
+                        and getattr(e, "status_code", None) == 401
+                    )
                     if use_json_format:
                         error_log_data = {
                             "request_id": request_id,
-                            "type": "error",
+                            "type": "error" if not is_401 else "warning",
                             "method": request.method,
                             "path": request.url.path,
                             "error": str(e),
                             "duration": round(duration, 3),
                             "timestamp": datetime.utcnow().isoformat() + "Z",
                         }
-                        logger.error(json.dumps(error_log_data, ensure_ascii=False))
+                        if is_401:
+                            logger.warning(
+                                json.dumps(error_log_data, ensure_ascii=False)
+                            )
+                        else:
+                            logger.error(
+                                json.dumps(error_log_data, ensure_ascii=False)
+                            )
                     else:
-                        self._log_error_readable(
-                            request_id=request_id,
-                            method=request.method,
-                            path=request.url.path,
-                            error=str(e),
-                            duration=duration,
-                        )
+                        if is_401:
+                            logger.warning(
+                                f"\n{'='*80}\n"
+                                f"⚠️ 401 [{request_id}]\n"
+                                f"{'='*80}\n"
+                                f"Method:      {request.method}\n"
+                                f"Path:        {request.url.path}\n"
+                                f"Error:       {e}\n"
+                                f"Duration:    {duration:.3f}s\n"
+                            )
+                        else:
+                            self._log_error_readable(
+                                request_id=request_id,
+                                method=request.method,
+                                path=request.url.path,
+                                error=str(e),
+                                duration=duration,
+                            )
                     raise
 
         return custom_route_handler
@@ -289,7 +313,7 @@ class LoggerRoute(APIRoute):
             "body": self._truncate_body(body, max_length=1000),
             "timestamp": datetime.utcnow().isoformat() + "Z",
         }
-        logger.info(json.dumps(log_data, ensure_ascii=False))
+        logger.debug(json.dumps(log_data, ensure_ascii=False))
 
     def _log_response_json(
         self,

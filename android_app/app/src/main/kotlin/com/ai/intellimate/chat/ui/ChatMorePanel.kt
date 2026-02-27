@@ -9,6 +9,7 @@ import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.tmp.DiaAmountLayout
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
@@ -32,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Checkroom
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ProvideTextStyle
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -69,8 +72,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
 import androidx.navigation.NavController
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.heartbeat.toHeartbeat
+import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.ReplyStyleSheet
+import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.xb.navigation.Routes
 
 /** 聊天更多面板组件 */
@@ -84,6 +90,7 @@ fun ChatMorePanel(
     onHeightChange: (Dp) -> Unit,
     onReset: () -> Unit,
     onCall: () -> Unit,
+    hasUserMessages: Boolean = true,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -150,11 +157,17 @@ fun ChatMorePanel(
                                     onHeightChange(maxHeight - transY.value)
                                 }
                                 .background(color = HeartColor.primaryColor),
-                        contentPadding = PaddingValues(vertical = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = UiConfigs.Padding.ScreenHorizontal,
+                                vertical = UiConfigs.Spacing.Large,
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
+                        verticalArrangement = Arrangement.spacedBy(UiConfigs.Spacing.MediumPlus),
                     ) {
                         item("Chat Style") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 isVip = true,
                                 onClick = {
                                     // 检查是否已登录
@@ -175,7 +188,9 @@ fun ChatMorePanel(
                                             showSheet = true
                                         } else {
                                             // 去会员中心
-                                            navController.navigate(Routes.Me.VipCenter)
+                                            navController.navigate(
+                                                Routes.Me.vipCenter("chat_more_panel")
+                                            )
                                             onDismiss() // 要关闭掉panel
                                         }
                                     }
@@ -191,29 +206,134 @@ fun ChatMorePanel(
                             )
                         }
 
-                        item("Reset") {
+                        item("love journal") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
+                                // love journal 图标大小要特别设置以达到合适的视觉效果
+                                // 后面需要修改图标设计使得大小和视觉效果高度一致，同样大小的图标
+                                // 视觉上也会一样大小
+                                iconSize =
+                                    dimensionResource(R.dimen.heartbeat_more_panel_icon_size),
                                 onClick = {
                                     // 检查是否已登录
-                                    if (IntySetting.isLogin()) {
-                                        // 清空当前chat的所有聊天消息，（保留intro和opening），然后给服务器发送reset消息
-                                        // 相当于重新开始和agent初次聊天
-                                        showResetConfirmDialog = true
+                                    if (
+                                        IntySetting.isLogin() &&
+                                            IntySetting.getCurToken().isNotEmpty()
+                                    ) {
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_MORE_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to "heartbeat",
+                                                "agent_id" to (agentInfo?.id ?: ""),
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        onDismiss()
+                                        agentInfo?.id?.let {
+                                            navController.toHeartbeat(it, pageSource = "more_panel")
+                                        }
                                     }
                                 },
                                 icon = {
                                     Image(
-                                        painter = painterResource(R.drawable.icon_reset_chat),
-                                        contentDescription = "reset",
+                                        painter = painterResource(R.drawable.icon_heartbeat),
+                                        contentDescription = "hb journal",
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 },
-                                text = { Text(stringResource(R.string.str_reset)) },
+                                text = { Text(stringResource(R.string.hb_journal)) },
+                            )
+                        }
+
+                        item("Reset") {
+                            Box(
+                                modifier =
+                                    Modifier.fillMaxWidth().graphicsLayer {
+                                        alpha = if (hasUserMessages) 1f else 0.4f
+                                    }
+                            ) {
+                                MorePanelItem(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        FirebaseManager.Events.CHAT_MORE_CLICK.logEvent(
+                                            "click_type" to "reset",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        )
+                                        if (hasUserMessages && IntySetting.isLogin()) {
+                                            showResetConfirmDialog = true
+                                        }
+                                    },
+                                    icon = {
+                                        Image(
+                                            painter = painterResource(R.drawable.icon_reset_chat),
+                                            contentDescription = "reset",
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    },
+                                    text = { Text(stringResource(R.string.str_reset)) },
+                                )
+                            }
+                        }
+
+                        item("Call") {
+                            MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CALL,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "call",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    onCall()
+                                },
+                                icon = {
+                                    Image(
+                                        imageVector = Icons.Rounded.Call,
+                                        contentDescription = "call",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.call)) },
+                            )
+                        }
+
+                        item("Change outfit") {
+                            MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_MORE_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "change_outfit",
+                                            "agent_id" to (agentInfo?.id ?: ""),
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    chatViewModel.setInputMessage(
+                                        "Could you change your outfit for me?"
+                                    )
+                                    onDismiss()
+                                },
+                                icon = {
+                                    Image(
+                                        imageVector = Icons.Rounded.Checkroom,
+                                        contentDescription = "change outfit",
+                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                },
+                                text = { Text(stringResource(R.string.chat_more_change_outfit)) },
                             )
                         }
 
                         item("Feedback") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     // 检查是否已登录
                                     if (
@@ -246,6 +366,7 @@ fun ChatMorePanel(
 
                         item("Report") {
                             MorePanelItem(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     // 检查是否已登录
                                     if (
@@ -280,31 +401,6 @@ fun ChatMorePanel(
                                     )
                                 },
                                 text = { Text(stringResource(R.string.str_report)) },
-                            )
-                        }
-
-                        item("Call") {
-                            MorePanelItem(
-                                onClick = {
-                                    FirebaseManager.logEvent(
-                                        FirebaseManager.Events.CHAT_MORE_CALL,
-                                        FirebaseManager.safeEventParams(
-                                            "click_type" to "call",
-                                            "agent_id" to (agentInfo?.id ?: ""),
-                                            "timestamp" to System.currentTimeMillis(),
-                                        ),
-                                    )
-                                    onCall()
-                                },
-                                icon = {
-                                    Image(
-                                        imageVector = Icons.Rounded.Call,
-                                        contentDescription = "call",
-                                        colorFilter = ColorFilter.tint(Color(0x99FFFFFF)),
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                },
-                                text = { Text(stringResource(R.string.call)) },
                             )
                         }
                     }
@@ -353,6 +449,7 @@ private fun MorePanelItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isVip: Boolean = false,
+    iconSize: Dp = 36.dp,
     icon: @Composable () -> Unit,
     text: @Composable () -> Unit,
 ) {
@@ -365,7 +462,7 @@ private fun MorePanelItem(
                 Modifier.size(64.dp)
                     .background(color = Color.White.copy(0.05f), shape = RoundedCornerShape(8.dp))
         ) {
-            Box(modifier = Modifier.align(Alignment.Center).size(36.dp)) { icon() }
+            Box(modifier = Modifier.align(Alignment.Center).size(iconSize)) { icon() }
 
             if (isVip) {
                 Image(
@@ -425,12 +522,29 @@ private fun ResetConfirmDialog(onReset: () -> Unit, onDismiss: () -> Unit) {
                 )
         ) {
             Column() {
-                Text(
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    text = stringResource(R.string.chat_reset_tips),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-                )
+                Column(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = UiConfigs.Padding.ScreenHorizontal,
+                            vertical = UiConfigs.Padding.DialogEdge,
+                        )
+                ) {
+                    Text(
+                        color = Color.White,
+                        fontSize = UiConfigs.Typography.BodyLarge,
+                        text = stringResource(R.string.chat_reset_tips),
+                    )
+                    Spacer(Modifier.height(UiConfigs.Spacing.Small))
+                    Text(
+                        color = UiConfigs.Colors.VipSecondaryText,
+                        fontSize = UiConfigs.Typography.Support,
+                        text =
+                            stringResource(
+                                R.string.chat_reset_cost_hint,
+                                BoostConfig.CHAT_RESET_COST,
+                            ),
+                    )
+                }
                 HorizontalDivider(thickness = .5.dp, color = Color(0xFF201731))
                 Row {
                     TextButton(

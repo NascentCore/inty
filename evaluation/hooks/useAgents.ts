@@ -3,11 +3,19 @@
  * 提供智能体的CRUD操作和缓存管理
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { message } from "antd";
 import api from "../services/api";
-import type { Agent, AgentCreateRequest, AgentUpdateRequest } from "../types";
-import type { AgentVisibility } from "../inty_sdk/src/resources/api/v1/ai/agents";
+import type {
+  Agent,
+  AgentCreateRequest,
+  AgentUpdateRequest,
+  AgentVisibility,
+} from "../types";
+import {
+  filterAgentsByType,
+  loadAdminAgentList,
+} from "../services/agentListService";
 
 interface UseAgentsOptions {
   type?: "public" | "private" | "all";
@@ -40,6 +48,17 @@ interface UseAgentsReturn {
   clearCache: () => void;
 }
 
+interface IntyUploadImageResponse {
+  data?: {
+    avatar_url?: string;
+    url?: string;
+  };
+}
+
+interface IntyAgentMutationResponse {
+  data?: Agent;
+}
+
 const isFile = (value: unknown): value is File => {
   return value instanceof File;
 };
@@ -49,13 +68,15 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     type = "all",
     autoLoad = true,
     enableCache = true,
-    cacheKey = `agents_cache_${type}`,
+    // 2026-01: 切换为管理员全量列表接口后，避免复用旧缓存导致“非管理员创建”为空
+    cacheKey = `agents_cache_${type}_admin_list_v1`,
   } = options;
 
   // 状态管理
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadRequestIdRef = useRef(0);
 
   // 缓存管理
   const CACHE_EXPIRY = 30 * 60 * 1000; // 30分钟过期
@@ -110,7 +131,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   // 加载智能体列表
   const loadAgents = useCallback(
     async (forceRefresh: boolean = false) => {
-      console.log("loadAgents called with forceRefresh:", forceRefresh);
+      const requestId = ++loadRequestIdRef.current;
+      const isCurrentRequest = () => loadRequestIdRef.current === requestId;
+
       try {
         setLoading(true);
         setError(null);
@@ -118,35 +141,43 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         // 检查缓存
         if (!forceRefresh) {
           const cachedData = getCachedData();
-          if (cachedData) {
+          if (cachedData && isCurrentRequest()) {
             setAgents(cachedData);
             setLoading(false);
-            console.log("cachedData:", cachedData);
             return;
           }
         }
 
-        let response = await api.getIntyClient().api.v1.ai.agents.list({
-          // 增加限制以获取更多智能体；后端限制最多 1000 个，这是分页设计；以后需要调整
-          limit: 1000,
-          skip: 0,
+        let hasLoadedFirstBatch = false;
+
+        // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
+        const allAgents = await loadAdminAgentList({
+          shouldContinue: isCurrentRequest,
+          onBatchLoaded: (accumulatedAgents) => {
+            if (!isCurrentRequest()) {
+              return;
+            }
+
+            const filteredAgents = filterAgentsByType(accumulatedAgents, type);
+            setAgents(filteredAgents);
+
+            // 第一批返回后立即展示，避免长时间整页 loading
+            if (!hasLoadedFirstBatch) {
+              hasLoadedFirstBatch = true;
+              setLoading(false);
+            }
+          },
         });
-        let data = response.data;
-        console.log("agent data:", data, "total:", data?.length);
 
-        if (type !== "all" && Array.isArray(data)) {
-          data = data.filter((agent) => {
-            if (type === "public") return agent.visibility === "PUBLIC";
-            if (type === "private") return agent.visibility === "PRIVATE";
-            return true;
-          });
+        if (!isCurrentRequest()) {
+          return;
         }
-        console.log("agent data after filtering:", data);
 
-        setAgents((data || []) as unknown as Agent[]);
+        const filteredAgents = filterAgentsByType(allAgents, type);
+        setAgents(filteredAgents);
 
         // 更新缓存
-        setCachedData((data || []) as unknown as Agent[]);
+        setCachedData(filteredAgents);
 
         if (forceRefresh) {
           message.success(`智能体列表已刷新`);
@@ -154,7 +185,9 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
       } catch (error) {
         handleError(error, "获取智能体列表失败");
       } finally {
-        setLoading(false);
+        if (isCurrentRequest()) {
+          setLoading(false);
+        }
       }
     },
     [type, getCachedData, setCachedData, handleError],
@@ -185,12 +218,12 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         ) {
           // data.avatar 是 File 对象，需要上传
           try {
-            const uploadResponse = await api
+            const uploadResponse = (await api
               .getIntyClient()
               .api.v1.uploadImage({
                 file: data.avatar,
                 cropping_avatar: true,
-              });
+              })) as IntyUploadImageResponse;
             console.log("uploadResponse:", uploadResponse);
             // 上传成功后，将返回的 avatar_url 和 url 赋值给 agentData
             (agentData as AgentCreateRequest).avatar = uploadResponse.data
@@ -213,10 +246,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           agentData.voice_id = data.voice_id;
         }
 
-        const response = await api
+        const response = (await api
           .getIntyClient()
-          .api.v1.ai.agents.create(agentData);
-        const newAgent = response.data as unknown as Agent;
+          .api.v1.ai.agents.create(agentData)) as IntyAgentMutationResponse;
+        const newAgent = (response.data as Agent | undefined) ?? null;
 
         // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
         clearCache();
@@ -254,12 +287,12 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           isFile(data.avatar)
         ) {
           try {
-            const uploadResponse = await api
+            const uploadResponse = (await api
               .getIntyClient()
               .api.v1.uploadImage({
                 file: data.avatar,
                 cropping_avatar: true,
-              });
+              })) as IntyUploadImageResponse;
             console.log("uploadResponse:", uploadResponse);
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data
               ?.avatar_url as string;
@@ -297,9 +330,17 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           .getIntyClient()
           .api.v1.ai.agents.update(agentId, updateData)) as unknown as Agent;
 
-        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
+        // 仅更新本地内存态，避免保存动作被“全量分页刷新列表”阻塞
+        setAgents((prevAgents) => {
+          const mergedAgents = prevAgents.map((agent) => {
+            if (agent.id !== agentId) {
+              return agent;
+            }
+            return { ...agent, ...updatedAgent };
+          });
+          return filterAgentsByType(mergedAgents, type);
+        });
         clearCache();
-        await loadAgents(true); // 强制刷新
 
         message.success("智能体更新成功");
         return updatedAgent;
@@ -310,7 +351,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError, loadAgents],
+    [clearCache, handleError, type],
   );
 
   // 删除智能体
@@ -361,13 +402,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
       loadAgents();
     }
   }, [autoLoad, loadAgents]);
-
-  // 类型变化时重新加载
-  useEffect(() => {
-    if (autoLoad) {
-      loadAgents();
-    }
-  }, [type, autoLoad, loadAgents]);
 
   return {
     // 状态

@@ -90,11 +90,20 @@ export const MessageToImageIcon: React.FC<MessageToImageIconProps> = ({
       } else {
         message.error("图片生成失败：未返回有效图片");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Image generation error:", error);
 
       // 处理特定错误
-      if (error?.response?.status === 400) {
+      const responseStatus =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { status?: unknown } }).response
+          ?.status === "number"
+          ? (error as { response: { status: number } }).response.status
+          : undefined;
+
+      if (responseStatus === 400) {
         message.error("只能对最后一条AI回复生成图片");
       } else {
         const errorMessage =

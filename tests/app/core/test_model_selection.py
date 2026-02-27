@@ -7,99 +7,43 @@ from app.core.config import (
     GEMINI_2_5_FLASH,
     GEMINI_2_5_FLASH_LITE,
     AgentConfig,
-    global_config_loaded_from_config_yaml,
+    global_config_loaded_from_config_yaml as global_config,
 )
-from app.core.model_selection import select_chat_model, select_text_to_image_model
+from app.core.model_selection import (
+    select_chat_image_model,
+    select_chat_model,
+    select_text_to_image_model,
+)
+from app.utils.models_catalog import (
+    NANO_BANANA,
+    NANO_BANANA_PRO,
+    SEEDREAM_V4_5_EDIT,
+    Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+)
 
 
 def test_select_chat_model_free_user_uses_free_model():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_5_FLASH_LITE
+    assert model == global_config.agent.free_user_chat_model
 
 
 def test_select_chat_model_subscribed_user_uses_sub_model():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_chat_model(user=user, is_subscribed=True)
-    assert model == GEMINI_2_5_FLASH
-
-
-def test_select_chat_model_superuser_by_is_superuser_field():
-    user = SimpleNamespace(is_superuser=True, email=None)
-    model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_5_FLASH
-
-
-def test_select_chat_model_superuser_by_email():
-    user = SimpleNamespace(is_superuser=False, email="it@sxwl.ai")
-    model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_5_FLASH
-
-
-def test_select_chat_model_superuser_by_email_case_insensitive():
-    user = SimpleNamespace(is_superuser=False, email="IT@SXWL.AI")
-    model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_5_FLASH
-
-
-def test_select_chat_model_falls_back_to_model_when_sub_user_chat_model_is_none():
-    user = SimpleNamespace(is_superuser=False, email=None)
-    mock_agent_config = AgentConfig(
-        api_key="test",
-        langchain_api_key="test",
-        model="fallback-model",
-        sub_user_chat_model=None,
-        free_user_chat_model="free-model",
-    )
-    mock_config = SimpleNamespace(agent=mock_agent_config)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
-        model = select_chat_model(user=user, is_subscribed=True)
-        assert model == "fallback-model"
-
-
-def test_select_chat_model_falls_back_to_model_when_free_user_chat_model_is_none():
-    user = SimpleNamespace(is_superuser=False, email=None)
-    mock_agent_config = AgentConfig(
-        api_key="test",
-        langchain_api_key="test",
-        model="fallback-model",
-        sub_user_chat_model="sub-model",
-        free_user_chat_model=None,
-    )
-    mock_config = SimpleNamespace(agent=mock_agent_config)
-    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
-        model = select_chat_model(user=user, is_subscribed=False)
-        assert model == "fallback-model"
-
-
-def test_select_chat_model_works_with_partially_populated_user():
-    user = SimpleNamespace()
-    model = select_chat_model(user=user, is_subscribed=False)
-    assert model == GEMINI_2_5_FLASH_LITE
+    assert model == global_config.agent.sub_user_chat_model
 
 
 def test_select_text_to_image_model_free_user():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_text_to_image_model(user=user, is_subscribed=False)
-    assert model == global_config_loaded_from_config_yaml.agent.free_user_text_to_image_model
+    assert model == global_config.agent.free_user_text_to_image_model
 
 
 def test_select_text_to_image_model_subscribed_user():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_text_to_image_model(user=user, is_subscribed=True)
-    assert model == global_config_loaded_from_config_yaml.agent.sub_user_text_to_image_model
-
-
-def test_select_text_to_image_model_superuser_by_is_superuser_field():
-    user = SimpleNamespace(is_superuser=True, email=None)
-    model = select_text_to_image_model(user=user, is_subscribed=False)
-    assert model == global_config_loaded_from_config_yaml.agent.sub_user_text_to_image_model
-
-
-def test_select_text_to_image_model_superuser_by_email():
-    user = SimpleNamespace(is_superuser=False, email="it@sxwl.ai")
-    model = select_text_to_image_model(user=user, is_subscribed=False)
-    assert model == global_config_loaded_from_config_yaml.agent.sub_user_text_to_image_model
+    assert model == global_config.agent.sub_user_text_to_image_model
 
 
 def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_sub_user_model_is_none():
@@ -132,7 +76,31 @@ def test_select_text_to_image_model_falls_back_to_vertex_image_model_when_free_u
         assert model == "fallback-vertex-model"
 
 
-def test_select_text_to_image_model_works_with_partially_populated_user():
+def test_select_chat_image_model_returns_gen_ai_model():
+    """select_chat_image_model 按订阅状态读 config nickname，返回 GenAIModel。"""
     user = SimpleNamespace()
-    model = select_text_to_image_model(user=user, is_subscribed=False)
-    assert model == global_config_loaded_from_config_yaml.agent.free_user_text_to_image_model
+    mock_agent = SimpleNamespace(
+        free_user_chat_image_model=NANO_BANANA.nickname,
+        sub_user_chat_image_model=NANO_BANANA_PRO.nickname,
+    )
+    mock_config = SimpleNamespace(agent=mock_agent)
+    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+        model_free = select_chat_image_model(user=user, is_subscribed=False)
+        assert model_free is NANO_BANANA
+        model_sub = select_chat_image_model(user=user, is_subscribed=True)
+        assert model_sub is NANO_BANANA_PRO
+
+
+def test_select_chat_image_model_uses_fal_nickname():
+    """select_chat_image_model 支持 fal 模型 nickname。"""
+    user = SimpleNamespace()
+    mock_agent = SimpleNamespace(
+        free_user_chat_image_model=Z_IMAGE_TURBO_IMAGE_TO_IMAGE.nickname,
+        sub_user_chat_image_model=SEEDREAM_V4_5_EDIT.nickname,
+    )
+    mock_config = SimpleNamespace(agent=mock_agent)
+    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+        model_free = select_chat_image_model(user=user, is_subscribed=False)
+        assert model_free is Z_IMAGE_TURBO_IMAGE_TO_IMAGE
+        model_sub = select_chat_image_model(user=user, is_subscribed=True)
+        assert model_sub is SEEDREAM_V4_5_EDIT

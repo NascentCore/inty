@@ -14,7 +14,7 @@ from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 async def get_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回的记录数"),
     status: Optional[str] = Query(None, description="按状态过滤"),
@@ -37,9 +37,6 @@ async def get_evaluation_sessions(
 
     返回当前用户创建的评测会话列表
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -51,7 +48,9 @@ async def get_evaluation_sessions(
 
     except Exception as e:
         logger.error(f"获取评测会话列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取评测会话列表失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch evaluation sessions"
+        )
 
 
 @router.post(
@@ -63,16 +62,13 @@ async def create_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_in: schemas.EvaluationSessionCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建评测会话
 
     用于评测当前聊天系统的智能体对话效果
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
@@ -94,7 +90,9 @@ async def create_evaluation_session(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"创建评测会话失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="创建评测会话失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to create evaluation session"
+        )
 
 
 @router.post(
@@ -105,26 +103,26 @@ async def start_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     启动评测会话
 
     开始执行对智能体的批量测试和评分
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
         # 验证会话所有权
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="评测会话不存在")
+            raise HTTPException(status_code=404, detail="Evaluation session not found")
 
         if session.creator_id != current_user.id:
-            raise HTTPException(status_code=403, detail="无权操作此评测会话")
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to operate this evaluation session",
+            )
 
         success = await evaluation_service.start_session(session_id)
 
@@ -135,7 +133,9 @@ async def start_evaluation_session(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"启动评测会话失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="启动评测会话失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to start evaluation session"
+        )
 
 
 @router.get(
@@ -147,31 +147,31 @@ async def get_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取评测会话详情
 
     包含完整的测试结果和交互记录
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="评测会话不存在")
+            raise HTTPException(status_code=404, detail="Evaluation session not found")
 
         if session.creator_id != current_user.id:
-            raise HTTPException(status_code=403, detail="无权访问此评测会话")
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to access this evaluation session",
+            )
 
         return session
 
     except Exception as e:
         logger.error(f"获取评测会话详情失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取会话详情失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch session details")
 
 
 @router.get(
@@ -183,33 +183,35 @@ async def get_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取评测结果
 
     返回指定会话的所有测试结果
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
         # 验证权限
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="评测会话不存在")
+            raise HTTPException(status_code=404, detail="Evaluation session not found")
 
         if session.creator_id != current_user.id:
-            raise HTTPException(status_code=403, detail="无权访问此评测会话")
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to access this evaluation session",
+            )
 
         results = await evaluation_service.get_session_results(session_id)
         return results
 
     except Exception as e:
         logger.error(f"获取评测结果失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取评测结果失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch evaluation results"
+        )
 
 
 @router.post(
@@ -220,26 +222,26 @@ async def cancel_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     取消评测会话
 
     停止正在进行的评测任务
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
 
         # 验证权限
         session = await evaluation_service.get_session(session_id)
         if not session:
-            raise HTTPException(status_code=404, detail="评测会话不存在")
+            raise HTTPException(status_code=404, detail="Evaluation session not found")
 
         if session.creator_id != current_user.id:
-            raise HTTPException(status_code=403, detail="无权操作此评测会话")
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to operate this evaluation session",
+            )
 
         success = await evaluation_service.cancel_session(session_id)
 
@@ -248,7 +250,9 @@ async def cancel_evaluation_session(
 
     except Exception as e:
         logger.error(f"取消评测会话失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="取消评测会话失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to cancel evaluation session"
+        )
 
 
 @router.post(
@@ -259,27 +263,27 @@ async def cancel_evaluation_session(
 async def parse_questions_file(
     *,
     file: UploadFile = File(...),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     解析问题文件
 
     支持txt、csv、json格式的问题文件上传和解析
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 验证文件大小（最大10MB）
         if file.size and file.size > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
+            raise HTTPException(status_code=400, detail="File size cannot exceed 10MB")
 
         # 验证文件类型
         allowed_types = [".json"]
         if not any(file.filename.lower().endswith(ext) for ext in allowed_types):
             raise HTTPException(
                 status_code=400,
-                detail=f"不支持的文件类型，只支持: {', '.join(allowed_types)}",
+                detail=(
+                    "Unsupported file type. Only supported: "
+                    f"{', '.join(allowed_types)}"
+                ),
             )
 
         questions = await QuestionParserService.parse_questions_file(file)
@@ -303,7 +307,7 @@ async def parse_questions_file(
         raise
     except Exception as e:
         logger.error(f"解析问题文件失败: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
 
 
 @router.get(
@@ -313,14 +317,11 @@ async def parse_questions_file(
 )
 async def get_scoring_models(
     *,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取可用模型列表
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         scoring_service = ScoringService()
         models = await scoring_service.get_available_models()
@@ -328,7 +329,7 @@ async def get_scoring_models(
 
     except Exception as e:
         logger.error(f"获取评分模型失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取评分模型失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch scoring models")
 
 
 @router.post(
@@ -338,16 +339,13 @@ async def get_scoring_models(
 async def validate_scoring_criteria(
     *,
     criteria: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     验证评分标准
 
     检查评分标准的格式和完整性
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         scoring_service = ScoringService()
         validation = scoring_service.validate_scoring_criteria(criteria)
@@ -355,7 +353,9 @@ async def validate_scoring_criteria(
 
     except Exception as e:
         logger.error(f"验证评分标准失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="验证评分标准失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to validate scoring criteria"
+        )
 
 
 @router.get(
@@ -366,7 +366,7 @@ async def validate_scoring_criteria(
 async def get_evaluation_stats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     days: int = Query(30, ge=1, le=365, description="统计天数"),
 ) -> Any:
     """
@@ -374,9 +374,6 @@ async def get_evaluation_stats(
 
     显示用户的评测历史和统计数据
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里可以实现统计逻辑
         # 暂时返回模拟数据
@@ -393,7 +390,7 @@ async def get_evaluation_stats(
 
     except Exception as e:
         logger.error(f"获取评测统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取统计信息失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch statistics")
 
 
 # WebSocket端点用于实时监控评测进度
@@ -402,16 +399,13 @@ async def monitor_evaluation_session(
     websocket,
     session_id: str,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ):
     """
     实时监控评测会话进度
 
     通过WebSocket推送评测进度和结果
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     await websocket.accept()
 
     try:
@@ -466,7 +460,7 @@ async def monitor_evaluation_session(
 async def get_evaluation_agents(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     type: str = Query("public", pattern="^(public|private)$", description="智能体类型"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
@@ -476,9 +470,6 @@ async def get_evaluation_agents(
 
     支持获取公开和私有智能体，用于评测系统选择测试对象
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
@@ -498,7 +489,7 @@ async def get_evaluation_agents(
 
     except Exception as e:
         logger.error(f"获取智能体列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取智能体列表失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch agents")
 
 
 @router.post(
@@ -510,16 +501,13 @@ async def create_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_in: schemas.AgentCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建用于评测的智能体
 
     在评测系统中创建新的智能体用于测试
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
@@ -532,7 +520,7 @@ async def create_evaluation_agent(
 
     except Exception as e:
         logger.error(f"创建智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="创建智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to create agent")
 
 
 @router.put(
@@ -545,26 +533,25 @@ async def update_evaluation_agent(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     agent_in: schemas.AgentUpdate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     更新评测智能体
 
     修改智能体的配置和提示词等信息
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
         # 验证权限
         agent = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent:
-            raise HTTPException(status_code=404, detail="智能体不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
 
         if agent.creator_id != current_user.id:
-            raise HTTPException(status_code=403, detail="无权修改此智能体")
+            raise HTTPException(
+                status_code=403, detail="Not authorized to update this agent"
+            )
 
         updated_agent = await agent_service.update_agent(
             db=db, agent_id=agent_id, agent_in=agent_in
@@ -577,7 +564,7 @@ async def update_evaluation_agent(
         raise
     except Exception as e:
         logger.error(f"更新智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="更新智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to update agent")
 
 
 @router.delete(
@@ -588,26 +575,25 @@ async def delete_evaluation_agent(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     删除评测智能体
 
     删除用户创建的私有智能体
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services import agent_service
 
         # 验证权限
         agent = await agent_service.get_agent(db, agent_id=agent_id)
         if not agent:
-            raise HTTPException(status_code=404, detail="智能体不存在")
+            raise HTTPException(status_code=404, detail="Agent not found")
 
         if agent.creator_id != current_user.id:
-            raise HTTPException(status_code=403, detail="无权删除此智能体")
+            raise HTTPException(
+                status_code=403, detail="Not authorized to delete this agent"
+            )
 
         await agent_service.delete_agent(db=db, agent_id=agent_id)
 
@@ -618,7 +604,7 @@ async def delete_evaluation_agent(
         raise
     except Exception as e:
         logger.error(f"删除智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="删除智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to delete agent")
 
 
 @router.get(
@@ -629,16 +615,13 @@ async def check_background_aspect_ratio(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     检查背景图是否为 9:16 比例
 
     用于生成背景动图前验证背景图比例
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         import io
 
@@ -659,7 +642,9 @@ async def check_background_aspect_ratio(
 
         # 验证背景图是否存在
         if not agent.background:
-            raise HTTPException(status_code=400, detail="请先上传背景图")
+            raise HTTPException(
+                status_code=400, detail="Please upload a background image first"
+            )
 
         # 将背景图 URL 转换为 GCS URI 格式
         background_url = agent.background
@@ -681,7 +666,11 @@ async def check_background_aspect_ratio(
 
         if not background_gcs_uri:
             raise HTTPException(
-                status_code=400, detail="无法获取背景图 URL，请重新上传背景图"
+                status_code=400,
+                detail=(
+                    "Unable to get background image URL. Please upload the image "
+                    "again"
+                ),
             )
 
         # 下载图片并检查尺寸
@@ -702,7 +691,10 @@ async def check_background_aspect_ratio(
         raise
     except Exception as e:
         logger.error(f"检查背景图宽高比失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="检查背景图宽高比失败")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to validate background image aspect ratio",
+        )
 
 
 @router.post(
@@ -715,16 +707,13 @@ async def upload_cropped_background(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     file: UploadFile = File(...),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     上传裁剪后的背景图
 
     替换智能体的背景图为裁剪后的 9:16 比例图片
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.schemas.agent import AgentUpdate
         from app.services import agent_service
@@ -749,7 +738,7 @@ async def upload_cropped_background(
 
         if not result.data:
             raise HTTPException(
-                status_code=400, detail=result.message or "图片上传失败"
+                status_code=400, detail=result.message or "Image upload failed"
             )
 
         # 更新 Agent 的背景图
@@ -767,7 +756,9 @@ async def upload_cropped_background(
         raise
     except Exception as e:
         logger.error(f"上传裁剪后的背景图失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="上传裁剪后的背景图失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to upload cropped background image"
+        )
 
 
 @router.post(
@@ -779,16 +770,13 @@ async def deploy_agent_to_production(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     admin_password: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     将智能体部署到生产环境
 
     需要管理员权限，将测试智能体上线到生产环境
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里应该实现实际的部署逻辑
         # 暂时返回模拟响应
@@ -803,7 +791,7 @@ async def deploy_agent_to_production(
 
     except Exception as e:
         logger.error(f"部署智能体失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="部署智能体失败")
+        raise HTTPException(status_code=500, detail="Failed to deploy agent")
 
 
 # =============================================================================
@@ -820,16 +808,13 @@ async def create_evaluation_template(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     template_in: schemas.EvaluationTemplateCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     创建评测模板
 
     保存常用的问题集和评分标准为模板
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         import uuid
 
@@ -859,7 +844,9 @@ async def create_evaluation_template(
 
     except Exception as e:
         logger.error(f"创建评测模板失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="创建评测模板失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to create evaluation template"
+        )
 
 
 @router.get(
@@ -870,7 +857,7 @@ async def create_evaluation_template(
 async def get_evaluation_templates(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     include_public: bool = Query(True, description="是否包含公开模板"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -880,9 +867,6 @@ async def get_evaluation_templates(
 
     返回用户的模板和公开模板
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import or_, select
 
@@ -904,7 +888,9 @@ async def get_evaluation_templates(
 
     except Exception as e:
         logger.error(f"获取评测模板失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取评测模板失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch evaluation templates"
+        )
 
 
 # =============================================================================
@@ -921,16 +907,13 @@ async def create_batch_evaluation(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     batch_request: schemas.BatchEvaluationRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     批量创建评测会话
 
     一次性创建多个评测会话
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         evaluation_service = EvaluationService(db)
         sessions = []
@@ -953,7 +936,9 @@ async def create_batch_evaluation(
 
     except Exception as e:
         logger.error(f"批量创建评测失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="批量创建评测失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to create evaluations in batch"
+        )
 
 
 @router.post(
@@ -964,16 +949,13 @@ async def export_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     export_request: schemas.EvaluationExportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     导出评测结果
 
     将评测结果导出为CSV、JSON或Excel格式
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里应该实现实际的导出逻辑
         # 暂时返回下载链接
@@ -989,7 +971,9 @@ async def export_evaluation_results(
 
     except Exception as e:
         logger.error(f"导出评测结果失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="导出评测结果失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to export evaluation results"
+        )
 
 
 @router.post(
@@ -1001,16 +985,13 @@ async def compare_evaluation_sessions(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     session_ids: List[str],
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     对比评测会话结果
 
     分析多个会话的结果差异
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         # 这里应该实现实际的对比逻辑
         # 暂时返回模拟数据
@@ -1029,7 +1010,9 @@ async def compare_evaluation_sessions(
 
     except Exception as e:
         logger.error(f"对比评测会话失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="对比评测会话失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to compare evaluation sessions"
+        )
 
 
 # =============================================================================
@@ -1096,7 +1079,9 @@ def _normalize_user_lookup_params(
 
     # 必须且只能提供其中一个
     if bool(normalized_email) == bool(normalized_user_id):
-        raise HTTPException(status_code=400, detail="必须且只能提供 email 或 user_id")
+        raise HTTPException(
+            status_code=400, detail="Provide either email or user_id, but not both"
+        )
 
     return normalized_email, normalized_user_id
 
@@ -1110,14 +1095,15 @@ async def _find_user_info_by_identifier(
         user_info = await service.find_user_by_email(normalized_email)
         if not user_info:
             raise HTTPException(
-                status_code=404, detail=f"未找到邮箱为 {normalized_email} 的用户"
+                status_code=404,
+                detail=f"User with email {normalized_email} not found",
             )
         return user_info
 
     user_info = await service.find_user_by_id(normalized_user_id)
     if not user_info:
         raise HTTPException(
-            status_code=404, detail=f"未找到ID为 {normalized_user_id} 的用户"
+            status_code=404, detail=f"User with ID {normalized_user_id} not found"
         )
     return user_info
 
@@ -1129,8 +1115,8 @@ async def _find_user_info_by_identifier(
 )
 async def get_new_users(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1142,9 +1128,6 @@ async def get_new_users(
     ),
 ) -> Any:
     """获取用户注册统计（按注册日期范围）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1165,7 +1148,7 @@ async def get_new_users(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取用户统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户统计失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch user statistics")
 
 
 @router.get(
@@ -1175,8 +1158,8 @@ async def get_new_users(
 )
 async def get_user_activity(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1188,9 +1171,6 @@ async def get_user_activity(
     ),
 ) -> Any:
     """获取用户聊天活动原始数据（按注册日期范围筛选用户）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1211,7 +1191,7 @@ async def get_user_activity(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取用户活动失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户活动失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch user activity")
 
 
 @router.get(
@@ -1221,8 +1201,8 @@ async def get_user_activity(
 )
 async def get_conversation_rounds(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1243,9 +1223,6 @@ async def get_conversation_rounds(
     ),
 ) -> Any:
     """获取对话轮数分布（按Session）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1268,7 +1245,9 @@ async def get_conversation_rounds(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取对话轮数失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取对话轮数失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch conversation turns"
+        )
 
 
 @router.get(
@@ -1278,8 +1257,8 @@ async def get_conversation_rounds(
 )
 async def get_user_rounds_distribution(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1300,9 +1279,6 @@ async def get_user_rounds_distribution(
     ),
 ) -> Any:
     """获取对话轮数分布（按用户）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1325,7 +1301,9 @@ async def get_user_rounds_distribution(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取用户轮数分布失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户轮数分布失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch user turn distribution"
+        )
 
 
 @router.get(
@@ -1335,8 +1313,8 @@ async def get_user_rounds_distribution(
 )
 async def get_popular_agents(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1357,12 +1335,7 @@ async def get_popular_agents(
     ),
 ) -> Any:
     """获取热门角色排行"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
-        from collections import defaultdict
-
         from app.services.user_analytics_service import UserAnalyticsService
 
         reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
@@ -1375,81 +1348,15 @@ async def get_popular_agents(
         )
 
         service = UserAnalyticsService(db)
-        activity_data = await service.get_user_chat_activity(reg_start, reg_end)
-
-        agent_stats = defaultdict(
-            lambda: {
-                "users": set(),
-                "rounds": 0,
-                "sessions": [],
-                "total_chats": set(),
-            }
+        return await service.get_popular_agents(
+            reg_start, reg_end, act_start, act_end, limit=20
         )
-        rounds_data = await service.get_conversation_rounds(
-            reg_start, reg_end, act_start, act_end
-        )
-        chat_to_rounds = {
-            item["chat_id"]: item["message_count_excluding_opening"]
-            for item in rounds_data
-        }
-
-        for item in activity_data:
-            if item["chat_id"] and item["agent_name"]:
-                agent_name = item["agent_name"]
-                agent_stats[agent_name]["total_chats"].add(item["chat_id"])
-
-        for item in activity_data:
-            if item["chat_id"] and item["agent_name"]:
-                agent_name = item["agent_name"]
-                rounds = chat_to_rounds.get(item["chat_id"], 0)
-                if rounds > 0:
-                    agent_stats[agent_name]["users"].add(item["user_id"])
-                    agent_stats[agent_name]["rounds"] += rounds
-                    agent_stats[agent_name]["sessions"].append(rounds)
-
-        result = []
-        for agent_name, stats in agent_stats.items():
-            user_count = len(stats["users"])
-            total_rounds = stats["rounds"]
-            sessions = stats["sessions"]
-            active_sessions = len(sessions)
-            total_sessions = len(stats["total_chats"])
-
-            avg_rounds_per_user = total_rounds / user_count if user_count > 0 else 0.0
-            sessions_ge_5 = sum(1 for r in sessions if r >= 5)
-            sessions_ge_10 = sum(1 for r in sessions if r >= 10)
-            pct_sessions_ge_5 = (
-                (sessions_ge_5 / active_sessions * 100) if active_sessions > 0 else 0.0
-            )
-            pct_sessions_ge_10 = (
-                (sessions_ge_10 / active_sessions * 100) if active_sessions > 0 else 0.0
-            )
-            open_rate = (
-                (active_sessions / total_sessions * 100) if total_sessions > 0 else 0.0
-            )
-
-            result.append(
-                {
-                    "agent_name": agent_name,
-                    "user_count": user_count,
-                    "total_rounds": total_rounds,
-                    "avg_rounds_per_user": round(avg_rounds_per_user, 2),
-                    "pct_sessions_ge_5": round(pct_sessions_ge_5, 2),
-                    "pct_sessions_ge_10": round(pct_sessions_ge_10, 2),
-                    "total_sessions": total_sessions,
-                    "active_sessions": active_sessions,
-                    "open_rate": round(open_rate, 2),
-                }
-            )
-
-        result.sort(key=lambda x: x["user_count"], reverse=True)
-        return result[:20]
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取热门角色失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取热门角色失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch popular agents")
 
 
 @router.get(
@@ -1459,8 +1366,8 @@ async def get_popular_agents(
 )
 async def get_users_hitting_limit(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1472,9 +1379,6 @@ async def get_users_hitting_limit(
     ),
 ) -> Any:
     """获取达到聊天限制的用户（使用活跃日期范围）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1505,7 +1409,9 @@ async def get_users_hitting_limit(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取达到限制的用户失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取达到限制的用户失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch users who hit limits"
+        )
 
 
 @router.get(
@@ -1515,8 +1421,8 @@ async def get_users_hitting_limit(
 )
 async def get_agent_analytics(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1537,9 +1443,6 @@ async def get_agent_analytics(
     ),
 ) -> Any:
     """获取角色数据分析"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1560,7 +1463,7 @@ async def get_agent_analytics(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取角色分析失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取角色分析失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch agent analysis")
 
 
 @router.get(
@@ -1570,8 +1473,8 @@ async def get_agent_analytics(
 )
 async def get_user_sessions_detail(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1592,9 +1495,6 @@ async def get_user_sessions_detail(
     ),
 ) -> Any:
     """获取用户会话详情"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1617,7 +1517,9 @@ async def get_user_sessions_detail(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取用户会话详情失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户会话详情失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch user session details"
+        )
 
 
 @router.get(
@@ -1627,8 +1529,8 @@ async def get_user_sessions_detail(
 )
 async def get_conversations_detail(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1649,9 +1551,6 @@ async def get_conversations_detail(
     ),
 ) -> Any:
     """获取对话详情（包含消息内容）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from collections import defaultdict
 
@@ -1719,7 +1618,9 @@ async def get_conversations_detail(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取对话详情失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取对话详情失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch conversation details"
+        )
 
 
 @router.get(
@@ -1729,8 +1630,8 @@ async def get_conversations_detail(
 )
 async def get_user_analytics_stats(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     register_start_date: Optional[str] = Query(
         None, description="注册开始日期 (YYYY-MM-DD)"
     ),
@@ -1751,9 +1652,6 @@ async def get_user_analytics_stats(
     ),
 ) -> Any:
     """获取用户数据分析统计概览"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -1774,7 +1672,159 @@ async def get_user_analytics_stats(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取统计数据失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取统计数据失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch statistics")
+
+
+@router.get(
+    "/user-analytics/reports",
+    response_model=schemas.user_analytics.UserAnalyticsReportsResponse,
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
+)
+async def get_user_analytics_reports(
+    *,
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
+    report_type: Optional[str] = Query(
+        None, description="daily | weekly，不传则返回全部"
+    ),
+    limit: int = Query(30, ge=1, le=100, description="返回条数"),
+    include_charts: bool = Query(True, description="是否返回图表数据"),
+) -> Any:
+    """获取用户数据分析预计算报告列表（日报/周报）"""
+    try:
+        from sqlalchemy import desc, select
+
+        from app.models.user_analytics_report import UserAnalyticsReport
+
+        def _safe_to_int(value: Any) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        def _normalize_daily_top_agent(
+            item: Dict[str, Any],
+            rank: int,
+        ) -> Optional[Dict[str, Any]]:
+            agent_name = item.get("agent_name")
+            if not isinstance(agent_name, str) or not agent_name:
+                return None
+            normalized_rank = _safe_to_int(item.get("rank"))
+            return {
+                "rank": normalized_rank if normalized_rank > 0 else rank,
+                "agent_name": agent_name,
+                "total_rounds": _safe_to_int(item.get("total_rounds")),
+                "user_count": _safe_to_int(item.get("user_count")),
+                "total_sessions": _safe_to_int(item.get("total_sessions")),
+                "active_sessions": _safe_to_int(item.get("active_sessions")),
+            }
+
+        def _build_daily_top_agents_by_rounds(charts: Any) -> List[Dict[str, Any]]:
+            if not isinstance(charts, dict):
+                return []
+
+            raw_top_agents = charts.get("daily_top_agents_by_rounds")
+            if isinstance(raw_top_agents, list) and raw_top_agents:
+                normalized_from_daily: List[Dict[str, Any]] = []
+                for index, item in enumerate(raw_top_agents, start=1):
+                    if not isinstance(item, dict):
+                        continue
+                    normalized_item = _normalize_daily_top_agent(item, index)
+                    if normalized_item is None:
+                        continue
+                    normalized_from_daily.append(normalized_item)
+                normalized_from_daily.sort(key=lambda item: item["rank"])
+                return normalized_from_daily[:10]
+
+            raw_popular_agents = charts.get("popular_agents")
+            if not isinstance(raw_popular_agents, list):
+                return []
+            popular_agents = [
+                item
+                for item in raw_popular_agents
+                if isinstance(item, dict) and item.get("agent_name")
+            ]
+            sorted_by_rounds = sorted(
+                popular_agents,
+                key=lambda item: (
+                    _safe_to_int(item.get("total_rounds")),
+                    _safe_to_int(item.get("user_count")),
+                ),
+                reverse=True,
+            )
+            fallback_top_agents: List[Dict[str, Any]] = []
+            for rank, item in enumerate(sorted_by_rounds[:10], start=1):
+                normalized_item = _normalize_daily_top_agent(item, rank)
+                if normalized_item is None:
+                    continue
+                fallback_top_agents.append(normalized_item)
+            return fallback_top_agents
+
+        def _build_daily_most_discussed_agent(
+            charts: Any,
+            daily_top_agents_by_rounds: List[Dict[str, Any]],
+        ) -> Optional[Dict[str, Any]]:
+            if isinstance(charts, dict):
+                raw_most_discussed = charts.get("daily_most_discussed_agent")
+                if isinstance(raw_most_discussed, dict):
+                    normalized_item = _normalize_daily_top_agent(raw_most_discussed, 1)
+                    if normalized_item is not None:
+                        return normalized_item
+            if daily_top_agents_by_rounds:
+                return daily_top_agents_by_rounds[0]
+            return None
+
+        stmt = (
+            select(UserAnalyticsReport)
+            .order_by(desc(UserAnalyticsReport.report_date))
+            .limit(limit)
+        )
+        if report_type in ("daily", "weekly"):
+            stmt = stmt.where(UserAnalyticsReport.report_type == report_type)
+
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+
+        reports = []
+        for row in rows:
+            daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(row.charts)
+            daily_most_discussed_agent = _build_daily_most_discussed_agent(
+                row.charts, daily_top_agents_by_rounds
+            )
+            charts_data = None
+            if include_charts and row.charts:
+                charts_data = schemas.user_analytics.UserAnalyticsReportCharts(
+                    new_users=row.charts.get("new_users", []),
+                    conversation_rounds=row.charts.get("conversation_rounds", []),
+                    user_rounds_distribution=row.charts.get(
+                        "user_rounds_distribution", []
+                    ),
+                    users_hitting_limit=row.charts.get("users_hitting_limit", []),
+                    popular_agents=row.charts.get("popular_agents", []),
+                    generated_images=row.charts.get("generated_images", []),
+                    daily_top_agents_by_rounds=daily_top_agents_by_rounds,
+                    daily_most_discussed_agent=daily_most_discussed_agent,
+                )
+            reports.append(
+                schemas.user_analytics.UserAnalyticsReportItem(
+                    id=row.id,
+                    report_type=row.report_type,
+                    report_date=row.report_date.isoformat(),
+                    stats=row.stats,
+                    daily_top_agents_by_rounds=daily_top_agents_by_rounds,
+                    daily_most_discussed_agent=daily_most_discussed_agent,
+                    charts=charts_data,
+                    created_at=(row.created_at.isoformat() if row.created_at else None),
+                )
+            )
+
+        return schemas.user_analytics.UserAnalyticsReportsResponse(reports=reports)
+
+    except Exception as e:
+        logger.error(f"获取预计算报告失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch precomputed reports"
+        )
 
 
 @router.get(
@@ -1784,8 +1834,8 @@ async def get_user_analytics_stats(
 )
 async def get_llm_latency_trend(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1797,9 +1847,6 @@ async def get_llm_latency_trend(
     ),
 ) -> Any:
     """获取 LLM 调用延迟趋势（按小时聚合）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1833,7 +1880,7 @@ async def get_llm_latency_trend(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取 LLM 延迟趋势失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取 LLM 延迟趋势失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch LLM latency trend")
 
 
 @router.get(
@@ -1843,8 +1890,8 @@ async def get_llm_latency_trend(
 )
 async def get_image_generation_latency_trend(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1856,9 +1903,6 @@ async def get_image_generation_latency_trend(
     ),
 ) -> Any:
     """获取生图耗时趋势（按小时和模型聚合）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1880,7 +1924,7 @@ async def get_image_generation_latency_trend(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="请提供 activity_start_date/activity_end_date 或 activity_last_days",
+                detail="Provide activity_start_date/activity_end_date or activity_last_days",
             )
 
         service = UserAnalyticsService(db)
@@ -1893,7 +1937,71 @@ async def get_image_generation_latency_trend(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取生图耗时趋势失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取生图耗时趋势失败")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch image generation duration trend",
+        )
+
+
+@router.get(
+    "/user-analytics/image-generation-failures",
+    response_model=schemas.user_analytics.ImageGenerationFailureAnalyticsResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_image_generation_failure_analytics(
+    *,
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
+    top_n_reasons: int = Query(20, ge=1, le=100, description="失败原因 Top N"),
+) -> Any:
+    """获取生图失败与兜底分析（只读 replica：失败类型、失败原因、兜底占比、按 Agent、按日趋势）"""
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        now = datetime.now(timezone.utc)
+        if activity_last_days:
+            act_end = now
+            act_start = now - timedelta(days=activity_last_days)
+        elif activity_start_date and activity_end_date:
+            act_start = datetime.strptime(activity_start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            act_end = datetime.strptime(activity_end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            ) + timedelta(days=1)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide activity_start_date/activity_end_date or activity_last_days",
+            )
+
+        service = UserAnalyticsService(db)
+        data = await service.get_image_generation_failure_analytics(
+            act_start, act_end, top_n_reasons=top_n_reasons
+        )
+        return {"data": data}
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取生图失败分析失败: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch image generation failure analytics",
+        )
 
 
 @router.get(
@@ -1903,8 +2011,8 @@ async def get_image_generation_latency_trend(
 )
 async def get_live_chat_latency_trend(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1916,9 +2024,6 @@ async def get_live_chat_latency_trend(
     ),
 ) -> Any:
     """获取 Live Chat 延迟趋势（按小时聚合）"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -1952,7 +2057,9 @@ async def get_live_chat_latency_trend(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取 Live Chat 延迟趋势失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取 Live Chat 延迟趋势失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch Live Chat latency trend"
+        )
 
 
 @router.get(
@@ -1962,8 +2069,8 @@ async def get_live_chat_latency_trend(
 )
 async def get_live_chat_basic_stats(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     activity_start_date: Optional[str] = Query(
         None, description="活跃开始日期 (YYYY-MM-DD)"
     ),
@@ -1975,9 +2082,6 @@ async def get_live_chat_basic_stats(
     ),
 ) -> Any:
     """获取 Live Chat 基础统计"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2011,7 +2115,9 @@ async def get_live_chat_basic_stats(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"获取 Live Chat 基础统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取 Live Chat 基础统计失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch Live Chat base statistics"
+        )
 
 
 @router.get(
@@ -2021,17 +2127,14 @@ async def get_live_chat_basic_stats(
 )
 async def get_user_daily_messages(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
     start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
 ) -> Any:
     """获取用户每日消息统计"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from datetime import datetime, timedelta, timezone
 
@@ -2082,7 +2185,9 @@ async def get_user_daily_messages(
         raise
     except Exception as e:
         logger.error(f"获取用户每日消息统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户每日消息统计失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch daily user message stats"
+        )
 
 
 @router.get(
@@ -2092,15 +2197,12 @@ async def get_user_daily_messages(
 )
 async def get_user_today_stats(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
     """获取用户当日统计"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -2120,7 +2222,132 @@ async def get_user_today_stats(
         raise
     except Exception as e:
         logger.error(f"获取用户当日统计失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户当日统计失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch today's user stats"
+        )
+
+
+@router.get(
+    "/user-analytics/user-generated-images",
+    response_model=schemas.user_analytics.UserGeneratedImagesResponse,
+    tags=[INTY_EVAL_TAG],
+)
+async def get_user_generated_images(
+    *,
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
+    email: Optional[str] = Query(None, description="用户邮箱"),
+    user_id: Optional[str] = Query(None, description="用户ID"),
+    skip: int = Query(0, ge=0, description="跳过的记录数"),
+    limit: int = Query(50, ge=1, le=200, description="返回的记录数"),
+) -> Any:
+    """
+    获取指定用户的所有聊天生成图片
+
+    从 resources 表查询带有 generation_prompt 的图片资源
+    """
+    try:
+        from sqlalchemy import select
+
+        from app.models.resource import Resource, ResourceType
+        from app.services.image_transform_service import image_transform_service
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        service = UserAnalyticsService(db)
+
+        # 查找用户
+        user_info = await _find_user_info_by_identifier(
+            service, email=email, user_id=user_id
+        )
+
+        # 查询指定用户的生成图片
+        query = (
+            select(Resource)
+            .where(
+                Resource.user_id == user_info["id"],
+                Resource.type == ResourceType.IMAGE,
+                Resource.resource_metadata.isnot(None),
+            )
+            .order_by(Resource.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        result = await db.execute(query)
+        resources = result.scalars().all()
+
+        # 收集所有 agent_id 并查询角色信息
+        from app.models.agent import Agent
+
+        agent_ids = list(set(r.agent_id for r in resources if r.agent_id))
+        agent_info_map: dict[str, dict] = {}
+        if agent_ids:
+            agent_query = select(Agent.id, Agent.name).where(Agent.id.in_(agent_ids))
+            agent_result = await db.execute(agent_query)
+            for row in agent_result.all():
+                agent_info_map[row.id] = {
+                    "name": row.name,
+                }
+
+        # 构建返回数据
+        images = []
+        for resource in resources:
+            metadata = resource.resource_metadata or {}
+            generation_prompt = metadata.get("generation_prompt")
+
+            # 只返回有 generation_prompt 的图片
+            if not generation_prompt:
+                continue
+
+            size = metadata.get("size", {})
+            try:
+                cdn_url = image_transform_service.transform_desktop(resource.url)
+            except Exception as e:
+                logger.warning(f"转换图片URL失败: {resource.url}, 错误: {str(e)}")
+                cdn_url = resource.url  # 使用原始URL作为fallback
+            reference_image_url = metadata.get("reference_image_url")
+
+            agent_info = agent_info_map.get(resource.agent_id, {})
+            images.append(
+                {
+                    "url": cdn_url,
+                    "gcs_url": resource.url,
+                    "generation_prompt": generation_prompt,
+                    "reference_image_url": reference_image_url,
+                    "width": size.get("width"),
+                    "height": size.get("height"),
+                    "created_at": (
+                        resource.created_at.isoformat() if resource.created_at else None
+                    ),
+                    "agent_id": resource.agent_id,
+                    "agent_name": agent_info.get("name"),
+                }
+            )
+
+        # 获取总数
+        count_query = select(Resource).where(
+            Resource.user_id == user_info["id"],
+            Resource.type == ResourceType.IMAGE,
+            Resource.resource_metadata.isnot(None),
+        )
+        count_result = await db.execute(count_query)
+        all_resources = count_result.scalars().all()
+        total = 0
+        for resource in all_resources:
+            metadata = resource.resource_metadata or {}
+            if metadata.get("generation_prompt"):
+                total += 1
+
+        logger.debug(f"获取用户 {user_info['id']} 的生成图片，共 {len(images)} 张")
+        return {"images": images, "total": total}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取用户生成图片失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch user generated images"
+        )
 
 
 @router.get(
@@ -2130,15 +2357,12 @@ async def get_user_today_stats(
 )
 async def get_user_sessions(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     email: Optional[str] = Query(None, description="用户邮箱"),
     user_id: Optional[str] = Query(None, description="用户ID"),
 ) -> Any:
     """获取用户的所有会话列表"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -2158,7 +2382,7 @@ async def get_user_sessions(
         raise
     except Exception as e:
         logger.error(f"获取用户会话列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取用户会话列表失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch user sessions")
 
 
 @router.get(
@@ -2168,16 +2392,13 @@ async def get_user_sessions(
 )
 async def get_session_messages(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     chat_id: str = Query(..., description="会话ID (chat_id)"),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(50, ge=1, le=200, description="每页数量"),
 ) -> Any:
     """获取指定会话的对话历史"""
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from app.services.user_analytics_service import UserAnalyticsService
 
@@ -2190,7 +2411,7 @@ async def get_session_messages(
 
     except Exception as e:
         logger.error(f"获取会话消息失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取会话消息失败")
+        raise HTTPException(status_code=500, detail="Failed to fetch session messages")
 
 
 # =============================================================================
@@ -2205,16 +2426,13 @@ async def get_session_messages(
 async def get_all_agents_image_counts(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     获取所有角色的生成图片数量
 
     返回格式: {"agent_id_1": 5, "agent_id_2": 10, ...}
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import func, select
 
@@ -2242,7 +2460,9 @@ async def get_all_agents_image_counts(
 
     except Exception as e:
         logger.error(f"获取角色图片数量失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取角色图片数量失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch agent image counts"
+        )
 
 
 @router.get(
@@ -2252,7 +2472,7 @@ async def get_all_agents_image_counts(
 async def get_agent_generated_images(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
     agent_id: str,
     skip: int = Query(0, ge=0, description="跳过的记录数"),
     limit: int = Query(50, ge=1, le=200, description="返回的记录数"),
@@ -2262,9 +2482,6 @@ async def get_agent_generated_images(
 
     从 resources 表查询带有 generation_prompt 的图片资源
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
         from sqlalchemy import select
 
@@ -2342,4 +2559,6 @@ async def get_agent_generated_images(
 
     except Exception as e:
         logger.error(f"获取角色生成图片失败: {str(e)}")
-        raise HTTPException(status_code=500, detail="获取角色生成图片失败")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch agent generated images"
+        )

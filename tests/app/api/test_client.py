@@ -4,6 +4,8 @@ from typing import Iterable, List, Optional
 import httpx
 from loguru import logger
 
+from app.core.config import global_config_loaded_from_config_yaml
+
 
 class TestClient:
     """
@@ -134,6 +136,7 @@ class TestClient:
         messages: Optional[Iterable[dict]] = None,
         *,
         language: str = "en",
+        headers: Optional[dict] = None,
     ) -> dict:
         if not self.token:
             raise RuntimeError(
@@ -151,11 +154,72 @@ class TestClient:
             "language": language,
         }
 
+        request_headers = {**self.client.headers, **(headers or {})}
         response = self.client.post(
             f"{self.base_url}/api/v1/chat/completions/{agent_id}",
             json=payload,
+            headers=request_headers,
         )
 
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    def headers_for_festival_memory(self) -> dict:
+        """Return headers with appVersionCode so API includes festival_memory_prompt messages."""
+        headers = dict(self.client.headers)
+        min_ver = (
+            global_config_loaded_from_config_yaml.app.min_app_version_code_for_festival_memory
+        )
+        if min_ver > 0:
+            headers["appVersionCode"] = "9999"
+        return headers
+
+    def get_agent_chat_messages(
+        self,
+        agent_id: str,
+        limit: int = 20,
+        offset: int = 0,
+        order: str = "desc",
+        *,
+        include_festival_memory: bool = True,
+        headers: Optional[dict] = None,
+    ) -> dict:
+        """GET /api/v1/chats/agents/{agent_id}/messages. Returns response JSON (asserts 200)."""
+        if not self.token:
+            raise RuntimeError(
+                "call create_user() before getting agent chat messages"
+            )
+        params = {"limit": limit, "offset": offset, "order": order}
+        if headers is not None:
+            request_headers = {**self.client.headers, **headers}
+        else:
+            request_headers = (
+                self.headers_for_festival_memory()
+                if include_festival_memory
+                else self.client.headers
+            )
+        response = self.client.get(
+            f"{self.base_url}/api/v1/chats/agents/{agent_id}/messages",
+            params=params,
+            headers=request_headers,
+        )
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    def get_agent(
+        self,
+        agent_id: str,
+        *,
+        headers: Optional[dict] = None,
+    ) -> dict:
+        """GET /api/v1/ai/agents/{agent_id}. Returns response JSON (asserts 200)."""
+        if not self.token:
+            raise RuntimeError("call create_user() before getting agent")
+        request_headers = {**self.client.headers, **(headers or {})}
+        response = self.client.get(
+            f"{self.base_url}/api/v1/ai/agents/{agent_id}",
+            headers=request_headers,
+        )
         assert response.status_code == 200, response.text
         return response.json()
 
@@ -186,6 +250,13 @@ class TestClient:
             )
 
         return response_data["data"]["urls"]
+
+    def surprise_snap_unlock(self, message_id: int):
+        """POST /api/v1/chats/surprise-snap/unlock. Returns the response; caller asserts response.status_code and response.json()."""
+        return self.client.post(
+            f"{self.base_url}/api/v1/chats/surprise-snap/unlock",
+            json={"message_id": message_id},
+        )
 
     def close(self):
         """Close the HTTP client."""

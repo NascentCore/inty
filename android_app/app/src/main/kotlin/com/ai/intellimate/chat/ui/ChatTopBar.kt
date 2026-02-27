@@ -4,7 +4,9 @@ import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.design.theme.AppColors
 import ai.sxwl.android.utils.ToastUtils
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -116,11 +119,31 @@ fun ChatTopBar(
     avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
     fontSize: TextUnit = 14.sp,
     earnedPoints: Int? = null,
+    showBackButton: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val tagsList = agentInfo.tags?.filterNotNull() ?: emptyList()
+    fun normTag(t: String) = t.trim().removePrefix("#").lowercase()
+    val isVipByTag = remember(tagsList) { tagsList.any { normTag(it) == "vip" } }
+
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        // 返回按钮：showBackButton 为 true 时显示，样式与电话/更多按钮一致（半透明圆角背景），图标使用 R.drawable.back 与其他页面统一
+        if (showBackButton) {
+            Box(
+                modifier = Modifier.noRippleClickable { navController.popBackStack() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.back),
+                    contentDescription = stringResource(R.string.content_desc_back),
+                    colorFilter = ColorFilter.tint(Color.White),
+                    modifier = Modifier.size(UiConfigs.ChatTopBar.MoreButtonIconSize),
+                )
+            }
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.BackButtonToAvatarSpacing))
+        }
         Row(
             modifier =
                 Modifier.background(
@@ -163,7 +186,7 @@ fun ChatTopBar(
             // 名字区域 - 不使用 weight，让所有元素靠左对齐
             Column {
                 // 能量点数区域，目前还未开放显示角色能量点数；需要不断跟踪角色跟用户聊天的共享点数
-                // 而不是角色总共的 boost points，因为那样用户感觉没有实际的提升。
+                // 而不是角色总共的 credits，因为那样用户感觉没有实际的提升。
                 if (showPoints) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -208,6 +231,33 @@ fun ChatTopBar(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        // VIP 角标：仅当角色 tags 含 vip 时展示，与 Explore 页逻辑一致
+        if (isVipByTag) {
+            Box(
+                modifier =
+                    Modifier.size(
+                            UiConfigs.ChatTopBar.ActionButtonContainerWidth,
+                            UiConfigs.ChatTopBar.ActionButtonContainerHeight,
+                        )
+                        .background(
+                            color = AppColors.VipHighlighterStrong,
+                            shape =
+                                RoundedCornerShape(
+                                    UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                                ),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.vip_badge_label),
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = UiConfigs.ChatTopBar.VipBadgeFontSize,
+                )
+            }
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
+        }
 
         Box(
             modifier =

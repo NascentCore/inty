@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 import firebase_admin
 from firebase_admin import credentials, exceptions, initialize_app, messaging
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 _ENV_CRED_JSON = "FIREBASE_CREDENTIALS_JSON"
 _ENV_CRED_FILE = "GOOGLE_APPLICATION_CREDENTIALS"

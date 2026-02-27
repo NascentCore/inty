@@ -1,10 +1,26 @@
+import enum
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
-from app.models.message import MessageType, SenderType
+from app.schemas.biz_action import BizAction
+
+
+class MessageType(str, enum.Enum):
+    """消息类型"""
+
+    TEXT = "TEXT"
+    VOICE = "VOICE"
+    IMAGE = "IMAGE"
+
+
+class SenderType(str, enum.Enum):
+    """发送者类型"""
+
+    USER = "USER"
+    AI = "AI"
 
 
 class MessageBase(BaseModel):
@@ -59,7 +75,10 @@ class MessageList(BaseModel):
 
 
 class ChatSettingsBase(BaseModel):
-    """聊天设置基础模型"""
+    """聊天设置基础模型。
+
+    当前不包含「选择模型」；模型选择仅由角色配置与订阅层决定，见 agent / model_selection。
+    """
 
     language: str = "en"
     voice_enabled: bool = True  # 个性化语音自动播放开关
@@ -283,7 +302,17 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class UserTimeContext(BaseModel):
+    """用户时间上下文（来自客户端）"""
+
+    local_time: Optional[str] = None  # ISO 8601 或可读时间字符串
+    timezone: Optional[str] = None  # IANA 时区名称，如 Asia/Shanghai
+    utc_offset_minutes: Optional[int] = None  # UTC 偏移分钟数，如 480 表示 UTC+8
+
+
 class ChatCompletionRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     messages: List[ChatMessage]
     # DEPRECATED: Currently this parameter has no effect.
     stream: bool = False
@@ -292,6 +321,9 @@ class ChatCompletionRequest(BaseModel):
     # DEPRECATED: Currently this parameter has no use.
     language: str = "zh"  # 添加语言字段，默认中文
     request_id: Optional[str] = None
+    user_time_context: Optional[UserTimeContext] = Field(
+        default=None, alias="time_context"
+    )  # 可选的用户时间上下文
     # TODO：目前还在实施中 https://github.com/NascentCore/inty/issues/1364
     message_id: Optional[str] = (
         None  # Android 端生成的消息唯一标识；前后端用该 ID 确认该信息，ID 由生成方产生。
@@ -315,6 +347,8 @@ class ChatCompletionResponse(BaseModel):
     object: str = "chat.completion"
     created: int
     model: str
+    # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
+    business_actions: List[BizAction] = Field(default_factory=list)
     choices: List[dict]
     usage: dict
 
@@ -380,9 +414,8 @@ class ChatImageGenerationRequest(BaseModel):
     message_id: int  # 必填：要生成图片的消息ID
     history_count: Optional[int] = None
     request_id: Optional[str] = None
-    model: Optional[str] = (
-        None  # 可选：指定生图模型（"gemini" 或 fal 模型名），覆盖配置默认值
-    )
+    # TODO: 移除 model 参数（当前按订阅状态选择模型，请求中的 model 未被使用）
+    model: Optional[str] = None
 
 
 class ChatImageGenerationResponse(BaseModel):
@@ -394,6 +427,7 @@ class ChatImageGenerationResponse(BaseModel):
     message_id: int
     model: Optional[str] = None  # 使用的生图模型
     generation_time_ms: Optional[int] = None  # 模型调用耗时（毫秒）
+    model_fallback_due_to_429: Optional[bool] = None  # 是否因 429 使用了备用模型
 
 
 class MessageVoteRequest(BaseModel):

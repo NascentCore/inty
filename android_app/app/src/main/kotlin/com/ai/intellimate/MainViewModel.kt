@@ -101,6 +101,11 @@ class MainViewModel : BaseVM() {
     private var _pushAgentId = MutableStateFlow("")
     val pushAgentId: StateFlow<String> = _pushAgentId.asStateFlow()
 
+    /** 节日记忆推送点击：跳转 Love Journal 页并定位到对应记忆条目。Pair(agentId, memoryId)，memoryId 可为 null。 */
+    private var _pushFestivalMemoryTarget = MutableStateFlow<Pair<String, Long?>?>(null)
+    val pushFestivalMemoryTarget: StateFlow<Pair<String, Long?>?> =
+        _pushFestivalMemoryTarget.asStateFlow()
+
     // 首次登陆时，记录跳转注册页面时的动作
     private val _needsRegInfo = MutableStateFlow(false)
     val needsRegInfo: StateFlow<Boolean> = _needsRegInfo.asStateFlow()
@@ -185,13 +190,12 @@ class MainViewModel : BaseVM() {
         _isLoggedIn.value = IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
 
         viewModelScope.launch {
-            isLoggedIn
-                .collect {
-                    if (it) {
-                        // 领取积分
-                        BoostManager.checkClaimReward()
-                    }
+            isLoggedIn.collect {
+                if (it) {
+                    // 领取积分
+                    BoostManager.checkClaimReward()
                 }
+            }
         }
     }
 
@@ -485,6 +489,16 @@ class MainViewModel : BaseVM() {
     /** 更新 pushAgentId (离线推送通知点击) */
     fun updatePushAgentId(id: String) {
         _pushAgentId.value = id
+    }
+
+    /** 更新节日记忆推送目标 (点击节日记忆通知后跳转 Love Journal) */
+    fun updatePushFestivalMemoryTarget(agentId: String, memoryId: Long?) {
+        _pushFestivalMemoryTarget.value = Pair(agentId, memoryId)
+    }
+
+    /** 清除节日记忆推送目标（导航完成后调用） */
+    fun clearPushFestivalMemoryTarget() {
+        _pushFestivalMemoryTarget.value = null
     }
 
     /** 更新 needsRegInfo (首次登录跳转完善资料页面) */

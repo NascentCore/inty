@@ -3,7 +3,13 @@
  * 提供与单个智能体的实时聊天功能
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   Layout,
   Card,
@@ -37,14 +43,18 @@ import {
   DeleteOutlined,
   LikeOutlined,
   DislikeOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../hooks/useAgents";
+import { useApiKeyContext } from "../hooks/useApiKey";
 import api from "../services/api";
-import type { Agent } from "../types";
+import type { Agent, FestivalMemoryItem } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
+import AgentDetailModal from "../components/common/AgentDetailModal";
 import { MessageToImageIcon } from "../components/MessageToImageIcon";
+import { filterAgentsByName } from "../utils/agentFilters";
 import {
   formatUtcTimeOnly,
   formatUtcTimeRaw,
@@ -53,7 +63,7 @@ import {
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
-const { TextArea } = Input;
+const { TextArea, Search } = Input;
 
 interface ChatSession {
   id: string;
@@ -69,10 +79,18 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
-  type?: "text" | "image"; // 消息类型：文本或图片
+  type?: "text" | "image" | "festival_memory_prompt" | "surprise_snap"; // 消息类型：文本、图片、节日记忆提示、Surprise Snap
+  festival_memory_id?: number; // 节日记忆提示消息对应的 memory 记录 id（仅 type=festival_memory_prompt 时）
   image_url?: string; // 图片URL（仅图片消息）
+  // Surprise Snap 专属角色照（仅 type=surprise_snap 时）
+  media_url?: string;
+  caption?: string;
+  price?: number;
+  is_locked?: boolean;
   user_vote?: "like" | "dislike" | null; // 用户投票：点赞/点踩
   meta_data?: {
+    messageType?: string;
+    agentId?: string;
     generated_image?: {
       image_url: string;
       width: number;
@@ -97,6 +115,7 @@ export const ChatPage: React.FC = () => {
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [agentSearch, setAgentSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -104,13 +123,60 @@ export const ChatPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(
     new Map(),
   );
+  const [festivalMemoryModalOpen, setFestivalMemoryModalOpen] = useState(false);
+  const [agentWithFestivalMemories, setAgentWithFestivalMemories] =
+    useState<Agent | null>(null);
+  const [festivalMemoriesLoading, setFestivalMemoriesLoading] = useState(false);
+  const [agentDetailModalVisible, setAgentDetailModalVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    is_superuser?: boolean;
+  } | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    is_subscribed?: boolean;
+  } | null>(null);
   const backgroundImageUrl = selectedAgent?.background;
   const backgroundAnimatedUrl = selectedAgent?.background_animated;
   const backgroundAltName = selectedAgent?.name ?? "角色";
-
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const isSurpriseSnapMessage = (m: ChatMessage) =>
+    m.type === "surprise_snap" || m.meta_data?.messageType === "surprise_snap";
+
+  const { isApiKeyValid } = useApiKeyContext();
+
+  // 获取当前用户 profile 与订阅状态（用于 Surprise Snap 前端展示：订阅/管理员仍显示图片）
+  useEffect(() => {
+    if (!isApiKeyValid) {
+      setUserProfile(null);
+      setSubscriptionStatus(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const client = api.getIntyClient();
+        const [profileRes, subRes] = await Promise.all([
+          client.api.v1.users.profile.me(),
+          client.api.v1.subscription.getStatus(),
+        ]);
+        if (cancelled) return;
+        const data = (profileRes as { data?: { is_superuser?: boolean } })?.data;
+        const subData = (subRes as { data?: { is_subscribed?: boolean } })?.data;
+        setUserProfile(data ? { is_superuser: data.is_superuser } : null);
+        setSubscriptionStatus(subData ? { is_subscribed: subData.is_subscribed } : null);
+      } catch {
+        if (!cancelled) {
+          setUserProfile(null);
+          setSubscriptionStatus(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isApiKeyValid]);
 
   // 智能体数据
   const {
@@ -122,6 +188,15 @@ export const ChatPage: React.FC = () => {
     type: "all", // 获取所有角色（包括公开和私有）
     autoLoad: true,
   });
+  const normalizedAgentSearch = agentSearch.trim();
+  const filteredAgents = useMemo(
+    () => filterAgentsByName(agents, normalizedAgentSearch),
+    [agents, normalizedAgentSearch],
+  );
+  const showSearchEmpty =
+    agents.length > 0 &&
+    normalizedAgentSearch.length > 0 &&
+    filteredAgents.length === 0;
 
   // 从localStorage加载已生成的图片
   useEffect(() => {
@@ -135,6 +210,23 @@ export const ChatPage: React.FC = () => {
       }
     }
   }, []);
+
+  // 点开特殊消息（静静查看）时调用 agent info（GET /ai/agents/:id）获取 features 并展示节日记忆
+  useEffect(() => {
+    if (!festivalMemoryModalOpen || !selectedAgent?.id) {
+      setAgentWithFestivalMemories(null);
+      return;
+    }
+    setFestivalMemoriesLoading(true);
+    api.agents
+      .get(selectedAgent.id)
+      .then((agent) => {
+        setAgentWithFestivalMemories(agent);
+      })
+      .finally(() => {
+        setFestivalMemoriesLoading(false);
+      });
+  }, [festivalMemoryModalOpen, selectedAgent?.id]);
 
   // 重新发送和删除消息相关状态
   const [resending, setResending] = useState<string | null>(null);
@@ -215,12 +307,21 @@ export const ChatPage: React.FC = () => {
         const convertedMessages: ChatMessage[] = messagesData.messages.map(
           (msg, index) => ({
             id: `msg_history_${index}_${Date.now()}`,
-            role: msg.role,
+            role:
+              msg.type === "festival_memory_prompt" ||
+              msg.type === "surprise_snap"
+                ? "assistant"
+                : (msg.role ?? "assistant"),
             content: msg.content || "",
             timestamp: msg.timestamp,
             remoteId: msg.id.toString(),
             type: msg.type || "text",
+            festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
+            media_url: msg.media_url,
+            caption: msg.caption,
+            price: msg.price,
+            is_locked: msg.is_locked,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }),
@@ -387,6 +488,59 @@ export const ChatPage: React.FC = () => {
     [selectedAgent?.id],
   );
 
+  const [unlockingSurpriseSnapId, setUnlockingSurpriseSnapId] = useState<
+    number | null
+  >(null);
+
+  const handleSurpriseSnapUnlock = useCallback(
+    async (messageId: number) => {
+      if (!selectedAgent) return;
+      setUnlockingSurpriseSnapId(messageId);
+      try {
+        await api.chat.surpriseSnapUnlock(messageId);
+        const messagesResponse = await api.chat.getMessages(selectedAgent.id, {
+          limit: 100,
+          offset: 0,
+        });
+        const msgList = messagesResponse.messages ?? [];
+        const converted: ChatMessage[] = msgList.map((msg, i) => ({
+          id: `msg_${selectedAgent.id}_${i}_${Date.now()}`,
+          role:
+            msg.type === "festival_memory_prompt" &&
+            (msg.role == null || String(msg.role) === "")
+              ? "assistant"
+              : (msg.role ??
+                (msg.sender_type === "USER" ? "user" : "assistant")),
+          content: msg.content || "",
+          timestamp:
+            msg.timestamp || msg.created_at || new Date().toISOString(),
+          remoteId: msg.id ? msg.id.toString() : undefined,
+          type: msg.type || "text",
+          festival_memory_id: msg.festival_memory_id,
+          image_url: msg.image_url,
+          media_url: msg.media_url,
+          caption: msg.caption,
+          price: msg.price,
+          is_locked: msg.is_locked,
+          user_vote: msg.user_vote || null,
+          meta_data: msg.meta_data,
+        }));
+        const unique = converted.filter(
+          (msg, index, self) =>
+            msg.remoteId &&
+            index === self.findIndex((m) => m.remoteId === msg.remoteId),
+        );
+        setMessages(unique);
+      } catch (e) {
+        console.error("Surprise Snap 解锁失败:", e);
+        message.error("解锁失败，请重试");
+      } finally {
+        setUnlockingSurpriseSnapId(null);
+      }
+    },
+    [selectedAgent],
+  );
+
   // 选择智能体 - 从后端获取真实会话记录
   const handleSelectAgent = useCallback(
     async (agent: Agent) => {
@@ -398,33 +552,41 @@ export const ChatPage: React.FC = () => {
           .getIntyClient()
           .api.v1.chats.agents.getSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
-        // 先尝试获取现有的聊天详情和消息历史
-        const chatData = await api.chat.getChatDetail(agent.id, {
-          page: 1,
-          size: 100,
+        // 使用聊天消息接口获取历史（GET /chats/agents/{agent_id}/messages）
+        const messagesResponse = await api.chat.getMessages(agent.id, {
+          limit: 100,
+          offset: 0,
         });
 
-        // 转换消息格式（支持文本和图片消息）
-        const convertedMessages: ChatMessage[] = (chatData.messages || []).map(
-          (msg, index) => ({
-            id: `msg_${chatData.chat_info?.id || "unknown"}_${index}_${Date.now()}`,
-            role:
-              msg.role || (msg.sender_type === "USER" ? "user" : "assistant"), // 优先使用 role，fallback 到 sender_type
-            content: msg.content || "",
-            timestamp:
-              msg.timestamp || msg.created_at || new Date().toISOString(),
-            remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
-            type: msg.type || "text",
-            image_url: msg.image_url,
-            user_vote: msg.user_vote || null,
-            meta_data: msg.meta_data,
-          }),
-        );
+        const msgList = messagesResponse.messages ?? [];
 
-        console.log("获取到的聊天数据:", chatData);
-        console.log("消息数量:", chatData.messages?.length);
-        if (chatData.messages && chatData.messages.length > 0) {
-          console.log("第一条消息示例:", chatData.messages[0]);
+        // 转换消息格式（支持文本和图片消息）
+        const convertedMessages: ChatMessage[] = msgList.map((msg, index) => ({
+          id: `msg_${agent.id}_${index}_${Date.now()}`,
+          role:
+            msg.type === "festival_memory_prompt" ||
+            msg.type === "surprise_snap"
+              ? "assistant"
+              : (msg.role ??
+                (msg.sender_type === "USER" ? "user" : "assistant")), // 后端 surprise_snap 返回 role=null，前端强制为 assistant 以正确展示
+          content: msg.content || "",
+          timestamp:
+            msg.timestamp || msg.created_at || new Date().toISOString(),
+          remoteId: msg.id ? msg.id.toString() : undefined, // 使用真实消息ID
+          type: msg.type || "text",
+          festival_memory_id: msg.festival_memory_id,
+          image_url: msg.image_url,
+          media_url: msg.media_url,
+          caption: msg.caption,
+          price: msg.price,
+          is_locked: msg.is_locked,
+          user_vote: msg.user_vote || null,
+          meta_data: msg.meta_data,
+        }));
+
+        console.log("获取到的消息数量:", msgList.length);
+        if (msgList.length > 0) {
+          console.log("第一条消息示例:", msgList[0]);
         }
         console.log("转换后的消息:", convertedMessages);
 
@@ -449,14 +611,13 @@ export const ChatPage: React.FC = () => {
           uniqueMessages.filter((m) => m.type === "image").length,
         );
 
-        // 创建会话对象
+        // 创建会话对象（消息接口不返回 chat_info，使用 agent 维度的临时 id）
         const session: ChatSession = {
-          id: chatData.chat_info?.id || `temp_${Date.now()}`,
+          id: `temp_${agent.id}`,
           agent_id: agent.id,
           agent_name: agent.name,
           messages: uniqueMessages,
-          created_at:
-            chatData.chat_info?.created_at || new Date().toISOString(),
+          created_at: new Date().toISOString(),
         };
 
         setCurrentSession(session);
@@ -509,12 +670,21 @@ export const ChatPage: React.FC = () => {
             const convertedMessages: ChatMessage[] = historyData.messages.map(
               (msg, index) => ({
                 id: `msg_history_${index}_${Date.now()}`,
-                role: msg.role, // 直接使用API返回的role字段（'user' 或 'assistant'）
+          role:
+            msg.type === "festival_memory_prompt" ||
+            msg.type === "surprise_snap"
+              ? "assistant"
+              : (msg.role ?? "assistant"),
                 content: msg.content || "",
                 timestamp: msg.timestamp,
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
                 type: msg.type || "text",
+                festival_memory_id: msg.festival_memory_id,
                 image_url: msg.image_url,
+                media_url: msg.media_url,
+                caption: msg.caption,
+                price: msg.price,
+                is_locked: msg.is_locked,
                 user_vote: msg.user_vote || null,
                 meta_data: msg.meta_data,
               }),
@@ -606,12 +776,21 @@ export const ChatPage: React.FC = () => {
           const refreshedMessages: ChatMessage[] = refreshedData.messages.map(
             (msg, index) => ({
               id: `msg_refreshed_${index}_${Date.now()}`,
-              role: msg.role,
+              role:
+                msg.type === "festival_memory_prompt" ||
+                msg.type === "surprise_snap"
+                  ? "assistant"
+                  : (msg.role ?? "assistant"),
               content: msg.content || "",
               timestamp: msg.timestamp,
               remoteId: msg.id ? String(msg.id) : `remote_${index}`,
               type: msg.type || "text",
+              festival_memory_id: msg.festival_memory_id,
               image_url: msg.image_url,
+              media_url: msg.media_url,
+              caption: msg.caption,
+              price: msg.price,
+              is_locked: msg.is_locked,
               user_vote: msg.user_vote || null,
               meta_data: msg.meta_data,
             }),
@@ -731,12 +910,21 @@ export const ChatPage: React.FC = () => {
             refreshedMessages.messages || []
           ).map((msg) => ({
             id: msg.id.toString(), // 转换number到string
-            role: msg.role,
+            role:
+              msg.type === "festival_memory_prompt" ||
+              msg.type === "surprise_snap"
+                ? "assistant"
+                : (msg.role ?? "assistant"),
             content: msg.content,
             timestamp: msg.timestamp,
             remoteId: msg.id.toString(), // 添加remoteId
             type: msg.type || "text",
+            festival_memory_id: msg.festival_memory_id,
             image_url: msg.image_url,
+            media_url: msg.media_url,
+            caption: msg.caption,
+            price: msg.price,
+            is_locked: msg.is_locked,
             user_vote: msg.user_vote || null,
             meta_data: msg.meta_data,
           }));
@@ -1068,100 +1256,127 @@ export const ChatPage: React.FC = () => {
                 />
               }
             >
-              {agentsError ? (
-                <Alert
-                  message="加载失败"
-                  description={agentsError}
-                  type="error"
-                  showIcon
+              <div
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Search
+                  allowClear
+                  value={agentSearch}
+                  placeholder="搜索智能体名称"
+                  onChange={(event) => setAgentSearch(event.target.value)}
                 />
-              ) : agents.length === 0 ? (
-                <Empty
-                  description="暂无可用智能体"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              ) : (
-                <div style={{ height: "100%", overflowY: "auto" }}>
-                  <List
-                    loading={agentsLoading}
-                    dataSource={agents}
-                    renderItem={(agent) => (
-                      <List.Item
-                        className={`agent-item ${selectedAgent?.id === agent.id ? "selected" : ""}`}
-                        style={{
-                          cursor: "pointer",
-                          padding: "12px",
-                          border:
-                            selectedAgent?.id === agent.id
-                              ? "2px solid #1890ff"
-                              : "1px solid #f0f0f0",
-                          borderRadius: "8px",
-                          marginBottom: "8px",
-                          backgroundColor:
-                            selectedAgent?.id === agent.id ? "#f6ffed" : "#fff",
-                          transition: "all 0.2s ease",
-                        }}
-                        onClick={() => handleSelectAgent(agent)}
-                      >
-                        <List.Item.Meta
-                          avatar={<AvatarDisplay agent={agent} size={40} />}
-                          title={
-                            <Text strong style={{ fontSize: "14px" }}>
-                              {agent.name}
-                            </Text>
-                          }
-                          description={
-                            <div>
-                              <Text
-                                type="secondary"
-                                style={{
-                                  fontSize: "12px",
-                                  lineHeight: "1.4",
-                                  whiteSpace: "pre-wrap",
-                                  wordBreak: "break-word",
-                                  display: "block",
-                                }}
-                              >
-                                {agent.intro}
+                <div
+                  style={{
+                    marginTop: 12,
+                    flex: 1,
+                    overflowY: "auto",
+                  }}
+                >
+                  {agentsError ? (
+                    <Alert
+                      message="加载失败"
+                      description={agentsError}
+                      type="error"
+                      showIcon
+                    />
+                  ) : agents.length === 0 ? (
+                    <Empty
+                      description="暂无可用智能体"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : showSearchEmpty ? (
+                    <Empty
+                      description="未找到匹配的智能体"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : (
+                    <List
+                      loading={agentsLoading}
+                      dataSource={filteredAgents}
+                      renderItem={(agent) => (
+                        <List.Item
+                          className={`agent-item ${selectedAgent?.id === agent.id ? "selected" : ""}`}
+                          style={{
+                            cursor: "pointer",
+                            padding: "12px",
+                            border:
+                              selectedAgent?.id === agent.id
+                                ? "2px solid #1890ff"
+                                : "1px solid #f0f0f0",
+                            borderRadius: "8px",
+                            marginBottom: "8px",
+                            backgroundColor:
+                              selectedAgent?.id === agent.id
+                                ? "#f6ffed"
+                                : "#fff",
+                            transition: "all 0.2s ease",
+                          }}
+                          onClick={() => handleSelectAgent(agent)}
+                        >
+                          <List.Item.Meta
+                            avatar={<AvatarDisplay agent={agent} size={40} />}
+                            title={
+                              <Text strong style={{ fontSize: "14px" }}>
+                                {agent.name}
                               </Text>
-                              <div style={{ marginTop: 4 }}>
-                                {agent.gender && (
+                            }
+                            description={
+                              <div>
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    fontSize: "12px",
+                                    lineHeight: "1.4",
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                    display: "block",
+                                  }}
+                                >
+                                  {agent.intro}
+                                </Text>
+                                <div style={{ marginTop: 4 }}>
+                                  {agent.gender && (
+                                    <Tag
+                                      color={
+                                        agent.gender === "MALE"
+                                          ? "blue"
+                                          : agent.gender === "FEMALE"
+                                            ? "pink"
+                                            : "default"
+                                      }
+                                    >
+                                      {agent.gender === "MALE"
+                                        ? "男"
+                                        : agent.gender === "FEMALE"
+                                          ? "女"
+                                          : "其他"}
+                                    </Tag>
+                                  )}
                                   <Tag
                                     color={
-                                      agent.gender === "MALE"
-                                        ? "blue"
-                                        : agent.gender === "FEMALE"
-                                          ? "pink"
-                                          : "default"
+                                      agent.visibility === "PUBLIC"
+                                        ? "green"
+                                        : "orange"
                                     }
                                   >
-                                    {agent.gender === "MALE"
-                                      ? "男"
-                                      : agent.gender === "FEMALE"
-                                        ? "女"
-                                        : "其他"}
+                                    {agent.visibility === "PUBLIC"
+                                      ? "公开"
+                                      : "私有"}
                                   </Tag>
-                                )}
-                                <Tag
-                                  color={
-                                    agent.visibility === "PUBLIC"
-                                      ? "green"
-                                      : "orange"
-                                  }
-                                >
-                                  {agent.visibility === "PUBLIC"
-                                    ? "公开"
-                                    : "私有"}
-                                </Tag>
+                                </div>
                               </div>
-                            </div>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )}
                 </div>
-              )}
+              </div>
             </Card>
           </Col>
 
@@ -1171,7 +1386,23 @@ export const ChatPage: React.FC = () => {
               <Card
                 title={
                   <Space>
-                    <AvatarDisplay agent={selectedAgent} size={32} />
+                    <Tooltip title="查看角色详情">
+                      <Button
+                        type="text"
+                        onClick={() => setAgentDetailModalVisible(true)}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          padding: 0,
+                          borderRadius: "50%",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <AvatarDisplay agent={selectedAgent} size={32} />
+                      </Button>
+                    </Tooltip>
                     <div>
                       <Text strong>{selectedAgent.name}</Text>
                       <Text
@@ -1409,6 +1640,7 @@ export const ChatPage: React.FC = () => {
                     {messages.length > 0 && (
                       <List
                         dataSource={messages}
+                        rowKey={(msg: ChatMessage) => msg.remoteId ?? msg.id}
                         renderItem={(message: ChatMessage, index: number) => (
                           <div>
                             <List.Item
@@ -1469,22 +1701,137 @@ export const ChatPage: React.FC = () => {
                                         : "none",
                                   }}
                                 >
-                                  {/* 显示文本消息 */}
-                                  <Paragraph
-                                    style={{
-                                      margin: 0,
-                                      color:
-                                        message.role === "user"
-                                          ? "#fff"
-                                          : "#000",
-                                      whiteSpace: "pre-wrap",
-                                      wordBreak: "break-word",
-                                    }}
-                                  >
-                                    {message.content &&
-                                    message.role === "assistant"
-                                      ? formatMessageContent(message.content)
-                                      : message.content || ""}
+                                  {isSurpriseSnapMessage(message) ? (
+                                    <div style={{ marginTop: 0 }}>
+                                      <div style={{ marginBottom: 6 }}>
+                                        <Tag color="purple">Fun Moment</Tag>
+                                      </div>
+                                      {!message.is_locked ||
+                                      subscriptionStatus?.is_subscribed ||
+                                      userProfile?.is_superuser ? (
+                                        <>
+                                          {message.media_url && (
+                                            <Image
+                                              src={message.media_url}
+                                              alt="Surprise Snap"
+                                              style={{
+                                                maxWidth: "300px",
+                                                borderRadius: "8px",
+                                              }}
+                                              placeholder={
+                                                <Spin size="small" />
+                                              }
+                                            />
+                                          )}
+                                          {message.caption && (
+                                            <div style={{ marginTop: 8 }}>
+                                              {message.caption}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div
+                                            style={{
+                                              position: "relative",
+                                              display: "inline-block",
+                                            }}
+                                          >
+                                            {message.media_url && (
+                                              <Image
+                                                src={message.media_url}
+                                                alt=""
+                                                style={{
+                                                  maxWidth: 300,
+                                                  borderRadius: 8,
+                                                  filter: "blur(12px)",
+                                                  pointerEvents: "none",
+                                                }}
+                                              />
+                                            )}
+                                            <div
+                                              style={{
+                                                position: "absolute",
+                                                top: "50%",
+                                                left: "50%",
+                                                transform:
+                                                  "translate(-50%,-50%)",
+                                                fontSize: 32,
+                                                color: "#722ed1",
+                                              }}
+                                            >
+                                              <CrownOutlined />
+                                            </div>
+                                          </div>
+                                          {message.caption && (
+                                            <div style={{ marginTop: 8 }}>
+                                              {message.caption}
+                                            </div>
+                                          )}
+                                          <Button
+                                            type="primary"
+                                            size="small"
+                                            loading={
+                                              unlockingSurpriseSnapId ===
+                                              Number(message.remoteId)
+                                            }
+                                            onClick={() =>
+                                              message.remoteId &&
+                                              handleSurpriseSnapUnlock(
+                                                Number(message.remoteId),
+                                              )
+                                            }
+                                            style={{ marginTop: 8 }}
+                                          >
+                                            用 Credits 解锁（
+                                            {message.price ?? 0}）
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      {/* 显示文本消息 */}
+                                      <Paragraph
+                                        style={{
+                                          margin: 0,
+                                          color:
+                                            message.role === "user"
+                                              ? "#fff"
+                                              : "#000",
+                                          whiteSpace: "pre-wrap",
+                                          wordBreak: "break-word",
+                                        }}
+                                      >
+                                        {message.type ===
+                                        "festival_memory_prompt" ? (
+                                      <>
+                                        {(message.content || "")
+                                          .replace(
+                                            /\{char\}/g,
+                                            selectedAgent?.name ?? "角色",
+                                          )
+                                          .replace("静静查看", "")
+                                          .trim()}{" "}
+                                        <a
+                                          onClick={() =>
+                                            setFestivalMemoryModalOpen(true)
+                                          }
+                                          style={{
+                                            color: "#722ed1",
+                                            textDecoration: "underline",
+                                            cursor: "pointer",
+                                          }}
+                                        >
+                                          静静查看
+                                        </a>
+                                      </>
+                                    ) : message.content &&
+                                      message.role === "assistant" ? (
+                                      formatMessageContent(message.content)
+                                    ) : (
+                                      message.content || ""
+                                    )}
                                   </Paragraph>
 
                                   {/* 如果有生成的图片，在文本下方显示 */}
@@ -1561,6 +1908,8 @@ export const ChatPage: React.FC = () => {
                                           )}
                                       </div>
                                     )}
+                                    </>
+                                  )}
                                   <div
                                     style={{
                                       fontSize: "10px",
@@ -1590,8 +1939,11 @@ export const ChatPage: React.FC = () => {
                                         alignItems: "center",
                                       }}
                                     >
-                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示 */}
+                                      {/* 语音播放按钮 - 只对AI回复且有真实消息ID的消息显示（排除节日记忆提示、Surprise Snap） */}
                                       {message.role === "assistant" &&
+                                        message.type !==
+                                          "festival_memory_prompt" &&
+                                        !isSurpriseSnapMessage(message) &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
@@ -1618,9 +1970,12 @@ export const ChatPage: React.FC = () => {
                                           />
                                         )}
 
-                                      {/* 图片生成按钮 - 只在最后一条AI文本消息显示 */}
+                                      {/* 图片生成按钮 - 只在最后一条AI文本消息显示（排除节日记忆提示） */}
                                       {message.role === "assistant" &&
                                         message.type !== "image" &&
+                                        !isSurpriseSnapMessage(message) &&
+                                        message.type !==
+                                          "festival_memory_prompt" &&
                                         message.remoteId &&
                                         typeof message.remoteId === "string" &&
                                         !message.remoteId.startsWith(
@@ -1687,8 +2042,11 @@ export const ChatPage: React.FC = () => {
                                           />
                                         )}
 
-                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示 */}
+                                      {/* 点赞/点踩按钮 - 仅对 AI 消息显示（排除节日记忆提示、Surprise Snap） */}
                                       {message.role === "assistant" &&
+                                        message.type !==
+                                          "festival_memory_prompt" &&
+                                        !isSurpriseSnapMessage(message) &&
                                         message.remoteId &&
                                         !message.remoteId.startsWith(
                                           "assistant_",
@@ -1917,6 +2275,12 @@ export const ChatPage: React.FC = () => {
           </Col>
         </Row>
 
+        <AgentDetailModal
+          open={agentDetailModalVisible}
+          agent={selectedAgent}
+          onClose={() => setAgentDetailModalVisible(false)}
+        />
+
         {/* 聊天历史模态框 */}
         <Modal
           title={
@@ -1940,7 +2304,14 @@ export const ChatPage: React.FC = () => {
               <div style={{ marginBottom: 16 }}>
                 <Text strong>当前智能体: {selectedAgent?.name}</Text>
                 <br />
-                <Text type="secondary">共 {messages.length} 条消息</Text>
+                <Text type="secondary">
+                  共{" "}
+                  {
+                    messages.filter((m) => m.type !== "festival_memory_prompt")
+                      .length
+                  }{" "}
+                  条消息
+                </Text>
               </div>
 
               {/* 消息列表 */}
@@ -2070,6 +2441,57 @@ export const ChatPage: React.FC = () => {
                   {JSON.stringify(messages, null, 2)}
                 </div>
               </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* 心跳日记弹窗：通过 agent info 接口返回的 features.festival_memories 展示节日记忆 */}
+        <Modal
+          title="心跳日记"
+          open={festivalMemoryModalOpen}
+          onCancel={() => setFestivalMemoryModalOpen(false)}
+          footer={null}
+          width={640}
+          destroyOnClose
+        >
+          {festivalMemoriesLoading ? (
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <Spin />
+            </div>
+          ) : (
+            <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+              {agentWithFestivalMemories?.features?.festival_memories &&
+              agentWithFestivalMemories.features.festival_memories.length >
+                0 ? (
+                <Row gutter={[12, 12]}>
+                  {(
+                    agentWithFestivalMemories.features
+                      .festival_memories as FestivalMemoryItem[]
+                  ).map((item, idx) => (
+                    <Col span={12} key={`${item.festival_date}-${idx}`}>
+                      <Card
+                        size="small"
+                        title={
+                          item.festival_name || item.festival_date || "节日记忆"
+                        }
+                        style={{ height: "100%" }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: "13px",
+                            lineHeight: 1.6,
+                            color: "#333",
+                          }}
+                        >
+                          {item.memory}
+                        </Text>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              ) : (
+                <Empty description="暂无节日记忆" />
+              )}
             </div>
           )}
         </Modal>

@@ -3,7 +3,7 @@ package com.ai.intellimate.xb.navigation
 object RoutesChat {
     /** 聊天页面路由，参数：agentId（角色ID）、showBoost（是否显示Boost弹窗）、isDeleted（是否已删除，可选） */
     const val ChatPage =
-        "chat_page/{agentId}/{showBoost}?shouldAutoFocusInput={shouldAutoFocusInput}&isDeleted={isDeleted}"
+        "chat_page/{agentId}/{showBoost}?shouldAutoFocusInput={shouldAutoFocusInput}&isDeleted={isDeleted}&fromPage={fromPage}"
 
     /** 语音通话页面路由，参数：agentId（角色ID） */
     const val VoiceCall = "voice_call/{agentId}"
@@ -22,8 +22,9 @@ object RoutesChat {
         showBoost: Boolean,
         shouldAutoFocusInput: Boolean = true,
         isDeleted: Boolean = false,
+        fromPage: String? = null,
     ) =
-        "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}"
+        "chat_page/${agentId}/${showBoost}?shouldAutoFocusInput=${shouldAutoFocusInput}&isDeleted=${isDeleted}&fromPage=${fromPage}"
 
     /**
      * 构建语音通话页面路由路径

@@ -246,5 +246,4 @@ MMKV（版本 2.2.4）作为轻量级键值存储，通过 `IntySetting` 单例�
   const val MESSAGE_TO_IMAGE_GENERATION_FAILURE = "message_to_image_generation_failure"
   const val IMAGE_GENERATION_LIMIT_REACHED = "image_generation_limit_reached"
   ```
-- 事件名调整后需同步更新 `../bizops/FIREBASE_BUSINESS_EVENTS.md` 和
-  `../bizops/FIREBASE_EVENTS_DOCUMENTATION.md`。
+- 事件名调整后需同步更新 `../bizops/Firebase 事件列表.md`。

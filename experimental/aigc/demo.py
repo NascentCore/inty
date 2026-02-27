@@ -13,7 +13,7 @@ from models import CharacterGenerationRequest
 def main():
     """Run a demo of the character generation system"""
 
-    logger = logging.getLogger(__name__)
+    from loguru import logger
     logger.info("Starting AI Character Generator Demo")
 
     print("🎭 AI Character Generator Demo")

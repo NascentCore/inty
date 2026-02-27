@@ -1,6 +1,5 @@
 package com.ai.intellimate.chat
 
-import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import androidx.compose.foundation.background
@@ -11,17 +10,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
-import com.ai.intellimate.BuildConfig
-import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
-import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.FeedbackRequestDialog
-import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.xb.navigation.Routes
 
@@ -50,39 +42,19 @@ internal fun ChatScreen(
     shouldAutoFocusInput: Boolean = true,
     onCall: () -> Unit = {},
     shouldShowBoostSheetOnOpen: Boolean = false,
+    fromPage: String? = null,
+    refreshMessageCount: Int = 0,
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
-    val chatMessages by chatViewModel.msgs.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
-    val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
-    val context = LocalContext.current
-    val hasLoadingMessage =
-        chatMessages.any { msg ->
-            val hasGeneratedImage = msg.hasGeneratedImage()
-            val generatedImageUrl = msg.getGeneratedImageUrl()
-            msg.content == "loading_animation" &&
-                !hasGeneratedImage &&
-                generatedImageUrl != "loading"
-        }
-
-    fun isVipTag(tag: String?): Boolean {
-        val normalized =
-            tag?.trim()?.removePrefix("#")?.lowercase()?.takeIf { it.isNotBlank() } ?: return false
-        return normalized == "vip"
-    }
-
-    val isVipCharacter =
-        remember(agentInfo?.id, agentInfo?.tags) { agentInfo?.tags?.any { isVipTag(it) } == true }
-
-    val showVipCharacterLockedDialog = isVipCharacter && !vipStatus.isSubscribed
 
     Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
         // 背景图放在最底层，不受 imePadding 影响
         AgentBackground(
             agentInfo = agentInfo,
             showGradients = true,
-            isLoading = hasLoadingMessage,
+            isLoading = false,
             isCurrentPage = true,
             enableAnimatedBackground = autoPlayAnimation,
             modifier = Modifier.fillMaxSize(),
@@ -96,23 +68,9 @@ internal fun ChatScreen(
             shouldShowBoostSheetOnOpen = shouldShowBoostSheetOnOpen,
             shouldAutoFocusInput = shouldAutoFocusInput,
             onCall = onCall,
+            fromPage = fromPage,
+            refreshMessageCount = refreshMessageCount,
         )
-
-        // VIP 角色聊天权限拦截：非订阅用户不允许进入 VIP 角色聊天
-        if (showVipCharacterLockedDialog && !BuildConfig.DEBUG) {
-            val dialogData =
-                ChatDialogData(
-                    R.drawable.img_unlimit_dialog_bg,
-                    stringResource(R.string.vip_character_chat_locked_content),
-                    stringResource(R.string.vip_character_chat_locked_cta),
-                )
-            UnlimitChatDialog(
-                dialogData = dialogData,
-                onCancel = { navController.popBackStack() },
-                onSure = { navController.navigate(Routes.Me.VipCenter) },
-                onMoreInfo = { navController.navigate(Routes.Me.VipCenter) },
-            )
-        }
 
         // 反馈请求对话框
         if (showFeedbackDialog) {

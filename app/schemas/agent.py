@@ -4,10 +4,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator
 
+from app.api.types.llm_config import LLMConfig
 from app.models.agent import AgentSource, AgentStatus, AgentVisibility
 from app.schemas.response import APIResponse, PaginationData
 from app.schemas.user import User
 from app.utils.image import ImageSize
+
+ModelConfig = LLMConfig
 
 
 class AgentMetaData(BaseModel):
@@ -89,48 +92,18 @@ class AgentRecommendationRequest(BaseModel):
     )
 
 
-class ModelConfig(BaseModel):
-    """AI模型配置"""
+class ExclusivePhotoItem(BaseModel):
+    """运营上传的专属角色照单条"""
 
-    model: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
-    temperature: Optional[float] = Field(
-        None, ge=0.0, le=2.0, description="Temperature for response generation"
-    )
-    max_tokens: Optional[int] = Field(
-        None, ge=1, le=8192, description="Maximum tokens in response"
-    )
-    top_p: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Top-p sampling parameter"
-    )
-    top_k: Optional[int] = Field(None, ge=1, description="Top-k sampling parameter")
-    frequency_penalty: Optional[float] = Field(
-        None, ge=-2.0, le=2.0, description="Frequency penalty"
-    )
-    presence_penalty: Optional[float] = Field(
-        None, ge=-2.0, le=2.0, description="Presence penalty"
-    )
-
-    @field_validator("temperature")
-    @classmethod
-    def validate_temperature(cls, v):
-        if v is not None and (v < 0.0 or v > 2.0):
-            raise ValueError("Temperature must be between 0.0 and 2.0")
-        return v
-
-    @field_validator("top_p")
-    @classmethod
-    def validate_top_p(cls, v):
-        if v is not None and (v < 0.0 or v > 1.0):
-            raise ValueError("Top-p must be between 0.0 and 1.0")
-        return v
+    image_url: str = Field(..., description="照片地址（GCS 或 CDN）")
+    caption: str = Field(..., description="文案")
+    credits_required: int = Field(..., ge=0, description="解锁所需 credit 数量")
 
 
 class AgentBase(BaseModel):
     """AI角色基础模型"""
 
-    name: str
+    name: str = Field(..., max_length=256, description="角色名称，最长 256 字符")
     gender: str
     avatar: Optional[str] = None
     background: Optional[str] = None
@@ -147,6 +120,10 @@ class AgentBase(BaseModel):
         description="角色来源：USER_CREATED（用户创建）或 AUTO_GENERATED（自动生成）",
     )
     photos: Optional[List[str]] = None
+    exclusive_photos: Optional[List[ExclusivePhotoItem]] = Field(
+        None,
+        description="运营上传的专属角色照：image_url, caption, credits_required",
+    )
     category: Optional[str] = None
 
     # Legacy字段 (已废弃)
@@ -163,11 +140,10 @@ class AgentBase(BaseModel):
     )
     mode_prompt: Optional[str] = Field(
         None,
-        description="模式提示词 - 放在角色卡提示词后面，覆盖全局默认模式提示词。可以是预设 ID 或自定义文本",
+        description="模式提示词 - 放在角色设定提示词后面，覆盖全局默认模式提示词。可以是预设 ID 或自定义文本",
     )
 
-    # 角色卡相关字段 (推荐使用)
-    character_card_spec: Optional[str] = None
+    # 角色设定相关字段 (推荐使用)
     personality: Optional[str] = Field(None, description="角色性格特点 (推荐)")
     scenario: Optional[str] = Field(None, description="背景设定 (推荐)")
     message_example: Optional[str] = Field(None, description="对话示例")
@@ -188,7 +164,12 @@ class AgentBase(BaseModel):
     )
 
     @field_validator(
-        "background_images", "photos", "alternate_greetings", "tags", mode="before"
+        "background_images",
+        "photos",
+        "exclusive_photos",
+        "alternate_greetings",
+        "tags",
+        mode="before",
     )
     @classmethod
     def convert_empty_string_to_none(cls, v):
@@ -214,12 +195,12 @@ class AgentCreate(AgentBase):
 
     推荐使用方式：
     1. 使用personality + scenario字段构建角色
-    2. 添加first_message作为开场白
+    2. 添加opening作为开场白
     3. 可选添加message_example展示对话风格
 
     兼容性说明：
      - 仍支持使用prompt字段 (legacy模式)
-     - 优先级：角色卡字段 > prompt字段
+     - 优先级：personality/scenario > prompt字段
     """
 
     request_id: Optional[str] = None
@@ -241,7 +222,7 @@ class AgentUpdate(AgentBase):
     main_prompt: Optional[str] = None
     mode_prompt: Optional[str] = None
 
-    # 角色卡相关字段
+    # 角色设定相关字段
     personality: Optional[str] = None
     scenario: Optional[str] = None
     message_example: Optional[str] = None
@@ -316,6 +297,24 @@ class AgentInDB(AgentBase):
         from_attributes = True
 
 
+class FestivalMemoryItem(BaseModel):
+    """角色详情 features 中的单条节日记忆"""
+
+    memory_id: int = Field(..., description="memory 表主键 id")
+    festival_date: str = Field(..., description="节日日期，如 YYYY-MM-DD")
+    festival_name: str = Field(..., description="节日名称")
+    memory: str = Field(..., description="用户与该角色在此节日下的回忆摘要")
+
+
+class AgentFeatures(BaseModel):
+    """角色详情可扩展的 features，当前包含节日记忆"""
+
+    festival_memories: List[FestivalMemoryItem] = Field(
+        default_factory=list,
+        description="当前用户与该角色的节日记忆列表",
+    )
+
+
 class Agent(AgentInDB):
     """AI角色，在 sqlalchemy 模型基础上添加额外多表查询来的数据"""
 
@@ -323,6 +322,10 @@ class Agent(AgentInDB):
     follower_count: int = 0
     connector_count: int = 0
     creator: Optional[User] = None
+    features: Optional[AgentFeatures] = Field(
+        None,
+        description="可扩展功能数据，如节日记忆等",
+    )
     # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。
     avatar_size: Optional[ImageSize] = None
     # 从 resources 表中读取对应的图片尺寸；注意区分图片的字节大小，指的是文件本身的大小。

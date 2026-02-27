@@ -23,6 +23,7 @@ import type {
   CharacterThemeUpdateRequest,
   AddAgentToThemeRequest,
   ReorderAgentsRequest,
+  WebSocketMessage,
 } from "../types";
 import { message } from "antd";
 import { Inty } from "inty";
@@ -48,6 +49,9 @@ export const getGlobalApiKey = (): string | null => {
   return globalApiKey;
 };
 
+type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
+type QueryParamValue = string | number | boolean | null | undefined;
+
 class ApiClient {
   private baseURL: string;
   private apiPrefix: string;
@@ -65,7 +69,10 @@ class ApiClient {
     };
   }
 
-  private async request<T>(endpoint: string, options: any = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestOptions = {},
+  ): Promise<T> {
     // 自动添加API前缀，如果endpoint已经包含/api/则不添加
     const fullEndpoint = endpoint.startsWith("/api/")
       ? endpoint
@@ -80,45 +87,34 @@ class ApiClient {
     }
 
     // 构建基础 headers，先合并默认 headers 和传入的 headers
-    let headers: Record<string, string> = {
-      ...this.headers,
-      ...(options.headers || {}),
-    };
+    const requestHeaders = new Headers(this.headers);
+    if (options.headers) {
+      const customHeaders = new Headers(options.headers);
+      customHeaders.forEach((value, key) => {
+        requestHeaders.set(key, value);
+      });
+    }
 
     // 如果是上传请求（FormData），不要覆盖Content-Type
     if (options.body instanceof FormData) {
-      // 重新构建 headers，优先使用传入的 headers，然后合并默认 headers
-      headers = {
-        ...(options.headers || {}),
-        ...this.headers,
-      };
-      // 删除Content-Type，让浏览器自动设置；覆盖默认的 Content-Type: application/json
-      // TODO: 是否仅支持浏览器使用，代码中使用该 API 是否会有问题
-      if (headers && typeof headers === "object") {
-        delete (headers as any)["Content-Type"];
-      }
+      requestHeaders.delete("Content-Type");
     }
 
     // 确保 Authorization header 总是最后设置，不会被覆盖
-    headers = {
-      ...headers,
-      Authorization: `Bearer ${currentApiKey}`,
-    };
+    requestHeaders.set("Authorization", `Bearer ${currentApiKey}`);
 
     // 构建最终的 config 对象
-    const config: any = {
+    const config: RequestOptions = {
       ...options,
-      headers,
+      headers: requestHeaders,
     };
 
     // 验证 Authorization header 是否已正确设置
-    const authHeaderValue = config.headers?.Authorization;
+    const authHeaderValue = requestHeaders.get("Authorization");
     const hasAuthHeader =
-      authHeaderValue &&
-      typeof authHeaderValue === "string" &&
-      authHeaderValue.trim().length > 0;
+      typeof authHeaderValue === "string" && authHeaderValue.trim().length > 0;
 
-    if (!config.headers || !hasAuthHeader) {
+    if (!hasAuthHeader) {
       throw new Error("Authorization header 设置失败");
     }
 
@@ -126,26 +122,9 @@ class ApiClient {
       // 确保 headers 是一个普通对象（不是 Headers 对象）
       // fetch API 可以接受 Headers 对象或普通对象，但为了确保兼容性，我们使用普通对象
       const finalHeaders: Record<string, string> = {};
-      if (config.headers) {
-        // 如果 headers 是 Headers 对象，转换为普通对象
-        if (config.headers instanceof Headers) {
-          // 使用 Array.from 来避免类型推断问题
-          const entries = Array.from(config.headers.entries()) as Array<
-            [string, string]
-          >;
-          entries.forEach(([key, value]) => {
-            finalHeaders[key] = value;
-          });
-        } else if (typeof config.headers === "object") {
-          // 如果是普通对象，直接复制
-          Object.assign(finalHeaders, config.headers);
-        }
-      }
-
-      // 确保 Authorization header 存在
-      if (!finalHeaders.Authorization && authHeaderValue) {
-        finalHeaders.Authorization = authHeaderValue;
-      }
+      requestHeaders.forEach((value, key) => {
+        finalHeaders[key] = value;
+      });
 
       const finalConfig = {
         ...config,
@@ -157,13 +136,13 @@ class ApiClient {
       class ApiError extends Error {
         public status: number;
         public statusText: string;
-        public errorData: any;
+        public errorData: unknown;
 
         constructor(
           message: string,
           status: number,
           statusText: string,
-          errorData: any,
+          errorData: unknown,
         ) {
           super(message);
           this.name = "ApiError";
@@ -176,11 +155,21 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData: unknown = await response.json().catch(() => ({}));
+        const parsedErrorMessage =
+          typeof errorData === "object" &&
+          errorData !== null &&
+          "detail" in errorData &&
+          typeof (errorData as { detail?: unknown }).detail === "string"
+            ? (errorData as { detail: string }).detail
+            : typeof errorData === "object" &&
+                errorData !== null &&
+                "message" in errorData &&
+                typeof (errorData as { message?: unknown }).message === "string"
+              ? (errorData as { message: string }).message
+              : `HTTP ${response.status}: ${response.statusText}`;
         throw new ApiError(
-          errorData.detail ||
-            errorData.message ||
-            `HTTP ${response.status}: ${response.statusText}`,
+          parsedErrorMessage,
           response.status,
           response.statusText,
           errorData,
@@ -189,25 +178,31 @@ class ApiClient {
 
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
-        const result = await response.json();
+        const result: unknown = await response.json();
 
         // Check if it's APIResponse format
         if (result && typeof result === "object" && "code" in result) {
-          if (result.code === 200) {
-            return result.data;
+          const apiResult = result as {
+            code?: number;
+            message?: string;
+            data?: T;
+          };
+
+          if (apiResult.code === 200) {
+            return apiResult.data as T;
           } else {
             throw new ApiError(
-              result.message || "API Error",
+              apiResult.message || "API Error",
               response.status,
               response.statusText,
               result,
             );
           }
         } else {
-          return result;
+          return result as T;
         }
       } else {
-        return response as any;
+        return response as unknown as T;
       }
     } catch (error) {
       logError(`API请求失败: ${endpoint}, 错误信息: ${error}`);
@@ -218,18 +213,20 @@ class ApiClient {
   // GET请求
   async get<T>(
     endpoint: string,
-    params?: Record<string, any>,
-    options?: any,
+    params?: Record<string, QueryParamValue> | object,
+    options?: RequestOptions,
   ): Promise<T> {
     let finalEndpoint = endpoint;
 
-    if (params && !("signal" in params)) {
+    if (params && !("signal" in (params as object))) {
       const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
-        }
-      });
+      Object.entries(params as Record<string, QueryParamValue>).forEach(
+        ([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        },
+      );
       const queryString = searchParams.toString();
       if (queryString) {
         finalEndpoint += `?${queryString}`;
@@ -240,7 +237,7 @@ class ApiClient {
   }
 
   // POST请求
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
@@ -248,7 +245,7 @@ class ApiClient {
   }
 
   // PUT请求
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
@@ -266,7 +263,7 @@ class ApiClient {
   async upload<T>(
     endpoint: string,
     file: File,
-    additionalData?: Record<string, any>,
+    additionalData?: Record<string, string | number | boolean>,
   ): Promise<T> {
     const formData = new FormData();
     formData.append("file", file);
@@ -369,6 +366,15 @@ export const evaluationSessionApi = {
 // 智能体管理API
 // =============================================================================
 
+interface UploadAvatarResponse {
+  url?: string;
+  data?: {
+    url?: string;
+    avatar_url?: string;
+  };
+  [key: string]: unknown;
+}
+
 export const agentApi = {
   // 获取智能体列表 - API前缀由ApiClient自动处理
   list: (params?: {
@@ -376,6 +382,10 @@ export const agentApi = {
     skip?: number;
     limit?: number;
   }): Promise<Agent[]> => apiClient.get("/ai/agents/me", params),
+
+  // 管理员获取全量智能体列表（包含非管理员创建的角色）
+  listAll: (params?: { skip?: number; limit?: number }): Promise<Agent[]> =>
+    apiClient.get("/ai/agents/admin/list", params),
 
   // 获取推荐智能体 - 使用现有API
   getRecommended: (): Promise<Agent[]> => apiClient.get("/ai/agents/recommend"),
@@ -417,8 +427,13 @@ export const agentApi = {
     }),
 
   // 上传头像
-  uploadAvatar: (file: File, croppingAvatar: boolean = true): Promise<any> =>
-    apiClient.upload("/images", file, { cropping_avatar: croppingAvatar }),
+  uploadAvatar: (
+    file: File,
+    croppingAvatar: boolean = true,
+  ): Promise<UploadAvatarResponse> =>
+    apiClient.upload<UploadAvatarResponse>("/images", file, {
+      cropping_avatar: croppingAvatar,
+    }),
 
   // 检查背景图宽高比
   checkBackgroundAspectRatio: (
@@ -676,6 +691,14 @@ export const userAnalyticsApi = {
   ): Promise<import("../types").UserAnalyticsStatsResponse> =>
     apiClient.get("/evaluation/user-analytics/stats", params),
 
+  // 获取预计算报告列表（日报/周报）
+  getReports: (params?: {
+    report_type?: "daily" | "weekly";
+    limit?: number;
+    include_charts?: boolean;
+  }): Promise<import("../types").UserAnalyticsReportsResponse> =>
+    apiClient.get("/evaluation/user-analytics/reports", params),
+
   // 获取用户注册统计
   getNewUsers: (
     params?: AnalyticsDateParams,
@@ -762,6 +785,15 @@ export const userAnalyticsApi = {
   }): Promise<import("../types").SessionMessagesResponse> =>
     apiClient.get("/evaluation/user-analytics/session-messages", params),
 
+  // 获取用户生成图片列表
+  getUserGeneratedImages: (
+    params: UserLookupParams & {
+      skip?: number;
+      limit?: number;
+    },
+  ): Promise<import("../types").UserGeneratedImagesResponse> =>
+    apiClient.get("/evaluation/user-analytics/user-generated-images", params),
+
   // 获取 LLM 调用延迟趋势
   getLLMLatency: (
     params?: AnalyticsDateParams,
@@ -800,7 +832,8 @@ export class WebSocketManager {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval = 3000;
-  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private listeners: Map<string, Set<(data: WebSocketMessage) => void>> =
+    new Map();
 
   constructor(sessionId: string) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -821,8 +854,8 @@ export class WebSocketManager {
 
         this.ws.onmessage = (event) => {
           try {
-            const message = JSON.parse(event.data);
-            this.handleMessage(message);
+            const parsedMessage = JSON.parse(event.data) as WebSocketMessage;
+            this.handleMessage(parsedMessage);
           } catch (error) {
             console.error("WebSocket消息解析失败:", error);
           }
@@ -843,7 +876,7 @@ export class WebSocketManager {
     });
   }
 
-  private handleMessage(message: any) {
+  private handleMessage(message: WebSocketMessage) {
     const { type } = message;
     const listeners = this.listeners.get(type);
 
@@ -887,14 +920,14 @@ export class WebSocketManager {
     }
   }
 
-  on(eventType: string, callback: (data: any) => void) {
+  on(eventType: string, callback: (data: WebSocketMessage) => void) {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, new Set());
     }
     this.listeners.get(eventType)!.add(callback);
   }
 
-  off(eventType: string, callback: (data: any) => void) {
+  off(eventType: string, callback: (data: WebSocketMessage) => void) {
     const listeners = this.listeners.get(eventType);
     if (listeners) {
       listeners.delete(callback);
@@ -994,12 +1027,13 @@ export const chatApi = {
     };
     messages: Array<{
       id?: number;
-      role: "user" | "assistant";
-      sender_type: "USER" | "AI";
+      role: "user" | "assistant" | null;
+      sender_type: "USER" | "AI" | null;
       content: string;
       created_at: string;
       timestamp: string;
-      type?: "text" | "image";
+      type?: "text" | "image" | "festival_memory_prompt";
+      festival_memory_id?: number;
       image_url?: string;
       user_vote?: "like" | "dislike" | null;
       meta_data?: {
@@ -1026,21 +1060,30 @@ export const chatApi = {
     };
   }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
 
-  // 获取轻量级消息列表
+  // 获取轻量级消息列表（后端使用 limit/offset；此处兼容 page/size 并转换）
   getMessages: (
     agentId: string,
     params?: {
       page?: number;
       size?: number;
+      limit?: number;
+      offset?: number;
     },
   ): Promise<{
     messages: Array<{
       id: number;
-      role: "user" | "assistant";
+      role: "user" | "assistant" | null;
+      sender_type?: "USER" | "AI" | null;
       content: string;
       timestamp: string;
-      type?: "text" | "image";
+      created_at?: string;
+      type?: "text" | "image" | "festival_memory_prompt" | "surprise_snap";
+      festival_memory_id?: number;
       image_url?: string;
+      media_url?: string;
+      caption?: string;
+      price?: number;
+      is_locked?: boolean;
       user_vote?: "like" | "dislike" | null;
       meta_data?: {
         generated_image?: {
@@ -1061,7 +1104,16 @@ export const chatApi = {
     offset: number;
     has_more: boolean;
     page: number;
-  }> => apiClient.get(`/chats/agents/${agentId}/messages`, params),
+  }> => {
+    const size = params?.size ?? params?.limit ?? 100;
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? size;
+    const offset = params?.offset ?? (page - 1) * size;
+    return apiClient.get(`/chats/agents/${agentId}/messages`, {
+      limit,
+      offset,
+    });
+  },
 
   // 更新消息投票
   updateMessageVote: (
@@ -1081,6 +1133,10 @@ export const chatApi = {
       vote,
     }),
 
+  // Surprise Snap 解锁（免费用户用 credit 解锁，扣费在 App 端；后端仅记录解锁状态）
+  surpriseSnapUnlock: (messageId: number): Promise<{ data?: { unlocked?: boolean } }> =>
+    apiClient.post(`/chats/surprise-snap/unlock`, { message_id: messageId }),
+
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组
   clearMessages: (
     agentId: string,
@@ -1099,7 +1155,9 @@ export const chatApi = {
     apiClient.delete(`/chats/${chatId}`),
 
   // 获取智能体调试消息
-  getAgentDebugMessages: (agentId: string): Promise<any> =>
+  getAgentDebugMessages: (
+    agentId: string,
+  ): Promise<{ messages?: unknown[]; [key: string]: unknown }> =>
     apiClient.get(`/chats/agents/${agentId}/debug-messages`),
 
   // 生成消息语音
@@ -1129,7 +1187,7 @@ export const chatApi = {
       voice_enabled?: boolean;
       style_prompt?: string;
     },
-  ): Promise<any> =>
+  ): Promise<{ [key: string]: unknown }> =>
     apiClient.put(`/chats/agents/${agentId}/settings`, settings),
 };
 
@@ -1224,7 +1282,7 @@ export const chatImageApi = {
     generation_time_ms?: number;
   }> => apiClient.post(`/chats/agents/${agentId}/generate-image`, data),
 
-  // 获取图片生成配置
+  // 获取图片生成配置（模型为 models_catalog nickname）
   getConfig: (): Promise<{
     prompt_template: string;
     default_history_count: number;
@@ -1286,6 +1344,19 @@ export const reportApi = {
   }): Promise<import("../types").ReportsListResponse> =>
     apiClient.get("/report/", params),
 
+  // 按 id 获取单条举报详情（用于永久链接）
+  get: (reportId: string): Promise<import("../types").ReportItem> =>
+    apiClient.get(`/report/${reportId}`),
+
+  // 更新举报/反馈关联的 GitHub issue 链接
+  updateGithubIssue: (
+    reportId: string,
+    githubIssueUrl: string | null,
+  ): Promise<import("../types").ReportItem> =>
+    apiClient.put(`/report/${reportId}/github-issue`, {
+      github_issue: githubIssueUrl,
+    }),
+
   // 删除举报/反馈记录
   delete: (reportId: string): Promise<null> =>
     apiClient.delete(`/report/${reportId}`),
@@ -1341,6 +1412,40 @@ export const characterThemeApi = {
 };
 
 // =============================================================================
+// 节日记忆配置与抽取（管理员）
+// =============================================================================
+
+export const festivalMemoryApi = {
+  listConfigs: (params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<import("../types").FestivalMemoryConfigItem[]> =>
+    apiClient.get("/evaluation/admin/festival-memory-configs", params),
+
+  createConfig: (
+    data: import("../types").FestivalMemoryConfigCreate,
+  ): Promise<import("../types").FestivalMemoryConfigItem> =>
+    apiClient.post("/evaluation/admin/festival-memory-configs", data),
+
+  updateConfig: (
+    configId: number,
+    data: import("../types").FestivalMemoryConfigUpdate,
+  ): Promise<import("../types").FestivalMemoryConfigItem> =>
+    apiClient.put(
+      `/evaluation/admin/festival-memory-configs/${configId}`,
+      data,
+    ),
+
+  deleteConfig: (configId: number): Promise<null> =>
+    apiClient.delete(`/evaluation/admin/festival-memory-configs/${configId}`),
+
+  runExtraction: (
+    body: import("../types").FestivalMemoryExtractionRunRequest,
+  ): Promise<import("../types").FestivalMemoryExtractionRunResponse> =>
+    apiClient.post("/evaluation/admin/festival-memory-extraction/run", body),
+};
+
+// =============================================================================
 // 导出默认API实例
 // =============================================================================
 
@@ -1360,6 +1465,7 @@ export default {
   userAnalytics: userAnalyticsApi,
   generatedImages: generatedImagesApi,
   report: reportApi,
+  festivalMemory: festivalMemoryApi,
   inty: intyClient,
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端

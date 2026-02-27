@@ -10,7 +10,7 @@ on:
       target_count:
         description: "目标创建角色数量 (1-10)"
         required: false
-        default: "3"
+        default: "1"
         type: choice
         options:
           - "1"
@@ -45,7 +45,7 @@ jobs:
       - name: 调用 Dify API
         env:
           DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PYTHONPATH: .
         run: |
-          python scripts/run_dify_chat.py --config sync_agents_dev_to_prod/config.yaml.example --target-count ${{ inputs.target_count || '3' }}
+          python scripts/run_dify_chat.py --config sync_agents_dev_to_prod/config.yaml.example --target-count ${{ inputs.target_count || '1' }}

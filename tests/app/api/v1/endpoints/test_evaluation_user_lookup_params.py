@@ -36,10 +36,16 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
     async def override_get_async_db():
         yield None
 
+    async def override_get_async_replica_db():
+        yield None
+
     app.dependency_overrides[deps.get_current_active_user] = (
         override_current_active_user
     )
     app.dependency_overrides[deps.get_async_db] = override_get_async_db
+    app.dependency_overrides[deps.get_async_replica_db] = (
+        override_get_async_replica_db
+    )
 
     calls: list[tuple[str, str]] = []
 

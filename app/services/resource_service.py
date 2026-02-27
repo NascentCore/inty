@@ -149,6 +149,7 @@ async def async_create_image_resource(
     gcs_url: Optional[str] = None,
     generation_prompt: Optional[str] = None,
     reference_image_url: Optional[str] = None,
+    agent_id: Optional[str] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -179,6 +180,7 @@ async def async_create_image_resource(
             type=ResourceType.IMAGE,
             url=url,
             resource_metadata=resource_metadata,
+            agent_id=agent_id,
         ),
         user_id=user_id,
     )

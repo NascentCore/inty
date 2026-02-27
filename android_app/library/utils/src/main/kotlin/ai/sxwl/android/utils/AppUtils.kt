@@ -1,6 +1,7 @@
 package ai.sxwl.android.utils
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
@@ -11,10 +12,89 @@ import android.os.Process
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.pm.PackageInfoCompat
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.preferencesDataStore
+import java.io.IOException
 import kotlin.system.exitProcess
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+
+private const val DEBUG_MODE_DATASTORE_NAME = "debug_mode_settings"
+private const val KEY_DEBUG_MODE = "debug_mode"
+private val Context.debugModeDataStore by preferencesDataStore(name = DEBUG_MODE_DATASTORE_NAME)
 
 /** 应用工具类 提供应用相关的工具方法 */
 object AppUtils {
+    private const val TAG = "AppUtils"
+    private const val BUILD_TYPE_DEBUG = "debug"
+    private val DEBUG_MODE_PREF_KEY = booleanPreferencesKey(KEY_DEBUG_MODE)
+    @Volatile private var cachedDebugModeOverride: Boolean? = null
+    @Volatile private var debugModeOverrideLoaded: Boolean = false
+
+    /**
+     * Debug 模式状态流：
+     * 1. 优先使用 DataStore 中的手动设置值
+     * 2. 当未设置时回退到应用 BuildType 判断
+     */
+    fun debugModeFlow(context: Context = Utils.getApp()): Flow<Boolean> {
+        val appContext = context.applicationContext
+        val defaultValue = isBuildTypeDebug(appContext)
+        return appContext.debugModeDataStore.data
+            .catch { error ->
+                if (error is IOException) {
+                    Log.e(TAG, "读取 Debug Mode 失败，回退默认值", error)
+                    emit(emptyPreferences())
+                } else {
+                    throw error
+                }
+            }
+            .map { preferences ->
+                val override = preferences[DEBUG_MODE_PREF_KEY]
+                cachedDebugModeOverride = override
+                debugModeOverrideLoaded = true
+                override ?: defaultValue
+            }
+            .distinctUntilChanged()
+    }
+
+    /** 判断当前是否为 Debug 模式（优先读取 DataStore 手动开关） */
+    fun isDebugMode(context: Context = Utils.getApp()): Boolean {
+        val appContext = context.applicationContext
+        if (debugModeOverrideLoaded) {
+            return cachedDebugModeOverride ?: isBuildTypeDebug(appContext)
+        }
+        val override = runBlocking {
+            appContext.debugModeDataStore.data
+                .catch { error ->
+                    if (error is IOException) {
+                        Log.e(TAG, "读取 Debug Mode 失败，回退默认值", error)
+                        emit(emptyPreferences())
+                    } else {
+                        throw error
+                    }
+                }
+                .map { preferences -> preferences[DEBUG_MODE_PREF_KEY] }
+                .first()
+        }
+        cachedDebugModeOverride = override
+        debugModeOverrideLoaded = true
+        return override ?: isBuildTypeDebug(appContext)
+    }
+
+    /** 手动设置 Debug 模式开关，并持久化到 DataStore */
+    suspend fun setDebugMode(enabled: Boolean, context: Context = Utils.getApp()) {
+        context.applicationContext.debugModeDataStore.edit { preferences ->
+            preferences[DEBUG_MODE_PREF_KEY] = enabled
+        }
+        cachedDebugModeOverride = enabled
+        debugModeOverrideLoaded = true
+    }
 
     // ==================== 应用状态监听 ====================
 
@@ -161,5 +241,19 @@ object AppUtils {
         val packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
         @Suppress("DEPRECATION")
         return packageInfo?.signatures
+    }
+
+    private fun isBuildTypeDebug(context: Context): Boolean {
+        val appBuildType = readAppBuildType(context) ?: return false
+        return appBuildType.equals(BUILD_TYPE_DEBUG, ignoreCase = true)
+    }
+
+    private fun readAppBuildType(context: Context): String? {
+        val appBuildConfigClassName = "${context.packageName}.BuildConfig"
+        return runCatching {
+                val buildConfigClass = Class.forName(appBuildConfigClassName)
+                buildConfigClass.getField("BUILD_TYPE").get(null) as? String
+            }
+            .getOrNull()
     }
 }

@@ -162,7 +162,7 @@ class Agent(Base):
         Integer,
         default=0,
         server_default=sa.text("0"),
-        comment="角色积分，用于角色热度排名（boosting feature）",
+        comment="iMate 积分，用于 iMate 热度排名（hype an iMate feature）",
     )
     prompt = Column(String)
 

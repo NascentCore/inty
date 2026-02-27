@@ -63,6 +63,16 @@ class AICallRepository(private val dataSource: AICallDataSource) {
         dataSource.sendPacket(packet)
     }
 
+    suspend fun sendActivityStart() {
+        val packet = CallPacket(CallType.ACTIVITY_START.name.lowercase())
+        dataSource.sendPacket(packet)
+    }
+
+    suspend fun sendActivityEnd() {
+        val packet = CallPacket(CallType.ACTIVITY_END.name.lowercase())
+        dataSource.sendPacket(packet)
+    }
+
     /** 关闭连接 */
     suspend fun closeCall() {
         LogUtils.d("关闭语音通话")

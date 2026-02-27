@@ -24,14 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -67,7 +65,7 @@ fun EnergyCelebrationBanner(
         )
     },
     subtitle: @Composable () -> Unit = {},
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val dismissCall by rememberUpdatedState(onDismissRequest)
     var showCard by remember { mutableStateOf(false) }
@@ -79,21 +77,19 @@ fun EnergyCelebrationBanner(
         dismissCall()
     }
 
-    Popup(
-        alignment = Alignment.TopCenter
-    ) {
+    Popup(alignment = Alignment.TopCenter) {
         AnimatedVisibility(
             visible = showCard,
             modifier = modifier.fillMaxWidth(),
             enter = fadeIn() + slideInVertically { -it },
-            exit = slideOutVertically { -it } + fadeOut()
+            exit = slideOutVertically { -it } + fadeOut(),
         ) {
             EnergyCelebrationCard(
                 icon = icon,
                 subtitle = subtitle,
                 containerColor = containerColor,
                 contentColor = contentColor,
-                content = content
+                content = content,
             )
         }
     }
@@ -106,7 +102,7 @@ private fun EnergyCelebrationCard(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.95f),
     contentColor: Color = contentColorFor(MaterialTheme.colorScheme.secondaryContainer),
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Surface(
         modifier =
@@ -116,15 +112,13 @@ private fun EnergyCelebrationCard(
                 .shadow(elevation = 8.dp, shape = RoundedCornerShape(28.dp)),
         shape = RoundedCornerShape(28.dp),
         color = containerColor,
-        contentColor = contentColor
+        contentColor = contentColor,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(36.dp)) {
-                icon()
-            }
+            Box(Modifier.size(36.dp)) { icon() }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 ProvideTextStyle(
@@ -132,14 +126,14 @@ private fun EnergyCelebrationCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                     ),
-                    content
+                    content,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 ProvideTextStyle(
                     MaterialTheme.typography.bodyMedium.copy(
                         color = contentColor.copy(alpha = 0.9f)
                     ),
-                    subtitle
+                    subtitle,
                 )
             }
         }
@@ -392,8 +386,8 @@ private fun EnergyCelebrationCardPreview() {
                 )
             },
             subtitle = {
-                //Text(stringResource(R.string.energy_points_hundreds_subtitle))
-            }
+                // Text(stringResource(R.string.energy_points_hundreds_subtitle))
+            },
         ) {
             Text(stringResource(R.string.energy_points_hundreds_title, 100))
         }

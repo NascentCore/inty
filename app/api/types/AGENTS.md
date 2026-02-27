@@ -1,0 +1,8 @@
+# API types
+
+后端 HTTP 接口类型定义，用于向 Android App 发送数据。
+
+- 使用 Pydantic Model 定义。
+- 本目录保留与 API 内部或非 API 代码共用的类型（如 `llm_config.py`）。HTTP 请求/响应 DTO（如 chat 业务动作等）定义在 [app/schemas](../schemas)。
+- `llm_config.py` 提供 API 与内部共用的 `LLMConfig` 类型，字段与约束与 agent 的 ModelConfig 及各处实际使用的 LLM 参数一致；使用处通过 `from app.api.types.llm_config import LLMConfig` 引用。
+- `api_key` 与 `base_url` 已废弃：chat 使用全局 client，故 LLMConfig 不包含此二字段；数据库/agent 中若仍存有该字段仅作向后兼容。

@@ -8,6 +8,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
 
     implementation(libs.androidx.startup)
+    implementation(libs.androidx.dataStore.preferences)
 
     // 图片压缩库
     implementation(libs.luban)

@@ -22,9 +22,9 @@ interface Agent {
   background?: string;
   extensions?: {
     avatar_crop?: AvatarCropData;
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ApiResponse<T> {

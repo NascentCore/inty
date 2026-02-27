@@ -1,25 +1,94 @@
 # Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
 
-本文件适用于仓库根目录及全局协作约定；各子目录如存在自己的 `AGENTS.md`，则**以子目录文件为准并视为对本文件的补充/覆盖**。
+## 概述
 
-## 快速导航（优先阅读各目录 AGENTS.md）
+### 产品概述
 
-- `app/AGENTS.md`：后端服务（FastAPI）开发规范
-- `tests/AGENTS.md`：测试规范
-- `alembic/AGENTS.md`：数据库迁移规范
-- `evaluation/AGENTS.md`：运营工具（React）规范
-- `web_app/`：独立 Web App（如有规则，优先遵循其目录内规则文件）
-- `android_app/AGENTS.md`：Android App 开发规范
-- `scripts/AGENTS.md`：脚本开发规范
-- `devops/AGENTS.md`：运维与部署规范
-- `experimental/AGENTS.md`：原型与实验代码规范
+- IntelliMate 定位为面向 35+、有较好社会地位与自我认知的美国男性用户的长期 AI 陪伴产品，提供可持续进化的情感陪伴。
+- IntelliMate 产品形态基于 Chat 界面，用户通过手机屏幕、与 iMate 交流，使用文字、图片、声音（语音消息、通话、音乐）、视频（动图、视频、背景声音等）。
+  - iMate 是所有角色的总称，如”这是为您推荐的 iMates“。
+  - iMate 是提供情感陪伴体验的主体，IntelliMate 无法通过人工设计来满足用户需求，只能通过 iMate 让用户通过与其互动来持续获得和优化的情感陪伴体验
+  - Character/Agent/iMate 通常指同一概念，Agent 沿用自后端、指一个独立的逻辑概念来指代一个独立的抽象角色
+  - Character（角色）沿用自业界的统称，一般来自 Character.ai
+- **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
+  - app/（后端）改动不影响[用户手册](docs/INTELLIMATE.md)
+- 使用 jinja2 template 编写提示词模版：`{{ <变量名> }}`
+  使用 `prompt_template.py:render_prompt_jinja2_template` 来生成最终提示词
 
-## 基础约定
+### 代码库概述
 
-- **语言**：所有可自然语言表达的输出统一使用中文（普通话）。代码、命令、标识符不受该限制。
-- **Python 版本**：仓库 `pyproject.toml` 约束为 `>=3.12`。
+- TASKS.md 管理 IntelliMate 项目中应该要完成的任务，用于明确的需要完成的任务列表
+
+## 代码库内的一般性约定
+
+- **非代码类文字**：
+  - Must use English for texts viewable to public users
+  - 所有可自然语言表达的输出统一使用中文（普通话）。代码、命令、标识符不受该限制。
+    只包含文档的目录用中文命名、方便理解，包含代码的目录必须用 English 以方便调用。
+    - 如有可能、在不影响正确性前提下，使用中文编写各类非代码的文字内容：代码注释、GitHub Pull Request 标题 & 描述等等
+    - 本代码库开发人员母语为中文普通话
+    - 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
+- **评测数据**:
+  - 采集要放在功能开发的核心需求里：原始数据收集（在功能设计过程中可以考虑将重要数据写入日志、数据库）、数据筛选清洗等等
+- **代码**：
+  - Do not both with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
+  - Do not do defensive programming, let failure appear early and loud.
+
+## 软件工程规范
+
+- **Dev Mode**:
+  - 默认为开发阶段，不需要考虑 backward compatibility
+  - 尽量不使用默认参数
+  - 当函数的参数数量在 3 个以上时，可以考虑使用结构体来组合参数
+- **代码结构规范**
+  1. Functions should be composable, prefer `func a(), func b(), func c() { a(); b() }`
+     over `func a(), func b() { a() }, func c() { b() }`.
+     Avoid deep nesting of funcation calls.
+  2. Always define types to name input and output, and cleanly separate the codd reading
+     input and writing output, with the abstract data processing and handling that can
+     work with abstract data types. Example:
+     prefer `def write_to_db(data, db) { ... }; def read_from_db() { ... }; def proc() { }` over `def proc() { code reading from db, processing, code writing to db}`
+- **TDD**：采用测试驱动开发方式，首先编写测试来预演目标行为，然后通过迭代代码来使测试通过
+  - 使用单元测试作为代码的“可执行规范”，通过测试用例来体现设计目标
+  - 使用单元测试作为代码行为的“可执行示例”，通过测试用例来提供具体的代码行为描述
 - **优先可维护性**：避免“为了省事”引入隐式行为（魔法常量、吞异常、无边界重试、隐藏的全局状态）。
 - **改完要自查**：每次修改后都应回看 diff，确保改动与意图一致、无泄漏敏感信息、无无关文件被改动。
+- **AI 工作总结**：
+  - 生成代码中要在其注释中总结你的关键中间步骤，如 app/core/voice/tts_api.py 记录了你如何从官方文档页面收集数据并处理
+- **Git 工作流**：
+  - 每完成一次改动，生成一句话总结、详细描述
+ 
+### 工程文档维护
+
+- 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
+- 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
+- Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
+- 修改后务必回看 diff，确认无误再提交/交付。
+- 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
+- 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
+
+### README.md AGENTS.md 内容
+
+
+```text:https://app.monosketch.io/?id=02-AA-p-YYNmJ9TDuzP6YdRCnaWois
+                 Human developers、human product          
+README.md        designer etc                            
+                                                         
+    △            ────────────────────────────────────────
+    │                                                    
+    │                                                    
+    │                                                    
+    │ Higher                                             
+    │ abstraction────────────────────────────────────────
+    │ Higher                                             
+    │ intuitivity                                        
+    │                                                    
+    │                                                    
+    │            ────────────────────────────────────────
+                                                         
+AGENTS.md        AI                                      
+                                                         
+```
 
 ## Alembic
 
@@ -27,86 +96,12 @@
 - 修改数据库表 schema 应该**单独**进行，不要与其他改动混合：保证 alembic version 可以快速同步，避免多人并行产生非线性迁移链。
   - 例如：当前 alembic head revision 为 1，改动 A 与改动 B 同时修改 DB，则可能出现两个并行 version 文件都依赖 revision 1。
 
-## 代码库结构
+## Python-Kotlin HTTP APIs 数据类型定义
 
-- `android_app/` IntelliMate, android app code，kotlin compose jetpack
-- `app/` Inty 后端服务，Python fastapi
-  - `app/openapi.json` 来自 FastAPI 生成，并使用 stainless 生成 Kotlin/TypeScript SDK（分别以 submodule 形式位于 `evaluation/inty_sdk`、`android_app/library/inty_sdk`）
-- `alembic/` Inty 后端服务数据库 schema 管理，使用 <https://github.com/sqlalchemy/alembic>
-- `evaluation/` Inty 运营工具，react 由 app/ 后端提供 web serving
-- `web_app/` 独立 Web App（React/TS）
-- `scripts/` 各类脚本，以修改数据库记录为主
-- `devops/` 运维相关代码
-- `experimental/` 原型代码
-- `docs/` 文档
-- `backend/`：后端相关文档与迁移中的说明（以目录内文档为准）
+下面 2 处代码需要同步修改：
 
-## 语言与输出
-
-- 所有生成的输出必须使用中文（普通话），即使用户指令为英文。
-- 该指令仅适用于可以使用中文的场景；若内容不能使用中文（如代码），则不适用。
-
-## 文档维护
-
-- 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
-- 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
-- Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
-- 修改后务必回看 diff，确认无误再提交/交付。
-- 新建任意文件时，需在适当格式中加入 `CREATED_BY_AGENT` 标记，用于记录创建者身份。
-- 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
-- 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
-
-## 提交与变更请求记录规范
-
-- 小改动：在提交信息中包含用户的原始变更请求（可放在提交说明 body 部分），并简述本次处理方式。
-- 大改动或新增大型功能：将用户的变更请求写入一个与代码改动同目录的 `<TASK>_REQUESTS.md` 文件；`<TASK>` 使用任务或分支的简明标识。在提交信息中引用该文件路径。
-- `<TASK>` 命名：使用全大写下划线（snake_case）风格并与分支/任务编号一致，例如 `AGENT_MANAGER_REFACTOR`；避免使用 `-` 与空格。
-- 不要写关于改动内容的 summary markdown 文件
-
-## Coding style
-
-- 各类语言函数体不应超过 50 行；100 行以上必须拆分为更小函数；50-100 行之间酌情处理。
-
-### 不要在注释里重复显而易见的代码含义
-
-不要写这种“复述函数名”的注释：
-
-```python
-# Get current setting
-def get_current_setting():
-  ...
-```
-
-应该让函数名/代码本身表达含义：
-
-```python
-def get_current_setting():
-  ...
-```
-
-### 避免魔法数字/字符串/值
-
-尽可能用具名常量替代魔法值，提升可读性与可维护性。
-
-### 优先早返回（early return）
-
-优先：
-
-```python
-if false:
-  return None
-
-...
-```
-
-而不是：
-
-```python
-if true:
-  ...
-else:
-  return None
-```
+- [Kotlin API 数据类型](android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model)
+- [Python HTTP API 数据类型](app/schemas)
 
 ## Python
 
@@ -114,24 +109,14 @@ else:
 - 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
 - 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）
 - 严禁向已有的 `__init__.py` 内添加新逻辑代码（除非该目录规则明确要求）
-- 使用 cyclopts 来暴露 scripts 命令行界面
-
-## 测试（仓库级）
-
-- `pytest` 配置在 `pytest.ini`，默认收集 `app/` 与 `tests/` 下的 `test_*.py`。
-- 常用命令（按环境选择 `python` 或 `python3`）：
-
-```bash
-python -m pytest
-python -m pytest -m "not slow"
-python -m pytest tests/app/services/test_chat_service.py -k test_xxx
-```
+- 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
+- 禁止使用 `__main__.py` 这种范式，使用显式的 `main.py` 入口文件
 
 ## Android App
 
-- 只支持 portrait 显示；不支持 landscape 显示，无需在改动时考虑兼容 landscape 显示。
+- Android 发布新版本后将 version code 写入 [Prod 后端配置文件](devops/config.yaml.prod) `google_play.current_version_code`
 
-## CloudFlare
+## CloudFlare CDN（用于支持媒体文件分发：image audio 等）
 
 - @<https://developers.cloudflare.com/llms.txt>
 - @<https://developers.cloudflare.com/workers/prompt.txt>
@@ -139,3 +124,45 @@ python -m pytest tests/app/services/test_chat_service.py -k test_xxx
 - @<https://developers.cloudflare.com/developer-platform/llms-full.txt>
 
 来自官方文档链接 https://developers.cloudflare.com/stream/changelog/
+
+## Cursor Cloud specific instructions
+
+### Service overview
+
+The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL 16** (Docker, port 5432). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
+
+### Update script
+
+The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
+
+### Starting services
+
+1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
+   - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
+   - The CI uses plain `postgres:16` (not `pgvector/pgvector:pg16`); both work. Plain postgres:16 is sufficient for all tests.
+2. **Backend**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
+   - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
+   - `--test` = dev mode minus evaluation frontend build (fast startup)
+   - `--dev` = full dev mode including evaluation frontend build
+   - The server runs on `http://localhost:8000`
+
+### Running tests
+
+```bash
+source .venv/bin/activate
+pytest -m "not noci" -v -s tests/
+```
+
+Tests are functional/E2E against a running backend (not unit-style mocks). The backend must be running first. See `tests/AGENTS.md`.
+
+### Lint / formatting
+
+- `black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
+- No strict linter is enforced in CI for the backend currently
+
+### Gotchas
+
+- Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
+- `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
+- The venv **must** be activated before running `start.sh` — the script does not activate it.
+- Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).

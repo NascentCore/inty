@@ -2,7 +2,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.services.chat_history_service import get_latest_ai_message_info
+from app.services.chat_history_service import (
+    get_latest_ai_message_info,
+    get_latest_user_message_id,
+)
 
 
 class TestChatHistoryService:
@@ -26,3 +29,23 @@ class TestChatHistoryService:
         
         # Assert that the function returns None when no chat history is found
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_latest_user_message_id_returns_none_when_no_user_message(self):
+        """get_latest_user_message_id 在无用户消息时返回 None"""
+        mock_db = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        result = await get_latest_user_message_id(mock_db, "no-user-msg-session")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_latest_user_message_id_returns_id_when_user_message_exists(self):
+        """get_latest_user_message_id 在存在用户消息时返回该消息的 id"""
+        mock_db = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.first.return_value = (99,)
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        result = await get_latest_user_message_id(mock_db, "session-with-user-msg")
+        assert result == 99

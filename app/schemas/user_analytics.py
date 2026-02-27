@@ -232,6 +232,7 @@ class UserTodayStatsResponse(BaseModel):
 
     today_message_count: int = Field(description="今日消息数")
     today_session_count: int = Field(description="今日会话数")
+    total_generated_images: int = Field(description="用户总的生图数", default=0)
 
 
 class UserSessionItem(BaseModel):
@@ -300,6 +301,15 @@ class ImageGenerationLatencyResponse(BaseModel):
     data: List[ImageGenerationLatencyItem]
 
 
+class ImageGenerationFailureAnalyticsResponse(BaseModel):
+    """生图失败与兜底分析响应（只读 replica，与日报口径一致）"""
+
+    data: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="summary, fallback_stats, failures_by_type, failures_by_reason, daily_trend, failures_by_agent",
+    )
+
+
 class LiveChatLatencyItem(BaseModel):
     """Live Chat 延迟统计项"""
 
@@ -332,4 +342,106 @@ class LiveChatBasicStatsResponse(BaseModel):
     avg_duration_per_user: float = Field(description="人均通话时长（秒）", default=0.0)
     avg_duration_per_session: float = Field(
         description="每 session 平均时长（秒）", default=0.0
+    )
+
+
+class UserGeneratedImageItem(BaseModel):
+    """用户生成图片项"""
+
+    url: str = Field(description="CDN URL")
+    gcs_url: str = Field(description="GCS URL")
+    generation_prompt: str = Field(description="生成提示词")
+    reference_image_url: Optional[str] = Field(None, description="参考图片URL")
+    width: Optional[int] = Field(None, description="图片宽度")
+    height: Optional[int] = Field(None, description="图片高度")
+    created_at: Optional[str] = Field(None, description="创建时间")
+    agent_id: Optional[str] = Field(None, description="角色ID")
+    agent_name: Optional[str] = Field(None, description="角色名称")
+
+
+class UserGeneratedImagesResponse(BaseModel):
+    """用户生成图片列表响应"""
+
+    images: List[UserGeneratedImageItem]
+    total: int = Field(description="总数量")
+
+
+class UserAnalyticsReportGeneratedImageItem(BaseModel):
+    """日报中的生图列表项"""
+
+    id: int = Field(description="chat_history ID")
+    session_id: str = Field(description="会话 session_id")
+    image_url: str = Field(
+        description="图片 URL（gs:// 已转换为 https://storage.googleapis.com/）"
+    )
+    meta_data: Dict[str, Any] = Field(default_factory=dict, description="消息元数据")
+    created_at: Optional[str] = Field(None, description="创建时间")
+
+
+class UserAnalyticsReportDailyTopAgentItem(BaseModel):
+    """日报中按聊天轮数排序的角色项"""
+
+    rank: int = Field(description="当日排名（1 开始）")
+    agent_name: str = Field(description="角色名称")
+    total_rounds: int = Field(description="总聊天轮数")
+    user_count: int = Field(description="真实发起聊天人数", default=0)
+    total_sessions: int = Field(description="浏览会话数", default=0)
+    active_sessions: int = Field(description="有用户消息的会话数", default=0)
+
+
+class UserAnalyticsReportCharts(BaseModel):
+    """用户数据分析预计算报告图表数据"""
+
+    new_users: List[Dict[str, Any]] = Field(
+        default_factory=list, description="每日新用户"
+    )
+    conversation_rounds: List[Dict[str, Any]] = Field(
+        default_factory=list, description="对话轮数（按Session）"
+    )
+    user_rounds_distribution: List[Dict[str, Any]] = Field(
+        default_factory=list, description="对话轮数分布（按用户）"
+    )
+    users_hitting_limit: List[Dict[str, Any]] = Field(
+        default_factory=list, description="达到聊天限制的用户"
+    )
+    popular_agents: List[Dict[str, Any]] = Field(
+        default_factory=list, description="热门角色排行"
+    )
+    generated_images: List[UserAnalyticsReportGeneratedImageItem] = Field(
+        default_factory=list, description="日报当日生图列表"
+    )
+    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = Field(
+        default_factory=list, description="日报当日聊天轮数 Top 角色（默认 Top10）"
+    )
+    daily_most_discussed_agent: Optional[UserAnalyticsReportDailyTopAgentItem] = Field(
+        None, description="日报当日聊天轮数最高角色"
+    )
+
+
+class UserAnalyticsReportItem(BaseModel):
+    """用户数据分析预计算报告项"""
+
+    id: str = Field(description="报告 ID")
+    report_type: str = Field(description="daily | weekly")
+    report_date: str = Field(
+        description="日报：统计日期；周报：该周周一日期 (YYYY-MM-DD)"
+    )
+    stats: UserAnalyticsStatsResponse = Field(description="聚合统计数据")
+    daily_top_agents_by_rounds: List[UserAnalyticsReportDailyTopAgentItem] = Field(
+        default_factory=list,
+        description="日报当日聊天轮数 Top 角色（用于轻量列表请求）",
+    )
+    daily_most_discussed_agent: Optional[UserAnalyticsReportDailyTopAgentItem] = Field(
+        None,
+        description="日报当日聊天轮数最高角色（用于轻量列表请求）",
+    )
+    charts: Optional[UserAnalyticsReportCharts] = Field(None, description="图表数据")
+    created_at: Optional[str] = Field(None, description="创建时间")
+
+
+class UserAnalyticsReportsResponse(BaseModel):
+    """用户数据分析预计算报告列表响应"""
+
+    reports: List[UserAnalyticsReportItem] = Field(
+        default_factory=list, description="报告列表"
     )

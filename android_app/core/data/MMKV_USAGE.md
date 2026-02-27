@@ -55,6 +55,16 @@ fun changeUser(uid: String) {
 
 ## 数据分类与键命名规范
 
+### 已迁至 DataStore（不再经 MMKV）
+
+以下 8 个用户级设置已迁移到 `IntySettingsDataStore`（DataStore 存储，不迁移旧 MMKV 记录）：
+
+- `chat_font_size_sp`、`chat_model_id`、`chat_list_full_screen`
+- `auto_play_animation`、`text_streaming`、`show_scene_action_button`
+- `show_keep_talking`、`auto_play_audio`
+
+对外仍通过 `IntySetting` 的同步 getter/setter 访问，实现见 [IntySettingsDataStore.kt](src/main/kotlin/ai/sxwl/android/data/store/IntySettingsDataStore.kt)。
+
 ### 1. 用户认证相关
 
 | 键名 | 类型 | 存储位置 | 说明 |
@@ -73,13 +83,15 @@ fun changeUser(uid: String) {
 
 ### 2. 应用设置相关
 
+以下键仍存于 MMKV（`curUserSetting`）；部分同组键已迁至 DataStore，见上文「已迁至 DataStore」：
+
 | 键名 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `show_keep_talking` | Boolean | `false` | 是否显示 Keep Talking 按钮 |
+| `show_keep_talking` | Boolean | `false` | 是否显示 Keep Talking 按钮（**值已迁 DataStore**，MMKV 不再读写） |
 | `user_set_keep_talking` | Boolean | `false` | 用户是否手动设置过 Keep Talking |
-| `auto_play_audio` | Boolean | `true` | 自动播放语音消息 |
+| `auto_play_audio` | Boolean | `true` | 自动播放语音消息（**值已迁 DataStore**） |
 | `user_set_auto_play_voice` | Boolean | `false` | 用户是否手动设置过自动播放 |
-| `show_scene_action_button` | Boolean | `false` | 显示场景动作输入按钮 |
+| `show_scene_action_button` | Boolean | `false` | 显示场景动作输入按钮（**值已迁 DataStore**） |
 | `user_set_scene_action_button` | Boolean | `false` | 用户是否手动设置过场景动作按钮 |
 
 **API 方法**：

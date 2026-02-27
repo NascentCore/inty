@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "38134e7d4781a174a8502fc225bbf1ac",
+    "identityHash": "98e9662b8ee726971ebb989adaa025a6",
     "entities": [
       {
         "tableName": "chat_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localId` TEXT NOT NULL, `agentId` TEXT NOT NULL, `remoteId` TEXT, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `userFeedback` TEXT, `isOpening` INTEGER NOT NULL, `isVoice` INTEGER NOT NULL, `metaAgentId` TEXT, `generatedImageUrl` TEXT, `generatedImageWidth` INTEGER, `generatedImageHeight` INTEGER, `sortKey` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`localId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`localId` TEXT NOT NULL, `agentId` TEXT NOT NULL, `remoteId` TEXT, `role` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` TEXT, `audioUrl` TEXT, `userVote` TEXT, `userFeedback` TEXT, `isOpening` INTEGER NOT NULL, `isVoice` INTEGER NOT NULL, `metaAgentId` TEXT, `generatedImageUrl` TEXT, `generatedImageWidth` INTEGER, `generatedImageHeight` INTEGER, `sortKey` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `isSending` INTEGER NOT NULL, PRIMARY KEY(`localId`))",
         "fields": [
           {
             "fieldPath": "localId",
@@ -106,6 +106,12 @@
             "columnName": "updatedAt",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "isSending",
+            "columnName": "isSending",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -125,13 +131,13 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_agentId` ON `${TABLE_NAME}` (`agentId`)"
           },
           {
-            "name": "index_chat_messages_remoteId",
+            "name": "index_chat_messages_localId",
             "unique": false,
             "columnNames": [
-              "remoteId"
+              "localId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_remoteId` ON `${TABLE_NAME}` (`remoteId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_localId` ON `${TABLE_NAME}` (`localId`)"
           },
           {
             "name": "index_chat_messages_agentId_sortKey",
@@ -196,7 +202,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '38134e7d4781a174a8502fc225bbf1ac')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '98e9662b8ee726971ebb989adaa025a6')"
     ]
   }
 }

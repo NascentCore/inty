@@ -50,7 +50,7 @@ android {
 
 dependencies {
 
-    // ===== Inty SDK（Stainless https://app.stainless.com/ 根据 app/openapi.json 生成的代码）=====
+    // ===== Inty SDK（由 OpenAPI 生成的 Kotlin 客户端，见 android_app/library/inty_sdk）=====
     // 注意：版本必须与 app/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
     implementation(libs.inty.kotlin)
 
@@ -60,8 +60,10 @@ dependencies {
 
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.room.paging)
 
     implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.paging.runtime)
 
     implementation(projects.core.firebase)
     api(libs.billing.client)
@@ -102,4 +104,8 @@ dependencies {
     implementation(libs.koin.androidx.navigation)
     testImplementation(libs.koin.test.junit)
     testImplementation(libs.koin.test.android)
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions { freeCompilerArgs.add("-Xannotation-default-target=param-property") }
 }

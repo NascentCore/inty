@@ -222,6 +222,28 @@ class PushNotificationManager private constructor(private val application: Appli
                 }
             }
 
+            FCMConstants.TYPE_FESTIVAL_MEMORY -> {
+                // 节日记忆通知：跳转到该角色 Love Journal 页并定位到对应记忆条目
+                if (!agentId.isNullOrEmpty()) {
+                    val festivalMemoryIdStr = data[FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID]
+                    val festivalMemoryId = festivalMemoryIdStr?.toLongOrNull()
+                    Intent(application, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra(FCMConstants.DATA_KEY_TYPE, FCMConstants.TYPE_FESTIVAL_MEMORY)
+                        putExtra(FCMConstants.DATA_KEY_AGENT_ID, agentId)
+                        festivalMemoryId?.let {
+                            putExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID, it)
+                        }
+                    }
+                } else {
+                    LogUtils.w(
+                        "PushNotificationManager",
+                        "消息类型为 festival_memory 但缺少 agent_id，跳转到主页面",
+                    )
+                    createMainActivityIntent()
+                }
+            }
+
             FCMConstants.TYPE_SYSTEM,
             null -> {
                 // 系统通知或其他：跳转到主页面

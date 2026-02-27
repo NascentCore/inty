@@ -1,17 +1,45 @@
 # DevOps - 运维（目录索引）
 
-本 README 仅作为 `devops/` 目录的索引与文件概述；具体操作流程请查看相应专题文档。
+**Playground:**
 
-## 常用文档入口
+- https://platform.openai.com/playground/images
+- https://console.cloud.google.com/vertex-ai/studio/multimodal?project=alien-paratext-461204-i9
+- https://fal.ai/models/fal-ai/z-image/turbo
 
-- 发布流程：`RELEASE.md`
-- GCP/线上环境信息：`GCP.md`
-- Nginx 配置与更新：`nginx/README.md`
-- Google Play 运营操作：`GOOGLE_PLAY.md`
-- Android App 运维说明：`ANDROID_APP.md`
-- Web 域名/证书/部署：`WEB_APP.md`
-- 密钥与加密（SOPS）：`SOPS.md`
-- 目录内工具脚本：`validate_configs.py`
+**LangSmith**
+
+- dev 环境 100% 追踪
+- prod 环境 10% 追踪文本 100% 其他
+
+## IntelliMate & Inty dev 与 prod 环境
+
+- 共享同一台 gcp VM
+- 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
+- 操作这两个环境必须先写 python 脚本，严禁直接操作数据库、或者直接调用管理员权限的 API Endpoint，步骤如下（以 dev 为例）：
+  ```bash
+  ssh <gcp-vm>
+  docker exec -it inty-backend-dev bash
+  python scripts/<...>.py <flags>
+  ```
+
+### dev 环境测试用户
+
+** 需要时可以随时添加**
+
+dev 环境预制了 3 个测试用户（使用`python scripts/create_email_password_superuser.py --email test@local.ai --password test`）：
+- test1@sxwl.ai sxwl666!
+- test2@sxwl.ai sxwl666!
+- test3@sxwl.ai sxwl666!
+
+## 链接
+
+- [prod push worker logs](https://cloudlogging.app.goo.gl/VXHGrai93hqJU3er9)
+- [dev push worker logs](https://cloudlogging.app.goo.gl/xhWv88U4bH7v7UNd9)
+- [prod inty backend logs](https://cloudlogging.app.goo.gl/9fr7rxgrwbas68En9)
+- [dev inty backend logs](https://cloudlogging.app.goo.gl/aaPiWvxr7syuAFuX7)
+- [LangSmith IntelliMate-dev project](https://smith.langchain.com/o/1463b2d0-5d84-4f0c-b31e-0a158d823e01)
+- [LangSmith inty-backend-prod tracing project](https://smith.langchain.com/o/824a4bb5-ca84-4fa2-969e-7a50cd267999/projects/p/2808d56c-e07f-4293-8bec-1cc62d9f4975)
+- [Sentry plan overview](https://inty-inc.sentry.io/settings/billing/overview/): 生产环境追踪等 Observability 需求
 
 ## 非 .md 文件与子目录概述
 
@@ -24,3 +52,9 @@
   - `nginx/conf.d/sxwl.ai.conf`：站点配置
   - `nginx/validate.sh`：配置校验
 - **docker/**：运维侧的 Docker 相关材料（如有）
+
+## Notes
+
+同样的提示词，Cursor 搞定了，Copilot 搞不定：
+* Copilot 搞不定，引入新的错误：https://github.com/NascentCore/inty/pull/2246
+* Cursor 搞定，未引入新的错误：https://github.com/NascentCore/inty/pull/2249

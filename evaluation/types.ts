@@ -1,10 +1,70 @@
 // 智能体管理系统类型定义
 
-// 从 SDK 导入 Agent 类型
-import type {
-  Agent as BaseAgent,
-  AgentVisibility,
-} from "inty_sdk/src/resources/api/v1/ai/agents";
+// 本地定义 Agent 基础类型，避免依赖 SDK 源码目录
+export type AgentVisibility = "PUBLIC" | "PRIVATE";
+export type AgentGender = "MALE" | "FEMALE" | "OTHER";
+
+export interface AgentCreator {
+  id?: string;
+  email?: string;
+  is_superuser?: boolean;
+  [key: string]: unknown;
+}
+
+export interface AgentImageSize {
+  width: number;
+  height: number;
+}
+
+export interface AgentBaseExtensions {
+  avatar_crop?: AvatarCropData;
+  [key: string]: unknown;
+}
+
+export interface BaseAgent {
+  id: string;
+  name: string;
+  visibility: AgentVisibility;
+  gender: AgentGender;
+  intro?: string;
+  opening?: string;
+  scenario?: string;
+  main_prompt?: string;
+  personality?: string;
+  mode_prompt?: string;
+  avatar?: string;
+  background?: string;
+  background_images?: string[];
+  voice_id?: string;
+  llm_config?: LLMConfig | null;
+  extensions?: AgentBaseExtensions | null;
+  tags?: string[];
+  creator?: AgentCreator;
+  created_at?: string;
+  updated_at?: string;
+  avatar_size?: AgentImageSize | null;
+  background_size?: AgentImageSize | null;
+  [key: string]: unknown;
+}
+
+/** 运营上传的专属角色照单条 */
+export interface ExclusivePhotoItem {
+  image_url: string;
+  caption: string;
+  credits_required: number;
+}
+
+/** 角色详情中的单条节日记忆（features.festival_memories） */
+export interface FestivalMemoryItem {
+  festival_date: string;
+  festival_name: string;
+  memory: string;
+}
+
+/** 角色可扩展功能数据，如节日记忆/心跳日记 */
+export interface AgentFeatures {
+  festival_memories?: FestivalMemoryItem[];
+}
 
 // 扩展 Agent 类型以包含 meta_data 和 background_animated 字段
 export interface Agent extends BaseAgent {
@@ -12,9 +72,9 @@ export interface Agent extends BaseAgent {
   background_animated?: string; // webp 动图 URL
   description?: string; // 描述字段
   source?: AgentSource; // 角色来源
+  features?: AgentFeatures;
+  exclusive_photos?: ExclusivePhotoItem[]; // 运营专属角色照（评测管理用）
 }
-
-export type { AgentVisibility };
 
 // 角色来源类型
 export type AgentSource = "USER_CREATED" | "AUTO_GENERATED";
@@ -87,6 +147,7 @@ export interface AgentUpdateRequest {
   meta_data?: AgentMetaData;
   extensions?: { [key: string]: unknown } | null;
   tags?: string[];
+  exclusive_photos?: ExclusivePhotoItem[];
 }
 
 // 生成背景视频请求
@@ -341,14 +402,14 @@ export interface ComparisonResult {
 }
 
 // API 响应通用格式
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
 }
 
 // 分页响应
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   items: T[];
   total: number;
   page: number;
@@ -520,6 +581,64 @@ export interface ConversationsDetailResponse {
   sessions: ConversationsDetailSession[];
 }
 
+export interface UserAnalyticsReportGeneratedImageItem {
+  id: number;
+  session_id: string;
+  image_url: string;
+  meta_data: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export interface UserAnalyticsReportDailyTopAgentItem {
+  rank: number;
+  agent_name: string;
+  total_rounds: number;
+  user_count: number;
+  total_sessions: number;
+  active_sessions: number;
+}
+
+export interface UserAnalyticsReportCharts {
+  new_users: Array<{ date: string; auth_type: string; count: number }>;
+  conversation_rounds: Array<{
+    chat_id: string;
+    message_count: number;
+    message_count_excluding_opening: number;
+  }>;
+  user_rounds_distribution: Array<{
+    user_id: string;
+    total_rounds: number;
+  }>;
+  users_hitting_limit: Array<{
+    date: string;
+    user_id: string;
+    auth_type: string;
+    nickname: string | null;
+    email: string | null;
+    chat_count_24h: number;
+    limit_value: number;
+  }>;
+  popular_agents: PopularAgentsResponse[];
+  generated_images: UserAnalyticsReportGeneratedImageItem[];
+  daily_top_agents_by_rounds: UserAnalyticsReportDailyTopAgentItem[];
+  daily_most_discussed_agent: UserAnalyticsReportDailyTopAgentItem | null;
+}
+
+export interface UserAnalyticsReportItem {
+  id: string;
+  report_type: "daily" | "weekly";
+  report_date: string;
+  stats: UserAnalyticsStatsResponse;
+  daily_top_agents_by_rounds: UserAnalyticsReportDailyTopAgentItem[];
+  daily_most_discussed_agent: UserAnalyticsReportDailyTopAgentItem | null;
+  charts: UserAnalyticsReportCharts | null;
+  created_at: string | null;
+}
+
+export interface UserAnalyticsReportsResponse {
+  reports: UserAnalyticsReportItem[];
+}
+
 export interface UserAnalyticsStatsResponse {
   // 统计类型
   total_new_users: number;
@@ -572,6 +691,7 @@ export interface UserDailyMessagesResponse {
 export interface UserTodayStatsResponse {
   today_message_count: number;
   today_session_count: number;
+  total_generated_images: number;
 }
 
 export interface UserSessionItem {
@@ -586,6 +706,18 @@ export interface UserSessionsResponse {
   sessions: UserSessionItem[];
 }
 
+export interface SessionGeneratedImageMeta {
+  image_url: string;
+  width?: number;
+  height?: number;
+  [key: string]: unknown;
+}
+
+export interface SessionMessageMetaData {
+  generated_image?: SessionGeneratedImageMeta;
+  [key: string]: unknown;
+}
+
 export interface SessionMessageItem {
   id: number;
   message_type: string;
@@ -593,7 +725,7 @@ export interface SessionMessageItem {
   image_url?: string | null; // 独立图片消息的 URL
   created_at: string | null;
   audio_url: string | null;
-  meta_data: Record<string, any> | null;
+  meta_data: SessionMessageMetaData | null;
 }
 
 export interface SessionMessagesResponse {
@@ -674,19 +806,48 @@ export interface ImageCountsResponse {
   counts: Record<string, number>;
 }
 
+// 用户生成图片
+export interface UserGeneratedImageItem {
+  url: string;
+  gcs_url: string;
+  generation_prompt: string;
+  reference_image_url: string | null;
+  width: number | null;
+  height: number | null;
+  created_at: string | null;
+  agent_id: string | null;
+  agent_name: string | null;
+}
+
+export interface UserGeneratedImagesResponse {
+  images: UserGeneratedImageItem[];
+  total: number;
+}
+
 // Report/Feedback 相关类型
 export type ReportTargetType = "USER" | "AGENT";
 export type ReportStatus = "PENDING" | "PROCESSING" | "RESOLVED" | "REJECTED";
 export type ReportType = "REPORT" | "FEEDBACK";
+
+export interface ReporterUserInfo {
+  id: string;
+  readable_id: string | null;
+  nickname: string | null;
+  email: string | null;
+  phone: string | null;
+  created_at: string | null;
+}
 
 export interface ReportItem {
   id: string;
   target_id: string;
   target_type: ReportTargetType;
   reporter_id: string;
+  reporter_user_info: ReporterUserInfo | null;
   reason_codes: string[];
   image_urls: string[];
   description: string | null;
+  github_issue: string | null;
   status: ReportStatus;
   report_type: ReportType | null;
   created_at: string;
@@ -695,4 +856,71 @@ export interface ReportItem {
 export interface ReportsListResponse {
   items: ReportItem[];
   total: number;
+}
+
+// 节日记忆配置与执行
+export interface FestivalMemoryConfigItem {
+  id: number;
+  festival_name: string;
+  festival_date: string;
+  prompt: string;
+  enabled: boolean;
+  /** 节日与执行时间所属时区，IANA 名如 Asia/Shanghai */
+  timezone: string;
+  /** 执行日期（该时区下），须不早于节日日期 */
+  run_at_date: string | null;
+  /** 执行时刻（该时区下本地小时）0-23 */
+  run_at_hour: number | null;
+  /** 最近一次被定时任务执行的时间 */
+  last_run_at: string | null;
+  /** 窗口内最少用户消息轮数，null 表示默认 15 */
+  min_rounds_in_window?: number | null;
+  /** 模型配置 JSON，null 表示使用默认模型 */
+  llm_config?: LLMConfig | null;
+}
+
+export interface FestivalMemoryConfigCreate {
+  festival_name: string;
+  festival_date: string;
+  prompt: string;
+  enabled?: boolean;
+  /** 节日与执行时间所属时区，IANA 名如 Asia/Shanghai，默认 UTC */
+  timezone?: string;
+  run_at_date: string;
+  run_at_hour: number; // 0-23
+  /** 窗口内最少用户消息轮数，不传则默认 15 */
+  min_rounds_in_window?: number | null;
+  /** 模型配置，不传或 null 表示使用默认模型 */
+  llm_config?: LLMConfig | null;
+}
+
+export interface FestivalMemoryConfigUpdate {
+  festival_name?: string;
+  festival_date?: string;
+  prompt?: string;
+  enabled?: boolean;
+  timezone?: string;
+  run_at_date?: string;
+  run_at_hour?: number; // 0-23
+  /** 窗口内最少用户消息轮数，不传则默认 15 */
+  min_rounds_in_window?: number | null;
+  /** 模型配置，不传表示不更新，传 null 表示改为默认模型 */
+  llm_config?: LLMConfig | null;
+}
+
+export interface FestivalMemoryExtractionRunRequest {
+  config_id?: number;
+  festival_name?: string;
+  festival_date?: string;
+  prompt?: string;
+  /** 节日日期所属时区（仅当未传 config_id 时用于窗口计算） */
+  timezone?: string;
+  /** 窗口内最少用户消息轮数（仅当未传 config_id 时生效），不传则默认 15 */
+  min_rounds_in_window?: number | null;
+}
+
+export interface FestivalMemoryExtractionRunResponse {
+  total_pairs: number;
+  success_count: number;
+  failed_count: number;
 }

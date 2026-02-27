@@ -1,24 +1,28 @@
 """
-Wrapper of OpenAI API, used to wrap the OpenAI API with LangSmith.
+OpenAI API client helpers and shared client singleton.
+
+LangSmith tracing is done at call site (e.g. agent._call_openai_api_with_retry),
+not via client wrapping.
 """
 
-"""
-Demo for using OpenAI SDK with LangSmith to track the usage of OpenAI API.
-"""
+# TODO: 写一个 Wrapper 来完成常见功能，包括：
+# 1. structured output
+# 2. system_prompt, prompt, 单一 text 输出及结构和输出
+# 之前尝试：https://github.com/NascentCore/inty/pull/2310 没有完成
 
 import os
 import threading
 from enum import StrEnum
-from typing import Optional
+from typing import Optional, Tuple
 
 from langchain_core.messages import BaseMessage
-from langsmith import traceable, wrappers
 from loguru import logger
-from openai import OpenAI
-from typing_extensions import deprecated
+from openai import AsyncOpenAI, OpenAI
 
+from app.api.types.llm_config import LLMConfig
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.external_services.fakes.openai import FakeOpenAI
+from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
 
 class Role(StrEnum):
@@ -63,6 +67,9 @@ _warn_env_var("LANGSMITH_PROJECT")
 _base_client: Optional[OpenAI] = None
 _client_lock = threading.Lock()
 
+_async_client: Optional[AsyncOpenAI] = None
+_async_client_lock = threading.Lock()
+
 
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
@@ -101,53 +108,81 @@ def get_base_openai_client() -> OpenAI:
     return _base_client
 
 
-def wrap_client_with_langsmith(
-    client: OpenAI, chat_name: str, labels: dict[str, str]
-) -> OpenAI:
+def _create_async_openai_client() -> AsyncOpenAI:
+    """创建 AsyncOpenAI 客户端，与 sync 客户端相同配置（base_url、api_key、OpenRouter headers）。"""
+    # 测试环境也使用真实 AsyncOpenAI；需 mock 的测试会 patch chat_completion_for_extraction。
+    return AsyncOpenAI(
+        base_url=global_config_loaded_from_config_yaml.agent.base_url,
+        api_key=global_config_loaded_from_config_yaml.agent.api_key,
+        default_headers={
+            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
+            "X-Title": global_config_loaded_from_config_yaml.app.name,
+        },
+        timeout=120.0,
+    )
+
+
+def get_async_openai_client() -> AsyncOpenAI:
     """
-    已废弃：直接返回基础客户端，不再使用 wrap_openai
-
-    wrap_openai 会创建多层嵌套的 trace，导致 LangSmith 显示混乱。
-    现在改用 langsmith.trace context manager 在 API 调用处手动创建单个 trace。
-
-    Args:
-        client: 基础OpenAI客户端
-        chat_name: 聊天名称（不再使用）
-        labels: 元数据标签（不再使用）
-
-    Returns:
-        基础OpenAI客户端（不包装）
+    获取全局单例的 AsyncOpenAI 客户端。
+    用于记忆抽取等异步调用，与 get_base_openai_client() 配置一致。
     """
-    # 直接返回基础客户端，不再使用 wrap_openai
-    # trace 在 agent.py 的 _call_openai_api_with_retry 中手动创建
-    return client
+    global _async_client
+    if _async_client is None:
+        with _async_client_lock:
+            if _async_client is None:
+                logger.debug("创建全局 AsyncOpenAI 客户端")
+                _async_client = _create_async_openai_client()
+    return _async_client
 
 
-@deprecated(
-    "Demo function do not use, this is only for demo @traceable "
-    "This also mapps user->Human and assistant->AI"
-    "We want to have it logging the raw messages, but langsmith insists on"
-    "mapping user->Human and assistant->AI"
-)
-@traceable
-def chat_completions(messages: list[dict[str, str]], **kwargs):
+def _default_extraction_llm_config() -> LLMConfig:
+    """默认记忆抽取用 LLM 配置，与原先 chat_completion_for_extraction 行为一致。"""
+    return LLMConfig(
+        model=DEFAULT_MEMORY_EXTRACTION_MODEL,
+        max_tokens=4000,
+        temperature=0.3,
+    )
+
+
+def _llm_config_to_create_kwargs(llm_config: LLMConfig) -> dict:
+    """从 LLMConfig 构建 client.chat.completions.create 的参数字典，仅包含非 None 字段。"""
+    model = (llm_config.model or "").strip() or DEFAULT_MEMORY_EXTRACTION_MODEL
+    kwargs: dict = {
+        "model": model,
+        "max_tokens": llm_config.max_tokens,
+        "temperature": llm_config.temperature,
+    }
+    if llm_config.top_p is not None:
+        kwargs["top_p"] = llm_config.top_p
+    if llm_config.presence_penalty is not None:
+        kwargs["presence_penalty"] = llm_config.presence_penalty
+    if llm_config.frequency_penalty is not None:
+        kwargs["frequency_penalty"] = llm_config.frequency_penalty
+    return kwargs
+
+
+async def chat_completion_for_extraction(
+    prompt: str,
+    llm_config: Optional[LLMConfig] = None,
+) -> Tuple[str, int | None, int | None]:
     """
-    Return an OpenAI client without LangSmith tracing.
+    异步调用 chat completions 用于记忆抽取。
+    返回 (content, prompt_tokens, completion_tokens)。
+    llm_config 为 None 时使用默认配置（DEFAULT_MEMORY_EXTRACTION_MODEL、max_tokens=4000、temperature=0.3）。
     """
-    return _create_openai_client().chat.completions.create(messages=messages, **kwargs)
-
-
-def create_openai_client(chat_name: str, labels: dict[str, str]):
-    """
-    Return an OpenAI client with LangSmith tracing.
-    The ENV vars are required by langsmith.
-    This maps the role of the messages: user->Human and assistant->AI.
-
-    Note: 该函数保留用于向后兼容，但推荐在Agent类中使用缓存的客户端。
-    对于需要在Agent外部使用的场景，该函数仍然有效。
-    """
-    base_client = get_base_openai_client()
-    return wrap_client_with_langsmith(base_client, chat_name, labels)
+    cfg = llm_config if llm_config is not None else _default_extraction_llm_config()
+    client = get_async_openai_client()
+    create_kwargs = _llm_config_to_create_kwargs(cfg)
+    response = await client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        **create_kwargs,
+    )
+    content = (response.choices[0].message.content or "") if response.choices else ""
+    usage = response.usage
+    prompt_tokens = usage.prompt_tokens if usage else None
+    completion_tokens = usage.completion_tokens if usage else None
+    return (content, prompt_tokens, completion_tokens)
 
 
 def langchain_message_to_openai_message(
@@ -178,7 +213,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
 
     load_dotenv()
-    client = create_openai_client()
+    client = get_base_openai_client()
     response = client.chat.completions.create(
         model="openai/gpt-3.5-turbo",
         messages=[{"role": "user", "content": "Hello, world!"}],

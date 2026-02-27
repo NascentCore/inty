@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 from fastapi import UploadFile
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class QuestionParserService:
@@ -20,7 +20,7 @@ class QuestionParserService:
         filename = file.filename or ""
 
         if not filename.endswith(".json"):
-            raise ValueError(f"不支持的文件类型: {filename}")
+            raise ValueError(f"Unsupported file type: {filename}")
         return QuestionParserService._parse_json(content)
 
     @staticmethod
@@ -71,14 +71,14 @@ class QuestionParserService:
                         questions.append(question)
 
             if not questions:
-                raise ValueError("JSON文件中没有找到有效的问题")
+                raise ValueError("No valid questions found in JSON file")
 
             return questions
 
         except json.JSONDecodeError as e:
-            raise ValueError(f"JSON格式错误: {str(e)}")
+            raise ValueError(f"Invalid JSON format: {str(e)}")
         except Exception as e:
-            raise ValueError(f"JSON文件解析失败: {str(e)}")
+            raise ValueError(f"Failed to parse JSON file: {str(e)}")
 
     @staticmethod
     def _remove_line_number(line: str) -> str:

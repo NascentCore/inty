@@ -1,6 +1,7 @@
 package com.ai.intellimate
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -10,16 +11,12 @@ import ai.sxwl.android.design.ui.HeartBottomAppBar
 import ai.sxwl.android.design.ui.HeartBottomTabItem
 import ai.sxwl.android.firebase.FirebaseManager
 import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -105,19 +103,7 @@ fun HomeScreen(
         )
     }
 
-    // 创建共享的 CreateRoleActivity launcher，用于处理从 Create Tab 创建后的刷新
-    // 当 CreateRoleActivity 返回成功时，如果当前在 Profile Tab，需要刷新列表
     var shouldRefreshProfile by remember { mutableStateOf(false) }
-    val createRoleLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
-                shouldRefreshProfile = true
-                mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
-            }
-        }
 
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
@@ -176,7 +162,6 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize().background(HeartColor.primaryColor),
         containerColor = Color.Transparent,
         bottomBar = {
-            val context = LocalContext.current
             HeartBottomAppBar(
                 modifier = Modifier,
                 selectedTab = selectedTab.value.ordinal,
@@ -195,27 +180,18 @@ fun HomeScreen(
                         if (selectedTab.value == HomeTabIndex.Explore) {
                             mainViewModel.triggerExploreReset()
                         }
-                        // 重置计时器，避免连续触发
-                        lastTabClickTime = 0
-                        lastTabIndex = -1
                     } else {
                         // 正常点击，更新记录
-                        lastTabClickTime = currentTime
-                        lastTabIndex = tabIndex
-                        handleTabSelectionWithLauncher(
+                        handleTabSelection(
                             navController,
                             tabIndex,
-                            context,
                             mainViewModel,
-                            createRoleLauncher,
                         )
                     }
                 },
-                iconSize = UiConfigs.BottomBar.TabIconSize,
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
                 height = UiConfigs.BottomBar.Height,
                 labelSpacing = UiConfigs.BottomBar.TabIconLabelSpacing,
-                bottomSpace = UiConfigs.BottomBar.BottomSpacing,
             )
         },
         contentWindowInsets = WindowInsets.navigationBars,
@@ -318,12 +294,9 @@ private fun ExpiredDialogLogic(navController: NavController, mainViewModel: Main
                             BillingRepository.launchBillingFlow(context, googleProductId)
                     } else {
                         // 跳转到订阅中心
-                        navController.navigate(Routes.Me.VipCenter)
-                        //                        VipCenterActivity.launch(context,
-                        // VipCenterActivity.HOME_EXPIRED_DIALOG)
+                        navController.navigate(Routes.Me.vipCenter("explore_vip"))
                     }
                 }
-
                 showExpiredDialog = false
             },
         )
@@ -363,20 +336,22 @@ private fun calculateResubReminderDelaySeconds(showCount: Int): Long {
     return RESUB_REMINDER_CYCLE_SECONDS * multiplier
 }
 
-/** 处理Tab选择逻辑（带 launcher） */
-private fun handleTabSelectionWithLauncher(
+/** 处理中间功能键与普通 Tab 的选择逻辑。 */
+private fun handleTabSelection(
     navController: NavController,
     tabIndex: Int,
-    context: Context,
     mainViewModel: MainViewModel,
-    createRoleLauncher: ActivityResultLauncher<Intent>,
 ) {
     if (tabIndex == HomeTabIndex.Create.ordinal) {
         if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-            // 使用 CreateRoleActivity 提供的方法获取 Intent
-            //            val intent = CreateRoleActivity.getIntent(context, null)
-            //            createRoleLauncher.launch(intent)
-            navController.navigate(Routes.Creat.CreateRole)
+            navController.navigate(
+                Routes.Chat.chatPage(
+                    agentId = AgentConstants.INTELLIMATE_AGENT_ID,
+                    showBoost = false,
+                    shouldAutoFocusInput = false,
+                    fromPage = "bottom_nav_center",
+                )
+            )
         }
         return
     }
@@ -428,6 +403,7 @@ private fun HomeContent(
                 shouldRefreshProfile = shouldRefreshProfile,
                 onRefreshProfileHandled = onRefreshProfileHandled,
                 appUpdateTips = appUpdateTips,
+                innerPadding = innerPadding,
                 mainViewModel = mainViewModel,
             )
         }
@@ -482,15 +458,16 @@ private fun MessagesTabContent(navController: NavController, mainViewModel: Main
                     conversation.convertToAgentInfo().id,
                     false,
                     isDeleted = conversation.isDeleted,
+                    fromPage = "conversation",
                 )
             )
         },
         onClickFavoriteAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.Chat.chatPage(agent.id, false))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false, fromPage = "favorite"))
         },
         onNavigateToExplore = { mainViewModel.selectTab(HomeTabIndex.Explore.ordinal) },
-        onOpenSubscription = { navController.navigate(Routes.Me.VipCenter) },
+        onOpenSubscription = { navController.navigate(Routes.Me.vipCenter("home_subscription")) },
         pageTrackingContext = "MainActivity",
     )
 }
@@ -517,10 +494,15 @@ private fun ExploreTabContent(
         navController,
         modifier = Modifier,
         innerPadding = innerPadding,
-        onClickAgent = { agent ->
+        onClickAgent = { agent, type ->
             AgentStore.addAgent(agent)
             navController.navigate(
-                Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false)
+                Routes.Chat.chatPage(
+                    agent.id,
+                    false,
+                    shouldAutoFocusInput = false,
+                    fromPage = "explore_$type",
+                )
             )
         },
         viewModel = exploreViewModel,
@@ -535,6 +517,7 @@ private fun ProfileTabContent(
     shouldRefreshProfile: Boolean,
     onRefreshProfileHandled: () -> Unit,
     appUpdateTips: Boolean,
+    innerPadding: PaddingValues,
     mainViewModel: MainViewModel,
 ) {
     val context = LocalContext.current
@@ -553,29 +536,6 @@ private fun ProfileTabContent(
         } else {
             uiState.userProfile
         }
-
-    // 创建用于编辑的 launcher（独立于 Create Tab 的 launcher）
-    //    val editAgentLauncher =
-    //        rememberLauncherForActivityResult(
-    //            contract = ActivityResultContracts.StartActivityForResult()
-    //        ) { result ->
-    //            // 编辑成功后刷新列表
-    //            if (result.resultCode == Activity.RESULT_OK) {
-    //                profileViewModel.refreshCreatedAgents()
-    //            }
-    //        }
-
-    // 创建用于从 Profile 页面创建角色的 launcher（包括从草稿创建）
-    //    val createFromProfileLauncher =
-    //        rememberLauncherForActivityResult(
-    //            contract = ActivityResultContracts.StartActivityForResult()
-    //        ) { result ->
-    //            // 创建成功后刷新列表和草稿
-    //            if (result.resultCode == Activity.RESULT_OK) {
-    //                profileViewModel.refreshCreatedAgents()
-    //                profileViewModel.refreshAgentDrafts()
-    //            }
-    //        }
 
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
@@ -642,14 +602,14 @@ private fun ProfileTabContent(
 
     ProfilePage(
         navController,
-        modifier = Modifier,
+        modifier = Modifier.padding(innerPadding),
         userProfile = safeUserProfile,
         agents = uiState.userCreatedAgents,
         drafts = uiState.drafts,
         isLoading = uiState.isLoading,
         onClickAgent = { agent ->
             AgentStore.addAgent(agent)
-            navController.navigate(Routes.Chat.chatPage(agent.id, false))
+            navController.navigate(Routes.Chat.chatPage(agent.id, false, fromPage = "profile"))
         },
         onClickDraft = { draftId ->
             //            val intent = CreateRoleActivity.getIntent(context, null, draftId)
@@ -689,29 +649,34 @@ private val defaultTabItems =
             selectedIcon = R.drawable.tab_icon_home_selected,
             unselectedIcon = R.drawable.tab_icon_chat,
             labelResId = R.string.tab_home,
+            // 不能使用 uiconfigs 因为依赖关系是单向的，uiconfigs 定义于 app 模块，core 模块无法直接访问 app 模块的变量
+            iconSize = 23.dp,
         ),
         HeartBottomTabItem(
             index = 1,
             selectedIcon = R.drawable.tab_icon_messages_selected,
             unselectedIcon = R.drawable.tab_icon_messages,
             labelResId = R.string.tab_messages,
+            iconSize = 23.dp,
         ),
         HeartBottomTabItem(
             index = 2,
-            selectedIcon = R.drawable.tab_icon_create,
-            unselectedIcon = R.drawable.tab_icon_create,
-            labelResId = R.string.tab_create,
+            selectedIcon = R.drawable.app_icon,
+            unselectedIcon = R.drawable.app_icon,
+            iconSize = 38.dp,
         ),
         HeartBottomTabItem(
             index = 3,
             selectedIcon = R.drawable.tab_icon_explore_selected,
             unselectedIcon = R.drawable.tab_icon_explore,
             labelResId = R.string.tab_explore,
+            iconSize = 23.dp,
         ),
         HeartBottomTabItem(
             index = 4,
             selectedIcon = R.drawable.tab_icon_me_selected,
             unselectedIcon = R.drawable.tab_icon_me,
             labelResId = R.string.tab_me,
+            iconSize = 23.dp,
         ),
     )

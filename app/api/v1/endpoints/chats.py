@@ -1,8 +1,9 @@
+import asyncio
 import json
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 from loguru import logger
@@ -17,12 +18,14 @@ from app.api.tags import (
     NOT_USED_TAG,
     WEB_APP_TAG,
 )
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
+from app.schemas.evaluation import SurpriseSnapUnlockRequest
 from app.schemas.response import (
     APIResponse,
     BizError,
@@ -32,7 +35,12 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
+from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.global_services import subscription_service
+from app.services.surprise_snap_service import (
+    get_unlocked_surprise_snap_message_ids,
+    record_surprise_snap_unlock,
+)
 from app.services.voice_service import voice_service
 
 # TODO: Prefix should be /chat instead of /chats.
@@ -127,203 +135,6 @@ async def get_agent_status(
     }
 
 
-@router.post(
-    "/agents/initialize",
-    deprecated=True,
-    include_in_schema=False,
-    description="No record of who is using this",
-    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
-)
-async def initialize_agents(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Manually initialize commonly used Agents (admin function)
-    """
-    try:
-        await agent_manager.initialize_popular_agents(db)
-        return {
-            "status": "success",
-            "message": "Common Agents initialization completed",
-            "active_agents": agent_manager.get_agent_count(),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
-
-
-@router.delete(
-    "/agents/cleanup",
-    deprecated=True,
-    include_in_schema=False,
-    description="No record of who is using this",
-    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
-)
-async def cleanup_idle_agents(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    Manually cleanup idle Agents (admin function)
-    """
-    try:
-        old_count = agent_manager.get_agent_count()
-        agent_manager._cleanup_idle_agents()
-        new_count = agent_manager.get_agent_count()
-        return {
-            "status": "success",
-            "message": "Idle Agents cleanup completed",
-            "cleaned_count": old_count - new_count,
-            "remaining_agents": new_count,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
-
-
-@router.get(
-    "/{chat_id}/detail",
-    deprecated=True,
-    include_in_schema=False,
-    tags=[INTERNAL_API_TAG, NOT_USED_TAG],
-    summary="Get Chat Detail",
-    description="Get chat details with paginated message records",
-)
-async def get_chat_detail(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    chat_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
-    offset: int = Query(0, ge=0, description="Offset (number of messages to skip)"),
-) -> Any:
-    """
-    Get chat details with paginated message records
-    Support scrolling to load earlier conversations
-    """
-    # Verify if chat exists
-    chat = await chat_service.get_chat(db, chat_id=chat_id)
-    if not chat:
-        raise HTTPException(status_code=404, detail="Chat not found")
-
-    # Verify if chat belongs to current user
-    if chat.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-
-    try:
-        # Use unified session_id generation rule
-        session_id = generate_session_id(chat_id)
-
-        # Get paginated messages
-        messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
-        )
-
-        # Assemble return data
-        return {
-            "chat_info": {
-                "id": chat.id,
-                "agent_id": chat.agent_id,
-                "agent_name": chat.agent_name,
-                "agent_avatar": chat.agent_avatar,
-                "user_id": chat.user_id,
-                "created_at": chat.created_at.isoformat() if chat.created_at else None,
-                "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
-            },
-            "messages": messages_data["messages"],
-            "pagination": {
-                "total": messages_data["total"],
-                "limit": messages_data["limit"],
-                "offset": messages_data["offset"],
-                "page": messages_data["page"],
-                "has_more": messages_data["has_more"],
-                "total_pages": (
-                    (messages_data["total"] + limit - 1) // limit if limit > 0 else 1
-                ),
-            },
-        }
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get chat details: {str(e)}"
-        )
-
-
-@router.get(
-    "/agents/{agent_id}/detail",
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-    include_in_schema=False,
-    deprecated=True,
-    summary="Get Chat Detail for agent identified by agent_id",
-    description="Return the chat details by Agent ID with paginated message records",
-)
-async def get_agent_chat_detail(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
-    offset: int = Query(0, ge=0, description="Offset (number of messages to skip)"),
-) -> Any:
-    """
-    Get chat details by Agent ID with paginated message records
-    If user hasn't created a session with this Agent, automatically create one
-    Support scrolling to load earlier conversations
-    """
-    try:
-        logger.debug(f"Getting Agent chat details - Agent ID: {agent_id}")
-
-        # Get or create unique session with this Agent
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
-        )
-
-        # Verify if the agent_id in returned chat matches the input
-        if chat.agent_id != agent_id:
-            logger.error(f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Agent ID mismatch: input={agent_id}, actual={chat.agent_id}",
-            )
-
-        # Use unified session_id generation rule
-        session_id = generate_session_id(chat.id)
-
-        # Get paginated messages
-        messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
-        )
-
-        # Assemble return data
-        data = {
-            "chat_info": {
-                "id": chat.id,
-                "agent_id": chat.agent_id,
-                "agent_name": chat.agent_name,
-                "agent_avatar": chat.agent_avatar,
-                "user_id": chat.user_id,
-                "created_at": chat.created_at.isoformat() if chat.created_at else None,
-                "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
-            },
-            "messages": messages_data["messages"],
-            "pagination": {
-                "total": messages_data["total"],
-                "limit": messages_data["limit"],
-                "offset": messages_data["offset"],
-                "page": messages_data["page"],
-                "has_more": messages_data["has_more"],
-                "total_pages": (
-                    (messages_data["total"] + limit - 1) // limit if limit > 0 else 1
-                ),
-            },
-        }
-        return data
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get chat details: {str(e)}"
-        )
-
-
 @router.get(
     "/agents/{agent_id}/messages",
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
@@ -342,6 +153,7 @@ async def get_agent_chat_messages(
         regex="^(asc|desc)$",
         description="Sort order: asc=old messages first, desc=new messages first",
     ),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
     Get only chat message records by Agent ID (lighter interface)
@@ -367,10 +179,29 @@ async def get_agent_chat_messages(
         # Use unified session_id generation rule
         session_id = generate_session_id(chat.id)
 
-        # 获取分页消息
-        messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id, limit=limit, offset=offset, user_id=current_user.id
+        # 仅当客户端提供版本且满足最低要求时按需投递；未传版本或旧版不投递，delivery_at 保持 null
+        if is_festival_memory_enabled(app_version_code):
+            try:
+                await deliver_festival_memories_for_user_agent(
+                    db, current_user.id, agent_id
+                )
+            except Exception as e:
+                logger.warning(f"投递节日记忆提示失败: {e}")
+
+        unlocked_ids = await get_unlocked_surprise_snap_message_ids(
+            db, current_user.id
         )
+        messages_data = await asyncio.to_thread(
+            chat_history_service.get_messages_paginated,
+            session_id=session_id,
+            limit=limit,
+            offset=offset,
+            user_id=current_user.id,
+            unlocked_surprise_snap_message_ids=unlocked_ids,
+        )
+
+        # 如果客户端版本不支持节日记忆，则不返回节日记忆消息，即便数据库中有节日记忆消息。
+        # 这种情况不会发生，因为客户端会自动升级到支持节日记忆的版本。
 
         # 如果要求升序（旧消息在前），则不反转
         # 如果要求降序（新消息在前），则反转消息列表
@@ -380,15 +211,40 @@ async def get_agent_chat_messages(
         return messages_data
 
     except Exception as e:
+        logger.exception("Failed to get message records: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to get message records: {str(e)}"
         )
 
 
 @router.post(
+    "/surprise-snap/unlock",
+    response_model=schemas.APIResponse[dict],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    summary="Record Surprise Snap unlock",
+    description="Free user uses credit to unlock a surprise_snap message (credit deduction on app). Backend only records unlock state.",
+)
+async def surprise_snap_unlock(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    body: SurpriseSnapUnlockRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> Any:
+    ok = await record_surprise_snap_unlock(
+        db, current_user.id, body.message_id
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=403,
+            detail="Message not found or not a surprise_snap or not your chat",
+        )
+    return schemas.APIResponse.success(data={"unlocked": True})
+
+
+@router.post(
     "/messages/vote",
     response_model=APIResponse[Dict[str, Any]],
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG, NOT_USED_TAG],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Update Message Vote",
     description="Set, toggle, or remove vote (like/dislike) for a message. Only AI messages can be voted.",
 )
@@ -829,72 +685,6 @@ async def delete_agent_chats(
         )
 
 
-@router.get(
-    "/agents/{agent_id}/debug-messages",
-    deprecated=True,
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-    summary="Get Agent Debug Messages",
-    description="Get Agent Debug Messages by Agent ID",
-)
-async def get_agent_debug_messages(
-    *,
-    db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    获取Agent对话的调试信息
-    根据Agent ID获取用户与该Agent的聊天会话中的debug_messages字段
-    """
-    try:
-        logger.debug(
-            f"获取Agent调试信息 - Agent ID: {agent_id}, User ID: {current_user.id}"
-        )
-
-        # 首先验证Agent是否存在
-        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db:
-            raise HTTPException(status_code=404, detail="Agent not found")
-
-        # 获取用户与该Agent的聊天会话
-        chat = await chat_service.get_chat_by_agent_and_user(
-            db=db, agent_id=agent_id, user_id=current_user.id
-        )
-
-        if not chat:
-            # 如果没有聊天会话，返回空的调试信息
-            return {
-                "chat_id": None,
-                "agent_id": agent_id,
-                "agent_name": agent_db.name,
-                "debug_messages": None,
-                "message": "No chat session found with this agent",
-            }
-
-        # 返回调试信息
-        return {
-            "chat_id": chat.id,
-            "agent_id": chat.agent_id,
-            "agent_name": chat.agent_name or agent_db.name,
-            "debug_messages": chat.debug_messages,
-            "last_updated": chat.updated_at.isoformat() if chat.updated_at else None,
-            "message": (
-                "Debug messages retrieved successfully"
-                if chat.debug_messages
-                else "No debug messages available"
-            ),
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取Agent调试信息失败 - Agent ID: {agent_id}, Error: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get debug messages: {str(e)}"
-        )
-
-
 @router.post(
     "/agents/{agent_id}/clear-messages",
     response_model=schemas.ClearMessagesResponse,
@@ -926,7 +716,7 @@ async def clear_agent_chat_messages(
         if request.message_id and request.timestamp:
             raise HTTPException(
                 status_code=400,
-                detail="只能提供 message_id 或 timestamp 中的一个参数，不能同时提供",
+                detail="Provide either message_id or timestamp, not both",
             )
 
         # 验证Agent是否存在
@@ -940,7 +730,9 @@ async def clear_agent_chat_messages(
         )
 
         if not chat:
-            raise HTTPException(status_code=404, detail="未找到与该Agent的聊天会话")
+            raise HTTPException(
+                status_code=404, detail="Chat session for this agent was not found"
+            )
 
         # 生成session_id
         session_id = generate_session_id(chat.id)
@@ -1015,6 +807,7 @@ async def generate_chat_image(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
+            subscription_service=subscription_service,
             history_count=request.history_count,
             model=request.model,
         )

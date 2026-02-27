@@ -19,18 +19,6 @@ from app.services import character_theme_service
 router = APIRouter(prefix="/character-themes", route_class=LoggerRoute)
 
 
-async def get_current_superuser(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.User:
-    """验证当前用户是否为超级管理员"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="只有超级用户才能访问此接口",
-        )
-    return current_user
-
-
 @router.post(
     "/",
     response_model=schemas.APIResponse[character_theme_schemas.CharacterTheme],
@@ -43,7 +31,7 @@ async def create_theme(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     theme_in: character_theme_schemas.CharacterThemeCreate,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """创建角色主题专区"""
     try:
@@ -52,7 +40,9 @@ async def create_theme(
         return schemas.APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"创建角色主题专区失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"创建专区失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to create theme section: {str(e)}"
+        )
 
 
 @router.get(
@@ -104,7 +94,9 @@ async def list_themes(
         return schemas.APIResponse.success(data=theme_schemas)
     except Exception as e:
         logger.error(f"获取角色主题专区列表失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取专区列表失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch theme sections: {str(e)}"
+        )
 
 
 @router.get(
@@ -138,12 +130,16 @@ async def get_theme(
     try:
         theme = await character_theme_service.get_theme(db, theme_id)
         if not theme:
-            return schemas.APIResponse.error(message="专区不存在", code=404)
+            return schemas.APIResponse.error(
+                message="Theme section not found", code=404
+            )
         theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
         return schemas.APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"获取角色主题专区详情失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取专区详情失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch theme section details: {str(e)}"
+        )
 
 
 @router.put(
@@ -159,18 +155,22 @@ async def update_theme(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     theme_in: character_theme_schemas.CharacterThemeUpdate,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """更新角色主题专区"""
     try:
         theme = await character_theme_service.update_theme(db, theme_id, theme_in)
         if not theme:
-            return schemas.APIResponse.error(message="专区不存在", code=404)
+            return schemas.APIResponse.error(
+                message="Theme section not found", code=404
+            )
         theme_schema = character_theme_schemas.CharacterTheme.model_validate(theme)
         return schemas.APIResponse.success(data=theme_schema)
     except Exception as e:
         logger.error(f"更新角色主题专区失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"更新专区失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to update theme section: {str(e)}"
+        )
 
 
 @router.delete(
@@ -185,17 +185,21 @@ async def delete_theme(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """删除角色主题专区"""
     try:
         success = await character_theme_service.delete_theme(db, theme_id)
         if not success:
-            return schemas.APIResponse.error(message="专区不存在", code=404)
+            return schemas.APIResponse.error(
+                message="Theme section not found", code=404
+            )
         return schemas.APIResponse.success(data={"message": "专区删除成功"})
     except Exception as e:
         logger.error(f"删除角色主题专区失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"删除专区失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to delete theme section: {str(e)}"
+        )
 
 
 @router.post(
@@ -211,7 +215,7 @@ async def add_agent_to_theme(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     request: character_theme_schemas.AddAgentToThemeRequest,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """添加角色到专区"""
     try:
@@ -226,7 +230,9 @@ async def add_agent_to_theme(
         raise
     except Exception as e:
         logger.error(f"添加角色到专区失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"添加角色失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to add agent to theme section: {str(e)}"
+        )
 
 
 @router.delete(
@@ -242,7 +248,7 @@ async def remove_agent_from_theme(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     agent_id: str,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """从专区移除角色"""
     try:
@@ -251,12 +257,18 @@ async def remove_agent_from_theme(
         )
         if not success:
             return schemas.APIResponse.error(
-                message="专区或角色不存在，或角色不在该专区中", code=404
+                message=(
+                    "Theme section or agent not found, or agent is not in the "
+                    "section"
+                ),
+                code=404,
             )
         return schemas.APIResponse.success(data={"message": "角色移除成功"})
     except Exception as e:
         logger.error(f"从专区移除角色失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"移除角色失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to remove agent from theme section: {str(e)}"
+        )
 
 
 @router.put(
@@ -272,7 +284,7 @@ async def reorder_agents(
     db: AsyncSession = Depends(deps.get_async_db),
     theme_id: str,
     request: character_theme_schemas.ReorderAgentsRequest,
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """调整角色顺序"""
     try:
@@ -282,4 +294,6 @@ async def reorder_agents(
         raise
     except Exception as e:
         logger.error(f"调整角色顺序失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"调整顺序失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to reorder agents in theme section: {str(e)}"
+        )

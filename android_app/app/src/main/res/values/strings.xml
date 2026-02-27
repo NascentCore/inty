@@ -13,10 +13,10 @@
 <resources>
     <string name="app_name">IntelliMate</string>
     <string name="ID">ID:%s</string>
-    <string name="no_agent">Create your own characters now!</string>
+    <string name="no_agent">Create your own iMates now!</string>
     <string name="vibe_mode_title">The Vibe Mode</string>
     <string name="vibe_mode_active_title">Enjoy the vibe</string>
-    <string name="vibe_mode_subtitle">Exclusive access to pre-release features and perks for Premium subscribers</string>
+    <string name="vibe_mode_subtitle">Exclusive access to pre-release features</string>
     <string name="vibe_mode_toggle_content_desc">Toggle Vibe Mode</string>
     <string name="me_icons_row_help">Help Center</string>
     <string name="me_icons_row_discord">Discord</string>
@@ -32,6 +32,14 @@
     <string name="settings_user_id_unavailable">Unavailable</string>
     <string name="settings_user_email">User Email</string>
     <string name="settings_user_email_unavailable">Unavailable</string>
+    <string name="settings_debug_mode_title">Debug mode</string>
+    <string name="settings_debug_mode_on">On</string>
+    <string name="settings_debug_mode_off">Off</string>
+    <string name="settings_debug_user_time_context_title">User time context reporting</string>
+    <string name="settings_debug_user_time_context_on">Enabled</string>
+    <string name="settings_debug_user_time_context_off">Disabled</string>
+    <string name="settings_debug_fcm_token">FCM Token</string>
+    <string name="settings_debug_fcm_token_loading">Loading…</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>
@@ -68,6 +76,7 @@
     <string name="unknown_error">Unknown error</string>
     <string name="check_network_connection">please check network connection</string>
     <string name="please_try_again_later">please try again later</string>
+    <string name="network_error">Network error, please try again later</string>
 
 
     <!-- Error message formats -->
@@ -85,7 +94,7 @@
 
     <string name="premium_title">IntelliMate Premium</string>
     <string name="premium_subtitle">Experience your imagination without limits!</string>
-    <string name="messages_premium_banner_title">Unlock unlimited messages, photos, and voices.</string>
+    <string name="messages_premium_banner_title">✨💕 Unlock unlimited chats,\nphotos, and voice</string>
     <string name="messages_premium_banner_cta">Get Premium</string>
 
     <string name="premium_benefit_unlimited_chat">Unlimited chat</string>
@@ -112,6 +121,9 @@
     <string name="str_expired_vip_dialog_content">You have enjoyed IntelliMate Premium before. Come back and check out IntelliMate Premium\'s newest benefits and perks!</string>
     <string name="str_unlimit_dialog_content">Daily Free Chat Limit Reached! Go Premium for unlimited chats and exclusive features! Free chats refresh tomorrow — come back and keep chatting. ❤️</string>
     <string name="str_unlimit_btn_text">Unlimited Chat and More! 🔥</string>
+    <string name="chat_subscriber_limit_reached_title">Daily Premium Chat Limit Reached</string>
+    <string name="chat_subscriber_limit_reached_content">You\'ve used all available chats for today. Your daily Premium chat limit refreshes tomorrow.</string>
+    <string name="chat_subscriber_limit_reached_confirm">Got it</string>
     <!-- Image Generation Error Messages -->
     <string name="image_generation_free_limit_content">Daily Free Pic Limit Reached! Go Premium for more pics and exclusive features! Free pics refresh tomorrow - come back then.</string>
     <string name="image_generation_vip_limit_content">Oops! Daily Pic Limit Reached! You\'ve used all available pics for today. Don\'t worry—your limit refreshes tomorrow! Can\'t wait to see what you\'ll create next!</string>
@@ -180,14 +192,14 @@
     <string name="face_edit">Crop</string>
     <string name="remove_background_image">Remove image</string>
     <string name="save_draft_dialog_title">Save draft?</string>
-    <string name="save_draft_dialog_message">Save your progress as a draft so you can finish this character later from the Me page.</string>
+    <string name="save_draft_dialog_message">Save your progress as a draft so you can finish this iMate later from the Me page.</string>
     <string name="save_draft_dialog_confirm">Save draft</string>
     <string name="save_draft_dialog_discard">Don\&#39;t save</string>
     <string name="draft_badge_label">Draft</string>
     <string name="vip_badge_label">VIP</string>
-    <string name="vip_badge_content_description">VIP character</string>
-    <string name="draft_card_placeholder_name">Untitled character</string>
-    <string name="draft_card_placeholder_intro">Add more details to finish this character.</string>
+    <string name="vip_badge_content_description">VIP iMate</string>
+    <string name="draft_card_placeholder_name">Untitled iMate</string>
+    <string name="draft_card_placeholder_intro">Add more details to finish this iMate.</string>
     <string name="delete_draft_title">Delete draft</string>
     <string name="delete_draft_confirm">Are you sure you want to delete the draft "%s"? This action cannot be undone.</string>
 
@@ -206,7 +218,7 @@
     <string name="feedback_title">Help Us Improve</string>
     <string name="feedback_subtitle">Was everything to your satisfaction? </string>
     <string name="feedback_reason_chat_not_natural">Chat replies don\'t feel natural / off-topic</string>
-    <string name="feedback_reason_character_mismatch">The character doesn\'t match its persona</string>
+    <string name="feedback_reason_character_mismatch">The iMate doesn\'t match its persona</string>
     <string name="feedback_reason_app_slow">The app is slow or gets stuck</string>
     <string name="feedback_reason_feature_hard_to_find">I couldn\'t find / how to use this feature</string>
     <string name="feedback_reason_ui_inconvenient">UI or interaction feels inconvenient</string>
@@ -227,12 +239,12 @@
 
     <!-- Dialog Components -->
     <string name="are_you_sure">Are you sure?</string>
-    <string name="delete_account_warning">All your data including chats history and created AI characters will be lost, and cannot be restored.</string>
+    <string name="delete_account_warning">All your data including chats history and created iMates will be lost, and cannot be restored.</string>
     <string name="please_read_warning">Please read the warning carefully and proceed with caution.</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
     <string name="logout_confirm_title">Log out?</string>
-    <string name="logout_confirm_description">You\'ll sign out of IntelliMate and need to log in again to keep chatting. Your chats and characters stay safe.</string>
+    <string name="logout_confirm_description">You\'ll sign out of IntelliMate and need to log in again to keep chatting. Your chats and iMates stay safe.</string>
 
 
     <!-- Subscription popup title -->
@@ -243,7 +255,6 @@
     <string name="subscription_description_fmt_str" formatted="false">%s will be charged %s, cancel at any time</string>
 
     <!-- Chat -->
-    <string name="chat_settings_my_persona_title">My Persona</string>
     <string name="chat_settings_settings_title">Settings</string>
     <string name="chat_settings_support_resources_title">Support</string>
     <string name="chat_settings_user_manual_title">User Manual (Notion)</string>
@@ -268,13 +279,27 @@
     <string name="chat_settings_preference_hint">charming, bold, adventurous…</string>
     <string name="chat_input_placeholder">Write something to %1$s</string>
     <string name="chat_input_with_scene_action_placeholder">Click () to describe actions, feelings, thoughts</string>
+    <string name="chat_voice_input_toggle_to_voice">Switch to voice input</string>
+    <string name="chat_voice_input_toggle_to_keyboard">Switch to keyboard input</string>
+    <string name="chat_voice_input_hold_to_talk">Hold to talk</string>
+    <string name="chat_voice_input_release_to_end">Release to finish</string>
+    <string name="chat_voice_input_permission_rationale">Microphone permission is required for voice input.</string>
+    <string name="chat_voice_input_not_available">Speech recognition is unavailable on this device.</string>
+    <string name="chat_voice_input_failed">Could not recognize speech. Try again.</string>
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>
-    <string name="chat_ai_typing_default_name">Your IntelliMate</string>
+    <string name="chat_ai_typing_default_name">Your iMate</string>
 
     <!-- VIP character access control -->
-    <string name="vip_character_chat_locked_content">This is a VIP character. Go Premium to chat with VIP characters and unlock exclusive features!</string>
+    <string name="vip_character_chat_locked_content">This is a VIP iMate. Go Premium to chat with VIP iMates and unlock exclusive features!</string>
     <string name="vip_character_chat_locked_cta">Subscribe to Chat VIP 🔥</string>
     <string name="unlock_with_credits">Unlock with Credits</string>
+    <string name="unlock_with_credits_price">Unlock with %d credits</string>
+    <string name="chat_moment_prompt">🍷 Hey, do you wanna see more secret moments with me?</string>
+    <string name="moment_purchase_dialog_title">Unlock this moment?</string>
+    <string name="moment_purchase_dialog_message">Spend %d credits to unlock this secret moment.</string>
+    <string name="moment_purchase_confirm">Unlock</string>
+    <string name="moment_purchase_success">Purchase successful.</string>
+    <string name="go_premium">Go Premium</string>
     <string name="close">Close</string>
 
     <!-- VIP Components -->
@@ -313,6 +338,15 @@
     <string name="download_button">Download</string>
     <string name="share_image_content_description">Share image</string>
     <string name="share_button">Share</string>
+    <string name="upscale_image_content_description">Upscale image</string>
+    <string name="upscale_button">Upscale</string>
+    <string name="image_upscale_locked_title">VIP Upscale</string>
+    <string name="image_upscale_locked_message">This is a VIP feature. Spend %1$d credits to unlock it now.</string>
+    <string name="image_upscale_use_credits">Use credits</string>
+    <string name="image_upscale_unlocking">Unlocking…</string>
+    <string name="image_upscale_dialog_title">Choose upscale level</string>
+    <string name="image_upscale_option">%1$dx</string>
+    <string name="image_upscale_applied">Upscale set to %1$dx.</string>
     <string name="toast_no_shareable_image">No image to share</string>
 
     <!-- Additional UI Text -->
@@ -331,6 +365,8 @@
     <string name="report_button_content_description">Report inappropriate content</string>
     <string name="reply_style">Chat Style</string>
     <string name="str_reset">Reset</string>
+    <!-- Change outfit 更合适，但是太长会导致文字换行 -->
+    <string name="chat_more_change_outfit">New Outfit</string>
     <string name="cancel_button">Cancel</string>
     <string name="generate_avatar_title_full">Generate</string>
     <string name="upload_from_gallery">Upload</string>
@@ -365,12 +401,13 @@
     <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
     <string name="profile_premium_banner_button_activate">Activate now</string>
     <string name="profile_daily_rewards_title">Daily Check-in</string>
-    <string name="profile_daily_rewards_subtitle">Get %1$d Boost Points</string>
+    <string name="profile_daily_rewards_subtitle">Get %1$d credits</string>
+    <string name="me_create_character_banner_title">Create your own iMate</string>
     <string name="check_in_day_together">💗 Day %1$d Together</string>
     <string name="play_button_symbol">▶</string>
     <string name="empty_parentheses_symbol">()</string>
     <string name="edit_button">Edit</string>
-    <string name="delete_character_full">Delete Character</string>
+    <string name="delete_character_full">Delete iMate</string>
     <string name="delete_character_confirm_full">Are you sure you want to delete "%s"? This action cannot be undone.</string>
     <string name="delete_button">Delete</string>
     <string name="cancel_button_full">Cancel</string>
@@ -390,7 +427,9 @@
     <string name="str_cancel_upgrade">Use Older Version</string>
 
     <string name="str_chat_disabled">Chat unavailable</string>
-    <string name="str_agent_is_deleted">Character is no longer available</string>
+    <string name="str_agent_is_deleted">iMate is no longer available</string>
+    <string name="str_character_not_unlocked">iMate not unlocked yet</string>
+    <string name="str_please_wait_loading">Please wait until data has loaded</string>
     <string name="agent_gallery_ai_images_title">AI-Generated Images</string>
     <string name="agent_gallery_ai_images_description">Based on your chat history · showing the latest %1$d images</string>
     <string name="agent_gallery_ai_images_content_description">AI-generated chat image</string>
@@ -403,9 +442,9 @@
     <string name="agent_photo_album_set_as_background">Set as chat background</string>
 
     <!-- Empty State Messages -->
-    <string name="empty_conversations">No conversations yet\nStart chatting with your favorite characters!</string>
-    <string name="empty_explore_data">No characters available\nTry refreshing or check your connection</string>
-    <string name="empty_explore_error">Failed to load characters\nCheck your connection and try again</string>
+    <string name="empty_conversations">No conversations yet\nStart chatting with your favorite iMates!</string>
+    <string name="empty_explore_data">No iMates available\nTry refreshing or check your connection</string>
+    <string name="empty_explore_error">Failed to load iMates\nCheck your connection and try again</string>
     <string name="retry_button">Retry</string>
 
     <!-- Messages Page -->
@@ -413,18 +452,24 @@
     <string name="messages_tab_intimate">Intimate</string>
     <string name="messages_tab_favorites">Favorite</string>
     <string name="messages_favorites_empty_title">No favorites yet</string>
-    <string name="messages_favorites_empty_subtitle">Tap the heart icon on any character to save it here.</string>
+    <string name="messages_favorites_empty_subtitle">Tap the heart icon on any iMate to save it here.</string>
     <string name="messages_favorites_empty_explore_cta">Explore IntelliMates</string>
     <string name="favorite_button_add_to_favorites">Add to favorites</string>
     <string name="favorite_button_remove_from_favorites">Remove from favorites</string>
 
     <!-- Explore Search -->
-    <string name="explore_search_icon_desc">Search characters</string>
+    <string name="explore_search_icon_desc">Search iMates</string>
     <string name="explore_search_placeholder">Search by name or #tag</string>
     <string name="explore_search_cancel">Cancel</string>
-    <string name="explore_search_empty">No matching characters</string>
+    <string name="explore_search_empty">No matching iMates</string>
     <string name="explore_search_hint_text">Enter a name or #tag and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
+    <string name="explore_newly_imates_title">New iMates for you</string>
+    <string name="explore_newly_imates_subtitle">Newly crafted based on your preference</string>
+
+    <!-- Explore Loading States -->
+    <string name="explore_loading_more_hint">More iMates to load...</string>
+    <string name="explore_loading_explore_more">Explore More</string>
 
     <!-- Bottom Navigation Tab Labels -->
     <string name="tab_home">Chats</string>
@@ -433,7 +478,7 @@
     <string name="tab_explore">Explore</string>
     <string name="tab_me">Me</string>
 
-    <string name="str_edit_my_persona">Edit My Persona</string>
+    <string name="str_edit_my_persona">Edit Profile</string>
     <string name="str_name">Name</string>
     <string name="str_name_placeholder">Enter your name</string>
     <string name="str_pronouns">Pronouns</string>
@@ -461,6 +506,8 @@
     <!-- Image Generation Error Messages -->
     <string name="image_generation_failed">Image generation failed</string>
     <string name="image_generation_failed_tap_to_delete">Image generation failed, tap to delete</string>
+    <string name="image_generating">Image generating...</string>
+    <string name="vip_speed_up">Speed Up</string>
 
     <!-- Billing Error Messages -->
     <!-- 购买相关错误 -->
@@ -508,75 +555,77 @@
     <string name="billing_error_fallback_product_details">Failed to load product details</string>
     <string name="billing_error_fallback_google_play_service">Google Play services error</string>
 
-    <!-- Boost / Leaderboard -->
-    <string name="energy_points_first_title">You earned your FIRST Boost Point!</string>
-    <string name="energy_points_first_subtitle">Keep chatting to earn more Boost Points.</string>
-    <string name="energy_points_tens_title">Added 10 Boost Points! Total %1$d Boost Points!</string>
+    <!-- Credits / Leaderboard -->
+    <string name="energy_points_first_title">You earned your FIRST Credit!</string>
+    <string name="energy_points_first_subtitle">Keep chatting to earn more Credits.</string>
+    <string name="energy_points_tens_title">Added 10 Credits! Total %1$d Credits!</string>
     <string name="energy_points_tens_subtitle">Milestone unlocked - keep the streak going.</string>
-    <string name="energy_points_hundreds_title">Added 100 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_hundreds_title">Added 100 Credits! Total %1$d Credits!</string>
     <string name="energy_points_hundreds_subtitle">Mega trophy achieved. Your AI is cheering.</string>
-    <string name="energy_points_thousands_title">Added 1000 Boost Points! Total %1$d Boost Points!</string>
+    <string name="energy_points_thousands_title">Added 1000 Credits! Total %1$d Credits!</string>
     <string name="energy_points_thousands_subtitle">Legendary trophy unlocked!</string>
-    <string name="energy_points_add_title">Added %1$d Boost Points! Total %2$d Boost Points!</string>
-    <string name="energy_points_counter">%1$d pts</string>
-    <string name="boost_points_label">Boost Points</string>
-    <string name="boost_points_value">%1$d pts</string>
-    <string name="boost_points_action">Boost</string>
+    <string name="energy_points_add_title">Added %1$d Credits! Total %2$d Credits!</string>
+    <string name="energy_points_counter">%1$d credits</string>
+    <string name="boost_points_label">Credits</string>
+    <string name="boost_points_value">%1$d credits</string>
+    <string name="boost_points_action">Credits</string>
     <string name="boost_points_action_disabled">Learn</string>
-    <string name="boost_sheet_title">Boost this character</string>
-    <string name="boost_points_available">Available: %1$d pts</string>
-    <string name="boost_points_to_invest">Planning to invest %1$d pts</string>
-    <string name="boost_selected_points">%1$d pts</string>
-    <string name="boost_points_step_hint">Each boost uses %1$d pts</string>
-    <string name="boost_sheet_not_enough_points">You need at least %1$d pts to boost. Earn more by chatting, generating images, or listening to voices.</string>
-    <string name="boost_points_need_at_least">You need at least %1$d pts</string>
-    <string name="boost_sheet_confirm">Boost now</string>
+    <string name="boost_sheet_title">Hype this iMate</string>
+    <string name="boost_points_available">Available: %1$d credits</string>
+    <string name="boost_points_to_invest">Ready to hype with %1$d credits</string>
+    <string name="boost_selected_points">%1$d credits</string>
+    <string name="boost_points_step_hint">Each hype uses %1$d credits</string>
+    <string name="boost_sheet_not_enough_points">You need at least %1$d credits to hype. Earn more by chatting, generating images, or listening to voices.</string>
+    <string name="boost_points_need_at_least">You need at least %1$d credits</string>
+    <string name="boost_sheet_confirm">Hype now</string>
     <string name="boost_sheet_cancel">Maybe later</string>
-    <string name="boost_daily_reward_cta">Claim daily Boost Points (+200)</string>
+    <string name="boost_daily_reward_cta">Claim daily Credits (+200)</string>
     <string name="boost_daily_reward_claimed">Daily reward collected</string>
     <string name="boost_daily_reward_already">Daily reward already claimed</string>
-    <string name="boost_leaderboard_title">Top IntelliMates</string>
-    <string name="boost_leaderboard_empty">No boosts yet. Chat or boost to populate this board.</string>
+    <string name="boost_leaderboard_title">Top Hyped iMates</string>
+    <string name="boost_leaderboard_empty">No hype yet. Chat or hype an iMate to populate this board.</string>
     <string name="boost_leaderboard_chat">Chat</string>
     <string name="boost_leaderboard_back_cd">Back to Explore</string>
-    <string name="boost_leaderboard_energy_points_value">Boost Points: %1$d</string>
+    <string name="boost_leaderboard_energy_points_value">Credits: %1$d</string>
     <string name="boost_trend_up">Rising</string>
     <string name="boost_trend_down">Cooling</string>
     <string name="boost_trend_flat">Steady</string>
     <string name="boost_tab_recommend">Featured</string>
-    <string name="boost_tab_leaderboard">Boost</string>
-    <string name="boost_system_message">You invested %1$d pts in %2$s. Total boosts: %3$d.</string>
-    <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real characters to unlock this board.</string>
-    <string name="boost_toast_not_enough_points">Not enough points yet. Chat more to earn boosts.</string>
-    <string name="boost_toast_success">Boost sent to %1$s!</string>
-    <string name="boost_toast_success_points">%1$d Boost Points sent to %2$s!</string>
-    <string name="boost_toast_daily_reward_claimed">+%1$d pts added</string>
+    <string name="boost_tab_leaderboard">Credits</string>
+    <string name="boost_system_message">You hyped %2$s with %1$d credits. Total hypes: %3$d.</string>
+    <string name="boost_seed_placeholder_toast">This is preview data. Start chatting with real iMates to unlock this board.</string>
+    <string name="boost_toast_not_enough_points">Not enough credits yet. Chat more to earn credits.</string>
+    <string name="boost_toast_success">Hyped %1$s!</string>
+    <string name="boost_toast_success_points">Hyped %2$s with %1$d Credits!</string>
+    <string name="boost_toast_daily_reward_claimed">+%1$d credits added</string>
     <string name="boost_toast_generic_error">Something went wrong. Please try again.</string>
-    <string name="boost_points_help_title">Boost Points</string>
-    <string name="boost_points_help_subtitle">Boost Points are an important resource in the app.You can use them to boost any character you like and help them rank higher.</string>
-    <string name="boost_points_help_progress">%1$d / %2$d pts to boost</string>
+    <string name="boost_points_help_title">Credits</string>
+    <string name="boost_points_help_subtitle">Credits are an important resource in the app. You can use them to hype any iMate you like and help them rank higher.</string>
+    <string name="boost_points_help_progress">%1$d / %2$d credits to hype</string>
     <string name="boost_points_help_how_to_earn_title">How to earn?</string>
-    <string name="boost_points_help_how_to_earn_body">You can earn Boost Points by: Chatting with characters, Generating images, Listening to voices, Checking in daily.</string>
+    <string name="boost_points_help_how_to_earn_body">You can earn Credits by: Chatting with iMates, Generating images, Listening to voices, Checking in daily.</string>
     <string name="boost_points_help_cta_check_in">Daily check-in</string>
     <string name="boost_points_help_cta_leaderboard">View Top 10</string>
     <string name="boost_points_help_close">Got it</string>
-    <string name="boost_character_energy_points">Character Boost Points: %1$d</string>
-    <string name="boost_character_energy_points_hint">This score ranks IntelliMates on the leaderboard.</string>
-    <string name="explore_boost_shortcut">Top IntelliMates</string>
-    <string name="explore_boost_shortcut_cd">Open boost leaderboard</string>
-    <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this IntelliMate will have a fresh start with you.</string>
+    <string name="boost_character_energy_points">iMate Hype Score: %1$d</string>
+    <string name="boost_character_energy_points_hint">This hype score ranks iMates on the leaderboard.</string>
+    <string name="explore_boost_shortcut">Top Hyped iMates</string>
+    <string name="explore_boost_shortcut_cd">Open iMate hype leaderboard</string>
+    <string name="explore_go_to_bottom_cd">Go to bottom</string>
+    <string name="chat_reset_tips">Once reset, all previous messages will be deleted and this iMate will have a fresh start with you.</string>
+    <string name="chat_reset_cost_hint">Non-members cost %1$d credits. Members reset for free.</string>
     <string name="reset">Reset</string>
     <string name="reset_failed_msg">Reset failed. Please try again.</string>
     <string name="reset_suc_msg">A new conversation has started.</string>
     <string name="chat_setting_text_streaming">Text streaming</string>
-    <string name="my_boost_points">My Boost Points: %1$d</string>
+    <string name="my_boost_points">My Hype Credits: %1$d</string>
 
     <!-- Holiday celebration popup -->
     <string name="holiday_celebration_title">Merry Christmas &amp; Happy New Year!</string>
     <string name="holiday_celebration_subtitle">Wishing you warmth, magic, and a brand new year full of good surprises.</string>
     <string name="holiday_celebration_primary_cta">🎉 Let\'s Celebrate 💝</string>
     <string name="holiday_celebration_secondary_cta">Not now</string>
-    <string name="holiday_celebration_points_added">🥳 100 Boost Points!</string>
+    <string name="holiday_celebration_points_added">🥳 100 Credits!</string>
 
     <!-- IntelliMate tips popup -->
     <string name="intellimate_tip_title">Quick tip</string>
@@ -592,6 +641,7 @@
     <string name="voice_call_connected">Connected</string>
     <string name="voice_call_error">error</string>
     <string name="voice_call_request_permission">Request Permission</string>
+    <string name="voice_call_requesting_permission">Requesting microphone permission…</string>
     <string name="voice_call_permission_rationale">Voice call requires microphone permission to record audio. Please enable it in Settings.</string>
     <string name="voice_call_open_settings">Open Settings</string>
     <string name="call">Call</string>
@@ -599,11 +649,26 @@
     <string name="mute">mute</string>
     <string name="voice_call_duration">Call Duration</string>
     <string name="voice_call_remaining_time">Remaining Time</string>
+    <string name="voice_call_tap_to_interrupt_ai">tap to interrupt AI</string>
+    <string name="voice_call_ai_status_listening">listening</string>
+    <string name="voice_call_ai_status_speaking">speaking</string>
     <string name="chat_save_user_photo_success">Saved. You can update it on the Me page.</string>
 
     <!-- Login -->
-    <string name="login_welcome">Thousands of AI characters await your match.</string>
+    <string name="login_welcome">Thousands of iMates await your match.</string>
     <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
+    <string name="credits_not_enough">Not enough credits.</string>
+    <string name="credits_deducted">%1$d credits deducted.</string>
+    <string name="speed_up">Speed Up</string>
+    <string name="heartbeat_journal">Love Journal</string>
+    <string name="heartbeat_journal_title_with_name">%1$s\'s Love Journal</string>
+    <string name="hb_journal">Love Journal</string>
+    <string name="take_a_look">Take a look</string>
+    <string name="chat_festival_memory_notify">%1$s left you a secret note in their Love Journal. Tap to read.</string>
+    <string name="chat_message_type_unsupported">This message type is not supported in the current version. Please update to the latest version.</string>
+    <string name="heartbeat_subtitle">%1$d Love Journals about you</string>
+    <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
+    <string name="heartbeat_empty">No Love Journal yet</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A relationship to explore</item>

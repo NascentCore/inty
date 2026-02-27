@@ -38,8 +38,12 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
 
     try {
       setLoading(true);
-      const response = await api.getIntyClient().api.v1.users.profile.me();
-      setUserInfo((response.data as UserProfile | null) || null);
+      const response = (await api
+        .getIntyClient()
+        .api.v1.users.profile.me()) as {
+        data?: UserProfile | null;
+      };
+      setUserInfo(response.data || null);
     } catch (error) {
       console.error("获取用户信息失败:", error);
       setUserInfo(null);

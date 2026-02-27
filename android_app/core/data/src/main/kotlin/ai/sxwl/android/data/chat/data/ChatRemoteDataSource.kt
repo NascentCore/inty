@@ -5,19 +5,29 @@ import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.SurpriseSnapUnlockReq
+import ai.sxwl.android.data.api.model.SurpriseSnapUnlockResp
+import ai.sxwl.android.data.api.model.UserTimeContext
 import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.http.IntyNetworkManager
+import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import com.inty.api.core.RequestOptions
 import java.time.Duration
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
+    suspend fun unlockSurpriseSnap(messageId: Long): HttpResult<SurpriseSnapUnlockResp> {
+        return NetServiceMgr.getChatApi().unlockSurpriseSnap(SurpriseSnapUnlockReq(messageId))
+    }
+
     suspend fun getMessages(
         agentId: String,
         pageSize: Int,
@@ -57,11 +67,30 @@ class ChatRemoteDataSource {
             LogUtils.i(
                 "ChatRemoteDataSource.sendMessage: agentId=$agentId, messagesCount=${messages.size}"
             )
-            val request = SendMsgReq(messages)
+            val request = SendMsgReq(messages = messages, timeContext = buildUserTimeContext())
             NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
+        }
+    }
+
+    private fun buildUserTimeContext(): UserTimeContext? {
+        if (!shouldReportUserTimeContext()) return null
+        val now = ZonedDateTime.now()
+        val utcOffsetMinutes = now.offset.totalSeconds / 60
+        return UserTimeContext(
+            localTime = now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+            timezone = now.zone.id,
+            utcOffsetMinutes = utcOffsetMinutes,
+        )
+    }
+
+    private fun shouldReportUserTimeContext(): Boolean {
+        return if (DebugBackendEndpointStore.isRuntimeOverrideSupported()) {
+            DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
+        } else {
+            false
         }
     }
 

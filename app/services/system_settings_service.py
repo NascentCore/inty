@@ -8,7 +8,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.system_settings import SettingCategory, SystemSettings
 from app.services.cache_service import InMemoryCache
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class SystemSettingsService:

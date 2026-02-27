@@ -287,7 +287,7 @@ async def email_password_login(
         user = result.scalar_one_or_none()
 
         if not user:
-            logger.error(f"User not found with email: {email}")
+            logger.warning(f"User not found with email: {email}")
             return APIResponse.error(message="Invalid Email password combination")
 
         # 验证密码

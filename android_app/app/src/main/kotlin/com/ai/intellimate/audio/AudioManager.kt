@@ -1,12 +1,10 @@
 package com.ai.intellimate.audio
 
-import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import com.ai.intellimate.boost.BoostManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -91,15 +89,12 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                     "timestamp" to playbackStartTime,
                 ),
             )
-            if (HeartAppUtils.isAppDebugMode(context)) {
-                BoostManager.recordAudioPlayback(agentId, agentName ?: "")
-            }
         }
 
         // 检查是否启用自动播放
         // 手动点击时不受自动播放设置影响
         // 开场白消息的自动播放不受用户设置影响（业务逻辑必需）
-        if (autoPlay && !isManualClick) {
+        /*if (autoPlay && !isManualClick) {
             // 检查是否是开场白消息，如果是则允许播放
             // 开场白消息的localMsgId通常包含_assistant_标识
             val isOpeningMessage = messageId.contains("_assistant_")
@@ -111,7 +106,7 @@ private constructor(private val context: Context, private var scope: CoroutineSc
                     "音频LOG测试 Opening message detected (messageId contains '_assistant_'), allowing auto play despite user setting"
                 )
             }
-        }
+        }*/
 
         // 开场白状态管理已移至消息级别，不再需要特殊处理
 

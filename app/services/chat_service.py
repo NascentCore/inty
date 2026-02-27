@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime
 from typing import List, Optional, Union
@@ -16,7 +17,7 @@ from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
-from app.services.global_services import subscription_service
+from app.services.subscription_service import SubscriptionService
 from app.services.user_service import build_user_info_prompt_block
 
 
@@ -306,11 +307,11 @@ async def update_chat(
     """
     try:
         if not db_chat:
-            raise HTTPException(status_code=404, detail="聊天不存在")
+            raise HTTPException(status_code=404, detail="Chat not found")
 
         update_data = chat_in.model_dump(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="没有提供要更新的数据")
+            raise HTTPException(status_code=400, detail="No data provided to update")
 
         for field, value in update_data.items():
             setattr(db_chat, field, value)
@@ -326,19 +327,21 @@ async def update_chat(
         logger.error(
             f"数据完整性错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="数据完整性约束违反")
+        raise HTTPException(
+            status_code=400, detail="Data integrity constraint violated"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
             f"数据库错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
             f"未知错误 - 更新聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
@@ -347,7 +350,7 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
     """
     try:
         if not db_chat:
-            raise HTTPException(status_code=404, detail="聊天不存在")
+            raise HTTPException(status_code=404, detail="Chat not found")
 
         await db.delete(db_chat)
         await db.commit()
@@ -360,19 +363,21 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
         logger.error(
             f"数据完整性错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=400, detail="无法删除聊天，存在关联数据")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete chat due to related data"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(
             f"数据库错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(
             f"未知错误 - 删除聊天 {db_chat.id if db_chat else 'unknown'}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_or_create_chat_by_agent(
@@ -432,7 +437,10 @@ async def get_or_create_chat_by_agent(
                 )
                 raise HTTPException(
                     status_code=500,
-                    detail=f"聊天会话数据不一致: 期望Agent ID {agent_id}, 实际 {existing_chat.agent_id}",
+                    detail=(
+                        "Chat session data mismatch: expected agent ID "
+                        f"{agent_id}, got {existing_chat.agent_id}"
+                    ),
                 )
 
             # 3. 并行获取Agent信息（如果未缓存）
@@ -646,7 +654,7 @@ async def get_or_create_chat_by_agent(
             agent_info = agent_result.first()
             if not agent_info:
                 logger.error(f"Agent不存在: {agent_id}")
-                raise HTTPException(status_code=404, detail="Agent不存在")
+                raise HTTPException(status_code=404, detail="Agent not found")
 
             (
                 agent_name,
@@ -689,7 +697,8 @@ async def get_or_create_chat_by_agent(
                 f"创建聊天会话后Agent ID不匹配！期望: {agent_id}, 实际: {db_chat.agent_id}"
             )
             raise HTTPException(
-                status_code=500, detail=f"创建聊天会话失败: Agent ID不匹配"
+                status_code=500,
+                detail="Failed to create chat session: agent ID mismatch",
             )
 
         # 9. 异步添加Agent开场白（避免阻塞）
@@ -793,7 +802,7 @@ async def get_or_create_chat_by_agent(
         raise
     except IntegrityError as e:
         await db.rollback()
-        logger.error(f"数据完整性错误 - 获取或创建聊天: {str(e)}")
+        logger.warning(f"数据完整性错误 - 获取或创建聊天（并发冲突已重试）: {str(e)}")
         # 可能是并发创建导致的重复，尝试再次查询
         try:
             result = await db.execute(
@@ -816,15 +825,15 @@ async def get_or_create_chat_by_agent(
         except Exception as retry_e:
             logger.error(f"重试查询失败: {str(retry_e)}")
             pass
-        raise HTTPException(status_code=500, detail="创建聊天会话失败")
+        raise HTTPException(status_code=500, detail="Failed to create chat session")
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 获取或创建聊天: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 获取或创建聊天: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_or_create_chat_settings(
@@ -853,7 +862,7 @@ async def get_or_create_chat_settings(
 
         if not chat:
             logger.error(f"Chat记录不存在，无法创建设置 - chat_id: {chat_id}")
-            raise HTTPException(status_code=404, detail="聊天记录不存在")
+            raise HTTPException(status_code=404, detail="Chat history not found")
 
         # 如果不存在，创建新的设置
         settings_id = str(uuid.uuid4())
@@ -899,11 +908,11 @@ async def get_or_create_chat_settings(
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 获取或创建聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 获取或创建聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def update_chat_settings(
@@ -922,12 +931,12 @@ async def update_chat_settings(
         settings = result.scalar_one_or_none()
 
         if not settings:
-            raise HTTPException(status_code=404, detail="聊天设置不存在")
+            raise HTTPException(status_code=404, detail="Chat settings not found")
 
         # 更新设置
         update_data = settings_update.model_dump(exclude_unset=True)
         if not update_data:
-            raise HTTPException(status_code=400, detail="没有提供要更新的数据")
+            raise HTTPException(status_code=400, detail="No data provided to update")
 
         for field, value in update_data.items():
             setattr(settings, field, value)
@@ -950,11 +959,11 @@ async def update_chat_settings(
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"数据库错误 - 更新聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="数据库操作失败")
+        raise HTTPException(status_code=500, detail="Database operation failed")
     except Exception as e:
         await db.rollback()
         logger.error(f"未知错误 - 更新聊天设置 {chat_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_chat_by_agent_and_user(
@@ -981,12 +990,12 @@ async def get_chat_by_agent_and_user(
         logger.error(
             f"数据库查询错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="数据库查询失败")
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception as e:
         logger.error(
             f"未知错误 - 获取聊天会话 agent_id={agent_id}, user_id={user_id}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail="服务器内部错误")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def get_chat_by_user_and_agent(
@@ -1096,7 +1105,9 @@ async def delete_chats_by_agent_id(
         logger.error(
             f"删除聊天记录失败 - Agent ID: {agent_id}, User ID: {user_id}, Error: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail=f"删除聊天记录失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete chat history: {str(e)}"
+        )
 
 
 async def save_debug_messages(
@@ -1206,6 +1217,66 @@ def _is_network_error(error_message: str, error_type: str) -> bool:
     return False
 
 
+def _is_429_resource_exhausted(exception: Exception) -> bool:
+    """判定是否为 Vertex/Gemini 429 RESOURCE_EXHAUSTED 错误。"""
+    if getattr(exception, "status_code", None) == 429:
+        return True
+    msg = str(exception)
+    return "429" in msg and "RESOURCE_EXHAUSTED" in msg.upper()
+
+
+async def _record_chat_image_failure(
+    db: AsyncSession,
+    subscription_service: SubscriptionService,
+    session_id: str,
+    message_id: int,
+    user_id: str,
+    agent_id: str,
+    message_content: str,
+    resolved_model_id: str,
+    current_prompt: Optional[str],
+    failure_reason: str,
+    failure_type: str,
+) -> None:
+    """记录生图失败：更新消息 meta_data（generated_image_attempt）并记录用量（0）。"""
+    try:
+        await chat_history_service.update_message_metadata(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            metadata_update={
+                "generated_image_attempt": {
+                    "prompt": current_prompt,
+                    "failure_reason": failure_reason,
+                    "failure_type": failure_type,
+                }
+            },
+        )
+    except Exception as meta_err:
+        logger.warning(f"更新失败尝试元数据失败: {meta_err}")
+    try:
+        await subscription_service.record_usage(
+            db,
+            user_id,
+            "image_generation",
+            0,
+            extra_data={
+                "agent_id": agent_id,
+                "message_content": message_content[:100],
+                "success": False,
+                "failure_reason": failure_reason,
+                "failure_type": failure_type,
+                "session_id": session_id,
+                "message_id": message_id,
+                "model": resolved_model_id,
+                "prompt": current_prompt,
+            },
+        )
+        logger.debug(f"图片生成失败记录成功: user_id={user_id}")
+    except Exception as e:
+        logger.warning(f"记录图片生成失败信息失败: {str(e)}")
+
+
 async def _try_match_existing_image(
     db: AsyncSession,
     agent_id: str,
@@ -1214,6 +1285,7 @@ async def _try_match_existing_image(
     session_id: str,
     current_prompt: str,
     message_content: str,
+    subscription_service: SubscriptionService,
     is_network_error: bool = False,
 ) -> Optional[schemas.ChatImageGenerationResponse]:
     """
@@ -1301,6 +1373,7 @@ async def _try_match_existing_image(
                         "is_from_other_user": is_other_user,
                         "session_id": session_id,
                         "message_id": message_id,
+                        "prompt": current_prompt,
                     },
                 )
                 logger.debug(f"匹配图片用量记录成功: user_id={user_id}")
@@ -1336,8 +1409,9 @@ async def generate_chat_image(
     agent_id: str,
     user_id: str,
     message_id: int,
+    subscription_service: SubscriptionService,
     history_count: Optional[int] = None,
-    model: Optional[str] = None,
+    model: Optional[str] = None,  # TODO: 移除未使用的 model 参数，与 schema/API 一并清理
 ) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
@@ -1357,7 +1431,7 @@ async def generate_chat_image(
         user_id: 用户ID
         message_id: 要生成图片的消息ID
         history_count: 使用的历史消息数量
-        model: 可选，指定生图模型（"gemini" 或 fal 模型名），订阅用户强制使用 gemini
+        model: 未使用；模型仅按订阅状态选择。保留仅为 API 兼容，待清理。
 
     Returns:
         成功时返回 `ChatImageGenerationResponse`，业务限制错误时返回 `UsageLimitExceeded` 或 `BizError`
@@ -1454,31 +1528,27 @@ async def generate_chat_image(
             f"只能对最后一条AI回复生成图片: latest={latest_ai_message_id}, "
             f"requested={message_id}"
         )
-        raise HTTPException(status_code=400, detail="只能对最后一条AI回复生成图片")
+        raise HTTPException(
+            status_code=400,
+            detail="Only the latest AI reply can be used to generate an image",
+        )
 
-    # 确定使用的模型：订阅用户强制使用 gemini，免费用户使用配置或请求指定的模型
+    # 模型选择仅按订阅状态，使用 config 中的 nickname 解析为 GenAIModel（无请求覆盖）
     from app.core.model_selection import select_chat_image_model
+    from app.utils.models_catalog import CHAT_IMAGE_FAL_IDS
 
     subscription_status = await subscription_service.get_user_subscription_status(
         db, user.id
     )
     is_subscribed = subscription_status.is_subscribed
 
-    # 确定最终使用的模型
-    if is_subscribed:
-        # 订阅用户强制使用 gemini
-        selected_model = "gemini"
-    elif model:
-        # 免费用户使用请求指定的模型
-        selected_model = model
-    else:
-        # 免费用户使用配置默认模型
-        selected_model = select_chat_image_model(user=user, is_subscribed=False)
+    try:
+        resolved_model = select_chat_image_model(user=user, is_subscribed=is_subscribed)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    use_gemini = selected_model == "gemini"
     logger.info(
-        f"消息生图模型选择 - 订阅用户: {is_subscribed}, 请求模型: {model}, "
-        f"最终模型: {selected_model}"
+        f"消息生图模型选择 - 订阅: {is_subscribed}, 模型: {resolved_model.nickname} ({resolved_model.id_on_provider})"
     )
 
     # 调用图片生成服务
@@ -1487,71 +1557,121 @@ async def generate_chat_image(
     failure_reason = None
     failure_type = None
 
-    # 预先构建提示词，用于匹配已生成图片
-    current_prompt = None
-    try:
-        # 获取聊天历史以构建提示词
-        messages_data = chat_history_service.get_messages_paginated(
-            session_id=session_id,
-            limit=history_count
-            or global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
-            offset=0,
-        )
-        chat_history = messages_data.get("messages", [])
-        # 获取用户信息（与 generate_chat_image_with_gemini 保持一致）
-        user_info = await build_user_info_prompt_block(db, user_id) if user_id else ""
-        current_prompt = image_generation_service.build_image_prompt(
-            agent_data=agent_data,
-            chat_history=chat_history,
-            user_message=message_content,
-            user_info=user_info,
-        )
-    except Exception as e:
-        logger.warning(f"构建提示词失败，将无法匹配已生成图片: {str(e)}")
+    enable_chat_image_match_fallback = (
+        global_config_loaded_from_config_yaml.agent.enable_chat_image_match_fallback
+    )
 
-    import time
+    # 预先构建提示词，用于匹配已生成图片（可按配置禁用）
+    current_prompt = None
+    if enable_chat_image_match_fallback:
+        try:
+            # 获取聊天历史以构建提示词
+            messages_data = chat_history_service.get_messages_paginated(
+                session_id=session_id,
+                limit=history_count
+                or global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
+                offset=0,
+            )
+            chat_history = messages_data.get("messages", [])
+            # 获取用户信息（与 image_generation_service 的统一生图入口保持一致）
+            user_info = (
+                await build_user_info_prompt_block(db, user_id) if user_id else ""
+            )
+            char_name, user_name = (
+                await image_generation_service.get_char_user_names_for_image_prompt(
+                    db, user_id, agent_data
+                )
+            )
+            current_prompt = image_generation_service.build_image_prompt(
+                agent_data=agent_data,
+                chat_history=chat_history,
+                user_message=message_content,
+                user_info=user_info,
+                char_name=char_name,
+                user_name=user_name,
+            )
+        except Exception as e:
+            logger.warning(f"构建提示词失败，将无法匹配已生成图片: {e}")
 
     generation_start_time = time.time()
+    actual_model = resolved_model.id_on_provider
+    model_fallback_due_to_429 = False
+
     try:
-        if use_gemini:
-            image_generation_result = (
-                await image_generation_service.generate_chat_image_with_gemini(
-                    db=db,
-                    session_id=session_id,
-                    message_id=message_id,
-                    agent_data=agent_data,
-                    message_content=message_content,
-                    user_id=user_id,
-                    history_count=history_count,
-                )
+        primary_model = resolved_model.id_on_provider
+        if is_subscribed and primary_model not in CHAT_IMAGE_FAL_IDS:
+            fallback_model = (
+                global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
             )
+            try:
+                image_generation_result = (
+                    await image_generation_service.generate_chat_image_for_message(
+                        db=db,
+                        session_id=session_id,
+                        message_id=message_id,
+                        agent_data=agent_data,
+                        message_content=message_content,
+                        user_id=user_id,
+                        history_count=history_count,
+                        model=primary_model,
+                    )
+                )
+                actual_model = primary_model
+                model_fallback_due_to_429 = False
+            except Exception as e:
+                if _is_429_resource_exhausted(e):
+                    logger.info(
+                        "消息生图 429，重试备用模型 - agent_id=%s message_id=%s primary=%s fallback=%s",
+                        agent_id,
+                        message_id,
+                        primary_model,
+                        fallback_model,
+                    )
+                    image_generation_result = (
+                        await image_generation_service.generate_chat_image_for_message(
+                            db=db,
+                            session_id=session_id,
+                            message_id=message_id,
+                            agent_data=agent_data,
+                            message_content=message_content,
+                            user_id=user_id,
+                            history_count=history_count,
+                            model=fallback_model,
+                        )
+                    )
+                    actual_model = fallback_model
+                    model_fallback_due_to_429 = True
+                else:
+                    raise
         else:
             image_generation_result = (
-                await image_generation_service.generate_chat_image_with_fal(
+                await image_generation_service.generate_chat_image_for_message(
                     db=db,
                     session_id=session_id,
                     message_id=message_id,
                     agent_data=agent_data,
                     message_content=message_content,
-                    model=selected_model,
                     user_id=user_id,
                     history_count=history_count,
+                    model=primary_model,
                 )
             )
+            actual_model = primary_model
         # 计算生成耗时
         generation_time_ms = int((time.time() - generation_start_time) * 1000)
-        # 添加模型信息和耗时到结果
-        image_generation_result["model"] = selected_model
+        image_generation_result["model"] = actual_model
         image_generation_result["generation_time_ms"] = generation_time_ms
+        image_generation_result["model_fallback_due_to_429"] = model_fallback_due_to_429
         logger.info(
-            f"图片生成完成 - 模型: {selected_model}, 耗时: {generation_time_ms}ms"
+            f"图片生成完成 - 模型: {actual_model}, 耗时: {generation_time_ms}ms"
+            + (", 因429使用备用模型" if model_fallback_due_to_429 else "")
         )
     except ValueError as e:
         error_message = str(e)
         is_network_error = _is_network_error(error_message, type(e).__name__)
 
-        # 所有生图失败都尝试匹配已生成图片（不需要判断原因）
-        if current_prompt:
+        # 若启用兜底，生图失败时尝试匹配已生成图片
+        if enable_chat_image_match_fallback and current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,
@@ -1560,6 +1680,7 @@ async def generate_chat_image(
                 session_id=session_id,
                 current_prompt=current_prompt,
                 message_content=message_content,
+                subscription_service=subscription_service,
                 is_network_error=is_network_error,
             )
             if fallback_result:
@@ -1591,29 +1712,19 @@ async def generate_chat_image(
                 f"图片生成被安全过滤器阻止 - Agent ID: {agent_id}, "
                 f"Message ID: {message_id}, Reason: {failure_reason}"
             )
-
-            # 记录失败信息（不计入用量，usage_count=0）
-            try:
-                await subscription_service.record_usage(
-                    db,
-                    user_id,
-                    "image_generation",
-                    0,  # 失败不计入用量
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_content": message_content[:100],  # 只记录前100个字符
-                        "success": False,
-                        "failure_reason": failure_reason,
-                        "failure_type": failure_type,
-                        "session_id": session_id,
-                        "message_id": message_id,
-                        "model": selected_model,
-                    },
-                )
-                logger.debug(f"图片生成失败记录成功: user_id={user_id}")
-            except Exception as e:
-                logger.warning(f"记录图片生成失败信息失败: {str(e)}")
-
+            await _record_chat_image_failure(
+                db=db,
+                subscription_service=subscription_service,
+                session_id=session_id,
+                message_id=message_id,
+                user_id=user_id,
+                agent_id=agent_id,
+                message_content=message_content,
+                resolved_model_id=resolved_model.id_on_provider,
+                current_prompt=current_prompt,
+                failure_reason=failure_reason,
+                failure_type=failure_type,
+            )
             return BizError(
                 code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
                 error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
@@ -1631,8 +1742,8 @@ async def generate_chat_image(
         failure_type = type(e).__name__.lower()
         is_network_error = _is_network_error(error_message, failure_type)
 
-        # 所有生图失败都尝试匹配已生成图片（不需要判断原因）
-        if current_prompt:
+        # 若启用兜底，生图失败时尝试匹配已生成图片
+        if enable_chat_image_match_fallback and current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
                 agent_id=agent_id,
@@ -1641,6 +1752,7 @@ async def generate_chat_image(
                 session_id=session_id,
                 current_prompt=current_prompt,
                 message_content=message_content,
+                subscription_service=subscription_service,
                 is_network_error=is_network_error,
             )
             if fallback_result:
@@ -1651,30 +1763,19 @@ async def generate_chat_image(
             f"Message ID: {message_id}, Error Type: {failure_type}, "
             f"Reason: {failure_reason}"
         )
-
-        # 记录失败信息（不计入用量，usage_count=0）
-        try:
-            await subscription_service.record_usage(
-                db,
-                user_id,
-                "image_generation",
-                0,  # 失败不计入用量
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_content": message_content[:100],  # 只记录前100个字符
-                    "success": False,
-                    "failure_reason": failure_reason,
-                    "failure_type": failure_type,
-                    "session_id": session_id,
-                    "message_id": message_id,
-                    "model": selected_model,
-                },
-            )
-            logger.debug(f"图片生成失败记录成功: user_id={user_id}")
-        except Exception as e:
-            logger.warning(f"记录图片生成失败信息失败: {str(e)}")
-
-        # 重新抛出异常，让上层处理
+        await _record_chat_image_failure(
+            db=db,
+            subscription_service=subscription_service,
+            session_id=session_id,
+            message_id=message_id,
+            user_id=user_id,
+            agent_id=agent_id,
+            message_content=message_content,
+            resolved_model_id=resolved_model.id_on_provider,
+            current_prompt=current_prompt,
+            failure_reason=failure_reason,
+            failure_type=failure_type,
+        )
         raise
 
     # 记录成功用量
@@ -1690,15 +1791,17 @@ async def generate_chat_image(
                 "success": True,
                 "session_id": session_id,
                 "message_id": message_id,
-                "model": selected_model,
+                "model": actual_model,
                 "generation_time_ms": image_generation_result.get("generation_time_ms"),
+                "model_fallback_due_to_429": model_fallback_due_to_429,
+                "prompt": image_generation_result.get("prompt"),
             },
         )
         logger.debug(f"图片生成用量记录成功: user_id={user_id}")
     except Exception as e:
         logger.warning(f"记录图片生成用量失败: {str(e)}")
 
-    # 追加更新 meta_data，添加模型和耗时信息
+    # 追加更新 meta_data，添加模型、耗时、是否因429使用备用模型及提示词
     try:
         await chat_history_service.update_message_metadata(
             db=db,
@@ -1706,8 +1809,10 @@ async def generate_chat_image(
             message_id=message_id,
             metadata_update={
                 "generated_image": {
-                    "model": selected_model,
+                    "model": actual_model,
                     "generation_time_ms": generation_time_ms,
+                    "model_fallback_due_to_429": model_fallback_due_to_429,
+                    "prompt": image_generation_result.get("prompt"),
                 }
             },
         )

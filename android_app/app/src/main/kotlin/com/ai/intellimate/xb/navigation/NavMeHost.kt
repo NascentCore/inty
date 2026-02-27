@@ -1,5 +1,6 @@
 package com.ai.intellimate.xb.navigation
 
+import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -22,7 +23,21 @@ fun NavGraphBuilder.meGraph(
     chatViewModel: ChatViewModel,
 ) {
     // 定义vip订阅页面路由
-    composable(Routes.Me.VipCenter) { VipCenterContent(navController) }
+    composable(
+        route = Routes.Me.VipCenter,
+        arguments =
+            listOf(
+                navArgument("pageSource") {
+                    type = NavType.StringType
+                    nullable = true
+                }
+            ),
+    ) { backStackEntry ->
+        VipCenterContent(
+            navController,
+            pageFrom = backStackEntry.arguments?.getString("pageSource"),
+        )
+    }
 
     composable(Routes.Me.CheckIn) { IgnoreSystemFontScaling { CheckInScreen(navController) } }
 
@@ -47,9 +62,22 @@ fun NavGraphBuilder.meGraph(
             ),
     ) { backStackEntry ->
         val isFeedback = backStackEntry.arguments?.getBoolean("isFeedback")
-        val targetType = backStackEntry.arguments?.getString("showBoost")
+        val targetType = backStackEntry.arguments?.getString("targetType")
         val targetId = backStackEntry.arguments?.getString("targetId")
-        ReportPage(navController, isFeedback ?: false, targetType ?: "", targetId ?: "USER")
+        val initialEvidenceImageUrl =
+            remember(backStackEntry) {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.remove<String>(Routes.Me.ReportInitialEvidenceImageUrlKey)
+                    .orEmpty()
+            }
+        ReportPage(
+            navController = navController,
+            isFeedbackModel = isFeedback ?: false,
+            targetType = targetType ?: "USER",
+            targetId = targetId ?: "",
+            initialEvidenceImageUrl = initialEvidenceImageUrl,
+        )
     }
 
     uploadSelfieScreen(onBack = { navController.navigateUp() })

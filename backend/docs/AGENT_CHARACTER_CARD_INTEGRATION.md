@@ -191,7 +191,7 @@
 ## 测试与验证建议
 
 - **单元测试**：覆盖 `CharacterCardMapper` 映射、提示词模板渲染（含变量替换）、用户信息解析。
-- **集成测试**：验证 `import-character-card`、`export-character-card`、`character-card/features` 接口，以及聊天流程中系统消息顺序是否符合预期。
+- **集成测试**：验证 `{agent_id}/character-card`、`character-card/features` 接口，以及聊天流程中系统消息顺序是否符合预期。
 - **回归测试**：确保无角色卡字段的旧 Agent 仍能成功聊天，缓存命中后配置变更可通过 `reload_agent` 生效。
 - **监控**：关注 token 消耗、缓存命中率、`AgentManager` 清理日志与异常。
 
@@ -199,5 +199,4 @@
 
 - `first_message` 字段已移除；若仍需在数据库中持久化该信息，需要评估是否放入 `extensions` 或 `character_card_data`。
 - 聊天流程仍是同步阻塞 OpenAI API，后续可在 `_chat_sync_optimized` 中接入流式接口或重构为 Runnable 管线。
-- `Agent.get_final_prompt` 仍引用 `self.prompt_runnable`（尚未完全实现），如需调试完整提示词可进一步补强该逻辑。
 - 语音系统依赖 `opening` 文本，在导入角色卡后建议触发 `generate_agent_opening_voice` 以保持体验一致。

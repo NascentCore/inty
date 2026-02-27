@@ -43,6 +43,8 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
         blob = bucket.blob(path)
         blob.upload_from_string(file_data, content_type=content_type)
         public_url = blob.public_url
+        # blob.generate_signed_url(expiration=datetime.timedelta(seconds=3600))
+        # TODO：是否可以用来提升安全性？
         return public_url
     except Exception as e:
         logger.error(f"GCS上传失败: {str(e)}")

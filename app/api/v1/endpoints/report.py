@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +11,14 @@ from app.api.utils.logger_route import LoggerRoute
 from app.db.session import get_async_db
 from app.models.report import ReportStatus, ReportType
 from app.models.user import User
-from app.schemas.report import ReportCreate, ReportQuery, ReportsList, TargetType
+from app.schemas.report import (
+    ReportCreate,
+    ReportGithubIssueUpdate,
+    ReportOut,
+    ReportQuery,
+    ReportsList,
+    TargetType,
+)
 from app.schemas.response import APIResponse
 from app.services import report_service
 
@@ -27,7 +34,7 @@ async def list_reports(
     skip: int = 0,
     limit: int = 50,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_superuser),
 ):
     """查询 Report/Feedback 列表，支持按创建时间排序（order_by: created_at_desc 或 created_at_asc）"""
     query = ReportQuery(
@@ -42,13 +49,44 @@ async def list_reports(
     return ReportsList(items=items, total=total)
 
 
+@router.get("/{report_id}", response_model=ReportOut, tags=[WEB_APP_TAG])
+async def get_report(
+    report_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_superuser),
+):
+    """按 id 获取单条举报详情（用于永久链接打开）。"""
+    report = await report_service.get_report(db, report_id)
+    return ReportOut.model_validate(report)
+
+
+@router.put("/{report_id}/github-issue", response_model=ReportOut, tags=[WEB_APP_TAG])
+async def update_report_github_issue(
+    report_id: str,
+    payload: ReportGithubIssueUpdate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_superuser),
+):
+    """更新举报记录关联的 GitHub issue URL。"""
+    try:
+        report = await report_service.update_report_github_issue(
+            db, report_id, payload.github_issue
+        )
+    except ValueError as exc:
+        error_message = str(exc)
+        if error_message == "Report not found":
+            raise HTTPException(status_code=404, detail=error_message) from exc
+        raise HTTPException(status_code=400, detail=error_message) from exc
+    return ReportOut.model_validate(report)
+
+
 @router.post("/", response_model=APIResponse, tags=[WEB_APP_TAG, NOT_USED_TAG])
 async def create_report(
     report_in: ReportCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(deps.get_current_active_user),
 ):
-    """Submit report"""
+    """提交举报或反馈，任意已登录用户可调用"""
     try:
         report = await report_service.create_report(db, report_in, current_user.id)
         return APIResponse.success()
@@ -61,7 +99,7 @@ async def create_report(
 async def delete_report(
     report_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_superuser),
 ):
     try:
         await report_service.delete_report(
@@ -72,9 +110,11 @@ async def delete_report(
         )
         return APIResponse.success()
     except PermissionError:
-        return APIResponse.error(message="无权限删除该记录", code=403)
+        return APIResponse.error(
+            message="Not authorized to delete this record", code=403
+        )
     except ValueError:
-        return APIResponse.error(message="记录不存在", code=404)
+        return APIResponse.error(message="Record not found", code=404)
     except SQLAlchemyError as e:
         logger.error(f"Failed to delete report: {str(e)}")
-        return APIResponse.error(message="删除失败", code=500)
+        return APIResponse.error(message="Delete failed", code=500)

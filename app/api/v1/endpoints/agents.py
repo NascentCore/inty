@@ -4,9 +4,10 @@ Agents endpoints for accessing agents for interactions.
 
 import traceback
 import uuid
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+import httpx
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,47 +20,43 @@ from app.api.tags import (
     NOT_USED_TAG,
     WEB_APP_TAG,
 )
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_text_to_image_model
-from app.external_services.fal import is_fal_model
+from app.core.user_privilege.superuser_check import is_superuser
+from app.utils.models_catalog import is_fal_model
+from app.external_services.gcs import upload_to_gcs
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
     TextToImageProvider,
     generate_text_to_image,
 )
-from app.schemas.character_card import (
-    CharacterCardExportRequest,
-    CharacterCardImportRequest,
-    CharacterCardImportResponse,
-    CharacterCardValidationResponse,
-)
+from app.schemas.agent import AgentUpdate
 from app.schemas.response import (
     APIResponse,
     BusinessErrorCode,
     create_business_error_response,
 )
 from app.services import agent_service
-from app.services.character_card_service import character_card_service
 from app.services.global_services import subscription_service
+from app.services import memory_service
+from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
-from app.utils.gemini import ImagenGeneratedImage, text_to_image
-from app.utils.image import AspectRatio, ImageFormat
+from app.services.scoring_service import ScoringService
+from app.services.video_generation_service import video_generation_service
+from app.utils.gemini import (
+    ImagenGeneratedImage,
+    generate_image_description,
+    text_to_image,
+)
+from app.utils.image import AspectRatio, ImageFormat, ImageSize
+from app.utils.video_to_animated_image import (
+    convert_video_to_animated_image_and_upload,
+)
 
 router = APIRouter(prefix="/ai/agents", route_class=LoggerRoute)
-
-
-async def get_current_superuser(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-) -> schemas.User:
-    """验证当前用户是否为超级管理员"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="只有超级用户才能访问此接口",
-        )
-    return current_user
 
 
 @router.get(
@@ -84,6 +81,23 @@ async def list_agents(
         skip=skip,
         limit=limit,
     )
+    return schemas.APIResponse.success(data=agents)
+
+
+@router.get(
+    "/admin/list",
+    response_model=schemas.APIResponse[List[schemas.Agent]],
+    summary="Admin list all AI characters (for evaluation console)",
+    description="Superuser-only endpoint to list all AI characters, including those created by non-superusers.",
+    tags=[INTY_EVAL_TAG],
+)
+async def admin_list_all_agents(
+    db: AsyncSession = Depends(deps.get_async_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(1000, ge=1, le=1000),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
+) -> Any:
+    agents = await agent_service.get_all_agents_for_admin(db, skip=skip, limit=limit)
     return schemas.APIResponse.success(data=agents)
 
 
@@ -193,16 +207,14 @@ async def create_agent(
     """
     Create new AI agent
 
-    推荐使用角色卡字段构建AI角色：
-    - personality: 角色性格特点 (推荐)
-    - scenario: 背景设定 (推荐)
-    - first_message: 开场白
+    推荐使用结构化角色设定字段构建 AI 角色：
+    - personality: 角色性格特点（推荐）
+    - scenario: 背景设定（推荐）
     - message_example: 对话示例
 
     兼容性说明：
-    - 仍支持legacy的prompt字段
-    - 如果同时提供prompt和角色卡字段，将优先使用角色卡字段
-    - 建议新创建的角色使用角色卡字段以获得更好的效果
+    - 仍支持 legacy 的 prompt 字段
+    - 如果同时提供 prompt 和 personality/scenario，将优先使用 personality/scenario
     """
     # 检查数量限制：系统管理员不限制，普通用户限制6个
     is_allowed, agent_count, limit = (
@@ -237,16 +249,28 @@ async def get_agent(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ) -> Any:
     """
     Get AI agent by ID
     """
-    agent = await agent_service.get_agent(
+    agent_orm = await agent_service.get_agent(
         db, agent_id=agent_id, current_user_id=current_user.id
     )
-    if not agent:
+    if not agent_orm:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
+    agent_schema = schemas.Agent.model_validate(agent_orm)
+    if is_festival_memory_enabled(app_version_code):
+        festival_list = await memory_service.get_festival_memories_for_user_agent(
+            db, current_user.id, agent_id
+        )
+        if festival_list:
+            agent_schema.features = schemas.AgentFeatures(
+                festival_memories=[
+                    schemas.FestivalMemoryItem(**item) for item in festival_list
+                ]
+            )
+    return agent_schema
 
 
 @router.put(
@@ -295,8 +319,8 @@ async def delete_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    # Check permission: only creator can delete
-    if agent.creator_id != current_user.id:
+    # Check permission: creator can delete; superuser can delete any agent
+    if not (is_superuser(current_user) or agent.creator_id == current_user.id):
         raise HTTPException(status_code=403, detail="Permission denied")
 
     deleted_agent = await agent_service.delete_agent(db, db_agent=agent)
@@ -333,13 +357,11 @@ async def generate_background_animated(
 
     # 验证背景图是否存在
     if not agent.background:
-        raise HTTPException(status_code=400, detail="请先上传背景图")
+        raise HTTPException(
+            status_code=400, detail="Please upload a background image first"
+        )
 
     try:
-        from app.services.image_transform_service import image_transform_service
-        from app.services.video_generation_service import video_generation_service
-        from app.utils.gemini import generate_image_description
-
         # 1. 将背景图 URL 转换为 GCS URI 格式
         background_url = agent.background
         background_gcs_uri = None
@@ -398,10 +420,6 @@ async def generate_background_animated(
 
         # 4. 将视频转换为 webp 动图
         logger.info(f"开始将视频转换为 webp 动图: {video_gcs_uri}")
-        from app.utils.video_to_animated_image import (
-            convert_video_to_animated_image_and_upload,
-        )
-
         # 将 GCS URI 转换为 CDN URL 用于下载
         video_url = image_transform_service.transform_desktop(video_gcs_uri)
 
@@ -415,8 +433,6 @@ async def generate_background_animated(
         )
 
         # 5. 更新 Agent 的 background_animated 字段
-        from app.schemas.agent import AgentUpdate
-
         agent_update = AgentUpdate(background_animated=webp_url)
         updated_agent = await agent_service.update_agent(
             db, db_agent=agent, agent_in=agent_update
@@ -431,7 +447,7 @@ async def generate_background_animated(
         logger.error(f"Veo3 API 调用失败: {str(e)}")
         raise HTTPException(
             status_code=501,
-            detail=f"视频生成功能暂未实现或 API 配置错误: {str(e)}",
+            detail=f"Video generation not implemented or API configuration error: {str(e)}",
         )
     except ValueError as e:
         logger.error(f"参数验证失败: {str(e)}")
@@ -443,18 +459,18 @@ async def generate_background_animated(
             logger.error(f"FFmpeg 相关错误: {error_msg}")
             raise HTTPException(
                 status_code=500,
-                detail=f"视频转换失败: {error_msg}。"
-                "请参考文档 backend/docs/FFMPEG_INSTALLATION.md 了解安装方法。",
+                detail=(
+                    f"Video conversion failed: {error_msg}. "
+                    "See backend/docs/FFMPEG_INSTALLATION.md for installation steps."
+                ),
             )
         raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:
-        import traceback
-
         error_trace = traceback.format_exc()
         logger.error(f"生成背景动图失败: {str(e)}\n{error_trace}")
         raise HTTPException(
             status_code=500,
-            detail=f"生成背景动图失败: {str(e)}",
+            detail=f"Failed to generate animated background: {str(e)}",
         )
 
 
@@ -511,10 +527,6 @@ async def _download_and_upload_to_gcs(
     Returns:
         (gcs_uri, byte_size) 元组
     """
-    import httpx
-
-    from app.external_services.gcs import upload_to_gcs
-
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.get(url)
         response.raise_for_status()
@@ -557,8 +569,6 @@ async def _generate_with_fal_ai(
     Returns:
         (generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict) 元组
     """
-    from app.utils.image import ImageSize
-
     fal_api_key = global_config_loaded_from_config_yaml.fal.api_key
 
     fal_request = TextToImageGenerationRequest(
@@ -620,9 +630,12 @@ async def _generate_with_fal_ai(
             gcs_urls.append(gcs_uri)
             gcs_url_to_img_dict[gcs_uri] = imagen_image
 
-        except Exception as e:
+        except (httpx.HTTPError, OSError) as e:
             logger.error(f"Failed to download/upload fal.ai image {i}: {e}")
             continue
+        except Exception as e:
+            logger.error(f"Unexpected error processing fal.ai image {i}: {e}")
+            raise
 
     if not gcs_urls:
         raise Exception("No images were generated from fal.ai")
@@ -633,8 +646,7 @@ async def _generate_with_fal_ai(
 @router.post(
     "/text-to-image",
     response_model=APIResponse[dict],
-    summary="[Deprecated, use /api/v1/images/text-to-image instead] Generate images based on text description",
-    deprecated=True,
+    summary="Generate images based on text description, 用于支持 dify 角色产线",
     include_in_schema=True,
     tags=[INTY_EVAL_TAG],
 )
@@ -732,8 +744,6 @@ async def generate_background(
             rai_reasons = result["rai_reasons"]
 
         # Convert GCS URLs to CDN URLs
-        from app.services.image_transform_service import image_transform_service
-
         cdn_urls = []
         cdn_url_to_img_dict = {}
         for gcs_url in gcs_urls:
@@ -804,6 +814,7 @@ async def generate_background(
         return APIResponse.success(data=response_data)
 
     except Exception as e:
+        # API boundary: 将任意未处理异常转为结构化错误响应，避免向客户端泄露堆栈
         logger.error(f"Background image generation failed: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
 
@@ -829,204 +840,6 @@ async def generate_background(
             )
 
 
-# ==================== 角色卡相关API端点 ====================
-
-
-@router.post(
-    "/import-character-card",
-    response_model=APIResponse[CharacterCardImportResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def import_character_card(
-    request: CharacterCardImportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    从JSON数据导入角色卡
-    """
-    try:
-        result = await character_card_service.import_character_card(
-            request=request, user_id=current_user.id, db=db
-        )
-
-        if result.success:
-            return APIResponse.success(data=result)
-        else:
-            return APIResponse.error(message=result.message, data=result)
-
-    except Exception as e:
-        logger.error(f"导入角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to import character card: {str(e)}")
-
-
-@router.post(
-    "/import-character-card-file",
-    response_model=APIResponse[CharacterCardImportResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def import_character_card_file(
-    file: UploadFile = File(...),
-    override_existing: bool = Query(False, description="是否覆盖现有同名角色"),
-    import_character_book: bool = Query(True, description="是否导入角色书"),
-    import_alternate_greetings: bool = Query(True, description="是否导入替代问候语"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    从文件导入角色卡（支持JSON和PNG文件）
-    """
-    try:
-        # 验证文件大小 (最大10MB)
-        if file.size and file.size > 10 * 1024 * 1024:
-            return APIResponse.error(message="File size cannot exceed 10MB")
-
-        result = await character_card_service.import_character_card_from_file(
-            file=file,
-            user_id=current_user.id,
-            db=db,
-            override_existing=override_existing,
-            import_character_book=import_character_book,
-            import_alternate_greetings=import_alternate_greetings,
-        )
-
-        if result.success:
-            return APIResponse.success(data=result)
-        else:
-            return APIResponse.error(message=result.message, data=result)
-
-    except Exception as e:
-        logger.error(f"从文件导入角色卡失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to import character card from file: {str(e)}"
-        )
-
-
-@router.post(
-    "/export-character-card",
-    response_model=APIResponse[dict],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def export_character_card(
-    request: CharacterCardExportRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    导出Agent为角色卡格式
-    """
-    try:
-        card_data = await character_card_service.export_agent_to_character_card(
-            agent_id=request.agent_id,
-            user_id=current_user.id,
-            db=db,
-            include_character_book=request.include_character_book,
-            include_alternate_greetings=request.include_alternate_greetings,
-            include_extensions=request.include_extensions,
-        )
-
-        return APIResponse.success(data=card_data.dict())
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"导出角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to export character card: {str(e)}")
-
-
-@router.get(
-    "/{agent_id}/character-card",
-    response_model=APIResponse[dict],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def get_agent_character_card(
-    agent_id: str,
-    include_character_book: bool = Query(True, description="是否包含角色书"),
-    include_alternate_greetings: bool = Query(True, description="是否包含替代问候语"),
-    include_extensions: bool = Query(True, description="是否包含扩展数据"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-    db: AsyncSession = Depends(deps.get_async_db),
-):
-    """
-    获取Agent的角色卡数据
-    """
-    try:
-        card_data = await character_card_service.export_agent_to_character_card(
-            agent_id=agent_id,
-            user_id=current_user.id,
-            db=db,
-            include_character_book=include_character_book,
-            include_alternate_greetings=include_alternate_greetings,
-            include_extensions=include_extensions,
-        )
-
-        return APIResponse.success(data=card_data.dict())
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取角色卡数据失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to get character card data: {str(e)}")
-
-
-@router.post(
-    "/validate-character-card",
-    response_model=APIResponse[CharacterCardValidationResponse],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def validate_character_card(
-    card_data: dict, current_user: schemas.User = Depends(deps.get_current_active_user)
-):
-    """
-    验证角色卡数据格式
-    """
-    try:
-        result = await character_card_service.validate_character_card(card_data)
-        return APIResponse.success(data=result)
-
-    except Exception as e:
-        logger.error(f"验证角色卡失败: {str(e)}")
-        return APIResponse.error(message=f"Failed to validate character card: {str(e)}")
-
-
-@router.get(
-    "/character-card/features",
-    response_model=APIResponse[dict],
-    include_in_schema=False,
-    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
-)
-async def get_character_card_features(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
-):
-    """
-    获取支持的角色卡功能列表
-    """
-    try:
-        from app.services.character_card_mapper import CharacterCardMapper
-
-        mapper = CharacterCardMapper()
-        features = mapper.get_supported_features()
-
-        return APIResponse.success(
-            data={
-                "supported_features": features,
-                "spec_version": "chara_card_v2",
-                "spec_version_number": "2.0",
-            }
-        )
-
-    except Exception as e:
-        logger.error(f"获取角色卡功能列表失败: {str(e)}")
-        return APIResponse.error(
-            message=f"Failed to get character card features: {str(e)}"
-        )
-
-
 @router.get(
     "/models/openrouter",
     response_model=schemas.APIResponse[List[dict]],
@@ -1036,17 +849,12 @@ async def get_character_card_features(
     tags=[INTY_EVAL_TAG],
 )
 async def get_openrouter_models(
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ):
     """
     获取OpenRouter模型列表
     """
-    if not current_user.is_superuser:
-        return schemas.APIResponse.error(message="Unauthorized access")
-
     try:
-        from app.services.scoring_service import ScoringService
-
         scoring_service = ScoringService()
         models = await scoring_service._fetch_openrouter_models()
 
@@ -1089,7 +897,9 @@ async def get_openrouter_models(
 
     except Exception as e:
         logger.error(f"获取OpenRouter模型失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取OpenRouter模型失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch OpenRouter models: {str(e)}"
+        )
 
 
 @router.get(
@@ -1116,7 +926,9 @@ async def get_image_generation_config(
 
     except Exception as e:
         logger.error(f"获取图片生成配置失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取图片生成配置失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch image generation config: {str(e)}"
+        )
 
 
 @router.get(
@@ -1132,9 +944,6 @@ async def get_available_prompts(
 ) -> Any:
     """获取可用的 prompt 列表"""
     try:
-        from app.core.agent import prompts as agent_prompts
-        from app.core.config import global_config_loaded_from_config_yaml
-
         main_prompts = [
             {
                 "id": prompt.id,
@@ -1168,7 +977,9 @@ async def get_available_prompts(
 
     except Exception as e:
         logger.error(f"获取可用 prompt 列表失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"获取可用 prompt 列表失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to fetch available prompt list: {str(e)}"
+        )
 
 
 @router.put(
@@ -1180,7 +991,7 @@ async def get_available_prompts(
 )
 async def update_image_generation_config(
     config: Dict[str, Any],
-    current_user: schemas.User = Depends(get_current_superuser),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
     更新图片生成配置（仅超级用户）
@@ -1222,4 +1033,6 @@ async def update_image_generation_config(
 
     except Exception as e:
         logger.error(f"更新图片生成配置失败: {str(e)}")
-        return schemas.APIResponse.error(message=f"更新图片生成配置失败: {str(e)}")
+        return schemas.APIResponse.error(
+            message=f"Failed to update image generation config: {str(e)}"
+        )

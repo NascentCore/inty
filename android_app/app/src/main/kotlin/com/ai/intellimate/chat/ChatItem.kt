@@ -1,11 +1,20 @@
 package com.ai.intellimate.chat
 
+import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.getCdnImageUrl
-import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.billing.BillingRepository
+import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.character.local.db.FestivalMemory
+import ai.sxwl.android.data.character.repository.CharacterRepository
+import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
-import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.design.theme.brushes
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.TimeUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ClipData
@@ -18,14 +27,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -39,26 +51,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -66,8 +87,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,8 +102,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.intellimate.BuildConfig
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.heartbeat.FestivalMemoryDebugMetadata
+import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.audio.AudioInfo
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.audio.VoicePlayer
@@ -94,6 +118,8 @@ import com.ai.intellimate.utils.ChatTextFormatter
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 private fun debugOnlyCopyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService<ClipboardManager>()
@@ -106,45 +132,546 @@ private const val DEBUG_METADATA_VALUE_MAX = 64
 @Composable
 fun ChatItem(
     navController: NavController,
-    item: MsgInfo,
+    isOnlyOpeningMessage: Boolean,
+    item: MessageEntity,
+    chatViewModel: ChatViewModel,
+    agentName: String? = null,
     isCurrentPage: Boolean = true,
-    chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
     isGuideVisible: Boolean = false,
     messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
 ) {
-    when (item.role) {
-        "assistant" -> {
-            ChatItemAI(
-                navController,
-                item,
-                isCurrentPage,
-                chatViewModel,
-                isLatestMessage,
-                isGuideVisible,
-                messageFontSizeSp,
-            )
-        }
 
-        "user" -> {
-            ChatItemUser(item, messageFontSizeSp)
-        }
+    val agentInfoForFormatting by
+        (chatViewModel?.agentInfo ?: flowOf(null)).collectAsState(initial = null)
+    if (item.type == "text" || item.type.isNullOrBlank()) {
+        when (item.role) {
+            "assistant" -> {
+                ChatItemAI(
+                    navController,
+                    isOnlyOpeningMessage = isOnlyOpeningMessage,
+                    item,
+                    isCurrentPage,
+                    chatViewModel,
+                    isLatestMessage,
+                    isGuideVisible,
+                    messageFontSizeSp,
+                )
+            }
 
-        "system" -> {
-            ChatItemSystemTips(item, chatViewModel)
-        }
+            "user" -> {
+                ChatItemUser(
+                    item,
+                    messageFontSizeSp,
+                    useDoubleAsteriskActionMarker =
+                        agentInfoForFormatting?.useDoubleAsteriskActionMarker() ?: false,
+                )
+            }
 
-        else -> {
-            LogUtils.w("ChatItem - 未知角色: ${item.role}")
-            ChatItemUser(item, messageFontSizeSp)
+            "system" -> {
+                ChatItemSystemTips(item, chatViewModel)
+            }
+
+            else -> {
+                ChatItemVersionSupport()
+            }
+        }
+    } else {
+        when (item.type) {
+            "festival_memory_prompt" ->
+                ChatItemFestivalMemory(
+                    agentName = agentName.orEmpty(),
+                    agentId = item.metaData.agentId,
+                    festivalMemoryId = item.festivalMemoryId,
+                    onClick = {
+                        FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                            "click_type" to "heartbeat",
+                            "agent_id" to item.metaData.agentId,
+                            "memory_id" to item.festivalMemoryId,
+                        )
+                        navController.toHeartbeat(
+                            item.metaData.agentId,
+                            item.festivalMemoryId,
+                            "message_notify",
+                        )
+                    },
+                )
+            "surprise_snap" -> {
+                val messageKey =
+                    item.id.takeIf { it.isNotBlank() } ?: "${item.metaData.agentId}-${item.indexId}"
+                LaunchedEffect(messageKey, isCurrentPage) {
+                    if (isCurrentPage) {
+                        chatViewModel.reportForMomentExposureIfNeeded(
+                            messageKey,
+                            item.metaData.agentId.orEmpty(),
+                        )
+                    }
+                }
+                ChatItemForMoment(
+                    navController = navController,
+                    chatViewModel = chatViewModel,
+                    message = item,
+                    modifier = Modifier.width(200.dp)
+                )
+            }
+            else -> {
+                ChatItemVersionSupport()
+            }
         }
     }
+}
+
+private val itemDefaultBackgroundColor = Color.Black.copy(0.5f)
+
+@Composable
+private fun ChatItem(
+    modifier: Modifier = Modifier,
+    color: Color = itemDefaultBackgroundColor,
+    contentColor: Color = Color.White,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier.padding(bottom = 16.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = color,
+        contentColor = contentColor,
+    ) {
+        Box(Modifier.padding(16.dp), content = content)
+    }
+}
+
+@Composable
+private fun ChatItemVersionSupport(modifier: Modifier = Modifier) {
+    ChatItem(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.chat_message_type_unsupported),
+            modifier = Modifier.alpha(0.8f),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun VersionSupportPreview() {
+    IntelliMateTheme { ChatItemVersionSupport() }
+}
+
+@Composable
+private fun ChatItemForMoment(
+    navController: NavController,
+    chatViewModel: ChatViewModel,
+    message: MessageEntity,
+    modifier: Modifier = Modifier,
+) {
+    val vipStatus by VipStatusHelper.vipStatus.collectAsState()
+    val isLocked by
+        remember(message) {
+            derivedStateOf { message.momentExtra?.isPurchased == false && !vipStatus.isSubscribed }
+        }
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showConfirmDialog) {
+        PurchaseForMomentDialog(
+            price = message.momentExtra?.price ?: 0,
+            agentId = message.metaData.agentId.orEmpty(),
+            onConfirm = {
+                showConfirmDialog = false
+
+                message.momentExtra?.let {
+                    if (!isLoading) {
+                        scope
+                            .launch {
+                                isLoading = true
+
+                                try {
+                                    chatViewModel.purchaseForMoment(message)
+                                    ToastUtils.showShort(R.string.moment_purchase_success)
+                                } catch (error: Exception) {
+                                    error.printStackTrace()
+                                    ToastUtils.showShort(error.message ?: "Unknown Error")
+                                }
+                            }
+                            .invokeOnCompletion { isLoading = false }
+                    }
+                }
+            },
+            onCancel = { showConfirmDialog = false },
+        )
+    }
+
+    ChatItemForMoment(
+        image = message.momentExtra?.image.orEmpty(),
+        text = message.content,
+        isLocked = isLocked,
+        agentId = message.metaData.agentId.orEmpty(),
+        unlockByVip = {
+                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                        "click_type" to "for_moment_go_premium",
+                        "agent_id" to (message.metaData.agentId.orEmpty()),
+                    )
+                    navController.navigate(Routes.Me.vipCenter("for_moment"))
+                },
+                unlockByCredits = {
+                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                        "click_type" to "for_moment_unlock_credits",
+                        "agent_id" to (message.metaData.agentId.orEmpty()),
+                    )
+                    showConfirmDialog = true
+                },
+        modifier = modifier,
+    )
+}
+
+/**
+ * 秘密时刻积分支付确认弹窗
+ *
+ * 使用场景：用户点击「Unlock with Credits」后，在扣费前确认是否使用积分解锁该条秘密时刻。 预期效果：居中对话框，标题 + 说明文案（含所需积分数量），取消 / 解锁 双按钮。
+ *
+ * 可配置项：price 所需积分、agentId 用于埋点、onConfirm 确认解锁、onCancel 取消。
+ */
+@Composable
+private fun PurchaseForMomentDialog(
+    price: Int,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    agentId: String = "",
+) {
+    Dialog(
+        onDismissRequest = onCancel,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true),
+    ) {
+        Surface(
+            modifier = modifier,
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(dimensionResource(R.dimen.padding_large))
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.moment_purchase_dialog_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_medium)))
+                Text(
+                    text = stringResource(R.string.moment_purchase_dialog_message, price),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_large)))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier =
+                            Modifier.noRippleClickable(onClick = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "for_moment_purchase_dialog_cancel",
+                                    "agent_id" to agentId,
+                                )
+                                onCancel()
+                            }),
+                    )
+                    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.padding_medium)))
+                    Text(
+                        text = stringResource(R.string.moment_purchase_confirm),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier =
+                            Modifier.noRippleClickable(onClick = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "for_moment_purchase_dialog_confirm",
+                                    "agent_id" to agentId,
+                                    "price" to price,
+                                )
+                                onConfirm()
+                            }),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 秘密时刻解锁卡片
+ *
+ * 使用场景：聊天中展示未解锁的“秘密时刻”内容，引导用户通过 Premium 或 Credits 解锁。 预期效果：深色卡片、带渐变描边的模糊图区域、中央皇冠图标、提示文案（含酒杯 emoji）、
+ * “Go Premium”（渐变填充 + VIP 徽章 + 火焰 emoji）与“Unlock with Credits”（渐变描边空心）双按钮。
+ *
+ * 可配置项：image 图片 URL、isLocked 是否锁定、price 积分价格、unlockByVip / unlockByCredits 回调。
+ */
+@Composable
+private fun ChatItemForMoment(
+    image: String,
+    text: String,
+    isLocked: Boolean,
+    unlockByVip: () -> Unit,
+    unlockByCredits: () -> Unit,
+    modifier: Modifier = Modifier,
+    agentId: String = "",
+) {
+    val context = LocalContext.current
+    val borderWidth = dimensionResource(R.dimen.moment_border_width)
+    var showFullScreenImage by remember { mutableStateOf(false) }
+
+    val gradientStart = MaterialTheme.colorScheme.primary
+    val gradientEnd = MaterialTheme.colorScheme.secondary
+    val borderGradient = Brush.linearGradient(listOf(gradientStart, gradientEnd))
+    val buttonShape = RoundedCornerShape(100)
+
+    if (showFullScreenImage && image.isNotEmpty()) {
+        Dialog(
+            onDismissRequest = { showFullScreenImage = false },
+            properties =
+                DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true,
+                ),
+        ) {
+            FullScreenImageViewer(
+                imageUrl = image,
+                onDismiss = { showFullScreenImage = false },
+            )
+        }
+    }
+
+    ChatItem(modifier = modifier) {
+        Column(modifier = Modifier) {
+            // 图片区域：渐变描边、模糊图、中央皇冠
+            Box(
+                modifier =
+                    Modifier
+                        .padding(horizontal = dimensionResource(R.dimen.padding_medium))
+                        .fillMaxWidth()
+                        .aspectRatio(9f / 16f)
+                        .clip(MaterialTheme.shapes.medium)
+                        .border(
+                            width = borderWidth,
+                            brush = borderGradient,
+                            shape = MaterialTheme.shapes.medium,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    modifier =
+                        Modifier.fillMaxSize() then
+                            if (isLocked) {
+                                Modifier.blur(10.dp, 10.dp)
+                            } else {
+                                Modifier.clickable {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "for_moment_view_image",
+                                        "agent_id" to agentId,
+                                    )
+                                    showFullScreenImage = true
+                                }
+                            },
+                    model =
+                        ImageRequest.Builder(context)
+                            .data(getCdnImageUrl(image, width = 360, quality = 70))
+                            .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                )
+
+                if (isLocked) {
+                    Image(
+                        painter = painterResource(R.drawable.icon_subscription),
+                        contentDescription = "vip",
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .background(
+                                    brush =
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.secondary,
+                                            )
+                                        ),
+                                    shape = CircleShape,
+                                )
+                                .padding(11.dp),
+                    )
+                }
+            }
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+
+            if (isLocked) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(32.dp)
+                            .clip(buttonShape)
+                            .drawBehind {
+                                drawRect(brush = MaterialTheme.brushes.gradientBrush2, alpha = 0.2f)
+                            }
+                            .border(
+                                width = 1.dp,
+                                brush = MaterialTheme.brushes.gradientBrush2,
+                                shape = buttonShape,
+                            )
+                            .noRippleClickable(onClick = unlockByVip),
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_vip_badge),
+                        contentDescription = "vip",
+                        modifier = Modifier.size(24.dp, 12.dp),
+                    )
+                    Spacer(modifier = Modifier.width(dimensionResource(R.dimen.padding_small)))
+                    Text(
+                        text = stringResource(R.string.go_premium),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_extra_small)))
+
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(32.dp)
+                            .clip(buttonShape)
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                shape = buttonShape,
+                            )
+                            .noRippleClickable(onClick = unlockByCredits),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.unlock_with_credits),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun ChatItemForMomentPreview() {
+    IntelliMateTheme {
+        ChatItemForMoment(
+            image = "",
+            text = stringResource(R.string.chat_moment_prompt),
+            isLocked = false,
+            unlockByVip = {},
+            unlockByCredits = {},
+            modifier = Modifier.width(200.dp),
+        )
+    }
+}
+
+/**
+ * 聊天内节日记忆通知条目。Debug 构建下若提供 agentId 与
+ * festivalMemoryId，会在下方展示该条节日记忆的完整元数据（id、agentId、festivalDate、festivalName、memory、title）。
+ */
+@Composable
+private fun ChatItemFestivalMemory(
+    agentName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    agentId: String? = null,
+    festivalMemoryId: Long? = null,
+) {
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
+    var memories by remember { mutableStateOf<List<FestivalMemory>>(emptyList()) }
+    val characterRepository: CharacterRepository = remember { DataModule.getCharacterRepository() }
+    LaunchedEffect(isDebugMode, agentId, festivalMemoryId) {
+        if (isDebugMode && agentId != null && !agentId.isBlank() && festivalMemoryId != null) {
+            characterRepository.getFestivalMemories(agentId).collect { memories = it }
+        } else {
+            memories = emptyList()
+        }
+    }
+    val memory =
+        remember(memories, festivalMemoryId) {
+            if (festivalMemoryId == null) null else memories.find { it.id == festivalMemoryId }
+        }
+
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        ChatItem(
+            modifier = Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.LoveJournalNotifyWidthRatio),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text =
+                        buildAnnotatedString {
+                            val fullText =
+                                stringResource(R.string.chat_festival_memory_notify, agentName)
+                            // 加粗短语需为 notify 字符串的子串，翻译时需保持一致（如 "Love Journal"）
+                            val boldPhrase = stringResource(R.string.heartbeat_journal)
+                            val start = fullText.indexOf(boldPhrase)
+                            if (start >= 0) {
+                                append(fullText.substring(0, start))
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append(boldPhrase)
+                                }
+                                append(fullText.substring(start + boldPhrase.length))
+                            } else {
+                                append(fullText)
+                            }
+                        },
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noRippleClickable(onClick = onClick),
+                )
+                if (isDebugMode && memory != null) {
+                    FestivalMemoryDebugMetadata(
+                        memory = memory,
+                        modifier =
+                            Modifier.padding(top = dimensionResource(R.dimen.padding_extra_small)),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun FestivalMemoryPreview() {
+    IntelliMateTheme { ChatItemFestivalMemory(agentName = "Agent", onClick = {}) }
 }
 
 @Composable
 private fun ChatItemAI(
     navController: NavController,
-    item: MsgInfo,
+    isOnlyOpeningMessage: Boolean,
+    item: MessageEntity,
     isCurrentPage: Boolean = true,
     chatViewModel: ChatViewModel? = null,
     isLatestMessage: Boolean = false,
@@ -152,19 +679,20 @@ private fun ChatItemAI(
     messageFontSizeSp: Float,
 ) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     val timestampText = remember(item.timestamp) { formatTimestamp(item.timestamp) }
     val messageFontSize = messageFontSizeSp.sp
     val agentInfo by viewModel.agentInfo.collectAsState()
 
     runCatching {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier
+                .padding(bottom = 16.dp)
+                .fillMaxWidth()) {
                 val hasGeneratedImage = item.hasGeneratedImage()
                 val generatedImageUrl = item.getGeneratedImageUrl()
-                val isImageLoading =
-                    (item.content == "loading_animation" &&
-                        item.localMsgId.contains("loading_image", ignoreCase = true)) ||
-                        (generatedImageUrl == "loading")
-                val isQueryMsgsCompleted by viewModel.isQueryMsgsCompleted.collectAsState()
+                val isImageLoading = generatedImageUrl == "loading"
+                val autoPlayAudioSetting by
+                    SettingStateManager.autoPlayAudioFlow.collectAsState(false)
 
                 if (item.content.isNotEmpty() && item.content != "loading_animation") {
                     val vmAgentId = agentInfo?.id
@@ -173,35 +701,31 @@ private fun ChatItemAI(
 
                     val audioInfo =
                         AudioInfo(
-                            url = item.audio_url ?: "",
+                            url = item.audioUrl ?: "",
                             title = "Voice Message",
                             artist = "AI Agent",
-                            messageId = item.localMsgId,
+                            messageId = item.id.takeIf { it.isNotBlank() },
                             agentId = safeAgentId,
                             agentName = agentInfo?.name,
                         )
 
-                    val allMessages by viewModel.msgs.collectAsState()
-                    val actualChatMessages =
-                        allMessages.filter { !it.isOpening() && it.role != "system" }
-                    val isOnlyOpeningMessage = actualChatMessages.isEmpty()
-
                     val hasPlayedOpening = OpeningPlayState.agentOpeningPlayed(agentInfo?.id ?: "")
 
                     val shouldAutoPlay =
-                        item.isOpening() &&
+                        item.isOpening &&
                             isOnlyOpeningMessage &&
                             !hasPlayedOpening &&
                             isCurrentPage &&
-                            isQueryMsgsCompleted &&
                             safeAgentId.isNotEmpty() &&
                             audioInfo.url.isNotEmpty() &&
-                            IntySetting.isAutoPlayAudio() &&
+                            autoPlayAudioSetting &&
                             !isGuideVisible // 未出现引导手势时
 
                     // 消息气泡上方的辅助内容条
                     Row(
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // 显示音频播放按钮
@@ -212,7 +736,7 @@ private fun ChatItemAI(
                                 modifier =
                                     Modifier.widthIn(UiConfigs.ChatMessagePane.AudioPlayerMinWidth),
                                 onTtsGenerated = { audioUrl ->
-                                    viewModel.updateMessageAudioUrl(item.localMsgId, audioUrl)
+                                    viewModel.updateMessageAudioUrl(item.id, audioUrl)
                                 },
                                 serverMessageId = item.id,
                             )
@@ -252,12 +776,21 @@ private fun ChatItemAI(
 
                 val shouldHideText = isImageOnlyMessage || isNormalLoading
                 val shouldFlowShow by viewModel.shouldFlowShow.collectAsState()
-                val shouldShowMessageActions = isLatestMessage && !shouldFlowShow
+                val shouldShowMessageActions by
+                    remember(isLatestMessage) {
+                        derivedStateOf {
+                            isLatestMessage &&
+                                !shouldFlowShow &&
+                                !item.isOpening &&
+                                !isNormalLoading
+                        }
+                    }
 
                 if (isNormalLoading) {
                     Box(
                         modifier =
-                            Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                 .padding(
                                     horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                     vertical = UiConfigs.ChatMessagePane.PaddingVertical,
@@ -267,38 +800,13 @@ private fun ChatItemAI(
                         LoadingAnimation(agentInfo?.name)
                     }
                 } else if (!shouldHideText && item.content.isNotEmpty()) {
-                    val allMessages by viewModel.msgs.collectAsState()
-                    val agentId = agentInfo?.id ?: ""
-
-                    // 记录查询完成时已存在的消息ID列表，用于区分历史消息和新消息
-                    // 使用 LaunchedEffect 在查询完成的瞬间记录消息列表
-                    // 使用 agentId 作为 key，确保切换会话时重置状态
-                    var messagesAtQueryComplete by
-                        remember(agentId) { mutableStateOf<Set<String>>(emptySet()) }
-
-                    LaunchedEffect(isQueryMsgsCompleted, agentId) {
-                        if (isQueryMsgsCompleted) {
-                            if (messagesAtQueryComplete.isEmpty()) {
-                                // 查询完成的瞬间，记录当前所有消息的ID
-                                // 优先使用服务器ID，如果没有则使用localMsgId
-                                messagesAtQueryComplete =
-                                    allMessages
-                                        .map {
-                                            it.id.takeIf { id -> id.isNotEmpty() } ?: it.localMsgId
-                                        }
-                                        .toSet()
-                            }
-                        } else {
-                            // 查询未完成时，重置状态（切换会话时会触发）
-                            messagesAtQueryComplete = emptySet()
-                        }
-                    }
 
                     Row(modifier = Modifier.fillMaxWidth()) {
                         val context = LocalContext.current
                         Box(
                             modifier =
-                                Modifier.background(Color.Black.copy(alpha = 0.5f), msgShape)
+                                Modifier
+                                    .background(Color.Black.copy(alpha = 0.5f), msgShape)
                                     .padding(
                                         horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
                                         vertical = UiConfigs.ChatMessagePane.PaddingVertical,
@@ -320,12 +828,15 @@ private fun ChatItemAI(
                                     item.content != "loading_animation"
 
                             if (item.content.isNotEmpty()) {
+                                val useDoubleAsterisk =
+                                    agentInfo?.useDoubleAsteriskActionMarker() ?: false
                                 StyledMessageText(
                                     text = item.content,
                                     fontSize = messageFontSize,
                                     fontWeight = FontWeight.Normal,
                                     normalColor = Color.White,
                                     actionColor = Color.White.copy(0.55f),
+                                    useDoubleAsteriskActionMarker = useDoubleAsterisk,
                                     isFlow = isFlow,
                                     onDisplayComplete = {
                                         // 标记消息已完整显示，避免再次流式显示
@@ -340,11 +851,15 @@ private fun ChatItemAI(
                                         viewModel.generateImageForMessageOrPickImage(item.id)
                                     },
                                     modifier =
-                                        Modifier.align(Alignment.BottomEnd).offset(10.dp, 10.dp),
+                                        Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .offset(10.dp, 10.dp),
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        Spacer(modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f))
                     }
                 }
 
@@ -353,8 +868,8 @@ private fun ChatItemAI(
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onLike = { viewModel.likeMessage(item.id) },
+                        onDislike = { viewModel.dislikeMessage(item.id) },
                         onRecall = { viewModel.recallMessage() },
                     )
                 }
@@ -376,21 +891,32 @@ private fun ChatItemAI(
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (isImageLoading) {
+                            val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
                             ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                                 showLoadingDots = true,
+                                showSpeedUpButton = !vipStatus.isSubscribed,
+                                onVipSpeedUpClick = {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "image speed up"
+                                    )
+                                    navController.navigate(Routes.Me.vipCenter("speed up "))
+                                },
                             )
                         } else if (imageLoadError) {
                             Box(
                                 modifier =
-                                    Modifier.fillMaxWidth(0.35f)
+                                    Modifier
+                                        .fillMaxWidth(0.35f)
                                         .aspectRatio(aspectRatio)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.Black.copy(alpha = 0.3f))
                                         .padding(16.dp)
                                         .noRippleClickable {
-                                            viewModel.clearGeneratedImage(item.localMsgId)
+                                            viewModel.clearGeneratedImage(item.id)
                                         },
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -423,7 +949,8 @@ private fun ChatItemAI(
                                 // 使用 Box 叠加 shimmer 和图片
                                 Box(
                                     modifier =
-                                        Modifier.fillMaxWidth(0.35f)
+                                        Modifier
+                                            .fillMaxWidth(0.35f)
                                             .aspectRatio(aspectRatio)
                                             .constrainAs(img) {}
                                             .clip(RoundedCornerShape(12.dp))
@@ -466,7 +993,9 @@ private fun ChatItemAI(
                         } else {
                             // URL 为空或其他情况，显示 shimmer
                             ShimmerPlaceholder(
-                                modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(aspectRatio),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .aspectRatio(aspectRatio),
                                 cornerRadius = 12.dp,
                             )
                         }
@@ -483,7 +1012,6 @@ private fun ChatItemAI(
                                 ),
                         ) {
                             val agentId = agentInfo?.id ?: ""
-                            val context = LocalContext.current
                             FullScreenImageViewer(
                                 imageUrl = generatedImageUrl,
                                 onDismiss = { showFullScreenImage = false },
@@ -503,6 +1031,12 @@ private fun ChatItemAI(
                                     stringResource(R.string.agent_gallery_set_as_background),
                                 onReport = {
                                     if (agentId.isNotBlank()) {
+                                        navController.currentBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set(
+                                                Routes.Me.ReportInitialEvidenceImageUrlKey,
+                                                generatedImageUrl,
+                                            )
                                         navController.navigate(
                                             Routes.Me.reportPage(false, "AGENT", agentId)
                                         )
@@ -527,20 +1061,22 @@ private fun ChatItemAI(
                     Spacer(modifier = Modifier.height(2.dp))
                     MessageActionBar(
                         message = item,
-                        onLike = { viewModel.likeMessage(item.localMsgId) },
-                        onDislike = { viewModel.dislikeMessage(item.localMsgId) },
+                        onLike = { viewModel.likeMessage(item.id) },
+                        onDislike = { viewModel.dislikeMessage(item.id) },
                         onRecall = { viewModel.recallMessage() },
                     )
                 }
 
-                if (BuildConfig.DEBUG) {
+                if (isDebugMode) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         DebugMessageMetadata(
                             item = item,
                             modifier =
                                 Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO),
                         )
-                        Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                        Spacer(modifier = Modifier
+                            .widthIn(80.dp)
+                            .weight(1f))
                     }
                 }
             }
@@ -550,7 +1086,8 @@ private fun ChatItemAI(
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(12.dp),
                             )
@@ -570,82 +1107,104 @@ private fun ChatItemAI(
                         fontSize = messageFontSize,
                     )
                 }
-                Spacer(modifier = Modifier.widthIn(80.dp).weight(1f))
+                Spacer(modifier = Modifier
+                    .widthIn(80.dp)
+                    .weight(1f))
             }
         }
 }
 
-/** 用户消息气泡布局，靠右对齐。 */
+/** 用户消息气泡布局，靠右对齐。与当前 agent 一致：*...* 作为动作标记时，用户消息内 *text* 也以斜体显示且不显示 *。 */
 @Composable
-private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
+private fun ChatItemUser(
+    item: MessageEntity,
+    messageFontSizeSp: Float,
+    useDoubleAsteriskActionMarker: Boolean = false,
+) {
+    val isDebugMode = HeartAppUtils.isAppDebugMode()
     val messageFontSize = messageFontSizeSp.sp
     runCatching {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.Bottom,
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
             ) {
-                val context = LocalContext.current
-
-                Box(
-                    modifier =
-                        Modifier.background(
-                                Color.White.copy(alpha = 0.6f),
-                                RoundedCornerShape(12.dp),
-                            )
-                            .padding(
-                                horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
-                            )
-                            .widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            )
-                            .pointerInput(item.content) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        debugOnlyCopyToClipboard(context, item.content)
-                                    }
-                                )
-                            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    StyledMessageText(
-                        text = item.content,
-                        fontSize = messageFontSize,
-                        fontWeight = FontWeight.Normal,
-                        normalColor = Color(0xff090909),
-                        actionColor = Color(0xff090909).copy(0.6f),
-                    )
-                }
-            }
-        }
-        .also {
-            if (BuildConfig.DEBUG) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DebugMessageMetadata(
-                        item = item,
+                    val context = LocalContext.current
+
+                    Box(
                         modifier =
-                            Modifier.widthIn(
-                                min = 1.dp,
-                                max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                            ),
-                    )
+                            Modifier
+                                .background(
+                                    Color.White.copy(alpha = 0.6f),
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .padding(
+                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                    vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
+                                )
+                                .widthIn(
+                                    min = 1.dp,
+                                    max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                                )
+                                .pointerInput(item.content) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            debugOnlyCopyToClipboard(context, item.content)
+                                        }
+                                    )
+                                }
+                    ) {
+                        StyledMessageText(
+                            text = item.content,
+                            fontSize = messageFontSize,
+                            fontWeight = FontWeight.Normal,
+                            normalColor = Color(0xff090909),
+                            actionColor = Color(0xff090909).copy(0.6f),
+                            useDoubleAsteriskActionMarker = useDoubleAsteriskActionMarker,
+                        )
+                    }
+                }
+
+                if (isDebugMode) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        DebugMessageMetadata(
+                            item = item,
+                            modifier =
+                                Modifier.widthIn(
+                                    min = 1.dp,
+                                    max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                                ),
+                        )
+                    }
                 }
             }
         }
         .onFailure {
             // 如果渲染失败，显示空消息气泡；应无可能发生，仅作为保守的兜底处理。
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 val context = LocalContext.current
                 Box(
                     modifier =
-                        Modifier.background(
+                        Modifier
+                            .background(
                                 Color.White.copy(alpha = 0.6f),
                                 RoundedCornerShape(12.dp),
                             )
                             .padding(
                                 horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                vertical = UiConfigs.ChatMessagePane.PaddingVertical,
+                                vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
                             )
                             .widthIn(
                                 min = 1.dp,
@@ -670,7 +1229,7 @@ private fun ChatItemUser(item: MsgInfo, messageFontSizeSp: Float) {
 }
 
 @Composable
-private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = null) {
+private fun ChatItemSystemTips(item: MessageEntity, chatViewModel: ChatViewModel? = null) {
     val viewModel = chatViewModel ?: viewModel<ChatViewModel>()
 
     val displayText =
@@ -681,11 +1240,14 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
         }
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.noRippleClickable { viewModel.deleteMessage(item.localMsgId) },
+            modifier =
+                Modifier.noRippleClickable { viewModel.deleteMessage(item.id, item.indexId) },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -702,8 +1264,8 @@ private fun ChatItemSystemTips(item: MsgInfo, chatViewModel: ChatViewModel? = nu
 }
 
 @Composable
-private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
-    if (!BuildConfig.DEBUG) return
+private fun DebugMessageMetadata(item: MessageEntity, modifier: Modifier = Modifier) {
+    if (!HeartAppUtils.isAppDebugMode()) return
 
     val metadataLines =
         remember(item) {
@@ -711,22 +1273,22 @@ private fun DebugMessageMetadata(item: MsgInfo, modifier: Modifier = Modifier) {
                     val roleLabel = item.role.ifBlank { "unknown" }
                     add("role=$roleLabel")
                     item.id.takeIf { it.isNotBlank() }?.let { add("id=${it.debugEllipsize()}") }
-                    add("local=${item.localMsgId}")
+                    add("local=${item.id}")
                     item.timestamp?.takeIf { it.isNotBlank() }?.let { add("ts=$it") }
-                    item.meta_data?.let { meta ->
+                    item.metaData.let { meta ->
                         val metaParts = mutableListOf<String>()
-                        meta.agentId?.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
+                        meta.agentId.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
                         if (meta.isOpening) metaParts += "opening=true"
                         meta.generatedImage?.let { image ->
                             metaParts +=
-                                "image=${image.imageUrl.debugEllipsize()} (${image.width}x${image.height})"
+                                "image=${image.imageUrl?.debugEllipsize()} (${image.width}x${image.height})"
                         }
                         if (metaParts.isNotEmpty()) add("meta=${metaParts.joinToString()}")
                     }
-                    item.audio_url
+                    item.audioUrl
                         ?.takeIf { it.isNotBlank() }
                         ?.let { add("audio=${it.debugEllipsize()}") }
-                    item.user_vote?.takeIf { it.isNotBlank() }?.let { add("vote=$it") }
+                    item.userVote?.let { add("vote=$it") }
                 }
             }
             .filter { it.isNotBlank() }
@@ -756,6 +1318,11 @@ private fun String.debugEllipsize(maxLength: Int = DEBUG_METADATA_VALUE_MAX): St
     return take(maxLength - 3) + "..."
 }
 
+/**
+ * 聊天气泡内消息正文。动作描述（括号或 *...*）以斜体+actionColor 显示。
+ *
+ * @param useDoubleAsteriskActionMarker true 时用 *...* 识别动作，false 时用 ()/（）
+ */
 @Composable
 private fun StyledMessageText(
     text: String,
@@ -763,6 +1330,7 @@ private fun StyledMessageText(
     fontWeight: FontWeight,
     normalColor: Color,
     actionColor: Color,
+    useDoubleAsteriskActionMarker: Boolean = false,
     isFlow: Boolean = false,
     onDisplayComplete: (() -> Unit)? = null,
 ) {
@@ -807,6 +1375,7 @@ private fun StyledMessageText(
                 fontWeight = fontWeight,
                 normalColor = normalColor,
                 italicColor = actionColor,
+                actionMarkerBrackets = !useDoubleAsteriskActionMarker,
             )
     )
 }
@@ -946,7 +1515,8 @@ private fun LoadingAnimation(agentName: String?) {
 
                 Box(
                     modifier =
-                        Modifier.size(6.dp)
+                        Modifier
+                            .size(6.dp)
                             .background(
                                 color = Color.White.copy(dotAlpha * 0.7f),
                                 shape = CircleShape,
@@ -970,7 +1540,8 @@ internal fun AgentInfoChatCard(info: String) {
 
     Box(
         modifier =
-            Modifier.border(
+            Modifier
+                .border(
                     width = .5.dp,
                     brush = Brush.horizontalGradient(colors = listOf(purpleStart, purpleEnd)),
                     shape = RoundedCornerShape(12.dp),
@@ -1006,7 +1577,9 @@ private fun ExpandableTextWithButton(
         var pd by remember { mutableIntStateOf(0) }
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(end = pd.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = pd.dp),
             style = textStyle,
             maxLines = if (isExpanded) Int.MAX_VALUE else collapsedMaxLines,
             overflow = TextOverflow.Ellipsis,
@@ -1027,7 +1600,8 @@ private fun ExpandableTextWithButton(
                     ),
                 contentDescription = null,
                 modifier =
-                    Modifier.size(18.dp)
+                    Modifier
+                        .size(18.dp)
                         .align(Alignment.BottomEnd)
                         .noRippleClickable(onClick = { isExpanded = isExpanded.not() }),
                 tint = Color.White,
@@ -1053,11 +1627,11 @@ private fun ChatMessageTimestamp(timestampText: String?, fontSize: TextUnit) {
 
 private fun formatTimestamp(rawTimestamp: String?): String? {
     if (rawTimestamp.isNullOrBlank()) return null
-    return TimeUtils.convertUtcToLocalFull(rawTimestamp).takeIf { it.isNotBlank() }
+    return TimeUtils.convertUtcToLocalFullForDisplay(rawTimestamp).takeIf { it.isNotBlank() }
 }
 
 /** 计算语音消息组的时长（秒） 通过最后一条AI语音消息的时间戳减去第一条用户消息的时间戳计算 */
-private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
+private fun calculateVoiceChatDuration(messages: List<MessageEntity>): Long {
     if (messages.isEmpty()) return 0L
 
     // 找到第一条用户消息的时间戳
@@ -1066,7 +1640,7 @@ private fun calculateVoiceChatDuration(messages: List<MsgInfo>): Long {
         firstUserMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
 
     // 找到最后一条AI语音消息的时间戳
-    val lastAiVoiceMessage = messages.lastOrNull { it.role == "assistant" && it.isVoiceMessage() }
+    val lastAiVoiceMessage = messages.lastOrNull { it.role == "assistant" && it.isVoice }
     val lastAiVoiceTimestamp =
         lastAiVoiceMessage?.timestamp?.let { TimeUtils.parseIsoTimeToTimestamp(it) }
 
@@ -1099,7 +1673,7 @@ private fun formatDuration(durationSeconds: Long): String {
  */
 @Composable
 fun VoiceChatHistoryCollapsed(
-    messages: List<MsgInfo>,
+    messages: List<MessageEntity>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1109,11 +1683,15 @@ fun VoiceChatHistoryCollapsed(
 
     Box(
         modifier =
-            modifier.fillMaxWidth().noRippleClickable(onClick = onClick).padding(vertical = 8.dp)
+            modifier
+                .fillMaxWidth()
+                .noRippleClickable(onClick = onClick)
+                .padding(vertical = 8.dp)
     ) {
         Row(
             modifier =
-                Modifier.fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                Modifier
+                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
                     .background(
                         color = Color.Black.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(12.dp),
@@ -1179,7 +1757,7 @@ fun VoiceChatHistoryCollapsed(
  */
 @Composable
 fun VoiceChatHistoryExpandedContainer(
-    messages: List<MsgInfo>,
+    messages: List<MessageEntity>,
     onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -1192,6 +1770,7 @@ fun VoiceChatHistoryExpandedContainer(
     Column(
         modifier =
             modifier
+                .padding(bottom = 16.dp)
                 .fillMaxWidth()
                 .background(Color.Black.copy(alpha = 0.5f), containerShape)
                 .padding(12.dp)
@@ -1199,13 +1778,15 @@ fun VoiceChatHistoryExpandedContainer(
         // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
         Box(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .noRippleClickable(onClick = onCollapse)
                     .padding(bottom = 8.dp)
         ) {
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.3f),
                             shape = RoundedCornerShape(12.dp),
@@ -1263,5 +1844,68 @@ fun VoiceChatHistoryExpandedContainer(
 
         // 消息内容
         content()
+    }
+}
+
+/**
+ * 语音消息组 UI：折叠时显示摘要卡片，展开时显示每条消息的气泡。 在内部维护展开/折叠状态，使用 VoiceChatHistoryCollapsed 与
+ * VoiceChatHistoryExpandedContainer。
+ *
+ * @param messages 语音组消息列表（可为 null 的 Paging 项），会过滤掉 null 后使用
+ * @param navController 用于单条消息内跳转
+ * @param chatViewModel 可为 null，用于消息操作
+ * @param isCurrentPage 是否当前页
+ * @param isGuideVisible 是否显示引导
+ * @param messageFontSizeSp 消息字号
+ * @param modifier 布局修饰
+ */
+@Composable
+fun CallMessages(
+    messages: List<MessageEntity?>,
+    navController: NavController,
+    chatViewModel: ChatViewModel,
+    onCollapseChange: () -> Unit,
+    modifier: Modifier = Modifier,
+    isCurrentPage: Boolean = true,
+    isGuideVisible: Boolean = false,
+    messageFontSizeSp: Float = SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP,
+) {
+    val list = remember(messages) { messages.filterNotNull() }
+    val collapseChangeCall by rememberUpdatedState(onCollapseChange)
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    if (expanded) {
+        VoiceChatHistoryExpandedContainer(
+            messages = list,
+            onCollapse = {
+                expanded = false
+                onCollapseChange()
+            },
+            modifier = modifier,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                list.forEachIndexed { index, msg ->
+                    ChatItem(
+                        navController = navController,
+                        isOnlyOpeningMessage = false,
+                        item = msg,
+                        isCurrentPage = isCurrentPage,
+                        chatViewModel = chatViewModel,
+                        isLatestMessage = false,
+                        isGuideVisible = isGuideVisible,
+                        messageFontSizeSp = messageFontSizeSp,
+                    )
+                }
+            }
+        }
+    } else {
+        VoiceChatHistoryCollapsed(
+            messages = list,
+            onClick = {
+                expanded = true
+                onCollapseChange()
+            },
+            modifier = modifier,
+        )
     }
 }

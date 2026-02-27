@@ -220,6 +220,7 @@ fun ChatPageContainer(
             Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
                 ChatPage(
                     navController,
+                    fromPage = "home_tab",
                     modifier = Modifier.fillMaxSize(),
                     chatViewModel = chatViewModel,
                     isCurrentPage = isPageCurrent,
@@ -248,6 +249,7 @@ fun ChatPageContainer(
                     shouldShowBoostSheetOnOpen = false,
                     debugAgentIndex = currentPage,
                     onCall = { navController.navigate(Routes.Chat.voiceCall(agent.id)) },
+                    refreshMessageCount = 1,
                 )
             }
         }

@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     chat,
     chats,
     evaluation,
+    festival_memory,
     images,
     live_chat,
     notification,
@@ -50,6 +51,11 @@ api_router.include_router(subscription.router, tags=["subscription"])
 api_router.include_router(
     evaluation.router,
     tags=["evaluation"],
+    include_in_schema=False,
+)
+api_router.include_router(
+    festival_memory.router,
+    tags=["festival-memory"],
     include_in_schema=False,
 )
 api_router.include_router(version.router, tags=["version"])

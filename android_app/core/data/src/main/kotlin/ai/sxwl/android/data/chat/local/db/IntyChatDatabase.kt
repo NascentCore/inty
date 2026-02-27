@@ -8,16 +8,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(
-    entities = [ChatMessageEntity::class, ChatSyncStateEntity::class],
-    version = 2,
-    exportSchema = true,
-)
+@Database(entities = [MessageEntity::class], version = 10, exportSchema = true)
 abstract class IntyChatDatabase : RoomDatabase() {
 
     abstract fun chatMessageDao(): ChatMessageDao
-
-    abstract fun chatSyncStateDao(): ChatSyncStateDao
 
     companion object {
         private const val DATABASE_NAME = "inty_chat.db"
@@ -37,7 +31,7 @@ abstract class IntyChatDatabase : RoomDatabase() {
                                 IntyChatDatabase::class.java,
                                 DATABASE_NAME,
                             )
-                            .fallbackToDestructiveMigration()
+                            .fallbackToDestructiveMigration(true)
                             .build()
                             .also { instance = it }
                 }

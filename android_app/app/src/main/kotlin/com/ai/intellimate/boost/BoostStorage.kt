@@ -26,7 +26,9 @@ internal object BoostStorage {
         try {
             Utils.getApp().boostState.updateData { last ->
                 transform(last).also { updated ->
-                    _pointChanged.trySend(updated.availablePoints - last.availablePoints to updated.availablePoints)
+                    _pointChanged.trySend(
+                        updated.availablePoints - last.availablePoints to updated.availablePoints
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -39,7 +41,9 @@ internal object BoostStorage {
         try {
             Utils.getApp().boostState.updateData { last ->
                 snapshot.also { updated ->
-                    _pointChanged.trySend(updated.availablePoints - last.availablePoints to updated.availablePoints)
+                    _pointChanged.trySend(
+                        updated.availablePoints - last.availablePoints to updated.availablePoints
+                    )
                 }
             }
         } catch (e: Exception) {

@@ -1,0 +1,75 @@
+# CREATED_BY_AGENT
+# 第一阶段：构建前端
+FROM node:18-slim AS frontend-builder
+
+WORKDIR /
+
+# 复制前端代码和依赖文件
+COPY evaluation/ evaluation/
+
+RUN ./evaluation/build.sh
+
+# 第二阶段：构建后端
+FROM python:3.12-slim AS base
+
+WORKDIR /
+ENV PYTHONPATH=.
+
+# Check platform compatibility
+RUN if [ "$(uname -m)" != "x86_64" ]; then \
+    echo "ERROR: This Dockerfile requires AMD64 platform (x86_64) due to animeface dependency" && \
+    echo "Current architecture: $(uname -m)" && \
+    exit 1; \
+fi
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制依赖文件
+COPY requirements.txt .
+# https://stackoverflow.com/a/58021389/31283770
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+COPY scripts/requirements.txt scripts_requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r scripts_requirements.txt
+
+FROM base
+
+ARG CONFIG_FILE
+
+RUN if [ -z "$CONFIG_FILE" ]; then \
+    echo "ERROR: CONFIG_FILE build argument is required but not provided" && \
+    echo "Usage: docker build --build-arg CONFIG_FILE=path/to/config.yaml -t your-app ." && \
+    exit 1; \
+fi
+
+# 复制应用代码
+COPY app/ app/
+COPY backend/ backend/
+COPY alembic/ alembic/
+# Used for manipulate backend system with bundled configurations.
+COPY scripts/ scripts/
+# 方便操作后端数据库
+COPY devops/ devops/
+# IntelliMate 使用手册，用来给 IntelliMate 官方助手角色提供回答问题的提示词
+COPY docs/INTELLIMATE.md docs/INTELLIMATE.md
+# IntelliMate 变更日志，用来给 IntelliMate 官方助手角色提供功能更新提示词
+COPY android_app/docs/CHANGE_LOGS.md android_app/docs/CHANGE_LOGS.md
+# 启动脚本
+COPY backend/inty/start.sh .
+
+# 复制指定的配置文件到 config.yaml
+COPY ${CONFIG_FILE} config.yaml
+
+# 从前端构建阶段复制构建结果
+COPY --from=frontend-builder /app/static/evaluation/ app/static/evaluation/
+COPY --from=frontend-builder /app/static/evaluation/resources/ app/static/evaluation/resources/
+
+# 暴露端口
+EXPOSE 8000
+
+CMD ["/start.sh"]

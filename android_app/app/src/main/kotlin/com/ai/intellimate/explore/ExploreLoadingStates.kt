@@ -13,16 +13,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+import com.ai.intellimate.R
+import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.IntelliMateCtaButton
 
 /** Explore页面的加载状态组件 */
 @Composable
@@ -31,6 +34,7 @@ fun ExploreLoadingStates(
     lazyPagingItems: LazyPagingItems<AgentInfo>,
     showLoadMoreLoading: Boolean = false,
     isRefreshing: Boolean = false,
+    onExploreMore: () -> Unit = {},
 ) {
     // 加载更多状态指示器
     when (lazyPagingItems.loadState.append) {
@@ -52,7 +56,7 @@ fun ExploreLoadingStates(
                     lazyPagingItems.itemCount > 0 &&
                     lazyPagingItems.loadState.refresh is LoadState.NotLoading
             ) {
-                NoMoreDataIndicator()
+                NoMoreDataIndicator(onExploreMore = onExploreMore)
             }
         }
     }
@@ -62,10 +66,13 @@ fun ExploreLoadingStates(
 @Composable
 private fun LoadingMoreIndicator() {
     Box(
-        modifier = Modifier.size(165.dp, 60.dp).padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(UiConfigs.Spacing.MediumPlus),
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White.copy(0.7f))
+        CircularProgressIndicator(
+            modifier = Modifier.size(UiConfigs.TopIconsRow.Size),
+            color = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+        )
     }
 }
 
@@ -73,14 +80,14 @@ private fun LoadingMoreIndicator() {
 @Composable
 private fun LoadMoreErrorIndicator(onRetry: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(UiConfigs.Spacing.MediumPlus),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "More characters to load…",
-            color = Color.White.copy(0.7f),
-            fontSize = 12.sp,
+            text = stringResource(R.string.explore_loading_more_hint),
+            color = Color.White.copy(alpha = UiConfigs.Alpha.SecondaryText),
+            style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
         )
 
@@ -88,20 +95,29 @@ private fun LoadMoreErrorIndicator(onRetry: () -> Unit) {
             onClick = onRetry,
             colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
         ) {
-            Icon(imageVector = Icons.Rounded.Refresh, contentDescription = "Refresh")
+            Icon(
+                imageVector = Icons.Rounded.Refresh,
+                contentDescription = stringResource(R.string.retry_button),
+            )
         }
     }
 }
 
-/** 没有更多数据指示器 - 跨两列显示 */
+/**
+ * 末尾 Explore More 按钮 - 跨两列显示。
+ *
+ * 使用场景：推荐列表加载完毕时，提示用户还有更多内容可探索。 预期视觉效果：与 Create My IntelliMate 一致的粉橙渐变 CTA 按钮，全宽圆角，白字 Explore More。
+ * 可配置项：onExploreMore - 按钮点击回调。
+ */
 @Composable
-private fun NoMoreDataIndicator() {
-    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-        Text(
-            text = "No more data available",
-            color = Color.White.copy(0.6f),
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
+private fun NoMoreDataIndicator(onExploreMore: () -> Unit = {}) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(UiConfigs.Spacing.MediumPlus),
+        contentAlignment = Alignment.Center,
+    ) {
+        IntelliMateCtaButton(
+            text = stringResource(R.string.explore_loading_explore_more),
+            onClick = onExploreMore,
         )
     }
 }

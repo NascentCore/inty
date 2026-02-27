@@ -1,5 +1,6 @@
 package ai.sxwl.android.data.billing
 
+import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.app.Activity
@@ -48,6 +49,9 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
 
     private val _vipStatusFlow = MutableStateFlow<VipStatus>(VipStatus(isSubscribed = false))
     val vipStatusFlow: StateFlow<VipStatus> = _vipStatusFlow.asStateFlow()
+
+    private val _debugVipStatus = MutableStateFlow<VipStatus?>(null)
+    val debugVipStatus = _debugVipStatus.asStateFlow()
 
     private val _plansFlow = MutableStateFlow<List<VipPlan>>(emptyList())
     val plansFlow: StateFlow<List<VipPlan>> = _plansFlow.asStateFlow()
@@ -381,28 +385,41 @@ object BillingRepository : PurchasesUpdatedListener, BillingClientStateListener 
         }
     }
 
+    fun setDebugVipStatus(status: VipStatus?) {
+        this._debugVipStatus.value = status
+    }
+
     /** 智能刷新订阅状态 */
     fun refreshSubscriptionStatus() {
-        eventScope.launch {
-            try {
-                log("开始刷新订阅状态", LogUtils.D)
-                val oldStatus = _vipStatusFlow.value
-                fetchRemote()
 
-                // 检查状态是否发生变化
-                val newStatus = _vipStatusFlow.value
-                if (oldStatus.isSubscribed != newStatus.isSubscribed) {
-                    log(
-                        "订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}",
-                        LogUtils.I,
-                    )
-                    _eventFlow.emit(BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus))
+        log("开始刷新订阅状态", LogUtils.D)
+        val status = debugVipStatus.value
 
-                    // 自动更新Firebase用户属性
-                    VipStatusHelper.updateFirebaseUserProperties()
+        if (AppUtils.isAppDebug() && status != null) {
+            _vipStatusFlow.value = status
+        } else {
+            eventScope.launch {
+                try {
+                    val oldStatus = _vipStatusFlow.value
+                    fetchRemote()
+
+                    // 检查状态是否发生变化
+                    val newStatus = _vipStatusFlow.value
+                    if (oldStatus.isSubscribed != newStatus.isSubscribed) {
+                        log(
+                            "订阅状态发生变化: ${oldStatus.isSubscribed} -> ${newStatus.isSubscribed}",
+                            LogUtils.I,
+                        )
+                        _eventFlow.emit(
+                            BillingEvent.SubscriptionStatusChanged(oldStatus, newStatus)
+                        )
+
+                        // 自动更新Firebase用户属性
+                        VipStatusHelper.updateFirebaseUserProperties()
+                    }
+                } catch (e: Exception) {
+                    log("刷新订阅状态失败: ${e.message}", LogUtils.E)
                 }
-            } catch (e: Exception) {
-                log("刷新订阅状态失败: ${e.message}", LogUtils.E)
             }
         }
     }

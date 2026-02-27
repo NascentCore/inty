@@ -101,6 +101,8 @@ object FirebaseManager {
                     Events.SUBSCRIPTION_SUCCESS to 1.0, // 订阅验证成功
                     Events.SUBSCRIPTION_FAILURE to 1.0, // 订阅验证失败
                     Events.FREE_LIMIT_REACHED to 1.0, // 达到免费限制
+                    Events.SUBSCRIBER_LIMIT_REACHED to 1.0, // 订阅用户达到当日聊天限制
+                    Events.VIP_AGENT_UNLOCK to 1.0, // 聊天页解锁 VIP 角色
                     Events.SUBSCRIPTION_PRICE_VIEW to 1.0, // 订阅价格查看（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_SUCCESS to 1.0, // Explore接口请求成功（100%采样）
                     Events.EXPLORE_AGENTS_FETCH_ERROR to 1.0, // Explore接口请求错误（100%采样）
@@ -123,6 +125,7 @@ object FirebaseManager {
 
                     // 🔴 页面曝光事件 - 100%采样
                     Events.CHAT_PAGE_VIEW to 1.0, // ChatPage 页面曝光
+                    Events.FOR_MOMENT_MESSAGE_EXPOSURE to 1.0, // For Moment 消息曝光
 
                     // 🔴 图片生成相关事件 - 100%采样
                     Events.MESSAGE_TO_IMAGE_GENERATION_BUTTON_CLICKED to 1.0, // 图片生成开始
@@ -512,6 +515,8 @@ object FirebaseManager {
         const val PURCHASE = FirebaseAnalytics.Event.PURCHASE
 
         // 业务自定义事件
+        const val SUBSCRIPTION_PAGE_VIEW = "subscription_page_view"
+        const val SUBSCRIPTION_CTA_CLICK = "subscription_cta_click"
         const val USER_LOGOUT = "user_logout"
         const val MESSAGE_SENT = "message_sent"
         const val MESSAGE_SEND_SUCCESS = "message_send_success"
@@ -535,8 +540,12 @@ object FirebaseManager {
         const val SUBSCRIPTION_FAILURE = "subscription_failure" // 订阅验证失败
         const val SUBSCRIPTION_PRICE_VIEW = "subscription_price_view" // 订阅价格查看
         const val FREE_LIMIT_REACHED = "free_limit_reached"
+        const val SUBSCRIBER_LIMIT_REACHED = "subscriber_limit_reached"
+        const val VIP_AGENT_UNLOCK =
+            "vip_agent_unlock" // 聊天页解锁 VIP 角色（含解锁方式、角色 id，credits 解锁时含当前积分）
 
         // 用户交互事件
+        const val CONVERSATIONS_PAGE_CLICK = "conversations_page_click"
         const val CHAT_PAGE_CLICK = "chat_page_click" // 聊天页面点击
         const val CHAT_SIDEBAR_CLICK = "chat_sidebar_click" // 聊天侧边栏点击
         const val CHAT_MORE_CLICK = "chat_more_click" // 聊天更多面板点击
@@ -545,6 +554,9 @@ object FirebaseManager {
 
         // 页面曝光事件
         const val CHAT_PAGE_VIEW = "chat_page_view" // ChatPage 页面曝光
+
+        // For Moment 消息曝光（以 ChatPage 为周期，每条消息每周期上报一次）
+        const val FOR_MOMENT_MESSAGE_EXPOSURE = "for_moment_message_exposure"
 
         // 推送通知相关事件
         const val PUSH_NOTIFICATION_CLICK = "push_notification_click" // 推送通知点击

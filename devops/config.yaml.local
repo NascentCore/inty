@@ -1,4 +1,6 @@
-# For local development
+# For running an actual backend server locally
+# With all dependent services running locally or faked out
+# Can be used to run end-to-end testing of the full app
 app:
   debug: true
   environment: local
@@ -13,10 +15,10 @@ app:
     subscribed_user_image_gen_24h_limit: 8
     free_user_agent_creation_24h_limit: 1
     subscribed_user_agent_creation_24h_limit: 2
-  gcp_service_account_key: ".secrets/gcp-service-account-key.json"
 
 sentry:
-  dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
+  # dev-inty/default
+  dsn: "https://43877f17f1d13e7e2847d7fa994b5fd9@o4510350447411200.ingest.us.sentry.io/4510871322034176"
   enabled: true
   traces_sample_rate: 1.0  # 本地开发环境使用 100% 采样率以便调试
 
@@ -26,9 +28,11 @@ security:
   access_token_expire_minutes: 10080
 
 database:
+  # Read-only replica: 34.87.163.31
   host: localhost
   port: 5432
   user: postgres
+  # Read-only replica: sxwl666A!
   password: "sxwl666!"
   db: "inty"
 
@@ -45,15 +49,24 @@ verification:
 
 logging:
   level: "DEBUG"
-  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{extra[request_id]}</cyan> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+  colorize: true
 
 firebase:
   service_account_path: ".secrets/firebase-service-account-key.json"
 
 agent:
-  api_key: "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"
-  # inty-dev api key personal access token
-  langchain_api_key: "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"
+  # 测试用 API key，每周上限 $1，inty-testing API key，intellimate-dev project
+  api_key: "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"
+  # intellimate-dev project, inty-testing api key, personal access token
+  langchain_api_key: "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"
+  # 本地测试时使用免费模型，还可以在 openrouter 上找其他的免费模型：
+  # https://openrouter.ai/models?fmt=cards&q=%3Afree
+  # 这些模型经常出错，不太好用
+  # 但是，目前没有免费的生图、生语音、生视频模型
+  sub_user_chat_model: "google/gemini-2.5-flash-lite"
+  free_user_chat_model: "google/gemini-2.5-flash-lite"
+  # 本地开发环境流量小也需要完整追踪方便测试
+  langsmith_text_chat_sample_rate: 1.0
 
 google_play:
   package_name: "com.ai.intellimate"
@@ -85,3 +98,8 @@ gemini_live:
   sub_user_agent_limit: 20  # 订阅用户累计可聊天的 agent 数
   free_user_max_session_duration: 60  # 免费用户单次会话最大时长（秒）
   sub_user_max_session_duration: 120  # 订阅用户单次会话最大时长（秒）
+
+fal:
+  # inty-test API KEY, Fal.AI
+  api_key: 00390a52-cf59-46de-99c6-498f6b916807:a45acbb8f83ecd037a567ca952d557ef
+

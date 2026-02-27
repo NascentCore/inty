@@ -98,7 +98,7 @@ private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeed
     val reasons = viewModel.reasons.collectAsState()
     val selectedReasonCodes = viewModel.selectedReasonCodes
     val description = viewModel.description.collectAsState()
-    val localImages = viewModel.localImages
+    val evidenceImages = viewModel.evidenceImagesForDisplay()
     val isSubmitting = viewModel.isSubmitting.collectAsState()
 
     val galleryLauncher =
@@ -119,7 +119,7 @@ private fun ReportContent(viewModel: ReportViewModel, onBack: () -> Unit, isFeed
         },
         description = description.value,
         onDescriptionChange = { viewModel.setDescription(it) },
-        images = localImages.toList(),
+        images = evidenceImages,
         onClickAddImage = { galleryLauncher.launch("image/*") },
         onSave = { viewModel.submit() },
         isSubmitting = isSubmitting.value,

@@ -7,6 +7,7 @@ from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -14,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.base import SessionLocal
-from app.db.session import get_async_db
+from app.db.session import get_async_db, get_async_replica_db
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -53,8 +54,13 @@ async def get_current_user(
             raise credentials_exception
 
     except JWTError as jwt_error:
-        logger.error(f"JWT解码失败: {str(jwt_error)}")
-        logger.error(f"JWT错误类型: {type(jwt_error).__name__}")
+        if isinstance(jwt_error, ExpiredSignatureError):
+            logger.warning(
+                f"JWT已过期: {str(jwt_error)} (类型: {type(jwt_error).__name__})"
+            )
+        else:
+            logger.error(f"JWT解码失败: {str(jwt_error)}")
+            logger.error(f"JWT错误类型: {type(jwt_error).__name__}")
         raise credentials_exception
     except ValidationError as validation_error:
         logger.error(f"Token验证失败: {str(validation_error)}")
@@ -103,6 +109,18 @@ async def get_current_active_user(
         )
 
     logger.debug(f"用户活跃状态检查通过: {current_user.id}")
+    return current_user
+
+
+async def get_current_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """要求当前用户为超级用户，否则抛出 403。"""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superusers can access this endpoint",
+        )
     return current_user
 
 

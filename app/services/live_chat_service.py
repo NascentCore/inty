@@ -9,10 +9,13 @@ import asyncio
 import base64
 import os
 import re
+import tempfile
 import time
+import uuid
 from collections import deque
+from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from google import genai
 from google.genai import types
@@ -22,9 +25,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.voice import tts_api as voice_tts_api
 from app.schemas.live_chat import LiveChatConfig, LiveChatStatus
 from app.services import agent_service, chat_history_service
 from app.services.chat_service import generate_session_id, get_or_create_chat_by_agent
+from app.services.gcs_service import GCSService
+from app.utils.audio import build_interleaved_pcm_24k
+from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
 
 # 语音通话默认音色映射（按性别选择 Gemini 预置音色）
 GENDER_TO_GEMINI_VOICE_MAPPING = {
@@ -42,6 +49,7 @@ class LiveSession:
     agent_id: str
     user_id: str
     chat_id: str
+    voice_session_id: str = ""
     status: LiveChatStatus = LiveChatStatus.CONNECTING
     config: LiveChatConfig = field(default_factory=LiveChatConfig)
     gemini_session: Any = None
@@ -72,6 +80,10 @@ class LiveSession:
     turn_latencies: List[float] = field(default_factory=list)
     current_turn_start_time: Optional[float] = None
     last_response_after_silence_ms: Optional[int] = None
+    # 按对话顺序累积的音频（"user" | "ai", bytes），用于保存单路 WAV 到 GCS
+    conversation_audio_chunks: List[Tuple[str, bytes]] = field(
+        default_factory=list, repr=False
+    )
 
     def get_latency_metrics(self) -> dict:
         """计算并返回延迟指标"""
@@ -110,10 +122,20 @@ class LiveChatService:
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_key_path
                 logger.debug(f"设置 GCP 凭证: {gcp_key_path}")
 
-            self._client = genai.Client(
+            base_client = genai.Client(
                 vertexai=True,
                 project=self._config.project_id,
                 location=self._config.location,
+            )
+            self._client = wrap_google_genai_client_with_langsmith(
+                base_client,
+                tags=["google-genai", "gemini-live", "app-services-live-chat"],
+                metadata={
+                    "source": "app.services.live_chat_service",
+                    "project_id": self._config.project_id,
+                    "location": self._config.location,
+                },
+                chat_name="Inty_GeminiLive",
             )
             logger.info(
                 f"Gemini Live 客户端已初始化 - project: {self._config.project_id}, "
@@ -137,14 +159,14 @@ class LiveChatService:
         3. 构建 system instruction
         """
         if not self._config.enabled:
-            raise ValueError("实时语音通话功能未启用")
+            raise ValueError("Live voice chat is not enabled")
 
         chat = await get_or_create_chat_by_agent(db, user_id, agent_id)
         session_id = generate_session_id(chat.id)
 
         agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
         if not agent_data:
-            raise ValueError(f"Agent 未找到: {agent_id}")
+            raise ValueError(f"Agent not found: {agent_id}")
 
         agent = await agent_manager.get_agent(agent_data)
 
@@ -153,6 +175,7 @@ class LiveChatService:
             agent_id=agent_id,
             user_id=user_id,
             chat_id=chat.id,
+            voice_session_id=str(uuid.uuid4()),
             config=config or LiveChatConfig(),
         )
 
@@ -199,6 +222,17 @@ class LiveChatService:
             "## 输出格式\n"
             "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
         )
+
+        response_language_name = (
+            getattr(self._config, "response_language_name", "") or ""
+        ).strip()
+        if response_language_name:
+            parts.append(
+                "## Language policy\n"
+                f"You must speak ONLY in {response_language_name}. "
+                "Never switch to any other language, even if the user asks or speaks in another language. "
+                "If the user speaks another language, politely continue in the required language."
+            )
 
         return "\n\n".join(parts)
 
@@ -332,12 +366,18 @@ class LiveChatService:
         agent_gender: Optional[str] = None,
         system_instruction: Optional[str] = None,
     ) -> types.LiveConnectConfig:
-        """构建 Gemini Live 连接配置"""
-        # 验证 voice_id 是否是 Gemini 支持的预设语音，否则根据性别选择默认语音
-        if voice_id and voice_id in self.GEMINI_PREBUILT_VOICES:
+        """构建 Gemini Live 连接配置。支持带 google/ 前缀与无前缀的 voice_id。"""
+        prefix, raw = voice_tts_api.parse_voice_id(voice_id or "")
+        if (
+            voice_id
+            and prefix == voice_tts_api.VOICE_ID_PREFIX_GEMINI
+            and raw in self.GEMINI_PREBUILT_VOICES
+        ):
+            voice_name = raw
+        elif voice_id and prefix == "" and voice_id in self.GEMINI_PREBUILT_VOICES:
             voice_name = voice_id
         else:
-            # 根据性别选择默认音色，回退到配置文件默认值
+            logger.error(f"Unknown voice_id: {voice_id}")
             voice_name = GENDER_TO_GEMINI_VOICE_MAPPING.get(
                 agent_gender, self._config.default_voice
             )
@@ -347,15 +387,26 @@ class LiveChatService:
                     f"根据性别 {agent_gender} 使用默认语音: {voice_name}"
                 )
 
+        speech_config_kwargs: Dict[str, Any] = {
+            "voice_config": types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
+            )
+        }
+        speech_language_code = (
+            getattr(self._config, "speech_language_code", "") or ""
+        ).strip()
+        speech_fields = getattr(types.SpeechConfig, "model_fields", {})
+        if speech_language_code and "language_code" in speech_fields:
+            speech_config_kwargs["language_code"] = speech_language_code
+        elif speech_language_code:
+            logger.warning(
+                "当前 google-genai SDK 的 SpeechConfig 不支持 language_code，"
+                "将仅依赖 system instruction 约束回复语言"
+            )
+
         live_cfg = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name=voice_name
-                    )
-                )
-            ),
+            speech_config=types.SpeechConfig(**speech_config_kwargs),
             system_instruction=system_instruction,
             input_audio_transcription=(
                 types.AudioTranscriptionConfig()
@@ -545,7 +596,9 @@ class LiveChatService:
                 db, agent_id=session.agent_id
             )
             if not agent_data:
-                await on_error("AGENT_NOT_FOUND", f"Agent 未找到: {session.agent_id}")
+                await on_error(
+                    "AGENT_NOT_FOUND", f"Agent not found: {session.agent_id}"
+                )
                 return
 
             history_messages = chat_history_service.get_history_messages(
@@ -630,6 +683,10 @@ class LiveChatService:
                                 and audio_data
                             ):
                                 session.pending_audio.append(bytes(audio_data))
+                                if session.config.save_history:
+                                    session.conversation_audio_chunks.append(
+                                        ("user", bytes(audio_data))
+                                    )
                         continue
 
                     if item_type == "activity_start":
@@ -668,6 +725,10 @@ class LiveChatService:
                             mime_type=f"audio/pcm;rate={self._config.send_sample_rate}",
                         )
                     )
+                    if session.config.save_history:
+                        session.conversation_audio_chunks.append(
+                            ("user", bytes(audio_data))
+                        )
             finally:
                 if session.receive_task is not None:
                     session.receive_task.cancel()
@@ -842,6 +903,10 @@ class LiveChatService:
                                 logger.debug(
                                     f"收到音频数据: {len(part.inline_data.data)} bytes"
                                 )
+                                if session.config.save_history:
+                                    session.conversation_audio_chunks.append(
+                                        ("ai", bytes(part.inline_data.data))
+                                    )
                                 await on_audio(part.inline_data.data)
 
                             # 兼容：如果未启用 output_audio_transcription，且模型确实返回文本 parts
@@ -874,23 +939,40 @@ class LiveChatService:
                         )
 
                         if user_text:
-                            await on_transcript(user_text, "user")
                             flushed_user = True
                             if session.config.save_history:
-                                chat_history_service.add_user_message(
+                                user_message_id = chat_history_service.add_user_message(
                                     session.session_id,
                                     user_text,
+                                    meta_data={
+                                        "is_voice": True,
+                                        "voice_session_id": session.voice_session_id,
+                                    },
                                 )
+                                ts = time.time() * 1000
+                                await on_transcript(
+                                    user_text, "user", user_message_id, ts
+                                )
+                            else:
+                                await on_transcript(user_text, "user")
                         if ai_text:
-                            await on_transcript(ai_text, "assistant")
                             flushed_ai = True
                             if session.config.save_history:
-                                chat_history_service.add_ai_message_sync(
+                                ai_message_id = chat_history_service.add_ai_message_sync(
                                     session_id=session.session_id,
                                     message=ai_text,
                                     agent_id=session.agent_id,
-                                    meta_data={"is_voice": True},
+                                    meta_data={
+                                        "is_voice": True,
+                                        "voice_session_id": session.voice_session_id,
+                                    },
                                 )
+                                ts = time.time() * 1000
+                                await on_transcript(
+                                    ai_text, "assistant", ai_message_id, ts
+                                )
+                            else:
+                                await on_transcript(ai_text, "assistant")
 
                         session.pending_user_transcript = ""
                         session.pending_ai_transcript = ""
@@ -909,7 +991,10 @@ class LiveChatService:
                                 session_id=session.session_id,
                                 message=session.ai_transcript_buffer.strip(),
                                 agent_id=session.agent_id,
-                                meta_data={"is_voice": True},
+                                meta_data={
+                                    "is_voice": True,
+                                    "voice_session_id": session.voice_session_id,
+                                },
                             )
                             session.ai_transcript_buffer = ""
 
@@ -951,26 +1036,40 @@ class LiveChatService:
         session: LiveSession,
         db: AsyncSession,
     ):
-        """保存语音对话到聊天历史"""
-        if not session.user_transcript_buffer and not session.ai_transcript_buffer:
+        """保存语音对话到聊天历史；若有音频则生成单路 WAV 写本地、上传 GCS、写表后删除本地文件。"""
+        has_transcript = bool(
+            session.user_transcript_buffer or session.ai_transcript_buffer
+        )
+        has_audio = bool(session.conversation_audio_chunks)
+        if not has_transcript and not has_audio:
             return
+
+        user_message_id: Optional[int] = None
+        ai_message_id: Optional[int] = None
 
         try:
             if session.user_transcript_buffer:
-                chat_history_service.add_user_message(
+                user_message_id = chat_history_service.add_user_message(
                     session.session_id,
                     session.user_transcript_buffer,
+                    meta_data={
+                        "is_voice": True,
+                        "voice_session_id": session.voice_session_id,
+                    },
                 )
                 logger.debug(
                     f"保存用户语音转录: {session.user_transcript_buffer[:50]}..."
                 )
 
             if session.ai_transcript_buffer:
-                chat_history_service.add_ai_message_sync(
+                ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session.session_id,
                     message=session.ai_transcript_buffer,
                     agent_id=session.agent_id,
-                    meta_data={"is_voice": True},
+                    meta_data={
+                        "is_voice": True,
+                        "voice_session_id": session.voice_session_id,
+                    },
                 )
                 logger.debug(
                     f"保存 AI 语音转录: {session.ai_transcript_buffer[:50]}..."
@@ -978,6 +1077,76 @@ class LiveChatService:
 
         except Exception as e:
             logger.error(f"保存对话历史失败: {str(e)}")
+            return
+
+        if not has_audio:
+            return
+
+        if user_message_id is None:
+            user_message_id = await chat_history_service.get_latest_user_message_id(
+                db, session.session_id
+            )
+        if ai_message_id is None:
+            ai_message_id = await chat_history_service.get_latest_ai_message_id(
+                db, session.session_id
+            )
+
+        temp_path: Optional[Path] = None
+        try:
+            pcm_24k = build_interleaved_pcm_24k(
+                session.conversation_audio_chunks,
+                user_sample_rate=self._config.send_sample_rate,
+                ai_sample_rate=self._config.receive_sample_rate,
+            )
+            if not pcm_24k:
+                return
+            wav_bytes = voice_tts_api.pcm_to_wav(
+                pcm_24k, mime_type="audio/L16;rate=24000"
+            )
+            temp_dir = self._config.audio_temp_dir or tempfile.gettempdir()
+            temp_path = Path(temp_dir) / (
+                f"live_chat_{session.session_id}_{uuid.uuid4().hex}.wav"
+            )
+            temp_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path.write_bytes(wav_bytes)
+
+            gcs_service = GCSService()
+            gcs_url = await gcs_service.upload_live_chat_audio(
+                str(session.user_id),
+                session.agent_id,
+                session.session_id,
+                session.voice_session_id,
+                wav_bytes,
+            )
+            if not gcs_url:
+                logger.warning("Live chat 音频上传 GCS 未返回 URL，跳过写表")
+                return
+
+            total_duration = len(pcm_24k) / (self._config.receive_sample_rate * 2)
+            if user_message_id is not None:
+                await chat_history_service.update_message_audio_url(
+                    db,
+                    session.session_id,
+                    str(user_message_id),
+                    gcs_url,
+                    audio_duration=total_duration,
+                )
+            if ai_message_id is not None:
+                await chat_history_service.update_message_audio_url(
+                    db,
+                    session.session_id,
+                    str(ai_message_id),
+                    gcs_url,
+                    audio_duration=total_duration,
+                )
+        except Exception as e:
+            logger.error(f"保存 live chat 音频到 GCS 失败: {str(e)}")
+        finally:
+            if temp_path is not None and temp_path.exists():
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError as e:
+                    logger.debug(f"删除临时文件失败（忽略）: {e}")
 
     def _cleanup_session(self, session_id: str):
         """清理会话"""
@@ -993,7 +1162,7 @@ class LiveChatService:
         """发送音频数据到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
 
         await session.gemini_session.send_realtime_input(
             audio=types.Blob(
@@ -1005,7 +1174,7 @@ class LiveChatService:
     async def send_activity_start(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
         await session.gemini_session.send_realtime_input(
             activity_start=types.ActivityStart()
         )
@@ -1013,7 +1182,7 @@ class LiveChatService:
     async def send_activity_end(self, session_id: str):
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
         await session.gemini_session.send_realtime_input(
             activity_end=types.ActivityEnd()
         )
@@ -1026,7 +1195,7 @@ class LiveChatService:
         """发送文本消息到 Gemini Live"""
         session = self._active_sessions.get(session_id)
         if not session or not session.gemini_session:
-            raise ValueError(f"会话不存在或未连接: {session_id}")
+            raise ValueError(f"Session not found or not connected: {session_id}")
 
         await session.gemini_session.send(
             input=types.Content(

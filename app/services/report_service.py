@@ -1,4 +1,5 @@
-from typing import List
+import re
+from typing import List, Optional
 
 from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +12,12 @@ from app.models.report import (
     Report,
     ReportType,
 )
+from app.models.user import User
 from app.schemas.report import ReportCreate, ReportQuery, ReportReason
+
+GITHUB_ISSUE_URL_PATTERN = re.compile(
+    r"^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/issues/\d+/?(?:[?#].*)?$"
+)
 
 
 def list_report_reasons() -> List[ReportReason]:
@@ -25,6 +31,25 @@ def list_report_reasons() -> List[ReportReason]:
         )
         for id, code in REASON_ID_TO_CODE.items()
     ]
+
+
+async def _get_users_by_ids(
+    db: AsyncSession, user_ids: List[str]
+) -> dict[str, User]:
+    unique_user_ids = list({user_id for user_id in user_ids if user_id})
+    if not unique_user_ids:
+        return {}
+
+    result = await db.execute(select(User).where(User.id.in_(unique_user_ids)))
+    users = result.scalars().all()
+    return {user.id: user for user in users}
+
+
+def _attach_reporter_user_info(
+    reports: List[Report], users_by_id: dict[str, User]
+) -> None:
+    for report in reports:
+        report.reporter_user_info = users_by_id.get(report.reporter_id)
 
 
 async def create_report(
@@ -176,7 +201,69 @@ async def query_reports(db: AsyncSession, query: ReportQuery):
         if item.report_type is None:
             item.report_type = ReportType.REPORT
 
+    users_by_id = await _get_users_by_ids(
+        db,
+        [item.reporter_id for item in items],
+    )
+    _attach_reporter_user_info(items, users_by_id)
+
     return items, total
+
+
+async def get_report(db: AsyncSession, report_id: str) -> Report:
+    """按 id 获取单条举报，不存在时抛出 ValueError。"""
+    report = (
+        await db.execute(select(Report).where(Report.id == report_id))
+    ).scalar_one_or_none()
+    if not report:
+        raise ValueError("Report not found")
+    if report.reason_codes is None and report.reason_ids:
+        is_feedback = report.report_type == ReportType.FEEDBACK
+        id_to_code_map = (
+            FEEDBACK_REASON_ID_TO_CODE if is_feedback else REASON_ID_TO_CODE
+        )
+        report.reason_codes = [
+            id_to_code_map[rid] for rid in report.reason_ids if rid in id_to_code_map
+        ] or []
+    if report.reason_ids is None:
+        report.reason_ids = []
+    if report.reason_codes is None:
+        report.reason_codes = []
+    if report.report_type is None:
+        report.report_type = ReportType.REPORT
+
+    users_by_id = await _get_users_by_ids(db, [report.reporter_id])
+    _attach_reporter_user_info([report], users_by_id)
+    return report
+
+
+def _normalize_github_issue_url(github_issue: Optional[str]) -> Optional[str]:
+    if github_issue is None:
+        return None
+
+    normalized_url = github_issue.strip()
+    if not normalized_url:
+        return None
+
+    if not GITHUB_ISSUE_URL_PATTERN.match(normalized_url):
+        raise ValueError(
+            "Invalid GitHub issue URL format. Expected: https://github.com/<owner>/<repo>/issues/<number>"
+        )
+    return normalized_url
+
+
+async def update_report_github_issue(
+    db: AsyncSession, report_id: str, github_issue: Optional[str]
+) -> Report:
+    report = (
+        await db.execute(select(Report).where(Report.id == report_id))
+    ).scalar_one_or_none()
+    if not report:
+        raise ValueError("Report not found")
+
+    report.github_issue = _normalize_github_issue_url(github_issue)
+    await db.commit()
+    return await get_report(db, report_id)
 
 
 async def delete_report(

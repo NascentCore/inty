@@ -12,7 +12,6 @@ import {
   HistoryOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BgColorsOutlined,
   SettingOutlined,
   UserOutlined,
   AppstoreOutlined,
@@ -20,20 +19,23 @@ import {
   ExclamationCircleOutlined,
   PhoneOutlined,
   DashboardOutlined,
+  FileTextOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
-import { Live2DEmotionChatDemo } from "./pages/Live2DEmotionChatDemo";
 import AgentManagePage from "./pages/AgentManagePage";
 import CharacterThemeManagePage from "./pages/CharacterThemeManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UserAnalyticsPage } from "./pages/UserAnalyticsPage";
+import { UserAnalyticsReportsPage } from "./pages/UserAnalyticsReportsPage";
 import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
 import { PerformanceAnalyticsPage } from "./pages/PerformanceAnalyticsPage";
+import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -41,20 +43,26 @@ import { UserInfo } from "./components/UserInfo";
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
+/** Height reserved for the sidebar header (logo + hamburger), used for scroll area max-height. */
+const SIDER_HEADER_HEIGHT_PX = 80;
+/** Minimum height of each sidebar menu row (icon + label area). */
+const MENU_ROW_MIN_HEIGHT_PX = 40;
+
 type PageKey =
   | "evaluation"
   | "history"
   | "chat"
   | "voice-chat"
   | "agents"
-  | "live2d"
   | "settings"
   | "user-analytics"
+  | "user-analytics-reports"
   | "user-daily-messages"
   | "character-themes"
   | "generated-images"
   | "report-feedback"
-  | "performance-analytics";
+  | "performance-analytics"
+  | "festival-memory";
 
 interface NavigationItem {
   key: PageKey;
@@ -67,8 +75,16 @@ interface NavigationItem {
 const AppContent: React.FC = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<PageKey>(() => {
-    // GEMINI: 从 localStorage 读取上次访问的页面，如果不存在则默认为 "evaluation"
+    if (
+      typeof window !== "undefined" &&
+      window.location.hash.startsWith("#report-feedback")
+    ) {
+      return "report-feedback";
+    }
     const savedPage = localStorage.getItem("lastVisitedPage");
+    if (savedPage === "live2d") {
+      return "chat";
+    }
     return (savedPage as PageKey) || "chat";
   });
   const [collapsed, setCollapsed] = useState(false);
@@ -148,6 +164,24 @@ const AppContent: React.FC = () => {
   // 导航菜单配置
   const navigationItems: NavigationItem[] = [
     {
+      key: "user-analytics-reports",
+      icon: <FileTextOutlined />,
+      label: "用户日报周报",
+      description: "全部用户预计算日报与周报",
+    },
+    {
+      key: "report-feedback",
+      icon: <ExclamationCircleOutlined />,
+      label: "举报与反馈",
+      description: "查看用户举报和反馈列表",
+    },
+    {
+      key: "agents",
+      icon: <RobotOutlined />,
+      label: "智能体管理",
+      description: "创建、编辑和管理智能体",
+    },
+    {
       key: "chat",
       icon: <MessageOutlined />,
       label: "单角色聊天",
@@ -158,18 +192,6 @@ const AppContent: React.FC = () => {
       icon: <PhoneOutlined />,
       label: "语音通话",
       description: "与智能体进行实时语音对话",
-    },
-    {
-      key: "live2d",
-      icon: <BgColorsOutlined />,
-      label: "Live2D 情绪聊天",
-      description: "基于Gemini情绪标签切换背景",
-    },
-    {
-      key: "agents",
-      icon: <RobotOutlined />,
-      label: "智能体管理",
-      description: "创建、编辑和管理智能体",
     },
     {
       key: "character-themes",
@@ -190,22 +212,10 @@ const AppContent: React.FC = () => {
       description: "查看历史评测会话和结果",
     },
     {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "系统设置",
-      description: "配置图片生成等系统参数",
-    },
-    {
       key: "user-analytics",
       icon: <UserOutlined />,
       label: "用户数据分析",
       description: "查看用户注册和聊天行为数据",
-    },
-    {
-      key: "performance-analytics",
-      icon: <DashboardOutlined />,
-      label: "性能监控",
-      description: "查看 LLM、生图和 Live Chat 延迟趋势",
     },
     {
       key: "user-daily-messages",
@@ -220,10 +230,22 @@ const AppContent: React.FC = () => {
       description: "查看角色聊天生成的所有图片",
     },
     {
-      key: "report-feedback",
-      icon: <ExclamationCircleOutlined />,
-      label: "举报与反馈",
-      description: "查看用户举报和反馈列表",
+      key: "festival-memory",
+      icon: <CalendarOutlined />,
+      label: "节日记忆提取",
+      description: "配置节日与提示词，抽取用户与角色的节日回忆",
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "消息生图系统设置",
+      description: "配置图片生成等系统参数",
+    },
+    {
+      key: "performance-analytics",
+      icon: <DashboardOutlined />,
+      label: "性能监控",
+      description: "查看 LLM、生图和 Live Chat 延迟趋势",
     },
   ];
 
@@ -233,21 +255,21 @@ const AppContent: React.FC = () => {
       case "evaluation":
         return "智能体评测";
       case "history":
-        return "评测记录";
+        return "智能体评测记录";
       case "chat":
         return "单角色聊天";
       case "voice-chat":
         return "语音通话";
-      case "live2d":
-        return "Live2D 情绪聊天 (Gemini Demo)";
       case "agents":
         return "智能体管理";
       case "character-themes":
         return "角色专区管理";
       case "settings":
-        return "系统设置";
+        return "消息生图系统设置";
       case "user-analytics":
         return "用户数据分析";
+      case "user-analytics-reports":
+        return "用户日报周报";
       case "performance-analytics":
         return "性能监控";
       case "user-daily-messages":
@@ -256,6 +278,8 @@ const AppContent: React.FC = () => {
         return "生成图片管理";
       case "report-feedback":
         return "举报与反馈";
+      case "festival-memory":
+        return "节日记忆提取";
       default:
         return "智能体评测系统";
     }
@@ -275,9 +299,13 @@ const AppContent: React.FC = () => {
       case "chat":
         return <ChatPage />;
       case "voice-chat":
-        return <VoiceChatPage />;
-      case "live2d":
-        return <Live2DEmotionChatDemo />;
+        return (
+          <VoiceChatPage
+            onNavigateToUserDailyMessages={() =>
+              setCurrentPage("user-daily-messages")
+            }
+          />
+        );
       case "agents":
         return <AgentManagePage />;
       case "character-themes":
@@ -286,6 +314,8 @@ const AppContent: React.FC = () => {
         return <SettingsPage />;
       case "user-analytics":
         return <UserAnalyticsPage />;
+      case "user-analytics-reports":
+        return <UserAnalyticsReportsPage />;
       case "performance-analytics":
         return <PerformanceAnalyticsPage />;
       case "user-daily-messages":
@@ -294,6 +324,8 @@ const AppContent: React.FC = () => {
         return <GeneratedImagesPage />;
       case "report-feedback":
         return <ReportFeedbackPage />;
+      case "festival-memory":
+        return <FestivalMemoryPage />;
 
       default:
         return null;
@@ -329,158 +361,171 @@ const AppContent: React.FC = () => {
             }
           }}
         >
-          {/* Logo区域 - 添加汉堡按钮 */}
           <div
             style={{
-              padding: collapsed ? "16px 12px" : "16px 24px",
-              borderBottom: "1px solid #f0f0f0",
+              height: "100%",
               display: "flex",
-              alignItems: "center",
-              justifyContent: collapsed ? "center" : "space-between",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {collapsed ? (
-                /* 收起状态：显示汉堡按钮 */
+            {/* Logo区域 - 添加汉堡按钮 */}
+            <div
+              style={{
+                padding: collapsed ? "16px 12px" : "16px 24px",
+                borderBottom: "1px solid #f0f0f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: collapsed ? "center" : "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center" }}>
+                {collapsed ? (
+                  /* 收起状态：显示汉堡按钮 */
+                  <Button
+                    type="text"
+                    icon={<MenuUnfoldOutlined />}
+                    onClick={() => handleCollapse(false)}
+                    style={{
+                      padding: "4px 8px",
+                      height: "32px",
+                      width: "32px",
+                      borderRadius: "6px",
+                      color: "#1890ff",
+                      border: "1px solid #d9d9d9",
+                      fontSize: "16px",
+                    }}
+                    title="展开菜单"
+                  />
+                ) : (
+                  /* 展开状态：显示标题 */
+                  <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                    InTy 评测
+                  </Title>
+                )}
+              </div>
+
+              {/* 汉堡按钮 - 仅在展开状态显示 */}
+              {!collapsed && (
                 <Button
                   type="text"
-                  icon={<MenuUnfoldOutlined />}
-                  onClick={() => handleCollapse(false)}
+                  icon={<MenuFoldOutlined />}
+                  onClick={() => handleCollapse(true)}
                   style={{
                     padding: "4px 8px",
                     height: "32px",
                     width: "32px",
                     borderRadius: "6px",
-                    color: "#1890ff",
+                    color: "#666",
                     border: "1px solid #d9d9d9",
-                    fontSize: "16px",
                   }}
-                  title="展开菜单"
+                  title="收起菜单"
                 />
-              ) : (
-                /* 展开状态：显示标题 */
-                <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                  InTy 评测
-                </Title>
               )}
             </div>
 
-            {/* 汉堡按钮 - 仅在展开状态显示 */}
-            {!collapsed && (
-              <Button
-                type="text"
-                icon={<MenuFoldOutlined />}
-                onClick={() => handleCollapse(true)}
-                style={{
-                  padding: "4px 8px",
-                  height: "32px",
-                  width: "32px",
-                  borderRadius: "6px",
-                  color: "#666",
-                  border: "1px solid #d9d9d9",
-                }}
-                title="收起菜单"
-              />
-            )}
-          </div>
-
-          {/* 导航菜单容器 */}
-          <div
-            style={{
-              flex: 1,
-              overflow: "auto",
-              paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
-            }}
-          >
-            <Menu
-              mode="inline"
-              selectedKeys={[currentPage]}
+            {/* 导航菜单容器 */}
+            <div
               style={{
-                border: "none",
-                paddingTop: "16px",
-                background: "transparent",
+                flex: 1,
+                minHeight: 0,
+                maxHeight: `calc(100vh - ${SIDER_HEADER_HEIGHT_PX}px)`,
+                overflowY: "auto",
+                overflowX: "hidden",
+                paddingBottom: collapsed ? "20px" : "80px", // 为底部预留空间
               }}
-              items={navigationItems.map((item) => ({
-                key: item.key,
-                icon: item.icon,
-                label: (
-                  <Tooltip
-                    title={collapsed ? item.label : ""}
-                    placement="right"
-                    styles={{
-                      root: {
-                        fontSize: "12px",
-                        color: "#ffffff",
-                      },
-                    }}
-                    overlayInnerStyle={{
-                      color: "#ffffff",
-                      backgroundColor: "rgba(0, 0, 0, 0.85)",
-                      borderRadius: "6px",
-                      padding: "6px 8px",
-                      border: "none",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        flex: 1,
-                        minHeight: collapsed ? "auto" : "40px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: collapsed ? "center" : "flex-start",
-                      }}
+            >
+              <Menu
+                mode="inline"
+                selectedKeys={[currentPage]}
+                style={{
+                  border: "none",
+                  paddingTop: "16px",
+                  background: "transparent",
+                }}
+                items={navigationItems.map((item) => ({
+                  key: item.key,
+                  icon: undefined,
+                  label: (
+                    <Tooltip
+                      title={collapsed ? item.label : ""}
+                      placement="right"
+                      overlayClassName="collapsed-menu-tooltip"
+                      color="#ffffff"
                     >
                       <div
                         style={{
-                          fontSize: "14px",
-                          fontWeight: "500",
-                          lineHeight: "1.4",
-                          color: "rgba(0, 0, 0, 0.85)",
-                          marginBottom: collapsed ? "0" : "2px",
+                          flex: 1,
+                          minHeight: `${MENU_ROW_MIN_HEIGHT_PX}px`,
+                          display: "flex",
+                          flexDirection: collapsed ? "row" : "column",
+                          alignItems: collapsed ? "center" : "flex-start",
+                          justifyContent: collapsed ? "center" : "flex-start",
+                          width: "100%",
                         }}
                       >
-                        {item.label}
-                      </div>
-                      {!collapsed && (
-                        <div
+                        <span
                           style={{
-                            fontSize: "11px",
-                            lineHeight: "1.3",
-                            color: "rgba(0, 0, 0, 0.45)",
-                            marginTop: "2px",
+                            flexShrink: 0,
+                            display: "inline-flex",
+                            marginRight: collapsed ? 0 : 8,
                           }}
                         >
-                          {item.description}
-                        </div>
-                      )}
-                    </div>
-                  </Tooltip>
-                ),
-                onClick: () => setCurrentPage(item.key),
-                style: {
-                  height: "auto",
-                  lineHeight: "normal",
-                  padding: collapsed ? "12px" : "12px 24px",
-                  marginBottom: "4px",
-                  borderRadius: "6px",
-                  display: "flex",
-                  alignItems: "flex-start",
-                },
-              }))}
-            />
-          </div>
+                          {item.icon}
+                        </span>
+                        {!collapsed && (
+                          <>
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                lineHeight: "1.4",
+                                color: "rgba(0, 0, 0, 0.85)",
+                                marginBottom: "2px",
+                              }}
+                            >
+                              {item.label}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                lineHeight: "1.3",
+                                color: "rgba(0, 0, 0, 0.45)",
+                                marginTop: "2px",
+                              }}
+                            >
+                              {item.description}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </Tooltip>
+                  ),
+                  onClick: () => setCurrentPage(item.key),
+                  style: {
+                    height: "auto",
+                    lineHeight: "normal",
+                    padding: collapsed ? "12px" : "12px 24px",
+                    marginBottom: "4px",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                  },
+                }))}
+              />
+            </div>
 
-          {/* 底部区域 */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: "inherit",
-            }}
-          ></div>
+            {/* 底部区域 */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: "inherit",
+              }}
+            ></div>
+          </div>
         </Sider>
 
         {/* 主内容区域 */}

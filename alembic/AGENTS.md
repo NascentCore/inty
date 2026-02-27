@@ -1,11 +1,8 @@
 # AGENTS.md · alembic/（数据库迁移）
 
-本文件覆盖并补充根 `AGENTS.md`，仅适用于 `alembic/`。
-
-## 原则
+- 配置文件为 `alembic/alembic.ini`；从仓库根目录执行时需 `export ALEMBIC_CONFIG=alembic/alembic.ini` 或 `alembic -c alembic/alembic.ini ...`。
+- 禁止生成更新数据表的 version 文件
+- `alembic revision --autogenerate -m "<revision description>"`
+  使用该命令生成新的 version 文件
 - 一切数据库模式变更必须通过迁移完成；禁止绕过迁移直接改表。
 - 禁止重写或删除历史迁移；如需修复，追加新迁移说明原因与影响。
-
-## 质量
-- 每个迁移必须实现 `upgrade()` 与 `downgrade()`；涉及数据变更需考虑回滚安全。
-- 大表/热表变更采用分步与无锁策略（创建新列→回填→切换→清理）。

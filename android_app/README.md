@@ -2,12 +2,6 @@
 
 IntelliMate Android App 全部代码位于本目录下。
 
-IntelliMate：AI 驱动的、面向北美中青年（25+）男性的长期亲密陪伴
-
-```text
-IntelliMate: Ultimate Companionship, enabled by AI
-```
-
 ## Overview
 
 - Kotlin+Jetpack Compose
@@ -15,49 +9,7 @@ IntelliMate: Ultimate Companionship, enabled by AI
   ![image](https://github.com/user-attachments/assets/cbd3f10f-f028-4103-a5f6-c997ba8b9eb9)
 - cmd+↑（放大模拟器设备界面）cmd+↓ （缩小模拟器设备界面）
 - [adb shell monkey](https://developer.android.com/studio/test/other-testing-tools/monkey)
-
-## 新人速览：产品核心概念
-
-- **长期亲密陪伴**：产品的目标不是“单次问答”，而是建立连续的情感关系与陪伴体验；用户会在多次对话中累积信任、默契与共同记忆。
-- **角色（Agent）**：每个 Agent 代表一套稳定的人设（人格、语气、偏好、边界与互动风格），决定用户“在和谁说话”，并确保跨会话的一致性与可辨识度。
-- **关系与记忆**：系统会围绕用户与 Agent 的互动沉淀长期状态（如偏好、重要事件、关系进展），让对话看起来“记得你、理解你”，而不是每次从零开始。
-- **多模态对话体验**：核心交流以聊天为载体，通常同时覆盖文本与语音等形式，强调情绪表达与沉浸感，让互动更接近真实陪伴。
-- **叙事与成长**：通过持续的剧情/话题推进与阶段性目标，让用户有“共同经历”的感觉，并为长期留存提供可持续的内容动力。
-- **安全与边界**：在亲密语境下仍需要明确的内容安全、可控性与用户保护机制，确保互动符合预期并降低风险。
-
-## 媒体缓存速览
-
-- `AudioCacheManager` + `AudioPreloadManager`：`app/src/main/kotlin/com/ai/intellimate/audio/` 中使用 `LruCache<String, ByteArray>` 与 `context.cacheDir/audio_cache` 双层缓存开场白/消息语音，`UnifiedStartupManager` 启动阶段批量预热，命中后直接从内存或本地文件播放。
-- `VideoCacheManager`：`app/src/main/kotlin/com/ai/intellimate/ui/components/VideoCacheManager.kt` 把背景动画视频下载到 `context.cacheDir/video_cache`，内存仅存文件路径并同步至 `IntySetting`，`AnimatedBackground`、`AgentBackground` 以及启动流程调用 `preloadVideo()` 缓解首次加载黑屏。
-- `AdvancedCoilConfig` + `ImagePreloadManager`：`core/design` 为 Coil 配置 40% 内存 + 5% 磁盘缓存（目录 `context.cacheDir/image_cache`），`core/common/startup/ImagePreloadManager` 在推荐/聊天 agent 到手后批量 `preloadAgentsImages()`，保证头像与背景图片快速命中。
-
-## 运行脚本化点击测试（UIAutomator）
-
-前置条件：
-- 已连接且解锁的模拟器或真机（可用 `adb devices` 检查）
-- 可以正常安装/启动 `app` 的 Debug 构建
-
-测试类路径：`app/src/androidTest/kotlin/com/ai/intellimate/ScriptedClickTest.kt`
-
-在 Android Studio 中运行：
-- 打开上述测试类，右键运行“Run 'ScriptedClickTest'”，选择目标设备
-
-命令行运行（推荐从 `android_app/` 目录执行）：
-
-```bash
-cd android_app
-# 仅运行该测试类（Debug 变体）
-ANDROID_SERIAL=<device_id 可选> \
-./gradlew :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.ai.intellimate.ScriptedClickTest
-
-# 运行模块内所有 androidTest（Debug 变体）
-ANDROID_SERIAL=<device_id 可选> ./gradlew :app:connectedDebugAndroidTest
-```
-
-小贴士：
-- 若首次启动会弹出权限对话框，测试会尝试点击“允许/Allow/OK”；若设备语言不同，可在 `ScriptedClickTest` 的 `steps` 中增删 `ClickText/ClickDesc/ClickResId/Wait/Back` 等步骤以匹配实际界面。
-- 若连接多台设备，可通过设置 `ANDROID_SERIAL=<device_id>` 指定目标设备（用 `adb devices` 获取 `device_id`）。
+- [app_con.png](./app_icon.png) 是 intellimate app 图标，图标背景色为 `2F0C4F`
 
 ## Repo 初始化
 

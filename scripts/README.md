@@ -2,6 +2,10 @@
 
 This directory contains utility scripts for the Inty backend.
 
+- **delete_festival_memories_and_prompts.py**：删除所有节日记忆（memory 表 `memory_type=festival`）及对应的「节日记忆提示」类 chat_history。默认 dry-run；实际执行请使用 `--no-dry-run`，可选 `--yes` 跳过交互确认。
+- **create_mock_user_agent_memory.py**：为指定 (user_id, agent_id) 创建一条 mock 记忆及对应消息（节日记忆提示 + 可选 mock 人机对话）。必填 `user_id`、`agent_id`；可选 `--memory-type`（festival/user_agent）、`--festival-config-id` 或 `--festival-name`/`--festival-date`、`--content`、`--add-mock-chat`；默认 dry-run，实际执行用 `--no-dry-run`，可选 `--yes`。
+- **run_festival_memory_extraction_to_json.py**：节日记忆抽取，结果写 JSON 不写库。必填 `--festival-name`、`--festival-date`、`--output`；抽取模式需 `--prompt` 或 `--prompt-file`；加 `--query` 时仅从 memory 表查询已有结果并写 JSON，不执行抽取。
+
 ## compress_agent_avatar_image.py
 
 Compresses PNG avatar images to JPEG format and updates the database records.

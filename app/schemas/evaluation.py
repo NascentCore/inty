@@ -26,7 +26,7 @@ class EvaluationSessionCreate(BaseModel):
     def validate_questions(cls, v):
         """验证问题列表"""
         if not v:
-            raise ValueError("问题列表不能为空")
+            raise ValueError("Question list cannot be empty")
 
         # 去重
         unique_questions = []
@@ -38,10 +38,10 @@ class EvaluationSessionCreate(BaseModel):
                 seen.add(q_clean.lower())
 
         if not unique_questions:
-            raise ValueError("没有有效的问题")
+            raise ValueError("No valid questions found")
 
         if len(unique_questions) > 50:
-            raise ValueError("问题数量不能超过50个")
+            raise ValueError("Question count must not exceed 50")
 
         return unique_questions
 
@@ -49,10 +49,10 @@ class EvaluationSessionCreate(BaseModel):
     def validate_agents(cls, v):
         """验证智能体列表"""
         if not v:
-            raise ValueError("必须选择至少一个智能体")
+            raise ValueError("At least one agent must be selected")
 
         if len(v) > 20:
-            raise ValueError("选择的智能体数量不能超过20个")
+            raise ValueError("Selected agents must not exceed 20")
 
         return list(set(v))  # 去重
 
@@ -231,7 +231,7 @@ class BatchEvaluationRequest(BaseModel):
     @validator("sessions")
     def validate_sessions(cls, v):
         if len(v) > 5:
-            raise ValueError("批量评测最多支持5个会话")
+            raise ValueError("Batch evaluation supports up to 5 sessions")
         return v
 
 
@@ -252,3 +252,9 @@ class EvaluationExportRequest(BaseModel):
     include_interactions: bool = Field(False, description="是否包含交互记录")
     include_metadata: bool = Field(False, description="是否包含元数据")
     request_id: Optional[str] = None
+
+
+class SurpriseSnapUnlockRequest(BaseModel):
+    """免费用户用 credit 解锁 Surprise Snap 消息的请求（扣费在 app 端，后端仅记录解锁状态）。"""
+
+    message_id: int = Field(..., description="要解锁的 surprise_snap 消息 ID")

@@ -68,6 +68,17 @@ object ToastUtils {
     }
 
     /**
+     * 显示短时间Toast（2秒），支持格式化参数
+     *
+     * @param messageResId 要显示的消息资源ID（可含 %1$d 等占位符）
+     * @param formatArgs 格式化参数
+     */
+    @JvmStatic
+    fun showShort(@StringRes messageResId: Int, vararg formatArgs: Any) {
+        showToast(getString(messageResId, *formatArgs), Toast.LENGTH_SHORT)
+    }
+
+    /**
      * 显示长时间Toast（3.5秒）
      *
      * @param message 要显示的消息
@@ -271,6 +282,17 @@ object ToastUtils {
         return try {
             val context = safeAppContext()
             context?.getString(resId) ?: "Unknown"
+        } catch (e: Exception) {
+            Log.e(TAG, "获取字符串资源失败: $resId", e)
+            "Unknown"
+        }
+    }
+
+    /** 获取带格式化参数的字符串资源 */
+    private fun getString(@StringRes resId: Int, vararg formatArgs: Any): String {
+        return try {
+            val context = safeAppContext()
+            context?.getString(resId, *formatArgs) ?: "Unknown"
         } catch (e: Exception) {
             Log.e(TAG, "获取字符串资源失败: $resId", e)
             "Unknown"

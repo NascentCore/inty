@@ -1,21 +1,28 @@
 app:
   environment: prod
+  # 仅当请求头 appVersionCode >= 此值时返回记忆提醒；0 表示不按版本限制。不配则默认 0。
+  # 4000 远远大于现在的 commit count，这样相当于禁止功能；这样方便测试后端：
+  # https://github.com/NascentCore/inty/blob/130596ee989fce0bd4db863d1030274950cd4bf6/devops/config.yaml.dev#L16C45-L16C49
+  # app 发布上线之前，这个数值要调整回 dev 环境的数值：3345
+  min_app_version_code_for_festival_memory: 3585
+
   limits:
     guest_user_chat_24h_limit: 10
-    free_user_chat_24h_limit: 100
-    guest_user_voice_24h_limit: 5
-    free_user_voice_24h_limit: 10
-    subscribed_user_voice_24h_limit: 500
-    free_user_image_gen_24h_limit: 5
-    subscribed_user_image_gen_24h_limit: 100
-    free_user_agent_creation_24h_limit: 5
-    subscribed_user_agent_creation_24h_limit: 20
+    free_user_chat_24h_limit: 50
+    guest_user_voice_24h_limit: 1
+    free_user_voice_24h_limit: 5
+    subscribed_user_voice_24h_limit: 100
+    free_user_image_gen_24h_limit: 1
+    subscribed_user_image_gen_24h_limit: 5
+    free_user_agent_creation_24h_limit: 1
+    subscribed_user_agent_creation_24h_limit: 5
   gcp_service_account_key: "inty-backend-key.json"
 
 sentry:
+  # inty-backend/default
   dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
   enabled: true
-  traces_sample_rate: 0.2  # 生产环境使用 20% 采样率以控制数据量
+  traces_sample_rate: 0.1
 
 security:
   secret_key: "893-ac77-4b6d-b644"
@@ -24,17 +31,17 @@ security:
 
 database:
   host: "10.41.177.3"
-  port: 5432
   user: "postgres"
   password: "sxwl666A!"
   db: "inty"
-  pool_size: 50
-  max_overflow: 20
+  pool_size: 100
+  max_overflow: 50
   pool_timeout: 10
   pool_recycle: 3600
   pool_pre_ping: true
   connect_timeout: 5
   command_timeout: 30
+  replica_host: "10.41.177.17"
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
@@ -51,20 +58,25 @@ firebase:
   service_account_path: "inty-firebase-key.json"
 
 agent:
-  model: "google/gemini-2.5-flash"
+  # OpenRouter API Key: inty-prod
   api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
-  langchain_api_key: "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"
+  # LangSmith try@sxwl.ai IntelliMate-prod project, inty-prod API key 名字
+  langchain_api_key: "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"
   force_default_prompts: false
   # 消息生图模型配置：prod 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
-  free_user_chat_image_model: "gemini"
-  sub_user_chat_image_model: "gemini"
+  free_user_chat_image_model: "Nano Banana"
+  sub_user_chat_image_model: "Nano Banana Pro"
+  # 使用 global 可改善 gemini-3-pro-image-preview 的可用性
+  vertex_ai_location: "global"
 
 google_play:
   package_name: "com.ai.intellimate"
   webhook_secret: ""
   enable_version_check: true
   min_supported_version: 100
+  # 设置为 0 时从 Google Play API 动态获取
+  current_version_code: 3694
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
@@ -81,7 +93,6 @@ cloudflare:
 
 logging:
   level: "INFO"
-  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{extra[request_id]}</cyan> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 
 gemini_live:
   enabled: true
@@ -100,4 +111,5 @@ gemini_live:
   sub_user_max_session_duration: 120  # 订阅用户单次会话最大时长（秒）
   
 fal:
-  api_key: c5403f4b-1171-4b13-80ef-684802b2c3c9:26b324871f439642e5a375481e01cd25
+  # inty-prod API Key, fal.ai
+  api_key: 0b135fdb-8e5c-46ee-971a-3694410d98d2:3881993c5f3268bf109fbbfd505f1991

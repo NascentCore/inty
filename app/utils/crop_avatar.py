@@ -45,7 +45,7 @@ FACE_DETECTION_MIN_NEIGHBORS = (
 # https://forum.opencv.org/t/face-detection-for-static-image-find-top-of-head-and-chin/3009/9
 # See full list at:
 # https://github.com/opencv/opencv/tree/master/data/haarcascades
-# NOTE: This usally cannot detect any faces.
+# NOTE: This usually cannot detect any faces.
 # Internet claims (https://stackoverflow.com/q/59466015/31283770)
 # it detecst left facing faces, but not working as expected, see left-facing.png.
 # Media pipe etc.

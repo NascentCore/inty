@@ -289,6 +289,30 @@ class MainActivity : BaseActivity() {
             return false
         }
 
+        // 节日记忆通知：跳转到该角色 Love Journal 页并定位到对应记忆条目
+        if (messageType == FCMConstants.TYPE_FESTIVAL_MEMORY && !agentId.isNullOrEmpty()) {
+            hasHandledNotificationIntent = true
+            val memoryId =
+                if (intent.hasExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID)) {
+                    intent.getLongExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID, 0L)
+                } else {
+                    null
+                }
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.PUSH_NOTIFICATION_CLICK,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agentId,
+                    "page_source" to PUSH_NOTIFICATION,
+                    "type" to FCMConstants.TYPE_FESTIVAL_MEMORY,
+                ),
+            )
+            mainViewModel.updatePushFestivalMemoryTarget(agentId, memoryId)
+            intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
+            intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)
+            intent.removeExtra(FCMConstants.DATA_KEY_FESTIVAL_MEMORY_ID)
+            return true
+        }
+
         // 如果是 agent_message 类型且有 agent_id，跳转到 ChatActivity
         if (messageType == FCMConstants.TYPE_AGENT_MESSAGE && !agentId.isNullOrEmpty()) {
             hasHandledNotificationIntent = true // 标记已处理，避免重复跳转
@@ -307,13 +331,12 @@ class MainActivity : BaseActivity() {
             intent.removeExtra(FCMConstants.DATA_KEY_TYPE)
             intent.removeExtra(FCMConstants.DATA_KEY_AGENT_ID)
             return true
-        } else {
-            // 有推送数据但不是有效的 agent_message，记录日志
-            LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId")
-            // 标记已处理，避免重复检查
-            hasHandledNotificationIntent = true
-            return false
         }
+
+        // 有推送数据但不是有效的类型，记录日志
+        LogUtils.w("MainActivity", "从推送通知启动，但数据不完整 - 消息类型: $messageType, agent_id: $agentId")
+        hasHandledNotificationIntent = true
+        return false
     }
 
     @Composable
@@ -335,6 +358,7 @@ class MainActivity : BaseActivity() {
         // 直接使用ViewModel的StateFlow，实现响应式UI更新
         val isLoggedIn by mainViewModel.isLoggedIn.collectAsState()
         val showSettings by mainViewModel.showSettings.collectAsState()
+        val selectedTab by mainViewModel.selectedTab.collectAsState()
 
         // 设计决策：使用会话级标记而非日期级持久化
         // 原因：
@@ -404,24 +428,22 @@ class MainActivity : BaseActivity() {
             // 场景3：用户已登录且已显示过，或日期已过期，不做任何操作
         }
 
-        // 用户从未登录 -> 已登录时，尝试展示随机 tips（同一 session 仅一次）
+        // 登出时仅隐藏 tips 弹窗，不重置 session 门控（同一前台 session 内不应重复弹）
         LaunchedEffect(isLoggedIn) {
-            if (isLoggedIn) {
-                tryShowRandomIntelliMateTip()
-                return@LaunchedEffect
+            if (!isLoggedIn) {
+                showIntelliMateTipDialog = false
+                intelliMateTipText = null
             }
-            // 登出时仅隐藏弹窗，不重置 session 门控（同一前台 session 内不应重复弹）
-            showIntelliMateTipDialog = false
-            intelliMateTipText = null
         }
 
-        // App 从后台回到前台时（Activity resume）尝试展示随机 tips（同一 session 仅一次）
-        LifecycleResumeEffect(isLoggedIn) {
-            if (isLoggedIn) {
+        // 仅在用户打开 Me 页（Profile tab）时尝试展示随机 tips，避免在其他页面打扰
+        LaunchedEffect(selectedTab) {
+            if (selectedTab == HomeTabIndex.Profile && isLoggedIn) {
                 tryShowRandomIntelliMateTip()
             }
-            onPauseOrDispose {}
         }
+
+        LifecycleResumeEffect(Unit) { onPauseOrDispose {} }
 
         // 在首次显示时执行初始化操作
         LaunchedEffect(Unit) {
@@ -495,12 +517,12 @@ class MainActivity : BaseActivity() {
                 onDismiss = { showHolidayCelebrationDialog = false },
                 onPrimaryClick = {
                     // 设计决策：点击按钮后执行三个操作：
-                    // 1. 添加 100 个 boost points 作为节日奖励（提升用户参与度）
+                    // 1. 添加 100 credits 作为节日奖励（提升用户参与度）
                     // 2. 显示成功提示（即时反馈）
                     // 3. 导航到随机圣诞角色（增强节日主题体验，引导用户探索圣诞内容）
                     LogUtils.d(
                         "MainActivity",
-                        "Holiday celebration button clicked, adding 100 boost points",
+                        "Holiday celebration button clicked, adding 100 credits",
                     )
                     BoostManager.requestManualPoints(100)
                     ToastUtils.showShort(R.string.holiday_celebration_points_added)
@@ -525,6 +547,7 @@ class MainActivity : BaseActivity() {
                                 randomAgent.id,
                                 false,
                                 shouldAutoFocusInput = false,
+                                fromPage = "holiday_celebration",
                             )
                         )
                         LogUtils.d(
@@ -543,17 +566,23 @@ class MainActivity : BaseActivity() {
         var creditsPointChanged by remember { mutableStateOf(0 to 0) }
 
         LaunchedEffect(Unit) {
-            BoostManager.pointChanged
-                .collect {
+            BoostManager.pointChanged.collect {
+                LogUtils.d("积分变化=${it.first}")
+                if (it.first >= 10) {
                     creditsPointChanged = it
                 }
+            }
         }
 
-        if (creditsPointChanged.first > 0) {
-            EnergyCelebrationBanner(
-                onDismissRequest = { creditsPointChanged = 0 to 0}
-            ) {
-                Text(stringResource(R.string.energy_points_add_title, creditsPointChanged.first, creditsPointChanged.second))
+        if (creditsPointChanged.first >= 10) {
+            EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
+                Text(
+                    stringResource(
+                        R.string.energy_points_add_title,
+                        creditsPointChanged.first,
+                        creditsPointChanged.second,
+                    )
+                )
             }
         }
     }
@@ -831,7 +860,7 @@ fun SplashLoginUI(
                                 LogUtils.e("Google login failed: ${loginResult.message}")
                                 reportLoginFailure("backend_error", loginResult.message, null)
                                 com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
-                                    loginResult.message
+                                    context.getString(R.string.network_error)
                                 )
                             }
                         }
@@ -1074,7 +1103,7 @@ private fun performEmailLogin(
                     LogUtils.e("Email login failed: ${loginResult.message}")
                     reportLoginFailure("backend_error", loginResult.message, null)
                     com.ai.intellimate.utils.NetworkErrorHandler.showNetworkAwareError(
-                        loginResult.message
+                        context.getString(R.string.network_error)
                     )
                 }
             }

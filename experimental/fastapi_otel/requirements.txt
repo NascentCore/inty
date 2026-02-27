@@ -1,0 +1,4 @@
+fastapi
+uvicorn
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp-proto-http

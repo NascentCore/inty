@@ -283,7 +283,7 @@ private fun PreviewVipAgentUnlockDialog() {
     val mockAgent =
         AgentInfo(
             id = "preview-agent",
-            name = "VIP Character",
+            name = "VIP iMate",
             background = "https://example.com/background.jpg",
             avatar = "https://example.com/avatar.jpg",
         )

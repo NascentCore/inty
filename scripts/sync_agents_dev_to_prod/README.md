@@ -1,12 +1,13 @@
-# 同步角色 Dev 到 Prod
+# 同步角色 Dev 与 Prod
 
-从 dev 环境同步指定运营用户创建的角色数据到 prod 环境。
+在 dev 与 prod 环境之间同步角色数据，支持两个方向。
 
 ## 功能特性
 
-- 自动同步 dev 环境中运营用户创建的未删除角色到 prod 环境
-- 支持创建、更新和删除操作
-- 自动检查并创建 prod 环境的运营用户
+- **dev-to-prod**：从 dev 同步指定运营用户创建的角色到 prod
+- **prod-to-dev**：从 prod 按名称同步指定角色到 dev
+- 支持创建和更新操作
+- 自动检查并创建目标环境的运营用户
 - 智能处理 readable_id 冲突，自动生成新的自增 ID
 - Dry-run 模式预览更改
 - 详细的日志记录
@@ -15,12 +16,10 @@
 
 同步操作按以下顺序执行：
 
-1. **删除**: prod 存在但 dev 不存在的角色会被软删除（设置 deleted_at）
-   - **安全限制**: 只删除运营用户创建的角色，其他用户创建的角色会被跳过
-2. **更新**: dev 和 prod 都存在但字段不同的角色会被更新
-3. **创建**: dev 存在但 prod 不存在的角色会被创建
+1. **更新**：源和目标都存在且字段不同的角色会被更新
+2. **创建**：源存在但目标不存在的角色会被创建
 
-操作顺序说明：先删除后创建，避免唯一字段冲突。如果创建时 readable_id 仍然冲突，会自动生成新的自增 ID
+操作顺序说明：先更新后创建。如果创建时 readable_id 冲突，会自动生成新的自增 ID
 
 ## 配置
 
@@ -50,10 +49,18 @@ pip install -r requirements.txt
 
 ### 3. 预览同步操作
 
-先运行预览模式，查看将要执行的操作：
+先运行预览模式，查看将要执行的操作。
+
+**dev-to-prod（默认）**：
 
 ```bash
 python sync_agents.py --dry-run
+```
+
+**prod-to-dev（按名称同步单个角色）**：
+
+```bash
+python sync_agents.py --direction prod-to-dev --agent-name IntelliMate --dry-run
 ```
 
 预览输出示例：
@@ -61,16 +68,15 @@ python sync_agents.py --dry-run
 ```
 ========================================================
 开始同步角色数据
-运营用户ID: user-01JWZ34Y4D1C92GD86A5R6EWYJ
+方向: Dev → Prod
 模式: 预览模式 (dry-run)
 ========================================================
-Dev环境找到 15 个未删除角色
-Prod环境找到 12 个未删除角色
+Dev环境找到 15 个角色
+Prod环境找到 12 个角色
 
 同步计划:
   需要创建: 5 个角色
   需要更新: 2 个角色
-  需要删除: 2 个角色
   无需变更: 10 个角色
 
 【预览模式】以下是详细操作列表:
@@ -83,18 +89,22 @@ Prod环境找到 12 个未删除角色
 更新角色列表:
   🔄 更新: Sophie (ID: agent-zzz)
   ...
-
-删除角色列表:
-  🗑️  删除: Old Character (ID: agent-abc)
-  ...
 ```
 
 ### 4. 执行同步
 
-确认预览结果无误后，执行实际同步：
+确认预览结果无误后，执行实际同步。
+
+**dev-to-prod**：
 
 ```bash
 python sync_agents.py
+```
+
+**prod-to-dev**：
+
+```bash
+python sync_agents.py --direction prod-to-dev --agent-name IntelliMate
 ```
 
 执行输出示例：
@@ -105,15 +115,12 @@ Dev环境运营用户: admin (user-01JWZ34Y4D1C92GD86A5R6EWYJ)
 运营用户已存在: user-01JWZ34Y4D1C92GD86A5R6EWYJ
 
 开始执行同步操作...
-操作顺序：1) 删除 → 2) 更新 → 3) 创建
+操作顺序：1) 更新 → 2) 创建
 
-第 1 步：执行删除操作...
-🗑️  删除成功: Old Character (ID: agent-abc)
-
-第 2 步：执行更新操作...
+第 1 步：执行更新操作...
 🔄 更新成功: Sophie (ID: agent-zzz)
 
-第 3 步：执行创建操作...
+第 2 步：执行创建操作...
 ⚠️  readable_id 冲突: 10000002 已存在，使用新 ID: 10000015
 ✨ 创建成功: Amber (ID: agent-xxx)
 ✨ 创建成功: Lily (ID: agent-yyy)
@@ -122,24 +129,24 @@ Dev环境运营用户: admin (user-01JWZ34Y4D1C92GD86A5R6EWYJ)
 同步完成！
   创建: 5 个
   更新: 2 个
-  删除: 2 个
 ========================================================
 ```
 
 ## 命令行参数
 
 - `--config <path>`: 指定配置文件路径（默认: config.yaml）
+- `--direction`: 同步方向，`dev-to-prod` 或 `prod-to-dev`（默认: dev-to-prod）
+- `--agent-name <name>`: 按名称筛选角色；prod-to-dev 时必填
 - `--dry-run`: 预览模式，不实际执行操作
 
 ## 注意事项
 
-1. **运营用户**: 如果 prod 环境不存在运营用户，脚本会自动创建
-2. **软删除**: 删除操作是软删除，只设置 deleted_at 字段，不会物理删除数据
-3. **删除限制**: 只会删除运营用户创建的角色，其他用户创建的角色会被跳过并记录警告日志
-4. **readable_id 冲突**: 如果创建角色时 readable_id 已存在，会自动生成新的自增 ID 并记录警告
-5. **事务安全**: 所有操作在一个事务中执行，如有错误会自动回滚
-6. **字段同步**: 同步所有角色相关字段，但不包括 created_at, updated_at, deleted_at
-7. **建议流程**: 先运行 dry-run 预览，确认无误后再执行实际同步
+1. **运营用户**: 如果目标环境不存在运营用户，脚本会自动创建
+2. **prod-to-dev**: 必须指定 `--agent-name`；若 prod 中不存在该名称的角色，脚本会报错退出
+3. **readable_id 冲突**: 如果创建角色时 readable_id 已存在，会自动生成新的自增 ID 并记录警告
+4. **事务安全**: 所有操作在一个事务中执行，如有错误会自动回滚
+5. **字段同步**: 同步所有角色相关字段，但不包括 created_at, updated_at, deleted_at
+6. **建议流程**: 先运行 dry-run 预览，确认无误后再执行实际同步
 
 ## 故障排除
 
@@ -149,7 +156,11 @@ Dev环境运营用户: admin (user-01JWZ34Y4D1C92GD86A5R6EWYJ)
 
 ### 运营用户不存在
 
-脚本会自动在 prod 环境创建运营用户，但需要确保 dev 环境中该用户存在。
+脚本会自动在目标环境创建运营用户。dev-to-prod 时需确保 dev 环境中该用户存在；prod-to-dev 时需确保 prod 中角色的 creator 在 dev 中存在（或为运营用户）。
+
+### prod-to-dev 时提示「不存在名为 X 的未删除角色」
+
+确认 prod 数据库中确实存在该名称的角色，且未被软删除（deleted_at 为空）。
 
 ### 同步失败
 

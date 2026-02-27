@@ -28,7 +28,11 @@ from db_service import (
     get_user_all_chat_history,
     get_users_by_emails,
 )
-from memory_extractor import ExtractedMemory, extract_user_memory, load_custom_memory_prompt
+from memory_extractor import (
+    ExtractedMemory,
+    extract_user_memory,
+    load_custom_memory_prompt,
+)
 from report_generator import generate_report, regenerate_report_from_json
 
 app = cyclopts.App(
@@ -142,10 +146,14 @@ def run(
 
             try:
                 # 获取聊天历史
-                progress.update(task_id, description=f"[{i + 1}/{len(users)}] 获取聊天历史...")
+                progress.update(
+                    task_id, description=f"[{i + 1}/{len(users)}] 获取聊天历史..."
+                )
                 histories = get_user_all_chat_history(user.id)
                 if not histories:
-                    console.print(f"  [yellow]用户 {user_label} 没有聊天记录，跳过[/yellow]")
+                    console.print(
+                        f"  [yellow]用户 {user_label} 没有聊天记录，跳过[/yellow]"
+                    )
                     progress.remove_task(task_id)
                     continue
 
@@ -153,17 +161,23 @@ def run(
                 console.print(f"  [dim]聊天历史: {len(chat_history_text)} 字符[/dim]")
 
                 # 提取记忆
-                progress.update(task_id, description=f"[{i + 1}/{len(users)}] 提取用户记忆...")
+                progress.update(
+                    task_id, description=f"[{i + 1}/{len(users)}] 提取用户记忆..."
+                )
                 memory = extract_user_memory(
                     chat_history_text=chat_history_text,
                     memory_prompt=custom_prompt,
                     model=model,
                 )
                 memories.append(memory)
-                console.print(f"  [dim]记忆摘要: {len(memory.summary_for_prompt)} 字符[/dim]")
+                console.print(
+                    f"  [dim]记忆摘要: {len(memory.summary_for_prompt)} 字符[/dim]"
+                )
 
                 # 运行对比模拟
-                progress.update(task_id, description=f"[{i + 1}/{len(users)}] 运行对话模拟...")
+                progress.update(
+                    task_id, description=f"[{i + 1}/{len(users)}] 运行对话模拟..."
+                )
                 result = run_comparison_simulation(
                     agent_info=agent_info,
                     user_id=user.id,
@@ -177,6 +191,7 @@ def run(
             except Exception as e:
                 console.print(f"  [red]处理失败: {e}[/red]")
                 import traceback
+
                 console.print(f"  [dim]{traceback.format_exc()}[/dim]")
 
             finally:

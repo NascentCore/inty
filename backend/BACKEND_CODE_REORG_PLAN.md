@@ -21,7 +21,7 @@ CREATED_BY_AGENT
    - 更新 `.github/workflows/` 及任何外部部署脚本，必要时设置 `working-directory: backend`。
    - 修正 `devops/` 配置（`config.yaml.*`、`nginx.conf` 等）与 Terraform/SOPS 相关引用。
 5. **验证与回归测试**
-   - 本地跑 `docker compose up pgvector -d`、`./start.sh --dev`、单元/集成测试。
+   - 本地跑 `docker compose up pgvector -d`、`./backend/inty/start.sh --dev`、单元/集成测试。
    - 触发或手动运行 CI 确认工作流通过，记录迁移注意事项。
 
 ## 风险与缓解

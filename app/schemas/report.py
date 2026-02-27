@@ -89,15 +89,35 @@ class ReportQuery(BaseModel):
     limit: int = 100
 
 
+class ReportGithubIssueUpdate(BaseModel):
+    github_issue: Optional[str] = Field(
+        None, description="GitHub issue URL associated with this report"
+    )
+
+
+class ReporterUserInfo(BaseModel):
+    id: str
+    readable_id: Optional[str]
+    nickname: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    created_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
 class ReportOut(BaseModel):
     id: str
     target_id: str
     target_type: str
     reporter_id: str
+    reporter_user_info: Optional[ReporterUserInfo] = None
     reason_ids: List[int]  # DEPRECATED: 使用 reason_codes 代替
     reason_codes: List[str]
     image_urls: List[str]
     description: Optional[str]
+    github_issue: Optional[str]
     status: str
     report_type: Optional[str]
     created_at: datetime

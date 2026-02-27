@@ -1,9 +1,10 @@
-name: dev-prod 同步 AI 角色
+name: dev-prod 同步 AI 角色及主题专区
 
 on:
   schedule:
-    # Run every day at 5 PM UTC, 2:00 AM Beijing time, 10:00 AM PST.
-    - cron: "0 17 * * *"
+    # 21:00 Beijing time, 05:00 AM PST. 在 prod 后端部署 1 小时后
+    # 这个设置比较麻烦，应该改为单独更新数据库 schema，这样就不要让数据同步等待代码同步了
+    - cron: "0 12 * * *"
   workflow_dispatch:
 
 jobs:

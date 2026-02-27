@@ -2,7 +2,7 @@ import time
 import uuid
 from typing import Optional, TypeAlias, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
+from app.schemas.biz_action import ActionType, BizAction, BusinessActions
+from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
@@ -23,8 +25,13 @@ from app.schemas.response import (
     create_business_error_response,
 )
 from app.services import agent_service, chat_history_service, chat_service
+from app.services.memory_service import deliver_festival_memories_for_user_agent
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
+from app.services.surprise_snap_service import (
+    get_unlocked_surprise_snap_message_ids,
+    try_trigger_surprise_snap,
+)
 from app.services.push_notification_service import mark_user_push_notifications_as_read
 from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
@@ -58,15 +65,74 @@ def _handle_subscription_limit_error(
         )
 
 
+def _build_surprise_snap_choice_message(
+    info: dict,
+    unlocked_message_ids: set,
+) -> dict:
+    """构建单条 Surprise Snap choice 的 message 字典，与消息列表中 surprise_snap 项结构一致。is_locked 仅根据是否在 unlock 表中。"""
+    message_id = info.get("id")
+    is_locked = not (message_id in unlocked_message_ids)
+    return {
+        "role": None,
+        "content": "",
+        "type": "surprise_snap",
+        "id": message_id,
+        "media_url": info.get("media_url"),
+        "caption": info.get("caption") or "",
+        "price": info.get("price", 0),
+        "is_locked": is_locked,
+        "meta_data": info.get("meta_data"),
+        "timestamp": info.get("timestamp"),
+    }
+
+
+def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> dict:
+    """构建单条节日提醒 choice 的 message 字典，与普通 AI 消息结构一致（含 id、meta_data、timestamp、audio_url）。
+
+    同一条 message 中可能同时出现顶层的 festival_memory_id（snake_case）与 meta_data 内的
+    festivalMemoryId（camelCase）：前者为本接口显式提供、供客户端优先使用；后者来自写入
+    chat_history 时存储的 meta_data，透传未改。客户端应以顶层 festival_memory_id 为准。
+    """
+    if info:
+        return {
+            "role": None,
+            "content": item["content"],
+            "type": "festival_memory_prompt",
+            "festival_memory_id": item["memory_id"],
+            "id": info["id"],
+            "meta_data": info["meta_data"],
+            "timestamp": info["timestamp"],
+            "audio_url": info["audio_url"],
+        }
+    msg_id = item.get("message_id")
+    return {
+        "role": None,
+        "content": item["content"],
+        "type": "festival_memory_prompt",
+        "festival_memory_id": item["memory_id"],
+        "id": msg_id,
+        "meta_data": None,
+        "timestamp": None,
+        "audio_url": None,
+    }
+
+
 def _build_chat_response(
     response_content: str,
     last_user_message: str,
     latest_message_info: Optional[dict],
     audio_url: Optional[str],
     request: ChatCompletionRequest,
+    user_message_id: Optional[int] = None,
 ) -> dict:
     """构建聊天响应数据"""
     message = {"role": "assistant", "content": response_content}
+    # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
+    default_business_actions = BusinessActions(
+        subscription_actions=[
+            BizAction(action_type=ActionType.NONE, message=""),
+        ]
+    )
 
     if latest_message_info:
         message["id"] = latest_message_info["id"]
@@ -84,6 +150,10 @@ def _build_chat_response(
         "object": "chat.completion",
         "created": int(time.time()),
         "model": request.model,
+        "user_message_id": user_message_id,
+        "business_actions": [
+            a.model_dump() for a in default_business_actions.subscription_actions
+        ],
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
             "prompt_tokens": len(last_user_message.split()),
@@ -97,8 +167,7 @@ def _build_chat_response(
 @router.post(
     "/completions/{agent_id}",
     response_model=schemas.APIResponse[dict],
-    deprecated=True,
-    summary="[Deprecated use /api/v2/chat/completions/{agent_id} instead] 返回与指定 Agent 聊天的下一条消息",
+    summary="返回与指定 Agent 聊天的下一条消息",
     description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
 )
@@ -108,6 +177,7 @@ async def agent_chat_completions(
     agent_id: str,
     request: ChatCompletionRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ):
     """
     基于Agent ID的OpenAI风格聊天接口
@@ -151,6 +221,13 @@ async def agent_chat_completions(
 
         last_user_message = user_messages[-1].content
         messages = [HumanMessage(content=last_user_message)]
+        user_time_context = (
+            request.user_time_context.model_dump(exclude_none=True)
+            if request.user_time_context
+            else None
+        )
+        if user_time_context == {}:
+            user_time_context = None
 
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
@@ -191,15 +268,34 @@ async def agent_chat_completions(
                 model_override = select_chat_model(
                     user=current_user, is_subscribed=bool(subscription)
                 )
-                response_content = await agent.chat(
+                logger.debug(
+                    f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={bool(subscription)}"
+                )
+                chat_result = await agent.chat(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
+                    user_time_context=user_time_context,
                     model_override=model_override,
                 )
+                response_content, ai_message_id = (
+                    (chat_result[0], chat_result[1])
+                    if isinstance(chat_result, tuple)
+                    else (chat_result, None)
+                )
 
-            logger.debug(f"Agent聊天响应成功: {response_content[:100]}...")
+                if response_content is None:
+                    logger.error(
+                        f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
+                    )
+                    raise HTTPException(
+                        status_code=500, detail="Chat returned no content"
+                    )
+
+            logger.debug(
+                f"Agent聊天响应成功: {(response_content or '')[:100]}..."
+            )
 
             # 用户发送消息后，标记该用户的所有未读推送为已读
             try:
@@ -271,22 +367,102 @@ async def agent_chat_completions(
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 
-        # 获取最新AI消息的完整信息
+        surprise_snap_message_id = None
         try:
-            with log_time(f"获取最新消息: session_id={session_id}"):
-                latest_message_info = (
-                    await chat_history_service.get_latest_ai_message_info(
-                        db, session_id
+            surprise_snap_message_id = await try_trigger_surprise_snap(
+                db, session_id, current_user.id, agent_id
+            )
+        except Exception as e:
+            logger.warning(f"Surprise Snap 触发失败: {e}")
+
+        # 获取 AI 消息完整信息：插入时已拿到 message id 则按 id 查，否则查最新一条
+        latest_message_info = None
+        try:
+            if ai_message_id is not None:
+                with log_time(f"获取AI消息信息: message_id={ai_message_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            db, ai_message_id
+                        )
                     )
-                )
+            if latest_message_info is None:
+                with log_time(f"获取最新消息: session_id={session_id}"):
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            db, session_id
+                        )
+                    )
         except Exception as e:
             logger.warning(f"获取最新消息信息失败: {str(e)}")
-            latest_message_info = None
+
+        user_message_id = None
+        try:
+            with log_time(f"获取最新用户消息ID: session_id={session_id}"):
+                user_message_id = await chat_history_service.get_latest_user_message_id(
+                    db, session_id
+                )
+        except Exception as e:
+            logger.warning(f"获取最新用户消息ID失败: {str(e)}")
+
+        # 仅当客户端提供版本且满足最低要求时按需投递；未传版本或旧版不投递，delivery_at 保持 null
+        delivered_prompts = []
+        if is_festival_memory_enabled(app_version_code):
+            try:
+                with log_time(
+                    f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+                ):
+                    delivered_prompts = await deliver_festival_memories_for_user_agent(
+                        db, current_user.id, agent_id
+                    )
+            except Exception as e:
+                logger.warning(f"投递节日记忆提示失败: {e}")
+                delivered_prompts = []
 
         # 构建响应
         data = _build_chat_response(
-            response_content, last_user_message, latest_message_info, audio_url, request
+            response_content,
+            last_user_message,
+            latest_message_info,
+            audio_url,
+            request,
+            user_message_id=user_message_id,
         )
+
+        # 若有本次投递的节日提醒，追加到 choices（仅当 is_festival_memory_enabled 时才会投递，故此处不必再判版本）
+        if delivered_prompts:
+            msg_ids = [
+                item["message_id"]
+                for item in delivered_prompts
+                if item.get("message_id") is not None
+            ]
+            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
+                db, msg_ids
+            )
+            for idx, item in enumerate(delivered_prompts, start=1):
+                msg_id = item.get("message_id")
+                info = infos_map.get(msg_id) if msg_id is not None else None
+                message = _build_festival_prompt_choice_message(item, info)
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
+
+        # 若本次触发了 Surprise Snap，追加一条 choice 与消息列表结构一致
+        if surprise_snap_message_id is not None:
+            info = await chat_history_service.get_surprise_snap_message_display_info(
+                db, surprise_snap_message_id
+            )
+            if info is not None:
+                unlocked_ids = await get_unlocked_surprise_snap_message_ids(
+                    db, current_user.id
+                )
+                message = _build_surprise_snap_choice_message(
+                    info,
+                    unlocked_message_ids=unlocked_ids,
+                )
+                idx = len(data["choices"])
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
 
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
@@ -299,8 +475,17 @@ async def agent_chat_completions(
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
+class ChatImageBizErrorData(BizError):
+    description: Optional[str] = None
+    suggestion: Optional[str] = None
+
+
 ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
-    Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]
+    Union[
+        schemas.ChatImageGenerationResponse,
+        UsageLimitExceeded,
+        ChatImageBizErrorData,
+    ]
 ]
 
 
@@ -349,6 +534,7 @@ async def generate_chat_image(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
+            subscription_service=subscription_service,
             history_count=request.history_count,
             model=request.model,
         )
@@ -367,6 +553,8 @@ async def generate_chat_image(
                     "message": result.message,
                 },
                 extra_data={
+                    "code": result.code,
+                    "message": result.message,
                     "suggestion": "Please modify your prompt and try again.",
                 },
             )

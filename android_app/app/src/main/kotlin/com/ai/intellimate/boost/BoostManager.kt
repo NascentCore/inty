@@ -71,13 +71,12 @@ object BoostManager {
         }
     }
 
-    fun recordImageGeneration(agentInfo: AgentInfo?) {
-        if (agentInfo == null) return
+    fun recordImageGeneration(agentId: String) {
         val repo = repository ?: return
         val points = BoostCalculator.imageGenerationPoints()
         scope.launch {
-            repo.addPoints(points, PointSource.Image(agentInfo.id))
-            logPointsEvent(PointSource.Image(agentInfo.id), points)
+            repo.addPoints(points, PointSource.Image(agentId))
+            logPointsEvent(PointSource.Image(agentId), points)
         }
     }
 
@@ -98,6 +97,16 @@ object BoostManager {
     suspend fun unlockVipAgent(): Boolean {
         val repo = repository ?: throw BoostException(BoostError.NotInitialized)
         return repo.deductPoints(BoostConfig.UNLOCK_VIP_AGENT_COST)
+    }
+
+    /**
+     * 扣除积分（用于重置等消耗场景）。
+     *
+     * @return 积分不足时返回 false
+     */
+    suspend fun deductPoints(points: Int): Boolean {
+        val repo = repository ?: throw BoostException(BoostError.NotInitialized)
+        return repo.deductPoints(points)
     }
 
     /** 检查积分奖励领取 */
@@ -241,7 +250,7 @@ object BoostManager {
     }
 
     /**
-     * 手动添加 boost points（用于节日奖励等场景）。
+     * 手动添加 credits（用于节日奖励等场景）。
      *
      * 设计决策：
      * 1. 增强的错误处理和日志记录：
@@ -252,10 +261,10 @@ object BoostManager {
      *     - 使用协程在后台执行：不阻塞调用线程
      *     - 捕获所有异常：确保不会因异常导致应用崩溃
      * 3. 使用场景：
-     *     - 节日庆祝弹窗奖励（100 points）
+     *     - 节日庆祝弹窗奖励（100 credits）
      *     - 其他手动奖励场景
      *
-     * @param points 要添加的 points 数量，必须大于 0
+     * @param points 要添加的 credits 数量，必须大于 0
      */
     fun requestManualPoints(points: Int) {
         val repo = repository
@@ -282,6 +291,15 @@ object BoostManager {
                     e,
                 )
             }
+        }
+    }
+
+    suspend fun consume(amount: Int, source: PointSource): Boolean {
+        return (repository?.consume(amount) == true).also {
+            logFirebaseEvent(
+                "boost_consume",
+                mapOf("source" to source.analyticsName, "points" to amount, "success" to it),
+            )
         }
     }
 

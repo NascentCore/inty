@@ -75,7 +75,12 @@ fun NavGraphBuilder.exploreGraph(navController: NavController) {
             onClickAgent = { agent ->
                 AgentStore.addAgent(agent)
                 navController.navigate(
-                    Routes.Chat.chatPage(agent.id, false, shouldAutoFocusInput = false)
+                    Routes.Chat.chatPage(
+                        agent.id,
+                        false,
+                        shouldAutoFocusInput = false,
+                        fromPage = "themed_detail",
+                    )
                 )
             },
         )

@@ -1,0 +1,30 @@
+# 需要的时候手动运行来更新 prod 数据库 schema，不影响 dev 环境
+name: Alembic Upgrade Production DB Schema
+
+on:
+  workflow_dispatch:
+
+jobs:
+  alembic-upgrade-prod:
+    runs-on: inty-prod-server-gcp
+    # 只用于手动更新 prod 环境数据库，dev 环境随时会随着代码改动被实时更新
+    # 为了避免回退等操作影响后端数据库，这个只能手动触发
+    environment: prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Upgrade production database
+        run: |
+          export PYTHONPATH=.
+          export ALEMBIC_CONFIG=alembic/alembic.ini
+          alembic -x "config=devops/config.yaml.prod" upgrade head

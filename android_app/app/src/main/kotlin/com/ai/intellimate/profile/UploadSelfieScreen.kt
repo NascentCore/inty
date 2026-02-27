@@ -49,6 +49,7 @@ import androidx.navigation.compose.composable
 import coil3.compose.AsyncImage
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
 import java.io.File
 import kotlinx.serialization.Serializable
 
@@ -103,8 +104,16 @@ fun UploadSelfieScreen(onBack: () -> Unit, viewModel: ModifyProfileViewModel = v
                     FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
                         .also { cameraLauncher.launch(it) }
             } catch (error: Throwable) {
+                // #region agent log
+                val msg = error.localizedMessage.orEmpty()
+                NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                    "F",
+                    "UploadSelfieScreen.kt:onTakeSelfie",
+                    msg,
+                )
+                // #endregion
                 LogUtils.e(error.localizedMessage)
-                ToastUtils.showShort(error.localizedMessage.orEmpty())
+                ToastUtils.showShort(msg)
             }
         },
         onBack = onBack,

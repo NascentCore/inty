@@ -50,8 +50,8 @@ git tag $GIT_TAG && git push --tags
 - **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
 - **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
 - **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
-- **Dockerfile**：`docker/Dockerfile.push-worker`
-- **启动脚本**：`start_push_worker.sh`
+- **Dockerfile**：`devops/docker/Dockerfile.push-worker`
+- **启动脚本**：`backend/push_worker/start.sh`
 - **配置文件**：使用与后端服务一致的 `devops/config.yaml.{environment}`（构建期注入进镜像，见下文「配置文件如何进入 Docker 镜像」）
 - **挂载卷**：
   - `/opt/inty-{environment}/inty-backend-key.json`
@@ -67,26 +67,15 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 
 ## Android app 发布流程
 
-1. 修改代码中的 versionName 到新的版本号，否则会触发版本检查错误，如 https://github.com/NascentCore/inty/commit/0c18b413401dedc48efe9c1bcc67e2ba999065be
-   <img width="900" height="400" alt="image" src="https://github.com/user-attachments/assets/186335c0-fc96-4520-b8da-d89f0f892a23" />
-2. 在本地 git checkout 出对应的 tag，构建 release aab（使用 release build type）并确认其 versionName
-   <img width="480" height="208" alt="image" src="https://github.com/user-attachments/assets/433d8afe-911f-4494-8e0f-39a666653afc" />
-3. 上传内测轨道（AAB）
-   <img width="800" height="1614" alt="image" src="https://github.com/user-attachments/assets/07cc93c6-a573-40d8-98f2-f716fce5826a" />
-   编写有价值的更新说明
-4. 从 Google Play 商店下载内测版本测试
-5. 创建生产环境发布版本，选择前面测试的内测版本
-   <img width="800" height="1340" alt="image" src="https://github.com/user-attachments/assets/a3a327d1-70a7-4236-a4b0-02c15283ac49" />
-6. 提交审核
-7. 审核通过后，正式发布
-8. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
-
-## 发布后：更新后端版本检查 current_version_code
-
-发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
-
-- 修改 `devops/config.yaml.{prod,dev}` 中 `google_play.current_version_code`
-- （了解用法/默认值参考）`../app/core/config.py` 的 `GooglePlayConfig.current_version_code`
+1. https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml 每日构建并上传 AAB 到内测轨道
+2. 测试内测轨道（Internal testing）版本
+3. Promote 内测版本到 Production
+   <img width="600" height="1098" alt="image" src="https://github.com/user-attachments/assets/32936e40-07f0-4f1a-8897-d0e546fa57a2" />
+4. 审核通过后，正式发布
+5. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
+6. 发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
+   - 修改 `devops/config.yaml.{prod,dev}` 中 `google_play.current_version_code`
+   - （了解用法/默认值参考）`../app/core/config.py` 的 `GooglePlayConfig.current_version_code`
 
 ## 发布前最终检查（建议）
 
@@ -123,8 +112,8 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 在 GitHub Actions 部署工作流中，通过 `CONFIG_FILE` build-arg 选择并注入配置：
 
 - **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
-- **Backend Dockerfile**：`docker/Dockerfile`
-- **Push worker Dockerfile**：`docker/Dockerfile.push-worker`
+- **Backend Dockerfile**：`devops/docker/Dockerfile`
+- **Push worker Dockerfile**：`devops/docker/Dockerfile.push-worker`
 
 工作流会按环境（`dev`/`prod`）计算出：
 

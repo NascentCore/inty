@@ -2,7 +2,7 @@
 
 ## 概述
 
-消息生图功能允许用户基于聊天上下文为 AI 回复生成图片。该功能使用 Gemini 2.5 Flash Image 模型，通过 Agent 的参考图（背景图或头像）和聊天上下文生成符合角色外观一致性的图片。
+消息生图功能允许用户基于聊天上下文为 AI 回复生成图片。该功能使用 Gemini 模型（如 gemini-2.5-flash-image），通过 Agent 的参考图（背景图或头像）和聊天上下文生成符合角色外观一致性的图片。订阅用户、超级用户和免费用户默认均使用 `gemini-2.5-flash-image`。若遇 404，可尝试将 `agent.vertex_ai_location` 设为 `"global"`。
 
 ## 架构概览
 
@@ -81,7 +81,7 @@
 
 4. **调用图片生成服务**
    - 传入 `message_id`、Agent 数据、消息内容、历史数量
-   - 调用 `image_generation_service.generate_chat_image_with_gemini()`
+   - 调用 `image_generation_service.generate_chat_image_for_message()`
 
 5. **记录用量**
    - 使用 `subscription_service.record_usage()` 记录图片生成用量
@@ -104,14 +104,15 @@
 
 - **处理**:
   - 提取 Agent 的 `scenario`（背景设定），若无则使用 `intro`
-  - 提取 Agent 的 `personality`（性格）
+  - 提取 Agent 的 `personality`（性格与说话习惯等）
+  - 当调用方传入 `char_name`、`user_name` 时，对 personality 与 scenario（及 fallback 的 intro）使用 `render_prompt_jinja2_template` 渲染，填充 `{{ char }}`、`{{ user }}`，与聊天侧行为一致
   - 格式化聊天历史为文本（用户/AI 对话）
   - 使用 `app/core/agent/prompts.py` 中维护的提示词模板进行变量替换
 
 - **模板变量**:
 
   - `{chat_history}`: 格式化的聊天历史
-  - `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description）
+  - `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description/Selfie Persona）
 
 - **提示词模板**（默认）:
 
@@ -135,17 +136,19 @@
 
 #### 3.2 图片生成流程
 
-`generate_chat_image_with_gemini()` 方法实现完整的图片生成流程：
+`generate_chat_image_for_message()` 方法实现完整的图片生成流程：
 
 **方法签名**:
 ```python
-async def generate_chat_image_with_gemini(
+async def generate_chat_image_for_message(
     self,
     db: AsyncSession,
     session_id: str,
     message_id: int,  # 必需参数：要更新的消息ID
     agent_data: dict,
     message_content: str,
+    model: str,  # 可传 nickname 或 provider model id
+    user_id: Optional[str] = None,
     history_count: Optional[int] = None,
 ) -> Dict
 ```
@@ -167,18 +170,10 @@ async def generate_chat_image_with_gemini(
    - 将参考图 URL 转换为完整 HTTP URL（支持 `gs://` 到 HTTPS 的转换）
    - 如果两者都不存在，抛出 `ValueError`
 
-5. **调用 Gemini 2.5 Flash Image**
-   - 使用 `google.genai` SDK（通过 `get_genai_client()` 获取客户端）
-   - 模型：`gemini-2.5-flash-image`
-   - 输入格式：
-     - 参考图（`types.Part.from_uri()`，MIME 类型为 `image/jpeg`）
-     - 文字提示词（`types.Part.from_text()`）
-   - 配置参数：
-     - `temperature`: 1.0
-     - `top_p`: 0.95
-     - `max_output_tokens`: 8192
-     - `response_modalities`: ["IMAGE"]（只返回图片）
-     - 安全设置：各种有害内容类别设置为 `BLOCK_MEDIUM_AND_ABOVE`
+5. **根据模型路由到对应 provider**
+   - 模型：支持配置中的 nickname（`free_user_chat_image_model` / `sub_user_chat_image_model`）或 provider model id，仅允许四款（Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
+   - 当模型为 Gemini（Nano Banana / Nano Banana Pro）时，使用 `WrappedClient.async_generate_image()`，输入为参考图 +（可选）用户自拍 + 提示词
+   - 当模型为 fal（Seedream / Z Image Turbo I2I）时，自动转换为各自 API 所需输入（`image_url` 或 `image_urls`）
 
 6. **提取图片数据**
    - 从响应中提取 `candidate.content.parts` 中的 `inline_data`
@@ -209,7 +204,10 @@ async def generate_chat_image_with_gemini(
         "height": 1024,
         "format": "jpeg",
         "prompt": "构建的提示词",
-        "generated_at": "2024-01-01T00:00:00"
+        "generated_at": "2024-01-01T00:00:00",
+        "model": "实际使用的模型 ID",
+        "generation_time_ms": 1234,
+        "model_fallback_due_to_429": false
       }
       ```
 
@@ -280,6 +278,9 @@ async def generate_chat_image_with_gemini(
 
 - 图片生成提示词模板：`IMAGE_GENERATION_PROMPT_TEMPLATE`（在代码中维护，可通过 `/api/v1/ai/agents/image-generation/config` 运行时更新）
 - 默认历史消息数量：`agent.image_generation_default_history_count`（`config.yaml` 中配置，默认 10）
+- 消息生图模型：`free_user_chat_image_model`、`sub_user_chat_image_model`（**nickname**，来自 `app/utils/models_catalog.py`）。仅允许四款：Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image；其他值在加载配置时校验失败。
+- 订阅用户 429 备用模型：`sub_user_chat_image_gemini_fallback_model`（Vertex 模型 ID，默认 `gemini-2.5-flash-image`）；仅当**订阅用户**首轮生图遇 429 时用于重试一次，见下文「429 重试」
+- Vertex AI 区域：`agent.vertex_ai_location`（默认 `us-central1`，设为 `global` 可改善 Preview 模型可用性）
 - 应用限额：`app.limits.free_user_image_gen_24h_limit`、`app.limits.subscribed_user_image_gen_24h_limit`
 - GCS 配置：`gcs.bucket`
 - Cloudflare CDN：`cloudflare.enabled`、`cloudflare.domain`
@@ -297,6 +298,8 @@ async def generate_chat_image_with_gemini(
 5. **存储策略**: 图片上传到 GCS 存储为 `gs://` URI，通过 CDN 加速访问，图片信息存储在消息 `meta_data` 中。
 
 6. **重复生成**: 重复生成会直接覆盖 `meta_data.generated_image` 字段。
+
+7. **429 重试（仅订阅用户 + Gemini）**：首轮使用主模型生图时，若 API 返回 429（RESOURCE_EXHAUSTED），则自动用备用模型（`sub_user_chat_image_gemini_fallback_model`，默认 `gemini-2.5-flash-image`）再试一次；仅重试一次，第二次失败则按现有错误与兜底逻辑处理。成功时会在 `generated_image` 与用量 `extra_data` 中记录实际使用的模型及 `model_fallback_due_to_429`（是否因 429 使用了备用模型）。
 
 ## 错误处理
 

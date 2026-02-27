@@ -9,16 +9,34 @@ import datetime
 from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
+from sqlalchemy import or_, select, update
 
+from app.api.types.llm_config import LLMConfig
 from app.core.config import global_config_loaded_from_config_yaml
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, AsyncSessionLocalReplica
+from app.models.memory import FestivalMemoryConfig
+from app.services import festival_memory_service
+from app.services.memory_extraction_service import (
+    extract_and_save as memory_extract_and_save,
+)
+from app.services.memory_extraction_service import (
+    get_users_to_extract as memory_get_users_to_extract,
+)
 from app.services.push_notification_service import (
     discover_new_users_for_push,
     discover_users_with_updated_tokens,
     initialize_push_system,
+    process_festival_memory_push_batch,
     process_push_batch,
+)
+from app.services.user_analytics_report_service import (
+    compute_and_save_daily_report as user_analytics_compute_daily,
+)
+from app.services.user_analytics_report_service import (
+    compute_and_save_weekly_report as user_analytics_compute_weekly,
 )
 
 
@@ -148,6 +166,111 @@ class PushSchedulerService:
                 next_run_time=datetime.datetime.now(),
             )
 
+            # 记忆抽取：每日 UTC cron_hour 点执行，启动后立即执行一次（若启用）
+            mem_cfg = getattr(
+                global_config_loaded_from_config_yaml,
+                "memory_extraction",
+                None,
+            )
+            if mem_cfg and getattr(mem_cfg, "enabled", False):
+                self.scheduler.add_job(
+                    self._run_memory_extraction,
+                    trigger=CronTrigger(hour=mem_cfg.cron_hour, minute=0),
+                    id="run_memory_extraction",
+                    name="记忆抽取",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                logger.info(
+                    f"已添加记忆抽取任务: 启动后立即执行，之后每日 UTC {mem_cfg.cron_hour}:00"
+                )
+
+            # 节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且未跑过的配置
+            self.scheduler.add_job(
+                self._run_festival_memory_extraction,
+                trigger=IntervalTrigger(minutes=5),
+                id="run_festival_memory_extraction",
+                name="节日记忆抽取",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+                next_run_time=datetime.datetime.now(),
+            )
+            logger.info("已添加节日记忆抽取任务: 启动后立即执行，之后每 5 分钟扫描")
+
+            # 节日记忆通知：每 15 分钟扫描未投递且未发过 system notification 的节日记忆并发送 FCM（可选）
+            if getattr(config, "festival_memory_enabled", True):
+                self.scheduler.add_job(
+                    self._run_festival_memory_push,
+                    trigger=IntervalTrigger(minutes=15),
+                    id="run_festival_memory_push",
+                    name="节日记忆通知",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                logger.info(
+                    "已添加节日记忆通知任务: 启动后立即执行，之后每 15 分钟扫描"
+                )
+
+            # 用户数据分析日报周报：每日/每周执行（若启用）
+            uar_cfg = getattr(
+                global_config_loaded_from_config_yaml,
+                "user_analytics_report",
+                None,
+            )
+            if uar_cfg and getattr(uar_cfg, "enabled", False):
+                self.scheduler.add_job(
+                    self._run_user_analytics_daily_report,
+                    trigger=CronTrigger(hour=uar_cfg.daily_cron_hour, minute=0),
+                    id="run_user_analytics_daily_report",
+                    name="用户数据分析日报",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                self.scheduler.add_job(
+                    self._run_user_analytics_weekly_report,
+                    trigger=CronTrigger(
+                        day_of_week="mon",
+                        hour=uar_cfg.weekly_cron_hour,
+                        minute=0,
+                    ),
+                    id="run_user_analytics_weekly_report",
+                    name="用户数据分析周报",
+                    replace_existing=True,
+                    coalesce=True,
+                    max_instances=1,
+                    next_run_time=datetime.datetime.now(),
+                )
+                logger.info(
+                    f"已添加用户数据分析日报周报任务: 日报每日 UTC {uar_cfg.daily_cron_hour}:00, "
+                    f"周报每周一 UTC {uar_cfg.weekly_cron_hour}:00"
+                )
+
+                async def backfill_user_analytics_reports():
+                    from app.services.user_analytics_report_service import (
+                        backfill_missing_reports,
+                    )
+
+                    logger.info("[用户数据分析补算] 开始检查并补算缺失的日报与周报")
+                    try:
+                        async with AsyncSessionLocal() as db:
+                            daily_count, weekly_count = await backfill_missing_reports(
+                                db
+                            )
+                            logger.info(
+                                f"[用户数据分析补算] 完成: 日报 {daily_count} 条, 周报 {weekly_count} 条"
+                            )
+                    except Exception as e:
+                        logger.error(f"[用户数据分析补算] 执行失败: {str(e)}")
+
+                asyncio.create_task(backfill_user_analytics_reports())
+
             logger.info("已添加所有推送检查任务，将在启动后立即执行一次")
 
             logger.info("推送调度器启动成功")
@@ -163,7 +286,8 @@ class PushSchedulerService:
 
         try:
             if self.scheduler:
-                self.scheduler.shutdown(wait=True)
+                # wait=False 避免死锁：stop() 与 job 同处一事件循环，wait=True 会阻塞循环导致 job 无法结束
+                self.scheduler.shutdown(wait=False)
             self.is_running = False
             logger.info("推送调度器已停止")
 
@@ -265,6 +389,196 @@ class PushSchedulerService:
 
         except Exception as e:
             logger.error(f"token 更新扫描任务执行失败: {str(e)}")
+
+    async def _run_memory_extraction(self) -> None:
+        """每日记忆抽取：筛选待抽取用户并逐个 extract_and_save。"""
+        try:
+            logger.info("[记忆抽取] 开始...")
+            read_session_factory = (
+                AsyncSessionLocalReplica
+                if AsyncSessionLocalReplica is not None
+                else AsyncSessionLocal
+            )
+            read_source = (
+                "replica" if AsyncSessionLocalReplica is not None else "primary"
+            )
+            logger.info(f"[记忆抽取] 用户筛选与历史读取将优先使用: {read_source}")
+
+            async with read_session_factory() as read_db:
+                user_ids = await memory_get_users_to_extract(
+                    read_db, prefer_replica_read=True
+                )
+
+            logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
+            async with AsyncSessionLocal() as write_db:
+                for uid in user_ids:
+                    try:
+                        await memory_extract_and_save(
+                            write_db, uid, prefer_replica_read=True
+                        )
+                    except Exception as e:
+                        await write_db.rollback()
+                        logger.warning(f"[记忆抽取] user_id={uid} 失败: {e}")
+            logger.info("[记忆抽取] 完成")
+        except Exception as e:
+            logger.error(f"[记忆抽取] 执行失败: {str(e)}")
+
+    async def _run_festival_memory_extraction(self) -> None:
+        """节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且尚未为此执行时刻跑过的配置。"""
+        from datetime import timezone as dt_timezone
+        from zoneinfo import ZoneInfo
+
+        try:
+            logger.info("[节日记忆抽取] 开始...")
+            now = datetime.datetime.now(dt_timezone.utc)
+            read_session_factory = (
+                AsyncSessionLocalReplica
+                if AsyncSessionLocalReplica is not None
+                else AsyncSessionLocal
+            )
+            read_source = (
+                "replica" if AsyncSessionLocalReplica is not None else "primary"
+            )
+            logger.info(f"[节日记忆抽取] 配置与历史读取将优先使用: {read_source}")
+
+            async with read_session_factory() as db:
+                result = await db.execute(
+                    select(FestivalMemoryConfig).where(
+                        FestivalMemoryConfig.enabled.is_(True),
+                        FestivalMemoryConfig.run_at_date.isnot(None),
+                        FestivalMemoryConfig.run_at_hour.isnot(None),
+                    )
+                )
+                all_configs = result.scalars().all()
+            due_configs = []
+            for config in all_configs:
+                tz_str = getattr(config, "timezone", "UTC") or "UTC"
+                tz = ZoneInfo(tz_str)
+                run_at_local = datetime.datetime.combine(
+                    config.run_at_date,
+                    datetime.time(config.run_at_hour or 0, 0, 0),
+                    tzinfo=tz,
+                )
+                run_at_dt = run_at_local.astimezone(dt_timezone.utc)
+                if now < run_at_dt:
+                    continue
+                if config.last_run_at is not None and config.last_run_at >= run_at_dt:
+                    continue
+                due_configs.append(config)
+            if not due_configs:
+                logger.debug("[节日记忆抽取] 无到点配置，跳过")
+                return
+            for config in due_configs:
+                tz_str = getattr(config, "timezone", "UTC") or "UTC"
+                tz = ZoneInfo(tz_str)
+                run_at_local = datetime.datetime.combine(
+                    config.run_at_date,
+                    datetime.time(config.run_at_hour or 0, 0, 0),
+                    tzinfo=tz,
+                )
+                run_at_dt = run_at_local.astimezone(dt_timezone.utc)
+                # 占位：只有更新到 1 行的实例才执行 pairs，避免多实例重复执行
+                async with AsyncSessionLocal() as db:
+                    claim_result = await db.execute(
+                        update(FestivalMemoryConfig)
+                        .where(FestivalMemoryConfig.id == config.id)
+                        .where(
+                            or_(
+                                FestivalMemoryConfig.last_run_at.is_(None),
+                                FestivalMemoryConfig.last_run_at < run_at_dt,
+                            )
+                        )
+                        .values(last_run_at=now)
+                    )
+                    await db.commit()
+                if claim_result.rowcount != 1:
+                    logger.debug(
+                        f"[节日记忆抽取] config_id={config.id} 已被占位或已执行，跳过"
+                    )
+                    continue
+                min_rounds = (
+                    getattr(config, "min_rounds_in_window", None)
+                    or festival_memory_service.DEFAULT_MIN_ROUNDS_IN_WINDOW
+                )
+                read_db_url = festival_memory_service.resolve_sync_read_db_url(
+                    prefer_replica_read=True
+                )
+                pairs = await asyncio.to_thread(
+                    festival_memory_service.get_pairs_with_min_rounds_in_window_sync,
+                    config.festival_date,
+                    read_db_url,
+                    min_rounds,
+                    tz_str,
+                )
+                async with AsyncSessionLocal() as db:
+                    for user_id, agent_id in pairs:
+                        try:
+                            raw_llm = getattr(config, "llm_config", None)
+                            await festival_memory_service.extract_festival_and_save(
+                                db,
+                                user_id,
+                                agent_id,
+                                config.festival_name,
+                                config.festival_date,
+                                config.prompt,
+                                llm_config=(
+                                    LLMConfig.model_validate(raw_llm)
+                                    if raw_llm is not None
+                                    else None
+                                ),
+                                prefer_replica_read=True,
+                            )
+                        except Exception as e:
+                            await db.rollback()
+                            logger.warning(
+                                f"[节日记忆抽取] user_id={user_id} agent_id={agent_id} "
+                                f"festival={config.festival_name} 失败: {e}"
+                            )
+            logger.info("[节日记忆抽取] 完成")
+        except Exception as e:
+            logger.error(f"[节日记忆抽取] 执行失败: {str(e)}")
+
+    async def _run_festival_memory_push(self) -> None:
+        """节日记忆通知：扫描未投递且未发过 system notification 的节日记忆并发送 FCM。"""
+        try:
+            logger.info("[节日记忆通知] 开始...")
+            config = global_config_loaded_from_config_yaml.push_notification
+            batch_size = getattr(config, "festival_memory_batch_size", 50)
+            async with AsyncSessionLocal() as db:
+                success_count, fail_count = await process_festival_memory_push_batch(
+                    db, batch_size=batch_size
+                )
+            logger.info(f"[节日记忆通知] 完成: 成功={success_count}, 失败={fail_count}")
+        except Exception as e:
+            logger.error(f"[节日记忆通知] 执行失败: {str(e)}")
+
+    async def _run_user_analytics_daily_report(self) -> None:
+        """每日用户数据分析日报：统计 T-1 日数据。"""
+        try:
+            from datetime import timedelta, timezone
+
+            logger.info("[用户数据分析日报] 开始...")
+            today_utc = datetime.datetime.now(timezone.utc).date()
+            report_date = today_utc - timedelta(days=1)
+            async with AsyncSessionLocal() as db:
+                await user_analytics_compute_daily(db, report_date)
+            logger.info("[用户数据分析日报] 完成")
+        except Exception:
+            logger.exception("[用户数据分析日报] 执行失败")
+
+    async def _run_user_analytics_weekly_report(self) -> None:
+        """每周用户数据分析周报：统计上一周（周一到周日）数据。"""
+        try:
+            from datetime import timedelta, timezone
+
+            logger.info("[用户数据分析周报] 开始...")
+            today = datetime.datetime.now(timezone.utc).date()
+            week_start = today - timedelta(days=today.weekday() + 7)
+            async with AsyncSessionLocal() as db:
+                await user_analytics_compute_weekly(db, week_start)
+            logger.info("[用户数据分析周报] 完成")
+        except Exception:
+            logger.exception("[用户数据分析周报] 执行失败")
 
 
 # 全局调度器实例

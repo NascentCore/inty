@@ -73,10 +73,55 @@ object UiConfigs {
         val VipHeroPlaceholder = 170.dp
     }
 
+    /** 4/8 栅格间距 - 全部为 4pt 的整数倍，便于统一节奏 */
+    object SpacingGrid {
+        /** 4pt */
+        val Space4 = 4.dp
+
+        /** 8pt */
+        val Space8 = 8.dp
+
+        /** 12pt */
+        val Space12 = 12.dp
+
+        /** 16pt */
+        val Space16 = 16.dp
+
+        /** 20pt */
+        val Space20 = 20.dp
+
+        /** 24pt */
+        val Space24 = 24.dp
+
+        /** 28pt */
+        val Space28 = 28.dp
+
+        /** 32pt */
+        val Space32 = 32.dp
+
+        /** 36pt */
+        val Space36 = 36.dp
+
+        /** 40pt */
+        val Space40 = 40.dp
+
+        /** 48pt */
+        val Space48 = 48.dp
+
+        /** 56pt */
+        val Space56 = 56.dp
+
+        /** 64pt */
+        val Space64 = 64.dp
+    }
+
     /** 尺寸配置 - 适用于按钮、对话框、编辑器等组件的高度和宽度设置 */
     object Size {
         /** 主要按钮高度 */
         val PrimaryButtonHeight = 50.dp
+
+        /** CTA 按钮高度（Create My IntelliMate、Explore More 等） */
+        val CtaButtonHeight = 56.dp
 
         /** 聊天对话框最小高度 */
         val ChatDialogMinHeight = 430.dp
@@ -268,6 +313,15 @@ object UiConfigs {
         const val DefaultTextFieldMaxChars = 1000
     }
 
+    /** Credits 配置 - 适用于积分消耗相关的统一入口 */
+    object Credits {
+        /** VIP 角色聊天每条消息消耗的积分 */
+        const val VipChatMessageCost = 1
+
+        /** VIP 图片高清放大功能（非订阅用户）单次解锁积分 */
+        const val VipImageUpscaleCost = 10
+    }
+
     /** URL 配置 - 适用于外部链接，如社交媒体邀请链接、帮助中心等 */
     object Urls {
         /** WhatsApp 群组邀请链接 */
@@ -292,6 +346,96 @@ object UiConfigs {
 
         /** 队列大小警告阈值（百分比） - 当队列使用率超过此值时记录警告日志 */
         const val QUEUE_WARNING_THRESHOLD = 0.8f // 80%
+
+        /** Speaking 状态的最低保留时长（毫秒），用于补偿状态与音频流的不同步 */
+        const val SPEAKING_INDICATOR_HOLD_MS = 1200L
+
+        /** 播放队列排空后，再保留 speaking 状态的缓冲时间（毫秒），使切到 listening 更自然 */
+        const val SPEAKING_INDICATOR_TAIL_MS = 300L
+
+        /** 语音通话打断按钮配置 */
+        object InterruptButton {
+            /** 按钮直径 */
+            val Size = 180.dp
+
+            /** 波浪动画外圈额外尺寸 */
+            val WaveExtraSize = 40.dp
+
+            /** 波浪动画整体尺寸 */
+            val WaveSize = Size + WaveExtraSize
+
+            /** 按钮内部内容内边距 */
+            val ContentPadding = 16.dp
+
+            /** 状态文本与提示文本间距 */
+            val TextSpacing = UiConfigs.Spacing.Tiny
+
+            /** 按钮边框宽度 */
+            val BorderWidth = 1.dp
+
+            /** 按钮背景透明度 */
+            const val BackgroundAlpha = 0.18f
+
+            /** 按钮边框透明度 */
+            const val BorderAlpha = 0.35f
+
+            /** 状态文本透明度 */
+            const val StatusTextAlpha = 0.8f
+
+            /** 波浪动画基础透明度 */
+            const val WaveAlpha = 0.35f
+
+            /** 波浪线宽 */
+            val WaveStrokeWidth = 2.dp
+
+            /** 波浪数量 */
+            const val WaveCount = 3
+
+            /** 波浪动画时长（毫秒） */
+            const val WaveDurationMs = 1500
+
+            /** 波浪动画错开间隔（毫秒） */
+            const val WaveDelayMs = 300
+
+            /** 波浪最小缩放 */
+            const val WaveStartScale = 0.85f
+
+            /** 波浪最大缩放 */
+            const val WaveEndScale = 1.25f
+        }
+
+        /** 语音通话布局间距配置 */
+        object Layout {
+            /** 顶部占位高度（头像上方） */
+            val TopSpacerHeight = 160.dp
+
+            /** 头像直径 */
+            val AvatarSize = 120.dp
+
+            /** 头像边框宽度 */
+            val AvatarBorderWidth = 1.dp
+
+            /** 头像与名字之间的间距 */
+            val AvatarToNameSpacing = 16.dp
+
+            /** 名字与打断按钮区域之间的间距 */
+            val NameToStatusSpacing = 8.dp
+
+            /** 连接状态与打断按钮之间的间距 */
+            val StatusToInterruptSpacing = UiConfigs.Spacing.Large
+
+            /** 打断按钮与通话时长之间的间距 */
+            val InterruptToTimeSpacing = UiConfigs.Spacing.HeroGap
+
+            /** 通话时长区块内小间距（标签与数值之间等） */
+            val TimeBlockSpacing = 6.dp
+
+            /** 通话时长区块内大间距（时长与剩余时间之间） */
+            val TimeSectionSpacing = 16.dp
+
+            /** 底部操作栏与屏幕底边的间距 */
+            val BottomBarPadding = 50.dp
+        }
     }
 
     /** Explore 页面配置 - 适用于发现页面的分页、预加载、滚动行为等设置 */
@@ -347,7 +491,7 @@ object UiConfigs {
         /** 订阅横幅配置 */
         object PremiumBanner {
             /** 横幅高度 */
-            val Height = 110.dp
+            val Height = 102.dp
 
             /** 横幅圆角半径 */
             val CornerRadius = 20.dp
@@ -371,7 +515,7 @@ object UiConfigs {
             val CtaHorizontalPadding = 14.dp
 
             /** CTA 按钮垂直内边距 */
-            val CtaVerticalPadding = 6.dp
+            val CtaVerticalPadding = 8.dp
 
             /** CTA 图标大小 */
             val CtaIconSize = 16.dp
@@ -432,6 +576,15 @@ object UiConfigs {
         /** 区域之间的间距 */
         val SectionSpacing = 16.dp
 
+        /** 个人页区块横幅圆角半径（Premium、Vibe Mode、Daily Check-in 横幅统一使用） */
+        val SectionBannerCornerRadius = 8.dp
+
+        /** 个人页区块横幅垂直内边距（Vibe Mode、Daily Check-in、Create Character 横幅统一使用） */
+        val SectionBannerVerticalPadding = 8.dp
+
+        /** 个人页区块横幅水平内边距（Vibe Mode、Daily Check-in、Create Character 横幅统一使用） */
+        val SectionBannerHorizontalPadding = 18.dp
+
         /** 底部间距 */
         val BottomSpacing = 8.dp
 
@@ -483,6 +636,9 @@ object UiConfigs {
         /** 空状态底部间距 */
         val EmptyStateBottomSpacing = 16.dp
 
+        /** 空状态插图（画笔图标）尺寸 */
+        val EmptyStateIconSize = 100.dp
+
         /** 空状态内容间距 */
         val EmptyStateContentSpacing = 10.dp
 
@@ -496,9 +652,6 @@ object UiConfigs {
         object VibeMode {
             /** Vibe 模式横幅高度 */
             val BannerHeight = 92.dp
-
-            /** Vibe 模式圆角半径 */
-            val CornerRadius = 20.dp
 
             /** Vibe 模式边框宽度 */
             val BorderWidth = 1.dp
@@ -519,8 +672,14 @@ object UiConfigs {
         /** 聊天消息面板垂直内边距 */
         val PaddingVertical = 13.dp
 
+        /** 用户消息气泡垂直内边距（与 AI 消息保持一致） */
+        val UserMessagePaddingVertical = PaddingVertical
+
         /** AI 消息宽度比例（相对于父容器） */
         const val AI_WIDTH_RATIO = 0.9f
+
+        /** Love Journal 通知条宽度比例（相对于父容器），小于 AI 气泡以区分样式 */
+        const val LoveJournalNotifyWidthRatio = 0.76f
 
         /** 用户消息宽度比例（相对于父容器） */
         const val USER_WIDTH_RATIO = 0.3f
@@ -609,6 +768,9 @@ object UiConfigs {
         /** 右上角操作按钮容器圆角（电话/更多） */
         val ActionButtonContainerCornerRadius = 16.dp
 
+        /** VIP 角标文字字号 */
+        val VipBadgeFontSize = 12.sp
+
         /** 收藏按钮激活状态颜色（粉色） */
         val FavoriteActiveTint = Color(0xFFFF5A8A)
 
@@ -666,11 +828,62 @@ object UiConfigs {
             /** 按钮大小 - 发送/更多按钮的尺寸 */
             val ButtonSize = 30.dp
 
-            /** 尾部控件内边距 - 输入框文本区域距离右侧按钮区域的距离 */
-            val TrailingControlsPadding = 104.dp
-
             /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
             val SceneActionButtonSpacing = 6.dp
+
+            /** 尾部控件内边距 - 文字模式下输入框文本区域与右侧按钮区域的距离，仅预留发送/更多按钮与右侧边距，避免预留过大导致右侧空白过多 */
+            val TrailingControlsPadding = ButtonSize + ButtonRightPadding
+
+            /** 语音输入切换按钮大小 */
+            val VoiceToggleButtonSize = ButtonSize
+
+            /** 语音输入切换按钮图标大小 */
+            val VoiceToggleIconSize = 18.dp
+
+            /** 语音输入切换按钮左侧边距 */
+            val VoiceTogglePaddingStart = UiConfigs.Spacing.Small
+
+            /** 语音输入切换按钮与输入区域间距 */
+            val VoiceTogglePaddingEnd = UiConfigs.Spacing.Tiny
+
+            /** 语音模式下尾部内边距 - 按住说话与 + 按钮的间距，与左侧和键盘按钮的间距一致（VoiceTogglePaddingEnd） */
+            val VoiceModeTrailingPadding = VoiceTogglePaddingEnd + ButtonSize + ButtonRightPadding
+
+            /** 语音模式且显示场景操作 () 按钮时的尾部内边距 - 避免与 ()、+ 按钮重叠 */
+            val VoiceModeTrailingPaddingWithSceneAction =
+                VoiceModeTrailingPadding + SceneActionButtonSpacing + ButtonSize
+
+            /** 头部控件内边距 - 输入框文本区域距离左侧语音按钮的距离 */
+            val LeadingControlsPadding =
+                VoiceTogglePaddingStart + VoiceToggleButtonSize + VoiceTogglePaddingEnd
+
+            /** 语音输入按住说话按钮边框宽度 */
+            val VoiceHoldButtonBorderWidth = 1.dp
+
+            /** 语音输入按住说话按钮背景透明度（未录制） */
+            const val VoiceHoldButtonIdleAlpha = 0.12f
+
+            /** 语音输入按住说话按钮背景透明度（录制中） */
+            const val VoiceHoldButtonRecordingAlpha = 0.22f
+
+            /** 语音输入按住说话按钮边框透明度 */
+            const val VoiceHoldButtonBorderAlpha = 0.22f
+
+            /** 语音输入按住说话按钮禁用文本透明度 */
+            const val VoiceHoldButtonDisabledTextAlpha = 0.4f
+
+            /** 语音输入切换按钮背景透明度（可用） */
+            const val VoiceToggleBackgroundAlpha = 0.16f
+
+            /** 语音输入切换按钮背景透明度（不可用） */
+            const val VoiceToggleDisabledBackgroundAlpha = 0.08f
+
+            /** 语音输入切换按钮图标透明度（不可用） */
+            const val VoiceToggleDisabledIconAlpha = 0.4f
+
+            /** 显示场景操作 () 按钮时的尾部内边距 - 预留 () 按钮、间距、发送/更多按钮及右侧边距，避免输入区与 ()、+ 按钮重叠 */
+            val TrailingControlsPaddingWithSceneAction =
+                ButtonSize + SceneActionButtonSpacing + ButtonSize + ButtonRightPadding
         }
 
         /** 聊天气泡配置 - 适用于聊天消息气泡的装饰、样式等设置 */

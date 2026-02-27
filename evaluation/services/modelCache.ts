@@ -128,7 +128,7 @@ class ModelCacheService {
     cacheKey: string,
     timeKey: string,
     ignoreExpiry = false,
-  ): any[] | null {
+  ): ScoringModel[] | null {
     try {
       const cacheTime = localStorage.getItem(timeKey);
       const cachedData = localStorage.getItem(cacheKey);
@@ -152,7 +152,11 @@ class ModelCacheService {
   /**
    * 缓存模型列表
    */
-  private cacheModels(models: any[], cacheKey: string, timeKey: string): void {
+  private cacheModels(
+    models: ScoringModel[],
+    cacheKey: string,
+    timeKey: string,
+  ): void {
     try {
       localStorage.setItem(cacheKey, JSON.stringify(models));
       localStorage.setItem(timeKey, Date.now().toString());

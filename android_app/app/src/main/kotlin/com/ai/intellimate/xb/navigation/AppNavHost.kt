@@ -1,5 +1,6 @@
 package com.ai.intellimate.xb.navigation
 
+import ai.sxwl.android.utils.LogUtils
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -17,6 +18,7 @@ import androidx.navigation.navArgument
 import com.ai.intellimate.HomeScreen
 import com.ai.intellimate.MainViewModel
 import com.ai.intellimate.SplashLoginUI
+import com.ai.intellimate.agent.heartbeat.toHeartbeat
 import com.ai.intellimate.agent.info.AgentInfoViewModel
 import com.ai.intellimate.call.VoiceCallScreen
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -50,7 +52,15 @@ fun AppNavHost(
     LaunchedEffect(pushAgentId) {
         if (pushAgentId.isEmpty()) return@LaunchedEffect
         mainViewModel.updatePushAgentId("")
-        navController.navigate(Routes.Chat.chatPage(pushAgentId, false))
+        navController.navigate(Routes.Chat.chatPage(pushAgentId, false, fromPage = "push"))
+    }
+
+    val pushFestivalMemoryTarget by mainViewModel.pushFestivalMemoryTarget.collectAsState()
+    LaunchedEffect(pushFestivalMemoryTarget) {
+        val pair = pushFestivalMemoryTarget
+        if (pair == null || pair.first.isEmpty()) return@LaunchedEffect
+        mainViewModel.clearPushFestivalMemoryTarget()
+        navController.toHeartbeat(pair.first, pair.second, pageSource = "push")
     }
 
     val needsRegInfo by mainViewModel.needsRegInfo.collectAsState()
@@ -104,9 +114,15 @@ fun AppNavHost(
 
             if (agentId != null) {
                 VoiceCallScreen(
-                    onBack = { navController.popBackStack() },
-                    onVip = { navController.navigate(Routes.Me.VipCenter) },
-                    onVipMoreInfo = { navController.navigate(Routes.Me.VipCenter) },
+                    onBack = {
+                        LogUtils.d("Call:语音聊天消息数=$it")
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("messageCount", it)
+                        navController.popBackStack()
+                    },
+                    onVip = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
+                    onVipMoreInfo = { navController.navigate(Routes.Me.vipCenter("voice_call")) },
                     agentId = agentId,
                 )
             }

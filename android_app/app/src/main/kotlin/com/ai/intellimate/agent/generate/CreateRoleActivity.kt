@@ -55,7 +55,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -77,7 +76,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -105,6 +103,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.ui.NameInputKeyBoardOption
 import com.ai.intellimate.ui.SingleLineInputField
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.IntelliMateCtaButton
 import com.ai.intellimate.utils.AvatarManager
 import com.ai.intellimate.utils.ShareUtils
 import com.ai.intellimate.utils.UCropHelper
@@ -960,7 +959,7 @@ fun CreateRolePage(
                 label = "Opening (set tone and context) *",
                 value = opening,
                 onValueChange = { opening = it },
-                placeholder = "Please fill in the character's opening remarks...",
+                placeholder = "Please fill in your iMate's opening remarks...",
                 minLines = 2,
                 maxLength = 200,
             )
@@ -972,7 +971,7 @@ fun CreateRolePage(
                 label = "Intro for other users (no impact on chat) *",
                 value = intro,
                 onValueChange = { intro = it },
-                placeholder = "Please fill in the character introduction...",
+                placeholder = "Please fill in the iMate introduction...",
                 minLines = 2,
                 maxLength = 500,
             )
@@ -982,109 +981,114 @@ fun CreateRolePage(
             val scope = rememberCoroutineScope()
 
             // Create Button
-            CreateButton(
+            IntelliMateCtaButton(
+                text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
                 isLoading = isLoading,
-                isEditMode = isEditMode,
-                onClick = {
+                onClick = click@{
 
-                    // Validate required fields
-                    if (
-                        name.isBlank() || intro.isBlank() || opening.isBlank() || settings.isBlank()
-                    ) {
-                        ToastUtils.showShort(R.string.please_fill_required_fields)
-                        return@CreateButton
-                    }
-
-                    isLoading = true
-
-                    scope
-                        .launch {
-                            try {
-                                // Prepare avatar and background fields according to new logic
-                                val backgroundUrl =
-                                    if (avatarUrls.isNotEmpty()) {
-                                        // Use selected image from generated grid as background
-                                        avatarUrls.getOrNull(selectedImageIndex)
-                                            ?: avatarUrls.first()
-                                    } else {
-                                        // Use single generated image as background
-                                        avatarUrl
-                                    }
-
-                                val backgroundImagesList =
-                                    avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
-
-                                // Save background for chat usage
-                                if (backgroundUrl != null) {
-                                    AvatarManager.setChatBackgroundUrl(backgroundUrl)
-                                }
-
-                                val currentCroppedAvatar =
-                                    croppedAvatarUrls[selectedImageIndex]
-                                        ?: editAgent?.avatar?.takeIf {
-                                            editAgent.background == backgroundUrl
-                                        }
-                                val request =
-                                    CreateAgentRequest(
-                                        name = name,
-                                        gender = gender,
-                                        avatar = currentCroppedAvatar,
-                                        background = backgroundUrl,
-                                        backgroundImages = backgroundImagesList,
-                                        settings = mapOf("description" to settings),
-                                        intro = intro,
-                                        opening = opening,
-                                        visibility = visibility,
-                                        prompt = settings,
-                                    )
-
-                                // Call API through ViewModel
-                                createRoleViewModel.updateAgent(
-                                    agentId = editAgent?.id.takeIf { isEditMode },
-                                    request = request,
-                                    createTempFile = { context.createTempFile(it) },
-                                    context = context,
-                                )
-
-                                if (isEditMode) {
-                                    ToastUtils.showShort(R.string.character_updated_successfully)
-                                    //                                    onCreateSuccess()
-                                } else {
-                                    // 如果是从草稿列表进入的，删除该草稿
-                                    if (savedDraft != null && draftId != null) {
-                                        CreateRoleDraftStorage.deleteDraft(draftId)
-                                    }
-                                    // 清除临时草稿
-                                    CreateRoleDraftStorage.clearCurrentDraft()
-                                    ToastUtils.showShort(
-                                        context.getString(R.string.create_ai_successfully)
-                                    )
-                                    //                                    onCreateSuccess()
-                                }
-
-                                // 创建成功
-                                navController.previousBackStackEntry
-                                    ?.savedStateHandle
-                                    ?.set("createBackCode", Activity.RESULT_OK)
-                                navController.popBackStack()
-                            } catch (e: Exception) {
-                                val operation =
-                                    if (isEditMode) context.getString(R.string.update_failed)
-                                    else context.getString(R.string.creation_failed)
-                                val errorMessage =
-                                    context.getString(
-                                        R.string.operation_error_with_reason,
-                                        operation,
-                                        e.message ?: context.getString(R.string.unknown_error),
-                                    )
-                                ToastUtils.showShort(errorMessage)
-                                LogUtils.e(
-                                    "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
-                                )
-                            }
+                        // Validate required fields
+                        if (
+                            name.isBlank() ||
+                                intro.isBlank() ||
+                                opening.isBlank() ||
+                                settings.isBlank()
+                        ) {
+                            ToastUtils.showShort(R.string.please_fill_required_fields)
+                            return@click
                         }
-                        .invokeOnCompletion { isLoading = false }
-                },
+
+                        isLoading = true
+
+                        scope
+                            .launch {
+                                try {
+                                    // Prepare avatar and background fields according to new logic
+                                    val backgroundUrl =
+                                        if (avatarUrls.isNotEmpty()) {
+                                            // Use selected image from generated grid as background
+                                            avatarUrls.getOrNull(selectedImageIndex)
+                                                ?: avatarUrls.first()
+                                        } else {
+                                            // Use single generated image as background
+                                            avatarUrl
+                                        }
+
+                                    val backgroundImagesList =
+                                        avatarUrls.ifEmpty { listOfNotNull(avatarUrl) }
+
+                                    // Save background for chat usage
+                                    if (backgroundUrl != null) {
+                                        AvatarManager.setChatBackgroundUrl(backgroundUrl)
+                                    }
+
+                                    val currentCroppedAvatar =
+                                        croppedAvatarUrls[selectedImageIndex]
+                                            ?: editAgent?.avatar?.takeIf {
+                                                editAgent.background == backgroundUrl
+                                            }
+                                    val request =
+                                        CreateAgentRequest(
+                                            name = name,
+                                            gender = gender,
+                                            avatar = currentCroppedAvatar,
+                                            background = backgroundUrl,
+                                            backgroundImages = backgroundImagesList,
+                                            settings = mapOf("description" to settings),
+                                            intro = intro,
+                                            opening = opening,
+                                            visibility = visibility,
+                                            prompt = settings,
+                                        )
+
+                                    // Call API through ViewModel
+                                    createRoleViewModel.updateAgent(
+                                        agentId = editAgent?.id.takeIf { isEditMode },
+                                        request = request,
+                                        createTempFile = { context.createTempFile(it) },
+                                        context = context,
+                                    )
+
+                                    if (isEditMode) {
+                                        ToastUtils.showShort(
+                                            R.string.character_updated_successfully
+                                        )
+                                        //                                    onCreateSuccess()
+                                    } else {
+                                        // 如果是从草稿列表进入的，删除该草稿
+                                        if (savedDraft != null && draftId != null) {
+                                            CreateRoleDraftStorage.deleteDraft(draftId)
+                                        }
+                                        // 清除临时草稿
+                                        CreateRoleDraftStorage.clearCurrentDraft()
+                                        ToastUtils.showShort(
+                                            context.getString(R.string.create_ai_successfully)
+                                        )
+                                        //                                    onCreateSuccess()
+                                    }
+
+                                    // 创建成功
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("createBackCode", Activity.RESULT_OK)
+                                    navController.popBackStack()
+                                } catch (e: Exception) {
+                                    val operation =
+                                        if (isEditMode) context.getString(R.string.update_failed)
+                                        else context.getString(R.string.creation_failed)
+                                    val errorMessage =
+                                        context.getString(
+                                            R.string.operation_error_with_reason,
+                                            operation,
+                                            e.message ?: context.getString(R.string.unknown_error),
+                                        )
+                                    ToastUtils.showShort(errorMessage)
+                                    LogUtils.e(
+                                        "${if (isEditMode) "UpdateRole" else "CreateRole"} error: ${e.message}"
+                                    )
+                                }
+                            }
+                            .invokeOnCompletion { isLoading = false }
+                    },
             )
 
             Spacer(modifier = Modifier.height(60.dp))
@@ -1990,49 +1994,6 @@ private fun VisibilitySwitchSection(
                         checkedBorderColor = Color.Transparent,
                         uncheckedBorderColor = Color.Transparent,
                     ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun CreateButton(isLoading: Boolean, isEditMode: Boolean = false, onClick: () -> Unit) {
-    var lastClickTime by remember { mutableLongStateOf(0L) }
-
-    Button(
-        onClick = {
-            val currentTime = System.currentTimeMillis()
-            if (AntiClick.isValidClick(lastClickTime)) {
-                lastClickTime = currentTime
-                onClick()
-            }
-        },
-        enabled = !isLoading,
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        shape = RoundedCornerShape(25.dp),
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFE91E63), Color(0xFFFF9800))
-                        ),
-                    shape = RoundedCornerShape(25.dp),
-                ),
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.5.dp,
-            )
-        } else {
-            Text(
-                text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
             )
         }
     }

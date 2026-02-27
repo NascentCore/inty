@@ -5,7 +5,6 @@ from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.models import Base
-from app.models.associations import agent_followers
 from app.models.user import Gender
 
 
@@ -39,13 +38,15 @@ class Agent(Base):
     id = Column(String, primary_key=True, index=True)
     # DEPRECATED: app 显示 ID 而非 readable_id
     readable_id = Column(String(8), comment="【已废弃】角色可读ID")
-    name = Column(String(30), index=True, nullable=False)
+    name = Column(String(256), index=True, nullable=False)
     gender = Column(Enum(Gender, name="gender"), nullable=False)
     avatar = Column(String)
     background = Column(String)
     background_images = Column(JSON)  # 存储背景图列表
     background_animated = Column(String, nullable=True)  # 存储 webp 动图 URL
     voice_id = Column(String)
+    # 这里包含了 llm_config 和 chat_settings 的配置；llm_config 用于覆盖系统为
+    # 免费用户和付费用户设置的默认模型。
     settings = Column(JSON)
     intro = Column(String)
     opening = Column(String)
@@ -53,6 +54,11 @@ class Agent(Base):
         Enum(AgentVisibility, name="visibility"), default=AgentVisibility.PUBLIC
     )
     photos = Column(JSON)
+    exclusive_photos = Column(
+        JSON,
+        nullable=True,
+        comment="运营上传的专属角色照：每项含 image_url, caption, credits_required",
+    )
     category = Column(String)
     status = Column(Enum(AgentStatus, name="agentstatus"), default=AgentStatus.PENDING)
     source = Column(
@@ -86,11 +92,9 @@ class Agent(Base):
     )  # 主提示词 - 作为第一个system message，可以是预设 ID 或自定义文本
     mode_prompt = Column(
         Text, nullable=True
-    )  # 模式提示词 - 放在角色卡提示词后面，可以是预设 ID 或自定义文本
+    )  # 模式提示词 - 放在角色设定提示词后面，可以是预设 ID 或自定义文本
 
-    # 角色卡相关字段；都已经废弃
-    character_card_spec = Column(String, nullable=True)  # 角色卡规范版本
-    character_card_data = Column(JSON, nullable=True)  # 原始角色卡数据
+    # 角色设定相关字段
     personality = Column(Text, nullable=True)  # 性格特征
     scenario = Column(Text, nullable=True)  # 场景设定
     message_example = Column(Text, nullable=True)  # 对话示例
@@ -111,10 +115,6 @@ class Agent(Base):
 
     # 关系
     creator = relationship("User", back_populates="agents")
-    followers = relationship(
-        "User", secondary=agent_followers, back_populates="following_agents"
-    )
-    messages = relationship("Message", back_populates="agent")
     chat_settings = relationship("ChatSettings", back_populates="agent")
     chats = relationship("Chat", back_populates="agent")
     resources = relationship("Resource", back_populates="agent")

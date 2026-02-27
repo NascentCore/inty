@@ -1,7 +1,6 @@
 package com.ai.intellimate.agent.info
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -40,7 +39,6 @@ fun AgentGalleryImagePreviewDialog(
                 ),
         ) {
             val currentImageUrl = previewImageUrl
-            val context = LocalContext.current
             FullScreenImageViewer(
                 imageUrl = currentImageUrl,
                 onDismiss = onDismiss,
@@ -55,6 +53,9 @@ fun AgentGalleryImagePreviewDialog(
                 actionLabel = stringResource(R.string.agent_gallery_set_as_background),
                 onReport = {
                     if (agentId.isNotBlank()) {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(Routes.Me.ReportInitialEvidenceImageUrlKey, currentImageUrl)
                         navController.navigate(Routes.Me.reportPage(false, "AGENT", agentId))
                         //                        ReportActivity.launch(context, targetType =
                         // "AGENT", targetId = agentId)

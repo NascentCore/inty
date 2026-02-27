@@ -5,13 +5,12 @@ import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ai.intellimate.audio.PlaybackState
-import com.ai.intellimate.audio.RecordingState
 import com.ai.intellimate.call.data.AICallRepository
 import com.ai.intellimate.call.data.ConnectionState
 import com.ai.intellimate.call.data.bean.CallType
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.utils.NetworkErrorHandler
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,16 +24,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/** 语音通话状态 */
-data class VoiceCallState(
-    val isCallActive: Boolean = false,
-    val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
-    val recordingState: RecordingState = RecordingState.IDLE,
-    val playbackState: PlaybackState = PlaybackState.IDLE,
-    val error: String? = null,
-    val hasPermission: Boolean = false,
-)
 
 /** 语音通话ViewModel 管理语音通话的状态和业务逻辑 */
 class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel() {
@@ -62,6 +51,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
     // 日志节流：记录上次打印警告的时间
     private var lastWarningLogTime = 0L
     private val warningLogInterval = 5000L // 5秒内最多打印一次警告
+    var messageCount = 0
 
     init {
         // 启动队列消费协程
@@ -120,6 +110,13 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             repository
                 .call(agentId)
                 .catch { error ->
+                    // #region agent log（上报 Crashlytics）
+                    NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
+                        "C",
+                        "VoiceCallViewModel.kt:call.catch",
+                        error.message,
+                    )
+                    // #endregion
                     LogUtils.e("连接语音通话失败: ${error.message}")
                     _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
                 }
@@ -148,7 +145,11 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             }
                         }
 
-                        CallType.STATUS -> {}
+                        CallType.STATUS -> {
+                            packet.statusEnum?.let { status ->
+                                _uiState.update { it.copy(callState = status) }
+                            }
+                        }
 
                         CallType.SESSION_INFO -> {
                             _uiState.update {
@@ -162,9 +163,23 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                             }
                         }
 
+                        CallType.TRANSCRIPT,
+                        CallType.USER_TRANSCRIPT -> messageCount++
+
                         else -> {}
                     }
                 }
+        }
+    }
+
+    fun interruptSpeaking() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.sendActivityStart()
+                repository.sendActivityEnd()
+            } catch (e: Exception) {
+                LogUtils.e("发送打断信号失败: ${e.message}")
+            }
         }
     }
 

@@ -82,13 +82,13 @@ def get_users_by_emails(emails: List[str]) -> List[UserInfo]:
             # 先获取所有 chat_id 和对应的 session_id
             cur.execute("SELECT id, user_id FROM chats")
             all_chats = cur.fetchall()
-            
+
             # 构建 session_id 到 user_id 的映射
             session_to_user = {}
             for chat in all_chats:
                 session_id = generate_session_id(chat["id"])
                 session_to_user[session_id] = chat["user_id"]
-            
+
             # 查询消息数量
             cur.execute("""
                 SELECT session_id::text, COUNT(*) as msg_count 
@@ -96,15 +96,17 @@ def get_users_by_emails(emails: List[str]) -> List[UserInfo]:
                 GROUP BY session_id
             """)
             session_counts = cur.fetchall()
-            
+
             # 按用户聚合消息数
             user_msg_counts = {}
             for row in session_counts:
                 session_id = row["session_id"]
                 if session_id in session_to_user:
                     user_id = session_to_user[session_id]
-                    user_msg_counts[user_id] = user_msg_counts.get(user_id, 0) + row["msg_count"]
-            
+                    user_msg_counts[user_id] = (
+                        user_msg_counts.get(user_id, 0) + row["msg_count"]
+                    )
+
             # 查询用户信息
             query = """
                 SELECT id, email, nickname
@@ -140,13 +142,13 @@ def get_top_users_by_message_count(limit: int = 20) -> List[UserInfo]:
             # 获取所有 chat 及其 user_id
             cur.execute("SELECT id, user_id FROM chats")
             all_chats = cur.fetchall()
-            
+
             # 构建 session_id 到 user_id 的映射
             session_to_user = {}
             for chat in all_chats:
                 session_id = generate_session_id(chat["id"])
                 session_to_user[session_id] = chat["user_id"]
-            
+
             # 查询每个 session 的消息数量
             cur.execute("""
                 SELECT session_id::text, COUNT(*) as msg_count 
@@ -154,34 +156,39 @@ def get_top_users_by_message_count(limit: int = 20) -> List[UserInfo]:
                 GROUP BY session_id
             """)
             session_counts = cur.fetchall()
-            
+
             # 按用户聚合消息数
             user_msg_counts = {}
             for row in session_counts:
                 session_id = row["session_id"]
                 if session_id in session_to_user:
                     user_id = session_to_user[session_id]
-                    user_msg_counts[user_id] = user_msg_counts.get(user_id, 0) + row["msg_count"]
-            
+                    user_msg_counts[user_id] = (
+                        user_msg_counts.get(user_id, 0) + row["msg_count"]
+                    )
+
             # 过滤出有消息的用户并排序
             user_ids_with_msgs = sorted(
                 user_msg_counts.keys(),
                 key=lambda uid: user_msg_counts[uid],
-                reverse=True
+                reverse=True,
             )[:limit]
-            
+
             if not user_ids_with_msgs:
                 return []
-            
+
             # 查询用户信息
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT id, email, nickname
                 FROM users
                 WHERE id = ANY(%s)
                 AND deleted_at IS NULL
-            """, (user_ids_with_msgs,))
+            """,
+                (user_ids_with_msgs,),
+            )
             rows = cur.fetchall()
-            
+
             # 构建结果
             user_info_map = {row["id"]: row for row in rows}
             result = []
@@ -274,7 +281,9 @@ def get_chat_messages(chat_id: str, limit: int = 500) -> List[ChatMessage]:
                     continue
 
                 # 确定角色
-                role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
+                role = (
+                    "user" if message_type in ["human", "HumanMessage"] else "assistant"
+                )
                 messages.append(ChatMessage(role=role, content=content))
 
             return messages

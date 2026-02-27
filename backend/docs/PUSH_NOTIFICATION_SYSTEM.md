@@ -19,12 +19,13 @@
    - `record_push_history()`: 记录推送历史
 
 3. **定时任务调度** (`app/services/push_scheduler_service.py`)
-   - 使用 APScheduler 实现三个阶段的推送检查
+   - 使用 APScheduler 实现分阶段聊天推送与节日记忆通知
    - 10分钟推送：每5分钟检查一次
    - 30分钟推送：每10分钟检查一次
    - 2小时推送：每30分钟检查一次
+   - **节日记忆通知**（可选，`push_notification.festival_memory_enabled`）：每 15 分钟扫描未投递且未发过 system notification 的节日记忆，发送 FCM；点击进入该角色 Love Journal 并定位到对应记忆条目。`push_type = "festival_memory"`，`stage = "festival"`。
 
-4. **独立服务入口** (`app/services/push_worker.py`)
+4. **独立服务入口** (`backend/push_worker/main.py`)
    - 可单独运行的服务进程
    - 初始化 Firebase、数据库连接和 AgentManager
    - 支持优雅关闭（SIGTERM/SIGINT）
@@ -58,6 +59,11 @@
 
 - 使用数据库唯一约束 `(chat_id, stage)` 确保每个聊天在每个阶段只发送一次
 - 在发送前检查推送历史，避免重复发送
+
+### 推送类型（push_type）
+
+- `no_chat` / `recent_chat`：分阶段聊天推送，`stage` 为 10min / 30min / 2h / 24h / 48h 等。
+- **`festival_memory`**：节日记忆通知。扫描存在「未投递且未发过 system notification」的节日记忆的 (user_id, agent_id)，发送 FCM；**按版本门控**：仅当用户 `last_android_app_version_code` ≥ `min_app_version_code_for_festival_memory` 时发送（与 in-app 节日记忆门控一致）。去重以 `memory.system_notification_sent_at` 为准，发送成功后更新该字段；可选并存 `PushNotificationHistory`（`push_type = "festival_memory"`，`stage = "festival"`）便于审计。点击通知进入该角色 Love Journal 页并定位到对应记忆条目。
 
 ## 消息生成
 
@@ -110,6 +116,8 @@ push_notification:
 
 - `enabled`: 是否启用推送服务（默认：`false`）
 - `batch_size`: 每批处理的聊天数量（默认：`50`）
+- `festival_memory_enabled`: 是否启用节日记忆通知推送（默认：`true`）
+- `festival_memory_batch_size`: 节日记忆通知每批处理的 (user_id, agent_id) 数量（默认：`50`）
 - `max_retries`: 最大重试次数（默认：`3`）
 - `intervals`: 推送时间间隔配置（分钟）
 
@@ -120,7 +128,7 @@ push_notification:
 推送服务可以作为独立进程运行：
 
 ```bash
-python -m app.services.push_worker
+python -m backend.push_worker.main
 ```
 
 ### 依赖要求
@@ -219,7 +227,7 @@ alembic upgrade head
 - `app/models/push_notification.py` - 推送历史模型
 - `app/services/push_notification_service.py` - 推送服务核心逻辑
 - `app/services/push_scheduler_service.py` - 定时任务调度
-- `app/services/push_worker.py` - 独立服务入口
+- `backend/push_worker/main.py` - 独立服务入口
 - `app/core/prompting/push_message_prompt.py` - 提示词模板
 - `alembic/versions/20251111_140711_create_push_notification_history.py` - 数据库迁移
 

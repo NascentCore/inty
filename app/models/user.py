@@ -17,7 +17,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, validates
 
 from app.models import Base
-from app.models.associations import agent_followers
 
 
 class AuthType(str, enum.Enum):
@@ -56,6 +55,10 @@ class User(Base):
     avatar = Column(String, comment="用户头像URL")
     email = Column(String, comment="邮箱地址")
     user_photo = Column(String, comment="用户自拍照片URL，用于生图参考")
+    selfie_persona_summary = Column(
+        String(1024),
+        comment="根据用户自拍推测的简短画像结论，用于聊天提示词",
+    )
 
     @validates("phone")
     def validate_phone(self, key, value):
@@ -102,12 +105,15 @@ class User(Base):
         comment="FCM token 无效时间，如果为 None 表示用户有有效 token 或未检查，如果有值表示在这个时间点发现用户所有 token 都无效",
     )
 
+    # 用于 push worker 的 feature gating：worker 根据此值决定是否发送或如何构造 push
+    last_android_app_version_code = Column(
+        Integer,
+        nullable=True,
+        comment="Last Android app version code reported by client on POST /api/v1/version/check; used for feature gating in the push worker. Android-specific because backend may serve iOS in the future.",
+    )
+
     # 关系
     agents = relationship("Agent", back_populates="creator")
-    following_agents = relationship(
-        "Agent", secondary=agent_followers, back_populates="followers"
-    )
-    messages = relationship("Message", back_populates="sender")
     chat_settings = relationship("ChatSettings", back_populates="user")
     chats = relationship("Chat", back_populates="user")
     resources = relationship("Resource", back_populates="user")

@@ -1,19 +1,39 @@
 # InTy - 长期 AI 情感陪伴
 
+- **InTy 是基于 AI 的情感陪伴系统，不是伴侣/聚焦情感因为其没有物理实体（仅手机 App）、长期在于目标是建立长期关系（角色与用户、用户与长期陪伴体验/app）**
+- **本代码库是多语言（Python 后端、Kotlin 安卓 app、Typescript 运营系统）monorepo**
+
+![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
+![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=flat&theme=default&responseTime=true)
+![](https://api.checklyhq.com/v1/badges/checks/f2988f0a-f58a-4e75-87bc-e5700869ba68?style=flat&theme=default&responseTime=true)
+
 [![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
-[![Build and deploy Inty backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
-
-TODO: 添加 web app dev 环境部署流程
-
 [![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
 [![CI - Web App](https://github.com/NascentCore/inty/actions/workflows/ci_web_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_web_app.yaml)
-[![Sync AI characters from dev to prod](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml)
 [![Validate configs](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml)
 
-![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=for-the-badge&theme=default&responseTime=true)
-![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=for-the-badge&theme=default&responseTime=true)
+[![dev-prod 同步 AI 角色](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml)
+[![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
+[![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
+[![Release - 构建部署 Inty Push Worker](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml)
 
-InTy 是基于 AI 的情感伴侣系统，包含后端服务、Android 应用和 Web 应用。
+## IntelliMate 2026 Q1 目标
+
+**建立生活节奏（晨午晚仪式）+ 共同记忆（挚爱馆/歌/回顾）+ 角色人生线三位一体的长期陪伴底座，使关系可回溯、可延续、可生长。**
+
+## Cursor
+
+**Cursor 是我们选定的 AI coding 工具，必须使用**
+
+- https://cursor.com/blog/secure-codebase-indexing
+  - 团队账户内的成员共享云端代码索引，可以加速
+- https://cursor.com/docs/context/commands
+  - 定制命令
+- 使用 Cursor 对代码库进行问答；直接打开 Ask 模式（Shift+Tab 切换）
+  <img width="900" height="1766" alt="image" src="https://github.com/user-attachments/assets/9ca85fb0-4fe3-495b-ae37-13534bfd2999" />
+- 本代码库维护了丰富的 AGENTS.md 来增强 Cursor 在本代码库的效能
+  - 并且广泛使用 markdown 文档来增强 Cursor 对整个代码库的高抽象层级上的设计意图、架构、未来路线图（[项目管理](项目管理/)目录）
+  - Cursor 是对接代码库的唯一入口，包括询问和修改代码
 
 ## 快速开始
 
@@ -49,34 +69,27 @@ pip install -r requirements.txt
 # 启动 postgres 数据库
 docker compose up pgvector -d
 # 注意拷贝 admin bearer token 用来登录 http://localhost:8000/evaluation
-./start.sh --dev
+./backend/inty/start.sh --dev
 ```
 
 <img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
 
-### 启动 Dummy 服务
+### 本地联调：本地后端+ Android Studio App
 
 ```bash
 docker compose up pgvector -d
 cp devops/config.yaml.test config.yaml
 
 # 修改相关 py 代码，会自动加载，无需重启
-./start.sh --dev
+./backend/inty/start.sh --dev
+
+# 打开 Android Studio
+# 选择 local build type，编译运行
+
+# 同时打开端口代理、让模拟器可以访问本机端口
+# -s 在多个模拟器时可以指向特定模拟器
+adb reverse [-s 34181JEHN02316] tcp:8000 tcp:8000
 ```
-
-修改 app/core/config.py 中的 APIEndpointsConfig `use_dummy_*` 等相关开关；
-找到你需要返回特定测试值的 endpoints 文件
-
-用 `local` build type 来构建 Android App IntelliMate 就能访问。
-记住打开本地反向代理 `adb -s 34181JEHN02316 reverse tcp:8000 tcp:8000`
-
-
-## 代码库其他组件说明
-
-更多详细信息请参考各子目录的 README 文件：
-
-- 后端开发：参见 [backend/README.md](backend/README.md)
-- [mychatplayground](mychatplayground/README.md): 用于测试提示词和聊天效果的 web 工具
 
 ### 相关链接
 

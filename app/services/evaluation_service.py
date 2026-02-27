@@ -20,7 +20,7 @@ from app.models.evaluation import (
 from app.services import agent_service, chat_service
 from app.services.scoring_service import ScoringService
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class EvaluationService:
@@ -51,7 +51,7 @@ class EvaluationService:
 
         if len(agents) != len(selected_agents):
             missing_agents = set(selected_agents) - {agent.id for agent in agents}
-            raise ValueError(f"智能体不存在: {missing_agents}")
+            raise ValueError(f"Agents not found: {missing_agents}")
 
         # 创建会话
         session = EvaluationSession(
@@ -91,10 +91,10 @@ class EvaluationService:
         session = result.scalar_one_or_none()
 
         if not session:
-            raise ValueError(f"评测会话不存在: {session_id}")
+            raise ValueError(f"Evaluation session not found: {session_id}")
 
         if session.status != EvaluationStatus.PENDING:
-            raise ValueError(f"评测会话状态错误: {session.status}")
+            raise ValueError(f"Invalid evaluation session status: {session.status}")
 
         # 更新会话状态
         await self.db.execute(
@@ -298,7 +298,7 @@ class EvaluationService:
             agent = db_result.scalar_one_or_none()
 
             if not agent:
-                result.error_message = f"智能体不存在: {agent_id}"
+                result.error_message = f"Agent not found: {agent_id}"
                 await self._save_result(result)
                 return result
 
@@ -313,7 +313,7 @@ class EvaluationService:
             end_time = datetime.utcnow()
 
             if not chat_response or not chat_response.get("response"):
-                result.error_message = "智能体未返回回复"
+                result.error_message = "Agent did not return a response"
                 await self._save_result(result)
                 return result
 
@@ -716,7 +716,7 @@ class EvaluationService:
                 self.db, agent_id=agent_id
             )
             if not agent_data:
-                raise ValueError(f"无法获取智能体数据: {agent_id}")
+                raise ValueError(f"Failed to fetch agent data: {agent_id}")
 
             # 从AgentManager获取Agent实例
             from app.core.agent.agent import agent_manager
@@ -768,4 +768,4 @@ class EvaluationService:
 
         except Exception as e:
             logger.error(f"评测消息发送失败 - Agent: {agent_id}, 错误: {str(e)}")
-            raise ValueError(f"智能体通信失败: {str(e)}")
+            raise ValueError(f"Agent communication failed: {str(e)}")

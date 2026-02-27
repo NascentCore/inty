@@ -14,7 +14,6 @@ experimental/voice_chat/
   ├─ server/                # FastAPI + aiortc 服务端
   │   ├─ main.py            # /offer 信令与 Gemini Live 音频桥接
   │   ├─ config.py          # YAML 配置加载（支持环境变量展开）
-  │   ├─ config.yaml        # 示例配置（可用 ${GOOGLE_API_KEY}）
   │   ├─ requirements.txt   # 服务端依赖
   │   └─ start.sh           # 启动脚本
   └─ android_app/           # Android WebRTC Demo 应用（Kotlin）
@@ -26,27 +25,6 @@ experimental/voice_chat/
               ├─ AndroidManifest.xml
               ├─ res/layout/activity_main.xml
               └─ java/com/example/voicechat/MainActivity.kt
-```
-
-### 配置
-
-- **位置**：`experimental/voice_chat/server/config.yaml`
-- **说明**：支持从环境变量展开，推荐将 `gemini.api_key` 写为 `${GOOGLE_API_KEY}` 并导出环境变量。
-
-示例：
-```yaml
-server:
-  host: 0.0.0.0
-  port: 9001
-  stun_server: stun:stun.l.google.com:19302
-  log_level: info
-
-gemini:
-  api_key: "${GOOGLE_API_KEY}"
-  model: gemini-live-2.5-flash-preview-native-audio-09-2025
-  voice_name: Zephyr
-  send_sample_rate: 16000
-  receive_sample_rate: 24000
 ```
 
 ### 运行（服务端）

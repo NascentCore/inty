@@ -8,16 +8,17 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.character.local.db.CharacterDao
 import ai.sxwl.android.data.character.local.db.CharacterDatabase
 import ai.sxwl.android.data.character.local.db.CharacterEntity
+import ai.sxwl.android.data.character.local.db.FestivalMemory
 import ai.sxwl.android.utils.LogUtils
+import androidx.room.withTransaction
 import com.architecture.httplib.core.HttpResult
+import java.time.LocalDate
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 class CharacterRepository(
     private val dao: CharacterDao = CharacterDatabase.getInstance().characterDao(),
@@ -42,17 +43,48 @@ class CharacterRepository(
         return dao.observeCharacter(agentId).filterNotNull()
     }
 
+    fun getFestivalMemories(agentId: String): Flow<List<FestivalMemory>> {
+        return dao.getFestivalMemories(agentId)
+    }
+
+    suspend fun updateLocalAgent(agentId: String, update: (AgentInfo) -> AgentInfo) {
+        withContext(dispatcher) {
+            val entity = dao.getCharacter(agentId)
+            val agent = entity?.toAgentInfo() ?: AgentInfo(id = agentId)
+
+            dao.upsert(update(agent).toCharacterEntity(entity))
+        }
+    }
+
     suspend fun refreshAgent(agentId: String): HttpResult<AgentInfo> {
-        return runCatching {
-            NetServiceMgr.getChatApi().getAgentInfo(agentId)
-        }.onSuccess {
-            val existing = dao.getCharacter(agentId)
-            if (it is HttpResult.Success) {
-                dao.upsert(it.data.toCharacterEntity(existing))
+        return runCatching { NetServiceMgr.getChatApi().getAgentInfo(agentId) }
+            .onSuccess {
+                val existing = dao.getCharacter(agentId)
+                if (it is HttpResult.Success) {
+                    dao.upsert(it.data.toCharacterEntity(existing))
+
+                    val memories =
+                        it.data.features?.festivalMemories?.map { memory ->
+                            FestivalMemory(
+                                id = memory.memoryId ?: 0,
+                                agentId = agentId,
+                                festivalDate = memory.festivalDate,
+                                festivalName = memory.festivalName,
+                                memory = memory.memory,
+                            )
+                        }
+
+                    if (!memories.isNullOrEmpty()) {
+                        CharacterDatabase.getInstance().withTransaction {
+                            dao.clearMemories(agentId)
+                            dao.upsert(memories)
+                        }
+                        LogUtils.d("更新角色记忆${memories.size}条")
+                    }
+                }
             }
-        }.onFailure { error ->
-            LogUtils.e("setAgentID exception: ${error.message}")
-        }.getOrThrow()
+            .onFailure { error -> LogUtils.e("setAgentID exception: ${error.message}") }
+            .getOrThrow()
     }
 
     suspend fun cacheAgents(agents: List<AgentInfo>) {
@@ -68,6 +100,7 @@ class CharacterRepository(
         dao.upsertAll(entities)
     }
 
+    @Deprecated("不完整的AgentInfo会删除数据库中已有记录")
     suspend fun syncCharacterSnapshot(agentInfo: AgentInfo, energyPoints: Int) {
         withContext(dispatcher) {
             val existing = dao.getCharacter(agentInfo.id)
@@ -79,8 +112,9 @@ class CharacterRepository(
     }
 
     suspend fun updateEnergy(agentId: String, energyPoints: Int) {
-        val sanitizedPoints = max(0, energyPoints)
         withContext(dispatcher) {
+            val existing = dao.getCharacter(agentId)
+            val sanitizedPoints = max(existing?.energyPoints ?: 0, energyPoints)
             dao.updateEnergy(agentId, sanitizedPoints, System.currentTimeMillis())
         }
     }
@@ -165,32 +199,33 @@ private fun AgentInfo.toCharacterEntity(existing: CharacterEntity?): CharacterEn
         followerCount = followerCount,
         connectorCount = connectorCount,
         deletedAt = deletedAt,
-        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() }
-    ) ?: CharacterEntity(
-        agentId = id,
-        name = name,
-        avatar = avatar,
-        intro = intro,
-        readableId = readableId,
-        energyPoints = energyPoints,
-        category = category,
-        updatedAt = System.currentTimeMillis(),
-        background = background,
-        backgroundAnimatedUrl = backgroundAnimatedUrl,
-        gender = gender,
-        isFollowed = isFollowed,
-        opening = opening,
-        openingAudioUrl = opening_audio_url,
-        voicePreview = voicePreview,
-        createdAt = createdAt,
-        creator = creator,
-        tags = tags?.filterNotNull(),
-        settings = settings,
-        visibility = visibility,
-        prompt = prompt,
-        followerCount = followerCount,
-        connectorCount = connectorCount,
-        deletedAt = deletedAt,
-        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() }
+        backgroundImages = backgroundImages.takeIf { it.isNotEmpty() },
     )
+        ?: CharacterEntity(
+            agentId = id,
+            name = name,
+            avatar = avatar,
+            intro = intro,
+            readableId = readableId,
+            energyPoints = energyPoints,
+            category = category,
+            updatedAt = System.currentTimeMillis(),
+            background = background,
+            backgroundAnimatedUrl = backgroundAnimatedUrl,
+            gender = gender,
+            isFollowed = isFollowed,
+            opening = opening,
+            openingAudioUrl = opening_audio_url,
+            voicePreview = voicePreview,
+            createdAt = createdAt,
+            creator = creator,
+            tags = tags?.filterNotNull(),
+            settings = settings,
+            visibility = visibility,
+            prompt = prompt,
+            followerCount = followerCount,
+            connectorCount = connectorCount,
+            deletedAt = deletedAt,
+            backgroundImages = backgroundImages.takeIf { it.isNotEmpty() },
+        )
 }

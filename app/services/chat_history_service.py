@@ -1,10 +1,12 @@
 import json
-from typing import Any, Dict, List, Optional
+import uuid
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Set, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.prompt_template import (
@@ -55,6 +57,7 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
 
 # Keep the legacy connection function for PostgresChatMessageHistory compatibility
 _connection = None
+_replica_connection = None
 
 
 def get_chat_history_connection():
@@ -64,14 +67,52 @@ def get_chat_history_connection():
         try:
             import psycopg
 
+            logger.debug(
+                f"connecting to database: {global_config_loaded_from_config_yaml.database.url}"
+            )
             _connection = psycopg.connect(
                 global_config_loaded_from_config_yaml.database.url, autocommit=True
             )
-            logger.info("chat_history数据库连接已建立")
+            logger.info("chat_history 数据库连接已建立")
         except Exception as e:
             logger.error(f"建立chat_history数据库连接失败: {str(e)}")
             raise
     return _connection
+
+
+def _sync_url_from_async_replica(async_replica_url: Optional[str]) -> Optional[str]:
+    """从 async_replica_url（postgresql+asyncpg://...）得到同步驱动用 URL（postgresql://...）。"""
+    if not async_replica_url:
+        return None
+    return async_replica_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+
+def get_chat_history_replica_connection():
+    """
+    只读副本连接，用于 chat_history/chats 的只读查询（如按日期查会话对与消息）。
+    当 config.database.async_replica_url 未配置时返回 None。
+    """
+    global _replica_connection
+    async_replica_url = global_config_loaded_from_config_yaml.database.async_replica_url
+    sync_url = _sync_url_from_async_replica(async_replica_url)
+    if not sync_url:
+        return None
+    if _replica_connection is None or _replica_connection.closed:
+        try:
+            import psycopg
+
+            # 5 秒连接超时，避免副本不可达时长时间阻塞（如从本机连生产副本）
+            conninfo = (
+                f"{sync_url}?connect_timeout=5"
+                if "?" not in sync_url
+                else f"{sync_url}&connect_timeout=5"
+            )
+            _replica_connection = psycopg.connect(conninfo, autocommit=True)
+            logger.info("chat_history 副本数据库连接已建立")
+        except Exception as e:
+            logger.error("建立 chat_history 副本连接失败: %s", e)
+            raise
+    return _replica_connection
 
 
 # chat_history表现在由Alembic迁移管理，不需要手动初始化
@@ -240,12 +281,38 @@ def has_user_messages_ever(session_id: str) -> bool:
         return False
 
 
-def add_user_message(session_id: str, message: str) -> None:
-    """添加用户消息到聊天历史"""
+def add_user_message(
+    session_id: str, message: str, meta_data: Optional[dict] = None
+) -> Optional[int]:
+    """添加用户消息到聊天历史。meta_data 非空时用 raw INSERT 写入元数据并返回插入 id，否则走 PostgresChatMessageHistory 并返回 None。"""
     try:
-        history = get_chat_history(session_id)
-        history.add_messages([HumanMessage(content=message)])
-        logger.debug(f"添加用户消息到会话 {session_id}: {message}")
+        if meta_data is None:
+            history = get_chat_history(session_id)
+            history.add_messages([HumanMessage(content=message)])
+            logger.debug(f"添加用户消息到会话 {session_id}: {message[:50]}...")
+            return None
+        conn = get_chat_history_connection()
+        message_data = {"type": "human", "data": {"content": message}}
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (
+                    session_id,
+                    json.dumps(message_data),
+                    json.dumps(meta_data),
+                ),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+        logger.debug(
+            f"添加用户消息到会话 {session_id}: {message[:50]}..., ID: {message_id}"
+        )
+        return message_id
     except Exception as e:
         logger.error(f"添加用户消息失败 {session_id}: {str(e)}")
         raise
@@ -312,6 +379,121 @@ def add_ai_message_sync(
         raise
 
 
+FESTIVAL_MEMORY_PROMPT_CONTENT = (
+    "{char} wrote you a secret heartbeat diary. Take a quiet look."
+)
+META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
+META_MESSAGE_TYPE_SURPRISE_SNAP = "surprise_snap"
+
+
+def get_festival_memory_prompt_content_for_agent_sync(agent_id: str) -> str:
+    """
+    返回用于展示的节日记忆提示文案（与 add_festival_memory_prompt_message_sync 落库一致）。
+    供按需投递时构建 chat completion choices 中的 message 使用。
+    """
+    agent_name = "角色"
+    try:
+        conn = get_chat_history_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name FROM agents WHERE id = %s LIMIT 1",
+                (agent_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                agent_name = str(row[0]).strip() or agent_name
+    except Exception as e:
+        logger.debug(f"获取 agent 名称失败 agent_id={agent_id}: {e}")
+    return FESTIVAL_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
+
+
+def add_festival_memory_prompt_message_sync(
+    session_id: str,
+    agent_id: str,
+    memory_id: int,
+    festival_name: str,
+    festival_date: Union[date, str],
+) -> Optional[int]:
+    """
+    向 chat_history 插入一条「节日记忆/心跳日记」提示类 AI 消息。
+    按 (session_id, agent_id, festival_name, festival_date) 幂等：已存在则返回已有 id 不插入。
+    写入时用该会话的角色名称替换模板中的 {char}，落库即为最终文案；
+    meta_data 中记录 festivalMemoryId、festivalName、festivalDate。
+    返回插入或已存在消息的 ID，失败返回 None。
+    """
+    festival_date_str = (
+        festival_date.isoformat()
+        if isinstance(festival_date, date)
+        else str(festival_date)
+    )
+    try:
+        conn = get_chat_history_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id FROM chat_history
+                WHERE session_id = %s AND deleted_at IS NULL
+                  AND meta_data->>'messageType' = %s AND meta_data->>'agentId' = %s
+                  AND meta_data->>'festivalName' = %s AND meta_data->>'festivalDate' = %s
+                LIMIT 1
+                """,
+                (
+                    session_id,
+                    META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+                    agent_id,
+                    festival_name,
+                    festival_date_str,
+                ),
+            )
+            row = cur.fetchone()
+            if row:
+                logger.debug(
+                    f"节日记忆提示消息已存在 session_id={session_id} agent_id={agent_id} "
+                    f"festival={festival_name} {festival_date_str}, id={row[0]}"
+                )
+                return row[0]
+        agent_name = "角色"
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name FROM agents WHERE id = %s LIMIT 1",
+                (agent_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                agent_name = str(row[0]).strip() or agent_name
+        content = FESTIVAL_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
+        message_data = {
+            "type": "ai",
+            "data": {"content": content},
+        }
+        meta_data = {
+            "agentId": agent_id,
+            "messageType": META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+            "festivalMemoryId": memory_id,
+            "festivalName": festival_name,
+            "festivalDate": festival_date_str,
+        }
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (session_id, json.dumps(message_data), json.dumps(meta_data)),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+        logger.debug(
+            f"添加节日记忆提示消息到会话 {session_id} agent_id={agent_id}, ID={message_id}"
+        )
+        return message_id
+    except Exception as e:
+        logger.error(f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}")
+        return None
+
+
 async def add_ai_message(
     db: AsyncSession,
     session_id: str,
@@ -366,6 +548,66 @@ async def add_ai_message(
         logger.error(f"添加AI消息失败 {session_id}: {str(e)}")
         await db.rollback()
         raise
+
+
+async def add_surprise_snap_message(
+    db: AsyncSession,
+    session_id: str,
+    agent_id: str,
+    image_url: str,
+    caption: str,
+    credits_required: int,
+    exclusive_photo_index: int,
+) -> Optional[int]:
+    """插入一条 Surprise Snap 专属照消息，返回消息 ID。"""
+    try:
+        message_data = {
+            "type": META_MESSAGE_TYPE_SURPRISE_SNAP,
+            "data": {
+                "image_url": image_url,
+                "caption": caption,
+                "credits_required": credits_required,
+            },
+        }
+        meta_data = {
+            "messageType": META_MESSAGE_TYPE_SURPRISE_SNAP,
+            "agentId": agent_id,
+            "exclusive_photo_index": exclusive_photo_index,
+        }
+        sid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+        ch = ChatHistory(
+            session_id=sid,
+            message=message_data,
+            meta_data=meta_data,
+        )
+        db.add(ch)
+        await db.commit()
+        await db.refresh(ch)
+        return ch.id
+    except Exception as e:
+        logger.error(f"添加 Surprise Snap 消息失败 session_id={session_id}: {e}")
+        await db.rollback()
+        raise
+
+
+async def count_user_messages_since(
+    db: AsyncSession,
+    session_id: str,
+    since_at: datetime,
+) -> int:
+    """统计该会话中自 since_at 以来的用户（human）消息条数。"""
+    sid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
+    stmt = select(func.count()).select_from(ChatHistory).where(
+        ChatHistory.session_id == sid,
+        ChatHistory.deleted_at.is_(None),
+        ChatHistory.created_at >= since_at,
+        or_(
+            ChatHistory.message["type"].astext == "human",
+            ChatHistory.message["type"].astext == "HumanMessage",
+        ),
+    )
+    result = await db.execute(stmt)
+    return result.scalar() or 0
 
 
 async def update_message_metadata(
@@ -611,6 +853,31 @@ async def get_latest_ai_message_id(db: AsyncSession, session_id: str) -> Optiona
         return None
 
 
+async def get_latest_user_message_id(
+    db: AsyncSession, session_id: str
+) -> Optional[int]:
+    """获取会话中最新的用户消息ID（排除已软删除的）"""
+    try:
+        stmt = (
+            select(ChatHistory.id)
+            .where(
+                and_(
+                    ChatHistory.session_id == session_id,
+                    ChatHistory.message["type"].astext.in_(["human", "HumanMessage"]),
+                    ChatHistory.deleted_at.is_(None),
+                )
+            )
+            .order_by(desc(ChatHistory.created_at), desc(ChatHistory.id))
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        row = result.first()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"获取最新用户消息ID失败 {session_id}: {str(e)}")
+        return None
+
+
 async def delete_image_by_source_message(
     db: AsyncSession, session_id: str, source_message_id: int
 ) -> Optional[str]:
@@ -727,8 +994,159 @@ async def get_latest_ai_message_info(
         return None
 
 
+async def get_ai_message_info_by_id(
+    db: AsyncSession, message_id: int
+) -> Optional[Dict[str, Any]]:
+    """根据消息 ID 获取 AI 消息的完整信息（与 get_latest_ai_message_info 返回结构一致）。"""
+    try:
+        stmt = (
+            select(ChatHistory)
+            .where(
+                ChatHistory.id == message_id,
+                ChatHistory.message["type"].astext == "ai",
+                ChatHistory.deleted_at.is_(None),
+            )
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        chat_history = result.scalar_one_or_none()
+        if not chat_history:
+            return None
+
+        content = ""
+        try:
+            message_data = chat_history.message
+            if "data" in message_data and "content" in message_data["data"]:
+                content = message_data["data"]["content"]
+            elif "content" in message_data:
+                content = message_data["content"]
+        except (TypeError, KeyError) as e:
+            logger.warning(f"解析AI消息内容失败: {str(e)}")
+            content = str(chat_history.message) if chat_history.message else ""
+
+        return {
+            "id": chat_history.id,
+            "content": content,
+            "audio_url": chat_history.audio_url,
+            "meta_data": chat_history.meta_data,
+            "timestamp": (
+                chat_history.created_at.isoformat() if chat_history.created_at else None
+            ),
+        }
+    except Exception as e:
+        logger.error(f"根据ID获取AI消息信息失败 message_id={message_id}: {str(e)}")
+        return None
+
+
+async def get_ai_message_infos_by_ids(
+    db: AsyncSession, message_ids: List[int]
+) -> Dict[int, Dict[str, Any]]:
+    """
+    根据消息 ID 列表批量获取 AI 消息完整信息（与 get_ai_message_info_by_id 单条结构一致）。
+    返回 id -> info 的映射；未找到或非 AI 消息的 id 不会出现在结果中。
+    """
+    if not message_ids:
+        return {}
+    try:
+        stmt = select(ChatHistory).where(
+            ChatHistory.id.in_(message_ids),
+            ChatHistory.message["type"].astext == "ai",
+            ChatHistory.deleted_at.is_(None),
+        )
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+        out = {}
+        for chat_history in rows:
+            content = ""
+            try:
+                message_data = chat_history.message
+                if "data" in message_data and "content" in message_data["data"]:
+                    content = message_data["data"]["content"]
+                elif "content" in message_data:
+                    content = message_data["content"]
+            except (TypeError, KeyError) as e:
+                logger.warning(f"解析AI消息内容失败: {str(e)}")
+                content = str(chat_history.message) if chat_history.message else ""
+            out[chat_history.id] = {
+                "id": chat_history.id,
+                "content": content,
+                "audio_url": chat_history.audio_url,
+                "meta_data": chat_history.meta_data,
+                "timestamp": (
+                    chat_history.created_at.isoformat()
+                    if chat_history.created_at
+                    else None
+                ),
+            }
+        return out
+    except Exception as e:
+        logger.error(
+            f"批量根据ID获取AI消息信息失败 message_ids={message_ids}: {str(e)}"
+        )
+        return {}
+
+
+async def get_surprise_snap_message_display_info(
+    db: AsyncSession, message_id: int
+) -> Optional[Dict[str, Any]]:
+    """
+    根据消息 ID 获取单条 surprise_snap 消息的展示信息（与 get_messages_paginated 中
+    surprise_snap 项结构一致），供聊天接口作为 choice 返回。未找到或非 surprise_snap 返回 None。
+    """
+    try:
+        stmt = (
+            select(ChatHistory)
+            .where(
+                ChatHistory.id == message_id,
+                ChatHistory.message["type"].astext == META_MESSAGE_TYPE_SURPRISE_SNAP,
+                ChatHistory.deleted_at.is_(None),
+            )
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        msg = row.message
+        if isinstance(msg, str):
+            msg = json.loads(msg) if msg else {}
+        elif not isinstance(msg, dict):
+            msg = {}
+        data = msg.get("data") or {}
+        if not isinstance(data, dict):
+            data = {}
+        image_url_raw = data.get("image_url")
+        media_url = None
+        if image_url_raw:
+            from app.services.image_transform_service import (
+                image_transform_service,
+            )
+            media_url = image_transform_service.transform_desktop(image_url_raw)
+        return {
+            "id": row.id,
+            "timestamp": (
+                row.created_at.isoformat() if row.created_at else None
+            ),
+            "meta_data": row.meta_data,
+            "media_url": media_url,
+            "caption": data.get("caption") or "",
+            "price": int(data.get("credits_required", 0)),
+        }
+    except Exception as e:
+        logger.error(
+            f"获取 Surprise Snap 展示信息失败 message_id={message_id}: {str(e)}"
+        )
+        return None
+
+
 def get_messages_paginated(
-    session_id: str, limit: int = 20, offset: int = 0, user_id: Optional[str] = None
+    session_id: str,
+    limit: int = 20,
+    offset: int = 0,
+    user_id: Optional[str] = None,
+    *,
+    is_subscribed: Optional[bool] = None,
+    unlocked_surprise_snap_message_ids: Optional[Set[int]] = None,
 ) -> Dict[str, Any]:
     """
     分页获取聊天消息
@@ -738,6 +1156,8 @@ def get_messages_paginated(
         limit: 每页消息数量
         offset: 偏移量（跳过的消息数量）
         user_id: 用户ID（保留以保持API兼容性，但不再用于过滤反馈）
+        is_subscribed: 保留以兼容调用方，不参与 is_locked 计算
+        unlocked_surprise_snap_message_ids: 当前用户已解锁的 surprise_snap 消息 ID 集合；is_locked 仅据此计算，订阅状态由 App 端判断
 
     Returns:
         包含消息列表和分页信息的字典
@@ -846,6 +1266,40 @@ def get_messages_paginated(
                             message_obj["image_url"] = None
 
                         # 不返回 image_metadata 和 prompt 字段
+                    elif (
+                        message_type == "ai"
+                        and meta_data
+                        and meta_data.get("messageType")
+                        == META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                    ):
+                        message_obj["type"] = META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT
+                        message_obj["role"] = None
+                        message_obj["sender_type"] = None
+                        raw_id = meta_data.get("festivalMemoryId")
+                        if raw_id is not None:
+                            try:
+                                message_obj["festival_memory_id"] = int(raw_id)
+                            except (TypeError, ValueError):
+                                pass
+                    elif message_type == META_MESSAGE_TYPE_SURPRISE_SNAP:
+                        message_obj["type"] = META_MESSAGE_TYPE_SURPRISE_SNAP
+                        message_obj["role"] = None
+                        message_obj["sender_type"] = None
+                        data = message_data.get("data") or {}
+                        image_url_raw = data.get("image_url")
+                        if image_url_raw:
+                            from app.services.image_transform_service import (
+                                image_transform_service,
+                            )
+                            message_obj["media_url"] = (
+                                image_transform_service.transform_desktop(image_url_raw)
+                            )
+                        else:
+                            message_obj["media_url"] = None
+                        message_obj["caption"] = data.get("caption") or ""
+                        message_obj["price"] = data.get("credits_required", 0)
+                        unlocked_ids = unlocked_surprise_snap_message_ids or set()
+                        message_obj["is_locked"] = not (message_id in unlocked_ids)
                     else:
                         message_obj["type"] = "text"
 
@@ -967,7 +1421,8 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
     获取会话的历史消息，返回 LangChain BaseMessage 格式（排除已软删除的）
 
     用于 Agent 对话时获取上下文历史，替代 PostgresChatMessageHistory.messages
-    以支持软删除过滤。
+    以支持软删除过滤。会排除 festival_memory_prompt、surprise_snap 等非对话类消息，
+    避免其进入 Agent 上下文导致重复或干扰。
 
     Args:
         session_id: 会话ID
@@ -978,21 +1433,33 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
     try:
         conn = get_chat_history_connection()
 
+        # 排除 festival_memory_prompt、surprise_snap 等非对话类消息，避免进入 Agent 上下文
         query = """
-            SELECT message
-            FROM chat_history 
+            SELECT message, created_at
+            FROM chat_history
             WHERE session_id = %s AND deleted_at IS NULL
+              AND (meta_data IS NULL
+                   OR meta_data->>'messageType' IS NULL
+                   OR (meta_data->>'messageType' != %s AND meta_data->>'messageType' != %s))
             ORDER BY created_at ASC
         """
 
         messages: List[BaseMessage] = []
         with conn.cursor() as cur:
-            cur.execute(query, (session_id,))
+            cur.execute(
+                query,
+                (
+                    session_id,
+                    META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+                    META_MESSAGE_TYPE_SURPRISE_SNAP,
+                ),
+            )
             rows = cur.fetchall()
 
             for row in rows:
                 try:
                     message_raw = row[0]
+                    created_at = row[1]
                     if isinstance(message_raw, str):
                         message_data = json.loads(message_raw)
                     elif isinstance(message_raw, dict):
@@ -1008,10 +1475,17 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
                     elif "content" in message_data:
                         content = message_data["content"]
 
+                    # 关键步骤：把 created_at 放入 additional_kwargs，供上层按自然日插入日期 system message。
+                    message_kwargs = (
+                        {"additional_kwargs": {"created_at": created_at.isoformat()}}
+                        if created_at
+                        else {}
+                    )
+
                     if message_type in ["human", "HumanMessage"]:
-                        messages.append(HumanMessage(content=content))
+                        messages.append(HumanMessage(content=content, **message_kwargs))
                     else:
-                        messages.append(AIMessage(content=content))
+                        messages.append(AIMessage(content=content, **message_kwargs))
 
                 except Exception as e:
                     logger.warning(f"解析历史消息失败: {str(e)}")

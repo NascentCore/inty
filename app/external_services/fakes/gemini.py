@@ -69,6 +69,21 @@ class _FakeGeminiModels:
         )
 
 
+class _FakeGeminiModelsAio:
+    """Async models facade：WrappedClient 使用 client.aio.models.generate_content / generate_images。"""
+
+    def __init__(self, client: "FakeGeminiClient") -> None:
+        self._client = client
+
+    async def generate_images(self, *, model: str, prompt: str, config):
+        return self._client._generate_images(model=model, prompt=prompt, config=config)
+
+    async def generate_content(self, *, model: str, contents, config):
+        return self._client._generate_content(
+            model=model, contents=contents, config=config
+        )
+
+
 class FakeGeminiClient:
     """
     A lightweight fake of the Gemini image generation client for tests.
@@ -78,15 +93,21 @@ class FakeGeminiClient:
       * client.models.generate_images(...)
       * GeneratedImage objects exposing .image.gcs_uri, .rai_filtered_reason,
         and .enhanced_prompt
+      * client.models.generate_content(...) for chat image generation
 
     The fake stores generated image bytes in-memory so that callers patched
     through download_from_gcs() can retrieve them via download_image().
+
+    When fail_generate_content is True, generate_content() returns a response
+    with empty candidates to simulate failure (e.g. for testing failure logging).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, fail_generate_content: bool = False) -> None:
         self.models = _FakeGeminiModels(self)
+        self.aio = type("FakeAio", (), {"models": _FakeGeminiModelsAio(self)})()
         self._generated_bytes: Dict[str, bytes] = {}
         self._call_index = 0
+        self._fail_generate_content = fail_generate_content
 
     def _generate_images(self, *, model: str, prompt: str, config):
         gcs_base = getattr(config, "output_gcs_uri", "gs://fake-bucket/generated")
@@ -127,12 +148,14 @@ class FakeGeminiClient:
         return _FakeGeneratedImageResponse(generated_images=generated_images)
 
     def _generate_content(self, *, model: str, contents, config):
-        image_bytes = self._make_image_bytes(self._call_index)
+        self._call_index += 1
+        if self._fail_generate_content:
+            return _FakeGenerateContentResponse(candidates=[])
+        image_bytes = self._make_image_bytes(self._call_index - 1)
         inline_data = _FakeInlineData(data=image_bytes)
         part = _FakePart(inline_data=inline_data)
         content = _FakeContent(parts=[part])
         candidate = _FakeContentCandidate(content=content)
-        self._call_index += 1
         return _FakeGenerateContentResponse(candidates=[candidate])
 
     def download_image(self, url: str) -> bytes:

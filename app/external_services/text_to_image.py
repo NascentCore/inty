@@ -4,7 +4,6 @@ Unified text-to-image API wrapper for multiple providers.
 Supported providers:
 - Google Vertex AI Imagen via `google.genai` (model name uses `google/` prefix)
 - OpenAI image generation via OpenAI client (model name uses `openai/` prefix)
-- fal.ai model APIs via `fal_client`
 
 This module is intentionally NOT integrated into Inty backend flows yet.
 
@@ -24,18 +23,15 @@ from typing import Any, Optional
 
 import PIL.Image
 
-from app.external_services.fal_ai import FalAIClient
 
 GOOGLE_MODEL_PREFIX = "google/"
 OPENAI_MODEL_PREFIX = "openai/"
 DEFAULT_GOOGLE_MIME_TYPE = "image/jpeg"
-DEFAULT_FAL_IMAGE_SIZE = "landscape_4_3"
-DEFAULT_FAL_OUTPUT_FORMAT = "png"
 DEFAULT_GCS_BASE_DIR = "tmp/image_generation_wrapper"
 FORMAT_JPEG = "jpeg"
 FORMAT_PNG = "png"
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class TextToImageProvider(StrEnum):
@@ -82,7 +78,6 @@ class TextToImageGenerationRequest:
     Provider routing is based on `model`:
     - `google/<imagen-model-name>` routes to Google Imagen.
     - `openai/<image-model-name>` routes to OpenAI image generation.
-    - Otherwise routes to fal.ai.
 
     Use `provider_args` for provider-specific parameters.
     """
@@ -103,7 +98,7 @@ def generate_text_to_image(
         return _generate_google_imagen(provider_model=provider_model, request=request)
     if provider == TextToImageProvider.OPENAI:
         return _generate_openai_image(provider_model=provider_model, request=request)
-    return _generate_fal_text_to_image(provider_model=provider_model, request=request)
+    raise ValueError(f"Unsupported provider: {provider}")
 
 
 def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
@@ -134,19 +129,23 @@ def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
         )
         return TextToImageProvider.GOOGLE, model
 
-    # If model has org prefix, check routing.
+    # If model has org prefix, only google and openai are supported.
     if "/" in model:
         org = model.split("/", 1)[0].strip().lower()
-        # fal-ai or fal routes to FALAI provider (backward compatibility).
         if org in ("fal-ai", "fal"):
-            return TextToImageProvider.FALAI, model
-        # For unknown orgs (not google/openai/fal-ai/fal), raise error to match test expectations.
+            raise ValueError(
+                f"Unsupported image model org prefix: {org!r} (model={model!r}). "
+                "FAL (fal.ai) is not supported; use google/ or openai/ prefix."
+            )
         raise ValueError(
             f"Unsupported image model org prefix: {org!r} (model={model!r})"
         )
 
-    # Otherwise, default to FALAI for models without org prefix.
-    return TextToImageProvider.FALAI, model
+    # No org prefix and not imagen-*: require explicit google/ or openai/ prefix.
+    raise ValueError(
+        f"Unsupported image model: {model!r}. "
+        "Model id must use google/ or openai/ prefix (e.g. google/imagen-4.0-fast-generate-001)."
+    )
 
 
 def _generate_google_imagen(
@@ -154,6 +153,14 @@ def _generate_google_imagen(
     provider_model: str,
     request: TextToImageGenerationRequest,
 ) -> TextToImageGenerationResult:
+    """
+    Google Imagen via client.models.generate_images.
+
+    GCS: When output_gcs_uri is set in config, the SDK uploads generated images
+    to GCS; response contains gcs_uri per image. No app-side upload.
+    GenerateImagesConfig also supports output_compression_quality (0-100) for JPEG
+    if we need to control quality; not passed in _build_google_generate_images_config.
+    """
     client = request.provider_args.get("client") or _get_google_genai_client()
 
     aspect_ratio = request.provider_args.get("aspect_ratio")
@@ -278,56 +285,6 @@ def _generate_openai_image(
     )
 
 
-def _generate_fal_text_to_image(
-    *,
-    provider_model: str,
-    request: TextToImageGenerationRequest,
-) -> TextToImageGenerationResult:
-    api_key = request.provider_args.get("api_key")
-    client = FalAIClient(api_key=api_key if isinstance(api_key, str) else None)
-
-    arguments: dict[str, Any] = dict(request.provider_args.get("arguments") or {})
-    arguments.setdefault("prompt", request.prompt)
-    arguments.setdefault("num_images", int(request.num_images))
-    arguments.setdefault(
-        "image_size", request.provider_args.get("image_size") or DEFAULT_FAL_IMAGE_SIZE
-    )
-    arguments.setdefault(
-        "output_format",
-        request.provider_args.get("output_format") or DEFAULT_FAL_OUTPUT_FORMAT,
-    )
-
-    if request.negative_prompt:
-        arguments.setdefault("negative_prompt", request.negative_prompt)
-    if request.seed is not None:
-        arguments.setdefault("seed", int(request.seed))
-
-    result = client.text_to_image(
-        model=provider_model, arguments=arguments, with_logs=False
-    )
-
-    images: list[TextToImageGeneratedImage] = []
-    for img in result.images:
-        images.append(
-            TextToImageGeneratedImage(
-                provider=TextToImageProvider.FALAI,
-                model=provider_model,
-                prompt=request.prompt,
-                url=img.url,
-                width=img.width if isinstance(img.width, int) else None,
-                height=img.height if isinstance(img.height, int) else None,
-                mime_type=img.content_type,
-            )
-        )
-
-    return TextToImageGenerationResult(
-        provider=TextToImageProvider.FALAI,
-        model=provider_model,
-        images=images,
-        raw=result.raw,
-    )
-
-
 def _gcs_uri_to_public_url(gcs_uri: Optional[str]) -> Optional[str]:
     if not gcs_uri:
         return None
@@ -357,6 +314,9 @@ def _build_google_generate_images_config(
     """
     Build `google.genai.types.GenerateImagesConfig` if available, otherwise fall back
     to a lightweight attribute container (useful for unit tests).
+
+    Optional: GenerateImagesConfig supports output_compression_quality (int 0-100)
+    for JPEG; not wired here yet.
     """
 
     try:

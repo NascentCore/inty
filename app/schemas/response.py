@@ -1,4 +1,25 @@
-from enum import Enum
+"""API 响应外壳与业务错误定义。
+
+HTTP 状态码 / body.code / data.error_code 使用规则（与 Kotlin 端
+android_app/core/data/.../BusinessErrorCodes.kt 及 NetServiceMgr 保持一致）：
+
+- **HTTP status（HTTP 状态码）**：仅用于请求或基础设施失败。4xx（如 400 错误请求、
+  404 未找到）或 5xx（服务端错误）。后端抛出 HTTPException 时，客户端收到该状态码及
+  通常为 FastAPI 风格 body（如 {"detail": "..."}）。不要用 HTTP 状态码表示业务结果
+  （如需要订阅），应通过响应 body 表示。
+
+- **Body code（APIResponse.code）**：成功 = 200。业务错误 = 数字码（如 10001001 表示
+  SUBSCRIPTION_REQUIRED）。使用 APIResponse.success() 或 APIResponse.error(...) 的
+  响应通常以 HTTP 200 返回；客户端必须读取 body，并根据 body.code（以及存在时的
+  data.error_code）分支处理。
+
+- **data.error_code**：当 body.code != 200 时，data 可能包含字符串 "error_code"
+  （如 "SUBSCRIPTION_REQUIRED"）及可选的 "description" 等字段（如限额类错误中的
+  used_count、daily_limit）。用 data.error_code 做业务错误类型分支；用 body.code
+  做数字匹配，body.message 做展示。
+"""
+
+from enum import StrEnum
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel
@@ -66,7 +87,7 @@ class UsageLimitExceeded(BizError):
 
 # TODO：需要与前端确认错误码和错误消息是否一致，使用 enum 方便 Stainless SDK 自动生成错误码和错误消息
 # 代码仍在开发中，目前无效
-class WIPBusinessErrorCodeEnum(str, Enum):
+class BusinessErrorCodeEnum(StrEnum):
     """业务错误码枚举类型，用于返回错误信息给前端"""
 
     SUBSCRIPTION_REQUIRED = "SUBSCRIPTION_REQUIRED"
@@ -159,14 +180,6 @@ class BusinessErrorCode:
         "error_code": "LIVE_CHAT_DURATION_LIMIT_REACHED",
         "message": "Live chat duration limit reached",
     }
-
-
-# 业务错误消息定义
-BUSINESS_ERROR_MESSAGES = {
-    BusinessErrorCode.SUBSCRIPTION_REQUIRED[
-        "code"
-    ]: BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
-}
 
 
 def create_business_error_response(

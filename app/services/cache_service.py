@@ -4,7 +4,7 @@ import time
 from threading import RLock
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class InMemoryCache:
@@ -108,6 +108,7 @@ class CacheService:
 
         self._cleanup_task = None
         self._cleanup_running = False
+        self._cleanup_run_count = 0
 
     async def start_cleanup_task(self):
         """启动清理任务"""

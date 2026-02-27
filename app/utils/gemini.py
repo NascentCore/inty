@@ -19,6 +19,7 @@ import io
 import json
 import os
 from enum import StrEnum
+import threading
 from typing import List, Optional
 
 import google.genai as genai
@@ -41,61 +42,67 @@ from app.utils.image import (
     crop_image_to_9_16,
     get_jpg_bytes_from_pil_image,
 )
+from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
 
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
-client = None  # Will be initialized when needed
+_google_genai_client = None  # Will be initialized when needed
+_google_genai_client_lock = threading.Lock()
+
+
+def create_google_genai_client():
+    """
+    使用 Vertex AI 配置创建并返回包装后的 Google Gen AI 客户端。
+    使用与 GCS 相同的 service account 凭证；可抛出 ValueError 或 genai 相关异常。
+    """
+    credentials_path = (
+        global_config_loaded_from_config_yaml.app.gcp_service_account_key
+    )
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+
+    location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
+    project_id = None
+    if os.path.exists(credentials_path):
+        with open(credentials_path, "r") as f:
+            creds = json.load(f)
+            project_id = creds.get("project_id")
+
+    if not project_id:
+        raise ValueError(
+            f"Project ID not found in credentials file: {credentials_path}"
+        )
+
+    if hasattr(genai, "_client_cache"):
+        genai._client_cache.clear()
+
+    tracing_metadata = {
+        "source": "app.utils.gemini",
+        "project_id": project_id,
+        "location": location,
+    }
+    return genai.Client(
+        vertexai=True,
+        project=project_id,
+        location=location,
+    )
 
 
 def get_genai_client():
-    """Get or create Google Gen AI client with proper configuration"""
-    global client
-    if client is None:
-        # Check if we're in test environment
-        from app.core.config import Environment
+    """
+    获取或创建 Google Gen AI 客户端。
+    """
+    global _google_genai_client
+    with _google_genai_client_lock:
+        if _google_genai_client is None:
+            from app.core.config import Environment
 
-        if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-            logger.info("Using FakeGeminiClient in test environment")
-            client = FakeGeminiClient()
-            return client
-
-        try:
-            # Initialize with Vertex AI configuration
-            # This will use the same service account credentials as GCS
-
-            # Set environment variable for proper authentication
-            credentials_path = (
-                global_config_loaded_from_config_yaml.app.gcp_service_account_key
-            )
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-            # Try to get project ID from credentials file
-            project_id = None
-            location = "us-central1"  # Default location for Imagen
-
-            if os.path.exists(credentials_path):
-                with open(credentials_path, "r") as f:
-                    creds = json.load(f)
-                    project_id = creds.get("project_id")
-
-            if not project_id:
-                # Fallback: try to get from environment or use default
-                project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "inty-backend")
-
-            # Clear any cached client to ensure fresh authentication
-            if hasattr(genai, "_client_cache"):
-                genai._client_cache.clear()
-
-            client = genai.Client(vertexai=True, project=project_id, location=location)
-            logger.debug(
-                f"Initialized Google Gen AI client with project: {project_id}, location: {location}"
-            )
-        except Exception as e:
-            logger.error(f"Error initializing Google Gen AI client: {e}")
-            # Fallback to basic initialization with environment variable set
-            client = genai.Client(vertexai=True)
-
-    return client
+            if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+                logger.info("Using FakeGeminiClient in test environment")
+                _google_genai_client = FakeGeminiClient()
+            else:
+                logger.info("Creating Google Gen AI client")
+                _google_genai_client = create_google_genai_client()
+    return _google_genai_client
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:
@@ -229,12 +236,14 @@ def generate_image_description(image_uri: str) -> str:
             if hasattr(prompt_feedback, "block_reason"):
                 block_reason = prompt_feedback.block_reason
                 logger.warning(f"请求被阻止，原因: {block_reason}")
-                raise ValueError(f"图片描述生成请求被安全过滤器阻止: {block_reason}")
+                raise ValueError(
+                    f"Image description request blocked by safety filter: {block_reason}"
+                )
 
         # 提取文本描述
         if not response.candidates or len(response.candidates) == 0:
             logger.error("Gemini 未返回任何候选结果")
-            raise ValueError("Gemini 未返回任何候选结果")
+            raise ValueError("Gemini returned no candidates")
 
         candidate = response.candidates[0]
 
@@ -243,12 +252,14 @@ def generate_image_description(image_uri: str) -> str:
         if finish_reason and finish_reason != "STOP":
             logger.warning(f"候选结果完成原因: {finish_reason}")
             if finish_reason == "SAFETY":
-                raise ValueError("图片描述生成被安全过滤器阻止")
+                raise ValueError(
+                    "Image description generation blocked by safety filter"
+                )
 
         # 提取文本内容
         if not candidate.content or not candidate.content.parts:
             logger.error("候选结果中没有内容")
-            raise ValueError("候选结果中没有内容")
+            raise ValueError("No content in candidates")
 
         description_text = ""
         for part in candidate.content.parts:
@@ -257,7 +268,7 @@ def generate_image_description(image_uri: str) -> str:
 
         if not description_text:
             logger.error("无法从响应中提取文本描述")
-            raise ValueError("无法从响应中提取文本描述")
+            raise ValueError("Unable to extract text description from response")
 
         logger.info(f"图片描述生成成功: {description_text}")
         return description_text.strip()
@@ -278,18 +289,22 @@ def text_to_image(
     model: Optional[str] = None,
 ) -> List[ImagenGeneratedImage]:
     """
-    使用output_gcs_uri参数直接将生成的背景图保存到GCS，返回实际生成的图片GCS路径列表
-    支持includeRaiReason参数获取RAI过滤原因
+    使用 output_gcs_uri 将生成的背景图由 SDK 直接写入 GCS，返回实际生成的图片
+    GCS 路径列表。支持 include_rai_reason 获取 RAI 过滤原因。
+
+    GCS：generate_images 在 config 中传入 output_gcs_uri 后由 SDK 直接上传，
+    无需应用侧再调用 upload_to_gcs。可选：output_compression_quality (0-100)
+    可控制 JPEG 压缩质量，当前未传。
 
     Args:
         prompt (str): 生成图片的描述提示词
         negative_prompt (str): 生成图片的负面提示词
-        gcs_uri_base (str): GCS 存储基础URI
+        gcs_uri_base (str): GCS 存储基础 URI
         count (int): 生成图片数量，默认为1
         aspect_ratio (str): 图片尺寸比例，默认为"9:16"
 
     Returns:
-        list: 生成图片的HTTPS URL列表，或包含RAI原因的字典
+        list: 生成图片的 GCS/HTTPS 信息列表，或包含 RAI 原因的字典
     """
     try:
         logger.debug(
@@ -300,7 +315,8 @@ def text_to_image(
             f"aspect_ratio: {aspect_ratio}"
         )
 
-        # 使用新的Google Gen AI SDK生成图片
+        # 使用新的 Google Gen AI SDK 生成图片；SDK 按 output_gcs_uri 直接写入 GCS。
+        # 可选 output_compression_quality (0-100) 未传，使用 SDK 默认。
         config = types.GenerateImagesConfig(
             negative_prompt=negative_prompt,
             number_of_images=count,
@@ -320,6 +336,7 @@ def text_to_image(
         if enhanced_prompt:
             prompt = enhance_prompt(prompt, gender)
         response = client.models.generate_images(
+            # TODO: 这里的 fallback 逻辑是否需要？外层已经有多处 fallback，这里是否重复？
             model=model
             or global_config_loaded_from_config_yaml.agent.vertex_image_model,
             prompt=prompt,

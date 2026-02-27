@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.ai.intellimate.agent.heartbeat.heartbeat
 import com.ai.intellimate.agent.info.AgentInfoViewModel
 import com.ai.intellimate.agent.info.AiAgentInfoScreen
 import com.ai.intellimate.agent.info.PhotoAlbumScreen
@@ -69,4 +70,6 @@ fun NavGraphBuilder.homeGraph(
 
     /** 首次登录时完善个人信息页面 */
     composable(Routes.Home.RegInfoPage) { RegInfoPage(navController) }
+
+    heartbeat(onBack = { navController.popBackStack() })
 }

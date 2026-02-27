@@ -3,26 +3,26 @@ package ai.sxwl.android.design.theme
 import androidx.compose.ui.graphics.Color
 
 // region 动态生成的主题色 https://material-foundation.github.io/material-theme-builder/
-val primaryLight = Color(0xFF9C27B0)
+val primaryLight = Color(0xFFC567F5)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFAA3BE3)
 val onPrimaryContainerLight = Color(0xFFFFF9FB)
-val secondaryLight = Color(0xFF7D4897)
+val secondaryLight = Color(0xFF9E97FF)
 val onSecondaryLight = Color(0xFFFFFFFF)
 val secondaryContainerLight = Color(0xFFE3A8FF)
 val onSecondaryContainerLight = Color(0xFF6A3684)
-val tertiaryLight = Color(0xFFB0056C)
+val tertiaryLight = Color(0xFFC3F0FD)
 val onTertiaryLight = Color(0xFFFFFFFF)
 val tertiaryContainerLight = Color(0xFFD12E86)
 val onTertiaryContainerLight = Color(0xFFFFF9F9)
-val errorLight = Color(0xFFBA1A1A)
+val errorLight = Color(0xFFFF4E4E)
 val onErrorLight = Color(0xFFFFFFFF)
 val errorContainerLight = Color(0xFFFFDAD6)
 val onErrorContainerLight = Color(0xFF93000A)
 val backgroundLight = Color(0xFF1C1523)
 val onBackgroundLight = Color(0xFFFFFFFF)
-val surfaceLight = Color(0xFFFFF7FC)
-val onSurfaceLight = Color(0xFF201923)
+val surfaceLight = Color(0xFF3C3445)
+val onSurfaceLight = Color(0xFFFFFFFF)
 val surfaceVariantLight = Color(0xFFEFDDF2)
 val onSurfaceVariantLight = Color(0xFF4F4353)
 val outlineLight = Color(0xFF817284)
@@ -38,6 +38,7 @@ val surfaceContainerLowLight = Color(0xFFFDEFFE)
 val surfaceContainerLight = Color(0xFFF8EAF8)
 val surfaceContainerHighLight = Color(0xFFF2E4F2)
 val surfaceContainerHighestLight = Color(0xFFECDEEC)
+val TextOnLightSurface = Color(0xFF3B2353)
 
 val primaryLightMediumContrast = Color(0xFF590080)
 val onPrimaryLightMediumContrast = Color(0xFFFFFFFF)
@@ -247,6 +248,10 @@ object AppColors {
     val PremiumBannerCtaForeground = Color(0xFF1C1523)
     /** Material Design Green 500 - 用于表示成功状态、激活状态或选中状态的绿色指示器 */
     val Green500 = Color(0xFF4CAF50)
+    /** Create/Explore 等 CTA 按钮渐变起始色（粉红） */
+    val IntelliMateCtaGradientStart = Color(0xFFE91E63)
+    /** Create/Explore 等 CTA 按钮渐变结束色（橙） */
+    val IntelliMateCtaGradientEnd = Color(0xFFFF9800)
 }
 
 object VibeModeColors {
@@ -268,6 +273,20 @@ object VibeModeColors {
  * - 背景为深色夜空渐变（紫/深蓝/墨绿），前景为高饱和霓虹与金色高光。
  * - 适配“极其吸睛、非常 splashy”的氛围：强对比、强辉光、强节日感。
  */
+/** Love Journal 页面设计配色（与设计稿一致）。 屏幕背景、卡片、主文字与强调色（标题下划线、日期）。 */
+object LoveJournalColors {
+    /** 屏幕背景渐变起点（左上）：暖浅米/粉米（设计稿 #F7E5DE） */
+    val background = Color(0xFFF7E5DE)
+    /** 屏幕背景渐变终点（右下）：同色系更深（#B89A8E） */
+    val backgroundGradientEnd = Color(0xFFB89A8E)
+    /** 卡片背景：极浅灰白（设计稿 rgb(249,249,249)） */
+    val cardBackground = Color(0xFFF9F9F9)
+    /** 主文字（标题、副标题、正文）：深灰 */
+    val onBackground = Color(0xFF241F1A)
+    /** 强调色：标题下划线、日期（红橙） */
+    val accent = Color(0xFFEC725B)
+}
+
 object HolidayCelebrationColors {
     val BackdropTop = Color(0xFF1A0033)
     val BackdropMid = Color(0xFF0C1238)

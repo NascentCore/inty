@@ -3,7 +3,7 @@
  * 负责评测会话的基本配置（测试名称、用户身份、评分标准等）
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Form,
@@ -40,7 +40,7 @@ interface FormValues {
   scoring_model: string;
   scoring_criteria: string;
   use_new_user_identity: boolean;
-  config: any;
+  config: EvaluationSessionCreateRequest["config"];
 }
 
 const defaultScoringCriteria = `请基于智能体的角色设定对其表现进行综合评分(1-10分):
@@ -101,38 +101,50 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       scoring_model: "",
       scoring_criteria: defaultScoringCriteria,
       use_new_user_identity: false,
-      config: {},
+      config: {
+        agents: [],
+        questions: [],
+        scoring_model: "",
+        scoring_criteria: defaultScoringCriteria,
+        parallel_limit: 1,
+        timeout: 300,
+      },
       ...initialValues,
     },
     validate: validateForm,
   });
+  const scoringModelValue = form.values.scoring_model;
+  const setFormValue = form.setValue;
 
   // 加载评分模型 - 使用OpenRouter模型
-  const loadScoringModels = async () => {
-    try {
-      setModelsLoading(true);
-      const models = await modelCacheService.getOpenRouterModels();
+  const loadScoringModels = useCallback(
+    async (currentScoringModel: string) => {
+      try {
+        setModelsLoading(true);
+        const models = await modelCacheService.getOpenRouterModels();
 
-      setScoringModels(models);
+        setScoringModels(models);
 
-      // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
-      if (models.length > 0 && !form.values.scoring_model) {
-        const preferredModel = models.find(
-          (model) => model.id === "google/gemini-2.5-flash-lite",
-        );
-        const defaultModel = preferredModel || models[0];
-        form.setValue("scoring_model", defaultModel.id);
+        // 设置默认模型 - 优先选择 google/gemini-2.5-flash-lite
+        if (models.length > 0 && !currentScoringModel) {
+          const preferredModel = models.find(
+            (model) => model.id === "google/gemini-2.5-flash-lite",
+          );
+          const defaultModel = preferredModel || models[0];
+          setFormValue("scoring_model", defaultModel.id);
+        }
+      } catch (error) {
+        console.error("加载评分模型失败:", error);
+      } finally {
+        setModelsLoading(false);
       }
-    } catch (error) {
-      console.error("加载评分模型失败:", error);
-    } finally {
-      setModelsLoading(false);
-    }
-  };
+    },
+    [setFormValue],
+  );
 
   // 刷新模型列表
   const handleRefreshModels = () => {
-    loadScoringModels();
+    loadScoringModels(scoringModelValue);
   };
 
   useEffect(() => {
@@ -141,8 +153,8 @@ export const TestConfigForm: React.FC<TestConfigFormProps> = ({
       return;
     }
 
-    loadScoringModels();
-  }, []); // 保持空依赖数组，只在组件挂载时运行一次
+    loadScoringModels(scoringModelValue);
+  }, [loadScoringModels, scoringModels.length, scoringModelValue]);
 
   // 通知父组件表单值变化
   useEffect(() => {

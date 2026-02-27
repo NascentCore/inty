@@ -4,16 +4,20 @@
 
 > Content should be copied to https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322
 
-> 这里的内容被拷贝到 IntelliMate 官方助手角色系统消息（称为提示词的一部分）
+> 这里的内容被拷贝到 IntelliMate 官方助手 iMate 系统消息（称为提示词的一部分）
 > 拷贝时，以 > 开头的文本行会被删除掉
 
 This guide gives IntelliMate users a clear, plain-language map of where to find help when they feel lost. It consolidates the Android client documentation and reorganizes it for non-technical readers.
+
+Terminology used in this guide:
+- **IntelliMate** = the app product
+- **iMate** = the AI companion in the IntelliMate app
 
 ## TL;DR
 
 - **Install or update**: Prefer the [Google Play internal testing channel](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc). For the very latest QA builds, grab the APK from the [daily release page](https://github.com/NascentCore/inty-app/releases).
 - **Sign in**: You can explore as a guest, but linking your Google account keeps chats and VIP benefits synced across devices. (Phones in China must install Google services first.)
-- **Main flow**: Discover agents on Explore → open a Chat → use extras like voice playback, image generation, or Keep Talking → adjust Profile or Settings as needed.
+- **Main flow**: Discover iMates on Explore → open a Chat → use extras like voice playback, image generation, Keep Talking, or Hype actions → adjust Profile or Settings as needed.
 - **Need help?**
   - In-app: Settings → Help & Feedback (placeholder entry; use tester channels for now).
   - Test/ops escalation: see “Contact & Escalation” near the end of this doc.
@@ -23,10 +27,10 @@ This guide gives IntelliMate users a clear, plain-language map of where to find 
 ### Bottom navigation bar
 
 Bottom navigation bar host entry points of IntelliMate App's primary features. The icons are (from left to right):
-- **Chats** for you to chat and interact with IntelliMate, and the main portal to IntelliMate's long-term AI companionship experience
-- **Messages** for you to return to your IntelliMate AI companions
-- **Create IntelliMate** for you to create your own IntelliMate for long-term AI companionship
-- **Explore IntelliMates** for you to explore and find your desired IntelliMates
+- **Chats** for you to chat and interact with your iMates, and the main portal to IntelliMate's long-term AI companionship experience
+- **Messages** for you to return to your iMates
+- **Official Assistant Chat** (middle icon) for you to quickly open a chat with the IntelliMate official assistant
+- **Explore iMates** for you to explore and find your desired iMate
 - **Me** for managing your **Premium subscription** and general settings of the app
 
 <img width="480" height="96" alt="image" src="https://github.com/user-attachments/assets/349658de-d749-40af-a3cc-4e9613fcf6ac" />
@@ -43,53 +47,65 @@ Click the **Chats** or the **left-most** icon to open the chat page. Below is an
 
 Click the **Messages** or the **2nd** icon from the left
 
-### Create IntelliMate page
+### Official Assistant Chat entry
 
-Click the **Create** or the **middle** to open the Create IntelliMate page.
+Tap the **middle** icon to open the chat screen with the IntelliMate official assistant.
 
-### Explore IntelliMate page
+### Explore iMates page
 
-Click the **Explore** icon to open the Explore IntelliMates page.
+Click the **Explore** icon to open the Explore iMates page.
+At the top of Explore, tap the horizontal **Create your own iMate** banner to start creating your own iMate.
 
 ### Me page
 
 Click the **Me** or the **right-most** icon
+
+Top-right quick actions currently include **Help**, **Daily Check-in**, and **Settings**.
 
 ## Where do I go to…?
 
 | Task | App path | Tips & references |
 | --- | --- | --- |
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
-| Find or follow agents | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
-| Chat with an agent | Tap any agent card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
-| Create or edit an agent | Explore → “Create/+” or Profile → My Agents | Guided flow with image upload and text-to-image background (`POST /api/v1/ai/agents/text-to-image`). |
+| Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
+| Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
+| Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
+| Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
+| Create or edit an iMate | Explore → top banner **Create your own iMate** or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
-| Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. |
+| Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
+| Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. When opened from chat or a notification, that entry is highlighted with a glow and the rest of the screen is dimmed; tap outside the glowing card to return to the normal list. |
 | Check version info | Settings → About | Version code comes from git commit count. If Play build lags behind, install the QA APK. |
-| Send feedback or report | Chat → ⋮ → Report, or Profile → Feedback | Reports go through the Report Service; attach screenshots when possible. |
+| Send feedback or report | Chat → ⋮ → Report, Profile → Feedback, or Image Viewer → Report | Reports go through the Report Service; when reporting from Image Viewer, the current image is attached automatically and you can add more evidence images. |
 
 ## Feature Deep Dive
 
 ### 1. Explore
 - Double-tap the header to rewind to the top and refresh.
 - Avatars/backgrounds preload so cards stay visible even on slow networks.
+- The top horizontal banner **Create your own iMate** opens the iMate creation flow directly.
+- The top banner section includes **Newly iMates** with subtitle **“Newly crafted based on your preference”**, showing up to 10 most recently created iMates.
 - Switch between Recommended, Favorites, Created by Me.
-- *Screenshot placeholder:*
-  
-  ![Explore screenshot placeholder](<ADD_EXPLORE_SCREENSHOT_URL_HERE>)
+
+  <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/526e12a9-f0ef-4735-9ec9-ec32da978639" />
 
 ### 2. Chats
 - Every message supports voice playback; audio is cached locally (`AudioCacheManager`).
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
-- *Screenshot placeholder:*
-  
-  ![Chat screenshot placeholder](<ADD_CHAT_SCREENSHOT_URL_HERE>)
+- **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
+- VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
+- If a subscribed user reaches the daily chat quota, IntelliMate shows a dedicated dialog (**“Daily Premium Chat Limit Reached”**) instead of the upgrade-to-premium prompt.
+- Fullscreen image viewer includes a VIP **Upscale** action (next to Share) with **1x / 2x / 4x** options. Non-subscribed users can still use it by spending **10 credits** once per open viewer session.
 
-### 3. Agents
-- Follow/unfollow directly on Explore cards.
-- Creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).
-- Agent detail pages show AI-Generated media pulled from recent chats, with explicit labeling.
+  <img width="300" height="1200" alt="image" src="https://github.com/user-attachments/assets/0326fd90-1bbe-4207-9e9f-1c71c4608847" />
+
+**Voice call** (from Chat): Voice calls require microphone permission. The centre circle shows connection status (e.g. Connecting / Connected), **listening** when the AI is waiting for you, or **speaking** when the AI is talking—then you see “tap to interrupt AI” and a wave animation; tap the circle to interrupt and speak. Use mute and end-call as needed. If the voice call screen stays blank, grant microphone permission when prompted or in system Settings → App → IntelliMate → Permissions.
+
+### 3. iMates
+- iMate creation/editing supports uploads plus AI-generated art; failures surface clear error states (`AvatarManager`).
+- iMate detail pages show AI-generated media pulled from recent chats, with explicit labeling.
+- iMate detail pages include **Hype this iMate**, which lets you spend Credits to increase that iMate's Hype Score.
 
 ### 4. VIP / Subscription
 - Plans run through Google Play Billing; benefits refresh automatically after purchase.
@@ -109,6 +125,8 @@ Click the **Me** or the **right-most** icon
 
 ### Chat & Media
 - **Voice playback issues**: Check system volume. If playback keeps failing, clear cache or restart the app; audio will re-cache automatically.
+- **Voice call screen stays blank**: Allow microphone permission when the app asks, or open Settings → Apps → IntelliMate → Permissions and enable Microphone.
+- **Daily premium chat limit reached**: If you are already subscribed and hit your daily quota, you should see a dedicated limit dialog. The quota refreshes automatically the next day.
 - **Image generation errors**: `IMAGE_GENERATION_LIMIT_REACHED` means you hit the quota. Try again later.
 
 ### Subscription
