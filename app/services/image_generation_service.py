@@ -23,6 +23,7 @@ from app.core.google_genai.wrapped_client import WrappedClient
 from langsmith.run_helpers import traceable
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
@@ -506,6 +507,7 @@ class ImageGenerationService:
         agent_id: str,
         exclude_user_id: Optional[str] = None,
         only_user_id: Optional[str] = None,
+        only_include_ai_character: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """
         查询指定agent的已生成图片（从resources表查询）
@@ -515,16 +517,14 @@ class ImageGenerationService:
             agent_id: Agent ID
             exclude_user_id: 排除指定用户的图片（用于优先匹配其他用户）
             only_user_id: 仅查询指定用户的图片
+            only_include_ai_character: 为 True 时仅返回 metadata 中 only_include_ai_character 为 True 的图（兜底候选）
 
         Returns:
             包含图片信息的列表，每个元素包含：
+            - image_id: 稳定图片标识（Resource.url，用于兜底去重）
             - image_url: 图片GCS URI
             - prompt: 生成图片的提示词
-            - width: 图片宽度
-            - height: 图片高度
-            - format: 图片格式
-            - user_id: 生成该图片的用户ID
-            - generated_at: 生成时间（created_at）
+            - width, height, format, user_id, generated_at
         """
         try:
             # TODO：如何确保 Cache 可以稳定的在数据库更新后获得更新从而拿到最新数据？
@@ -540,6 +540,14 @@ class ImageGenerationService:
 
             if only_user_id:
                 conditions.append(app_models.Resource.user_id == only_user_id)
+
+            if only_include_ai_character is True:
+                conditions.append(
+                    app_models.Resource.resource_metadata.op("->>")(
+                        "only_include_ai_character"
+                    )
+                    == "true"
+                )
 
             query = (
                 select(app_models.Resource)
@@ -573,6 +581,7 @@ class ImageGenerationService:
 
                     images.append(
                         {
+                            "image_id": resource.url,
                             "image_url": resource.url,  # GCS URI
                             "prompt": prompt,
                             "width": width,
@@ -595,11 +604,12 @@ class ImageGenerationService:
                     continue
 
             logger.debug(
-                "查询到 Agent {} 的 {} 张已生成图片（exclude_user_id={}, only_user_id={}）",
+                "查询到 Agent {} 的 {} 张已生成图片（exclude_user_id={}, only_user_id={}, only_include_ai_character={}）",
                 agent_id,
                 len(images),
                 exclude_user_id,
                 only_user_id,
+                only_include_ai_character,
             )
             return images
 
@@ -642,31 +652,47 @@ class ImageGenerationService:
             return best_match
         return None
 
+    def _exclude_image_ids(
+        self,
+        images: List[Dict[str, Any]],
+        exclude_image_ids: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """从候选列表中排除已发送过的兜底图（按 image_id 去重）。"""
+        if not exclude_image_ids:
+            return images
+        exclude_set = set(exclude_image_ids)
+        return [img for img in images if img.get("image_id") not in exclude_set]
+
     async def find_most_similar_image(
         self,
         db: AsyncSession,
         agent_id: str,
         current_prompt: str,
         current_user_id: Optional[str] = None,
+        only_include_ai_character: bool = False,
+        exclude_image_ids: Optional[List[str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         根据提示词相似度找到最匹配的图片
-        优先匹配其他用户生成的图片，其次匹配当前用户的图片
+        优先匹配其他用户生成的图片，其次匹配当前用户的图片。
 
         Args:
-            db: 数据库会话
-            agent_id: Agent ID
-            current_prompt: 当前提示词
-            current_user_id: 当前用户ID（用于优先级匹配）
-
+            only_include_ai_character: 为 True 时仅从带该标签的图中选（兜底候选）
+            exclude_image_ids: 排除的 image_id 列表（如该 chat 已展示的兜底图），在相似度匹配前过滤
         Returns:
-            最相似的图片信息，如果未找到则返回None
+            最相似的图片信息（含 image_id），如果未找到则返回 None
         """
         try:
             # 第一步：优先匹配其他用户的图片
             if current_user_id:
                 other_users_images = await self.get_generated_images_for_agent(
-                    db, agent_id, exclude_user_id=current_user_id
+                    db,
+                    agent_id,
+                    exclude_user_id=current_user_id,
+                    only_include_ai_character=only_include_ai_character,
+                )
+                other_users_images = self._exclude_image_ids(
+                    other_users_images, exclude_image_ids
                 )
                 if other_users_images:
                     best_match = self._find_best_match_in_images(
@@ -682,13 +708,18 @@ class ImageGenerationService:
             # 第二步：匹配当前用户的图片
             if current_user_id:
                 current_user_images = await self.get_generated_images_for_agent(
-                    db, agent_id, only_user_id=current_user_id
+                    db,
+                    agent_id,
+                    only_user_id=current_user_id,
+                    only_include_ai_character=only_include_ai_character,
                 )
             else:
-                # 如果没有current_user_id，查询所有图片
                 current_user_images = await self.get_generated_images_for_agent(
-                    db, agent_id
+                    db, agent_id, only_include_ai_character=only_include_ai_character
                 )
+            current_user_images = self._exclude_image_ids(
+                current_user_images, exclude_image_ids
+            )
 
             if current_user_images:
                 best_match = self._find_best_match_in_images(
@@ -930,11 +961,17 @@ class ImageGenerationService:
                     generation_prompt=prepared.prompt,
                     reference_image_url=prepared.reference_url,
                     agent_id=agent_id,
+                    only_include_ai_character=prepared.user_photo_url is None,
                 )
                 logger.info("图片已保存到resources表: {}", gcs_uri)
             except Exception as e:
-                logger.warning("保存图片到resources表失败: {}", str(e))
-                traceback.print_exc()
+                # Rollback 以便调用方继续使用同一 session（如重复 url 导致 IntegrityError）
+                await db.rollback()
+                if isinstance(e, IntegrityError):
+                    logger.warning("保存图片到resources表失败（可能已存在）: {}", str(e))
+                else:
+                    logger.warning("保存图片到resources表失败: {}", str(e))
+                    traceback.print_exc()
 
         logger.info(
             "图片生成成功并更新到消息 meta_data，message_id={}, cdn_url={}",

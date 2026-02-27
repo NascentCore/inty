@@ -1279,6 +1279,7 @@ async def _record_chat_image_failure(
 
 async def _try_match_existing_image(
     db: AsyncSession,
+    chat_id: str,
     agent_id: str,
     user_id: str,
     message_id: int,
@@ -1289,21 +1290,8 @@ async def _try_match_existing_image(
     is_network_error: bool = False,
 ) -> Optional[schemas.ChatImageGenerationResponse]:
     """
-    尝试匹配已生成的图片
-    优先匹配其他用户生成的图片，其次匹配当前用户的图片
-
-    Args:
-        db: 数据库会话
-        agent_id: Agent ID
-        user_id: 用户ID
-        message_id: 消息ID
-        session_id: 会话ID
-        current_prompt: 当前提示词
-        message_content: 消息内容
-        is_network_error: 是否是网络错误
-
-    Returns:
-        匹配到的图片响应，如果未找到则返回None
+    尝试匹配已生成的图片（仅从带 only_include_ai_character 的图中选，并排除已展示过的兜底图）。
+    顺序：1) 查询 fallback 候选 2) 去除 sent_fallback_images 3) 剩余图片中相似度匹配。
     """
     from app.services.image_generation_service import image_generation_service
     from app.services.image_transform_service import image_transform_service
@@ -1314,11 +1302,20 @@ async def _try_match_existing_image(
             f"尝试匹配已生成图片 - Agent ID: {agent_id}, User ID: {user_id}"
         )
 
+        # 读取该 chat 已展示的兜底图 id，避免重复展示
+        chat_result = await db.execute(
+            select(models.Chat).where(models.Chat.id == chat_id)
+        )
+        chat = chat_result.scalar_one_or_none()
+        sent_fallback_images = list(chat.sent_fallback_images or []) if chat else []
+
         similar_image = await image_generation_service.find_most_similar_image(
             db=db,
             agent_id=agent_id,
             current_prompt=current_prompt,
             current_user_id=user_id,
+            only_include_ai_character=True,
+            exclude_image_ids=sent_fallback_images,
         )
 
         if similar_image:
@@ -1328,6 +1325,12 @@ async def _try_match_existing_image(
                 f"找到匹配图片，相似度: {similar_image.get('similarity', 0):.3f}, "
                 f"来自{'其他用户' if is_other_user else '当前用户'}: {matched_user_id}"
             )
+
+            # 记录已展示的兜底图 id（按 image_id 去重），供后续兜底排除
+            image_id = similar_image.get("image_id") or similar_image.get("image_url")
+            if chat and image_id and image_id not in sent_fallback_images:
+                chat.sent_fallback_images = sent_fallback_images + [image_id]
+                await db.flush()
 
             # 获取GCS URI并转换为CDN URL
             gcs_uri = similar_image.get("image_url", "")
@@ -1674,6 +1677,7 @@ async def generate_chat_image(
         if enable_chat_image_match_fallback and current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
+                chat_id=chat.id,
                 agent_id=agent_id,
                 user_id=user_id,
                 message_id=message_id,
@@ -1749,6 +1753,7 @@ async def generate_chat_image(
         if enable_chat_image_match_fallback and current_prompt:
             fallback_result = await _try_match_existing_image(
                 db=db,
+                chat_id=chat.id,
                 agent_id=agent_id,
                 user_id=user_id,
                 message_id=message_id,

@@ -7,7 +7,7 @@ from sqlalchemy import (
     Index,
     String,
 )
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.orm import relationship
 
 from app.models import Base
@@ -28,6 +28,13 @@ class Chat(Base):
         JSON,
         nullable=True,
         comment="最新一次发送给大模型的完整messages列表（JSON格式）",
+    )
+    # 已作为兜底展示过的图片 id 列表（Resource.url），按 image_id 去重，避免重复展示
+    sent_fallback_images = Column(
+        JSONB,
+        nullable=False,
+        server_default=sa.text("'[]'::jsonb"),
+        comment="已展示的兜底图片 image_id 列表，用于排除后续兜底候选",
     )
 
     # 关系

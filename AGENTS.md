@@ -92,9 +92,12 @@ AGENTS.md        AI
 
 ## Alembic
 
-- 按照 alembic/README.md 中的步骤创建新的 alembic version 文件，而不是直接编写
-- 修改数据库表 schema 应该**单独**进行，不要与其他改动混合：保证 alembic version 可以快速同步，避免多人并行产生非线性迁移链。
-  - 例如：当前 alembic head revision 为 1，改动 A 与改动 B 同时修改 DB，则可能出现两个并行 version 文件都依赖 revision 1。
+Use the following steps to create alembic revision file
+
+```bash
+alembic -c alembic/alembic.ini upgrade head # First ensure the local DB is updated
+alembic -c alembic/alembic.ini revision --autogenerate -m "<revision description>"
+```
 
 ## Python-Kotlin HTTP APIs 数据类型定义
 

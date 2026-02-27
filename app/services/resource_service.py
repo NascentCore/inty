@@ -150,6 +150,7 @@ async def async_create_image_resource(
     generation_prompt: Optional[str] = None,
     reference_image_url: Optional[str] = None,
     agent_id: Optional[str] = None,
+    only_include_ai_character: bool = False,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -170,6 +171,7 @@ async def async_create_image_resource(
         gcs_url=gcs_url,
         generation_prompt=generation_prompt,
         reference_image_url=reference_image_url,
+        only_include_ai_character=only_include_ai_character,
     )
 
     # Convert to dict for database storage
