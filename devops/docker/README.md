@@ -68,6 +68,39 @@ docker run -d \
   inty-push-worker:latest
 ```
 
+### `Dockerfile.ops`
+
+用于构建 Ops 平台（evaluation Web UI + 完整 `/api/v1`）的 Docker 镜像，与后端主服务分离部署。镜像包含 evaluation 前端构建结果与 ops 启动脚本，监听端口 8001。
+
+**构建要求**：
+
+- 平台：AMD64 (x86_64)
+- 必需构建参数：`CONFIG_FILE` - 配置文件路径
+
+**构建示例**：
+
+```bash
+# 从项目根目录构建
+docker build \
+  --build-arg CONFIG_FILE=devops/config.yaml.prod \
+  -f devops/docker/Dockerfile.ops \
+  -t inty-ops:latest \
+  .
+```
+
+**运行示例**：
+
+```bash
+docker run -d \
+  --name inty-ops \
+  -p 8001:8001 \
+  -v /path/to/inty-backend-key.json:/inty-backend-key.json:ro \
+  -v /path/to/inty-firebase-key.json:/inty-firebase-key.json:ro \
+  inty-ops:latest
+```
+
+部署流程见 `.github/workflows/build_and_deploy_ops.yml`；dev/prod 同 VM，分别使用 host 端口 8001、8011，nginx 将 ops.inty.cc 反代到 8011、dev.ops.inty.cc 反代到 8001。
+
 ## 构建上下文
 
 **重要**：所有 Dockerfile 的构建上下文应为**项目根目录**，而不是 `devops/docker/` 目录。构建时使用 `-f` 参数指定 Dockerfile 路径。
@@ -93,7 +126,7 @@ docker build -f Dockerfile -t inty-backend .
 
 ## 系统依赖
 
-两个 Dockerfile 都安装以下系统依赖：
+上述 Dockerfile 均安装以下系统依赖：
 
 - `build-essential` - C/C++ 编译工具链
 - `libpq-dev` - PostgreSQL 客户端库
@@ -101,7 +134,7 @@ docker build -f Dockerfile -t inty-backend .
 
 ## 多阶段构建
 
-两个 Dockerfile 都采用多阶段构建：
+主服务与 Ops 的 Dockerfile 采用多阶段构建：
 
 1. **frontend-builder**：构建前端静态文件
 2. **base**：安装 Python 依赖和系统工具
@@ -118,4 +151,4 @@ docker build -f Dockerfile -t inty-backend .
 
 - 部署流程：参见 `devops/README.md`
 - 推送服务详情：参见 `devops/README.md#推送服务部署`
-- 启动脚本：`backend/inty/start.sh`（后端主服务）、`backend/push_worker/start.sh`（推送服务）
+- 启动脚本：`backend/inty/start.sh`（后端主服务）、`backend/push_worker/start.sh`（推送服务）、`backend/ops/start.sh`（Ops 平台）

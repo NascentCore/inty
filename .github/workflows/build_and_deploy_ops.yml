@@ -1,0 +1,146 @@
+name: Release - Inty Ops 平台
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**/*.py"
+      - "alembic/**/*.py"
+      - "backend/ops/**"
+      - "devops/config.yaml.dev"
+      - "devops/config.yaml.prod"
+      - "evaluation/**/*.tsx"
+      - "evaluation/tsconfig.json"
+      - "evaluation/tsconfig.node.json"
+      - "evaluation/package.json"
+      - "evaluation/package-lock.json"
+      - "evaluation/vite.config.ts"
+      - "evaluation/vitest.config.ts"
+      - "evaluation/index.html"
+      - "evaluation/build.sh"
+      - "devops/docker/Dockerfile.ops"
+      - ".github/workflows/build_and_deploy_ops.yml"
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        description: The environment to deploy to
+        required: true
+        default: dev
+
+  schedule:
+    - cron: "0 11 * * *"
+
+concurrency:
+  group: inty-deploy-ops-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
+  cancel-in-progress: true
+
+env:
+  INTY_OPS_IMAGE: ghcr.io/nascentcore/inty-backend/inty-ops
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+
+    permissions:
+      packages: write
+      contents: write
+
+    environment: ${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}
+
+    steps:
+      - id: prep
+        run: |
+          echo "environment=${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
+
+      - name: Check prep output
+        run: |
+          echo "environment=${{ steps.prep.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "image_tag=${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+        with:
+          cache-binary: true
+
+      - id: build-docker-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./devops/docker/Dockerfile.ops
+          push: true
+          tags: ${{ env.INTY_OPS_IMAGE }}:${{ steps.prep.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            CONFIG_FILE=devops/config.yaml.${{ steps.prep.outputs.environment }}
+
+      - name: Pull deployment image
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 5
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            sudo docker pull ${{ env.INTY_OPS_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+
+      - name: Deploy ops to ${{ steps.prep.outputs.environment }}
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 5
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo docker stop inty-ops-${{ steps.prep.outputs.environment }} || true
+            sudo docker rm inty-ops-${{ steps.prep.outputs.environment }} || true
+            sudo docker run --detach --log-driver=gcplogs \
+              --name inty-ops-${{ steps.prep.outputs.environment }} \
+              --restart unless-stopped \
+              --publish ${{ vars.OPS_SERVICE_PORT_ON_HOST }}:8001 \
+              --env LANGCHAIN_TRACING_V2=true \
+              --env LANGCHAIN_PROJECT=inty-ops-${{ steps.prep.outputs.environment }} \
+              --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
+              --label application=inty-ops \
+              --label environment=${{ steps.prep.outputs.environment }} \
+              --log-opt labels=application,environment \
+              --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
+              --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
+              ${{ env.INTY_OPS_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+            echo "Waiting for application startup..."
+            while ! sudo docker logs inty-ops-${{ steps.prep.outputs.environment }} 2>&1 | grep -q "Application startup complete"
+            do
+              sleep 1
+            done
+            if [ $? -eq 0 ]; then
+              echo "Application startup complete detected!"
+            else
+              echo "Timeout waiting for application startup"
+              exit 1
+            fi
+
+      - name: Sanity check
+        run: |
+          curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.OPS_SERVICE_PUBLIC_URL }}
+
+      - name: Write summary
+        run: |
+          echo "## Build and deploy ops"
+          echo "GitHub ref: ${{ github.ref }}"
+          echo "Deployed to ${{ steps.prep.outputs.environment }} for ${{ vars.OPS_SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Ops image: ${{ env.INTY_OPS_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
