@@ -33,7 +33,7 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            sudo mv /tmp/sxwl.ai.conf /etc/nginx/conf.d/sxwl.ai.conf
+            sudo cp /tmp/sxwl.ai.conf /etc/nginx/conf.d/sxwl.ai.conf
             sudo nginx -t # 验证配置；失败则立即退出，不重启
             sudo systemctl restart nginx
             sudo systemctl status nginx
