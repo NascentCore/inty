@@ -2,6 +2,7 @@ package ai.sxwl.android.data.chat.repository
 
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.VoteConstants
+import ai.sxwl.android.data.api.model.ChatImageGenerationResult
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository
@@ -59,9 +60,7 @@ class ChatRepositoryImpl(
     override suspend fun generateImageForMessage(
         agentId: String,
         messageId: String,
-    ): com.architecture.httplib.core.HttpResult<
-        ai.sxwl.android.data.http.services.ChatService.ChatImageGenerationResult
-    > {
+    ): HttpResult<ChatImageGenerationResult> {
         LogUtils.d(
             "ChatRepositoryImpl.generateImageForMessage called for $agentId, messageId: $messageId"
         )

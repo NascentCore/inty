@@ -61,7 +61,7 @@
 - ✅ Phase 0：已执行（本次提交补齐盘点清单、迁移映射、冻结规则）。
 - ✅ Phase 1：已完成（`93f881d8771e5db21fe391eb9baa4ef73ed23957`）。
 - ✅ Phase 2：已完成（`a6a5bfd5604949f850be73584c9060adc4cae35c`）。
-- ⏳ Phase 3：进行中（聊天域残留 Stainless 依赖待迁移）。
+- ✅ Phase 3：已完成（本次提交：聊天域改为 Retrofit + 本地 DTO + HttpResult）。
 - ⏳ Phase 4：未开始（构建依赖与死代码清理）。
 
 ## Phase 0 - 盘点与冻结（准备阶段）
@@ -174,10 +174,11 @@
 
 ### TODO（Phase 3）
 
-- [ ] `ChatRemoteDataSource.messageGenerateImage()` 不再调用 `core/data/http/services/ChatService`，改为直接走 `NetServiceMgr.getChatApi().generateMessageImage(...)`。
-- [ ] `ChatRepository` / `ChatUseCases` / `RoomImpl` 类型签名从 `ChatService.ChatImageGenerationResult` 迁移为 `core/data/api/model` 本地 DTO。
-- [ ] 聊天域统一错误模型到 `HttpResult`，移除 `ApiResult` 桥接逻辑。
-- [ ] 清理 `core/data/http/services/ChatService.kt` 与相关异常类型引用。
+- [x] `ChatRemoteDataSource.messageGenerateImage()` 不再调用 `core/data/http/services/ChatService`，改为直接走 `NetServiceMgr.getChatApi().generateMessageImage(...)`。
+- [x] `ChatRepository` / `ChatUseCases` / `RoomImpl` 类型签名从 `ChatService.ChatImageGenerationResult` 迁移为 `core/data/api/model` 本地 DTO。
+- [x] 聊天域统一错误模型到 `HttpResult`，移除 `ApiResult` 桥接逻辑。
+- [x] 清理 `core/data/http/services/ChatService.kt` 与相关异常类型引用。
+- [x] 对应实现已落地并合入：本次提交。
 
 ---
 

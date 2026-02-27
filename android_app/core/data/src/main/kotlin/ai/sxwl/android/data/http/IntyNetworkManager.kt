@@ -3,7 +3,6 @@ package ai.sxwl.android.data.http
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.http.services.AgentService
 import ai.sxwl.android.data.http.services.AuthService
-import ai.sxwl.android.data.http.services.ChatService
 import ai.sxwl.android.data.http.services.ReportService
 import ai.sxwl.android.data.http.services.SubscriptionService
 import ai.sxwl.android.data.http.services.UserService
@@ -286,7 +285,6 @@ object IntyNetworkManager {
      * - `auth`: 对应 NetServiceMgr 的认证相关 API
      * - `user`: 对应 NetServiceMgr 的 `getUserApi()`
      * - `agent`: 对应 NetServiceMgr 的 `getAgentApi()`
-     * - `chat`: 对应 NetServiceMgr 的 `getChatApi()`
      * - `subscription`: 对应 NetServiceMgr 的 `getSubscriptionApi()`
      * - `report`: 对应 NetServiceMgr 的举报相关 API
      *
@@ -316,10 +314,6 @@ object IntyNetworkManager {
     /** 智能体相关API 替换: IAgentApi */
     val agent: AgentService
         get() = AgentService
-
-    /** 聊天相关API 替换: IChatApi */
-    val chat: ChatService
-        get() = ChatService
 
     /** 订阅相关API 替换: ISubscriptionApi */
     val subscription: SubscriptionService

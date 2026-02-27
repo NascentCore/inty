@@ -308,6 +308,17 @@ data class ChatImageGenerationApiResponse(
     val data: ChatImageGenerationPayload? = null,
 )
 
+/**
+ * 聊天消息生图结果（供业务层直接使用的本地 DTO）。
+ */
+@JsonClass(generateAdapter = true)
+data class ChatImageGenerationResult(
+    @Json(name = "image_url") val imageUrl: String,
+    val width: Int,
+    val height: Int,
+    @Json(name = "message_id") val messageId: Long,
+)
+
 @JsonClass(generateAdapter = true)
 data class ClearMessagesRequest(
     @Json(name = "message_id") val messageId: Long? = null,
