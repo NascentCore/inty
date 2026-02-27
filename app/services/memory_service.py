@@ -339,7 +339,11 @@ async def deliver_festival_memories_for_user_agent(
     因操作仅限定于同一用户与角色对，发生概率较低。若需严格避免，可对 memory 行加
     SELECT FOR UPDATE 或对投递结果加唯一约束并做幂等处理。
     """
-    undelivered = await get_undelivered_festival_memories(db, user_id, agent_id)
+    # 本函数被 API 端点在异步请求链路中调用；历史上在该链路混用 async DB 与 to_thread
+    # 会出现 MissingGreenlet。这里改为将 memory 表读写也放入同步线程执行，避免 greenlet 上下文问题。
+    undelivered = await asyncio.to_thread(
+        _get_undelivered_festival_memories_sync, user_id, agent_id
+    )
     if not undelivered:
         return []
 
@@ -354,6 +358,7 @@ async def deliver_festival_memories_for_user_agent(
         get_festival_memory_prompt_content_for_agent_sync, agent_id
     )
     delivered = []
+    delivered_memory_ids: list[int] = []
     for item in undelivered:
         mid = item["id"]
         festival_name = item["festival_name"]
@@ -373,11 +378,7 @@ async def deliver_festival_memories_for_user_agent(
         )
         if msg_id is None:
             continue
-        await db.execute(
-            update(Memory)
-            .where(Memory.id == mid, Memory.delivery_at.is_(None))
-            .values(delivery_at=now)
-        )
+        delivered_memory_ids.append(mid)
         delivered.append(
             {
                 "memory_id": mid,
@@ -391,5 +392,59 @@ async def deliver_festival_memories_for_user_agent(
                 ),
             }
         )
-    await db.commit()
+    if delivered_memory_ids:
+        await asyncio.to_thread(
+            _mark_festival_memories_delivered_sync,
+            delivered_memory_ids,
+            now,
+        )
     return delivered
+
+
+def _get_undelivered_festival_memories_sync(user_id: str, agent_id: str) -> list[dict]:
+    """同步查询未投递节日记忆，供 to_thread 调用。"""
+    engine = get_sync_engine()
+    with engine.connect() as conn:
+        stmt = select(
+            Memory.id,
+            Memory.meta_data,
+        ).where(
+            Memory.user_id == user_id,
+            Memory.agent_id == agent_id,
+            Memory.memory_type == MEMORY_TYPE_FESTIVAL,
+            Memory.delivery_at.is_(None),
+        )
+        rows = conn.execute(stmt).fetchall()
+
+    items: list[dict] = []
+    for row in rows:
+        memory_id, metadata = row
+        festival_name, festival_date = resolve_festival_name_and_date(metadata)
+        if festival_name is None or festival_date is None:
+            continue
+        items.append(
+            {
+                "id": memory_id,
+                "festival_name": festival_name,
+                "festival_date": festival_date,
+            }
+        )
+    items.sort(
+        key=lambda item: (_festival_date_sort_key(item["festival_date"]), item["id"])
+    )
+    return items
+
+
+def _mark_festival_memories_delivered_sync(
+    memory_ids: list[int], delivered_at: datetime
+) -> None:
+    """同步批量更新 delivery_at，供 to_thread 调用。"""
+    if not memory_ids:
+        return
+    engine = get_sync_engine()
+    with engine.begin() as conn:
+        conn.execute(
+            update(Memory)
+            .where(Memory.id.in_(memory_ids), Memory.delivery_at.is_(None))
+            .values(delivery_at=delivered_at)
+        )

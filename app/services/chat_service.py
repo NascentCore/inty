@@ -1687,11 +1687,14 @@ async def generate_chat_image(
                 return fallback_result
 
         # 检查是否是安全过滤器阻止（用于记录日志和返回业务错误）
+        error_message_lower = error_message.lower()
         is_safety_filter = (
             "被阻止" in error_message
             or "安全过滤器" in error_message
-            or "blocked" in error_message.lower()
-            or "safety" in error_message.lower()
+            or "blocked" in error_message_lower
+            or "safety" in error_message_lower
+            or "image_prohibited_content" in error_message_lower
+            or "finishreason.image_" in error_message_lower
         )
 
         if is_safety_filter:

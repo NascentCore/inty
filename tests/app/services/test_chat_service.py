@@ -213,6 +213,95 @@ class TestChatService:
         await db_session.commit()
 
     @pytest.mark.asyncio
+    @patch("app.services.chat_service._record_chat_image_failure", new_callable=AsyncMock)
+    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image_for_message")
+    async def test_generate_chat_image_prohibited_content_returns_biz_error(
+        self,
+        mock_generate_image: AsyncMock,
+        mock_record_chat_image_failure: AsyncMock,
+        db_session: AsyncSession,
+    ):
+        """当 Gemini 返回 IMAGE_PROHIBITED_CONTENT 时，返回 BizError 而不是抛 500。"""
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Test User",
+            email="test@example.com",
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔善良的女孩",
+            scenario="在咖啡厅里与用户聊天",
+            intro="一个可爱的AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+        session_id = chat_service.generate_session_id(chat.id)
+
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": "给我画一张图片"}},
+            meta_data={},
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+
+        mock_subscription_svc = _make_mock_subscription_svc()
+        mock_generate_image.side_effect = ValueError(
+            "No content in candidates (finish_reason: FinishReason.IMAGE_PROHIBITED_CONTENT)"
+        )
+        mock_record_chat_image_failure.return_value = None
+
+        result = await chat_service.generate_chat_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=ai_message.id,
+            subscription_service=mock_subscription_svc,
+            history_count=10,
+            model="gemini-2.5-flash-image",
+        )
+
+        assert isinstance(result, BizError)
+        assert result.code == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"]
+        assert (
+            result.error_code
+            == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"]
+        )
+        assert result.message == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+
+        await db_session.delete(ai_message)
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
     async def test_generate_chat_image_business_limit_guest(
         self,
         db_session: AsyncSession,

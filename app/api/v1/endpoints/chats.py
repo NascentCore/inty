@@ -186,6 +186,7 @@ async def get_agent_chat_messages(
                     db, current_user.id, agent_id
                 )
             except Exception as e:
+                await db.rollback()
                 logger.warning(f"投递节日记忆提示失败: {e}")
 
         unlocked_ids = await get_unlocked_surprise_snap_message_ids(

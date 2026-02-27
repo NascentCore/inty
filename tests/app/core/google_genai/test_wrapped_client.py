@@ -17,6 +17,7 @@ from app.external_services.gcs import get_bucket_and_path_from_gcs_url
 from app.core.google_genai.wrapped_client import (
     LangSmithTraceRunType,
     WrappedClient,
+    _extract_image_part_from_gemini_response,
     _langsmith_process_outputs_generate_image,
 )
 from app.utils.image import ImageFormat, ImageSize
@@ -121,6 +122,19 @@ def test_async_client_stores_client():
     client = Mock()
     wrapper = WrappedClient(client=client)
     assert wrapper.client is client
+
+
+def test_extract_image_part_treats_image_prohibited_content_as_safety_block():
+    candidate = Mock()
+    candidate.finish_reason = "FinishReason.IMAGE_PROHIBITED_CONTENT"
+    candidate.safety_ratings = []
+    candidate.content = None
+    response = Mock()
+    response.prompt_feedback = None
+    response.candidates = [candidate]
+
+    with pytest.raises(ValueError, match="blocked by safety filter"):
+        _extract_image_part_from_gemini_response(response)
 
 
 @pytest.mark.asyncio

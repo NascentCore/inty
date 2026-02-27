@@ -1,9 +1,11 @@
 """Business error and integration tests for chats endpoints."""
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
+from sqlalchemy.exc import MissingGreenlet
 
 from app.api import deps
 from app.api.v1.endpoints import chats as chats_v1
@@ -219,3 +221,76 @@ def test_v1_chats_generate_image_wraps_business_error(
     )
     assert body["data"]["used_count"] == 4
     assert body["data"]["daily_limit"] == 4
+
+
+def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_greenlet(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    app = FastAPI()
+    app.include_router(chats_v1.router, prefix="/api/v1")
+
+    mock_db = _create_mock_db_session()
+    rollback_called = False
+
+    async def _rollback():
+        nonlocal rollback_called
+        rollback_called = True
+
+    mock_db.rollback = AsyncMock(side_effect=_rollback)
+
+    async def override_db():
+        yield mock_db
+
+    app.dependency_overrides[deps.get_async_db] = override_db
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_deliver_festival(*args, **kwargs):
+        raise MissingGreenlet("greenlet_spawn has not been called")
+
+    async def fake_get_unlocked_surprise_snap_message_ids(db, user_id):
+        if not rollback_called:
+            raise MissingGreenlet("session should be rolled back before continuing")
+        return set()
+
+    def fake_get_messages_paginated(*args, **kwargs):
+        return {"messages": [{"id": 1, "role": "assistant", "content": "ok"}], "total": 1}
+
+    monkeypatch.setattr(
+        chats_v1.chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(chats_v1, "is_festival_memory_enabled", lambda _: True)
+    monkeypatch.setattr(
+        chats_v1,
+        "deliver_festival_memories_for_user_agent",
+        fake_deliver_festival,
+    )
+    monkeypatch.setattr(
+        chats_v1,
+        "get_unlocked_surprise_snap_message_ids",
+        fake_get_unlocked_surprise_snap_message_ids,
+    )
+    monkeypatch.setattr(
+        chats_v1.chat_history_service,
+        "get_messages_paginated",
+        fake_get_messages_paginated,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(app, user) as client:
+        response = client.get(
+            "/api/v1/chats/agents/agent-1/messages",
+            params={"limit": 20, "offset": 0, "order": "desc"},
+            headers={"appVersionCode": "9999"},
+        )
+
+    body = response.json()
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert rollback_called is True
+    assert body["total"] == 1
+    assert body["messages"][0]["content"] == "ok"

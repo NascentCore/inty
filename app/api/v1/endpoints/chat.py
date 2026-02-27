@@ -415,6 +415,7 @@ async def agent_chat_completions(
                         db, current_user.id, agent_id
                     )
             except Exception as e:
+                await db.rollback()
                 logger.warning(f"投递节日记忆提示失败: {e}")
                 delivered_prompts = []
 
