@@ -13,6 +13,7 @@ Usage (from repo root):
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 import sys
 from pathlib import Path
@@ -48,7 +49,7 @@ def _ensure_config(config_path: Optional[str]) -> None:
     else:
         if not target.exists():
             print(
-                f"错误: 未指定 --config 且当前目录下不存在 {CONFIG_YAML}",
+                f"错误: 未指定 --config 且当前目录下不存在 {CONFIG_YAML}，请在仓库根目录运行或使用 --config PATH",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -66,27 +67,9 @@ def _normalize_gcs_uri(uri: str) -> str:
 
 
 async def _run(
-    gcs_uri: Annotated[
-        Optional[str],
-        cyclopts.Parameter(
-            name="--gcs-uri",
-            help="GCS URI of the Resource to verify (e.g. gs://inty-static/chat_images/...).",
-        ),
-    ] = None,
-    agent_id: Annotated[
-        Optional[str],
-        cyclopts.Parameter(
-            name="--agent-id",
-            help="Agent ID; then all fallback candidates for this agent are listed (no single-URI check).",
-        ),
-    ] = None,
-    config: Annotated[
-        Optional[str],
-        cyclopts.Parameter(
-            name="--config",
-            help="复制此 YAML 到当前目录 config.yaml 后再导入 app。",
-        ),
-    ] = None,
+    gcs_uri: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    config: Optional[str] = None,
 ) -> None:
     _ensure_config(config)
     if not gcs_uri and not agent_id:
@@ -135,11 +118,36 @@ async def _run(
                 print(f"  {img['image_id']}")
 
 
-if __name__ == "__main__":
-    import asyncio
+def main(
+    gcs_uri: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--gcs-uri",
+            help="GCS URI of the Resource to verify (e.g. gs://inty-static/chat_images/...).",
+        ),
+    ] = None,
+    agent_id: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--agent-id",
+            help="Agent ID; then all fallback candidates for this agent are listed (no single-URI check).",
+        ),
+    ] = None,
+    config: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--config",
+            help="复制此 YAML 到当前目录 config.yaml 后再导入 app。",
+        ),
+    ] = None,
+) -> None:
+    """Sync entrypoint: parse args and run async _run."""
+    asyncio.run(_run(gcs_uri=gcs_uri, agent_id=agent_id, config=config))
 
+
+if __name__ == "__main__":
     app = cyclopts.App(
         help="Verify a tagged Resource appears in get_generated_images_for_agent(..., only_include_ai_character=True)."
     )
-    app.default(_run)
+    app.default(main)
     app()

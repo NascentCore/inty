@@ -28,7 +28,6 @@ from typing import Annotated, Optional
 import cyclopts
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
 from app.models.resource import Resource, ResourceType
