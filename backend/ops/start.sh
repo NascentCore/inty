@@ -42,6 +42,7 @@ if [ "$DEV" = true ]; then
   echo "Initializing admin user ..."
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   echo "Starting evaluation frontend in dev mode..."
+  evaluation/build.sh
   cd evaluation && npm run dev
 else
   echo "Starting ops in normal mode on port $OPS_PORT..."
