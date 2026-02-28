@@ -677,8 +677,12 @@
     <string name="heartbeat_empty">No Love Journal yet</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
+        <item>A voice that stays</item>
         <item>A relationship to explore</item>
+        <item>A heart that listens</item>
         <item>A night to spend</item>
+        <item>A world built for two</item>
         <item>On your terms always</item>
+        <item>Someone who gets you</item>
     </string-array>
 </resources>
