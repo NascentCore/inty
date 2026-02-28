@@ -14,3 +14,9 @@
 
 黏贴 github issue 链接即可让 cursor 来处理
 <img width="1216" height="1438" alt="image" src="https://github.com/user-attachments/assets/578dc3f9-640e-4816-a4bd-621c6da4af70" />
+
+## Z Image Turbo Image to Image 示例
+
+有点搞笑、但是没审核、生图速度极快
+
+<img width="600" height="1330" alt="image" src="https://github.com/user-attachments/assets/8fb4df85-4469-4bb1-aefc-68f43eb7bc34" />
