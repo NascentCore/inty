@@ -33,13 +33,21 @@ class AgentSortOption(str, Enum):
 
     # Ascending order of the creation time, oldest to the newest
     CREATED_ASC = "created_asc"
+
     # Descending order of the creation time, newest to the oldest
     CREATED_DESC = "created_desc"
+
     # Newest first, only agents with gender opposite to requesting user (MALE/FEMALE); OTHER/unknown same as created_desc
+    # 只给请求用户的异性角色。
     CREATED_DESC_WITH_OPPOSITE_GENDER = "created_desc_with_opposite_gender"
+
     # Random order, use sort_seed to ensure consistent order
+    # 随机排序，使用 sort_seed 确保一致的排序结果
     RANDOM = "random"
+
     # Score-based random recommendation: 6 high-score agents + 4 random agents
+    # Same as CREATED_DESC_WITH_OPPOSITE_GENDER, but with score-based random selection
+    # 请求用户的异性角色排在前列。
     SCORE_BASED_RANDOM = "score_based_random"
 
     # 根据角色能量点数排序；用户使用 app 聊天获得能力点数、每天签到也获得能量点数，然后可以以给角色增加能量点数
