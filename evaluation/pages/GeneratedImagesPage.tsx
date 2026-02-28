@@ -15,7 +15,6 @@ import {
   Spin,
   Input,
   Image,
-  Modal,
   Typography,
   Tag,
   Space,
@@ -44,8 +43,10 @@ import {
   GENERATED_IMAGE_COUNT_BADGE_OVERFLOW_COUNT,
   normalizeGeneratedImageCount,
 } from "../utils/generatedImageCountDisplay";
+import GeneratedImageDetailModal from "../components/common/GeneratedImageDetailModal";
+import { buildGeneratedImageDetailFromGeneratedImage } from "../utils/generatedImageDetail";
 
-const { Text, Paragraph, Title } = Typography;
+const { Text, Paragraph } = Typography;
 const { Search } = Input;
 
 const GeneratedImagesPage: React.FC = () => {
@@ -181,6 +182,12 @@ const GeneratedImagesPage: React.FC = () => {
     if (!dateStr) return "未知";
     return formatUtcTimeRaw(dateStr, "YYYY-MM-DD HH:mm") + " (UTC)";
   };
+  const previewImageDetail = React.useMemo(() => {
+    if (!previewImage) {
+      return null;
+    }
+    return buildGeneratedImageDetailFromGeneratedImage(previewImage);
+  }, [previewImage]);
 
   return (
     <div style={{ padding: "24px", height: "100%", overflow: "hidden" }}>
@@ -492,76 +499,12 @@ const GeneratedImagesPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 图片预览弹窗 */}
-      <Modal
+      <GeneratedImageDetailModal
         open={!!previewImage}
-        onCancel={() => setPreviewImage(null)}
-        footer={null}
-        width={800}
-        centered
-        title={
-          <Space>
-            <PictureOutlined />
-            <span>图片详情</span>
-          </Space>
-        }
-      >
-        {previewImage && (
-          <div>
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <Image
-                src={previewImage.url}
-                alt="生成图片"
-                style={{ maxHeight: 500, objectFit: "contain" }}
-              />
-            </div>
-            <Card size="small" style={{ marginTop: 16 }}>
-              <Title level={5} style={{ marginBottom: 12 }}>
-                生成提示词
-              </Title>
-              <Paragraph
-                style={{
-                  backgroundColor: "#f5f5f5",
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 12,
-                }}
-              >
-                {previewImage.generation_prompt}
-              </Paragraph>
-              {previewImage.reference_image_url && (
-                <>
-                  <Title level={5} style={{ marginBottom: 12, marginTop: 16 }}>
-                    参考图
-                  </Title>
-                  <div style={{ marginBottom: 12 }}>
-                    <Image
-                      src={previewImage.reference_image_url}
-                      alt="参考图"
-                      style={{ maxHeight: 200, objectFit: "contain" }}
-                    />
-                  </div>
-                </>
-              )}
-              <Space split={<span style={{ color: "#d9d9d9" }}>|</span>}>
-                {previewImage.width && previewImage.height && (
-                  <Text type="secondary">
-                    尺寸: {previewImage.width} x {previewImage.height}
-                  </Text>
-                )}
-                <Text type="secondary">
-                  生成时间: {formatDate(previewImage.created_at)}
-                </Text>
-                {previewImage.user_id && (
-                  <Text type="secondary">
-                    用户ID: {previewImage.user_id.slice(0, 8)}...
-                  </Text>
-                )}
-              </Space>
-            </Card>
-          </div>
-        )}
-      </Modal>
+        onClose={() => setPreviewImage(null)}
+        detail={previewImageDetail}
+        title="图片详情"
+      />
     </div>
   );
 };

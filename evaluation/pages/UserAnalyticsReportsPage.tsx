@@ -65,6 +65,11 @@ import {
   WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
 import { USER_ANALYTICS_GENERATED_IMAGE_PREVIEW_STYLE } from "../utils/userAnalyticsReportImagePreview";
+import GeneratedImageDetailModal from "../components/common/GeneratedImageDetailModal";
+import {
+  buildGeneratedImageDetailFromDailyReportItem,
+  type GeneratedImageDetail,
+} from "../utils/generatedImageDetail";
 
 type ReportType = "daily" | "weekly";
 
@@ -207,6 +212,8 @@ function ReportContent({
   charts: UserAnalyticsReportCharts | null;
   reportType: ReportType;
 }) {
+  const [previewImageDetail, setPreviewImageDetail] =
+    useState<GeneratedImageDetail | null>(null);
   const roundsDistributionBySession = useMemo(
     () =>
       charts
@@ -281,30 +288,43 @@ function ReportContent({
                 </div>
               )}
               <Row gutter={[12, 12]}>
-                {previewGeneratedImages.map((item) => (
-                  <Col key={item.id} xs={12} sm={8} md={6} lg={4} xl={3}>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                      }}
-                    >
-                      <Image
-                        src={item.image_url}
-                        alt={`generated-${item.id}`}
-                        style={USER_ANALYTICS_GENERATED_IMAGE_PREVIEW_STYLE}
-                      />
+                {previewGeneratedImages.map((item) => {
+                  const detail = buildGeneratedImageDetailFromDailyReportItem(item);
+                  return (
+                    <Col key={item.id} xs={12} sm={8} md={6} lg={4} xl={3}>
                       <div
-                        style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
                       >
-                        {item.created_at
-                          ? item.created_at.replace("T", " ").slice(0, 19)
-                          : "时间未知"}
+                        <Image
+                          src={item.image_url}
+                          alt={`generated-${item.id}`}
+                          preview={false}
+                          style={{
+                            ...USER_ANALYTICS_GENERATED_IMAGE_PREVIEW_STYLE,
+                            cursor: "pointer",
+                          }}
+                          onClick={() => setPreviewImageDetail(detail)}
+                        />
+                        <div
+                          style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                        >
+                          {item.created_at
+                            ? item.created_at.replace("T", " ").slice(0, 19)
+                            : "时间未知"}
+                        </div>
+                        <div
+                          style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                        >
+                          模型: {detail.model || "未知模型"}
+                        </div>
                       </div>
-                    </div>
-                  </Col>
-                ))}
+                    </Col>
+                  );
+                })}
               </Row>
             </>
           ) : (
@@ -312,6 +332,12 @@ function ReportContent({
           )}
         </Card>
       )}
+      <GeneratedImageDetailModal
+        open={!!previewImageDetail}
+        onClose={() => setPreviewImageDetail(null)}
+        detail={previewImageDetail}
+        title="图片详情"
+      />
       <Row gutter={[16, 16]} style={{ marginTop: "24px" }}>
         <Col xs={24} lg={12}>
           <Card title="用户注册结构" style={{ height: "400px" }}>
