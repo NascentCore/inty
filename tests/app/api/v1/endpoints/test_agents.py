@@ -361,6 +361,78 @@ def test_recommend_agents_energy_points_sorting(
             integration_client.delete_agent(agent_id)
 
 
+def test_recommend_agents_score_based_random_gender_order_female_user(
+    integration_client: TestClient, db_session
+):
+    """E2E: 女性用户请求 sort=score_based_random 时，返回列表中所有男性角色排在任意女性/OTHER 之前。"""
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    db_user.is_superuser = True
+    db_session.commit()
+
+    update_resp = integration_client.client.put(
+        f"{integration_client.base_url}/api/v1/users/profile",
+        json={"gender": "FEMALE"},
+    )
+    assert update_resp.status_code == 200, update_resp.text
+
+    male_ids = []
+    female_ids = []
+    for i in range(4):
+        aid = integration_client.create_agent(
+            name=f"Gender E2E Male {uuid.uuid4().hex[:6]}",
+            gender="MALE",
+            visibility="PUBLIC",
+        )
+        male_ids.append(aid)
+    for i in range(4):
+        aid = integration_client.create_agent(
+            name=f"Gender E2E Female {uuid.uuid4().hex[:6]}",
+            gender="FEMALE",
+            visibility="PUBLIC",
+        )
+        female_ids.append(aid)
+    our_ids = set(male_ids + female_ids)
+
+    try:
+        resp = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={
+                "page": 1,
+                "page_size": 50,
+                "sort": "score_based_random",
+                "sort_seed": "e2e-gender-test",
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert data.get("code") == 200, data
+        items = data["data"]["list"]
+        our_items = [(i, item) for i, item in enumerate(items) if item["id"] in our_ids]
+        male_indices = [
+            i for i, item in our_items if (item.get("gender") or "").upper() == "MALE"
+        ]
+        female_other_indices = [
+            i for i, item in our_items if (item.get("gender") or "").upper() != "MALE"
+        ]
+        if male_indices and female_other_indices:
+            assert max(male_indices) < min(
+                female_other_indices
+            ), "E2E: When user is FEMALE, all MALE agents must appear before any FEMALE/OTHER in recommend list"
+    finally:
+        for aid in our_ids:
+            integration_client.delete_agent(aid)
+        db_user = db_session.query(User).filter(User.id == user_id).first()
+        if db_user is not None:
+            db_user.is_superuser = False
+            db_session.commit()
+
+
 def test_recommend_agents_never_returns_private_even_for_superuser(
     integration_client: TestClient, db_session
 ):
