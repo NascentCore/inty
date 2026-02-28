@@ -354,6 +354,9 @@ class MainViewModel : BaseVM() {
             // 清理内存数据
             followingAgents.clear()
             tabHistory.clear()
+            // 退出登录/删除账号后，将 tab 选择重置为 Remote Config 默认首页
+            hasUserManuallySelectedTab = false
+            _selectedTab.value = getInitialTabFromRemoteConfig()
 
             // 清理统一启动管理器的数据
             UnifiedStartupManager.clearAllData()
