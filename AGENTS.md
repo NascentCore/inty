@@ -186,6 +186,50 @@ Pre-installed at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` s
 - Git submodules must be initialized for the Android build: `git submodule update --init --recursive` (the update script handles this).
 - The SDK directory must be owned by the current user (not root) so Gradle can auto-install additional SDK components.
 
+### Android emulator (no-KVM)
+
+Cloud Agent VMs run inside Firecracker and **do not have KVM** (`/dev/kvm` absent, no `vmx`/`svm` CPU flags). The Android emulator still works using software-only CPU emulation, but boots significantly slower (~4 min vs ~20 s with KVM).
+
+**Pre-created AVD:** `test_avd` (Pixel 6, API 36, google_apis/x86_64). The update script creates it automatically.
+
+**Starting the emulator (headless, no-KVM):**
+
+```bash
+export ANDROID_HOME=/opt/android-sdk
+export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+
+emulator -avd test_avd -no-window -no-audio -no-boot-anim -no-accel -gpu swiftshader_indirect -no-snapshot &
+```
+
+**Waiting for boot to complete:**
+
+```bash
+adb wait-for-device
+# Poll until sys.boot_completed=1 (may take ~4 minutes without KVM)
+while [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do sleep 10; done
+echo "Emulator booted"
+```
+
+**Key flags explained:**
+
+| Flag | Purpose |
+|------|---------|
+| `-no-accel` | Disables KVM/HVF; uses TCG software emulation (mandatory in no-KVM VMs) |
+| `-gpu swiftshader_indirect` | Software GPU rendering via SwiftShader (no host GPU needed) |
+| `-no-window` | Headless mode (no X11 display required) |
+| `-no-audio` | Disables audio (no PulseAudio/ALSA needed) |
+| `-no-boot-anim` | Skips boot animation to speed up startup |
+| `-no-snapshot` | Cold boot every time; avoids stale snapshot issues |
+
+**Caveats and performance tips:**
+
+- Cold boot takes ~4 minutes without KVM. Budget for this in test scripts.
+- Use `-no-snapshot` to avoid stale quickboot state; cold boot is more reliable in ephemeral VMs.
+- After boot, `adb install` and `adb shell` commands work normally.
+- To run instrumented tests: `cd android_app && ./gradlew connectedDebugAndroidTest` (requires a running emulator).
+- To kill the emulator cleanly: `adb -s emulator-5554 emu kill`
+- Memory: the emulator uses ~1.5 GB RAM. Ensure the VM has enough headroom for both the emulator and the backend.
+
 ### Gotchas
 
 - Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
@@ -194,3 +238,4 @@ Pre-installed at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` s
 - `black` is not in `requirements.txt`; install separately: `pip install black`.
 - The venv **must** be activated before running `start.sh` — the script does not activate it.
 - Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
+- **Android emulator without KVM**: always pass `-no-accel -gpu swiftshader_indirect`; omitting `-no-accel` will crash with `KVM is not found`. See "Android emulator (no-KVM)" section above for full instructions.
