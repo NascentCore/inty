@@ -251,9 +251,13 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           .api.v1.ai.agents.create(agentData)) as IntyAgentMutationResponse;
         const newAgent = (response.data as Agent | undefined) ?? null;
 
-        // 清理缓存并重新加载 agents 列表以确保获取完整数据（包括 avatar_size 和 background_size）
+        // 将新 agent 插入本地列表第 1 位，不重载全量列表
+        if (newAgent) {
+          setAgents((prev) =>
+            filterAgentsByType([newAgent, ...prev], type),
+          );
+        }
         clearCache();
-        await loadAgents(true); // 强制刷新
 
         message.success("智能体创建成功");
         return newAgent;
@@ -264,7 +268,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError, loadAgents],
+    [clearCache, handleError, type],
   );
 
   // 更新智能体
