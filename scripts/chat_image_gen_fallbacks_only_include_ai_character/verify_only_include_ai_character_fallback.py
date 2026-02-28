@@ -7,8 +7,8 @@ returns it.
 
 Usage (from repo root):
     export PYTHONPATH=.
-    python scripts/verify_only_include_ai_character_fallback.py --gcs-uri "gs://inty-static/chat_images/AGENT_ID/filename.jpg" --config devops/config.yaml.dev
-    python scripts/verify_only_include_ai_character_fallback.py --agent-id AGENT_ID --config devops/config.yaml.dev
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/verify_only_include_ai_character_fallback.py --gcs-uri "gs://inty-static/chat_images/AGENT_ID/filename.jpg" --config devops/config.yaml.dev
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/verify_only_include_ai_character_fallback.py --agent-id AGENT_ID --config devops/config.yaml.dev
 """
 
 from __future__ import annotations
@@ -31,7 +31,8 @@ CONFIG_YAML = "config.yaml"
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
+    """仓库根目录（本脚本在 scripts/chat_image_gen_fallbacks_only_include_ai_character/ 下）。"""
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def _ensure_config(config_path: Optional[str]) -> None:

@@ -8,13 +8,13 @@ field), filters to entries with one_character is True, maps each image_url to GC
 and updates the Resource row if found.
 
 Test with one image: run with --limit 1, then run the manual check in
-scripts/verify_only_include_ai_character_fallback.py.
+scripts/chat_image_gen_fallbacks_only_include_ai_character/verify_only_include_ai_character_fallback.py.
 
 Usage (from repo root):
     export PYTHONPATH=.
-    python scripts/tag_only_include_ai_character_from_json.py --chat-images-json only-include-imate.json --config devops/config.yaml.dev --dry-run
-    python scripts/tag_only_include_ai_character_from_json.py --chat-images-json only-include-imate.json --config devops/config.yaml.dev --limit 1
-    python scripts/tag_only_include_ai_character_from_json.py --chat-images-json only-include-imate.json --config devops/config.yaml.dev --yes
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/tag_only_include_ai_character_from_json.py --chat-images-json only-include-imate.json --config devops/config.yaml.dev --dry-run
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/tag_only_include_ai_character_from_json.py --chat-images-json only-include-imate.json --config devops/config.yaml.dev --limit 1
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/tag_only_include_ai_character_from_json.py --chat-images-json only-include-imate.json --config devops/config.yaml.dev --yes
 """
 
 from __future__ import annotations
@@ -37,8 +37,8 @@ CONFIG_YAML = "config.yaml"
 
 
 def _repo_root() -> Path:
-    """仓库根目录（scripts 的上一级）。"""
-    return Path(__file__).resolve().parent.parent
+    """仓库根目录（本脚本在 scripts/chat_image_gen_fallbacks_only_include_ai_character/ 下）。"""
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def _ensure_config(config_path: Optional[str]) -> None:

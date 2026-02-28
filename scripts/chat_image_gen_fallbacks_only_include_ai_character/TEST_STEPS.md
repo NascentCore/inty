@@ -7,7 +7,7 @@
 ### 1.1 打标单张图
 
 ```bash
-python scripts/tag_only_include_ai_character_from_json.py \
+python scripts/chat_image_gen_fallbacks_only_include_ai_character/tag_only_include_ai_character_from_json.py \
   --chat-images-json only-include-imate.json \
   --config devops/config.yaml.prod \
   --limit 1
@@ -34,7 +34,7 @@ WHERE url = 'gs://inty-static/chat_images/...';
 用上一步的 GCS URI 跑验证脚本，确认该图会出现在 `get_generated_images_for_agent(..., only_include_ai_character=True)` 的结果中（此步骤不在 CI 中执行）：
 
 ```bash
-python scripts/verify_only_include_ai_character_fallback.py \
+python scripts/chat_image_gen_fallbacks_only_include_ai_character/verify_only_include_ai_character_fallback.py \
   --gcs-uri "gs://inty-static/chat_images/AGENT_ID/filename.jpg" \
   --config devops/config.yaml.prod
 ```
@@ -46,7 +46,7 @@ python scripts/verify_only_include_ai_character_fallback.py \
 确认单张图行为正确后，对全部 `one_character=true` 条目打标：
 
 ```bash
-python scripts/tag_only_include_ai_character_from_json.py \
+python scripts/chat_image_gen_fallbacks_only_include_ai_character/tag_only_include_ai_character_from_json.py \
   --chat-images-json only-include-imate.json \
   --config devops/config.yaml.prod \
   --yes
@@ -55,7 +55,7 @@ python scripts/tag_only_include_ai_character_from_json.py \
 **可选**：先做一次 dry-run 查看将要更新的数量与 URI：
 
 ```bash
-python scripts/tag_only_include_ai_character_from_json.py \
+python scripts/chat_image_gen_fallbacks_only_include_ai_character/tag_only_include_ai_character_from_json.py \
   --chat-images-json only-include-imate.json \
   --config devops/config.yaml.prod \
   --dry-run

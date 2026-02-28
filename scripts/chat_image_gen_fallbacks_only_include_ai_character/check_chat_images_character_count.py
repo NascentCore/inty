@@ -5,9 +5,9 @@ how many characters are in the image (structured output { count: int }); display
 
 Usage (from repo root):
     export PYTHONPATH=.
-    python scripts/check_chat_images_character_count.py --chat-images-json /path/to/studio_results.json
-    python scripts/check_chat_images_character_count.py --chat-images-json data.json --config devops/config.yaml.dev --limit 2 --no-preview
-    python scripts/check_chat_images_character_count.py --chat-images-json data.json --output-json results.json
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/check_chat_images_character_count.py --chat-images-json /path/to/studio_results.json
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/check_chat_images_character_count.py --chat-images-json data.json --config devops/config.yaml.dev --limit 2 --no-preview
+    python scripts/chat_image_gen_fallbacks_only_include_ai_character/check_chat_images_character_count.py --chat-images-json data.json --output-json results.json
 
 Image list is read from JSON only (array of objects with gcs_uri or image_url, and optionally id, session_id, created_at).
 """
@@ -32,8 +32,8 @@ CONFIG_YAML = "config.yaml"
 
 
 def _repo_root() -> Path:
-    """仓库根目录（scripts 的上一级）。"""
-    return Path(__file__).resolve().parent.parent
+    """仓库根目录（本脚本在 scripts/chat_image_gen_fallbacks_only_include_ai_character/ 下）。"""
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def _ensure_config(config_path: Optional[str]) -> None:
@@ -64,7 +64,7 @@ class CharacterCountResponse(BaseModel):
     count: int
 
 
-async def main(
+async def _main(
     chat_images_json: Annotated[
         str,
         cyclopts.Parameter(
@@ -104,7 +104,6 @@ async def main(
     """Read image list from JSON, preview each, call Gemini for character count, display results."""
     _ensure_config(config)
 
-    from app.external_services.gcs import download_from_gcs
     from app.utils.gemini import get_genai_client
 
     json_path = Path(chat_images_json)
@@ -165,7 +164,6 @@ async def main(
 
         if not no_preview:
             try:
-                # Download https_url with wget or curl
                 import subprocess
                 filename = f"image_{message_id}.{https_url.split('/')[-1].split('.')[-1]}"
                 subprocess.run(["wget", https_url, "-O", filename])
@@ -255,6 +253,55 @@ async def main(
         print(f"Wrote {len(results)} results to {out_path}")
 
     print(f"Done. Processed {len(results)} images (total in JSON: {total}).")
+
+
+def main(
+    chat_images_json: Annotated[
+        str,
+        cyclopts.Parameter(
+            name="--chat-images-json",
+            help="JSON file path: array of objects with gcs_uri or image_url, and optionally id, session_id, created_at.",
+        ),
+    ],
+    config: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--config",
+            help="复制此 YAML 到当前目录 config.yaml 后再导入 app；不指定则要求已存在 config.yaml。",
+        ),
+    ] = None,
+    no_preview: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--no-preview",
+            help="Skip opening each image for preview; only download and call Gemini.",
+        ),
+    ] = False,
+    limit: Annotated[
+        Optional[int],
+        cyclopts.Parameter(
+            name="--limit",
+            help="Process only the first N images (for testing).",
+        ),
+    ] = None,
+    output_json: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--output-json",
+            help="Write results to this JSON file.",
+        ),
+    ] = None,
+) -> None:
+    """Sync entrypoint: parse args and run async _main."""
+    asyncio.run(
+        _main(
+            chat_images_json=chat_images_json,
+            config=config,
+            no_preview=no_preview,
+            limit=limit,
+            output_json=output_json,
+        )
+    )
 
 
 if __name__ == "__main__":
