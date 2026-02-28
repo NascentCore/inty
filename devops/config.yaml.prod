@@ -21,7 +21,8 @@ app:
 sentry:
   # inty-backend/default
   dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
-  enabled: true
+  # Sentry 生成大量日志，影响排查，目前也没有实际帮助到 devops（由于无法有效获得 trace）
+  enabled: false
   traces_sample_rate: 0.1
 
 security:
