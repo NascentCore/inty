@@ -19,6 +19,7 @@ Usage (from repo root):
 
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import sys
@@ -74,7 +75,7 @@ def image_url_to_gcs_uri(image_url: str) -> str:
     return ""
 
 
-async def run(
+async def _run(
     chat_images_json: Annotated[
         str,
         cyclopts.Parameter(
@@ -189,6 +190,55 @@ async def run(
     )
     if dry_run:
         print("(dry-run: no changes committed)")
+
+
+def run(
+    chat_images_json: Annotated[
+        str,
+        cyclopts.Parameter(
+            name="--chat-images-json",
+            help="JSON file path: array of objects with image_url and one_character.",
+        ),
+    ],
+    config: Annotated[
+        Optional[str],
+        cyclopts.Parameter(
+            name="--config",
+            help="复制此 YAML 到当前目录 config.yaml 后再导入 app；不指定则要求已存在 config.yaml。",
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--dry-run",
+            help="Only log what would be updated; do not commit.",
+        ),
+    ] = False,
+    limit: Annotated[
+        Optional[int],
+        cyclopts.Parameter(
+            name="--limit",
+            help="Process only the first N entries with one_character=true.",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--yes",
+            help="Skip confirmation prompt when not in dry-run.",
+        ),
+    ] = False,
+) -> None:
+    """Sync entrypoint: parse args and run async _run."""
+    asyncio.run(
+        _run(
+            chat_images_json=chat_images_json,
+            config=config,
+            dry_run=dry_run,
+            limit=limit,
+            yes=yes,
+        )
+    )
 
 
 if __name__ == "__main__":
