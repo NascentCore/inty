@@ -24,7 +24,7 @@ from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal
 from app.models.resource import Resource, ResourceType
-from app.services import image_generation_service
+from app.services.image_generation_service import image_generation_service
 
 CONFIG_YAML = "config.yaml"
 
