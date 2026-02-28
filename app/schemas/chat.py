@@ -430,6 +430,26 @@ class ChatImageGenerationResponse(BaseModel):
     model_fallback_due_to_429: Optional[bool] = None  # 是否因 429 使用了备用模型
 
 
+class ChatMusicGenerationRequest(BaseModel):
+    """聊天生音乐请求 - 基于已有消息生成音乐"""
+
+    message_id: int  # 必填：要生成音乐的消息ID
+    history_count: Optional[int] = None
+    request_id: Optional[str] = None
+    model: Optional[str] = None  # 允许请求方显式指定模型 ID（可选）
+
+
+class ChatMusicGenerationResponse(BaseModel):
+    """聊天生音乐响应"""
+
+    audio_url: str
+    audio_metadata: dict
+    prompt: str
+    message_id: int
+    model: Optional[str] = None
+    generation_time_ms: Optional[int] = None
+
+
 class MessageVoteRequest(BaseModel):
     """消息投票请求"""
 

@@ -94,6 +94,7 @@ class BusinessErrorCodeEnum(StrEnum):
     IMAGE_GENERATION_LIMIT_REACHED = "IMAGE_GENERATION_LIMIT_REACHED"
     AGENT_CREATION_LIMIT_REACHED = "AGENT_CREATION_LIMIT_REACHED"
     VOICE_GENERATION_LIMIT_REACHED = "VOICE_GENERATION_LIMIT_REACHED"
+    MUSIC_GENERATION_LIMIT_REACHED = "MUSIC_GENERATION_LIMIT_REACHED"
     GUEST_LOGIN_REQUIRED = "GUEST_LOGIN_REQUIRED"
     IMAGE_GENERATION_BLOCKED = "IMAGE_GENERATION_BLOCKED"
     LIVE_CHAT_AGENT_LIMIT_REACHED = "LIVE_CHAT_AGENT_LIMIT_REACHED"
@@ -107,6 +108,7 @@ class BusinessErrorCodeEnum(StrEnum):
             BusinessErrorCodeEnum.IMAGE_GENERATION_LIMIT_REACHED: 10001002,
             BusinessErrorCodeEnum.AGENT_CREATION_LIMIT_REACHED: 10001003,
             BusinessErrorCodeEnum.VOICE_GENERATION_LIMIT_REACHED: 10001004,
+            BusinessErrorCodeEnum.MUSIC_GENERATION_LIMIT_REACHED: 10001009,
             BusinessErrorCodeEnum.GUEST_LOGIN_REQUIRED: 10001005,
             BusinessErrorCodeEnum.IMAGE_GENERATION_BLOCKED: 10001006,
             BusinessErrorCodeEnum.LIVE_CHAT_AGENT_LIMIT_REACHED: 10001007,
@@ -122,6 +124,7 @@ class BusinessErrorCodeEnum(StrEnum):
             BusinessErrorCodeEnum.IMAGE_GENERATION_LIMIT_REACHED: "Image generation limit reached",
             BusinessErrorCodeEnum.AGENT_CREATION_LIMIT_REACHED: "Character creation limit reached",
             BusinessErrorCodeEnum.VOICE_GENERATION_LIMIT_REACHED: "Voice generation limit reached",
+            BusinessErrorCodeEnum.MUSIC_GENERATION_LIMIT_REACHED: "Music generation limit reached",
             BusinessErrorCodeEnum.GUEST_LOGIN_REQUIRED: "Guest login required - Please sign in with Google",
             BusinessErrorCodeEnum.IMAGE_GENERATION_BLOCKED: "Image generation was blocked by safety filter",
             BusinessErrorCodeEnum.LIVE_CHAT_AGENT_LIMIT_REACHED: "Live chat agent limit reached",
@@ -159,6 +162,11 @@ class BusinessErrorCode:
         "code": 10001004,
         "error_code": "VOICE_GENERATION_LIMIT_REACHED",
         "message": "Voice generation limit reached",
+    }
+    MUSIC_GENERATION_LIMIT_REACHED = {
+        "code": 10001009,
+        "error_code": "MUSIC_GENERATION_LIMIT_REACHED",
+        "message": "Music generation limit reached",
     }
     GUEST_LOGIN_REQUIRED = {
         "code": 10001005,

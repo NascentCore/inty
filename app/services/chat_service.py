@@ -1837,3 +1837,182 @@ async def generate_chat_image(
     )
 
     return response
+
+
+async def generate_chat_music(
+    db: AsyncSession,
+    agent_id: str,
+    user_id: str,
+    message_id: int,
+    subscription_service: SubscriptionService,
+    history_count: Optional[int] = None,
+    model: Optional[str] = None,
+) -> Union[schemas.ChatMusicGenerationResponse, UsageLimitExceeded]:
+    """
+    基于聊天上下文生成音乐（MVP）
+
+    流程：
+    1. 验证 Agent / Chat / 用户
+    2. 检查音乐生成限额
+    3. 选择模型并调用音乐生成服务
+    4. 写入消息 audio_url 与 generated_music 元数据
+    5. 记录用量并返回结果
+    """
+    from app.core.model_selection import select_chat_music_model
+    from app.services.music_generation_service import music_generation_service
+
+    logger.info(f"开始生成聊天音乐 - Agent ID: {agent_id}, User ID: {user_id}")
+
+    # 验证 Agent 是否存在
+    result = await db.execute(
+        select(models.Agent.id, models.Agent.name).where(models.Agent.id == agent_id)
+    )
+    agent_basic = result.first()
+    if not agent_basic:
+        logger.error(f"Agent未找到: {agent_id}")
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    chat = await get_or_create_chat_by_agent(db=db, user_id=user_id, agent_id=agent_id)
+    if chat.agent_id != agent_id:
+        logger.error(f"Agent ID不匹配: 传入={agent_id}, 实际={chat.agent_id}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent ID mismatch: expected={agent_id}, actual={chat.agent_id}",
+        )
+
+    session_id = generate_session_id(chat.id)
+
+    user_result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    is_allowed, used_count, daily_limit = await subscription_service.check_music_gen_limit(
+        db, user
+    )
+    if not is_allowed:
+        logger.warning(f"用户 {user_id} 已达到音乐生成限额: {used_count}/{daily_limit}")
+        if user.auth_type == AuthType.GUEST:
+            error_code = BusinessErrorCode.GUEST_LOGIN_REQUIRED
+        else:
+            subscription_status = (
+                await subscription_service.get_user_subscription_status(db, user.id)
+            )
+            if subscription_status.is_subscribed:
+                error_code = BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED
+            else:
+                error_code = BusinessErrorCode.SUBSCRIPTION_REQUIRED
+        return UsageLimitExceeded(
+            code=error_code["code"],
+            error_code=error_code["error_code"],
+            message=error_code["message"],
+            used_count=used_count,
+            daily_limit=daily_limit,
+        )
+
+    message_content = await chat_history_service.get_message_content(
+        db=db,
+        session_id=session_id,
+        message_id=str(message_id),
+    )
+    if not message_content:
+        logger.error(f"消息未找到: message_id={message_id}")
+        raise HTTPException(status_code=404, detail=f"Message not found: {message_id}")
+
+    latest_ai_message_id = await chat_history_service.get_latest_ai_message_id(db, session_id)
+    if latest_ai_message_id != message_id:
+        logger.warning(
+            f"只能对最后一条AI回复生成音乐: latest={latest_ai_message_id}, requested={message_id}"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Only the latest AI reply can be used to generate music",
+        )
+
+    agent_data = await agent_service.get_agent_for_chat(db, agent_id=chat.agent_id)
+    if not agent_data:
+        logger.error(f"Agent数据未找到: {chat.agent_id}")
+        raise HTTPException(status_code=404, detail="Agent data not found")
+
+    subscription_status = await subscription_service.get_user_subscription_status(db, user.id)
+    resolved_model = model
+    if not resolved_model:
+        resolved_model = select_chat_music_model(
+            user=user, is_subscribed=subscription_status.is_subscribed
+        )
+
+    generation_start_time = time.time()
+    music_generation_result = await music_generation_service.generate_chat_music_for_message(
+        db=db,
+        session_id=session_id,
+        message_id=message_id,
+        agent_data=agent_data,
+        message_content=message_content,
+        model=resolved_model,
+        user_id=user_id,
+        history_count=history_count,
+    )
+    generation_time_ms = int((time.time() - generation_start_time) * 1000)
+
+    music_generation_result["model"] = resolved_model
+    music_generation_result["generation_time_ms"] = generation_time_ms
+
+    audio_url = music_generation_result["audio_url"]
+    audio_metadata = music_generation_result.get("audio_metadata", {})
+    audio_duration = audio_metadata.get("duration_sec")
+    if audio_duration is not None:
+        try:
+            audio_duration = float(audio_duration)
+        except (TypeError, ValueError):
+            audio_duration = None
+
+    # 写入统一 metadata 与 audio_url 字段，方便 Android 直接复用现有播放能力。
+    await chat_history_service.update_message_metadata(
+        db=db,
+        session_id=session_id,
+        message_id=message_id,
+        metadata_update={
+            "generated_music": {
+                "audio_url": audio_url,
+                "prompt": music_generation_result.get("prompt"),
+                "model": resolved_model,
+                "generation_time_ms": generation_time_ms,
+                "generated_at": datetime.utcnow().isoformat(),
+                **audio_metadata,
+            }
+        },
+    )
+    await chat_history_service.update_message_audio_url(
+        db=db,
+        session_id=session_id,
+        message_id=str(message_id),
+        audio_url=audio_url,
+        audio_duration=audio_duration,
+    )
+
+    try:
+        await subscription_service.record_usage(
+            db,
+            user_id,
+            "music_generation",
+            1,
+            extra_data={
+                "agent_id": agent_id,
+                "message_id": message_id,
+                "session_id": session_id,
+                "message_content": message_content[:100],
+                "model": resolved_model,
+                "prompt": music_generation_result.get("prompt"),
+                "generation_time_ms": generation_time_ms,
+                "success": True,
+            },
+        )
+        logger.debug(f"音乐生成用量记录成功: user_id={user_id}")
+    except Exception as e:
+        logger.warning(f"记录音乐生成用量失败: {str(e)}")
+
+    response = schemas.ChatMusicGenerationResponse(**music_generation_result)
+    logger.info(
+        f"聊天音乐生成成功 - Agent ID: {agent_id}, Message ID: {response.message_id}"
+    )
+    return response

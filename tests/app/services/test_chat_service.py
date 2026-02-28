@@ -17,7 +17,7 @@ from app import models
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
-from app.schemas.chat import ChatImageGenerationResponse
+from app.schemas.chat import ChatImageGenerationResponse, ChatMusicGenerationResponse
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services import chat_history_service, chat_service
@@ -48,6 +48,7 @@ def _make_mock_subscription_svc():
     """构造用于 generate_chat_image 的 mock SubscriptionService（避免导入 global_services）。"""
     mock_svc = AsyncMock()
     mock_svc.check_image_gen_limit.return_value = (True, 2, 10)
+    mock_svc.check_music_gen_limit.return_value = (True, 1, 2)
     mock_svc.get_user_subscription_status.return_value = SubscriptionStatusResponse(
         is_subscribed=False,
         subscription_status="free",
@@ -469,6 +470,290 @@ class TestChatService:
         mock_subscription_svc.check_image_gen_limit.assert_called_once()
 
         # 清理测试数据
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
+    @patch("app.services.music_generation_service.music_generation_service.generate_chat_music_for_message")
+    async def test_generate_chat_music_success(
+        self,
+        mock_generate_music: AsyncMock,
+        db_session: AsyncSession,
+    ):
+        """测试生成聊天音乐成功流程 - 使用真实数据库"""
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+        history_count = 8
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Test User",
+            email="test@example.com",
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔善良的女孩",
+            scenario="在咖啡厅里与用户聊天",
+            intro="一个可爱的AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+        session_id = chat_service.generate_session_id(chat.id)
+
+        user_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "human", "data": {"content": "你好"}},
+            meta_data={},
+        )
+        db_session.add(user_message)
+        await db_session.flush()
+
+        ai_message_content = "给我一段放松的背景音乐"
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": ai_message_content}},
+            meta_data={},
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+        message_id = ai_message.id
+
+        mock_subscription_svc = _make_mock_subscription_svc()
+        mock_music_result = {
+            "message_id": message_id,
+            "audio_url": "https://cdn.example.com/test_music.mp3",
+            "audio_metadata": {
+                "duration_sec": 21.5,
+                "format": "mp3",
+                "provider": "fal",
+            },
+            "prompt": "music prompt",
+            "model": "fal-ai/stable-audio",
+        }
+        mock_generate_music.return_value = mock_music_result
+
+        result = await chat_service.generate_chat_music(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=message_id,
+            subscription_service=mock_subscription_svc,
+            history_count=history_count,
+        )
+
+        assert isinstance(result, ChatMusicGenerationResponse)
+        assert result.message_id == message_id
+        assert result.audio_url == mock_music_result["audio_url"]
+        assert result.audio_metadata == mock_music_result["audio_metadata"]
+        assert result.prompt == mock_music_result["prompt"]
+        assert result.model == mock_music_result["model"]
+        assert result.generation_time_ms is not None
+
+        mock_subscription_svc.check_music_gen_limit.assert_called_once()
+        mock_generate_music.assert_called_once()
+        generate_call_args = mock_generate_music.call_args
+        assert generate_call_args[1]["db"] == db_session
+        assert generate_call_args[1]["session_id"] == session_id
+        assert generate_call_args[1]["message_id"] == message_id
+        assert generate_call_args[1]["agent_data"]["id"] == agent_id
+        assert generate_call_args[1]["message_content"] == ai_message_content
+        assert generate_call_args[1]["history_count"] == history_count
+
+        mock_subscription_svc.record_usage.assert_called_once()
+        record_call_args = mock_subscription_svc.record_usage.call_args
+        assert record_call_args[0][2] == "music_generation"
+
+        await db_session.refresh(ai_message)
+        db_message = ai_message
+        assert db_message.audio_url == mock_music_result["audio_url"]
+        assert db_message.meta_data["generated_music"]["audio_url"] == mock_music_result[
+            "audio_url"
+        ]
+        assert db_message.meta_data["generated_music"]["model"] == mock_music_result[
+            "model"
+        ]
+
+        await db_session.delete(ai_message)
+        await db_session.delete(user_message)
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_music_business_limit_guest(
+        self,
+        db_session: AsyncSession,
+    ):
+        """测试生成聊天音乐 - Guest 用户业务限制错误"""
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.GUEST,
+            nickname="Guest User",
+            email=None,
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔善良的女孩",
+            scenario="在咖啡厅里与用户聊天",
+            intro="一个可爱的AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.check_music_gen_limit.return_value = (
+            False,
+            0,
+            0,
+        )
+
+        result = await chat_service.generate_chat_music(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=123,
+            subscription_service=mock_subscription_svc,
+            history_count=None,
+        )
+
+        assert isinstance(result, UsageLimitExceeded)
+        assert result.code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["code"]
+        assert result.error_code == BusinessErrorCode.GUEST_LOGIN_REQUIRED["error_code"]
+        assert result.message == BusinessErrorCode.GUEST_LOGIN_REQUIRED["message"]
+        assert result.used_count == 0
+        assert result.daily_limit == 0
+        mock_subscription_svc.check_music_gen_limit.assert_called_once()
+
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_music_business_limit_subscribed(
+        self,
+        db_session: AsyncSession,
+    ):
+        """测试生成聊天音乐 - 订阅用户达到限额时返回音乐限额错误"""
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Subscribed User",
+            email="test@example.com",
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔善良的女孩",
+            scenario="在咖啡厅里与用户聊天",
+            intro="一个可爱的AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.check_music_gen_limit.return_value = (
+            False,
+            6,
+            6,
+        )
+        mock_subscription_svc.get_user_subscription_status.return_value = (
+            SubscriptionStatusResponse(is_subscribed=True, subscription_status="subscribed")
+        )
+
+        result = await chat_service.generate_chat_music(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=123,
+            subscription_service=mock_subscription_svc,
+            history_count=None,
+        )
+
+        assert isinstance(result, UsageLimitExceeded)
+        assert result.code == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["code"]
+        assert (
+            result.error_code
+            == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["error_code"]
+        )
+        assert result.message == BusinessErrorCode.MUSIC_GENERATION_LIMIT_REACHED["message"]
+        assert result.used_count == 6
+        assert result.daily_limit == 6
+        mock_subscription_svc.check_music_gen_limit.assert_called_once()
+
         await db_session.delete(chat)
         await db_session.delete(test_agent)
         await db_session.delete(test_user)
