@@ -92,23 +92,37 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
             >
               {detail.generationPrompt || "暂无生成提示词"}
             </Paragraph>
-            {detail.referenceImageUrl && (
+            {detail.referenceImages.length > 0 && (
               <>
                 <Title level={5} style={{ marginBottom: 12, marginTop: 16 }}>
-                  参考图
+                  参考图（metadata）
                 </Title>
-                <div style={{ marginBottom: 12 }}>
-                  <Image
-                    src={detail.referenceImageUrl}
-                    alt="参考图"
-                    style={{
-                      width: "100%",
-                      maxHeight: 220,
-                      objectFit: "contain",
-                      borderRadius: 8,
-                      backgroundColor: "#f5f5f5",
-                    }}
-                  />
+                <div
+                  style={{
+                    marginBottom: 12,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {detail.referenceImages.map((referenceImage) => (
+                    <div key={`${referenceImage.label}-${referenceImage.url}`}>
+                      <div style={{ marginBottom: 6 }}>
+                        <Tag>{referenceImage.label}</Tag>
+                      </div>
+                      <Image
+                        src={referenceImage.url}
+                        alt={referenceImage.label}
+                        style={{
+                          width: "100%",
+                          maxHeight: 200,
+                          objectFit: "contain",
+                          borderRadius: 8,
+                          backgroundColor: "#f5f5f5",
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -118,6 +132,9 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
               split={<span style={{ color: "#d9d9d9" }}>|</span>}
             >
               <Text type="secondary">模型: {detail.model || "未知模型"}</Text>
+              {detail.userReferenceImageUrl && (
+                <Text type="secondary">包含用户参考图: 是</Text>
+              )}
               {detail.width && detail.height && (
                 <Text type="secondary">
                   尺寸: {detail.width} x {detail.height}

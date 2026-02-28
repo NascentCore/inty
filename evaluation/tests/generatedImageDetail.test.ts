@@ -34,10 +34,16 @@ describe("generatedImageDetail", () => {
       image_url: "https://cdn.example.com/image.webp",
       meta_data: {
         user_id: "user-1",
+        user_reference_image_url: "https://cdn.example.com/selfie.webp",
         generated_image: {
           image_url: "gs://bucket/image.webp",
           prompt: "test prompt",
           reference_image_url: "https://cdn.example.com/ref.webp",
+          user_reference_image_url: "https://cdn.example.com/selfie.webp",
+          reference_image_urls: [
+            "https://cdn.example.com/ref.webp",
+            "https://cdn.example.com/selfie.webp",
+          ],
           width: 768,
           height: 1024,
           model: "openai/gpt-image-1",
@@ -53,6 +59,11 @@ describe("generatedImageDetail", () => {
     expect(detail.gcsUrl).toBe("gs://bucket/image.webp");
     expect(detail.generationPrompt).toBe("test prompt");
     expect(detail.referenceImageUrl).toBe("https://cdn.example.com/ref.webp");
+    expect(detail.userReferenceImageUrl).toBe("https://cdn.example.com/selfie.webp");
+    expect(detail.referenceImages).toEqual([
+      { label: "角色参考图", url: "https://cdn.example.com/ref.webp" },
+      { label: "用户参考图", url: "https://cdn.example.com/selfie.webp" },
+    ]);
     expect(detail.width).toBe(768);
     expect(detail.height).toBe(1024);
     expect(detail.userId).toBe("user-1");
@@ -68,6 +79,7 @@ describe("generatedImageDetail", () => {
       gcs_url: "gs://bucket/generated.webp",
       generation_prompt: "fallback prompt",
       reference_image_url: null,
+      user_reference_image_url: "https://cdn.example.com/selfie2.webp",
       width: 512,
       height: 512,
       created_at: null,
@@ -85,5 +97,8 @@ describe("generatedImageDetail", () => {
       width: 512,
       height: 512,
     });
+    expect(detail.referenceImages).toEqual([
+      { label: "用户参考图", url: "https://cdn.example.com/selfie2.webp" },
+    ]);
   });
 });

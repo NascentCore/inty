@@ -788,6 +788,8 @@ export interface GeneratedImage {
   gcs_url: string;
   generation_prompt: string;
   reference_image_url: string | null;
+  user_reference_image_url?: string | null;
+  reference_image_urls?: string[] | null;
   width: number | null;
   height: number | null;
   created_at: string | null;

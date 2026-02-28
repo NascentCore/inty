@@ -9,11 +9,18 @@ import type {
 
 type UnknownRecord = Record<string, unknown>;
 
+export interface GeneratedImageReferenceAsset {
+  label: string;
+  url: string;
+}
+
 export interface GeneratedImageDetail {
   imageUrl: string;
   gcsUrl: string | null;
   generationPrompt: string | null;
   referenceImageUrl: string | null;
+  userReferenceImageUrl: string | null;
+  referenceImages: GeneratedImageReferenceAsset[];
   width: number | null;
   height: number | null;
   createdAt: string | null;
@@ -29,6 +36,8 @@ interface ParsedGeneratedImageMeta {
   imageUrl: string | null;
   generationPrompt: string | null;
   referenceImageUrl: string | null;
+  userReferenceImageUrl: string | null;
+  referenceImageUrls: string[];
   width: number | null;
   height: number | null;
   userId: string | null;
@@ -67,6 +76,27 @@ function readBoolean(value: unknown): boolean | null {
   return value;
 }
 
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => readString(item))
+    .filter((item): item is string => item !== null);
+}
+
+function normalizeImageUrl(value: string): string {
+  if (value.startsWith("gs://")) {
+    return value.replace("gs://", "https://storage.googleapis.com/");
+  }
+  return value;
+}
+
+function isLikelyImageUrl(value: string): boolean {
+  const normalizedUrl = normalizeImageUrl(value);
+  return normalizedUrl.startsWith("http://") || normalizedUrl.startsWith("https://");
+}
+
 function readGeneratedImageMetaNode(
   metaData: UnknownRecord,
 ): UnknownRecord | null {
@@ -85,6 +115,11 @@ function parseGeneratedImageMeta(metaData: UnknownRecord): ParsedGeneratedImageM
       readString(generatedImage?.prompt) ??
       readString(generatedImage?.generation_prompt),
     referenceImageUrl: readString(generatedImage?.reference_image_url),
+    userReferenceImageUrl:
+      readString(generatedImage?.user_reference_image_url) ??
+      readString(metaData.user_reference_image_url) ??
+      readString(metaData.user_photo_url),
+    referenceImageUrls: readStringArray(generatedImage?.reference_image_urls),
     width: readNumber(generatedImage?.width),
     height: readNumber(generatedImage?.height),
     userId: readString(metaData.user_id),
@@ -97,16 +132,57 @@ function parseGeneratedImageMeta(metaData: UnknownRecord): ParsedGeneratedImageM
   };
 }
 
+function buildReferenceImageAssets({
+  roleReferenceImageUrl,
+  userReferenceImageUrl,
+  extraReferenceImageUrls,
+}: {
+  roleReferenceImageUrl: string | null;
+  userReferenceImageUrl: string | null;
+  extraReferenceImageUrls: string[];
+}): GeneratedImageReferenceAsset[] {
+  const assets: GeneratedImageReferenceAsset[] = [];
+  const visitedUrls = new Set<string>();
+  const append = (url: string | null, label: string) => {
+    if (!url) {
+      return;
+    }
+    if (!isLikelyImageUrl(url)) {
+      return;
+    }
+    const normalizedUrl = normalizeImageUrl(url);
+    if (visitedUrls.has(normalizedUrl)) {
+      return;
+    }
+    visitedUrls.add(normalizedUrl);
+    assets.push({ label, url: normalizedUrl });
+  };
+
+  append(roleReferenceImageUrl, "角色参考图");
+  append(userReferenceImageUrl, "用户参考图");
+  extraReferenceImageUrls.forEach((url, index) => {
+    append(url, `参考图 ${index + 1}`);
+  });
+
+  return assets;
+}
+
 function buildFallbackMetaDataFromGeneratedImage(
   image: GeneratedImage,
 ): UnknownRecord {
+  const referenceImageUrls = [image.reference_image_url, image.user_reference_image_url]
+    .map((value) => readString(value))
+    .filter((value): value is string => value !== null);
   return {
     user_id: image.user_id,
     session_id: image.session_id,
+    user_reference_image_url: image.user_reference_image_url,
     generated_image: {
       image_url: image.gcs_url || image.url,
       prompt: image.generation_prompt,
       reference_image_url: image.reference_image_url,
+      user_reference_image_url: image.user_reference_image_url,
+      reference_image_urls: referenceImageUrls,
       width: image.width,
       height: image.height,
       model: image.model,
@@ -130,11 +206,27 @@ export function buildGeneratedImageDetailFromDailyReportItem(
 ): GeneratedImageDetail {
   const normalizedMetaData = isRecord(item.meta_data) ? item.meta_data : {};
   const parsedMeta = parseGeneratedImageMeta(normalizedMetaData);
+  const roleReferenceImageUrl =
+    parsedMeta.referenceImageUrl ?? readString(normalizedMetaData.reference_image_url);
+  const userReferenceImageUrl =
+    parsedMeta.userReferenceImageUrl ??
+    readString(normalizedMetaData.user_reference_image_url) ??
+    readString(normalizedMetaData.user_photo_url);
+  const referenceImages = buildReferenceImageAssets({
+    roleReferenceImageUrl,
+    userReferenceImageUrl,
+    extraReferenceImageUrls: [
+      ...parsedMeta.referenceImageUrls,
+      ...readStringArray(normalizedMetaData.reference_image_urls),
+    ],
+  });
   return {
     imageUrl: item.image_url,
     gcsUrl: parsedMeta.imageUrl,
     generationPrompt: parsedMeta.generationPrompt,
-    referenceImageUrl: parsedMeta.referenceImageUrl,
+    referenceImageUrl: roleReferenceImageUrl,
+    userReferenceImageUrl,
+    referenceImages,
     width: parsedMeta.width,
     height: parsedMeta.height,
     createdAt: item.created_at,
@@ -154,12 +246,31 @@ export function buildGeneratedImageDetailFromGeneratedImage(
     ? image.meta_data
     : buildFallbackMetaDataFromGeneratedImage(image);
   const parsedMeta = parseGeneratedImageMeta(normalizedMetaData);
+  const roleReferenceImageUrl =
+    image.reference_image_url ??
+    parsedMeta.referenceImageUrl ??
+    readString(normalizedMetaData.reference_image_url);
+  const userReferenceImageUrl =
+    image.user_reference_image_url ??
+    parsedMeta.userReferenceImageUrl ??
+    readString(normalizedMetaData.user_reference_image_url) ??
+    readString(normalizedMetaData.user_photo_url);
+  const combinedExtraReferenceImageUrls = [
+    ...parsedMeta.referenceImageUrls,
+    ...readStringArray(normalizedMetaData.reference_image_urls),
+  ];
+  const referenceImages = buildReferenceImageAssets({
+    roleReferenceImageUrl,
+    userReferenceImageUrl,
+    extraReferenceImageUrls: combinedExtraReferenceImageUrls,
+  });
   return {
     imageUrl: image.url,
     gcsUrl: image.gcs_url || parsedMeta.imageUrl,
     generationPrompt: image.generation_prompt || parsedMeta.generationPrompt,
-    referenceImageUrl:
-      image.reference_image_url || parsedMeta.referenceImageUrl,
+    referenceImageUrl: roleReferenceImageUrl,
+    userReferenceImageUrl,
+    referenceImages,
     width: image.width ?? parsedMeta.width,
     height: image.height ?? parsedMeta.height,
     createdAt: image.created_at,

@@ -928,6 +928,13 @@ class ImageGenerationService:
                 "prompt": prepared.prompt,
                 "model": resolved_model_id,
                 "generated_at": generated_at_iso,
+                "reference_image_url": prepared.reference_url,
+                "user_reference_image_url": prepared.user_photo_url,
+                "reference_image_urls": [
+                    url
+                    for url in [prepared.reference_url, prepared.user_photo_url]
+                    if url is not None
+                ],
             }
         }
         success = await chat_history_service.update_message_metadata(
@@ -960,6 +967,7 @@ class ImageGenerationService:
                     gcs_url=gcs_uri,
                     generation_prompt=prepared.prompt,
                     reference_image_url=prepared.reference_url,
+                    user_reference_image_url=prepared.user_photo_url,
                     agent_id=agent_id,
                     only_include_ai_character=prepared.user_photo_url is None,
                 )

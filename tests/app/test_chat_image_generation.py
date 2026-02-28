@@ -255,6 +255,7 @@ class TestImageGenerationService:
             nickname="Chat Tester",
             email="test@example.com",
             system_language="en",
+            user_photo="gs://test-bucket/user-selfie.jpg",
         )
         session.add(user)
         await session.commit()
@@ -826,6 +827,7 @@ class TestChatHistoryService:
             nickname="Chat Tester",
             email="test@example.com",
             system_language="en",
+            user_photo="gs://test-bucket/user-selfie.jpg",
         )
         session.add(user)
         await session.commit()
@@ -900,6 +902,15 @@ class TestChatHistoryService:
         assert gen.get("format") is not None
         assert gen.get("prompt") is not None
         assert gen.get("generated_at") is not None
+        assert gen.get("reference_image_url") == agent.background
+        assert (
+            gen.get("user_reference_image_url")
+            == "https://storage.googleapis.com/test-bucket/user-selfie.jpg"
+        )
+        assert gen.get("reference_image_urls") == [
+            agent.background,
+            "https://storage.googleapis.com/test-bucket/user-selfie.jpg",
+        ]
 
         gcs_uri = gen["image_url"]
 
@@ -918,6 +929,15 @@ class TestChatHistoryService:
         meta = resource.resource_metadata or {}
         assert meta.get("generation_prompt") is not None
         assert meta.get("gcs_url") == gcs_uri
+        assert meta.get("reference_image_url") == agent.background
+        assert (
+            meta.get("user_reference_image_url")
+            == "https://storage.googleapis.com/test-bucket/user-selfie.jpg"
+        )
+        assert meta.get("reference_image_urls") == [
+            agent.background,
+            "https://storage.googleapis.com/test-bucket/user-selfie.jpg",
+        ]
 
         await session.delete(resource)
         await session.delete(chat_msg)

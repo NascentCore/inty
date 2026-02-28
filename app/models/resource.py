@@ -61,6 +61,8 @@ class ImageResourceMetadata(BaseModel):
     gcs_url: Optional[str] = None
     generation_prompt: Optional[str] = None
     reference_image_url: Optional[str] = None  # 生成图片时使用的参考图
+    user_reference_image_url: Optional[str] = None  # 用户上传自拍作为额外参考图
+    reference_image_urls: Optional[list[str]] = None  # 参与生图的全部参考图 URL
     only_include_ai_character: Optional[bool] = None  # 无用户参考图时为 True，用于兜底候选过滤
 
     class Config:
