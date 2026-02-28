@@ -990,11 +990,7 @@ export const AgentManagePage: React.FC = () => {
   // 删除智能体
   const handleDeleteAgent = async (agent: Agent) => {
     try {
-      const success = await deleteAgentFromHook(agent.id);
-      if (success) {
-        // 删除成功后，重新加载列表以确保数据同步
-        loadAgents();
-      }
+      await deleteAgentFromHook(agent.id);
     } catch (error) {
       console.error("删除智能体失败:", error);
       message.error("删除智能体失败，请重试");
