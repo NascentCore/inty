@@ -9,7 +9,7 @@
 ```bash
 python scripts/tag_only_include_ai_character_from_json.py \
   --chat-images-json only-include-imate.json \
-  --config devops/config.yaml.dev \
+  --config devops/config.yaml.prod \
   --limit 1
 ```
 
@@ -36,7 +36,7 @@ WHERE url = 'gs://inty-static/chat_images/...';
 ```bash
 python scripts/verify_only_include_ai_character_fallback.py \
   --gcs-uri "gs://inty-static/chat_images/AGENT_ID/filename.jpg" \
-  --config devops/config.yaml.dev
+  --config devops/config.yaml.prod
 ```
 
 **预期**：输出 `OK: ... is in get_generated_images_for_agent(..., only_include_ai_character=True)`，退出码 0。
@@ -48,7 +48,7 @@ python scripts/verify_only_include_ai_character_fallback.py \
 ```bash
 python scripts/tag_only_include_ai_character_from_json.py \
   --chat-images-json only-include-imate.json \
-  --config devops/config.yaml.dev \
+  --config devops/config.yaml.prod \
   --yes
 ```
 
@@ -57,6 +57,6 @@ python scripts/tag_only_include_ai_character_from_json.py \
 ```bash
 python scripts/tag_only_include_ai_character_from_json.py \
   --chat-images-json only-include-imate.json \
-  --config devops/config.yaml.dev \
+  --config devops/config.yaml.prod \
   --dry-run
 ```
