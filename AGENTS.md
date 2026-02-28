@@ -58,9 +58,11 @@
   - 生成代码中要在其注释中总结你的关键中间步骤，如 app/core/voice/tts_api.py 记录了你如何从官方文档页面收集数据并处理
 - **Git 工作流**：
   - 每完成一次改动，生成一句话总结、详细描述
- 
+
 ### 工程文档维护
 
+- Use repo-root relative path when referencing files in this repo, for example:
+  [repo root AGENTS.md](/AGENTS.md).
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
 - 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
 - Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
