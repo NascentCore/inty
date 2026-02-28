@@ -983,9 +983,13 @@ fun SplashLoginUI(
                     imageResIds =
                         listOf(
                             R.drawable.login_banner_0,
+                            R.drawable.login_banner_4,
                             R.drawable.login_banner_1,
+                            R.drawable.login_banner_5,
                             R.drawable.login_banner_2,
+                            R.drawable.login_banner_6,
                             R.drawable.login_banner_3,
+                            R.drawable.login_banner_7
                         ),
                     onPageChange = { bannerIndex = it },
                 )
