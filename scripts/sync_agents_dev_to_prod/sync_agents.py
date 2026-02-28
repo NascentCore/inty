@@ -268,6 +268,7 @@ FIELDS_TO_SYNC = [
     "opening",
     "visibility",
     "photos",
+    "exclusive_photos",
     "category",
     "status",
     "source",
