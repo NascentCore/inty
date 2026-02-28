@@ -149,6 +149,7 @@ async def async_create_image_resource(
     gcs_url: Optional[str] = None,
     generation_prompt: Optional[str] = None,
     reference_image_url: Optional[str] = None,
+    user_reference_image_url: Optional[str] = None,
     agent_id: Optional[str] = None,
     only_include_ai_character: bool = False,
 ) -> None:
@@ -171,6 +172,12 @@ async def async_create_image_resource(
         gcs_url=gcs_url,
         generation_prompt=generation_prompt,
         reference_image_url=reference_image_url,
+        user_reference_image_url=user_reference_image_url,
+        reference_image_urls=[
+            url
+            for url in [reference_image_url, user_reference_image_url]
+            if url is not None
+        ],
         only_include_ai_character=only_include_ai_character,
     )
 

@@ -2534,6 +2534,28 @@ async def get_agent_generated_images(
             size = metadata.get("size", {})
             cdn_url = image_transform_service.transform_desktop(resource.url)
             reference_image_url = metadata.get("reference_image_url")
+            user_reference_image_url = metadata.get("user_reference_image_url")
+            reference_image_urls = metadata.get("reference_image_urls")
+            generated_image_meta = metadata.get("generated_image")
+            model = None
+            generation_time_ms = None
+            model_fallback_due_to_429 = None
+            if isinstance(generated_image_meta, dict):
+                model = generated_image_meta.get("model")
+                generation_time_ms = generated_image_meta.get("generation_time_ms")
+                model_fallback_due_to_429 = generated_image_meta.get(
+                    "model_fallback_due_to_429"
+                )
+                if reference_image_url is None:
+                    reference_image_url = generated_image_meta.get("reference_image_url")
+                if user_reference_image_url is None:
+                    user_reference_image_url = generated_image_meta.get(
+                        "user_reference_image_url"
+                    )
+                if reference_image_urls is None:
+                    reference_image_urls = generated_image_meta.get("reference_image_urls")
+            if model is None:
+                model = metadata.get("model")
 
             user_info = user_info_map.get(resource.user_id, {})
             images.append(
@@ -2542,6 +2564,8 @@ async def get_agent_generated_images(
                     "gcs_url": resource.url,
                     "generation_prompt": generation_prompt,
                     "reference_image_url": reference_image_url,
+                    "user_reference_image_url": user_reference_image_url,
+                    "reference_image_urls": reference_image_urls,
                     "width": size.get("width"),
                     "height": size.get("height"),
                     "created_at": (
@@ -2551,6 +2575,11 @@ async def get_agent_generated_images(
                     "user_nickname": user_info.get("nickname"),
                     "user_email": user_info.get("email"),
                     "user_photo": user_info.get("user_photo"),
+                    "model": model,
+                    "generation_time_ms": generation_time_ms,
+                    "model_fallback_due_to_429": model_fallback_due_to_429,
+                    "session_id": metadata.get("session_id"),
+                    "meta_data": metadata,
                 }
             )
 

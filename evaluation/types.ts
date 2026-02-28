@@ -788,6 +788,8 @@ export interface GeneratedImage {
   gcs_url: string;
   generation_prompt: string;
   reference_image_url: string | null;
+  user_reference_image_url?: string | null;
+  reference_image_urls?: string[] | null;
   width: number | null;
   height: number | null;
   created_at: string | null;
@@ -795,6 +797,11 @@ export interface GeneratedImage {
   user_nickname: string | null;
   user_email: string | null;
   user_photo: string | null;
+  model?: string | null;
+  generation_time_ms?: number | null;
+  model_fallback_due_to_429?: boolean | null;
+  session_id?: string | null;
+  meta_data?: Record<string, unknown> | null;
 }
 
 export interface GeneratedImagesResponse {
