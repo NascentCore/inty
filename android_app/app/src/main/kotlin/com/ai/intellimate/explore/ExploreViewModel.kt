@@ -435,7 +435,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区）。使用 created_desc_with_gender 由后端按用户性别过滤异性角色；空列表时回退请求 created_desc 以保持分区可见。 */
+    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区）。使用 created_desc_with_opposite_gender 由后端按用户性别过滤异性角色；空列表时回退请求 created_desc 以保持分区可见。 */
     fun loadNewlyCreatedAgents(limit: Int = NEWLY_CREATED_SECTION_LIMIT) {
         viewModelScope.launch {
             try {
@@ -446,7 +446,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                         sort_seed = "newly_imates",
                         sort = sort,
                     )
-                when (val result = fetchNewlyCreated("created_desc_with_gender")) {
+                when (val result = fetchNewlyCreated("created_desc_with_opposite_gender")) {
                     is HttpResult.Success -> {
                         var latestAgents = result.data.list.orEmpty().take(limit)
                         if (latestAgents.isEmpty()) {
