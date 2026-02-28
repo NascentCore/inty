@@ -31,8 +31,6 @@ import com.ai.intellimate.utils.UserProfileManager
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     companion object {
         private const val NEWLY_CREATED_SECTION_LIMIT = 10
-        private const val NEWLY_CREATED_SECTION_FETCH_MULTIPLIER = 3
-        private const val NEWLY_CREATED_SECTION_MAX_PAGE_SIZE = 100
     }
 
     // 角色数据库仓库，用于搜索
@@ -437,27 +435,28 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区） */
+    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区）。使用 created_desc_with_gender 由后端按用户性别过滤异性角色；空列表时回退请求 created_desc 以保持分区可见。 */
     fun loadNewlyCreatedAgents(limit: Int = NEWLY_CREATED_SECTION_LIMIT) {
         viewModelScope.launch {
             try {
-                val userGender = UserProfileManager.profile.first().gender
-                val requestPageSize = buildNewlyCreatedRequestPageSize(limit, userGender)
-                when (
-                    val result =
-                        NetServiceMgr.getAgentApi().exploreAgents(
-                            page = 1,
-                            pageSize = requestPageSize,
-                            sort_seed = "newly_imates",
-                            sort = "created_desc",
-                        )
-                ) {
+                fun fetchNewlyCreated(sort: String) =
+                    NetServiceMgr.getAgentApi().exploreAgents(
+                        page = 1,
+                        pageSize = limit,
+                        sort_seed = "newly_imates",
+                        sort = sort,
+                    )
+                when (val result = fetchNewlyCreated("created_desc_with_gender")) {
                     is HttpResult.Success -> {
-                        val fetchedAgents = result.data.list.orEmpty()
-                        val latestAgents =
-                            filterNewlyCreatedAgentsByUserGender(fetchedAgents, userGender).take(limit)
+                        var latestAgents = result.data.list.orEmpty().take(limit)
+                        if (latestAgents.isEmpty()) {
+                            val fallback = fetchNewlyCreated("created_desc")
+                            if (fallback is HttpResult.Success) {
+                                latestAgents = fallback.data.list.orEmpty().take(limit)
+                            }
+                        }
                         LogUtils.d(
-                            "ExploreViewModel - 获取最近创建角色成功: fetched=${fetchedAgents.size}, filtered=${latestAgents.size}, userGender=$userGender"
+                            "ExploreViewModel - 获取最近创建角色成功: latest=${latestAgents.size}"
                         )
                         _newlyCreatedAgents.value = latestAgents
                     }
@@ -472,12 +471,6 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 LogUtils.e("ExploreViewModel - 加载最近创建角色异常: ${e.message}", e)
             }
         }
-    }
-
-    private fun buildNewlyCreatedRequestPageSize(limit: Int, userGender: String?): Int {
-        if (!shouldUseOppositeGenderFilter(userGender)) return limit
-        return (limit * NEWLY_CREATED_SECTION_FETCH_MULTIPLIER)
-            .coerceAtMost(NEWLY_CREATED_SECTION_MAX_PAGE_SIZE)
     }
 
     /** 搜索角色（从本地数据库搜索，按名称模糊匹配） */

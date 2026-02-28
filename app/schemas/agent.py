@@ -35,6 +35,8 @@ class AgentSortOption(str, Enum):
     CREATED_ASC = "created_asc"
     # Descending order of the creation time, newest to the oldest
     CREATED_DESC = "created_desc"
+    # Newest first, only agents with gender opposite to requesting user (MALE/FEMALE); OTHER/unknown same as created_desc
+    CREATED_DESC_WITH_GENDER = "created_desc_with_gender"
     # Random order, use sort_seed to ensure consistent order
     RANDOM = "random"
     # Score-based random recommendation: 6 high-score agents + 4 random agents

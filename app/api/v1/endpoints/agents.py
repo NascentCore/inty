@@ -141,7 +141,7 @@ async def recommend_agents(
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(
         schemas.AgentSortOption.CREATED_DESC,
-        description="Sort order: created_asc, created_desc, random, score_based_random, energy_points",
+        description="Sort order: created_asc, created_desc, created_desc_with_gender, random, score_based_random, energy_points",
     ),
     sort_seed: str = Query(
         "", description="Sort seed for deterministic random ordering"
@@ -153,6 +153,7 @@ async def recommend_agents(
 
     Sorting options (default: created_desc):
     - created_desc: Most recent first
+    - created_desc_with_gender: Newest first, only agents whose gender is opposite to the requesting user (MALE/FEMALE); if user gender is OTHER/unknown, same as created_desc
     - created_asc: Oldest first
     - random: Random order (uses sort_seed for deterministic results)
     - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)

@@ -717,35 +717,67 @@ async def get_recommended_agents_paginated(
             # 传统分页逻辑
             skip = (page - 1) * page_size
 
-            # 确定排序方式
-            order_by_clauses = []
-            if sort_by == AgentSortOption.CREATED_ASC:
-                order_by_clauses = [models.Agent.created_at.asc()]
-            elif sort_by == AgentSortOption.RANDOM:
-                order_by_clauses = [get_deterministic_random_order(sort_seed)]
-            elif sort_by == AgentSortOption.ENERGY_POINTS:
-                order_by_clauses = [
-                    desc(func.coalesce(models.Agent.points, 0)),
-                    desc(models.Agent.created_at),
+            # CREATED_DESC_WITH_GENDER: filter by opposite user gender when MALE/FEMALE
+            opposite_gender = None
+            if sort_by == AgentSortOption.CREATED_DESC_WITH_GENDER and current_user.gender in (
+                Gender.MALE,
+                Gender.FEMALE,
+            ):
+                opposite_gender = (
+                    Gender.FEMALE if current_user.gender == Gender.MALE else Gender.MALE
+                )
+
+            if opposite_gender is not None:
+                # Count and data use same filters: base (public, superuser, not deleted) + opposite gender
+                count_query = select(func.count()).select_from(
+                    base_query.where(models.Agent.gender == opposite_gender).subquery()
+                )
+                count_result = await db.execute(count_query)
+                total = count_result.scalar()
+                data_query = (
+                    _select_agents_with_sizes()
+                    .where(models.Agent.gender == opposite_gender)
+                    .offset(skip)
+                    .limit(page_size)
+                    .order_by(desc(models.Agent.created_at))
+                )
+                result = await db.execute(data_query)
+                query_results = result.all()
+                agents_list = [
+                    _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
                 ]
-            else:  # 默认为 CREATED_DESC
-                order_by_clauses = [desc(models.Agent.created_at)]
+            else:
+                # 确定排序方式
+                order_by_clauses = []
+                if sort_by == AgentSortOption.CREATED_ASC:
+                    order_by_clauses = [models.Agent.created_at.asc()]
+                elif sort_by == AgentSortOption.RANDOM:
+                    order_by_clauses = [get_deterministic_random_order(sort_seed)]
+                elif sort_by == AgentSortOption.ENERGY_POINTS:
+                    order_by_clauses = [
+                        desc(func.coalesce(models.Agent.points, 0)),
+                        desc(models.Agent.created_at),
+                    ]
+                elif sort_by == AgentSortOption.CREATED_DESC_WITH_GENDER:
+                    order_by_clauses = [desc(models.Agent.created_at)]
+                else:  # 默认为 CREATED_DESC
+                    order_by_clauses = [desc(models.Agent.created_at)]
 
-            # 获取分页数据，同时获取头像和背景图的尺寸信息
-            data_query = (
-                _select_agents_with_sizes()
-                .offset(skip)
-                .limit(page_size)
-                .order_by(*order_by_clauses)
-            )
+                # 获取分页数据，同时获取头像和背景图的尺寸信息
+                data_query = (
+                    _select_agents_with_sizes()
+                    .offset(skip)
+                    .limit(page_size)
+                    .order_by(*order_by_clauses)
+                )
 
-            result = await db.execute(data_query)
-            query_results = result.all()
+                result = await db.execute(data_query)
+                query_results = result.all()
 
-            # 处理查询结果，提取agent和metadata信息
-            agents_list = [
-                _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
-            ]
+                # 处理查询结果，提取agent和metadata信息
+                agents_list = [
+                    _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
+                ]
 
         # 为所有 agents 设置关注相关默认值（关注功能已下线）
         agents = []
