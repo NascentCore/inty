@@ -34,6 +34,17 @@ from app.services.agent_service import (
 
 admin_user = None
 
+
+class DummyUserWithGender:
+    """Minimal user-like object with gender for recommend_agents_paginated tests."""
+
+    def __init__(self, user_id: str, nickname: str, is_superuser: bool, gender=None):
+        self.id = user_id
+        self.nickname = nickname
+        self.is_superuser = is_superuser
+        self.gender = gender
+
+
 @pytest.fixture
 async def db_session():
     """Provide a database session for testing with proper cleanup."""
@@ -422,6 +433,102 @@ async def test_get_recommended_agents_paginated_excludes_private_always(db_sessi
     super_ids = {agent.id for agent in super_page.list}
     assert public_agent.id in super_ids
     assert private_agent.id not in super_ids
+
+
+@pytest.mark.asyncio
+async def test_get_recommended_agents_paginated_created_desc_with_gender_filters_by_opposite(
+    db_session,
+):
+    """CREATED_DESC_WITH_GENDER: MALE user gets only FEMALE agents; FEMALE user gets only MALE agents."""
+    test_id = str(uuid.uuid4())[:6]
+    agents = [
+        models.Agent(
+            id=f"test-gender-{test_id}-f{i}",
+            readable_id=f"gf{i}{test_id}"[:8],
+            name=f"Female {i} {test_id}",
+            gender=models.Gender.FEMALE,
+            visibility=AgentVisibility.PUBLIC,
+            creator_id=admin_user.id,
+        )
+        for i in range(2)
+    ] + [
+        models.Agent(
+            id=f"test-gender-{test_id}-m{i}",
+            readable_id=f"gm{i}{test_id}"[:8],
+            name=f"Male {i} {test_id}",
+            gender=models.Gender.MALE,
+            visibility=AgentVisibility.PUBLIC,
+            creator_id=admin_user.id,
+        )
+        for i in range(2)
+    ]
+    for a in agents:
+        db_session.add(a)
+    await db_session.commit()
+
+    male_user = DummyUserWithGender("u-male", "male", False, models.Gender.MALE)
+    page_male = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=male_user,  # type: ignore[arg-type]
+        page=1,
+        page_size=10,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
+    )
+    assert all(a.gender == models.Gender.FEMALE for a in page_male.list)
+
+    female_user = DummyUserWithGender("u-female", "female", False, models.Gender.FEMALE)
+    page_female = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=female_user,  # type: ignore[arg-type]
+        page=1,
+        page_size=10,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
+    )
+    assert all(a.gender == models.Gender.MALE for a in page_female.list)
+
+
+@pytest.mark.asyncio
+async def test_get_recommended_agents_paginated_created_desc_with_gender_other_no_filter(
+    db_session,
+):
+    """CREATED_DESC_WITH_GENDER with user gender OTHER or None: no gender filter, same as created_desc."""
+    test_id = str(uuid.uuid4())[:6]
+    agent = models.Agent(
+        id=f"test-gender-other-{test_id}",
+        readable_id=f"go{test_id}"[:8],
+        name=f"Agent Other {test_id}",
+        gender=models.Gender.FEMALE,
+        visibility=AgentVisibility.PUBLIC,
+        creator_id=admin_user.id,
+    )
+    db_session.add(agent)
+    await db_session.commit()
+
+    desc_page = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=DummyUserWithGender("u", "u", False, models.Gender.OTHER),  # type: ignore[arg-type]
+        page=1,
+        page_size=10,
+        sort_by=AgentSortOption.CREATED_DESC,
+    )
+    with_gender_other_page = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=DummyUserWithGender("u", "u", False, models.Gender.OTHER),  # type: ignore[arg-type]
+        page=1,
+        page_size=10,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
+    )
+    assert desc_page.total == with_gender_other_page.total
+    assert {a.id for a in desc_page.list} == {a.id for a in with_gender_other_page.list}
+
+    with_gender_none_page = await agent_service.get_recommended_agents_paginated(
+        db_session,
+        current_user=DummyUserWithGender("u", "u", False, None),  # type: ignore[arg-type]
+        page=1,
+        page_size=10,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
+    )
+    assert desc_page.total == with_gender_none_page.total
 
 
 @pytest.mark.asyncio

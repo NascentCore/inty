@@ -6,6 +6,10 @@
 
 Only user-visible changes are recorded
 
+## 2026-02-28
+
+- Explore page now applies a gender preference filter in **New iMates for you**: users with `MALE`/`FEMALE` profiles see newly created iMates of the opposite gender, while `OTHER`/`NON_BINARY` profiles keep the existing unfiltered behavior.
+
 ## 2026-02-26
 
 - Standardized chat bubble spacing on the chat page: user message bubbles now use the same vertical spacing as AI messages to improve readability.

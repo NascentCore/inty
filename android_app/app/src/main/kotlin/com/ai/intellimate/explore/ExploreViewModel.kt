@@ -22,8 +22,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import com.ai.intellimate.utils.UserProfileManager
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
@@ -433,22 +435,29 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区） */
+    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区）。使用 created_desc_with_gender 由后端按用户性别过滤异性角色；空列表时回退请求 created_desc 以保持分区可见。 */
     fun loadNewlyCreatedAgents(limit: Int = NEWLY_CREATED_SECTION_LIMIT) {
         viewModelScope.launch {
             try {
-                when (
-                    val result =
-                        NetServiceMgr.getAgentApi().exploreAgents(
-                            page = 1,
-                            pageSize = limit,
-                            sort_seed = "newly_imates",
-                            sort = "created_desc",
-                        )
-                ) {
+                suspend fun fetchNewlyCreated(sort: String) =
+                    NetServiceMgr.getAgentApi().exploreAgents(
+                        page = 1,
+                        pageSize = limit,
+                        sort_seed = "newly_imates",
+                        sort = sort,
+                    )
+                when (val result = fetchNewlyCreated("created_desc_with_gender")) {
                     is HttpResult.Success -> {
-                        val latestAgents = result.data.list.orEmpty().take(limit)
-                        LogUtils.d("ExploreViewModel - 获取最近创建角色成功: ${latestAgents.size} 条")
+                        var latestAgents = result.data.list.orEmpty().take(limit)
+                        if (latestAgents.isEmpty()) {
+                            val fallback = fetchNewlyCreated("created_desc")
+                            if (fallback is HttpResult.Success) {
+                                latestAgents = fallback.data.list.orEmpty().take(limit)
+                            }
+                        }
+                        LogUtils.d(
+                            "ExploreViewModel - 获取最近创建角色成功: latest=${latestAgents.size}"
+                        )
                         _newlyCreatedAgents.value = latestAgents
                     }
 
