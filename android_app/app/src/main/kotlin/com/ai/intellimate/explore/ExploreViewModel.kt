@@ -439,7 +439,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     fun loadNewlyCreatedAgents(limit: Int = NEWLY_CREATED_SECTION_LIMIT) {
         viewModelScope.launch {
             try {
-                fun fetchNewlyCreated(sort: String) =
+                suspend fun fetchNewlyCreated(sort: String) =
                     NetServiceMgr.getAgentApi().exploreAgents(
                         page = 1,
                         pageSize = limit,
