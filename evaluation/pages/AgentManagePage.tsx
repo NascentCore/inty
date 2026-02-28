@@ -484,37 +484,19 @@ export const AgentManagePage: React.FC = () => {
     setAvatarCropModalVisible(true);
   };
 
-  // 处理头像截取确认
+  // 处理头像截取确认（仅更新本地状态，不触发 loadAgents，与编辑弹窗保存一致）
   const handleAvatarCropConfirm = async (cropData: AvatarCropData) => {
     if (!currentAgentForAvatar) return;
 
     try {
-      // 更新智能体头像坐标信息
-      const updateData = {
-        extensions: {
-          avatar_crop: cropData,
-        },
-      };
-
-      const updatedAgent = (await api
-        .getIntyClient()
-        .api.v1.ai.agents.update(
-          currentAgentForAvatar.id,
-          updateData,
-        )) as unknown as Agent;
+      const updatedAgent = await updateAgentFromHook(
+        currentAgentForAvatar.id,
+        { extensions: { avatar_crop: cropData } },
+      );
       if (updatedAgent) {
         message.success("头像坐标设置成功");
-        // 刷新智能体列表
-        loadAgents();
-      } else {
-        message.error("头像坐标设置失败");
       }
-    } catch (error) {
-      logError("设置头像坐标失败");
-      console.error("设置头像坐标失败:", error);
-      message.error("设置头像坐标失败，请重试");
     } finally {
-      // 关闭弹窗并重置状态
       setAvatarCropModalVisible(false);
       setAvatarCropImageSrc("");
       setCurrentAgentForAvatar(null);
@@ -2049,7 +2031,7 @@ export const AgentManagePage: React.FC = () => {
                             onClick={() => showEditModal(agent)}
                           />
                         </Tooltip>,
-                        <Tooltip key="avatar" title="修改头像">
+                        <Tooltip key="avatar" title="从形象照片上截取头像">
                           <Button
                             type="text"
                             icon={<CameraOutlined />}
