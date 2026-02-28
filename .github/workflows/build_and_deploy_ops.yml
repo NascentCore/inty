@@ -11,6 +11,7 @@ on:
       - "devops/config.yaml.dev"
       - "devops/config.yaml.prod"
       - "evaluation/**/*.tsx"
+      - "evaluation/**/*.ts"
       - "evaluation/tsconfig.json"
       - "evaluation/tsconfig.node.json"
       - "evaluation/package.json"
