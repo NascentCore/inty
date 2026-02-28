@@ -3,6 +3,8 @@ package ai.sxwl.android.data.api
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatImageGenerationApiResponse
 import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
+import ai.sxwl.android.data.api.model.ChatMusicGenerationApiResponse
+import ai.sxwl.android.data.api.model.ChatMusicGenerationRequest
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.ClearMessagesRequest
@@ -79,6 +81,12 @@ interface IChatApi {
         @Path("agent_id") agent_id: String,
         @Body req: ChatImageGenerationRequest,
     ): HttpResult<ChatImageGenerationApiResponse>
+
+    @POST("/api/v1/chat/music/{agent_id}")
+    suspend fun generateMessageMusic(
+        @Path("agent_id") agent_id: String,
+        @Body req: ChatMusicGenerationRequest,
+    ): HttpResult<ChatMusicGenerationApiResponse>
 
     @POST("/api/v1/chats/agents/{agent_id}/clear-messages")
     suspend fun clearMessages(

@@ -1181,6 +1181,64 @@ class SubscriptionService:
             # 出错时默认允许，避免影响用户体验
             return True, 0, -1
 
+    async def check_music_gen_limit(
+        self, db: AsyncSession, user: schemas.User
+    ) -> Tuple[bool, int, int]:
+        """
+        检查用户音乐生成次数限制（24小时滚动窗口）
+
+        Returns:
+            Tuple[bool, int, int]: (是否允许生成, 已用次数, 限制次数)
+        """
+        try:
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+                and not global_config_loaded_from_config_yaml.app.debug
+            ):
+                logger.debug("TEST 环境下放宽音乐生成限额: user_id=%s", user.id)
+                return True, 0, TEST_ENVIRONMENT_LIMIT
+
+            if is_superuser(user):
+                logger.debug(f"Superuser {user.id} has unlimited music generation")
+                return SUPERUSER_LIMIT_CHECK_RESULT
+
+            # 游客用户不允许生成音乐
+            if user.auth_type == AuthType.GUEST:
+                logger.debug(f"Guest user {user.id} is not allowed to generate music")
+                return False, 0, 0
+
+            subscription_status = await self.get_user_subscription_status(db, user.id)
+            if subscription_status.is_subscribed:
+                music_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.subscribed_user_music_gen_24h_limit
+                )
+            else:
+                music_limit = (
+                    global_config_loaded_from_config_yaml.app.limits.free_user_music_gen_24h_limit
+                )
+
+            if music_limit is None:
+                return True, 0, -1
+
+            now = datetime.now(timezone.utc)
+            hours_24_ago = now - timedelta(hours=24)
+            generation_count_result = await db.execute(
+                select(func.sum(SubscriptionUsage.usage_count)).where(
+                    and_(
+                        SubscriptionUsage.user_id == user.id,
+                        SubscriptionUsage.usage_type == "music_generation",
+                        SubscriptionUsage.usage_date >= hours_24_ago,
+                    )
+                )
+            )
+            music_24h_count = generation_count_result.scalar() or 0
+            is_allowed = music_24h_count < music_limit
+            return is_allowed, music_24h_count, music_limit
+        except Exception as e:
+            logger.error(f"检查音乐生成次数限制失败: {str(e)}")
+            return True, 0, -1
+
     async def check_live_chat_limit(
         self, db: AsyncSession, user: schemas.User, agent_id: str
     ) -> Tuple[bool, str, Dict[str, Any]]:

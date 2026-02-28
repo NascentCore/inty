@@ -36,3 +36,13 @@ def select_chat_image_model(*, user: object, is_subscribed: bool) -> GenAIModel:
         config.sub_user_chat_image_model if is_subscribed else config.free_user_chat_image_model
     )
     return resolve_chat_image_model(nickname)
+
+
+def select_chat_music_model(*, user: object, is_subscribed: bool) -> str:
+    """
+    Select chat music model based on user's subscription status.
+    """
+    config = global_config_loaded_from_config_yaml.agent
+    if is_subscribed:
+        return config.sub_user_chat_music_model
+    return config.free_user_chat_music_model

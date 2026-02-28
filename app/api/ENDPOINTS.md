@@ -71,6 +71,7 @@ Evaluation 与 festival_memory 的实现位于 `backend/ops/api/v1/`，主应用
 |------|------|----------|
 | `/api/v1/chat/completions/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/images/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
+| `/api/v1/chat/music/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 
 ### 聊天会话 (Chats)
 

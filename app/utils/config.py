@@ -192,6 +192,8 @@ class AppConfig:
         free_user_voice_24h_limit: int = 100
         guest_user_voice_24h_limit: int = 10
         subscribed_user_voice_24h_limit: int = 100
+        free_user_music_gen_24h_limit: int = 2
+        subscribed_user_music_gen_24h_limit: int = 6
         image_compression_threshold_size_kb: int = 500
 
     limits: LimitsConfig = None
@@ -257,11 +259,15 @@ class AgentConfig:
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
     image_generation_default_history_count: int = 10
+    music_generation_default_history_count: int = 10
     # 消息生图失败时是否匹配已生成图片作为兜底
     enable_chat_image_match_fallback: bool = False
     # 消息生图（chat image）模型配置：使用 models_catalog 中模型的 nickname
     free_user_chat_image_model: str = "Nano Banana"
     sub_user_chat_image_model: str = "Nano Banana"
+    # 消息生音乐（chat music）模型配置：当前使用 fal 模型 ID
+    free_user_chat_music_model: str = "fal-ai/stable-audio"
+    sub_user_chat_music_model: str = "fal-ai/stable-audio"
     # 用户自拍画像推断模型（用于生成简短用户画像结论）
     selfie_persona_gemini_model: str = "gemini-2.5-flash"
     # 订阅用户首轮生图遇 429 时重试使用的 Vertex 模型 ID

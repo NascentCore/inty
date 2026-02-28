@@ -492,6 +492,14 @@ ChatImageGenerationAPIResponse: TypeAlias = schemas.APIResponse[
 ]
 
 
+ChatMusicGenerationAPIResponse: TypeAlias = schemas.APIResponse[
+    Union[
+        schemas.ChatMusicGenerationResponse,
+        UsageLimitExceeded,
+    ]
+]
+
+
 @router.post(
     "/images/{agent_id}",
     response_model=ChatImageGenerationAPIResponse,
@@ -570,4 +578,47 @@ async def generate_chat_image(
         logger.error(f"生成聊天图片失败 - Agent ID: {agent_id}, Error: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to generate image: {str(e)}"
+        )
+
+
+@router.post(
+    "/music/{agent_id}",
+    response_model=ChatMusicGenerationAPIResponse,
+    summary="基于聊天消息及上下文生成背景音乐",
+    description=(
+        "根据 Agent 角色设定、聊天历史和目标消息，生成一段可用于当前对话氛围的背景音乐。"
+    ),
+    tags=[INTY_EVAL_TAG],
+)
+async def generate_chat_music(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: schemas.ChatMusicGenerationRequest,
+    current_user: schemas.User = Depends(deps.get_current_active_user),
+) -> ChatMusicGenerationAPIResponse:
+    """基于聊天上下文生成音乐。"""
+    try:
+        result = await chat_service.generate_chat_music(
+            db=db,
+            agent_id=agent_id,
+            user_id=current_user.id,
+            message_id=request.message_id,
+            subscription_service=subscription_service,
+            history_count=request.history_count,
+            model=request.model,
+        )
+
+        if isinstance(result, UsageLimitExceeded):
+            return schemas.APIResponse.error(
+                message=result.message, code=result.code, data=result
+            )
+
+        return schemas.APIResponse.success(data=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成聊天音乐失败 - Agent ID: {agent_id}, Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate music: {str(e)}"
         )

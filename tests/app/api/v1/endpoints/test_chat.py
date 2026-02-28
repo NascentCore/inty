@@ -141,6 +141,33 @@ def _stub_generate_chat_image_blocked(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(chat_service, "generate_chat_image", fake_generate_chat_image)
 
 
+def _stub_generate_chat_music(monkeypatch: pytest.MonkeyPatch):
+    async def fake_generate_chat_music(*args, **kwargs):
+        return UsageLimitExceeded(
+            code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"],
+            error_code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"],
+            message=BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
+            used_count=2,
+            daily_limit=2,
+        )
+
+    monkeypatch.setattr(chat_service, "generate_chat_music", fake_generate_chat_music)
+
+
+def _stub_generate_chat_music_success(monkeypatch: pytest.MonkeyPatch):
+    async def fake_generate_chat_music(*args, **kwargs):
+        return chat_v1.schemas.ChatMusicGenerationResponse(
+            audio_url="https://cdn.example.com/music.mp3",
+            audio_metadata={"format": "mp3", "duration_sec": 12.3, "provider": "fal"},
+            prompt="music prompt",
+            message_id=1,
+            model="fal-ai/stable-audio",
+            generation_time_ms=520,
+        )
+
+    monkeypatch.setattr(chat_service, "generate_chat_music", fake_generate_chat_music)
+
+
 def test_v1_chat_completions_guest_requires_login(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -252,6 +279,52 @@ def test_v1_chat_generate_image_biz_error_matches_response_model(
         "message"
     ]
     assert body["data"]["suggestion"] == "Please modify your prompt and try again."
+
+
+def test_v1_chat_generate_music_wraps_business_error(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_generate_chat_music(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/chat/music/agent-1",
+            json={"message_id": 1},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
+    assert (
+        body["data"]["error_code"]
+        == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
+    )
+    assert body["data"]["used_count"] == 2
+    assert body["data"]["daily_limit"] == 2
+
+
+def test_v1_chat_generate_music_success(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_generate_chat_music_success(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/chat/music/agent-1",
+            json={"message_id": 1},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert body["data"]["audio_url"] == "https://cdn.example.com/music.mp3"
+    assert body["data"]["model"] == "fal-ai/stable-audio"
 
 
 @pytest.mark.noci

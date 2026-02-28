@@ -131,6 +131,14 @@ data class MsgInfo(
         return meta_data?.generatedImage?.height
     }
 
+    fun hasGeneratedMusic(): Boolean {
+        return meta_data?.generatedMusic != null
+    }
+
+    fun getGeneratedMusicUrl(): String? {
+        return meta_data?.generatedMusic?.audioUrl ?: audio_url
+    }
+
     /** 判断是否为语音聊天消息 */
     fun isVoiceMessage(): Boolean {
         return meta_data?.isVoice == true
@@ -143,12 +151,21 @@ data class MsgInfo(
         val isOpening: Boolean = false,
         val voice_session_id: String? = null,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
+        @Json(name = "generated_music") val generatedMusic: GeneratedMusic? = null,
     ) {
         @JsonClass(generateAdapter = true)
         data class GeneratedImage(
             @Json(name = "image_url") val imageUrl: String = "",
             val width: Int = 0,
             val height: Int = 0,
+        )
+
+        @JsonClass(generateAdapter = true)
+        data class GeneratedMusic(
+            @Json(name = "audio_url") val audioUrl: String = "",
+            val model: String? = null,
+            @Json(name = "duration_sec") val durationSec: Double? = null,
+            val format: String? = null,
         )
     }
 
@@ -279,6 +296,13 @@ data class ChatImageGenerationRequest(
     val model: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
+data class ChatMusicGenerationRequest(
+    @Json(name = "message_id") val messageId: Long,
+    @Json(name = "history_count") val historyCount: Int? = null,
+    val model: String? = null,
+)
+
 /**
  * 聊天消息生图数据载荷（兼容成功与业务失败两类 data 结构）。
  */
@@ -306,6 +330,28 @@ data class ChatImageGenerationApiResponse(
     val code: Int? = null,
     val message: String? = null,
     val data: ChatImageGenerationPayload? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ChatMusicGenerationPayload(
+    @Json(name = "audio_url") val audioUrl: String? = null,
+    @Json(name = "audio_metadata") val audioMetadata: Map<String, Any?> = emptyMap(),
+    val prompt: String? = null,
+    @Json(name = "message_id") val messageId: Long? = null,
+    val model: String? = null,
+    @Json(name = "generation_time_ms") val generationTimeMs: Int? = null,
+    val code: Int? = null,
+    @Json(name = "error_code") val errorCode: String? = null,
+    val message: String? = null,
+    @Json(name = "daily_limit") val dailyLimit: Int? = null,
+    @Json(name = "used_count") val usedCount: Int? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ChatMusicGenerationApiResponse(
+    val code: Int? = null,
+    val message: String? = null,
+    val data: ChatMusicGenerationPayload? = null,
 )
 
 /**

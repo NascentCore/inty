@@ -28,6 +28,8 @@ from app.schemas.chat import ChatDeletionResponse as ChatDeletionResponse
 from app.schemas.chat import ChatDeletionSummary as ChatDeletionSummary
 from app.schemas.chat import ChatImageGenerationRequest as ChatImageGenerationRequest
 from app.schemas.chat import ChatImageGenerationResponse as ChatImageGenerationResponse
+from app.schemas.chat import ChatMusicGenerationRequest as ChatMusicGenerationRequest
+from app.schemas.chat import ChatMusicGenerationResponse as ChatMusicGenerationResponse
 from app.schemas.chat import ChatInDB as ChatInDB
 from app.schemas.chat import ChatSettings as ChatSettings
 from app.schemas.chat import ChatSettingsCreate as ChatSettingsCreate
