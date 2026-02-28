@@ -472,7 +472,7 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
         current_user=male_user,  # type: ignore[arg-type]
         page=1,
         page_size=10,
-        sort_by=AgentSortOption.CREATED_DESC_WITH_GENDER,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
     assert all(a.gender == models.Gender.FEMALE for a in page_male.list)
 
@@ -482,7 +482,7 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_filters
         current_user=female_user,  # type: ignore[arg-type]
         page=1,
         page_size=10,
-        sort_by=AgentSortOption.CREATED_DESC_WITH_GENDER,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
     assert all(a.gender == models.Gender.MALE for a in page_female.list)
 
@@ -516,7 +516,7 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_other_n
         current_user=DummyUserWithGender("u", "u", False, models.Gender.OTHER),  # type: ignore[arg-type]
         page=1,
         page_size=10,
-        sort_by=AgentSortOption.CREATED_DESC_WITH_GENDER,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
     assert desc_page.total == with_gender_other_page.total
     assert {a.id for a in desc_page.list} == {a.id for a in with_gender_other_page.list}
@@ -526,7 +526,7 @@ async def test_get_recommended_agents_paginated_created_desc_with_gender_other_n
         current_user=DummyUserWithGender("u", "u", False, None),  # type: ignore[arg-type]
         page=1,
         page_size=10,
-        sort_by=AgentSortOption.CREATED_DESC_WITH_GENDER,
+        sort_by=AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER,
     )
     assert desc_page.total == with_gender_none_page.total
 

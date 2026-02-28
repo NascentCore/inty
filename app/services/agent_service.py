@@ -719,7 +719,7 @@ async def get_recommended_agents_paginated(
 
             # CREATED_DESC_WITH_GENDER: filter by opposite user gender when MALE/FEMALE
             opposite_gender = None
-            if sort_by == AgentSortOption.CREATED_DESC_WITH_GENDER and current_user.gender in (
+            if sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER and current_user.gender in (
                 Gender.MALE,
                 Gender.FEMALE,
             ):
@@ -758,7 +758,7 @@ async def get_recommended_agents_paginated(
                         desc(func.coalesce(models.Agent.points, 0)),
                         desc(models.Agent.created_at),
                     ]
-                elif sort_by == AgentSortOption.CREATED_DESC_WITH_GENDER:
+                elif sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER:
                     order_by_clauses = [desc(models.Agent.created_at)]
                 else:  # 默认为 CREATED_DESC
                     order_by_clauses = [desc(models.Agent.created_at)]
