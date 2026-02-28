@@ -194,6 +194,13 @@ object IntySetting {
         contextRef?.get()?.intySettingsCache?.updateData(update)
     }
 
+    /** 仅用于测试：将 DataStore 重置为默认状态并标记已迁移，以便 initialize 不触发 MMKV 迁移。 */
+    internal fun resetCacheForTest(context: Context) {
+        runBlocking {
+            context.intySettingsCache.updateData { _ -> IntySettingsCache(isMigrateFinished = true) }
+        }
+    }
+
 //    private fun getUserDataStore(): Flow<DataStore<Preferences>> {
 //        return getCurUserIDFlow().map { dataStore("user_$it") }
 //    }

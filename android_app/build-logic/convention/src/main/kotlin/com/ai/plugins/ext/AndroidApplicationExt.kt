@@ -9,31 +9,29 @@ import org.gradle.api.Project
 
 /** 获取git commit信息的函数 使用Provider来避免配置缓存问题 */
 private fun getGitCommitInfo(project: Project): String {
-    return "debug"
-//    return project.providers
-//        .exec {
-//            commandLine("git", "rev-parse", "--short", "HEAD")
-//            workingDir(project.rootDir)
-//        }
-//        .standardOutput
-//        .asText
-//        .get()
-//        .trim()
+    return project.providers
+        .exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+            workingDir(project.rootDir)
+        }
+        .standardOutput
+        .asText
+        .get()
+        .trim()
 }
 
 /** 获取git的提交次数，作为versionCode 使用Provider来避免配置缓存问题 */
 private fun getCommitCount(project: Project): Int {
-    return 10000
-//    return project.providers
-//        .exec {
-//            commandLine("git", "rev-list", "--count", "HEAD")
-//            workingDir(project.rootDir)
-//        }
-//        .standardOutput
-//        .asText
-//        .get()
-//        .trim()
-//        .toInt()
+    return project.providers
+        .exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+            workingDir(project.rootDir)
+        }
+        .standardOutput
+        .asText
+        .get()
+        .trim()
+        .toInt()
 }
 
 /** android application 的gradle相关配置 扩展函数 */
