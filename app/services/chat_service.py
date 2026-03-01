@@ -1563,6 +1563,10 @@ async def generate_chat_image(
     enable_chat_image_match_fallback = (
         global_config_loaded_from_config_yaml.agent.enable_chat_image_match_fallback
     )
+    logger.info(
+        f"消息生图兜底配置 - enabled={enable_chat_image_match_fallback} "
+        f"agent_id={agent_id} message_id={message_id}"
+    )
 
     # 预先构建提示词，用于匹配已生成图片（可按配置禁用）
     current_prompt = None
@@ -1593,7 +1597,15 @@ async def generate_chat_image(
                 char_name=char_name,
                 user_name=user_name,
             )
+            logger.info(
+                f"消息生图兜底提示词已构建 - agent_id={agent_id} "
+                f"message_id={message_id} prompt_length={len(current_prompt)}"
+            )
         except Exception as e:
+            logger.info(
+                f"消息生图兜底提示词构建失败，兜底可能跳过 - agent_id={agent_id} "
+                f"message_id={message_id} error_type={type(e).__name__}"
+            )
             logger.warning(f"构建提示词失败，将无法匹配已生成图片: {e}")
 
     generation_start_time = time.time()
@@ -1624,11 +1636,9 @@ async def generate_chat_image(
             except Exception as e:
                 if _is_429_resource_exhausted(e):
                     logger.info(
-                        "消息生图 429，重试备用模型 - agent_id=%s message_id=%s primary=%s fallback=%s",
-                        agent_id,
-                        message_id,
-                        primary_model,
-                        fallback_model,
+                        f"消息生图 429，重试备用模型 - agent_id={agent_id} "
+                        f"message_id={message_id} primary={primary_model} "
+                        f"fallback={fallback_model}"
                     )
                     image_generation_result = (
                         await image_generation_service.generate_chat_image(
@@ -1675,6 +1685,10 @@ async def generate_chat_image(
 
         # 若启用兜底，生图失败时尝试匹配已生成图片
         if enable_chat_image_match_fallback and current_prompt:
+            logger.info(
+                f"消息生图失败后尝试兜底匹配 - agent_id={agent_id} "
+                f"message_id={message_id} failure_type={type(e).__name__}"
+            )
             fallback_result = await _try_match_existing_image(
                 db=db,
                 chat_id=chat.id,
@@ -1689,6 +1703,16 @@ async def generate_chat_image(
             )
             if fallback_result:
                 return fallback_result
+        else:
+            fallback_skip_reason = (
+                "fallback_disabled"
+                if not enable_chat_image_match_fallback
+                else "fallback_prompt_unavailable"
+            )
+            logger.info(
+                f"消息生图失败后跳过兜底匹配 - agent_id={agent_id} "
+                f"message_id={message_id} reason={fallback_skip_reason}"
+            )
 
         # 检查是否是安全过滤器阻止（用于记录日志和返回业务错误）
         error_message_lower = error_message.lower()
@@ -1751,6 +1775,10 @@ async def generate_chat_image(
 
         # 若启用兜底，生图失败时尝试匹配已生成图片
         if enable_chat_image_match_fallback and current_prompt:
+            logger.info(
+                f"消息生图失败后尝试兜底匹配 - agent_id={agent_id} "
+                f"message_id={message_id} failure_type={failure_type}"
+            )
             fallback_result = await _try_match_existing_image(
                 db=db,
                 chat_id=chat.id,
@@ -1765,6 +1793,16 @@ async def generate_chat_image(
             )
             if fallback_result:
                 return fallback_result
+        else:
+            fallback_skip_reason = (
+                "fallback_disabled"
+                if not enable_chat_image_match_fallback
+                else "fallback_prompt_unavailable"
+            )
+            logger.info(
+                f"消息生图失败后跳过兜底匹配 - agent_id={agent_id} "
+                f"message_id={message_id} reason={fallback_skip_reason}"
+            )
 
         logger.error(
             f"图片生成失败 - Agent ID: {agent_id}, "
