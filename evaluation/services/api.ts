@@ -699,6 +699,14 @@ export const userAnalyticsApi = {
   }): Promise<import("../types").UserAnalyticsReportsResponse> =>
     apiClient.get("/evaluation/user-analytics/reports", params),
 
+  // 获取指定日期的语音播报与语音通话录音（按用户-角色分组）
+  getDailyVoiceAudios: (
+    report_date: string,
+  ): Promise<import("../types").DailyVoiceAudiosResponse> =>
+    apiClient.get("/evaluation/user-analytics/daily-voice-audios", {
+      report_date,
+    }),
+
   // 获取用户注册统计
   getNewUsers: (
     params?: AnalyticsDateParams,

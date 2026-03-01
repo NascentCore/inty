@@ -37,13 +37,13 @@ OPS_PORT="${PORT:-8001}"
 if [ "$LOCAL" = true ]; then
   echo "Seeding report test data..."
   python scripts/seed_report_test_data.py
-  echo "Starting ops in dev mode on port $OPS_PORT..."
-  uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload &>/dev/null &
+  
   echo "Initializing admin user ..."
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
-  echo "Starting evaluation frontend in dev mode..."
-  evaluation/build.sh # 安装依赖库并构建前端
-  cd evaluation && npm run dev
+  echo "Run the following command to start the evaluation frontend in dev mode..."
+  echo "cd evaluation && npm run dev"
+  echo "Starting ops backend server in dev mode on port $OPS_PORT..."
+  uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload
 else
   echo "Starting ops in normal mode on port $OPS_PORT..."
   uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT"

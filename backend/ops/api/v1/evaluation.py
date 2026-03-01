@@ -1828,6 +1828,62 @@ async def get_user_analytics_reports(
 
 
 @router.get(
+    "/user-analytics/daily-voice-audios",
+    response_model=schemas.user_analytics.DailyVoiceAudiosResponse,
+    tags=[INTY_EVAL_TAG, NOT_USED_TAG],
+)
+async def get_daily_voice_audios(
+    *,
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
+    report_date: str = Query(..., description="日报日期 (YYYY-MM-DD)"),
+) -> Any:
+    """获取指定日期的语音播报与语音通话录音，按用户-角色分组"""
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from app.schemas import user_analytics as ua_schemas
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        act_start = datetime.strptime(report_date, "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        )
+        act_end = act_start + timedelta(days=1)
+        service = UserAnalyticsService(db)
+        voice_message_groups, voice_call_groups = (
+            await service.get_voice_audios_on_date(act_start, act_end)
+        )
+
+        def to_group(g: Dict[str, Any]) -> ua_schemas.VoiceAudioGroupByUserAgent:
+            return ua_schemas.VoiceAudioGroupByUserAgent(
+                user_id=g["user_id"],
+                agent_id=g["agent_id"],
+                agent_name=g.get("agent_name") or "",
+                audios=[
+                    ua_schemas.VoiceAudioItem(
+                        audio_url=a["audio_url"],
+                        message_id=a["message_id"],
+                        created_at=a.get("created_at"),
+                        duration_seconds=a.get("duration_seconds"),
+                    )
+                    for a in g.get("audios") or []
+                ],
+            )
+
+        return ua_schemas.DailyVoiceAudiosResponse(
+            voice_message_audios=[to_group(g) for g in voice_message_groups],
+            voice_call_audios=[to_group(g) for g in voice_call_groups],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取日报语音录音失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch daily voice audios"
+        )
+
+
+@router.get(
     "/user-analytics/llm-latency",
     response_model=schemas.user_analytics.LLMLatencyResponse,
     tags=[INTY_EVAL_TAG],

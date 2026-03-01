@@ -378,6 +378,37 @@ class UserAnalyticsReportGeneratedImageItem(BaseModel):
     created_at: Optional[str] = Field(None, description="创建时间")
 
 
+class VoiceAudioItem(BaseModel):
+    """单条语音录音项（播报或通话）"""
+
+    audio_url: str = Field(description="GCS 或 CDN 音频 URL")
+    message_id: int = Field(description="chat_history 消息 ID")
+    created_at: Optional[str] = Field(None, description="创建时间 ISO 字符串")
+    duration_seconds: Optional[float] = Field(None, description="音频时长（秒）")
+
+
+class VoiceAudioGroupByUserAgent(BaseModel):
+    """按用户-角色分组的语音录音列表"""
+
+    user_id: str = Field(description="用户 ID")
+    agent_id: str = Field(description="角色 ID")
+    agent_name: str = Field(default="", description="角色名称")
+    audios: List[VoiceAudioItem] = Field(
+        default_factory=list, description="该用户-角色下的录音列表"
+    )
+
+
+class DailyVoiceAudiosResponse(BaseModel):
+    """日报当日语音播报与语音通话录音（按用户-角色分组）"""
+
+    voice_message_audios: List[VoiceAudioGroupByUserAgent] = Field(
+        default_factory=list, description="语音播报（TTS）按用户-角色分组"
+    )
+    voice_call_audios: List[VoiceAudioGroupByUserAgent] = Field(
+        default_factory=list, description="语音通话录音按用户-角色分组"
+    )
+
+
 class UserAnalyticsReportDailyTopAgentItem(BaseModel):
     """日报中按聊天轮数排序的角色项"""
 

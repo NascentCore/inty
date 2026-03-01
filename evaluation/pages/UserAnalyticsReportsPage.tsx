@@ -5,11 +5,11 @@
  */
 
 import React, {
-  useState,
-  useEffect,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import {
   Card,
@@ -38,9 +38,11 @@ import Plot from "react-plotly.js";
 import type { Data } from "plotly.js";
 import { userAnalyticsApi } from "../services/api";
 import type {
+  DailyVoiceAudiosResponse,
   UserAnalyticsReportItem,
   UserAnalyticsStatsResponse,
   UserAnalyticsReportCharts,
+  VoiceAudioGroupByUserAgent,
 } from "../types";
 import {
   DAILY_USAGE_CHART_METRICS,
@@ -97,6 +99,7 @@ const USAGE_MARKER_SIZE = 6;
 const REPORTS_LIMIT = 30;
 const DAILY_LATEST_LIMIT = 1;
 const DAILY_GENERATED_IMAGES_PREVIEW_LIMIT = 60;
+const DAILY_VOICE_AUDIOS_PREVIEW_LIMIT = 20;
 const TOP_AGENTS_TREND_CHART_HEIGHT = 420;
 const TOP_AGENT_MARKER_SIZE = 20;
 const TOP_AGENT_TREND_COLORS = [
@@ -203,17 +206,131 @@ function getAgentTrendColor(agentName: string): string {
   return TOP_AGENT_TREND_COLORS[colorIndex];
 }
 
+function VoiceAudiosGroupCard({
+  title,
+  groups,
+  previewLimit,
+}: {
+  title: string;
+  groups: VoiceAudioGroupByUserAgent[];
+  previewLimit: number;
+}) {
+  if (groups.length === 0) {
+    return (
+      <Card title={title} style={{ marginTop: "24px" }}>
+        <Empty description="当天无数据" />
+      </Card>
+    );
+  }
+  return (
+    <Card
+      title={`${title}（${groups.length} 组）`}
+      style={{ marginTop: "24px" }}
+      styles={{ body: { maxHeight: 420, overflowY: "auto" } }}
+    >
+      {groups.slice(0, previewLimit).map((group, idx) => (
+        <div
+          key={`${group.user_id}-${group.agent_id}-${idx}`}
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            backgroundColor: "#fafafa",
+            borderRadius: 8,
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+            用户 {group.user_id.slice(0, 8)}… · {group.agent_name || group.agent_id}
+          </div>
+          {group.audios.map((a, i) => (
+            <div key={i} style={{ marginTop: 8 }}>
+              <Space size={8} align="center">
+                <span style={{ fontSize: 12, color: "#999" }}>Voice</span>
+                <a
+                  href={a.audio_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12 }}
+                >
+                  Open recording
+                </a>
+                {a.duration_seconds != null && (
+                  <span style={{ fontSize: 12, color: "#999" }}>
+                    {a.duration_seconds.toFixed(1)}s
+                  </span>
+                )}
+              </Space>
+              <audio
+                src={a.audio_url}
+                controls
+                preload="metadata"
+                style={{ width: "100%", maxWidth: 320, height: 32, marginTop: 4 }}
+              />
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: "#999",
+                  wordBreak: "break-all",
+                  marginTop: 4,
+                }}
+                title={a.audio_url}
+              >
+                {a.audio_url}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+      {groups.length > previewLimit && (
+        <div style={{ marginTop: 12, color: "#999", fontSize: 12 }}>
+          仅展示前 {previewLimit} 组
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function ReportContent({
   stats,
   charts,
   reportType,
+  reportDate,
+  voiceAudiosCache,
+  setVoiceAudiosCache,
 }: {
   stats: UserAnalyticsStatsResponse;
   charts: UserAnalyticsReportCharts | null;
   reportType: ReportType;
+  reportDate?: string;
+  voiceAudiosCache: Record<string, DailyVoiceAudiosResponse | null>;
+  setVoiceAudiosCache: React.Dispatch<
+    React.SetStateAction<Record<string, DailyVoiceAudiosResponse | null>>
+  >;
 }) {
   const [previewImageDetail, setPreviewImageDetail] =
     useState<GeneratedImageDetail | null>(null);
+  const [voiceAudiosLoading, setVoiceAudiosLoading] = useState(false);
+  useEffect(() => {
+    if (
+      reportType !== "daily" ||
+      !reportDate ||
+      voiceAudiosCache[reportDate] !== undefined
+    ) {
+      return;
+    }
+    setVoiceAudiosLoading(true);
+    userAnalyticsApi
+      .getDailyVoiceAudios(reportDate)
+      .then((data) => {
+        setVoiceAudiosCache((prev) => ({ ...prev, [reportDate!]: data }));
+      })
+      .finally(() => setVoiceAudiosLoading(false));
+  }, [
+    reportType,
+    reportDate,
+    voiceAudiosCache,
+    setVoiceAudiosCache,
+  ]);
   const roundsDistributionBySession = useMemo(
     () =>
       charts
@@ -331,6 +448,28 @@ function ReportContent({
             <Empty description="当天无生图" />
           )}
         </Card>
+      )}
+      {reportType === "daily" && reportDate && (
+        <>
+          {voiceAudiosLoading ? (
+            <Card title="当天语音播报（按用户-角色）" style={{ marginTop: "24px" }}>
+              <Spin />
+            </Card>
+          ) : voiceAudiosCache[reportDate] ? (
+            <>
+              <VoiceAudiosGroupCard
+                title="当天语音播报（按用户-角色）"
+                groups={voiceAudiosCache[reportDate]!.voice_message_audios}
+                previewLimit={DAILY_VOICE_AUDIOS_PREVIEW_LIMIT}
+              />
+              <VoiceAudiosGroupCard
+                title="当天语音通话录音（按用户-角色）"
+                groups={voiceAudiosCache[reportDate]!.voice_call_audios}
+                previewLimit={DAILY_VOICE_AUDIOS_PREVIEW_LIMIT}
+              />
+            </>
+          ) : null}
+        </>
       )}
       <GeneratedImageDetailModal
         open={!!previewImageDetail}
@@ -768,6 +907,9 @@ export const UserAnalyticsReportsPage: React.FC = () => {
   );
   const [loadingReports, setLoadingReports] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
+  const [voiceAudiosCache, setVoiceAudiosCache] = useState<
+    Record<string, DailyVoiceAudiosResponse | null>
+  >({});
   const requestIdRef = useRef(0);
 
   const isStaleRequest = useCallback(
@@ -1053,10 +1195,13 @@ export const UserAnalyticsReportsPage: React.FC = () => {
             stats={report.stats}
             charts={report.charts}
             reportType={report.report_type}
+            reportDate={report.report_date}
+            voiceAudiosCache={voiceAudiosCache}
+            setVoiceAudiosCache={setVoiceAudiosCache}
           />
         ),
       })),
-    [sortedReports],
+    [sortedReports, voiceAudiosCache],
   );
 
   return (

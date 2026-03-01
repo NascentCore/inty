@@ -48,7 +48,7 @@ verification:
   code_expire_minutes: 5 
 
 logging:
-  level: "DEBUG"
+  level: INFO
   colorize: true
 
 firebase:
