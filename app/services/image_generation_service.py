@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 import PIL.Image
 from pydantic import BaseModel, Field
-from app.core.google_genai.wrapped_client import WrappedClient
+from app.core.google_genai.wrapped_client import get_wrapped_client
 from langsmith.run_helpers import traceable
 from loguru import logger
 from sqlalchemy import select
@@ -54,6 +54,7 @@ from app.utils.models_catalog import (
     CHAT_IMAGE_GEN_MODELS,
     NANO_BANANA,
     NANO_BANANA_2,
+    NANO_BANANA_MODELS,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
@@ -405,16 +406,10 @@ class ImageGenerationService:
         gcs_uri_base: str,
         system_instructions: Optional[List[str]] = None,
     ) -> GeneratedImageProcessResult:
-        if model_id not in (
-            NANO_BANANA.id_on_provider,
-            NANO_BANANA_2.id_on_provider,
-            NANO_BANANA_PRO.id_on_provider,
-        ):
-            raise ValueError(
-                f"Chat image Gemini model {model_id!r} not supported by WrappedClient"
-            )
+        if model_id not in [m.id_on_provider for m in NANO_BANANA_MODELS]:
+            raise ValueError(f"{model_id!r} not supported by WrappedClient")
 
-        client = WrappedClient(client=get_genai_client())
+        client = get_wrapped_client()
         contents = [reference_image_url]
         if user_reference_image_url:
             contents.append(user_reference_image_url)
