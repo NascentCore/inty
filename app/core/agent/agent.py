@@ -672,6 +672,8 @@ class Agent:
     MAX_MESSAGES_ALL = 0
 
     def _get_chat_messages_limit(self, *, is_subscribed: bool) -> int:
+        if self._is_intellimate_official():
+            return global_config.agent.official_assistant_chat_messages_limit
         limits = global_config.app.limits
         if is_subscribed:
             return limits.sub_user_chat_messages_limit
