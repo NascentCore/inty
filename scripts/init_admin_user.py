@@ -32,8 +32,12 @@ def generate_readable_id() -> str:
 def create_user(
     user_id: str = DEFAULT_ADMIN_USER_ID,
     is_superuser: bool = True,
+    token_file: Path | None = None,
 ):
-    """Create an admin user in the database."""
+    """Create an admin user in the database.
+
+    Optionally write the bearer token to a file via --token-file path.
+    """
     logger.info("Starting admin user creation...")
 
     # Create database session
@@ -74,6 +78,11 @@ def create_user(
     logger.info(f"Email: {created_user.email}")
     logger.info(f"Readable ID: {created_user.readable_id}")
     logger.info(f"🔑 Bearer Token: {access_token}")
+    print(f"🔑 Bearer Token: {access_token}")
+
+    if token_file is not None:
+        token_file.write_text(access_token + "\n")
+        logger.info(f"Token written to {token_file}")
 
 
 if __name__ == "__main__":
