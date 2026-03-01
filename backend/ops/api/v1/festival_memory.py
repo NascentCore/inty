@@ -15,7 +15,7 @@ from app.api.tags import INTY_EVAL_TAG
 from app.api.types.llm_config import LLMConfig
 from app.api.utils.logger_route import LoggerRoute
 from app.models.memory import FestivalMemoryConfig
-from app.schemas.festival_memory import (
+from app.schemas.ops.festival_memory import (
     FestivalMemoryConfigCreate,
     FestivalMemoryConfigInDB,
     FestivalMemoryConfigUpdate,

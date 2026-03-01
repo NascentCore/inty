@@ -7,9 +7,11 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
+from app.schemas.ops.evaluation import BatchEvaluationRequest, EvaluationComparison, EvaluationExportRequest, EvaluationResultResponse, EvaluationSessionCreate, EvaluationSessionDetail, EvaluationSessionResponse, EvaluationStats, EvaluationTemplateCreate, EvaluationTemplateResponse, QuestionFileUpload, ScoringModelInfo
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
+from app.schemas.ops.user_analytics import AgentAnalyticsResponse, ConversationRoundsResponse, ConversationsDetailResponse, DailyNewUsersResponse, DailyVoiceAudiosResponse, ImageGenerationFailureAnalyticsResponse, ImageGenerationLatencyResponse, LLMLatencyResponse, LiveChatBasicStatsResponse, LiveChatLatencyResponse, PopularAgentsResponse, SessionMessagesResponse, UserAnalyticsReportCharts, UserAnalyticsReportItem, UserAnalyticsReportsResponse, UserAnalyticsStatsResponse, UserChatActivityItem, UserDailyMessagesResponse, UserGeneratedImagesResponse, UserRoundsDistributionItem, UserSessionsDetailResponse, UserSessionsResponse, UserTodayStatsResponse, UsersHittingLimitResponse
 from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
@@ -21,7 +23,7 @@ router = APIRouter(prefix="/evaluation", route_class=LoggerRoute)
 
 @router.get(
     "/sessions",
-    response_model=List[schemas.EvaluationSessionResponse],
+    response_model=List[EvaluationSessionResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_sessions(
@@ -55,13 +57,13 @@ async def get_evaluation_sessions(
 
 @router.post(
     "/sessions",
-    response_model=schemas.EvaluationSessionResponse,
+    response_model=EvaluationSessionResponse,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_session(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    session_in: schemas.EvaluationSessionCreate,
+    session_in: EvaluationSessionCreate,
     current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
@@ -140,7 +142,7 @@ async def start_evaluation_session(
 
 @router.get(
     "/sessions/{session_id}",
-    response_model=schemas.EvaluationSessionDetail,
+    response_model=EvaluationSessionDetail,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_session(
@@ -176,7 +178,7 @@ async def get_evaluation_session(
 
 @router.get(
     "/sessions/{session_id}/results",
-    response_model=List[schemas.EvaluationResultResponse],
+    response_model=List[EvaluationResultResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_results(
@@ -257,7 +259,7 @@ async def cancel_evaluation_session(
 
 @router.post(
     "/questions/parse",
-    response_model=schemas.QuestionFileUpload,
+    response_model=QuestionFileUpload,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def parse_questions_file(
@@ -312,7 +314,7 @@ async def parse_questions_file(
 
 @router.get(
     "/models",
-    response_model=List[schemas.ScoringModelInfo],
+    response_model=List[ScoringModelInfo],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_scoring_models(
@@ -360,7 +362,7 @@ async def validate_scoring_criteria(
 
 @router.get(
     "/stats",
-    response_model=schemas.EvaluationStats,
+    response_model=EvaluationStats,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_stats(
@@ -801,13 +803,13 @@ async def deploy_agent_to_production(
 
 @router.post(
     "/templates",
-    response_model=schemas.EvaluationTemplateResponse,
+    response_model=EvaluationTemplateResponse,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_evaluation_template(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    template_in: schemas.EvaluationTemplateCreate,
+    template_in: EvaluationTemplateCreate,
     current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
@@ -851,7 +853,7 @@ async def create_evaluation_template(
 
 @router.get(
     "/templates",
-    response_model=List[schemas.EvaluationTemplateResponse],
+    response_model=List[EvaluationTemplateResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_evaluation_templates(
@@ -900,13 +902,13 @@ async def get_evaluation_templates(
 
 @router.post(
     "/sessions/batch",
-    response_model=List[schemas.EvaluationSessionResponse],
+    response_model=List[EvaluationSessionResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def create_batch_evaluation(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    batch_request: schemas.BatchEvaluationRequest,
+    batch_request: BatchEvaluationRequest,
     current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
@@ -948,7 +950,7 @@ async def create_batch_evaluation(
 async def export_evaluation_results(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
-    export_request: schemas.EvaluationExportRequest,
+    export_request: EvaluationExportRequest,
     current_user: schemas.User = Depends(deps.get_current_superuser),
 ) -> Any:
     """
@@ -978,7 +980,7 @@ async def export_evaluation_results(
 
 @router.post(
     "/sessions/compare",
-    response_model=schemas.EvaluationComparison,
+    response_model=EvaluationComparison,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def compare_evaluation_sessions(
@@ -1110,7 +1112,7 @@ async def _find_user_info_by_identifier(
 
 @router.get(
     "/user-analytics/new-users",
-    response_model=List[schemas.user_analytics.DailyNewUsersResponse],
+    response_model=List[DailyNewUsersResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_new_users(
@@ -1153,7 +1155,7 @@ async def get_new_users(
 
 @router.get(
     "/user-analytics/user-activity",
-    response_model=List[schemas.user_analytics.UserChatActivityItem],
+    response_model=List[UserChatActivityItem],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_activity(
@@ -1196,7 +1198,7 @@ async def get_user_activity(
 
 @router.get(
     "/user-analytics/conversation-rounds",
-    response_model=List[schemas.user_analytics.ConversationRoundsResponse],
+    response_model=List[ConversationRoundsResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_conversation_rounds(
@@ -1252,7 +1254,7 @@ async def get_conversation_rounds(
 
 @router.get(
     "/user-analytics/user-rounds-distribution",
-    response_model=List[schemas.user_analytics.UserRoundsDistributionItem],
+    response_model=List[UserRoundsDistributionItem],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_rounds_distribution(
@@ -1308,7 +1310,7 @@ async def get_user_rounds_distribution(
 
 @router.get(
     "/user-analytics/popular-agents",
-    response_model=List[schemas.user_analytics.PopularAgentsResponse],
+    response_model=List[PopularAgentsResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_popular_agents(
@@ -1361,7 +1363,7 @@ async def get_popular_agents(
 
 @router.get(
     "/user-analytics/users-hitting-limit",
-    response_model=List[schemas.user_analytics.UsersHittingLimitResponse],
+    response_model=List[UsersHittingLimitResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_users_hitting_limit(
@@ -1416,7 +1418,7 @@ async def get_users_hitting_limit(
 
 @router.get(
     "/user-analytics/agent-analytics",
-    response_model=List[schemas.user_analytics.AgentAnalyticsResponse],
+    response_model=List[AgentAnalyticsResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_agent_analytics(
@@ -1468,7 +1470,7 @@ async def get_agent_analytics(
 
 @router.get(
     "/user-analytics/user-sessions-detail",
-    response_model=List[schemas.user_analytics.UserSessionsDetailResponse],
+    response_model=List[UserSessionsDetailResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_sessions_detail(
@@ -1524,7 +1526,7 @@ async def get_user_sessions_detail(
 
 @router.get(
     "/user-analytics/conversations-detail",
-    response_model=List[schemas.user_analytics.ConversationsDetailResponse],
+    response_model=List[ConversationsDetailResponse],
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_conversations_detail(
@@ -1625,7 +1627,7 @@ async def get_conversations_detail(
 
 @router.get(
     "/user-analytics/stats",
-    response_model=schemas.user_analytics.UserAnalyticsStatsResponse,
+    response_model=UserAnalyticsStatsResponse,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_analytics_stats(
@@ -1677,7 +1679,7 @@ async def get_user_analytics_stats(
 
 @router.get(
     "/user-analytics/reports",
-    response_model=schemas.user_analytics.UserAnalyticsReportsResponse,
+    response_model=UserAnalyticsReportsResponse,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_user_analytics_reports(
@@ -1793,7 +1795,7 @@ async def get_user_analytics_reports(
             )
             charts_data = None
             if include_charts and row.charts:
-                charts_data = schemas.user_analytics.UserAnalyticsReportCharts(
+                charts_data = UserAnalyticsReportCharts(
                     new_users=row.charts.get("new_users", []),
                     conversation_rounds=row.charts.get("conversation_rounds", []),
                     user_rounds_distribution=row.charts.get(
@@ -1806,7 +1808,7 @@ async def get_user_analytics_reports(
                     daily_most_discussed_agent=daily_most_discussed_agent,
                 )
             reports.append(
-                schemas.user_analytics.UserAnalyticsReportItem(
+                UserAnalyticsReportItem(
                     id=row.id,
                     report_type=row.report_type,
                     report_date=row.report_date.isoformat(),
@@ -1818,7 +1820,7 @@ async def get_user_analytics_reports(
                 )
             )
 
-        return schemas.user_analytics.UserAnalyticsReportsResponse(reports=reports)
+        return UserAnalyticsReportsResponse(reports=reports)
 
     except Exception as e:
         logger.error(f"获取预计算报告失败: {str(e)}")
@@ -1829,7 +1831,7 @@ async def get_user_analytics_reports(
 
 @router.get(
     "/user-analytics/daily-voice-audios",
-    response_model=schemas.user_analytics.DailyVoiceAudiosResponse,
+    response_model=DailyVoiceAudiosResponse,
     tags=[INTY_EVAL_TAG, NOT_USED_TAG],
 )
 async def get_daily_voice_audios(
@@ -1885,7 +1887,7 @@ async def get_daily_voice_audios(
 
 @router.get(
     "/user-analytics/llm-latency",
-    response_model=schemas.user_analytics.LLMLatencyResponse,
+    response_model=LLMLatencyResponse,
     tags=[INTY_EVAL_TAG],
 )
 async def get_llm_latency_trend(
@@ -1941,7 +1943,7 @@ async def get_llm_latency_trend(
 
 @router.get(
     "/user-analytics/image-generation-latency",
-    response_model=schemas.user_analytics.ImageGenerationLatencyResponse,
+    response_model=ImageGenerationLatencyResponse,
     tags=[INTY_EVAL_TAG],
 )
 async def get_image_generation_latency_trend(
@@ -2001,8 +2003,7 @@ async def get_image_generation_latency_trend(
 
 @router.get(
     "/user-analytics/image-generation-failures",
-    response_model=schemas.user_analytics.ImageGenerationFailureAnalyticsResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=ImageGenerationFailureAnalyticsResponse,
 )
 async def get_image_generation_failure_analytics(
     *,
@@ -2062,8 +2063,7 @@ async def get_image_generation_failure_analytics(
 
 @router.get(
     "/user-analytics/live-chat-latency",
-    response_model=schemas.user_analytics.LiveChatLatencyResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=LiveChatLatencyResponse,
 )
 async def get_live_chat_latency_trend(
     *,
@@ -2120,8 +2120,7 @@ async def get_live_chat_latency_trend(
 
 @router.get(
     "/user-analytics/live-chat-stats",
-    response_model=schemas.user_analytics.LiveChatBasicStatsResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=LiveChatBasicStatsResponse,
 )
 async def get_live_chat_basic_stats(
     *,
@@ -2178,8 +2177,7 @@ async def get_live_chat_basic_stats(
 
 @router.get(
     "/user-analytics/user-daily-messages",
-    response_model=schemas.user_analytics.UserDailyMessagesResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=UserDailyMessagesResponse,
 )
 async def get_user_daily_messages(
     *,
@@ -2248,8 +2246,7 @@ async def get_user_daily_messages(
 
 @router.get(
     "/user-analytics/user-today-stats",
-    response_model=schemas.user_analytics.UserTodayStatsResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=UserTodayStatsResponse,
 )
 async def get_user_today_stats(
     *,
@@ -2285,8 +2282,7 @@ async def get_user_today_stats(
 
 @router.get(
     "/user-analytics/user-generated-images",
-    response_model=schemas.user_analytics.UserGeneratedImagesResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=UserGeneratedImagesResponse,
 )
 async def get_user_generated_images(
     *,
@@ -2408,8 +2404,7 @@ async def get_user_generated_images(
 
 @router.get(
     "/user-analytics/user-sessions",
-    response_model=schemas.user_analytics.UserSessionsResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=UserSessionsResponse,
 )
 async def get_user_sessions(
     *,
@@ -2443,8 +2438,7 @@ async def get_user_sessions(
 
 @router.get(
     "/user-analytics/session-messages",
-    response_model=schemas.user_analytics.SessionMessagesResponse,
-    tags=[INTY_EVAL_TAG],
+    response_model=SessionMessagesResponse,
 )
 async def get_session_messages(
     *,
@@ -2477,7 +2471,6 @@ async def get_session_messages(
 
 @router.get(
     "/agents/generated-images/counts",
-    tags=[INTY_EVAL_TAG],
 )
 async def get_all_agents_image_counts(
     *,

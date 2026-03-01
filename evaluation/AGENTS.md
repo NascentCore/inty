@@ -2,6 +2,7 @@
 
 这是一个用于支持 IntelliMate 产品运营的 web 工具；用户是产品经理（非工程师）；为他们提供角色管理、用户行为分析等等核心功能。
 
+- Do not add error handling, assumes user will retry
 - 只经由统一 API 层访问后端；避免在组件内直接拼接请求。
 - 变更需更新对应测试（vitest），并保持类型无误与构建通过。
 - 图片都保证完整显示
