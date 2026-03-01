@@ -42,14 +42,6 @@ internal data class OfficialAssistantFaqItem(
 internal fun officialAssistantFaqItems(): List<OfficialAssistantFaqItem> {
     return listOf(
         OfficialAssistantFaqItem(
-            titleResId = R.string.chat_official_faq_title_open_assistant_chat,
-            questionResId = R.string.chat_official_faq_question_open_assistant_chat,
-        ),
-        OfficialAssistantFaqItem(
-            titleResId = R.string.chat_official_faq_title_switch_backend,
-            questionResId = R.string.chat_official_faq_question_switch_backend,
-        ),
-        OfficialAssistantFaqItem(
             titleResId = R.string.chat_official_faq_title_restore_premium,
             questionResId = R.string.chat_official_faq_question_restore_premium,
         ),
