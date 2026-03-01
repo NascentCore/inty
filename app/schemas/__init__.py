@@ -1,6 +1,6 @@
 # DO NOT ADD ANY NEW IMPORTS IN THIS FILE !!!
 # THE EXISTING IMPORTS ARE KEPT FOR BACKWARD COMPATIBILITY ONLY !!!
-from app.schemas import user_analytics
+from app.schemas.analytics import user_analytics
 from app.schemas.agent import Agent as Agent
 from app.schemas.agent import AgentCreate as AgentCreate
 from app.schemas.agent import AgentFeatures as AgentFeatures
