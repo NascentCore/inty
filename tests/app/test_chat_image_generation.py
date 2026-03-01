@@ -86,7 +86,7 @@ class TestImageGenerationService:
                         {"role": "user", "content": "hello"},
                         {"role": "assistant", "content": "hi there"},
                     ],
-                    model_id_on_provider=NANO_BANANA.nickname,
+                    model_id_on_provider=NANO_BANANA.id_on_provider,
                     user_reference_image_url="https://example.com/user-selfie.jpg",
                 ),
                 gcs_uri_base="chat_images/agent-nickname",
@@ -120,7 +120,7 @@ class TestImageGenerationService:
                     message_history=[
                         {"role": "assistant", "content": "let's watch the sunset"},
                     ],
-                    model_id_on_provider=SEEDREAM_V4_5_EDIT.nickname,
+                    model_id_on_provider=SEEDREAM_V4_5_EDIT.id_on_provider,
                 ),
                 gcs_uri_base="chat_images/agent-seedream",
             )

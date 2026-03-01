@@ -53,10 +53,11 @@ from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
     CHAT_IMAGE_GEN_MODELS,
     NANO_BANANA,
+    NANO_BANANA_2,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
-    resolve_model_id_on_provider,
+    resolve_id_on_provider,
     resolve_nickname,
 )
 
@@ -357,7 +358,7 @@ class ImageGenerationService:
         解析聊天生图模型：支持直接传 provider model id，也支持传模型 nickname。
         model 可以是 GenAIModel.nickname 或 GenAIModel.id_on_provider。
         """
-        model = resolve_model_id_on_provider(id_or_nickname)
+        model = resolve_id_on_provider(id_or_nickname)
         if model:
             return model.id_on_provider
         model = resolve_nickname(id_or_nickname)
@@ -406,6 +407,7 @@ class ImageGenerationService:
     ) -> GeneratedImageProcessResult:
         if model_id not in (
             NANO_BANANA.id_on_provider,
+            NANO_BANANA_2.id_on_provider,
             NANO_BANANA_PRO.id_on_provider,
         ):
             raise ValueError(
