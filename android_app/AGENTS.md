@@ -1,6 +1,6 @@
 # IntelliMate Android app
 
-- Update docs/CHANGE_LOGS.md in PR that add or modify user-facing features and/or beahaviors
+- Update [change logs](/android_app/docs/CHANGE_LOGS.md) and [user manual](/docs/INTELLIMATE.md) when add or modify user-facing features and/or beahaviors
 - 新功能要添加 firebase 埋点来收集用户使用数据。
 - 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
   [MMKV](https://github.com/Tencent/MMKV) 已计划废弃
