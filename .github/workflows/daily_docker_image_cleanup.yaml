@@ -2,8 +2,8 @@ name: Daily Docker image cleanup
 
 on:
   schedule:
-    # Daily at 03:00 UTC
-    - cron: "0 3 * * *"
+    # Daily at 10:00 UTC
+    - cron: "0 10 * * *"
   workflow_dispatch:
 
 jobs:
