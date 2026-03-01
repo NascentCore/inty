@@ -18,7 +18,6 @@ import {
   PictureOutlined,
   ExclamationCircleOutlined,
   PhoneOutlined,
-  DashboardOutlined,
   FileTextOutlined,
   CalendarOutlined,
 } from "@ant-design/icons";
@@ -34,7 +33,6 @@ import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
-import { PerformanceAnalyticsPage } from "./pages/PerformanceAnalyticsPage";
 import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
@@ -61,7 +59,6 @@ type PageKey =
   | "character-themes"
   | "generated-images"
   | "report-feedback"
-  | "performance-analytics"
   | "festival-memory";
 
 interface NavigationItem {
@@ -84,6 +81,9 @@ const AppContent: React.FC = () => {
     const savedPage = localStorage.getItem("lastVisitedPage");
     if (savedPage === "live2d") {
       return "chat";
+    }
+    if (savedPage === "performance-analytics") {
+      return "user-analytics-reports";
     }
     return (savedPage as PageKey) || "chat";
   });
@@ -241,12 +241,6 @@ const AppContent: React.FC = () => {
       label: "消息生图系统设置",
       description: "配置图片生成等系统参数",
     },
-    {
-      key: "performance-analytics",
-      icon: <DashboardOutlined />,
-      label: "性能监控",
-      description: "查看 LLM、生图和 Live Chat 延迟趋势",
-    },
   ];
 
   // 获取页面标题
@@ -270,8 +264,6 @@ const AppContent: React.FC = () => {
         return "用户数据分析";
       case "user-analytics-reports":
         return "用户日报周报";
-      case "performance-analytics":
-        return "性能监控";
       case "user-daily-messages":
         return "用户每日消息";
       case "generated-images":
@@ -316,8 +308,6 @@ const AppContent: React.FC = () => {
         return <UserAnalyticsPage />;
       case "user-analytics-reports":
         return <UserAnalyticsReportsPage />;
-      case "performance-analytics":
-        return <PerformanceAnalyticsPage />;
       case "user-daily-messages":
         return <UserDailyMessagesPage />;
       case "generated-images":
