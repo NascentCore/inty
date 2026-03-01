@@ -1,5 +1,6 @@
 # Pydantic models for API endpoints
 
+- Ops platform analytics schemas live under `app/schemas/analytics/` (e.g. user_analytics).
 - Must keep consistent between data types here and
   [kotlin data types](/android_app/library/inty)
 - Also keep consistent with [SqlAlchemy table models](/app/models/)

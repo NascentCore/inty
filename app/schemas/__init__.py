@@ -1,6 +1,5 @@
 # DO NOT ADD ANY NEW IMPORTS IN THIS FILE !!!
 # THE EXISTING IMPORTS ARE KEPT FOR BACKWARD COMPATIBILITY ONLY !!!
-from app.schemas import user_analytics
 from app.schemas.agent import Agent as Agent
 from app.schemas.agent import AgentCreate as AgentCreate
 from app.schemas.agent import AgentFeatures as AgentFeatures
@@ -43,27 +42,6 @@ from app.schemas.chat import Message as Message
 from app.schemas.chat import MessageCreate as MessageCreate
 from app.schemas.chat import MessageList as MessageList
 from app.schemas.chat import MessageUpdate as MessageUpdate
-from app.schemas.evaluation import BatchEvaluationRequest as BatchEvaluationRequest
-from app.schemas.evaluation import EvaluationComparison as EvaluationComparison
-from app.schemas.evaluation import EvaluationExportRequest as EvaluationExportRequest
-from app.schemas.evaluation import (
-    EvaluationInteractionResponse as EvaluationInteractionResponse,
-)
-from app.schemas.evaluation import EvaluationResultResponse as EvaluationResultResponse
-from app.schemas.evaluation import EvaluationSessionCreate as EvaluationSessionCreate
-from app.schemas.evaluation import EvaluationSessionDetail as EvaluationSessionDetail
-from app.schemas.evaluation import (
-    EvaluationSessionResponse as EvaluationSessionResponse,
-)
-from app.schemas.evaluation import EvaluationSessionUpdate as EvaluationSessionUpdate
-from app.schemas.evaluation import EvaluationStats as EvaluationStats
-from app.schemas.evaluation import EvaluationTemplateCreate as EvaluationTemplateCreate
-from app.schemas.evaluation import (
-    EvaluationTemplateResponse as EvaluationTemplateResponse,
-)
-from app.schemas.evaluation import QuestionFileUpload as QuestionFileUpload
-from app.schemas.evaluation import ScoringModelInfo as ScoringModelInfo
-from app.schemas.evaluation import WebSocketMessage as WebSocketMessage
 from app.schemas.resource import Resource as Resource
 from app.schemas.resource import ResourceCreate as ResourceCreate
 from app.schemas.resource import ResourceInDB as ResourceInDB
