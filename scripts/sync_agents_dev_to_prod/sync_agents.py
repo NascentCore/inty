@@ -331,6 +331,13 @@ def compare_agents(agent1: Agent, agent2: Agent) -> bool:
     return False
 
 
+def needs_agent_update(source_agent: Agent, target_agent: Agent) -> bool:
+    """判断目标角色是否需要更新（包含恢复软删除）。"""
+    if target_agent.deleted_at is not None:
+        return True
+    return compare_agents(source_agent, target_agent)
+
+
 def copy_agent_fields(source: Agent, target: Agent) -> None:
     """将源Agent的字段复制到目标Agent"""
     for field in FIELDS_TO_SYNC:
@@ -367,7 +374,7 @@ async def sync_agents(
     to_update_ids = [
         agent_id
         for agent_id in to_check_update_ids
-        if compare_agents(source_agents[agent_id], target_agents[agent_id])
+        if needs_agent_update(source_agents[agent_id], target_agents[agent_id])
     ]
 
     logger.info("")
@@ -441,6 +448,7 @@ async def sync_agents(
                 target_agent = result.scalar_one()
 
                 copy_agent_fields(source_agent, target_agent)
+                target_agent.deleted_at = None
                 target_agent.readable_id = await ensure_unique_readable_id(
                     target_session, target_agent.readable_id, exclude_agent_id=agent_id
                 )
@@ -580,8 +588,14 @@ async def main():
                     source_list = [a for a in source_list if a.name == args.agent_name]
                 source_agents = {a.id: a for a in source_list}
 
-                prod_list = await fetch_agents(prod_session, user_id)
-                target_agents = {a.id: a for a in prod_list}
+                source_ids = list(source_agents.keys())
+                if source_ids:
+                    result = await prod_session.execute(
+                        select(Agent).where(Agent.id.in_(source_ids))
+                    )
+                    target_agents = {a.id: a for a in result.scalars().all()}
+                else:
+                    target_agents = {}
 
                 result = await dev_session.execute(
                     select(User).where(User.id == user_id)
@@ -608,9 +622,7 @@ async def main():
 
                 target_ids = [a.id for a in source_list]
                 result = await target_session.execute(
-                    select(Agent).where(
-                        Agent.id.in_(target_ids), Agent.deleted_at.is_(None)
-                    )
+                    select(Agent).where(Agent.id.in_(target_ids))
                 )
                 target_agents = {a.id: a for a in result.scalars().all()}
 
