@@ -102,7 +102,7 @@ def _truncate_trace_text(value: Any) -> str:
     return text[:_MAX_TRACE_TEXT_PREVIEW_LEN] + "…"
 
 
-def _process_inputs_generate_chat_image_for_message(inputs: Dict[str, Any]) -> Dict[str, Any]:
+def _process_inputs_generate_chat_image(inputs: Dict[str, Any]) -> Dict[str, Any]:
     agent_data = inputs.get("agent_data") or {}
     message_content = inputs.get("message_content") or ""
     output: Dict[str, Any] = {
@@ -118,7 +118,7 @@ def _process_inputs_generate_chat_image_for_message(inputs: Dict[str, Any]) -> D
     return output
 
 
-def _process_outputs_generate_chat_image_for_message(outputs: Any) -> Any:
+def _process_outputs_generate_chat_image(outputs: Any) -> Any:
     if not isinstance(outputs, dict):
         return outputs
     prompt = outputs.get("prompt")
@@ -830,12 +830,12 @@ class ImageGenerationService:
         )
 
     @traceable(
-        name="generate_chat_image_for_message",
+        name="generate_chat_image",
         run_type="chain",
-        process_inputs=_process_inputs_generate_chat_image_for_message,
-        process_outputs=_process_outputs_generate_chat_image_for_message,
+        process_inputs=_process_inputs_generate_chat_image,
+        process_outputs=_process_outputs_generate_chat_image,
     )
-    async def generate_chat_image_for_message(
+    async def generate_chat_image(
         self,
         db: AsyncSession,
         session_id: str,

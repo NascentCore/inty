@@ -299,7 +299,7 @@ class TestImageGenerationService:
         }
         message_content = "给我画一张图片"
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -448,7 +448,7 @@ class TestImageGenerationService:
         }
         message_content = "draw me a portrait"
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -566,7 +566,7 @@ class TestImageGenerationService:
         }
         message_content = "generate a scene with us"
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -746,7 +746,7 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -871,7 +871,7 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
