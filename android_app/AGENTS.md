@@ -1,5 +1,6 @@
 # IntelliMate Android app
 
+- Do not try to test using Android emulator (the environment does not have KVM)
 - Update [change logs](/android_app/docs/CHANGE_LOGS.md) and [user manual](/docs/INTELLIMATE.md) when add or modify user-facing features and/or beahaviors
 - 新功能要添加 firebase 埋点来收集用户使用数据。
 - 使用 [DataStore](https://developer.android.com/reference/kotlin/androidx/datastore/core/DataStore)，
