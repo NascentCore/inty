@@ -2,6 +2,7 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.utils.HeartAppUtils
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -93,9 +94,11 @@ import com.ai.intellimate.chat.ui.ChatTopBar
 import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.ui.ImagePickItem
 import com.ai.intellimate.chat.ui.KeepTalkingFloatingButton
+import com.ai.intellimate.chat.ui.OfficialAssistantFaqQuestions
 import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
+import com.ai.intellimate.chat.ui.officialAssistantFaqItems
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -215,6 +218,8 @@ internal fun ChatPage(
     val userProfileViewModel = viewModel<ModifyProfileViewModel>()
     val context = LocalContext.current
     val agentInfo by chatViewModel.agentInfo.collectAsState()
+    val officialAssistantFaqQuickItems = remember { officialAssistantFaqItems() }
+    val isOfficialAssistantChat = AgentConstants.isIntelliMateAgent(agentInfo?.id, agentInfo?.name)
 
     // 用户自建私有角色不展示 Boost 相关功能
     val shouldShowBoostUi = agentInfo?.isUserCreatedPrivateRole() != true
@@ -614,6 +619,31 @@ internal fun ChatPage(
                             }
                             showPremiumDialog = false
                         }
+                    }
+
+                    if (isOfficialAssistantChat) {
+                        OfficialAssistantFaqQuestions(
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(
+                                        horizontal = UiConfigs.ChatPage.OfficialAssistantFaq.HorizontalPadding
+                                    ),
+                            items = officialAssistantFaqQuickItems,
+                            onQuestionClick = { item ->
+                                chatViewModel.setInputMessage(context.getString(item.questionResId))
+                                inputFocusRequester.requestFocus()
+                                onInputFocusChange(true)
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "official_faq_question",
+                                    "agent_id" to agentInfo?.id,
+                                    "agent_name" to agentInfo?.name,
+                                    "faq_title" to context.getString(item.titleResId),
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                )
+                            },
+                        )
+                        Spacer(Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing))
                     }
                 }
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()

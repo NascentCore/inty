@@ -796,6 +796,42 @@ object UiConfigs {
             val iconSize = 24.dp
         }
 
+        /** 官方助手 FAQ 快捷问题区配置（Official Assistant FAQ Quick Questions） */
+        object OfficialAssistantFaq {
+            /** FAQ 区左右内边距 */
+            val HorizontalPadding = 16.dp
+
+            /** FAQ 区按钮之间的横向间距 */
+            val HorizontalSpacing = 8.dp
+
+            /** FAQ 区按钮之间的纵向间距 */
+            val VerticalSpacing = 8.dp
+
+            /** FAQ 区和下方内容之间的间距 */
+            val BottomSpacing = 12.dp
+
+            /** FAQ 胶囊按钮圆角 */
+            val ButtonCornerRadius = 24.dp
+
+            /** FAQ 按钮横向内边距 */
+            val ButtonHorizontalPadding = 14.dp
+
+            /** FAQ 按钮纵向内边距 */
+            val ButtonVerticalPadding = 8.dp
+
+            /** FAQ 描边宽度 */
+            val BorderWidth = 1.dp
+
+            /** FAQ 描边透明度 */
+            const val BorderAlpha = 0.72f
+
+            /** FAQ 按钮背景透明度 */
+            const val ButtonBackgroundAlpha = 0.2f
+
+            /** FAQ 按钮标题最大行数 */
+            const val ButtonTextMaxLines = 1
+        }
+
         /** 聊天输入框配置 - 适用于聊天输入框的尺寸、间距等设置 */
         object ChatInput {
             /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */

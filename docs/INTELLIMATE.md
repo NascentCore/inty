@@ -50,6 +50,7 @@ Click the **Messages** or the **2nd** icon from the left
 ### Official Assistant Chat entry
 
 Tap the **middle** icon to open the chat screen with the IntelliMate official assistant.
+In this official chat page, you can use the FAQ quick-question buttons near the top to prefill common long-form questions into the input box (they are not auto-sent).
 
 ### Explore iMates page
 
