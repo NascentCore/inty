@@ -35,7 +35,10 @@ def select_chat_image_model(*, user: object, is_subscribed: bool) -> GenAIModel:
     nickname = (
         config.sub_user_chat_image_model if is_subscribed else config.free_user_chat_image_model
     )
-    return resolve_nickname(nickname)
+    model = resolve_nickname(nickname)
+    if not model:
+        raise ValueError(f"Chat image model {nickname!r} not allowed; allowed: {allowed_nicknames}")
+    return model
 
 
 def select_chat_music_model(*, user: object, is_subscribed: bool) -> str:

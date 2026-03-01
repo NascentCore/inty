@@ -639,7 +639,6 @@ ChatMusicGenerationAPIResponse: TypeAlias = schemas.APIResponse[
         "注意：路径参数 `agent_id` 仅作为目前的名称，实际应为 `chat_id`。未来如需扩展可直接重命名。"
         "agent id 则代表与该 agent 的*当前*会话的 id"
     ),
-    tags=[INTY_EVAL_TAG],
 )
 async def generate_chat_image(
     *,
