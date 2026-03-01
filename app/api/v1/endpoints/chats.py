@@ -25,7 +25,7 @@ from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
-from app.schemas.ops.evaluation import SurpriseSnapUnlockRequest
+from backend.ops.schemas.evaluation import SurpriseSnapUnlockRequest
 from app.schemas.response import (
     APIResponse,
     BizError,

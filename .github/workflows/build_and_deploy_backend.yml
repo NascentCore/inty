@@ -7,6 +7,7 @@ on:
     paths:
       # 后端代码
       - "app/**/*.py"
+      - "app/schemas/ops/**/*.py"
       - "alembic/**/*.py"
       - "backend/inty/*.py"
       - "backend/inty/start.sh"
