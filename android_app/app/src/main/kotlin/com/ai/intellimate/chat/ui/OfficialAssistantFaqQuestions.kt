@@ -18,7 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
-internal const val OFFICIAL_ASSISTANT_FAQ_MAX_ITEMS = 9
+internal const val OFFICIAL_ASSISTANT_FAQ_MAX_ITEMS = 7
 
 /**
  * 官方助手 FAQ 快捷问题项（Official Assistant FAQ Item）。
