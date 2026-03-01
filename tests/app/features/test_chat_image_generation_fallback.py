@@ -93,7 +93,7 @@ async def test_chat_image_generation_fallback_returns_matched_image(
 
     # 3) 主生图强制失败，触发兜底
     monkeypatch.setattr(
-        "app.services.image_generation_service.image_generation_service.generate_chat_image_for_message",
+        "app.services.image_generation_service.image_generation_service.generate_chat_image",
         AsyncMock(side_effect=ValueError("simulated primary failure")),
     )
 

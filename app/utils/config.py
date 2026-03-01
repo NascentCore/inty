@@ -608,10 +608,8 @@ def _validate_config(config: Config):
         raise ValueError("elevenlabs.api_key is required")
 
     # 消息生图模型 nickname 必须能解析为允许的模型
-    from app.utils.models_catalog import resolve_chat_image_model
-
-    resolve_chat_image_model(config.agent.free_user_chat_image_model)
-    resolve_chat_image_model(config.agent.sub_user_chat_image_model)
+    models_catalog.must_resolve_nickname(config.agent.free_user_chat_image_model)
+    models_catalog.must_resolve_nickname(config.agent.sub_user_chat_image_model)
 
     # 校验并自动修正 limits 配置
     limits = config.app.limits

@@ -72,7 +72,7 @@ class TestImageGenerationService:
             )
 
         with patch(
-            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
             new=fake_async_generate_image,
         ), patch(
             "app.services.image_generation_service.get_genai_client",
@@ -86,7 +86,7 @@ class TestImageGenerationService:
                         {"role": "user", "content": "hello"},
                         {"role": "assistant", "content": "hi there"},
                     ],
-                    model=NANO_BANANA.nickname,
+                    model_id_on_provider=NANO_BANANA.id_on_provider,
                     user_reference_image_url="https://example.com/user-selfie.jpg",
                 ),
                 gcs_uri_base="chat_images/agent-nickname",
@@ -120,7 +120,7 @@ class TestImageGenerationService:
                     message_history=[
                         {"role": "assistant", "content": "let's watch the sunset"},
                     ],
-                    model=SEEDREAM_V4_5_EDIT.nickname,
+                    model_id_on_provider=SEEDREAM_V4_5_EDIT.id_on_provider,
                 ),
                 gcs_uri_base="chat_images/agent-seedream",
             )
@@ -228,7 +228,7 @@ class TestImageGenerationService:
             lambda: FakeGeminiClient(),
         )
         monkeypatch.setattr(
-            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
             fake_async_generate_image,
         )
         monkeypatch.setattr(
@@ -299,7 +299,7 @@ class TestImageGenerationService:
         }
         message_content = "给我画一张图片"
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -448,7 +448,7 @@ class TestImageGenerationService:
         }
         message_content = "draw me a portrait"
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -566,7 +566,7 @@ class TestImageGenerationService:
         }
         message_content = "generate a scene with us"
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -746,7 +746,7 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,
@@ -871,7 +871,7 @@ class TestChatHistoryService:
             "background": agent.background,
         }
 
-        result = await image_generation_service.generate_chat_image_for_message(
+        result = await image_generation_service.generate_chat_image(
             db=session,
             session_id=session_id_str,
             message_id=message_id,

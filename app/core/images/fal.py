@@ -304,11 +304,7 @@ def _upload_image_file_to_gcs_and_return_url(
         bucket_name=global_config.gcs.bucket,
         path=gcs_path,
     )
-    if image_file.width is not None and image_file.height is not None:
-        image_size = ImageSize(width=image_file.width, height=image_file.height)
-    else:
-        pil_image = PIL.Image.open(io.BytesIO(file_data))
-        image_size = ImageSize(width=pil_image.width, height=pil_image.height)
+    image_size = ImageSize(width=image_file.width, height=image_file.height)
     return _DataUriUploadResult(
         gcs_uri=gcs_uri,
         gcs_http_url=gcs_http_url,
@@ -381,7 +377,7 @@ class ZImageTurboImageToImageInput(BaseModel):
     )
     num_images: int = 1
     enable_safety_checker: bool = False
-    output_format: ImageFormat = ImageFormat.PNG
+    output_format: ImageFormat = ImageFormat.JPEG
     acceleration: AccelerationEnum = AccelerationEnum.REGULAR
     enable_prompt_expansion: bool = Field(
         default=False,

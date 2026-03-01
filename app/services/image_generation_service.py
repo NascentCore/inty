@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 import PIL.Image
 from pydantic import BaseModel, Field
-from app.core.google_genai.wrapped_client import WrappedClient
+from app.core.google_genai.wrapped_client import get_wrapped_client
 from langsmith.run_helpers import traceable
 from loguru import logger
 from sqlalchemy import select
@@ -51,11 +51,15 @@ from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
+    CHAT_IMAGE_GEN_MODELS,
     NANO_BANANA,
+    NANO_BANANA_2,
+    NANO_BANANA_MODELS,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
-    resolve_chat_image_model,
+    resolve_id_on_provider,
+    resolve_nickname,
 )
 
 # 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
@@ -87,7 +91,7 @@ class ChatImageGenModelInput(BaseModel):
     prompt: str
     reference_image_url: str
     message_history: List[Dict[str, Any]] = Field(default_factory=list)
-    model: str
+    model_id_on_provider: str
     user_reference_image_url: Optional[str] = None
     append_history_to_prompt: bool = True
 
@@ -99,7 +103,7 @@ def _truncate_trace_text(value: Any) -> str:
     return text[:_MAX_TRACE_TEXT_PREVIEW_LEN] + "…"
 
 
-def _process_inputs_generate_chat_image_for_message(inputs: Dict[str, Any]) -> Dict[str, Any]:
+def _process_inputs_generate_chat_image(inputs: Dict[str, Any]) -> Dict[str, Any]:
     agent_data = inputs.get("agent_data") or {}
     message_content = inputs.get("message_content") or ""
     output: Dict[str, Any] = {
@@ -115,7 +119,7 @@ def _process_inputs_generate_chat_image_for_message(inputs: Dict[str, Any]) -> D
     return output
 
 
-def _process_outputs_generate_chat_image_for_message(outputs: Any) -> Any:
+def _process_outputs_generate_chat_image(outputs: Any) -> Any:
     if not isinstance(outputs, dict):
         return outputs
     prompt = outputs.get("prompt")
@@ -350,26 +354,21 @@ class ImageGenerationService:
         similarity = intersection / union
         return similarity
 
-    def _resolve_chat_image_model_id(self, model: Optional[str]) -> str:
+    def _resolve_chat_image_gen_model_id_or_nickname(self, id_or_nickname: str) -> str:
         """
         解析聊天生图模型：支持直接传 provider model id，也支持传模型 nickname。
+        model 可以是 GenAIModel.nickname 或 GenAIModel.id_on_provider。
         """
-        if model is None:
-            return NANO_BANANA.id_on_provider
-
-        normalized_model = model.strip()
-        if not normalized_model:
-            raise ValueError("Chat image model is required")
-
-        direct_ids = {
-            NANO_BANANA.id_on_provider,
-            NANO_BANANA_PRO.id_on_provider,
-            *CHAT_IMAGE_FAL_IDS,
-        }
-        if normalized_model in direct_ids:
-            return normalized_model
-
-        return resolve_chat_image_model(normalized_model).id_on_provider
+        model = resolve_id_on_provider(id_or_nickname)
+        if model:
+            return model.id_on_provider
+        model = resolve_nickname(id_or_nickname)
+        if model:
+            return model.id_on_provider
+        allowed_nicknames = [m.nickname for m in CHAT_IMAGE_GEN_MODELS]
+        allowed_ids_on_provider = [m.id_on_provider for m in CHAT_IMAGE_GEN_MODELS]
+        allowed = allowed_nicknames + allowed_ids_on_provider
+        raise ValueError(f"Chat image model {id_or_nickname!r} not allowed; allowed: {', '.join(allowed)}")
 
     def _format_message_history_for_model_prompt(
         self, message_history: List[Dict[str, Any]]
@@ -407,15 +406,10 @@ class ImageGenerationService:
         gcs_uri_base: str,
         system_instructions: Optional[List[str]] = None,
     ) -> GeneratedImageProcessResult:
-        if model_id not in (
-            NANO_BANANA.id_on_provider,
-            NANO_BANANA_PRO.id_on_provider,
-        ):
-            raise ValueError(
-                f"Chat image Gemini model {model_id!r} not supported by WrappedClient"
-            )
+        if model_id not in [m.id_on_provider for m in NANO_BANANA_MODELS]:
+            raise ValueError(f"{model_id!r} not supported by WrappedClient")
 
-        client = WrappedClient(client=get_genai_client())
+        client = get_wrapped_client()
         contents = [reference_image_url]
         if user_reference_image_url:
             contents.append(user_reference_image_url)
@@ -478,7 +472,7 @@ class ImageGenerationService:
         - 逻辑：解析模型并自动路由（Gemini/fal）
         - 适配：转换为各 provider 需要的输入参数
         """
-        resolved_model_id = self._resolve_chat_image_model_id(chat_input.model)
+        resolved_model_id = chat_input.model_id_on_provider
         if chat_input.append_history_to_prompt:
             prompt_for_model = self._build_chat_image_prompt_for_model(
                 prompt=chat_input.prompt,
@@ -831,12 +825,12 @@ class ImageGenerationService:
         )
 
     @traceable(
-        name="generate_chat_image_for_message",
+        name="generate_chat_image",
         run_type="chain",
-        process_inputs=_process_inputs_generate_chat_image_for_message,
-        process_outputs=_process_outputs_generate_chat_image_for_message,
+        process_inputs=_process_inputs_generate_chat_image,
+        process_outputs=_process_outputs_generate_chat_image,
     )
-    async def generate_chat_image_for_message(
+    async def generate_chat_image(
         self,
         db: AsyncSession,
         session_id: str,
@@ -862,7 +856,7 @@ class ImageGenerationService:
             model,
         )
 
-        resolved_model_id = self._resolve_chat_image_model_id(model)
+        resolved_model_id = self._resolve_chat_image_gen_model_id_or_nickname(model)
 
         # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
         # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
@@ -910,7 +904,7 @@ class ImageGenerationService:
                 prompt=prepared.prompt,
                 reference_image_url=prepared.reference_url,
                 message_history=prepared.chat_history,
-                model=resolved_model_id,
+                model_id_on_provider=resolved_model_id,
                 user_reference_image_url=prepared.user_photo_url,
                 append_history_to_prompt=False,
             ),

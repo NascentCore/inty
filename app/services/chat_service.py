@@ -1608,7 +1608,7 @@ async def generate_chat_image(
             )
             try:
                 image_generation_result = (
-                    await image_generation_service.generate_chat_image_for_message(
+                    await image_generation_service.generate_chat_image(
                         db=db,
                         session_id=session_id,
                         message_id=message_id,
@@ -1631,7 +1631,7 @@ async def generate_chat_image(
                         fallback_model,
                     )
                     image_generation_result = (
-                        await image_generation_service.generate_chat_image_for_message(
+                        await image_generation_service.generate_chat_image(
                             db=db,
                             session_id=session_id,
                             message_id=message_id,
@@ -1648,7 +1648,7 @@ async def generate_chat_image(
                     raise
         else:
             image_generation_result = (
-                await image_generation_service.generate_chat_image_for_message(
+                await image_generation_service.generate_chat_image(
                     db=db,
                     session_id=session_id,
                     message_id=message_id,
