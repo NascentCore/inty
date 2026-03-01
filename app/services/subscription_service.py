@@ -720,18 +720,25 @@ class SubscriptionService:
         extra_data: Optional[Dict[str, Any]] = None,
     ) -> Optional[SubscriptionUsage]:
         """记录用户使用情况"""
-        # 如果没有提供数据库会话，创建新的会话
-        if db is None:
-            from app.api.deps import get_async_db
+        from app.api.deps import get_async_db
 
-            async for db_session in get_async_db():
-                return await self._record_usage_impl(
-                    db_session, user_id, usage_type, usage_count, extra_data
-                )
-        else:
-            return await self._record_usage_impl(
+        # 优先复用调用方会话；若该会话已处于异常事务状态，则自动降级到独立会话重试一次。
+        if db is not None:
+            usage = await self._record_usage_impl(
                 db, user_id, usage_type, usage_count, extra_data
             )
+            if usage is not None:
+                return usage
+            logger.warning(
+                "记录用户用量失败，改用独立数据库会话重试: "
+                f"user_id={user_id}, usage_type={usage_type}"
+            )
+
+        async for db_session in get_async_db():
+            return await self._record_usage_impl(
+                db_session, user_id, usage_type, usage_count, extra_data
+            )
+        return None
 
     async def _record_usage_impl(
         self,

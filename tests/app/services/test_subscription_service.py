@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -300,6 +301,53 @@ class TestSubscriptionService:
         assert is_allowed is False  # 7 >= 6 (free user limit)
         assert agent_count == 7
         assert limit == 6  # free_user_agent_creation_24h_limit
+
+    @pytest.mark.asyncio
+    async def test_record_usage_retries_with_isolated_session_when_caller_session_fails(
+        self,
+        monkeypatch,
+    ):
+        mock_google_play_service = AsyncMock(spec=GooglePlayService)
+        subscription_service = SubscriptionService(mock_google_play_service)
+
+        broken_db = AsyncMock(spec=AsyncSession)
+        isolated_db = AsyncMock(spec=AsyncSession)
+        usage_record = SimpleNamespace(id="usage-record-1")
+
+        async def fake_record_usage_impl(db, user_id, usage_type, usage_count, extra_data):
+            if db is broken_db:
+                return None
+            if db is isolated_db:
+                return usage_record
+            return None
+
+        subscription_service._record_usage_impl = AsyncMock(
+            side_effect=fake_record_usage_impl
+        )
+
+        async def fake_get_async_db():
+            yield isolated_db
+
+        monkeypatch.setattr("app.api.deps.get_async_db", fake_get_async_db)
+
+        result = await subscription_service.record_usage(
+            db=broken_db,
+            user_id="user-1",
+            usage_type="live_chat",
+            usage_count=1,
+            extra_data={"source": "test"},
+        )
+
+        assert result is usage_record
+        assert subscription_service._record_usage_impl.await_count == 2
+        assert (
+            subscription_service._record_usage_impl.await_args_list[0].args[0]
+            is broken_db
+        )
+        assert (
+            subscription_service._record_usage_impl.await_args_list[1].args[0]
+            is isolated_db
+        )
 
 
 class TestRTDNSubscriptionNotification:

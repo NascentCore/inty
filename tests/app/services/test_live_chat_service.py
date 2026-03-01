@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from google.genai import types
 
+import app.services.live_chat_service as live_chat_module
 from app.services.live_chat_service import LiveChatService
 
 
@@ -73,3 +74,28 @@ def test_build_live_config_accepts_google_prefixed_voice_id():
         live_config.speech_config.voice_config.prebuilt_voice_config.voice_name
         == "Zephyr"
     )
+
+
+def test_build_live_config_non_gemini_voice_id_falls_back_without_error(
+    monkeypatch,
+):
+    service = _build_service_with_language_config()
+    error_messages = []
+
+    def fake_error(*args, **kwargs):
+        error_messages.append((args, kwargs))
+
+    monkeypatch.setattr(live_chat_module.logger, "error", fake_error)
+
+    live_config = service._build_live_config(
+        voice_id="elevenlabs/2OMO1Tj9atc7AKQjMwxW",
+        agent_gender="FEMALE",
+        system_instruction="test",
+    )
+
+    assert live_config.speech_config is not None
+    assert (
+        live_config.speech_config.voice_config.prebuilt_voice_config.voice_name
+        == "Zephyr"
+    )
+    assert error_messages == []
