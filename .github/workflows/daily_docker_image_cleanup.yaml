@@ -1,0 +1,17 @@
+name: Daily Docker image cleanup
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  prune-dangling-images:
+    runs-on: inty-prod-server-gcp
+    steps:
+      - name: Remove dangling Docker images
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker image prune --force
