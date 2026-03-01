@@ -61,7 +61,7 @@ class TestChatService:
     """测试聊天服务"""
 
     @pytest.mark.asyncio
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image_for_message")
+    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
     async def test_generate_chat_image_success(
         self,
         mock_generate_image: AsyncMock,
@@ -215,7 +215,7 @@ class TestChatService:
 
     @pytest.mark.asyncio
     @patch("app.services.chat_service._record_chat_image_failure", new_callable=AsyncMock)
-    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image_for_message")
+    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
     async def test_generate_chat_image_prohibited_content_returns_biz_error(
         self,
         mock_generate_image: AsyncMock,
@@ -762,7 +762,7 @@ class TestChatService:
     @pytest.mark.asyncio
     @patch("app.services.chat_service.chat_history_service.update_message_metadata")
     @patch(
-        "app.services.image_generation_service.image_generation_service.generate_chat_image_for_message"
+        "app.services.image_generation_service.image_generation_service.generate_chat_image"
     )
     async def test_generate_chat_image_429_fallback_success(
         self,
