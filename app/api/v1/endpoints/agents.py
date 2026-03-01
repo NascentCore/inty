@@ -559,7 +559,7 @@ async def _download_and_upload_to_gcs(
         else:
             resolved_content_type = "image/png"
 
-    upload_to_gcs(
+    await upload_to_gcs_async(
         file_data=image_bytes,
         content_type=resolved_content_type,
         bucket_name=gcs_bucket,
@@ -580,10 +580,7 @@ async def _generate_with_fal_ai(
     gcs_base_path: str,
 ) -> tuple[list[ImagenGeneratedImage], list[str], list[str], dict]:
     """
-    使用 fal.ai 生成图片，下载并上传到 GCS。
-
-    Returns:
-        (generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict) 元组
+    使用 fal.ai z_image_turbo 生成图片并上传到 GCS。直接 await 异步接口，避免在事件循环中调用 asyncio.run()。
     """
     if _is_fal_z_image_turbo_model(model):
         return await _generate_with_fal_z_image_turbo(
@@ -613,56 +610,35 @@ async def _generate_with_fal_ai(
     generated_images: list[ImagenGeneratedImage] = []
     gcs_urls: list[str] = []
     gcs_url_to_img_dict: dict = {}
-
-    for i, fal_image in enumerate(fal_result.images):
-        if not fal_image.url:
-            logger.warning(f"fal.ai image {i} has no URL, skipping")
-            continue
-
-        file_ext = "png"
-        if fal_image.mime_type:
-            if "jpeg" in fal_image.mime_type or "jpg" in fal_image.mime_type:
-                file_ext = "jpg"
-            elif "webp" in fal_image.mime_type:
-                file_ext = "webp"
-
-        gcs_path = f"{gcs_base_path}/fal_{uuid.uuid4().hex}.{file_ext}"
-
-        try:
-            gcs_uri, byte_size = await _download_and_upload_to_gcs(
-                url=fal_image.url,
-                gcs_bucket=gcs_bucket,
-                gcs_path=gcs_path,
-                content_type=fal_image.mime_type,
-            )
-            logger.debug(f"Uploaded fal.ai image to GCS: {gcs_uri}")
-
-            image_size = None
-            if fal_image.width and fal_image.height:
-                image_size = ImageSize(width=fal_image.width, height=fal_image.height)
-
-            imagen_image = ImagenGeneratedImage(
-                gcs_uri=gcs_uri,
-                size=image_size,
-                byte_size=byte_size,
-                format=ImageFormat.PNG if file_ext == "png" else ImageFormat.JPEG,
-                rai_filtered_reason=None,
-                enhanced_prompt=prompt,
-            )
-            generated_images.append(imagen_image)
-            gcs_urls.append(gcs_uri)
-            gcs_url_to_img_dict[gcs_uri] = imagen_image
-
-        except (httpx.HTTPError, OSError) as e:
-            logger.error(f"Failed to download/upload fal.ai image {i}: {e}")
-            continue
-        except Exception as e:
-            logger.error(f"Unexpected error processing fal.ai image {i}: {e}")
-            raise
-
-    if not gcs_urls:
-        raise Exception("No images were generated from fal.ai")
-
+    for img in fal_result.images:
+        gcs_uri = img.gcs_uri
+        if not gcs_uri and img.public_url and "storage.googleapis.com" in img.public_url:
+            gcs_uri = "gs://" + img.public_url.replace("https://storage.googleapis.com/", "", 1)
+        size = (
+            ImageSize(width=img.width, height=img.height)
+            if (img.width is not None and img.height is not None)
+            else None
+        )
+        fmt = None
+        if img.format:
+            try:
+                fmt = ImageFormat(img.format)
+            except (ValueError, TypeError):
+                pass
+        byte_size = len(img.image_bytes) if img.image_bytes else None
+        imagen_img = ImagenGeneratedImage(
+            gcs_uri=gcs_uri,
+            size=size,
+            format=fmt,
+            byte_size=byte_size,
+            rai_filtered_reason=None,
+            enhanced_prompt=prompt,
+        )
+        generated_images.append(imagen_img)
+        url_for_list = gcs_uri or img.public_url or img.url
+        if url_for_list:
+            gcs_urls.append(url_for_list)
+            gcs_url_to_img_dict[url_for_list] = imagen_img
     return generated_images, gcs_urls, [], gcs_url_to_img_dict
 
 
@@ -801,7 +777,7 @@ async def generate_background(
                     gcs_base_path=gcs_base_path,
                 )
             )
-        else:
+        elif is_imagen_model(image_model):
             # Google Imagen 生图流程
             generated_images = text_to_image(
                 request.prompt,
@@ -821,6 +797,33 @@ async def generate_background(
                     continue
                 gcs_url_to_img_dict[image.gcs_uri] = image
 
+            gcs_urls = result["image_uris"]
+            rai_reasons = result["rai_reasons"]
+        elif is_gemini_model(image_model):
+            # Gemini 生图流程：使用 wrapped_client，与 app/AGENTS.md 约定一致
+            wrapped = get_wrapped_client()
+            # gcs_uri_base 需为 bucket 相对路径，供 wrapped 内 upload 使用
+            gcs_uri_base_for_wrapped = gcs_base_path
+            results: list[ImagenGeneratedImage] = []
+            gcs_url_to_img_dict = {}
+            for _ in range(request.count):
+                one = await wrapped.async_generate_image(
+                    model=image_model,
+                    contents=[request.prompt],
+                    gcs_uri_base=gcs_uri_base_for_wrapped,
+                )
+                img = ImagenGeneratedImage(
+                    gcs_uri=one.gcs_uri,
+                    size=one.size,
+                    format=one.format,
+                    byte_size=len(one.raw_data) if one.raw_data else None,
+                    rai_filtered_reason=None,
+                )
+                results.append(img)
+                if one.gcs_uri:
+                    gcs_url_to_img_dict[one.gcs_uri] = img
+            generated_images = results
+            result = process_generated_images(generated_images)
             gcs_urls = result["image_uris"]
             rai_reasons = result["rai_reasons"]
 

@@ -66,7 +66,7 @@ from langsmith.run_helpers import traceable
 
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
+from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs_async
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
@@ -227,7 +227,7 @@ class WrappedClient:
                 logger.debug("Gemini generate_content response: {}", response)
                 try:
                     image_part = _extract_image_part_from_gemini_response(response)
-                    result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                    result = await _process_image_part_to_generated_image(image_part, gcs_uri_base)
                 except Exception:
                     # 失败路径保留完整响应，便于排障；成功路径会在 trace 中脱敏图片数据。
                     attach_provider_response_to_langsmith_run(response)
@@ -328,7 +328,7 @@ def _extract_image_part_from_gemini_response(
     return image_part
 
 
-def _process_image_part_to_generated_image(
+async def _process_image_part_to_generated_image(
     image_part: gemini_types.Part,
     gcs_uri_base: str,
 ) -> GeneratedImageProcessResult:
@@ -409,7 +409,7 @@ def _process_image_part_to_generated_image(
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{ext}"
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-    upload_to_gcs(
+    await upload_to_gcs_async(
         file_data=image_data,
         content_type=content_type,
         bucket_name=bucket_name,

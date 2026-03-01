@@ -7,6 +7,9 @@ from pathlib import Path
 import loguru
 from google.cloud import storage
 
+# 官方 google-cloud-storage 无原生 async client（见 https://github.com/googleapis/python-storage/issues/1366），
+# 异步场景下通过 asyncio.to_thread 运行同步上传，避免阻塞事件循环。
+
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.fakes.gcs import FakeGCSClient
 
@@ -50,14 +53,14 @@ def upload_to_gcs(file_data, content_type, bucket_name, path):
 
 
 async def upload_to_gcs_async(file_data, content_type, bucket_name, path):
-    """Async version of upload_to_gcs; runs the blocking upload in a thread."""
-    client = get_gcs_client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(path)
-    await asyncio.to_thread(
-        blob.upload_from_string, file_data, content_type=content_type
+    """异步上传到 GCS：在线程中执行同步 SDK，不阻塞事件循环。"""
+    return await asyncio.to_thread(
+        upload_to_gcs,
+        file_data,
+        content_type,
+        bucket_name,
+        path,
     )
-    return blob.public_url
 
 
 # 新增删除方法
