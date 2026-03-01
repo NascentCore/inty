@@ -255,6 +255,8 @@ class AgentConfig:
     # 文本聊天的失败概率也极低，因此不需要特别关注错误信息。
     # 图片生成不使用该采样率限制，保持全量追踪。
     langsmith_text_chat_sample_rate: float = 0.1
+    # 官方 IntelliMate 助手的对话历史窗口条数（不按订阅分档，仅此一个限制）
+    official_assistant_chat_messages_limit: int = 50
 
     # TODO: 这是做什么的？
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
