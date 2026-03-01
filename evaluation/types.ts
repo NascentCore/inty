@@ -639,6 +639,25 @@ export interface UserAnalyticsReportsResponse {
   reports: UserAnalyticsReportItem[];
 }
 
+export interface VoiceAudioItem {
+  audio_url: string;
+  message_id: number;
+  created_at: string | null;
+  duration_seconds: number | null;
+}
+
+export interface VoiceAudioGroupByUserAgent {
+  user_id: string;
+  agent_id: string;
+  agent_name: string;
+  audios: VoiceAudioItem[];
+}
+
+export interface DailyVoiceAudiosResponse {
+  voice_message_audios: VoiceAudioGroupByUserAgent[];
+  voice_call_audios: VoiceAudioGroupByUserAgent[];
+}
+
 export interface UserAnalyticsStatsResponse {
   // 统计类型
   total_new_users: number;

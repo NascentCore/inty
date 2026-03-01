@@ -212,6 +212,138 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_voice_audios_on_date(
+        self,
+        activity_start_date: datetime,
+        activity_end_date: datetime,
+        register_start_date: Optional[datetime] = None,
+        register_end_date: Optional[datetime] = None,
+    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """查询指定日期范围内的语音播报与语音通话录音，按 (user_id, agent_id) 分组。
+
+        返回: (voice_message_groups, voice_call_groups)。每组为 { user_id, agent_id, agent_name, audios: [{ audio_url, message_id, created_at, duration_seconds }] }。
+        语音通话同一 URL 在 user/AI 两条消息上共享，按 (user_id, agent_id) 内按 audio_url 去重。
+        """
+        from collections import defaultdict
+
+        reg_start = register_start_date or datetime(2020, 1, 1, tzinfo=timezone.utc)
+        reg_end = register_end_date or activity_end_date
+
+        active_session_ids = await self.get_active_session_ids_on_date(
+            activity_start_date, activity_end_date
+        )
+        if not active_session_ids:
+            return [], []
+
+        chats_query = text("""
+            SELECT c.id, c.user_id, c.agent_id, a.name
+            FROM chats c
+            INNER JOIN users u ON c.user_id = u.id AND u.deleted_at IS NULL
+            INNER JOIN agents a ON c.agent_id = a.id AND a.deleted_at IS NULL
+            WHERE u.created_at >= :reg_start AND u.created_at < :reg_end
+              AND c.is_active = true
+        """)
+        result = await self.db.execute(
+            chats_query,
+            {"reg_start": reg_start, "reg_end": reg_end},
+        )
+        session_to_user_agent: Dict[str, tuple] = {}
+        for row in result.fetchall():
+            chat_id, user_id, agent_id, agent_name = row
+            sid = generate_session_id(str(chat_id))
+            if sid in active_session_ids:
+                session_to_user_agent[sid] = (str(user_id), str(agent_id), agent_name or "")
+
+        session_ids = [s for s in active_session_ids if s in session_to_user_agent]
+        if not session_ids:
+            return [], []
+
+        rows_audio: List[tuple] = []
+        for batch in _batch_list(session_ids, self._batch_size):
+            placeholders = ",".join([f":sid_{i}" for i in range(len(batch))])
+            query = text(f"""
+                SELECT session_id::text, id, audio_url, created_at, meta_data
+                FROM chat_history
+                WHERE session_id::text IN ({placeholders})
+                  AND created_at >= :act_start AND created_at < :act_end
+                  AND audio_url IS NOT NULL AND deleted_at IS NULL
+            """)
+            params = {f"sid_{i}": s for i, s in enumerate(batch)}
+            params["act_start"] = activity_start_date
+            params["act_end"] = activity_end_date
+            res = await self.db.execute(query, params)
+            rows_audio.extend(res.fetchall())
+
+        def _duration_from_meta(meta: Optional[Dict]) -> Optional[float]:
+            if not meta:
+                return None
+            d = meta.get("audioDuration")
+            if d is not None and isinstance(d, (int, float)):
+                return float(d)
+            return None
+
+        voice_message_key_to_audios: Dict[tuple, List[Dict[str, Any]]] = defaultdict(list)
+        voice_call_key_to_seen_url: Dict[tuple, Dict[str, Dict[str, Any]]] = defaultdict(dict)
+        key_to_agent_name: Dict[tuple, str] = {}
+
+        for row in rows_audio:
+            session_id, msg_id, audio_url, created_at, meta_data = row
+            meta = meta_data or {}
+            is_voice_call = meta.get("is_voice") in (True, "true")
+            t = session_to_user_agent.get(session_id)
+            if not t:
+                continue
+            user_id, agent_id, agent_name = t
+            key = (user_id, agent_id)
+            key_to_agent_name[key] = agent_name or ""
+            created_at_str = created_at.isoformat() if created_at else None
+            duration = _duration_from_meta(meta)
+            entry = {
+                "audio_url": audio_url,
+                "message_id": msg_id,
+                "created_at": created_at_str,
+                "duration_seconds": duration,
+            }
+            if is_voice_call:
+                if audio_url not in voice_call_key_to_seen_url[key]:
+                    voice_call_key_to_seen_url[key][audio_url] = entry
+                else:
+                    existing = voice_call_key_to_seen_url[key][audio_url]
+                    if created_at and (
+                        existing.get("created_at") is None
+                        or (existing["created_at"] or "") > (created_at_str or "")
+                    ):
+                        voice_call_key_to_seen_url[key][audio_url] = entry
+            else:
+                voice_message_key_to_audios[key].append(entry)
+
+        def _build_groups(
+            key_to_audios: Dict[tuple, Any],
+            values_are_list: bool,
+        ) -> List[Dict[str, Any]]:
+            out = []
+            for (user_id, agent_id), audios in key_to_audios.items():
+                audios_list = (
+                    audios if values_are_list else list(audios.values())
+                )
+                out.append(
+                    {
+                        "user_id": user_id,
+                        "agent_id": agent_id,
+                        "agent_name": key_to_agent_name.get((user_id, agent_id), ""),
+                        "audios": audios_list,
+                    }
+                )
+            return out
+
+        voice_message_groups = _build_groups(
+            voice_message_key_to_audios, values_are_list=True
+        )
+        voice_call_groups = _build_groups(
+            voice_call_key_to_seen_url, values_are_list=False
+        )
+        return voice_message_groups, voice_call_groups
+
     async def _query_session_message_counts(
         self,
         session_ids: List[str],
