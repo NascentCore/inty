@@ -1407,6 +1407,22 @@ async def _try_match_existing_image(
         return None
 
 
+def _log_matched_fallback_result(
+    agent_id: str,
+    request_message_id: int,
+    fallback_result: schemas.ChatImageGenerationResponse,
+) -> None:
+    image_metadata = fallback_result.image_metadata or {}
+    logger.info(
+        f"消息生图兜底匹配返回结果 - agent_id={agent_id} "
+        f"request_message_id={request_message_id} "
+        f"response_message_id={fallback_result.message_id} "
+        f"image_url={fallback_result.image_url} "
+        f"is_matched={image_metadata.get('is_matched')} "
+        f"similarity={image_metadata.get('similarity')}"
+    )
+
+
 async def generate_chat_image(
     db: AsyncSession,
     agent_id: str,
@@ -1702,6 +1718,11 @@ async def generate_chat_image(
                 is_network_error=is_network_error,
             )
             if fallback_result:
+                _log_matched_fallback_result(
+                    agent_id=agent_id,
+                    request_message_id=message_id,
+                    fallback_result=fallback_result,
+                )
                 return fallback_result
         else:
             fallback_skip_reason = (
@@ -1792,6 +1813,11 @@ async def generate_chat_image(
                 is_network_error=is_network_error,
             )
             if fallback_result:
+                _log_matched_fallback_result(
+                    agent_id=agent_id,
+                    request_message_id=message_id,
+                    fallback_result=fallback_result,
+                )
                 return fallback_result
         else:
             fallback_skip_reason = (
