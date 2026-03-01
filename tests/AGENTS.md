@@ -7,18 +7,20 @@
 - Use the API Endpoints from the local backend server and postgres,
   started with:
 
-  ```bash
+  ```bash:launch-backend-for-testing
   docker run --rm --name pg-inty -p 5432:5432 \
     -e POSTGRES_PASSWORD=sxwl666! \
     -e POSTGRES_DB=inty \
     -d postgres:16
   cp devops/config.yaml.test config.yaml
   backend/inty/start.sh --test
-  ```
   
-  Same as in GitHub workflow [ci_backend.yaml](/.github/workflows/ci_backend.yaml)
+  # Create a admin bearer token, and write the token to a .txt file
+  python scripts/init_admin_user.py --token-file ./admin_token.txt
+  ```
+
   - Access real database, and do not patch sqlalchemy
-- Use [fake external services](/app/external_services/fakes)
+- Use [fake external services](/app/external_services/fakes) when writing tests.
 
 ## 新功能 / API+客户端联调时的防遗漏
 

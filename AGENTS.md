@@ -5,19 +5,6 @@
 ### 产品概述
 
 - IntelliMate 定位为面向 35+、有较好社会地位与自我认知的美国男性用户的长期 AI 陪伴产品，提供可持续进化的情感陪伴。
-- IntelliMate 产品形态基于 Chat 界面，用户通过手机屏幕、与 iMate 交流，使用文字、图片、声音（语音消息、通话、音乐）、视频（动图、视频、背景声音等）。
-  - iMate 是所有角色的总称，如”这是为您推荐的 iMates“。
-  - iMate 是提供情感陪伴体验的主体，IntelliMate 无法通过人工设计来满足用户需求，只能通过 iMate 让用户通过与其互动来持续获得和优化的情感陪伴体验
-  - Character/Agent/iMate 通常指同一概念，Agent 沿用自后端、指一个独立的逻辑概念来指代一个独立的抽象角色
-  - Character（角色）沿用自业界的统称，一般来自 Character.ai
-- **用户手册**：IntelliMate Android App 内用户可见的改动都要对应更新[用户手册](docs/INTELLIMATE.md)
-  - app/（后端）改动不影响[用户手册](docs/INTELLIMATE.md)
-- 使用 jinja2 template 编写提示词模版：`{{ <变量名> }}`
-  使用 `prompt_template.py:render_prompt_jinja2_template` 来生成最终提示词
-
-### 代码库概述
-
-- TASKS.md 管理 IntelliMate 项目中应该要完成的任务，用于明确的需要完成的任务列表
 - 后端有两个 FastAPI 应用：`backend/inty`（主 API，面向 Android）、`backend/ops`（运营与 evaluation）；见 [backend/README.md](backend/README.md) 与 [backend/ops/AGENTS.md](backend/ops/AGENTS.md)
 
 ## 代码库内的一般性约定
