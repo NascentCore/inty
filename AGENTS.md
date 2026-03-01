@@ -130,6 +130,8 @@ The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI wo
 
 The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
 
+It also builds the `evaluation/inty_sdk` TypeScript SDK (if not already built) and runs `npm install` in `evaluation/`, so `npm run test` (vitest), `npm run build`, and `npm run type-check` work out-of-the-box.
+
 ### Starting services
 
 1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
@@ -161,6 +163,18 @@ cd android_app
 ```
 
 For targeted testing after changing specific modules, see the module-to-task mapping in `.github/workflows/ci_android_app.yaml`.
+
+**Evaluation frontend (TypeScript/Vite):**
+
+```bash
+cd evaluation
+npm run test          # vitest
+npm run type-check    # tsc --noEmit
+npm run build         # vite build (production bundle)
+npx eslint . --ext .ts,.tsx  # lint
+```
+
+The update script pre-installs `node_modules` and builds the `inty_sdk` dependency, so these commands work out-of-the-box. See also `evaluation/AGENTS.md`.
 
 ### Lint / formatting
 
