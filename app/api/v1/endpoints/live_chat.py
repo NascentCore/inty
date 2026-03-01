@@ -438,8 +438,9 @@ async def live_chat_session(
                 if latency_metrics:
                     extra_data["latency_metrics"] = latency_metrics
 
+                # 使用独立会话记录用量，避免复用当前 WS 链路中的事务状态导致 prepared/rollback 错误。
                 usage_record = await subscription_service.record_usage(
-                    db=db,
+                    db=None,
                     user_id=current_user.id,
                     usage_type="live_chat",
                     usage_count=1,

@@ -23,7 +23,6 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.user_privilege.premium_check import is_eligible_for_premium
 from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
 from app.schemas.evaluation import SurpriseSnapUnlockRequest
 from app.schemas.response import (
@@ -161,11 +160,13 @@ async def get_agent_chat_messages(
     Specifically for scrolling load
     """
     try:
+        # 先缓存 user_id，避免后续数据库 rollback 使 ORM 实例过期后再读属性触发 MissingGreenlet
+        current_user_id = current_user.id
         logger.debug(f"Getting Agent chat messages - Agent ID: {agent_id}")
 
         # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
+            db=db, user_id=current_user_id, agent_id=agent_id
         )
 
         # Verify if the agent_id in returned chat matches the input
@@ -183,21 +184,21 @@ async def get_agent_chat_messages(
         if is_festival_memory_enabled(app_version_code):
             try:
                 await deliver_festival_memories_for_user_agent(
-                    db, current_user.id, agent_id
+                    db, current_user_id, agent_id
                 )
             except Exception as e:
                 await db.rollback()
                 logger.warning(f"投递节日记忆提示失败: {e}")
 
         unlocked_ids = await get_unlocked_surprise_snap_message_ids(
-            db, current_user.id
+            db, current_user_id
         )
         messages_data = await asyncio.to_thread(
             chat_history_service.get_messages_paginated,
             session_id=session_id,
             limit=limit,
             offset=offset,
-            user_id=current_user.id,
+            user_id=current_user_id,
             unlocked_surprise_snap_message_ids=unlocked_ids,
         )
 
@@ -212,7 +213,7 @@ async def get_agent_chat_messages(
         return messages_data
 
     except Exception as e:
-        logger.exception("Failed to get message records: %s", e)
+        logger.exception(f"Failed to get message records: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to get message records: {str(e)}"
         )
@@ -260,6 +261,8 @@ async def update_message_vote(
     Only AI messages (role="assistant") can be voted.
     """
     try:
+        current_user_id = current_user.id
+
         # 验证 vote 值
         if request.vote is not None and request.vote not in ["like", "dislike"]:
             return APIResponse.error(
@@ -269,11 +272,11 @@ async def update_message_vote(
 
         # Get or create chat session
         chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=request.agent_id
+            db=db, user_id=current_user_id, agent_id=request.agent_id
         )
 
         # Verify chat belongs to current user
-        if chat.user_id != current_user.id:
+        if chat.user_id != current_user_id:
             return APIResponse.error(message="Forbidden", code=403)
 
         # Generate session_id
@@ -316,7 +319,7 @@ async def update_message_vote(
             db=db,
             session_id=session_id,
             message_id=request.message_id,
-            user_id=current_user.id,
+            user_id=current_user_id,
             vote=request.vote,
         )
 
@@ -507,8 +510,11 @@ async def update_agent_chat_settings(
     If chat session doesn't exist, automatically create one
     """
     try:
+        current_user_id = current_user.id
+        current_user_is_superuser = bool(current_user.is_superuser)
+
         logger.info(
-            f"Updating Agent chat settings - Agent ID: {agent_id}, User ID: {current_user.id}"
+            f"Updating Agent chat settings - Agent ID: {agent_id}, User ID: {current_user_id}"
         )
 
         # First verify if Agent exists
@@ -518,7 +524,7 @@ async def update_agent_chat_settings(
 
         # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
+            db=db, user_id=current_user_id, agent_id=agent_id
         )
 
         # Verify if the agent_id in returned chat matches the input
@@ -529,25 +535,25 @@ async def update_agent_chat_settings(
         # Get or create chat settings, then update
         # First ensure settings exist
         settings = await chat_service.get_or_create_chat_settings(
-            db=db, chat_id=chat.id, user_id=current_user.id, agent_id=agent_id
+            db=db, chat_id=chat.id, user_id=current_user_id, agent_id=agent_id
         )
 
         subscription_status = await subscription_service.get_user_subscription_status(
-            db, current_user.id
+            db, current_user_id
         )
 
         # Check if trying to update style_prompt and if user has subscription
         # style_prompt is only available for subscribed users or superusers
-        if settings_update.style_prompt and not is_eligible_for_premium(
-            current_user, subscription_status
+        if settings_update.style_prompt and not (
+            current_user_is_superuser or subscription_status.is_subscribed
         ):
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
             )
 
         # Check if trying to update premium_mode and if user has subscription
-        if settings_update.premium_mode and not is_eligible_for_premium(
-            current_user, subscription_status
+        if settings_update.premium_mode and not (
+            current_user_is_superuser or subscription_status.is_subscribed
         ):
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
@@ -597,8 +603,10 @@ async def get_agent_chat_settings(
     If chat session or settings don't exist, automatically create them
     """
     try:
+        current_user_id = current_user.id
+
         logger.info(
-            f"Getting Agent chat settings - Agent ID: {agent_id}, User ID: {current_user.id}"
+            f"Getting Agent chat settings - Agent ID: {agent_id}, User ID: {current_user_id}"
         )
 
         # First verify if Agent exists
@@ -608,12 +616,12 @@ async def get_agent_chat_settings(
 
         # Get or create unique session with this Agent
         chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
+            db=db, user_id=current_user_id, agent_id=agent_id
         )
 
         # Get or create chat settings
         settings = await chat_service.get_or_create_chat_settings(
-            db=db, chat_id=chat.id, user_id=current_user.id, agent_id=agent_id
+            db=db, chat_id=chat.id, user_id=current_user_id, agent_id=agent_id
         )
 
         logger.info(

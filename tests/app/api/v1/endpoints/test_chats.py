@@ -1,5 +1,6 @@
 """Business error and integration tests for chats endpoints."""
 
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -19,6 +20,24 @@ from tests.app.api.v1.endpoints.conftest import (
     _create_mock_db_session,
     _make_user,
 )
+
+
+class _ExpiringUser:
+    """模拟 rollback 后 ORM 用户对象属性失效（访问 id 抛 MissingGreenlet）。"""
+
+    def __init__(self, user_id: str, *, is_superuser: bool = False):
+        self._user_id = user_id
+        self._expired = False
+        self.is_superuser = is_superuser
+
+    @property
+    def id(self) -> str:
+        if self._expired:
+            raise MissingGreenlet("greenlet_spawn has not been called")
+        return self._user_id
+
+    def expire(self) -> None:
+        self._expired = True
 
 
 @pytest.fixture
@@ -256,3 +275,120 @@ def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_gr
     assert rollback_called is True
     assert body["total"] == 1
     assert body["messages"][0]["content"] == "ok"
+
+
+def test_get_agent_chat_messages_uses_cached_user_id_after_chat_creation_rollback(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    app = FastAPI()
+    app.include_router(chats_v1.router, prefix="/api/v1")
+
+    mock_db = _create_mock_db_session()
+
+    async def override_db():
+        yield mock_db
+
+    app.dependency_overrides[deps.get_async_db] = override_db
+
+    user = _ExpiringUser("user-expire-1")
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        assert user_id == "user-expire-1"
+        # 模拟 service 内 rollback 后，ORM 用户对象属性失效
+        user.expire()
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_unlocked_surprise_snap_message_ids(db, user_id):
+        assert user_id == "user-expire-1"
+        return set()
+
+    def fake_get_messages_paginated(*args, **kwargs):
+        assert kwargs["user_id"] == "user-expire-1"
+        return {"messages": [{"id": 1, "role": "assistant", "content": "ok"}], "total": 1}
+
+    monkeypatch.setattr(
+        chats_v1.chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(chats_v1, "is_festival_memory_enabled", lambda _: False)
+    monkeypatch.setattr(
+        chats_v1,
+        "get_unlocked_surprise_snap_message_ids",
+        fake_get_unlocked_surprise_snap_message_ids,
+    )
+    monkeypatch.setattr(
+        chats_v1.chat_history_service,
+        "get_messages_paginated",
+        fake_get_messages_paginated,
+    )
+
+    with _client_with_user(app, user) as client:
+        response = client.get(
+            "/api/v1/chats/agents/agent-1/messages",
+            params={"limit": 20, "offset": 0, "order": "desc"},
+        )
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+
+
+def test_get_agent_chat_settings_uses_cached_user_id_after_chat_creation_rollback(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    app = FastAPI()
+    app.include_router(chats_v1.router, prefix="/api/v1")
+
+    mock_db = _create_mock_db_session()
+
+    async def override_db():
+        yield mock_db
+
+    app.dependency_overrides[deps.get_async_db] = override_db
+
+    user = _ExpiringUser("user-expire-2")
+
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        assert user_id == "user-expire-2"
+        user.expire()
+        return SimpleNamespace(id="chat-2", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        assert user_id == "user-expire-2"
+        return SimpleNamespace(
+            id="settings-2",
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            language="en",
+            voice_enabled=True,
+            style_prompt=None,
+            premium_mode=False,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
+        )
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chats_v1.chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        chats_v1.chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+
+    with _client_with_user(app, user) as client:
+        response = client.get("/api/v1/chats/agents/agent-2/settings")
+
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "settings-2"
