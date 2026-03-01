@@ -209,7 +209,7 @@ POST   /api/v1/chats/messages/vote                    // 更新消息投票
 POST   /api/v1/chats/agents/{agent_id}/clear-messages // 清除消息
 
 // 图片生成
-POST   /api/v1/chats/agents/{agent_id}/generate-image // 生成聊天图片
+POST   /api/v1/chat/images/{agent_id}                  // 生成聊天图片
 
 // 语音
 POST   /api/v1/chats/agents/{agent_id}/messages/{message_id}/voice // 生成消息语音
