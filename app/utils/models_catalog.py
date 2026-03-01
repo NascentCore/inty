@@ -271,6 +271,38 @@ NANO_BANANA_PRO = GenAIModel(
 )
 
 
+NANO_BANANA_2 = GenAIModel(
+    nickname="Nano Banana 2",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.TEXT, DataModality.IMAGE]
+    ),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-3.1-flash-image-preview",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.5, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+            PriceInfo(
+                price=0.5, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
+            )
+        ],
+        outputs=[
+            PriceInfo(
+                price=3.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+            PriceInfo(
+                price=60.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
+            ),
+        ],
+        official_url="https://blog.google/innovation-and-ai/technology/ai/nano-banana-2/",
+    ),
+    playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal;mode=prompt?model=gemini-3.1-flash-image-preview&project=alien-paratext-461204-i9",
+    notes="<= 200k input tokens, <= 14 reference images.",
+)
+
+
 IMAGEN_4_FAST = GenAIModel(
     nickname="Imagen 4.0 Fast",
     modalities=ModelModalities(

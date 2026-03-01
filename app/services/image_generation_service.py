@@ -63,8 +63,10 @@ _MAX_PROMPT_LOG_LEN = 800000
 _MAX_TRACE_TEXT_PREVIEW_LEN = 500
 
 
-class ChatImagePreparedInputs(BaseModel):
-    """Prepared inputs for chat image generation (Gemini or fal)."""
+class ChatImageGenInput(BaseModel):
+    """
+    这是从聊天历史中收集到的信息，用于构建生图模型的提示词。
+    """
 
     history_count: int
     chat_history: List[Any]
@@ -77,8 +79,10 @@ class ChatImagePreparedInputs(BaseModel):
     reference_type: Literal["背景图", "头像"]
 
 
-class ChatImageModelInput(BaseModel):
-    """统一聊天生图模型输入：用于模型路由与 provider 输入适配。"""
+class ChatImageGenModelInput(BaseModel):
+    """
+    统一聊天生图模型输入：用于模型路由与 provider 输入适配。
+    """
 
     prompt: str
     reference_image_url: str
@@ -464,7 +468,7 @@ class ImageGenerationService:
 
     async def generate_chat_image_by_model(
         self,
-        chat_input: ChatImageModelInput,
+        chat_input: ChatImageGenModelInput,
         gcs_uri_base: str,
         system_instructions: Optional[List[str]] = None,
     ) -> GeneratedImageProcessResult:
@@ -748,7 +752,7 @@ class ImageGenerationService:
         message_content: str,
         user_id: Optional[str] = None,
         history_count: Optional[int] = None,
-    ) -> ChatImagePreparedInputs:
+    ) -> ChatImageGenInput:
         """
         准备聊天生图所需输入：历史消息、用户信息、提示词、参考图 URL 等。
         由 generate_chat_image_for_message 共用。
@@ -814,7 +818,7 @@ class ImageGenerationService:
             "背景图" if agent_data.get("background") else "头像"
         )
 
-        return ChatImagePreparedInputs(
+        return ChatImageGenInput(
             history_count=history_count,
             chat_history=chat_history,
             user_info=user_info,
@@ -851,8 +855,10 @@ class ImageGenerationService:
         4) 返回前端需要的响应结构
         """
         logger.debug(
-            "统一聊天生图入口，session_id={}, model={}",
+            "统一聊天生图入口，session_id={}, message_id={}, agent_data={}, model={}",
             session_id,
+            message_id,
+            agent_data,
             model,
         )
 
@@ -900,7 +906,7 @@ class ImageGenerationService:
                 agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
             ]
         result = await self.generate_chat_image_by_model(
-            chat_input=ChatImageModelInput(
+            chat_input=ChatImageGenModelInput(
                 prompt=prepared.prompt,
                 reference_image_url=prepared.reference_url,
                 message_history=prepared.chat_history,
