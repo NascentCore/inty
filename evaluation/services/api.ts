@@ -1280,7 +1280,7 @@ export const chatImageApi = {
     message_id: number;
     model?: string;
     generation_time_ms?: number;
-  }> => apiClient.post(`/chats/agents/${agentId}/generate-image`, data),
+  }> => apiClient.post(`/chat/images/${agentId}`, data),
 
   // 获取图片生成配置（模型为 models_catalog nickname）
   getConfig: (): Promise<{

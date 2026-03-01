@@ -95,7 +95,6 @@ Evaluation 与 festival_memory 的实现位于 `backend/ops/api/v1/`，主应用
 | `/api/v1/chats/agents/{agent_id}/chats` | DELETE | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/{agent_id}/debug-messages` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/{agent_id}/clear-messages` | POST | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/{agent_id}/generate-image` | POST | `app/api/v1/endpoints/chats.py` |
 
 > **节日记忆提示消息（与 Android App 的接口约定）**：
 >

@@ -10,7 +10,7 @@ from sqlalchemy.exc import MissingGreenlet
 from app.api import deps
 from app.api.v1.endpoints import chats as chats_v1
 from app.models.user import AuthType
-from app.schemas.response import BusinessErrorCode, UsageLimitExceeded
+from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
 from app.services.voice_service import VoiceService
@@ -82,19 +82,6 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
         "add_user_message",
         fake_add_user_message,
     )
-
-
-def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
-    async def fake_generate_chat_image(*args, **kwargs):
-        return UsageLimitExceeded(
-            code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"],
-            error_code=BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"],
-            message=BusinessErrorCode.SUBSCRIPTION_REQUIRED["message"],
-            used_count=4,
-            daily_limit=4,
-        )
-
-    monkeypatch.setattr(chat_service, "generate_chat_image", fake_generate_chat_image)
 
 
 def test_generate_message_voice_guest_login_required(
@@ -196,31 +183,6 @@ def test_update_chat_settings_requires_subscription(
         == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
     )
     assert body["data"].get("used_count") is None
-
-
-def test_v1_chats_generate_image_wraps_business_error(
-    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
-):
-    _stub_generate_chat_image(monkeypatch)
-
-    user = _make_user(auth_type=AuthType.GOOGLE)
-
-    with _client_with_user(chats_business_error_app, user) as client:
-        response = client.post(
-            "/api/v1/chats/agents/agent-1/generate-image",
-            json={"message_id": 1},
-        )
-
-    body = response.json()
-
-    assert response.status_code == 200
-    assert body["code"] == BusinessErrorCode.SUBSCRIPTION_REQUIRED["code"]
-    assert (
-        body["data"]["error_code"]
-        == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
-    )
-    assert body["data"]["used_count"] == 4
-    assert body["data"]["daily_limit"] == 4
 
 
 def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_greenlet(

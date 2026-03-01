@@ -41,16 +41,13 @@
 }
 ```
 
-**废弃端点**: `POST /api/v1/chats/agents/{agent_id}/generate-image`（已标记为 `deprecated`，建议使用新端点）
-
 ## 实现细节
 
 ### 1. API 端点实现
 
-**主要端点位置**: `app/api/v1/endpoints/chat.py::generate_chat_image`  
-**废弃端点位置**: `app/api/v1/endpoints/chats.py::generate_chat_image`（已标记为 deprecated）
+**端点位置**: `app/api/v1/endpoints/chat.py::generate_chat_image`
 
-两个端点都调用核心服务函数 `chat_service.generate_chat_image()`，端点层只负责：
+端点调用核心服务函数 `chat_service.generate_chat_image()`，端点层只负责：
 - 参数验证和解析
 - 用户认证（通过 `Depends(deps.get_current_active_user)`）
 - 响应格式化和错误处理
