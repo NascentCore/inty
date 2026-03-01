@@ -111,6 +111,7 @@ def enhance_prompt(prompt: str, gender: str) -> str:
     enhanced_prompt = f"""
     A person who is attractive/beautiful/lovely/intriguing.
     age: 22 - 35
+
     gender: {gender}
 
     {prompt}
