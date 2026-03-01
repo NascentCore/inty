@@ -168,7 +168,7 @@ class WrappedClient:
         self.client = client
 
     @traceable(
-        name="generate_image",
+        name="generate_image_with_google_genai",
         # LLM 是语言模型，生图模型就作为工具调用类型
         run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,

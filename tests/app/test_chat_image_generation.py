@@ -18,7 +18,7 @@ from app.external_services.fakes.gemini import FakeGeminiClient
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
-from app.services.image_generation_service import ChatImageModelInput, image_generation_service
+from app.services.image_generation_service import ChatImageGenModelInput, image_generation_service
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
     NANO_BANANA,
@@ -79,7 +79,7 @@ class TestImageGenerationService:
             return_value=FakeGeminiClient(),
         ):
             result = await image_generation_service.generate_chat_image_by_model(
-                chat_input=ChatImageModelInput(
+                chat_input=ChatImageGenModelInput(
                     prompt="draw us in a cafe",
                     reference_image_url="https://example.com/reference.jpg",
                     message_history=[
@@ -114,7 +114,7 @@ class TestImageGenerationService:
             new=fake_seedream_v4_5_edit,
         ):
             result = await image_generation_service.generate_chat_image_by_model(
-                chat_input=ChatImageModelInput(
+                chat_input=ChatImageGenModelInput(
                     prompt="draw a romantic evening",
                     reference_image_url="https://example.com/reference.jpg",
                     message_history=[
