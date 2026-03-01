@@ -217,6 +217,10 @@
 # 警告抑制
 # ===========================================
 
+# Play Core KTX (review-ktx) 引用 GMS 注解 NoNullnessRewrite，该注解不在 classpath，
+# 仅编译期使用，对运行时无影响。见 R8 missing class 报错与 missing_rules.txt 建议。
+-dontwarn com.google.android.gms.common.annotation.NoNullnessRewrite
+
 # 抑制常见警告
 -dontwarn java.lang.management.ManagementFactory
 -dontwarn java.lang.management.RuntimeMXBean
