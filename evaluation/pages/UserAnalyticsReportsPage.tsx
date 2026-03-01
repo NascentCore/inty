@@ -63,6 +63,7 @@ import {
   buildRollingDailyImageUsageSeries,
   buildRollingDailyUsageSeries,
   buildDailyUsageTickText,
+  removeOpeningVoiceMessageAudios,
   sortReportsByDateDesc,
   WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
@@ -322,7 +323,11 @@ function ReportContent({
     userAnalyticsApi
       .getDailyVoiceAudios(reportDate)
       .then((data) => {
-        setVoiceAudiosCache((prev) => ({ ...prev, [reportDate!]: data }));
+        const normalizedVoiceAudios = removeOpeningVoiceMessageAudios(data);
+        setVoiceAudiosCache((prev) => ({
+          ...prev,
+          [reportDate!]: normalizedVoiceAudios,
+        }));
       })
       .finally(() => setVoiceAudiosLoading(false));
   }, [
