@@ -10,11 +10,13 @@ import {
   buildRollingDailyImageUsageSeries,
   buildVoiceRequestsPerMessageRatioValues,
   buildDailyUsageTickText,
+  removeOpeningVoiceMessageAudios,
   sortReportsByDateDesc,
   DAILY_TOP_AGENTS_LIMIT,
   WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 } from "../utils/userAnalyticsReports";
 import type {
+  DailyVoiceAudiosResponse,
   UserAnalyticsReportItem,
   UserAnalyticsStatsResponse,
 } from "../types";
@@ -282,6 +284,93 @@ describe("buildVoiceRequestsPerMessageRatioValues", () => {
 
   it("无用量序列时返回空数组", () => {
     expect(buildVoiceRequestsPerMessageRatioValues(null)).toEqual([]);
+  });
+});
+
+describe("removeOpeningVoiceMessageAudios", () => {
+  it("按用户-角色分组去掉首条语音播报，并清理空分组", () => {
+    const voiceAudios: DailyVoiceAudiosResponse = {
+      voice_message_audios: [
+        {
+          user_id: "u1",
+          agent_id: "a1",
+          agent_name: "A",
+          audios: [
+            {
+              audio_url: "https://example.com/opening-u1-a1.mp3",
+              message_id: 1,
+              created_at: "2026-02-01T00:00:00Z",
+              duration_seconds: 3.8,
+            },
+            {
+              audio_url: "https://example.com/reply-u1-a1.mp3",
+              message_id: 2,
+              created_at: "2026-02-01T00:01:00Z",
+              duration_seconds: 4.2,
+            },
+          ],
+        },
+        {
+          user_id: "u2",
+          agent_id: "a2",
+          agent_name: "B",
+          audios: [
+            {
+              audio_url: "https://example.com/opening-u2-a2.mp3",
+              message_id: 3,
+              created_at: "2026-02-01T00:02:00Z",
+              duration_seconds: 4.0,
+            },
+          ],
+        },
+      ],
+      voice_call_audios: [
+        {
+          user_id: "u1",
+          agent_id: "a1",
+          agent_name: "A",
+          audios: [
+            {
+              audio_url: "https://example.com/call-u1-a1.mp3",
+              message_id: 9,
+              created_at: "2026-02-01T00:03:00Z",
+              duration_seconds: 30.5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const filtered = removeOpeningVoiceMessageAudios(voiceAudios);
+
+    expect(filtered.voice_message_audios).toEqual([
+      {
+        user_id: "u1",
+        agent_id: "a1",
+        agent_name: "A",
+        audios: [
+          {
+            audio_url: "https://example.com/reply-u1-a1.mp3",
+            message_id: 2,
+            created_at: "2026-02-01T00:01:00Z",
+            duration_seconds: 4.2,
+          },
+        ],
+      },
+    ]);
+    expect(filtered.voice_call_audios).toEqual(voiceAudios.voice_call_audios);
+    expect(voiceAudios.voice_message_audios[0]?.audios).toHaveLength(2);
+    expect(voiceAudios.voice_message_audios[1]?.audios).toHaveLength(1);
+  });
+
+  it("没有语音播报分组时返回空列表", () => {
+    const filtered = removeOpeningVoiceMessageAudios({
+      voice_message_audios: [],
+      voice_call_audios: [],
+    });
+
+    expect(filtered.voice_message_audios).toEqual([]);
+    expect(filtered.voice_call_audios).toEqual([]);
   });
 });
 

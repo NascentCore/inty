@@ -2,9 +2,11 @@
  * CREATED_BY_AGENT
  */
 import type {
+  DailyVoiceAudiosResponse,
   UserAnalyticsReportItem,
   UserAnalyticsReportDailyTopAgentItem,
   UserAnalyticsStatsResponse,
+  VoiceAudioGroupByUserAgent,
 } from "../types";
 
 type DailyUsageAxis = "y" | "y2";
@@ -91,6 +93,22 @@ export const DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE =
 export const DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR =
   DAILY_IMAGE_USAGE_CHART_METRICS.find((metric) => metric.axis === "y2")
     ?.color ?? "#faad14";
+
+const removeFirstAudioInVoiceMessageGroup = (
+  group: VoiceAudioGroupByUserAgent,
+): VoiceAudioGroupByUserAgent => ({
+  ...group,
+  audios: group.audios.slice(1),
+});
+
+export const removeOpeningVoiceMessageAudios = (
+  dailyVoiceAudios: DailyVoiceAudiosResponse,
+): DailyVoiceAudiosResponse => ({
+  ...dailyVoiceAudios,
+  voice_message_audios: dailyVoiceAudios.voice_message_audios
+    .map(removeFirstAudioInVoiceMessageGroup)
+    .filter((group) => group.audios.length > 0),
+});
 
 const ISO_DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 const WEEKDAY_LABELS = [
