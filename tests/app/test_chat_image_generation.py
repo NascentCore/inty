@@ -231,11 +231,12 @@ class TestImageGenerationService:
             "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
             fake_async_generate_image,
         )
+        async def fake_upload_async(file_data, content_type, bucket_name, path):
+            return "https://storage.googleapis.com/{}/{}".format(bucket_name, path)
+
         monkeypatch.setattr(
-            "app.core.google_genai.wrapped_client.upload_to_gcs",
-            lambda file_data, content_type, bucket_name, path: "https://storage.googleapis.com/{}/{}".format(
-                bucket_name, path
-            ),
+            "app.core.google_genai.wrapped_client.upload_to_gcs_async",
+            fake_upload_async,
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.image_transform_service.transform_desktop",
@@ -680,11 +681,12 @@ class TestChatHistoryService:
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
         )
+        async def fake_upload_async(file_data, content_type, bucket_name, path):
+            return "https://storage.googleapis.com/{}/{}".format(bucket_name, path)
+
         monkeypatch.setattr(
-            "app.core.google_genai.wrapped_client.upload_to_gcs",
-            lambda file_data, content_type, bucket_name, path: "https://storage.googleapis.com/{}/{}".format(
-                bucket_name, path
-            ),
+            "app.core.google_genai.wrapped_client.upload_to_gcs_async",
+            fake_upload_async,
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.image_transform_service.transform_desktop",
@@ -802,12 +804,12 @@ class TestChatHistoryService:
             lambda: FakeGeminiClient(),
         )
 
-        def fake_upload(file_data, content_type, bucket_name, path):
+        async def fake_upload_async(file_data, content_type, bucket_name, path):
             return "https://storage.googleapis.com/{}/{}".format(bucket_name, path)
 
         monkeypatch.setattr(
-            "app.core.google_genai.wrapped_client.upload_to_gcs",
-            fake_upload,
+            "app.core.google_genai.wrapped_client.upload_to_gcs_async",
+            fake_upload_async,
         )
         monkeypatch.setattr(
             "app.services.image_generation_service.image_transform_service.transform_desktop",

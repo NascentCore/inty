@@ -45,7 +45,8 @@ NOTES:
 
 import datetime
 import copy
-import io
+import json
+import time
 import uuid
 from enum import StrEnum
 from typing import Any, NamedTuple
@@ -58,7 +59,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml as global_config
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.gcs import upload_to_gcs
+from app.external_services.gcs import upload_to_gcs_async
 from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, compress_png_to_jpeg, parse_image_data_uri
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO, Z_IMAGE_TURBO_IMAGE_TO_IMAGE
@@ -252,7 +253,7 @@ class ZImageTurboInput(BaseModel):
     """)
     num_images: int = 1
     enable_safety_checker: bool = False
-    output_format: ImageFormat = ImageFormat.JPEG
+    output_format: ImageFormat = ImageFormat.WEBP
     acceleration: AccelerationEnum = AccelerationEnum.NONE
     enable_prompt_expansion: bool = False
 
@@ -282,7 +283,7 @@ class ZImageTurboOutput(BaseModel):
     prompt: str
 
 
-def _upload_image_file_to_gcs_and_return_url(
+async def _upload_image_file_to_gcs_and_return_url(
     image_file: ImageFile,
     gcs_uri_base: str,
     enable_compress_png_to_jpeg: bool = True,
@@ -292,18 +293,43 @@ def _upload_image_file_to_gcs_and_return_url(
     The data URI is a base64 encoded image string with MIME type and base64 encoding.
     eg: data:image/jpeg;base64,/9j/4A...
     """
+    # #region agent log
+    _dp = "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug-713d4f.log"
+    with open(_dp, "a") as _f:
+        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:before_parse", "message": "before parse_image_data_uri", "data": {"data_uri_len": len(image_file.url)}, "hypothesisId": "H1"}) + "\n")
+    # #endregion
     file_data, image_format = parse_image_data_uri(image_file.url)
+    # #region agent log
+    with open(_dp, "a") as _f:
+        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:after_parse", "message": "after parse_image_data_uri", "data": {"bytes_len": len(file_data), "image_format": str(image_format)}, "hypothesisId": "H1"}) + "\n")
+    # #endregion
     if enable_compress_png_to_jpeg and image_format == ImageFormat.PNG:
+        # #region agent log
+        with open(_dp, "a") as _f:
+            _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:before_compress", "message": "before compress_png_to_jpeg", "data": {}, "hypothesisId": "H1"}) + "\n")
+        # #endregion
         file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
+        # #region agent log
+        with open(_dp, "a") as _f:
+            _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:after_compress", "message": "after compress_png_to_jpeg", "data": {"bytes_len": len(file_data)}, "hypothesisId": "H1"}) + "\n")
+        # #endregion
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
     gcs_uri = f"gs://{global_config.gcs.bucket}/{gcs_path}"
-    gcs_http_url = upload_to_gcs(
+    # #region agent log
+    with open(_dp, "a") as _f:
+        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:before_upload", "message": "before upload_to_gcs_async", "data": {}, "hypothesisId": "H5"}) + "\n")
+    # #endregion
+    gcs_http_url = await upload_to_gcs_async(
         file_data=file_data,
         content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
         bucket_name=global_config.gcs.bucket,
         path=gcs_path,
     )
+    # #region agent log
+    with open(_dp, "a") as _f:
+        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:after_upload", "message": "after upload_to_gcs_async", "data": {}, "hypothesisId": "H5"}) + "\n")
+    # #endregion
     image_size = ImageSize(width=image_file.width, height=image_file.height)
     return _DataUriUploadResult(
         gcs_uri=gcs_uri,
@@ -331,7 +357,7 @@ async def z_image_turbo(
     for i, image in enumerate(result.images):
         if not image.url.startswith("data:"):
             raise ValueError(f"Image URL is not a data URI: {image.url}")
-        upload_result = _upload_image_file_to_gcs_and_return_url(
+        upload_result = await _upload_image_file_to_gcs_and_return_url(
             image, gcs_uri_base, enable_compress_png_to_jpeg=True
         )
         logger.debug("Uploaded ZImageTurbo data URI to GCS (image index: {})", i)
@@ -433,7 +459,7 @@ async def z_image_turbo_image_to_image(
     first_img = result.images[0]
     if not first_img.url.startswith("data:"):
         raise ValueError(f"Image URL is not a data URI: {first_img.url}")
-    upload_result = _upload_image_file_to_gcs_and_return_url(
+    upload_result = await _upload_image_file_to_gcs_and_return_url(
         first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
     )
     logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)

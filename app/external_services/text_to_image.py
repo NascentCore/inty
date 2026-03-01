@@ -102,6 +102,7 @@ def generate_text_to_image(
     request: TextToImageGenerationRequest,
 ) -> TextToImageGenerationResult:
     provider, provider_model = _resolve_provider_and_model(request.model)
+    logger.debug(f"Generating text-to-image with provider: {provider} and model: {provider_model}")
     if provider == TextToImageProvider.GOOGLE:
         return _generate_google_imagen(provider_model=provider_model, request=request)
     if provider == TextToImageProvider.OPENAI:
