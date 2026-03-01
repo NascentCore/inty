@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.models_catalog import GenAIModel, resolve_chat_image_model
+from app.utils.models_catalog import GenAIModel, resolve_nickname
 
 
 def select_chat_model(*, user: object, is_subscribed: bool) -> str:
@@ -35,7 +35,7 @@ def select_chat_image_model(*, user: object, is_subscribed: bool) -> GenAIModel:
     nickname = (
         config.sub_user_chat_image_model if is_subscribed else config.free_user_chat_image_model
     )
-    return resolve_chat_image_model(nickname)
+    return resolve_nickname(nickname)
 
 
 def select_chat_music_model(*, user: object, is_subscribed: bool) -> str:
