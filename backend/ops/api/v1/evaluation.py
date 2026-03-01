@@ -11,7 +11,34 @@ from backend.ops.schemas.evaluation import BatchEvaluationRequest, EvaluationCom
 from app.api import deps
 from app.api.tags import INTY_EVAL_TAG, NOT_USED_TAG
 from app.api.utils.logger_route import LoggerRoute
-from backend.ops.schemas.user_analytics import AgentAnalyticsResponse, ConversationRoundsResponse, ConversationsDetailResponse, DailyNewUsersResponse, DailyVoiceAudiosResponse, ImageGenerationFailureAnalyticsResponse, ImageGenerationLatencyResponse, LLMLatencyResponse, LiveChatBasicStatsResponse, LiveChatLatencyResponse, PopularAgentsResponse, SessionMessagesResponse, UserAnalyticsReportCharts, UserAnalyticsReportItem, UserAnalyticsReportsResponse, UserAnalyticsStatsResponse, UserChatActivityItem, UserDailyMessagesResponse, UserGeneratedImagesResponse, UserRoundsDistributionItem, UserSessionsDetailResponse, UserSessionsResponse, UserTodayStatsResponse, UsersHittingLimitResponse
+from backend.ops.schemas.user_analytics import (
+    AgentAnalyticsResponse,
+    ConversationRoundsResponse,
+    ConversationsDetailResponse,
+    DailyNewUsersResponse,
+    DailyVoiceAudiosResponse,
+    ImageGenerationFailureAnalyticsResponse,
+    ImageGenerationLatencyResponse,
+    LiveChatBasicStatsResponse,
+    LiveChatLatencyResponse,
+    LLMLatencyResponse,
+    PopularAgentsResponse,
+    SessionMessagesResponse,
+    UserAnalyticsReportCharts,
+    UserAnalyticsReportItem,
+    UserAnalyticsReportsResponse,
+    UserAnalyticsStatsResponse,
+    UserChatActivityItem,
+    UserDailyMessagesResponse,
+    UserGeneratedImagesResponse,
+    UserRoundsDistributionItem,
+    UserSessionsDetailResponse,
+    UserSessionsResponse,
+    UserTodayStatsResponse,
+    UsersHittingLimitResponse,
+    VoiceAudioGroupByUserAgent,
+    VoiceAudioItem,
+)
 from app.services.evaluation_service import EvaluationService
 from app.services.question_parser_service import QuestionParserService
 from app.services.scoring_service import ScoringService
@@ -1844,7 +1871,6 @@ async def get_daily_voice_audios(
     try:
         from datetime import datetime, timedelta, timezone
 
-        from app.schemas import user_analytics as ua_schemas
         from app.services.user_analytics_service import UserAnalyticsService
 
         act_start = datetime.strptime(report_date, "%Y-%m-%d").replace(
@@ -1856,13 +1882,13 @@ async def get_daily_voice_audios(
             await service.get_voice_audios_on_date(act_start, act_end)
         )
 
-        def to_group(g: Dict[str, Any]) -> ua_schemas.VoiceAudioGroupByUserAgent:
-            return ua_schemas.VoiceAudioGroupByUserAgent(
+        def to_group(g: Dict[str, Any]) -> VoiceAudioGroupByUserAgent:
+            return VoiceAudioGroupByUserAgent(
                 user_id=g["user_id"],
                 agent_id=g["agent_id"],
                 agent_name=g.get("agent_name") or "",
                 audios=[
-                    ua_schemas.VoiceAudioItem(
+                    VoiceAudioItem(
                         audio_url=a["audio_url"],
                         message_id=a["message_id"],
                         created_at=a.get("created_at"),
@@ -1872,7 +1898,7 @@ async def get_daily_voice_audios(
                 ],
             )
 
-        return ua_schemas.DailyVoiceAudiosResponse(
+        return DailyVoiceAudiosResponse(
             voice_message_audios=[to_group(g) for g in voice_message_groups],
             voice_call_audios=[to_group(g) for g in voice_call_groups],
         )
