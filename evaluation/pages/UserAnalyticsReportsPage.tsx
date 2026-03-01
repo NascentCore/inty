@@ -68,6 +68,7 @@ import {
 } from "../utils/userAnalyticsReports";
 import { USER_ANALYTICS_GENERATED_IMAGE_PREVIEW_STYLE } from "../utils/userAnalyticsReportImagePreview";
 import GeneratedImageDetailModal from "../components/common/GeneratedImageDetailModal";
+import { PerformanceAnalyticsSection } from "../components/userAnalytics/PerformanceAnalyticsSection";
 import {
   buildGeneratedImageDetailFromDailyReportItem,
   type GeneratedImageDetail,
@@ -1489,6 +1490,7 @@ export const UserAnalyticsReportsPage: React.FC = () => {
           )}
         </Spin>
       </Card>
+      <PerformanceAnalyticsSection />
       <Spin spinning={loadingReports}>
         {sortedReports.length === 0 ? (
           loadingReports ? null : (
