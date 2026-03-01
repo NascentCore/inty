@@ -72,7 +72,7 @@ class TestImageGenerationService:
             )
 
         with patch(
-            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
             new=fake_async_generate_image,
         ), patch(
             "app.services.image_generation_service.get_genai_client",
@@ -228,7 +228,7 @@ class TestImageGenerationService:
             lambda: FakeGeminiClient(),
         )
         monkeypatch.setattr(
-            "app.services.image_generation_service.WrappedClient.async_generate_image",
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
             fake_async_generate_image,
         )
         monkeypatch.setattr(
