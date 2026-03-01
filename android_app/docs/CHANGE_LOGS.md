@@ -9,6 +9,7 @@ Only user-visible changes are recorded
 ## 2026-02-28
 
 - Explore page now applies a gender preference filter in **New iMates for you**: users with `MALE`/`FEMALE` profiles see newly created iMates of the opposite gender, while `OTHER`/`NON_BINARY` profiles keep the existing unfiltered behavior.
+- Official Assistant chat now shows up to 9 FAQ quick-question buttons near the top area; tapping a button fills the full question into the chat input box without sending it automatically.
 
 ## 2026-02-26
 

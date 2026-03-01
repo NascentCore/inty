@@ -1055,6 +1055,7 @@ class ChatViewModel : BaseVM() {
     /** 将预定义文案填入输入框（如更多面板「换装」），用户可编辑后发送。 */
     fun setInputMessage(text: String) {
         inputData.value = text
+        inputSelection.value = text.length
     }
 
     fun loadRecentMessages(count: Int) {

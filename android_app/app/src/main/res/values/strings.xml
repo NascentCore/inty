@@ -294,6 +294,24 @@
     <string name="chat_voice_input_failed">Could not recognize speech. Try again.</string>
     <string name="chat_ai_typing_placeholder">%1$s is typing</string>
     <string name="chat_ai_typing_default_name">Your iMate</string>
+    <string name="chat_official_faq_title_open_assistant_chat">Open assistant chat</string>
+    <string name="chat_official_faq_question_open_assistant_chat">How do I open the Official Assistant Chat from the middle icon in the bottom navigation bar?</string>
+    <string name="chat_official_faq_title_switch_backend">Switch backend</string>
+    <string name="chat_official_faq_question_switch_backend">How can I switch backend endpoints in a debug build to test local, dev, or prod servers?</string>
+    <string name="chat_official_faq_title_restore_premium">Restore Premium</string>
+    <string name="chat_official_faq_question_restore_premium">How do I restore my subscription if I was charged but Premium perks are still locked?</string>
+    <string name="chat_official_faq_title_fix_voice_call">Fix voice call</string>
+    <string name="chat_official_faq_question_fix_voice_call">Why is the voice call screen blank, and how do I fix microphone permission settings?</string>
+    <string name="chat_official_faq_title_upscale_image">Upscale image</string>
+    <string name="chat_official_faq_question_upscale_image">How do I upscale an AI image, and how many credits does it cost for non-subscribed users?</string>
+    <string name="chat_official_faq_title_create_imate">Create my iMate</string>
+    <string name="chat_official_faq_question_create_imate">How can I create my own iMate from Explore or from My iMates in the Me page?</string>
+    <string name="chat_official_faq_title_daily_chat_limit">Daily chat limit</string>
+    <string name="chat_official_faq_question_daily_chat_limit">What should I do when I see \"Daily Premium Chat Limit Reached\"?</string>
+    <string name="chat_official_faq_title_report_issue">Report an issue</string>
+    <string name="chat_official_faq_question_report_issue">How do I report a problematic chat or image and attach evidence for support?</string>
+    <string name="chat_official_faq_title_check_version">Check app version</string>
+    <string name="chat_official_faq_question_check_version">Where can I check app version info, and how do I get the latest QA build if Google Play is behind?</string>
 
     <!-- VIP character access control -->
     <string name="vip_character_chat_locked_content">This is a VIP iMate. Go Premium to chat with VIP iMates and unlock exclusive features!</string>
