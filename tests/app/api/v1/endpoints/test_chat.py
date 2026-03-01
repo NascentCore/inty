@@ -117,6 +117,129 @@ def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
     )
 
 
+def _stub_success_chat_completion_with_premium_preview(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    class DummyAgent:
+        async def chat(self, *args, **kwargs):
+            return ("free-mode response", 101)
+
+        async def generate_message_without_user_save(self, *args, **kwargs):
+            return "A warmer and more personalized premium-only response sample."
+
+    async def fake_get_agent(agent_data):
+        return DummyAgent()
+
+    async def fake_check_chat_limit(db, user):
+        # used_count=4 -> 第 5 条触发预览（默认 every_n=5）
+        return True, 4, 100
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            voice_enabled=False,
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_record_usage(*args, **kwargs):
+        return None
+
+    async def fake_get_ai_message_info_by_id(db, message_id):
+        return {
+            "id": message_id,
+            "meta_data": {"source": "unit-test"},
+            "timestamp": 1735689600000,
+            "audio_url": None,
+        }
+
+    async def fake_get_latest_user_message_id(db, session_id):
+        return 55
+
+    async def fake_mark_user_push_notifications_as_read(db, user_id):
+        return 0
+
+    async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
+        return None
+
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.agent,
+        "enable_free_user_premium_preview",
+        True,
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.agent,
+        "free_user_premium_preview_every_n_messages",
+        5,
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.agent,
+        "free_user_premium_preview_max_chars",
+        280,
+    )
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_ai_message_info_by_id",
+        fake_get_ai_message_info_by_id,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_user_message_id",
+        fake_get_latest_user_message_id,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "try_trigger_surprise_snap",
+        fake_try_trigger_surprise_snap,
+    )
+
+
 def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
     async def fake_generate_chat_image(*args, **kwargs):
         return UsageLimitExceeded(
@@ -224,6 +347,44 @@ def test_v1_chat_completions_subscription_required(
     )
     assert body["data"]["used_count"] == 5
     assert body["data"]["daily_limit"] == 5
+
+
+def test_v1_chat_completions_adds_premium_preview_and_popup_action(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_success_chat_completion_with_premium_preview(monkeypatch)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+
+    data = body["data"]
+    actions = data["business_actions"]
+    assert isinstance(actions, list) and len(actions) > 0
+    assert actions[0]["action_type"] == "subscription_popup"
+    assert actions[0]["message"]
+
+    choices = data["choices"]
+    premium_preview_choices = [
+        c
+        for c in choices
+        if c.get("message", {}).get("type") == "premium_preview"
+    ]
+    assert len(premium_preview_choices) == 1
+    premium_content = premium_preview_choices[0]["message"]["content"]
+    assert "Premium-only preview:" in premium_content
+    assert "Subscribe to Premium" in premium_content
 
 
 def test_v1_chat_generate_image_wraps_business_error(

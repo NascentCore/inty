@@ -1,6 +1,7 @@
 import time
 import uuid
-from typing import Optional, TypeAlias, Union
+from types import SimpleNamespace
+from typing import List, Optional, TypeAlias, Union
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from langchain_core.messages import HumanMessage
@@ -10,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import models, schemas
 from app.api import deps
 from app.api.tags import ANDROID_APP_TAG, INTY_EVAL_TAG, WEB_APP_TAG
-from app.schemas.biz_action import ActionType, BizAction, BusinessActions
+from app.schemas.biz_action import (
+    GENERAL_SUBSCRIPTION_POPUP_MESSAGES,
+    ActionType,
+    BizAction,
+)
 from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
@@ -124,15 +129,15 @@ def _build_chat_response(
     audio_url: Optional[str],
     request: ChatCompletionRequest,
     user_message_id: Optional[int] = None,
+    subscription_actions: Optional[List[BizAction]] = None,
 ) -> dict:
     """构建聊天响应数据"""
     message = {"role": "assistant", "content": response_content}
-    # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
-    default_business_actions = BusinessActions(
-        subscription_actions=[
+    if subscription_actions is None or len(subscription_actions) == 0:
+        # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
+        subscription_actions = [
             BizAction(action_type=ActionType.NONE, message=""),
         ]
-    )
 
     if latest_message_info:
         message["id"] = latest_message_info["id"]
@@ -151,9 +156,7 @@ def _build_chat_response(
         "created": int(time.time()),
         "model": request.model,
         "user_message_id": user_message_id,
-        "business_actions": [
-            a.model_dump() for a in default_business_actions.subscription_actions
-        ],
+        "business_actions": [a.model_dump() for a in subscription_actions],
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
             "prompt_tokens": len(last_user_message.split()),
@@ -162,6 +165,94 @@ def _build_chat_response(
             + len(response_content.split()),
         },
     }
+
+
+def _should_trigger_premium_preview(
+    *,
+    is_subscribed: bool,
+    next_chat_count: int,
+) -> bool:
+    if is_subscribed:
+        return False
+    if not global_config_loaded_from_config_yaml.agent.enable_free_user_premium_preview:
+        return False
+    preview_every = (
+        global_config_loaded_from_config_yaml.agent.free_user_premium_preview_every_n_messages
+    )
+    if preview_every <= 0:
+        return False
+    return next_chat_count % preview_every == 0
+
+
+def _truncate_premium_preview_content(content: str) -> str:
+    max_chars = (
+        global_config_loaded_from_config_yaml.agent.free_user_premium_preview_max_chars
+    )
+    if max_chars <= 0 or len(content) <= max_chars:
+        return content
+    return content[:max_chars].rstrip() + "..."
+
+
+def _build_premium_preview_choice(preview_content: str) -> dict:
+    return {
+        "role": "assistant",
+        "type": "premium_preview",
+        "content": (
+            "Premium-only preview:\n"
+            f"{preview_content}\n\n"
+            "Subscribe to Premium to unlock this quality in every chat."
+        ),
+        "meta_data": {
+            "premium_only": True,
+            "source": "free_user_premium_preview",
+        },
+    }
+
+
+def _build_premium_subscription_action(next_chat_count: int) -> BizAction:
+    msg_idx = next_chat_count % len(GENERAL_SUBSCRIPTION_POPUP_MESSAGES)
+    return BizAction(
+        action_type=ActionType.SUBSCRIPTION_POPUP,
+        message=GENERAL_SUBSCRIPTION_POPUP_MESSAGES[msg_idx],
+    )
+
+
+async def _try_generate_premium_preview_choice(
+    *,
+    agent,
+    current_user: schemas.User,
+    session_id: str,
+    last_user_message: str,
+    chat_settings: models.ChatSettings,
+    user_time_context: Optional[dict],
+) -> Optional[dict]:
+    premium_settings = SimpleNamespace(
+        premium_mode=True,
+        style_prompt=chat_settings.style_prompt,
+        voice_enabled=False,
+    )
+    premium_model_override = select_chat_model(user=current_user, is_subscribed=True)
+    premium_preview_prompt = (
+        "Generate one short premium-only sample reply for the user's latest message. "
+        "Make it deeper, warmer, and more personalized than free mode. "
+        "Return only the reply text in one paragraph (max 80 words).\n"
+        f"User latest message: {last_user_message}"
+    )
+    preview_content = await agent.generate_message_without_user_save(
+        user_id=current_user.id,
+        session_id=session_id,
+        messages=[HumanMessage(content=premium_preview_prompt)],
+        chat_settings=premium_settings,
+        user_time_context=user_time_context,
+        model_override=premium_model_override,
+        is_subscribed=True,
+    )
+    if not preview_content:
+        return None
+    preview_content = _truncate_premium_preview_content(preview_content.strip())
+    if not preview_content:
+        return None
+    return _build_premium_preview_choice(preview_content)
 
 
 @router.post(
@@ -298,6 +389,33 @@ async def agent_chat_completions(
             logger.debug(
                 f"Agent聊天响应成功: {(response_content or '')[:100]}..."
             )
+            subscription_actions = None
+            premium_preview_choice = None
+            next_chat_count = used_count + 1
+            if _should_trigger_premium_preview(
+                is_subscribed=is_subscribed,
+                next_chat_count=next_chat_count,
+            ):
+                try:
+                    with log_time(
+                        f"生成付费预览内容: user_id={current_user.id}, chat_count={next_chat_count}"
+                    ):
+                        premium_preview_choice = (
+                            await _try_generate_premium_preview_choice(
+                                agent=agent,
+                                current_user=current_user,
+                                session_id=session_id,
+                                last_user_message=last_user_message,
+                                chat_settings=chat_settings,
+                                user_time_context=user_time_context,
+                            )
+                        )
+                    if premium_preview_choice is not None:
+                        subscription_actions = [
+                            _build_premium_subscription_action(next_chat_count)
+                        ]
+                except Exception as e:
+                    logger.warning(f"生成付费预览失败，已跳过: {str(e)}")
 
             # 用户发送消息后，标记该用户的所有未读推送为已读
             try:
@@ -429,7 +547,18 @@ async def agent_chat_completions(
             audio_url,
             request,
             user_message_id=user_message_id,
+            subscription_actions=subscription_actions,
         )
+
+        if premium_preview_choice is not None:
+            idx = len(data["choices"])
+            data["choices"].append(
+                {
+                    "index": idx,
+                    "message": premium_preview_choice,
+                    "finish_reason": "stop",
+                }
+            )
 
         # 若有本次投递的节日提醒，追加到 choices（仅当 is_festival_memory_enabled 时才会投递，故此处不必再判版本）
         if delivered_prompts:
@@ -441,10 +570,11 @@ async def agent_chat_completions(
             infos_map = await chat_history_service.get_ai_message_infos_by_ids(
                 db, msg_ids
             )
-            for idx, item in enumerate(delivered_prompts, start=1):
+            for item in delivered_prompts:
                 msg_id = item.get("message_id")
                 info = infos_map.get(msg_id) if msg_id is not None else None
                 message = _build_festival_prompt_choice_message(item, info)
+                idx = len(data["choices"])
                 data["choices"].append(
                     {"index": idx, "message": message, "finish_reason": "stop"}
                 )
