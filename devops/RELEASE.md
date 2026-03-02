@@ -81,7 +81,7 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
    <img width="600" height="1616" alt="image" src="https://github.com/user-attachments/assets/380669dc-4671-4551-bc20-201625f228be" />
    <img width="600" height="1288" alt="image" src="https://github.com/user-attachments/assets/89c1d846-ab5c-4d74-b1ee-8c935d7916d0" />
 
-   1. 参考 [Change logs](/android_app/docs/CHANGE_LOGS.md) 填写 release notes
+   1. 参考 [Change logs](/android_app/docs/CHANGE_LOGS.md) 找到距离上次发布依赖的改动，填写 release notes
 
 4. 审核通过后，正式发布
 5. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
