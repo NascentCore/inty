@@ -802,15 +802,20 @@ class GeminiTTSAPI:
                 role="user",
                 parts=[types.Part.from_text(text=TTS_ROLEPLAY_INSTRUCTION)],
             ),
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text="Stage directions to describe the scene: " + "\n".join(stage_directions))],
-            ),
+        ]
+        if stage_directions:
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text="Stage directions to describe the scene: " + "\n".join(stage_directions))],
+                )
+            )
+        contents.append(
             types.Content(
                 role="user",
                 parts=[types.Part.from_text(text=dialogue_text)],
-            ),
-        ]
+            )
+        )
 
         config = types.GenerateContentConfig(
             temperature=self._temperature,
