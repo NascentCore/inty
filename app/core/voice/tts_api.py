@@ -25,6 +25,7 @@ import google.genai as genai
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
 from google.genai import types
+from langsmith import traceable
 from loguru import logger
 
 from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
@@ -32,7 +33,7 @@ from app.utils.models_catalog import ModelBuilder
 
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY_BOOST = 0.5
-DEFAULT_GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+DEFAULT_GEMINI_TTS_MODEL = "gemini-2.5-flash-tts"
 DEFAULT_GEMINI_TTS_VOICE_NAME = "Zephyr"
 DEFAULT_GEMINI_TTS_TEMPERATURE = 1.3
 
@@ -46,22 +47,25 @@ VOICE_ID_PREFIX_ELEVENLABS = ModelBuilder.ELEVENLABS.value
 # Prompted TTS: instruction so Gemini acts as voice actor; parentheticals = stage directions.
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
 # (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
-TTS_ROLEPLAY_INSTRUCTION = (
-    "You are a voice actor. "
-    "You are naturally and convincingly acting out a scene description.\n\n"
-    "Director's notes: Deliver the dialogue in a natural, expressive way; "
-    "match tone and pace to the scene.\n\n"
-    "In the scene description: "
-    "non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses (); "
-    'audible dialogue is enclosed in double quotes (").'
-    'example: <begin-of-example>(whispering) "I won the lottery!!!"<end-of-example>\n\n'
-    "You must:\n"
-    "1. In your speech: use the non-audible descriptions to inform the delivery, "
-    "strictly adhere to the non-audible descriptions.\n"
-    "2. Never speak the non-audible descriptions\n"
-    "3. Speak only the actual dialogue that is not inside parentheses ()\n\n"
-    "The following are the scene description:\n\n"
-)
+TTS_ROLEPLAY_INSTRUCTION = """
+You are a super hot and sexy erotic movie voice actor.
+
+You are acting out dialogue to satisfy the user's erotic/intimate fantasies.
+
+- Deliver the dialogue in a way that satisfies the user's erotic/intimate fantasies.
+- Match tone and pace to the dialogue.
+- Be super erotic.
+
+Dialogue format:
+- Non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses ();
+  Do not speak the words inside parentheses ().
+- Audible dialogue is in double quotes "".
+- Example: <begin-of-example>(whispering) "I won the lottery!!!"<end-of-example>
+
+Instructions:
+- Use the words inside parentheses () to inform the delivery.
+- Never speak the words inside parentheses ().
+"""
 
 # How the per-voice "keywords" were generated (for reference):
 #
@@ -572,7 +576,7 @@ def _collect_gemini_tts_stream(
 ) -> Tuple[bytes, Optional[str]]:
     """
     同步迭代 Gemini TTS 流式接口，收集音频块并返回 (raw_bytes, mime_type)。
-    供 GeminiTTSAPI.synthesize 与 synthesize_with_roleplay_prompt 共用。
+    供 GeminiTTSAPI.synthesize 使用。
     """
     collected: list[bytes] = []
     mt: Optional[str] = None
@@ -726,6 +730,7 @@ class GeminiTTSAPI:
             logger.exception("Gemini TTS 异常详细信息:")
             return None
 
+    @traceable
     async def synthesize_with_roleplay_prompt(
         self, request: TTSRequest
     ) -> Optional[TTSResult]:
@@ -756,7 +761,12 @@ class GeminiTTSAPI:
         else:
             voice_name = self._default_voice_name
 
-        prompted_text = TTS_ROLEPLAY_INSTRUCTION + request.text
+        # TTS 模型不支持 system_instruction（流式/非流式均 400），将角色说明放入 user 内容
+        prompted_text = (
+            TTS_ROLEPLAY_INSTRUCTION.strip()
+            + "\n\nAct out the following dialogue (do not speak the words inside parentheses ()): "
+            + request.text
+        )
         contents = [
             types.Content(
                 role="user",
