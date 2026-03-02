@@ -426,10 +426,13 @@ export const AgentManagePage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    loadAgents();
+    // 关键步骤：如果 useAgents 已经从共享缓存恢复了全量 agents，进入页面时不再重复触发全量加载
+    if (agents.length === 0) {
+      loadAgents();
+    }
     loadModels(); // 加载模型列表
     loadAvailablePrompts(); // 加载 prompt 列表
-  }, [loadAgents, loadModels, loadAvailablePrompts]);
+  }, [agents.length, loadAgents, loadModels, loadAvailablePrompts]);
 
   // 处理头像上传（创建模式，打开截取弹窗）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {

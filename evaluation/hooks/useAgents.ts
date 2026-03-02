@@ -19,7 +19,10 @@ import {
 import {
   clearSharedAgentsCache,
   getSharedAgentsCache,
+  getSharedAgentsRequest,
+  clearSharedAgentsRequest,
   setSharedAgentsCache,
+  setSharedAgentsRequest,
 } from "../services/agentsSharedStore";
 
 interface UseAgentsOptions {
@@ -224,6 +227,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     async (forceRefresh: boolean = false) => {
       const requestId = ++loadRequestIdRef.current;
       const isCurrentRequest = () => loadRequestIdRef.current === requestId;
+      let currentLoadRequest: Promise<Agent[]> | null = null;
 
       try {
         setError(null);
@@ -235,35 +239,58 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             setAgents(cachedData);
             return;
           }
+
+          // 关键步骤：如果同一缓存键已有进行中的全量加载任务，直接复用该请求，避免重复分页拉取
+          const sharedLoadingRequest = getSharedAgentsRequest({
+            cacheKey,
+            maxAgeMs: CACHE_EXPIRY_MS,
+          });
+          if (sharedLoadingRequest) {
+            setLoading(true);
+            const sharedAgents = await sharedLoadingRequest;
+            if (!isCurrentRequest()) {
+              return;
+            }
+            setAgents(sharedAgents);
+            setCachedData(sharedAgents);
+            return;
+          }
         }
 
         setLoading(true);
         let hasLoadedFirstBatch = false;
 
-        // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
-        const allAgents = await loadAdminAgentList({
-          shouldContinue: isCurrentRequest,
-          onBatchLoaded: (accumulatedAgents) => {
-            if (!isCurrentRequest()) {
-              return;
-            }
+        // 关键步骤：把“全量分页加载”封装为共享 Promise，同一时刻只跑一条请求链
+        currentLoadRequest = (async (): Promise<Agent[]> => {
+          // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
+          const allAgents = await loadAdminAgentList({
+            shouldContinue: isCurrentRequest,
+            onBatchLoaded: (accumulatedAgents) => {
+              if (!isCurrentRequest()) {
+                return;
+              }
 
-            const filteredAgents = filterAgentsByType(accumulatedAgents, type);
-            setAgents(filteredAgents);
+              const filteredAgents = filterAgentsByType(accumulatedAgents, type);
+              setAgents(filteredAgents);
 
-            // 第一批返回后立即展示，避免长时间整页 loading
-            if (!hasLoadedFirstBatch) {
-              hasLoadedFirstBatch = true;
-              setLoading(false);
-            }
-          },
-        });
+              // 第一批返回后立即展示，避免长时间整页 loading
+              if (!hasLoadedFirstBatch) {
+                hasLoadedFirstBatch = true;
+                setLoading(false);
+              }
+            },
+          });
+
+          return filterAgentsByType(allAgents, type);
+        })();
+
+        setSharedAgentsRequest(cacheKey, currentLoadRequest);
+        const filteredAgents = await currentLoadRequest;
 
         if (!isCurrentRequest()) {
           return;
         }
 
-        const filteredAgents = filterAgentsByType(allAgents, type);
         setAgents(filteredAgents);
 
         // 更新缓存
@@ -275,12 +302,18 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
       } catch (error) {
         handleError(error, "获取智能体列表失败");
       } finally {
+        if (currentLoadRequest) {
+          clearSharedAgentsRequest({
+            cacheKey,
+            request: currentLoadRequest,
+          });
+        }
         if (isCurrentRequest()) {
           setLoading(false);
         }
       }
     },
-    [type, getCachedData, setCachedData, handleError],
+    [type, cacheKey, getCachedData, setCachedData, handleError],
   );
 
   // 创建智能体
