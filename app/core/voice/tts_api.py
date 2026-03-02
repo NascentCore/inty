@@ -599,7 +599,6 @@ def _generate_gemini_tts(
     return inline.data, mt
 
 
-
 def _pace_instruction_for_gemini(speaking_rate: float) -> str:
     """
     根据 speaking_rate 生成 Gemini TTS 的语速说明（自然语言 prompt）。
@@ -615,18 +614,10 @@ def _pace_instruction_for_gemini(speaking_rate: float) -> str:
     return f"Deliver the following at {rate:.1f}x normal speaking rate (faster). "
 
 
-def santize_text_for_gemini_tts(text: str) -> Tuple[List[str], List[str]]:
+def sanitize_text_for_gemini_tts(text: str) -> Tuple[List[str], List[str]]:
     """
-    去掉文本中间的 （）内的内容，只保留开头的（）内的内容。
-    (After your successful presentation, your secretary entered your room to congratulate you.)
-    "So, you're tired aren't you?"
-    (She closes the door behind her and locks it)
-    "sir, what can I do for you..?"
-
-    返回 
-    (After your successful presentation, your secretary entered your room to congratulate you.)
-    "So, you're tired aren't you?"
-    "sir, what can I do for you..?"
+    将文本按括号拆成舞台说明与台词：每个 "(...)" 内为 stage_direction，括号外为 dialogue 片段。
+    返回 (stage_directions, dialogue) 两个列表，供 roleplay prompt 分别传给模型。
     """
     stage_directions = []
     dialogue = []
@@ -802,7 +793,7 @@ class GeminiTTSAPI:
 
         # TTS 模型不支持 system_instruction（流式/非流式均 400），将角色说明放入 user 内容
         # pace = _pace_instruction_for_gemini(request.speaking_rate)
-        stage_directions, dialogues = santize_text_for_gemini_tts(request.text)
+        stage_directions, dialogues = sanitize_text_for_gemini_tts(request.text)
         contents = [
             types.Content(
                 role="user",

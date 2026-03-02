@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_tts_model
+from app.services.global_services import subscription_service
 from app.core.voice.tts_api import (
     TTS_PROVIDER_ELEVENLABS,
     TTS_PROVIDER_GEMINI,
@@ -174,8 +175,6 @@ class VoiceService:
 
             if model is None:
                 if user and db and is_gemini_voice(voice_id):
-                    from app.services.global_services import subscription_service
-
                     subscription = await subscription_service.get_user_current_subscription(
                         db, user.id
                     )

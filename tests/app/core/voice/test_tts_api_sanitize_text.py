@@ -1,45 +1,57 @@
-"""Tests for app.core.voice.tts_api: santize_text_for_gemini_tts (keep first (), remove rest)."""
+"""Tests for app.core.voice.tts_api: sanitize_text_for_gemini_tts (split by parens into stage_directions and dialogue)."""
 
-from app.core.voice.tts_api import santize_text_for_gemini_tts
+from app.core.voice.tts_api import sanitize_text_for_gemini_tts
 
 
-class TestSantizeTextForGeminiTts:
+class TestSanitizeTextForGeminiTts:
     def test_keeps_first_paren_block_removes_later_ones(self):
         text = """(After your successful presentation, your secretary entered your room to congratulate you.)
 "So, you're tired aren't you?"
 (She closes the door behind her and locks it)
 "sir, what can I do for you..?"
 """
-        # 第二个 (…) 整段去掉后，其后的 \n 保留，故两段对话之间多一空行
-        want = """(After your successful presentation, your secretary entered your room to congratulate you.)
-"So, you're tired aren't you?"
+        stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
+        assert stage_directions == [
+            "After your successful presentation, your secretary entered your room to congratulate you.",
+            "She closes the door behind her and locks it",
+        ]
+        assert dialogue == [
+            "",
+            '\n"So, you\'re tired aren\'t you?"\n',
+            '\n"sir, what can I do for you..?"\n',
+        ]
 
-"sir, what can I do for you..?"
-"""
-        assert santize_text_for_gemini_tts(text) == want
-
-    def test_only_one_paren_block_unchanged(self):
+    def test_only_one_paren_block(self):
         text = '(Stage direction here.) "Dialogue only."'
-        assert santize_text_for_gemini_tts(text) == text
+        stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
+        assert stage_directions == ["Stage direction here."]
+        assert dialogue == ['', ' "Dialogue only."']
 
-    def test_no_parens_unchanged(self):
+    def test_no_parens(self):
         text = '"Just dialogue."'
-        assert santize_text_for_gemini_tts(text) == text
+        stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
+        assert stage_directions == []
+        assert dialogue == ['"Just dialogue."']
 
     def test_multiple_later_blocks_removed(self):
         text = '(First.) "A" (Second.) "B" (Third.) "C"'
-        # 去掉 (Second.) 与 (Third.) 后，原 ) 后的空格保留，故 "A" "B" "C" 间各多一空格
-        want = '(First.) "A"  "B"  "C"'
-        assert santize_text_for_gemini_tts(text) == want
+        stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
+        assert stage_directions == ["First.", "Second.", "Third."]
+        assert dialogue == ['', ' "A" ', ' "B" ', ' "C"']
 
     def test_empty_string(self):
-        assert santize_text_for_gemini_tts('') == ''
+        stage_directions, dialogue = sanitize_text_for_gemini_tts("")
+        assert stage_directions == []
+        assert dialogue == [""]
 
-    def test_unclosed_first_paren_returns_unchanged(self):
-        # 第一个 ( 没有匹配的 ) 时不应 IndexError，原样返回
+    def test_unclosed_first_paren(self):
         text = "(unclosed"
-        assert santize_text_for_gemini_tts(text) == text
+        stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
+        assert stage_directions == []
+        assert dialogue == ["", "unclosed"]
 
     def test_unclosed_first_paren_with_more_text(self):
         text = '(unclosed "dialogue"'
-        assert santize_text_for_gemini_tts(text) == text
+        stage_directions, dialogue = sanitize_text_for_gemini_tts(text)
+        assert stage_directions == []
+        assert dialogue == ["", 'unclosed "dialogue"']

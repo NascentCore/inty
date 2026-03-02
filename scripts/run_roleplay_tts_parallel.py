@@ -21,7 +21,7 @@ from typing import Annotated, List, Optional
 import cyclopts
 from loguru import logger
 
-# 内置示例：与 tts_api.santize_text_for_gemini_tts 文档中的格式一致
+# 内置示例：与 tts_api.sanitize_text_for_gemini_tts 的 (stage_directions, dialogue) 格式一致
 DEFAULT_SAMPLE = '''(After your successful presentation, your secretary entered your room to congratulate you.)
 "So, you're tired aren't you?"
 (She closes the door behind her and locks it)
