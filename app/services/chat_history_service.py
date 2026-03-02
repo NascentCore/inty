@@ -17,6 +17,33 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.chat_history import ChatHistory
 
 
+def _extract_text_from_content(content: Any) -> str:
+    """从消息 content 中提取可读文本；支持字符串与 OpenAI content parts。"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts: List[str] = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                text = part.get("text")
+                if isinstance(text, str) and text.strip():
+                    text_parts.append(text.strip())
+        return "\n".join(text_parts)
+    return ""
+
+
+def _message_preview_for_log(message: Any) -> str:
+    """生成日志预览，避免多模态 content 直接切片报错。"""
+    text = _extract_text_from_content(message)
+    if text:
+        return f"{text[:50]}..."
+    if isinstance(message, list):
+        return f"[{len(message)} content parts]"
+    if isinstance(message, str):
+        return f"{message[:50]}..."
+    return "[unsupported message content]"
+
+
 def _parse_message_content(message_raw) -> Dict[str, str]:
     """
     解析消息内容，提取文本内容和角色
@@ -41,9 +68,9 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
         content = ""
 
         if "data" in message_data and "content" in message_data["data"]:
-            content = message_data["data"]["content"]
+            content = _extract_text_from_content(message_data["data"]["content"])
         elif "content" in message_data:
-            content = message_data["content"]
+            content = _extract_text_from_content(message_data["content"])
 
         # 确定角色
         role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
@@ -185,7 +212,7 @@ def get_last_message(session_id: str) -> Optional[str]:
         messages = history.messages
         if messages:
             last_message = messages[-1]
-            return last_message.content
+            return _extract_text_from_content(last_message.content)
         return None
     except Exception as e:
         logger.error(f"获取最近消息失败 {session_id}: {str(e)}")
@@ -227,9 +254,11 @@ def get_last_message_with_timestamp(session_id: str) -> Optional[Dict[str, Any]]
                     # 解析消息内容
                     content = ""
                     if "data" in message_data and "content" in message_data["data"]:
-                        content = message_data["data"]["content"]
+                        content = _extract_text_from_content(
+                            message_data["data"]["content"]
+                        )
                     elif "content" in message_data:
-                        content = message_data["content"]
+                        content = _extract_text_from_content(message_data["content"])
 
                     return {"content": content, "timestamp": created_at}
 
@@ -282,14 +311,16 @@ def has_user_messages_ever(session_id: str) -> bool:
 
 
 def add_user_message(
-    session_id: str, message: str, meta_data: Optional[dict] = None
+    session_id: str,
+    message: str | List[Dict[str, Any]],
+    meta_data: Optional[dict] = None,
 ) -> Optional[int]:
     """添加用户消息到聊天历史。meta_data 非空时用 raw INSERT 写入元数据并返回插入 id，否则走 PostgresChatMessageHistory 并返回 None。"""
     try:
-        if meta_data is None:
+        if meta_data is None and isinstance(message, str):
             history = get_chat_history(session_id)
             history.add_messages([HumanMessage(content=message)])
-            logger.debug(f"添加用户消息到会话 {session_id}: {message[:50]}...")
+            logger.debug(f"添加用户消息到会话 {session_id}: {_message_preview_for_log(message)}")
             return None
         conn = get_chat_history_connection()
         message_data = {"type": "human", "data": {"content": message}}
@@ -304,13 +335,13 @@ def add_user_message(
                 (
                     session_id,
                     json.dumps(message_data),
-                    json.dumps(meta_data),
+                    json.dumps(meta_data) if meta_data is not None else None,
                 ),
             )
             result = cur.fetchone()
             message_id = result[0] if result else None
         logger.debug(
-            f"添加用户消息到会话 {session_id}: {message[:50]}..., ID: {message_id}"
+            f"添加用户消息到会话 {session_id}: {_message_preview_for_log(message)}, ID: {message_id}"
         )
         return message_id
     except Exception as e:
@@ -971,9 +1002,9 @@ async def get_latest_ai_message_info(
         try:
             message_data = chat_history.message
             if "data" in message_data and "content" in message_data["data"]:
-                content = message_data["data"]["content"]
+                content = _extract_text_from_content(message_data["data"]["content"])
             elif "content" in message_data:
-                content = message_data["content"]
+                content = _extract_text_from_content(message_data["content"])
 
         except (TypeError, KeyError) as e:
             logger.warning(f"解析AI消息内容失败: {str(e)}")
@@ -1017,9 +1048,9 @@ async def get_ai_message_info_by_id(
         try:
             message_data = chat_history.message
             if "data" in message_data and "content" in message_data["data"]:
-                content = message_data["data"]["content"]
+                content = _extract_text_from_content(message_data["data"]["content"])
             elif "content" in message_data:
-                content = message_data["content"]
+                content = _extract_text_from_content(message_data["content"])
         except (TypeError, KeyError) as e:
             logger.warning(f"解析AI消息内容失败: {str(e)}")
             content = str(chat_history.message) if chat_history.message else ""
@@ -1061,9 +1092,9 @@ async def get_ai_message_infos_by_ids(
             try:
                 message_data = chat_history.message
                 if "data" in message_data and "content" in message_data["data"]:
-                    content = message_data["data"]["content"]
+                    content = _extract_text_from_content(message_data["data"]["content"])
                 elif "content" in message_data:
-                    content = message_data["content"]
+                    content = _extract_text_from_content(message_data["content"])
             except (TypeError, KeyError) as e:
                 logger.warning(f"解析AI消息内容失败: {str(e)}")
                 content = str(chat_history.message) if chat_history.message else ""
@@ -1210,12 +1241,12 @@ def get_messages_paginated(
 
                     # 解析消息类型和内容
                     message_type = message_data.get("type", "human")
-                    content = ""
-
+                    raw_content = ""
                     if "data" in message_data and "content" in message_data["data"]:
-                        content = message_data["data"]["content"]
+                        raw_content = message_data["data"]["content"]
                     elif "content" in message_data:
-                        content = message_data["content"]
+                        raw_content = message_data["content"]
+                    content = _extract_text_from_content(raw_content)
 
                     # 确定角色
                     role = (
@@ -1246,6 +1277,8 @@ def get_messages_paginated(
                         "timestamp": timestamp_str,
                         "created_at": timestamp_str,  # 添加 created_at 以保持向后兼容
                     }
+                    if isinstance(raw_content, list):
+                        message_obj["content_parts"] = raw_content
 
                     # 检查是否是图片消息（独立的图片消息，兼容旧数据）
                     if message_type == "image" and "data" in message_data:
@@ -1468,12 +1501,13 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
                         message_data = json.loads(str(message_raw))
 
                     message_type = message_data.get("type", "human")
-                    content = ""
-
+                    content: Any = ""
                     if "data" in message_data and "content" in message_data["data"]:
                         content = message_data["data"]["content"]
                     elif "content" in message_data:
                         content = message_data["content"]
+                    if not isinstance(content, list):
+                        content = _extract_text_from_content(content)
 
                     # 关键步骤：把 created_at 放入 additional_kwargs，供上层按自然日插入日期 system message。
                     message_kwargs = (

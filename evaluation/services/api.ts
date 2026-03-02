@@ -960,6 +960,20 @@ export class WebSocketManager {
 // 聊天API - 调用现有的聊天系统
 // =============================================================================
 
+type ChatTextContentPart = {
+  type: 'text';
+  text: string;
+};
+
+type ChatImageUrlContentPart = {
+  type: 'image_url';
+  image_url: {
+    url: string;
+  };
+};
+
+type ChatMessageContent = string | Array<ChatTextContentPart | ChatImageUrlContentPart>;
+
 export const chatApi = {
   // 获取用户聊天列表
   getChats: (): Promise<
@@ -989,7 +1003,7 @@ export const chatApi = {
     agentId: string,
     messages: Array<{
       role: "user" | "assistant";
-      content: string;
+      content: ChatMessageContent;
     }>,
     stream: boolean = false,
   ): Promise<{

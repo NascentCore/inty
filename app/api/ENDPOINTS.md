@@ -69,6 +69,15 @@
 | `/api/v1/chat/images/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/music/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 
+> **`/api/v1/chat/completions/{agent_id}` 多模态输入约定**：
+>
+> - `messages[].content` 兼容两种格式：
+>   1. 纯文本字符串（向后兼容）
+>   2. OpenAI-style content parts 数组（当前支持 `text` 与 `image_url`）
+> - 示例：
+>   - 文本：`{"role":"user","content":"hello"}`
+>   - 图文：`{"role":"user","content":[{"type":"text","text":"describe this"},{"type":"image_url","image_url":{"url":"https://..."}}]}`
+
 ### 聊天会话 (Chats)
 
 | 路径 | 方法 | 实现文件 |
