@@ -17,10 +17,11 @@ interface ChatMessageDao {
 
     /**
      * 返回 PagingSource，用于配合 RemoteMediator 进行分页加载 按 sortKey DESC 排序，最新的消息在列表底部 排除 isOpening 为 true
-     * 的数据。id ASC 作为第二排序键，使 premium_preview（id 形如 46_preview）紧接主回复（46）同页展示。
+     * 的数据。premium_preview（id 形如 46_preview）与主回复（46）使用同一逻辑 id 排序，主回复在前、preview 紧跟。
+     * 用 REPLACE(id,'_preview','') 再 CAST 保证 46 与 46_preview 同组（Cast(id AS INTEGER) 对 46_preview 可能得 0 导致错位）。
      */
     @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC, id ASC, indexId DESC "
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY CAST(REPLACE(id, '_preview', '') AS INTEGER) DESC, CASE WHEN id LIKE '%_preview' THEN 1 ELSE 0 END ASC, indexId DESC"
     )
     fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
