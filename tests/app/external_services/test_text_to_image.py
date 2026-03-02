@@ -47,6 +47,33 @@ class _FakeGoogleClient:
         self.models = _FakeGoogleModels()
 
 
+class _FakeFalClient:
+    def subscribe(self, model: str, arguments: dict[str, object], with_logs: bool = False):  # noqa: ARG002
+        assert model == "fal-ai/z-image/turbo"
+        assert arguments["prompt"] == "A friendly companion smiling at the camera"
+        assert arguments["num_images"] == 2
+        assert arguments["image_size"] == "portrait_4_3"
+        assert arguments["output_format"] == "png"
+        assert arguments["sync_mode"] is False
+        return {
+            "images": [
+                {
+                    "url": "https://fal.example/generated/1.png",
+                    "width": 1024,
+                    "height": 1365,
+                    "content_type": "image/png",
+                },
+                {
+                    "url": "https://fal.example/generated/2.png",
+                    "width": 1024,
+                    "height": 1365,
+                    "content_type": "image/png",
+                },
+            ],
+            "prompt": "A friendly companion smiling at the camera",
+        }
+
+
 def test_text_to_image_google_prefix_dispatch() -> None:
     fake_client = _FakeGoogleClient()
 
@@ -89,9 +116,15 @@ def test_resolve_provider_and_model_openai_keeps_org_prefix() -> None:
     assert provider_model == "openai/gpt-image-1"
 
 
+def test_resolve_provider_and_model_falai_keeps_org_prefix() -> None:
+    provider, provider_model = _resolve_provider_and_model("fal-ai/z-image/turbo")
+    assert provider == TextToImageProvider.FALAI
+    assert provider_model == "fal-ai/z-image/turbo"
+
+
 @pytest.mark.parametrize(
     "model",
-    ["", "google/", "openai/", "unknown/x", "fal-ai/z-image/turbo", "fal/foo"],
+    ["", "google/", "openai/", "fal-ai/", "fal/", "unknown/x"],
 )
 def test_resolve_provider_and_model_invalid_raises(model: str) -> None:
     with pytest.raises(ValueError):
@@ -99,8 +132,10 @@ def test_resolve_provider_and_model_invalid_raises(model: str) -> None:
 
 
 def test_resolve_provider_and_model_bare_model_raises() -> None:
-    """Bare model id without google/ or openai/ prefix raises (FAL no longer supported)."""
-    with pytest.raises(ValueError, match="Model id must use google/ or openai/"):
+    """Bare model id without explicit provider prefix should raise."""
+    with pytest.raises(
+        ValueError, match="Model id must use google/, openai/, or fal-ai/"
+    ):
         _resolve_provider_and_model("some-bare-model")
 
 
@@ -128,3 +163,30 @@ def test_text_to_image_openai_returns_png_bytes() -> None:
         assert img.height == 64
         assert img.format == "png"
         assert img.gcs_uri is None
+
+
+def test_text_to_image_falai_prefix_dispatch_z_image_turbo() -> None:
+    fake_fal_client = _FakeFalClient()
+    result = generate_text_to_image(
+        TextToImageGenerationRequest(
+            model="fal-ai/z-image/turbo",
+            prompt="A friendly companion smiling at the camera",
+            num_images=2,
+            provider_args={
+                "fal_client": fake_fal_client,
+                "image_size": "portrait_4_3",
+                "output_format": "png",
+                "sync_mode": False,
+            },
+        )
+    )
+
+    assert result.provider == TextToImageProvider.FALAI
+    assert result.model == "fal-ai/z-image/turbo"
+    assert len(result.images) == 2
+    for image in result.images:
+        assert image.provider == TextToImageProvider.FALAI
+        assert image.url and image.url.startswith("https://fal.example/generated/")
+        assert image.width == 1024
+        assert image.height == 1365
+        assert image.mime_type == "image/png"

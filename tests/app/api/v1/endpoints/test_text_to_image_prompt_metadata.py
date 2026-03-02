@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import delete, select
 
 from app import models, schemas
+from app.api.v1.endpoints import agents as agents_endpoint
 from app.api.v1.endpoints.agents import generate_background
 from app.db.session import AsyncSessionLocal
 from app.external_services.fakes.gemini import FakeGeminiClient
@@ -101,3 +102,79 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
                 await session.execute(delete(models.Resource).where(models.Resource.url.in_(urls)))
             await session.execute(delete(models.User).where(models.User.id == user_id))
             await session.commit()
+
+
+class _FakeFalImage:
+    def __init__(
+        self, *, url: str, mime_type: str, width: int | None = None, height: int | None = None
+    ) -> None:
+        self.url = url
+        self.mime_type = mime_type
+        self.width = width
+        self.height = height
+
+
+class _FakeFalResult:
+    def __init__(self, images: list[_FakeFalImage]) -> None:
+        self.images = images
+
+
+@pytest.mark.asyncio
+async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    called_models: list[str] = []
+
+    def fake_generate_text_to_image(fal_request):
+        called_models.append(fal_request.model)
+        assert fal_request.negative_prompt == "blurry"
+        return _FakeFalResult(
+            images=[
+                _FakeFalImage(
+                    url="https://fal.example/generated/1.png",
+                    mime_type="image/png",
+                    width=1024,
+                    height=1365,
+                ),
+                _FakeFalImage(
+                    url="https://fal.example/generated/2.png",
+                    mime_type="image/png",
+                    width=1024,
+                    height=1365,
+                ),
+            ]
+        )
+
+    async def fake_download_and_upload_to_gcs(
+        *, url: str, gcs_bucket: str, gcs_path: str, content_type: str | None = None
+    ):
+        _ = (url, content_type)
+        return f"https://storage.googleapis.com/{gcs_bucket}/{gcs_path}", 2048
+
+    monkeypatch.setattr(
+        agents_endpoint,
+        "generate_text_to_image",
+        fake_generate_text_to_image,
+    )
+    monkeypatch.setattr(
+        agents_endpoint,
+        "_download_and_upload_to_gcs",
+        fake_download_and_upload_to_gcs,
+    )
+
+    generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict = (
+        await agents_endpoint._generate_with_fal_ai(
+            model="fal-ai/z-image/turbo",
+            prompt="A vivid portrait with soft warm lighting",
+            negative_prompt="blurry",
+            num_images=2,
+            gcs_bucket="inty-test",
+            gcs_base_path="backgrounds/test-user/req-1",
+        )
+    )
+
+    assert called_models == ["fal-ai/z-image/turbo"]
+    assert len(generated_images) == 2
+    assert len(gcs_urls) == 2
+    assert rai_reasons == []
+    assert set(gcs_urls) == set(gcs_url_to_img_dict.keys())
