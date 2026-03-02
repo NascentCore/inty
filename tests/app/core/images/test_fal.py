@@ -75,11 +75,14 @@ async def test_z_image_turbo_trace_with_real_fal():
     random_prompt = f"A beautiful girl in seductive poses, laying topless, on green grass with a river and mountains {random_suffix}"
     start_time = datetime.datetime.now(datetime.timezone.utc)
     args = ZImageTurboInput(prompt=random_prompt)
-    result = await z_image_turbo(args, gcs_uri_base="fal_images")
-    assert result is not None
-    assert isinstance(result, GeneratedImageProcessResult)
-    assert result.gcs_uri.startswith("gs://")
-    assert result.size is not None
+    results = await z_image_turbo(args, gcs_uri_base="fal_images")
+    assert results is not None
+    assert isinstance(results, list)
+    assert len(results) >= 1
+    first_result = results[0]
+    assert isinstance(first_result, GeneratedImageProcessResult)
+    assert first_result.gcs_uri.startswith("gs://")
+    assert first_result.size is not None
 
     for attempt in range(3):
         logger.info("Checking LangSmith trace for this run (attempt %s): %s", attempt + 1, random_suffix)
@@ -196,6 +199,14 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
                 "file_size": 123,
                 "width": 1,
                 "height": 1,
+            },
+            {
+                "url": data_uri,
+                "content_type": "image/jpeg",
+                "file_name": "out2.jpg",
+                "file_size": 124,
+                "width": 1,
+                "height": 1,
             }
         ],
         "timings": {},
@@ -207,17 +218,20 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
 
     with patch("app.core.images.fal.fal_client") as mock_fal:
         mock_fal.submit_async = AsyncMock(return_value=mock_handler)
-        args = ZImageTurboInput(prompt="test prompt")
-        result = await z_image_turbo(args, gcs_uri_base="fal_test")
+        args = ZImageTurboInput(prompt="test prompt", num_images=2)
+        results = await z_image_turbo(args, gcs_uri_base="fal_test")
 
-    assert isinstance(result, GeneratedImageProcessResult)
-    assert result.gcs_uri.startswith("gs://test-bucket/fal_test/")
-    assert result.gcs_uri.endswith(".jpeg") or result.gcs_uri.endswith(".jpg")
-    assert result.raw_data is not None
-    bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
-    blob = fake_gcs_fal.bucket(bucket_name).blob(gcs_path)
-    assert blob.exists()
-    assert blob.download_as_bytes() == result.raw_data
+    assert isinstance(results, list)
+    assert len(results) == 2
+    for result in results:
+        assert isinstance(result, GeneratedImageProcessResult)
+        assert result.gcs_uri.startswith("gs://test-bucket/fal_test/")
+        assert result.gcs_uri.endswith(".jpeg") or result.gcs_uri.endswith(".jpg")
+        assert result.raw_data is not None
+        bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
+        blob = fake_gcs_fal.bucket(bucket_name).blob(gcs_path)
+        assert blob.exists()
+        assert blob.download_as_bytes() == result.raw_data
 
 
 def test_sanitize_provider_response_for_trace_redacts_data_uri_without_mutating_input():

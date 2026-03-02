@@ -680,17 +680,16 @@ async def _generate_with_fal_z_image_turbo(
     gcs_urls: list[str] = []
     gcs_url_to_img_dict: dict[str, ImagenGeneratedImage] = {}
 
-    for _ in range(num_images):
-        result = await z_image_turbo(
-            ZImageTurboInput(
-                prompt=prompt,
-                image_size="portrait_4_3",
-                num_images=1,
-                output_format=ImageFormat.PNG,
-            ),
-            gcs_uri_base=gcs_base_path,
-        )
-
+    results = await z_image_turbo(
+        ZImageTurboInput(
+            prompt=prompt,
+            image_size="portrait_4_3",
+            num_images=num_images,
+            output_format=ImageFormat.PNG,
+        ),
+        gcs_uri_base=gcs_base_path,
+    )
+    for result in results:
         byte_size = result.raw_data_total_bytes
         if byte_size <= 0 and isinstance(result.raw_data, bytes):
             byte_size = len(result.raw_data)

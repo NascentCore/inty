@@ -116,17 +116,31 @@ async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
     async def fake_z_image_turbo(args, gcs_uri_base):
         called_bases.append(gcs_uri_base)
         called_prompts.append(args.prompt)
-        idx = len(called_bases)
-        return GeneratedImageProcessResult(
-            size=ImageSize(width=1024, height=1365),
-            format=ImageFormat.PNG,
-            raw_data=b"fake-png-bytes",
-            raw_data_total_bytes=14,
-            gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_{idx}.png",
-            gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_{idx}.png",
-            generated_at=datetime.now(timezone.utc),
-            raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake"}]},
-        )
+        assert args.num_images == 2
+        assert args.image_size == "portrait_4_3"
+        assert args.output_format == ImageFormat.PNG
+        return [
+            GeneratedImageProcessResult(
+                size=ImageSize(width=1024, height=1365),
+                format=ImageFormat.PNG,
+                raw_data=b"fake-png-bytes-1",
+                raw_data_total_bytes=16,
+                gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_1.png",
+                gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_1.png",
+                generated_at=datetime.now(timezone.utc),
+                raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake1"}]},
+            ),
+            GeneratedImageProcessResult(
+                size=ImageSize(width=1024, height=1365),
+                format=ImageFormat.PNG,
+                raw_data=b"fake-png-bytes-2",
+                raw_data_total_bytes=16,
+                gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_2.png",
+                gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_2.png",
+                generated_at=datetime.now(timezone.utc),
+                raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake2"}]},
+            ),
+        ]
     def fail_generate_text_to_image(_):
         raise AssertionError("z-image/turbo should use app/core/images/fal.py API")
 
@@ -152,11 +166,8 @@ async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
         )
     )
 
-    assert called_bases == ["backgrounds/test-user/req-1", "backgrounds/test-user/req-1"]
-    assert called_prompts == [
-        "A vivid portrait with soft warm lighting",
-        "A vivid portrait with soft warm lighting",
-    ]
+    assert called_bases == ["backgrounds/test-user/req-1"]
+    assert called_prompts == ["A vivid portrait with soft warm lighting"]
     assert len(generated_images) == 2
     assert len(gcs_urls) == 2
     assert rai_reasons == []
