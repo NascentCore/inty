@@ -4,6 +4,9 @@
 app:
   debug: true
   environment: local
+  features:
+    # 无 background/avatar 的角色也可生图（用占位图），便于本地测试
+    allow_chat_image_without_agent_visual: true
   limits:
     free_user_chat_24h_limit: 1
     guest_user_chat_24h_limit: 1
@@ -48,7 +51,7 @@ verification:
   code_expire_minutes: 5 
 
 logging:
-  level: INFO
+  level: DEBUG
   colorize: true
 
 firebase:

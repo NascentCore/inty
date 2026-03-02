@@ -43,6 +43,9 @@
     <string name="settings_debug_clear_last_rank_date">测试评分</string>
     <string name="settings_debug_clear_last_rank_date_hint">点击触发评分测试弹窗</string>
     <string name="settings_debug_clear_last_rank_date_toast">已触发评分测试</string>
+    <string name="settings_debug_custom_backend_label">Custom backend URL (e.g. for WiFi)</string>
+    <string name="settings_debug_custom_backend_placeholder">http://192.168.x.x:8000/</string>
+    <string name="settings_debug_custom_backend_apply">Apply custom URL</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>
@@ -677,7 +680,7 @@
     <string name="chat_save_user_photo_success">Saved. You can update it on the Me page.</string>
 
     <!-- Login -->
-    <string name="login_welcome">Thousands of iMates await your match.</string>
+    <string name="login_welcome">Thousands of iMates. One perfect match. Is it you?</string>
     <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
     <string name="credits_not_enough">Not enough credits.</string>
     <string name="credits_deducted">%1$d credits deducted.</string>

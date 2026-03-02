@@ -1088,10 +1088,7 @@ class Agent:
                     f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                all_messages = self._build_messages_with_date_system_prompts(
-                    history_messages=recent_history,
-                    current_messages=messages,
-                )
+                all_messages = recent_history + messages
                 all_messages = self._inject_user_time_context_periodically(
                     all_messages, user_time_context, datetime.now(timezone.utc)
                 )
@@ -1401,10 +1398,7 @@ class Agent:
             )
 
             # 注意：这里不保存用户消息到历史记录
-            all_messages = self._build_messages_with_date_system_prompts(
-                history_messages=recent_history,
-                current_messages=messages,
-            )
+            all_messages = recent_history + messages
             all_messages = self._inject_user_time_context_periodically(
                 all_messages, user_time_context, datetime.now(timezone.utc)
             )

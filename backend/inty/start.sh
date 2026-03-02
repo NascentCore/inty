@@ -64,6 +64,7 @@ if [ "$DEV" = true ]; then
     echo "Starting in dev mode..."
   fi
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+  python scripts/create_email_password_superuser.py --email test@sxwl.ai --password test --yes
   uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."

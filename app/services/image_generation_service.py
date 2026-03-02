@@ -26,13 +26,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import asyncio
 from app.core.agent import prompts as agent_prompts
 from app.core.agent.prompt_template import render_prompt_jinja2_template
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.model_selection import select_text_to_image_model
 from app.core.images.fal import (
     FalSeedreamV4_5EditInput,
     ZImageTurboImageToImageInput,
+    ZImageTurboInput,
     seedream_v4_5_edit,
+    z_image_turbo,
     z_image_turbo_image_to_image,
 )
 from app.core.images.types import GeneratedImageProcessResult
@@ -61,6 +65,7 @@ from app.utils.models_catalog import (
     resolve_id_on_provider,
     resolve_nickname,
 )
+from app.utils.models_catalog import is_fal_model
 
 # 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
 _MAX_PROMPT_LOG_LEN = 800000
@@ -79,17 +84,18 @@ class ChatImageGenInput(BaseModel):
     char_name: str
     user_name: str
     prompt: str
-    reference_url: str
-    reference_type: Literal["背景图", "头像"]
+    reference_url: Optional[str] = None
+    reference_type: Optional[Literal["背景图", "头像"]] = None
 
 
 class ChatImageGenModelInput(BaseModel):
     """
     统一聊天生图模型输入：用于模型路由与 provider 输入适配。
+    reference_image_url 为 None 时表示纯文生图（仅 Gemini 支持，用于无 background/avatar 的测试）。
     """
 
     prompt: str
-    reference_image_url: str
+    reference_image_url: Optional[str] = None
     message_history: List[Dict[str, Any]] = Field(default_factory=list)
     model_id_on_provider: str
     user_reference_image_url: Optional[str] = None
@@ -401,7 +407,7 @@ class ImageGenerationService:
         self,
         model_id: str,
         prompt: str,
-        reference_image_url: str,
+        reference_image_url: Optional[str],
         user_reference_image_url: Optional[str],
         gcs_uri_base: str,
         system_instructions: Optional[List[str]] = None,
@@ -410,7 +416,9 @@ class ImageGenerationService:
             raise ValueError(f"{model_id!r} not supported by WrappedClient")
 
         client = get_wrapped_client()
-        contents = [reference_image_url]
+        contents: List[str] = []
+        if reference_image_url:
+            contents.append(reference_image_url)
         if user_reference_image_url:
             contents.append(user_reference_image_url)
             logger.info("添加用户自拍照片作为参考图: {}", user_reference_image_url)
@@ -427,10 +435,14 @@ class ImageGenerationService:
         self,
         model_id: str,
         prompt: str,
-        reference_image_url: str,
+        reference_image_url: Optional[str],
         user_reference_image_url: Optional[str],
         gcs_uri_base: str,
     ) -> GeneratedImageProcessResult:
+        if not reference_image_url:
+            raise ValueError(
+                "Fal chat image models require a reference image; use a Gemini model (e.g. Nano Banana) for agents without background or avatar."
+            )
         if model_id == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
             args = ZImageTurboImageToImageInput(
                 prompt=prompt,
@@ -497,6 +509,78 @@ class ImageGenerationService:
             user_reference_image_url=chat_input.user_reference_image_url,
             gcs_uri_base=gcs_uri_base,
             system_instructions=system_instructions,
+        )
+
+    async def _generate_chat_image_via_text_to_image(
+        self,
+        prepared: ChatImageGenInput,
+        gcs_uri_base: str,
+        is_subscribed: bool,
+    ) -> tuple[GeneratedImageProcessResult, str]:
+        """
+        无 reference 时回退到文生图：按订阅状态选 free_user_text_to_image_model / sub_user_text_to_image_model，
+        调用对应 Fal 或 Google 文生图 API，返回 GeneratedImageProcessResult 及实际使用的 model id。
+        """
+        from app.utils.gemini import text_to_image as gemini_text_to_image
+        from app.utils.image import ImageFormat, ImageSize
+
+        text_to_image_model_id = select_text_to_image_model(
+            user=None, is_subscribed=is_subscribed
+        )
+        prompt_for_model = self._build_chat_image_prompt_for_model(
+            prompt=prepared.prompt,
+            message_history=prepared.chat_history,
+        )
+
+        if is_fal_model(text_to_image_model_id):
+            args = ZImageTurboInput(
+                prompt=prompt_for_model,
+                num_images=1,
+            )
+            result = await z_image_turbo(args, gcs_uri_base=gcs_uri_base)
+            return result, text_to_image_model_id
+
+        # Google Imagen path: sync text_to_image, convert first image to GeneratedImageProcessResult
+        def _run_gemini_text_to_image() -> List[Any]:
+            return gemini_text_to_image(
+                prompt=prompt_for_model,
+                negative_prompt="",
+                enhanced_prompt=False,
+                gender="",
+                aspect_ratio="9:16",
+                gcs_uri_base=gcs_uri_base,
+                count=1,
+                model=text_to_image_model_id,
+            )
+
+        images = await asyncio.to_thread(_run_gemini_text_to_image)
+        if not images:
+            raise ValueError("Google text-to-image returned no images")
+        img = images[0]
+        if not img.gcs_uri:
+            raise ValueError(
+                "Google text-to-image image has no gcs_uri (e.g. RAI filtered)"
+            )
+        gcs_http = img.gcs_uri
+        gcs_uri = (
+            f"gs://{gcs_http.replace('https://storage.googleapis.com/', '')}"
+            if gcs_http.startswith("https://storage.googleapis.com/")
+            else gcs_http
+        )
+        size = img.size or ImageSize(width=0, height=0)
+        fmt = img.format or ImageFormat.JPEG
+        return (
+            GeneratedImageProcessResult(
+                size=size,
+                format=fmt,
+                raw_data=None,
+                raw_data_total_bytes=img.byte_size or 0,
+                gcs_uri=gcs_uri,
+                gcs_http_url=gcs_http,
+                generated_at=datetime.now(timezone.utc),
+                raw_response_from_provider=None,
+            ),
+            text_to_image_model_id,
         )
 
     async def get_generated_images_for_agent(
@@ -796,21 +880,29 @@ class ImageGenerationService:
         )
 
         reference_url = agent_data.get("background") or agent_data.get("avatar")
+        reference_type: Optional[Literal["背景图", "头像"]] = None
         if not reference_url:
-            raise ValueError(
-                "Agent has no background or avatar; cannot generate image"
+            if global_config_loaded_from_config_yaml.app.features.allow_chat_image_without_agent_visual:
+                reference_url = None
+                logger.info(
+                    "Agent has no background or avatar; using text-only image generation (no reference image)"
+                )
+            else:
+                raise ValueError(
+                    "Agent has no background or avatar; cannot generate image"
+                )
+        else:
+            if reference_url.startswith(GCS_GS_PREFIX):
+                reference_url = reference_url.replace(
+                    GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
+                )
+            if not reference_url.startswith("http"):
+                raise ValueError(
+                    f"Invalid reference image path: {reference_url}, must start with 'http'"
+                )
+            reference_type = (
+                "背景图" if agent_data.get("background") else "头像"
             )
-        if reference_url.startswith(GCS_GS_PREFIX):
-            reference_url = reference_url.replace(
-                GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
-            )
-        if not reference_url.startswith("http"):
-            raise ValueError(
-                f"Invalid reference image path: {reference_url}, must start with 'http'"
-            )
-        reference_type: Literal["背景图", "头像"] = (
-            "背景图" if agent_data.get("background") else "头像"
-        )
 
         return ChatImageGenInput(
             history_count=history_count,
@@ -840,11 +932,12 @@ class ImageGenerationService:
         model: str,
         user_id: Optional[str] = None,
         history_count: Optional[int] = None,
+        is_subscribed: bool = False,
     ) -> Dict[str, Any]:
         """
         统一聊天生图入口（替代 generate_chat_image_with_gemini / generate_chat_image_with_fal）：
         1) 准备聊天生图输入（prompt/reference/history）
-        2) 基于 model 路由并适配 provider 输入
+        2) 有 reference 时用 chat image 模型；无 reference 时回退到 text-to-image 模型（free/sub 对应）
         3) 回写消息 meta_data / agent background_images / resources
         4) 返回前端需要的响应结构
         """
@@ -856,22 +949,6 @@ class ImageGenerationService:
             model,
         )
 
-        resolved_model_id = self._resolve_chat_image_gen_model_id_or_nickname(model)
-
-        # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
-        # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
-        # 仅对 Gemini 路径生效，保持与历史行为一致。
-        if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
-            test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
-            if test_fail_mode == "safety_filter":
-                logger.warning("测试模式：模拟安全过滤器阻止")
-                raise ValueError(
-                    "Image generation blocked by safety filter: test mode trigger"
-                )
-            if test_fail_mode == "network_error":
-                logger.warning("测试模式：模拟网络错误")
-                raise ConnectionError("Connection timeout: test mode trigger")
-
         prepared = await self._prepare_chat_image_inputs(
             db=db,
             session_id=session_id,
@@ -881,35 +958,69 @@ class ImageGenerationService:
             history_count=history_count,
         )
 
-        logger.info(
-            "开始生成图片，session_id={}, model={}, 使用{}: {}",
-            session_id,
-            resolved_model_id,
-            prepared.reference_type,
-            prepared.reference_url,
-        )
+        # 仅当 reference 与 user_photo 均为 None 时用文生图模型；否则仍用 chat image 模型（可有 user_photo 作参考）
+        if prepared.reference_url is None and prepared.user_photo_url is None:
+            agent_id = agent_data.get("id")
+            if not agent_id:
+                raise ValueError("Agent data missing ID; cannot generate image path")
+            gcs_uri_base = f"chat_images/{agent_id}"
+            result, resolved_model_id = await self._generate_chat_image_via_text_to_image(
+                prepared=prepared,
+                gcs_uri_base=gcs_uri_base,
+                is_subscribed=is_subscribed,
+            )
+            ref_desc = "no reference (text-to-image fallback)"
+        else:
+            resolved_model_id = self._resolve_chat_image_gen_model_id_or_nickname(model)
+            # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
+            if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
+                test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
+                if test_fail_mode == "safety_filter":
+                    logger.warning("测试模式：模拟安全过滤器阻止")
+                    raise ValueError(
+                        "Image generation blocked by safety filter: test mode trigger"
+                    )
+                if test_fail_mode == "network_error":
+                    logger.warning("测试模式：模拟网络错误")
+                    raise ConnectionError("Connection timeout: test mode trigger")
+            ref_desc = (
+                f"{prepared.reference_type}: {prepared.reference_url}"
+                if prepared.reference_type and prepared.reference_url
+                else ("user_photo as reference" if prepared.user_photo_url else "no reference (text-only)")
+            )
+            agent_id = agent_data.get("id")
+            if not agent_id:
+                raise ValueError("Agent data missing ID; cannot generate image path")
+            gcs_uri_base = f"chat_images/{agent_id}"
+            system_instructions: Optional[List[str]] = None
+            if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
+                system_instructions = [
+                    agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
+                ]
+            # 无 agent reference 但有 user_photo 时，用 user_photo 作 reference，且不再重复传 user_reference
+            ref_url = prepared.reference_url or prepared.user_photo_url
+            user_ref_url = prepared.user_photo_url if prepared.reference_url else None
+            result = await self.generate_chat_image_by_model(
+                chat_input=ChatImageGenModelInput(
+                    prompt=prepared.prompt,
+                    reference_image_url=ref_url,
+                    message_history=prepared.chat_history,
+                    model_id_on_provider=resolved_model_id,
+                    user_reference_image_url=user_ref_url,
+                    append_history_to_prompt=False,
+                ),
+                gcs_uri_base=gcs_uri_base,
+                system_instructions=system_instructions,
+            )
 
         agent_id = agent_data.get("id")
         if not agent_id:
             raise ValueError("Agent data missing ID; cannot generate image path")
-        gcs_uri_base = f"chat_images/{agent_id}"
-
-        system_instructions: Optional[List[str]] = None
-        if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
-            system_instructions = [
-                agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
-            ]
-        result = await self.generate_chat_image_by_model(
-            chat_input=ChatImageGenModelInput(
-                prompt=prepared.prompt,
-                reference_image_url=prepared.reference_url,
-                message_history=prepared.chat_history,
-                model_id_on_provider=resolved_model_id,
-                user_reference_image_url=prepared.user_photo_url,
-                append_history_to_prompt=False,
-            ),
-            gcs_uri_base=gcs_uri_base,
-            system_instructions=system_instructions,
+        logger.info(
+            "开始生成图片，session_id={}, model={}, 使用{}",
+            session_id,
+            resolved_model_id,
+            ref_desc,
         )
 
         gcs_uri = result.gcs_uri
@@ -931,9 +1042,9 @@ class ImageGenerationService:
                 "reference_image_url": prepared.reference_url,
                 "user_reference_image_url": prepared.user_photo_url,
                 "reference_image_urls": [
-                    url
-                    for url in [prepared.reference_url, prepared.user_photo_url]
-                    if url is not None
+                    u
+                    for u in [prepared.reference_url, prepared.user_photo_url]
+                    if u is not None
                 ],
             }
         }

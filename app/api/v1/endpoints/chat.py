@@ -1,5 +1,6 @@
 import time
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any, List, Optional, TypeAlias, Union
 
@@ -193,8 +194,10 @@ def _truncate_premium_preview_content(content: str) -> str:
     return content[:max_chars].rstrip() + "..."
 
 
-def _build_premium_preview_choice(preview_content: str) -> dict:
+def _build_premium_preview_choice(preview_content: str, agent_id: str) -> dict:
+    """Build premium_preview choice with stable id and agent_id so the client can persist and filter by agent (e.g. Room)."""
     return {
+        "id": f"preview-{uuid.uuid4().hex[:12]}",
         "role": "assistant",
         "type": "premium_preview",
         "content": (
@@ -202,9 +205,11 @@ def _build_premium_preview_choice(preview_content: str) -> dict:
             f"{preview_content}\n\n"
             "Subscribe to Premium to unlock this quality in every chat."
         ),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "meta_data": {
             "premium_only": True,
             "source": "free_user_premium_preview",
+            "agentId": agent_id,
         },
     }
 
@@ -220,6 +225,7 @@ def _build_premium_subscription_action(next_chat_count: int) -> BizAction:
 async def _try_generate_premium_preview_choice(
     *,
     agent,
+    agent_id: str,
     current_user: schemas.User,
     session_id: str,
     last_user_text: str,
@@ -252,7 +258,7 @@ async def _try_generate_premium_preview_choice(
     preview_content = _truncate_premium_preview_content(preview_content.strip())
     if not preview_content:
         return None
-    return _build_premium_preview_choice(preview_content)
+    return _build_premium_preview_choice(preview_content, agent_id)
 
 
 @router.post(
@@ -285,16 +291,18 @@ async def agent_chat_completions(
 
     try:
         request_handling_timer = Timer("请求处理")
+        # Capture user_id before any await to avoid ORM lazy load after session use (MissingGreenlet)
+        user_id = current_user.id
         logger.debug(
-            f"聊天请求 - agent_id={agent_id}, user_id={current_user.id}, messages={len(request.messages)}"
+            f"聊天请求 - agent_id={agent_id}, user_id={user_id}, messages={len(request.messages)}"
         )
 
         # 获取或创建与该Agent的唯一会话
         with log_time(
-            f"获取或创建聊天会话: user_id={current_user.id}, agent_id={agent_id}"
+            f"获取或创建聊天会话: user_id={user_id}, agent_id={agent_id}"
         ):
             chat = await chat_service.get_or_create_chat_by_agent(
-                db=db, user_id=current_user.id, agent_id=agent_id
+                db=db, user_id=user_id, agent_id=agent_id
             )
 
         # 验证返回的chat中的agent_id是否与传入的一致
@@ -339,7 +347,9 @@ async def agent_chat_completions(
 
         session_id = generate_session_id(chat.id)
 
-        with log_time(f"订阅检查: user_id={current_user.id}"):
+        # Refresh ORM user so lazy access inside check_chat_limit / later code does not trigger MissingGreenlet
+        await db.refresh(current_user)
+        with log_time(f"订阅检查: user_id={user_id}"):
             is_allowed, used_count, daily_limit = (
                 await subscription_service.check_chat_limit(db, current_user)
             )
@@ -353,12 +363,12 @@ async def agent_chat_completions(
         try:
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
                 chat_settings = await chat_service.get_or_create_chat_settings(
-                    db, chat.id, current_user.id, agent_id
+                    db, chat.id, user_id, agent_id
                 )
 
             with log_time(f"AI聊天处理: session_id={session_id}"):
                 subscription = await subscription_service.get_user_current_subscription(
-                    db, current_user.id
+                    db, user_id
                 )
                 is_subscribed = bool(subscription)
                 model_override = select_chat_model(
@@ -368,7 +378,7 @@ async def agent_chat_completions(
                     f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
                 chat_result = await agent.chat(
-                    user_id=current_user.id,
+                    user_id=user_id,
                     session_id=session_id,
                     messages=messages,
                     chat_settings=chat_settings,
@@ -384,7 +394,7 @@ async def agent_chat_completions(
 
                 if response_content is None:
                     logger.error(
-                        f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
+                        f"Chat 返回无内容 - agent_id={agent_id}, user_id={user_id}"
                     )
                     raise HTTPException(
                         status_code=500, detail="Chat returned no content"
@@ -402,12 +412,13 @@ async def agent_chat_completions(
             ):
                 try:
                     with log_time(
-                        f"生成付费预览内容: user_id={current_user.id}, chat_count={next_chat_count}"
+                        f"生成付费预览内容: user_id={user_id}, chat_count={next_chat_count}"
                     ):
                         premium_preview_choice = (
                             await _try_generate_premium_preview_choice(
                                 agent=agent,
-                                current_user=current_user,
+                                agent_id=agent_id,
+                                current_user=current_user,  # ORM user refreshed above
                                 session_id=session_id,
                                 last_user_text=last_user_text,
                                 chat_settings=chat_settings,
@@ -424,16 +435,16 @@ async def agent_chat_completions(
             # 用户发送消息后，标记该用户的所有未读推送为已读
             try:
                 read_count = await mark_user_push_notifications_as_read(
-                    db, current_user.id
+                    db, user_id
                 )
                 if read_count > 0:
                     logger.debug(
-                        f"标记用户推送为已读: user_id={current_user.id}, count={read_count}"
+                        f"标记用户推送为已读: user_id={user_id}, count={read_count}"
                     )
             except Exception as e:
                 # 标记已读失败不应该影响聊天流程，只记录日志
                 logger.warning(
-                    f"标记用户推送为已读失败: user_id={current_user.id}, error={str(e)}"
+                    f"标记用户推送为已读失败: user_id={user_id}, error={str(e)}"
                 )
 
         except Exception as e:
@@ -464,7 +475,7 @@ async def agent_chat_completions(
                     audio_url, audio_duration = voice_result
                 else:
                     logger.warning(
-                        f"用户 {current_user.id} 语音生成失败或达到限制，聊天文本正常返回"
+                        f"用户 {user_id} 语音生成失败或达到限制，聊天文本正常返回"
                     )
             else:
                 logger.debug("语音未启用，跳过语音生成")
@@ -476,10 +487,10 @@ async def agent_chat_completions(
 
         # 记录聊天使用情况
         try:
-            with log_time(f"记录使用情况: user_id={current_user.id}"):
+            with log_time(f"记录使用情况: user_id={user_id}"):
                 await subscription_service.record_usage(
                     db,
-                    current_user.id,
+                    user_id,
                     "chat",
                     1,
                     extra_data={
@@ -494,7 +505,7 @@ async def agent_chat_completions(
         surprise_snap_message_id = None
         try:
             surprise_snap_message_id = await try_trigger_surprise_snap(
-                db, session_id, current_user.id, agent_id
+                db, session_id, user_id, agent_id
             )
         except Exception as e:
             logger.warning(f"Surprise Snap 触发失败: {e}")
@@ -533,10 +544,10 @@ async def agent_chat_completions(
         if is_festival_memory_enabled(app_version_code):
             try:
                 with log_time(
-                    f"投递节日记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+                    f"投递节日记忆提示: user_id={user_id}, agent_id={agent_id}"
                 ):
                     delivered_prompts = await deliver_festival_memories_for_user_agent(
-                        db, current_user.id, agent_id
+                        db, user_id, agent_id
                     )
             except Exception as e:
                 await db.rollback()
@@ -590,7 +601,7 @@ async def agent_chat_completions(
             )
             if info is not None:
                 unlocked_ids = await get_unlocked_surprise_snap_message_ids(
-                    db, current_user.id
+                    db, user_id
                 )
                 message = _build_surprise_snap_choice_message(
                     info,

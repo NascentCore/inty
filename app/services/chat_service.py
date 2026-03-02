@@ -1645,6 +1645,7 @@ async def generate_chat_image(
                         user_id=user_id,
                         history_count=history_count,
                         model=primary_model,
+                        is_subscribed=is_subscribed,
                     )
                 )
                 actual_model = primary_model
@@ -1666,6 +1667,7 @@ async def generate_chat_image(
                             user_id=user_id,
                             history_count=history_count,
                             model=fallback_model,
+                            is_subscribed=is_subscribed,
                         )
                     )
                     actual_model = fallback_model
@@ -1683,6 +1685,7 @@ async def generate_chat_image(
                     user_id=user_id,
                     history_count=history_count,
                     model=primary_model,
+                    is_subscribed=is_subscribed,
                 )
             )
             actual_model = primary_model

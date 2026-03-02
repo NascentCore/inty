@@ -144,7 +144,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
         metaData =
             meta_data?.run {
                 MessageEntity.MetaData(
-                    agentId = this.agentId.orEmpty(),
+                    agentId = this.agentId?.takeIf { it.isNotBlank() } ?: agentId,
                     isVoice = isVoice,
                     isOpening = isOpening,
                     generatedImage =
@@ -180,6 +180,7 @@ fun MessageEntity.toModel(): MsgInfo {
         audio_url = audioUrl,
         user_vote = userVote?.name,
         localMsgId = id,
+        type = type,
         meta_data =
             MsgInfo.MsgMetaData(
                 agentId = metaData.agentId,

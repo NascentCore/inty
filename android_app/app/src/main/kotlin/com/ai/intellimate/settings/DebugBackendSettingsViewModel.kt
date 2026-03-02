@@ -27,6 +27,8 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val buildType: String,
         // 当前生效的后端地址
         val activeBaseUrl: String,
+        // 自定义后端 URL 输入（如 WiFi 开发时填 http://<主机IP>:8000/）
+        val customUrlInput: String,
         // 手动 Debug Mode 状态
         val debugModeEnabled: Boolean,
         // Remix 按钮可见性（仅在 debug 构建中有效）
@@ -60,6 +62,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         return UiState(
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
+            customUrlInput = "",
             debugModeEnabled = debugModeEnabled,
             remixButtonVisible = remixButtonVisible,
             userTimeContextReportingEnabled = userTimeContextReportingEnabled,
@@ -87,7 +90,21 @@ class DebugBackendSettingsViewModel : ViewModel() {
         // 统一清除两套网络栈缓存，确保切换地址后使用新客户端
         NetworkStackCoordinator.clearAllRuntimeCaches()
 
-        _uiState.update { it.copy(activeBaseUrl = NetworkConfig.getBaseUrl()) }
+        _uiState.update {
+            it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "")
+        }
+    }
+
+    fun setCustomUrlInput(value: String) {
+        _uiState.update { it.copy(customUrlInput = value) }
+    }
+
+    /** 应用当前输入的自定义 URL（如 WiFi 开发时的主机地址 http://<主机IP>:8000/） */
+    fun applyCustomUrl() {
+        val url = _uiState.value.customUrlInput.trim()
+        if (url.isBlank()) return
+        val normalized = if (url.endsWith("/")) url else "$url/"
+        applySelectedOverride(normalized)
     }
 
     fun resetOverride() {

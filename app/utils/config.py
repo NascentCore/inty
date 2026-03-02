@@ -148,6 +148,8 @@ class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = True
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
+    # 允许在角色无 background/avatar 时仍生成聊天图：无 reference 时回退到文生图（free/sub 对应 free_user_text_to_image_model / sub_user_text_to_image_model）
+    allow_chat_image_without_agent_visual: bool = True
 
 
 @dataclass
@@ -261,8 +263,8 @@ class AgentConfig:
     # TODO: 这是做什么的？
     vertex_image_model: str = VERTEX_AI_IMAGEN_4_FAST
 
-    free_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4_FAST
-    sub_user_text_to_image_model: str = VERTEX_AI_IMAGEN_4
+    free_user_text_to_image_model: str = models_catalog.Z_IMAGE_TURBO.id_on_provider
+    sub_user_text_to_image_model: str = models_catalog.Z_IMAGE_TURBO.id_on_provider
     force_default_prompts: bool = False  # 强制使用默认提示词，忽略Agent自定义提示词
     enable_christmas_prompt: bool = False  # 是否启用圣诞节季节性提示词
     # 图片生成配置
