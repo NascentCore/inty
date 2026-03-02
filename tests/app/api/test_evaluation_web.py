@@ -39,9 +39,13 @@ def test_configure_evaluation_web_routes_enabled(tmp_path):
     )
 
     with TestClient(app) as client:
-        response = client.get("/evaluation")
+        response = client.get("/")
         assert response.status_code == 200
         assert "evaluation-home" in response.text
+
+        legacy_response = client.get("/evaluation")
+        assert legacy_response.status_code == 200
+        assert "evaluation-home" in legacy_response.text
 
         static_file = client.get("/evaluation/asset.txt")
         assert static_file.status_code == 200
@@ -62,6 +66,7 @@ def test_configure_evaluation_web_routes_disabled_in_api_only_mode(tmp_path):
     )
 
     with TestClient(app) as client:
+        assert client.get("/").status_code == 404
         assert client.get("/evaluation").status_code == 404
         assert client.get("/evaluation/asset.txt").status_code == 404
         assert client.get("/static/evaluation/index.html").status_code == 404

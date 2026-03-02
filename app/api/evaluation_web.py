@@ -29,13 +29,23 @@ def configure_evaluation_web_routes(
     if os.path.exists(static_root_dir):
         app.mount("/static", StaticFiles(directory=static_root_dir), name="static")
 
+    evaluation_static_dir = os.path.join(static_root_dir, "evaluation")
+    evaluation_index = os.path.join(evaluation_static_dir, "index.html")
+
+    @app.get(
+        "/",
+        # 迁移步骤：将评测页入口切到根路径，同时保留 /evaluation 兼容旧链接和旧构建资源前缀。
+        include_in_schema=False,
+    )
+    async def evaluation_frontend_root():
+        return FileResponse(evaluation_index)
+
     @app.get(
         "/evaluation",
         # 此为内部运营使用 API，不对外展示
         include_in_schema=False,
     )
-    async def evaluation_frontend():
-        evaluation_index = os.path.join(static_root_dir, "evaluation", "index.html")
+    async def evaluation_frontend_legacy():
         return FileResponse(evaluation_index)
 
     @app.get(
@@ -44,5 +54,5 @@ def configure_evaluation_web_routes(
         include_in_schema=False,
     )
     async def evaluation_static_files(path: str):
-        file_path = os.path.join(static_root_dir, "evaluation", path)
+        file_path = os.path.join(evaluation_static_dir, path)
         return FileResponse(file_path)

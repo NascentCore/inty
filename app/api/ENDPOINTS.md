@@ -11,9 +11,10 @@
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
-| `/evaluation` | GET | `backend/ops/main.py` |
-| `/evaluation/{path:path}` | GET | `backend/ops/main.py` |
+| `/` | GET | `backend/inty/main.py` 或 `app/api/evaluation_web.py`（ops 评测页入口） |
+| `/health` | GET | `backend/ops/main.py` |
+| `/evaluation` | GET | `app/api/evaluation_web.py` |
+| `/evaluation/{path:path}` | GET | `app/api/evaluation_web.py` |
 
 ## API v1 端点 (`/api/v1`)
 

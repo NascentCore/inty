@@ -58,8 +58,9 @@ backend/ops/start.sh  # 启动后端
 
 ## 5. 访问
 
-- 健康检查：<http://localhost:8001/>
-- Evaluation Web UI：<http://localhost:3000/evaluation>
+- 健康检查：<http://localhost:8001/health>
+- Evaluation Web UI（后端静态托管）：<http://localhost:8001/>
+- Evaluation Web UI（Vite 本地开发服务器）：<http://localhost:3000/>
 - API 文档（仅当 `config.yaml` 中 `app.debug` 为 true）：<http://localhost:8001/docs>
 
 默认端口为 **8001**；可通过环境变量 `PORT` 覆盖（例如 Cloud Run 下 `PORT=8080`）。
