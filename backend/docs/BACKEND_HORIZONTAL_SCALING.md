@@ -42,7 +42,7 @@
   - 启动“热门 Agent 预热”加分布式锁（键如 `locks:agent:prewarm`）。
   - 订阅 `agent:invalidated` 频道；收到事件后清理本机 LRU 实例缓存并按需懒加载。
   - 保留每实例短期 LRU 缓存，但不承载跨实例唯一状态。
-- **评测实时广播（WS/SSE）**（`app/services/evaluation_service.py`、`app/api/v1/endpoints/evaluation.py`）
+- **评测实时广播（WS/SSE）**（`app/services/evaluation_service.py`、`backend/ops/api/v1/evaluation.py`）
   - `_broadcast_update` 改为发布到 Redis 频道：`evaluation:{session_id}`。
   - 新增本机 `WebSocketConnectionRegistry`：仅保存当前实例的连接集合。
   - 订阅 `evaluation:*` 频道：若本机持有 `session_id` 连接则扇出下发。

@@ -4,20 +4,16 @@
 
 ## 双应用说明
 
-- **backend/inty**（主后端）：面向 Android 的 `/api/v1`；可选 `INTY_API_ONLY=true` 时不提供 evaluation Web UI。
+- **backend/inty**（主后端）：面向 Android 的 `/api/v1`。
 - **backend/ops**（运营平台）：提供 evaluation Web UI 与完整 `/api/v1`（含 evaluation、festival_memory 与所有 shared 端点）。部署后通过 ops.inty.cc / dev.ops.inty.cc 访问。
-
-Evaluation 与 festival_memory 的实现位于 `backend/ops/api/v1/`，主应用通过 re-export 继续挂载直至 ops 部署完成。
 
 ## 根路径端点
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
-| `/evaluation` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
-| `/evaluation/{path:path}` | GET | `backend/inty/main.py` 或 `backend/ops/main.py` |
-
-> 注：当设置 `INTY_API_ONLY=true`（例如使用 `backend/inty/start.sh --api-only`）时，主应用不会注册 `/evaluation` 与 `/evaluation/{path:path}`。Ops 应用始终提供上述端点。
+| `/evaluation` | GET | `backend/ops/main.py` |
+| `/evaluation/{path:path}` | GET | `backend/ops/main.py` |
 
 ## API v1 端点 (`/api/v1`)
 
@@ -197,43 +193,43 @@ Evaluation 与 festival_memory 的实现位于 `backend/ops/api/v1/`，主应用
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/api/v1/evaluation/sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/start` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/results` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/cancel` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/questions/parse` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/models` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/scoring-criteria/validate` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/stats` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/monitor` | WebSocket | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}` | PUT | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/check-background-aspect-ratio` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/upload-cropped-background` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/agents/{agent_id}/deploy` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/templates` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/templates` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/batch` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/results/export` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/sessions/compare` | POST | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/new-users` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-activity` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversation-rounds` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-rounds-distribution` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/popular-agents` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/users-hitting-limit` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/agent-analytics` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-sessions-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/stats` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/reports` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/image-generation-failures` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/user-sessions` | GET | `app/api/v1/endpoints/evaluation.py` |
-| `/api/v1/evaluation/user-analytics/session-messages` | GET | `app/api/v1/endpoints/evaluation.py` |
+| `/api/v1/evaluation/sessions` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/{session_id}/start` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/{session_id}` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/{session_id}/results` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/{session_id}/cancel` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/questions/parse` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/models` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/scoring-criteria/validate` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/stats` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/{session_id}/monitor` | WebSocket | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}` | PUT | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}` | DELETE | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}/check-background-aspect-ratio` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}/upload-cropped-background` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}/deploy` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/templates` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/templates` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/batch` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/results/export` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/compare` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/new-users` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-activity` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/conversation-rounds` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-rounds-distribution` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/popular-agents` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/users-hitting-limit` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/agent-analytics` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-sessions-detail` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/stats` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/reports` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/image-generation-failures` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-sessions` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/session-messages` | GET | `backend/ops/api/v1/evaluation.py` |
 

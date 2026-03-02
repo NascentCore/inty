@@ -3,7 +3,7 @@
 from fastapi.routing import APIRoute
 
 from app.api import deps
-from app.api.v1.endpoints import evaluation
+from backend.ops.api.v1 import evaluation
 
 
 def _get_user_analytics_routes() -> list[APIRoute]:

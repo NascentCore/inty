@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.api.v1.endpoints import festival_memory as festival_memory_endpoint
 from backend.ops.schemas.festival_memory import FestivalMemoryExtractionRunRequest
+from backend.ops.api.v1 import festival_memory as festival_memory_endpoint
 
 
 @pytest.mark.asyncio

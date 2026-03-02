@@ -9,9 +9,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api import deps
-from app.api.v1.endpoints import evaluation
 from app.models.user import AuthType
 from app.schemas import User as UserSchema
+from backend.ops.api.v1 import evaluation
 
 
 def _make_superuser(*, user_id: str = "admin-1") -> UserSchema:

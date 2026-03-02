@@ -9,7 +9,6 @@
 
 用于构建 Inty 后端主服务的 Docker 镜像。该镜像包含：
 
-- **前端构建阶段**：使用 Node.js 构建 `evaluation/` 前端应用
 - **后端构建阶段**：基于 Python 3.12，包含所有后端依赖和系统工具
 - **运行时阶段**：包含完整的应用代码、数据库迁移工具和启动脚本
 
@@ -134,18 +133,20 @@ docker build -f Dockerfile -t inty-backend .
 
 ## 多阶段构建
 
-主服务与 Ops 的 Dockerfile 采用多阶段构建：
+Ops 的 Dockerfile 采用前后端多阶段构建：
 
 1. **frontend-builder**：构建前端静态文件
 2. **base**：安装 Python 依赖和系统工具
 3. **最终阶段**：组装完整的运行时镜像
+
+主服务与 push-worker 的 Dockerfile 仅保留 Python 后端构建阶段，不再构建 evaluation 前端静态资源。
 
 ## 注意事项
 
 1. **平台限制**：由于 animeface 依赖，仅支持 AMD64 架构
 2. **配置文件必需**：构建时必须提供 `CONFIG_FILE` 参数，否则构建会失败
 3. **缓存优化**：使用 BuildKit 缓存机制加速 pip 依赖安装
-4. **前端构建**：推送服务 Dockerfile 虽然包含前端构建阶段，但实际运行时不需要前端资源（保留以保持一致性）
+4. **前端构建**：仅 Ops Dockerfile 构建 evaluation 前端；主服务与 push-worker 镜像不包含该阶段
 
 ## 相关文档
 
