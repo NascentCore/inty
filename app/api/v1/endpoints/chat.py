@@ -1,7 +1,7 @@
 import time
 import uuid
 from types import SimpleNamespace
-from typing import List, Optional, TypeAlias, Union
+from typing import Any, List, Optional, TypeAlias, Union
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from langchain_core.messages import HumanMessage
@@ -46,7 +46,7 @@ router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
 def _handle_subscription_limit_error(
     session_id: str,
-    last_user_message: str,
+    last_user_message: str | List[dict[str, Any]],
     current_user: schemas.User,
     used_count: int,
     daily_limit: int,
@@ -124,7 +124,7 @@ def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> d
 
 def _build_chat_response(
     response_content: str,
-    last_user_message: str,
+    last_user_text: str,
     latest_message_info: Optional[dict],
     audio_url: Optional[str],
     request: ChatCompletionRequest,
@@ -159,9 +159,9 @@ def _build_chat_response(
         "business_actions": [a.model_dump() for a in subscription_actions],
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
-            "prompt_tokens": len(last_user_message.split()),
+            "prompt_tokens": len(last_user_text.split()),
             "completion_tokens": len(response_content.split()),
-            "total_tokens": len(last_user_message.split())
+            "total_tokens": len(last_user_text.split())
             + len(response_content.split()),
         },
     }
@@ -222,7 +222,7 @@ async def _try_generate_premium_preview_choice(
     agent,
     current_user: schemas.User,
     session_id: str,
-    last_user_message: str,
+    last_user_text: str,
     chat_settings: models.ChatSettings,
     user_time_context: Optional[dict],
 ) -> Optional[dict]:
@@ -236,7 +236,7 @@ async def _try_generate_premium_preview_choice(
         "Generate one short premium-only sample reply for the user's latest message. "
         "Make it deeper, warmer, and more personalized than free mode. "
         "Return only the reply text in one paragraph (max 80 words).\n"
-        f"User latest message: {last_user_message}"
+        f"User latest message: {last_user_text or '[No plain text content provided]'}"
     )
     preview_content = await agent.generate_message_without_user_save(
         user_id=current_user.id,
@@ -310,8 +310,12 @@ async def agent_chat_completions(
         if not user_messages:
             raise HTTPException(status_code=400, detail="No user message found")
 
-        last_user_message = user_messages[-1].content
+        last_user_message = user_messages[-1].to_model_content()
+        last_user_text = user_messages[-1].extract_text_content()
         messages = [HumanMessage(content=last_user_message)]
+        logger.debug(
+            f"聊天请求最后一条用户消息: has_multimodal={isinstance(last_user_message, list)}, text_length={len(last_user_text)}"
+        )
         user_time_context = (
             request.user_time_context.model_dump(exclude_none=True)
             if request.user_time_context
@@ -405,7 +409,7 @@ async def agent_chat_completions(
                                 agent=agent,
                                 current_user=current_user,
                                 session_id=session_id,
-                                last_user_message=last_user_message,
+                                last_user_text=last_user_text,
                                 chat_settings=chat_settings,
                                 user_time_context=user_time_context,
                             )
@@ -480,7 +484,7 @@ async def agent_chat_completions(
                     1,
                     extra_data={
                         "agent_id": agent_id,
-                        "message_length": len(last_user_message),
+                        "message_length": len(last_user_text),
                     },
                 )
             logger.debug("聊天使用情况记录成功")
@@ -542,7 +546,7 @@ async def agent_chat_completions(
         # 构建响应
         data = _build_chat_response(
             response_content,
-            last_user_message,
+            last_user_text,
             latest_message_info,
             audio_url,
             request,

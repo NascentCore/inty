@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Literal, Optional
 
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
@@ -297,9 +297,44 @@ class Chat(ChatInDB):
 
 
 # OpenAI style message model
+class ChatMessageTextContentPart(BaseModel):
+    type: Literal["text"]
+    text: str = Field(min_length=1)
+
+
+class ChatMessageImageUrlData(BaseModel):
+    url: str = Field(min_length=1)
+
+
+class ChatMessageImageContentPart(BaseModel):
+    type: Literal["image_url"]
+    image_url: ChatMessageImageUrlData
+
+
+ChatMessageContentPart = Annotated[
+    ChatMessageTextContentPart | ChatMessageImageContentPart,
+    Field(discriminator="type"),
+]
+
+
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
-    content: str
+    content: str | List[ChatMessageContentPart]
+
+    def to_model_content(self) -> str | List[Dict[str, Any]]:
+        if isinstance(self.content, str):
+            return self.content
+        return [part.model_dump(exclude_none=True) for part in self.content]
+
+    def extract_text_content(self) -> str:
+        if isinstance(self.content, str):
+            return self.content
+        text_parts = [
+            part.text.strip()
+            for part in self.content
+            if isinstance(part, ChatMessageTextContentPart) and part.text.strip()
+        ]
+        return "\n".join(text_parts)
 
 
 class UserTimeContext(BaseModel):

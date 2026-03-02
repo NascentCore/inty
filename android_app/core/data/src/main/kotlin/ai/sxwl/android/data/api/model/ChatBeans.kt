@@ -34,8 +34,38 @@ data class SendMsgResponse(
 }
 
 @JsonClass(generateAdapter = true)
+data class ChatMessageContentPart(
+    val type: String = "text",
+    val text: String? = null,
+    @Json(name = "image_url") val imageUrl: ImageUrlPayload? = null,
+) {
+    @JsonClass(generateAdapter = true)
+    data class ImageUrlPayload(
+        val url: String = "",
+    )
+}
+
+@JsonClass(generateAdapter = true)
+data class SendMsgReqMessage(
+    val role: String = "",
+    val content: Any = "",
+) {
+    companion object {
+        fun text(
+            role: String,
+            text: String,
+        ) = SendMsgReqMessage(role = role, content = text)
+
+        fun multimodal(
+            role: String,
+            parts: List<ChatMessageContentPart>,
+        ) = SendMsgReqMessage(role = role, content = parts)
+    }
+}
+
+@JsonClass(generateAdapter = true)
 data class SendMsgReq(
-    val messages: List<MsgInfo> = listOf(),
+    val messages: List<SendMsgReqMessage> = listOf(),
     val model: String = "chatbot",
     val stream: Boolean = false,
     @Json(name = "time_context") val timeContext: UserTimeContext? = null,

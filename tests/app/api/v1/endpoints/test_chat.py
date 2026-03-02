@@ -240,6 +240,113 @@ def _stub_success_chat_completion_with_premium_preview(
     )
 
 
+def _stub_success_chat_completion_with_multimodal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> dict:
+    captured: dict = {}
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    class DummyAgent:
+        async def chat(self, *args, **kwargs):
+            captured["messages"] = kwargs.get("messages")
+            return ("multimodal response", 301)
+
+    async def fake_get_agent(agent_data):
+        return DummyAgent()
+
+    async def fake_check_chat_limit(db, user):
+        return True, 0, 100
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            voice_enabled=False,
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_record_usage(*args, **kwargs):
+        return None
+
+    async def fake_get_ai_message_info_by_id(db, message_id):
+        return {
+            "id": message_id,
+            "meta_data": {"source": "multimodal-test"},
+            "timestamp": "2026-03-02T00:00:00Z",
+            "audio_url": None,
+        }
+
+    async def fake_get_latest_user_message_id(db, session_id):
+        return 77
+
+    async def fake_mark_user_push_notifications_as_read(db, user_id):
+        return 0
+
+    async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
+        return None
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_ai_message_info_by_id",
+        fake_get_ai_message_info_by_id,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_user_message_id",
+        fake_get_latest_user_message_id,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "try_trigger_surprise_snap",
+        fake_try_trigger_surprise_snap,
+    )
+    return captured
+
+
 def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
     async def fake_generate_chat_image(*args, **kwargs):
         return UsageLimitExceeded(
@@ -385,6 +492,48 @@ def test_v1_chat_completions_adds_premium_preview_and_popup_action(
     premium_content = premium_preview_choices[0]["message"]["content"]
     assert "Premium-only preview:" in premium_content
     assert "Subscribe to Premium" in premium_content
+
+
+def test_v1_chat_completions_accepts_multimodal_user_content(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured = _stub_success_chat_completion_with_multimodal(monkeypatch)
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Please describe this picture."},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "https://cdn.example.com/test.jpg"},
+                    },
+                ],
+            }
+        ],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert body["data"]["choices"][0]["message"]["content"] == "multimodal response"
+    assert body["data"]["usage"]["prompt_tokens"] == 4
+
+    sent_messages = captured.get("messages")
+    assert sent_messages is not None and len(sent_messages) == 1
+    sent_content = sent_messages[0].content
+    assert isinstance(sent_content, list)
+    assert sent_content[0]["type"] == "text"
+    assert sent_content[0]["text"] == "Please describe this picture."
+    assert sent_content[1]["type"] == "image_url"
+    assert sent_content[1]["image_url"]["url"] == "https://cdn.example.com/test.jpg"
 
 
 def test_v1_chat_generate_image_wraps_business_error(

@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.ClearMessagesRequest
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
+import ai.sxwl.android.data.api.model.SendMsgReqMessage
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.api.model.SurpriseSnapUnlockReq
 import ai.sxwl.android.data.api.model.SurpriseSnapUnlockResp
@@ -65,7 +66,11 @@ class ChatRemoteDataSource {
             LogUtils.i(
                 "ChatRemoteDataSource.sendMessage: agentId=$agentId, messagesCount=${messages.size}"
             )
-            val request = SendMsgReq(messages = messages, timeContext = buildUserTimeContext())
+            val requestMessages =
+                messages.map { msg ->
+                    SendMsgReqMessage.text(role = msg.role, text = msg.content)
+                }
+            val request = SendMsgReq(messages = requestMessages, timeContext = buildUserTimeContext())
             NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")

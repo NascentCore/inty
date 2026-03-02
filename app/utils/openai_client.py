@@ -17,7 +17,7 @@ not via client wrapping.
 import os
 import threading
 from enum import StrEnum
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from langchain_core.messages import BaseMessage
 from loguru import logger
@@ -191,7 +191,7 @@ async def chat_completion_for_extraction(
 
 def langchain_message_to_openai_message(
     message: BaseMessage, user_name: str, agent_name: str
-) -> dict[str, str]:
+) -> dict[str, Any]:
     name = None
     if message.type == Role.HUMAN.value:
         role = Role.USER.value
@@ -201,9 +201,20 @@ def langchain_message_to_openai_message(
         name = agent_name
     else:
         role = message.type
+    content = message.content
+    if isinstance(content, list):
+        normalized_content = []
+        for part in content:
+            if hasattr(part, "model_dump"):
+                normalized_content.append(part.model_dump(exclude_none=True))
+            else:
+                normalized_content.append(part)
+        content = normalized_content
+    elif hasattr(content, "model_dump"):
+        content = content.model_dump(exclude_none=True)
     res = {
         "role": role,
-        "content": message.content,
+        "content": content,
     }
     if name:
         res["name"] = name
