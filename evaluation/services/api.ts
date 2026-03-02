@@ -26,7 +26,6 @@ import type {
   WebSocketMessage,
 } from "../types";
 import { message } from "antd";
-import { Inty } from "inty";
 
 // =============================================================================
 // 基础API配置
@@ -51,6 +50,44 @@ export const getGlobalApiKey = (): string | null => {
 
 type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
 type QueryParamValue = string | number | boolean | null | undefined;
+type IntyCompatClient = {
+  api: {
+    v1: {
+      users: {
+        profile: {
+          me: () => Promise<{ data?: Record<string, unknown> | null }>;
+        };
+      };
+      subscription: {
+        getStatus: () => Promise<{ data?: Record<string, unknown> | null }>;
+      };
+      chats: {
+        agents: {
+          getSettings: (
+            agentId: string,
+          ) => Promise<{ premium_mode?: boolean; [key: string]: unknown }>;
+        };
+      };
+      ai: {
+        agents: {
+          create: (data: AgentCreateRequest) => Promise<{ data?: Agent | null }>;
+          retrieve: (agentId: string) => Promise<Agent>;
+          update: (
+            agentId: string,
+            data: Partial<AgentUpdateRequest> & {
+              replace_background_images?: boolean;
+            },
+          ) => Promise<Agent>;
+          delete: (agentId: string) => Promise<{ message?: string } | null>;
+        };
+      };
+      uploadImage: (params: {
+        file: File;
+        cropping_avatar?: boolean;
+      }) => Promise<{ data?: { avatar_url?: string; url?: string } | null }>;
+    };
+  };
+};
 
 class ApiClient {
   private baseURL: string;
@@ -285,33 +322,81 @@ class ApiClient {
 // 创建API客户端实例
 const apiClient = new ApiClient(window.location.origin);
 
-// 创建一个自定义的 Inty 客户端，支持相对路径
-let intyClient: Inty | null = null;
-
-// 初始化 Inty 客户端
-const initializeIntyClient = () => {
-  const apiKey = getGlobalApiKey();
-  if (apiKey) {
-    intyClient = new Inty({
-      baseURL: window.location.origin,
-      apiKey: apiKey,
-    });
-  }
+// 兼容层：移除 Stainless SDK 依赖后，保留旧调用链（api.getIntyClient().api.v1...）
+const intyClient: IntyCompatClient = {
+  api: {
+    v1: {
+      users: {
+        profile: {
+          me: async () => {
+            const profile = await apiClient.get<Record<string, unknown>>(
+              "/users/me",
+            );
+            return { data: profile };
+          },
+        },
+      },
+      subscription: {
+        getStatus: async () => {
+          const subscriptionStatus = await apiClient.get<
+            Record<string, unknown>
+          >("/subscription/status");
+          return { data: subscriptionStatus };
+        },
+      },
+      chats: {
+        agents: {
+          getSettings: (agentId: string) =>
+            apiClient.get(`/chats/agents/${agentId}/settings`),
+        },
+      },
+      ai: {
+        agents: {
+          create: async (data: AgentCreateRequest) => {
+            const createdAgent = await apiClient.post<Agent>("/ai/agents", data);
+            return { data: createdAgent };
+          },
+          retrieve: (agentId: string) => apiClient.get(`/ai/agents/${agentId}`),
+          update: (
+            agentId: string,
+            data: Partial<AgentUpdateRequest> & {
+              replace_background_images?: boolean;
+            },
+          ) => apiClient.put(`/ai/agents/${agentId}`, data),
+          delete: (agentId: string) => apiClient.delete(`/ai/agents/${agentId}`),
+        },
+      },
+      uploadImage: async ({
+        file,
+        cropping_avatar,
+      }: {
+        file: File;
+        cropping_avatar?: boolean;
+      }) => {
+        const additionalData =
+          cropping_avatar === undefined ? undefined : { cropping_avatar };
+        const uploadResponse = await apiClient.upload<UploadAvatarResponse>(
+          "/images",
+          file,
+          additionalData,
+        );
+        const normalizedUrl = uploadResponse.url ?? uploadResponse.data?.url;
+        const normalizedAvatarUrl =
+          uploadResponse.data?.avatar_url ?? normalizedUrl;
+        return {
+          data: {
+            avatar_url: normalizedAvatarUrl,
+            url: normalizedUrl,
+          },
+        };
+      },
+    },
+  },
 };
 
-// 初始化客户端
-initializeIntyClient();
-
-// 更新 Inty 客户端的 API Key
+// 兼容旧调用入口：保留该函数，但不再创建 SDK 客户端实例
 export const updateIntyClient = (apiKey: string | null) => {
-  if (apiKey) {
-    intyClient = new Inty({
-      baseURL: window.location.origin,
-      apiKey: apiKey,
-    });
-  } else {
-    intyClient = null;
-  }
+  setGlobalApiKey(apiKey);
 };
 
 // =============================================================================
@@ -1492,7 +1577,7 @@ export default {
   WebSocketManager,
   // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
   getIntyClient: () => {
-    if (!intyClient) {
+    if (!getGlobalApiKey()) {
       throw new Error("API Key 未设置，请先设置 API Key");
     }
     return intyClient;
