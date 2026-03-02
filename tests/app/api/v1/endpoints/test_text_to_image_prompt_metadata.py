@@ -9,10 +9,12 @@ from sqlalchemy import delete, select
 from app import models, schemas
 from app.api.v1.endpoints import agents as agents_endpoint
 from app.api.v1.endpoints.agents import generate_background
+from app.core.images.types import GeneratedImageProcessResult
 from app.db.session import AsyncSessionLocal
 from app.external_services.fakes.gemini import FakeGeminiClient
 from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
+from app.utils.image import ImageFormat, ImageSize
 
 
 @pytest.mark.asyncio
@@ -104,62 +106,39 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             await session.commit()
 
 
-class _FakeFalImage:
-    def __init__(
-        self, *, url: str, mime_type: str, width: int | None = None, height: int | None = None
-    ) -> None:
-        self.url = url
-        self.mime_type = mime_type
-        self.width = width
-        self.height = height
-
-
-class _FakeFalResult:
-    def __init__(self, images: list[_FakeFalImage]) -> None:
-        self.images = images
-
-
 @pytest.mark.asyncio
 async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    called_models: list[str] = []
+    called_bases: list[str] = []
+    called_prompts: list[str] = []
 
-    def fake_generate_text_to_image(fal_request):
-        called_models.append(fal_request.model)
-        assert fal_request.negative_prompt == "blurry"
-        return _FakeFalResult(
-            images=[
-                _FakeFalImage(
-                    url="https://fal.example/generated/1.png",
-                    mime_type="image/png",
-                    width=1024,
-                    height=1365,
-                ),
-                _FakeFalImage(
-                    url="https://fal.example/generated/2.png",
-                    mime_type="image/png",
-                    width=1024,
-                    height=1365,
-                ),
-            ]
+    async def fake_z_image_turbo(args, gcs_uri_base):
+        called_bases.append(gcs_uri_base)
+        called_prompts.append(args.prompt)
+        idx = len(called_bases)
+        return GeneratedImageProcessResult(
+            size=ImageSize(width=1024, height=1365),
+            format=ImageFormat.PNG,
+            raw_data=b"fake-png-bytes",
+            raw_data_total_bytes=14,
+            gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_{idx}.png",
+            gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_{idx}.png",
+            generated_at=datetime.now(timezone.utc),
+            raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake"}]},
         )
-
-    async def fake_download_and_upload_to_gcs(
-        *, url: str, gcs_bucket: str, gcs_path: str, content_type: str | None = None
-    ):
-        _ = (url, content_type)
-        return f"https://storage.googleapis.com/{gcs_bucket}/{gcs_path}", 2048
+    def fail_generate_text_to_image(_):
+        raise AssertionError("z-image/turbo should use app/core/images/fal.py API")
 
     monkeypatch.setattr(
         agents_endpoint,
-        "generate_text_to_image",
-        fake_generate_text_to_image,
+        "z_image_turbo",
+        fake_z_image_turbo,
     )
     monkeypatch.setattr(
         agents_endpoint,
-        "_download_and_upload_to_gcs",
-        fake_download_and_upload_to_gcs,
+        "generate_text_to_image",
+        fail_generate_text_to_image,
     )
 
     generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict = (
@@ -173,7 +152,11 @@ async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
         )
     )
 
-    assert called_models == ["fal-ai/z-image/turbo"]
+    assert called_bases == ["backgrounds/test-user/req-1", "backgrounds/test-user/req-1"]
+    assert called_prompts == [
+        "A vivid portrait with soft warm lighting",
+        "A vivid portrait with soft warm lighting",
+    ]
     assert len(generated_images) == 2
     assert len(gcs_urls) == 2
     assert rai_reasons == []

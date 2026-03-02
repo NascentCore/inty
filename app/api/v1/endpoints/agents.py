@@ -24,13 +24,13 @@ from app.api.utils.feature_gating import is_festival_memory_enabled
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent import prompts as agent_prompts
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.images.fal import ZImageTurboInput, z_image_turbo
 from app.core.model_selection import select_text_to_image_model
 from app.core.user_privilege.superuser_check import is_superuser
-from app.utils.models_catalog import is_fal_model
+from app.utils.models_catalog import Z_IMAGE_TURBO, is_fal_model
 from app.external_services.gcs import upload_to_gcs
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
-    TextToImageProvider,
     generate_text_to_image,
 )
 from app.schemas.agent import AgentUpdate
@@ -570,8 +570,15 @@ async def _generate_with_fal_ai(
     Returns:
         (generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict) 元组
     """
-    fal_api_key = global_config_loaded_from_config_yaml.fal.api_key
+    if _is_fal_z_image_turbo_model(model):
+        return await _generate_with_fal_z_image_turbo(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            num_images=num_images,
+            gcs_base_path=gcs_base_path,
+        )
 
+    fal_api_key = global_config_loaded_from_config_yaml.fal.api_key
     fal_request = TextToImageGenerationRequest(
         model=model,
         prompt=prompt,
@@ -640,6 +647,68 @@ async def _generate_with_fal_ai(
 
     if not gcs_urls:
         raise Exception("No images were generated from fal.ai")
+
+    return generated_images, gcs_urls, [], gcs_url_to_img_dict
+
+
+def _is_fal_z_image_turbo_model(model: str) -> bool:
+    normalized = model.strip().lower()
+    return normalized in {
+        Z_IMAGE_TURBO.id_on_provider,
+        "fal/z-image/turbo",
+    }
+
+
+async def _generate_with_fal_z_image_turbo(
+    *,
+    prompt: str,
+    negative_prompt: str | None,
+    num_images: int,
+    gcs_base_path: str,
+) -> tuple[list[ImagenGeneratedImage], list[str], list[str], dict]:
+    """
+    z-image/turbo 路径统一复用 app/core/images/fal.py，
+    复用现有的数据 URI 解析、GCS 上传与 LangSmith 追踪实现。
+    """
+    if negative_prompt:
+        logger.info(
+            "fal-ai/z-image/turbo currently ignores negative_prompt, value={}",
+            negative_prompt,
+        )
+
+    generated_images: list[ImagenGeneratedImage] = []
+    gcs_urls: list[str] = []
+    gcs_url_to_img_dict: dict[str, ImagenGeneratedImage] = {}
+
+    for _ in range(num_images):
+        result = await z_image_turbo(
+            ZImageTurboInput(
+                prompt=prompt,
+                image_size="portrait_4_3",
+                num_images=1,
+                output_format=ImageFormat.PNG,
+            ),
+            gcs_uri_base=gcs_base_path,
+        )
+
+        byte_size = result.raw_data_total_bytes
+        if byte_size <= 0 and isinstance(result.raw_data, bytes):
+            byte_size = len(result.raw_data)
+
+        imagen_image = ImagenGeneratedImage(
+            gcs_uri=result.gcs_uri,
+            size=result.size,
+            byte_size=byte_size,
+            format=result.format,
+            rai_filtered_reason=None,
+            enhanced_prompt=prompt,
+        )
+        generated_images.append(imagen_image)
+        gcs_urls.append(result.gcs_uri)
+        gcs_url_to_img_dict[result.gcs_uri] = imagen_image
+
+    if not gcs_urls:
+        raise Exception("No images were generated from fal.ai z-image/turbo")
 
     return generated_images, gcs_urls, [], gcs_url_to_img_dict
 
