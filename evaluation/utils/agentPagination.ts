@@ -1,6 +1,6 @@
 import type { Agent } from "../types";
 
-export const AGENT_LIST_PAGE_SIZE = 20;
+export const AGENT_LIST_PAGE_SIZE = 50;
 
 export interface FetchAllAgentsWithPaginationOptions {
   fetchPage: (params: { skip: number; limit: number }) => Promise<Agent[]>;
