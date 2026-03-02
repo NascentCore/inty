@@ -583,7 +583,9 @@ async def agent_chat_completions(
                 if data["choices"]
                 else None
             )
-            if main_id:
+            if main_id is None and ai_message_id is not None:
+                main_id = ai_message_id
+            if main_id is not None:
                 premium_preview_choice["id"] = f"{main_id}_preview"
             idx = len(data["choices"])
             data["choices"].append(

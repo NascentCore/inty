@@ -7,6 +7,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(entities = [MessageEntity::class], version = 11, exportSchema = true)
 abstract class IntyChatDatabase : RoomDatabase() {
@@ -15,6 +17,13 @@ abstract class IntyChatDatabase : RoomDatabase() {
 
     companion object {
         private const val DATABASE_NAME = "inty_chat.db"
+
+        /** 10→11: 新增 message.model（MetaData.model），用于 debug 显示所用模型。 */
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE message ADD COLUMN model TEXT")
+            }
+        }
 
         @Volatile private var instance: IntyChatDatabase? = null
 
@@ -31,7 +40,7 @@ abstract class IntyChatDatabase : RoomDatabase() {
                                 IntyChatDatabase::class.java,
                                 DATABASE_NAME,
                             )
-                            .fallbackToDestructiveMigration(true)
+                            .addMigrations(MIGRATION_10_11)
                             .build()
                             .also { instance = it }
                 }
