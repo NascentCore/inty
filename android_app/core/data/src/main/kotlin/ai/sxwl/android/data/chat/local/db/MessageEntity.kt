@@ -68,6 +68,8 @@ data class MessageEntity(
         val isOpening: Boolean = false,
         val voiceSessionId: String? = null,
         @Embedded("generate_image_") val generatedImage: GeneratedImage? = null,
+        /** Backend model used for this message (debug only). */
+        val model: String? = null,
     ) {
         data class GeneratedImage(
             val imageUrl: String? = null,
@@ -119,6 +121,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                             )
                         },
                     voiceSessionId = voice_session_id,
+                    model = model,
                 )
             } ?: MetaData(agentId),
         type = type,
@@ -155,6 +158,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                                 height = height,
                             )
                         },
+                    model = model,
                 )
             } ?: MessageEntity.MetaData(agentId),
         isSending = false,
@@ -194,6 +198,7 @@ fun MessageEntity.toModel(): MsgInfo {
                             height = g.height ?: 0,
                         )
                     },
+                model = metaData.model,
             ),
     )
 }

@@ -1279,6 +1279,7 @@ private fun DebugMessageMetadata(item: MessageEntity, modifier: Modifier = Modif
                     item.metaData.let { meta ->
                         val metaParts = mutableListOf<String>()
                         meta.agentId.takeIf { it.isNotBlank() }?.let { metaParts += "agent=$it" }
+                        meta.model.takeIf { !it.isNullOrBlank() }?.let { metaParts += "model=$it" }
                         if (meta.isOpening) metaParts += "opening=true"
                         meta.generatedImage?.let { image ->
                             metaParts +=

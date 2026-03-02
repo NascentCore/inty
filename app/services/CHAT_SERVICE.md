@@ -211,10 +211,17 @@ Chat (数据库表)
           └─ chat_history (数据库表)
               ├─ session_id (外键)
               ├─ message (JSON)
-              ├─ meta_data (JSON)
+              ├─ meta_data (JSON，见下)
               ├─ audio_url
               └─ created_at
 ```
+
+**AI 消息 meta_data 常见字段**（写入由 `chat_history_service.add_ai_message_sync` / agent 等完成）：
+
+- `agentId`：角色 ID
+- `isOpening`：是否为开场白
+- `llm_invoke_time`：当次 LLM 调用耗时（秒）
+- `model`：当次回复使用的后端模型 id（如 `openai/gpt-4o`），供客户端在 Debug 构建下展示
 
 ### 关键映射
 

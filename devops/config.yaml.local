@@ -75,6 +75,8 @@ agent:
   sub_user_chat_image_model: "Z Image Turbo Image to Image"
   # 本地开发环境流量小也需要完整追踪方便测试
   langsmith_text_chat_sample_rate: 1.0
+  # 开启付费内容预览
+  enable_free_user_premium_preview: true
 
 google_play:
   package_name: "com.ai.intellimate"

@@ -232,7 +232,7 @@ class AgentConfig:
     # Subscribed users: default chat model (OpenRouter model id), invoked via OpenAI client + OpenRouter.
     sub_user_chat_model: str = GEMINI_2_5_FLASH
     # 免费用户商业化触达：定期返回一条“付费专属预览”消息并引导订阅。
-    enable_free_user_premium_preview: bool = True
+    enable_free_user_premium_preview: bool = False
     # 触发频率（按聊天次数）：例如 5 表示每 5 条聊天触发一次；<=0 表示关闭。
     free_user_premium_preview_every_n_messages: int = 5
     # 预览文案最大长度（字符）。

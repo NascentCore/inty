@@ -62,6 +62,11 @@
 - `CharacterDatabase` 为单库入口，`CharacterRepository` 负责暴露 `Flow` 订阅与同步方法，app 层通过 `DataModule.getCharacterRepository()` 获取实例。
 - 聊天页通过 Room 统计 AI 回复次数并实时刷新顶部能量，禁止绕过仓库直接访问数据库。
 
+## 聊天消息 Debug 信息（仅 Debug 构建）
+
+- 每条消息气泡下方在 Debug 构建中会显示 `DebugMessageMetadata`，包含：`role`、`id`、`local`、`ts`、`meta`（含 `agent`、`model`、`opening`、`image` 等）、`audio`、`vote`。
+- 后端在保存 AI 消息时会在 `meta_data` 中写入 `model`（当次回复使用的模型 id）；Android 端 `MsgInfo.MsgMetaData` / `MessageEntity.MetaData` 含可选字段 `model`，Room 版本 11 起持久化，便于开发排查所用模型。
+
 ## Kotlin / Compose UI 规范
 
 - 禁止使用魔法值（如 `10.dp`）——将 UI 常量定义在 `core/design` token 或 `MaterialTheme` 中，通过入参传递并提供合理默认值。

@@ -410,6 +410,9 @@ async def agent_chat_completions(
                 is_subscribed=is_subscribed,
                 next_chat_count=next_chat_count,
             ):
+                logger.info(
+                    f"premium_preview: attempting generation - agent_id={agent_id}, user_id={user_id}, next_chat_count={next_chat_count}"
+                )
                 try:
                     with log_time(
                         f"生成付费预览内容: user_id={user_id}, chat_count={next_chat_count}"
@@ -426,9 +429,17 @@ async def agent_chat_completions(
                             )
                         )
                     if premium_preview_choice is not None:
+                        content_preview = (premium_preview_choice.get("content") or "")[:80]
+                        logger.info(
+                            f"premium_preview: generated - agent_id={agent_id}, user_id={user_id}, choice_id={premium_preview_choice.get('id')}, content_preview={content_preview!r}"
+                        )
                         subscription_actions = [
                             _build_premium_subscription_action(next_chat_count)
                         ]
+                    else:
+                        logger.info(
+                            f"premium_preview: not generated (empty preview) - agent_id={agent_id}, user_id={user_id}"
+                        )
                 except Exception as e:
                     logger.warning(f"生成付费预览失败，已跳过: {str(e)}")
 
@@ -566,6 +577,14 @@ async def agent_chat_completions(
         )
 
         if premium_preview_choice is not None:
+            # 让 premium_preview 的 id 与主回复同组排序，便于客户端按 id 排序时出现在同一页（主回复 id 如 46，设为 46_preview）
+            main_id = (
+                data["choices"][0]["message"].get("id")
+                if data["choices"]
+                else None
+            )
+            if main_id:
+                premium_preview_choice["id"] = f"{main_id}_preview"
             idx = len(data["choices"])
             data["choices"].append(
                 {
@@ -573,6 +592,9 @@ async def agent_chat_completions(
                     "message": premium_preview_choice,
                     "finish_reason": "stop",
                 }
+            )
+            logger.info(
+                f"premium_preview: included in response - agent_id={agent_id}, user_id={user_id}, choice_index={idx}, message_type={premium_preview_choice.get('type')}"
             )
 
         # 若有本次投递的节日提醒，追加到 choices（仅当 is_festival_memory_enabled 时才会投递，故此处不必再判版本）

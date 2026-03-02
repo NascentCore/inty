@@ -1307,13 +1307,16 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录（包含LLM调用时间），并返回插入后的 message id 供调用方使用
+                # 保存AI响应到历史记录（包含LLM调用时间与所用模型），并返回插入后的 message id 供调用方使用
                 save_response_start = time.time()
                 ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
                     agent_id=self.agent_id,
-                    meta_data={"llm_invoke_time": api_time},
+                    meta_data={
+                        "llm_invoke_time": api_time,
+                        "model": model_name,
+                    },
                 )
                 save_response_time = time.time() - save_response_start
                 logger.debug(
@@ -1402,7 +1405,6 @@ class Agent:
             all_messages = self._inject_user_time_context_periodically(
                 all_messages, user_time_context, datetime.now(timezone.utc)
             )
-            logger.debug(f"all_messages: {all_messages}")
 
             # 如果 user_profile 为 None，自动获取
             if user_profile is None:
@@ -1428,7 +1430,6 @@ class Agent:
                 langchain_message_to_openai_message(message, user_name, self.name)
                 for message in messages_list
             ]
-            logger.debug(f"openai_messages: {openai_messages}")
 
             input_build_time = time.time() - input_build_start
             logger.debug(

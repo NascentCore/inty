@@ -182,6 +182,8 @@ data class MsgInfo(
         val voice_session_id: String? = null,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
         @Json(name = "generated_music") val generatedMusic: GeneratedMusic? = null,
+        /** Backend model used for this message (e.g. openai/gpt-4o); for debug display. */
+        val model: String? = null,
     ) {
         @JsonClass(generateAdapter = true)
         data class GeneratedImage(
