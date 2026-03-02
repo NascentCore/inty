@@ -233,8 +233,8 @@ class HealthCheckData(BaseModel):
     version: str
 
 
-@app.get("/", response_model=APIResponse[HealthCheckData], include_in_schema=False)
-async def root():
+@app.get("/health", response_model=APIResponse[HealthCheckData], include_in_schema=False)
+async def health():
     return APIResponse.success(
         data=HealthCheckData(
             app_name=f"{global_config_loaded_from_config_yaml.app.name} Ops",
