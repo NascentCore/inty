@@ -6,6 +6,7 @@ import {
   loadAdminAgentList,
   loadSelfAgentList,
 } from "../services/agentListService";
+import { AGENT_LIST_PAGE_SIZE } from "../utils/agentPagination";
 
 vi.mock("../services/api", () => ({
   agentApi: {
@@ -33,21 +34,23 @@ describe("agentListService", () => {
 
   it("loads admin agents with paginated strategy", async () => {
     vi.mocked(agentApi.listAll)
-      .mockResolvedValueOnce(buildAgents(20, 0, "PUBLIC"))
-      .mockResolvedValueOnce(buildAgents(3, 20, "PRIVATE"));
+      .mockResolvedValueOnce(buildAgents(AGENT_LIST_PAGE_SIZE, 0, "PUBLIC"))
+      .mockResolvedValueOnce(
+        buildAgents(3, AGENT_LIST_PAGE_SIZE, "PRIVATE"),
+      );
 
     const onBatchLoaded = vi.fn();
     const agents = await loadAdminAgentList({ onBatchLoaded });
 
-    expect(agents).toHaveLength(23);
+    expect(agents).toHaveLength(AGENT_LIST_PAGE_SIZE + 3);
     expect(vi.mocked(agentApi.listAll)).toHaveBeenCalledTimes(2);
     expect(vi.mocked(agentApi.listAll)).toHaveBeenNthCalledWith(1, {
       skip: 0,
-      limit: 20,
+      limit: AGENT_LIST_PAGE_SIZE,
     });
     expect(vi.mocked(agentApi.listAll)).toHaveBeenNthCalledWith(2, {
-      skip: 20,
-      limit: 20,
+      skip: AGENT_LIST_PAGE_SIZE,
+      limit: AGENT_LIST_PAGE_SIZE,
     });
     expect(onBatchLoaded).toHaveBeenCalledTimes(2);
   });
@@ -62,7 +65,7 @@ describe("agentListService", () => {
     expect(vi.mocked(agentApi.list)).toHaveBeenCalledWith({
       type: "public",
       skip: 0,
-      limit: 20,
+      limit: AGENT_LIST_PAGE_SIZE,
     });
   });
 

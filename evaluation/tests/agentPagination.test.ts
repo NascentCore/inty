@@ -13,48 +13,56 @@ const buildAgents = (count: number, startIndex = 0): Agent[] =>
 
 describe("fetchAllAgentsWithPagination", () => {
   it("loads agents by pages and emits incremental batches", async () => {
+    const pageSize = AGENT_LIST_PAGE_SIZE;
     const fetchPage = vi
       .fn()
-      .mockResolvedValueOnce(buildAgents(20, 0))
-      .mockResolvedValueOnce(buildAgents(20, 20))
-      .mockResolvedValueOnce(buildAgents(5, 40));
+      .mockResolvedValueOnce(buildAgents(pageSize, 0))
+      .mockResolvedValueOnce(buildAgents(pageSize, pageSize))
+      .mockResolvedValueOnce(buildAgents(5, pageSize * 2));
     const onBatchLoaded = vi.fn();
 
     const result = await fetchAllAgentsWithPagination({
       fetchPage,
-      pageSize: AGENT_LIST_PAGE_SIZE,
+      pageSize,
       onBatchLoaded,
     });
 
-    expect(result).toHaveLength(45);
+    expect(result).toHaveLength(pageSize * 2 + 5);
     expect(fetchPage).toHaveBeenCalledTimes(3);
-    expect(fetchPage).toHaveBeenNthCalledWith(1, { skip: 0, limit: 20 });
-    expect(fetchPage).toHaveBeenNthCalledWith(2, { skip: 20, limit: 20 });
-    expect(fetchPage).toHaveBeenNthCalledWith(3, { skip: 40, limit: 20 });
+    expect(fetchPage).toHaveBeenNthCalledWith(1, { skip: 0, limit: pageSize });
+    expect(fetchPage).toHaveBeenNthCalledWith(2, {
+      skip: pageSize,
+      limit: pageSize,
+    });
+    expect(fetchPage).toHaveBeenNthCalledWith(3, {
+      skip: pageSize * 2,
+      limit: pageSize,
+    });
 
     expect(onBatchLoaded).toHaveBeenCalledTimes(3);
-    expect(onBatchLoaded.mock.calls[0][0]).toHaveLength(20);
-    expect(onBatchLoaded.mock.calls[1][0]).toHaveLength(40);
-    expect(onBatchLoaded.mock.calls[2][0]).toHaveLength(45);
+    expect(onBatchLoaded.mock.calls[0][0]).toHaveLength(pageSize);
+    expect(onBatchLoaded.mock.calls[1][0]).toHaveLength(pageSize * 2);
+    expect(onBatchLoaded.mock.calls[2][0]).toHaveLength(pageSize * 2 + 5);
   });
 
   it("supports early stop through shouldContinue", async () => {
+    const pageSize = AGENT_LIST_PAGE_SIZE;
     let keepLoading = true;
     const fetchPage = vi
       .fn()
-      .mockResolvedValueOnce(buildAgents(20, 0))
-      .mockResolvedValueOnce(buildAgents(20, 20));
+      .mockResolvedValueOnce(buildAgents(pageSize, 0))
+      .mockResolvedValueOnce(buildAgents(pageSize, pageSize));
 
     const result = await fetchAllAgentsWithPagination({
       fetchPage,
-      pageSize: AGENT_LIST_PAGE_SIZE,
+      pageSize,
       onBatchLoaded: () => {
         keepLoading = false;
       },
       shouldContinue: () => keepLoading,
     });
 
-    expect(result).toHaveLength(20);
+    expect(result).toHaveLength(pageSize);
     expect(fetchPage).toHaveBeenCalledTimes(1);
   });
 
@@ -70,6 +78,9 @@ describe("fetchAllAgentsWithPagination", () => {
 
     expect(result).toEqual([]);
     expect(onBatchLoaded).not.toHaveBeenCalled();
-    expect(fetchPage).toHaveBeenCalledWith({ skip: 0, limit: 20 });
+    expect(fetchPage).toHaveBeenCalledWith({
+      skip: 0,
+      limit: AGENT_LIST_PAGE_SIZE,
+    });
   });
 });
