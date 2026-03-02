@@ -278,7 +278,7 @@ class AgentConfig:
     sub_user_chat_music_model: str = "fal-ai/stable-audio"
     # 聊天 TTS（Gemini TTS 模型 ID）；选择逻辑见 select_chat_tts_model()
     free_user_chat_tts_model: str = "gemini-2.5-flash-tts"
-    sub_user_chat_tts_model: str = "gemini-2.5-flash-tts"
+    sub_user_chat_tts_model: str = "gemini-2.5-pro-tts"
     # 用户自拍画像推断模型（用于生成简短用户画像结论）
     selfie_persona_gemini_model: str = "gemini-2.5-flash"
     # 订阅用户首轮生图遇 429 时重试使用的 Vertex 模型 ID
