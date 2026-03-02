@@ -20,6 +20,7 @@ import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
@@ -78,12 +79,18 @@ class ChatRemoteDataSource {
         }
     }
 
+    /** 用户本地时间，简单可读格式，如 2026-03-02 6:41:23 pm */
+    private val localTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd h:mm:ss a", Locale.US)
+
     private fun buildUserTimeContext(): UserTimeContext? {
         if (!shouldReportUserTimeContext()) return null
         val now = ZonedDateTime.now()
         val utcOffsetMinutes = now.offset.totalSeconds / 60
+        val raw = now.format(localTimeFormatter)
+        val localTime = raw.replace(" AM", " am").replace(" PM", " pm")
         return UserTimeContext(
-            localTime = now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+            localTime = localTime,
             timezone = now.zone.id,
             utcOffsetMinutes = utcOffsetMinutes,
         )

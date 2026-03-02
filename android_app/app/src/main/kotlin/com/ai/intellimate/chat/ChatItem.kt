@@ -144,7 +144,8 @@ fun ChatItem(
 
     val agentInfoForFormatting by
         (chatViewModel?.agentInfo ?: flowOf(null)).collectAsState(initial = null)
-    if (item.type == "text" || item.type.isNullOrBlank()) {
+    // premium_preview: free-user upsell message from backend (role=assistant, type=premium_preview); show as assistant text
+    if (item.type == "text" || item.type.isNullOrBlank() || item.type == "premium_preview") {
         when (item.role) {
             "assistant" -> {
                 ChatItemAI(
