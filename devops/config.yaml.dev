@@ -73,6 +73,11 @@ agent:
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
   enable_chat_image_match_fallback: true
 
+  # 打开高级功能预览，吸引用户付费
+  enable_free_user_premium_preview: true
+  free_user_premium_preview_every_n_messages: 10
+  free_user_premium_preview_max_chars: 200
+
 google_play:
   package_name: "com.ai.intellimate"
   webhook_secret: ""
