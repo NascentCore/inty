@@ -74,7 +74,13 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
    <img width="200" height="696" alt="image" src="https://github.com/user-attachments/assets/bdde0572-bf2d-473b-9865-cbaca556af4c" />
    <img width="200" height="694" alt="image" src="https://github.com/user-attachments/assets/7a2cb850-dfc4-4d74-b238-59bcd95a1248" />
 
-3. 【测试通过后】将该内测版本发布到 Production；确保内测轨道 app 版本号（me->settings）与 Google Play 上要发布的版本号一致；然后填写 release notes
+3. 【手动测试】使用下面的测试账户来测试 App 各项功能
+
+   ```text
+   test@sxwl.ai
+   sxwltest
+   ```
+4. 【测试通过后】将该内测版本发布到 Production；确保内测轨道 app 版本号（me->settings）与 Google Play 上要发布的版本号一致；然后填写 release notes
 
    <img width="200" height="1220" alt="image" src="https://github.com/user-attachments/assets/8abdfb90-b4a2-4df8-9d57-459ef00580e4" />
    <img width="600" height="1152" alt="image" src="https://github.com/user-attachments/assets/ee4177a7-5a27-4d8a-9de7-5e7e14d7ee54" />
@@ -83,9 +89,9 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 
    1. 参考 [Change logs](/android_app/docs/CHANGE_LOGS.md) 找到距离上次发布依赖的改动，填写 release notes
 
-4. 审核通过后，正式发布
-5. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
-6. 发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
+5. 审核通过后，正式发布
+6. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
+7. 发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
    - 修改 `devops/config.yaml.{prod,dev}` 中 `google_play.current_version_code`
    - （了解用法/默认值参考）`../app/core/config.py` 的 `GooglePlayConfig.current_version_code`
 
