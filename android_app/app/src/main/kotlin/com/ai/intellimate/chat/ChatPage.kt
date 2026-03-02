@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -64,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -193,6 +195,11 @@ object ChatPageSource {
         "main_activity_home_tab" // 在 MainActivity 的 HorizontalPager 中（默认来源，首次进入或从 chat tab 进入）
     const val FROM_PREVIOUS_AGENT = "from_previous_agent" // 在 HorizontalPager 中从上一个 agent 滑动而来
 }
+
+internal fun shouldDisplayOfficialAssistantCreateButton(
+    isOfficialAssistantChat: Boolean,
+    isKeyboardVisible: Boolean,
+): Boolean = isOfficialAssistantChat && !isKeyboardVisible
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -413,6 +420,8 @@ internal fun ChatPage(
     val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat() // 计算出键盘当前弹出/回收进度
 
     val isKeyboardVisible = imeHeight > 0
+    val shouldShowOfficialAssistantCreateButton =
+        shouldDisplayOfficialAssistantCreateButton(isOfficialAssistantChat, isKeyboardVisible)
     onKeyboardVisible(isKeyboardVisible)
     val bottomPadding = UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
 
@@ -811,6 +820,33 @@ internal fun ChatPage(
                         )
                     }
                 } else {
+                    if (shouldShowOfficialAssistantCreateButton) {
+                        val createEntryConfig = UiConfigs.ChatPage.OfficialAssistantCreateEntry
+                        // AI 实现小结：
+                        // 1) 仅在官方助手聊天页显示创建角色入口；
+                        // 2) 按钮固定放在输入框上方；
+                        // 3) 键盘弹起后自动隐藏，避免遮挡输入区域。
+                        OfficialAssistantCreateEntryButton(
+                            modifier =
+                                Modifier.padding(
+                                    start = createEntryConfig.HorizontalPadding,
+                                    end = createEntryConfig.HorizontalPadding,
+                                    bottom = createEntryConfig.BottomSpacing,
+                                ),
+                            text = stringResource(R.string.chat_official_create_imate_button),
+                            onClick = {
+                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                    "click_type" to "official_create_imate",
+                                    "agent_id" to agentInfo?.id,
+                                    "agent_name" to agentInfo?.name,
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                )
+                                navController.navigate(Routes.Creat.createRole(""))
+                            },
+                        )
+                    }
+
                     val effectiveBottomPadding =
                         if (showMorePanel)
                             morePanelHeight + UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
@@ -1221,6 +1257,57 @@ internal fun ChatPage(
             suppressFocusCallback.value = true
             focusManager.clearFocus()
         }
+    }
+}
+
+/**
+ * 官方助手聊天页「Create your own iMate」入口按钮。
+ *
+ * 适用范围：
+ * - 仅用于官方助手聊天页输入框上方的创建角色快捷入口。
+ *
+ * 预期视觉效果：
+ * - 左对齐胶囊按钮；
+ * - 背景使用 IntelliMate 主 CTA 渐变色；
+ * - 文案显示 `+ Create your own iMate`，字体与高度与上方 FAQ 按钮保持一致。
+ *
+ * 可配置项：
+ * @param modifier 外层布局修饰符（用于定位到输入框上方并设置间距）
+ * @param text 按钮文案
+ * @param onClick 点击回调（建议用于导航到创建角色页面）
+ */
+@Composable
+private fun OfficialAssistantCreateEntryButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    onClick: () -> Unit,
+) {
+    val config = UiConfigs.ChatPage.OfficialAssistantCreateEntry
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(config.CornerRadius))
+                .background(
+                    brush =
+                        Brush.horizontalGradient(
+                            colors =
+                                listOf(
+                                    AppColors.IntelliMateCtaGradientStart,
+                                    AppColors.IntelliMateCtaGradientEnd,
+                                )
+                        )
+                )
+                .noRippleClickable { onClick() }
+                .padding(
+                    horizontal = config.ContentHorizontalPadding,
+                    vertical = config.ContentVerticalPadding,
+                )
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

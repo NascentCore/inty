@@ -832,6 +832,24 @@ object UiConfigs {
             const val ButtonTextMaxLines = 1
         }
 
+        /** 官方助手聊天页“Create your own iMate”创建入口按钮配置 */
+        object OfficialAssistantCreateEntry {
+            /** 入口按钮左右外边距（与聊天输入框对齐） */
+            val HorizontalPadding = 16.dp
+
+            /** 入口按钮与输入框之间的间距 */
+            val BottomSpacing = 8.dp
+
+            /** 入口按钮圆角（胶囊样式） */
+            val CornerRadius = 24.dp
+
+            /** 入口按钮内容水平内边距（与 FAQ 快捷按钮一致） */
+            val ContentHorizontalPadding = OfficialAssistantFaq.ButtonHorizontalPadding
+
+            /** 入口按钮内容垂直内边距（与 FAQ 快捷按钮一致） */
+            val ContentVerticalPadding = OfficialAssistantFaq.ButtonVerticalPadding
+        }
+
         /** 聊天输入框配置 - 适用于聊天输入框的尺寸、间距等设置 */
         object ChatInput {
             /** 聊天输入框底部空白边距 - 输入框与键盘或更多面板之间的间距 */

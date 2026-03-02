@@ -51,6 +51,7 @@ Click the **Messages** or the **2nd** icon from the left
 
 Tap the **middle** icon to open the chat screen with the IntelliMate official assistant.
 In this official chat page, you can use the FAQ quick-question buttons near the top to prefill common long-form questions into the input box (they are not auto-sent).
+You can also tap **+ Create your own iMate** above the input box to jump straight to the iMate creation page. This button hides automatically while the keyboard is open.
 
 ### Explore iMates page
 
@@ -72,7 +73,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
 | Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
-| Create or edit an iMate | Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
+| Create or edit an iMate | Official Assistant Chat → **+ Create your own iMate**, or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. When opened from chat or a notification, that entry is highlighted with a glow and the rest of the screen is dimmed; tap outside the glowing card to return to the normal list. |

@@ -309,6 +309,7 @@
     <string name="chat_official_faq_question_report_issue">How do I report a problematic chat or image and attach evidence for support?</string>
     <string name="chat_official_faq_title_check_version">Check app version</string>
     <string name="chat_official_faq_question_check_version">Where can I check app version info?</string>
+    <string name="chat_official_create_imate_button">+ Create your own iMate</string>
 
     <!-- VIP character access control -->
     <string name="vip_character_chat_locked_content">This is a VIP iMate. Go Premium to chat with VIP iMates and unlock exclusive features!</string>
