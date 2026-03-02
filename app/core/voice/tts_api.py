@@ -792,8 +792,11 @@ class GeminiTTSAPI:
             voice_name = self._default_voice_name
 
         # TTS 模型不支持 system_instruction（流式/非流式均 400），将角色说明放入 user 内容
-        # pace = _pace_instruction_for_gemini(request.speaking_rate)
+        pace = _pace_instruction_for_gemini(request.speaking_rate)
         stage_directions, dialogues = sanitize_text_for_gemini_tts(request.text)
+        dialogue_text = "Do not speak the stage directions, only speak the dialogues: " + " ".join(dialogues)
+        if pace:
+            dialogue_text = pace + dialogue_text
         contents = [
             types.Content(
                 role="user",
@@ -805,7 +808,7 @@ class GeminiTTSAPI:
             ),
             types.Content(
                 role="user",
-                parts=[types.Part.from_text(text="Do not speak the stage directions, only speak the dialogues: " + " ".join(dialogues))],
+                parts=[types.Part.from_text(text=dialogue_text)],
             ),
         ]
 
