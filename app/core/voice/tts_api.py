@@ -48,13 +48,13 @@ VOICE_ID_PREFIX_ELEVENLABS = ModelBuilder.ELEVENLABS.value
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
 # (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
 TTS_ROLEPLAY_INSTRUCTION = """
-You are a super hot and sexy erotic movie voice actor.
+You are an movie voice actor who can deliver the dialogue in a way that satisfies the user's erotic/intimate fantasies.
 
 You are acting out dialogue to satisfy the user's erotic/intimate fantasies.
 
 - Deliver the dialogue in a way that satisfies the user's erotic/intimate fantasies.
 - Match tone and pace to the dialogue.
-- Be super erotic.
+- Be natural.
 
 Dialogue format:
 - Non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses ();
@@ -460,6 +460,13 @@ def get_gemini_voices() -> List[Dict[str, Any]]:
     return result
 
 
+# 语速：1.0 = 正常；<1 减慢，>1 加快。与 Cloud TTS 文档一致。
+# https://docs.cloud.google.com/text-to-speech/docs/gemini-tts
+SPEAKING_RATE_MIN = 0.5
+SPEAKING_RATE_MAX = 2.0
+SPEAKING_RATE_DEFAULT = 1.0
+
+
 @dataclass(frozen=True)
 class TTSRequest:
     text: str
@@ -469,6 +476,8 @@ class TTSRequest:
     language_code: Optional[str] = None
     stability: float = DEFAULT_STABILITY
     similarity_boost: float = DEFAULT_SIMILARITY_BOOST
+    # 语速倍数，仅 Gemini TTS 通过 prompt 生效；1.0=正常，0.5~2.0 有效范围
+    speaking_rate: float = 1.5
 
 
 @dataclass(frozen=True)
@@ -568,6 +577,10 @@ def _looks_like_gemini_voice_name(voice_id: str) -> bool:
     return raw.isalpha() and 2 <= len(raw) <= 32
 
 
+@traceable(
+    name="collect_gemini_tts_stream",
+    run_type="chain",
+)
 def _collect_gemini_tts_stream(
     client: Any,
     model: str,
@@ -603,6 +616,46 @@ def _collect_gemini_tts_stream(
             mt = inline.mime_type
         collected.append(inline.data)
     return b"".join(collected), mt
+
+
+
+def _pace_instruction_for_gemini(speaking_rate: float) -> str:
+    """
+    根据 speaking_rate 生成 Gemini TTS 的语速说明（自然语言 prompt）。
+    文档：Enhanced pace and pronunciation control；Values <1 减慢，>1 加快，默认 1。
+    """
+    if speaking_rate <= 0 or speaking_rate == SPEAKING_RATE_DEFAULT:
+        return ""
+    rate = max(SPEAKING_RATE_MIN, min(SPEAKING_RATE_MAX, speaking_rate))
+    if rate == SPEAKING_RATE_DEFAULT:
+        return ""
+    if rate < 1.0:
+        return f"Deliver the following at {rate:.1f}x normal speaking rate (slower). "
+    return f"Deliver the following at {rate:.1f}x normal speaking rate (faster). "
+
+
+def santize_text_for_gemini_tts(text: str) -> str:
+    """
+    去掉文本中间的 （）内的内容，只保留开头的（）内的内容。
+    (After your successful presentation, your secretary entered your room to congratulate you.)
+    "So, you're tired aren't you?"
+    (She closes the door behind her and locks it)
+    "sir, what can I do for you..?"
+
+    返回 
+    (After your successful presentation, your secretary entered your room to congratulate you.)
+    "So, you're tired aren't you?"
+    "sir, what can I do for you..?"
+    """
+    parts = text.split("(")
+    if len(parts) <= 1:
+        return text
+    # parts[0] = 首 ( 之前；parts[1] = 第一个 (…) 内容 + ")" + 后续
+    first_inner = parts[1].split(")", 1)
+    out = parts[0] + "(" + first_inner[0] + ")" + first_inner[1]
+    for part in parts[2:]:
+        out += part.split(")", 1)[1] if ")" in part else part
+    return out
 
 
 class GeminiTTSAPI:
@@ -687,10 +740,14 @@ class GeminiTTSAPI:
             logger.error(f"Unknown voice_id: {request.voice_id}")
             voice_name = self._default_voice_name
 
+        user_text = request.text
+        pace = _pace_instruction_for_gemini(request.speaking_rate)
+        if pace:
+            user_text = pace + user_text
         contents = [
             types.Content(
                 role="user",
-                parts=[types.Part.from_text(text=request.text)],
+                parts=[types.Part.from_text(text=user_text)],
             )
         ]
 
@@ -762,10 +819,13 @@ class GeminiTTSAPI:
             voice_name = self._default_voice_name
 
         # TTS 模型不支持 system_instruction（流式/非流式均 400），将角色说明放入 user 内容
+        pace = _pace_instruction_for_gemini(request.speaking_rate)
         prompted_text = (
             TTS_ROLEPLAY_INSTRUCTION.strip()
-            + "\n\nAct out the following dialogue (do not speak the words inside parentheses ()): "
-            + request.text
+            + "\n\n"
+            + (pace if pace else "")
+            + "Act out the following dialogue (do not speak the words inside parentheses ()):\n"
+            + santize_text_for_gemini_tts(request.text)
         )
         contents = [
             types.Content(
