@@ -19,7 +19,7 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from google import genai
 from google.genai import types
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +28,11 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.voice import tts_api as voice_tts_api
 from app.schemas.live_chat import LiveChatConfig, LiveChatStatus
 from app.services import agent_service, chat_history_service
-from app.services.chat_service import generate_session_id, get_or_create_chat_by_agent
+from app.services.chat_service import (
+    generate_session_id,
+    get_or_create_chat_by_agent,
+    get_or_create_chat_settings,
+)
 from app.services.gcs_service import GCSService
 from app.utils.audio import build_interleaved_pcm_24k
 from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
@@ -218,10 +222,16 @@ class LiveChatService:
             if history_summary:
                 parts.append(f"## 之前的对话\n{history_summary}")
 
-        parts.append(
+        parts.append(self._build_live_response_constraints())
+
+        return "\n\n".join(parts)
+
+    def _build_live_response_constraints(self) -> str:
+        """构建 Live 对话回复约束。"""
+        parts = [
             "## 输出格式\n"
             "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
-        )
+        ]
 
         response_language_name = (
             getattr(self._config, "response_language_name", "") or ""
@@ -233,8 +243,59 @@ class LiveChatService:
                 "Never switch to any other language, even if the user asks or speaks in another language. "
                 "If the user speaks another language, politely continue in the required language."
             )
-
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _message_content_to_text(content: Any) -> str:
+        """
+        将消息内容转换为纯文本，兼容字符串和 OpenAI content parts。
+        """
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            text_parts: List[str] = []
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    text = part.get("text")
+                    if isinstance(text, str) and text.strip():
+                        text_parts.append(text.strip())
+            return "\n".join(text_parts)
+        return ""
+
+    def _build_system_instruction_from_text_chat_system_messages(
+        self, system_messages: List[SystemMessage]
+    ) -> str:
+        """
+        用文本聊天系统消息构建 Live system instruction，保持与文本聊天一致。
+        """
+        instruction_parts: List[str] = []
+        for message in system_messages:
+            text = self._message_content_to_text(getattr(message, "content", ""))
+            if text:
+                instruction_parts.append(text)
+        instruction_parts.append(self._build_live_response_constraints())
+        return "\n\n".join(instruction_parts)
+
+    def _build_prefill_turns_from_history_messages(
+        self, history_messages: List[BaseMessage]
+    ) -> List[types.Content]:
+        """
+        将文本聊天历史（用户/AI）转换为 Gemini Live 预填充 turns。
+        """
+        turns: List[types.Content] = []
+        for message in history_messages:
+            if isinstance(message, HumanMessage):
+                role = "user"
+            elif isinstance(message, AIMessage):
+                role = "model"
+            else:
+                continue
+
+            text = self._message_content_to_text(getattr(message, "content", ""))
+            if not text:
+                continue
+            turns.append(types.Content(role=role, parts=[types.Part(text=text)]))
+        return turns
 
     def _summarize_history(self, messages: List[Any], max_turns: int = 10) -> str:
         """将对话历史转换为文本摘要"""
@@ -605,13 +666,50 @@ class LiveChatService:
                 )
                 return
 
-            history_messages = chat_history_service.get_history_messages(
-                session.session_id
-            )
-
-            system_instruction = self._build_system_instruction(
-                agent_data, history_messages
-            )
+            # 启动 Live 会话时预填充文本聊天上下文：
+            # 1) 文本聊天 system messages 作为 system_instruction
+            # 2) 既有 user/AI 消息作为 turns 回放到 Live 模型
+            prefill_turns: List[types.Content] = []
+            try:
+                agent = await agent_manager.get_agent(agent_data)
+                chat_settings = await get_or_create_chat_settings(
+                    db=db,
+                    chat_id=session.chat_id,
+                    user_id=session.user_id,
+                    agent_id=session.agent_id,
+                )
+                user_profile = await asyncio.to_thread(
+                    agent._get_user_profile_sync, session.user_id
+                )
+                text_chat_system_messages = agent.build_system_messages(
+                    user_profile=user_profile,
+                    chat_settings=chat_settings,
+                    user_time_context=None,
+                )
+                history_messages = chat_history_service.get_history_messages(
+                    session.session_id
+                )
+                system_instruction = (
+                    self._build_system_instruction_from_text_chat_system_messages(
+                        text_chat_system_messages
+                    )
+                )
+                prefill_turns = self._build_prefill_turns_from_history_messages(
+                    history_messages
+                )
+            except Exception as e:
+                logger.warning(
+                    f"构建文本聊天上下文失败，降级为旧版上下文构建: session_id={session.session_id}, error={e}"
+                )
+                history_messages = chat_history_service.get_history_messages(
+                    session.session_id
+                )
+                system_instruction = self._build_system_instruction(
+                    agent_data, history_messages
+                )
+                prefill_turns = self._build_prefill_turns_from_history_messages(
+                    history_messages
+                )
 
             voice_id = session.config.voice_id or agent_data.get("voice_id")
             agent_gender = agent_data.get("gender")
@@ -632,6 +730,15 @@ class LiveChatService:
             session.connect_end_time = time.time()
             session.gemini_cm = gemini_cm
             session.gemini_session = gemini_session
+
+            if prefill_turns:
+                await gemini_session.send_client_content(
+                    turns=prefill_turns, turn_complete=False
+                )
+                logger.debug(
+                    f"Live 会话预填充完成: session_id={session.session_id}, turns={len(prefill_turns)}"
+                )
+
             session.status = LiveChatStatus.CONNECTED
             await on_status(LiveChatStatus.CONNECTED, "已连接")
 
