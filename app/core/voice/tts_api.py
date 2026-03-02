@@ -455,7 +455,7 @@ def get_gemini_voices() -> List[Dict[str, Any]]:
 # https://docs.cloud.google.com/text-to-speech/docs/gemini-tts
 SPEAKING_RATE_MIN = 0.5
 SPEAKING_RATE_MAX = 2.0
-SPEAKING_RATE_DEFAULT = 1.0
+SPEAKING_RATE_DEFAULT = 1.2
 
 
 @dataclass(frozen=True)
@@ -643,6 +643,9 @@ def santize_text_for_gemini_tts(text: str) -> str:
         return text
     # parts[0] = 首 ( 之前；parts[1] = 第一个 (…) 内容 + ")" + 后续
     first_inner = parts[1].split(")", 1)
+    if len(first_inner) != 2:
+        # 第一个 ( 没有匹配的 )，无法解析，原样返回
+        return text
     out = parts[0] + "(" + first_inner[0] + ")" + first_inner[1]
     for part in parts[2:]:
         out += part.split(")", 1)[1] if ")" in part else part

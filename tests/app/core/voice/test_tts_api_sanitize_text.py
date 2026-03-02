@@ -34,3 +34,12 @@ class TestSantizeTextForGeminiTts:
 
     def test_empty_string(self):
         assert santize_text_for_gemini_tts('') == ''
+
+    def test_unclosed_first_paren_returns_unchanged(self):
+        # 第一个 ( 没有匹配的 ) 时不应 IndexError，原样返回
+        text = "(unclosed"
+        assert santize_text_for_gemini_tts(text) == text
+
+    def test_unclosed_first_paren_with_more_text(self):
+        text = '(unclosed "dialogue"'
+        assert santize_text_for_gemini_tts(text) == text
