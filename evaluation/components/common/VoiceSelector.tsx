@@ -29,6 +29,12 @@ import {
 } from "@ant-design/icons";
 import api from "../../services/api";
 import type { Voice } from "../../types";
+import {
+  filterVoicesByGender,
+  getVoiceGenderStats,
+  normalizeVoiceGender,
+  type VoiceGenderFilter,
+} from "../../utils/voiceFilters";
 import VoicePreviewPlayer from "./VoicePreviewPlayer";
 
 const { Search } = Input;
@@ -52,6 +58,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [searchText, setSearchText] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [providerFilter, setProviderFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<VoiceGenderFilter>("all");
   const [expanded, setExpanded] = useState(false);
   const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(
     null,
@@ -64,6 +71,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       search = "",
       source = "all",
       provider = "all",
+      gender: VoiceGenderFilter = "all",
     ) => {
       setLoading(true);
       try {
@@ -88,6 +96,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             return true;
           });
         }
+
+        filteredVoices = filterVoicesByGender(filteredVoices, gender);
 
         setVoices(filteredVoices);
 
@@ -168,14 +178,22 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         timeoutId = setTimeout(() => func(...args), delay);
       };
     };
-    return debounce((search: string, source: string, provider: string) => {
-      loadVoices(false, search, source, provider);
-    }, 500);
+    return debounce(
+      (
+        search: string,
+        source: string,
+        provider: string,
+        gender: VoiceGenderFilter,
+      ) => {
+        loadVoices(false, search, source, provider, gender);
+      },
+      500,
+    );
   }, [loadVoices]);
 
   // 初始加载
   useEffect(() => {
-    loadVoices(false, "", "all", "all");
+    loadVoices(false, "", "all", "all", "all");
   }, [loadVoices]);
 
   // 当 value 变化时，立即显示基本信息并异步加载详细信息
@@ -199,8 +217,14 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 搜索和筛选变化时的防抖处理
   useEffect(() => {
-    debouncedLoadVoices(searchText, sourceFilter, providerFilter);
-  }, [searchText, sourceFilter, providerFilter, debouncedLoadVoices]);
+    debouncedLoadVoices(searchText, sourceFilter, providerFilter, genderFilter);
+  }, [
+    searchText,
+    sourceFilter,
+    providerFilter,
+    genderFilter,
+    debouncedLoadVoices,
+  ]);
 
   // 获取当前选中的音色
   const selectedVoice = useMemo(() => {
@@ -214,12 +238,16 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 获取音色来源统计 - 使用后端返回的voice_type和provider字段
   const voiceStats = useMemo(() => {
+    const genderStats = getVoiceGenderStats(voices);
     const stats = {
       personal: 0,
       preset: 0,
       total: voices.length,
       gemini: 0,
       elevenlabs: 0,
+      male: genderStats.male,
+      female: genderStats.female,
+      unknown: genderStats.unknown,
     };
     voices.forEach((voice) => {
       if (voice.voice_type === "personal") {
@@ -260,6 +288,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   // 音色卡片组件
   const VoiceCard: React.FC<{ voice: Voice }> = ({ voice }) => {
     const isSelected = value === voice.voice_id;
+    const normalizedGender = normalizeVoiceGender(voice.gender);
 
     return (
       <Card
@@ -322,10 +351,20 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             )}
             {voice.gender && (
               <Tag
-                color={voice.gender === "female" ? "magenta" : "cyan"}
+                color={
+                  normalizedGender === "female"
+                    ? "magenta"
+                    : normalizedGender === "male"
+                      ? "cyan"
+                      : "default"
+                }
                 style={{ margin: 0 }}
               >
-                {voice.gender === "female" ? "女" : "男"}
+                {normalizedGender === "female"
+                  ? "女"
+                  : normalizedGender === "male"
+                    ? "男"
+                    : "未知"}
               </Tag>
             )}
           </Space>
@@ -454,7 +493,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       {/* 搜索和过滤控件 */}
       <div style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
-          <Col span={8}>
+          <Col span={7}>
             <Search
               placeholder="搜索音色名称"
               allowClear
@@ -464,7 +503,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               prefix={<SearchOutlined />}
             />
           </Col>
-          <Col span={5}>
+          <Col span={4}>
             <Select
               placeholder="音色类型"
               style={{ width: "100%" }}
@@ -477,7 +516,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               <Option value="preset">预置音色 ({voiceStats.preset})</Option>
             </Select>
           </Col>
-          <Col span={5}>
+          <Col span={4}>
             <Select
               placeholder="TTS 服务商"
               style={{ width: "100%" }}
@@ -500,12 +539,32 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               </Option>
             </Select>
           </Col>
-          <Col span={6}>
+          <Col span={4}>
+            <Select
+              placeholder="性别"
+              style={{ width: "100%" }}
+              value={genderFilter}
+              onChange={setGenderFilter}
+              disabled={disabled}
+            >
+              <Option value="all">全部性别 ({voiceStats.total})</Option>
+              <Option value="male">男 ({voiceStats.male})</Option>
+              <Option value="female">女 ({voiceStats.female})</Option>
+              <Option value="unknown">未知 ({voiceStats.unknown})</Option>
+            </Select>
+          </Col>
+          <Col span={5}>
             <Space>
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() =>
-                  loadVoices(true, searchText, sourceFilter, providerFilter)
+                  loadVoices(
+                    true,
+                    searchText,
+                    sourceFilter,
+                    providerFilter,
+                    genderFilter,
+                  )
                 }
                 loading={loading}
                 disabled={disabled}
