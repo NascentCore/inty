@@ -67,10 +67,20 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 
 ## Android app 发布流程
 
-1. https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml 每日构建并上传 AAB 到内测轨道
-2. 测试内测轨道（Internal testing）版本
-3. Promote 内测版本到 Production
-   <img width="600" height="1098" alt="image" src="https://github.com/user-attachments/assets/32936e40-07f0-4f1a-8897-d0e546fa57a2" />
+1. 【已自动化】[每日构建并上传 AAB 到内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
+   测试发布负责人不需要检查这个，如有问题联系 @亚雄
+2. 【手动完成】打开 Google Play 下载内测轨道版本，确保能看到自己打开的 Internal Tester 版本
+
+   <img width="200" height="696" alt="image" src="https://github.com/user-attachments/assets/bdde0572-bf2d-473b-9865-cbaca556af4c" />
+   <img width="200" height="694" alt="image" src="https://github.com/user-attachments/assets/7a2cb850-dfc4-4d74-b238-59bcd95a1248" />
+
+3. 【测试通过后】将该内测版本发布到 Production；确保内测轨道 app 版本号（me->settings）与 Google Play 上要发布的版本号一致；然后填写 release notes
+
+   <img width="200" height="1220" alt="image" src="https://github.com/user-attachments/assets/8abdfb90-b4a2-4df8-9d57-459ef00580e4" />
+   <img width="600" height="1152" alt="image" src="https://github.com/user-attachments/assets/ee4177a7-5a27-4d8a-9de7-5e7e14d7ee54" />
+   <img width="600" height="1616" alt="image" src="https://github.com/user-attachments/assets/380669dc-4671-4551-bc20-201625f228be" />
+   <img width="600" height="1288" alt="image" src="https://github.com/user-attachments/assets/89c1d846-ab5c-4d74-b1ee-8c935d7916d0" />
+
 4. 审核通过后，正式发布
 5. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
 6. 发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
