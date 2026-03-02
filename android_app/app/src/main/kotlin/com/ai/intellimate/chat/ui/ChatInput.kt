@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -26,10 +27,13 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.Icon
@@ -51,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -67,6 +72,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.IntySmallTextField
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.components.ImagePickerBottomSheet
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -90,6 +96,7 @@ fun ChatInput(
 ) {
     val inputData = chatViewModel.inputData.collectAsState()
     val inputSelection = chatViewModel.inputSelection.collectAsState()
+    val inputImageUri = chatViewModel.inputImageUri.collectAsState()
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showSceneActionButton by SettingStateManager.showSceneActionButtonFlow.collectAsState()
     val sceneActionTemplate = if (agentInfo?.useDoubleAsteriskActionMarker() == true) "**" else "()"
@@ -104,6 +111,7 @@ fun ChatInput(
         remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
     var isVoiceInputMode by remember { mutableStateOf(false) }
     var isVoiceRecording by remember { mutableStateOf(false) }
+    var showImagePicker by remember { mutableStateOf(false) }
     /** 点击语音按钮时因无权限而发起了授权请求，授权通过后需切到语音模式 */
     var pendingSwitchToVoiceMode by remember { mutableStateOf(false) }
     val speechRecognizer =
@@ -221,6 +229,16 @@ fun ChatInput(
         onVoiceInputActiveChange(isVoiceInputMode || isVoiceRecording)
     }
 
+    if (showImagePicker) {
+        ImagePickerBottomSheet(
+            onDismiss = { showImagePicker = false },
+            onImageSelected = { uri ->
+                chatViewModel.setInputImage(uri)
+                showImagePicker = false
+            },
+        )
+    }
+
     val config = UiConfigs.ChatPage.ChatInput
     val minHeight = config.MinHeight
     val maxHeight = config.MaxHeight
@@ -239,6 +257,25 @@ fun ChatInput(
                 .clip(RoundedCornerShape(config.CornerRadius))
                 .background(AppColors.DarkPurpleOverlay60)
     ) {
+        if (!inputImageUri.value.isNullOrBlank()) {
+            ChatInputImagePreview(
+                imageUri = inputImageUri.value.orEmpty(),
+                previewSize = config.ImagePreviewSize,
+                cornerRadius = config.ImagePreviewCornerRadius,
+                removeButtonSize = config.ImagePreviewRemoveButtonSize,
+                removeIconSize = config.ImagePreviewRemoveIconSize,
+                removeButtonPadding = config.ImagePreviewRemoveButtonPadding,
+                onRemove = { chatViewModel.clearInputImage() },
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(
+                            start = config.LeadingControlsPadding,
+                            top = config.TopPadding,
+                            end = config.LeadingControlsPadding,
+                            bottom = config.ImagePreviewBottomSpacing,
+                        ),
+            )
+        }
         Box(
             modifier =
                 Modifier.fillMaxWidth()
@@ -419,6 +456,17 @@ fun ChatInput(
                 horizontalArrangement = Arrangement.spacedBy(config.SceneActionButtonSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                ChatImageAttachButton(
+                    buttonSize = config.ButtonSize,
+                    iconSize = config.VoiceToggleIconSize,
+                    hasSelectedImage = !inputImageUri.value.isNullOrBlank(),
+                    onClick = {
+                        if (showMorePanel) {
+                            onToggleMorePanel()
+                        }
+                        showImagePicker = true
+                    },
+                )
                 if (showSceneActionButton) {
                     SceneActionQuickButton(
                         buttonHeight = config.ButtonSize,
@@ -428,7 +476,7 @@ fun ChatInput(
                 }
                 MultiUseAccessButton(
                     buttonSize = config.ButtonSize,
-                    hasInput = inputData.value.isNotEmpty(),
+                    hasInput = inputData.value.isNotEmpty() || !inputImageUri.value.isNullOrBlank(),
                     showMorePanel = showMorePanel,
                     onSendMessage = onSendMessage,
                     onToggleMorePanel = {
@@ -443,6 +491,105 @@ fun ChatInput(
                 )
             }
         }
+    }
+}
+
+/**
+ * 聊天输入区已选图片预览（Image + Text 输入场景）。
+ *
+ * 适用范围：
+ * - 仅用于 ChatInput 顶部，展示当前待发送的单张图片。
+ *
+ * 视觉预期：
+ * - 小尺寸圆角缩略图，右上角有删除按钮，用户可在发送前撤销附件。
+ *
+ * 可配置项：
+ * - 通过入参传入尺寸、圆角、删除按钮大小，避免在调用侧写魔法值。
+ */
+@Composable
+private fun ChatInputImagePreview(
+    imageUri: String,
+    previewSize: Dp,
+    cornerRadius: Dp,
+    removeButtonSize: Dp,
+    removeIconSize: Dp,
+    removeButtonPadding: Dp,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.CenterStart) {
+        Box(
+            modifier =
+                Modifier.size(previewSize)
+                    .clip(RoundedCornerShape(cornerRadius))
+                    .background(Color.White.copy(alpha = 0.08f))
+        ) {
+            AsyncImage(
+                model = imageUri,
+                contentDescription = stringResource(R.string.chat_input_selected_image),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+            Box(
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(removeButtonPadding)
+                        .size(removeButtonSize)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.45f))
+                        .noRippleClickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.chat_input_remove_image),
+                    tint = Color.White,
+                    modifier = Modifier.size(removeIconSize),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 聊天输入区图片附件按钮（“选图”入口）。
+ *
+ * 适用范围：
+ * - 仅用于 ChatInput 右侧操作区，与发送/更多按钮并列。
+ *
+ * 视觉预期：
+ * - 未选择图片时为普通按钮态，已选择图片时高亮提示。
+ *
+ * 可配置项：
+ * - 按钮尺寸、图标尺寸、是否已选中图片（用于样式态切换）。
+ */
+@Composable
+private fun ChatImageAttachButton(
+    buttonSize: Dp,
+    iconSize: Dp,
+    hasSelectedImage: Boolean,
+    onClick: () -> Unit,
+) {
+    val backgroundColor =
+        if (hasSelectedImage) {
+            Color.White.copy(alpha = 0.2f)
+        } else {
+            AppColors.DarkPurpleOverlay60
+        }
+    Box(
+        modifier =
+            Modifier.size(buttonSize)
+                .clip(CircleShape)
+                .background(backgroundColor)
+                .noRippleClickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Image,
+            contentDescription = stringResource(R.string.chat_input_add_image),
+            tint = Color.White,
+            modifier = Modifier.size(iconSize),
+        )
     }
 }
 

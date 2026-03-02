@@ -1003,7 +1003,7 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
-    ) -> str:
+    ) -> Tuple[str | List[Dict[str, Any]], Optional[int]]:
         """
         优化版同步聊天方法，接受预计算的参数
 
@@ -1545,9 +1545,10 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
-    ) -> Tuple[str, Optional[int]]:
+    ) -> Tuple[str | List[Dict[str, Any]], Optional[int]]:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里。
-        成功时返回 (响应文本, 插入的 AI 消息 ID)；异常时抛出。
+        成功时返回 (响应内容, 插入的 AI 消息 ID)；响应内容可能是文本或 OpenAI content parts。
+        异常时抛出。
         """
         logger.debug(f"开始聊天处理 - Agent: {self.agent_id}, Session: {session_id}")
 

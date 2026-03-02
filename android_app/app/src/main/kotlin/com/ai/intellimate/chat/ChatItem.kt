@@ -1123,6 +1123,15 @@ private fun ChatItemUser(
 ) {
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val messageFontSize = messageFontSizeSp.sp
+    val userImageUrl = item.getGeneratedImageUrl()
+    val hasUserImage =
+        item.hasGeneratedImage() && !userImageUrl.isNullOrBlank() && userImageUrl != "loading"
+    val userImageAspectRatio =
+        item.metaData.generatedImage?.let { image ->
+            val width = image.width ?: 0
+            val height = image.height ?: 0
+            if (width > 0 && height > 0) width.toFloat() / height.toFloat() else 1f
+        } ?: 1f
     runCatching {
             Column(
                 modifier =
@@ -1130,44 +1139,66 @@ private fun ChatItemUser(
                         .fillMaxWidth()
                         .padding(bottom = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.Bottom,
-                ) {
-                    val context = LocalContext.current
-
-                    Box(
-                        modifier =
-                            Modifier
-                                .background(
-                                    Color.White.copy(alpha = 0.6f),
-                                    RoundedCornerShape(12.dp),
-                                )
-                                .padding(
-                                    horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
-                                    vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
-                                )
-                                .widthIn(
-                                    min = 1.dp,
-                                    max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
-                                )
-                                .pointerInput(item.content) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            debugOnlyCopyToClipboard(context, item.content)
-                                        }
-                                    )
-                                }
+                if (hasUserImage) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.End,
                     ) {
-                        StyledMessageText(
-                            text = item.content,
-                            fontSize = messageFontSize,
-                            fontWeight = FontWeight.Normal,
-                            normalColor = Color(0xff090909),
-                            actionColor = Color(0xff090909).copy(0.6f),
-                            useDoubleAsteriskActionMarker = useDoubleAsteriskActionMarker,
+                        AsyncImage(
+                            model = userImageUrl,
+                            contentDescription = stringResource(R.string.chat_input_selected_image),
+                            modifier =
+                                Modifier.widthIn(
+                                        min = 1.dp,
+                                        max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                                    )
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .aspectRatio(userImageAspectRatio),
+                            contentScale = ContentScale.Crop,
                         )
+                    }
+                }
+                if (item.content.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        val context = LocalContext.current
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .background(
+                                        Color.White.copy(alpha = 0.6f),
+                                        RoundedCornerShape(12.dp),
+                                    )
+                                    .padding(
+                                        horizontal = UiConfigs.ChatMessagePane.PaddingHorizontal,
+                                        vertical = UiConfigs.ChatMessagePane.UserMessagePaddingVertical,
+                                    )
+                                    .widthIn(
+                                        min = 1.dp,
+                                        max = UiConfigs.ChatMessagePane.UserMessageMaxWidth,
+                                    )
+                                    .pointerInput(item.content) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                debugOnlyCopyToClipboard(context, item.content)
+                                            }
+                                        )
+                                    }
+                        ) {
+                            StyledMessageText(
+                                text = item.content,
+                                fontSize = messageFontSize,
+                                fontWeight = FontWeight.Normal,
+                                normalColor = Color(0xff090909),
+                                actionColor = Color(0xff090909).copy(0.6f),
+                                useDoubleAsteriskActionMarker = useDoubleAsteriskActionMarker,
+                            )
+                        }
                     }
                 }
 

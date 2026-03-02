@@ -98,10 +98,15 @@ data class MessageUpdate(
 )
 
 fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
+    val extractedTextFromContentParts = extractTextFromContentParts()
+    val extractedImageUrlFromContentParts = extractFirstImageUrlFromContentParts()
     return MessageUpdate(
         id = id,
         role = role,
-        content = content.ifBlank { caption },
+        content =
+            content
+                .ifBlank { extractedTextFromContentParts }
+                .ifBlank { caption.orEmpty() },
         timestamp = timestamp,
         audioUrl = audio_url,
         metaData =
@@ -117,7 +122,14 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
                                 width = width,
                                 height = height,
                             )
-                        },
+                        }
+                            ?: extractedImageUrlFromContentParts?.let { imageUrl ->
+                                MetaData.GeneratedImage(
+                                    imageUrl = imageUrl,
+                                    width = null,
+                                    height = null,
+                                )
+                            },
                     voiceSessionId = voice_session_id,
                 )
             } ?: MetaData(agentId),
@@ -134,10 +146,15 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
 }
 
 fun MsgInfo.toEntity(agentId: String): MessageEntity {
+    val extractedTextFromContentParts = extractTextFromContentParts()
+    val extractedImageUrlFromContentParts = extractFirstImageUrlFromContentParts()
     return MessageEntity(
         id = id,
         role = role,
-        content = content.ifBlank { caption.orEmpty() },
+        content =
+            content
+                .ifBlank { extractedTextFromContentParts }
+                .ifBlank { caption.orEmpty() },
         timestamp = timestamp,
         audioUrl = audio_url,
         userVote = user_vote?.let { runCatching { UserVote.valueOf(it) }.getOrNull() },
@@ -154,6 +171,13 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                                 width = width,
                                 height = height,
                             )
+                        }
+                            ?: extractedImageUrlFromContentParts?.let { imageUrl ->
+                                MessageEntity.MetaData.GeneratedImage(
+                                    imageUrl = imageUrl,
+                                    width = null,
+                                    height = null,
+                                )
                         },
                 )
             } ?: MessageEntity.MetaData(agentId),
@@ -204,14 +228,29 @@ private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
  * 创建“正在发送”的用户消息临时实体。localId 应尽量大（如 temp_user_${Long.MAX_VALUE}_${nano}），sortKey 尽量大。
  * 用于发送前插入本地，发送成功后删除并用 user_message_id 更新为正式消息。
  */
-fun createTempSendingUserEntity(agentId: String, content: String): MessageEntity {
+fun createTempSendingUserEntity(
+    agentId: String,
+    content: String,
+    userImageUrl: String? = null,
+): MessageEntity {
     val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     return MessageEntity(
         id = "${(Long.MAX_VALUE - 1)}",
         role = "user",
         content = content,
         timestamp = timestamp,
-        metaData = MessageEntity.MetaData(agentId = agentId),
+        metaData =
+            MessageEntity.MetaData(
+                agentId = agentId,
+                generatedImage =
+                    userImageUrl?.let {
+                        MessageEntity.MetaData.GeneratedImage(
+                            imageUrl = it,
+                            width = null,
+                            height = null,
+                        )
+                    },
+            ),
         isSending = true,
     )
 }

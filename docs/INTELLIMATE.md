@@ -70,7 +70,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | --- | --- | --- |
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
 | Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
-| Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
+| Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation + send one selected image together with text in the same message. |
 | Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
 | Create or edit an iMate | Official Assistant Chat → **+ Create your own iMate**, or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
@@ -94,6 +94,8 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 - Every message supports voice playback; audio is cached locally (`AudioCacheManager`).
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.
+- Chat input supports **image + text** multimodal sending: tap the image button, pick one photo, optionally type text, then send both together.
+- Chat message bubbles can render multimodal replies from `/api/v1/chat/completions/{agent_id}` when the assistant returns both text and image content.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
 - VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
 - If a subscribed user reaches the daily chat quota, IntelliMate shows a dedicated dialog (**“Daily Premium Chat Limit Reached”**) instead of the upgrade-to-premium prompt.

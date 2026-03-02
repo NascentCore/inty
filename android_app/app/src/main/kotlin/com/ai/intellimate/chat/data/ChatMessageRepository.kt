@@ -2,7 +2,7 @@ package com.ai.intellimate.chat.data
 
 // CREATED_BY_AGENT
 
-import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.data.RoomDataSource
@@ -13,9 +13,11 @@ import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.dataStore
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
+import android.net.Uri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.core.net.toUri
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -24,14 +26,18 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostStorage
 import com.ai.intellimate.boost.PointSource
 import com.architecture.httplib.core.HttpResult
+import java.io.File
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 
 /**
  * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
@@ -77,20 +83,33 @@ class ChatMessageRepository(
         localDataSource.chatMessageDao.deleteByAgent(agentId)
     }
 
-    suspend fun sendMessage(agentId: String, content: String): HttpResult<SendMsgResponse> {
+    suspend fun sendMessage(
+        agentId: String,
+        content: String,
+        localImageUri: String? = null,
+    ): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
         val trimmed = content.trimEnd()
         val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        val uploadedImageUrl =
+            if (!localImageUri.isNullOrBlank()) {
+                when (val uploadResult = uploadChatInputImage(localImageUri.toUri())) {
+                    is HttpResult.Success -> uploadResult.data
+                    is HttpResult.Failure -> return HttpResult.Failure(
+                        uploadResult.message,
+                        uploadResult.code,
+                    )
+                }
+            } else {
+                null
+            }
 
-        localDataSource.appendSendingMessages(agentId, trimmed)
+        localDataSource.appendSendingMessages(agentId, trimmed, uploadedImageUrl)
 
         val result =
             try {
-                remoteDataSource.sendMessage(
-                    agentId,
-                    listOf(MsgInfo(content = trimmed, role = "user")),
-                )
+                remoteDataSource.sendMessage(agentId, trimmed, uploadedImageUrl)
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
@@ -108,9 +127,20 @@ class ChatMessageRepository(
                     add(
                         MessageEntity(
                             id = data.user_message_id.toString(),
-                            content = content,
+                            content = trimmed,
                             role = "user",
-                            metaData = MessageEntity.MetaData(agentId),
+                            metaData =
+                                MessageEntity.MetaData(
+                                    agentId = agentId,
+                                    generatedImage =
+                                        uploadedImageUrl?.let {
+                                            MessageEntity.MetaData.GeneratedImage(
+                                                imageUrl = it,
+                                                width = null,
+                                                height = null,
+                                            )
+                                        },
+                                ),
                             timestamp = timestamp,
                         )
                     )
@@ -126,6 +156,48 @@ class ChatMessageRepository(
         }
 
         return result
+    }
+
+    private suspend fun uploadChatInputImage(imageUri: Uri): HttpResult<String> {
+        return withContext(Dispatchers.IO) {
+            var tempFile: File? = null
+            try {
+                val context = Utils.getApp()
+                val inputStream =
+                    context.contentResolver.openInputStream(imageUri)
+                        ?: return@withContext HttpResult.Failure(
+                            "Failed to read selected image",
+                            -1,
+                        )
+                tempFile = File.createTempFile("chat_input_", ".jpg", context.cacheDir)
+                inputStream.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                val requestBody = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
+                val multipart =
+                    MultipartBody.Part.createFormData("file", tempFile.name, requestBody)
+                when (val uploadResult = NetServiceMgr.getUserApi().uploadAvatar(multipart)) {
+                    is HttpResult.Success -> {
+                        val resolvedUrl = uploadResult.data.url.ifBlank { uploadResult.data.avatar_url }
+                        if (resolvedUrl.isBlank()) {
+                            HttpResult.Failure("Image upload returned empty url", -1)
+                        } else {
+                            HttpResult.Success(resolvedUrl)
+                        }
+                    }
+                    is HttpResult.Failure -> {
+                        HttpResult.Failure(uploadResult.message, uploadResult.code)
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("uploadChatInputImage exception: ${e.message}")
+                HttpResult.Failure(e.message ?: "Image upload failed", -1)
+            } finally {
+                tempFile?.delete()
+            }
+        }
     }
 
     suspend fun recallLastAssistantMessage(agentId: String) {
@@ -148,7 +220,7 @@ class ChatMessageRepository(
             try {
                 remoteDataSource.sendMessage(
                     agentId,
-                    listOf(MsgInfo(content = "recall", role = "user")),
+                    userText = "recall",
                 )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.recallLastAssistantMessage exception: ${e.message}")

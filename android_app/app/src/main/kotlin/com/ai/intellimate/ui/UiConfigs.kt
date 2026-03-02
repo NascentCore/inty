@@ -882,6 +882,24 @@ object UiConfigs {
             /** 按钮大小 - 发送/更多按钮的尺寸 */
             val ButtonSize = 30.dp
 
+            /** 图文输入预览图尺寸 */
+            val ImagePreviewSize = 72.dp
+
+            /** 图文输入预览图圆角 */
+            val ImagePreviewCornerRadius = 12.dp
+
+            /** 图文输入预览与输入框的间距 */
+            val ImagePreviewBottomSpacing = 8.dp
+
+            /** 图文输入预览删除按钮尺寸 */
+            val ImagePreviewRemoveButtonSize = 20.dp
+
+            /** 图文输入预览删除按钮图标尺寸 */
+            val ImagePreviewRemoveIconSize = 14.dp
+
+            /** 图文输入预览删除按钮内边距 */
+            val ImagePreviewRemoveButtonPadding = 4.dp
+
             /** 场景操作按钮间距 - 场景操作按钮与发送/更多按钮之间的间距 */
             val SceneActionButtonSpacing = 6.dp
 

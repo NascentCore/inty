@@ -22,6 +22,7 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
 import com.ai.intellimate.R
@@ -175,6 +176,7 @@ class ChatViewModel : BaseVM() {
 
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
+    val inputImageUri = MutableStateFlow<String?>(null)
 
     // 用于标识当前是否在等待AI回复
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
@@ -231,6 +233,7 @@ class ChatViewModel : BaseVM() {
 
         _agentId.value = agentInfo?.id
         _imagePickMessageId.value = null
+        inputImageUri.value = null
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
@@ -491,13 +494,15 @@ class ChatViewModel : BaseVM() {
         }
 
         val inputMsg = inputData.value
-        if (inputMsg.isBlank()) {
+        val selectedImageUri = inputImageUri.value
+        if (inputMsg.isBlank() && selectedImageUri.isNullOrBlank()) {
             return
         }
 
         val agentId = _agentInfo.value?.id ?: return
         val agent = _agentInfo.value ?: return
         inputData.value = ""
+        inputImageUri.value = null
         _isWaitingForReply.value = true
         _imagePickMessageId.value = null
 
@@ -509,6 +514,7 @@ class ChatViewModel : BaseVM() {
                 _isWaitingForReply.value = false
                 inputData.value = inputMsg
                 inputSelection.value = inputMsg.length
+                inputImageUri.value = selectedImageUri
                 return@launch
             }
             // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
@@ -571,7 +577,14 @@ class ChatViewModel : BaseVM() {
 
             try {
                 // 处理发送结果
-                when (val result = chatMessageRepository.sendMessage(agentId, inputMsg.trimEnd())) {
+                when (
+                    val result =
+                        chatMessageRepository.sendMessage(
+                            agentId = agentId,
+                            content = inputMsg.trimEnd(),
+                            localImageUri = selectedImageUri,
+                        )
+                ) {
                     is HttpResult.Success -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
@@ -582,7 +595,8 @@ class ChatViewModel : BaseVM() {
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
-                                "message_type" to "normal",
+                                "message_type" to
+                                    if (selectedImageUri.isNullOrBlank()) "normal" else "image_text",
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
@@ -668,7 +682,8 @@ class ChatViewModel : BaseVM() {
                             FirebaseManager.safeEventParams(
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
-                                "message_type" to "normal",
+                                "message_type" to
+                                    if (selectedImageUri.isNullOrBlank()) "normal" else "image_text",
                                 "error_message" to "failure: ${result.message.take(100)}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
@@ -714,7 +729,8 @@ class ChatViewModel : BaseVM() {
                     FirebaseManager.safeEventParams(
                         "agent_id" to agentId,
                         "agent_name" to (_agentInfo.value?.name),
-                        "message_type" to "normal",
+                        "message_type" to
+                            if (selectedImageUri.isNullOrBlank()) "normal" else "image_text",
                         "error_message" to
                             "exception: ${e.javaClass.simpleName}, ${
                             e.message?.take(
@@ -1056,6 +1072,14 @@ class ChatViewModel : BaseVM() {
     fun setInputMessage(text: String) {
         inputData.value = text
         inputSelection.value = text.length
+    }
+
+    fun setInputImage(uri: Uri?) {
+        inputImageUri.value = uri?.toString()
+    }
+
+    fun clearInputImage() {
+        inputImageUri.value = null
     }
 
     fun loadRecentMessages(count: Int) {
@@ -1462,6 +1486,7 @@ class ChatViewModel : BaseVM() {
         _agentInfo.value = null
         inputData.update { "" }
         inputSelection.value = 0
+        inputImageUri.value = null
         _isWaitingForReply.value = false
         isQueryingMsgs = false
         lastQueryAgentId = null

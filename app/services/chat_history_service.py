@@ -351,7 +351,7 @@ def add_user_message(
 
 def add_ai_message_sync(
     session_id: str,
-    message: str,
+    message: str | List[Dict[str, Any]],
     agent_id: Optional[str] = None,
     meta_data: Optional[dict] = None,
 ) -> Optional[int]:
@@ -401,7 +401,7 @@ def add_ai_message_sync(
             message_id = result[0] if result else None
 
         logger.debug(
-            f"添加AI消息到会话 {session_id}: {message[:50]}..., ID: {message_id}"
+            f"添加AI消息到会话 {session_id}: {_message_preview_for_log(message)}, ID: {message_id}"
         )
         return message_id
 
@@ -528,7 +528,7 @@ def add_festival_memory_prompt_message_sync(
 async def add_ai_message(
     db: AsyncSession,
     session_id: str,
-    message: str,
+    message: str | List[Dict[str, Any]],
     agent_id: Optional[str] = None,
     audio_duration: Optional[float] = None,
     meta_data: Optional[dict] = None,
@@ -572,7 +572,9 @@ async def add_ai_message(
         await db.commit()
         await db.refresh(chat_history)  # 获取生成的ID
 
-        logger.debug(f"添加AI消息到会话 {session_id}: {message}, ID: {chat_history.id}")
+        logger.debug(
+            f"添加AI消息到会话 {session_id}: {_message_preview_for_log(message)}, ID: {chat_history.id}"
+        )
         return chat_history.id
 
     except Exception as e:
