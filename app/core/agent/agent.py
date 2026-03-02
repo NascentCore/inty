@@ -57,6 +57,8 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
 MINUTES_PER_HOUR = 60
+USER_TIME_CONTEXT_INTERVAL_MESSAGES = 10
+USER_TIME_CONTEXT_INTERVAL_MINUTES = 30
 USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##User Time Context"
 USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- This time reflects the user's local time, not the assistant's.",
@@ -430,15 +432,7 @@ class Agent:
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
-        if (
-            user_time_context
-            and global_config.app.features.experimental_enable_chat_with_user_time_context
-        ):
-            user_time_context_prompt = _build_user_time_context_prompt(
-                user_time_context
-            )
-            if user_time_context_prompt:
-                system_messages.append(SystemMessage(content=user_time_context_prompt))
+        # User time context 改为在对话中按“每 10 条消息 / 每 30 分钟”注入，见 _inject_user_time_context_periodically
 
         if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
@@ -489,15 +483,7 @@ class Agent:
         if user_profile:
             system_messages.append(SystemMessage(content=user_profile))
 
-        if (
-            user_time_context
-            and global_config.app.features.experimental_enable_chat_with_user_time_context
-        ):
-            user_time_context_prompt = _build_user_time_context_prompt(
-                user_time_context
-            )
-            if user_time_context_prompt:
-                system_messages.append(SystemMessage(content=user_time_context_prompt))
+        # User time context 改为在对话中按“每 10 条消息 / 每 30 分钟”注入，见 _inject_user_time_context_periodically
 
         if global_config.agent.enable_christmas_prompt:
             rendered_prompt = prompt_template.render_prompt_jinja2_template(
@@ -748,6 +734,67 @@ class Agent:
         except ValueError:
             logger.warning(f"无法解析消息 created_at: {created_at_raw}")
             return None
+
+    def _extract_message_datetime_utc(self, message: BaseMessage) -> Optional[datetime]:
+        """从 message.additional_kwargs.created_at 解析为 timezone-aware UTC datetime。"""
+        additional_kwargs = getattr(message, "additional_kwargs", None) or {}
+        created_at_raw = additional_kwargs.get("created_at")
+        if not isinstance(created_at_raw, str) or not created_at_raw.strip():
+            return None
+        normalized = created_at_raw.strip().replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(normalized)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except ValueError:
+            logger.warning(f"无法解析消息 created_at: {created_at_raw}")
+            return None
+
+    def _inject_user_time_context_periodically(
+        self,
+        all_messages: List[BaseMessage],
+        user_time_context: Optional[UserTimeContext],
+        now_utc: Optional[datetime] = None,
+    ) -> List[BaseMessage]:
+        """
+        在对话中按“每 10 条消息”或“每 30 分钟”插入一次 User Time Context：
+        以 system message 形式注入，穿插在 human/AI 消息之间（不在开头 system 块里）。
+        若未开启 feature 或无 user_time_context，则原样返回。
+        """
+        if not all_messages:
+            return all_messages
+        if not user_time_context or not global_config.app.features.experimental_enable_chat_with_user_time_context:
+            return all_messages
+        prompt = _build_user_time_context_prompt(user_time_context)
+        if not prompt:
+            return all_messages
+
+        current_utc = now_utc if now_utc is not None else datetime.now(timezone.utc)
+        interval_seconds = USER_TIME_CONTEXT_INTERVAL_MINUTES * 60
+        result: List[BaseMessage] = []
+        last_injection_index = -1
+        last_injection_time: Optional[datetime] = None
+
+        for index, message in enumerate(all_messages):
+            msg_time = self._extract_message_datetime_utc(message) or current_utc
+            should_inject = False
+            if last_injection_index == -1:
+                should_inject = True
+            else:
+                if (index - last_injection_index) >= USER_TIME_CONTEXT_INTERVAL_MESSAGES:
+                    should_inject = True
+                elif (
+                    last_injection_time is not None
+                    and (msg_time - last_injection_time).total_seconds() >= interval_seconds
+                ):
+                    should_inject = True
+            if should_inject:
+                result.append(SystemMessage(content=prompt))
+                last_injection_index = index
+                last_injection_time = msg_time
+            result.append(message)
+        return result
 
     def _build_messages_with_date_system_prompts(
         self,
@@ -1045,6 +1092,9 @@ class Agent:
                     history_messages=recent_history,
                     current_messages=messages,
                 )
+                all_messages = self._inject_user_time_context_periodically(
+                    all_messages, user_time_context, datetime.now(timezone.utc)
+                )
                 logger.debug(f"all_messages: {all_messages}")
 
                 # 保存原始用户消息到历史记录
@@ -1337,151 +1387,147 @@ class Agent:
         Returns:
             生成的AI消息内容
         """
-        # 从连接池获取连接
-        pool_start = time.time()
-        pool = get_connection_pool()
-        pool_time = time.time() - pool_start
-        logger.debug(f"连接池获取耗时: {pool_time:.3f}秒 - Agent: {self.agent_id}")
+        try:
+            # 获取相关的历史消息（排除已软删除的）；get_history_messages 内部自管连接，此处无需连接池
+            get_history_start = time.time()
+            history_messages = chat_history_service.get_history_messages(session_id)
+            recent_history = self._get_relevant_history_for_user_tier(
+                history_messages=history_messages,
+                is_subscribed=is_subscribed,
+            )
+            get_history_time = time.time() - get_history_start
+            logger.debug(
+                f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
+            )
 
-        with pool.connection() as conn_local:
-            try:
-                # 获取相关的历史消息（排除已软删除的）
-                get_history_start = time.time()
-                history_messages = chat_history_service.get_history_messages(session_id)
-                recent_history = self._get_relevant_history_for_user_tier(
-                    history_messages=history_messages,
-                    is_subscribed=is_subscribed,
+            # 注意：这里不保存用户消息到历史记录
+            all_messages = self._build_messages_with_date_system_prompts(
+                history_messages=recent_history,
+                current_messages=messages,
+            )
+            all_messages = self._inject_user_time_context_periodically(
+                all_messages, user_time_context, datetime.now(timezone.utc)
+            )
+            logger.debug(f"all_messages: {all_messages}")
+
+            # 如果 user_profile 为 None，自动获取
+            if user_profile is None:
+                user_profile = self._get_user_profile_sync(user_id)
+
+            input_build_start = time.time()
+            user_name = self._extract_user_name_from_profile(user_profile)
+            labels = {
+                "user_id": user_id,
+                "user_name": user_name,
+                "agent_id": self.agent_id,
+                "agent_name": self.name,
+                "chat_settings": chat_settings,
+            }
+
+            system_messages = self.build_system_messages(
+                user_profile, chat_settings, user_time_context
+            )
+
+            messages_list: list[BaseMessage] = system_messages + all_messages
+
+            openai_messages = [
+                langchain_message_to_openai_message(message, user_name, self.name)
+                for message in messages_list
+            ]
+            logger.debug(f"openai_messages: {openai_messages}")
+
+            input_build_time = time.time() - input_build_start
+            logger.debug(
+                f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 调用agent进行对话
+            agent_invoke_start = time.time()
+            logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
+
+            chat_name = f"{user_name}:{self.name}"
+            default_temperature = (
+                global_config.agent.temperature
+            )
+            default_max_tokens = (
+                global_config.agent.max_tokens
+            )
+            default_top_p = global_config.agent.top_p
+
+            client = get_base_openai_client()
+
+            # API调用（使用统一的重试和 trace 逻辑）
+            # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
+            api_start = time.time()
+            agent_model = self.model_config.get("model")
+            model_name = agent_model or model_override
+            if model_name is None:
+                raise ValueError(
+                    "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                 )
-                get_history_time = time.time() - get_history_start
-                logger.debug(
-                    f"历史消息获取耗时: {get_history_time:.3f}秒 - Agent: {self.agent_id}"
-                )
+            temperature = self.model_config.get("temperature", default_temperature)
+            max_tokens = self.model_config.get("max_tokens", default_max_tokens)
+            top_p = self.model_config.get("top_p", default_top_p)
+            model_source = (
+                "agent_config"
+                if (agent_model and model_name == agent_model)
+                else "override"
+            )
+            logger.debug(
+                f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+            )
 
-                # 注意：这里不保存用户消息到历史记录
-                all_messages = self._build_messages_with_date_system_prompts(
-                    history_messages=recent_history,
-                    current_messages=messages,
-                )
-                logger.debug(f"all_messages: {all_messages}")
+            response = self._call_openai_api_with_retry(
+                client=client,
+                model=model_name,
+                openai_messages=openai_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                extra_body=self._chat_extra_body(user_id),
+                user_id=user_id,
+                max_retries=3,
+                initial_delay=1.0,
+                chat_name=chat_name,
+                labels=labels,
+            )
+            api_time = time.time() - api_start
+            logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
 
-                # 如果 user_profile 为 None，自动获取
-                if user_profile is None:
-                    user_profile = self._get_user_profile_sync(user_id)
+            agent_invoke_time = time.time() - agent_invoke_start
+            logger.debug(
+                f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
+            )
 
-                input_build_start = time.time()
-                user_name = self._extract_user_name_from_profile(user_profile)
-                labels = {
-                    "user_id": user_id,
-                    "user_name": user_name,
-                    "agent_id": self.agent_id,
-                    "agent_name": self.name,
-                    "chat_settings": chat_settings,
-                }
-
-                system_messages = self.build_system_messages(
-                    user_profile, chat_settings, user_time_context
-                )
-
-                messages_list: list[BaseMessage] = system_messages + all_messages
-
-                openai_messages = [
-                    langchain_message_to_openai_message(message, user_name, self.name)
-                    for message in messages_list
-                ]
-                logger.debug(f"openai_messages: {openai_messages}")
-
-                input_build_time = time.time() - input_build_start
-                logger.debug(
-                    f"输入数据构建耗时: {input_build_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 调用agent进行对话
-                agent_invoke_start = time.time()
-                logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
-
-                chat_name = f"{user_name}:{self.name}"
-                default_temperature = (
-                    global_config.agent.temperature
-                )
-                default_max_tokens = (
-                    global_config.agent.max_tokens
-                )
-                default_top_p = global_config.agent.top_p
-
-                client = get_base_openai_client()
-
-                # API调用（使用统一的重试和 trace 逻辑）
-                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
-                api_start = time.time()
-                agent_model = self.model_config.get("model")
-                model_name = agent_model or model_override
-                if model_name is None:
-                    raise ValueError(
-                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
-                    )
-                temperature = self.model_config.get("temperature", default_temperature)
-                max_tokens = self.model_config.get("max_tokens", default_max_tokens)
-                top_p = self.model_config.get("top_p", default_top_p)
-                model_source = (
-                    "agent_config"
-                    if (agent_model and model_name == agent_model)
-                    else "override"
-                )
-                logger.debug(
-                    f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
-                )
-
-                response = self._call_openai_api_with_retry(
-                    client=client,
-                    model=model_name,
-                    openai_messages=openai_messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    top_p=top_p,
-                    extra_body=self._chat_extra_body(user_id),
-                    user_id=user_id,
-                    max_retries=3,
-                    initial_delay=1.0,
-                    chat_name=chat_name,
-                    labels=labels,
-                )
-                api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
-
-                agent_invoke_time = time.time() - agent_invoke_start
-                logger.debug(
-                    f"Agent推理耗时: {agent_invoke_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 处理响应
-                response_process_start = time.time()
-                if (
-                    response is None
-                    or not getattr(response, "choices", None)
-                    or len(response.choices) == 0
-                ):
-                    logger.error(
-                        f"LLM 返回无 choices（推送消息） - Agent: {self.agent_id}, "
-                        f"Session: {session_id}"
-                    )
-                    raise ValueError("LLM returned no choices")
-                response_text = response.choices[0].message.content
-                response_process_time = time.time() - response_process_start
-                logger.debug(
-                    f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
-                )
-
-                # 注意：这里不保存AI响应到历史记录，由调用方通过 add_ai_message 保存
-                logger.debug(
-                    f"推送消息生成完成（未保存到历史记录） - Agent: {self.agent_id}, Session: {session_id}"
-                )
-
-                return response_text
-            except Exception as e:
+            # 处理响应
+            response_process_start = time.time()
+            if (
+                response is None
+                or not getattr(response, "choices", None)
+                or len(response.choices) == 0
+            ):
                 logger.error(
-                    f"推送消息生成失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
+                    f"LLM 返回无 choices（推送消息） - Agent: {self.agent_id}, "
+                    f"Session: {session_id}"
                 )
-                raise
+                raise ValueError("LLM returned no choices")
+            response_text = response.choices[0].message.content
+            response_process_time = time.time() - response_process_start
+            logger.debug(
+                f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
+            )
+
+            # 注意：这里不保存AI响应到历史记录，由调用方通过 add_ai_message 保存
+            logger.debug(
+                f"推送消息生成完成（未保存到历史记录） - Agent: {self.agent_id}, Session: {session_id}"
+            )
+
+            return response_text
+        except Exception as e:
+            logger.error(
+                f"推送消息生成失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"
+            )
+            raise
 
     async def generate_message_without_user_save(
         self,

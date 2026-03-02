@@ -224,6 +224,7 @@ def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypa
 
 
 def test_build_system_messages_includes_time_context(monkeypatch):
+    """User time context 已改为在对话中按每 10 条/每 30 分钟注入，不放在 system_messages 中。"""
     monkeypatch.setattr(
         agent_module.global_config.app.features,
         "experimental_enable_chat_with_user_time_context",
@@ -239,13 +240,26 @@ def test_build_system_messages_includes_time_context(monkeypatch):
         "timezone": "Asia/Shanghai",
         "utc_offset_minutes": 480,
     }
+    # build_system_messages 不再包含 user time context
     contents = _get_contents(
         agent.build_system_messages("", None, user_time_context=user_time_context)
     )
     combined = "\n".join(contents)
+    assert "##User Time Context" not in combined
 
-    assert "##User Time Context" in combined
-    assert "2026-02-05T18:30:00" in combined
-    assert "Asia/Shanghai" in combined
-    assert "UTC+08:00" in combined
-    assert "Do not claim to need sleep or be offline." in combined
+    # _inject_user_time_context_periodically 会在对话中插入 time context
+    from langchain_core.messages import HumanMessage
+
+    messages = [HumanMessage(content="hi")]
+    injected = agent._inject_user_time_context_periodically(
+        messages, user_time_context, now_utc=None
+    )
+    injected_contents = [
+        getattr(m, "content", "") for m in injected if hasattr(m, "content")
+    ]
+    injected_combined = "\n".join(injected_contents)
+    assert "##User Time Context" in injected_combined
+    assert "2026-02-05T18:30:00" in injected_combined
+    assert "Asia/Shanghai" in injected_combined
+    assert "UTC+08:00" in injected_combined
+    assert "Do not claim to need sleep or be offline." in injected_combined
