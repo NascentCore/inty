@@ -16,6 +16,11 @@ import {
   filterAgentsByType,
   loadAdminAgentList,
 } from "../services/agentListService";
+import {
+  clearSharedAgentsCache,
+  getSharedAgentsCache,
+  setSharedAgentsCache,
+} from "../services/agentsSharedStore";
 
 interface UseAgentsOptions {
   type?: "public" | "private" | "all";
@@ -63,6 +68,90 @@ const isFile = (value: unknown): value is File => {
   return value instanceof File;
 };
 
+const CACHE_EXPIRY_MS = 30 * 60 * 1000; // 30分钟过期
+
+const canUseLocalStorage = (): boolean => {
+  return typeof localStorage !== "undefined";
+};
+
+const getCachedDataFromLocalStorage = (cacheKey: string): Agent[] | null => {
+  if (!canUseLocalStorage()) {
+    return null;
+  }
+
+  try {
+    const cachedRaw = localStorage.getItem(cacheKey);
+    const cacheTimeRaw = localStorage.getItem(`${cacheKey}_time`);
+
+    if (!cachedRaw || !cacheTimeRaw) {
+      return null;
+    }
+
+    const cacheTime = Number(cacheTimeRaw);
+    const isExpired = Number.isNaN(cacheTime)
+      ? true
+      : Date.now() - cacheTime > CACHE_EXPIRY_MS;
+
+    if (isExpired) {
+      localStorage.removeItem(cacheKey);
+      localStorage.removeItem(`${cacheKey}_time`);
+      return null;
+    }
+
+    return JSON.parse(cachedRaw) as Agent[];
+  } catch (error) {
+    console.warn("读取缓存失败:", error);
+    return null;
+  }
+};
+
+const setCachedDataToLocalStorage = (cacheKey: string, data: Agent[]): void => {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+  } catch (error) {
+    console.warn("设置缓存失败:", error);
+  }
+};
+
+const clearCachedDataFromLocalStorage = (cacheKey: string): void => {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
+  localStorage.removeItem(cacheKey);
+  localStorage.removeItem(`${cacheKey}_time`);
+};
+
+const getInitialAgentsState = (
+  enableCache: boolean,
+  cacheKey: string,
+): Agent[] => {
+  if (!enableCache) {
+    return [];
+  }
+
+  const sharedData = getSharedAgentsCache({
+    cacheKey,
+    maxAgeMs: CACHE_EXPIRY_MS,
+  });
+  if (sharedData) {
+    return sharedData;
+  }
+
+  const localData = getCachedDataFromLocalStorage(cacheKey);
+  if (localData) {
+    setSharedAgentsCache(cacheKey, localData);
+    return localData;
+  }
+
+  return [];
+};
+
 export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   const {
     type = "all",
@@ -73,51 +162,53 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   } = options;
 
   // 状态管理
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<Agent[]>(() =>
+    getInitialAgentsState(enableCache, cacheKey),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadRequestIdRef = useRef(0);
 
   // 缓存管理
-  const CACHE_EXPIRY = 30 * 60 * 1000; // 30分钟过期
-
   const getCachedData = useCallback((): Agent[] | null => {
-    if (!enableCache) return null;
+    if (!enableCache) {
+      return null;
+    }
 
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+    // 关键步骤：优先读页面级共享内存缓存，保证跨页面切换不重复拉取
+    const sharedData = getSharedAgentsCache({
+      cacheKey,
+      maxAgeMs: CACHE_EXPIRY_MS,
+    });
+    if (sharedData) {
+      return sharedData;
+    }
 
-      if (cached && cacheTime) {
-        const isExpired = Date.now() - parseInt(cacheTime) > CACHE_EXPIRY;
-        if (!isExpired) {
-          return JSON.parse(cached);
-        }
-      }
-    } catch (error) {
-      console.warn("读取缓存失败:", error);
+    const localData = getCachedDataFromLocalStorage(cacheKey);
+    if (localData) {
+      setSharedAgentsCache(cacheKey, localData);
+      return localData;
     }
 
     return null;
-  }, [enableCache, cacheKey, CACHE_EXPIRY]);
+  }, [enableCache, cacheKey]);
 
   const setCachedData = useCallback(
     (data: Agent[]) => {
-      if (!enableCache) return;
-
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify(data));
-        localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-      } catch (error) {
-        console.warn("设置缓存失败:", error);
+      if (!enableCache) {
+        return;
       }
+
+      // 关键步骤：同步写入共享内存缓存和 localStorage 缓存
+      setSharedAgentsCache(cacheKey, data);
+      setCachedDataToLocalStorage(cacheKey, data);
     },
     [enableCache, cacheKey],
   );
 
   const clearCache = useCallback(() => {
-    localStorage.removeItem(cacheKey);
-    localStorage.removeItem(`${cacheKey}_time`);
+    clearSharedAgentsCache(cacheKey);
+    clearCachedDataFromLocalStorage(cacheKey);
   }, [cacheKey]);
 
   // 错误处理
@@ -135,7 +226,6 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
       const isCurrentRequest = () => loadRequestIdRef.current === requestId;
 
       try {
-        setLoading(true);
         setError(null);
 
         // 检查缓存
@@ -143,11 +233,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           const cachedData = getCachedData();
           if (cachedData && isCurrentRequest()) {
             setAgents(cachedData);
-            setLoading(false);
             return;
           }
         }
 
+        setLoading(true);
         let hasLoadedFirstBatch = false;
 
         // 评测后台需要看到全量角色（包含非管理员创建的角色），使用管理员专用列表接口
@@ -253,11 +343,12 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
 
         // 将新 agent 插入本地列表第 1 位，不重载全量列表
         if (newAgent) {
-          setAgents((prev) =>
-            filterAgentsByType([newAgent, ...prev], type),
-          );
+          setAgents((prev) => {
+            const updatedAgents = filterAgentsByType([newAgent, ...prev], type);
+            setCachedData(updatedAgents);
+            return updatedAgents;
+          });
         }
-        clearCache();
 
         message.success("智能体创建成功");
         return newAgent;
@@ -268,7 +359,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError, type],
+    [handleError, setCachedData, type],
   );
 
   // 更新智能体
@@ -342,9 +433,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
             }
             return { ...agent, ...updatedAgent };
           });
-          return filterAgentsByType(mergedAgents, type);
+          const filteredAgents = filterAgentsByType(mergedAgents, type);
+          setCachedData(filteredAgents);
+          return filteredAgents;
         });
-        clearCache();
 
         message.success("智能体更新成功");
         return updatedAgent;
@@ -355,7 +447,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError, type],
+    [handleError, setCachedData, type],
   );
 
   // 删除智能体
@@ -368,10 +460,11 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         await api.getIntyClient().api.v1.ai.agents.delete(agentId);
 
         // 更新本地状态
-        setAgents((prev) => prev.filter((agent) => agent.id !== agentId));
-
-        // 清理缓存
-        clearCache();
+        setAgents((prev) => {
+          const filteredAgents = prev.filter((agent) => agent.id !== agentId);
+          setCachedData(filteredAgents);
+          return filteredAgents;
+        });
 
         message.success("智能体已删除");
         return true;
@@ -382,7 +475,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(false);
       }
     },
-    [clearCache, handleError],
+    [handleError, setCachedData],
   );
 
   // 辅助方法
