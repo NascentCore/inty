@@ -77,6 +77,13 @@ adb -s <device-id> reverse tcp:8000 tcp:8000
 然后使用 `local` 构建模式（build type）来启动 App，该构建模式下，`baseUrl()`返回
 `http://localhost:8000`。
 
+### 真机通过 WiFi 连接（无 USB）
+
+- **方式一（推荐）**：设备已通过 Android Studio 的无线调试与电脑配对时，`adb` 仍可用，直接执行  
+  `adb -s <device-id> reverse tcp:8000 tcp:8000`  
+  然后使用 **local** 构建运行，设备上的 `localhost:8000` 会转发到本机 8000 端口。
+- **方式二**：使用 **debug** 构建，在 App 内 **Settings → Debug Backend Endpoint** 中，在「自定义后端地址」输入本机局域网地址（如 `http://192.168.1.100:8000/`），点击「Apply custom URL」。确保手机与电脑在同一 WiFi，且本机防火墙允许 8000 端口入站。
+
 安装`adb`：`adb`包含在 Android Platform Tools 内，Tools -> SDK Manager，
 选择安装 Android SDK Platform Tools；将其路径加入 PATH：
 
