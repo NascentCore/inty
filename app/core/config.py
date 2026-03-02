@@ -25,7 +25,6 @@ from app.utils.config import (
     MemoryExtractionConfig,
     PushNotificationConfig,
     SecurityConfig,
-    SentryConfig,
     UserAnalyticsReportConfig,
     VerificationConfig,
     # End of 间接倒入

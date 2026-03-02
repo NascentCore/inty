@@ -9,7 +9,6 @@ import uuid
 from datetime import datetime
 from typing import Any, Callable
 
-import sentry_sdk
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -35,22 +34,6 @@ class LoggerRoute(APIRoute):
         "x-auth-token",
     }
 
-    def _maybe_set_sentry_transaction_name(self, request: Request) -> None:
-        sentry_config = global_config_loaded_from_config_yaml.sentry
-        if not sentry_config.enabled or not sentry_config.dsn:
-            return
-
-        transaction_name = f"{request.method} {self.path}"
-        hub = sentry_sdk.Hub.current
-        scope = getattr(hub, "scope", None)
-        if scope is None:
-            return
-
-        scope.transaction = transaction_name
-        if getattr(scope, "span", None) is not None:
-            scope.span.name = transaction_name
-        scope.set_tag("api.route", self.path)
-
     def get_route_handler(self) -> Callable:
         original_route_handler = super().get_route_handler()
 
@@ -65,8 +48,6 @@ class LoggerRoute(APIRoute):
                 use_json_format = (
                     global_config_loaded_from_config_yaml.app.use_json_log_format
                 )
-
-                self._maybe_set_sentry_transaction_name(request)
 
                 # Log request body for POST/PUT requests
                 if request.method in ["POST", "PUT", "PATCH"]:
