@@ -1,5 +1,21 @@
 # DevOps 日常操作
 
+## 创建 Email+Password （测试）用户
+
+```bash
+ssh inty
+# 根据后端环境选择 dev 或者 prod
+docker exec -it inty-backend-{dev|prod} bash
+# 进入运行中的容器后：
+export PYTHONPATH=.
+python scripts/create_email_password_superuser.py \
+  --email test@sxwl.ai \
+  --password sxwltest \
+  --nickname "Free Test User" \        
+  --is-superuser=false \
+  --yes
+```
+
 ## 手动操作 alembic versions
 
 - 找到对应环境的 docker image
