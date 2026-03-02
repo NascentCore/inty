@@ -319,7 +319,7 @@ def _upload_image_file_to_gcs_and_return_url(
 async def z_image_turbo(
     args: ZImageTurboInput,
     gcs_uri_base: str,
-) -> GeneratedImageProcessResult:
+) -> list[GeneratedImageProcessResult]:
     handler = await fal_client.submit_async(Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump())
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
@@ -327,25 +327,31 @@ async def z_image_turbo(
     logger.debug("ZImageTurbo raw result before processing and uploading to GCS: {}", raw_result)
     if not result.images:
         raise ValueError("No images returned from ZImageTurbo")
-    first_img = result.images[0]
-    if not first_img.url.startswith("data:"):
-        raise ValueError(f"Image URL is not a data URI: {first_img.url}")
-    logger.debug("Uploaded ZImageTurbo data URI to GCS (first image)")
-    upload_result = _upload_image_file_to_gcs_and_return_url(
-        first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
-    )
+    processed_results: list[GeneratedImageProcessResult] = []
+    for i, image in enumerate(result.images):
+        if not image.url.startswith("data:"):
+            raise ValueError(f"Image URL is not a data URI: {image.url}")
+        upload_result = _upload_image_file_to_gcs_and_return_url(
+            image, gcs_uri_base, enable_compress_png_to_jpeg=True
+        )
+        logger.debug("Uploaded ZImageTurbo data URI to GCS (image index: {})", i)
+        processed_results.append(
+            GeneratedImageProcessResult(
+                size=upload_result.image_size,
+                format=upload_result.image_format,
+                raw_data=upload_result.file_data,
+                raw_data_total_bytes=len(upload_result.file_data),
+                gcs_uri=upload_result.gcs_uri,
+                gcs_http_url=upload_result.gcs_http_url,
+                generated_at=datetime.datetime.now(datetime.timezone.utc),
+                raw_response_from_provider=raw_result,
+            )
+        )
+    if not processed_results:
+        raise ValueError("No valid images returned from ZImageTurbo")
     trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
     attach_provider_response_to_langsmith_run(trace_raw_result)
-    return GeneratedImageProcessResult(
-        size=upload_result.image_size,
-        format=upload_result.image_format,
-        raw_data=upload_result.file_data,
-        raw_data_total_bytes=len(upload_result.file_data),
-        gcs_uri=upload_result.gcs_uri,
-        gcs_http_url=upload_result.gcs_http_url,
-        generated_at=datetime.datetime.now(datetime.timezone.utc),
-        raw_response_from_provider=raw_result,
-    )
+    return processed_results
 
 
 class ZImageTurboImageToImageImageSizeEnum(StrEnum):

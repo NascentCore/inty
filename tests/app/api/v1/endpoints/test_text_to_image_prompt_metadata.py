@@ -7,11 +7,14 @@ import pytest
 from sqlalchemy import delete, select
 
 from app import models, schemas
+from app.api.v1.endpoints import agents as agents_endpoint
 from app.api.v1.endpoints.agents import generate_background
+from app.core.images.types import GeneratedImageProcessResult
 from app.db.session import AsyncSessionLocal
 from app.external_services.fakes.gemini import FakeGeminiClient
 from app.services.global_services import subscription_service
 from app.utils import gemini as gemini_utils
+from app.utils.image import ImageFormat, ImageSize
 
 
 @pytest.mark.asyncio
@@ -101,3 +104,71 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
                 await session.execute(delete(models.Resource).where(models.Resource.url.in_(urls)))
             await session.execute(delete(models.User).where(models.User.id == user_id))
             await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    called_bases: list[str] = []
+    called_prompts: list[str] = []
+
+    async def fake_z_image_turbo(args, gcs_uri_base):
+        called_bases.append(gcs_uri_base)
+        called_prompts.append(args.prompt)
+        assert args.num_images == 2
+        assert args.image_size == "portrait_4_3"
+        assert args.output_format == ImageFormat.PNG
+        return [
+            GeneratedImageProcessResult(
+                size=ImageSize(width=1024, height=1365),
+                format=ImageFormat.PNG,
+                raw_data=b"fake-png-bytes-1",
+                raw_data_total_bytes=16,
+                gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_1.png",
+                gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_1.png",
+                generated_at=datetime.now(timezone.utc),
+                raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake1"}]},
+            ),
+            GeneratedImageProcessResult(
+                size=ImageSize(width=1024, height=1365),
+                format=ImageFormat.PNG,
+                raw_data=b"fake-png-bytes-2",
+                raw_data_total_bytes=16,
+                gcs_uri=f"gs://inty-test/{gcs_uri_base}/fake_2.png",
+                gcs_http_url=f"https://storage.googleapis.com/inty-test/{gcs_uri_base}/fake_2.png",
+                generated_at=datetime.now(timezone.utc),
+                raw_response_from_provider={"images": [{"url": "data:image/png;base64,fake2"}]},
+            ),
+        ]
+    def fail_generate_text_to_image(_):
+        raise AssertionError("z-image/turbo should use app/core/images/fal.py API")
+
+    monkeypatch.setattr(
+        agents_endpoint,
+        "z_image_turbo",
+        fake_z_image_turbo,
+    )
+    monkeypatch.setattr(
+        agents_endpoint,
+        "generate_text_to_image",
+        fail_generate_text_to_image,
+    )
+
+    generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict = (
+        await agents_endpoint._generate_with_fal_ai(
+            model="fal-ai/z-image/turbo",
+            prompt="A vivid portrait with soft warm lighting",
+            negative_prompt="blurry",
+            num_images=2,
+            gcs_bucket="inty-test",
+            gcs_base_path="backgrounds/test-user/req-1",
+        )
+    )
+
+    assert called_bases == ["backgrounds/test-user/req-1"]
+    assert called_prompts == ["A vivid portrait with soft warm lighting"]
+    assert len(generated_images) == 2
+    assert len(gcs_urls) == 2
+    assert rai_reasons == []
+    assert set(gcs_urls) == set(gcs_url_to_img_dict.keys())

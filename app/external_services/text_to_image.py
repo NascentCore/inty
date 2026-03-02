@@ -4,6 +4,7 @@ Unified text-to-image API wrapper for multiple providers.
 Supported providers:
 - Google Vertex AI Imagen via `google.genai` (model name uses `google/` prefix)
 - OpenAI image generation via OpenAI client (model name uses `openai/` prefix)
+- fal.ai image generation via `fal_client` (model name uses `fal-ai/` prefix)
 
 This module is intentionally NOT integrated into Inty backend flows yet.
 
@@ -14,7 +15,7 @@ from __future__ import annotations
 
 import base64
 import io
-import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -26,6 +27,8 @@ import PIL.Image
 
 GOOGLE_MODEL_PREFIX = "google/"
 OPENAI_MODEL_PREFIX = "openai/"
+FALAI_MODEL_PREFIX = "fal-ai/"
+FAL_MODEL_PREFIX_ALIAS = "fal/"
 DEFAULT_GOOGLE_MIME_TYPE = "image/jpeg"
 DEFAULT_GCS_BASE_DIR = "tmp/image_generation_wrapper"
 FORMAT_JPEG = "jpeg"
@@ -98,6 +101,8 @@ def generate_text_to_image(
         return _generate_google_imagen(provider_model=provider_model, request=request)
     if provider == TextToImageProvider.OPENAI:
         return _generate_openai_image(provider_model=provider_model, request=request)
+    if provider == TextToImageProvider.FALAI:
+        return _generate_falai_image(provider_model=provider_model, request=request)
     raise ValueError(f"Unsupported provider: {provider}")
 
 
@@ -120,6 +125,19 @@ def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
         # OpenAI / OpenRouter generally expects the org-prefixed model id.
         return TextToImageProvider.OPENAI, model
 
+    if model.startswith(FALAI_MODEL_PREFIX):
+        stripped = model[len(FALAI_MODEL_PREFIX) :].strip()
+        if not stripped:
+            raise ValueError("fal-ai/ prefix provided but model name is empty")
+        return TextToImageProvider.FALAI, f"{FALAI_MODEL_PREFIX}{stripped}"
+
+    if model.startswith(FAL_MODEL_PREFIX_ALIAS):
+        stripped = model[len(FAL_MODEL_PREFIX_ALIAS) :].strip()
+        if not stripped:
+            raise ValueError("fal/ prefix provided but model name is empty")
+        # Normalize alias to canonical fal-ai/<model-id>.
+        return TextToImageProvider.FALAI, f"{FALAI_MODEL_PREFIX}{stripped}"
+
     # Backward-compatible heuristic for Imagen model names without prefix.
     if model.startswith("imagen-"):
         logger.warning(
@@ -129,22 +147,18 @@ def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
         )
         return TextToImageProvider.GOOGLE, model
 
-    # If model has org prefix, only google and openai are supported.
+    # If model has org prefix, only google/openai/fal-ai are supported.
     if "/" in model:
         org = model.split("/", 1)[0].strip().lower()
-        if org in ("fal-ai", "fal"):
-            raise ValueError(
-                f"Unsupported image model org prefix: {org!r} (model={model!r}). "
-                "FAL (fal.ai) is not supported; use google/ or openai/ prefix."
-            )
         raise ValueError(
             f"Unsupported image model org prefix: {org!r} (model={model!r})"
         )
 
-    # No org prefix and not imagen-*: require explicit google/ or openai/ prefix.
+    # No org prefix and not imagen-*: require explicit provider prefix.
     raise ValueError(
         f"Unsupported image model: {model!r}. "
-        "Model id must use google/ or openai/ prefix (e.g. google/imagen-4.0-fast-generate-001)."
+        "Model id must use google/, openai/, or fal-ai/ prefix "
+        "(e.g. google/imagen-4.0-fast-generate-001)."
     )
 
 
@@ -283,6 +297,121 @@ def _generate_openai_image(
         images=images,
         raw=response,
     )
+
+
+def _generate_falai_image(
+    *,
+    provider_model: str,
+    request: TextToImageGenerationRequest,
+) -> TextToImageGenerationResult:
+    fal_image_client = request.provider_args.get("fal_client")
+    if fal_image_client is None:
+        import fal_client as fal_image_client  # type: ignore
+
+    api_key = request.provider_args.get("api_key")
+    if isinstance(api_key, str) and api_key:
+        os.environ["FAL_KEY"] = api_key
+
+    arguments = _build_falai_arguments(provider_model=provider_model, request=request)
+    with_logs = bool(request.provider_args.get("with_logs", False))
+    response = fal_image_client.subscribe(
+        provider_model, arguments=arguments, with_logs=with_logs
+    )
+    if not isinstance(response, dict):
+        raise TypeError(f"fal_client.subscribe returned non-dict: {type(response)}")
+
+    output_format = request.provider_args.get("output_format")
+    normalized_format = output_format if isinstance(output_format, str) else None
+
+    images: list[TextToImageGeneratedImage] = []
+    for item in response.get("images", []) or []:
+        if not isinstance(item, dict):
+            continue
+
+        url = item.get("url")
+        if not isinstance(url, str) or not url:
+            continue
+
+        width = item.get("width")
+        height = item.get("height")
+        width_int = width if isinstance(width, int) else None
+        height_int = height if isinstance(height, int) else None
+
+        content_type = item.get("content_type")
+        mime_type = (
+            content_type
+            if isinstance(content_type, str)
+            else item.get("mime_type")
+            if isinstance(item.get("mime_type"), str)
+            else None
+        )
+
+        images.append(
+            TextToImageGeneratedImage(
+                provider=TextToImageProvider.FALAI,
+                model=provider_model,
+                prompt=request.prompt,
+                url=url,
+                mime_type=mime_type,
+                format=normalized_format,
+                width=width_int,
+                height=height_int,
+            )
+        )
+
+    return TextToImageGenerationResult(
+        provider=TextToImageProvider.FALAI,
+        model=provider_model,
+        images=images,
+        raw=response,
+    )
+
+
+def _build_falai_arguments(
+    *,
+    provider_model: str,
+    request: TextToImageGenerationRequest,
+) -> dict[str, Any]:
+    arguments: dict[str, Any] = {
+        "prompt": request.prompt,
+        "num_images": int(request.num_images),
+        # For /text-to-image endpoint we download image URL then upload to GCS.
+        # sync_mode=False ensures fal returns HTTP URL instead of data URI.
+        "sync_mode": bool(request.provider_args.get("sync_mode", False)),
+    }
+
+    if request.seed is not None:
+        arguments["seed"] = int(request.seed)
+
+    if request.negative_prompt and not _is_fal_z_image_turbo_model(provider_model):
+        arguments["negative_prompt"] = request.negative_prompt
+
+    passthrough_keys = (
+        "image_size",
+        "output_format",
+        "num_inference_steps",
+        "enable_safety_checker",
+        "enable_prompt_expansion",
+        "acceleration",
+        "strength",
+        "image_url",
+        "image_urls",
+    )
+    for key in passthrough_keys:
+        value = request.provider_args.get(key)
+        if value is not None:
+            arguments[key] = value
+
+    custom_arguments = request.provider_args.get("fal_arguments")
+    if isinstance(custom_arguments, dict):
+        arguments.update(custom_arguments)
+
+    return arguments
+
+
+def _is_fal_z_image_turbo_model(provider_model: str) -> bool:
+    normalized = provider_model.strip().lower()
+    return normalized.startswith("fal-ai/z-image/turbo")
 
 
 def _gcs_uri_to_public_url(gcs_uri: Optional[str]) -> Optional[str]:
