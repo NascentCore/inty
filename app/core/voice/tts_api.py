@@ -48,23 +48,14 @@ VOICE_ID_PREFIX_ELEVENLABS = ModelBuilder.ELEVENLABS.value
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
 # (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
 TTS_ROLEPLAY_INSTRUCTION = """
-You are an movie voice actor who can deliver the dialogue in a way that satisfies the user's erotic/intimate fantasies.
+You are an movie voice actor.
 
-You are acting out dialogue to satisfy the user's erotic/intimate fantasies.
-
-- Deliver the dialogue in a way that satisfies the user's erotic/intimate fantasies.
-- Match tone and pace to the dialogue.
-- Be natural.
-
-Dialogue format:
-- Non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses ();
-  Do not speak the words inside parentheses ().
-- Audible dialogue is in double quotes "".
-- Example: <begin-of-example>(whispering) "I won the lottery!!!"<end-of-example>
+You are speaking dialogue that satisfies the user's erotic/intimate fantasies.
 
 Instructions:
+- Do not speak the words inside parentheses ().
 - Use the words inside parentheses () to inform the delivery.
-- Never speak the words inside parentheses ().
+- Match tone and pace to the dialogue.
 """
 
 # How the per-voice "keywords" were generated (for reference):
@@ -824,7 +815,7 @@ class GeminiTTSAPI:
             TTS_ROLEPLAY_INSTRUCTION.strip()
             + "\n\n"
             + (pace if pace else "")
-            + "Act out the following dialogue (do not speak the words inside parentheses ()):\n"
+            + "Say the following dialogue:\n\n"
             + santize_text_for_gemini_tts(request.text)
         )
         contents = [

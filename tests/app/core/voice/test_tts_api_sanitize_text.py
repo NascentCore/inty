@@ -1,7 +1,5 @@
 """Tests for app.core.voice.tts_api: santize_text_for_gemini_tts (keep first (), remove rest)."""
 
-import pytest
-
 from app.core.voice.tts_api import santize_text_for_gemini_tts
 
 
