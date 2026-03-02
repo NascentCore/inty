@@ -2,7 +2,6 @@
 
 import os
 
-import sentry_sdk
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,9 +9,6 @@ from fastapi.openapi.utils import get_openapi
 from jose.exceptions import JWTError
 from loguru import logger
 from pydantic import BaseModel, ValidationError
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-from sentry_sdk.integrations.starlette import StarletteIntegration
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,33 +29,6 @@ from app.schemas.response import APIResponse
 from backend.ops.api.v1.router import api_router
 
 init_logger()
-
-
-def init_sentry():
-    """初始化 Sentry 错误监控"""
-    try:
-        sentry_config = global_config_loaded_from_config_yaml.sentry
-        if not sentry_config.enabled or not sentry_config.dsn:
-            return
-        sentry_sdk.init(
-            dsn=sentry_config.dsn,
-            environment=global_config_loaded_from_config_yaml.app.environment.value,
-            send_default_pii=False,
-            integrations=[
-                FastApiIntegration(),
-                StarletteIntegration(transaction_style="endpoint"),
-                SqlalchemyIntegration(),
-            ],
-            server_name=f"{global_config_loaded_from_config_yaml.app.name}-ops",
-            release=global_config_loaded_from_config_yaml.app.version,
-            auto_enabling_integrations=False,
-            traces_sample_rate=sentry_config.traces_sample_rate,
-        )
-    except Exception as e:
-        logger.error(f"初始化 Sentry 错误监控失败: {str(e)}")
-
-
-init_sentry()
 
 app = FastAPI(
     title=f"{global_config_loaded_from_config_yaml.app.name} Ops",
