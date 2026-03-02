@@ -1554,7 +1554,7 @@ async def generate_chat_image(
 
     # 模型选择仅按订阅状态，使用 config 中的 nickname 解析为 GenAIModel（无请求覆盖）
     from app.core.model_selection import select_chat_image_model
-    from app.utils.models_catalog import CHAT_IMAGE_FAL_IDS
+    from app.utils.models_catalog import ModelNameFamily, detect_model_name_family
 
     subscription_status = await subscription_service.get_user_subscription_status(
         db, user.id
@@ -1630,7 +1630,8 @@ async def generate_chat_image(
 
     try:
         primary_model = resolved_model.id_on_provider
-        if is_subscribed and primary_model not in CHAT_IMAGE_FAL_IDS:
+        primary_model_family = detect_model_name_family(primary_model)
+        if is_subscribed and primary_model_family == ModelNameFamily.GEMINI:
             fallback_model = (
                 global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
             )

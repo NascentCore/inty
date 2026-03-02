@@ -52,12 +52,14 @@ from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
     CHAT_IMAGE_GEN_MODELS,
+    ModelNameFamily,
     NANO_BANANA,
     NANO_BANANA_2,
     NANO_BANANA_MODELS,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+    detect_model_name_family,
     resolve_id_on_provider,
     resolve_nickname,
 )
@@ -481,7 +483,8 @@ class ImageGenerationService:
         else:
             prompt_for_model = chat_input.prompt
 
-        if resolved_model_id in CHAT_IMAGE_FAL_IDS:
+        model_family = detect_model_name_family(resolved_model_id)
+        if model_family == ModelNameFamily.FAL:
             return await self._generate_chat_image_with_resolved_fal_model(
                 model_id=resolved_model_id,
                 prompt=prompt_for_model,
@@ -490,13 +493,18 @@ class ImageGenerationService:
                 gcs_uri_base=gcs_uri_base,
             )
 
-        return await self._generate_chat_image_with_resolved_gemini_model(
-            model_id=resolved_model_id,
-            prompt=prompt_for_model,
-            reference_image_url=chat_input.reference_image_url,
-            user_reference_image_url=chat_input.user_reference_image_url,
-            gcs_uri_base=gcs_uri_base,
-            system_instructions=system_instructions,
+        if model_family == ModelNameFamily.GEMINI:
+            return await self._generate_chat_image_with_resolved_gemini_model(
+                model_id=resolved_model_id,
+                prompt=prompt_for_model,
+                reference_image_url=chat_input.reference_image_url,
+                user_reference_image_url=chat_input.user_reference_image_url,
+                gcs_uri_base=gcs_uri_base,
+                system_instructions=system_instructions,
+            )
+        raise ValueError(
+            f"Chat image model family unsupported for {resolved_model_id!r}; "
+            "expected fal or gemini"
         )
 
     async def get_generated_images_for_agent(
@@ -857,11 +865,12 @@ class ImageGenerationService:
         )
 
         resolved_model_id = self._resolve_chat_image_gen_model_id_or_nickname(model)
+        resolved_model_family = detect_model_name_family(resolved_model_id)
 
         # 测试模式：通过环境变量触发模拟失败（仅用于测试匹配逻辑）
         # 设置环境变量: TEST_IMAGE_GEN_FAIL=safety_filter 或 TEST_IMAGE_GEN_FAIL=network_error
         # 仅对 Gemini 路径生效，保持与历史行为一致。
-        if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
+        if resolved_model_family == ModelNameFamily.GEMINI:
             test_fail_mode = os.environ.get("TEST_IMAGE_GEN_FAIL", "").lower()
             if test_fail_mode == "safety_filter":
                 logger.warning("测试模式：模拟安全过滤器阻止")
@@ -895,7 +904,7 @@ class ImageGenerationService:
         gcs_uri_base = f"chat_images/{agent_id}"
 
         system_instructions: Optional[List[str]] = None
-        if resolved_model_id not in CHAT_IMAGE_FAL_IDS:
+        if resolved_model_family == ModelNameFamily.GEMINI:
             system_instructions = [
                 agent_prompts.R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
             ]

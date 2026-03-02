@@ -24,11 +24,16 @@ from typing import Any, Optional
 
 import PIL.Image
 
+from app.utils.models_catalog import (
+    ModelNameFamily,
+    detect_model_name_family,
+    normalize_model_name,
+)
+
 
 GOOGLE_MODEL_PREFIX = "google/"
 OPENAI_MODEL_PREFIX = "openai/"
 FALAI_MODEL_PREFIX = "fal-ai/"
-FAL_MODEL_PREFIX_ALIAS = "fal/"
 DEFAULT_GOOGLE_MIME_TYPE = "image/jpeg"
 DEFAULT_GCS_BASE_DIR = "tmp/image_generation_wrapper"
 FORMAT_JPEG = "jpeg"
@@ -112,44 +117,40 @@ def _resolve_provider_and_model(model: str) -> tuple[TextToImageProvider, str]:
             f"Invalid model id: {model!r}. Expect '<org>/<model>' format or imagen-* model name."
         )
 
-    if model.startswith(GOOGLE_MODEL_PREFIX):
-        stripped = model[len(GOOGLE_MODEL_PREFIX) :].strip()
+    normalized_model = normalize_model_name(model)
+    model_family = detect_model_name_family(model)
+
+    if normalized_model.startswith(GOOGLE_MODEL_PREFIX):
+        stripped = normalized_model[len(GOOGLE_MODEL_PREFIX) :].strip()
         if not stripped:
             raise ValueError("google/ prefix provided but model name is empty")
         return TextToImageProvider.GOOGLE, stripped
 
-    if model.startswith(OPENAI_MODEL_PREFIX):
-        stripped = model[len(OPENAI_MODEL_PREFIX) :].strip()
+    if normalized_model.startswith(OPENAI_MODEL_PREFIX):
+        stripped = normalized_model[len(OPENAI_MODEL_PREFIX) :].strip()
         if not stripped:
             raise ValueError("openai/ prefix provided but model name is empty")
         # OpenAI / OpenRouter generally expects the org-prefixed model id.
-        return TextToImageProvider.OPENAI, model
+        return TextToImageProvider.OPENAI, normalized_model
 
-    if model.startswith(FALAI_MODEL_PREFIX):
-        stripped = model[len(FALAI_MODEL_PREFIX) :].strip()
+    if model_family == ModelNameFamily.FAL:
+        stripped = normalized_model[len(FALAI_MODEL_PREFIX) :].strip()
         if not stripped:
             raise ValueError("fal-ai/ prefix provided but model name is empty")
         return TextToImageProvider.FALAI, f"{FALAI_MODEL_PREFIX}{stripped}"
 
-    if model.startswith(FAL_MODEL_PREFIX_ALIAS):
-        stripped = model[len(FAL_MODEL_PREFIX_ALIAS) :].strip()
-        if not stripped:
-            raise ValueError("fal/ prefix provided but model name is empty")
-        # Normalize alias to canonical fal-ai/<model-id>.
-        return TextToImageProvider.FALAI, f"{FALAI_MODEL_PREFIX}{stripped}"
-
     # Backward-compatible heuristic for Imagen model names without prefix.
-    if model.startswith("imagen-"):
+    if normalized_model.startswith("imagen-"):
         logger.warning(
             "Text-to-image model name '%s' is missing the 'google/' prefix; "
             "treating it as a Google Imagen model for compatibility.",
-            model,
+            normalized_model,
         )
-        return TextToImageProvider.GOOGLE, model
+        return TextToImageProvider.GOOGLE, normalized_model
 
     # If model has org prefix, only google/openai/fal-ai are supported.
-    if "/" in model:
-        org = model.split("/", 1)[0].strip().lower()
+    if "/" in normalized_model:
+        org = normalized_model.split("/", 1)[0].strip().lower()
         raise ValueError(
             f"Unsupported image model org prefix: {org!r} (model={model!r})"
         )
@@ -410,7 +411,7 @@ def _build_falai_arguments(
 
 
 def _is_fal_z_image_turbo_model(provider_model: str) -> bool:
-    normalized = provider_model.strip().lower()
+    normalized = normalize_model_name(provider_model)
     return normalized.startswith("fal-ai/z-image/turbo")
 
 

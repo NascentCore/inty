@@ -27,7 +27,12 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.images.fal import ZImageTurboInput, z_image_turbo
 from app.core.model_selection import select_text_to_image_model
 from app.core.user_privilege.superuser_check import is_superuser
-from app.utils.models_catalog import Z_IMAGE_TURBO, is_fal_model
+from app.utils.models_catalog import (
+    ModelNameFamily,
+    Z_IMAGE_TURBO,
+    detect_model_name_family,
+    normalize_model_name,
+)
 from app.external_services.gcs import upload_to_gcs
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
@@ -652,11 +657,8 @@ async def _generate_with_fal_ai(
 
 
 def _is_fal_z_image_turbo_model(model: str) -> bool:
-    normalized = model.strip().lower()
-    return normalized in {
-        Z_IMAGE_TURBO.id_on_provider,
-        "fal/z-image/turbo",
-    }
+    normalized = normalize_model_name(model)
+    return normalized == Z_IMAGE_TURBO.id_on_provider
 
 
 async def _generate_with_fal_z_image_turbo(
@@ -777,7 +779,7 @@ async def generate_background(
         gcs_bucket = global_config_loaded_from_config_yaml.gcs.bucket
 
         # 根据模型类型选择不同的生成流程
-        if is_fal_model(image_model):
+        if detect_model_name_family(image_model) == ModelNameFamily.FAL:
             # fal.ai 生图流程
             generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict = (
                 await _generate_with_fal_ai(

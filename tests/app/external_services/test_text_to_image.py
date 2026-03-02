@@ -122,6 +122,12 @@ def test_resolve_provider_and_model_falai_keeps_org_prefix() -> None:
     assert provider_model == "fal-ai/z-image/turbo"
 
 
+def test_resolve_provider_and_model_falai_alias_normalized() -> None:
+    provider, provider_model = _resolve_provider_and_model("FAL/Z-IMAGE/TURBO")
+    assert provider == TextToImageProvider.FALAI
+    assert provider_model == "fal-ai/z-image/turbo"
+
+
 @pytest.mark.parametrize(
     "model",
     ["", "google/", "openai/", "fal-ai/", "fal/", "unknown/x"],
