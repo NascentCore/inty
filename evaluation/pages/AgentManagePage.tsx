@@ -44,13 +44,14 @@ import type {
 import LLMConfigForm from "../components/common/LLMConfigForm";
 import VoiceSelector from "../components/common/VoiceSelector";
 import ScoreSelector from "../components/common/ScoreSelector";
-import { useAgents } from "../hooks/useAgents";
+import { useAgents, type UseAgentsReturn } from "../hooks/useAgents";
 import AgentDetailModal from "../components/common/AgentDetailModal";
 import { generateRandomName } from "../utils/nameGenerator";
 import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
 import BackgroundCropModal from "../components/common/BackgroundCropModal";
 import AvatarDisplay from "../components/common/AvatarDisplay";
+import { shouldLoadAgentsOnPageEnter } from "../utils/agentLoadingGuard";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -58,19 +59,39 @@ const { Option } = Select;
 
 // 类型已在 types.ts 中定义
 
-export const AgentManagePage: React.FC = () => {
-  // 使用 useAgents hook
+type SharedAgentsStateForManage = Pick<
+  UseAgentsReturn,
+  | "agents"
+  | "loading"
+  | "hasLoaded"
+  | "loadAgents"
+  | "createAgent"
+  | "updateAgent"
+  | "deleteAgent"
+>;
+
+export interface AgentManagePageProps {
+  sharedAgentsState?: SharedAgentsStateForManage;
+}
+
+export const AgentManagePage: React.FC<AgentManagePageProps> = ({
+  sharedAgentsState,
+}) => {
+  const localAgentsState = useAgents({
+    type: "all",
+    autoLoad: false, // 手动控制加载
+  });
+
+  // 优先使用 App 层共享状态，fallback 为本地 useAgents
   const {
     agents,
     loading,
+    hasLoaded,
     loadAgents: loadAgentsFromHook,
     createAgent: createAgentFromHook,
     updateAgent: updateAgentFromHook,
     deleteAgent: deleteAgentFromHook,
-  } = useAgents({
-    type: "all",
-    autoLoad: false, // 手动控制加载
-  });
+  } = sharedAgentsState ?? localAgentsState;
 
   // 状态管理
   const [localAgents, setLocalAgents] = useState<Agent[]>([]);
@@ -255,13 +276,13 @@ export const AgentManagePage: React.FC = () => {
 
   // 加载智能体列表
   const loadAgents = useCallback(
-    async (reset = false) => {
+    async (reset = false, forceRefresh = reset) => {
       if (reset) {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
 
       // 使用 useAgents hook 的 loadAgents
-      await loadAgentsFromHook(true);
+      await loadAgentsFromHook(forceRefresh);
     },
     [loadAgentsFromHook],
   );
@@ -426,10 +447,25 @@ export const AgentManagePage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    loadAgents();
+    if (sharedAgentsState) {
+      return;
+    }
+
+    if (
+      shouldLoadAgentsOnPageEnter({
+        hasLoaded,
+        isLoading: loading,
+        agentsCount: agents.length,
+      })
+    ) {
+      loadAgents(false, false);
+    }
+  }, [agents.length, hasLoaded, loadAgents, loading, sharedAgentsState]);
+
+  useEffect(() => {
     loadModels(); // 加载模型列表
     loadAvailablePrompts(); // 加载 prompt 列表
-  }, [loadAgents, loadModels, loadAvailablePrompts]);
+  }, [loadModels, loadAvailablePrompts]);
 
   // 处理头像上传（创建模式，打开截取弹窗）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {

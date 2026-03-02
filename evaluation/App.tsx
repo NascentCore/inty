@@ -35,6 +35,7 @@ import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
 import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
+import { useAgents } from "./hooks/useAgents";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
 
@@ -93,6 +94,10 @@ const AppContent: React.FC = () => {
 
   // API Key 管理
   const { isApiKeyValid, isLoading } = useApiKeyContext();
+  const sharedAgentsState = useAgents({
+    type: "all",
+    autoLoad: !isLoading && isApiKeyValid,
+  });
 
   // GEMINI: 将当前页面保存到 localStorage
   useEffect(() => {
@@ -289,7 +294,7 @@ const AppContent: React.FC = () => {
           />
         );
       case "chat":
-        return <ChatPage />;
+        return <ChatPage sharedAgentsState={sharedAgentsState} />;
       case "voice-chat":
         return (
           <VoiceChatPage
@@ -299,7 +304,7 @@ const AppContent: React.FC = () => {
           />
         );
       case "agents":
-        return <AgentManagePage />;
+        return <AgentManagePage sharedAgentsState={sharedAgentsState} />;
       case "character-themes":
         return <CharacterThemeManagePage />;
       case "settings":

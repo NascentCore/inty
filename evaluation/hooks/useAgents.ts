@@ -17,7 +17,7 @@ import {
   loadAdminAgentList,
 } from "../services/agentListService";
 
-interface UseAgentsOptions {
+export interface UseAgentsOptions {
   type?: "public" | "private" | "all";
   autoLoad?: boolean;
   enableCache?: boolean;
@@ -25,11 +25,12 @@ interface UseAgentsOptions {
   useRecommended?: boolean; // 是否使用推荐API
 }
 
-interface UseAgentsReturn {
+export interface UseAgentsReturn {
   // 状态
   agents: Agent[];
   loading: boolean;
   error: string | null;
+  hasLoaded: boolean;
 
   // 操作
   loadAgents: (forceRefresh?: boolean) => Promise<void>;
@@ -76,6 +77,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const loadRequestIdRef = useRef(0);
 
   // 缓存管理
@@ -186,6 +188,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         handleError(error, "获取智能体列表失败");
       } finally {
         if (isCurrentRequest()) {
+          setHasLoaded(true);
           setLoading(false);
         }
       }
@@ -412,6 +415,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
     agents,
     loading,
     error,
+    hasLoaded,
 
     // 操作
     loadAgents,

@@ -45,7 +45,7 @@ import {
   DislikeOutlined,
   CrownOutlined,
 } from "@ant-design/icons";
-import { useAgents } from "../hooks/useAgents";
+import { useAgents, type UseAgentsReturn } from "../hooks/useAgents";
 import { useApiKeyContext } from "../hooks/useApiKey";
 import api from "../services/api";
 import type { Agent, FestivalMemoryItem } from "../types";
@@ -107,7 +107,16 @@ interface ChatMessage {
   };
 }
 
-export const ChatPage: React.FC = () => {
+type SharedAgentsStateForChat = Pick<
+  UseAgentsReturn,
+  "agents" | "loading" | "error" | "loadAgents"
+>;
+
+export interface ChatPageProps {
+  sharedAgentsState?: SharedAgentsStateForChat;
+}
+
+export const ChatPage: React.FC<ChatPageProps> = ({ sharedAgentsState }) => {
   // 状态管理
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(
@@ -179,15 +188,16 @@ export const ChatPage: React.FC = () => {
   }, [isApiKeyValid]);
 
   // 智能体数据
+  const localAgentsState = useAgents({
+    type: "all", // 获取所有角色（包括公开和私有）
+    autoLoad: !sharedAgentsState,
+  });
   const {
     agents,
     loading: agentsLoading,
     error: agentsError,
     loadAgents,
-  } = useAgents({
-    type: "all", // 获取所有角色（包括公开和私有）
-    autoLoad: true,
-  });
+  } = sharedAgentsState ?? localAgentsState;
   const normalizedAgentSearch = agentSearch.trim();
   const filteredAgents = useMemo(
     () => filterAgentsByName(agents, normalizedAgentSearch),
