@@ -7,7 +7,7 @@
   - [x] 更新 nginx 配置来支持新域名
   - [x] 创建独立部署脚本和代码改动：https://github.com/NascentCore/inty/pull/2373
   - [ ] 创建独立部署 github 工作流
-  - [ ] **Follow-up (after ops is deployed and verified)**: remove evaluation and festival_memory from `app/api/v1/router.py`; remove re-export modules `app/api/v1/endpoints/evaluation.py` and `app/api/v1/endpoints/festival_memory.py`; optionally enable `INTY_API_ONLY=true` for main app in prod. Referenced in router and re-export file comments.
+  - [x] 主后端移除 ops 过渡层：`app/api/v1/router.py` 不再挂载 evaluation/festival_memory，删除 re-export 模块 `app/api/v1/endpoints/evaluation.py` 与 `app/api/v1/endpoints/festival_memory.py`，`backend/inty` 不再提供 `/evaluation`。
 - [ ] Optimize official assistant's prompts
   - [x] Added a separate build system messages API for official assistant
   - [ ] Integrate the new system messages building API in the agent workflow

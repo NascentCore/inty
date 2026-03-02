@@ -19,7 +19,7 @@
 ### 实现细节
 
 ```python
-# app/api/v1/endpoints/evaluation.py
+# backend/ops/api/v1/evaluation.py
 if not current_user.is_superuser:
     return schemas.APIResponse.error(message="Unauthorized access")
 ```
@@ -88,7 +88,7 @@ messages_data = chat_history_service.get_messages_paginated(
 
 ## 相关代码文件
 
-- `app/api/v1/endpoints/evaluation.py`：管理员图片查看端点
+- `backend/ops/api/v1/evaluation.py`：管理员图片查看端点
 - `app/api/v1/endpoints/chats.py`：用户聊天消息端点
 - `app/models/resource.py`：图片资源数据模型
 - `app/services/chat_history_service.py`：聊天消息服务

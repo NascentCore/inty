@@ -7,8 +7,6 @@ from app.api.v1.endpoints import (
     character_themes,
     chat,
     chats,
-    evaluation,
-    festival_memory,
     images,
     live_chat,
     notification,
@@ -43,18 +41,6 @@ api_router.include_router(images.router, tags=["images"])
 api_router.include_router(settings.router, tags=["settings"])
 
 api_router.include_router(subscription.router, tags=["subscription"])
-
-# Evaluation endpoints: implementation in backend/ops; re-exported here so main app still serves evaluation until ops is deployed. Follow-up: see TASKS.md (ops platform task) — remove these two includes and re-export modules after ops is verified; optionally set INTY_API_ONLY=true for main app.
-api_router.include_router(
-    evaluation.router,
-    tags=["evaluation"],
-    include_in_schema=False,
-)
-api_router.include_router(
-    festival_memory.router,
-    tags=["festival-memory"],
-    include_in_schema=False,
-)
 api_router.include_router(version.router, tags=["version"])
 api_router.include_router(text_to_speech.router, tags=["text_to_speech"])
 api_router.include_router(character_themes.router, tags=["character-themes"])

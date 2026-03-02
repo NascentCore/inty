@@ -128,7 +128,7 @@ CREATED_BY_AGENT
 |记忆读取|`app/services/memory_service.py`（get_festival_memories_for_user_agent）|
 |角色详情|`app/api/v1/endpoints/agents.py`（GET /{agent_id} 附加 features）|
 |Schema|`app/schemas/agent.py`（AgentFeatures、FestivalMemoryItem）、`app/schemas/festival_memory.py`|
-|管理员 API|`app/api/v1/endpoints/festival_memory.py`|
+|管理员 API|`backend/ops/api/v1/festival_memory.py`|
 |定时任务|`app/services/push_scheduler_service.py`（\_run_festival_memory_extraction）|
 |前端页面|`evaluation/pages/FestivalMemoryPage.tsx`、`evaluation/App.tsx`|
 |API 封装|`evaluation/services/api.ts`（festivalMemoryApi）|

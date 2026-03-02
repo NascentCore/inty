@@ -47,7 +47,7 @@ CREATED_BY_AGENT
 
 #### 1.3 新增 API 端点
 
-**文件**: `app/api/v1/endpoints/evaluation.py`
+**文件**: `backend/ops/api/v1/evaluation.py`
 
 新增以下端点：
 
@@ -182,7 +182,7 @@ Live Chat 的延迟数据存储在 `subscription_usage` 表的 `extra_data` JSON
 
 - `app/schemas/user_analytics.py`
 - `app/services/user_analytics_service.py`
-- `app/api/v1/endpoints/evaluation.py`
+- `backend/ops/api/v1/evaluation.py`
 
 ### 前端文件
 

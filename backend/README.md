@@ -2,7 +2,7 @@
 
 本仓库包含两个 FastAPI 应用：
 
-- **backend/inty**：主后端，面向 IntelliMate Android 的 API；可选 `--api-only` 时不提供 evaluation Web UI。默认端口 8000。
+- **backend/inty**：主后端，面向 IntelliMate Android 的 API。默认端口 8000。
 - **backend/ops**：运营平台，提供 evaluation Web UI 与完整 `/api/v1`（evaluation、festival_memory + 与 Android 共用的 shared 端点）。默认端口 8001，Cloud Run 下使用 `PORT`（默认 8080）。部署域名：ops.inty.cc、dev.ops.inty.cc。
 
 ## 本地启动后端服务
@@ -25,13 +25,9 @@ cp devops/config.yaml.test config.yaml
 启动 Ops（evaluation 专用，可与 inty 同时运行）：
 
 ```bash
-./backend/ops/start.sh --dev
+./backend/ops/start.sh --local
 # 默认 http://localhost:8001，Cloud Run 下 PORT=8080
 ```
-
-## Follow-ups
-
-- **After ops is deployed and verified**: Remove evaluation/festival_memory from main app router and re-export modules; optionally set main app to API-only in prod. See [TASKS.md](../TASKS.md) (ops platform task).
 
 ## GCS 配置
 

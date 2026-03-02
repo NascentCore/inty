@@ -1,5 +1,3 @@
-import os
-
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -20,10 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
-from app.api.evaluation_web import (
-    configure_evaluation_web_routes,
-    is_api_only_mode_enabled,
-)
 from app.api.v1.router import api_router
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -135,16 +129,6 @@ app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
 
 app.include_router(api_router)
-
-# 配置静态文件服务 - 用于评测系统前端
-_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-static_dir = os.path.join(_ROOT, "app", "static")
-api_only_mode_enabled = is_api_only_mode_enabled()
-configure_evaluation_web_routes(
-    app=app,
-    static_root_dir=static_dir,
-    api_only_mode_enabled=api_only_mode_enabled,
-)
 
 
 # 初始化 Firebase
