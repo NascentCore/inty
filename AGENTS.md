@@ -132,6 +132,8 @@ The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and*
 
 It also builds the `evaluation/inty_sdk` TypeScript SDK (if not already built) and runs `npm install` in `evaluation/`, so `npm run test` (vitest), `npm run build`, and `npm run type-check` work out-of-the-box.
 
+The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via apt, making `gcloud`, `gsutil`, and `bq` available on every boot.
+
 ### Starting services
 
 1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
