@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -1268,7 +1269,7 @@ internal fun ChatPage(
  * 预期视觉效果：
  * - 左对齐胶囊按钮；
  * - 背景使用 IntelliMate 主 CTA 渐变色；
- * - 文案显示 `+ Create your own iMate`。
+ * - 文案显示 `+ Create your own iMate`，字体与高度与上方 FAQ 按钮保持一致。
  *
  * 可配置项：
  * @param modifier 外层布局修饰符（用于定位到输入框上方并设置间距）
@@ -1305,8 +1306,7 @@ private fun OfficialAssistantCreateEntryButton(
         Text(
             text = text,
             color = Color.White,
-            fontSize = config.TextSize,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }

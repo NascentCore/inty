@@ -843,14 +843,11 @@ object UiConfigs {
             /** 入口按钮圆角（胶囊样式） */
             val CornerRadius = 24.dp
 
-            /** 入口按钮内容水平内边距 */
-            val ContentHorizontalPadding = 20.dp
+            /** 入口按钮内容水平内边距（与 FAQ 快捷按钮一致） */
+            val ContentHorizontalPadding = OfficialAssistantFaq.ButtonHorizontalPadding
 
-            /** 入口按钮内容垂直内边距 */
-            val ContentVerticalPadding = 10.dp
-
-            /** 入口按钮文字大小 */
-            val TextSize = 22.sp
+            /** 入口按钮内容垂直内边距（与 FAQ 快捷按钮一致） */
+            val ContentVerticalPadding = OfficialAssistantFaq.ButtonVerticalPadding
         }
 
         /** 聊天输入框配置 - 适用于聊天输入框的尺寸、间距等设置 */
