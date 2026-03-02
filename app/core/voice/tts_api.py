@@ -25,6 +25,7 @@ import google.genai as genai
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
 from google.genai import types
+from langsmith import traceable
 from loguru import logger
 
 from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
@@ -32,7 +33,7 @@ from app.utils.models_catalog import ModelBuilder
 
 DEFAULT_STABILITY = 0.5
 DEFAULT_SIMILARITY_BOOST = 0.5
-DEFAULT_GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts"
+DEFAULT_GEMINI_TTS_MODEL = "gemini-2.5-flash-tts"
 DEFAULT_GEMINI_TTS_VOICE_NAME = "Zephyr"
 DEFAULT_GEMINI_TTS_TEMPERATURE = 1.3
 
@@ -46,22 +47,12 @@ VOICE_ID_PREFIX_ELEVENLABS = ModelBuilder.ELEVENLABS.value
 # Prompted TTS: instruction so Gemini acts as voice actor; parentheticals = stage directions.
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
 # (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
-TTS_ROLEPLAY_INSTRUCTION = (
-    "You are a voice actor. "
-    "You are naturally and convincingly acting out a scene description.\n\n"
-    "Director's notes: Deliver the dialogue in a natural, expressive way; "
-    "match tone and pace to the scene.\n\n"
-    "In the scene description: "
-    "non-audible descriptions, like directions, thoughts, actions, etc., are in parentheses (); "
-    'audible dialogue is enclosed in double quotes (").'
-    'example: <begin-of-example>(whispering) "I won the lottery!!!"<end-of-example>\n\n'
-    "You must:\n"
-    "1. In your speech: use the non-audible descriptions to inform the delivery, "
-    "strictly adhere to the non-audible descriptions.\n"
-    "2. Never speak the non-audible descriptions\n"
-    "3. Speak only the actual dialogue that is not inside parentheses ()\n\n"
-    "The following are the scene description:\n\n"
-)
+TTS_ROLEPLAY_INSTRUCTION = """
+You are an erotic movie voice actor.
+You are acting as a fictional character in an intimate scene.
+You are given stage directions and dialogue.
+You should speak the dialogues based on the stage directions.
+"""
 
 # How the per-voice "keywords" were generated (for reference):
 #
@@ -456,6 +447,13 @@ def get_gemini_voices() -> List[Dict[str, Any]]:
     return result
 
 
+# 语速：1.0 = 正常；<1 减慢，>1 加快。与 Cloud TTS 文档一致。
+# https://docs.cloud.google.com/text-to-speech/docs/gemini-tts
+SPEAKING_RATE_MIN = 0.5
+SPEAKING_RATE_MAX = 2.0
+SPEAKING_RATE_DEFAULT = 1.0
+
+
 @dataclass(frozen=True)
 class TTSRequest:
     text: str
@@ -465,6 +463,8 @@ class TTSRequest:
     language_code: Optional[str] = None
     stability: float = DEFAULT_STABILITY
     similarity_boost: float = DEFAULT_SIMILARITY_BOOST
+    # 语速倍数，仅 Gemini TTS 通过 prompt 生效；1.0=正常，0.5~2.0 有效范围；与 SPEAKING_RATE_DEFAULT 一致以免默认请求误加 pace 指令
+    speaking_rate: float = SPEAKING_RATE_DEFAULT
 
 
 @dataclass(frozen=True)
@@ -564,41 +564,70 @@ def _looks_like_gemini_voice_name(voice_id: str) -> bool:
     return raw.isalpha() and 2 <= len(raw) <= 32
 
 
-def _collect_gemini_tts_stream(
+@traceable(
+    name="generate_gemini_tts",
+    run_type="chain",
+)
+def _generate_gemini_tts(
     client: Any,
     model: str,
     contents: List[Any],
     config: Any,
 ) -> Tuple[bytes, Optional[str]]:
     """
-    同步迭代 Gemini TTS 流式接口，收集音频块并返回 (raw_bytes, mime_type)。
-    供 GeminiTTSAPI.synthesize 与 synthesize_with_roleplay_prompt 共用。
+    调用 Gemini TTS 非流式接口，返回 (raw_bytes, mime_type)。
+    供 GeminiTTSAPI.synthesize 与 synthesize_with_roleplay_prompt 使用。
     """
-    collected: list[bytes] = []
-    mt: Optional[str] = None
-    for chunk in client.models.generate_content_stream(
+    response = client.models.generate_content(
         model=model,
         contents=contents,
         config=config,
+    )
+    if (
+        response.candidates is None
+        or not response.candidates
+        or response.candidates[0].content is None
+        or response.candidates[0].content.parts is None
+        or not response.candidates[0].content.parts
     ):
-        if (
-            chunk.candidates is None
-            or not chunk.candidates
-            or chunk.candidates[0].content is None
-            or chunk.candidates[0].content.parts is None
-            or not chunk.candidates[0].content.parts
-        ):
-            continue
+        return b"", None
+    part0 = response.candidates[0].content.parts[0]
+    inline = getattr(part0, "inline_data", None)
+    if not inline or not getattr(inline, "data", None):
+        return b"", None
+    mt = getattr(inline, "mime_type", None)
+    return inline.data, mt
 
-        part0 = chunk.candidates[0].content.parts[0]
-        inline = getattr(part0, "inline_data", None)
-        if not inline or not getattr(inline, "data", None):
-            continue
 
-        if mt is None and getattr(inline, "mime_type", None):
-            mt = inline.mime_type
-        collected.append(inline.data)
-    return b"".join(collected), mt
+def _pace_instruction_for_gemini(speaking_rate: float) -> str:
+    """
+    根据 speaking_rate 生成 Gemini TTS 的语速说明（自然语言 prompt）。
+    文档：Enhanced pace and pronunciation control；Values <1 减慢，>1 加快，默认 1。
+    """
+    if speaking_rate <= 0 or speaking_rate == SPEAKING_RATE_DEFAULT:
+        return ""
+    rate = max(SPEAKING_RATE_MIN, min(SPEAKING_RATE_MAX, speaking_rate))
+    if rate == SPEAKING_RATE_DEFAULT:
+        return ""
+    if rate < 1.0:
+        return f"Deliver the following at {rate:.1f}x normal speaking rate (slower). "
+    return f"Deliver the following at {rate:.1f}x normal speaking rate (faster). "
+
+
+def sanitize_text_for_gemini_tts(text: str) -> Tuple[List[str], List[str]]:
+    """
+    将文本按括号拆成舞台说明与台词：每个 "(...)" 内为 stage_direction，括号外为 dialogue 片段。
+    返回 (stage_directions, dialogue) 两个列表，供 roleplay prompt 分别传给模型。
+    """
+    stage_directions = []
+    dialogue = []
+    for part in text.split("("):
+        if ")" in part:
+            stage_directions.append(part.split(")", 1)[0])
+            dialogue.append(part.split(")", 1)[1])
+        else:
+            dialogue.append(part)
+    return stage_directions, dialogue
 
 
 class GeminiTTSAPI:
@@ -683,10 +712,14 @@ class GeminiTTSAPI:
             logger.error(f"Unknown voice_id: {request.voice_id}")
             voice_name = self._default_voice_name
 
+        user_text = request.text
+        pace = _pace_instruction_for_gemini(request.speaking_rate)
+        if pace:
+            user_text = pace + user_text
         contents = [
             types.Content(
                 role="user",
-                parts=[types.Part.from_text(text=request.text)],
+                parts=[types.Part.from_text(text=user_text)],
             )
         ]
 
@@ -702,10 +735,11 @@ class GeminiTTSAPI:
             ),
         )
 
+        model_to_use = request.model_id or self._model
         try:
-            # google-genai 的流式接口是同步迭代，这里放到线程池避免阻塞 event loop
+            # 非流式调用放到线程池避免阻塞 event loop
             audio_bytes, mime_type = await asyncio.to_thread(
-                _collect_gemini_tts_stream, client, self._model, contents, config
+                _generate_gemini_tts, client, model_to_use, contents, config
             )
 
             if not audio_bytes:
@@ -726,6 +760,7 @@ class GeminiTTSAPI:
             logger.exception("Gemini TTS 异常详细信息:")
             return None
 
+    @traceable
     async def synthesize_with_roleplay_prompt(
         self, request: TTSRequest
     ) -> Optional[TTSResult]:
@@ -756,12 +791,25 @@ class GeminiTTSAPI:
         else:
             voice_name = self._default_voice_name
 
-        prompted_text = TTS_ROLEPLAY_INSTRUCTION + request.text
+        # TTS 模型不支持 system_instruction（流式/非流式均 400），将角色说明放入 user 内容
+        pace = _pace_instruction_for_gemini(request.speaking_rate)
+        stage_directions, dialogues = sanitize_text_for_gemini_tts(request.text)
+        dialogue_text = "Do not speak the stage directions, only speak the dialogues: " + " ".join(dialogues)
+        if pace:
+            dialogue_text = pace + dialogue_text
         contents = [
             types.Content(
                 role="user",
-                parts=[types.Part.from_text(text=prompted_text)],
-            )
+                parts=[types.Part.from_text(text=TTS_ROLEPLAY_INSTRUCTION)],
+            ),
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text="Stage directions to describe the scene: " + "\n".join(stage_directions))],
+            ),
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=dialogue_text)],
+            ),
         ]
 
         config = types.GenerateContentConfig(
@@ -776,9 +824,10 @@ class GeminiTTSAPI:
             ),
         )
 
+        model_to_use = request.model_id or self._model
         try:
             audio_bytes, mime_type = await asyncio.to_thread(
-                _collect_gemini_tts_stream, client, self._model, contents, config
+                _generate_gemini_tts, client, model_to_use, contents, config
             )
 
             if not audio_bytes:

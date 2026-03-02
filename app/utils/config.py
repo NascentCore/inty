@@ -276,6 +276,9 @@ class AgentConfig:
     # 消息生音乐（chat music）模型配置：当前使用 fal 模型 ID
     free_user_chat_music_model: str = "fal-ai/stable-audio"
     sub_user_chat_music_model: str = "fal-ai/stable-audio"
+    # 聊天 TTS（Gemini TTS 模型 ID）；选择逻辑见 select_chat_tts_model()
+    free_user_chat_tts_model: str = "gemini-2.5-flash-tts"
+    sub_user_chat_tts_model: str = "gemini-2.5-flash-tts"
     # 用户自拍画像推断模型（用于生成简短用户画像结论）
     selfie_persona_gemini_model: str = "gemini-2.5-flash"
     # 订阅用户首轮生图遇 429 时重试使用的 Vertex 模型 ID
@@ -505,7 +508,7 @@ class TTSConfig:
     """语音播报配置"""
 
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
-    use_gemini_prompted_tts: bool = False
+    use_gemini_prompted_tts: bool = True
 
 
 @dataclass

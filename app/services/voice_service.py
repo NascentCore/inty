@@ -15,6 +15,8 @@ from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.model_selection import select_chat_tts_model
+from app.services.global_services import subscription_service
 from app.core.voice.tts_api import (
     TTS_PROVIDER_ELEVENLABS,
     TTS_PROVIDER_GEMINI,
@@ -171,7 +173,16 @@ class VoiceService:
                 )
                 return None
 
-            model = model or self.config.model
+            if model is None:
+                if user and db and is_gemini_voice(voice_id):
+                    subscription = await subscription_service.get_user_current_subscription(
+                        db, user.id
+                    )
+                    model = select_chat_tts_model(
+                        user=user, is_subscribed=bool(subscription)
+                    )
+                else:
+                    model = self.config.model
 
             logger.debug(
                 f"开始语音生成: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}"
