@@ -5,12 +5,17 @@ import pytest
 from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
     CHAT_IMAGE_FAL_MODELS,
+    ModelNameFamily,
     NANO_BANANA,
     NANO_BANANA_2,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+    detect_model_name_family,
+    is_fal_model,
+    is_gemini_model,
     must_resolve_nickname,
+    normalize_model_name,
     resolve_id_on_provider,
     resolve_nickname,
 )
@@ -68,3 +73,35 @@ def test_chat_image_fal_ids_matches_fal_models():
         SEEDREAM_V4_5_EDIT.id_on_provider,
         Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider,
     }
+
+
+def test_normalize_model_name_supports_fal_alias():
+    """fal/<id> 会被规范化为 fal-ai/<id>。"""
+    assert normalize_model_name("fal/z-image/turbo") == "fal-ai/z-image/turbo"
+    assert normalize_model_name("  FAL/Z-IMAGE/TURBO  ") == "fal-ai/z-image/turbo"
+
+
+def test_detect_model_name_family_fal():
+    """fal 系列模型应识别为 FAL。"""
+    assert detect_model_name_family("fal-ai/z-image/turbo") == ModelNameFamily.FAL
+    assert detect_model_name_family("fal/z-image/turbo") == ModelNameFamily.FAL
+    assert detect_model_name_family(SEEDREAM_V4_5_EDIT.nickname) == ModelNameFamily.FAL
+    assert is_fal_model("fal/z-image/turbo") is True
+
+
+def test_detect_model_name_family_gemini():
+    """gemini 系列模型应识别为 GEMINI。"""
+    assert detect_model_name_family("gemini-2.5-flash-image") == ModelNameFamily.GEMINI
+    assert (
+        detect_model_name_family("google/gemini-2.5-flash-image")
+        == ModelNameFamily.GEMINI
+    )
+    assert detect_model_name_family(NANO_BANANA.nickname) == ModelNameFamily.GEMINI
+    assert is_gemini_model("google/gemini-2.5-flash-image") is True
+
+
+def test_detect_model_name_family_other():
+    """非 fal/gemini 模型归类为 OTHER。"""
+    assert detect_model_name_family("google/imagen-4.0-fast-generate-001") == ModelNameFamily.OTHER
+    assert detect_model_name_family("openai/gpt-image-1") == ModelNameFamily.OTHER
+    assert detect_model_name_family("unknown-model") == ModelNameFamily.OTHER

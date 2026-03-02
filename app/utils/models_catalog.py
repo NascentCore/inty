@@ -490,6 +490,17 @@ CHAT_IMAGE_FAL_MODELS = [SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
 CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
 
 
+class ModelNameFamily(StrEnum):
+    """
+    模型名字族，用于做路由判断。
+    这里只区分 fal、gemini 与其他模型。
+    """
+
+    FAL = "fal"
+    GEMINI = "gemini"
+    OTHER = "other"
+
+
 def resolve_nickname(nickname: str) -> GenAIModel | None:
     """
     Resolve GenAIModel by exact nickname match among CHAT_IMAGE_GEN_MODELS.
@@ -524,12 +535,60 @@ def resolve_id_on_provider(id_on_provider: str) -> GenAIModel | None:
     return None
 
 
+def normalize_model_name(model: str) -> str:
+    """
+    规范化模型名用于检测：
+    - trim + lower
+    - fal/<id> 归一化为 fal-ai/<id>
+    """
+    if not model:
+        return ""
+    normalized = model.strip().lower()
+    if normalized.startswith("fal/"):
+        suffix = normalized.removeprefix("fal/").strip()
+        return f"fal-ai/{suffix}" if suffix else "fal-ai/"
+    return normalized
+
+
+def detect_model_name_family(model: str) -> ModelNameFamily:
+    """
+    将模型名识别为 fal / gemini / other。
+    支持 provider id、chat image nickname，以及常见前缀规则。
+    """
+    normalized = normalize_model_name(model)
+    if not normalized:
+        return ModelNameFamily.OTHER
+
+    # 先尝试从 chat image catalog 精确识别（id / nickname）
+    catalog_model = resolve_id_on_provider(normalized)
+    if not catalog_model:
+        catalog_model = resolve_nickname(model.strip())
+    if catalog_model:
+        if catalog_model.provider == ModelAPIProvider.FALAI:
+            return ModelNameFamily.FAL
+        if (
+            catalog_model.builder == ModelBuilder.GOOGLE
+            and "gemini" in catalog_model.id_on_provider.lower()
+        ):
+            return ModelNameFamily.GEMINI
+
+    # 兜底规则：catalog 外模型也能识别
+    if normalized.startswith("fal-ai/"):
+        return ModelNameFamily.FAL
+    if normalized.startswith("gemini-") or normalized.startswith("google/gemini-"):
+        return ModelNameFamily.GEMINI
+    return ModelNameFamily.OTHER
+
+
 def is_fal_model(model: str) -> bool:
     """
     Check if a model is a fal model.
-    拷贝自老的 API，要重构到使用 GenAIModel 对象。
     """
-    if not model:
-        return False
-    normalized = model.strip().lower()
-    return normalized.startswith("fal-ai/") or normalized.startswith("fal/")
+    return detect_model_name_family(model) == ModelNameFamily.FAL
+
+
+def is_gemini_model(model: str) -> bool:
+    """
+    Check if a model is a gemini model.
+    """
+    return detect_model_name_family(model) == ModelNameFamily.GEMINI

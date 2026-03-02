@@ -107,8 +107,10 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("model_id", ["fal-ai/z-image/turbo", "fal/z-image/turbo"])
 async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
     monkeypatch: pytest.MonkeyPatch,
+    model_id: str,
 ):
     called_bases: list[str] = []
     called_prompts: list[str] = []
@@ -157,7 +159,7 @@ async def test_generate_with_fal_ai_accepts_z_image_turbo_model(
 
     generated_images, gcs_urls, rai_reasons, gcs_url_to_img_dict = (
         await agents_endpoint._generate_with_fal_ai(
-            model="fal-ai/z-image/turbo",
+            model=model_id,
             prompt="A vivid portrait with soft warm lighting",
             negative_prompt="blurry",
             num_images=2,
