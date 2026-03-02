@@ -6,6 +6,10 @@
 
 Only user-visible changes are recorded
 
+## 2026-03-02
+
+- Official Assistant chat now includes a **"+ Create your own iMate"** button above the input box. It opens the iMate creation page, and auto-hides while the keyboard is open.
+
 ## 2026-02-28
 
 - Explore page now applies a gender preference filter in **New iMates for you**: users with `MALE`/`FEMALE` profiles see newly created iMates of the opposite gender, while `OTHER`/`NON_BINARY` profiles keep the existing unfiltered behavior.
