@@ -251,6 +251,7 @@ fun SettingsArrowItem(
     horizontalPadding: Int = 12, // 支持自定义padding，默认12dp
     selectableContent: Boolean = false, // 是否允许选择 content 文本
     showRedDot: Boolean = false, // 是否显示红点提示
+    showVip: Boolean = false, // 是否显示 VIP 角标（表示该功能需会员）
     contentMaxLines: Int = 2, // 限制内容展示行数，默认与之前一致
     onItemClick: () -> Unit = {},
     onLongClick: () -> Unit = {}, // 长按回调
@@ -288,6 +289,14 @@ fun SettingsArrowItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (showVip) {
+            Spacer(Modifier.width(8.dp))
+            Image(
+                painter = painterResource(R.drawable.ic_vip_badge),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp, 12.dp),
+            )
+        }
         Spacer(Modifier.width(8.dp))
         Box(modifier = Modifier.weight(1f).wrapContentHeight()) {
             if (selectableContent && item.content.isNotEmpty()) {

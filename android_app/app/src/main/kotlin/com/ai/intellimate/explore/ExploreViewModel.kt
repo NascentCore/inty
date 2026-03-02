@@ -95,12 +95,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     private val _hasSearchExecuted = MutableStateFlow(false)
     val hasSearchExecuted: StateFlow<Boolean> = _hasSearchExecuted.asStateFlow()
 
-    private enum class ExploreSearchMode {
-        Name,
-        Tag,
-    }
-
-    private data class ParsedExploreSearch(val mode: ExploreSearchMode, val query: String)
+    /** 解析后的搜索关键词，统一在 name 与 tag 中匹配，不再区分 # 前缀。 */
+    private data class ParsedExploreSearch(val query: String)
 
     // 实现 ExploreFetchCallback 接口
     override suspend fun onSuccess(
@@ -486,15 +482,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             _hasSearchExecuted.value = true
             try {
                 val dbResults =
-                    when (parsed.mode) {
-                        ExploreSearchMode.Name ->
-                            characterRepository.searchCharactersByName(parsed.query, limit = 100)
-                        ExploreSearchMode.Tag ->
-                            characterRepository.searchCharactersByTag(parsed.query, limit = 100)
-                    }
+                    characterRepository.searchCharactersByNameOrTag(parsed.query, limit = 100)
 
                 LogUtils.d(
-                    "ExploreViewModel - 从数据库搜索(mode=${parsed.mode}) 关键词'${parsed.query}'，找到${dbResults.size}个匹配结果"
+                    "ExploreViewModel - 从数据库搜索(name+tag) 关键词'${parsed.query}'，找到${dbResults.size}个匹配结果"
                 )
 
                 if (dbResults.isNotEmpty()) {
@@ -509,13 +500,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                     mergeAgentsUniqueById(recommendedAgents + chatAgents + userCreatedAgents)
 
                 val cacheResults =
-                    when (parsed.mode) {
-                        ExploreSearchMode.Name -> filterAgentsByName(allCachedAgents, parsed.query)
-                        ExploreSearchMode.Tag -> filterAgentsByTag(allCachedAgents, parsed.query)
-                    }
+                    filterAgentsByNameOrTag(allCachedAgents, parsed.query)
 
                 LogUtils.d(
-                    "ExploreViewModel - 数据库无结果，从缓存搜索(mode=${parsed.mode}): " +
+                    "ExploreViewModel - 数据库无结果，从缓存搜索(name+tag): " +
                         "推荐${recommendedAgents.size}个, 聊天${chatAgents.size}个, " +
                         "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果"
                 )
@@ -530,24 +518,11 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
+    /** 解析搜索关键词：仅做 trim，不再根据 # 区分 name/tag，统一在 name 与 tag 中匹配。 */
     private fun parseExploreSearch(raw: String): ParsedExploreSearch? {
         val trimmed = raw.trim()
         if (trimmed.isBlank()) return null
-
-        val normalizedPrefix =
-            if (trimmed.firstOrNull() == '＃') {
-                "#${trimmed.drop(1)}"
-            } else {
-                trimmed
-            }
-
-        if (!normalizedPrefix.startsWith("#")) {
-            return ParsedExploreSearch(mode = ExploreSearchMode.Name, query = trimmed)
-        }
-
-        val tagQuery = normalizedPrefix.removePrefix("#").trim()
-        if (tagQuery.isBlank()) return null
-        return ParsedExploreSearch(mode = ExploreSearchMode.Tag, query = tagQuery)
+        return ParsedExploreSearch(query = trimmed)
     }
 
     private fun mergeAgentsUniqueById(agents: List<AgentInfo>): List<AgentInfo> {
@@ -563,17 +538,14 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         return unique
     }
 
-    private fun filterAgentsByName(agents: List<AgentInfo>, query: String): List<AgentInfo> {
-        if (agents.isEmpty()) return emptyList()
-        return agents.filter { it.name.contains(query, ignoreCase = true) }
-    }
-
-    private fun filterAgentsByTag(agents: List<AgentInfo>, query: String): List<AgentInfo> {
+    /** 在 name 或 tags 中模糊匹配（与数据库 searchCharactersByNameOrTag 行为一致）。 */
+    private fun filterAgentsByNameOrTag(agents: List<AgentInfo>, query: String): List<AgentInfo> {
         if (agents.isEmpty()) return emptyList()
         return agents.filter { agent ->
-            agent.tags?.asSequence()?.filterNotNull()?.any {
-                it.contains(query, ignoreCase = true)
-            } == true
+            agent.name.contains(query, ignoreCase = true) ||
+                agent.tags?.asSequence()?.filterNotNull()?.any {
+                    it.contains(query, ignoreCase = true)
+                } == true
         }
     }
 

@@ -6,6 +6,10 @@
 
 Only user-visible changes are recorded
 
+## 2026-03-02
+
+- Removed the **Create your own iMate** banner from the top of the Explore page; create iMate via Profile → My iMates.
+
 ## 2026-02-28
 
 - Explore page now applies a gender preference filter in **New iMates for you**: users with `MALE`/`FEMALE` profiles see newly created iMates of the opposite gender, while `OTHER`/`NON_BINARY` profiles keep the existing unfiltered behavior.

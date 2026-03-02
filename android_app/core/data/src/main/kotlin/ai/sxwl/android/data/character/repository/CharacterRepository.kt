@@ -133,6 +133,14 @@ class CharacterRepository(
         }
     }
 
+    /** 在 name 或 tags 中模糊匹配，用于 Explore 统一搜索。 */
+    suspend fun searchCharactersByNameOrTag(query: String, limit: Int = 100): List<AgentInfo> {
+        return withContext(dispatcher) {
+            val entities = dao.searchCharactersByNameOrTag(query, limit)
+            entities.map { it.toAgentInfo() }
+        }
+    }
+
     suspend fun getAgentsByIds(agentIds: List<String>): List<AgentInfo> {
         if (agentIds.isEmpty()) return emptyList()
         return withContext(dispatcher) {

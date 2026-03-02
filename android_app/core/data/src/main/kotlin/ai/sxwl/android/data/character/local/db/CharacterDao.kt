@@ -46,6 +46,15 @@ interface CharacterDao {
     )
     suspend fun searchCharactersByTag(query: String, limit: Int = 100): List<CharacterEntity>
 
+    /** 在 name 或 tags 中模糊匹配，用于 Explore 统一搜索（不再区分 #tag 与 name）。 */
+    @Query(
+        "SELECT * FROM characters " +
+            "WHERE (name LIKE '%' || :query || '%' COLLATE NOCASE) " +
+            "OR (tags IS NOT NULL AND LOWER(tags) LIKE '%' || LOWER(:query) || '%') " +
+            "ORDER BY name LIMIT :limit"
+    )
+    suspend fun searchCharactersByNameOrTag(query: String, limit: Int = 100): List<CharacterEntity>
+
     @Query("SELECT * FROM festival_memory WHERE agentId = :agentId ORDER BY id DESC")
     fun getFestivalMemories(agentId: String): Flow<List<FestivalMemory>>
 
