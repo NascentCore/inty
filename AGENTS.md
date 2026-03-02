@@ -2,10 +2,12 @@
 
 ## 概述
 
+- Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm
+
 ### 产品概述
 
 - IntelliMate 定位为面向 35+、有较好社会地位与自我认知的美国男性用户的长期 AI 陪伴产品，提供可持续进化的情感陪伴。
-- 后端有两个 FastAPI 应用：`backend/inty`（主 API，面向 Android）、`backend/ops`（运营与 evaluation）；见 [backend/README.md](backend/README.md) 与 [backend/ops/AGENTS.md](backend/ops/AGENTS.md)
+- 后端有两个 FastAPI 应用：`backend/inty`（主 API，面向 Android）、`backend/ops` serving `evaluation/`
 
 ## 代码库内的一般性约定
 
