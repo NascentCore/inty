@@ -255,13 +255,13 @@ export const AgentManagePage: React.FC = () => {
 
   // 加载智能体列表
   const loadAgents = useCallback(
-    async (reset = false) => {
-      if (reset) {
+    async (forceRefresh = false) => {
+      if (forceRefresh) {
         setPagination((prev) => ({ ...prev, current: 1 }));
       }
 
-      // 使用 useAgents hook 的 loadAgents
-      await loadAgentsFromHook(true);
+      // 首次进入页面使用共享缓存，手动点击刷新时才强制重载
+      await loadAgentsFromHook(forceRefresh);
     },
     [loadAgentsFromHook],
   );
