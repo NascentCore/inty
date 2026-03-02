@@ -89,8 +89,7 @@ private fun chatModelLabelResId(modelId: String): Int {
         CHAT_MODEL_ID_DEFAULT -> R.string.chat_settings_model_default
         CHAT_MODEL_ID_GPT_5_2 -> R.string.chat_settings_model_gpt_5_2
         CHAT_MODEL_ID_CLAUDE_OPUS_4_5 -> R.string.chat_settings_model_claude_opus_4_5
-        // 默认模型ID显示为"Default"
-        CHAT_MODEL_ID_GEMINI_3_FLASH -> R.string.chat_settings_model_default
+        CHAT_MODEL_ID_GEMINI_3_FLASH -> R.string.chat_settings_model_gemini_3_flash
         else -> R.string.chat_settings_model_default
     }
 }
@@ -343,15 +342,22 @@ fun ChatSettingsDrawer(
 
                         IntelliMateDivider()
 
-                        // Models 下拉菜单
+                        // Models 下拉菜单：仅 VIP 可切换模型，非 VIP 固定视为 Default 且点击弹出升级弹窗
                         androidx.compose.foundation.layout.Box {
+                            val effectiveModelLabel =
+                                if (vipStatus.isSubscribed) {
+                                    stringResource(chatModelLabelResId(chatModelId))
+                                } else {
+                                    stringResource(R.string.chat_settings_model_default)
+                                }
                             SettingsArrowItem(
                                 item =
                                     SettingsItemData.CommonItemData(
                                         title = stringResource(R.string.chat_settings_models_title),
-                                        content = stringResource(chatModelLabelResId(chatModelId)),
+                                        content = effectiveModelLabel,
                                         arrow = true,
                                     ),
+                                showVip = true,
                                 fontLight = true,
                                 isInGroup = true,
                                 horizontalPadding = horizontalPadding,
@@ -363,6 +369,10 @@ fun ChatSettingsDrawer(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
+                                    if (!vipStatus.isSubscribed) {
+                                        showVipDialogPageSource = "chat_settings_model"
+                                        return@SettingsArrowItem
+                                    }
                                     showModelMenu = true
                                 },
                             )

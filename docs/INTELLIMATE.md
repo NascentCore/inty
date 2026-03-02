@@ -56,7 +56,7 @@ You can also tap **+ Create your own iMate** above the input box to jump straigh
 ### Explore iMates page
 
 Click the **Explore** icon to open the Explore iMates page.
-At the top of Explore, tap the horizontal **Create your own iMate** banner to start creating your own iMate.
+To create your own iMate, go to Profile → My iMates.
 
 ### Me page
 
@@ -73,7 +73,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation. |
 | Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
-| Create or edit an iMate | Explore → top banner **Create your own iMate**, Official Assistant Chat → **+ Create your own iMate**, or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
+| Create or edit an iMate | Official Assistant Chat → **+ Create your own iMate**, or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. When opened from chat or a notification, that entry is highlighted with a glow and the rest of the screen is dimmed; tap outside the glowing card to return to the normal list. |
@@ -85,7 +85,6 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 ### 1. Explore
 - Double-tap the header to rewind to the top and refresh.
 - Avatars/backgrounds preload so cards stay visible even on slow networks.
-- The top horizontal banner **Create your own iMate** opens the iMate creation flow directly.
 - The top banner section includes **Newly iMates** with subtitle **“Newly crafted based on your preference”**, showing up to 10 most recently created iMates.
 - Switch between Recommended, Favorites, Created by Me.
 

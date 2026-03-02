@@ -481,10 +481,10 @@
 
     <!-- Explore Search -->
     <string name="explore_search_icon_desc">Search iMates</string>
-    <string name="explore_search_placeholder">Search by name or #tag</string>
+    <string name="explore_search_placeholder">Search by name or tag</string>
     <string name="explore_search_cancel">Cancel</string>
     <string name="explore_search_empty">No matching iMates</string>
-    <string name="explore_search_hint_text">Enter a name or #tag and tap search</string>
+    <string name="explore_search_hint_text">Enter a name or tag and tap search</string>
     <string name="explore_search_clear_desc">Clear search text</string>
     <string name="explore_newly_imates_title">New iMates for you</string>
     <string name="explore_newly_imates_subtitle">Newly crafted based on your preference</string>
