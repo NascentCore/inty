@@ -12,6 +12,7 @@ from app.core.config import (
 from app.core.model_selection import (
     select_chat_image_model,
     select_chat_model,
+    select_chat_tts_model,
     select_text_to_image_model,
 )
 from app.utils.models_catalog import (
@@ -32,6 +33,24 @@ def test_select_chat_model_subscribed_user_uses_sub_model():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_chat_model(user=user, is_subscribed=True)
     assert model == global_config.agent.sub_user_chat_model
+
+
+def test_select_chat_tts_model_free_user_uses_free_model():
+    user = SimpleNamespace(is_superuser=False, email=None)
+    model = select_chat_tts_model(user=user, is_subscribed=False)
+    assert model == global_config.agent.free_user_chat_tts_model
+
+
+def test_select_chat_tts_model_subscribed_user_uses_sub_model():
+    user = SimpleNamespace(is_superuser=False, email=None)
+    mock_agent = SimpleNamespace(
+        free_user_chat_tts_model="gemini-2.5-flash-tts",
+        sub_user_chat_tts_model="gemini-2.5-pro-tts",
+    )
+    mock_config = SimpleNamespace(agent=mock_agent)
+    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+        model = select_chat_tts_model(user=user, is_subscribed=True)
+        assert model == "gemini-2.5-pro-tts"
 
 
 def test_select_text_to_image_model_free_user():

@@ -46,3 +46,13 @@ def select_chat_music_model(*, user: object, is_subscribed: bool) -> str:
     if is_subscribed:
         return config.sub_user_chat_music_model
     return config.free_user_chat_music_model
+
+
+def select_chat_tts_model(*, user: object, is_subscribed: bool) -> str:
+    """
+    Select chat TTS (Gemini TTS) model based on user's subscription status.
+    """
+    config = global_config_loaded_from_config_yaml.agent
+    if is_subscribed:
+        return config.sub_user_chat_tts_model
+    return config.free_user_chat_tts_model

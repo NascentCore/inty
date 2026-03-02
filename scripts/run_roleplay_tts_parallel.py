@@ -6,14 +6,15 @@
     # 使用内置示例（一段带括号的对话）并行跑 2 次
     PYTHONPATH=. python scripts/run_roleplay_tts_parallel.py --text "..." --text "..."
 
-    # 从文件读入多段助理内容（按双换行分段），并行合成并写出到 out/
-    PYTHONPATH=. python scripts/run_roleplay_tts_parallel.py --file samples.txt --output-dir out
+    # 从 JSON 读入所有 role=assistant 的 content，并行合成并写出到 out/
+    PYTHONPATH=. python scripts/run_roleplay_tts_parallel.py --file-json tests/files/erotic_messages_sample.json --output-dir out
 
     # 限制并发数
-    PYTHONPATH=. python scripts/run_roleplay_tts_parallel.py --file samples.txt --concurrency 2
+    PYTHONPATH=. python scripts/run_roleplay_tts_parallel.py --file-json tests/files/erotic_messages_sample.json --concurrency 2
 """
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Annotated, List, Optional
 
@@ -36,6 +37,7 @@ async def _synthesize_one(
     model_id: str,
     output_dir: Path,
     semaphore: Optional[asyncio.Semaphore],
+    total: int,
 ) -> tuple[int, bool, Optional[Path]]:
     """对一段助理内容调用 synthesize_with_roleplay_prompt，写出 WAV；返回 (index, ok, path)."""
     async def _run() -> tuple[bool, Optional[Path]]:
@@ -59,6 +61,8 @@ async def _synthesize_one(
             ok, path = await _run()
     else:
         ok, path = await _run()
+    status = f"OK {path}" if ok else "FAIL"
+    logger.info(f"Segment [{index}] done: {status} ({index + 1}/{total})")
     return index, ok, path
 
 
@@ -78,6 +82,8 @@ async def run_parallel(
 
     api = GeminiTTSAPI()
     sem = asyncio.Semaphore(concurrency) if concurrency else None
+    total = len(texts)
+    logger.info(f"Synthesizing {total} segments to {output_dir}")
 
     tasks = [
         _synthesize_one(
@@ -88,6 +94,7 @@ async def run_parallel(
             model_id=DEFAULT_GEMINI_TTS_MODEL,
             output_dir=output_dir,
             semaphore=sem,
+            total=total,
         )
         for i, t in enumerate(texts)
     ]
@@ -106,8 +113,8 @@ def main(
     file: Annotated[
         Optional[Path],
         cyclopts.Parameter(
-            name="--file",
-            help="从文件读入多段助理内容（按双换行 \\n\\n 分段）",
+            name="--file-json",
+            help="从 JSON 文件读入多段助理内容",
         ),
     ] = None,
     output_dir: Annotated[
@@ -134,8 +141,9 @@ def main(
 ):
     """使用助理内容调用 roleplay TTS，并行执行并写出 WAV 验证。"""
     if file is not None:
-        raw = file.read_text()
-        texts = [p.strip() for p in raw.split("\n\n") if p.strip()]
+        data = json.loads(file.read_text())
+        messages = data.get("messages") or []
+        texts = [m["content"].strip() for m in messages if m.get("role") == "assistant" and (m.get("content") or "").strip()]
     elif text and len(text) > 0:
         texts = [t.strip() for t in text if t.strip()]
     else:
@@ -152,8 +160,9 @@ def main(
             concurrency=concurrency,
         )
     )
-    for idx, (ok, path) in sorted(results.items()):
-        logger.info(f"[{idx}] {'OK ' + str(path) if ok else 'FAIL'}")
+    ok_count = sum(1 for ok, _ in results.values() if ok)
+    fail_count = len(results) - ok_count
+    logger.info(f"Done. {ok_count} OK, {fail_count} FAIL")
 
 
 if __name__ == "__main__":
