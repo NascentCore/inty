@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from typing_extensions import deprecated
 
 from app import models, schemas
+from app.core.config import global_config_loaded_from_config_yaml
 from app.core.agent.agent import agent_manager
 from app.core.agent.prompt_template import (
     has_template_variable,
@@ -370,11 +371,9 @@ async def get_agent_for_chat(db: AsyncSession, agent_id: str) -> Optional[dict]:
             "_complete_data": True,  # 标记为完整数据
         }
 
-        # 4. 缓存完整的Agent数据；agent 数据极少更新，因此缓存时间较长
-        AGENT_CONFIG_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60  # 7天
-        cache_service.set_agent_config(
-            agent_id, agent_data, ttl=AGENT_CONFIG_CACHE_TTL_SECONDS
-        )
+        # 4. 缓存完整的Agent数据；TTL 由配置项控制（默认 10 分钟），以兼容 ops 与后端分离部署、ops 直写 DB 的场景
+        ttl = global_config_loaded_from_config_yaml.agent.agent_config_cache_ttl_seconds
+        cache_service.set_agent_config(agent_id, agent_data, ttl=ttl)
 
         logger.debug(f"获取并缓存Agent聊天数据: {agent_data['name']}")
         return agent_data
