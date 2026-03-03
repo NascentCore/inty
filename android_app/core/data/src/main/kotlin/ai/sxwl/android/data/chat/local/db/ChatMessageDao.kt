@@ -4,9 +4,11 @@ package ai.sxwl.android.data.chat.local.db
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -20,7 +22,7 @@ interface ChatMessageDao {
      * 的数据
      */
     @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC, indexId DESC "
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC, Cast(indexId as INTEGER) DESC, indexId DESC"
     )
     fun pagingSource(agentId: String): PagingSource<Int, MessageEntity>
 
@@ -53,8 +55,20 @@ interface ChatMessageDao {
     )
     suspend fun deleteMessage(agentId: String, messageId: String, indexId: String)
 
-    @Query("DELETE FROM message WHERE agentId = :agentId AND isSending = 1")
+    @Query("DELETE FROM message WHERE agentId = :agentId AND status = 'SENDING'")
     suspend fun deleteSendingMsg(agentId: String)
+
+    /** 将发送中的用户消息标记为 SENDING_FAILED（仅更新 status，不删记录） */
+    @Query(
+        "UPDATE message SET status = 'SENDING_FAILED' WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user'"
+    )
+    suspend fun markSendingUserAsFailed(agentId: String)
+
+    /** 仅删除 createTempSendingLoadingEntity 创建的 loading 占位消息（role=assistant 且 status=SENDING） */
+    @Query(
+        "DELETE FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'assistant'"
+    )
+    suspend fun deleteSendingLoadingOnly(agentId: String)
 
     @Query("DELETE FROM message WHERE agentId = :agentId")
     suspend fun deleteByAgent(agentId: String)
@@ -109,6 +123,12 @@ interface ChatMessageDao {
     )
     suspend fun getLatestMessageId(agentId: String): String?
 
+    /** 当前会话最后一条消息（按 id DESC, indexId 数值 DESC, indexId 串 DESC），用于创建发送中占位时沿用其 id 与 indexId+1 */
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC, Cast(indexId as INTEGER) DESC, indexId DESC LIMIT 1"
+    )
+    suspend fun getLatestMessage(agentId: String): MessageEntity?
+
     @Query(
         "UPDATE message SET moment_isPurchased = :isPurchased WHERE agentId = :agentId AND id = :messageId"
     )
@@ -120,4 +140,10 @@ interface ChatMessageDao {
         "SELECT COUNT(*) FROM message WHERE role = 'user' AND timestamp IS NOT NULL AND date(timestamp, 'localtime') = date('now', 'localtime', '-1 day')"
     )
     suspend fun getYesterdayMessageCount(): Int
+
+    @Delete
+    suspend fun deleteMessage(messages: List<MessageEntity>)
+
+    @Update
+    suspend fun updateMessage(message: MessageEntity)
 }

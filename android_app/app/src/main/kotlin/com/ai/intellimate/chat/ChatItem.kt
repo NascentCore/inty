@@ -48,9 +48,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -165,6 +167,7 @@ fun ChatItem(
                     messageFontSizeSp,
                     useDoubleAsteriskActionMarker =
                         agentInfoForFormatting?.useDoubleAsteriskActionMarker() ?: false,
+                    onRetryFailedMessage = { content -> chatViewModel.setInputMessage(content) },
                 )
             }
 
@@ -1114,12 +1117,15 @@ private fun ChatItemAI(
         }
 }
 
-/** 用户消息气泡布局，靠右对齐。与当前 agent 一致：*...* 作为动作标记时，用户消息内 *text* 也以斜体显示且不显示 *。 */
+/** 用户消息气泡布局，靠右对齐。与当前 agent 一致：*...* 作为动作标记时，用户消息内 *text* 也以斜体显示且不显示 *。
+ * @param onRetryFailedMessage 点击发送失败感叹号时回调，将消息内容填入输入框（不删除/修改原消息）。
+ */
 @Composable
 private fun ChatItemUser(
     item: MessageEntity,
     messageFontSizeSp: Float,
     useDoubleAsteriskActionMarker: Boolean = false,
+    onRetryFailedMessage: (String) -> Unit = {},
 ) {
     val isDebugMode = HeartAppUtils.isAppDebugMode()
     val messageFontSize = messageFontSizeSp.sp
@@ -1166,7 +1172,19 @@ private fun ChatItemUser(
                         verticalAlignment = Alignment.Bottom,
                     ) {
                         val context = LocalContext.current
-
+                        if (item.status == MessageEntity.Status.SENDING_FAILED) {
+                            IconButton(
+                                onClick = { onRetryFailedMessage(item.content) },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Error,
+                                    contentDescription = stringResource(R.string.chat_message_send_failed_icon_content_desc),
+                                    tint = Color.Red,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
                         Box(
                             modifier =
                                 Modifier

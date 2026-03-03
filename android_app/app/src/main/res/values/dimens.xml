@@ -5,6 +5,9 @@
     <dimen name="padding_medium">12dp</dimen>
     <dimen name="padding_small">8dp</dimen>
     <dimen name="padding_extra_small">4dp</dimen>
+    <!-- 用户消息发送失败时气泡前的红色感叹号图标尺寸及与气泡间距 -->
+    <dimen name="chat_message_send_failed_icon_size">20dp</dimen>
+    <dimen name="chat_message_send_failed_icon_spacing_end">4dp</dimen>
     <!-- ChatItemForMoment 秘密时刻卡片 -->
     <dimen name="moment_card_corner_radius">12dp</dimen>
     <dimen name="moment_border_width">1dp</dimen>

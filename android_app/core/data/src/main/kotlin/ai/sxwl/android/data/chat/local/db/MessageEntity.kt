@@ -5,6 +5,7 @@ package ai.sxwl.android.data.chat.local.db
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.chat.local.db.MessageEntity.MetaData
 import ai.sxwl.android.data.chat.local.db.MessageEntity.MomentExtra
+import ai.sxwl.android.data.chat.local.db.MessageEntity.Status
 import ai.sxwl.android.data.chat.local.db.MessageEntity.UserVote
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -25,10 +26,11 @@ data class MessageEntity(
     val userVote: UserVote? = null,
     @Embedded val metaData: MetaData,
     // 以下为本地字段
-    val isSending: Boolean = false,
+    //val isSending: Boolean = false,
+    val status: Status? = Status.SUCCESS,
     val type: String? = null,
     val festivalMemoryId: Long? = null,
-    @Embedded("moment_") val momentExtra: MomentExtra? = null,
+    @Embedded("moment_") val momentExtra: MomentExtra? = null
 ) {
     val isVoice: Boolean
         get() = metaData.isVoice
@@ -81,6 +83,12 @@ data class MessageEntity(
         LIKE,
         DISLIKE,
     }
+
+    enum class Status {
+        SUCCESS, //成功
+        SENDING, //发送中
+        SENDING_FAILED //发送失败
+    }
 }
 
 data class MessageUpdate(
@@ -91,7 +99,8 @@ data class MessageUpdate(
     val timestamp: String? = null,
     val audioUrl: String? = null,
     @Embedded val metaData: MetaData,
-    val isSending: Boolean = false,
+    //val isSending: Boolean = false,
+    //val status: Status? = null,
     val type: String? = null,
     val festivalMemoryId: Long? = null,
     @Embedded("moment_") val momentExtra: MomentExtra? = null
@@ -181,7 +190,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                         },
                 )
             } ?: MessageEntity.MetaData(agentId),
-        isSending = false,
+        status = MessageEntity.Status.SUCCESS,
         type = type,
         festivalMemoryId = festivalMemoryId,
         momentExtra = if (type == "surprise_snap") {
@@ -225,17 +234,25 @@ fun MessageEntity.toModel(): MsgInfo {
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
 /**
- * 创建“正在发送”的用户消息临时实体。localId 应尽量大（如 temp_user_${Long.MAX_VALUE}_${nano}），sortKey 尽量大。
+ * 创建“正在发送”的用户消息临时实体。id 使用当前最后一条消息的 id，indexId 为最后一条的 indexId + 1。
  * 用于发送前插入本地，发送成功后删除并用 user_message_id 更新为正式消息。
+ * @param lastMessageId 当前最后一条消息的 id，无消息时传 null（此时 id 为 "0"）
+ * @param lastMessageIndexId 当前最后一条消息的 indexId，无消息时传 null（此时 indexId 为 "1"）
+ * @param userImageUrl 用户附带图片的 URL，可选
  */
 fun createTempSendingUserEntity(
     agentId: String,
     content: String,
+    lastMessageId: String?,
+    lastMessageIndexId: String?,
     userImageUrl: String? = null,
 ): MessageEntity {
     val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+    val id = lastMessageId ?: "0"
+    val indexId = "${(lastMessageIndexId?.toLongOrNull() ?: 0L) + 1}"
     return MessageEntity(
-        id = "${(Long.MAX_VALUE - 1)}",
+        id = id,
+        indexId = indexId,
         role = "user",
         content = content,
         timestamp = timestamp,
@@ -251,7 +268,7 @@ fun createTempSendingUserEntity(
                         )
                     },
             ),
-        isSending = true,
+        status = MessageEntity.Status.SENDING,
     )
 }
 
@@ -267,6 +284,6 @@ fun createTempSendingLoadingEntity(agentId: String): MessageEntity {
         content = LOADING_PLACEHOLDER_CONTENT,
         timestamp = timestamp,
         metaData = MessageEntity.MetaData(agentId = agentId),
-        isSending = true,
+        status = MessageEntity.Status.SENDING,
     )
 }
