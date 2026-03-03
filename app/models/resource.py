@@ -60,6 +60,7 @@ class ImageResourceMetadata(BaseModel):
     uncropped_image_url: Optional[str] = None
     gcs_url: Optional[str] = None
     generation_prompt: Optional[str] = None
+    generation_model: Optional[str] = None
     reference_image_url: Optional[str] = None  # 生成图片时使用的参考图
     user_reference_image_url: Optional[str] = None  # 用户上传自拍作为额外参考图
     reference_image_urls: Optional[list[str]] = None  # 参与生图的全部参考图 URL
