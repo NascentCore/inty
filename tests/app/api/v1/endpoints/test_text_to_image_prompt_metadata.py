@@ -79,11 +79,14 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
         )
 
         request_prompt = "A friendly companion smiling at the camera"
+        request_model = "google/imagen-4.0-fast-generate-001"
         request = schemas.TextToImageRequest(
             prompt=request_prompt,
             count=2,
             enhance_prompt=False,
+            model=request_model,
         )
+        expected_request_payload = request.model_dump()
         current_user = schemas.User(
             id=user_id,
             readable_id=readable_id,
@@ -117,6 +120,17 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             resource.resource_metadata.get("generation_prompt") for resource in resources
         }
         assert stored_prompts == {request_prompt}
+
+        stored_models = {
+            resource.resource_metadata.get("generation_model") for resource in resources
+        }
+        assert stored_models == {request_model}
+
+        stored_requests = {
+            tuple(sorted(resource.resource_metadata.get("text_to_image_request", {}).items()))
+            for resource in resources
+        }
+        assert stored_requests == {tuple(sorted(expected_request_payload.items()))}
 
     finally:
         async with AsyncSessionLocal() as session:
