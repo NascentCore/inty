@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.data.http.BusinessErrorCodes
@@ -27,6 +28,8 @@ import com.ai.intellimate.boost.PointSource
 import com.architecture.httplib.core.HttpResult
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -85,25 +88,26 @@ class ChatMessageRepository(
         agentId: String,
         content: String,
         localImageUri: String? = null,
+        preUploadTask: Deferred<HttpResult<String>>? = null,
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
         val trimmed = content.trimEnd()
         val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
-        val uploadedImageUrl =
-            if (!localImageUri.isNullOrBlank()) {
-                when (val uploadResult = uploadChatInputImage(localImageUri.toUri())) {
-                    is HttpResult.Success -> uploadResult.data
-                    is HttpResult.Failure -> return HttpResult.Failure(
-                        uploadResult.message,
-                        uploadResult.code,
-                    )
-                }
-            } else {
-                null
-            }
+        // AI implementation summary:
+        // 1) append local user message + loading placeholder immediately;
+        // 2) resolve uploaded URL via pre-upload task first, fallback to direct upload;
+        // 3) keep the temporary user bubble image as local URI to avoid blank waiting state.
+        localDataSource.appendSendingMessages(agentId, trimmed, localImageUri)
 
-        localDataSource.appendSendingMessages(agentId, trimmed, uploadedImageUrl)
+        val uploadedImageUrl =
+            when (val resolvedUpload = resolveChatInputImageUrl(localImageUri, preUploadTask)) {
+                is HttpResult.Success -> resolvedUpload.data.ifBlank { null }
+                is HttpResult.Failure -> {
+                    localDataSource.removeSendingMessage(agentId)
+                    return HttpResult.Failure(resolvedUpload.message, resolvedUpload.code)
+                }
+            }
 
         val result =
             try {
@@ -113,13 +117,11 @@ class ChatMessageRepository(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        localDataSource.removeSendingMessage(agentId)
-
         if (
             result is HttpResult.Success &&
                 result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
         ) {
-
+            localDataSource.removeSendingMessage(agentId)
             result.data.data?.let { data ->
                 val buildMessages = buildList {
                     add(
@@ -151,9 +153,42 @@ class ChatMessageRepository(
                     "RoomImpl.sendMessage saving ${buildMessages.size} assistant messages for agentId=$agentId"
                 )
             }
+        } else {
+            localDataSource.markSendingFailedAndRemoveLoading(agentId)
         }
 
         return result
+    }
+
+    suspend fun preUploadChatInputImage(localImageUri: String): HttpResult<String> {
+        return uploadChatInputImage(localImageUri.toUri())
+    }
+
+    private suspend fun resolveChatInputImageUrl(
+        localImageUri: String?,
+        preUploadTask: Deferred<HttpResult<String>>?,
+    ): HttpResult<String> {
+        if (localImageUri.isNullOrBlank()) {
+            return HttpResult.Success("")
+        }
+        val preUploadResult = awaitPreUploadResult(preUploadTask)
+        if (preUploadResult is HttpResult.Success) {
+            return preUploadResult
+        }
+        return uploadChatInputImage(localImageUri.toUri())
+    }
+
+    private suspend fun awaitPreUploadResult(
+        preUploadTask: Deferred<HttpResult<String>>?,
+    ): HttpResult<String>? {
+        if (preUploadTask == null) {
+            return null
+        }
+        return try {
+            preUploadTask.await()
+        } catch (cancelled: CancellationException) {
+            null
+        }
     }
 
     private suspend fun uploadChatInputImage(imageUri: Uri): HttpResult<String> {
@@ -212,7 +247,10 @@ class ChatMessageRepository(
             lastAssistantMessage.id,
             lastAssistantMessage.indexId,
         )
-        localDataSource.appendSendingLoadingOnly(agentId)
+        //localDataSource.appendSendingLoadingOnly(agentId)
+
+        val loadingMsg = createTempSendingLoadingEntity(agentId)
+        localDataSource.appendMessages(listOf(loadingMsg))
 
         val result =
             try {
@@ -225,7 +263,7 @@ class ChatMessageRepository(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        localDataSource.removeSendingMessage(agentId)
+        localDataSource.removeMessages(listOf(loadingMsg))
 
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()

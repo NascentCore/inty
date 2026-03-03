@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -103,6 +104,7 @@ fun ImagePickerBottomSheet(
 
     LaunchedEffect(Unit) { sheetState.show() }
 
+    val colorScheme = MaterialTheme.colorScheme
     ModalBottomSheet(
         onDismissRequest = {
             scope
@@ -116,6 +118,7 @@ fun ImagePickerBottomSheet(
         sheetState = sheetState,
         dragHandle = null,
         contentWindowInsets = { WindowInsets() },
+        containerColor = colorScheme.surface,
         modifier = modifier,
     ) {
         Column(
@@ -126,6 +129,7 @@ fun ImagePickerBottomSheet(
             ImagePickerOption(
                 icon = Icons.Filled.PhotoLibrary,
                 text = stringResource(R.string.image_picker_gallery),
+                contentColor = colorScheme.onSurface,
                 onClick = {
                     val pickRequest =
                         PickVisualMediaRequest.Builder()
@@ -142,6 +146,7 @@ fun ImagePickerBottomSheet(
             ImagePickerOption(
                 icon = Icons.Filled.CameraAlt,
                 text = stringResource(R.string.image_picker_camera),
+                contentColor = colorScheme.onSurface,
                 onClick = {
                     try {
                         val file =
@@ -178,6 +183,7 @@ fun ImagePickerBottomSheet(
             ImagePickerOption(
                 icon = null,
                 text = stringResource(R.string.cancel),
+                contentColor = colorScheme.error,
                 onClick = {
                     scope
                         .launch { sheetState.hide() }
@@ -200,6 +206,7 @@ fun ImagePickerBottomSheet(
  *
  * @param icon 图标，如果为null则不显示图标
  * @param text 按钮文字
+ * @param contentColor 文字与图标颜色
  * @param onClick 点击回调
  * @param isCancel 是否为取消按钮，取消按钮使用不同的样式
  */
@@ -207,6 +214,7 @@ fun ImagePickerBottomSheet(
 private fun ImagePickerOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     text: String,
+    contentColor: Color,
     onClick: () -> Unit,
     isCancel: Boolean = false,
 ) {
@@ -231,7 +239,7 @@ private fun ImagePickerOption(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = if (isCancel) Color.Red else Color.White,
+                tint = contentColor,
             )
             Spacer(modifier = Modifier.size(UiConfigs.Spacing.Small))
         }
@@ -240,7 +248,7 @@ private fun ImagePickerOption(
             text = text,
             fontSize = UiConfigs.Typography.Button,
             fontWeight = if (isCancel) FontWeight.Normal else FontWeight.Normal,
-            color = if (isCancel) Color.Red else Color.White,
+            color = contentColor,
         )
     }
 }

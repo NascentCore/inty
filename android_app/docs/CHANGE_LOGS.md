@@ -1,7 +1,7 @@
 # IntelliMate Change Logs
 
 > CREATED_BY_AGENT
-> This content is injected into the IntelliMate official assistant system message.
+> This content is injected into the Inty official assistant system message.
 > Lines starting with ">" will be removed during injection.
 
 Only user-visible changes are recorded
@@ -9,6 +9,7 @@ Only user-visible changes are recorded
 ## 2026-03-03
 
 - After creating an iMate from Official Assistant chat (**+ Create your own iMate**), the app now opens the newly created iMate chat directly instead of switching to the Me tab.
+- Chat image sending now starts uploading immediately after you pick a local photo in the input box, and while waiting for AI reply the outgoing bubble shows your local photo as a placeholder to avoid blank waiting states.
 
 ## 2026-03-02
 
@@ -27,7 +28,7 @@ Only user-visible changes are recorded
 
 ## 2026-02-24
 
-- Updated the middle icon in the bottom navigation bar: tapping it now opens chat with the IntelliMate official assistant.
+- Updated the middle icon in the bottom navigation bar: tapping it now opens chat with the Inty official assistant.
 - Moved the iMate creation entry point to the top of Explore with a horizontal banner button: **"Create your own iMate"**.
 
 ## 2026-02-11

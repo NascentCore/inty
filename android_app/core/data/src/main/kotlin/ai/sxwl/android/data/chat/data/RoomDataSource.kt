@@ -57,8 +57,17 @@ class RoomDataSource(
         }
     }
 
+    /** 发送成功时：删除所有 SENDING 的临时消息（用户占位 + loading 占位），由调用方再插入正式消息。 */
     suspend fun removeSendingMessage(agentId: String) {
         with(dispatcher) { messageDao.deleteSendingMsg(agentId) }
+    }
+
+    /** 发送失败时：将发送中的用户消息标记为 SENDING_FAILED，仅删除 loading 占位。 */
+    suspend fun markSendingFailedAndRemoveLoading(agentId: String) {
+        with(dispatcher) {
+            messageDao.markSendingUserAsFailed(agentId)
+            messageDao.deleteSendingLoadingOnly(agentId)
+        }
     }
 
     suspend fun clearChatData(agentId: String) =

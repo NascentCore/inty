@@ -6,6 +6,7 @@ import ai.sxwl.android.data.chat.local.db.MessageUpdate
 import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
 import ai.sxwl.android.utils.LogUtils
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 
 class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
@@ -45,32 +46,47 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         return chatMessageDao.getMessage(agentId, messageId)
     }
 
+    suspend fun getLatestMessage(agentId: String): MessageEntity? {
+        return chatMessageDao.getLatestMessage(agentId)
+    }
+
     suspend fun appendSendingMessages(
         agentId: String,
         userContent: String,
         userImageUrl: String? = null,
     ) {
-        val userEntity =
-            createTempSendingUserEntity(
-                agentId = agentId,
-                content = userContent,
-                userImageUrl = userImageUrl,
-            )
+        val last = chatMessageDao.getLatestMessage(agentId)
+        val userEntity = createTempSendingUserEntity(
+            agentId = agentId,
+            content = userContent,
+            lastMessageId = last?.id,
+            lastMessageIndexId = last?.indexId,
+            userImageUrl = userImageUrl,
+        )
         val loadingEntity = createTempSendingLoadingEntity(agentId = agentId)
-
         chatMessageDao.upsert(listOf(userEntity, loadingEntity))
     }
 
     /**
-     * 仅插入“正在发送”的 loading 占位（isSending=true），用于 recall 等不附带用户消息的请求。 请求结束后调用
-     * removeSendingMessage(agentId) 移除。
+     * 仅插入“正在发送”的 loading 占位（status=SENDING），用于 recall 等不附带用户消息的请求。 请求结束后调用
+     * removeSendingMessage(agentId) 或 markSendingFailedAndRemoveLoading(agentId) 处理。
      */
     suspend fun appendSendingLoadingOnly(agentId: String) {
         chatMessageDao.upsert(createTempSendingLoadingEntity(agentId = agentId))
     }
 
+    /** 发送成功时：删除该会话下所有 SENDING 的临时消息（用户占位 + loading 占位）。 */
     suspend fun removeSendingMessage(agentId: String) {
         chatMessageDao.deleteSendingMsg(agentId)
+    }
+
+    /** 发送失败时：将发送中的用户消息标记为 SENDING_FAILED，仅删除 loading 占位。 */
+    suspend fun markSendingFailedAndRemoveLoading(agentId: String) {
+        database.withTransaction {
+            chatMessageDao.markSendingUserAsFailed(agentId)
+            chatMessageDao.deleteSendingLoadingOnly(agentId)
+        }
+
     }
 
     suspend fun appendUserMessage(
@@ -122,5 +138,17 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         return chatMessageDao.getYesterdayMessageCount().also {
             LogUtils.d("Chat:Yesterday send message count = $it")
         }
+    }
+
+    suspend fun withTransaction(block: suspend () -> Unit) {
+        database.withTransaction(block)
+    }
+
+    suspend fun removeMessages(messages: List<MessageEntity>) {
+        chatMessageDao.deleteMessage(messages)
+    }
+
+    suspend fun updateMessage(message: MessageEntity) {
+        chatMessageDao.updateMessage(message)
     }
 }

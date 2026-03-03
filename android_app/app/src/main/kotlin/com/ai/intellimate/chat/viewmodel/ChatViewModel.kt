@@ -42,9 +42,11 @@ import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -67,6 +69,10 @@ import kotlinx.coroutines.withContext
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
 class ChatViewModel : BaseVM() {
+    private data class PendingInputImageUpload(
+        val localImageUri: String,
+        val uploadTask: Deferred<HttpResult<String>>,
+    )
 
     /** 聊天消息额度弹窗类型。 */
     enum class ChatLimitDialogType {
@@ -177,6 +183,7 @@ class ChatViewModel : BaseVM() {
     val inputData = MutableStateFlow<String>("")
     val inputSelection = MutableStateFlow<Int>(0)
     val inputImageUri = MutableStateFlow<String?>(null)
+    private var pendingInputImageUpload: PendingInputImageUpload? = null
 
     // 用于标识当前是否在等待AI回复
     private val _isWaitingForReply = MutableStateFlow<Boolean>(false)
@@ -267,6 +274,7 @@ class ChatViewModel : BaseVM() {
         if (agentInfo == null) {
             _agentInfo.value = null
             inputImageUri.value = null
+            clearPendingInputImageUpload()
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
@@ -342,6 +350,7 @@ class ChatViewModel : BaseVM() {
         inputData.value = ""
         inputSelection.value = 0
         inputImageUri.value = null
+        clearPendingInputImageUpload()
 
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
@@ -496,6 +505,13 @@ class ChatViewModel : BaseVM() {
 
         val inputMsg = inputData.value
         val selectedImageUri = inputImageUri.value
+        val selectedImageUploadTask =
+            pendingInputImageUpload
+                ?.takeIf { it.localImageUri == selectedImageUri }
+                ?.uploadTask
+        if (selectedImageUploadTask != null) {
+            pendingInputImageUpload = null
+        }
         if (inputMsg.isBlank() && selectedImageUri.isNullOrBlank()) {
             return
         }
@@ -516,6 +532,13 @@ class ChatViewModel : BaseVM() {
                 inputData.value = inputMsg
                 inputSelection.value = inputMsg.length
                 inputImageUri.value = selectedImageUri
+                if (!selectedImageUri.isNullOrBlank() && selectedImageUploadTask != null) {
+                    pendingInputImageUpload =
+                        PendingInputImageUpload(
+                            localImageUri = selectedImageUri,
+                            uploadTask = selectedImageUploadTask,
+                        )
+                }
                 return@launch
             }
             // 如果是第一次聊天，上报聊天开始事件（准确反映用户第一次发送消息的行为）
@@ -584,6 +607,7 @@ class ChatViewModel : BaseVM() {
                             agentId = agentId,
                             content = inputMsg.trimEnd(),
                             localImageUri = selectedImageUri,
+                            preUploadTask = selectedImageUploadTask,
                         )
                 ) {
                     is HttpResult.Success -> {
@@ -703,10 +727,13 @@ class ChatViewModel : BaseVM() {
                             ),
                         )
 
-                        // 显示网络错误
+                        // 显示网络错误；恢复输入框与已选图片（含图片上传失败时未插入临时消息的情况）
                         NetworkErrorHandler.showNetworkAwareError(
                             "Something went wrong. Please try again later."
                         )
+                        inputData.value = inputMsg
+                        inputSelection.value = inputMsg.length
+                        inputImageUri.value = selectedImageUri
                         _isWaitingForReply.value = false
                     }
                 }
@@ -756,6 +783,9 @@ class ChatViewModel : BaseVM() {
                 NetworkErrorHandler.showNetworkAwareError(
                     "An unexpected error occurred while sending message"
                 )
+                inputData.value = inputMsg
+                inputSelection.value = inputMsg.length
+                inputImageUri.value = selectedImageUri
                 _isWaitingForReply.value = false
             } finally {
                 // 确保状态在最后被正确重置
@@ -1076,11 +1106,77 @@ class ChatViewModel : BaseVM() {
     }
 
     fun setInputImage(uri: Uri?) {
-        inputImageUri.value = uri?.toString()
+        clearPendingInputImageUpload()
+        val selectedUri = uri?.toString()
+        inputImageUri.value = selectedUri
+        if (selectedUri.isNullOrBlank()) {
+            return
+        }
+        val currentAgent = _agentInfo.value
+        val uploadStartedAt = System.currentTimeMillis()
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.CHAT_PAGE_CLICK,
+            FirebaseManager.safeEventParams(
+                "click_type" to "chat_input_image_prefetch_start",
+                "agent_id" to currentAgent?.id,
+                "agent_name" to currentAgent?.name,
+                "timestamp" to uploadStartedAt,
+            ),
+        )
+        // AI implementation summary:
+        // 1) start pre-upload as soon as user picks a local image;
+        // 2) reuse this task when user taps send;
+        // 3) keep UI responsive by avoiding synchronous upload at selection callback.
+        val uploadTask =
+            viewModelScope.async(Dispatchers.IO) {
+                chatMessageRepository.preUploadChatInputImage(selectedUri)
+            }
+        pendingInputImageUpload =
+            PendingInputImageUpload(
+                localImageUri = selectedUri,
+                uploadTask = uploadTask,
+            )
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                when (val uploadResult = uploadTask.await()) {
+                    is HttpResult.Success -> {
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.CHAT_PAGE_CLICK,
+                            FirebaseManager.safeEventParams(
+                                "click_type" to "chat_input_image_prefetch_success",
+                                "agent_id" to currentAgent?.id,
+                                "agent_name" to currentAgent?.name,
+                                "duration_ms" to (System.currentTimeMillis() - uploadStartedAt),
+                            ),
+                        )
+                    }
+                    is HttpResult.Failure -> {
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.CHAT_PAGE_CLICK,
+                            FirebaseManager.safeEventParams(
+                                "click_type" to "chat_input_image_prefetch_failure",
+                                "agent_id" to currentAgent?.id,
+                                "agent_name" to currentAgent?.name,
+                                "error_code" to uploadResult.code,
+                                "error_message" to uploadResult.message,
+                            ),
+                        )
+                    }
+                }
+            } catch (_: CancellationException) {
+                // 用户切换图片/清空输入时会取消旧任务，取消不视为失败。
+            }
+        }
     }
 
     fun clearInputImage() {
         inputImageUri.value = null
+        clearPendingInputImageUpload()
+    }
+
+    private fun clearPendingInputImageUpload() {
+        pendingInputImageUpload?.uploadTask?.cancel()
+        pendingInputImageUpload = null
     }
 
     fun loadRecentMessages(count: Int) {
@@ -1488,6 +1584,7 @@ class ChatViewModel : BaseVM() {
         inputData.update { "" }
         inputSelection.value = 0
         inputImageUri.value = null
+        clearPendingInputImageUpload()
         _isWaitingForReply.value = false
         isQueryingMsgs = false
         lastQueryAgentId = null
