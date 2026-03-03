@@ -727,10 +727,13 @@ class ChatViewModel : BaseVM() {
                             ),
                         )
 
-                        // 显示网络错误
+                        // 显示网络错误；恢复输入框与已选图片（含图片上传失败时未插入临时消息的情况）
                         NetworkErrorHandler.showNetworkAwareError(
                             "Something went wrong. Please try again later."
                         )
+                        inputData.value = inputMsg
+                        inputSelection.value = inputMsg.length
+                        inputImageUri.value = selectedImageUri
                         _isWaitingForReply.value = false
                     }
                 }
@@ -780,6 +783,9 @@ class ChatViewModel : BaseVM() {
                 NetworkErrorHandler.showNetworkAwareError(
                     "An unexpected error occurred while sending message"
                 )
+                inputData.value = inputMsg
+                inputSelection.value = inputMsg.length
+                inputImageUri.value = selectedImageUri
                 _isWaitingForReply.value = false
             } finally {
                 // 确保状态在最后被正确重置

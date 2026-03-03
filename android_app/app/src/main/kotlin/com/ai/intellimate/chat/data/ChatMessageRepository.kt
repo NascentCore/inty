@@ -5,9 +5,9 @@ package com.ai.intellimate.chat.data
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
-import ai.sxwl.android.data.chat.data.RoomDataSource
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
 import ai.sxwl.android.data.chat.local.db.toUpdate
 import ai.sxwl.android.data.http.BusinessErrorCodes
@@ -59,7 +59,6 @@ class ChatMessageRepository(
     private val database: IntyChatDatabase = IntyChatDatabase.getInstance(),
     private val remoteDataSource: ChatRemoteDataSource = ChatRemoteDataSource(),
     private val localDataSource: ChatLocalDataSource = ChatLocalDataSource(database),
-    private val roomDataSource: RoomDataSource = RoomDataSource(database),
 ) {
     companion object {
         private val KEY_LAST_RANK_DATE = longPreferencesKey("last_rank_date")
@@ -118,13 +117,11 @@ class ChatMessageRepository(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        roomDataSource.removeSendingMessage(agentId)
-
         if (
             result is HttpResult.Success &&
                 result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
         ) {
-
+            localDataSource.removeSendingMessage(agentId)
             result.data.data?.let { data ->
                 val buildMessages = buildList {
                     add(
@@ -156,6 +153,8 @@ class ChatMessageRepository(
                     "RoomImpl.sendMessage saving ${buildMessages.size} assistant messages for agentId=$agentId"
                 )
             }
+        } else {
+            localDataSource.markSendingFailedAndRemoveLoading(agentId)
         }
 
         return result
@@ -248,7 +247,10 @@ class ChatMessageRepository(
             lastAssistantMessage.id,
             lastAssistantMessage.indexId,
         )
-        localDataSource.appendSendingLoadingOnly(agentId)
+        //localDataSource.appendSendingLoadingOnly(agentId)
+
+        val loadingMsg = createTempSendingLoadingEntity(agentId)
+        localDataSource.appendMessages(listOf(loadingMsg))
 
         val result =
             try {
@@ -261,7 +263,7 @@ class ChatMessageRepository(
                 HttpResult.Failure(e.message ?: "unknown error", -1)
             }
 
-        roomDataSource.removeSendingMessage(agentId)
+        localDataSource.removeMessages(listOf(loadingMsg))
 
         if (result is HttpResult.Success) {
             val choices = result.data.data?.choices ?: emptyList()
