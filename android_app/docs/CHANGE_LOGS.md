@@ -9,6 +9,7 @@ Only user-visible changes are recorded
 ## 2026-03-03
 
 - After creating an iMate from Official Assistant chat (**+ Create your own iMate**), the app now opens the newly created iMate chat directly instead of switching to the Me tab.
+- Chat image sending now starts uploading immediately after you pick a local photo in the input box, and while waiting for AI reply the outgoing bubble shows your local photo as a placeholder to avoid blank waiting states.
 
 ## 2026-03-02
 
