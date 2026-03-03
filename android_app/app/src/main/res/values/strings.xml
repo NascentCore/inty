@@ -681,7 +681,7 @@
     <string name="chat_save_user_photo_success">Saved. You can update it on the Me page.</string>
 
     <!-- Login -->
-    <string name="login_welcome">Thousands of iMates await your match.</string>
+    <string name="login_welcome">Thousands of iMates. One perfect match. Is it you?</string>
     <string name="upload_selfie_tips">Simply upload a clear, front-facing photo; avoid obscuring or blurring it.</string>
     <string name="credits_not_enough">Not enough credits.</string>
     <string name="credits_deducted">%1$d credits deducted.</string>
