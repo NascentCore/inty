@@ -3,8 +3,8 @@ name: Release - IntelliMate GPlay 内测轨道
 on:
   push:
     paths:
-      - "android_app/**"
-      - ".github/workflows/build_and_upload_android.yaml"
+      - "android_app/**/*.kt"
+      - "android_app/**/*.kts"
 
   workflow_dispatch:
 
