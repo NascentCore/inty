@@ -2,6 +2,46 @@
 
 CREATED_BY_AGENT
 
+## 0. 执行进度（2026-03-03）
+
+### 0.1 当前状态总览
+
+- **总体进度（MVP）**：约 **75%**
+- **已完成闭环**：后端读/投递/展示 + Android DTO 同步 + E2E 覆盖 + PR 合并冲突修复
+- **未完成**：自动生成写入链路（scheduler + LLM）、DB 唯一索引迁移、安全节奏/用户开关完整策略
+
+### 0.2 已完成项（Done）
+
+1. **数据与协议**
+   - `memory_type=daily_bonding` 元数据模型已落地（`local_date/timezone/emotional_salience/source_message_count/risk_tier`）。
+   - `AgentFeatures.daily_memories` 与 Android `DailyMemory` DTO 已同步。
+2. **在线投递链路**
+   - `daily_memory_prompt` 已接入 `chat completions` 与 `messages list` 两条入口。
+   - 使用 `delivery_at` + chat_history 幂等插入，保证“只投递一次”。
+3. **展示与兼容**
+   - `GET /ai/agents/{agent_id}` 可返回 `features.daily_memories`。
+   - 增加 `appVersionCode` 门槛 `min_app_version_code_for_daily_memory`。
+4. **质量与回归**
+   - 新增 `tests/app/api/v1/endpoints/test_daily_memory_chat_history_e2e.py`。
+   - 排除 `daily_memory_prompt` 对用户分析指标的干扰。
+
+### 0.3 进行中 / 待完成（Next）
+
+1. **写入链路补齐**
+   - 新增 DBN 生成任务（scheduler + eligibility + LLM summarize + upsert）。
+2. **数据约束增强**
+   - 增加 Alembic migration：`(user_id, agent_id, daily_bonding, local_date)` 唯一约束。
+3. **安全策略补齐**
+   - 7 天频次上限、risk tier 降级模板、用户关闭开关联动投递抑制。
+4. **灰度与观测**
+   - 事件埋点与看板漏斗（generated/delivered/opened/corrected）。
+
+### 0.4 最近里程碑
+
+- `13944919`：DBN MVP 主体实现（后端 + 测试 + Android DTO）。
+- `43054391`：修复 Android CI 编译失败（`roomDataSource` unresolved reference）。
+- `26bef8c6`：同步 `main` 并解决冲突，PR 恢复可合并。
+
 ## 1. 目标与成功标准
 
 ### 1.1 目标

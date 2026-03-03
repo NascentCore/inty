@@ -8,6 +8,27 @@ Expand Love Journal from festival-only recall to **everyday relationship memory 
 
 This feature is directly aligned with `docs/iMates_memory_for_bonding.md` Phase 3 ("periodic non-festival micro shared memory notes") and the bonding response protocol.
 
+## 1.1 Design status update (2026-03-03)
+
+### Implemented in current MVP branch
+
+- Added backend memory type `daily_bonding` and daily metadata parsing model.
+- Added on-demand daily prompt delivery on:
+  - `POST /api/v1/chat/completions/{agent_id}`
+  - `GET /api/v1/chats/agents/{agent_id}/messages`
+- Added idempotent prompt message type `daily_memory_prompt` and `delivery_at` mark update.
+- Added agent detail output `features.daily_memories`.
+- Added app version gating with `min_app_version_code_for_daily_memory`.
+- Excluded `daily_memory_prompt` from user analytics activity/latency metrics.
+- Synced Android API DTOs (`daily_memories`, `daily_memory_id`) for compatibility.
+
+### Deferred to next phase
+
+- Automated DBN write path (scheduler + LLM extraction) is not included in this PR.
+- DB-level uniqueness migration for `(user_id, agent_id, daily_bonding, local_date)` is not included yet.
+- Safety controls planned in this doc (cadence cap, user opt-out toggle, risk-tier downgrade policy) are not fully implemented yet.
+- Experiment dashboard events for DBN funnel are not fully instrumented yet.
+
 ## 2. Feature definition
 
 ### 2.1 Name
