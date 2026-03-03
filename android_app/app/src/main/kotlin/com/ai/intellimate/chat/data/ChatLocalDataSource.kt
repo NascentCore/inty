@@ -69,6 +69,10 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         chatMessageDao.upsert(createTempSendingLoadingEntity(agentId = agentId))
     }
 
+    suspend fun removeSendingMessage(agentId: String) {
+        chatMessageDao.deleteSendingMsg(agentId)
+    }
+
     suspend fun appendUserMessage(
         agentId: String,
         messageId: String,
