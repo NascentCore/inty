@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 DEV=false
-TEST=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # 当脚本位于 backend/inty 时从仓库根目录运行，以便 alembic/scripts 路径正确；Docker 中 COPY 到 / 时 SCRIPT_DIR=/ 仍 cd /
 if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -19,15 +19,9 @@ while [[ $# -gt 0 ]]; do
       DEV=true
       shift
       ;;
-    --test)
-      DEV=true
-      TEST=true
-      shift
-      ;;
     --help|-h)
-      echo "Usage: $0 [--dev] [--test]"
+      echo "Usage: $0 [--dev]"
       echo "  --dev   Dev mode: seed test user/data, uvicorn --reload"
-      echo "  --test  Test mode: same as --dev, intended for CI/testing"
       echo "Run from repository root. Default: run migrations and start uvicorn without reload."
       exit 0
       ;;
@@ -46,6 +40,7 @@ done
 echo "Starting database migrations..."
 export PYTHONPATH=.
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
+
 # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
 # 所有预置角色均由这个用户创建。也支持管理系统的登录。
 # 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。
@@ -58,14 +53,10 @@ alembic -c "$ALEMBIC_CONFIG" upgrade head
 python scripts/init_subscription_plans_simple.py
 
 if [ "$DEV" = true ]; then
-  if [ "$TEST" = true ]; then
-    echo "Starting in test mode..."
-  else
-    echo "Starting in dev mode..."
-  fi
+  echo "Starting in dev mode..."
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
-  echo "Starting in normal mode without reloading..."
+  echo "Starting in normal mode..."
   uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000
 fi

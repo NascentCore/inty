@@ -15,7 +15,7 @@ docker run --rm --name pg-inty -p 5432:5432 \
 cp devops/config.yaml.test config.yaml
 
 # 启动后端服务
-./backend/inty/start.sh --test
+./backend/inty/start.sh
 
 # 运行测试
 pytest -m "not noci" -v -s tests/

@@ -112,6 +112,7 @@ class VoiceService:
 
         return cleaned_text
 
+    @traceable
     async def generate_voice(
         self,
         text: str,
@@ -301,16 +302,6 @@ class VoiceService:
             gcs_url, gcs_http_url = self._build_gcs_urls(audio_url)
             logger.debug(f"GCS上传成功: gcs_url={gcs_url}, gcs_http_url={gcs_http_url}")
 
-            # Gemini 成功路径：把 GCS URL 作为 trace 输出，便于 LangSmith 追踪 invocations。
-            if provider_used == TTS_PROVIDER_GEMINI:
-                self._trace_gemini_tts_invocation_result(
-                    gcs_url=gcs_url,
-                    gcs_http_url=gcs_http_url,
-                    voice_id=voice_id,
-                    model=model,
-                    duration_seconds=duration,
-                )
-
             # 异步保存到缓存，不阻塞返回
             if audio_url:
                 logger.debug("异步保存到语音缓存")
@@ -467,24 +458,6 @@ class VoiceService:
             f"{GCS_GS_PREFIX}{bucket}/{path}",
             f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}",
         )
-
-    @traceable(name="gemini_tts_api_invocation_result", run_type="chain")
-    def _trace_gemini_tts_invocation_result(
-        self,
-        *,
-        gcs_url: str,
-        gcs_http_url: str,
-        voice_id: str,
-        model: str,
-        duration_seconds: float,
-    ) -> Dict[str, Any]:
-        return {
-            "gcs_url": gcs_url,
-            "gcs_http_url": gcs_http_url,
-            "voice_id": voice_id,
-            "model": model,
-            "duration_seconds": duration_seconds,
-        }
 
     def _generate_file_name(
         self, text: str, voice_id: str, model: str, extension: str

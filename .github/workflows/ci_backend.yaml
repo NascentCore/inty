@@ -129,7 +129,7 @@ jobs:
         run: |
           cp devops/config.yaml.test config.yaml
           # alembic upgrade head: no need to run, as backend/inty/start.sh already includes it
-          ./backend/inty/start.sh --test &
+          ./backend/inty/start.sh &
 
           # Wait for the server to be ready with better retry logic
           echo "Waiting for server to start..."

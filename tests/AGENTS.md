@@ -13,7 +13,7 @@
     -e POSTGRES_DB=inty \
     -d postgres:16
   cp devops/config.yaml.test config.yaml
-  backend/inty/start.sh --test
+  backend/inty/start.sh
   
   # Create a admin bearer token, and write the token to a .txt file
   python scripts/init_admin_user.py --token-file ./admin_token.txt
