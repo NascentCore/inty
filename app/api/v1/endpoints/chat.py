@@ -122,8 +122,63 @@ def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> d
     }
 
 
+def _normalize_response_content_part(part: Any) -> Optional[dict[str, Any]]:
+    if hasattr(part, "model_dump"):
+        part = part.model_dump(exclude_none=True)
+    if not isinstance(part, dict):
+        return None
+
+    part_type = part.get("type")
+    if part_type == "text":
+        text = part.get("text")
+        if isinstance(text, str):
+            return {"type": "text", "text": text}
+        return None
+
+    if part_type == "image_url":
+        image_url = part.get("image_url")
+        if hasattr(image_url, "model_dump"):
+            image_url = image_url.model_dump(exclude_none=True)
+        if not isinstance(image_url, dict):
+            return None
+        url = image_url.get("url")
+        if isinstance(url, str) and url.strip():
+            return {"type": "image_url", "image_url": {"url": url}}
+        return None
+
+    return None
+
+
+def _normalize_chat_response_content(
+    response_content: Any,
+) -> tuple[str, Optional[List[dict[str, Any]]]]:
+    if isinstance(response_content, str):
+        return response_content, None
+
+    if isinstance(response_content, list):
+        normalized_parts: List[dict[str, Any]] = []
+        text_parts: List[str] = []
+        for part in response_content:
+            normalized_part = _normalize_response_content_part(part)
+            if normalized_part is None:
+                continue
+            normalized_parts.append(normalized_part)
+            if normalized_part["type"] == "text":
+                text = normalized_part.get("text")
+                if isinstance(text, str) and text.strip():
+                    text_parts.append(text.strip())
+        if len(normalized_parts) > 0:
+            return "\n".join(text_parts), normalized_parts
+        return "", None
+
+    if response_content is None:
+        return "", None
+    return str(response_content), None
+
+
 def _build_chat_response(
-    response_content: str,
+    response_text_content: str,
+    response_content_parts: Optional[List[dict[str, Any]]],
     last_user_text: str,
     latest_message_info: Optional[dict],
     audio_url: Optional[str],
@@ -132,7 +187,9 @@ def _build_chat_response(
     subscription_actions: Optional[List[BizAction]] = None,
 ) -> dict:
     """构建聊天响应数据"""
-    message = {"role": "assistant", "content": response_content}
+    message = {"role": "assistant", "content": response_text_content}
+    if response_content_parts is not None and len(response_content_parts) > 0:
+        message["content_parts"] = response_content_parts
     if subscription_actions is None or len(subscription_actions) == 0:
         # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
         subscription_actions = [
@@ -160,9 +217,9 @@ def _build_chat_response(
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
         "usage": {
             "prompt_tokens": len(last_user_text.split()),
-            "completion_tokens": len(response_content.split()),
+            "completion_tokens": len(response_text_content.split()),
             "total_tokens": len(last_user_text.split())
-            + len(response_content.split()),
+            + len(response_text_content.split()),
         },
     }
 
@@ -389,10 +446,17 @@ async def agent_chat_completions(
                     raise HTTPException(
                         status_code=500, detail="Chat returned no content"
                     )
+                (
+                    response_text_content,
+                    response_content_parts,
+                ) = _normalize_chat_response_content(response_content)
 
-            logger.debug(
-                f"Agent聊天响应成功: {(response_content or '')[:100]}..."
+            response_preview = (
+                response_text_content[:100]
+                if response_text_content
+                else f"[multimodal parts={len(response_content_parts or [])}]"
             )
+            logger.debug(f"Agent聊天响应成功: {response_preview}...")
             subscription_actions = None
             premium_preview_choice = None
             next_chat_count = used_count + 1
@@ -445,15 +509,15 @@ async def agent_chat_completions(
         audio_duration = None
         try:
             # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
-            if chat_settings.voice_enabled:
+            if chat_settings.voice_enabled and response_text_content.strip():
                 # TODO: 添加一个默认语音 ID
                 agent_voice_id = agent_data.get("voice_id")
 
                 with log_time(
-                    f"语音生成: voice_id={agent_voice_id}, text_length={len(response_content)}, language={request.language}"
+                    f"语音生成: voice_id={agent_voice_id}, text_length={len(response_text_content)}, language={request.language}"
                 ):
                     voice_result = await voice_service.generate_voice(
-                        text=response_content,
+                        text=response_text_content,
                         voice_id=agent_voice_id,
                         language=request.language,
                         db=db,
@@ -466,6 +530,8 @@ async def agent_chat_completions(
                     logger.warning(
                         f"用户 {current_user.id} 语音生成失败或达到限制，聊天文本正常返回"
                     )
+            elif chat_settings.voice_enabled:
+                logger.debug("聊天响应仅包含图片内容，跳过语音生成")
             else:
                 logger.debug("语音未启用，跳过语音生成")
 
@@ -545,7 +611,8 @@ async def agent_chat_completions(
 
         # 构建响应
         data = _build_chat_response(
-            response_content,
+            response_text_content,
+            response_content_parts,
             last_user_text,
             latest_message_info,
             audio_url,

@@ -14,6 +14,7 @@ Only user-visible changes are recorded
 
 - Official Assistant chat now includes a **"+ Create your own iMate"** button above the input box. It opens the iMate creation page, and auto-hides while the keyboard is open.
 - Removed the **Create your own iMate** banner from the top of the Explore page; create iMate via Profile → My iMates.
+- Chat input now supports sending **one selected image + text** in a single message, and chat bubbles can render **text + image** replies returned by `/api/v1/chat/completions/{agent_id}`.
 
 ## 2026-02-28
 

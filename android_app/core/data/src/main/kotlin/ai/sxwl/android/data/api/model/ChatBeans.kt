@@ -120,6 +120,7 @@ data class QueryMsgsResponse(
 data class MsgInfo(
     val id: String = "", // 服务端对应的消息id
     val content: String = "",
+    @Json(name = "content_parts") val contentParts: List<ChatMessageContentPart> = emptyList(),
     val role: String = "",
     val meta_data: MsgMetaData? = null, // 附带数据
     val audio_url: String? = null, // 音频文件的url
@@ -163,6 +164,23 @@ data class MsgInfo(
 
     fun hasGeneratedMusic(): Boolean {
         return meta_data?.generatedMusic != null
+    }
+
+    fun extractTextFromContentParts(): String {
+        return contentParts
+            .asSequence()
+            .filter { it.type == "text" }
+            .mapNotNull { it.text?.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(separator = "\n")
+    }
+
+    fun extractFirstImageUrlFromContentParts(): String? {
+        return contentParts
+            .asSequence()
+            .filter { it.type == "image_url" }
+            .mapNotNull { it.imageUrl?.url?.trim() }
+            .firstOrNull { it.isNotEmpty() }
     }
 
     fun getGeneratedMusicUrl(): String? {

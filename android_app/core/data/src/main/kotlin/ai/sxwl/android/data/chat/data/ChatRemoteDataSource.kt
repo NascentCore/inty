@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.ChatMessageContentPart
 import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
 import ai.sxwl.android.data.api.model.ChatImageGenerationResult
 import ai.sxwl.android.data.api.model.ClearMessagesRequest
@@ -61,16 +62,46 @@ class ChatRemoteDataSource {
         }
     }
 
-    suspend fun sendMessage(agentId: String, messages: List<MsgInfo>): HttpResult<SendMsgResponse> {
+    suspend fun sendMessage(
+        agentId: String,
+        userText: String,
+        userImageUrl: String? = null,
+    ): HttpResult<SendMsgResponse> {
         return try {
+            val trimmedUserText = userText.trimEnd()
             LogUtils.i(
-                "ChatRemoteDataSource.sendMessage: agentId=$agentId, messagesCount=${messages.size}"
+                "ChatRemoteDataSource.sendMessage: agentId=$agentId, hasImage=${!userImageUrl.isNullOrBlank()}"
             )
-            val requestMessages =
-                messages.map { msg ->
-                    SendMsgReqMessage.text(role = msg.role, text = msg.content)
+            val requestMessage =
+                if (userImageUrl.isNullOrBlank()) {
+                    SendMsgReqMessage.text(role = "user", text = trimmedUserText)
+                } else {
+                    SendMsgReqMessage.multimodal(
+                        role = "user",
+                        parts =
+                            buildList {
+                                if (trimmedUserText.isNotBlank()) {
+                                    add(
+                                        ChatMessageContentPart(
+                                            type = "text",
+                                            text = trimmedUserText,
+                                        )
+                                    )
+                                }
+                                add(
+                                    ChatMessageContentPart(
+                                        type = "image_url",
+                                        imageUrl =
+                                            ChatMessageContentPart.ImageUrlPayload(
+                                                url = userImageUrl,
+                                            ),
+                                    )
+                                )
+                            },
+                    )
                 }
-            val request = SendMsgReq(messages = requestMessages, timeContext = buildUserTimeContext())
+            val request =
+                SendMsgReq(messages = listOf(requestMessage), timeContext = buildUserTimeContext())
             NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
