@@ -316,12 +316,24 @@ class FestivalMemoryItem(BaseModel):
     memory: str = Field(..., description="用户与该角色在此节日下的回忆摘要")
 
 
+class DailyMemoryItem(BaseModel):
+    """角色详情 features 中的单条日常记忆"""
+
+    memory_id: int = Field(..., description="memory 表主键 id")
+    local_date: str = Field(..., description="本地日期，如 YYYY-MM-DD")
+    memory: str = Field(..., description="用户与该角色的日常关系记忆摘要")
+
+
 class AgentFeatures(BaseModel):
-    """角色详情可扩展的 features，当前包含节日记忆"""
+    """角色详情可扩展的 features，包含节日记忆与日常记忆"""
 
     festival_memories: List[FestivalMemoryItem] = Field(
         default_factory=list,
         description="当前用户与该角色的节日记忆列表",
+    )
+    daily_memories: List[DailyMemoryItem] = Field(
+        default_factory=list,
+        description="当前用户与该角色的日常记忆列表",
     )
 
 

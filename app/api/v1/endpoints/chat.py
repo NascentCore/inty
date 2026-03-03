@@ -16,7 +16,10 @@ from app.schemas.biz_action import (
     ActionType,
     BizAction,
 )
-from app.api.utils.feature_gating import is_festival_memory_enabled
+from app.api.utils.feature_gating import (
+    is_daily_memory_enabled,
+    is_festival_memory_enabled,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
@@ -30,7 +33,10 @@ from app.schemas.response import (
     create_business_error_response,
 )
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.memory_service import deliver_festival_memories_for_user_agent
+from app.services.memory_service import (
+    deliver_daily_memories_for_user_agent,
+    deliver_festival_memories_for_user_agent,
+)
 from app.services.chat_service import generate_session_id
 from app.services.global_services import subscription_service
 from app.services.surprise_snap_service import (
@@ -115,6 +121,32 @@ def _build_festival_prompt_choice_message(item: dict, info: Optional[dict]) -> d
         "content": item["content"],
         "type": "festival_memory_prompt",
         "festival_memory_id": item["memory_id"],
+        "id": msg_id,
+        "meta_data": None,
+        "timestamp": None,
+        "audio_url": None,
+    }
+
+
+def _build_daily_prompt_choice_message(item: dict, info: Optional[dict]) -> dict:
+    """构建单条日常记忆提醒 choice 的 message 字典。"""
+    if info:
+        return {
+            "role": None,
+            "content": item["content"],
+            "type": "daily_memory_prompt",
+            "daily_memory_id": item["memory_id"],
+            "id": info["id"],
+            "meta_data": info["meta_data"],
+            "timestamp": info["timestamp"],
+            "audio_url": info["audio_url"],
+        }
+    msg_id = item.get("message_id")
+    return {
+        "role": None,
+        "content": item["content"],
+        "type": "daily_memory_prompt",
+        "daily_memory_id": item["memory_id"],
         "id": msg_id,
         "meta_data": None,
         "timestamp": None,
@@ -609,6 +641,20 @@ async def agent_chat_completions(
                 logger.warning(f"投递节日记忆提示失败: {e}")
                 delivered_prompts = []
 
+        delivered_daily_prompts = []
+        if is_daily_memory_enabled(app_version_code):
+            try:
+                with log_time(
+                    f"投递日常记忆提示: user_id={current_user.id}, agent_id={agent_id}"
+                ):
+                    delivered_daily_prompts = await deliver_daily_memories_for_user_agent(
+                        db, current_user.id, agent_id
+                    )
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"投递日常记忆提示失败: {e}")
+                delivered_daily_prompts = []
+
         # 构建响应
         data = _build_chat_response(
             response_text_content,
@@ -645,6 +691,24 @@ async def agent_chat_completions(
                 msg_id = item.get("message_id")
                 info = infos_map.get(msg_id) if msg_id is not None else None
                 message = _build_festival_prompt_choice_message(item, info)
+                idx = len(data["choices"])
+                data["choices"].append(
+                    {"index": idx, "message": message, "finish_reason": "stop"}
+                )
+
+        if delivered_daily_prompts:
+            msg_ids = [
+                item["message_id"]
+                for item in delivered_daily_prompts
+                if item.get("message_id") is not None
+            ]
+            infos_map = await chat_history_service.get_ai_message_infos_by_ids(
+                db, msg_ids
+            )
+            for item in delivered_daily_prompts:
+                msg_id = item.get("message_id")
+                info = infos_map.get(msg_id) if msg_id is not None else None
+                message = _build_daily_prompt_choice_message(item, info)
                 idx = len(data["choices"])
                 data["choices"].append(
                     {"index": idx, "message": message, "finish_reason": "stop"}
