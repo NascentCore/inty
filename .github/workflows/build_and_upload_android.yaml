@@ -2,6 +2,8 @@ name: Release - IntelliMate GPlay 内测轨道
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "android_app/**/*.kt"
       - "android_app/**/*.kts"
