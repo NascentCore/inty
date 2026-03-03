@@ -51,7 +51,7 @@ Click the **Messages** or the **2nd** icon from the left
 
 Tap the **middle** icon to open the chat screen with the IntelliMate official assistant.
 In this official chat page, you can use the FAQ quick-question buttons near the top to prefill common long-form questions into the input box (they are not auto-sent).
-You can also tap **+ Create your own iMate** above the input box to jump straight to the iMate creation page. This button hides automatically while the keyboard is open.
+You can also tap **+ Create your own iMate** above the input box to jump straight to the iMate creation page. This button hides automatically while the keyboard is open. After creation succeeds from this entry, IntelliMate opens the new iMate chat directly.
 
 ### Explore iMates page
 

@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.chat.ChatPageContainer
 import com.ai.intellimate.chat.viewmodel.ChatTabViewModel
 import com.ai.intellimate.explore.ExplorePage
@@ -55,6 +56,28 @@ import com.ai.intellimate.ui.components.UpgradeDialog
 import com.ai.intellimate.xb.helper.AgentStore
 import com.ai.intellimate.xb.navigation.Routes
 import java.util.concurrent.TimeUnit
+
+internal sealed interface CreateRoleSuccessAction {
+    data class NavigateToCreatedChat(
+        val agentId: String,
+    ) : CreateRoleSuccessAction
+
+    data object NavigateToProfile : CreateRoleSuccessAction
+}
+
+internal fun resolveCreateRoleSuccessAction(
+    createEntrySource: String?,
+    createdAgentId: String?,
+): CreateRoleSuccessAction {
+    return if (
+        createEntrySource == CreateRoleNavigationState.EntrySourceOfficialAssistantChat &&
+            !createdAgentId.isNullOrBlank()
+    ) {
+        CreateRoleSuccessAction.NavigateToCreatedChat(createdAgentId)
+    } else {
+        CreateRoleSuccessAction.NavigateToProfile
+    }
+}
 
 /** 主页面，包含五个tab */
 @Composable
@@ -108,15 +131,38 @@ fun HomeScreen(
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
     val savedStateHandle = currentEntry?.savedStateHandle
-    val result = savedStateHandle?.getLiveData<Int>("createBackCode")
-    LaunchedEffect(result?.value) {
-        result?.value?.let {
-            if (result.value == Activity.RESULT_OK) {
-                // 标记需要刷新 Profile 列表，并切换回 “Me” 页面
-                shouldRefreshProfile = true
+    val createResult =
+        savedStateHandle?.getLiveData<Int>(CreateRoleNavigationState.ResultCodeKey)
+    LaunchedEffect(createResult?.value) {
+        if (createResult?.value != Activity.RESULT_OK) return@LaunchedEffect
+
+        val action =
+            resolveCreateRoleSuccessAction(
+                createEntrySource =
+                    savedStateHandle?.get(CreateRoleNavigationState.ResultSourceKey),
+                createdAgentId = savedStateHandle?.get(CreateRoleNavigationState.CreatedAgentIdKey),
+            )
+
+        shouldRefreshProfile = true
+        when (action) {
+            is CreateRoleSuccessAction.NavigateToCreatedChat -> {
+                navController.navigate(
+                    Routes.Chat.chatPage(
+                        agentId = action.agentId,
+                        showBoost = false,
+                        fromPage = "official_assistant_create",
+                    )
+                )
+            }
+
+            CreateRoleSuccessAction.NavigateToProfile -> {
                 mainViewModel.selectTab(HomeTabIndex.Profile.ordinal)
             }
         }
+
+        savedStateHandle?.remove<Int>(CreateRoleNavigationState.ResultCodeKey)
+        savedStateHandle?.remove<String>(CreateRoleNavigationState.ResultSourceKey)
+        savedStateHandle?.remove<String>(CreateRoleNavigationState.CreatedAgentIdKey)
     }
 
     // 双击检测：跟踪最后点击的tab和时间
@@ -540,7 +586,8 @@ private fun ProfileTabContent(
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
     val savedStateHandle = currentEntry?.savedStateHandle
-    val result = savedStateHandle?.getLiveData<Int>("createBackCode")
+    val result =
+        savedStateHandle?.getLiveData<Int>(CreateRoleNavigationState.ResultCodeKey)
     LaunchedEffect(result?.value) {
         result?.value?.let {
             if (result.value == Activity.RESULT_OK) {
