@@ -233,7 +233,6 @@ class ChatViewModel : BaseVM() {
 
         _agentId.value = agentInfo?.id
         _imagePickMessageId.value = null
-        inputImageUri.value = null
 
         // Firebase Analytics - Agent 信息已设置（不再记录 chat_session_start，避免 HorizontalPager 缓存机制导致的误触发）
         agentInfo?.let { agent ->
@@ -267,6 +266,7 @@ class ChatViewModel : BaseVM() {
         // 如果 agent 为空，清理所有状态
         if (agentInfo == null) {
             _agentInfo.value = null
+            inputImageUri.value = null
             lastQueryAgentId = null
             isQueryingMsgs = false
             _isQueryMsgsCompleted.value = false
@@ -341,6 +341,7 @@ class ChatViewModel : BaseVM() {
         // 切换到不同 agent 时，清空输入状态，避免输入文案残留
         inputData.value = ""
         inputSelection.value = 0
+        inputImageUri.value = null
 
         // 立即绑定到Agent会话，获取本地缓存数据
         bindToAgentSession(agentInfo.id)
