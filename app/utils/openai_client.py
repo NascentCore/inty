@@ -178,6 +178,7 @@ async def chat_completion_for_extraction(
     cfg = llm_config if llm_config is not None else _default_extraction_llm_config()
     client = get_async_openai_client()
     create_kwargs = _llm_config_to_create_kwargs(cfg)
+
     response = await client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         **create_kwargs,
