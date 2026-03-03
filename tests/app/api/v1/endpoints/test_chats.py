@@ -14,7 +14,7 @@ from app.models.user import AuthType
 from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
-from app.services.voice_service import VoiceService
+from app.services.voice_service import VoiceGenerationResult, VoiceService
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
     _create_mock_db_session,
@@ -151,6 +151,76 @@ def test_generate_message_voice_limit_reached_for_signed_in_user(
     )
     assert body["data"]["used_count"] == 2
     assert body["data"]["limit"] == 2
+
+
+def test_generate_message_voice_success_includes_gcs_urls(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"voice_id": "google/Zephyr", "gender": "FEMALE"}
+
+    async def fake_get_chat_by_user_and_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_message_content(db, session_id, message_id):
+        return "hello"
+
+    async def fake_generate_voice(self, *args, **kwargs):
+        return VoiceGenerationResult(
+            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+            duration_seconds=1.23,
+        )
+
+    async def fake_update_message_audio_url(
+        db, session_id, message_id, audio_url, audio_duration
+    ):
+        return True
+
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        chat_service,
+        "get_chat_by_user_and_agent",
+        fake_get_chat_by_user_and_agent,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_message_content",
+        fake_get_message_content,
+    )
+    monkeypatch.setattr(
+        VoiceService,
+        "generate_voice",
+        fake_generate_voice,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "update_message_audio_url",
+        fake_update_message_audio_url,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/chats/agents/agent-1/messages/1/voice",
+            params={"language": "en"},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert body["data"]["gcs_url"] == "gs://test-bucket/voice/202603/voice_test.wav"
+    assert (
+        body["data"]["gcs_http_url"]
+        == "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav"
+    )
+    assert (
+        body["data"]["audio_url"]
+        == "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav"
+    )
+    assert body["data"]["audio_duration"] == 1.23
 
 
 def test_update_chat_settings_requires_subscription(

@@ -416,8 +416,11 @@ async def generate_message_voice(
                     )
             raise HTTPException(status_code=500, detail="Voice generation failed")
 
-        audio_url, audio_duration = voice_result
-        logger.debug(f"按需语音生成成功: {audio_url}, 时长: {audio_duration:.2f}秒")
+        audio_url = voice_result.gcs_http_url
+        audio_duration = voice_result.duration_seconds
+        logger.debug(
+            f"按需语音生成成功: {audio_url}, gcs_url={voice_result.gcs_url}, 时长: {audio_duration:.2f}秒"
+        )
 
         # 更新chat_history中对应消息的audio_url
         # 使用try-except确保更新失败不影响API响应
@@ -440,6 +443,8 @@ async def generate_message_voice(
         return APIResponse.success(
             data={
                 "audio_url": audio_url,
+                "gcs_url": voice_result.gcs_url,
+                "gcs_http_url": voice_result.gcs_http_url,
                 "message_id": message_id,
                 "voice_id": agent_voice_id
                 or global_config_loaded_from_config_yaml.elevenlabs.voice_id,

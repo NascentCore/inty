@@ -8,8 +8,10 @@ import hashlib
 import io
 import re
 import wave
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+from langsmith.run_helpers import traceable
 from loguru import logger
 from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +31,11 @@ from app.core.voice.tts_api import (
     is_gemini_voice,
     parse_voice_id,
 )
+from app.external_services.gcs import (
+    GCS_GS_PREFIX,
+    GCS_PUBLIC_HTTPS_PREFIX,
+    get_bucket_and_path_from_gcs_url,
+)
 from app.services.gcs_service import GCSService
 
 # 性别到音色ID的映射
@@ -37,6 +44,28 @@ GENDER_VOICE_MAPPING = {
     "FEMALE": "4tRn1lSkEn13EVTuqb0g",
     "OTHER": "O7p2vmz2iEYgMXxkbsif",
 }
+
+
+@dataclass(frozen=True)
+class VoiceGenerationResult:
+    """
+    Structured voice generation result:
+    - gcs_url: canonical gs:// URL
+    - gcs_http_url: canonical https://storage.googleapis.com URL
+    - duration_seconds: audio duration in seconds
+    """
+
+    gcs_url: str
+    gcs_http_url: str
+    duration_seconds: float
+
+    def __iter__(self) -> Iterator[Any]:
+        """
+        Backward compatibility for existing callers:
+        `audio_url, audio_duration = voice_result`
+        """
+        yield self.gcs_http_url
+        yield self.duration_seconds
 
 
 class VoiceService:
@@ -92,7 +121,7 @@ class VoiceService:
         db: Optional[AsyncSession] = None,
         agent_gender: Optional[str] = None,
         user: Optional[Any] = None,
-    ) -> Optional[Tuple[str, float]]:
+    ) -> Optional[VoiceGenerationResult]:
         """
         生成语音并上传到GCS
 
@@ -106,7 +135,7 @@ class VoiceService:
             user: 用户对象，用于限制检查和用量记录
 
         Returns:
-            语音文件的GCS URL和音频时长(秒)的元组，失败返回None
+            语音文件 URL 结果（含 gs:// 与 https:// URL 及音频时长），失败返回 None
         """
         if not self.config.enabled:
             logger.warning("ElevenLabs语音生成已禁用")
@@ -223,7 +252,12 @@ class VoiceService:
                         except Exception as e:
                             logger.warning(f"记录语音生成用量失败: {str(e)}")
 
-                    return (cached_url, cached_duration)
+                    gcs_url, gcs_http_url = self._build_gcs_urls(cached_url)
+                    return VoiceGenerationResult(
+                        gcs_url=gcs_url,
+                        gcs_http_url=gcs_http_url,
+                        duration_seconds=cached_duration,
+                    )
                 logger.debug("未找到缓存，开始新的语音生成")
 
             # 生成语音文件
@@ -233,7 +267,7 @@ class VoiceService:
                 logger.error("TTS 生成返回空数据")
                 return None
 
-            audio_data, duration, mime_type = audio_result
+            audio_data, duration, mime_type, provider_used = audio_result
 
             logger.debug(
                 f"TTS 生成成功，音频数据大小: {len(audio_data)} bytes, mime_type={mime_type}"
@@ -264,7 +298,18 @@ class VoiceService:
                 logger.error("GCS上传失败")
                 return None
 
-            logger.debug(f"GCS上传成功: {audio_url}")
+            gcs_url, gcs_http_url = self._build_gcs_urls(audio_url)
+            logger.debug(f"GCS上传成功: gcs_url={gcs_url}, gcs_http_url={gcs_http_url}")
+
+            # Gemini 成功路径：把 GCS URL 作为 trace 输出，便于 LangSmith 追踪 invocations。
+            if provider_used == TTS_PROVIDER_GEMINI:
+                self._trace_gemini_tts_invocation_result(
+                    gcs_url=gcs_url,
+                    gcs_http_url=gcs_http_url,
+                    voice_id=voice_id,
+                    model=model,
+                    duration_seconds=duration,
+                )
 
             # 异步保存到缓存，不阻塞返回
             if audio_url:
@@ -278,7 +323,7 @@ class VoiceService:
                         voice_id,
                         model,
                         language,
-                        audio_url,
+                        gcs_http_url,
                         duration,
                         len(audio_data),
                     )
@@ -305,7 +350,11 @@ class VoiceService:
                     logger.warning(f"记录语音生成用量失败: {str(e)}")
 
             logger.debug(f"语音生成成功: {file_name}, 时长: {duration:.2f}秒")
-            return (audio_url, duration)
+            return VoiceGenerationResult(
+                gcs_url=gcs_url,
+                gcs_http_url=gcs_http_url,
+                duration_seconds=duration,
+            )
 
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
@@ -323,7 +372,7 @@ class VoiceService:
 
     async def _call_tts_api(
         self, text: str, voice_id: str, model: str, language: str
-    ) -> Optional[Tuple[bytes, float, str]]:
+    ) -> Optional[Tuple[bytes, float, str, str]]:
         """
         调用 TTS 生成语音
 
@@ -332,7 +381,7 @@ class VoiceService:
         - 否则使用 ElevenLabs TTS
 
         Returns:
-            音频数据的字节流、时长(秒)、mime_type
+            音频数据的字节流、时长(秒)、mime_type、实际 provider
         """
         try:
             use_gemini = is_gemini_voice(voice_id)
@@ -354,6 +403,7 @@ class VoiceService:
             )
 
             if use_gemini:
+                provider_used = TTS_PROVIDER_GEMINI
                 use_prompted = (
                     global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
                 )
@@ -379,7 +429,9 @@ class VoiceService:
                     if not tts_result:
                         logger.error("ElevenLabs TTS 回退也失败")
                         return None
+                    provider_used = TTS_PROVIDER_ELEVENLABS
             else:
+                provider_used = TTS_PROVIDER_ELEVENLABS
                 tts_result = await self.tts_api.synthesize(req)
                 if not tts_result:
                     logger.error("ElevenLabs TTS 返回空数据")
@@ -392,15 +444,47 @@ class VoiceService:
             duration = self._calculate_audio_duration(audio_data, mime_type=mime_type)
 
             logger.debug(
-                f"TTS 调用成功 (provider={provider_name})，音频大小: {len(audio_data)} bytes, "
+                f"TTS 调用成功 (provider={provider_used})，音频大小: {len(audio_data)} bytes, "
                 f"时长: {duration:.2f}秒, mime_type={mime_type}"
             )
-            return (audio_data, duration, mime_type)
+            return (audio_data, duration, mime_type, provider_used)
 
         except Exception as e:
             logger.error(f"TTS 调用异常: {str(e)}")
             logger.exception("TTS 调用异常详细信息:")
             return None
+
+    def _build_gcs_urls(self, storage_url: str) -> Tuple[str, str]:
+        if storage_url.startswith(GCS_GS_PREFIX):
+            bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+            return storage_url, f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}"
+        if storage_url.startswith(GCS_PUBLIC_HTTPS_PREFIX):
+            bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+            return f"{GCS_GS_PREFIX}{bucket}/{path}", storage_url
+
+        bucket, path = get_bucket_and_path_from_gcs_url(storage_url)
+        return (
+            f"{GCS_GS_PREFIX}{bucket}/{path}",
+            f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket}/{path}",
+        )
+
+    @traceable(name="gemini_tts_api_invocation_result", run_type="chain")
+    def _trace_gemini_tts_invocation_result(
+        self,
+        *,
+        gcs_url: str,
+        gcs_http_url: str,
+        voice_id: str,
+        model: str,
+        duration_seconds: float,
+    ) -> Dict[str, Any]:
+        return {
+            "gcs_url": gcs_url,
+            "gcs_http_url": gcs_http_url,
+            "voice_id": voice_id,
+            "model": model,
+            "duration_seconds": duration_seconds,
+        }
 
     def _generate_file_name(
         self, text: str, voice_id: str, model: str, extension: str
