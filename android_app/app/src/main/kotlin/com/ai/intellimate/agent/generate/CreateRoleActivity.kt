@@ -345,6 +345,22 @@ fun CreateRolePage(
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
     var isUploadingFromGallery by remember { mutableStateOf(false) }
 
+    val createEntrySource =
+        remember {
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>(CreateRoleNavigationState.EntrySourceKey)
+        }
+
+    // AI 实现小结：
+    // 1) 创建页只在进入时读取一次入口来源；
+    // 2) 读取后立即清理来源标记，避免后续非官方入口被旧值污染。
+    LaunchedEffect(Unit) {
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.remove<String>(CreateRoleNavigationState.EntrySourceKey)
+    }
+
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val focusManager = LocalFocusManager.current
@@ -1041,12 +1057,13 @@ fun CreateRolePage(
                                         )
 
                                     // Call API through ViewModel
-                                    createRoleViewModel.updateAgent(
-                                        agentId = editAgent?.id.takeIf { isEditMode },
-                                        request = request,
-                                        createTempFile = { context.createTempFile(it) },
-                                        context = context,
-                                    )
+                                    val savedAgent =
+                                        createRoleViewModel.updateAgent(
+                                            agentId = editAgent?.id.takeIf { isEditMode },
+                                            request = request,
+                                            createTempFile = { context.createTempFile(it) },
+                                            context = context,
+                                        )
 
                                     if (isEditMode) {
                                         ToastUtils.showShort(
@@ -1067,9 +1084,22 @@ fun CreateRolePage(
                                     }
 
                                     // 创建成功
-                                    navController.previousBackStackEntry
-                                        ?.savedStateHandle
-                                        ?.set("createBackCode", Activity.RESULT_OK)
+                                    val previousSavedStateHandle =
+                                        navController.previousBackStackEntry?.savedStateHandle
+                                    previousSavedStateHandle?.set(
+                                        CreateRoleNavigationState.ResultCodeKey,
+                                        Activity.RESULT_OK,
+                                    )
+                                    previousSavedStateHandle?.set(
+                                        CreateRoleNavigationState.ResultSourceKey,
+                                        createEntrySource,
+                                    )
+                                    if (!isEditMode) {
+                                        previousSavedStateHandle?.set(
+                                            CreateRoleNavigationState.CreatedAgentIdKey,
+                                            savedAgent.id,
+                                        )
+                                    }
                                     navController.popBackStack()
                                 } catch (e: Exception) {
                                     val operation =

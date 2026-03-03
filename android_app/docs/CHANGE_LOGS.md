@@ -6,6 +6,10 @@
 
 Only user-visible changes are recorded
 
+## 2026-03-03
+
+- After creating an iMate from Official Assistant chat (**+ Create your own iMate**), the app now opens the newly created iMate chat directly instead of switching to the Me tab.
+
 ## 2026-03-02
 
 - Official Assistant chat now includes a **"+ Create your own iMate"** button above the input box. It opens the iMate creation page, and auto-hides while the keyboard is open.

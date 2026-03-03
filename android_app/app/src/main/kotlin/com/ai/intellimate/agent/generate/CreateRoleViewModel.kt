@@ -1,6 +1,7 @@
 package com.ai.intellimate.agent.generate
 
 import ai.sxwl.android.common.base.BaseVM
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.utils.ImageCompressUtils
 import ai.sxwl.android.utils.LogUtils
@@ -28,7 +29,7 @@ class CreateRoleViewModel : BaseVM() {
         request: CreateAgentRequest,
         createTempFile: (Uri) -> File,
         context: Context? = null,
-    ) {
+    ): AgentInfo {
         // 上传背景图片列表，记录每张图片的上传状态
         val remoteImageUrls = mutableListOf<String>()
         request.backgroundImages.forEachIndexed { index, uri ->
@@ -97,14 +98,16 @@ class CreateRoleViewModel : BaseVM() {
                 avatar = remoteAvatar,
             )
 
-        if (agentId.isNullOrBlank()) {
+        return if (agentId.isNullOrBlank()) {
             val result = repository.createAgent(newRequest)
 
             LogUtils.i("CreateRoleViewModel - createAgent success: ${result.id}")
+            result
         } else {
-            repository.updateAgent(agentId, newRequest)
+            val result = repository.updateAgent(agentId, newRequest)
 
             LogUtils.i("CreateRoleViewModel - updateAgent success: $agentId")
+            result
         }
     }
 

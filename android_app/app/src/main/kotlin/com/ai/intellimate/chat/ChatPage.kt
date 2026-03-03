@@ -89,6 +89,7 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
@@ -842,6 +843,12 @@ internal fun ChatPage(
                                     "user_type" to
                                         if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 )
+                                navController.currentBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(
+                                        CreateRoleNavigationState.EntrySourceKey,
+                                        CreateRoleNavigationState.EntrySourceOfficialAssistantChat,
+                                    )
                                 navController.navigate(Routes.Creat.createRole(""))
                             },
                         )
