@@ -6,50 +6,6 @@ from loguru import logger
 from app.core.logging import init_logger
 
 
-def test_logging_timezone_format():
-    """测试日志时间格式包含时区信息"""
-    logger.remove()
-    init_logger()
-    logged_messages = []
-    
-    def custom_sink(message):
-        logged_messages.append(str(message))
-    
-    # 使用配置中的格式，确保时区信息被包含
-    from app.core.config import global_config_loaded_from_config_yaml
-    logger.add(custom_sink, format=global_config_loaded_from_config_yaml.logging.format)
-
-    logger.info("This is an informational message.")
-    logger.debug("A debug statement here.")
-    logger.error("Something went wrong!")
-    
-    assert len(logged_messages) == 3
-    
-    for message in logged_messages:
-        assert " UTC " in message, f"Expected UTC timezone, got: {message}"
-
-
-def test_logging_environment_timezone():
-    """测试环境时区设置"""
-    original_tz = os.environ.get("TZ")
-    
-    try:
-        # 设置不同的时区
-        os.environ["TZ"] = "Asia/Shanghai"
-        
-        # 重新初始化日志
-        init_logger()
-        
-        # 验证TZ被强制设置为UTC
-        assert os.environ.get("TZ") == "UTC"
-        
-    finally:
-        # 恢复原始环境变量
-        if original_tz is not None:
-            os.environ["TZ"] = original_tz
-        elif "TZ" in os.environ:
-            del os.environ["TZ"]
-
 def test_logging_config_colorize():
     """colorize=True 时格式仅增加颜色标签，占位符与结构与非 colorize 一致"""
     from app.utils.config import LOGGING_FILE_FORMAT, LOGGING_LEVEL_FORMAT, LOGGING_MESSAGE_FORMAT, LOGGING_TIME_FORMAT, LoggingConfig

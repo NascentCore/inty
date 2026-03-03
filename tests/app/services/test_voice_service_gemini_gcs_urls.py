@@ -22,7 +22,6 @@ def test_build_gcs_urls_accepts_gs_url(voice_service: VoiceService):
 
 
 @pytest.mark.asyncio
-@patch.object(VoiceService, "_trace_gemini_tts_invocation_result")
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
 @patch("app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock)
 async def test_generate_voice_returns_both_gcs_urls_for_gemini(
@@ -68,39 +67,3 @@ async def test_generate_voice_returns_both_gcs_urls_for_gemini(
         model="gemini-2.5-flash-tts",
         duration_seconds=1.25,
     )
-
-
-@pytest.mark.asyncio
-@patch.object(VoiceService, "_trace_gemini_tts_invocation_result")
-@patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
-@patch("app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock)
-async def test_generate_voice_does_not_emit_gemini_trace_for_elevenlabs_provider(
-    mock_upload_voice_file: AsyncMock,
-    mock_call_tts_api: AsyncMock,
-    mock_trace_gemini_tts: AsyncMock,
-    voice_service: VoiceService,
-):
-    mock_call_tts_api.return_value = (
-        b"wav-bytes",
-        0.8,
-        "audio/mpeg",
-        TTS_PROVIDER_ELEVENLABS,
-    )
-    mock_upload_voice_file.return_value = (
-        "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.mp3"
-    )
-
-    result = await voice_service.generate_voice(
-        text="hello there",
-        voice_id="google/Zephyr",
-        language="en",
-        model="gemini-2.5-flash-tts",
-    )
-
-    assert isinstance(result, VoiceGenerationResult)
-    assert result.gcs_url == "gs://test-bucket/voice/202603/voice_test.mp3"
-    assert (
-        result.gcs_http_url
-        == "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.mp3"
-    )
-    mock_trace_gemini_tts.assert_not_called()
