@@ -4,7 +4,7 @@
 
 > Content should be copied to https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322
 
-> 这里的内容被拷贝到 IntelliMate 官方助手 iMate 系统消息（称为提示词的一部分）
+> 这里的内容被拷贝到 IntelliMate 官方助手 Inty 系统消息（称为提示词的一部分）
 > 拷贝时，以 > 开头的文本行会被删除掉
 
 This guide gives IntelliMate users a clear, plain-language map of where to find help when they feel lost. It consolidates the Android client documentation and reorganizes it for non-technical readers.
@@ -29,7 +29,7 @@ Terminology used in this guide:
 Bottom navigation bar host entry points of IntelliMate App's primary features. The icons are (from left to right):
 - **Chats** for you to chat and interact with your iMates, and the main portal to IntelliMate's long-term AI companionship experience
 - **Messages** for you to return to your iMates
-- **Official Assistant Chat** (middle icon) for you to quickly open a chat with the IntelliMate official assistant
+- **Official Assistant Chat** (middle icon) for you to quickly open a chat with the Inty official assistant
 - **Explore iMates** for you to explore and find your desired iMate
 - **Me** for managing your **Premium subscription** and general settings of the app
 
@@ -49,7 +49,7 @@ Click the **Messages** or the **2nd** icon from the left
 
 ### Official Assistant Chat entry
 
-Tap the **middle** icon to open the chat screen with the IntelliMate official assistant.
+Tap the **middle** icon to open the chat screen with the Inty official assistant.
 In this official chat page, you can use the FAQ quick-question buttons near the top to prefill common long-form questions into the input box (they are not auto-sent).
 You can also tap **+ Create your own iMate** above the input box to jump straight to the iMate creation page. This button hides automatically while the keyboard is open. After creation succeeds from this entry, IntelliMate opens the new iMate chat directly.
 

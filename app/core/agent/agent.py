@@ -81,6 +81,11 @@ class UserTimeContext(TypedDict, total=False):
 
 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
 INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX = "##IntelliMate Change Logs\n"
+INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE = """##Official Assistant Naming Update
+- The official assistant in the IntelliMate app is now named Inty.
+- IntelliMate is the app name, not the assistant name.
+- In historical messages, the assistant may still appear as "IntelliMate"; interpret that as the old assistant name.
+- Always use "Inty" as the assistant name, and correct old-name references to "Inty" when responding."""
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
@@ -455,6 +460,10 @@ class Agent:
             )
 
         if self._is_intellimate_official():
+            # Keep rename guidance explicit so old history can be normalized.
+            system_messages.append(
+                SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
+            )
             user_manual = _load_intellimate_user_manual()
             system_messages.append(
                 SystemMessage(
@@ -510,6 +519,9 @@ class Agent:
                 content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
                 + self.intro
             )
+        )
+        system_messages.append(
+            SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
         )
 
         user_manual = _load_intellimate_user_manual()
