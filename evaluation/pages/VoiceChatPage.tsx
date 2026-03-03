@@ -13,7 +13,6 @@ import {
   Avatar,
   Space,
   Typography,
-  Alert,
   Row,
   Col,
   Empty,
@@ -24,18 +23,16 @@ import {
   PhoneOutlined,
   AudioOutlined,
   AudioMutedOutlined,
-  RobotOutlined,
   UserOutlined,
-  ReloadOutlined,
   ClockCircleOutlined,
   WifiOutlined,
   LoadingOutlined,
   DashboardOutlined,
 } from "@ant-design/icons";
-import { useAgents } from "../hooks/useAgents";
 import { useLiveChat, Transcript } from "../hooks/useLiveChat";
 import type { Agent } from "../types";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
+import { SingleAgentSelectorPanel } from "../components/common/SingleAgentSelectorPanel";
 import { formatUtcTimeOnly } from "../utils/dateUtils";
 
 const { Content } = Layout;
@@ -61,16 +58,6 @@ export const VoiceChatPage: React.FC<VoiceChatPageProps> = ({
 }) => {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const transcriptsEndRef = useRef<HTMLDivElement>(null);
-
-  const {
-    agents,
-    loading: agentsLoading,
-    error: agentsError,
-    loadAgents,
-  } = useAgents({
-    type: "all",
-    autoLoad: true,
-  });
 
   const {
     status,
@@ -167,92 +154,10 @@ export const VoiceChatPage: React.FC<VoiceChatPageProps> = ({
         <Row gutter={24} style={{ flex: 1, minHeight: 0 }}>
           {/* 智能体选择侧栏 */}
           <Col span={6} style={{ height: "100%" }}>
-            <Card
-              title={
-                <Space>
-                  <RobotOutlined />
-                  选择智能体
-                </Space>
-              }
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-              }}
-              styles={{
-                body: { flex: 1, padding: "16px", overflow: "hidden" },
-              }}
-              extra={
-                <Button
-                  icon={<ReloadOutlined />}
-                  size="small"
-                  onClick={() => loadAgents(true)}
-                  loading={agentsLoading}
-                />
-              }
-            >
-              {agentsError ? (
-                <Alert
-                  message="加载失败"
-                  description={agentsError}
-                  type="error"
-                  showIcon
-                />
-              ) : agents.length === 0 ? (
-                <Empty
-                  description="暂无可用智能体"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              ) : (
-                <div style={{ height: "100%", overflowY: "auto" }}>
-                  <List
-                    loading={agentsLoading}
-                    dataSource={agents}
-                    renderItem={(agent) => (
-                      <List.Item
-                        style={{
-                          cursor: "pointer",
-                          padding: "12px",
-                          border:
-                            selectedAgent?.id === agent.id
-                              ? "2px solid #1890ff"
-                              : "1px solid #f0f0f0",
-                          borderRadius: "8px",
-                          marginBottom: "8px",
-                          backgroundColor:
-                            selectedAgent?.id === agent.id ? "#f6ffed" : "#fff",
-                          transition: "all 0.2s ease",
-                        }}
-                        onClick={() => handleSelectAgent(agent)}
-                      >
-                        <List.Item.Meta
-                          avatar={<AvatarDisplay agent={agent} size={40} />}
-                          title={
-                            <Text strong style={{ fontSize: "14px" }}>
-                              {agent.name}
-                            </Text>
-                          }
-                          description={
-                            <Text
-                              type="secondary"
-                              style={{
-                                fontSize: "12px",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {agent.intro}
-                            </Text>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
-                </div>
-              )}
-            </Card>
+            <SingleAgentSelectorPanel
+              selectedAgentId={selectedAgent?.id}
+              onSelectAgent={handleSelectAgent}
+            />
           </Col>
 
           {/* 通话主区域 */}
