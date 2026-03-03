@@ -22,7 +22,6 @@ def test_build_gcs_urls_accepts_gs_url(voice_service: VoiceService):
 
 
 @pytest.mark.asyncio
-@patch.object(VoiceService, "_trace_gemini_tts_invocation_result")
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
 @patch("app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock)
 async def test_generate_voice_returns_both_gcs_urls_for_gemini(
@@ -71,7 +70,6 @@ async def test_generate_voice_returns_both_gcs_urls_for_gemini(
 
 
 @pytest.mark.asyncio
-@patch.object(VoiceService, "_trace_gemini_tts_invocation_result")
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
 @patch("app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock)
 async def test_generate_voice_does_not_emit_gemini_trace_for_elevenlabs_provider(
