@@ -11,10 +11,12 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import get_sync_engine
-from app.models.memory import FestivalMemoryMetadata, Memory
+from app.models.memory import DailyBondingMemoryMetadata, FestivalMemoryMetadata, Memory
 from app.services.chat_history_service import (
+    add_daily_memory_prompt_message_sync,
     add_festival_memory_prompt_message_sync,
     get_chat_history_connection,
+    get_daily_memory_prompt_content_for_agent_sync,
     get_festival_memory_prompt_content_for_agent_sync,
 )
 from app.api.types.llm_config import LLMConfig
@@ -22,9 +24,11 @@ from app.services.chat_service import generate_session_id
 
 MEMORY_TYPE_USER_COMMON = "user_common"
 MEMORY_TYPE_FESTIVAL = "festival"
+MEMORY_TYPE_DAILY_BONDING = "daily_bonding"
 FESTIVAL_METADATA_NAME_KEY = "festival_name"
 FESTIVAL_METADATA_DATE_KEY = "festival_date"
 FESTIVAL_METADATA_LLM_CONFIG_KEY = "llm_config"
+DAILY_METADATA_LOCAL_DATE_KEY = "local_date"
 
 
 def _normalize_memory_metadata(raw_metadata: object) -> dict:
@@ -100,6 +104,33 @@ def _festival_date_sort_key(festival_date: Optional[date]) -> tuple[int, date]:
     if festival_date is None:
         return (1, date.max)
     return (0, festival_date)
+
+
+def _parse_daily_local_date(raw_local_date: object) -> Optional[date]:
+    if isinstance(raw_local_date, date):
+        return raw_local_date
+    if raw_local_date is None:
+        return None
+    value = str(raw_local_date).strip()
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def resolve_daily_local_date(raw_metadata: object) -> Optional[date]:
+    """从 memory.meta_data 读取 daily local_date。"""
+    metadata = _normalize_memory_metadata(raw_metadata)
+    meta = DailyBondingMemoryMetadata.model_validate(metadata)
+    return _parse_daily_local_date(meta.local_date)
+
+
+def _daily_local_date_sort_key(local_date: Optional[date]) -> tuple[int, date]:
+    if local_date is None:
+        return (1, date.max)
+    return (0, local_date)
 
 
 def get_user_memory_for_prompt_sync(
@@ -196,6 +227,54 @@ async def get_festival_memories_for_user_agent(
             "memory_id": item["memory_id"],
             "festival_date": item["festival_date"],
             "festival_name": item["festival_name"],
+            "memory": item["memory"],
+        }
+        for item in items
+    ]
+
+
+async def get_daily_memories_for_user_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> list[dict]:
+    """
+    获取指定用户与指定角色的日常记忆列表，供角色详情 features.daily_memories 使用。
+    返回列表元素：{"memory_id": int, "local_date": "YYYY-MM-DD", "memory": str}
+    """
+    stmt = select(
+        Memory.id,
+        Memory.meta_data,
+        Memory.content,
+    ).where(
+        Memory.user_id == user_id,
+        Memory.agent_id == agent_id,
+        Memory.memory_type == MEMORY_TYPE_DAILY_BONDING,
+    )
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+    items: list[dict] = []
+    for row in rows:
+        memory_id, metadata, content = row
+        local_date = resolve_daily_local_date(metadata)
+        if local_date is None or content is None:
+            continue
+        items.append(
+            {
+                "memory_id": memory_id,
+                "_local_date_obj": local_date,
+                "local_date": local_date.isoformat(),
+                "memory": content,
+            }
+        )
+    items.sort(
+        key=lambda item: (
+            _daily_local_date_sort_key(item["_local_date_obj"]),
+            item["memory_id"],
+        )
+    )
+    return [
+        {
+            "memory_id": item["memory_id"],
+            "local_date": item["local_date"],
             "memory": item["memory"],
         }
         for item in items
@@ -439,6 +518,135 @@ def _mark_festival_memories_delivered_sync(
     memory_ids: list[int], delivered_at: datetime
 ) -> None:
     """同步批量更新 delivery_at，供 to_thread 调用。"""
+    if not memory_ids:
+        return
+    engine = get_sync_engine()
+    with engine.begin() as conn:
+        conn.execute(
+            update(Memory)
+            .where(Memory.id.in_(memory_ids), Memory.delivery_at.is_(None))
+            .values(delivery_at=delivered_at)
+        )
+
+
+async def get_undelivered_daily_memories(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> list[dict]:
+    """
+    查询 (user_id, agent_id) 下尚未投递的日常记忆（delivery_at IS NULL）。
+    返回列表元素：{"id": int, "local_date": date}
+    """
+    stmt = select(
+        Memory.id,
+        Memory.meta_data,
+    ).where(
+        Memory.user_id == user_id,
+        Memory.agent_id == agent_id,
+        Memory.memory_type == MEMORY_TYPE_DAILY_BONDING,
+        Memory.delivery_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+    items: list[dict] = []
+    for row in rows:
+        memory_id, metadata = row
+        local_date = resolve_daily_local_date(metadata)
+        if local_date is None:
+            continue
+        items.append({"id": memory_id, "local_date": local_date})
+    items.sort(key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"]))
+    return items
+
+
+async def deliver_daily_memories_for_user_agent(
+    db: AsyncSession, user_id: str, agent_id: str
+) -> list[dict]:
+    """
+    为 (user_id, agent_id) 执行所有未投递日常记忆的投递：写入 chat_history 并更新 memory.delivery_at。
+    返回本次投递的提醒列表，每项含 memory_id, content, local_date，供发起聊天接口追加到 choices。
+    """
+    # AI 工作总结：
+    # 1) 复用 festival 的线程隔离策略，避免 async session 与同步连接混用时的 MissingGreenlet；
+    # 2) 复用 delivery_at 作为幂等状态，保持 API 层接入行为一致。
+    undelivered = await asyncio.to_thread(
+        _get_undelivered_daily_memories_sync, user_id, agent_id
+    )
+    if not undelivered:
+        return []
+
+    session_id = await asyncio.to_thread(
+        _get_session_id_for_user_agent_sync, user_id, agent_id
+    )
+    if not session_id:
+        return []
+
+    now = datetime.now(timezone.utc)
+    prompt_content = await asyncio.to_thread(
+        get_daily_memory_prompt_content_for_agent_sync, agent_id
+    )
+    delivered = []
+    delivered_memory_ids: list[int] = []
+    for item in undelivered:
+        mid = item["id"]
+        local_date = item["local_date"]
+        local_date_val: date = (
+            local_date if isinstance(local_date, date) else date.fromisoformat(str(local_date))
+        )
+        msg_id = await asyncio.to_thread(
+            add_daily_memory_prompt_message_sync,
+            session_id,
+            agent_id,
+            mid,
+            local_date_val,
+        )
+        if msg_id is None:
+            continue
+        delivered_memory_ids.append(mid)
+        delivered.append(
+            {
+                "memory_id": mid,
+                "message_id": msg_id,
+                "content": prompt_content,
+                "local_date": local_date_val.isoformat(),
+            }
+        )
+    if delivered_memory_ids:
+        await asyncio.to_thread(
+            _mark_daily_memories_delivered_sync,
+            delivered_memory_ids,
+            now,
+        )
+    return delivered
+
+
+def _get_undelivered_daily_memories_sync(user_id: str, agent_id: str) -> list[dict]:
+    """同步查询未投递日常记忆，供 to_thread 调用。"""
+    engine = get_sync_engine()
+    with engine.connect() as conn:
+        stmt = select(
+            Memory.id,
+            Memory.meta_data,
+        ).where(
+            Memory.user_id == user_id,
+            Memory.agent_id == agent_id,
+            Memory.memory_type == MEMORY_TYPE_DAILY_BONDING,
+            Memory.delivery_at.is_(None),
+        )
+        rows = conn.execute(stmt).fetchall()
+
+    items: list[dict] = []
+    for row in rows:
+        memory_id, metadata = row
+        local_date = resolve_daily_local_date(metadata)
+        if local_date is None:
+            continue
+        items.append({"id": memory_id, "local_date": local_date})
+    items.sort(key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"]))
+    return items
+
+
+def _mark_daily_memories_delivered_sync(memory_ids: list[int], delivered_at: datetime) -> None:
+    """同步批量更新日常记忆 delivery_at，供 to_thread 调用。"""
     if not memory_ids:
         return
     engine = get_sync_engine()

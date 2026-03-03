@@ -18,7 +18,10 @@ from app.api.tags import (
     NOT_USED_TAG,
     WEB_APP_TAG,
 )
-from app.api.utils.feature_gating import is_festival_memory_enabled
+from app.api.utils.feature_gating import (
+    is_daily_memory_enabled,
+    is_festival_memory_enabled,
+)
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
@@ -34,7 +37,10 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.chat_service import generate_session_id
-from app.services.memory_service import deliver_festival_memories_for_user_agent
+from app.services.memory_service import (
+    deliver_daily_memories_for_user_agent,
+    deliver_festival_memories_for_user_agent,
+)
 from app.services.global_services import subscription_service
 from app.services.surprise_snap_service import (
     get_unlocked_surprise_snap_message_ids,
@@ -189,6 +195,15 @@ async def get_agent_chat_messages(
             except Exception as e:
                 await db.rollback()
                 logger.warning(f"投递节日记忆提示失败: {e}")
+
+        if is_daily_memory_enabled(app_version_code):
+            try:
+                await deliver_daily_memories_for_user_agent(
+                    db, current_user_id, agent_id
+                )
+            except Exception as e:
+                await db.rollback()
+                logger.warning(f"投递日常记忆提示失败: {e}")
 
         unlocked_ids = await get_unlocked_surprise_snap_message_ids(
             db, current_user_id

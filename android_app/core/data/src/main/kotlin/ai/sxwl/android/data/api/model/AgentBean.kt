@@ -99,7 +99,8 @@ data class AgentInfo(
 @Parcelize
 @JsonClass(generateAdapter = true)
 data class Features(
-    @Json(name = "festival_memories") val festivalMemories: List<FestivalMemory> = emptyList()
+    @Json(name = "festival_memories") val festivalMemories: List<FestivalMemory> = emptyList(),
+    @Json(name = "daily_memories") val dailyMemories: List<DailyMemory> = emptyList(),
 ) : Parcelable
 
 @Parcelize
@@ -108,6 +109,14 @@ data class FestivalMemory(
     @Json(name = "memory_id") val memoryId: Long? = null,
     @Json(name = "festival_date") val festivalDate: String = "",
     @Json(name = "festival_name") val festivalName: String? = null,
+    val memory: String = "",
+) : Parcelable
+
+@Parcelize
+@JsonClass(generateAdapter = true)
+data class DailyMemory(
+    @Json(name = "memory_id") val memoryId: Long? = null,
+    @Json(name = "local_date") val localDate: String = "",
     val memory: String = "",
 ) : Parcelable
 

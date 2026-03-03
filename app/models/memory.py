@@ -74,6 +74,25 @@ class FestivalMemoryMetadata(BaseModel):
         return _validate_llm_config_from_dict(v)
 
 
+class DailyBondingMemoryMetadata(BaseModel):
+    """
+    日常记忆扩展字段（Memory.meta_data）的 Pydantic 类型。
+    """
+
+    local_date: Optional[str] = Field(None, description="本地日期（YYYY-MM-DD）")
+    timezone: Optional[str] = Field(None, description="IANA 时区")
+    emotional_salience: Optional[float] = Field(
+        None, description="情绪显著性分数，0~1"
+    )
+    source_message_count: Optional[int] = Field(None, description="来源消息数量")
+    risk_tier: Optional[str] = Field(None, description="风险等级：low|medium|high")
+
+    @field_validator("local_date", "timezone", "risk_tier", mode="before")
+    @classmethod
+    def _strip_optional_str_fields(cls, v: Any) -> Optional[str]:
+        return _strip_optional_str(v)
+
+
 class Memory(Base):
     """用户记忆；按 (user_id, memory_type, agent_id) 每次抽取时整批替换，仅保留最新。"""
 
@@ -82,7 +101,7 @@ class Memory(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     memory_type = Column(
-        String, nullable=False, comment="user_common | user_agent | festival"
+        String, nullable=False, comment="user_common | user_agent | festival | daily_bonding"
     )
     agent_id = Column(
         String, ForeignKey("agents.id"), nullable=True, comment="user_common 为 NULL"
@@ -95,7 +114,8 @@ class Memory(Base):
         JSON,
         nullable=True,
         comment=(
-            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_date': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选}"
+            "记忆扩展字段；节日记忆使用 {'festival_name': str, 'festival_date': 'YYYY-MM-DD', 'llm_config': {model, temperature, max_tokens} 可选}；"
+            "日常记忆使用 {'local_date': 'YYYY-MM-DD', 'timezone': 'UTC', 'emotional_salience': 0.8, 'source_message_count': 12, 'risk_tier': 'low'}"
         ),
     )
     extracted_at = Column(
@@ -109,7 +129,7 @@ class Memory(Base):
     delivery_at = Column(
         DateTime(timezone=True),
         nullable=True,
-        comment="节日记忆提示首次投递到会话的时间，仅 memory_type=festival 时使用",
+        comment="记忆提示首次投递到会话的时间，仅 memory_type=festival/daily_bonding 时使用",
     )
     system_notification_sent_at = Column(
         DateTime(timezone=True),

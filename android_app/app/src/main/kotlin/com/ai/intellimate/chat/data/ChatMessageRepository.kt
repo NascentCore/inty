@@ -104,7 +104,7 @@ class ChatMessageRepository(
             when (val resolvedUpload = resolveChatInputImageUrl(localImageUri, preUploadTask)) {
                 is HttpResult.Success -> resolvedUpload.data.ifBlank { null }
                 is HttpResult.Failure -> {
-                    roomDataSource.removeSendingMessage(agentId)
+                    localDataSource.removeSendingMessage(agentId)
                     return HttpResult.Failure(resolvedUpload.message, resolvedUpload.code)
                 }
             }

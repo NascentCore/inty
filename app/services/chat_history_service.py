@@ -414,6 +414,8 @@ FESTIVAL_MEMORY_PROMPT_CONTENT = (
     "{char} wrote you a secret heartbeat diary. Take a quiet look."
 )
 META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
+DAILY_MEMORY_PROMPT_CONTENT = "{char} kept a small note from yesterday. Want to read it?"
+META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT = "daily_memory_prompt"
 META_MESSAGE_TYPE_SURPRISE_SNAP = "surprise_snap"
 
 
@@ -436,6 +438,26 @@ def get_festival_memory_prompt_content_for_agent_sync(agent_id: str) -> str:
     except Exception as e:
         logger.debug(f"获取 agent 名称失败 agent_id={agent_id}: {e}")
     return FESTIVAL_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
+
+
+def get_daily_memory_prompt_content_for_agent_sync(agent_id: str) -> str:
+    """
+    返回用于展示的日常记忆提示文案（与 add_daily_memory_prompt_message_sync 落库一致）。
+    """
+    agent_name = "Character"
+    try:
+        conn = get_chat_history_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name FROM agents WHERE id = %s LIMIT 1",
+                (agent_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                agent_name = str(row[0]).strip() or agent_name
+    except Exception as e:
+        logger.debug(f"获取 agent 名称失败 agent_id={agent_id}: {e}")
+    return DAILY_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
 
 
 def add_festival_memory_prompt_message_sync(
@@ -522,6 +544,80 @@ def add_festival_memory_prompt_message_sync(
         return message_id
     except Exception as e:
         logger.error(f"添加节日记忆提示消息失败 session_id={session_id}: {str(e)}")
+        return None
+
+
+def add_daily_memory_prompt_message_sync(
+    session_id: str,
+    agent_id: str,
+    memory_id: int,
+    local_date: Union[date, str],
+) -> Optional[int]:
+    """
+    向 chat_history 插入一条日常记忆提示消息。
+    按 (session_id, agent_id, local_date) 幂等：已存在则返回已有 id 不插入。
+    """
+    local_date_str = local_date.isoformat() if isinstance(local_date, date) else str(local_date)
+    try:
+        conn = get_chat_history_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id FROM chat_history
+                WHERE session_id = %s AND deleted_at IS NULL
+                  AND meta_data->>'messageType' = %s AND meta_data->>'agentId' = %s
+                  AND meta_data->>'localDate' = %s
+                LIMIT 1
+                """,
+                (
+                    session_id,
+                    META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT,
+                    agent_id,
+                    local_date_str,
+                ),
+            )
+            row = cur.fetchone()
+            if row:
+                logger.debug(
+                    f"日常记忆提示消息已存在 session_id={session_id} agent_id={agent_id} "
+                    f"local_date={local_date_str}, id={row[0]}"
+                )
+                return row[0]
+        agent_name = "Character"
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name FROM agents WHERE id = %s LIMIT 1",
+                (agent_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                agent_name = str(row[0]).strip() or agent_name
+        content = DAILY_MEMORY_PROMPT_CONTENT.replace("{char}", agent_name)
+        message_data = {"type": "ai", "data": {"content": content}}
+        meta_data = {
+            "agentId": agent_id,
+            "messageType": META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT,
+            "dailyMemoryId": memory_id,
+            "localDate": local_date_str,
+        }
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (session_id, json.dumps(message_data), json.dumps(meta_data)),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+        logger.debug(
+            f"添加日常记忆提示消息到会话 {session_id} agent_id={agent_id}, ID={message_id}"
+        )
+        return message_id
+    except Exception as e:
+        logger.error(f"添加日常记忆提示消息失败 session_id={session_id}: {str(e)}")
         return None
 
 
@@ -1316,6 +1412,21 @@ def get_messages_paginated(
                                 message_obj["festival_memory_id"] = int(raw_id)
                             except (TypeError, ValueError):
                                 pass
+                    elif (
+                        message_type == "ai"
+                        and meta_data
+                        and meta_data.get("messageType")
+                        == META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT
+                    ):
+                        message_obj["type"] = META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT
+                        message_obj["role"] = None
+                        message_obj["sender_type"] = None
+                        raw_id = meta_data.get("dailyMemoryId")
+                        if raw_id is not None:
+                            try:
+                                message_obj["daily_memory_id"] = int(raw_id)
+                            except (TypeError, ValueError):
+                                pass
                     elif message_type == META_MESSAGE_TYPE_SURPRISE_SNAP:
                         message_obj["type"] = META_MESSAGE_TYPE_SURPRISE_SNAP
                         message_obj["role"] = None
@@ -1456,7 +1567,7 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
     获取会话的历史消息，返回 LangChain BaseMessage 格式（排除已软删除的）
 
     用于 Agent 对话时获取上下文历史，替代 PostgresChatMessageHistory.messages
-    以支持软删除过滤。会排除 festival_memory_prompt、surprise_snap 等非对话类消息，
+    以支持软删除过滤。会排除 festival_memory_prompt、daily_memory_prompt、surprise_snap 等非对话类消息，
     避免其进入 Agent 上下文导致重复或干扰。
 
     Args:
@@ -1475,7 +1586,11 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
             WHERE session_id = %s AND deleted_at IS NULL
               AND (meta_data IS NULL
                    OR meta_data->>'messageType' IS NULL
-                   OR (meta_data->>'messageType' != %s AND meta_data->>'messageType' != %s))
+                   OR (
+                       meta_data->>'messageType' != %s
+                       AND meta_data->>'messageType' != %s
+                       AND meta_data->>'messageType' != %s
+                   ))
             ORDER BY created_at ASC
         """
 
@@ -1486,6 +1601,7 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
                 (
                     session_id,
                     META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT,
+                    META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT,
                     META_MESSAGE_TYPE_SURPRISE_SNAP,
                 ),
             )

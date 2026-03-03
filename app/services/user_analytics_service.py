@@ -146,7 +146,7 @@ class UserAnalyticsService:
         activity_start_date: datetime,
         activity_end_date: datetime,
     ) -> Set[str]:
-        """查询在指定日期范围内有消息的 session_id 集合（排除 festival_memory_prompt）。
+        """查询在指定日期范围内有消息的 session_id 集合（排除记忆提醒消息）。
 
         用于日报等单日统计时先缩小范围，只对当日有活动的 session 做后续批量聚合。
         """
@@ -156,7 +156,8 @@ class UserAnalyticsService:
             WHERE created_at >= :activity_start_date
               AND created_at < :activity_end_date
               AND (meta_data->>'messageType' IS NULL
-                   OR meta_data->>'messageType' != 'festival_memory_prompt')
+                   OR (meta_data->>'messageType' != 'festival_memory_prompt'
+                       AND meta_data->>'messageType' != 'daily_memory_prompt'))
         """)
         result = await self.db.execute(
             query,
@@ -374,7 +375,7 @@ class UserAnalyticsService:
                     WHERE session_id::text IN ({placeholders})
                       AND created_at >= :activity_start_date
                       AND created_at < :activity_end_date
-                      AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
+                      AND (meta_data->>'messageType' IS NULL OR (meta_data->>'messageType' != 'festival_memory_prompt' AND meta_data->>'messageType' != 'daily_memory_prompt'))
                     GROUP BY session_id
                 """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
@@ -390,7 +391,7 @@ class UserAnalyticsService:
                         ) as non_opening_count
                     FROM chat_history
                     WHERE session_id::text IN ({placeholders})
-                      AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
+                      AND (meta_data->>'messageType' IS NULL OR (meta_data->>'messageType' != 'festival_memory_prompt' AND meta_data->>'messageType' != 'daily_memory_prompt'))
                     GROUP BY session_id
                 """)
                 params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
@@ -1818,7 +1819,7 @@ class UserAnalyticsService:
             SELECT COUNT(*)
             FROM chat_history
             WHERE session_id::text = :session_id
-              AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
+              AND (meta_data->>'messageType' IS NULL OR (meta_data->>'messageType' != 'festival_memory_prompt' AND meta_data->>'messageType' != 'daily_memory_prompt'))
         """)
         count_result = await self.db.execute(count_query, {"session_id": session_id})
         total = count_result.scalar() or 0
@@ -1839,7 +1840,7 @@ class UserAnalyticsService:
                 meta_data
             FROM chat_history
             WHERE session_id::text = :session_id
-              AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
+              AND (meta_data->>'messageType' IS NULL OR (meta_data->>'messageType' != 'festival_memory_prompt' AND meta_data->>'messageType' != 'daily_memory_prompt'))
             ORDER BY created_at ASC
             LIMIT :limit OFFSET :offset
         """)
@@ -1927,7 +1928,7 @@ class UserAnalyticsService:
               AND created_at < :end_date
               AND meta_data->>'llm_invoke_time' IS NOT NULL
               AND deleted_at IS NULL
-              AND (meta_data->>'messageType' IS NULL OR meta_data->>'messageType' != 'festival_memory_prompt')
+              AND (meta_data->>'messageType' IS NULL OR (meta_data->>'messageType' != 'festival_memory_prompt' AND meta_data->>'messageType' != 'daily_memory_prompt'))
             GROUP BY DATE_TRUNC('hour', created_at AT TIME ZONE 'UTC')
             ORDER BY hour
         """)
