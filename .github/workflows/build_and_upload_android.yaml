@@ -1,15 +1,12 @@
 name: Release - IntelliMate GPlay 内测轨道 
 
 on:
-  # push:
-  #   tags:
-  #     - "v*"
+  push:
+    paths:
+      - "android_app/**"
+      - ".github/workflows/build_and_upload_android.yaml"
 
   workflow_dispatch:
-
-  schedule:
-    # 3 pm UTC, 11 pm Beijing time.
-    - cron: "0 15 * * *"
 
 jobs:
   build-aab:
