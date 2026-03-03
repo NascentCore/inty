@@ -47,7 +47,7 @@ Based on [AGENTS.md](https://agents.md/)
 
 - 统一扩展容器：`agents.extensions`（JSON），前端/后端约定键值结构。
 - 头像裁切：`extensions.avatar_crop` 提供裁切坐标，后端序列化时基于 `background` 生成裁切头像 URL。
-- 缓存策略：Agent 轻量配置含 `extensions`，TTL 见 `agent.agent_config_cache_ttl_seconds`（默认 10 分钟）；更新后主动失效并触发 AgentManager 重载。
+- 缓存策略：Agent 轻量配置含 `extensions`，TTL 见 `agent.agent_config_cache_ttl_seconds`（默认 20 分钟）；更新后主动失效并触发 AgentManager 重载。
 
 ## 图片与资源
 
@@ -66,7 +66,7 @@ Based on [AGENTS.md](https://agents.md/)
 
 ## 缓存与重载
 
-- AgentData 缓存：聊天轻量数据（含 voice_id）由 `agent.agent_config_cache_ttl_seconds` 控制 TTL，默认 10 分钟；更新后主动失效。短 TTL 便于 ops 与后端分离部署时（ops 直写 DB）一段时间内读到最新数据。
+- AgentData 缓存：聊天轻量数据（含 voice_id）由 `agent.agent_config_cache_ttl_seconds` 控制 TTL，默认 20 分钟；更新后主动失效。短 TTL 便于 ops 与后端分离部署时（ops 直写 DB）一段时间内读到最新数据。
 - AgentManager：实例缓存、闲置清理、强制重载，保证提示词/配置即时生效。
 
 ## 评测前端（evaluation）对接

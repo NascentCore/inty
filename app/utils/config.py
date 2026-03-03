@@ -293,6 +293,8 @@ class AgentConfig:
     animated_image_fps: int = 15  # 动图帧率
     animated_image_max_width: int = 720  # 动图最大宽度
     preferred_animated_format: str = "avif"  # 首选格式：avif 或 gif
+    # Agent 聊天轻量数据缓存 TTL（秒）；短 TTL 便于 ops 与后端分离部署时读到最新数据
+    agent_config_cache_ttl_seconds: int = 20 * 60  # 默认 20 分钟
 
 
 @dataclass

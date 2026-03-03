@@ -56,6 +56,16 @@ const { TextArea } = Input;
 const { Search } = Input;
 const { Option } = Select;
 
+/** Show info dialog after agent data is saved: cache may take time to refresh. */
+function showAgentSavedCacheNotice() {
+  Modal.info({
+    title: "Saved",
+    content:
+      "Agent data has been saved. It may take some time for the cache to refresh before changes appear everywhere.",
+    okText: "OK",
+  });
+}
+
 // 类型已在 types.ts 中定义
 
 export const AgentManagePage: React.FC = () => {
@@ -498,6 +508,7 @@ export const AgentManagePage: React.FC = () => {
       );
       if (updatedAgent) {
         message.success("头像坐标设置成功");
+        showAgentSavedCacheNotice();
       }
     } finally {
       setAvatarCropModalVisible(false);
@@ -676,6 +687,7 @@ export const AgentManagePage: React.FC = () => {
           });
         }
         message.success("背景动图生成成功");
+        showAgentSavedCacheNotice();
         setGenerateAnimatedModalVisible(false);
         setGenerateAnimatedPrompt("");
         return true;
@@ -735,6 +747,7 @@ export const AgentManagePage: React.FC = () => {
       }
 
       message.success("背景图裁剪并上传成功");
+      showAgentSavedCacheNotice();
 
       // 不再直接生成视频，而是打开生成视频模态框让用户填写提示词
       // 保留 pendingGenerateAction，以便在生成模态框中点击确认时继续
@@ -856,6 +869,7 @@ export const AgentManagePage: React.FC = () => {
         setAvatarFile(null);
         setAvatarPreview("");
         setCreateAvatarCropData(null);
+        showAgentSavedCacheNotice();
         // 不需要调用 loadAgents()，因为 createAgentFromHook 已经优化更新了本地状态
       } else {
         // 创建失败，保持弹窗打开让用户重试
@@ -977,6 +991,7 @@ export const AgentManagePage: React.FC = () => {
         setAgentCopy(null);
         editForm.resetFields();
         setEditAvatarFile(null);
+        showAgentSavedCacheNotice();
         // 不需要调用 loadAgents()，因为 updateAgentFromHook 已经优化更新了本地状态
       } else {
         // 更新失败，保持弹窗打开让用户重试
@@ -1037,6 +1052,7 @@ export const AgentManagePage: React.FC = () => {
               background_images: filteredImages,
             });
             message.success("背景图已删除");
+            showAgentSavedCacheNotice();
           }
         } catch (error) {
           console.error("删除背景图失败:", error);
