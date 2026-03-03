@@ -86,6 +86,7 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             enhance_prompt=False,
             model=request_model,
         )
+        expected_request_payload = request.model_dump()
         current_user = schemas.User(
             id=user_id,
             readable_id=readable_id,
@@ -124,6 +125,12 @@ async def test_text_to_image_resources_store_generation_prompt(monkeypatch: pyte
             resource.resource_metadata.get("generation_model") for resource in resources
         }
         assert stored_models == {request_model}
+
+        stored_requests = {
+            tuple(sorted(resource.resource_metadata.get("text_to_image_request", {}).items()))
+            for resource in resources
+        }
+        assert stored_requests == {tuple(sorted(expected_request_payload.items()))}
 
     finally:
         async with AsyncSessionLocal() as session:

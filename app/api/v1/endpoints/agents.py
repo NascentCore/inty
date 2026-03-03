@@ -851,6 +851,7 @@ async def generate_background(
                 gcs_url=gcs_url,  # Store GCS URL in metadata
                 generation_prompt=request.prompt,
                 generation_model=image_model,
+                text_to_image_request=request.model_dump(),
             )
             logger.debug(
                 f"Created image resource record for CDN URL: {cdn_url}, GCS URL: {gcs_url}"

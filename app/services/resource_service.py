@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from loguru import logger
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -85,6 +85,7 @@ def create_image_resource(
     gcs_url: Optional[str] = None,
     generation_prompt: Optional[str] = None,
     generation_model: Optional[str] = None,
+    text_to_image_request: Optional[dict[str, Any]] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
@@ -105,6 +106,7 @@ def create_image_resource(
         gcs_url=gcs_url,
         generation_prompt=generation_prompt,
         generation_model=generation_model,
+        text_to_image_request=text_to_image_request,
     )
 
     # Convert to dict for database storage
@@ -155,6 +157,7 @@ async def async_create_image_resource(
     agent_id: Optional[str] = None,
     only_include_ai_character: bool = False,
     generation_model: Optional[str] = None,
+    text_to_image_request: Optional[dict[str, Any]] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -175,6 +178,7 @@ async def async_create_image_resource(
         gcs_url=gcs_url,
         generation_prompt=generation_prompt,
         generation_model=generation_model,
+        text_to_image_request=text_to_image_request,
         reference_image_url=reference_image_url,
         user_reference_image_url=user_reference_image_url,
         reference_image_urls=[

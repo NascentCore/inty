@@ -1,5 +1,5 @@
 import enum
-from typing import Optional
+from typing import Any, Optional
 
 import sqlalchemy as sa
 from pydantic import BaseModel
@@ -61,6 +61,7 @@ class ImageResourceMetadata(BaseModel):
     gcs_url: Optional[str] = None
     generation_prompt: Optional[str] = None
     generation_model: Optional[str] = None
+    text_to_image_request: Optional[dict[str, Any]] = None
     reference_image_url: Optional[str] = None  # 生成图片时使用的参考图
     user_reference_image_url: Optional[str] = None  # 用户上传自拍作为额外参考图
     reference_image_urls: Optional[list[str]] = None  # 参与生图的全部参考图 URL
