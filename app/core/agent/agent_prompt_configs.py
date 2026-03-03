@@ -6,7 +6,8 @@ from typing import Dict, Optional
 
 # 与 agent.py、Android AgentConstants 保持一致
 INTELLIMATE_AGENT_ID = "879e5e14-fec2-4d63-9704-4f3141bed74f"
-INTELLIMATE_AGENT_NAME = "IntelliMate"
+INTELLIMATE_AGENT_NAME = "Inty"
+INTELLIMATE_AGENT_NAME_LEGACY = "IntelliMate"
 
 
 @dataclass
@@ -20,6 +21,7 @@ class AgentPromptOverride:
 AGENT_PROMPT_OVERRIDES: Dict[str, AgentPromptOverride] = {
     INTELLIMATE_AGENT_ID: AgentPromptOverride(main_prompt="", mode_prompt=""),
     INTELLIMATE_AGENT_NAME: AgentPromptOverride(main_prompt="", mode_prompt=""),
+    INTELLIMATE_AGENT_NAME_LEGACY: AgentPromptOverride(main_prompt="", mode_prompt=""),
 }
 
 

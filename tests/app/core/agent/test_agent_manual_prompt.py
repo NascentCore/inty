@@ -42,7 +42,7 @@ CHANGE_LOGS_PROMPT_CONTENT = "\n".join(
         "",
         "> CREATED_BY_AGENT",
         "",
-        "> This content is injected into the IntelliMate official assistant system message.",
+        "> This content is injected into the Inty official assistant system message.",
         "> Lines starting with \">\" will be removed during injection.",
         "",
         "CHANGE_LOG_LINE_1",
@@ -51,6 +51,10 @@ CHANGE_LOGS_PROMPT_CONTENT = "\n".join(
 )
 MINIMAL_MANUAL_CONTENT = "# IntelliMate User Guide\nMANUAL_CONTENT"
 MINIMAL_CHANGE_LOGS_CONTENT = "# IntelliMate Change Logs\nCHANGE_LOG_CONTENT"
+OFFICIAL_RENAME_MESSAGE_PREFIX = "##Official Assistant Naming Update\n"
+OFFICIAL_RENAME_MESSAGE_LINE = (
+    "- The official assistant in the IntelliMate app is now named Inty."
+)
 
 
 def _patch_manual_and_change_logs(
@@ -91,10 +95,12 @@ def test_intellimate_official_injects_repo_change_logs_content(tmp_path, monkeyp
     change_logs_message = _find_message_by_prefix(
         contents, "##IntelliMate Change Logs\n"
     )
+    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
 
     assert change_logs_message == (
         "##IntelliMate Change Logs\n" + expected_change_logs
     )
+    assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "CREATED_BY_AGENT" not in change_logs_message
 
 
@@ -113,9 +119,11 @@ def test_intellimate_official_injects_manual_prompt(tmp_path, monkeypatch):
     contents = _get_contents(agent.build_system_messages("", None))
 
     manual_message = _find_message_by_prefix(contents, "##IntelliMate User Manual\n")
+    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert manual_message.startswith(
         "##IntelliMate User Manual\n# IntelliMate User Guide"
     )
+    assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "MANUAL_LINE_1" in manual_message
     assert "MANUAL_LINE_2" in manual_message
     assert ">" not in manual_message
@@ -141,9 +149,11 @@ def test_intellimate_official_injects_change_logs_prompt(tmp_path, monkeypatch):
     change_logs_message = _find_message_by_prefix(
         contents, "##IntelliMate Change Logs\n"
     )
+    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert change_logs_message.startswith(
         "##IntelliMate Change Logs\n# IntelliMate Change Logs"
     )
+    assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "CHANGE_LOG_LINE_1" in change_logs_message
     assert "CHANGE_LOG_LINE_2" in change_logs_message
     assert ">" not in change_logs_message
@@ -171,7 +181,9 @@ def test_build_system_messages_for_intellimate_official_assistant_happy_case(
     )
 
     manual_message = _find_message_by_prefix(contents, "##IntelliMate User Manual\n")
+    rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert manual_message.startswith("##IntelliMate User Manual\n")
+    assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
 
     change_logs_message = _find_message_by_prefix(
         contents, "##IntelliMate Change Logs\n"
@@ -195,6 +207,9 @@ def test_non_intellimate_official_does_not_inject_manual_prompt(monkeypatch):
 
     assert not any("##IntelliMate User Manual\n" in content for content in contents)
     assert not any("##IntelliMate Change Logs\n" in content for content in contents)
+    assert not any(
+        OFFICIAL_RENAME_MESSAGE_PREFIX in content for content in contents
+    )
 
 
 def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypatch):
