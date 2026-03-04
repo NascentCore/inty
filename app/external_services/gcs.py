@@ -1,5 +1,7 @@
+import asyncio
 import re
 import shutil
+import traceback
 from pathlib import Path
 
 import loguru
@@ -37,22 +39,25 @@ def get_gcs_client():
 
 
 def upload_to_gcs(file_data, content_type, bucket_name, path):
-    try:
-        client = get_gcs_client()
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(path)
-        blob.upload_from_string(file_data, content_type=content_type)
-        public_url = blob.public_url
-        # blob.generate_signed_url(expiration=datetime.timedelta(seconds=3600))
-        # TODO：是否可以用来提升安全性？
-        return public_url
-    except Exception as e:
-        logger.error(f"GCS上传失败: {str(e)}")
-        logger.error(f"错误类型: {type(e).__name__}")
-        import traceback
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(path)
+    blob.upload_from_string(file_data, content_type=content_type)
+    public_url = blob.public_url
+    # blob.generate_signed_url(expiration=datetime.timedelta(seconds=3600))
+    # TODO：是否可以用来提升安全性？
+    return public_url
 
-        logger.error(f"错误堆栈: {traceback.format_exc()}")
-        raise
+
+async def upload_to_gcs_async(file_data, content_type, bucket_name, path):
+    """Async version of upload_to_gcs; runs the blocking upload in a thread."""
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(path)
+    await asyncio.to_thread(
+        blob.upload_from_string, file_data, content_type=content_type
+    )
+    return blob.public_url
 
 
 # 新增删除方法
