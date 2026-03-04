@@ -825,7 +825,7 @@ internal fun ChatPage(
                         val createEntryConfig = UiConfigs.ChatPage.OfficialAssistantCreateEntry
                         // AI 实现小结：
                         // 1) 官方助手聊天页输入框上方提供两个独立快捷入口：
-                        //    - Test my MBTI type（测试我的 MBTI 类型）：仅回填结构化提示词，不自动发送；
+                        //    - Test my MBTI type（测试我的 MBTI 类型）：回填结构化提示词并立即发送；
                         //    - + Create your own iMate（创建我的 iMate）：进入创建角色流程。
                         // 2) 两个入口都遵循同一显隐规则：仅在官方助手页且键盘收起时展示；
                         // 3) 入口位置固定在输入框上方，避免与消息流和输入区交互冲突。
@@ -843,8 +843,7 @@ internal fun ChatPage(
                                     chatViewModel.setInputMessage(
                                         context.getString(R.string.chat_official_mbti_test_prompt)
                                     )
-                                    inputFocusRequester.requestFocus()
-                                    onInputFocusChange(true)
+                                    chatViewModel.sendMsg()
                                     FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
                                         "click_type" to "official_test_mbti_type",
                                         "agent_id" to agentInfo?.id,

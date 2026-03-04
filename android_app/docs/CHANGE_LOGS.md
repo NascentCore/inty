@@ -10,7 +10,7 @@
 
 ## 2026-03-04
 
-- Official Assistant chat now has a dedicated **Test my MBTI type** quick-action button above the input. Tapping it prefills a structured MBTI interview prompt (not auto-sent) so users can start a guided type discovery conversation immediately.
+- Official Assistant chat now has a dedicated **Test my MBTI type** quick-action button above the input. Tapping it sends a structured MBTI interview starter prompt immediately, so users can begin guided type discovery in one tap.
 
 ## 2026-03-03
 
