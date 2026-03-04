@@ -205,8 +205,10 @@ class VoiceService:
 
             if model is None:
                 if user and db and is_gemini_voice(voice_id):
-                    subscription = await subscription_service.get_user_current_subscription(
-                        db, user.id
+                    subscription = (
+                        await subscription_service.get_user_current_subscription(
+                            db, user.id
+                        )
                     )
                     model = select_chat_tts_model(
                         user=user, is_subscribed=bool(subscription)

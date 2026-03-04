@@ -16,14 +16,18 @@ def voice_service() -> VoiceService:
 
 
 def test_build_gcs_urls_accepts_gs_url(voice_service: VoiceService):
-    gcs_url, gcs_http_url = voice_service._build_gcs_urls("gs://test-bucket/voice/x.wav")
+    gcs_url, gcs_http_url = voice_service._build_gcs_urls(
+        "gs://test-bucket/voice/x.wav"
+    )
     assert gcs_url == "gs://test-bucket/voice/x.wav"
     assert gcs_http_url == "https://storage.googleapis.com/test-bucket/voice/x.wav"
 
 
 @pytest.mark.asyncio
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
-@patch("app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock)
+@patch(
+    "app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock
+)
 async def test_generate_voice_returns_both_gcs_urls_for_gemini(
     mock_upload_voice_file: AsyncMock,
     mock_call_tts_api: AsyncMock,
@@ -62,7 +66,9 @@ async def test_generate_voice_returns_both_gcs_urls_for_gemini(
 
 @pytest.mark.asyncio
 @patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
-@patch("app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock)
+@patch(
+    "app.services.voice_service.GCSService.upload_voice_file", new_callable=AsyncMock
+)
 async def test_generate_voice_does_not_emit_gemini_trace_for_elevenlabs_provider(
     mock_upload_voice_file: AsyncMock,
     mock_call_tts_api: AsyncMock,
