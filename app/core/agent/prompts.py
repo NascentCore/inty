@@ -70,6 +70,10 @@ ROLEPLAY_MAIN_PROMPT_1225 = _get_prompt_text("ROLEPLAY_MAIN_PROMPT_1225")
 
 RP_MODE_PROMPT_1225 = _get_prompt_text("RP_MODE_PROMPT_1225")
 
+AI_COMPANION_MAIN_PROMPT = _get_prompt_text("AI_COMPANION_MAIN_PROMPT")
+
+AI_COMPANION_MODE_PROMPT = _get_prompt_text("AI_COMPANION_MODE_PROMPT")
+
 
 @dataclass
 class PromptOption:
@@ -99,6 +103,12 @@ AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
         name="角色扮演主提示词 (1225)",
         description="角色扮演主提示词（1225版本），强调情感连接和角色代入",
         content=ROLEPLAY_MAIN_PROMPT_1225,
+    ),
+    PromptOption(
+        id="ai_companion_main",
+        name="AI companion",
+        description="AI companion 主提示词占位预设，后续可补充完整内容",
+        content=AI_COMPANION_MAIN_PROMPT,
     ),
 ]
 
@@ -132,6 +142,12 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
         name="RP模式 (1225)",
         description="角色扮演模式提示词（1225版本），强调主动推动剧情和场景变化",
         content=RP_MODE_PROMPT_1225,
+    ),
+    PromptOption(
+        id="ai_companion_mode",
+        name="AI companion",
+        description="AI companion 聊天模式占位预设，后续可补充完整内容",
+        content=AI_COMPANION_MODE_PROMPT,
     ),
 ]
 
