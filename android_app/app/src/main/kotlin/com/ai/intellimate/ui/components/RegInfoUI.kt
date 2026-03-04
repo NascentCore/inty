@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -137,6 +139,70 @@ internal fun AgeItem(
                 fontWeight = FontWeight.Normal,
             )
         }
+    }
+}
+
+/**
+ * MBTI 性格类型选择 Chip（Myers-Briggs Type Indicator）。
+ *
+ * 使用场景：
+ * - 注册信息弹层中展示 16 种 MBTI 类型（如 INTJ、ENFP）的可选项。
+ * - 在紧凑网格布局里保持清晰的选中态与未选中态，降低用户认知负担。
+ *
+ * 预期视觉：
+ * - 未选中：半透明深色底 + 细边框，保持整体层次不抢焦点。
+ * - 选中：渐变边框 + 高亮文字，便于在 16 项中快速识别当前选择。
+ *
+ * 可配置项：
+ * @param modifier 外部布局修饰器（用于网格宽度/高度、行列间距控制）。
+ * @param mbtiType 展示的 MBTI 代码（例如 INTP）。
+ * @param selected 当前项是否被选中。
+ * @param onClick 点击该项时的回调。
+ */
+@Composable
+internal fun MbtiTypeChip(
+    modifier: Modifier = Modifier,
+    mbtiType: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val cornerRadius = dimensionResource(R.dimen.reg_info_mbti_chip_corner_radius)
+    val borderWidth = dimensionResource(R.dimen.reg_info_mbti_chip_border_width)
+    val chipPaddingHorizontal = dimensionResource(R.dimen.reg_info_mbti_chip_padding_horizontal)
+    val chipPaddingVertical = dimensionResource(R.dimen.reg_info_mbti_chip_padding_vertical)
+
+    Box(
+        modifier =
+            modifier
+                .background(color = Color(0x3378599A), shape = RoundedCornerShape(cornerRadius))
+                .then(
+                    if (selected) {
+                        Modifier.border(
+                            brush =
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xffC122FF), Color(0xffFF905D))
+                                ),
+                            width = borderWidth,
+                            shape = RoundedCornerShape(cornerRadius),
+                        )
+                    } else {
+                        Modifier.border(
+                            width = borderWidth,
+                            color = Color.White.copy(0.2f),
+                            shape = RoundedCornerShape(cornerRadius),
+                        )
+                    }
+                )
+                .noRippleClickable { onClick() }
+                .padding(horizontal = chipPaddingHorizontal, vertical = chipPaddingVertical),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = mbtiType,
+            color = if (selected) Color.White else Color.White.copy(0.7f),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        )
     }
 }
 

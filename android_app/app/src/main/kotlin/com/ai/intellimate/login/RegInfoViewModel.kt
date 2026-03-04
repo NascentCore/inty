@@ -2,6 +2,7 @@ package com.ai.intellimate.login
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.GENDER
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.IntyUserProfileSDK
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val EVENT_REG_INFO_SUBMIT = "onboarding_reg_info_submit"
+
 class RegInfoViewModel : BaseVM() {
 
     // 事件通知机制
@@ -26,7 +29,7 @@ class RegInfoViewModel : BaseVM() {
         viewModelScope.launch { _events.emit(event) }
     }
 
-    fun onSave(gender: GENDER, age: String) {
+    fun onSave(gender: GENDER, age: String, mbti: String) {
         launchBackground {
             val info = UserProfileManager.profile.first()
             // 调用接口，需要让服务端存储游客的性别和年龄数据
@@ -39,6 +42,15 @@ class RegInfoViewModel : BaseVM() {
                 withContext(Dispatchers.Main) {
                     // 更新本地缓存
                     UserProfileManager.saveUserProfile(result)
+                    FirebaseManager.logEvent(
+                        EVENT_REG_INFO_SUBMIT,
+                        FirebaseManager.safeEventParams(
+                            "gender" to gender.value,
+                            "age_group" to age,
+                            "mbti_type" to mbti,
+                        ),
+                    )
+                    FirebaseManager.setUserProperty("mbti_type", mbti)
 
                     // 发送用户信息更新成功事件
                     // 不再重启 MainActivity，MainActivity 会自动感知状态变化

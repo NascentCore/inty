@@ -60,6 +60,6 @@ internal fun RegInfoPage(navController: NavController, viewModel: RegInfoViewMod
 
     RegInfoScreen(
         onClose = { navController.popBackStack() },
-        onSave = { gender, age -> viewModel.onSave(gender, age) },
+        onSave = { gender, age, mbti -> viewModel.onSave(gender, age, mbti) },
     )
 }

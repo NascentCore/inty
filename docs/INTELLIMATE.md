@@ -17,6 +17,7 @@ Terminology used in this guide:
 
 - **Install or update**: Prefer the [Google Play internal testing channel](https://play.google.com/store/apps/details?id=com.ai.intellimate&hl=en-US&ah=EmlT1IB-9hWsv_1I4B8Go9FEIFc). For the very latest QA builds, grab the APK from the [daily release page](https://github.com/NascentCore/inty-app/releases).
 - **Sign in**: You can explore as a guest, but linking your Google account keeps chats and VIP benefits synced across devices. (Phones in China must install Google services first.)
+- **First-time profile setup**: After sign-in, IntelliMate asks for pronouns, age group, and MBTI personality type to improve personalization.
 - **Main flow**: Discover iMates on Explore → open a Chat → use extras like voice playback, image generation, Keep Talking, or Hype actions → adjust Profile or Settings as needed.
 - **Need help?**
   - In-app: Settings → Help & Feedback (placeholder entry; use tester channels for now).
@@ -74,6 +75,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
 | Create or edit an iMate | Official Assistant Chat → **+ Create your own iMate**, or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
+| Complete first-time onboarding profile | Sign in → onboarding bottom sheet | You must choose pronouns, age group, and one MBTI type before entering the app. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
 | Manage notifications & privacy | Settings → Notifications / Privacy | Push powered by Firebase Cloud Messaging; toggle anytime. Tapping a “Heartbeat Journal” (festival memory) notification opens that iMate’s Love Journal and the related memory entry. When opened from chat or a notification, that entry is highlighted with a glow and the rest of the screen is dimmed; tap outside the glowing card to return to the normal list. |

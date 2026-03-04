@@ -8,6 +8,10 @@
 - Changes only affect debug build type's app is not listed.
 
 
+## 2026-03-04
+
+- During first-time sign-in onboarding, the profile setup sheet now includes an **MBTI personality type** selector with all 16 MBTI options, shown in a compact visual grid and required before entering the app.
+
 ## 2026-03-03
 
 - After creating an iMate from Official Assistant chat (**+ Create your own iMate**), the app now opens the newly created iMate chat directly instead of switching to the Me tab.

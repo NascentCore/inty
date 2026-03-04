@@ -85,13 +85,16 @@ class RegInfoActivity : BaseActivity() {
 
         RegInfoContent(
             onClose = { finish() },
-            onSave = { gender, age -> viewModel.onSave(gender, age) },
+            onSave = { gender, age, mbti -> viewModel.onSave(gender, age, mbti) },
         )
     }
 }
 
 /** 注册信息内容组件 */
 @Composable
-private fun RegInfoContent(onClose: () -> Unit, onSave: (gender: GENDER, age: String) -> Unit) {
+private fun RegInfoContent(
+    onClose: () -> Unit,
+    onSave: (gender: GENDER, age: String, mbti: String) -> Unit,
+) {
     RegInfoScreen(onClose = onClose, onSave = onSave)
 }

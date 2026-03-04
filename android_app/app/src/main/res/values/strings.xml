@@ -159,6 +159,8 @@
     <string name="tell_us_more">Tell us more for a better personalized experience</string>
     <string name="which_pronoun_use">Which pronoun do you use? *</string>
     <string name="what_is_your_age">What is your age? *</string>
+    <string name="what_is_your_mbti">What is your MBTI personality type? *</string>
+    <string name="mbti_selection_hint">Pick the one that fits you best</string>
     <string name="age_under_18">&lt;18</string>
     <string name="age_18_20">18–20</string>
     <string name="age_21_23">21–23</string>
@@ -351,6 +353,7 @@
     <string name="toast_age_screen_not_eligible">You are not eligible to use IntelliMate</string>
     <string name="toast_age_screen_required_select_age">Please select your age group</string>
     <string name="toast_reginfo_required_select_gender">Please select your gender</string>
+    <string name="toast_reginfo_required_select_mbti">Please select your MBTI personality type</string>
     <string name="toast_cancel_subscription_first">Please cancel the subscription before proceeding</string>
     <string name="toast_check_account_deletion_error">Check Account Deletion Server Error !</string>
     <string name="toast_account_deletion_error">Account Deletion Server Error !</string>
@@ -699,6 +702,24 @@
     <string name="heartbeat_subtitle">%1$d Love Journals about you</string>
     <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
     <string name="heartbeat_empty">No Love Journal yet</string>
+    <string-array name="mbti_personality_types">
+        <item>INTJ</item>
+        <item>INTP</item>
+        <item>ENTJ</item>
+        <item>ENTP</item>
+        <item>INFJ</item>
+        <item>INFP</item>
+        <item>ENFJ</item>
+        <item>ENFP</item>
+        <item>ISTJ</item>
+        <item>ISFJ</item>
+        <item>ESTJ</item>
+        <item>ESFJ</item>
+        <item>ISTP</item>
+        <item>ISFP</item>
+        <item>ESTP</item>
+        <item>ESFP</item>
+    </string-array>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A voice that stays</item>
