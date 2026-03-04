@@ -140,7 +140,7 @@ def test_android_app_requests_flow():
         assert r.status_code == 200
 
         # 14) 上传图片（可能依赖 GCS 配置失败，允许业务失败但 HTTP 可达）
-        test_img = Path(__file__).resolve().parents[4] / "files" / "test.jpg"
+        test_img = Path(__file__).resolve().parents[2] / "files" / "test.jpg"
         if test_img.exists():
             with test_img.open("rb") as f:
                 r = session.post(
