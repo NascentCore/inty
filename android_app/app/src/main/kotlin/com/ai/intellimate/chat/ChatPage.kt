@@ -421,7 +421,7 @@ internal fun ChatPage(
     val ratio = 1 - imeHeight.toFloat() / KEY_BOARD_HEIGHT_MAX.toFloat() // 计算出键盘当前弹出/回收进度
 
     val isKeyboardVisible = imeHeight > 0
-    val shouldShowOfficialAssistantCreateButton =
+    val shouldShowOfficialAssistantQuickActions =
         shouldDisplayOfficialAssistantCreateButton(isOfficialAssistantChat, isKeyboardVisible)
     onKeyboardVisible(isKeyboardVisible)
     val bottomPadding = UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
@@ -821,37 +821,61 @@ internal fun ChatPage(
                         )
                     }
                 } else {
-                    if (shouldShowOfficialAssistantCreateButton) {
+                    if (shouldShowOfficialAssistantQuickActions) {
                         val createEntryConfig = UiConfigs.ChatPage.OfficialAssistantCreateEntry
                         // AI 实现小结：
-                        // 1) 仅在官方助手聊天页显示创建角色入口；
-                        // 2) 按钮固定放在输入框上方；
-                        // 3) 键盘弹起后自动隐藏，避免遮挡输入区域。
-                        OfficialAssistantCreateEntryButton(
+                        // 1) 官方助手聊天页输入框上方提供两个独立快捷入口：
+                        //    - Test my MBTI type（测试我的 MBTI 类型）：仅回填结构化提示词，不自动发送；
+                        //    - + Create your own iMate（创建我的 iMate）：进入创建角色流程。
+                        // 2) 两个入口都遵循同一显隐规则：仅在官方助手页且键盘收起时展示；
+                        // 3) 入口位置固定在输入框上方，避免与消息流和输入区交互冲突。
+                        Column(
                             modifier =
                                 Modifier.padding(
                                     start = createEntryConfig.HorizontalPadding,
                                     end = createEntryConfig.HorizontalPadding,
                                     bottom = createEntryConfig.BottomSpacing,
-                                ),
-                            text = stringResource(R.string.chat_official_create_imate_button),
-                            onClick = {
-                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
-                                    "click_type" to "official_create_imate",
-                                    "agent_id" to agentInfo?.id,
-                                    "agent_name" to agentInfo?.name,
-                                    "user_type" to
-                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 )
-                                navController.currentBackStackEntry
-                                    ?.savedStateHandle
-                                    ?.set(
-                                        CreateRoleNavigationState.EntrySourceKey,
-                                        CreateRoleNavigationState.EntrySourceOfficialAssistantChat,
+                        ) {
+                            OfficialAssistantQuickActionButton(
+                                text = stringResource(R.string.chat_official_mbti_test_button),
+                                onClick = {
+                                    chatViewModel.setInputMessage(
+                                        context.getString(R.string.chat_official_mbti_test_prompt)
                                     )
-                                navController.navigate(Routes.Creat.createRole(""))
-                            },
-                        )
+                                    inputFocusRequester.requestFocus()
+                                    onInputFocusChange(true)
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "official_test_mbti_type",
+                                        "agent_id" to agentInfo?.id,
+                                        "agent_name" to agentInfo?.name,
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    )
+                                },
+                            )
+                            Spacer(Modifier.height(createEntryConfig.BottomSpacing))
+                            OfficialAssistantQuickActionButton(
+                                text = stringResource(R.string.chat_official_create_imate_button),
+                                onClick = {
+                                    FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                        "click_type" to "official_create_imate",
+                                        "agent_id" to agentInfo?.id,
+                                        "agent_name" to agentInfo?.name,
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    )
+                                    navController.currentBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set(
+                                            CreateRoleNavigationState.EntrySourceKey,
+                                            CreateRoleNavigationState
+                                                .EntrySourceOfficialAssistantChat,
+                                        )
+                                    navController.navigate(Routes.Creat.createRole(""))
+                                },
+                            )
+                        }
                     }
 
                     val effectiveBottomPadding =
@@ -1268,23 +1292,23 @@ internal fun ChatPage(
 }
 
 /**
- * 官方助手聊天页「Create your own iMate」入口按钮。
+ * 官方助手聊天页输入框上方快捷入口按钮（Official Assistant Quick Action Button）。
  *
  * 适用范围：
- * - 仅用于官方助手聊天页输入框上方的创建角色快捷入口。
+ * - 仅用于官方助手聊天页输入框上方的快捷入口（如“Test my MBTI type / + Create your own iMate”）。
  *
  * 预期视觉效果：
  * - 左对齐胶囊按钮；
  * - 背景使用 IntelliMate 主 CTA 渐变色；
- * - 文案显示 `+ Create your own iMate`，字体与高度与上方 FAQ 按钮保持一致。
+ * - 文案由参数传入，字体与高度与上方 FAQ 按钮保持一致。
  *
  * 可配置项：
  * @param modifier 外层布局修饰符（用于定位到输入框上方并设置间距）
  * @param text 按钮文案
- * @param onClick 点击回调（建议用于导航到创建角色页面）
+ * @param onClick 点击回调（可用于回填提示词或导航到创建角色页面）
  */
 @Composable
-private fun OfficialAssistantCreateEntryButton(
+private fun OfficialAssistantQuickActionButton(
     modifier: Modifier = Modifier,
     text: String,
     onClick: () -> Unit,
