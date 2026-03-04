@@ -4,7 +4,9 @@
 > This content is injected into the Inty official assistant system message.
 > Lines starting with ">" will be removed during injection.
 
-Only user-visible changes are recorded
+- Only user-visible changes are recorded.
+- Changes only affect debug build type's app is not listed.
+
 
 ## 2026-03-03
 

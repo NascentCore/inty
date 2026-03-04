@@ -38,6 +38,7 @@ private object Spacing {
 
 private object TextConfig {
     val SecondaryTextAlpha = 0.7f
+    val PlaceholderTextAlpha = 0.5f
     val MaxUrlLines = 2
 }
 
@@ -117,7 +118,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 placeholder = {
                     Text(
                         stringResource(R.string.settings_debug_custom_backend_placeholder),
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = Color.White.copy(alpha = TextConfig.PlaceholderTextAlpha),
                     )
                 },
                 singleLine = true,
@@ -129,7 +130,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
 
             Spacer(Modifier.height(Spacing.MediumSpacer))
             TextButton(onClick = viewModel::resetOverride) {
-                Text(text = "恢复默认", color = Color.White)
+                Text(text = stringResource(R.string.settings_debug_reset_to_default), color = Color.White)
             }
 
             // Remix 按钮可见性配置
@@ -156,7 +157,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(Spacing.SmallSpacer))
             TextButton(onClick = viewModel::resetRemixButtonOverride) {
-                Text(text = "恢复默认", color = Color.White)
+                Text(text = stringResource(R.string.settings_debug_reset_to_default), color = Color.White)
             }
 
             Spacer(Modifier.height(Spacing.MediumSpacer * 2))

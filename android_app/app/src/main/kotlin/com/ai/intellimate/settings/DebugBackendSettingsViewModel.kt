@@ -113,7 +113,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         NetworkStackCoordinator.clearAllRuntimeCaches()
 
         val active = NetworkConfig.getBaseUrl()
-        _uiState.update { it.copy(activeBaseUrl = active) }
+        _uiState.update { it.copy(activeBaseUrl = active, customUrlInput = "") }
     }
 
     fun toggleRemixButton() {
