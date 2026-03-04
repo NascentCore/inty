@@ -42,6 +42,7 @@ google_oauth:
   redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
 
 gcs:
+  use_fake_gcs: true
   bucket: "inty-static"
 
 verification:
@@ -107,4 +108,3 @@ gemini_live:
 fal:
   # inty-test API KEY, Fal.AI
   api_key: 00390a52-cf59-46de-99c6-498f6b916807:a45acbb8f83ecd037a567ca952d557ef
-
