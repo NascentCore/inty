@@ -318,7 +318,7 @@
     <string name="chat_official_faq_title_check_version">Check app version</string>
     <string name="chat_official_faq_question_check_version">Where can I check app version info?</string>
     <string name="chat_official_mbti_test_button">Test my MBTI type</string>
-    <string name="chat_official_mbti_test_prompt">I want to test my MBTI type. Please guide me with a structured conversation:\n1) Ask one question at a time and wait for my answer.\n2) Cover E/I, S/N, T/F, and J/P with practical scenario questions.\n3) After each answer, briefly explain what it suggests.\n4) At the end, give my most likely type, confidence level, and a short reason for each letter.\nStart with the first question now.</string>
+    <string name="chat_official_mbti_test_prompt">Test my MBTI type to better understand my emotional needs. Please guide me with a structured conversation:\n1) Ask one question at a time and wait for my answer.\n2) Cover E/I, S/N, T/F, and J/P with practical scenario questions.\n3) After each answer, briefly explain what it suggests.\n4) At the end, give my most likely type, confidence level, and a short reason for each letter.\nStart with the first question now.</string>
     <string name="chat_official_create_imate_button">+ Create your own iMate</string>
 
     <!-- VIP character access control -->
