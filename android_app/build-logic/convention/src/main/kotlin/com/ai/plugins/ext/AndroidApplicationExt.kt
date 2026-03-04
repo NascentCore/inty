@@ -22,6 +22,7 @@ private fun getGitCommitInfo(project: Project): String {
 
 /** 获取git的提交次数，作为versionCode 使用Provider来避免配置缓存问题 */
 private fun getCommitCount(project: Project): Int {
+    // 偶然测试导致 version code 增加到了 10000，直接增加 10000 的基数来向 version code 提前
     return project.providers
         .exec {
             commandLine("git", "rev-list", "--count", "HEAD")
@@ -31,7 +32,7 @@ private fun getCommitCount(project: Project): Int {
         .asText
         .get()
         .trim()
-        .toInt()
+        .toInt() + 10000
 }
 
 /** android application 的gradle相关配置 扩展函数 */
