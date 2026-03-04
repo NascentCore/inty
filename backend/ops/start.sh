@@ -38,9 +38,10 @@ if [ "$LOCAL" = true ]; then
   echo "Seeding report test data..."
   python scripts/seed_report_test_data.py
   
-  echo "Initializing admin user ..."
+  echo "创建测试用管理员账户用于在 ops 平台登陆访问"
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
-  echo "Run the following command to start the evaluation frontend in dev mode..."
+
+  echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
   echo "cd evaluation && npm run dev"
   echo "Starting ops backend server in dev mode on port $OPS_PORT..."
   uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload
