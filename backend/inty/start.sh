@@ -63,7 +63,10 @@ if [ "$DEV" = true ]; then
   else
     echo "Starting in dev mode..."
   fi
-  python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+  # 生成测试用管理员账号，ops 平台与 inty 后端分离后，这个应该就不需要了，先注释掉保留来做记录。
+  # python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+  # 生成测试用户用于本地 app 登陆
+  python scripts/create_email_password_superuser.py --email test@sxwl.ai --password test --yes
   uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."
