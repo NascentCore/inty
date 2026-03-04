@@ -45,6 +45,16 @@ GENDER_VOICE_MAPPING = {
     "OTHER": "O7p2vmz2iEYgMXxkbsif",
 }
 
+TTS_MODEL_SOURCE_EXPLICIT = "explicit"
+TTS_MODEL_SOURCE_CONFIG = "config"
+TTS_MODEL_SOURCE_SUBSCRIPTION = "subscription"
+
+
+def _is_gemini_tts_model(model_id: str) -> bool:
+    if not model_id:
+        return False
+    return model_id.startswith("gemini-")
+
 
 @dataclass(frozen=True)
 class VoiceGenerationResult:
@@ -78,6 +88,54 @@ class VoiceService:
         # 语音生成根据 voice_id 自动选择对应的 TTS 服务（Gemini 或 ElevenLabs）。
         self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
         self.gemini_tts_api = GeminiTTSAPI()
+
+    async def _resolve_model_and_source(
+        self,
+        *,
+        provider_selected: str,
+        requested_model: Optional[str],
+        db: Optional[AsyncSession],
+        user: Optional[Any],
+    ) -> Tuple[str, str]:
+        # 关键步骤：先按 provider 选择模型来源，再统一校验 provider/model 一致性。
+        if requested_model is not None:
+            return requested_model, TTS_MODEL_SOURCE_EXPLICIT
+
+        if provider_selected == TTS_PROVIDER_GEMINI:
+            if user and db:
+                subscription = await subscription_service.get_user_current_subscription(
+                    db, user.id
+                )
+                model_selected = select_chat_tts_model(
+                    user=user, is_subscribed=bool(subscription)
+                )
+                return model_selected, TTS_MODEL_SOURCE_SUBSCRIPTION
+
+            # 无 user/db 场景也必须使用 Gemini 模型，避免落到 ElevenLabs 默认模型。
+            return (
+                global_config_loaded_from_config_yaml.agent.free_user_chat_tts_model,
+                TTS_MODEL_SOURCE_CONFIG,
+            )
+
+        return self.config.model, TTS_MODEL_SOURCE_CONFIG
+
+    def _validate_model_provider_match(
+        self, *, provider_selected: str, model_selected: str
+    ) -> None:
+        if provider_selected == TTS_PROVIDER_GEMINI and not _is_gemini_tts_model(
+            model_selected
+        ):
+            raise ValueError(
+                f"TTS model/provider mismatch: provider={provider_selected}, "
+                f"model={model_selected}"
+            )
+        if provider_selected == TTS_PROVIDER_ELEVENLABS and _is_gemini_tts_model(
+            model_selected
+        ):
+            raise ValueError(
+                f"TTS model/provider mismatch: provider={provider_selected}, "
+                f"model={model_selected}"
+            )
 
     def _clean_text_for_voice(self, text: str) -> str:
         """
@@ -203,21 +261,26 @@ class VoiceService:
                 )
                 return None
 
-            if model is None:
-                if user and db and is_gemini_voice(voice_id):
-                    subscription = (
-                        await subscription_service.get_user_current_subscription(
-                            db, user.id
-                        )
-                    )
-                    model = select_chat_tts_model(
-                        user=user, is_subscribed=bool(subscription)
-                    )
-                else:
-                    model = self.config.model
+            provider_selected = (
+                TTS_PROVIDER_GEMINI
+                if is_gemini_voice(voice_id)
+                else TTS_PROVIDER_ELEVENLABS
+            )
+            model, model_source = await self._resolve_model_and_source(
+                provider_selected=provider_selected,
+                requested_model=model,
+                db=db,
+                user=user,
+            )
+            self._validate_model_provider_match(
+                provider_selected=provider_selected,
+                model_selected=model,
+            )
 
             logger.debug(
-                f"开始语音生成: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}"
+                f"开始语音生成: voice_id={voice_id}, provider_selected={provider_selected}, "
+                f"model_selected={model}, model_source={model_source}, language={language}, "
+                f"text_length={len(text)}"
             )
 
             # 并行检查缓存和预准备其他资源
@@ -267,10 +330,24 @@ class VoiceService:
             logger.debug("调用 TTS 生成接口（根据 voice_id 选择 Gemini 或 ElevenLabs）")
             audio_result = await self._call_tts_api(text, voice_id, model, language)
             if not audio_result:
-                logger.error("TTS 生成返回空数据")
+                logger.error(
+                    "TTS 生成返回空数据: provider_selected={}, model_selected={}, "
+                    "model_source={}, final_status={}",
+                    provider_selected,
+                    model,
+                    model_source,
+                    "failed",
+                )
                 return None
 
             audio_data, duration, mime_type, provider_used = audio_result
+            final_model_selected = model
+            if (
+                provider_selected == TTS_PROVIDER_GEMINI
+                and provider_used == TTS_PROVIDER_ELEVENLABS
+            ):
+                # Gemini -> ElevenLabs fallback 时 model 会重绑定到 ElevenLabs 默认模型。
+                final_model_selected = self.config.model
 
             logger.debug(
                 f"TTS 生成成功，音频数据大小: {len(audio_data)} bytes, mime_type={mime_type}"
@@ -343,12 +420,24 @@ class VoiceService:
                     logger.warning(f"记录语音生成用量失败: {str(e)}")
 
             logger.debug(f"语音生成成功: {file_name}, 时长: {duration:.2f}秒")
+            logger.info(
+                "TTS 生成完成: provider_selected={}, model_selected={}, "
+                "model_source={}, final_provider={}, final_status={}",
+                provider_selected,
+                final_model_selected,
+                model_source,
+                provider_used,
+                "success",
+            )
             return VoiceGenerationResult(
                 gcs_url=gcs_url,
                 gcs_http_url=gcs_http_url,
                 duration_seconds=duration,
             )
 
+        except ValueError:
+            logger.error("语音生成参数校验失败（provider/model 不一致）")
+            raise
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
             logger.exception("语音生成异常详细信息:")
@@ -380,6 +469,10 @@ class VoiceService:
             use_gemini = is_gemini_voice(voice_id)
             provider_name = (
                 TTS_PROVIDER_GEMINI if use_gemini else TTS_PROVIDER_ELEVENLABS
+            )
+            self._validate_model_provider_match(
+                provider_selected=provider_name,
+                model_selected=model,
             )
 
             logger.debug(
@@ -414,7 +507,7 @@ class VoiceService:
                     fallback_req = TTSRequest(
                         text=text,
                         voice_id=self.config.voice_id,
-                        model_id=model,
+                        model_id=self.config.model,
                         output_format=self.config.output_format,
                         language_code=language,
                     )
@@ -442,6 +535,9 @@ class VoiceService:
             )
             return (audio_data, duration, mime_type, provider_used)
 
+        except ValueError:
+            logger.error("TTS provider/model 校验失败")
+            raise
         except Exception as e:
             logger.error(f"TTS 调用异常: {str(e)}")
             logger.exception("TTS 调用异常详细信息:")
