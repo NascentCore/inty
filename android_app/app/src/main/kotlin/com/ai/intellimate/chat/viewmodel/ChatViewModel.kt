@@ -68,6 +68,14 @@ import kotlinx.coroutines.withContext
 
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
+/**
+ * 进程内会话状态：用户在本轮 APP 运行中是否已点击过「跳过」上传照片提示。
+ * 用于手动生图时：若已跳过，则本会话内不再弹出上传卡片，直接生图。
+ */
+private object ManualImageGenSession {
+    var skippedUploadPromptThisSession: Boolean = false
+}
+
 class ChatViewModel : BaseVM() {
     private data class PendingInputImageUpload(
         val localImageUri: String,
@@ -1278,7 +1286,9 @@ class ChatViewModel : BaseVM() {
 
     fun generateImageForMessageOrPickImage(messageId: String) {
         viewModelScope.launch {
-            if (UserProfileManager.profile.first().userPhoto.isNullOrEmpty()) {
+            val noUserPhoto = UserProfileManager.profile.first().userPhoto.isNullOrEmpty()
+            val alreadySkipped = ManualImageGenSession.skippedUploadPromptThisSession
+            if (noUserPhoto && !alreadySkipped) {
                 _imagePickMessageId.value = messageId
             } else {
                 generateImageForMessage(messageId)
@@ -1287,6 +1297,7 @@ class ChatViewModel : BaseVM() {
     }
 
     fun generateImageForMessage() {
+        ManualImageGenSession.skippedUploadPromptThisSession = true
         imagePickMessageId.value?.let { generateImageForMessage(it) }
         _imagePickMessageId.value = null
     }
