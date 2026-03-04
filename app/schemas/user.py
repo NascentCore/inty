@@ -13,6 +13,41 @@ class ActionType(str, Enum):
     REQUEST_FEEDBACK = "request_feedback"
 
 
+MBTI_TYPES = {
+    "INTJ",
+    "INTP",
+    "ENTJ",
+    "ENTP",
+    "INFJ",
+    "INFP",
+    "ENFJ",
+    "ENFP",
+    "ISTJ",
+    "ISFJ",
+    "ESTJ",
+    "ESFJ",
+    "ISTP",
+    "ISFP",
+    "ESTP",
+    "ESFP",
+}
+
+
+class UserMetadata(BaseModel):
+    """用户元数据（用于 users.meta_data 列）。"""
+
+    mbti_type: Optional[str] = None
+
+    @validator("mbti_type")
+    def validate_mbti_type(cls, v):
+        if v is None or v == "":
+            return None
+        normalized = v.strip().upper()
+        if normalized not in MBTI_TYPES:
+            raise ValueError(f"Unsupported MBTI type: {v}")
+        return normalized
+
+
 class UserBase(BaseModel):
     """用户基础信息"""
 
