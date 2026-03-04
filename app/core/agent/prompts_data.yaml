@@ -171,6 +171,12 @@ RP_MODE_PROMPT_1225: |
   - All descriptions of actions, emotions, and scenarios must be enclosed in parentheses ().
   - All dialogue must be enclosed in quotation marks "".
 
+AI_COMPANION_MAIN_PROMPT: |
+  AI companion
+
+AI_COMPANION_MODE_PROMPT: |
+  AI companion
+
 IMAGE_GENERATION_PROMPT_TEMPLATE: |
   Create an image to manifest the emotional bonding fitting to the scene.
   - The environment should be accurate
