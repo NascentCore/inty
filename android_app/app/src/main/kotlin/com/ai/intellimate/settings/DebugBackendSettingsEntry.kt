@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +38,7 @@ private object Spacing {
 
 private object TextConfig {
     val SecondaryTextAlpha = 0.7f
+    val PlaceholderTextAlpha = 0.5f
     val MaxUrlLines = 2
 }
 
@@ -102,8 +105,32 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             }
 
             Spacer(Modifier.height(Spacing.MediumSpacer))
+            Text(
+                text = stringResource(R.string.settings_debug_custom_backend_label),
+                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            OutlinedTextField(
+                value = uiState.customUrlInput,
+                onValueChange = viewModel::setCustomUrlInput,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(
+                        stringResource(R.string.settings_debug_custom_backend_placeholder),
+                        color = Color.White.copy(alpha = TextConfig.PlaceholderTextAlpha),
+                    )
+                },
+                singleLine = true,
+            )
+            Spacer(Modifier.height(Spacing.SmallSpacer))
+            Button(onClick = viewModel::applyCustomUrl) {
+                Text(stringResource(R.string.settings_debug_custom_backend_apply))
+            }
+
+            Spacer(Modifier.height(Spacing.MediumSpacer))
             TextButton(onClick = viewModel::resetOverride) {
-                Text(text = "恢复默认", color = Color.White)
+                Text(text = stringResource(R.string.settings_debug_reset_to_default), color = Color.White)
             }
 
             // Remix 按钮可见性配置
@@ -130,7 +157,7 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(Spacing.SmallSpacer))
             TextButton(onClick = viewModel::resetRemixButtonOverride) {
-                Text(text = "恢复默认", color = Color.White)
+                Text(text = stringResource(R.string.settings_debug_reset_to_default), color = Color.White)
             }
 
             Spacer(Modifier.height(Spacing.MediumSpacer * 2))
