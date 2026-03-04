@@ -12,7 +12,7 @@
 与线上抽取逻辑的关系：
 
 - **dump** 复刻 [memory_extraction_service.get_all_messages_for_user](app/services/memory_extraction_service.py) 的 SQL 与消息解析，并拼接与 [extract_and_save](app/services/memory_extraction_service.py) 相同的 `full_prompt`。
-- **run_extract** 使用同一套 [chat_completion_for_extraction](app/utils/openai_client.py) 与 [\_extract_part1_summary](app/services/memory_extraction_service.py)，不写 DB，仅打印/写文件。
+- **run_extract** 使用同一套 [chat_completion_for_extraction](app/utils/openai_client.py)、[MEMORY_EXTRACTION_RESPONSE_FORMAT](app/services/memory_extraction_service.py)（structured output）与 [_part1_from_content](app/services/memory_extraction_service.py)（先解析 JSON 取 `part1_summary`，否则回退正则），不写 DB，仅打印/写文件。
 
 ## 1. 导出用户对话（dump）
 
@@ -61,7 +61,8 @@ python scripts/run_extract_memory_from_dump.py \
 ```
 
 - 模型与参数：与线上一致，优先使用 `config.yaml` 中 `memory_extraction.model`，未配置则使用 [DEFAULT_MEMORY_EXTRACTION_MODEL](app/utils/openrouter_memory.py)（如 `mistralai/devstral-2512`）。
-- 脚本会先打印 **full_analysis**（模型完整返回），再打印 **Part1**（经 `_extract_part1_summary` 解析后的用户画像摘要）。若 Part1 为正则 fallback（前 2000 字），说明模型未按预期输出 Part 1 / Part 2 结构。
+- 抽取使用 **structured output**（`response_format` + json_schema，仅 `part1_summary` 字段）；若模型不支持则自动回退为自由文本并用 `_extract_part1_summary` 解析。
+- 脚本会先打印 **full_analysis**（模型完整返回，可能为 JSON 或自由文本），再打印 **Part1**（解析出的用户画像摘要）。
 
 ## 3. 验证流程（推荐步骤）
 
@@ -78,7 +79,7 @@ python scripts/run_extract_memory_from_dump.py \
    ```bash
    python scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_<short>_prompt.txt
    ```  
-   查看终端输出的 full_analysis 与 Part1：若 full_analysis 中出现大量「**AI**: / **User**:」对话复述、无「Part 1」「**About this user**」等结构，则说明模型未按 [memory_extraction_prompt.txt](app/core/prompting/memory_extraction_prompt.txt) 的格式输出，Part1 会退化为前 2000 字（即异常记忆来源）。
+   查看终端输出的 full_analysis 与 Part1：若 full_analysis 为 JSON 且含 `part1_summary` 则走结构化解析；否则若出现大量「**AI**: / **User**:」对话复述，Part1 会退化为前 2000 字（即异常记忆来源）。
 
 4. **换模型验证（可选）**  
    在 `config.yaml` 的 `memory_extraction` 下设置 `model: x-ai/grok-4`（或其它 OpenRouter 模型 id），保存后重新执行：
@@ -88,16 +89,20 @@ python scripts/run_extract_memory_from_dump.py \
    对比 Part1 是否为「**About this user, you should know:**」等结构化摘要。若新模型输出符合预期，可考虑将线上默认模型改为该模型（改 `memory_extraction.model` 或 [DEFAULT_MEMORY_EXTRACTION_MODEL](app/utils/openrouter_memory.py)）。
 
 5. **验证 prompt/解析修改**  
-   修改 [memory_extraction_prompt.txt](app/core/prompting/memory_extraction_prompt.txt) 或 [\_extract_part1_summary](app/services/memory_extraction_service.py) 后，用同一份 dump 的 prompt 反复执行 run_extract，对比 full_analysis 与 Part1 是否改善。
+   修改 [memory_extraction_prompt.txt](app/core/prompting/memory_extraction_prompt.txt) 或 [\_part1_from_content](app/services/memory_extraction_service.py) / [MEMORY_EXTRACTION_RESPONSE_FORMAT](app/services/memory_extraction_service.py) 后，用同一份 dump 的 prompt 反复执行 run_extract，对比 full_analysis 与 Part1 是否改善。
 
-## 4. 模型表现说明（经验结论）
+## 4. Structured output 说明
+
+记忆抽取优先使用 **structured output**（OpenRouter/OpenAI `response_format` + `json_schema`），要求模型返回 JSON 且包含字段 `part1_summary`，从根上避免自由文本格式漂移。配置的模型需支持 [structured_outputs](https://openrouter.ai/docs/guides/features/structured-outputs)（如 **x-ai/grok-4**）。若模型不支持，API 报错后会自动回退为不传 `response_format` 再调一次，并用 `_extract_part1_summary` 解析自由文本。
+
+## 5. 模型表现说明（经验结论）
 
 - **mistralai/devstral-2512**（默认）：在超长上下文（如 24 万+ token）下，可能出现不按 Part 1/Part 2 结构输出、而是复述或续写 **AI**/**User** 对话的情况，导致 Part1 解析失败、存入原始对话片段。适合作为成本/延迟参考，不一定适合作为记忆抽取默认模型。
 - **x-ai/grok-4**：在相同 dump 上验证可得到符合「Part 1 用户画像摘要」结构的输出，可按需设为 `memory_extraction.model` 或默认模型。
 
 更换线上模型时，需在 `config.yaml`（或生产配置）中设置 `memory_extraction.model`，或修改代码中的默认模型常量并部署。
 
-## 5. 相关代码与文档
+## 6. 相关代码与文档
 
 - 记忆功能总览：[evaluation/docs/MEMORY_FEATURE_IMPLEMENTATION_SUMMARY.md](evaluation/docs/MEMORY_FEATURE_IMPLEMENTATION_SUMMARY.md)
 - 抽取与解析逻辑：[app/services/memory_extraction_service.py](app/services/memory_extraction_service.py)

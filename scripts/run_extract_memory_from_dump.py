@@ -23,8 +23,9 @@ from loguru import logger
 from app.api.types.llm_config import LLMConfig
 from app.core.config import global_config_loaded_from_config_yaml
 from app.services.memory_extraction_service import (
-    _extract_part1_summary,
+    MEMORY_EXTRACTION_RESPONSE_FORMAT,
     _load_prompt,
+    _part1_from_content,
 )
 from app.utils.openai_client import chat_completion_for_extraction
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
@@ -82,9 +83,21 @@ async def run(
     logger.debug(f"使用模型: {llm_config.model}")
 
     try:
-        full_analysis, prompt_tokens, completion_tokens = (
-            await chat_completion_for_extraction(full_prompt, llm_config=llm_config)
-        )
+        try:
+            full_analysis, prompt_tokens, completion_tokens = (
+                await chat_completion_for_extraction(
+                    full_prompt,
+                    llm_config=llm_config,
+                    response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
+                )
+            )
+        except Exception as format_err:
+            logger.debug(f"structured output 失败，回退自由文本: {format_err}")
+            full_analysis, prompt_tokens, completion_tokens = (
+                await chat_completion_for_extraction(
+                    full_prompt, llm_config=llm_config
+                )
+            )
     except Exception as e:
         logger.error(f"LLM 调用失败: {e}")
         return 1
@@ -93,7 +106,7 @@ async def run(
         logger.error("LLM 返回内容过短或为空")
         return 1
 
-    part1 = _extract_part1_summary(full_analysis)
+    part1 = _part1_from_content(full_analysis)
     logger.info(
         f"Part1 长度={len(part1)}，prompt_tokens={prompt_tokens}，completion_tokens={completion_tokens}"
     )

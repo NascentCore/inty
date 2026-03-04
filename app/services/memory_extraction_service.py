@@ -32,6 +32,32 @@ MEMORY_TYPE_USER_COMMON = "user_common"
 
 _MAX_IN_PARAMS = 5000
 
+# Structured output schema for memory extraction (OpenRouter/OpenAI response_format).
+# Only part1_summary is persisted to memory.content.
+MEMORY_EXTRACTION_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "memory_extraction",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "part1_summary": {
+                    "type": "string",
+                    "description": (
+                        "User profile summary for prompt embedding. Include only cross-character consistent information. "
+                        "Use this structure: **About this user, you should know:** (2-4 sentences) "
+                        "**When talking to this user, note:** (bullets) **This user likes:** (bullets) "
+                        "**This user dislikes / avoid:** (bullets)."
+                    ),
+                }
+            },
+            "required": ["part1_summary"],
+            "additionalProperties": False,
+        },
+    },
+}
+
 _PROMPT_PATH = (
     Path(__file__).resolve().parents[1]
     / "core"
@@ -79,6 +105,23 @@ def _extract_part1_summary(full_analysis: str) -> str:
     if about_en:
         return about_en.group(1).strip()
     return full_analysis[:2000] if len(full_analysis) > 2000 else full_analysis
+
+
+def _part1_from_content(content: str) -> str:
+    """
+    从 LLM 返回的 content 解析出 Part1 摘要。
+    若 content 为 JSON 且含 part1_summary 且长度>=50，则使用该字段；否则回退到 _extract_part1_summary。
+    """
+    stripped = content.strip()
+    if stripped.startswith("{"):
+        try:
+            data = json.loads(content)
+            part1 = (data.get("part1_summary") or "").strip()
+            if part1 and len(part1) >= 50:
+                return part1
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return _extract_part1_summary(content)
 
 
 def get_all_messages_for_user(
@@ -337,14 +380,28 @@ async def extract_and_save(
             max_tokens=4000,
             temperature=0.3,
         )
-        full_analysis, prompt_tokens, completion_tokens = (
-            await chat_completion_for_extraction(full_prompt, llm_config=llm_config)
-        )
+        try:
+            full_analysis, prompt_tokens, completion_tokens = (
+                await chat_completion_for_extraction(
+                    full_prompt,
+                    llm_config=llm_config,
+                    response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
+                )
+            )
+        except Exception as format_err:
+            logger.debug(
+                f"记忆抽取 structured output 失败，回退自由文本 user_id={user_id}: {format_err}"
+            )
+            full_analysis, prompt_tokens, completion_tokens = (
+                await chat_completion_for_extraction(
+                    full_prompt, llm_config=llm_config
+                )
+            )
         if not full_analysis or len(full_analysis.strip()) < 10:
             raise ValueError(
                 "Unable to extract text from response or content too short"
             )
-        part1 = _extract_part1_summary(full_analysis)
+        part1 = _part1_from_content(full_analysis)
     except Exception as e:
         logger.warning(f"记忆抽取 LLM 调用失败 user_id={user_id}: {e}")
         duration_seconds = time.perf_counter() - start_time

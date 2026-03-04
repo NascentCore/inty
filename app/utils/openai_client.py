@@ -169,15 +169,19 @@ def _llm_config_to_create_kwargs(llm_config: LLMConfig) -> dict:
 async def chat_completion_for_extraction(
     prompt: str,
     llm_config: Optional[LLMConfig] = None,
+    response_format: Optional[dict] = None,
 ) -> Tuple[str, int | None, int | None]:
     """
     异步调用 chat completions 用于记忆抽取。
     返回 (content, prompt_tokens, completion_tokens)。
     llm_config 为 None 时使用默认配置（DEFAULT_MEMORY_EXTRACTION_MODEL、max_tokens=4000、temperature=0.3）。
+    response_format 非空时传入 create（OpenRouter/OpenAI 结构化输出），content 为 JSON 字符串，由调用方解析。
     """
     cfg = llm_config if llm_config is not None else _default_extraction_llm_config()
     client = get_async_openai_client()
     create_kwargs = _llm_config_to_create_kwargs(cfg)
+    if response_format is not None:
+        create_kwargs["response_format"] = response_format
 
     response = await client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
