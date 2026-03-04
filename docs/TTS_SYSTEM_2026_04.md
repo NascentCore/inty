@@ -91,59 +91,94 @@
 - `ElevenLabsExecutor`：仅接收 ElevenLabs model spec
 - 跨 provider fallback 必须重新构建 `TTSRequest`（模型、音色、输出参数全部重绑定）
 
-## 5. 迭代计划（12 周）
+## 5. 任务拆分（执行清单）
 
-## 阶段 A（第 1-2 周）：止血与护栏
+### 5.1 路由一致性与止血任务
 
-### 交付物
+1. 修复 provider/model 串线：
+   - Gemini 语音路径禁止使用 ElevenLabs 模型 ID
+   - ElevenLabs 路径禁止使用 Gemini 模型 ID
+2. 增加请求级一致性校验：
+   - 先从 `voice_id` 推断 provider
+   - 校验 `model` 是否属于该 provider，不匹配直接失败
+3. 修复跨 provider fallback：
+   - 跨 provider 时重新绑定模型、音色和输出参数
+   - 禁止复用上一次尝试的 `model`
+4. 增加关键日志字段：
+   - `provider_selected`
+   - `model_selected`
+   - `model_source`
+   - `final_status`
 
-1. 修复跨 provider `model` 串线：
-   - Gemini 路径绝不使用 ElevenLabs 模型
-   - ElevenLabs 回退路径绝不复用 Gemini 模型
-2. 请求级一致性校验：
-   - `voice_id` 推断 provider 后，对 `model` 做 provider 归属校验
-3. 新增关键测试（见第 7 节）
+### 5.2 模型目录与解析任务
 
-### 退出条件
+1. 新增 `tts_catalog`：
+   - 定义 `TTSModelSpec(provider, id_on_provider, nickname, capabilities, status)`
+2. 新增 resolver：
+   - `resolve_tts_model_by_id`
+   - `resolve_tts_model_by_nickname`
+   - `must_resolve_*`
+3. 新增 provider 归属判断：
+   - `is_model_belongs_to_provider(model, provider)`
+4. 为模型目录增加 allowlist 规则：
+   - chat tts 模型 allowlist（Gemini）
+   - elevenlabs 默认模型 allowlist（ElevenLabs）
 
-- 本地/CI 中新增的 TTS 路由测试全部通过
-- 生产无新增 “Invalid Endpoint name” / “invalid uid caused by provider mismatch”
+### 5.3 调用计划与执行器任务
 
----
+1. 新增 `TTSInvocationPlan`：
+   - `provider_selected/model_selected/voice_selected`
+   - `strategy_selected/fallback_chain/selection_reason`
+2. 新增 `TTSPlanner`：
+   - 统一完成 provider 选择、模型选择、fallback 计划生成
+3. 改造执行路径为“先计划后执行”：
+   - `VoiceService` 不再边判断边执行
+4. 拆分执行器：
+   - `GeminiExecutor`
+   - `ElevenLabsExecutor`
+   - 两者仅接受本 provider 的 model spec
 
-## 阶段 B（第 3-6 周）：目录化与调用计划
+### 5.4 配置校验与启动护栏任务
 
-### 交付物
+1. 在 `_validate_config` 中加入 TTS 校验：
+   - `free_user_chat_tts_model/sub_user_chat_tts_model` 必须是 Gemini 模型
+   - `elevenlabs.model` 必须是 ElevenLabs 模型
+2. 当配置不合法时启动失败，并输出允许值列表
+3. 为 fallback 配置增加完整性校验：
+   - 若存在跨 provider fallback，必须配置目标 provider 默认模型与默认音色
 
-1. 引入 `tts_catalog` 与 resolver
-2. 引入 `TTSInvocationPlan` 与 `TTSPlanner`
-3. `VoiceService` 从“边判断边执行”改为“先计划后执行”
-4. 启动期配置校验：
-   - chat TTS 模型配置必须落在 Gemini allowlist
-   - elevenlabs 默认模型必须落在 ElevenLabs allowlist
+### 5.5 观测与运维任务
 
-### 退出条件
-
-- 不合法配置在启动时直接失败
-- 运行时不再出现 provider/model 不一致请求
-
----
-
-## 阶段 C（第 7-12 周）：可运营化与观测
-
-### 交付物
-
-1. fallback 策略配置化（按错误类型分流）
-2. 统一观测字段（见第 6 节）
-3. Dashboard/告警规则：
+1. 统一 TTS 调用结构化字段：
+   - `tts_attempt_id`
+   - `voice_id_raw`
+   - `provider_attempts`
+   - `fallback_trigger_reason`
+   - `final_provider/final_model/final_status`
+2. 将关键字段同步到 LangSmith metadata
+3. 配置告警指标：
    - `gemini_empty_audio_rate`
    - `tts_provider_fallback_rate`
    - `provider_model_mismatch_count`
+4. 编写故障排查 runbook：
+   - 典型异常签名
+   - 对应排查路径
+   - 快速缓解动作
 
-### 退出条件
+### 5.6 测试与回归任务
 
-- 出现问题时可在 5 分钟内定位：是上游质量问题还是路由/配置问题
-- 回退成功率可量化并可对比迭代前后效果
+1. 必测用例：
+   - `voice_id=google/...` 且 `model=None`（无 `user/db`）时模型必须为 Gemini
+   - Gemini 失败回退 ElevenLabs 时 fallback 模型必须为 ElevenLabs 模型
+   - 显式传错 provider 模型立即失败（Fail Loud）
+2. 目录与计划测试：
+   - `tts_catalog` resolver allowlist 测试
+   - `TTSPlanner` 计划生成测试
+   - fallback 策略矩阵测试
+3. 兼容性回归：
+   - 语音列表接口行为不变
+   - `voice_id` 前缀兼容不变
+   - `VoiceGenerationResult` 返回结构不变
 
 ## 6. 观测与日志标准
 
@@ -162,9 +197,9 @@
 
 并在 LangSmith trace metadata 中同步关键字段，便于跨链路排障。
 
-## 7. 测试计划（按阶段）
+## 7. 测试任务清单
 
-## A 阶段必须新增测试
+### 7.1 核心必测
 
 1. `voice_id=google/...` 且 `model=None`（无 `user/db`）时，最终模型必须为 Gemini 模型。
 2. Gemini 失败回退 ElevenLabs 时，fallback request 的 `model_id` 必须为 ElevenLabs 模型。
@@ -173,7 +208,7 @@
    - 语音列表与 `voice_id` 前缀行为不变
    - 返回结构（`VoiceGenerationResult`）不变
 
-## B/C 阶段补充测试
+### 7.2 扩展回归
 
 1. `tts_catalog` resolver allowlist 测试
 2. `TTSPlanner` 计划生成快照测试
@@ -188,11 +223,11 @@
 3. **风险：改造影响现有接口稳定性**
    - 缓解：保持 API 入参与返回结构不变，先做内部 planner/executor 重构。
 
-## 9. 执行顺序建议（可直接开工）
+## 9. 实施约束与落地建议
 
-1. 先做 A 阶段（止血 + 测试）并上线。
-2. A 阶段稳定后，在同分支推进 B 阶段目录化重构。
-3. C 阶段以观测与策略配置化为主，避免一次性大改上线风险。
+1. 保持 API 入参与返回结构稳定，不因内部重构改变调用方契约。
+2. 所有新增配置必须有启动期校验，并提供明确的允许值错误提示。
+3. 回退策略的任何改动都必须同步更新对应测试矩阵与运行告警规则。
 
 ---
 
