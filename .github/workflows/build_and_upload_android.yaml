@@ -1,12 +1,9 @@
 name: Release - IntelliMate GPlay 内测轨道 
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "android_app/**/*.kt"
-      - "android_app/**/*.kts"
+  # 北京时间 10:00 发布一次（GitHub 使用 UTC）
+  schedule:
+    - cron: "0 2 * * *"   # 02:00 UTC = 10:00 北京
 
   workflow_dispatch:
 
