@@ -23,6 +23,8 @@ import yaml
 import asyncpg
 from pydantic import BaseModel, ValidationError
 
+from loguru import logger
+
 
 class DatabaseConfig(BaseModel):
     host: str
@@ -89,7 +91,6 @@ class AgentMigrator:
     def __init__(self, config_path: str):
         self.config = self._load_config(config_path)
         self._setup_logging()
-        self.from loguru import logger
 
     def _load_config(self, config_path: str) -> MigrationConfig:
         """加载配置文件"""
@@ -132,10 +133,10 @@ class AgentMigrator:
                 password=db_config.password,
                 database=db_config.db,
             )
-            self.logger.info(f"成功连接到 {env_name} 环境数据库")
+            logger.info(f"成功连接到 {env_name} 环境数据库")
             return conn
         except Exception as e:
-            self.logger.error(f"连接 {env_name} 环境数据库失败: {e}")
+            logger.error(f"连接 {env_name} 环境数据库失败: {e}")
             raise
 
     def _parse_json_fields(self, agent_dict: Dict[str, Any]):
@@ -161,14 +162,14 @@ class AgentMigrator:
                         else:
                             agent_dict[field] = json.loads(value)
                     except json.JSONDecodeError:
-                        self.logger.warning(f"无法解析JSON字段 {field}: {value}")
+                        logger.warning(f"无法解析JSON字段 {field}: {value}")
                         agent_dict[field] = None
 
     async def export_agents(
         self, from_env: str, output_file: Optional[str] = None
     ) -> str:
         """从指定环境导出AI角色"""
-        self.logger.info(f"开始从 {from_env} 环境导出AI角色")
+        logger.info(f"开始从 {from_env} 环境导出AI角色")
 
         export_config = self.config.migration.get("export", {})
         if not output_file:
@@ -218,7 +219,7 @@ class AgentMigrator:
             """
 
             rows = await conn.fetch(query, *params)
-            self.logger.info(f"查询到 {len(rows)} 个AI角色")
+            logger.info(f"查询到 {len(rows)} 个AI角色")
 
             # 转换数据
             agents_data = []
@@ -247,7 +248,7 @@ class AgentMigrator:
                     agent = AgentData(**agent_dict)
                     agents_data.append(agent.dict())
                 except ValidationError as e:
-                    self.logger.warning(
+                    logger.warning(
                         f"跳过无效角色数据 {agent_dict.get('id', 'unknown')}: {e}"
                     )
                     continue
@@ -266,9 +267,7 @@ class AgentMigrator:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2, default=str)
 
-            self.logger.info(
-                f"成功导出 {len(agents_data)} 个AI角色到文件: {output_file}"
-            )
+            logger.info(f"成功导出 {len(agents_data)} 个AI角色到文件: {output_file}")
             return output_file
 
         finally:
@@ -276,7 +275,7 @@ class AgentMigrator:
 
     async def import_agents(self, to_env: str, import_file: str) -> int:
         """向指定环境导入AI角色"""
-        self.logger.info(f"开始向 {to_env} 环境导入AI角色")
+        logger.info(f"开始向 {to_env} 环境导入AI角色")
 
         import_config = self.config.migration.get("import", {})
 
@@ -291,10 +290,10 @@ class AgentMigrator:
 
         agents_data = import_data.get("agents", [])
         if not agents_data:
-            self.logger.warning("导入文件中没有AI角色数据")
+            logger.warning("导入文件中没有AI角色数据")
             return 0
 
-        self.logger.info(f"读取到 {len(agents_data)} 个AI角色待导入")
+        logger.info(f"读取到 {len(agents_data)} 个AI角色待导入")
 
         conn = await self._get_db_connection(to_env)
 
@@ -307,18 +306,16 @@ class AgentMigrator:
                 try:
                     await self._import_single_agent(conn, agent_data, import_config)
                     imported_count += 1
-                    self.logger.debug(
-                        f"成功导入角色: {agent_data.get('name', 'unknown')}"
-                    )
+                    logger.debug(f"成功导入角色: {agent_data.get('name', 'unknown')}")
                 except Exception as e:
                     error_count += 1
-                    self.logger.error(
+                    logger.error(
                         f"导入角色失败 {agent_data.get('name', 'unknown')}: {e}"
                     )
                     if not import_config.get("skip_validation", False):
                         continue
 
-            self.logger.info(
+            logger.info(
                 f"导入完成: 成功 {imported_count}, 跳过 {skipped_count}, 错误 {error_count}"
             )
             return imported_count
@@ -351,7 +348,7 @@ class AgentMigrator:
             if import_config.get("update_existing", False):
                 await self._update_agent(conn, agent_data, import_config, new_id)
             else:
-                self.logger.info(f"跳过已存在的角色: {agent_data['name']}")
+                logger.info(f"跳过已存在的角色: {agent_data['name']}")
                 return
         else:
             await self._insert_agent(conn, agent_data, import_config, new_id)
@@ -365,7 +362,7 @@ class AgentMigrator:
     ) -> Optional[str]:
         """确保创建者存在，如果不存在则创建或使用默认值"""
         if not creator_id:
-            self.logger.warning(
+            logger.warning(
                 f"角色 {agent_data.get('name', 'unknown')} 没有创建者ID，将设置为NULL"
             )
             return None
@@ -382,10 +379,10 @@ class AgentMigrator:
         if creator_info and import_config.get("create_missing_users", True):
             try:
                 await self._create_user(conn, creator_id, creator_info)
-                self.logger.info(f"创建了缺失的用户: {creator_id}")
+                logger.info(f"创建了缺失的用户: {creator_id}")
                 return creator_id
             except Exception as e:
-                self.logger.error(f"创建用户失败 {creator_id}: {e}")
+                logger.error(f"创建用户失败 {creator_id}: {e}")
 
         # 使用默认创建者ID或设为NULL
         default_creator = import_config.get("default_creator_id")
@@ -395,12 +392,12 @@ class AgentMigrator:
                 "SELECT id FROM users WHERE id = $1", default_creator
             )
             if default_exists:
-                self.logger.warning(
+                logger.warning(
                     f"使用默认创建者 {default_creator} 替代不存在的创建者 {creator_id}"
                 )
                 return default_creator
 
-        self.logger.warning(f"创建者 {creator_id} 不存在且无法创建，将设置为NULL")
+        logger.warning(f"创建者 {creator_id} 不存在且无法创建，将设置为NULL")
         return None
 
     async def _create_user(
