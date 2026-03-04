@@ -94,17 +94,9 @@ Extract all information that helps AI characters have high-quality conversations
 
 ## Output format
 
-### Part 1: User profile summary (for prompt embedding)
+You must respond with a **JSON object** containing exactly one field: **part1_summary** (a string).
 
-**Important: This section may only contain cross-character consistent information.**
-
-Before writing Part 1, complete the Part 2 analysis. Every item in Part 1 must be marked "✅ Cross-character consistent" in Part 2.
-
-If an item appears only in one character's conversations (marked "❌" in Part 2), **do not** include it in Part 1.
-
-Use the following structure so it can be dropped into an AI character's prompt as-is:
-
----
+The value of **part1_summary** must be the Part 1 user profile summary: only cross-character consistent information, in the following structure so it can be dropped into an AI character's prompt as-is:
 
 **About this user, you should know:**
 
@@ -125,25 +117,7 @@ Use the following structure so it can be dropped into an AI character's prompt a
 - [Boundary 2]
 - ...
 
----
-
-### Part 2: Detailed extraction
-
-| Dimension | Content | Cross-role consistent? | Notes |
-|-----------|---------|------------------------|-------|
-| ... | ... | ✅/❌ | In which character conversation(s) it appears |
-
-**Consistency rule:**
-- ✅ Cross-character: appears in 2 or more different AI character conversations
-- ❌ Character-specific: appears in only 1 AI character's conversations
-
-### Part 3: Character-specific information (for reference only, not for embedding)
-
-[Information that appears only in one character's conversations but may be useful for context. This will not be embedded into system prompts.]
-
-### Part 4: Confidence
-
-[Which information is high vs. low confidence: e.g. mentioned across multiple characters vs. once or possibly role-play in a single character.]
+Before writing Part 1, mentally complete a Part 2–style check: every item in Part 1 must be consistent across two or more different AI character conversations. If an item appears only in one character's conversations, do not include it in part1_summary.
 
 ---
 

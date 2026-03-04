@@ -38,9 +38,9 @@ CREATED_BY_AGENT
   - 新用户：总消息数 ≥ `trigger_new_user_messages`
   - 已提取用户：自上次 `extracted_at` 后新增消息数 ≥ `trigger_incremental_messages`
 - **get_all_messages_for_user(user_id)**：拉取该用户在所有会话中的全部消息 `(role, content)`，按 `created_at` 升序；不按 agent 过滤，不限制条数。
-- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`app.utils.openai_client.chat_completion_for_extraction`，默认模型 `mistralai/devstral-2512`）调用 LLM、从响应 `usage` 读取 token 消耗、记录端到端耗时、解析 Part 1、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
-- **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）。
-- **\_extract_part1_summary(full_analysis)**：从 LLM 完整回复中解析 Part 1；支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等中英文 fallback 正则；Part 1 过短（≤50 字）时回退到约 2000 字或全文。
+- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`app.utils.openai_client.chat_completion_for_extraction`，默认模型 `mistralai/devstral-2512`）调用 LLM；优先使用 **structured output**（`response_format` + json_schema，仅 `part1_summary` 字段），若模型不支持则回退自由文本；从响应 `usage` 读取 token 消耗、记录端到端耗时、用 `_part1_from_content` 解析 Part 1（先 JSON 取 `part1_summary`，否则 `_extract_part1_summary`）、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
+- **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）；输出要求为 JSON 单字段 `part1_summary`。
+- **\_part1_from_content(content)**：若 content 为 JSON 且含 `part1_summary` 且长度≥50 则使用该字段，否则回退 **\_extract_part1_summary(full_analysis)**（支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等正则；过短时回退到约 2000 字或全文）。
 
 ### 5. 定时任务（`app/services/push_scheduler_service.py`）
 
@@ -61,8 +61,8 @@ CREATED_BY_AGENT
 ## 提示词与 Part 1 解析
 
 - **memory_extraction_prompt.txt**：英文，要求从多角色会话中抽取跨角色一致的用户信息；明确区分「用户偏好」与「AI 输出规则」，仅前者进入 Part 1。
-- **输出结构**：Part 1（用户画像，用于嵌入）、Part 2（逐维详细表+是否跨角色一致）、Part 3（仅单角色有用信息，不嵌入）、Part 4（置信度）。**仅 Part 1 持久化并注入到 `##User Memory`。**
-- **Part 1 解析**：`_extract_part1_summary` 通过多种正则匹配 `Part 1`、`**About this user**`、`**关于这位用户**` 等，并裁剪首尾 `---`；若均未命中或结果过短，则回退到 `**关于这位用户**` / `**About this user**` 段或全文前 2000 字。
+- **输出形态**：优先 **structured output**（`response_format` json_schema），模型返回 JSON 单字段 `part1_summary`；配置的模型需支持 OpenRouter [structured_outputs](https://openrouter.ai/docs/guides/features/structured-outputs)（如 x-ai/grok-4）。不支持时回退自由文本，由 `_extract_part1_summary` 解析。
+- **Part 1 解析**：`_part1_from_content` 优先从 JSON 取 `part1_summary`；否则 `_extract_part1_summary` 通过多种正则匹配 `Part 1`、`**About this user**`、`**关于这位用户**` 等，并裁剪首尾 `---`；若均未命中或结果过短，则回退到全文前 2000 字。**仅 Part 1 持久化并注入到 `##User Memory`。**
 
 ## 文件结构
 
