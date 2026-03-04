@@ -26,8 +26,8 @@ on:
       # - "evaluation/build.sh"
       # 容器
       - "devops/docker/Dockerfile"
-      # 工作流文件
-      - ".github/workflows/build_and_deploy_backend.yml"
+      # 工作流文件暂时取消掉，减少运行频率
+      # - ".github/workflows/build_and_deploy_backend.yml"
 
   workflow_dispatch:
     inputs:
