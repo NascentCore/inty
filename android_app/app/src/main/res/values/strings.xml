@@ -432,7 +432,7 @@
     <string name="profile_premium_banner_title_upgrade">Upgrade to Premium</string>
     <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
     <string name="profile_premium_banner_button_activate">Activate now</string>
-    <string name="profile_daily_rewards_title">Daily Check-in</string>
+    <string name="profile_daily_rewards_title">Check-in</string>
     <string name="profile_daily_rewards_subtitle">Get %1$d credits</string>
     <string name="me_create_character_banner_title">Create your own iMate</string>
     <string name="check_in_day_together">💗 Day %1$d Together</string>
@@ -659,11 +659,6 @@
     <string name="holiday_celebration_secondary_cta">Not now</string>
     <string name="holiday_celebration_points_added">🥳 100 Credits!</string>
 
-    <!-- IntelliMate tips popup -->
-    <string name="intellimate_tip_title">Quick tip</string>
-    <string name="intellimate_tip_got_it">Got it</string>
-    <string name="intellimate_tip_disable">Disable Tips</string>
-
     <!-- Placeholder -->
     <string name="under_development">Under Development</string>
     <string name="boost_leaderboard_tab_top_users">Top Users</string>
@@ -701,6 +696,7 @@
     <string name="heartbeat_subtitle">%1$d Love Journals about you</string>
     <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
     <string name="heartbeat_empty">No Love Journal yet</string>
+    <string name="my_own_imates">My own iMates</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A voice that stays</item>

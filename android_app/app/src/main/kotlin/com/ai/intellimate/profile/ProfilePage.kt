@@ -46,6 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpCenter
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -53,7 +54,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -319,20 +322,25 @@ private fun ProfileHeader(
 
             Icon(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            try {
-                                val intent =
-                                    Intent(Intent.ACTION_VIEW, UiConfigs.Urls.HelpCenter.toUri())
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                ToastUtils.showLargeText(e.toString())
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                try {
+                                    val intent =
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            UiConfigs.Urls.HelpCenter.toUri()
+                                        )
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    ToastUtils.showLargeText(e.toString())
+                                }
                             }
-                        }
-                    },
+                        },
                 imageVector = Icons.AutoMirrored.Rounded.HelpCenter,
                 contentDescription = stringResource(R.string.me_icons_row_help),
                 tint = Color.White,
@@ -396,13 +404,15 @@ private fun ProfileHeader(
 
             Icon(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            navController.navigate(Routes.Me.CheckIn)
-                        }
-                    },
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                navController.navigate(Routes.Me.CheckIn)
+                            }
+                        },
                 imageVector = Icons.Filled.EventAvailable,
                 contentDescription = null,
                 tint = Color.White,
@@ -411,15 +421,19 @@ private fun ProfileHeader(
 
             Icon(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.TopIconsRow.Size).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTime)) {
-                            lastClickTime = currentTime
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                navController.navigate(Routes.Me.Settings)
+                    Modifier
+                        .size(UiConfigs.MePage.TopIconsRow.Size)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTime)) {
+                                lastClickTime = currentTime
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    navController.navigate(Routes.Me.Settings)
+                                }
                             }
-                        }
-                    },
+                        },
                 imageVector = Icons.Filled.Settings,
                 contentDescription = stringResource(R.string.me_icons_row_settings),
                 tint = Color.White,
@@ -432,7 +446,8 @@ private fun ProfileHeader(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.AvatarFullSize)
+                    Modifier
+                        .size(UiConfigs.MePage.AvatarFullSize)
                         .background(color = Color.White, shape = CircleShape)
                         .padding(UiConfigs.MePage.AvatarPadding)
             ) {
@@ -440,7 +455,9 @@ private fun ProfileHeader(
                 val avatarUrl = getCdnImageUrl(userProfile.avatar, width = 512)
                 key(avatarUrl) { // 使用 key 确保 URL 变化时重新创建组件
                     AsyncImage(
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
                         model = ImageRequest.Builder(context).data(avatarUrl).build(),
                         placeholder = painterResource(R.drawable.app_icon),
                         error = painterResource(R.drawable.app_icon),
@@ -452,7 +469,9 @@ private fun ProfileHeader(
             Spacer(Modifier.width(UiConfigs.MePage.AvatarToNicknameSpacing))
 
             Column(
-                modifier = Modifier.weight(1f).offset(y = UiConfigs.MePage.ProfileNameBlockYOffset)
+                modifier = Modifier
+                    .weight(1f)
+                    .offset(y = UiConfigs.MePage.ProfileNameBlockYOffset)
             ) {
                 Text(
                     text = userProfile.nickname.ifEmpty { "Guest" },
@@ -483,24 +502,28 @@ private fun ProfileHeader(
 
             AsyncImage(
                 modifier =
-                    Modifier.size(UiConfigs.MePage.EditButtonSize).clickable {
-                        val currentTime = System.currentTimeMillis()
-                        if (AntiClick.isValidClick(lastClickTimeEdit)) {
-                            lastClickTimeEdit = currentTime
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
-                                //                                val intent =
-                                //                                    Intent(context,
-                                // ModifyProfileActivity::class.java).apply {
-                                //
-                                // putExtra("intent_key_agent_info", userProfile)
-                                //                                    }
-                                //                                editProfileLauncher.launch(intent)
-                                UserProfileStore.setUserProfile(userProfile)
-                                navController.navigate(Routes.Me.ModifyProfile)
+                    Modifier
+                        .size(UiConfigs.MePage.EditButtonSize)
+                        .clickable {
+                            val currentTime = System.currentTimeMillis()
+                            if (AntiClick.isValidClick(lastClickTimeEdit)) {
+                                lastClickTimeEdit = currentTime
+                                if (IntySetting.isLogin() && IntySetting.getCurToken()
+                                        .isNotEmpty()
+                                ) {
+                                    // 使用 launcher 启动 ModifyProfileActivity，返回后会自动刷新用户信息
+                                    //                                val intent =
+                                    //                                    Intent(context,
+                                    // ModifyProfileActivity::class.java).apply {
+                                    //
+                                    // putExtra("intent_key_agent_info", userProfile)
+                                    //                                    }
+                                    //                                editProfileLauncher.launch(intent)
+                                    UserProfileStore.setUserProfile(userProfile)
+                                    navController.navigate(Routes.Me.ModifyProfile)
+                                }
                             }
-                        }
-                    },
+                        },
                 model = R.drawable.icon_edit,
                 contentDescription = null,
             )
@@ -510,7 +533,9 @@ private fun ProfileHeader(
 
         // VIP Banner - 固定显示
         Box(
-            modifier = Modifier.fillMaxWidth().height(UiConfigs.MePage.VipBannerHeight),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(UiConfigs.MePage.VipBannerHeight),
             contentAlignment = Alignment.Center,
         ) {
             PremiumBanner(
@@ -520,12 +545,6 @@ private fun ProfileHeader(
                 onClick = { navController.navigate(Routes.Me.vipCenter("profile_upgrade")) },
             )
         }
-
-        Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
-        VibeModeBanner(
-            isSubscribed = isSubscribed,
-            onRequestSubscribe = { showSubscribeDialog = true },
-        )
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
         // Daily Rewards Banner - 固定显示（不随上划隐藏）
@@ -546,7 +565,7 @@ private fun ProfileHeader(
 
         Spacer(Modifier.height(UiConfigs.MePage.SectionSpacing))
         CreateCharacterBanner(
-            title = stringResource(R.string.me_create_character_banner_title),
+            title = stringResource(R.string.my_own_imates),
             onClick = { navController.navigate(Routes.Creat.createRole("")) },
         )
 
@@ -608,11 +627,14 @@ private fun DraftAgentCard(
         if (onDeleteDraft != null) {
             Box(
                 modifier =
-                    Modifier.align(Alignment.TopEnd).padding(UiConfigs.MePage.AgentCardPadding)
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(UiConfigs.MePage.AgentCardPadding)
             ) {
                 Box(
                     modifier =
-                        Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
+                        Modifier
+                            .size(UiConfigs.MePage.AgentCardMenuButtonSize)
                             .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius),
@@ -655,7 +677,8 @@ private fun DraftAgentCard(
 
         Box(
             modifier =
-                Modifier.align(Alignment.TopStart)
+                Modifier
+                    .align(Alignment.TopStart)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .background(Color.Black.copy(alpha = 0.65f), badgeShape)
                     .padding(horizontal = UiConfigs.Spacing.Small, vertical = badgeVerticalPadding)
@@ -670,7 +693,8 @@ private fun DraftAgentCard(
 
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .align(Alignment.BottomCenter),
@@ -809,7 +833,8 @@ private fun MyAgentCard(
         }
         Column(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(brush = gradientBrush)
                     .padding(UiConfigs.MePage.AgentCardPadding)
                     .align(Alignment.BottomCenter),
@@ -837,11 +862,14 @@ private fun MyAgentCard(
         if (onEditAgent != null || onDeleteAgent != null) {
             Box(
                 modifier =
-                    Modifier.align(Alignment.BottomEnd).padding(UiConfigs.MePage.AvatarPadding)
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(UiConfigs.MePage.AvatarPadding)
             ) {
                 Box(
                     modifier =
-                        Modifier.size(UiConfigs.MePage.AgentCardMenuButtonSize)
+                        Modifier
+                            .size(UiConfigs.MePage.AgentCardMenuButtonSize)
                             .background(
                                 Color.Black.copy(alpha = 0.5f),
                                 RoundedCornerShape(UiConfigs.MePage.AgentCardMenuButtonCornerRadius),
@@ -1033,8 +1061,6 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
             }
         }
 
-    val clickableModifier = Modifier.noRippleClickable(onClick = onClick)
-
     Row(
         modifier =
             modifier
@@ -1049,25 +1075,35 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                         else DailyRewardsBannerStyle.BorderColor,
                     shape = DailyRewardsBannerStyle.Shape,
                 )
-                .then(clickableModifier)
-                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
+                //.alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
                 .padding(
                     horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
                     vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // 左侧：Day * together + 进度条（与右侧交换后的位置）
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.profile_daily_rewards_title),
-                color =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTitleColor
-                    else DailyRewardsBannerStyle.TitleColor,
-                fontSize = DailyRewardsBannerStyle.TitleSize,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                text = stringResource(R.string.check_in_day_together, checkedInCount),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
             )
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(4.dp),
+                color =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledProgressColor
+                    else DailyRewardsBannerStyle.ProgressColor,
+                trackColor =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTrackColor
+                    else DailyRewardsBannerStyle.TrackColor,
+            )
+            Spacer(Modifier.height(4.dp))
             Text(
                 text =
                     stringResource(
@@ -1079,28 +1115,27 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     else DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Column(modifier = Modifier.padding(start = 12.dp), horizontalAlignment = Alignment.End) {
+        // 右侧：Daily Check-in 按钮样式
+        Button(
+            onClick = onClick,
+            modifier = Modifier.padding(start = 12.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        ) {
             Text(
-                text = stringResource(R.string.check_in_day_together, checkedInCount),
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.width(80.dp).height(4.dp),
-                color =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledProgressColor
-                    else DailyRewardsBannerStyle.ProgressColor,
-                trackColor =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTrackColor
-                    else DailyRewardsBannerStyle.TrackColor,
+                text = stringResource(R.string.profile_daily_rewards_title),
+                fontSize = DailyRewardsBannerStyle.TitleSize,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
@@ -1113,139 +1148,6 @@ private fun CreateRoleDraft.primaryImageUrl(): String? {
     return avatarUrl?.takeIf { it.isNotBlank() }
 }
 
-// TODO: 当前是一个 on/off 滑动开关，改为点了之后直接打开/关闭的整体条幅。
-@Composable
-private fun VibeModeBanner(
-    modifier: Modifier = Modifier,
-    isSubscribed: Boolean,
-    onRequestSubscribe: () -> Unit,
-) {
-    var vibeEnabled by remember { mutableStateOf(IntySetting.isVibeModeEnabled()) }
-    val isActive = isSubscribed && vibeEnabled
-
-    // 持久化 Vibe Mode 状态
-    LaunchedEffect(vibeEnabled, isSubscribed) {
-        if (isSubscribed) {
-            IntySetting.setVibeModeEnabled(vibeEnabled)
-        } else {
-            // 如果用户未订阅，确保 Vibe Mode 被禁用
-            if (vibeEnabled) {
-                vibeEnabled = false
-            }
-        }
-    }
-
-    val backgroundBrush =
-        when {
-            !isSubscribed ->
-                Brush.linearGradient(
-                    listOf(VibeModeColors.DisabledStart, VibeModeColors.DisabledEnd)
-                )
-
-            isActive ->
-                Brush.horizontalGradient(
-                    listOf(VibeModeColors.ActiveStart, VibeModeColors.ActiveEnd)
-                )
-
-            else ->
-                Brush.horizontalGradient(
-                    listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
-                )
-        }
-
-    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
-    val borderColor =
-        if (isActive) Color.White.copy(alpha = 0.45f)
-        else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
-
-    val switchColors =
-        SwitchDefaults.colors(
-            checkedThumbColor = Color.White,
-            checkedTrackColor = VibeModeColors.SwitchTrackActive,
-            uncheckedThumbColor = Color.White,
-            uncheckedTrackColor =
-                if (isSubscribed) VibeModeColors.SwitchTrackInactive
-                else VibeModeColors.SwitchTrackDisabled,
-            checkedBorderColor = Color.Transparent,
-            uncheckedBorderColor = Color.Transparent,
-            disabledCheckedThumbColor = Color.White,
-            disabledCheckedTrackColor = VibeModeColors.SwitchTrackActive,
-            disabledUncheckedThumbColor = Color.White.copy(alpha = UiConfigs.Alpha.DisabledButton),
-            disabledUncheckedTrackColor = VibeModeColors.SwitchTrackDisabled,
-            disabledCheckedBorderColor = Color.Transparent,
-            disabledUncheckedBorderColor = Color.Transparent,
-        )
-
-    val baseModifier =
-        modifier
-            .clip(shape)
-            .background(brush = backgroundBrush, shape = shape)
-            .border(
-                width = UiConfigs.MePage.VibeMode.BorderWidth,
-                color = borderColor,
-                shape = shape,
-            )
-            .padding(
-                horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
-                vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
-            )
-
-    Row(
-        modifier =
-            baseModifier.then(
-                if (isSubscribed) {
-                    Modifier
-                } else {
-                    Modifier.clickable(onClick = onRequestSubscribe)
-                }
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text =
-                    stringResource(
-                        if (isActive) R.string.vibe_mode_active_title else R.string.vibe_mode_title
-                    ),
-                color = Color.White,
-                fontSize = UiConfigs.Typography.ButtonLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            if (!isActive) {
-                Text(
-                    text = stringResource(R.string.vibe_mode_subtitle),
-                    color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
-                    fontSize = UiConfigs.Typography.Support,
-                    lineHeight = UiConfigs.LineHeight.Support,
-                )
-            }
-        }
-
-        Spacer(Modifier.width(UiConfigs.MePage.VibeMode.ContentSpacing))
-
-        val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
-
-        Box {
-            Switch(
-                checked = isActive,
-                onCheckedChange = { checked ->
-                    if (isSubscribed) {
-                        vibeEnabled = checked
-                    }
-                },
-                enabled = isSubscribed,
-                colors = switchColors,
-                modifier = Modifier.semantics { contentDescription = toggleContentDescription },
-            )
-            // 未订阅时在开关上叠加透明可点击层，确保点击开关与点击横幅一致：跳转会员中心
-            if (!isSubscribed) {
-                Box(modifier = Modifier.matchParentSize().clickable(onClick = onRequestSubscribe))
-            }
-        }
-    }
-}
-
 /** 创建角色引导 Banner - Me 页最后一个横幅，点击跳转创建角色页。 样式与 Vibe Mode、Daily Check-in 等区块横幅一致：圆角、边框、渐变背景、单行标题。 */
 @Composable
 private fun CreateCharacterBanner(
@@ -1253,27 +1155,10 @@ private fun CreateCharacterBanner(
     title: String,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
-    val backgroundBrush =
-        Brush.horizontalGradient(listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd))
-    val borderColor = Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
-
     Row(
         modifier =
             modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(backgroundBrush)
-                .border(
-                    width = UiConfigs.MePage.VibeMode.BorderWidth,
-                    color = borderColor,
-                    shape = shape,
-                )
-                .clickable(onClick = onClick)
-                .padding(
-                    horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
-                    vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
-                ),
+                .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -1283,6 +1168,16 @@ private fun CreateCharacterBanner(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f),
         )
+
+        IconButton(
+            onClick = onClick
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = "add",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 
