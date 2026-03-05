@@ -73,6 +73,23 @@ async def test_generate_voice_rejects_explicit_mismatched_model(
 
 
 @pytest.mark.asyncio
+@patch.object(VoiceService, "_call_tts_api", new_callable=AsyncMock)
+async def test_generate_voice_rejects_unknown_model_even_if_prefix_matches(
+    mock_call_tts_api: AsyncMock,
+    voice_service: VoiceService,
+):
+    with pytest.raises(ValueError, match="TTS model/provider mismatch"):
+        await voice_service.generate_voice(
+            text="hello",
+            voice_id="google/Zephyr",
+            language="en",
+            model="gemini-unknown-tts",
+        )
+
+    assert mock_call_tts_api.await_count == 0
+
+
+@pytest.mark.asyncio
 @patch.object(VoiceService, "_calculate_audio_duration", return_value=1.0)
 @patch("app.services.voice_service.ElevenLabsTTSAPI.synthesize", new_callable=AsyncMock)
 @patch("app.services.voice_service.GeminiTTSAPI.synthesize", new_callable=AsyncMock)
