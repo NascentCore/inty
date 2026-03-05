@@ -9,8 +9,19 @@ https://github.com/NascentCore/inty/pull/2402/changes 要对这个改动修改�
 from typing import Any
 from langsmith.run_helpers import get_current_run_tree
 
+from app.utils.langsmith_metadata import normalize_langsmith_metadata_value
+
 
 PROVIDER_RESPONSE_KEY = "raw_response_from_provider"
+
+
+def update_current_run_metadata(**kwargs: Any) -> None:
+    """若当前在 LangSmith trace 内，将 kwargs 合并到当前 run 的 metadata；值会经 normalize 以可序列化。"""
+    run = get_current_run_tree()
+    if run is None:
+        return
+    for key, value in kwargs.items():
+        run.metadata[str(key)] = normalize_langsmith_metadata_value(value)
 
 
 def attach_provider_response_to_langsmith_run(response: Any, key: str = PROVIDER_RESPONSE_KEY) -> None:

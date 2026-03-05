@@ -37,6 +37,7 @@ from app.external_services.gcs import (
     get_bucket_and_path_from_gcs_url,
 )
 from app.services.gcs_service import GCSService
+from app.utils.langsmith import update_current_run_metadata
 
 # 性别到音色ID的映射
 GENDER_VOICE_MAPPING = {
@@ -66,6 +67,27 @@ class VoiceGenerationResult:
         """
         yield self.gcs_http_url
         yield self.duration_seconds
+
+
+def _process_inputs_generate_voice(inputs: Dict[str, Any]) -> Dict[str, Any]:
+    """LangSmith process_inputs：将 user 转为可读摘要、model 显式化，避免 Input 面板显示对象地址或 null。"""
+    out: Dict[str, Any] = {
+        "text_length": len((inputs.get("text") or "")),
+        "voice_id": inputs.get("voice_id"),
+        "language": inputs.get("language"),
+        "model_passed_in": inputs.get("model") if inputs.get("model") is not None else "None",
+        "agent_gender": inputs.get("agent_gender"),
+    }
+    user = inputs.get("user")
+    if user is not None:
+        out["user"] = {
+            "user_id": getattr(user, "id", None),
+            "auth_type": str(getattr(user, "auth_type", None)) if getattr(user, "auth_type", None) is not None else None,
+            "is_superuser": getattr(user, "is_superuser", None),
+        }
+    else:
+        out["user"] = None
+    return out
 
 
 class VoiceService:
@@ -112,7 +134,7 @@ class VoiceService:
 
         return cleaned_text
 
-    @traceable
+    @traceable(process_inputs=_process_inputs_generate_voice)
     async def generate_voice(
         self,
         text: str,
@@ -219,6 +241,24 @@ class VoiceService:
             logger.debug(
                 f"开始语音生成: voice_id={voice_id}, model={model}, language={language}, text_length={len(text)}"
             )
+
+            # LangSmith：写入排查用 metadata（用户/角色、模型、Gemini 调用方式）
+            _meta: Dict[str, Any] = {
+                "voice_id": voice_id,
+                "agent_gender": agent_gender,
+                "model_resolved": model,
+            }
+            if is_gemini_voice(voice_id):
+                _meta["gemini_tts_mode"] = (
+                    "synthesize_with_roleplay_prompt" if use_prompted_gemini else "synthesize"
+                )
+            else:
+                _meta["tts_provider"] = "elevenlabs"
+            if user is not None:
+                _meta["user_id"] = user.id
+                _meta["user_auth_type"] = str(user.auth_type) if user.auth_type else None
+                _meta["user_is_superuser"] = user.is_superuser
+            update_current_run_metadata(**_meta)
 
             # 并行检查缓存和预准备其他资源
             cached_url = None
@@ -376,6 +416,7 @@ class VoiceService:
         Returns:
             音频数据的字节流、时长(秒)、mime_type、实际 provider
         """
+        fallback_errors: List[Dict[str, Any]] = []
         try:
             use_gemini = is_gemini_voice(voice_id)
             provider_name = (
@@ -400,14 +441,32 @@ class VoiceService:
                 use_prompted = (
                     global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
                 )
-                if use_prompted:
-                    tts_result = (
-                        await self.gemini_tts_api.synthesize_with_roleplay_prompt(req)
+                tts_result = None
+                try:
+                    if use_prompted:
+                        tts_result = (
+                            await self.gemini_tts_api.synthesize_with_roleplay_prompt(req)
+                        )
+                    else:
+                        tts_result = await self.gemini_tts_api.synthesize(req)
+                except Exception as e:
+                    fallback_errors.append({"stage": "gemini_tts", "error": str(e)})
+                    update_current_run_metadata(
+                        voice_gemini_error=str(e),
+                        voice_fallback_errors=fallback_errors,
                     )
-                else:
-                    tts_result = await self.gemini_tts_api.synthesize(req)
+                    tts_result = None
                 logger.debug(f"Gemini TTS 路径: use_gemini_prompted_tts={use_prompted}")
                 if not tts_result:
+                    if not fallback_errors:
+                        fallback_errors.append(
+                            {"stage": "gemini_tts", "reason": "empty_result_or_client_unavailable"}
+                        )
+                    update_current_run_metadata(
+                        voice_fallback_used=True,
+                        voice_fallback_to="elevenlabs",
+                        voice_fallback_errors=fallback_errors,
+                    )
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
                     logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
                     # 使用 ElevenLabs 默认音色，因为 Gemini 音色名无法在 ElevenLabs 中使用
@@ -418,8 +477,25 @@ class VoiceService:
                         output_format=self.config.output_format,
                         language_code=language,
                     )
-                    tts_result = await self.tts_api.synthesize(fallback_req)
+                    try:
+                        tts_result = await self.tts_api.synthesize(fallback_req)
+                    except Exception as e:
+                        fallback_errors.append(
+                            {"stage": "elevenlabs_fallback", "error": str(e)}
+                        )
+                        update_current_run_metadata(
+                            voice_elevenlabs_fallback_error=str(e),
+                            voice_fallback_errors=fallback_errors,
+                        )
+                        return None
                     if not tts_result:
+                        fallback_errors.append(
+                            {"stage": "elevenlabs_fallback", "reason": "empty_result"}
+                        )
+                        update_current_run_metadata(
+                            voice_elevenlabs_fallback_error="empty_result",
+                            voice_fallback_errors=fallback_errors,
+                        )
                         logger.error("ElevenLabs TTS 回退也失败")
                         return None
                     provider_used = TTS_PROVIDER_ELEVENLABS
@@ -445,6 +521,7 @@ class VoiceService:
         except Exception as e:
             logger.error(f"TTS 调用异常: {str(e)}")
             logger.exception("TTS 调用异常详细信息:")
+            update_current_run_metadata(voice_tts_exception=str(e))
             return None
 
     def _build_gcs_urls(self, storage_url: str) -> Tuple[str, str]:

@@ -29,6 +29,7 @@ from langsmith import traceable
 from loguru import logger
 
 from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
+from app.utils.langsmith import update_current_run_metadata
 from app.utils.models_catalog import ModelBuilder
 
 DEFAULT_STABILITY = 0.5
@@ -697,6 +698,7 @@ class GeminiTTSAPI:
         client = self._get_client()
         if client is None:
             logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            update_current_run_metadata(gemini_tts_error="client_not_configured")
             return None
 
         prefix, raw = parse_voice_id(request.voice_id)
@@ -744,6 +746,7 @@ class GeminiTTSAPI:
 
             if not audio_bytes:
                 logger.error("Gemini TTS 返回空音频数据")
+                update_current_run_metadata(gemini_tts_error="empty_audio_response")
                 return None
 
             if mime_type and mime_type.startswith("audio/L"):
@@ -758,6 +761,7 @@ class GeminiTTSAPI:
         except Exception as e:
             logger.error(f"Gemini TTS 调用失败: {str(e)}")
             logger.exception("Gemini TTS 异常详细信息:")
+            update_current_run_metadata(gemini_tts_error=str(e))
             return None
 
     @traceable
@@ -777,6 +781,7 @@ class GeminiTTSAPI:
         client = self._get_client()
         if client is None:
             logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            update_current_run_metadata(gemini_tts_error="client_not_configured")
             return None
 
         prefix, raw = parse_voice_id(request.voice_id)
@@ -837,6 +842,7 @@ class GeminiTTSAPI:
 
             if not audio_bytes:
                 logger.error("Gemini TTS 返回空音频数据")
+                update_current_run_metadata(gemini_tts_error="empty_audio_response")
                 return None
 
             if mime_type and mime_type.startswith("audio/L"):
@@ -851,6 +857,7 @@ class GeminiTTSAPI:
         except Exception as e:
             logger.error(f"Gemini TTS 调用失败: {str(e)}")
             logger.exception("Gemini TTS 异常详细信息:")
+            update_current_run_metadata(gemini_tts_error=str(e))
             return None
 
 
