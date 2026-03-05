@@ -592,7 +592,7 @@ object UiConfigs {
         val EditButtonSize = 40.dp
 
         /** VIP 横幅高度 */
-        val VipBannerHeight = 140.dp
+        val VipBannerHeight = 100.dp
 
         /** 角色卡片宽度 */
         val AgentCardWidth = 165.dp

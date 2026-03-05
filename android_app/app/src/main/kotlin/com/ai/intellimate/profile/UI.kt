@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -236,6 +237,7 @@ internal fun PremiumBanner(
         modifier =
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius))
+                .background(MaterialTheme.colorScheme.surface)
                 .height(UiConfigs.MePage.VipBannerHeight)
                 .clickable {
                     val currentTime = System.currentTimeMillis()
@@ -247,13 +249,6 @@ internal fun PremiumBanner(
                     }
                 }
     ) {
-        Image(
-            painter = painterResource(R.drawable.img_vip_banner_bg),
-            contentDescription = "",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize(),
-        )
-
         LeftParticleEffects()
 
         var boxSize by remember { mutableStateOf(Size.Zero) }
@@ -282,37 +277,45 @@ internal fun PremiumBanner(
                 }
             }
 
-        Column(
+        Row(
             modifier =
-                Modifier.fillMaxHeight()
+                Modifier.fillMaxSize()
                     .background(brush = backgroundBrush)
                     .onSizeChanged { size ->
                         boxSize = Size(size.width.toFloat(), size.height.toFloat())
                     }
-                    .padding(end = 8.dp)
-                    .align(Alignment.CenterEnd),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.Center,
+                    .padding(
+                        start = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                        end = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                    )
+                    .align(Alignment.CenterStart),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = bannerContent.title,
-                fontSize = 14.sp,
-                lineHeight = 14.sp,
-                fontWeight = FontWeight(700),
-                color = Color(0xFFFFFFFF),
-                textAlign = TextAlign.Right,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.Start,
+            ) {
+                Text(
+                    text = bannerContent.title,
+                    fontSize = 14.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = FontWeight(700),
+                    color = Color(0xFFFFFFFF),
+                    textAlign = TextAlign.Start,
+                )
 
-            Text(
-                text = bannerContent.subtitle,
-                fontSize = 12.sp,
-                lineHeight = 12.sp,
-                fontWeight = FontWeight(500),
-                color = Color(0x8CFFFFFF),
-                textAlign = TextAlign.Right,
-            )
+                Text(
+                    text = bannerContent.subtitle,
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    fontWeight = FontWeight(500),
+                    color = Color(0x8CFFFFFF),
+                    textAlign = TextAlign.Start,
+                )
+            }
             if (bannerContent.showActionButton) {
-                Spacer(Modifier.height(8.dp))
                 ActionButton(
                     modifier = Modifier,
                     onClick = onClick,
