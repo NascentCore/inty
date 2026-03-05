@@ -70,7 +70,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.call.voiceCallModule
-import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.explore.flattenAgents
 import com.ai.intellimate.explore.isChristmasTheme
@@ -567,26 +566,14 @@ class MainActivity : BaseActivity() {
             )
         }
 
-        var creditsPointChanged by remember { mutableStateOf(0 to 0) }
-
         LaunchedEffect(Unit) {
             BoostManager.pointChanged.collect {
                 LogUtils.d("积分变化=${it.first}")
                 if (it.first >= 10) {
-                    creditsPointChanged = it
+                    withContext(Dispatchers.Main) {
+                        ToastUtils.showShort(R.string.energy_points_add_title, it.first, it.second)
+                    }
                 }
-            }
-        }
-
-        if (creditsPointChanged.first >= 10) {
-            EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
-                Text(
-                    stringResource(
-                        R.string.energy_points_add_title,
-                        creditsPointChanged.first,
-                        creditsPointChanged.second,
-                    )
-                )
             }
         }
     }
