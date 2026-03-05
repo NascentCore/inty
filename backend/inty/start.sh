@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
-LOCAL=false
+DEV=false
+TEST=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 当脚本位于 backend/inty 时从仓库根目录运行，以便 alembic/scripts 路径正确；Docker 中 COPY 到 / 时 SCRIPT_DIR=/ 仍 cd /
 if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
@@ -14,13 +15,19 @@ fi
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --local)
-      LOCAL=true
+    --dev)
+      DEV=true
+      shift
+      ;;
+    --test)
+      DEV=true
+      TEST=true
       shift
       ;;
     --help|-h)
-      echo "Usage: $0 [--local]"
-      echo "  --local   Local mode: run inty locally"
+      echo "Usage: $0 [--dev] [--test]"
+      echo "  --dev   Dev mode: seed test user/data, uvicorn --reload"
+      echo "  --test  Test mode: same as --dev, intended for CI/testing"
       echo "Run from repository root. Default: run migrations and start uvicorn without reload."
       exit 0
       ;;
@@ -50,25 +57,16 @@ alembic -c "$ALEMBIC_CONFIG" upgrade head
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
 python scripts/init_subscription_plans_simple.py
 
-if [ "$LOCAL" = true ]; then
-  # 生成测试用管理员账号，供 sample iMate 的 creator_id 与本地测试使用
-  python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+if [ "$DEV" = true ]; then
+  if [ "$TEST" = true ]; then
+    echo "Starting in test mode..."
+  else
+    echo "Starting in dev mode..."
+  fi
+  # 生成测试用管理员账号，ops 平台与 inty 后端分离后，这个应该就不需要了，先注释掉保留来做记录。
+  # python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   # 生成测试用户用于本地 app 登陆
   python scripts/create_email_password_superuser.py --email test@sxwl.ai --password test --yes
-
-  # Import sample iMate (idempotent: skip if agent id already exists)
-  PYTHONPATH=. python scripts/import_agent_from_json.py \
-    --input tests/Isabelle_Martin_imate_info.json \
-    --creator-id user-testing \
-    --no-dry-run \
-    --yes
-
-  PYTHONPATH=. python scripts/import_agent_from_json.py \
-    --input tests/official_assistant.json \
-    --creator-id user-testing \
-    --no-dry-run \
-    --yes
-
   uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."
