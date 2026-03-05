@@ -54,6 +54,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -1027,8 +1028,6 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
             }
         }
 
-    val clickableModifier = Modifier.noRippleClickable(onClick = onClick)
-
     Row(
         modifier =
             modifier
@@ -1043,25 +1042,33 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                         else DailyRewardsBannerStyle.BorderColor,
                     shape = DailyRewardsBannerStyle.Shape,
                 )
-                .then(clickableModifier)
-                .alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
+                //.alpha(if (hasCheckedInToday) DailyRewardsBannerStyle.DISABLED_ALPHA else 1f)
                 .padding(
                     horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
                     vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
                 ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // 左侧：Day * together + 进度条（与右侧交换后的位置）
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.profile_daily_rewards_title),
-                color =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTitleColor
-                    else DailyRewardsBannerStyle.TitleColor,
-                fontSize = DailyRewardsBannerStyle.TitleSize,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                text = stringResource(R.string.check_in_day_together, checkedInCount),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
             )
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.width(100.dp).height(4.dp),
+                color =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledProgressColor
+                    else DailyRewardsBannerStyle.ProgressColor,
+                trackColor =
+                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTrackColor
+                    else DailyRewardsBannerStyle.TrackColor,
+            )
+            Spacer(Modifier.height(4.dp))
             Text(
                 text =
                     stringResource(
@@ -1073,28 +1080,27 @@ private fun DailyRewardsBanner(modifier: Modifier = Modifier, onClick: () -> Uni
                     else DailyRewardsBannerStyle.SubtitleColor,
                 fontSize = DailyRewardsBannerStyle.SubtitleSize,
                 fontWeight = FontWeight.Medium,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Column(modifier = Modifier.padding(start = 12.dp), horizontalAlignment = Alignment.End) {
+        // 右侧：Daily Check-in 按钮样式
+        Button(
+            onClick = onClick,
+            modifier = Modifier.padding(start = 12.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        ) {
             Text(
-                text = stringResource(R.string.check_in_day_together, checkedInCount),
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.width(80.dp).height(4.dp),
-                color =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledProgressColor
-                    else DailyRewardsBannerStyle.ProgressColor,
-                trackColor =
-                    if (hasCheckedInToday) DailyRewardsBannerStyle.DisabledTrackColor
-                    else DailyRewardsBannerStyle.TrackColor,
+                text = stringResource(R.string.profile_daily_rewards_title),
+                fontSize = DailyRewardsBannerStyle.TitleSize,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
