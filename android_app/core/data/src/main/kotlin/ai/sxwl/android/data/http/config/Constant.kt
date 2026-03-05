@@ -11,6 +11,7 @@ class Constant {
 
         // This refers to the shared development backend endpoint.
         // This is the backend endpoint for the debug build (default build type).
+        // TODO：迁移到 dev.app.inty.cc
         const val USER_HOST_DEV = "dev.ops.inty.cc"
 
         // This refers to the local backend endpoint that can be accessed
