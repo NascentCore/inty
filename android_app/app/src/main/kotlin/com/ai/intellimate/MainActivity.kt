@@ -27,15 +27,20 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -1016,12 +1022,26 @@ fun SplashLoginUI(
                     }
 
                     Spacer(Modifier.height(32.dp))
-                    Text(
-                        text = stringResource(R.string.login_welcome),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val dotSizeSelected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_selected)
+                        val dotSizeUnselected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_unselected)
+                        val dotSpacing = dimensionResource(R.dimen.login_carousel_indicator_dot_spacing)
+                        repeat(bannerText.size) { index ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = dotSpacing)
+                                    .size(if (index == bannerIndex) dotSizeSelected else dotSizeUnselected)
+                                    .background(
+                                        color = Color.White.copy(alpha = if (index == bannerIndex) 1f else 0.4f),
+                                        shape = CircleShape,
+                                    ),
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(32.dp))
                     // Google 登录按钮
                     GoogleLoginButton(

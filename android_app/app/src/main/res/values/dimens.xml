@@ -48,4 +48,8 @@
     <dimen name="rank_dialog_stars_image_spacing">16dp</dimen>
     <dimen name="rank_dialog_image_buttons_spacing">24dp</dimen>
     <dimen name="rank_dialog_button_spacing">12dp</dimen>
+    <!-- 登录页轮播指示器 -->
+    <dimen name="login_carousel_indicator_dot_size_selected">8dp</dimen>
+    <dimen name="login_carousel_indicator_dot_size_unselected">6dp</dimen>
+    <dimen name="login_carousel_indicator_dot_spacing">4dp</dimen>
 </resources>
