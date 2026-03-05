@@ -1,4 +1,5 @@
 import asyncio
+import json
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -22,8 +23,9 @@ from openai import (
     OpenAI,
     RateLimitError,
 )
+from pydantic import ValidationError
 from psycopg_pool import ConnectionPool
-from sqlalchemy import text
+from sqlalchemy import text, update
 from typing_extensions import deprecated
 
 from app import models
@@ -35,6 +37,7 @@ from app.core.agent.agent_prompt_configs import (
 )
 from app.core.config import Environment, global_config_loaded_from_config_yaml as global_config
 from app.models import chat_history
+from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
@@ -90,6 +93,34 @@ INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE = """##Official Assistant Naming Upda
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
 INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
+OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME = "save_user_mbti_type"
+OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS = 3
+OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
+    {
+        "type": "function",
+        "function": {
+            "name": OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME,
+            "description": (
+                "Persist the user's final MBTI type to the user's metadata. "
+                "Call this tool only after you have determined the final MBTI type."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "mbti_type": {
+                        "type": "string",
+                        "description": (
+                            "Final MBTI type, one of: "
+                            + ", ".join(sorted(MBTI_TYPES))
+                        ),
+                    }
+                },
+                "required": ["mbti_type"],
+                "additionalProperties": False,
+            },
+        },
+    }
+]
 
 
 def _load_prompt_markdown_content(path: Path) -> str:
@@ -630,7 +661,7 @@ class Agent:
                 sync_engine = get_sync_engine()
                 with sync_engine.connect() as conn:
                     query = text("""
-                        SELECT nickname, gender, age_group, description, system_language 
+                        SELECT nickname, gender, age_group, description, system_language, meta_data
                         FROM users 
                         WHERE id = :user_id
                     """)
@@ -642,7 +673,7 @@ class Agent:
                         cache_service.set_user_info(user_id, user_info_text, ttl=60)
                     else:
                         user_info_parts = []
-                        nickname, gender, age_group, description, system_language = row
+                        nickname, gender, age_group, description, system_language, meta_data = row
                         if nickname:
                             user_info_parts.append(f"Name: {nickname}")
                         if gender:
@@ -658,6 +689,12 @@ class Agent:
                             user_info_parts.append(f"Age: {age_group}")
                         if description:
                             user_info_parts.append(f"Description: {description}")
+                        if isinstance(meta_data, dict):
+                            user_metadata = UserMetadata.model_validate(meta_data)
+                            if user_metadata.mbti_type:
+                                user_info_parts.append(
+                                    f"MBTI Type: {user_metadata.mbti_type}"
+                                )
                         if user_info_parts:
                             user_info_text = "##User Information\n" + "\n".join(
                                 user_info_parts
@@ -805,6 +842,154 @@ class Agent:
 
         return messages_with_date_prompts
 
+    def _build_assistant_tool_call_message(self, assistant_message: Any) -> Dict[str, Any]:
+        tool_calls = getattr(assistant_message, "tool_calls", None) or []
+        serialized_tool_calls = []
+        for tool_call in tool_calls:
+            serialized_tool_calls.append(
+                {
+                    "id": tool_call.id,
+                    "type": getattr(tool_call, "type", "function"),
+                    "function": {
+                        "name": tool_call.function.name,
+                        "arguments": tool_call.function.arguments or "",
+                    },
+                }
+            )
+        return {
+            "role": "assistant",
+            "content": assistant_message.content or "",
+            "tool_calls": serialized_tool_calls,
+        }
+
+    def _parse_mbti_type_from_tool_arguments(self, raw_arguments: str) -> str:
+        try:
+            parsed_arguments = json.loads(raw_arguments or "{}")
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"{OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME} received invalid JSON arguments"
+            ) from e
+        mbti_type_raw = parsed_arguments.get("mbti_type")
+        if not isinstance(mbti_type_raw, str):
+            raise ValueError(
+                f"{OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME} requires string field mbti_type"
+            )
+        try:
+            user_metadata = UserMetadata(mbti_type=mbti_type_raw)
+        except ValidationError as e:
+            raise ValueError(f"Invalid MBTI type: {mbti_type_raw}") from e
+        if not user_metadata.mbti_type:
+            raise ValueError(
+                f"{OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME} requires non-empty mbti_type"
+            )
+        return user_metadata.mbti_type
+
+    def _save_user_mbti_type_to_user_metadata_sync(
+        self, *, user_id: str, mbti_type: str
+    ) -> None:
+        sync_engine = get_sync_engine()
+        with sync_engine.begin() as conn:
+            row = conn.execute(
+                text("SELECT meta_data FROM users WHERE id = :user_id"),
+                {"user_id": user_id},
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"User not found: {user_id}")
+            raw_meta_data = row[0]
+            if raw_meta_data is None:
+                user_metadata = UserMetadata()
+            elif isinstance(raw_meta_data, dict):
+                user_metadata = UserMetadata.model_validate(raw_meta_data)
+            else:
+                raise ValueError(
+                    f"users.meta_data must be an object, got {type(raw_meta_data).__name__}"
+                )
+            user_metadata.mbti_type = mbti_type
+            conn.execute(
+                update(models.User)
+                .where(models.User.id == user_id)
+                .values(
+                    meta_data=user_metadata.model_dump(exclude_none=True),
+                    updated_at=text("now()"),
+                )
+            )
+        cache_service.invalidate_user_info(user_id)
+
+    def _execute_official_assistant_tool_call(
+        self, *, tool_name: str, raw_arguments: str, user_id: str
+    ) -> str:
+        if tool_name != OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME:
+            return f"Unsupported tool: {tool_name}"
+        mbti_type = self._parse_mbti_type_from_tool_arguments(raw_arguments)
+        self._save_user_mbti_type_to_user_metadata_sync(
+            user_id=user_id, mbti_type=mbti_type
+        )
+        return f"Saved MBTI type: {mbti_type}"
+
+    def _resolve_official_assistant_tool_calls(
+        self,
+        *,
+        response: Any,
+        openai_messages: List[Dict[str, Any]],
+        client: OpenAI,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        extra_body: Dict[str, Any],
+        user_id: str,
+        chat_name: str,
+        labels: Dict[str, Any],
+    ) -> Tuple[Any, List[Dict[str, Any]]]:
+        messages_with_tool_results = [*openai_messages]
+        current_response = response
+        for tool_round in range(OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS):
+            current_message = current_response.choices[0].message
+            tool_calls = getattr(current_message, "tool_calls", None) or []
+            if not tool_calls:
+                return current_response, messages_with_tool_results
+
+            messages_with_tool_results.append(
+                self._build_assistant_tool_call_message(current_message)
+            )
+            for tool_call in tool_calls:
+                tool_name = tool_call.function.name
+                raw_arguments = tool_call.function.arguments or ""
+                tool_result = self._execute_official_assistant_tool_call(
+                    tool_name=tool_name,
+                    raw_arguments=raw_arguments,
+                    user_id=user_id,
+                )
+                logger.info(
+                    f"Official assistant tool executed: tool={tool_name}, user_id={user_id}, round={tool_round + 1}"
+                )
+                messages_with_tool_results.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": tool_result,
+                    }
+                )
+            current_response = self._call_openai_api_with_retry(
+                client=client,
+                model=model,
+                openai_messages=messages_with_tool_results,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                extra_body=extra_body,
+                user_id=user_id,
+                max_retries=3,
+                initial_delay=1.0,
+                chat_name=chat_name,
+                labels=labels,
+                tools=OFFICIAL_ASSISTANT_TOOL_DEFINITIONS,
+                tool_choice="auto",
+            )
+        raise ValueError(
+            f"Official assistant tool call rounds exceeded limit={OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS}"
+        )
+
     def _is_retryable_error(self, error: Exception) -> bool:
         """
         判断错误是否可重试
@@ -850,6 +1035,8 @@ class Agent:
         initial_delay: float = 1.0,
         chat_name: str = None,
         labels: Dict[str, Any] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[Any] = None,
     ):
         """
         带重试机制的OpenAI API调用，并集成LangSmith追踪
@@ -886,6 +1073,18 @@ class Agent:
                 enable_tracing and _should_trace()
             )
             try:
+                create_kwargs: Dict[str, Any] = {
+                    "messages": openai_messages,
+                    "model": model,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "top_p": top_p,
+                    "extra_body": extra_body,
+                }
+                if tools is not None:
+                    create_kwargs["tools"] = tools
+                if tool_choice is not None:
+                    create_kwargs["tool_choice"] = tool_choice
                 if should_trace:
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
@@ -895,12 +1094,7 @@ class Agent:
                         metadata=normalized_labels,
                     ) as run:
                         response = client.chat.completions.create(
-                            messages=openai_messages,
-                            model=model,
-                            temperature=temperature,
-                            max_tokens=max_tokens,
-                            top_p=top_p,
-                            extra_body=extra_body,
+                            **create_kwargs,
                         )
                         # 记录输出到 trace
                         if response.choices:
@@ -908,6 +1102,9 @@ class Agent:
                                 outputs={
                                     "content": response.choices[0].message.content,
                                     "finish_reason": response.choices[0].finish_reason,
+                                    "tool_calls_count": len(
+                                        response.choices[0].message.tool_calls or []
+                                    ),
                                     "model": response.model,
                                     "usage": (
                                         {
@@ -935,12 +1132,7 @@ class Agent:
                 else:
                     # 未采样或 tracing 关闭时，直接调用 API。
                     response = client.chat.completions.create(
-                        messages=openai_messages,
-                        model=model,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body=extra_body,
+                        **create_kwargs,
                     )
                 # 成功则返回
                 if attempt > 0:
@@ -1130,6 +1322,7 @@ class Agent:
                     f"chat completion LLM config: agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
                 )
 
+                enable_official_assistant_tools = self._is_intellimate_official()
                 try:
                     response = self._call_openai_api_with_retry(
                         client=client,
@@ -1144,7 +1337,30 @@ class Agent:
                         initial_delay=1.0,
                         chat_name=chat_name,
                         labels=labels,
+                        tools=(
+                            OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
+                            if enable_official_assistant_tools
+                            else None
+                        ),
+                        tool_choice="auto" if enable_official_assistant_tools else None,
                     )
+                    openai_messages_for_response = openai_messages
+                    if enable_official_assistant_tools:
+                        response, openai_messages_for_response = (
+                            self._resolve_official_assistant_tool_calls(
+                                response=response,
+                                openai_messages=openai_messages,
+                                client=client,
+                                model=model_name,
+                                temperature=temperature,
+                                max_tokens=max_tokens,
+                                top_p=top_p,
+                                extra_body=self._chat_extra_body(user_id),
+                                user_id=user_id,
+                                chat_name=chat_name,
+                                labels=labels,
+                            )
+                        )
                 except Exception as api_error:
                     # 记录详细的错误信息
                     error_context = {
@@ -1204,18 +1420,21 @@ class Agent:
                 content_filter_reasons = {"content_filter", "safety"}
 
                 # 处理内容过滤情况：用 "continue" 替换用户消息重试一次
-                if finish_reason in content_filter_reasons:
+                if finish_reason in content_filter_reasons and not enable_official_assistant_tools:
                     logger.warning(
                         f"内容过滤触发 - Agent: {self.agent_id}, User: {user_id}, "
                         f"Session: {session_id}, finish_reason: {finish_reason}, "
                         f"被截断内容: {response_text}"
                     )
                     # 用 "continue" 替换最后一条用户消息重试
-                    openai_messages[-1] = {"role": "user", "content": "continue"}
+                    openai_messages_for_response[-1] = {
+                        "role": "user",
+                        "content": "continue",
+                    }
                     retry_response = self._call_openai_api_with_retry(
                         client=client,
                         model=model_name,
-                        openai_messages=openai_messages,
+                        openai_messages=openai_messages_for_response,
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
