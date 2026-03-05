@@ -2,7 +2,8 @@
 """
 Import a single agent from a JSON file (as produced by export_agent_to_json.py) into the database.
 
-Preserves agent id for fixture/restore. Use when the same id does not already exist.
+Idempotent: if an agent with the same id already exists (and is not deleted), skips insert and exits 0.
+Preserves agent id for fixture/restore.
 
 Usage (from repo root with config.yaml):
     PYTHONPATH=. python scripts/import_agent_from_json.py --input tests/Isabelle_Martin_imate_info.json
@@ -108,7 +109,8 @@ async def _import_agent(
             select(Agent.id).where(Agent.id == agent_id, Agent.deleted_at.is_(None))
         )
         if existing.scalar_one_or_none() is not None:
-            raise SystemExit(f"Agent id={agent_id} already exists; delete or use another fixture")
+            logger.info("Agent id={} already exists; skipping (idempotent)", agent_id)
+            return
 
         if dry_run:
             logger.info(
@@ -130,7 +132,7 @@ async def _import_agent(
         db.add(agent)
         await db.commit()
         await db.refresh(agent)
-        logger.info("Inserted agent id=%s name=%s", agent.id, agent.name)
+        logger.info(f"Inserted agent id={agent.id} name={agent.name}")
 
 
 def main(
@@ -166,7 +168,7 @@ def main(
 ) -> None:
     path = Path(input_path)
     if not path.is_file():
-        logger.error("Not a file: %s", path)
+        logger.error(f"Not a file: {path}")
         sys.exit(1)
     if no_dry_run:
         dry_run = False
