@@ -1,7 +1,7 @@
 """add voice_id to chat_settings
 
 Revision ID: 6f8c4a2d9b11
-Revises: 47eafda3e405
+Revises: 2449ffd5ff0c
 Create Date: 2026-03-05 12:00:00.000000+00:00
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "6f8c4a2d9b11"
-down_revision: Union[str, None] = "47eafda3e405"
+down_revision: Union[str, None] = "2449ffd5ff0c"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
