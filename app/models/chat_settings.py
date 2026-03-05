@@ -19,6 +19,11 @@ class ChatSettings(Base):
     id = Column(String, primary_key=True, index=True)
     language = Column(String, default="en")
     voice_enabled = Column(Boolean, default=True)  # 个性化语音自动播放开关
+    voice_id = Column(
+        String,
+        nullable=True,
+        comment="Per-chat selected voice id (MVP supports Gemini voices only)",
+    )
     keep_talking = Column(Boolean, default=True)
     style_prompt = Column(Text, nullable=True, comment="风格提示词，仅订阅用户可设置")
     # 对应的，App chat settings 中使用的名字是 premium model (vs mode)

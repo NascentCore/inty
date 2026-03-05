@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.MsgInfo
+import ai.sxwl.android.data.api.model.TextToSpeechVoiceOption
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.character.repository.CharacterRepository
@@ -365,6 +366,7 @@ class ChatViewModel : BaseVM() {
 
         // 查询聊天设置
         getChatSetting()
+        loadChatVoiceOptionsIfNeeded()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -1520,6 +1522,10 @@ class ChatViewModel : BaseVM() {
     private val _chatSettings =
         MutableStateFlow<Map<String, ChatSettingsResponse.ChatSettingRspData>>(emptyMap())
     val chatSettings = _chatSettings.asStateFlow()
+    private val _chatVoiceOptions = MutableStateFlow<List<TextToSpeechVoiceOption>>(emptyList())
+    val chatVoiceOptions = _chatVoiceOptions.asStateFlow()
+    private val _isLoadingChatVoices = MutableStateFlow(false)
+    val isLoadingChatVoices = _isLoadingChatVoices.asStateFlow()
 
     /** 获取指定agent的聊天设置 */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
@@ -1541,6 +1547,49 @@ class ChatViewModel : BaseVM() {
                 // 更新指定agent的设置，保持其他agent的设置不变
                 _chatSettings.update { currentSettings ->
                     currentSettings + (agentId to result.data)
+                }
+            }
+        }
+    }
+
+    fun loadChatVoiceOptionsIfNeeded(forceRefresh: Boolean = false) = launchBackground {
+        if (!forceRefresh && _chatVoiceOptions.value.isNotEmpty()) {
+            return@launchBackground
+        }
+
+        _isLoadingChatVoices.value = true
+        try {
+            when (val result = NetServiceMgr.getTextToSpeechApi().listVoices(provider = "gemini")) {
+                is HttpResult.Failure -> {
+                    LogUtils.e("Failed to load chat voice options: ${result.message}")
+                }
+                is HttpResult.Success -> {
+                    _chatVoiceOptions.value =
+                        result.data
+                            .filter {
+                                it.voiceId.startsWith("google/") &&
+                                    it.provider.equals("gemini", ignoreCase = true)
+                            }
+                            .sortedBy { it.name.lowercase() }
+                }
+            }
+        } finally {
+            _isLoadingChatVoices.value = false
+        }
+    }
+
+    fun updateChatVoiceSetting(voiceId: String?) = launchBackground {
+        val agentId = agentInfo.value?.id ?: return@launchBackground
+        val req = ChatSettingsReq(voice_id = voiceId)
+        when (val result = NetServiceMgr.getChatApi().updateChatSettings(agentId, req)) {
+            is HttpResult.Failure -> {
+                NetworkErrorHandler.showNetworkAwareError(result.message)
+            }
+            is HttpResult.Success -> {
+                result.data.data?.let { chatSettingData ->
+                    _chatSettings.update { currentSettings ->
+                        currentSettings + (agentId to chatSettingData)
+                    }
                 }
             }
         }

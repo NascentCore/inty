@@ -1,6 +1,7 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.TextToSpeechVoiceOption
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
@@ -102,6 +103,10 @@ fun ChatSettingsDrawer(
     drawerState: MutableState<DrawerValue>,
     onKeepTalkingChange: (Boolean) -> Unit,
     navController: NavController,
+    selectedChatVoiceId: String?,
+    chatVoiceOptions: List<TextToSpeechVoiceOption>,
+    isLoadingChatVoices: Boolean,
+    onChatVoiceSelected: (String?) -> Unit,
     showBackButton: Boolean = false, // 是否在独立 ChatScreen 场景下（没有底部导航栏）
 ) {
     val context = LocalContext.current
@@ -129,6 +134,7 @@ fun ChatSettingsDrawer(
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
     var showVipDialogPageSource by rememberSaveable { mutableStateOf<String?>(null) }
     var showModelMenu by rememberSaveable { mutableStateOf(false) }
+    var showVoiceMenu by rememberSaveable { mutableStateOf(false) }
     var pendingFontSize by rememberSaveable {
         mutableFloatStateOf(SettingStateManager.CHAT_FONT_SIZE_DEFAULT_SP)
     }
@@ -225,6 +231,107 @@ fun ChatSettingsDrawer(
                                 SettingStateManager.updateAutoPlayAudio(enabled)
                             },
                         )
+
+                        IntelliMateDivider()
+
+                        // Voice 音色（每个聊天独立设置）
+                        androidx.compose.foundation.layout.Box {
+                            val selectedVoiceLabel =
+                                when {
+                                    isLoadingChatVoices ->
+                                        stringResource(R.string.chat_settings_voice_loading)
+                                    selectedChatVoiceId.isNullOrBlank() ->
+                                        stringResource(R.string.chat_settings_voice_default)
+                                    else ->
+                                        chatVoiceOptions
+                                            .firstOrNull { it.voiceId == selectedChatVoiceId }
+                                            ?.name
+                                            ?: selectedChatVoiceId
+                                }
+
+                            SettingsArrowItem(
+                                item =
+                                    SettingsItemData.CommonItemData(
+                                        title = stringResource(R.string.chat_settings_voice_title),
+                                        content = selectedVoiceLabel,
+                                        arrow = true,
+                                    ),
+                                fontLight = true,
+                                isInGroup = true,
+                                horizontalPadding = horizontalPadding,
+                                onItemClick = {
+                                    FirebaseManager.logEvent(
+                                        FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                        FirebaseManager.safeEventParams(
+                                            "click_type" to "open_voice_menu",
+                                            "timestamp" to System.currentTimeMillis(),
+                                        ),
+                                    )
+                                    if (!isLoadingChatVoices) {
+                                        showVoiceMenu = true
+                                    }
+                                },
+                            )
+
+                            DropdownMenu(
+                                expanded = showVoiceMenu,
+                                onDismissRequest = { showVoiceMenu = false },
+                                modifier =
+                                    Modifier.background(
+                                        MaterialTheme.colorScheme.surfaceContainerLowest
+                                    ),
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text =
+                                                stringResource(
+                                                    R.string.chat_settings_voice_default
+                                                ),
+                                            color = MaterialTheme.colorScheme.textOnLightSurface,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    },
+                                    onClick = {
+                                        showVoiceMenu = false
+                                        onChatVoiceSelected(null)
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to "select_voice",
+                                                "voice_id" to "default",
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                    },
+                                )
+
+                                chatVoiceOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = option.name,
+                                                color =
+                                                    MaterialTheme.colorScheme.textOnLightSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                        },
+                                        onClick = {
+                                            showVoiceMenu = false
+                                            onChatVoiceSelected(option.voiceId)
+                                            FirebaseManager.logEvent(
+                                                FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                                FirebaseManager.safeEventParams(
+                                                    "click_type" to "select_voice",
+                                                    "voice_id" to option.voiceId,
+                                                    "timestamp" to System.currentTimeMillis(),
+                                                ),
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
 
                         IntelliMateDivider()
 

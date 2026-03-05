@@ -277,6 +277,9 @@ internal fun ChatPage(
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
     val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
     val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
+    val chatSettings by chatViewModel.chatSettings.collectAsState()
+    val chatVoiceOptions by chatViewModel.chatVoiceOptions.collectAsState()
+    val isLoadingChatVoices by chatViewModel.isLoadingChatVoices.collectAsState()
 
     // 记录上次上报的 key，避免在同一页面状态下重复上报
     // 使用 agentInfo?.id 作为 key 的一部分，确保不同 Agent 的页面会分别上报
@@ -1189,6 +1192,12 @@ internal fun ChatPage(
             drawerState = drawerState,
             onKeepTalkingChange = { enabled -> onKeepTalkingChange(enabled) },
             navController = navController,
+            selectedChatVoiceId = agentInfo?.id?.let { chatSettings[it]?.voice_id },
+            chatVoiceOptions = chatVoiceOptions,
+            isLoadingChatVoices = isLoadingChatVoices,
+            onChatVoiceSelected = { voiceId ->
+                chatViewModel.updateChatVoiceSetting(voiceId)
+            },
             showBackButton = showBackButton,
         )
 
