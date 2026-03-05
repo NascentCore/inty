@@ -8,6 +8,10 @@
 - Changes only affect debug build type's app is not listed.
 
 
+## 2026-03-04
+
+- Official Assistant chat now has a dedicated **Test my MBTI type** quick-action button above the input. Tapping it sends a structured MBTI interview starter prompt immediately, so users can begin guided type discovery in one tap.
+
 ## 2026-03-03
 
 - After creating an iMate from Official Assistant chat (**+ Create your own iMate**), the app now opens the newly created iMate chat directly instead of switching to the Me tab.

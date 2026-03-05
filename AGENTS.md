@@ -3,6 +3,7 @@
 ## 概述
 
 - Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm
+- Use standard components: https://developer.android.com/develop/ui/compose/components
 
 ### 产品概述
 

@@ -51,6 +51,7 @@ Click the **Messages** or the **2nd** icon from the left
 
 Tap the **middle** icon to open the chat screen with the Inty official assistant.
 In this official chat page, you can use the FAQ quick-question buttons near the top to prefill common long-form questions into the input box (they are not auto-sent).
+You can also tap **Test my MBTI type** above the input box to send a structured MBTI interview starter prompt immediately, so the assistant begins a step-by-step type discovery conversation for you.
 You can also tap **+ Create your own iMate** above the input box to jump straight to the iMate creation page. This button hides automatically while the keyboard is open. After creation succeeds from this entry, IntelliMate opens the new iMate chat directly.
 
 ### Explore iMates page
@@ -73,6 +74,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation + send one selected image together with text in the same message. |
 | Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
+| Start an MBTI test chat | Official Assistant Chat → **Test my MBTI type** | Sends a structured MBTI interview starter prompt immediately, then continue by answering each follow-up question. |
 | Create or edit an iMate | Official Assistant Chat → **+ Create your own iMate**, or Profile → My iMates | Guided flow with image upload and text-to-image background generation. |
 | Subscribe or restore | Profile → VIP / Subscription | Uses Google Play Billing; see Troubleshooting if charges succeed but perks stay locked. |
 | Update personal profile info | Me → Settings | Personal info edits live in Me page settings (not in Chat settings). |
