@@ -22,10 +22,22 @@ def test_logging_timezone_format():
     logger.info("This is an informational message.")
     logger.debug("A debug statement here.")
     logger.error("Something went wrong!")
-    
-    assert len(logged_messages) == 3
-    
-    for message in logged_messages:
+
+    # 只校验本测试主动发出的 3 条日志；忽略其他后台线程（如 tracing/http）噪声日志。
+    expected_fragments = [
+        "This is an informational message.",
+        "A debug statement here.",
+        "Something went wrong!",
+    ]
+    target_messages = [
+        message
+        for message in logged_messages
+        if any(fragment in message for fragment in expected_fragments)
+    ]
+
+    assert len(target_messages) == 3
+
+    for message in target_messages:
         assert " UTC " in message, f"Expected UTC timezone, got: {message}"
 
 
