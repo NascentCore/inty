@@ -160,6 +160,20 @@ class CacheService:
         """清除用户信息缓存"""
         return self.user_cache.delete(f"user_info:{user_id}")
 
+    def get_user_auth_snapshot(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """获取鉴权用户快照缓存"""
+        return self.user_cache.get(f"user_auth_snapshot:{user_id}")
+
+    def set_user_auth_snapshot(
+        self, user_id: str, snapshot: Dict[str, Any], ttl: Optional[int] = None
+    ) -> None:
+        """设置鉴权用户快照缓存"""
+        self.user_cache.set(f"user_auth_snapshot:{user_id}", snapshot, ttl)
+
+    def invalidate_user_auth_snapshot(self, user_id: str) -> bool:
+        """清除鉴权用户快照缓存"""
+        return self.user_cache.delete(f"user_auth_snapshot:{user_id}")
+
     def get_session_info(self, session_key: str) -> Optional[Dict[str, Any]]:
         """获取会话信息缓存"""
         return self.session_cache.get(f"session:{session_key}")

@@ -97,6 +97,7 @@ Requirements:
             await db.commit()
 
         cache_service.invalidate_user_info(user_id)
+        cache_service.invalidate_user_auth_snapshot(user_id)
         logger.debug("Selfie persona summary updated: user_id={}", user_id)
 
     async def _infer_selfie_persona_summary(self, user_photo_url: str) -> Optional[str]:

@@ -914,6 +914,7 @@ class Agent:
                 )
             )
         cache_service.invalidate_user_info(user_id)
+        cache_service.invalidate_user_auth_snapshot(user_id)
 
     def _execute_official_assistant_tool_call(
         self, *, tool_name: str, raw_arguments: str, user_id: str
