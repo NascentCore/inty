@@ -1,0 +1,29 @@
+model_list:
+  - model_name: or-gpt-4o
+    litellm_params:
+      model: openrouter/openai/gpt-4o
+      api_key: os.environ/OPENROUTER_API_KEY
+      api_base: os.environ/OPENROUTER_API_BASE
+
+  - model_name: or-claude-3.5-sonnet
+    litellm_params:
+      model: openrouter/anthropic/claude-3.5-sonnet
+      api_key: os.environ/OPENROUTER_API_KEY
+      api_base: os.environ/OPENROUTER_API_BASE
+
+litellm_settings:
+  # Defaults for /key/generate when caller omits fields.
+  default_key_generate_params:
+    models: ["or-gpt-4o"]
+    max_budget: 10
+    budget_duration: "2592000s" # 30 days
+    rpm_limit: 60
+    tpm_limit: 120000
+
+  # Hard upper bounds for all /key/generate requests.
+  upperbound_key_generate_params:
+    max_budget: 100
+    budget_duration: "31536000s" # 365 days
+    duration: "31536000s" # max key lifetime
+    rpm_limit: 300
+    tpm_limit: 300000

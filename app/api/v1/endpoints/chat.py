@@ -356,11 +356,11 @@ async def agent_chat_completions(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     request: ChatCompletionRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
     app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ):
     """
-    基于Agent ID的OpenAI风格聊天接口
+    基于Agent ID的OpenAI风格聊天接口；evaluation 可传 X-Assume-User-Id 以该用户身份聊天并加载其历史。
     如果用户还没有和该Agent创建会话，则自动创建
     """
     if (
@@ -542,15 +542,18 @@ async def agent_chat_completions(
         try:
             # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
             if chat_settings.voice_enabled and response_text_content.strip():
-                # TODO: 添加一个默认语音 ID
+                selected_chat_voice_id = chat_settings.voice_id
                 agent_voice_id = agent_data.get("voice_id")
+                # Voice resolution order for MVP:
+                # 1) per-chat selected voice_id, 2) agent default voice_id, 3) service fallback.
+                resolved_voice_id = selected_chat_voice_id or agent_voice_id
 
                 with log_time(
-                    f"语音生成: voice_id={agent_voice_id}, text_length={len(response_text_content)}, language={request.language}"
+                    f"语音生成: voice_id={resolved_voice_id}, text_length={len(response_text_content)}, language={request.language}"
                 ):
                     voice_result = await voice_service.generate_voice(
                         text=response_text_content,
-                        voice_id=agent_voice_id,
+                        voice_id=resolved_voice_id,
                         language=request.language,
                         db=db,
                         agent_gender=agent_data.get("gender"),

@@ -8,8 +8,15 @@
 - Changes only affect debug build type's app is not listed.
 
 
+## 2026-03-06
+
+- Subscription (Premium) page layout and copy updated: title/subtitle now show **Upgrade to Premium** / **Premium enabled** and **Unlock 12 perks now!** / **12 perks Unlocked!** depending on subscription status; billing notice **Will charge [price] in the next billing cycle, cancel at any time** appears below plan cards; a **Benefit Details** table compares Free vs Premium (Daily Chat, Chat Memory, Voice, HD Voice, Voice Call Time, etc.); purchase button shows selected plan price and **Get Premium**; **Membership & Renewal Terms** link added at bottom.
+- Subscription page background image (AI character) removed; page uses solid theme background. All subscription UI (plan cards, benefit table, purchase button, discount tags) now use **MaterialTheme** for colors, typography, and shapes.
+
 ## 2026-03-04
 
+- Chat settings now include a VIP-gated **Voice** picker for Gemini voices. Non-subscribed users now see the same upgrade popup as **Models** when tapping Voice; subscribed users can select and save a per-chat voice for both auto-play and tap-to-play TTS.
+- The chat settings **Voice** dropdown now shows a compact, scrollable list with 9 visible entries for easier browsing.
 - Official Assistant chat now has a dedicated **Test my MBTI type** quick-action button above the input. Tapping it sends a structured MBTI interview starter prompt immediately, so users can begin guided type discovery in one tap.
 
 ## 2026-03-03
