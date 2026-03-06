@@ -149,6 +149,22 @@ async def live_chat_session(
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
+    # Evaluation: superuser can pass assume_user_id query param to act as another user (load their history)
+    assume_user_id = websocket.query_params.get("assume_user_id")
+    if assume_user_id and assume_user_id.strip() and current_user.is_superuser:
+        from sqlalchemy import select
+        from app.models.user import User
+
+        row = await db.execute(select(User).where(User.id == assume_user_id.strip()))
+        assumed_user = row.scalar_one_or_none()
+        if assumed_user and not assumed_user.deleted_at:
+            logger.info(
+                f"Live chat assuming user: operator={current_user.id}, assumed={assumed_user.id}, agent_id={agent_id}"
+            )
+            current_user = assumed_user
+        else:
+            logger.warning(f"assume_user_id not found or deleted: {assume_user_id}")
+
     if not live_chat_service.is_enabled():
         logger.warning("Live chat 功能未启用，拒绝连接")
         await websocket.close(code=4003, reason="Live chat is disabled")
