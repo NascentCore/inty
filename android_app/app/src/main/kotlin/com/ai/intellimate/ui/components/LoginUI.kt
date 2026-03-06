@@ -103,7 +103,7 @@ internal fun PolicyText() {
     val context = LocalContext.current
     val baseTextStyle =
         TextStyle(
-            color = Color.White.copy(alpha = 0.35f),
+            color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.Normal,
             textAlign = TextAlign.Center,

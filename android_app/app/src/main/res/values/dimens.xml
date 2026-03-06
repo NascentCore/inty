@@ -50,4 +50,8 @@
     <dimen name="rank_dialog_button_spacing">12dp</dimen>
     <!-- Chat settings voice dropdown -->
     <dimen name="chat_settings_dropdown_item_height">48dp</dimen>
+    <!-- 登录页轮播指示器 -->
+    <dimen name="login_carousel_indicator_dot_size_selected">8dp</dimen>
+    <dimen name="login_carousel_indicator_dot_size_unselected">6dp</dimen>
+    <dimen name="login_carousel_indicator_dot_spacing">4dp</dimen>
 </resources>

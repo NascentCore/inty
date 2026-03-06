@@ -356,11 +356,11 @@ async def agent_chat_completions(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     request: ChatCompletionRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
     app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
 ):
     """
-    基于Agent ID的OpenAI风格聊天接口
+    基于Agent ID的OpenAI风格聊天接口；evaluation 可传 X-Assume-User-Id 以该用户身份聊天并加载其历史。
     如果用户还没有和该Agent创建会话，则自动创建
     """
     if (

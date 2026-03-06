@@ -3,7 +3,7 @@
  * CREATED_BY_AGENT
  */
 
-import { getGlobalApiKey } from "./api";
+import { getGlobalApiKey, getAssumeUserId } from "./api";
 
 export type ConnectionStatus =
   | "idle"
@@ -113,7 +113,11 @@ export class LiveChatService {
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/v1/live-chat/${config.agentId}?token=${apiKey}`;
+    let wsUrl = `${protocol}//${host}/api/v1/live-chat/${config.agentId}?token=${apiKey}`;
+    const assumeId = getAssumeUserId();
+    if (assumeId && assumeId.trim()) {
+      wsUrl += `&assume_user_id=${encodeURIComponent(assumeId.trim())}`;
+    }
 
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(wsUrl);

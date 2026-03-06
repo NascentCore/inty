@@ -1,13 +1,14 @@
 package com.ai.intellimate.ui.components
 
 import ai.sxwl.android.data.billing.VipPlan
-import ai.sxwl.android.design.theme.AppColors
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,8 +18,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -28,8 +35,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,22 +48,25 @@ import com.ai.intellimate.R
 import java.util.Locale
 import kotlin.math.ceil
 
-/** 折扣标签组件 */
+/** 折扣标签组件，使用 MaterialTheme 颜色与字体。 */
 @Composable
 private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val shapes = MaterialTheme.shapes
     Box(
         modifier =
             modifier
                 .fillMaxWidth(0.6f)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(shapes.medium)
                 .background(
                     brush =
                         Brush.horizontalGradient(
                             colors =
                                 listOf(
-                                    AppColors.DiscountLightBlue,
-                                    AppColors.DiscountLightPurple,
-                                    AppColors.DiscountBlue,
+                                    colorScheme.tertiary,
+                                    colorScheme.secondary,
+                                    colorScheme.primary,
                                 )
                         )
                 ),
@@ -73,16 +83,14 @@ private fun DiscountTag(discountRate: Double, modifier: Modifier = Modifier) {
                         "%d%%",
                         ceil((1 - discountRate) * 100).toInt(),
                     ),
-                color = Color.Black,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                style = typography.labelLarge,
+                color = colorScheme.onPrimary,
             )
             Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = stringResource(R.string.discount_save),
-                color = Color.Black,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                style = typography.labelLarge,
+                color = colorScheme.onPrimary,
             )
         }
     }
@@ -106,7 +114,7 @@ fun PremiumBenefitItem(text: String) {
     Spacer(Modifier.height(4.dp))
 }
 
-/** 订阅计划卡片组件 */
+/** 订阅计划卡片组件，使用 MaterialTheme 颜色、字体与形状。 */
 @Composable
 fun PremiumPlanCard(
     plan: VipPlan,
@@ -115,13 +123,41 @@ fun PremiumPlanCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val shapes = MaterialTheme.shapes
     val subModifier = if (isSubscribed) Modifier.alpha(.4f) else Modifier
+    val cardBg =
+        if (isSelected)
+            Brush.verticalGradient(
+                listOf(
+                    colorScheme.tertiary,
+                    colorScheme.secondary,
+                    colorScheme.primary,
+                )
+            )
+        else
+            Brush.verticalGradient(
+                listOf(
+                    colorScheme.surface.copy(alpha = 0.5f),
+                    colorScheme.surface.copy(alpha = 0.5f),
+                )
+            )
+    val innerBg = if (isSelected) colorScheme.surface else Color.Transparent
+    val textColor =
+        when {
+            isSubscribed -> colorScheme.onBackground.copy(alpha = 0.5f)
+            else -> colorScheme.onBackground
+        }
 
     Box(
         modifier =
-            modifier.fillMaxHeight().then(subModifier).clickable(enabled = !isSubscribed) {
-                onClick()
-            },
+            modifier
+                .fillMaxHeight()
+                .then(subModifier)
+                .clickable(enabled = !isSubscribed) {
+                    onClick()
+                },
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -134,110 +170,58 @@ fun PremiumPlanCard(
                 modifier
                     .width(110.dp)
                     .height(97.dp)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    if (isSelected)
-                                        listOf(
-                                            Color(0xFFC2F7FD),
-                                            Color(0xFFC4A9FC),
-                                            Color(0xFF7E96FB),
-                                        )
-                                    else
-                                        listOf(
-                                            Color.Black.copy(alpha = 0.4f),
-                                            Color.Black.copy(alpha = 0.4f),
-                                        )
-                            ),
-                        shape = RoundedCornerShape(8.dp),
-                    )
+                    .background(brush = cardBg, shape = shapes.small)
                     .padding(1.dp)
             ) {
                 Box(
                     modifier =
-                        Modifier.width(109.dp)
-                            .height(96.dp)
-                            .background(
-                                if (isSelected) Color(red = 40, green = 20, blue = 65)
-                                else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp),
-                            )
+                        Modifier
+                            .matchParentSize()
+                            .background(innerBg, shape = shapes.small)
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = plan.name,
-                            color =
-                                when {
-                                    isSubscribed -> Color.White.copy(alpha = 0.5f)
-                                    else -> Color.White
-                                },
-                            fontSize = 12.sp,
+                            style = typography.labelLarge,
+                            color = textColor,
                             modifier = subModifier,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Box(
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .height(1.dp)
-                                    .background(
-                                        brush =
-                                            Brush.horizontalGradient(
-                                                colors =
-                                                    listOf(
-                                                        Color.White.copy(0.1f),
-                                                        Color.White.copy(0.4f),
-                                                        Color.White.copy(0.1f),
-                                                    )
-                                            )
-                                    )
+                                    .background(colorScheme.outline.copy(alpha = 0.4f))
                         )
-
-                        // 处理价格显示：去掉 .00 后缀，并根据长度自适应字号
                         val displayPrice = remember(plan.price) { plan.price.replace(".00", "") }
-
-                        // 根据价格长度自适应字号
-                        val priceFontSize =
-                            remember(displayPrice) {
+                        val priceStyle =
+                            remember(displayPrice, typography) {
                                 val priceLength =
                                     displayPrice
                                         .filter { it.isDigit() || it == '.' || it == ',' }
                                         .length
                                 when {
-                                    priceLength <= 3 -> 24.sp // 短价格（如 $9, $99）
-                                    priceLength <= 5 -> 20.sp // 中等价格（如 $9.99, $99.99）
-                                    priceLength <= 7 -> 18.sp // 较长价格（如 $999.99）
-                                    else -> 16.sp // 很长价格（如 $9999.99）
+                                    priceLength <= 3 -> typography.titleMedium
+                                    priceLength <= 5 -> typography.titleSmall
+                                    priceLength <= 7 -> typography.bodyLarge
+                                    else -> typography.labelLarge
                                 }
                             }
-
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = displayPrice,
-                            color =
-                                when {
-                                    isSubscribed -> Color.White.copy(alpha = 0.5f)
-                                    else -> Color.White
-                                },
-                            fontSize = priceFontSize,
-                            fontWeight = FontWeight.Normal,
+                            style = priceStyle,
+                            color = textColor,
                             modifier = subModifier,
                         )
-
                         Spacer(modifier = Modifier.height(2.dp))
-
-                        // 由于接口暂无此数据，先隐藏
-                        //                        Text(
-                        //                            text = "$6.66/month",
-                        //                            color = Color.White.copy(0.8f),
-                        //                            fontSize = 10.sp,
-                        //                            modifier = subModifier,
-                        //                        )
                     }
                 }
             }
@@ -249,7 +233,9 @@ fun PremiumPlanCard(
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,
-                modifier = Modifier.then(subModifier).align(Alignment.TopEnd),
+                modifier = Modifier
+                    .then(subModifier)
+                    .align(Alignment.TopEnd),
             )
         }
     }
@@ -265,7 +251,10 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(122.dp).padding(horizontal = 16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(122.dp)
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
@@ -280,7 +269,10 @@ fun PremiumPlanList(
     }
 }
 
-/** 购买按钮组件 */
+/**
+ * 购买按钮组件，使用 MaterialTheme 颜色、字体与形状。
+ * 当 [selectedPlanPrice] 非空且未订阅时，按钮文案为「价格 Get Premium」；否则为「Subscribe」/「Subscribed」。
+ */
 @Composable
 fun PurchaseButton(
     isSubscribed: Boolean,
@@ -288,12 +280,23 @@ fun PurchaseButton(
     onPurchase: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    selectedPlanPrice: String? = null,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val shapes = MaterialTheme.shapes
+    val buttonText =
+        when {
+            isSubscribed -> stringResource(R.string.premium_subscribed)
+            !selectedPlanPrice.isNullOrBlank() ->
+                stringResource(R.string.subscription_btn_price_get_premium, selectedPlanPrice)
+            else -> stringResource(R.string.premium_subscribe)
+        }
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(76.dp)
+                .height(56.dp)
                 .alpha(if (isSubscribed) 0.6f else 1f)
                 .clickable(
                     enabled = !isSubscribed && hasSelectedPlan && !isLoading,
@@ -301,36 +304,28 @@ fun PurchaseButton(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.vip_buy_btn),
-            contentDescription = null,
+        Surface(
+            shape = RoundedCornerShape(100),
+            color = colorScheme.secondaryContainer,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.FillHeight,
-        )
-
-        if (isLoading) {
-            // Loading 状态：显示透明背景的 CircularProgressIndicator
+        ) {
             Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(28.dp)),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                } else {
+                    Text(
+                        text = buttonText,
+                        style = typography.titleMedium,
+                        modifier = Modifier.alpha(if (isSubscribed) .7f else 1f),
+                    )
+                }
             }
-        } else {
-            Text(
-                text =
-                    if (isSubscribed) {
-                        stringResource(R.string.premium_subscribed)
-                    } else {
-                        stringResource(R.string.premium_subscribe)
-                    },
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                modifier = Modifier.alpha(if (isSubscribed) .7f else 1f),
-            )
         }
     }
 }
@@ -354,16 +349,206 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
     }
 }
 
-/** 空状态组件 */
+/** 权益对比表格的一行数据：左侧为权益名称，中间为 Free 列文案，右侧为 Premium 列文案。 */
+data class BenefitRow(val label: String, val free: String, val premium: String)
+
+/**
+ * 订阅页「Benefit Details」对比表格：Free | Premium 两列，多行权益对比。
+ * 使用 MaterialTheme 颜色与字体。
+ */
+@Composable
+fun BenefitDetailsTable(
+    rows: List<BenefitRow>,
+    modifier: Modifier = Modifier,
+    headerTitle: String = stringResource(R.string.subscription_benefit_details_title),
+    freeColumnTitle: String = stringResource(R.string.subscription_benefit_free),
+    premiumColumnTitle: String = stringResource(R.string.subscription_benefit_premium),
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val textColor = Color(0xFFEAD1FF)
+
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        LazyColumn(
+            modifier = Modifier
+        ) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "$headerTitle >",
+                        style = typography.titleSmall,
+                        color = textColor,
+                        modifier = Modifier.weight(2f)
+                            .padding(start = dimensionResource(R.dimen.padding_large))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = freeColumnTitle,
+                            style = typography.labelLarge,
+                            color = textColor
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = premiumColumnTitle,
+                            style = typography.labelLarge,
+                            color = textColor,
+                        )
+                    }
+                }
+            }
+
+            itemsIndexed(rows) { index, row ->
+                Row(
+                    modifier = Modifier
+                        .height(IntrinsicSize.Max)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val containerColor = if (index % 2 == 0) {
+                        Color.Transparent
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    }
+
+                    Box(
+                        contentAlignment = Alignment.CenterStart,
+                        modifier = Modifier
+                            .weight(2f)
+                            .background(containerColor)
+                            .padding(
+                                start = dimensionResource(R.dimen.padding_large),
+                                top = dimensionResource(R.dimen.padding_small),
+                                bottom = dimensionResource(R.dimen.padding_small)
+                            ),
+                    ) {
+                        Text(
+                            text = row.label,
+                            style = typography.bodyLarge,
+                            color = textColor,
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = row.free,
+                            style = typography.labelLarge,
+                            color = textColor,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .background(containerColor),
+                    ) {
+                        Text(
+                            text = row.premium,
+                            style = typography.labelLarge,
+                            color = textColor,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+/** 订阅页使用的 12 条权益对比行（Free | Premium），与文档 订阅页修改0304 一致。 */
+@Composable
+fun subscriptionBenefitRows(): List<BenefitRow> =
+    listOf(
+        BenefitRow(
+            stringResource(R.string.benefit_daily_chat),
+            stringResource(R.string.benefit_value_limited),
+            stringResource(R.string.benefit_value_unlimited),
+        ),
+        BenefitRow(
+            stringResource(R.string.benefit_chat_memory),
+            stringResource(R.string.benefit_value_short_term),
+            stringResource(R.string.benefit_value_long_term),
+        ),
+        BenefitRow(stringResource(R.string.benefit_customize_chat_style), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(stringResource(R.string.benefit_smarter_ai_model), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_voice),
+            stringResource(R.string.benefit_value_limited),
+            stringResource(R.string.benefit_value_unlimited),
+        ),
+        BenefitRow(stringResource(R.string.benefit_hd_voice), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_voice_call_time),
+            stringResource(R.string.benefit_value_5_min_per_day),
+            stringResource(R.string.benefit_value_30_min_per_day),
+        ),
+        BenefitRow(stringResource(R.string.benefit_more_image_generations), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_photo_quality),
+            stringResource(R.string.benefit_value_standard),
+            stringResource(R.string.benefit_value_hd),
+        ),
+        BenefitRow(stringResource(R.string.benefit_vip_exclusive_characters), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(stringResource(R.string.benefit_early_access_new_features), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(stringResource(R.string.benefit_advanced_functions), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+    )
+
+/** 空状态组件，使用 MaterialTheme 颜色与字体。 */
 @Composable
 fun EmptyPlanState(modifier: Modifier = Modifier) {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     Text(
         text = stringResource(R.string.no_subscription_plans),
-        color = Color.White.copy(alpha = 0.6f),
-        fontSize = 14.sp,
+        style = typography.bodyLarge,
+        color = colorScheme.onBackground.copy(alpha = 0.6f),
         textAlign = TextAlign.Center,
         modifier = modifier.fillMaxWidth(),
     )
+}
+
+@Preview
+@Composable
+private fun BenefitDetailsTablePreview() {
+    IntelliMateTheme {
+        BenefitDetailsTable(
+            rows = subscriptionBenefitRows(),
+            modifier = Modifier
+        )
+    }
 }
 
 @Preview(showBackground = true)

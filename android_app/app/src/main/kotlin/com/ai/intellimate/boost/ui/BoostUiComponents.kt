@@ -103,7 +103,7 @@ fun BoostStatusChip(
                     color = Color.White.copy(alpha = 0.08f),
                     shape = RoundedCornerShape(24.dp),
                 )
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
                 .noRippleClickable(enabled = true, onClick = handleClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -112,13 +112,13 @@ fun BoostStatusChip(
             painter = painterResource(R.drawable.rocket_launch_24px),
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(12.dp),
         )
         Spacer(Modifier.size(12.dp))
 
         ProvideTextStyle(
             value =
-                TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
             content = content,
         )
     }

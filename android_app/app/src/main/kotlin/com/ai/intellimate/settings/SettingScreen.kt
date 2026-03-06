@@ -3,6 +3,7 @@ package com.ai.intellimate.settings
 // import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -16,15 +17,22 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -38,12 +46,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.core.net.toUri
+import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.design.theme.VibeModeColors
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.BuildConfig
@@ -126,6 +142,11 @@ fun SettingScreen(
         Column(
             modifier = Modifier.verticalScroll(scrollState).padding(innerPadding).padding(16.dp)
         ) {
+            VibeModeBanner(
+                isSubscribed = state.isVipSubscribed,
+                onRequestSubscribe = { navController.navigate(Routes.Me.vipCenter("settings_vibe_mode")) },
+            )
+            Spacer(Modifier.height(16.dp))
             AccountInfoSection(userId = state.userId, userEmail = state.userEmail)
 
             Spacer(Modifier.height(16.dp))
@@ -204,7 +225,12 @@ private fun DebugVipStatus() {
 
                 FilterChip(
                     onClick = {
-                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = true))
+                        BillingRepository.setDebugVipStatus(
+                            VipStatus(
+                                isSubscribed = true,
+                                subscriptionStatus = VipStatus.UI_SUBSCRIBED
+                            )
+                        )
                     },
                     selected = vipStatus?.isSubscribed == true,
                     label = { Text("订阅") },
@@ -212,7 +238,7 @@ private fun DebugVipStatus() {
 
                 FilterChip(
                     onClick = {
-                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false))
+                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false, subscriptionStatus = VipStatus.UI_UNSUBSCRIBED))
                     },
                     selected = vipStatus?.isSubscribed == false,
                     label = { Text("非订阅") },
@@ -304,6 +330,120 @@ private fun AccountInfoSection(userId: String, userEmail: String) {
                 }
             },
         )
+    }
+}
+
+/** The Vibe Mode 卡片：订阅用户可开关，未订阅点击跳转会员中心。原在 Me 页，已移至设置页顶部。 */
+@Composable
+private fun VibeModeBanner(
+    modifier: Modifier = Modifier,
+    isSubscribed: Boolean,
+    onRequestSubscribe: () -> Unit,
+) {
+    var vibeEnabled by remember { mutableStateOf(IntySetting.isVibeModeEnabled()) }
+    val isActive = isSubscribed && vibeEnabled
+
+    LaunchedEffect(vibeEnabled, isSubscribed) {
+        if (isSubscribed) {
+            IntySetting.setVibeModeEnabled(vibeEnabled)
+        } else {
+            if (vibeEnabled) vibeEnabled = false
+        }
+    }
+
+    val backgroundBrush =
+        when {
+            !isSubscribed ->
+                Brush.linearGradient(
+                    listOf(VibeModeColors.DisabledStart, VibeModeColors.DisabledEnd)
+                )
+            isActive ->
+                Brush.horizontalGradient(
+                    listOf(VibeModeColors.ActiveStart, VibeModeColors.ActiveEnd)
+                )
+            else ->
+                Brush.horizontalGradient(
+                    listOf(VibeModeColors.InactiveStart, VibeModeColors.InactiveEnd)
+                )
+        }
+
+    val shape = RoundedCornerShape(UiConfigs.MePage.SectionBannerCornerRadius)
+    val borderColor =
+        if (isActive) Color.White.copy(alpha = 0.45f)
+        else Color.White.copy(alpha = UiConfigs.Alpha.SubtleBorder)
+
+    val switchColors =
+        SwitchDefaults.colors(
+            checkedThumbColor = Color.White,
+            checkedTrackColor = VibeModeColors.SwitchTrackActive,
+            uncheckedThumbColor = Color.White,
+            uncheckedTrackColor =
+                if (isSubscribed) VibeModeColors.SwitchTrackInactive
+                else VibeModeColors.SwitchTrackDisabled,
+            checkedBorderColor = Color.Transparent,
+            uncheckedBorderColor = Color.Transparent,
+            disabledCheckedThumbColor = Color.White,
+            disabledCheckedTrackColor = VibeModeColors.SwitchTrackActive,
+            disabledUncheckedThumbColor = Color.White.copy(alpha = UiConfigs.Alpha.DisabledButton),
+            disabledUncheckedTrackColor = VibeModeColors.SwitchTrackDisabled,
+            disabledCheckedBorderColor = Color.Transparent,
+            disabledUncheckedBorderColor = Color.Transparent,
+        )
+
+    val baseModifier =
+        modifier
+            .clip(shape)
+            .background(brush = backgroundBrush, shape = shape)
+            .border(
+                width = UiConfigs.MePage.VibeMode.BorderWidth,
+                color = borderColor,
+                shape = shape,
+            )
+            .padding(
+                horizontal = UiConfigs.MePage.SectionBannerHorizontalPadding,
+                vertical = UiConfigs.MePage.SectionBannerVerticalPadding,
+            )
+
+    Row(
+        modifier =
+            baseModifier.then(
+                if (isSubscribed) Modifier else Modifier.clickable(onClick = onRequestSubscribe)
+            ),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text =
+                    stringResource(
+                        if (isActive) R.string.vibe_mode_active_title else R.string.vibe_mode_title
+                    ),
+                color = Color.White,
+                fontSize = UiConfigs.Typography.ButtonLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (!isActive) {
+                Text(
+                    text = stringResource(R.string.vibe_mode_subtitle),
+                    color = Color.White.copy(alpha = UiConfigs.Alpha.DimmedText),
+                    fontSize = UiConfigs.Typography.Support,
+                    lineHeight = UiConfigs.LineHeight.Support,
+                )
+            }
+        }
+        Spacer(Modifier.width(UiConfigs.MePage.VibeMode.ContentSpacing))
+        val toggleContentDescription = stringResource(R.string.vibe_mode_toggle_content_desc)
+        Box {
+            Switch(
+                checked = isActive,
+                onCheckedChange = { if (isSubscribed) vibeEnabled = it },
+                enabled = isSubscribed,
+                colors = switchColors,
+                modifier = Modifier.semantics { contentDescription = toggleContentDescription },
+            )
+            if (!isSubscribed) {
+                Box(modifier = Modifier.matchParentSize().clickable(onClick = onRequestSubscribe))
+            }
+        }
     }
 }
 

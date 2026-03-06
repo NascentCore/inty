@@ -650,7 +650,13 @@ fun ChatSettingsDrawer(
                                     ),
                                 )
                                 if (isLoggedIn) {
-                                    navController.navigate(Routes.Me.reportPage(true))
+                                    navController.navigate(
+                                        Routes.Me.reportPage(
+                                            isFeedback = true,
+                                            targetType = "AGENT",
+                                            targetId = agentInfo?.id ?: "",
+                                        )
+                                    )
                                 }
                             },
                         )

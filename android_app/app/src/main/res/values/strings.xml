@@ -265,6 +265,43 @@
     <string name="subscription_description_placeholder">Will be charged at the next billing date</string>
     <string name="subscription_description_fmt_str" formatted="false">%s will be charged %s, cancel at any time</string>
 
+    <!-- Subscription page (参考 Talkie+ / 订阅页修改0304) -->
+    <string name="subscription_page_title_upgrade">Upgrade to Premium</string>
+    <string name="subscription_page_title_subscribed">Premium enabled</string>
+    <string name="subscription_page_subtitle_upgrade">Unlock 12 perks now!</string>
+    <string name="subscription_page_subtitle_subscribed">12 perks Unlocked!</string>
+    <string name="subscription_billing_cycle_notice" formatted="false">Will charge %1$s in the next billing cycle, cancel at any time.</string>
+    <string name="subscription_benefit_details_title">Benefit Details</string>
+    <string name="subscription_benefit_free">Free</string>
+    <string name="subscription_benefit_premium">Premium</string>
+    <string name="subscription_get_premium">Get Premium</string>
+    <string name="subscription_btn_price_get_premium" formatted="false">%1$s Get Premium</string>
+    <string name="membership_renewal_terms">Membership &amp; Renewal Terms</string>
+    <!-- Benefit table rows: label -->
+    <string name="benefit_daily_chat">Daily Chat</string>
+    <string name="benefit_chat_memory">Chat Memory</string>
+    <string name="benefit_customize_chat_style">Customize Chat Style</string>
+    <string name="benefit_smarter_ai_model">Smarter AI Model</string>
+    <string name="benefit_voice">Voice</string>
+    <string name="benefit_hd_voice">HD Voice</string>
+    <string name="benefit_voice_call_time">Voice Call Time</string>
+    <string name="benefit_more_image_generations">More Image Generations</string>
+    <string name="benefit_photo_quality">Photo Quality</string>
+    <string name="benefit_vip_exclusive_characters">VIP Exclusive Characters</string>
+    <string name="benefit_early_access_new_features">Early Access to New Features</string>
+    <string name="benefit_advanced_functions">Advanced Functions</string>
+    <!-- Benefit table: Free column values -->
+    <string name="benefit_value_limited">Limited</string>
+    <string name="benefit_value_unlimited">Unlimited</string>
+    <string name="benefit_value_short_term">Short-term</string>
+    <string name="benefit_value_long_term">Long-term</string>
+    <string name="benefit_value_standard">Standard</string>
+    <string name="benefit_value_hd">HD</string>
+    <string name="benefit_value_5_min_per_day">5 min/day</string>
+    <string name="benefit_value_30_min_per_day">30 min/day</string>
+    <string name="benefit_value_dash">—</string>
+    <string name="benefit_value_check">✓</string>
+
     <!-- Chat -->
     <string name="chat_settings_settings_title">Settings</string>
     <string name="chat_settings_support_resources_title">Support</string>
@@ -435,7 +472,8 @@
     <string name="profile_premium_banner_title_upgrade">Upgrade to Premium</string>
     <string name="profile_premium_banner_subtitle_unlock">Unlock all privileges now</string>
     <string name="profile_premium_banner_button_activate">Activate now</string>
-    <string name="profile_daily_rewards_title">Daily Check-in</string>
+    <string name="profile_premium_banner_button_view">View</string>
+    <string name="profile_daily_rewards_title">Check-in</string>
     <string name="profile_daily_rewards_subtitle">Get %1$d credits</string>
     <string name="me_create_character_banner_title">Create your own iMate</string>
     <string name="check_in_day_together">💗 Day %1$d Together</string>
@@ -662,11 +700,6 @@
     <string name="holiday_celebration_secondary_cta">Not now</string>
     <string name="holiday_celebration_points_added">🥳 100 Credits!</string>
 
-    <!-- IntelliMate tips popup -->
-    <string name="intellimate_tip_title">Quick tip</string>
-    <string name="intellimate_tip_got_it">Got it</string>
-    <string name="intellimate_tip_disable">Disable Tips</string>
-
     <!-- Placeholder -->
     <string name="under_development">Under Development</string>
     <string name="boost_leaderboard_tab_top_users">Top Users</string>
@@ -704,6 +737,7 @@
     <string name="heartbeat_subtitle">%1$d Love Journals about you</string>
     <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
     <string name="heartbeat_empty">No Love Journal yet</string>
+    <string name="my_own_imates">My own iMates</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A voice that stays</item>
