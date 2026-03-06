@@ -41,6 +41,10 @@ import {
   formatUtcTimeRaw,
   getCurrentUtcTime,
 } from "../utils/dateUtils";
+import {
+  sessionMessagesPaginationProps,
+  shouldShowSessionMessagesPagination,
+} from "../utils/sessionMessagesPagination";
 import type {
   UserDailyMessagesResponse,
   UserTodayStatsResponse,
@@ -953,16 +957,17 @@ export const UserDailyMessagesPage: React.FC = () => {
                             </div>
                           ),
                         )}
-                        {messagesData.has_more && (
+                        {shouldShowSessionMessagesPagination(messagesData) && (
                           <div style={{ textAlign: "center", marginTop: 16 }}>
                             <Pagination
                               current={messagesData.page}
                               total={messagesData.total}
                               pageSize={messagesData.size}
+                              showTotal={(total) => `共 ${total} 条消息`}
                               onChange={(page) =>
                                 handleMessagePageChange(record.chat_id, page)
                               }
-                              showSizeChanger={false}
+                              {...sessionMessagesPaginationProps}
                             />
                           </div>
                         )}
