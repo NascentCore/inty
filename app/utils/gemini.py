@@ -108,24 +108,17 @@ def get_genai_client():
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:
-    """
-    增强提示词
-    """
-    # 获取反向性别
-
-    # 构建增强提示词
     enhanced_prompt = f"""
-    A person who is welcoming, friendly.
+    A person who is attractive/beautiful/lovely/intriguing.
     age: 22 - 35
     gender: {gender}
 
     {prompt}
 
     Additional requirements:
-    The image must be of a person.
-    It cannot be a landscape, object, or any other non-human content.
-    Avoid generating images of people appearing less than 18 years old.
-    All content must be appropriate for a general audience.
+    - The image must be of a person at the center of the image.
+      - Never put the person on the side
+    - It cannot be a landscape, object, or any other non-human content.
     """
 
     logger.debug(f"Enhanced prompt: {enhanced_prompt}")
