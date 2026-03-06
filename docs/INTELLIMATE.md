@@ -94,7 +94,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 
 ### 2. Chats
 - Every message supports voice playback; audio is cached locally (`AudioCacheManager`).
-- Chat settings now include a per-chat **Voice** selector (Gemini voices). The selected voice applies to both auto-play and tap-to-play voice generation in that same chat.
+- Chat settings now include a VIP-gated per-chat **Voice** selector (Gemini voices). Non-subscribed users see the same upgrade popup as the Models row when tapping Voice; subscribed users can apply the selected voice to both auto-play and tap-to-play generation in that same chat.
 - The **Voice** selector uses a compact scrollable menu with 9 visible options at a time.
 - Buttons such as Keep Talking and Message to Image fire Firebase events, helping support diagnose issues.
 - “Network error” alerts usually clear after checking connectivity or switching back to the default backend on debug builds.

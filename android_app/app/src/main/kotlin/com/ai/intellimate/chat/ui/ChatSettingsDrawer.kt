@@ -261,6 +261,7 @@ fun ChatSettingsDrawer(
                                         content = selectedVoiceLabel,
                                         arrow = true,
                                     ),
+                                showVip = true,
                                 fontLight = true,
                                 isInGroup = true,
                                 horizontalPadding = horizontalPadding,
@@ -272,6 +273,18 @@ fun ChatSettingsDrawer(
                                             "timestamp" to System.currentTimeMillis(),
                                         ),
                                     )
+                                    if (!vipStatus.isSubscribed) {
+                                        showVipDialogPageSource = "chat_settings_voice"
+                                        FirebaseManager.logEvent(
+                                            FirebaseManager.Events.CHAT_SIDEBAR_CLICK,
+                                            FirebaseManager.safeEventParams(
+                                                "click_type" to
+                                                    "open_voice_menu_requires_subscription",
+                                                "timestamp" to System.currentTimeMillis(),
+                                            ),
+                                        )
+                                        return@SettingsArrowItem
+                                    }
                                     if (!isLoadingChatVoices) {
                                         showVoiceMenu = true
                                     }
