@@ -2,7 +2,80 @@
 
 参见 [config.yaml](config.yaml) 与 [start.sh](start.sh)。需配置 `FUNCLOUD_API_KEY`、`LITELLM_MASTER_KEY`，且启用 master-key 时需配数据库。
 
-## 直接 curl 调用 Funcloud
+## 复现流程：LiteLLM 经代理调用 Funcloud AI
+
+### 1. 环境准备
+
+- Python 3.12 + 已安装 `litellm`（或使用 `uv run`）
+- 可选：本地 PostgreSQL（若用默认 `DATABASE_URL`，需有 `lite-llm` 库；start.sh 会自动建库）
+- 环境变量：
+  - `FUNCLOUD_API_KEY`：Funcloud 的 API Key（必填）
+  - `LITELLM_MASTER_KEY`：代理鉴权用，客户端请求时需带 `Authorization: Bearer <此 key>`（必填）
+  - `DATABASE_URL`：不设则 start.sh 使用默认 `postgresql://postgres:sxwl666!@localhost:5432/lite-llm`
+
+### 2. 启动代理
+
+在仓库根目录执行：
+
+```bash
+export FUNCLOUD_API_KEY='你的 Funcloud Key'
+export LITELLM_MASTER_KEY='sk-llm-lite-master-key'   # 示例，可自定
+
+./tools/lite_llm_proxy/start.sh
+```
+
+代理监听 `http://0.0.0.0:4000`。start.sh 会设置 `FUNCLOUD_AUTH_HEADER="Bearer $FUNCLOUD_API_KEY"`，供 config 中 `extra_headers.Authorization` 使用（Funcloud 只认 Bearer，不认 x-api-key）。
+
+### 3. 用 curl 调用代理（代理再请求 Funcloud）
+
+客户端对**代理**发 OpenAI 兼容的 `/chat/completions`，代理根据 config 将请求转发到 Funcloud `https://api.funcloud.ai/v1/official/v1/messages`，并带上 `Authorization: Bearer $FUNCLOUD_API_KEY`，最后把 Funcloud 的 Anthropic 风格响应转成 OpenAI 风格返回：
+
+```bash
+curl -X POST 'http://localhost:4000/chat/completions' \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -d '{
+    "model": "claude-opus-4",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": [{"type": "text", "text": "Who are you?"}]}]
+  }'
+```
+
+成功时返回 OpenAI 格式，例如 `{"id":"chatcmpl-...","object":"chat.completion","choices":[...],"usage":{...}}`。
+
+### 4. 流程小结
+
+| 步骤 | 谁 | 动作 |
+|------|----|------|
+| 1 | 你 | 设置 `FUNCLOUD_API_KEY`、`LITELLM_MASTER_KEY`，执行 `./tools/lite_llm_proxy/start.sh` |
+| 2 | start.sh | 导出 `FUNCLOUD_AUTH_HEADER="Bearer $FUNCLOUD_API_KEY"`，启动 litellm --config config.yaml --port 4000 |
+| 3 | 你 | `curl -X POST http://localhost:4000/chat/completions -H "Authorization: Bearer $LITELLM_MASTER_KEY" -d '{"model":"claude-opus-4",...}'` |
+| 4 | LiteLLM 代理 | 用 config 中 model_list 的 `claude-opus-4` 对应 deployment：api_base=Funcloud `/v1/official/v1/messages`，extra_headers 提供 `Authorization: Bearer <Funcloud Key>` |
+| 5 | LiteLLM | 向 Funcloud 发 POST `https://api.funcloud.ai/v1/official/v1/messages`，Header 含 `Authorization: Bearer $FUNCLOUD_API_KEY`、`anthropic-version: 2023-06-01` 等，body 为 Anthropic messages 格式 |
+| 6 | Funcloud | 返回 Anthropic 风格 JSON（type/message/content/usage/stop_reason） |
+| 7 | LiteLLM | 将响应转成 OpenAI 风格（choices/usage）返回给 curl |
+
+### 5. 直接 curl 调用 Funcloud（不经过代理）
+
+不经过 LiteLLM 时，可直接请求 Funcloud（需 `Authorization: Bearer $FUNCLOUD_API_KEY`，不能用 x-api-key）：
+
+```bash
+curl -X POST 'https://api.funcloud.ai/v1/official/v1/messages' \
+  -H 'Content-Type: application/json' \
+  -H 'anthropic-version: 2023-06-01' \
+  -H "Authorization: Bearer $FUNCLOUD_API_KEY" \
+  -d '{
+    "model": "us.anthropic.claude-opus-4-20250514-v1:0",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": [{"type": "text", "text": "Who are you?"}]}]
+  }'
+```
+
+返回为 Anthropic 风格（无 `choices`，有 `content`/`usage.input_tokens`/`output_tokens`）。
+
+---
+
+## 直接 curl 调用 Funcloud（参考）
 
 Funcloud 在固定路径下接受 **OpenAI 风格** 请求。正确 URL（已用 tools/llm.py 验证）：
 
