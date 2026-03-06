@@ -168,7 +168,13 @@ private data class BannerContent(
     val buttonText: String,
 )
 
-/** Premium Banner 组件 */
+/**
+ * Premium Banner 组件。
+ *
+ * 使用范围：个人页（Me/Profile）区块内，用于展示订阅状态并引导用户查看/续费/激活会员。
+ * 预期视觉效果：圆角卡片、紫色径向渐变背景、左右浮动粒子动画、标题/副标题 + 右侧 CTA 按钮。
+ * 可配置项：status（订阅状态）、purchaseTime/expireTime（展示用日期）、onClick（点击整卡或按钮的回调）。
+ */
 @Composable
 internal fun PremiumBanner(
     status: String? = null,
@@ -267,8 +273,8 @@ internal fun PremiumBanner(
                     Brush.radialGradient(
                         colors =
                             listOf(
-                                Color(0xFFC122FF).copy(.5f),
-                                Color(0xFFC122FF).copy(.2f),
+                                UiConfigs.Colors.GradientStart.copy(.5f),
+                                UiConfigs.Colors.GradientStart.copy(.2f),
                                 Color.Transparent,
                                 Color.Transparent,
                             ),
@@ -312,7 +318,7 @@ internal fun PremiumBanner(
                     fontSize = 12.sp,
                     lineHeight = 12.sp,
                     fontWeight = FontWeight(500),
-                    color = Color(0x8CFFFFFF),
+                    color = UiConfigs.Colors.VipSecondaryText,
                     textAlign = TextAlign.Start,
                 )
             }
@@ -337,8 +343,8 @@ internal fun PurpleStar(modifier: Modifier = Modifier) {
                 Brush.radialGradient(
                     colors =
                         listOf(
-                            Color(0xFFC122FF).copy(.5f),
-                            Color(0xFFC122FF).copy(.3f),
+                            UiConfigs.Colors.GradientStart.copy(.5f),
+                            UiConfigs.Colors.GradientStart.copy(.3f),
                             Color.Transparent,
                         )
                 )
@@ -353,55 +359,46 @@ internal fun GoldDot(modifier: Modifier = Modifier) {
 
 @Composable
 private fun LeftParticleEffects() {
-    val density = LocalDensity.current
-    var containerSize by remember { mutableStateOf(Size.Zero) }
-
-    val particleCount = 12
-    val particles =
-        remember(particleCount) {
-            (0 until particleCount).map { index ->
-                ParticleConfig(
-                    initialX = Random.nextFloat() * 0.5f,
-                    initialY = -0.2f - (index * 0.15f),
-                    size = (6f + Random.nextFloat() * 10f).dp,
-                    alpha = 0.05f + Random.nextFloat() * 0.45f,
-                    duration = (3000 + Random.nextInt(2000)).toInt(),
-                    delay = (index * 200) + Random.nextInt(300),
-                )
-            }
-        }
-
-    Box(
-        modifier =
-            Modifier.fillMaxSize().onSizeChanged { size ->
-                with(density) {
-                    containerSize = Size(size.width.toDp().value, size.height.toDp().value)
-                }
-            }
-    ) {
-        if (containerSize.width > 0 && containerSize.height > 0) {
-            particles.forEach { particle ->
-                FloatingParticle(particle = particle, containerSize = containerSize)
-            }
-        }
+    ParticleEffects(
+        initialXMin = 0f,
+        initialXMax = 0.5f,
+        durationBase = 3000,
+    ) { particle, containerSize ->
+        FloatingParticle(particle = particle, containerSize = containerSize)
     }
 }
 
 @Composable
 private fun RightParticleEffects() {
+    ParticleEffects(
+        initialXMin = 0.5f,
+        initialXMax = 1f,
+        durationBase = 2500,
+    ) { particle, containerSize ->
+        FloatingGoldDot(particle = particle, containerSize = containerSize)
+    }
+}
+
+@Composable
+private fun ParticleEffects(
+    initialXMin: Float,
+    initialXMax: Float,
+    durationBase: Int,
+    content: @Composable (ParticleConfig, Size) -> Unit,
+) {
     val density = LocalDensity.current
     var containerSize by remember { mutableStateOf(Size.Zero) }
 
     val particleCount = 12
     val particles =
-        remember(particleCount) {
+        remember(particleCount, initialXMin, initialXMax, durationBase) {
             (0 until particleCount).map { index ->
                 ParticleConfig(
-                    initialX = 0.5f + Random.nextFloat() * 0.5f,
+                    initialX = initialXMin + Random.nextFloat() * (initialXMax - initialXMin),
                     initialY = -0.2f - (index * 0.15f),
                     size = (6f + Random.nextFloat() * 10f).dp,
                     alpha = 0.05f + Random.nextFloat() * 0.45f,
-                    duration = (2500 + Random.nextInt(2000)).toInt(),
+                    duration = (durationBase + Random.nextInt(2000)).toInt(),
                     delay = (index * 200) + Random.nextInt(300),
                 )
             }
@@ -417,7 +414,7 @@ private fun RightParticleEffects() {
     ) {
         if (containerSize.width > 0 && containerSize.height > 0) {
             particles.forEach { particle ->
-                FloatingGoldDot(particle = particle, containerSize = containerSize)
+                content(particle, containerSize)
             }
         }
     }
