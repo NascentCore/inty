@@ -36,7 +36,7 @@ from app.utils.models_catalog import (
     detect_model_name_family,
     normalize_model_name,
 )
-from app.external_services.gcs import upload_to_gcs
+from app.external_services.gcs import upload_to_gcs_async
 from app.external_services.text_to_image import (
     TextToImageGenerationRequest,
     generate_text_to_image,
@@ -566,7 +566,7 @@ async def _download_and_upload_to_gcs(
         path=gcs_path,
     )
 
-    gcs_uri = f"https://storage.googleapis.com/{gcs_bucket}/{gcs_path}"
+    gcs_uri = f"gs://{gcs_bucket}/{gcs_path}"
     return gcs_uri, len(image_bytes)
 
 
@@ -610,35 +610,54 @@ async def _generate_with_fal_ai(
     generated_images: list[ImagenGeneratedImage] = []
     gcs_urls: list[str] = []
     gcs_url_to_img_dict: dict = {}
-    for img in fal_result.images:
-        gcs_uri = img.gcs_uri
-        if not gcs_uri and img.public_url and "storage.googleapis.com" in img.public_url:
-            gcs_uri = "gs://" + img.public_url.replace("https://storage.googleapis.com/", "", 1)
-        size = (
-            ImageSize(width=img.width, height=img.height)
-            if (img.width is not None and img.height is not None)
-            else None
-        )
-        fmt = None
-        if img.format:
-            try:
-                fmt = ImageFormat(img.format)
-            except (ValueError, TypeError):
-                pass
-        byte_size = len(img.image_bytes) if img.image_bytes else None
-        imagen_img = ImagenGeneratedImage(
-            gcs_uri=gcs_uri,
-            size=size,
-            format=fmt,
-            byte_size=byte_size,
-            rai_filtered_reason=None,
-            enhanced_prompt=prompt,
-        )
-        generated_images.append(imagen_img)
-        url_for_list = gcs_uri or img.public_url or img.url
-        if url_for_list:
-            gcs_urls.append(url_for_list)
-            gcs_url_to_img_dict[url_for_list] = imagen_img
+
+    for i, fal_image in enumerate(fal_result.images):
+        if not fal_image.url:
+            logger.warning(f"fal.ai image {i} has no URL, skipping")
+            continue
+
+        file_ext = "png"
+        if fal_image.mime_type:
+            mt = fal_image.mime_type.lower()
+            if "jpeg" in mt or "jpg" in mt:
+                file_ext = "jpg"
+            elif "webp" in mt:
+                file_ext = "webp"
+
+        gcs_path = f"{gcs_base_path}/fal_{uuid.uuid4().hex}.{file_ext}"
+
+        try:
+            gcs_uri, byte_size = await _download_and_upload_to_gcs(
+                url=fal_image.url,
+                gcs_bucket=gcs_bucket,
+                gcs_path=gcs_path,
+                content_type=fal_image.mime_type,
+            )
+            logger.debug(f"Uploaded fal.ai image to GCS: {gcs_uri}")
+
+            image_size = None
+            if fal_image.width is not None and fal_image.height is not None:
+                image_size = ImageSize(width=fal_image.width, height=fal_image.height)
+
+            imagen_image = ImagenGeneratedImage(
+                gcs_uri=gcs_uri,
+                size=image_size,
+                byte_size=byte_size,
+                format=ImageFormat.PNG if file_ext == "png" else ImageFormat.JPEG if file_ext == "jpg" else ImageFormat.WEBP,
+                rai_filtered_reason=None,
+                enhanced_prompt=prompt,
+            )
+            generated_images.append(imagen_image)
+            gcs_urls.append(gcs_uri)
+            gcs_url_to_img_dict[gcs_uri] = imagen_image
+
+        except (httpx.HTTPError, OSError) as e:
+            logger.error(f"Failed to download/upload fal.ai image {i}: {e}")
+            continue
+
+    if not gcs_urls:
+        raise Exception("No images were generated from fal.ai")
+
     return generated_images, gcs_urls, [], gcs_url_to_img_dict
 
 
@@ -826,6 +845,11 @@ async def generate_background(
             result = process_generated_images(generated_images)
             gcs_urls = result["image_uris"]
             rai_reasons = result["rai_reasons"]
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported image model for background generation: {image_model}",
+            )
 
         # Convert GCS URLs to CDN URLs
         cdn_urls = []

@@ -45,8 +45,6 @@ NOTES:
 
 import datetime
 import copy
-import json
-import time
 import uuid
 from enum import StrEnum
 from typing import Any, NamedTuple
@@ -209,7 +207,7 @@ async def seedream_v4_5_edit(
     if not first_img.url.startswith("data:"):
         raise ValueError(f"Image URL is not a data URI: {first_img.url}")
     logger.debug("Uploaded SeedreamV4_5Edit data URI to GCS (first image)")
-    upload_result = _upload_image_file_to_gcs_and_return_url(
+    upload_result = await _upload_image_file_to_gcs_and_return_url(
         first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
     )
     # GCS 上传成功后，trace 中脱敏 data URI，减少 LangSmith 存储压力。
@@ -293,43 +291,18 @@ async def _upload_image_file_to_gcs_and_return_url(
     The data URI is a base64 encoded image string with MIME type and base64 encoding.
     eg: data:image/jpeg;base64,/9j/4A...
     """
-    # #region agent log
-    _dp = "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug-713d4f.log"
-    with open(_dp, "a") as _f:
-        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:before_parse", "message": "before parse_image_data_uri", "data": {"data_uri_len": len(image_file.url)}, "hypothesisId": "H1"}) + "\n")
-    # #endregion
     file_data, image_format = parse_image_data_uri(image_file.url)
-    # #region agent log
-    with open(_dp, "a") as _f:
-        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:after_parse", "message": "after parse_image_data_uri", "data": {"bytes_len": len(file_data), "image_format": str(image_format)}, "hypothesisId": "H1"}) + "\n")
-    # #endregion
     if enable_compress_png_to_jpeg and image_format == ImageFormat.PNG:
-        # #region agent log
-        with open(_dp, "a") as _f:
-            _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:before_compress", "message": "before compress_png_to_jpeg", "data": {}, "hypothesisId": "H1"}) + "\n")
-        # #endregion
         file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
-        # #region agent log
-        with open(_dp, "a") as _f:
-            _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:after_compress", "message": "after compress_png_to_jpeg", "data": {"bytes_len": len(file_data)}, "hypothesisId": "H1"}) + "\n")
-        # #endregion
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
     gcs_uri = f"gs://{global_config.gcs.bucket}/{gcs_path}"
-    # #region agent log
-    with open(_dp, "a") as _f:
-        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:before_upload", "message": "before upload_to_gcs_async", "data": {}, "hypothesisId": "H5"}) + "\n")
-    # #endregion
     gcs_http_url = await upload_to_gcs_async(
         file_data=file_data,
         content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
         bucket_name=global_config.gcs.bucket,
         path=gcs_path,
     )
-    # #region agent log
-    with open(_dp, "a") as _f:
-        _f.write(json.dumps({"sessionId": "713d4f", "timestamp": int(time.time() * 1000), "location": "fal._upload_image_file_to_gcs:after_upload", "message": "after upload_to_gcs_async", "data": {}, "hypothesisId": "H5"}) + "\n")
-    # #endregion
     image_size = ImageSize(width=image_file.width, height=image_file.height)
     return _DataUriUploadResult(
         gcs_uri=gcs_uri,
