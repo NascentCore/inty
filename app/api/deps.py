@@ -160,6 +160,15 @@ async def get_current_superuser(
     db: AsyncSession = Depends(get_async_db),
 ) -> User:
     """要求当前用户为超级用户，否则抛出 403。"""
+    if db is None:
+        # 测试场景下可能通过 dependency override 注入 None；保持向后兼容。
+        if not current_user.is_superuser:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only superusers can access this endpoint",
+            )
+        return current_user
+
     # 关键步骤：超级用户权限属于安全敏感检查，这里始终以数据库最新值为准，避免缓存短暂陈旧。
     result = await db.execute(select(User).where(User.id == current_user.id))
     latest_user = result.scalar_one_or_none()
