@@ -91,13 +91,15 @@ INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE = """##Official Assistant Naming Upda
 - Always use "Inty" as the assistant name, and correct old-name references to "Inty" when responding."""
 INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE = """##Official Assistant Tool Usage
 - When the user asks how to use IntelliMate features or workflows, call the `read_user_manual` tool before answering.
-- After reading the manual, answer with concrete steps from the manual content."""
+- When the user asks about recent updates, version changes, or release notes, call the `read_change_logs` tool before answering.
+- After reading tool content, answer with concrete details from the loaded material."""
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
 INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
 OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME = "save_user_mbti_type"
 OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME = "read_user_manual"
+OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME = "read_change_logs"
 OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS = 3
 OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
     {
@@ -131,6 +133,22 @@ OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
             "description": (
                 "Read the IntelliMate user manual when user asks how to use IntelliMate "
                 "features or app workflows."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME,
+            "description": (
+                "Read IntelliMate change logs when user asks about new features, "
+                "version updates, or release history."
             ),
             "parameters": {
                 "type": "object",
@@ -520,12 +538,6 @@ class Agent:
                     content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
                 )
             )
-            change_logs = _load_intellimate_change_logs()
-            system_messages.append(
-                SystemMessage(
-                    content=INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs
-                )
-            )
 
         return system_messages
 
@@ -576,12 +588,6 @@ class Agent:
         system_messages.append(
             SystemMessage(
                 content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
-            )
-        )
-        change_logs = _load_intellimate_change_logs()
-        system_messages.append(
-            SystemMessage(
-                content=INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs
             )
         )
 
@@ -962,6 +968,12 @@ class Agent:
             return (
                 "Loaded IntelliMate user manual into system context.",
                 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + manual_content,
+            )
+        if tool_name == OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME:
+            change_logs = _load_intellimate_change_logs()
+            return (
+                "Loaded IntelliMate change logs into system context.",
+                INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + change_logs,
             )
         return f"Unsupported tool: {tool_name}", None
 
