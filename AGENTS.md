@@ -1,5 +1,20 @@
 # Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
 
+> Last updated: 2026-03-05
+
+## 给 AI Agent 的最小执行清单（先读这个）
+
+1. 先读本文件，再读目标目录下的 `AGENTS.md`（若存在）。
+2. 先写测试成功标准，再实现；改完必须做针对性测试并给出证据。
+3. 优先小步修改、单一职责、可组合函数，避免深层嵌套调用。
+4. 不做防御性吞错；失败要尽早、明显地暴露。
+5. Python 仅捕获可处理的具体异常，禁止 `except Exception` 大网捕获。
+6. 涉及 Python/Kotlin HTTP API 数据结构变更时，必须双端同步修改：
+   - `android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model`
+   - `app/schemas`
+7. 完成后必须回看 diff，确保无无关改动、无敏感信息泄漏。
+8. 提交时附一句话总结 + 详细描述（便于追溯）。
+
 ## 概述
 
 - Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm

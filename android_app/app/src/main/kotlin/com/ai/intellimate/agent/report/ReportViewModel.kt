@@ -37,26 +37,45 @@ import okhttp3.RequestBody.Companion.asRequestBody
 data class ReportReasonItem(val reasonCode: ReportReasonCode, val stringResId: Int)
 
 private const val REPORT_DESCRIPTION_APP_VERSION_MARKER = "[INTY_APP_VERSION]"
+private const val REPORT_DESCRIPTION_AGENT_ID_MARKER = "[INTY_AGENT_ID]"
 
 internal fun buildReportDescriptionWithAppVersion(
     userDescription: String,
     versionName: String,
     versionCode: Int,
+    agentId: String,
 ): String {
-    if (userDescription.contains(REPORT_DESCRIPTION_APP_VERSION_MARKER)) {
+    val normalizedAgentId = agentId.trim()
+    val hasAppVersionMarker = userDescription.contains(REPORT_DESCRIPTION_APP_VERSION_MARKER)
+    val hasAgentIdMarker = userDescription.contains(REPORT_DESCRIPTION_AGENT_ID_MARKER)
+    if (hasAppVersionMarker && (normalizedAgentId.isEmpty() || hasAgentIdMarker)) {
         return userDescription
     }
     val suffix = buildString {
-        append("--- ")
-        append(REPORT_DESCRIPTION_APP_VERSION_MARKER)
-        append(" ---")
-        append('\n')
-        append("App版本：")
-        append(versionName)
-        append(" (")
-        append(versionCode)
-        append(')')
+        if (!hasAppVersionMarker) {
+            append("--- ")
+            append(REPORT_DESCRIPTION_APP_VERSION_MARKER)
+            append(" ---")
+            append('\n')
+            append("App版本：")
+            append(versionName)
+            append(" (")
+            append(versionCode)
+            append(')')
+        }
+        if (normalizedAgentId.isNotEmpty() && !hasAgentIdMarker) {
+            if (isNotEmpty()) {
+                append('\n')
+            }
+            append("--- ")
+            append(REPORT_DESCRIPTION_AGENT_ID_MARKER)
+            append(" ---")
+            append('\n')
+            append("Agent ID: ")
+            append(normalizedAgentId)
+        }
     }
+    if (suffix.isEmpty()) return userDescription
     val separator = if (userDescription.endsWith("\n")) "\n" else "\n\n"
     return userDescription + separator + suffix
 }
@@ -193,6 +212,7 @@ class ReportViewModel : BaseVM() {
                                 userDescription = trimmedDescription,
                                 versionName = BuildConfig.VERSION_NAME,
                                 versionCode = BuildConfig.VERSION_CODE,
+                                agentId = if (isFeedbackMode) targetID else "",
                             ),
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                         reportType =

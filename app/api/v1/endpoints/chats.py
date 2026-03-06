@@ -65,10 +65,10 @@ async def list_chats(
     skip: int = 0,
     # Upper limit of the number of chats to return
     limit: int = 100,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
-    Get current user's chat list
+    Get current user's chat list (evaluation can pass X-Assume-User-Id to list another user's chats).
     """
     chats = await chat_service.get_chats(
         db, user_id=current_user.id, skip=skip, limit=limit
@@ -87,10 +87,10 @@ async def create_chat(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     chat_in: schemas.ChatCreate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
-    Create new chat
+    Create new chat (evaluation can pass X-Assume-User-Id to create as another user).
     """
     chat = await chat_service.create_chat(db, chat_in=chat_in, user_id=current_user.id)
     return chat
@@ -107,10 +107,10 @@ async def delete_chat(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     chat_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
-    Delete chat
+    Delete chat (evaluation can pass X-Assume-User-Id).
     """
     chat = await chat_service.get_chat(db, chat_id=chat_id)
     if not chat:
@@ -150,7 +150,7 @@ async def get_agent_chat_messages(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
     limit: int = Query(20, ge=1, le=100, description="Number of messages per page"),
     offset: int = Query(0, ge=0, description="Offset"),
     order: str = Query(
@@ -245,7 +245,7 @@ async def surprise_snap_unlock(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     body: SurpriseSnapUnlockRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     ok = await record_surprise_snap_unlock(
         db, current_user.id, body.message_id
@@ -269,7 +269,7 @@ async def update_message_vote(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     request: MessageVoteRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> APIResponse[Dict[str, Any]]:
     """
     Update message vote (like/dislike)
@@ -364,10 +364,10 @@ async def generate_message_voice(
     agent_id: str,
     message_id: str,
     language: str = Query("zh", description="语言代码"),
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ):
     """
-    为指定消息生成语音
+    为指定消息生成语音（evaluation 可传 X-Assume-User-Id）
     用于用户点击播放按钮时的按需语音生成
     """
     try:
@@ -485,7 +485,7 @@ async def generate_message_voice(
 )
 async def get_voice_info(
     voice_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ):
     """
     获取特定语音的信息
@@ -522,7 +522,7 @@ async def update_agent_chat_settings(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     settings_update: schemas.ChatSettingsUpdate,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
     Update chat settings by Agent ID
@@ -616,10 +616,10 @@ async def get_agent_chat_settings(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
-    Get chat settings by Agent ID
+    Get chat settings by Agent ID (evaluation can pass X-Assume-User-Id)
     If chat session or settings don't exist, automatically create them
     """
     try:
@@ -675,10 +675,10 @@ async def delete_agent_chats(
     *,
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
-    删除用户与指定Agent的所有聊天记录
+    删除用户与指定Agent的所有聊天记录（evaluation 可传 X-Assume-User-Id）
     包括聊天会话、聊天设置和聊天历史
     """
     try:
@@ -727,7 +727,7 @@ async def clear_agent_chat_messages(
     db: AsyncSession = Depends(deps.get_async_db),
     agent_id: str,
     request: schemas.ClearMessagesRequest,
-    current_user: schemas.User = Depends(deps.get_current_active_user),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     """
     清除指定Agent聊天会话中的消息记录（软删除）

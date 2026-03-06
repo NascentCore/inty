@@ -122,7 +122,7 @@ internal fun AiAgentInfoScreen(
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
-    val enableRemix = UiConfigs.ChatPage.enableRemix()
+    val enableRemix = false//UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
     // 用户自建私有角色不展示 Boost 相关功能
@@ -254,94 +254,29 @@ internal fun AiAgentInfoScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+
+                                    if (shouldShowBoostUi) {
+                                        BoostStatusChip(
+                                            navController,
+                                            modifier = Modifier,
+                                            availablePoints = boostState.availablePoints,
+                                            onClick = { showBoostSheet = true },
+                                        ) {
+                                            Text(stringResource(R.string.boost_sheet_title))
+                                        }
+                                    } else {
+                                        // 确保不会误触发弹窗残留状态
+                                        if (showBoostSheet) showBoostSheet = false
+                                        if (showBoostHelpSheet) showBoostHelpSheet = false
+                                    }
                                 }
                             }
-                            Spacer(Modifier.width(16.dp))
                         }
 
                         // 角色应援/Boost 功能
                         Spacer(Modifier.height(16.dp))
 
-                        if (shouldShowBoostUi) {
-                            BoostStatusChip(
-                                navController,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                availablePoints = boostState.availablePoints,
-                                onClick = { showBoostSheet = true },
-                            ) {
-                                Text(stringResource(R.string.boost_sheet_title))
-                            }
 
-                            Spacer(Modifier.height(16.dp))
-
-                            Column(
-                                modifier =
-                                    Modifier.padding(horizontal = 16.dp)
-                                        .fillMaxWidth()
-                                        .border(
-                                            brush =
-                                                Brush.linearGradient(
-                                                    colors =
-                                                        listOf(
-                                                            Color.Transparent,
-                                                            Color.White.copy(0.2f),
-                                                            Color.Transparent,
-                                                        )
-                                                ),
-                                            width = 1.dp,
-                                            shape = RoundedCornerShape(12.dp),
-                                        )
-                                        .background(
-                                            color = Color(0x331C1D21),
-                                            shape = RoundedCornerShape(12.dp),
-                                        )
-                                        .padding(14.dp)
-                            ) {
-                                Text(
-                                    text =
-                                        stringResource(
-                                            R.string.boost_character_energy_points,
-                                            agent.energyPoints,
-                                        ),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White,
-                                )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text =
-                                        stringResource(R.string.boost_character_energy_points_hint),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Light,
-                                    color = Color.White.copy(alpha = 0.75f),
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                TextButton(
-                                    onClick = {
-                                        navController.navigate(Routes.Explore.BoostLeaderboard)
-                                        //
-                                        // com.ai.intellimate.boost.BoostLeaderboardActivity.launch(
-                                        //                                        context
-                                        //                                    )
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                R.string.boost_points_help_cta_leaderboard
-                                            ),
-                                        color = Color.White,
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(24.dp))
-                        } else {
-                            // 确保不会误触发弹窗残留状态
-                            if (showBoostSheet) showBoostSheet = false
-                            if (showBoostHelpSheet) showBoostHelpSheet = false
-                        }
 
                         Column(
                             modifier =

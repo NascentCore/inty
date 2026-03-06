@@ -6,6 +6,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.AntiClick
 import ai.sxwl.android.design.noRippleClickable
@@ -278,11 +279,11 @@ private fun ProfileHeader(
     // 如果提供了 vipStatus 参数，使用它；否则从 BillingRepository 获取并响应Flow变化
     // 使用 collectAsState() 来响应 Flow 的变化，确保订阅状态更新时UI能及时刷新
     // 当 BillingRepository.vipStatusFlow 的值变化时，Compose 会自动重新组合此组件
-    val vipStatusFromFlow by BillingRepository.vipStatusFlow.collectAsState()
+    val vipStatusFromFlow by VipStatusHelper.vipStatus.collectAsState()
     // 预览模式下使用传入的 vipStatus，正常模式下使用 Flow 的值
     // 当 vipStatusFromFlow 变化时，currentVipStatus 会自动重新计算
-    val currentVipStatus = vipStatus ?: vipStatusFromFlow
-    val isSubscribed = currentVipStatus.isSubscribed
+    //val currentVipStatus = vipStatusFromFlow
+    //val isSubscribed = currentVipStatus.isSubscribed
     var showSubscribeDialog by remember { mutableStateOf(false) }
 
     if (showSubscribeDialog) {
@@ -539,9 +540,9 @@ private fun ProfileHeader(
             contentAlignment = Alignment.Center,
         ) {
             PremiumBanner(
-                status = currentVipStatus.subscriptionStatus,
-                purchaseTime = TimeUtils.formatTimestampToString(currentVipStatus.purchaseTime),
-                expireTime = TimeUtils.formatTimestampToString(currentVipStatus.expiryTime),
+                status = vipStatusFromFlow.subscriptionStatus,
+                purchaseTime = TimeUtils.formatTimestampToString(vipStatusFromFlow.purchaseTime),
+                expireTime = TimeUtils.formatTimestampToString(vipStatusFromFlow.expiryTime),
                 onClick = { navController.navigate(Routes.Me.vipCenter("profile_upgrade")) },
             )
         }

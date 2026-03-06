@@ -22,10 +22,8 @@ internal fun ReportPage(
     LaunchedEffect(isFeedbackModel, targetType, targetId, initialEvidenceImageUrl) {
         viewModel.isFeedbackMode = isFeedbackModel
         viewModel.updateReasonsForMode()
-        if (!isFeedbackModel) {
-            viewModel.targetID = targetId
-            viewModel.targetType = targetType
-        }
+        viewModel.targetID = targetId
+        viewModel.targetType = targetType
         viewModel.setInitialEvidenceImage(initialEvidenceImageUrl)
     }
 
