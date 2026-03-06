@@ -10,14 +10,15 @@ import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,11 +32,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,15 +43,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.MainActivity
 import com.ai.intellimate.R
-import com.ai.intellimate.ui.components.AutoRenewalNotice
+import com.ai.intellimate.ui.components.BenefitDetailsTable
 import com.ai.intellimate.ui.components.EmptyPlanState
 import com.ai.intellimate.ui.components.PremiumPlanList
 import com.ai.intellimate.ui.components.PurchaseButton
+import com.ai.intellimate.ui.components.subscriptionBenefitRows
+import com.ai.intellimate.utils.TextStyleUtils
 import com.ai.intellimate.xb.components.IgnoreSystemFontScaling
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 
 /** 会员中心页面主内容 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,36 +123,20 @@ fun VipCenterContent(
         }
     }
 
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
     Box(
-        modifier =
-            Modifier.fillMaxSize().background(ai.sxwl.android.design.theme.HeartColor.primaryColor)
+        modifier = Modifier.fillMaxSize().background(colorScheme.background)
     ) {
-        // 双层图片背景
-        val hazeState = rememberHazeState()
-        Image(
-            painter = painterResource(R.drawable.vip_bg),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)))
-        Image(
-            painter = painterResource(R.drawable.vip_female),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize().padding(top = 100.dp).hazeSource(state = hazeState),
-            alignment = Alignment.BottomCenter,
-            contentScale = ContentScale.FillHeight,
-        )
-
+        val selectedPlan = plans.getOrNull(selectedPlanIndex)
         val scrollState = rememberScrollState()
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             VipCenterTopBar(onClose = { onClose() })
 
-            Spacer(Modifier.weight(1f))
-            VipBenefitsDesc(hazeState, vipStatus.isSubscribed)
+            // 顶部标题与副标题（参考 订阅页修改0304：非订阅/订阅状态不同文案）
+            SubscriptionPageHeader(isSubscribed = vipStatus.isSubscribed)
 
             Spacer(Modifier.height(12.dp))
-            // 动态显示订阅计划列表
             if (plans.isNotEmpty()) {
                 IgnoreSystemFontScaling {
                     PremiumPlanList(
@@ -163,7 +145,6 @@ fun VipCenterContent(
                         isSubscribed = vipStatus.isSubscribed,
                         onPlanSelected = { index ->
                             viewModel.selectPlan(index)
-
                             FirebaseManager.Events.SUBSCRIPTION_CTA_CLICK.logEvent(
                                 "click_type" to
                                     when (index) {
@@ -176,18 +157,41 @@ fun VipCenterContent(
                         },
                     )
                 }
+                // 当前选中计划价格与续费说明（参考 Talkie+）
+                if (selectedPlan != null) {
+                    Text(
+                        text = stringResource(R.string.subscription_billing_cycle_notice, selectedPlan.price),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp),
+                        style = typography.labelSmall,
+                        color = colorScheme.onBackground.copy(alpha = 0.85f),
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                BenefitDetailsTable(
+                    rows = subscriptionBenefitRows()
+                )
 
+                Spacer(Modifier.weight(1f).heightIn(min = 16.dp))
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
                     onPurchase = { onPurchase() },
                     isLoading = isPurchasing,
+                    selectedPlanPrice = selectedPlan?.price,
                 )
+                Spacer(Modifier.height(12.dp))
+                // 会员与续订条款链接（参考 Talkie+ 底部）
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextStyleUtils.BuildLink(
+                        context = context,
+                        text = stringResource(R.string.membership_renewal_terms),
+                        url = context.getString(R.string.url_user_agreement),
+                        fontSize = 12.sp,
+                    )
+                }
             } else {
                 EmptyPlanState()
             }
-
-            AutoRenewalNotice()
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -197,8 +201,9 @@ fun VipCenterContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VipCenterTopBar(onClose: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     CenterAlignedTopAppBar(
-        title = { Text(text = "", fontWeight = FontWeight(600), color = Color.White) },
+        title = { Text(text = "", fontWeight = FontWeight(600), color = colorScheme.onBackground) },
         modifier = Modifier.fillMaxWidth(),
         navigationIcon = {
             IconButton(onClick = onClose) {
@@ -208,44 +213,37 @@ private fun VipCenterTopBar(onClose: () -> Unit) {
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = Color.Transparent),
+        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = colorScheme.background),
     )
 }
 
+/** 订阅页顶部标题与副标题（参考 订阅页修改0304：非订阅 / 订阅状态不同文案）。 */
 @Composable
-private fun VipBenefitsDesc(hazeState: HazeState, isVipSubscribed: Boolean) {
-    Box(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp)
-                .background(Color(0x806E5289).copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp))
-                .clip(RoundedCornerShape(8.dp))
-                .hazeEffect(state = hazeState) { blurRadius = 4.dp }
-    ) {
-        Column {
-            Spacer(modifier = Modifier.height(16.dp))
-            Image(
-                painter =
-                    if (isVipSubscribed) {
-                        painterResource(R.drawable.vip_desc_title_sub)
-                    } else {
-                        painterResource(R.drawable.vip_desc_title)
-                    },
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
-                contentScale = ContentScale.FillWidth,
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
-            Image(
-                painter = painterResource(R.drawable.vip_desc_content),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
-                contentScale = ContentScale.FillWidth,
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-        }
+private fun SubscriptionPageHeader(isSubscribed: Boolean) {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text(
+            text =
+                if (isSubscribed) {
+                    stringResource(R.string.subscription_page_title_subscribed)
+                } else {
+                    stringResource(R.string.subscription_page_title_upgrade)
+                },
+            style = typography.titleLarge,
+            color = colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text =
+                if (isSubscribed) {
+                    stringResource(R.string.subscription_page_subtitle_subscribed)
+                } else {
+                    stringResource(R.string.subscription_page_subtitle_upgrade)
+                },
+            style = typography.bodyLarge,
+            color = colorScheme.onBackground.copy(alpha = 0.9f),
+        )
     }
 }
 

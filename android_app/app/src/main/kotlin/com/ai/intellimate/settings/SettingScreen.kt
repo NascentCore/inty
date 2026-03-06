@@ -3,6 +3,7 @@ package com.ai.intellimate.settings
 // import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
+import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
@@ -224,7 +225,12 @@ private fun DebugVipStatus() {
 
                 FilterChip(
                     onClick = {
-                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = true))
+                        BillingRepository.setDebugVipStatus(
+                            VipStatus(
+                                isSubscribed = true,
+                                subscriptionStatus = VipStatus.UI_SUBSCRIBED
+                            )
+                        )
                     },
                     selected = vipStatus?.isSubscribed == true,
                     label = { Text("订阅") },
@@ -232,7 +238,7 @@ private fun DebugVipStatus() {
 
                 FilterChip(
                     onClick = {
-                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false))
+                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false, subscriptionStatus = VipStatus.UI_UNSUBSCRIBED))
                     },
                     selected = vipStatus?.isSubscribed == false,
                     label = { Text("非订阅") },

@@ -183,6 +183,7 @@ internal fun PremiumBanner(
     val upgradeTitle = stringResource(R.string.profile_premium_banner_title_upgrade)
     val unlockSubtitle = stringResource(R.string.profile_premium_banner_subtitle_unlock)
     val keepPremiumButton = stringResource(R.string.profile_premium_banner_button_keep_premium)
+    val viewButton = stringResource(R.string.profile_premium_banner_button_view)
     val activateButton = stringResource(R.string.profile_premium_banner_button_activate)
     val memberSinceFormat = stringResource(R.string.profile_premium_banner_subtitle_member_since)
     val expiresOnFormat = stringResource(R.string.profile_premium_banner_subtitle_expires_on)
@@ -207,8 +208,8 @@ internal fun PremiumBanner(
                     BannerContent(
                         title = subscribedTitle,
                         subtitle = memberSinceFormat.format(dateText),
-                        showActionButton = false,
-                        buttonText = "",
+                        showActionButton = true,
+                        buttonText = viewButton,
                     )
                 }
 
