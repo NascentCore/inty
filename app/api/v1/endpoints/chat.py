@@ -542,15 +542,18 @@ async def agent_chat_completions(
         try:
             # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
             if chat_settings.voice_enabled and response_text_content.strip():
-                # TODO: 添加一个默认语音 ID
+                selected_chat_voice_id = chat_settings.voice_id
                 agent_voice_id = agent_data.get("voice_id")
+                # Voice resolution order for MVP:
+                # 1) per-chat selected voice_id, 2) agent default voice_id, 3) service fallback.
+                resolved_voice_id = selected_chat_voice_id or agent_voice_id
 
                 with log_time(
-                    f"语音生成: voice_id={agent_voice_id}, text_length={len(response_text_content)}, language={request.language}"
+                    f"语音生成: voice_id={resolved_voice_id}, text_length={len(response_text_content)}, language={request.language}"
                 ):
                     voice_result = await voice_service.generate_voice(
                         text=response_text_content,
-                        voice_id=agent_voice_id,
+                        voice_id=resolved_voice_id,
                         language=request.language,
                         db=db,
                         agent_gender=agent_data.get("gender"),

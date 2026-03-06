@@ -242,4 +242,12 @@ object NetServiceMgr {
         return apiCache.getOrPut(cacheKey) { getRetrofitNormal().create(ICommonApi::class.java) }
             as ICommonApi
     }
+
+    fun getTextToSpeechApi(): ITextToSpeechApi {
+        val cacheKey = "${baseUrl()}_ITextToSpeechApi"
+        @Suppress("UNCHECKED_CAST")
+        return apiCache.getOrPut(cacheKey) {
+            getRetrofitNoWrapper().create(ITextToSpeechApi::class.java)
+        } as ITextToSpeechApi
+    }
 }

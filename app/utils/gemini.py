@@ -108,11 +108,8 @@ def get_genai_client():
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:
-    """
-    增强提示词
-    """
     enhanced_prompt = f"""
-    A person who is charming, attractive, beautiful, handsome, etc.
+    A person who is attractive/beautiful/lovely/intriguing.
     age: 22 - 35
 
     gender: {gender}
@@ -120,9 +117,9 @@ def enhance_prompt(prompt: str, gender: str) -> str:
     {prompt}
 
     Additional requirements:
-    The image must be of a person.
-    It cannot be a landscape, object, or any other non-human content.
-    Make sure the person is at the center of the image, not on the side.
+    - The image must be of a person at the center of the image.
+      - Never put the person on the side
+    - It cannot be a landscape, object, or any other non-human content.
     """
 
     logger.debug(f"Enhanced prompt: {enhanced_prompt}")

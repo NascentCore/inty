@@ -18,6 +18,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
+from app.services.voice_service import VoiceGenerationResult
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
 from tests.app.api.test_client import TestClient
@@ -638,6 +639,57 @@ def test_v1_chat_completions_accepts_multimodal_user_content(
     assert sent_content[0]["text"] == "Please describe this picture."
     assert sent_content[1]["type"] == "image_url"
     assert sent_content[1]["image_url"]["url"] == "https://cdn.example.com/test.jpg"
+
+
+def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured_voice_id = {}
+
+    _stub_success_chat_completion_with_multimodal_response(
+        monkeypatch,
+        response_content="voice me",
+    )
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            voice_enabled=True,
+            voice_id="google/Zephyr",
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_generate_voice(*args, **kwargs):
+        captured_voice_id["value"] = kwargs.get("voice_id")
+        return VoiceGenerationResult(
+            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+            duration_seconds=1.23,
+        )
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(chat_v1.voice_service, "generate_voice", fake_generate_voice)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert captured_voice_id["value"] == "google/Zephyr"
 
 
 def test_v1_chat_completions_returns_text_and_image_content_parts(

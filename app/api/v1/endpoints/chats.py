@@ -26,6 +26,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.voice.tts_api import is_gemini_voice
 from app.schemas.chat import ChatCompletionRequest, MessageVoteRequest
 from backend.ops.schemas.evaluation import SurpriseSnapUnlockRequest
 from app.schemas.response import (
@@ -392,11 +393,14 @@ async def generate_message_voice(
         if not message_content:
             raise HTTPException(status_code=404, detail="Message not found")
 
-        # 使用Agent的voice_id生成语音
+        selected_chat_voice_id = (
+            chat.settings.voice_id if getattr(chat, "settings", None) else None
+        )
         agent_voice_id = agent_data.get("voice_id")
+        resolved_voice_id = selected_chat_voice_id or agent_voice_id
         voice_result = await voice_service.generate_voice(
             text=message_content,
-            voice_id=agent_voice_id,
+            voice_id=resolved_voice_id,
             language=language,
             db=db,
             agent_gender=agent_data.get("gender"),
@@ -461,7 +465,7 @@ async def generate_message_voice(
                 "gcs_url": voice_result.gcs_url,
                 "gcs_http_url": voice_result.gcs_http_url,
                 "message_id": message_id,
-                "voice_id": agent_voice_id
+                "voice_id": resolved_voice_id
                 or global_config_loaded_from_config_yaml.elevenlabs.voice_id,
                 "language": language,
                 "audio_duration": audio_duration,  # 音频时长（秒）
@@ -577,6 +581,14 @@ async def update_agent_chat_settings(
         ):
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
+            )
+
+        if settings_update.voice_id is not None and not is_gemini_voice(
+            settings_update.voice_id
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Only Gemini voices are supported in chat settings for now.",
             )
 
         # Then update settings

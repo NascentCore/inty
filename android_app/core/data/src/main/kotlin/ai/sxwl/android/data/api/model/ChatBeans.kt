@@ -286,6 +286,7 @@ data class ChatSettingsReq(
     val premium_mode: Boolean? = null,
     val style_prompt: String? = null,
     val voice_enabled: Boolean? = null,
+    val voice_id: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -309,6 +310,7 @@ data class ChatSettingsResponse(
         val language: String? = null, // 聊天语言
         val style_prompt: String? = null, // 定制化回复风格reply
         val voice_enabled: Boolean? = null, // 是否启用语音
+        val voice_id: String? = null, // 选中的语音 ID（MVP: google/*）
         val keep_talking: Boolean? = null, // 连续回复,似乎客户端实现，不需要接口字段
         val premium_mode: Boolean? = null, // 是否会员模式
     )
