@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -50,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -71,6 +73,7 @@ private const val CHAT_MODEL_ID_DEFAULT = "default"
 private const val CHAT_MODEL_ID_GPT_5_2 = "gpt5_2"
 private const val CHAT_MODEL_ID_CLAUDE_OPUS_4_5 = "claude_opus_4_5"
 private const val CHAT_MODEL_ID_GEMINI_3_FLASH = "gemini_3_flash"
+private const val VOICE_MENU_VISIBLE_ENTRY_COUNT = 9
 
 private data class ChatModelOption(val id: String, val labelResId: Int)
 
@@ -131,6 +134,8 @@ fun ChatSettingsDrawer(
     val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
 
     val horizontalPadding = 16
+    val dropdownItemHeight = dimensionResource(id = R.dimen.chat_settings_dropdown_item_height)
+    val voiceMenuMaxHeight = dropdownItemHeight * VOICE_MENU_VISIBLE_ENTRY_COUNT
     var showFontSizeDialog by rememberSaveable { mutableStateOf(false) }
     var showVipDialogPageSource by rememberSaveable { mutableStateOf<String?>(null) }
     var showModelMenu by rememberSaveable { mutableStateOf(false) }
@@ -277,7 +282,7 @@ fun ChatSettingsDrawer(
                                 expanded = showVoiceMenu,
                                 onDismissRequest = { showVoiceMenu = false },
                                 modifier =
-                                    Modifier.background(
+                                    Modifier.heightIn(max = voiceMenuMaxHeight).background(
                                         MaterialTheme.colorScheme.surfaceContainerLowest
                                     ),
                             ) {

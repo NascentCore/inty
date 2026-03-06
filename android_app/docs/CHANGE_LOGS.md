@@ -11,6 +11,7 @@
 ## 2026-03-04
 
 - Chat settings now include a **Voice** picker for Gemini voices. Your selected voice is saved per iMate chat and is used for both auto-play and tap-to-play TTS in that chat.
+- The chat settings **Voice** dropdown now shows a compact, scrollable list with 9 visible entries for easier browsing.
 - Official Assistant chat now has a dedicated **Test my MBTI type** quick-action button above the input. Tapping it sends a structured MBTI interview starter prompt immediately, so users can begin guided type discovery in one tap.
 
 ## 2026-03-03
