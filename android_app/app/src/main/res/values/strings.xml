@@ -13,7 +13,7 @@
 <resources>
     <string name="app_name">IntelliMate</string>
     <string name="ID">ID:%s</string>
-    <string name="no_agent">Create your own iMates now!</string>
+    <string name="no_agent">Create my own iMates now!</string>
     <string name="vibe_mode_title">The Vibe Mode</string>
     <string name="vibe_mode_active_title">Enjoy the vibe</string>
     <string name="vibe_mode_subtitle">Exclusive access to pre-release features</string>
@@ -356,7 +356,7 @@
     <string name="chat_official_faq_question_check_version">Where can I check app version info?</string>
     <string name="chat_official_mbti_test_button">Test my MBTI type</string>
     <string name="chat_official_mbti_test_prompt">Test my MBTI type to better understand my emotional needs. Please guide me with a structured conversation:\n1) Ask one question at a time.\n2) Cover E/I, S/N, T/F, and J/P with practical scenario questions.\n3) After each answer, briefly explain what it suggests. Proceed to next question without asking for my permission.\n4) At the end, give my most likely type, confidence level, and a short reason for each letter.\nStart with the first question now.</string>
-    <string name="chat_official_create_imate_button">+ Create your own iMate</string>
+    <string name="chat_official_create_imate_button">Create my own iMate</string>
 
     <!-- VIP character access control -->
     <string name="vip_character_chat_locked_content">This is a VIP iMate. Go Premium to chat with VIP iMates and unlock exclusive features!</string>
