@@ -48,6 +48,17 @@ export const getGlobalApiKey = (): string | null => {
   return globalApiKey;
 };
 
+// 评测用：以指定用户身份请求（仅 superuser 有效），用于加载该用户与角色的对话历史
+let assumeUserId: string | null = null;
+
+export const setAssumeUserId = (userId: string | null) => {
+  assumeUserId = userId;
+};
+
+export const getAssumeUserId = (): string | null => {
+  return assumeUserId;
+};
+
 type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
 type QueryParamValue = string | number | boolean | null | undefined;
 type IntyCompatClient = {
@@ -139,6 +150,11 @@ class ApiClient {
 
     // 确保 Authorization header 总是最后设置，不会被覆盖
     requestHeaders.set("Authorization", `Bearer ${currentApiKey}`);
+
+    const assumeId = getAssumeUserId();
+    if (assumeId && assumeId.trim()) {
+      requestHeaders.set("X-Assume-User-Id", assumeId.trim());
+    }
 
     // 构建最终的 config 对象
     const config: RequestOptions = {
