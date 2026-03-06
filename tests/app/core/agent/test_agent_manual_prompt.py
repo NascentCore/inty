@@ -71,20 +71,14 @@ def test_intellimate_change_logs_default_path_points_to_android_app_docs():
     assert agent_module.INTELLIMATE_CHANGE_LOGS_PATH == expected_path
 
 
-def test_intellimate_official_injects_repo_change_logs_content(tmp_path, monkeypatch):
+def test_intellimate_official_does_not_inject_change_logs_by_default(
+    tmp_path, monkeypatch
+):
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
     _patch_manual_and_change_logs(
         monkeypatch, manual_path, agent_module.INTELLIMATE_CHANGE_LOGS_PATH
     )
-
-    expected_change_logs = "\n".join(
-        line
-        for line in agent_module.INTELLIMATE_CHANGE_LOGS_PATH.read_text(
-            encoding="utf-8"
-        ).splitlines()
-        if not line.lstrip().startswith(">")
-    ).strip()
 
     agent = _build_agent(
         agent_id=INTELLIMATE_AGENT_ID,
@@ -92,16 +86,10 @@ def test_intellimate_official_injects_repo_change_logs_content(tmp_path, monkeyp
         personality="Warm personality.",
     )
     contents = _get_contents(agent.build_system_messages("", None))
-    change_logs_message = _find_message_by_prefix(
-        contents, "##IntelliMate Change Logs\n"
-    )
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
 
-    assert change_logs_message == (
-        "##IntelliMate Change Logs\n" + expected_change_logs
-    )
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
-    assert "CREATED_BY_AGENT" not in change_logs_message
+    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
 
 
 def test_intellimate_official_adds_manual_tool_usage_guidance(tmp_path, monkeypatch):
@@ -123,10 +111,11 @@ def test_intellimate_official_adds_manual_tool_usage_guidance(tmp_path, monkeypa
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
     assert "read_user_manual" in tool_usage_message
+    assert "read_change_logs" in tool_usage_message
     assert not any("##IntelliMate User Manual\n" in content for content in contents)
 
 
-def test_intellimate_official_injects_change_logs_prompt(tmp_path, monkeypatch):
+def test_intellimate_official_does_not_inject_change_logs_prompt(tmp_path, monkeypatch):
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
     change_logs_path = tmp_path / "CHANGE_LOGS.md"
@@ -140,25 +129,18 @@ def test_intellimate_official_injects_change_logs_prompt(tmp_path, monkeypatch):
     )
     contents = _get_contents(agent.build_system_messages("", None))
 
-    change_logs_message = _find_message_by_prefix(
-        contents, "##IntelliMate Change Logs\n"
-    )
+    tool_usage_message = _find_message_by_prefix(contents, "##Official Assistant Tool Usage\n")
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
-    assert change_logs_message.startswith(
-        "##IntelliMate Change Logs\n# IntelliMate Change Logs"
-    )
+    assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
-    assert "CHANGE_LOG_LINE_1" in change_logs_message
-    assert "CHANGE_LOG_LINE_2" in change_logs_message
-    assert ">" not in change_logs_message
-    assert "CREATED_BY_AGENT" not in change_logs_message
-    assert "Lines starting with" not in change_logs_message
+    assert "read_change_logs" in tool_usage_message
+    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
 
 
 def test_build_system_messages_for_intellimate_official_assistant_happy_case(
     tmp_path, monkeypatch
 ):
-    """Happy case: new API returns tool usage guidance, change logs, and character context."""
+    """Happy case: new API returns tool guidance and character context."""
     manual_path = tmp_path / "INTELLIMATE.md"
     manual_path.write_text(MINIMAL_MANUAL_CONTENT, encoding="utf-8")
     change_logs_path = tmp_path / "CHANGE_LOGS.md"
@@ -178,12 +160,8 @@ def test_build_system_messages_for_intellimate_official_assistant_happy_case(
     rename_message = _find_message_by_prefix(contents, OFFICIAL_RENAME_MESSAGE_PREFIX)
     assert tool_usage_message.startswith("##Official Assistant Tool Usage\n")
     assert OFFICIAL_RENAME_MESSAGE_LINE in rename_message
-
-    change_logs_message = _find_message_by_prefix(
-        contents, "##IntelliMate Change Logs\n"
-    )
-    assert change_logs_message.startswith("##IntelliMate Change Logs\n")
-    assert "CHANGE_LOG_LINE_1" in change_logs_message
+    assert "read_change_logs" in tool_usage_message
+    assert not any(content.startswith("##IntelliMate Change Logs\n") for content in contents)
 
     assert any("Warm personality." in c for c in contents)
 
@@ -229,7 +207,8 @@ def test_intellimate_official_has_empty_main_and_mode_prompts(tmp_path, monkeypa
     assert not any(default_main in c for c in contents)
     assert not any(default_mode in c for c in contents)
     assert any("##Official Assistant Tool Usage" in c for c in contents)
-    assert any("##IntelliMate Change Logs" in c for c in contents)
+    assert any("read_change_logs" in c for c in contents)
+    assert not any("##IntelliMate Change Logs" in c for c in contents)
 
 
 def test_build_system_messages_includes_time_context(monkeypatch):

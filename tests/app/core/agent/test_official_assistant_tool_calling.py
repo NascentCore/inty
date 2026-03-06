@@ -4,7 +4,9 @@ import pytest
 
 from app.core.agent import agent as agent_module
 from app.core.agent.agent import (
+    INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX,
     INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX,
+    OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME,
     OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME,
     OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME,
     OFFICIAL_ASSISTANT_TOOL_DEFINITIONS,
@@ -52,12 +54,13 @@ def test_parse_mbti_tool_arguments_rejects_invalid_type():
         agent._parse_mbti_type_from_tool_arguments('{"mbti_type":"ABCD"}')
 
 
-def test_official_tool_definitions_include_read_user_manual():
+def test_official_tool_definitions_include_manual_and_change_logs_reader():
     tool_names = {
         tool_definition["function"]["name"]
         for tool_definition in OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
     }
     assert OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME in tool_names
+    assert OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME in tool_names
     assert OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME in tool_names
 
 
@@ -143,6 +146,25 @@ def test_read_user_manual_tool_returns_system_message(monkeypatch: pytest.Monkey
     )
 
 
+def test_read_change_logs_tool_returns_system_message(monkeypatch: pytest.MonkeyPatch):
+    agent = _build_official_agent()
+    monkeypatch.setattr(
+        agent_module, "_load_intellimate_change_logs", lambda: "CHANGE_LOGS_ABC"
+    )
+
+    tool_result, injected_system_message = agent._execute_official_assistant_tool_call(
+        tool_name=OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME,
+        raw_arguments="{}",
+        user_id="user-1",
+    )
+
+    assert tool_result == "Loaded IntelliMate change logs into system context."
+    assert (
+        injected_system_message
+        == INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + "CHANGE_LOGS_ABC"
+    )
+
+
 def test_resolve_official_tool_calls_injects_manual_as_system_message(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -163,6 +185,51 @@ def test_resolve_official_tool_calls_injects_manual_as_system_message(
             message["role"] == "system"
             and message["content"]
             == INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + "MANUAL_XYZ"
+            for message in openai_messages
+        )
+        return final_response
+
+    monkeypatch.setattr(agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry)
+
+    response, _ = agent._resolve_official_assistant_tool_calls(
+        response=initial_response,
+        openai_messages=[{"role": "system", "content": "BASE_SYSTEM"}],
+        client=object(),
+        model="test-model",
+        temperature=0.7,
+        max_tokens=256,
+        top_p=0.9,
+        extra_body={"user": "user-1"},
+        user_id="user-1",
+        chat_name="test-chat",
+        labels={},
+    )
+
+    assert response is final_response
+
+
+def test_resolve_official_tool_calls_injects_change_logs_as_system_message(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    agent = _build_official_agent()
+    initial_response = _build_openai_response_with_tool_call(
+        tool_name=OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME,
+        tool_arguments="{}",
+        content="Let me check the change logs first.",
+    )
+    final_response = _build_openai_response_without_tool_call(
+        content="Here are the latest updates...",
+    )
+    monkeypatch.setattr(
+        agent_module, "_load_intellimate_change_logs", lambda: "CHANGE_LOGS_XYZ"
+    )
+
+    def fake_call_openai_api_with_retry(**kwargs):
+        openai_messages = kwargs["openai_messages"]
+        assert any(
+            message["role"] == "system"
+            and message["content"]
+            == INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + "CHANGE_LOGS_XYZ"
             for message in openai_messages
         )
         return final_response
