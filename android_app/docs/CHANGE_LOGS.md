@@ -15,6 +15,8 @@
 
 ## 2026-03-04
 
+- Chat settings now include a VIP-gated **Voice** picker for Gemini voices. Non-subscribed users now see the same upgrade popup as **Models** when tapping Voice; subscribed users can select and save a per-chat voice for both auto-play and tap-to-play TTS.
+- The chat settings **Voice** dropdown now shows a compact, scrollable list with 9 visible entries for easier browsing.
 - Official Assistant chat now has a dedicated **Test my MBTI type** quick-action button above the input. Tapping it sends a structured MBTI interview starter prompt immediately, so users can begin guided type discovery in one tap.
 
 ## 2026-03-03

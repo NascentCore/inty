@@ -14,7 +14,7 @@ from app.models.user import AuthType
 from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
-from app.services.voice_service import VoiceGenerationResult, VoiceService
+from app.services.voice_service import VoiceGenerationResult
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
     _create_mock_db_session,
@@ -66,7 +66,7 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
     async def fake_get_message_content(db, session_id, message_id):
         return "hello"
 
-    async def fake_generate_voice(self, *args, **kwargs):  # pragma: no cover - stub
+    async def fake_generate_voice(*args, **kwargs):  # pragma: no cover - stub
         return None
 
     async def fake_check_voice_limit(db, user):
@@ -87,7 +87,7 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
         fake_get_message_content,
     )
     monkeypatch.setattr(
-        VoiceService,
+        chats_v1.voice_service,
         "generate_voice",
         fake_generate_voice,
     )
@@ -165,7 +165,7 @@ def test_generate_message_voice_success_includes_gcs_urls(
     async def fake_get_message_content(db, session_id, message_id):
         return "hello"
 
-    async def fake_generate_voice(self, *args, **kwargs):
+    async def fake_generate_voice(*args, **kwargs):
         return VoiceGenerationResult(
             gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
             gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
@@ -189,7 +189,7 @@ def test_generate_message_voice_success_includes_gcs_urls(
         fake_get_message_content,
     )
     monkeypatch.setattr(
-        VoiceService,
+        chats_v1.voice_service,
         "generate_voice",
         fake_generate_voice,
     )
@@ -221,6 +221,75 @@ def test_generate_message_voice_success_includes_gcs_urls(
         == "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav"
     )
     assert body["data"]["audio_duration"] == 1.23
+
+
+def test_generate_message_voice_prefers_chat_settings_voice_id(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    captured = {}
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"voice_id": "google/Puck", "gender": "FEMALE"}
+
+    async def fake_get_chat_by_user_and_agent(db, user_id, agent_id):
+        return SimpleNamespace(
+            id="chat-1",
+            agent_id=agent_id,
+            settings=SimpleNamespace(voice_id="google/Zephyr"),
+        )
+
+    async def fake_get_message_content(db, session_id, message_id):
+        return "hello"
+
+    async def fake_generate_voice(*args, **kwargs):
+        captured["voice_id"] = kwargs.get("voice_id")
+        return VoiceGenerationResult(
+            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+            duration_seconds=1.23,
+        )
+
+    async def fake_update_message_audio_url(
+        db, session_id, message_id, audio_url, audio_duration
+    ):
+        return True
+
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        chat_service,
+        "get_chat_by_user_and_agent",
+        fake_get_chat_by_user_and_agent,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_message_content",
+        fake_get_message_content,
+    )
+    monkeypatch.setattr(
+        chats_v1.voice_service,
+        "generate_voice",
+        fake_generate_voice,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "update_message_audio_url",
+        fake_update_message_audio_url,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.post(
+            "/api/v1/chats/agents/agent-1/messages/1/voice",
+            params={"language": "en"},
+        )
+
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert captured["voice_id"] == "google/Zephyr"
+    assert body["data"]["voice_id"] == "google/Zephyr"
 
 
 def test_update_chat_settings_requires_subscription(
@@ -272,6 +341,60 @@ def test_update_chat_settings_requires_subscription(
         == BusinessErrorCode.SUBSCRIPTION_REQUIRED["error_code"]
     )
     assert body["data"].get("used_count") is None
+
+
+def test_update_chat_settings_rejects_non_gemini_voice_id(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(id="settings-1", voice_enabled=False, voice_id=None)
+
+    async def fake_get_subscription_status(db, user_id):
+        return SimpleNamespace(is_subscribed=True)
+
+    async def fake_update_chat_settings(db, chat_id, settings_update):
+        return SimpleNamespace(id="settings-1")
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "get_user_subscription_status",
+        fake_get_subscription_status,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "update_chat_settings",
+        fake_update_chat_settings,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.put(
+            "/api/v1/chats/agents/agent-1/settings",
+            json={"voice_id": "11labs/EXAVITQu4vr4xnSDxMaL"},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Only Gemini voices are supported in chat settings for now."
+    )
 
 
 def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_greenlet(
