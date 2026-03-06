@@ -242,30 +242,11 @@ class WrappedClient:
                 raise ValueError(f"Unsupported model: {model}")
 
 
-def _extract_image_part_from_gemini_response(
-    response: gemini_types.GeneratedContent,
-) -> gemini_types.Part:
+def _process_one_candidate(candidate: Any) -> gemini_types.Part:
     """
-    校验 Gemini generate_content 响应并提取图片 part。
+    校验单个 Gemini 候选结果并提取图片 part。
     成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
     """
-    # 检查 prompt_feedback（响应级别的反馈）
-    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
-        prompt_feedback = response.prompt_feedback
-        logger.warning("Prompt feedback: {}", prompt_feedback)
-        if hasattr(prompt_feedback, "block_reason"):
-            block_reason = prompt_feedback.block_reason
-            logger.warning("请求被阻止，原因: {}", block_reason)
-            raise ValueError(
-                f"Image generation request blocked by safety filter: {block_reason}"
-            )
-
-    if not response.candidates:
-        logger.error("Gemini 未返回任何候选结果")
-        raise ValueError("Gemini returned no candidates")
-
-    candidate = response.candidates[0]
-
     # 检查 finish_reason（完成原因）
     finish_reason = getattr(candidate, "finish_reason", None)
     finish_reason_text = str(finish_reason) if finish_reason is not None else ""
@@ -326,6 +307,31 @@ def _extract_image_part_from_gemini_response(
         raise ValueError("No image data found in response")
 
     return image_part
+
+
+def _extract_image_part_from_gemini_response(
+    response: gemini_types.GeneratedContent,
+) -> gemini_types.Part:
+    """
+    校验 Gemini generate_content 响应并提取图片 part。
+    成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
+    """
+    # 检查 prompt_feedback（响应级别的反馈）
+    if hasattr(response, "prompt_feedback") and response.prompt_feedback:
+        prompt_feedback = response.prompt_feedback
+        logger.warning("Prompt feedback: {}", prompt_feedback)
+        if hasattr(prompt_feedback, "block_reason"):
+            block_reason = prompt_feedback.block_reason
+            logger.warning("请求被阻止，原因: {}", block_reason)
+            raise ValueError(
+                f"Image generation request blocked by safety filter: {block_reason}"
+            )
+
+    if not response.candidates:
+        logger.error("Gemini 未返回任何候选结果")
+        raise ValueError("Gemini returned no candidates")
+
+    return _process_one_candidate(response.candidates[0])
 
 
 def _process_image_part_to_generated_image(
