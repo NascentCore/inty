@@ -157,14 +157,28 @@ async def get_current_active_user(
 
 async def get_current_superuser(
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> User:
     """要求当前用户为超级用户，否则抛出 403。"""
-    if not current_user.is_superuser:
+    # 关键步骤：超级用户权限属于安全敏感检查，这里始终以数据库最新值为准，避免缓存短暂陈旧。
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    latest_user = result.scalar_one_or_none()
+
+    if latest_user is None or latest_user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account has been deleted",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    _cache_user_auth_snapshot(latest_user)
+
+    if not latest_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only superusers can access this endpoint",
         )
-    return current_user
+    return latest_user
 
 
 async def get_effective_user_for_eval(
