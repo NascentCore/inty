@@ -171,15 +171,17 @@ object AgentCacheManager {
         }
     }
 
-    /** 从缓存中删除agent */
+    /** 从缓存中删除agent（用于后端返回 404 时清理本地 stale 数据，避免继续在搜索/列表中展示） */
     fun removeAgent(agentId: String) {
         try {
-            // 从推荐列表移除
             val recommendedAgents = getCachedAgents().toMutableList()
             recommendedAgents.removeAll { it.id == agentId }
             cacheAgents(recommendedAgents)
 
-            // 从用户自建列表移除
+            val chatAgents = getCachedChatAgents().toMutableList()
+            chatAgents.removeAll { it.id == agentId }
+            cacheChatAgents(chatAgents)
+
             val userCreatedAgents = getCachedUserCreatedAgents().toMutableList()
             userCreatedAgents.removeAll { it.id == agentId }
             cacheUserCreatedAgents(userCreatedAgents)

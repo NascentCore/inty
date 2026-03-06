@@ -3,6 +3,7 @@ import re
 import sys
 import traceback
 from datetime import UTC, datetime
+from typing import Annotated
 
 import cyclopts
 from loguru import logger
@@ -217,6 +218,13 @@ async def main(
     delete_existing: bool = False,
     is_superuser: bool = True,
     yes: bool = False,
+    print_id: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--print-id",
+            help="Print created/existing user id to stdout for use in scripts",
+        ),
+    ] = False,
 ):
     """
     创建邮箱密码认证用户
@@ -242,6 +250,8 @@ async def main(
         是否创建为超级用户，默认 True
     yes
         自动确认所有提示（非交互模式）
+    print_id
+        若设置，仅将创建或已存在用户的 id 打印到 stdout，便于脚本捕获（如 --creator-id）
 
     Examples
     --------
@@ -293,6 +303,9 @@ async def main(
         logger.info("User creation completed successfully")
     else:
         logger.info("Dry-run completed. No changes were made to the database.")
+
+    if print_id:
+        print(user.id)
 
 
 if __name__ == "__main__":

@@ -23,6 +23,14 @@ import retrofit2.http.Query
 interface IAgentApi {
 
     /** 用于explore页面的列表数据 */
+    /** Search public agents by keyword (name, intro, category). Used by Explore search to avoid showing stale cached agents. */
+    @GET("api/v1/ai/agents/search")
+    suspend fun searchAgents(
+        @Query("q") q: String,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): HttpResult<AgentInfoResponse>
+
     @GET("api/v1/ai/agents/recommend")
     suspend fun exploreAgents(
         @Query("page") page: Int,

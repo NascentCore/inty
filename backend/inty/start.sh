@@ -20,7 +20,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --test)
-      DEV=true
       TEST=true
       shift
       ;;
@@ -57,16 +56,25 @@ alembic -c "$ALEMBIC_CONFIG" upgrade head
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
 python scripts/init_subscription_plans_simple.py
 
-if [ "$DEV" = true ]; then
-  if [ "$TEST" = true ]; then
-    echo "Starting in test mode..."
-  else
-    echo "Starting in dev mode..."
-  fi
+if [ "$DEV" = true || "$TEST" = true ]; then
   # 生成测试用管理员账号，ops 平台与 inty 后端分离后，这个应该就不需要了，先注释掉保留来做记录。
   # python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
-  # 生成测试用户用于本地 app 登陆
-  python scripts/create_email_password_superuser.py --email test@sxwl.ai --password test --yes
+  # 生成测试用户用于本地 app 登陆；捕获其 id 供后续 agent 导入使用
+  TEST_USER_ID=$(PYTHONPATH=. python scripts/create_email_password_superuser.py --email test@sxwl.ai --password test --yes --print-id)
+
+  # Import sample iMate (idempotent: skip if agent id already exists)
+  PYTHONPATH=. python scripts/import_agent_from_json.py \
+    --input tests/Isabelle_Martin_imate_info.json \
+    --creator-id "$TEST_USER_ID" \
+    --no-dry-run \
+    --yes
+
+  PYTHONPATH=. python scripts/import_agent_from_json.py \
+    --input tests/official_assistant.json \
+    --creator-id "$TEST_USER_ID" \
+    --no-dry-run \
+    --yes
+
   uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."

@@ -111,3 +111,46 @@ def test_resolve_official_tool_calls_executes_tool_and_returns_final_response(
     assert captured["raw_arguments"] == '{"mbti_type":"enfp"}'
     assert response is final_response
     assert messages[-1]["role"] == "tool"
+
+
+def test_get_user_profile_sync_includes_mbti_type_when_present(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """When users.meta_data has mbti_type, the user info section includes 'MBTI Type: <type>'."""
+    agent = _build_official_agent()
+    user_id = "user-mbti-test"
+    # Row: nickname, gender, age_group, description, system_language, meta_data
+    fake_row = (None, None, None, None, None, {"mbti_type": "INTP"})
+    fake_result = SimpleNamespace(fetchone=lambda: fake_row)
+    fake_conn = SimpleNamespace(execute=lambda query, params: fake_result)
+
+    class FakeConnectionManager:
+        def __enter__(self):
+            return fake_conn
+
+        def __exit__(self, *args):
+            return None
+
+    fake_engine = SimpleNamespace(connect=lambda: FakeConnectionManager())
+
+    monkeypatch.setattr(
+        "app.core.agent.agent.cache_service.get_user_info",
+        lambda uid: None,
+    )
+    monkeypatch.setattr(
+        "app.core.agent.agent.cache_service.set_user_info",
+        lambda uid, text, ttl=60: None,
+    )
+    monkeypatch.setattr(
+        "app.core.agent.agent.get_sync_engine",
+        lambda: fake_engine,
+    )
+    monkeypatch.setattr(
+        "app.services.memory_service.get_user_memory_for_prompt_sync",
+        lambda uid: "",
+    )
+
+    profile = agent._get_user_profile_sync(user_id)
+
+    assert "##User Information" in profile
+    assert "MBTI Type: INTP" in profile

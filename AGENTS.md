@@ -14,6 +14,7 @@
 
 - Do not bother with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
 - Do not do defensive programming, let failure appear early and loud.
+- **Logging**: Use f-strings for log message interpolation (e.g. `logger.info(f"key={value}")`) so that values are emitted; avoid `logger.info("key=%s", value)` as some setups do not substitute `%s`.
 
 ## 软件工程规范
 

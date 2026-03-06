@@ -76,6 +76,66 @@ def _should_trace() -> bool:
     return rand < sample_rate
 
 
+# Max chars of reasoning to log (avoid huge logs from long-thinking models e.g. Qwen with 3k+ reasoning tokens).
+REASONING_LOG_MAX_CHARS = 2000
+
+
+def _extract_reasoning_and_text_from_message(
+    message_content: Any,
+    message_reasoning: Any = None,
+) -> Tuple[Any, Optional[str]]:
+    """
+    Extract final text for storage/response and optional reasoning for logging.
+
+    OpenRouter / reasoning models may return:
+    - message.content as list of parts with type "reasoning" or "text";
+    - message.reasoning as a separate field (OpenRouter).
+    Returns (content_for_storage, reasoning_for_log). content_for_storage is either
+    a string (text only) or the original content if no parts; reasoning_for_log is
+    None when there is nothing to log.
+    """
+    reasoning_parts: List[str] = []
+
+    if message_reasoning is not None:
+        if isinstance(message_reasoning, str) and message_reasoning.strip():
+            reasoning_parts.append(message_reasoning.strip())
+        elif isinstance(message_reasoning, list):
+            for part in message_reasoning:
+                if isinstance(part, dict) and part.get("type") == "reasoning":
+                    t = part.get("text")
+                    if isinstance(t, str) and t.strip():
+                        reasoning_parts.append(t.strip())
+                elif isinstance(part, str) and part.strip():
+                    reasoning_parts.append(part.strip())
+
+    if isinstance(message_content, str):
+        reasoning_for_log = "\n".join(reasoning_parts) if reasoning_parts else None
+        return message_content, reasoning_for_log
+
+    if isinstance(message_content, list):
+        text_parts: List[str] = []
+        for part in message_content:
+            if hasattr(part, "model_dump"):
+                part = part.model_dump(exclude_none=True)
+            if not isinstance(part, dict):
+                continue
+            part_type = part.get("type")
+            if part_type == "reasoning":
+                t = part.get("text")
+                if isinstance(t, str) and t.strip():
+                    reasoning_parts.append(t.strip())
+            elif part_type == "text":
+                t = part.get("text")
+                if isinstance(t, str) and t.strip():
+                    text_parts.append(t.strip())
+        reasoning_for_log = "\n".join(reasoning_parts) if reasoning_parts else None
+        content_for_storage = "\n".join(text_parts) if text_parts else ""
+        return content_for_storage, reasoning_for_log
+
+    reasoning_for_log = "\n".join(reasoning_parts) if reasoning_parts else None
+    return message_content, reasoning_for_log
+
+
 class UserTimeContext(TypedDict, total=False):
     local_time: str
     timezone: str
@@ -640,9 +700,11 @@ class Agent:
             self.last_used = time.time()
 
     def _chat_extra_body(self, user_id: str) -> Dict[str, Any]:
-        """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), user (tracking)."""
+        """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), reasoning.effort (OpenRouter), user (tracking). Official assistant uses minimal reasoning; others use none."""
+        reasoning_effort = "minimal" if self._is_intellimate_official() else "none"
         return {
             "generation_config": {"thinking_budget": 0},
+            "reasoning": {"effort": reasoning_effort},
             "user": user_id,
         }
 
@@ -650,6 +712,9 @@ class Agent:
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
         同步获取用户profile信息（优化版本 - 使用全局缓存），并追加 ##User Memory。
+
+        The ##User Information block includes MBTI from users.meta_data when present
+        (e.g. after the official assistant save_user_mbti_type tool has run).
         """
         cached_user_info = cache_service.get_user_info(user_id)
         if cached_user_info is not None:
@@ -947,8 +1012,25 @@ class Agent:
             current_message = current_response.choices[0].message
             tool_calls = getattr(current_message, "tool_calls", None) or []
             if not tool_calls:
+                final_content = getattr(current_message, "content", None) or ""
+                preview_len = 300
+                content_preview = (
+                    (final_content[:preview_len] + "..." if len(final_content) > preview_len else final_content)
+                    or "(empty)"
+                )
+                logger.info(
+                    f"Official assistant LLM response has no tool_calls (round={tool_round + 1}), returning as final. "
+                    f"reply_preview={content_preview}"
+                )
                 return current_response, messages_with_tool_results
 
+            for tc in tool_calls:
+                name = getattr(tc.function, "name", None)
+                args = getattr(tc.function, "arguments", None) or ""
+                args_preview = args[:500] + "..." if len(args) > 500 else args
+                logger.info(
+                    f"Official assistant LLM returned tool_calls: round={tool_round + 1}, tool_name={name}, arguments={args_preview}"
+                )
             messages_with_tool_results.append(
                 self._build_assistant_tool_call_message(current_message)
             )
@@ -970,6 +1052,14 @@ class Agent:
                         "content": tool_result,
                     }
                 )
+            last_roles = [
+                m.get("role")
+                for m in messages_with_tool_results[-(1 + len(tool_calls)) :]
+            ]
+            logger.info(
+                f"Official assistant sending follow-up LLM request with tool results: "
+                f"round={tool_round + 1}, total_messages={len(messages_with_tool_results)}, last_roles={last_roles}"
+            )
             current_response = self._call_openai_api_with_retry(
                 client=client,
                 model=model,
@@ -1085,12 +1175,32 @@ class Agent:
                     create_kwargs["tools"] = tools
                 if tool_choice is not None:
                     create_kwargs["tool_choice"] = tool_choice
+                # Log so we can confirm tool definitions and tool messages are in the request
+                if tools is not None:
+                    tool_names = [t.get("function", {}).get("name", "") for t in tools]
+                    msg_roles = [m.get("role") for m in openai_messages]
+                    has_tool_msgs = any(
+                        m.get("role") == "tool" or "tool_calls" in m
+                        for m in openai_messages
+                    )
+                    logger.info(
+                        f"LLM request with tools: tool_names={tool_names}, tool_choice={tool_choice}, "
+                        f"message_count={len(openai_messages)}, message_roles={msg_roles}, has_tool_or_tool_calls={has_tool_msgs}"
+                    )
                 if should_trace:
+                    trace_inputs: Dict[str, Any] = {
+                        "messages": openai_messages,
+                        "model": model,
+                    }
+                    if tools is not None:
+                        trace_inputs["tools"] = tools
+                    if tool_choice is not None:
+                        trace_inputs["tool_choice"] = tool_choice
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
                         name=trace_name,
                         run_type="llm",
-                        inputs={"messages": openai_messages, "model": model},
+                        inputs=trace_inputs,
                         metadata=normalized_labels,
                     ) as run:
                         response = client.chat.completions.create(
@@ -1098,13 +1208,36 @@ class Agent:
                         )
                         # 记录输出到 trace
                         if response.choices:
+                            msg = response.choices[0].message
+                            raw_tool_calls = getattr(msg, "tool_calls", None) or []
+                            tool_calls_for_trace = [
+                                {
+                                    "id": getattr(tc, "id", None),
+                                    "function": {
+                                        "name": getattr(
+                                            getattr(tc, "function", None),
+                                            "name",
+                                            None,
+                                        ),
+                                        "arguments": getattr(
+                                            getattr(tc, "function", None),
+                                            "arguments",
+                                            None,
+                                        ),
+                                    },
+                                }
+                                for tc in raw_tool_calls
+                            ]
+                            choice = response.choices[0]
+                            finish_reason = getattr(
+                                msg, "finish_reason", None
+                            ) or getattr(choice, "finish_reason", None)
                             run.end(
                                 outputs={
-                                    "content": response.choices[0].message.content,
-                                    "finish_reason": response.choices[0].finish_reason,
-                                    "tool_calls_count": len(
-                                        response.choices[0].message.tool_calls or []
-                                    ),
+                                    "content": msg.content,
+                                    "finish_reason": finish_reason,
+                                    "tool_calls_count": len(raw_tool_calls),
+                                    "tool_calls": tool_calls_for_trace,
                                     "model": response.model,
                                     "usage": (
                                         {
@@ -1413,8 +1546,24 @@ class Agent:
                         f"Session: {session_id}, Model: {model_name}"
                     )
                     raise ValueError("LLM returned no choices")
-                finish_reason = response.choices[0].finish_reason
-                response_text = response.choices[0].message.content
+                choice0 = response.choices[0]
+                msg = choice0.message
+                finish_reason = getattr(choice0, "finish_reason", None) or getattr(
+                    msg, "finish_reason", None
+                )
+                response_text, reasoning_for_log = _extract_reasoning_and_text_from_message(
+                    msg.content,
+                    getattr(msg, "reasoning", None),
+                )
+                if reasoning_for_log:
+                    preview = (
+                        reasoning_for_log[:REASONING_LOG_MAX_CHARS]
+                        + ("..." if len(reasoning_for_log) > REASONING_LOG_MAX_CHARS else "")
+                    )
+                    logger.info(
+                        f"LLM reasoning (agent_id={self.agent_id}, session_id={session_id}, "
+                        f"model={model_name}, chars={len(reasoning_for_log)}): {preview}"
+                    )
 
                 # 定义需要重试的 finish_reason
                 content_filter_reasons = {"content_filter", "safety"}
@@ -1455,8 +1604,24 @@ class Agent:
                             f"Session: {session_id}, Model: {model_name}"
                         )
                         raise ValueError("LLM returned no choices on retry")
-                    retry_finish_reason = retry_response.choices[0].finish_reason
-                    retry_response_text = retry_response.choices[0].message.content
+                    retry_choice0 = retry_response.choices[0]
+                    retry_msg = retry_choice0.message
+                    retry_finish_reason = getattr(
+                        retry_choice0, "finish_reason", None
+                    ) or getattr(retry_msg, "finish_reason", None)
+                    retry_response_text, retry_reasoning = _extract_reasoning_and_text_from_message(
+                        retry_msg.content,
+                        getattr(retry_msg, "reasoning", None),
+                    )
+                    if retry_reasoning:
+                        preview = (
+                            retry_reasoning[:REASONING_LOG_MAX_CHARS]
+                            + ("..." if len(retry_reasoning) > REASONING_LOG_MAX_CHARS else "")
+                        )
+                        logger.info(
+                            f"LLM reasoning (retry) (agent_id={self.agent_id}, session_id={session_id}, "
+                            f"model={model_name}, chars={len(retry_reasoning)}): {preview}"
+                        )
 
                     # 重试后仍被过滤则记录错误，但使用重试后的响应
                     if retry_finish_reason in content_filter_reasons:
@@ -1696,7 +1861,20 @@ class Agent:
                         f"Session: {session_id}"
                     )
                     raise ValueError("LLM returned no choices")
-                response_text = response.choices[0].message.content
+                push_msg = response.choices[0].message
+                response_text, reasoning_for_log = _extract_reasoning_and_text_from_message(
+                    push_msg.content,
+                    getattr(push_msg, "reasoning", None),
+                )
+                if reasoning_for_log:
+                    preview = (
+                        reasoning_for_log[:REASONING_LOG_MAX_CHARS]
+                        + ("..." if len(reasoning_for_log) > REASONING_LOG_MAX_CHARS else "")
+                    )
+                    logger.info(
+                        f"LLM reasoning (push) (agent_id={self.agent_id}, session_id={session_id}, "
+                        f"chars={len(reasoning_for_log)}): {preview}"
+                    )
                 response_process_time = time.time() - response_process_start
                 logger.debug(
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"

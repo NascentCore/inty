@@ -4,10 +4,12 @@ import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.chat.local.db.MessageEntity
+import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.agent.info.AgentInfoViewModel.Companion.DEFAULT_GALLERY_DIMENSION
 import com.ai.intellimate.chat.data.ChatMessageRepository
+import com.ai.intellimate.utils.AgentCacheManager
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.architecture.httplib.core.HttpResult
 import com.squareup.moshi.JsonClass
@@ -69,6 +71,9 @@ class AgentInfoViewModel : BaseVM() {
                         setAgentInfo(result.data)
                     }
                     is HttpResult.Failure -> {
+                        if (result.code == 404) {
+                            removeStaleAgentFromLocalCaches(agentId)
+                        }
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
                 }
@@ -102,6 +107,10 @@ class AgentInfoViewModel : BaseVM() {
                         _agentInfo.value = result.data
                     }
                     is HttpResult.Failure -> {
+                        if (result.code == 404) {
+                            removeStaleAgentFromLocalCaches(agentId)
+                            _agentInfo.value = null
+                        }
                         NetworkErrorHandler.showNetworkAwareError(result.message)
                     }
                 }
@@ -109,6 +118,12 @@ class AgentInfoViewModel : BaseVM() {
                 LogUtils.e("refreshAgentData exception: ${e.message}")
             }
         }
+    }
+
+    /** 后端返回 404 时从本地 Room 与内存缓存中移除该 agent，避免 Explore 搜索等继续展示已删除角色。 */
+    private suspend fun removeStaleAgentFromLocalCaches(agentId: String) {
+        DataModule.getCharacterRepository().removeCachedAgent(agentId)
+        AgentCacheManager.removeAgent(agentId)
     }
 
     private fun bindGallery(agentId: String) {

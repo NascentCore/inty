@@ -87,6 +87,13 @@ class CharacterRepository(
             .getOrThrow()
     }
 
+    /** Remove a single agent from local cache so it no longer appears in explore search. Call when backend returns 404 for this agent. */
+    suspend fun removeCachedAgent(agentId: String) {
+        withContext(dispatcher) {
+            dao.deleteCharacter(agentId)
+        }
+    }
+
     suspend fun cacheAgents(agents: List<AgentInfo>) {
         if (agents.isEmpty()) return
 

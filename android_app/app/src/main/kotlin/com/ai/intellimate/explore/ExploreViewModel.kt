@@ -182,6 +182,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
 
     /** 获取推荐agents的Paging数据流 */
     fun getRecommendAgentsFlow(): Flow<PagingData<AgentInfo>>? {
+        if (UnifiedStartupManager.consumeInvalidateAgentListsRequest()) {
+            _agentsFlow.value = null
+            isInitialized = false
+        }
         if (!isInitialized) {
             initializePagingData()
         }
@@ -454,6 +458,9 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                         LogUtils.d(
                             "ExploreViewModel - 获取最近创建角色成功: latest=${latestAgents.size}"
                         )
+                        LogUtils.d(
+                            "ExploreViewModel - exploreAgents (New iMates) API returned: count=${latestAgents.size}, agents=${latestAgents.joinToString { "${it.id}:${it.name}" }}"
+                        )
                         _newlyCreatedAgents.value = latestAgents
                     }
 
@@ -469,7 +476,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    /** 搜索角色（从本地数据库搜索，按名称模糊匹配） */
+    /** 搜索角色：优先走后端搜索（保证只展示当前存在的 agent），失败或离线时回退到本地 Room + 内存缓存。 */
     fun searchAgentsByName(keyword: String) {
         val parsed = parseExploreSearch(keyword)
         if (parsed == null) {
@@ -481,13 +488,30 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
             _isSearching.value = true
             _hasSearchExecuted.value = true
             try {
+                val apiResult =
+                    NetServiceMgr.getAgentApi()
+                        .searchAgents(q = parsed.query, page = 1, pageSize = 50)
+                when (apiResult) {
+                    is HttpResult.Success -> {
+                        val list = apiResult.data.list.orEmpty()
+                        LogUtils.d(
+                            "ExploreViewModel - 后端搜索 '${parsed.query}' 返回 ${list.size} 条"
+                        )
+                        _searchResults.value = list
+                        return@launch
+                    }
+                    is HttpResult.Failure -> {
+                        LogUtils.w(
+                            "ExploreViewModel - 后端搜索失败(code=${apiResult.code})，回退本地: ${apiResult.message}"
+                        )
+                    }
+                }
+
                 val dbResults =
                     characterRepository.searchCharactersByNameOrTag(parsed.query, limit = 100)
-
                 LogUtils.d(
                     "ExploreViewModel - 从数据库搜索(name+tag) 关键词'${parsed.query}'，找到${dbResults.size}个匹配结果"
                 )
-
                 if (dbResults.isNotEmpty()) {
                     _searchResults.value = dbResults
                     return@launch
@@ -498,16 +522,12 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 val userCreatedAgents = AgentCacheManager.getCachedUserCreatedAgents()
                 val allCachedAgents =
                     mergeAgentsUniqueById(recommendedAgents + chatAgents + userCreatedAgents)
-
-                val cacheResults =
-                    filterAgentsByNameOrTag(allCachedAgents, parsed.query)
-
+                val cacheResults = filterAgentsByNameOrTag(allCachedAgents, parsed.query)
                 LogUtils.d(
                     "ExploreViewModel - 数据库无结果，从缓存搜索(name+tag): " +
                         "推荐${recommendedAgents.size}个, 聊天${chatAgents.size}个, " +
                         "用户创建${userCreatedAgents.size}个, 找到${cacheResults.size}个匹配结果"
                 )
-
                 _searchResults.value = cacheResults
             } catch (e: Exception) {
                 LogUtils.e("ExploreViewModel - searchAgentsByName异常: ${e.message}", e)

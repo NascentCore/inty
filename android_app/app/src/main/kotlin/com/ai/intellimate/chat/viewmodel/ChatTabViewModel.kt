@@ -35,6 +35,9 @@ class ChatTabViewModel : BaseVM() {
 
     /** 获取聊天agents的Paging数据流 */
     fun getChatAgentsFlow(): Flow<PagingData<AgentInfo>>? {
+        if (UnifiedStartupManager.consumeInvalidateAgentListsRequest()) {
+            clearData()
+        }
         if (!isInitialized) {
             initializePagingData()
         }

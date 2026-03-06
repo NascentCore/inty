@@ -44,6 +44,16 @@ object UnifiedStartupManager {
     private val _chatAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
     val chatAgents: StateFlow<List<AgentInfo>> = _chatAgents.asStateFlow()
 
+    /** Set when backend URL changes; consumed by Chat/Explore so they clear paging and refetch. */
+    @Volatile
+    private var invalidateAgentListsRequested = false
+
+    fun consumeInvalidateAgentListsRequest(): Boolean {
+        val was = invalidateAgentListsRequested
+        invalidateAgentListsRequested = false
+        return was
+    }
+
     // 启动进度
     private val _startupProgress = MutableStateFlow(0f)
     val startupProgress: StateFlow<Float> = _startupProgress.asStateFlow()
@@ -521,6 +531,7 @@ object UnifiedStartupManager {
 
     /** 清理所有启动数据（用于用户登出等场景） */
     fun clearAllData() {
+        invalidateAgentListsRequested = true
         _userAccountReady.value = false
         _recommendedAgents.value = emptyList()
         _chatAgents.value = emptyList()

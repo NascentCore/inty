@@ -72,6 +72,9 @@ class ExplorePagingSource(
                             }
 
                         if (validCachedAgents.isNotEmpty()) {
+                            LogUtils.d(
+                                "ExplorePagingSource - explore agents (from cache): page=$page, count=${validCachedAgents.size}, agents=${validCachedAgents.joinToString { "${it.id}:${it.name}" }}"
+                            )
                             if (cacheProvider.shouldUpdateFromNetwork()) {
                                 loadFromNetworkAsync(page, pageSize)
                             }
@@ -182,6 +185,9 @@ class ExplorePagingSource(
                             agent.id.isNotEmpty() &&
                                 !AgentConstants.isIntelliMateAgent(agent.id, agent.name)
                         }
+                    LogUtils.d(
+                        "ExplorePagingSource - exploreAgents API returned: page=$page, pageSize=$pageSize, rawCount=${agents.size}, validCount=${validAgents.size}, agents=${validAgents.joinToString { "${it.id}:${it.name}" }}"
+                    )
 
                     fetchCallback?.onSuccess(
                         page,

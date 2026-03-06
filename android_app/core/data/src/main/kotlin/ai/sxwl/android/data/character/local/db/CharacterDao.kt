@@ -18,6 +18,9 @@ interface CharacterDao {
     @Query("SELECT * FROM characters WHERE agent_id = :agentId LIMIT 1")
     suspend fun getCharacter(agentId: String): CharacterEntity?
 
+    @Query("DELETE FROM characters WHERE agent_id = :agentId")
+    suspend fun deleteCharacter(agentId: String)
+
     @Query("SELECT * FROM characters WHERE agent_id IN (:agentIds)")
     suspend fun getCharacters(agentIds: List<String>): List<CharacterEntity>
 

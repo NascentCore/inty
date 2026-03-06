@@ -1,5 +1,6 @@
 package com.ai.intellimate.settings
 
+import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.NetworkStackCoordinator
 import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
@@ -8,6 +9,8 @@ import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ai.intellimate.utils.AgentCacheManager
+import com.ai.intellimate.utils.UnifiedStartupManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,6 +92,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
 
         // 统一清除两套网络栈缓存，确保切换地址后使用新客户端
         NetworkStackCoordinator.clearAllRuntimeCaches()
+        refreshLocalDataAfterUrlChange()
 
         _uiState.update {
             it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "")
@@ -111,9 +115,24 @@ class DebugBackendSettingsViewModel : ViewModel() {
         DebugBackendEndpointStore.clearOverride()
         // 统一清除两套网络栈缓存，确保重置地址后使用新客户端
         NetworkStackCoordinator.clearAllRuntimeCaches()
+        refreshLocalDataAfterUrlChange()
 
         val active = NetworkConfig.getBaseUrl()
         _uiState.update { it.copy(activeBaseUrl = active, customUrlInput = "") }
+    }
+
+    /** 后端 URL 变更后清除本地缓存与持久化数据，避免展示旧后端数据 */
+    private fun refreshLocalDataAfterUrlChange() {
+        UnifiedStartupManager.clearAllData()
+        AgentCacheManager.clearCache()
+        viewModelScope.launch {
+            runCatching {
+                DataModule.getChatRepository().clearAllChatData()
+                LogUtils.i(TAG, "Cleared all chat data after backend URL change")
+            }.onFailure { e ->
+                LogUtils.e(TAG, "Failed to clear chat data after URL change", e)
+            }
+        }
     }
 
     fun toggleRemixButton() {

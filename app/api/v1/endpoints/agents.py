@@ -180,6 +180,8 @@ async def recommend_agents(
         sort_by=sort,
         sort_seed=sort_seed,
     )
+    agent_ids = [a.id for a in pagination_data.list]
+    logger.info(f"/recommend returned agent IDs: {agent_ids}")
     return schemas.APIResponse.success(data=pagination_data)
 
 
