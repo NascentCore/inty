@@ -78,7 +78,13 @@ internal fun ChatScreen(
                 onCancel = { chatViewModel.hideFeedbackRequestDialog() },
                 onSendSuggestions = {
                     chatViewModel.hideFeedbackRequestDialog()
-                    navController.navigate(Routes.Me.reportPage(true))
+                    navController.navigate(
+                        Routes.Me.reportPage(
+                            isFeedback = true,
+                            targetType = "AGENT",
+                            targetId = agentInfo?.id ?: "",
+                        )
+                    )
                     //                    ReportActivity.launchFeedback(context)
                 },
             )
