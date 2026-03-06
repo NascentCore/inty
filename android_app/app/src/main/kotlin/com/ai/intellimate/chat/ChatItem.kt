@@ -1180,7 +1180,7 @@ private fun ChatItemUser(
                                 Icon(
                                     imageVector = Icons.Outlined.Error,
                                     contentDescription = stringResource(R.string.chat_message_send_failed_icon_content_desc),
-                                    tint = Color.Red,
+                                    tint = MaterialTheme.colorScheme.error,
                                 )
                             }
                             Spacer(modifier = Modifier.width(4.dp))

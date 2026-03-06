@@ -18,6 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_tts_model
+from app.core.voice.tts_catalog import (
+    TTS_MODELS,
+    is_model_belongs_to_provider,
+)
 from app.services.global_services import subscription_service
 from app.core.voice.tts_api import (
     TTS_PROVIDER_ELEVENLABS,
@@ -27,6 +31,7 @@ from app.core.voice.tts_api import (
     ElevenLabsTTSAPI,
     GeminiTTSAPI,
     TTSRequest,
+    TTSResult,
     get_gemini_voices,
     is_gemini_voice,
     parse_voice_id,
@@ -48,12 +53,6 @@ GENDER_VOICE_MAPPING = {
 TTS_MODEL_SOURCE_EXPLICIT = "explicit"
 TTS_MODEL_SOURCE_CONFIG = "config"
 TTS_MODEL_SOURCE_SUBSCRIPTION = "subscription"
-
-
-def _is_gemini_tts_model(model_id: str) -> bool:
-    if not model_id:
-        return False
-    return model_id.startswith("gemini-")
 
 
 @dataclass(frozen=True)
@@ -122,19 +121,15 @@ class VoiceService:
     def _validate_model_provider_match(
         self, *, provider_selected: str, model_selected: str
     ) -> None:
-        if provider_selected == TTS_PROVIDER_GEMINI and not _is_gemini_tts_model(
-            model_selected
-        ):
+        if not is_model_belongs_to_provider(model_selected, provider_selected):
+            allowed_for_provider = [
+                model.id_on_provider
+                for model in TTS_MODELS
+                if model.provider == provider_selected
+            ]
             raise ValueError(
                 f"TTS model/provider mismatch: provider={provider_selected}, "
-                f"model={model_selected}"
-            )
-        if provider_selected == TTS_PROVIDER_ELEVENLABS and _is_gemini_tts_model(
-            model_selected
-        ):
-            raise ValueError(
-                f"TTS model/provider mismatch: provider={provider_selected}, "
-                f"model={model_selected}"
+                f"model={model_selected}, allowed_models={allowed_for_provider}"
             )
 
     def _clean_text_for_voice(self, text: str) -> str:
@@ -452,6 +447,37 @@ class VoiceService:
         # Gemini TTS 常见返回 PCM 后会被封装成 WAV；未知类型默认用 wav，便于播放与兼容
         return ".wav"
 
+    @traceable(
+        name="tts_fallback_elevenlabs",
+        run_type="chain",
+    )
+    async def _synthesize_elevenlabs_fallback(
+        self,
+        text: str,
+        voice_id: str,
+        model_id: str,
+        language: str,
+    ) -> Optional[Tuple[bytes, str]]:
+        """
+        回退到 ElevenLabs 时的 TTS 调用，供 LangSmith 单独追踪。
+        返回 (audio_bytes, mime_type) 或 None。
+        """
+        fallback_req = TTSRequest(
+            text=text,
+            voice_id=voice_id,
+            model_id=model_id,
+            output_format=self.config.output_format,
+            language_code=language,
+        )
+        result = await self.tts_api.synthesize(fallback_req)
+        if result is None:
+            return None
+        return (result.audio_bytes, result.mime_type)
+
+    @traceable(
+        name="call_tts_api",
+        run_type="chain",
+    )
     async def _call_tts_api(
         self, text: str, voice_id: str, model: str, language: str
     ) -> Optional[Tuple[bytes, float, str, str]]:
@@ -503,18 +529,22 @@ class VoiceService:
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
                     logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
+                    self._validate_model_provider_match(
+                        provider_selected=TTS_PROVIDER_ELEVENLABS,
+                        model_selected=self.config.model,
+                    )
                     # 使用 ElevenLabs 默认音色，因为 Gemini 音色名无法在 ElevenLabs 中使用
-                    fallback_req = TTSRequest(
+                    fallback_result = await self._synthesize_elevenlabs_fallback(
                         text=text,
                         voice_id=self.config.voice_id,
                         model_id=self.config.model,
-                        output_format=self.config.output_format,
-                        language_code=language,
+                        language=language,
                     )
-                    tts_result = await self.tts_api.synthesize(fallback_req)
-                    if not tts_result:
+                    if fallback_result is None:
                         logger.error("ElevenLabs TTS 回退也失败")
                         return None
+                    audio_bytes_fb, mime_type_fb = fallback_result
+                    tts_result = TTSResult(audio_bytes=audio_bytes_fb, mime_type=mime_type_fb)
                     provider_used = TTS_PROVIDER_ELEVENLABS
             else:
                 provider_used = TTS_PROVIDER_ELEVENLABS

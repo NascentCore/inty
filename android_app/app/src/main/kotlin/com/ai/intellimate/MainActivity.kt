@@ -27,15 +27,20 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,18 +70,14 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.call.voiceCallModule
-import com.ai.intellimate.chat.ui.EnergyCelebrationBanner
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.explore.flattenAgents
 import com.ai.intellimate.explore.isChristmasTheme
-import com.ai.intellimate.tips.IntelliMateTipsRepository
-import com.ai.intellimate.tips.IntelliMateTipsSessionGate
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.CarouselBackground
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
-import com.ai.intellimate.ui.components.IntelliMateTipDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
 import com.ai.intellimate.ui.components.PolicyText
 import com.ai.intellimate.ui.components.RankDialog
@@ -378,33 +380,7 @@ class MainActivity : BaseActivity() {
         var showHolidayCelebrationDialog by remember { mutableStateOf(false) }
         val themeAgents by AgentCacheManager.themeAgentCache.collectAsState()
 
-        // IntelliMate tips 弹窗（每个 session 仅展示一次；session=前台到后台）
         val context = LocalContext.current
-        var showIntelliMateTipDialog by remember { mutableStateOf(false) }
-        var intelliMateTipText by remember { mutableStateOf<String?>(null) }
-
-        val scope = rememberCoroutineScope()
-
-        fun tryShowRandomIntelliMateTip() {
-            if (!isLoggedIn) return
-            // 检查用户是否禁用了 tips
-            if (IntySetting.isTipsDisabled()) return
-            // 频率控制：最多每 8 小时展示一次，降低打扰（跨 session/重启生效）
-            if (!IntySetting.canShowIntelliMateTipNow()) return
-            if (!IntelliMateTipsSessionGate.tryAcquireToShowInCurrentSession()) return
-
-            scope.launch {
-                val tip = IntelliMateTipsRepository.getRandomTipText(context)
-                if (tip.isNullOrBlank()) {
-                    IntelliMateTipsSessionGate.releaseWithoutShowing()
-                    return@launch
-                }
-                intelliMateTipText = tip
-                showIntelliMateTipDialog = true
-                IntySetting.setIntelliMateTipLastShowTimeMillis(System.currentTimeMillis())
-                IntelliMateTipsSessionGate.markShownInCurrentSession()
-            }
-        }
 
         // 设计决策：使用 LaunchedEffect(Unit) 处理应用首次启动的情况
         // 原因：确保应用启动时如果用户已登录，弹窗能够显示
@@ -433,21 +409,6 @@ class MainActivity : BaseActivity() {
                 hasShownInSession = false
             }
             // 场景3：用户已登录且已显示过，或日期已过期，不做任何操作
-        }
-
-        // 登出时仅隐藏 tips 弹窗，不重置 session 门控（同一前台 session 内不应重复弹）
-        LaunchedEffect(isLoggedIn) {
-            if (!isLoggedIn) {
-                showIntelliMateTipDialog = false
-                intelliMateTipText = null
-            }
-        }
-
-        // 仅在用户打开 Me 页（Profile tab）时尝试展示随机 tips，避免在其他页面打扰
-        LaunchedEffect(selectedTab) {
-            if (selectedTab == HomeTabIndex.Profile && isLoggedIn) {
-                tryShowRandomIntelliMateTip()
-            }
         }
 
         LifecycleResumeEffect(Unit) { onPauseOrDispose {} }
@@ -550,21 +511,6 @@ class MainActivity : BaseActivity() {
             navController,
         )
 
-        // 只在用户已登录时显示 tips 弹窗
-        if (showIntelliMateTipDialog && isLoggedIn) {
-            val tip = intelliMateTipText
-            if (!tip.isNullOrBlank()) {
-                IntelliMateTipDialog(
-                    tipText = tip,
-                    onDismiss = { showIntelliMateTipDialog = false },
-                    onDisableTips = {
-                        IntySetting.setTipsDisabled(true)
-                        showIntelliMateTipDialog = false
-                    },
-                )
-            }
-        }
-
         // 只在用户已登录时显示庆祝弹窗
         if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
             HolidayCelebrationDialog(
@@ -620,26 +566,14 @@ class MainActivity : BaseActivity() {
             )
         }
 
-        var creditsPointChanged by remember { mutableStateOf(0 to 0) }
-
         LaunchedEffect(Unit) {
             BoostManager.pointChanged.collect {
                 LogUtils.d("积分变化=${it.first}")
                 if (it.first >= 10) {
-                    creditsPointChanged = it
+                    withContext(Dispatchers.Main) {
+                        ToastUtils.showShort(R.string.energy_points_add_title, it.first, it.second)
+                    }
                 }
-            }
-        }
-
-        if (creditsPointChanged.first >= 10) {
-            EnergyCelebrationBanner(onDismissRequest = { creditsPointChanged = 0 to 0 }) {
-                Text(
-                    stringResource(
-                        R.string.energy_points_add_title,
-                        creditsPointChanged.first,
-                        creditsPointChanged.second,
-                    )
-                )
             }
         }
     }
@@ -1016,12 +950,26 @@ fun SplashLoginUI(
                     }
 
                     Spacer(Modifier.height(32.dp))
-                    Text(
-                        text = stringResource(R.string.login_welcome),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val dotSizeSelected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_selected)
+                        val dotSizeUnselected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_unselected)
+                        val dotSpacing = dimensionResource(R.dimen.login_carousel_indicator_dot_spacing)
+                        repeat(bannerText.size) { index ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = dotSpacing)
+                                    .size(if (index == bannerIndex) dotSizeSelected else dotSizeUnselected)
+                                    .background(
+                                        color = Color.White.copy(alpha = if (index == bannerIndex) 1f else 0.4f),
+                                        shape = CircleShape,
+                                    ),
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(32.dp))
                     // Google 登录按钮
                     GoogleLoginButton(

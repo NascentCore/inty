@@ -1,10 +1,10 @@
 """
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
-
 from typing import Any, Dict, Generator
+from typing import Generator, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
@@ -165,6 +165,39 @@ async def get_current_superuser(
             detail="Only superusers can access this endpoint",
         )
     return current_user
+
+
+async def get_effective_user_for_eval(
+    current_user: User = Depends(get_current_active_user),
+    x_assume_user_id: Optional[str] = Header(None, alias="X-Assume-User-Id"),
+    db: AsyncSession = Depends(get_async_db),
+) -> User:
+    """
+    For evaluation: return the user to act as.
+    If X-Assume-User-Id is set and current user is superuser, load and return that user;
+    otherwise return current_user. Used so chat/voice in evaluation can load another user's history.
+    """
+    if not x_assume_user_id or not x_assume_user_id.strip():
+        return current_user
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superusers can assume another user identity",
+        )
+    user_id = x_assume_user_id.strip()
+    row = await db.execute(select(User).where(User.id == user_id))
+    user = row.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User not found: {user_id}",
+        )
+    if user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User has been deleted",
+        )
+    return user
 
 
 async def get_user_from_token(token: str, db: AsyncSession) -> User:

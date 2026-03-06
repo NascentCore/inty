@@ -17,7 +17,6 @@ import ai.sxwl.android.utils.LogUtils
 import android.app.Application
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.notifications.PushNotificationManager
-import com.ai.intellimate.tips.IntelliMateTipsForegroundSessionTracker
 import com.ai.intellimate.utils.AgentCacheProviderImpl
 import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
 import com.ai.intellimate.utils.UnifiedStartupManager
@@ -48,7 +47,6 @@ class IntelliMateApp : Application() {
         DataModule.setRecommendedCacheProvider(recommendedCacheProvider)
 
         UnifiedStartupManager.initializeEssential(this)
-        IntelliMateTipsForegroundSessionTracker.install(this)
 
         // 初始化本地 为角色应援/Boost 体系
         // TODO：是否可以讲 IntySetting 初始化也转移到这里。

@@ -16,11 +16,6 @@
 - 字体：使用MaterialTheme.typography获取字体style，如Text(style = MaterialTheme.typography.titleMedium)
 - 形状：使用MaterialTheme.shapes获取组件形状，如Surface(shape = MaterialTheme.shapes.medium)
 
-## 功能
-
-- [intellimate_tips.json](app/src/main/assets/intellimate_tips.json) 可以添加用户指南让用户看到
-  <img width="300" height="736" alt="image" src="https://github.com/user-attachments/assets/06d2c224-5ab9-4abb-a072-5715ec813a35" />
-
 ## 一般指示
 
 - When referring to concepts in Kotlin code, use the language conventions, and remind the user about that, so the user can understand what it refers to
