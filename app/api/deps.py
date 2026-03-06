@@ -2,7 +2,7 @@
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
 
-from typing import Generator
+from typing import Any, Dict, Generator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -17,8 +17,10 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.base import SessionLocal
 from app.db.session import get_async_db, get_async_replica_db
 from app.models.user import User
+from app.services.cache_service import cache_service
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+USER_AUTH_SNAPSHOT_TTL_SECONDS = 60
 
 
 def get_db() -> Generator:
@@ -28,6 +30,42 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
+
+def _build_user_auth_snapshot(user: User) -> Dict[str, Any]:
+    return {
+        column.name: getattr(user, column.name)
+        for column in User.__table__.columns
+    }
+
+
+def _cache_user_auth_snapshot(user: User) -> None:
+    try:
+        cache_service.set_user_auth_snapshot(
+            user.id,
+            _build_user_auth_snapshot(user),
+            ttl=USER_AUTH_SNAPSHOT_TTL_SECONDS,
+        )
+    except Exception as cache_error:
+        logger.warning(f"写入用户鉴权快照缓存失败: {cache_error}")
+
+
+def _get_user_from_auth_snapshot(
+    user_id: str, credentials_exception: HTTPException
+) -> User | None:
+    # 关键步骤：先查 user_auth_snapshot；命中则直接恢复 User，miss 再回源数据库。
+    cached_snapshot = cache_service.get_user_auth_snapshot(user_id)
+    if cached_snapshot is None:
+        return None
+    if cached_snapshot.get("deleted_at"):
+        logger.error(f"缓存中用户已删除: {user_id}")
+        raise credentials_exception
+    try:
+        return User(**cached_snapshot)
+    except Exception as cache_error:
+        logger.warning(f"恢复用户鉴权快照失败，回源数据库: user_id={user_id}, error={cache_error}")
+        cache_service.invalidate_user_auth_snapshot(user_id)
+        return None
 
 
 async def get_current_user(
@@ -75,6 +113,10 @@ async def get_current_user(
         raise credentials_exception
 
     try:
+        cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
+        if cached_user is not None:
+            return cached_user
+
         user = await db.execute(select(User).where(User.id == user_id))
         user = user.scalar_one_or_none()
 
@@ -82,6 +124,7 @@ async def get_current_user(
             logger.error(f"数据库中未找到用户: {user_id}")
             raise credentials_exception
 
+        _cache_user_auth_snapshot(user)
         return user
 
     except Exception as db_error:
@@ -149,6 +192,10 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User:
     except JWTError:
         raise credentials_exception
 
+    cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
+    if cached_user is not None:
+        return cached_user
+
     user = await db.execute(select(User).where(User.id == user_id))
     user = user.scalar_one_or_none()
 
@@ -158,4 +205,5 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User:
     if user.deleted_at:
         raise credentials_exception
 
+    _cache_user_auth_snapshot(user)
     return user

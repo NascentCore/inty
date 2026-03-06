@@ -23,6 +23,23 @@ Out of scope (this phase):
 - Replacing business logic semantics
 - Non-DB optimizations (model serving, external API latency)
 
+## 2.1 Implementation Status
+
+- [x] **P0-A Auth user snapshot cache** implemented.
+  - Added cache key family: `user_auth_snapshot:{user_id}`.
+  - Current TTL is **60 seconds** (within planned 30-120s range).
+  - Read path integrated in:
+    - `app/api/deps.py:get_current_user`
+    - `app/api/deps.py:get_user_from_token` (WebSocket auth path)
+  - Active invalidation integrated in user-profile mutation paths:
+    - `app/services/user_service.py:update_user`
+    - `app/services/user_service.py:delete_user_account`
+    - `app/services/selfie_persona_service.py` (selfie persona summary update)
+    - `app/core/agent/agent.py` (official assistant MBTI metadata write)
+- [ ] P0-B Subscription status/request-scope reuse
+- [ ] P0-C Usage aggregation cache
+- [ ] P0-D `/users/me` summary cache
+
 ## 3. Current State Summary
 
 - Existing cache is mostly in-process memory (`InMemoryCache`) with TTL.

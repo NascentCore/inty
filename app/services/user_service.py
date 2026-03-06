@@ -22,6 +22,11 @@ from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 
 
+def _invalidate_user_related_cache(user_id: str) -> None:
+    cache_service.invalidate_user_info(user_id)
+    cache_service.invalidate_user_auth_snapshot(user_id)
+
+
 @deprecated("app 不在显示 readable_id 字段，请使用 id 字段")
 async def generate_next_readable_id(db: AsyncSession) -> str:
     """
@@ -177,9 +182,9 @@ async def update_user(db: AsyncSession, user_id: str, user_in: UserUpdate) -> Us
         await db.commit()
         await db.refresh(user)
 
-        # 清除用户信息缓存，确保Agent系统能获取到最新信息
-        cache_service.invalidate_user_info(user_id)
-        logger.debug(f"已清除用户 {user_id} 的缓存信息")
+        # 关键步骤：资料更新后同时失效 user_info 与 user_auth_snapshot，避免读到旧鉴权状态/资料。
+        _invalidate_user_related_cache(user_id)
+        logger.debug(f"已清除用户 {user_id} 的缓存信息与鉴权快照")
 
         if selfie_persona_feature_enabled and user_photo_changed and user.user_photo:
             from app.services.selfie_persona_service import selfie_persona_service
@@ -469,6 +474,7 @@ async def delete_user_account(
         # 提交用户数据更改
         await db.commit()
         await db.refresh(user)
+        _invalidate_user_related_cache(user_id)
 
         logger.info(f"用户账户删除成功: {user_id}")
 
