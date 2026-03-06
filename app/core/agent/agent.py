@@ -89,11 +89,15 @@ INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE = """##Official Assistant Naming Upda
 - IntelliMate is the app name, not the assistant name.
 - In historical messages, the assistant may still appear as "IntelliMate"; interpret that as the old assistant name.
 - Always use "Inty" as the assistant name, and correct old-name references to "Inty" when responding."""
+INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE = """##Official Assistant Tool Usage
+- When the user asks how to use IntelliMate features or workflows, call the `read_user_manual` tool before answering.
+- After reading the manual, answer with concrete steps from the manual content."""
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
 INTELLIMATE_CHANGE_LOGS_PATH = REPO_ROOT / "android_app" / "docs" / "CHANGE_LOGS.md"
 OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME = "save_user_mbti_type"
+OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME = "read_user_manual"
 OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS = 3
 OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
     {
@@ -119,7 +123,23 @@ OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
                 "additionalProperties": False,
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME,
+            "description": (
+                "Read the IntelliMate user manual when user asks how to use IntelliMate "
+                "features or app workflows."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 
@@ -495,10 +515,9 @@ class Agent:
             system_messages.append(
                 SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
             )
-            user_manual = _load_intellimate_user_manual()
             system_messages.append(
                 SystemMessage(
-                    content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
+                    content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
                 )
             )
             change_logs = _load_intellimate_change_logs()
@@ -554,11 +573,9 @@ class Agent:
         system_messages.append(
             SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
         )
-
-        user_manual = _load_intellimate_user_manual()
         system_messages.append(
             SystemMessage(
-                content=INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + user_manual
+                content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
             )
         )
         change_logs = _load_intellimate_change_logs()
@@ -862,6 +879,19 @@ class Agent:
             "tool_calls": serialized_tool_calls,
         }
 
+    def _insert_system_message_into_openai_messages(
+        self, *, openai_messages: List[Dict[str, Any]], system_message_content: str
+    ) -> None:
+        insertion_index = 0
+        while (
+            insertion_index < len(openai_messages)
+            and openai_messages[insertion_index].get("role") == "system"
+        ):
+            insertion_index += 1
+        openai_messages.insert(
+            insertion_index, {"role": "system", "content": system_message_content}
+        )
+
     def _parse_mbti_type_from_tool_arguments(self, raw_arguments: str) -> str:
         try:
             parsed_arguments = json.loads(raw_arguments or "{}")
@@ -918,14 +948,22 @@ class Agent:
 
     def _execute_official_assistant_tool_call(
         self, *, tool_name: str, raw_arguments: str, user_id: str
-    ) -> str:
-        if tool_name != OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME:
-            return f"Unsupported tool: {tool_name}"
-        mbti_type = self._parse_mbti_type_from_tool_arguments(raw_arguments)
-        self._save_user_mbti_type_to_user_metadata_sync(
-            user_id=user_id, mbti_type=mbti_type
-        )
-        return f"Saved MBTI type: {mbti_type}"
+    ) -> Tuple[str, Optional[str]]:
+        # Step 1: execute the tool side effect (if any), and return tool result text.
+        # Step 2: optionally return a system message to be injected into the next LLM call.
+        if tool_name == OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME:
+            mbti_type = self._parse_mbti_type_from_tool_arguments(raw_arguments)
+            self._save_user_mbti_type_to_user_metadata_sync(
+                user_id=user_id, mbti_type=mbti_type
+            )
+            return f"Saved MBTI type: {mbti_type}", None
+        if tool_name == OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME:
+            manual_content = _load_intellimate_user_manual()
+            return (
+                "Loaded IntelliMate user manual into system context.",
+                INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + manual_content,
+            )
+        return f"Unsupported tool: {tool_name}", None
 
     def _resolve_official_assistant_tool_calls(
         self,
@@ -956,7 +994,7 @@ class Agent:
             for tool_call in tool_calls:
                 tool_name = tool_call.function.name
                 raw_arguments = tool_call.function.arguments or ""
-                tool_result = self._execute_official_assistant_tool_call(
+                tool_result, injected_system_message = self._execute_official_assistant_tool_call(
                     tool_name=tool_name,
                     raw_arguments=raw_arguments,
                     user_id=user_id,
@@ -971,6 +1009,11 @@ class Agent:
                         "content": tool_result,
                     }
                 )
+                if injected_system_message:
+                    self._insert_system_message_into_openai_messages(
+                        openai_messages=messages_with_tool_results,
+                        system_message_content=injected_system_message,
+                    )
             current_response = self._call_openai_api_with_retry(
                 client=client,
                 model=model,
