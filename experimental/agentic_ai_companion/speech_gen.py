@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 TTS_MODEL = "gemini-2.5-flash-preview-tts"
 from loguru import logger
+
 MAX_TEXT_LENGTH = 2000
 
 # 与 live_voice.DEFAULT_VOICE_NAME 保持相同，保证 text_to_speech 与 live_voice_message_reply 音色一致

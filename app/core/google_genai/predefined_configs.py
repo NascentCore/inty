@@ -21,10 +21,12 @@ IMAGE_CONFIG_9_16_1K = types.ImageConfig(
 )
 
 
-GEN_CONTENT_CONFIG_IMAGE_9_16_1K: Final[types.GenerateContentConfig] = types.GenerateContentConfig(
-    temperature=1.0,
-    top_p=0.95,
-    max_output_tokens=8192,
-    response_modalities=["IMAGE"],
-    image_config=IMAGE_CONFIG_9_16_1K,
+GEN_CONTENT_CONFIG_IMAGE_9_16_1K: Final[types.GenerateContentConfig] = (
+    types.GenerateContentConfig(
+        temperature=1.0,
+        top_p=0.95,
+        max_output_tokens=8192,
+        response_modalities=["IMAGE"],
+        image_config=IMAGE_CONFIG_9_16_1K,
+    )
 )

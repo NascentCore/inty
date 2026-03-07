@@ -26,12 +26,16 @@ class ModelModalities(BaseModel):
     模型输入输出的模态组合，用于描述模型支持的输入和输出模态。
     """
 
-    inputs: list[DataModality] = Field(description="""
+    inputs: list[DataModality] = Field(
+        description="""
         模型输入的模态列表，比如文本、图像、音频、视频等。
-        列表中的模态可以互斥，也可以不互斥，比如文本和图像可以同时输入。""")
-    outputs: list[DataModality] = Field(description="""
+        列表中的模态可以互斥，也可以不互斥，比如文本和图像可以同时输入。"""
+    )
+    outputs: list[DataModality] = Field(
+        description="""
         模型输出的模态列表，比如文本、图像、音频、视频等。
-        列表中的模态可以互斥，也可以不互斥，比如文本和图像可以同时输出。""")
+        列表中的模态可以互斥，也可以不互斥，比如文本和图像可以同时输出。"""
+    )
 
     notes: str = Field(description="模型价格的一些备注信息", default="")
 
@@ -85,9 +89,12 @@ class Pricing(BaseModel):
     outputs: list[PriceInfo] = Field(
         description="模型输出价格信息列表，用于计算用量和成本。"
     )
-    official_url: str = Field(default="", description="""
+    official_url: str = Field(
+        default="",
+        description="""
         模型 API 提供者的官方定价页面 URL，比如 fal.ai 的定价页面。
-        """)
+        """,
+    )
     notes: str = Field(description="模型价格的一些备注信息", default="")
 
 
@@ -115,7 +122,8 @@ class GenAIModel(BaseModel):
     为了方便和简化命名规则，我们这里只考虑模型构建者、模型名称，不考虑 API 提供者。
     """
 
-    nickname: str = Field(description="""
+    nickname: str = Field(
+        description="""
         用于给非后端团队提供的名称，方便沟通和理解。
         计划在 app/utils/config.py 中使用这些名字来指代模型。
 
@@ -125,35 +133,46 @@ class GenAIModel(BaseModel):
         指的是 Gemini 2.5 Flash Image。
         而有些模型没有业界统称，像 Imagen 4.0 Ultra 等等。
         但最终在使用时的名字要根据后台实际使用的 API 提供者来确定，比如 openrouter 上需要增加
-        模型构建者名字；而 Google 内部对 geminie imagen 模型的称呼则各有不同""")
+        模型构建者名字；而 Google 内部对 geminie imagen 模型的称呼则各有不同"""
+    )
 
-    modalities: ModelModalities = Field(description="""
-        模型输入输出的模态组合，用于描述模型支持的输入和输出模态。""")
+    modalities: ModelModalities = Field(
+        description="""
+        模型输入输出的模态组合，用于描述模型支持的输入和输出模态。"""
+    )
 
-    builder: ModelBuilder = Field(description="""
+    builder: ModelBuilder = Field(
+        description="""
         模型构建者，比如 Google，这个用于在代码中确定某个模型在第三方平台上的使用时的名字。
         这个名称需要与第三方平台上的模型名称一致。比如 Google 的模型名称是 gemini-2.5-flash，
-        那么在该平台上名字是 google/gemini-2.5-flash。""")
+        那么在该平台上名字是 google/gemini-2.5-flash。"""
+    )
 
-    provider: ModelAPIProvider = Field(description="""
+    provider: ModelAPIProvider = Field(
+        description="""
         模型 API 提供者，比如 OpenRouter，这个用于在代码中确定某个模型在第三方平台上的使用时的名字。
         这个名称需要与第三方平台上的模型名称一致。比如 Google 的模型名称是 gemini-2.5-flash，
-        那么在该平台上名字是 google/gemini-2.5-flash。""")
+        那么在该平台上名字是 google/gemini-2.5-flash。"""
+    )
 
-    id_on_provider: str = Field(description="""
+    id_on_provider: str = Field(
+        description="""
         模型 ID，用于在代码中唯一标识一个模型。
         这个 ID 需要与第三方平台上的模型名称一致。比如 Google 的模型名称是 gemini-2.5-flash，
         那么在该平台上名字是 google/gemini-2.5-flash。
 
         现阶段，不区分 Provider，只隐含在代码中的对应 API 上使用合适的名字。
-        这个 ID 只用于后端代码使用""")
+        这个 ID 只用于后端代码使用"""
+    )
 
     pricing: Pricing = Field(description="模型价格，用于计算用量和成本。")
 
-    
-    official_url: str = Field(default="", description="""
+    official_url: str = Field(
+        default="",
+        description="""
         模型 API 提供者的官方 URL，多为 Hugging Face 或 GitHub 地址。
-        """)
+        """,
+    )
 
     notes: str = Field(
         description="""
@@ -274,7 +293,8 @@ NANO_BANANA_PRO = GenAIModel(
 NANO_BANANA_2 = GenAIModel(
     nickname="Nano Banana 2",
     modalities=ModelModalities(
-        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.TEXT, DataModality.IMAGE]
+        inputs=[DataModality.TEXT, DataModality.IMAGE],
+        outputs=[DataModality.TEXT, DataModality.IMAGE],
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
@@ -286,7 +306,7 @@ NANO_BANANA_2 = GenAIModel(
             ),
             PriceInfo(
                 price=0.5, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
-            )
+            ),
         ],
         outputs=[
             PriceInfo(
@@ -529,7 +549,9 @@ def must_resolve_nickname(nickname: str) -> GenAIModel:
     model = resolve_nickname(nickname)
     if not model:
         allowed_nicknames = [m.nickname for m in CHAT_IMAGE_GEN_MODELS]
-        raise ValueError(f"Chat image model nickname {nickname!r} not allowed; allowed: {allowed_nicknames}")
+        raise ValueError(
+            f"Chat image model nickname {nickname!r} not allowed; allowed: {allowed_nicknames}"
+        )
     return model
 
 

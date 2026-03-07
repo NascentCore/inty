@@ -24,7 +24,9 @@ describe("generatedImageDetail", () => {
 
   it("returns null model for invalid metadata", () => {
     expect(extractGeneratedImageModel(null)).toBeNull();
-    expect(extractGeneratedImageModel({ generated_image: "not-an-object" })).toBeNull();
+    expect(
+      extractGeneratedImageModel({ generated_image: "not-an-object" }),
+    ).toBeNull();
   });
 
   it("builds detail data from daily report item", () => {
@@ -59,7 +61,9 @@ describe("generatedImageDetail", () => {
     expect(detail.gcsUrl).toBe("gs://bucket/image.webp");
     expect(detail.generationPrompt).toBe("test prompt");
     expect(detail.referenceImageUrl).toBe("https://cdn.example.com/ref.webp");
-    expect(detail.userReferenceImageUrl).toBe("https://cdn.example.com/selfie.webp");
+    expect(detail.userReferenceImageUrl).toBe(
+      "https://cdn.example.com/selfie.webp",
+    );
     expect(detail.referenceImages).toEqual([
       { label: "角色参考图", url: "https://cdn.example.com/ref.webp" },
       { label: "用户参考图", url: "https://cdn.example.com/selfie.webp" },

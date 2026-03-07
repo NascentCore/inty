@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -14,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
 
@@ -31,6 +31,7 @@ internal const val OFFICIAL_ASSISTANT_FAQ_MAX_ITEMS = 7
  * - 点击后触发回调，由上层把“长问题”写入聊天输入框（不直接发送）。
  *
  * 可配置项：
+ *
  * @param titleResId 按钮短标题文案资源 ID（展示给用户）
  * @param questionResId 长问题文案资源 ID（回填到输入框）
  */
@@ -83,6 +84,7 @@ internal fun officialAssistantFaqItems(): List<OfficialAssistantFaqItem> {
  * - 整体风格与聊天场景一致（使用 MaterialTheme 的颜色与排版）。
  *
  * 可配置项：
+ *
  * @param modifier 外层布局修饰符（控制间距、宽度、位置）
  * @param items FAQ 项列表（建议最多 9 个）
  * @param onQuestionClick 按钮点击回调（由上层决定如何处理回填）
@@ -104,7 +106,8 @@ internal fun OfficialAssistantFaqQuestions(
         items.forEach { item ->
             OutlinedButton(
                 onClick = { onQuestionClick(item) },
-                shape = RoundedCornerShape(UiConfigs.ChatPage.OfficialAssistantFaq.ButtonCornerRadius),
+                shape =
+                    RoundedCornerShape(UiConfigs.ChatPage.OfficialAssistantFaq.ButtonCornerRadius),
                 border =
                     BorderStroke(
                         width = UiConfigs.ChatPage.OfficialAssistantFaq.BorderWidth,
@@ -117,13 +120,15 @@ internal fun OfficialAssistantFaqQuestions(
                     ButtonDefaults.outlinedButtonColors(
                         containerColor =
                             MaterialTheme.colorScheme.surface.copy(
-                                alpha = UiConfigs.ChatPage.OfficialAssistantFaq.ButtonBackgroundAlpha
+                                alpha =
+                                    UiConfigs.ChatPage.OfficialAssistantFaq.ButtonBackgroundAlpha
                             ),
                         contentColor = MaterialTheme.colorScheme.primary,
                     ),
                 contentPadding =
                     PaddingValues(
-                        horizontal = UiConfigs.ChatPage.OfficialAssistantFaq.ButtonHorizontalPadding,
+                        horizontal =
+                            UiConfigs.ChatPage.OfficialAssistantFaq.ButtonHorizontalPadding,
                         vertical = UiConfigs.ChatPage.OfficialAssistantFaq.ButtonVerticalPadding,
                     ),
             ) {

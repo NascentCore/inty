@@ -325,12 +325,14 @@ async def get_users_to_extract(
 
     # 已提取过的用户及其上次 extracted_at
     r2 = await db.execute(
-        text("""
+        text(
+            """
             SELECT user_id, MAX(extracted_at) AS last_at
             FROM memory_extraction_log
             WHERE memory_type = :mt
             GROUP BY user_id
-        """),
+        """
+        ),
         {"mt": MEMORY_TYPE_USER_COMMON},
     )
     user_to_last = {r[0]: r[1] for r in r2.fetchall()}
@@ -393,9 +395,7 @@ async def extract_and_save(
                 f"记忆抽取 structured output 失败，回退自由文本 user_id={user_id}: {format_err}"
             )
             full_analysis, prompt_tokens, completion_tokens = (
-                await chat_completion_for_extraction(
-                    full_prompt, llm_config=llm_config
-                )
+                await chat_completion_for_extraction(full_prompt, llm_config=llm_config)
             )
         if not full_analysis or len(full_analysis.strip()) < 10:
             raise ValueError(

@@ -241,7 +241,8 @@ function VoiceAudiosGroupCard({
           }}
         >
           <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-            用户 {group.user_id.slice(0, 8)}… · {group.agent_name || group.agent_id}
+            用户 {group.user_id.slice(0, 8)}… ·{" "}
+            {group.agent_name || group.agent_id}
           </div>
           {group.audios.map((a, i) => (
             <div key={i} style={{ marginTop: 8 }}>
@@ -265,7 +266,12 @@ function VoiceAudiosGroupCard({
                 src={a.audio_url}
                 controls
                 preload="metadata"
-                style={{ width: "100%", maxWidth: 320, height: 32, marginTop: 4 }}
+                style={{
+                  width: "100%",
+                  maxWidth: 320,
+                  height: 32,
+                  marginTop: 4,
+                }}
               />
               <div
                 style={{
@@ -331,12 +337,7 @@ function ReportContent({
         }));
       })
       .finally(() => setVoiceAudiosLoading(false));
-  }, [
-    reportType,
-    reportDate,
-    voiceAudiosCache,
-    setVoiceAudiosCache,
-  ]);
+  }, [reportType, reportDate, voiceAudiosCache, setVoiceAudiosCache]);
   const roundsDistributionBySession = useMemo(
     () =>
       charts
@@ -412,7 +413,8 @@ function ReportContent({
               )}
               <Row gutter={[12, 12]}>
                 {previewGeneratedImages.map((item) => {
-                  const detail = buildGeneratedImageDetailFromDailyReportItem(item);
+                  const detail =
+                    buildGeneratedImageDetailFromDailyReportItem(item);
                   return (
                     <Col key={item.id} xs={12} sm={8} md={6} lg={4} xl={3}>
                       <div
@@ -433,14 +435,22 @@ function ReportContent({
                           onClick={() => setPreviewImageDetail(detail)}
                         />
                         <div
-                          style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                          style={{
+                            color: "#999",
+                            fontSize: 12,
+                            lineHeight: 1.2,
+                          }}
                         >
                           {item.created_at
                             ? item.created_at.replace("T", " ").slice(0, 19)
                             : "时间未知"}
                         </div>
                         <div
-                          style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                          style={{
+                            color: "#999",
+                            fontSize: 12,
+                            lineHeight: 1.2,
+                          }}
                         >
                           模型: {detail.model || "未知模型"}
                         </div>
@@ -458,7 +468,10 @@ function ReportContent({
       {reportType === "daily" && reportDate && (
         <>
           {voiceAudiosLoading ? (
-            <Card title="当天语音播报（按用户-角色）" style={{ marginTop: "24px" }}>
+            <Card
+              title="当天语音播报（按用户-角色）"
+              style={{ marginTop: "24px" }}
+            >
               <Spin />
             </Card>
           ) : voiceAudiosCache[reportDate] ? (

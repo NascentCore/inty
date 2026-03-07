@@ -21,7 +21,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-_real_from loguru import logger
+from loguru import logger
 
 
 class _LoggerWrapper:

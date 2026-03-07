@@ -66,7 +66,9 @@ class MusicGenerationService:
         logger.debug("构建聊天音乐提示词完成，长度={}。", len(prompt))
         return prompt
 
-    def _extract_audio_url_from_fal_result(self, result: dict[str, Any]) -> Optional[str]:
+    def _extract_audio_url_from_fal_result(
+        self, result: dict[str, Any]
+    ) -> Optional[str]:
         """
         从 fal 返回中提取音频 URL。
 
@@ -101,7 +103,9 @@ class MusicGenerationService:
                 return value
         return None
 
-    def _extract_duration_seconds_from_fal_result(self, result: dict[str, Any]) -> Optional[float]:
+    def _extract_duration_seconds_from_fal_result(
+        self, result: dict[str, Any]
+    ) -> Optional[float]:
         """尽力从 fal 返回中提取时长（秒）。"""
         if not isinstance(result, dict):
             return None
@@ -193,7 +197,9 @@ class MusicGenerationService:
         )
         chat_history = messages_data.get("messages", [])
         user_info = (
-            await build_user_info_prompt_block(db, user_id) if user_id is not None else ""
+            await build_user_info_prompt_block(db, user_id)
+            if user_id is not None
+            else ""
         )
         prompt = self.build_music_prompt(
             agent_data=agent_data,

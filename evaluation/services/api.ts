@@ -81,7 +81,9 @@ type IntyCompatClient = {
       };
       ai: {
         agents: {
-          create: (data: AgentCreateRequest) => Promise<{ data?: Agent | null }>;
+          create: (
+            data: AgentCreateRequest,
+          ) => Promise<{ data?: Agent | null }>;
           retrieve: (agentId: string) => Promise<Agent>;
           update: (
             agentId: string,
@@ -345,9 +347,8 @@ const intyClient: IntyCompatClient = {
       users: {
         profile: {
           me: async () => {
-            const profile = await apiClient.get<Record<string, unknown>>(
-              "/users/me",
-            );
+            const profile =
+              await apiClient.get<Record<string, unknown>>("/users/me");
             return { data: profile };
           },
         },
@@ -369,7 +370,10 @@ const intyClient: IntyCompatClient = {
       ai: {
         agents: {
           create: async (data: AgentCreateRequest) => {
-            const createdAgent = await apiClient.post<Agent>("/ai/agents", data);
+            const createdAgent = await apiClient.post<Agent>(
+              "/ai/agents",
+              data,
+            );
             return { data: createdAgent };
           },
           retrieve: (agentId: string) => apiClient.get(`/ai/agents/${agentId}`),
@@ -379,7 +383,8 @@ const intyClient: IntyCompatClient = {
               replace_background_images?: boolean;
             },
           ) => apiClient.put(`/ai/agents/${agentId}`, data),
-          delete: (agentId: string) => apiClient.delete(`/ai/agents/${agentId}`),
+          delete: (agentId: string) =>
+            apiClient.delete(`/ai/agents/${agentId}`),
         },
       },
       uploadImage: async ({
@@ -1062,18 +1067,20 @@ export class WebSocketManager {
 // =============================================================================
 
 type ChatTextContentPart = {
-  type: 'text';
+  type: "text";
   text: string;
 };
 
 type ChatImageUrlContentPart = {
-  type: 'image_url';
+  type: "image_url";
   image_url: {
     url: string;
   };
 };
 
-type ChatMessageContent = string | Array<ChatTextContentPart | ChatImageUrlContentPart>;
+type ChatMessageContent =
+  | string
+  | Array<ChatTextContentPart | ChatImageUrlContentPart>;
 
 export const chatApi = {
   // 获取用户聊天列表
@@ -1257,7 +1264,9 @@ export const chatApi = {
     }),
 
   // Surprise Snap 解锁（免费用户用 credit 解锁，扣费在 App 端；后端仅记录解锁状态）
-  surpriseSnapUnlock: (messageId: number): Promise<{ data?: { unlocked?: boolean } }> =>
+  surpriseSnapUnlock: (
+    messageId: number,
+  ): Promise<{ data?: { unlocked?: boolean } }> =>
     apiClient.post(`/chats/surprise-snap/unlock`, { message_id: messageId }),
 
   // 清除聊天消息 - 注意：API 期望单个 message_id 而不是数组

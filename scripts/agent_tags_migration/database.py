@@ -247,9 +247,11 @@ class DatabaseManager:
             )
 
             # 最近创建的智能体数量（过去30天）
-            stats["recent_agents"] = await conn.fetchval("""SELECT COUNT(*) FROM agents 
+            stats["recent_agents"] = await conn.fetchval(
+                """SELECT COUNT(*) FROM agents 
                    WHERE created_at > NOW() - INTERVAL '30 days' 
-                   AND deleted_at IS NULL""")
+                   AND deleted_at IS NULL"""
+            )
 
         return stats
 

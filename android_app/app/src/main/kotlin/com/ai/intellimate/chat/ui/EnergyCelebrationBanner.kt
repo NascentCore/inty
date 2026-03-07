@@ -217,7 +217,10 @@ internal fun resolveCelebrationLevel(totalPoints: Int): EnergyCelebrationLevel? 
     return null
 }
 
-private data class EnergyCelebrationUiModel(val level: EnergyCelebrationLevel, val totalPoints: Int)
+private data class EnergyCelebrationUiModel(
+    val level: EnergyCelebrationLevel,
+    val totalPoints: Int,
+)
 
 enum class EnergyCelebrationLevel {
     First,

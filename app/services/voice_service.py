@@ -544,7 +544,9 @@ class VoiceService:
                         logger.error("ElevenLabs TTS 回退也失败")
                         return None
                     audio_bytes_fb, mime_type_fb = fallback_result
-                    tts_result = TTSResult(audio_bytes=audio_bytes_fb, mime_type=mime_type_fb)
+                    tts_result = TTSResult(
+                        audio_bytes=audio_bytes_fb, mime_type=mime_type_fb
+                    )
                     provider_used = TTS_PROVIDER_ELEVENLABS
             else:
                 provider_used = TTS_PROVIDER_ELEVENLABS

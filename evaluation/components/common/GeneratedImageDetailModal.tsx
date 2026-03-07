@@ -24,19 +24,18 @@ function formatDateTime(dateTime: string | null): string {
   return `${formatUtcTimeRaw(dateTime, "YYYY-MM-DD HH:mm:ss")} (UTC)`;
 }
 
-function formatGenerationTimeMs(generationTimeMs: number | null): string | null {
+function formatGenerationTimeMs(
+  generationTimeMs: number | null,
+): string | null {
   if (generationTimeMs === null) {
     return null;
   }
   return `${(generationTimeMs / 1000).toFixed(2)}s (${Math.round(generationTimeMs)}ms)`;
 }
 
-export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps> = ({
-  open,
-  onClose,
-  detail,
-  title = "图片详情",
-}) => {
+export const GeneratedImageDetailModal: React.FC<
+  GeneratedImageDetailModalProps
+> = ({ open, onClose, detail, title = "图片详情" }) => {
   const metadataJson = useMemo(() => {
     if (!detail || Object.keys(detail.metaData).length === 0) {
       return "暂无 metadata";
@@ -101,7 +100,8 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
                   style={{
                     marginBottom: 12,
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(180px, 1fr))",
                     gap: 12,
                   }}
                 >

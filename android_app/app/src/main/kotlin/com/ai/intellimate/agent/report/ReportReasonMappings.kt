@@ -1,7 +1,7 @@
 package com.ai.intellimate.agent.report
 
-import com.ai.intellimate.R
 import ai.sxwl.android.data.api.model.ReportReasonCode
+import com.ai.intellimate.R
 
 /**
  * 举报和反馈原因代码到字符串资源ID的映射

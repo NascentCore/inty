@@ -397,14 +397,18 @@ def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
     trigger_rounds = raw.get("trigger_rounds")
     if not isinstance(trigger_rounds, list):
         trigger_rounds = [3, 8, 15]
-    return SurpriseSnapConfig(enabled_since=enabled_since, trigger_rounds=trigger_rounds)
+    return SurpriseSnapConfig(
+        enabled_since=enabled_since, trigger_rounds=trigger_rounds
+    )
 
 
 @dataclass
 class SurpriseSnapConfig:
     """Surprise Snap：用户与角色对话达到指定轮数时插入专属照消息。"""
 
-    enabled_since: Optional[datetime] = None  # 只统计此时间之后的用户消息；None 则不触发
+    enabled_since: Optional[datetime] = (
+        None  # 只统计此时间之后的用户消息；None 则不触发
+    )
     trigger_rounds: List[int] = field(
         default_factory=lambda: [3, 8, 15]
     )  # 用户消息数达到这些轮数时触发

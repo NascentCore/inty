@@ -3,12 +3,7 @@
  * 提供与单个智能体的实时聊天功能
  */
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Layout,
   Card,
@@ -156,10 +151,14 @@ export const ChatPage: React.FC = () => {
           client.api.v1.subscription.getStatus(),
         ]);
         if (cancelled) return;
-        const data = (profileRes as { data?: { is_superuser?: boolean } })?.data;
-        const subData = (subRes as { data?: { is_subscribed?: boolean } })?.data;
+        const data = (profileRes as { data?: { is_superuser?: boolean } })
+          ?.data;
+        const subData = (subRes as { data?: { is_subscribed?: boolean } })
+          ?.data;
         setUserProfile(data ? { is_superuser: data.is_superuser } : null);
-        setSubscriptionStatus(subData ? { is_subscribed: subData.is_subscribed } : null);
+        setSubscriptionStatus(
+          subData ? { is_subscribed: subData.is_subscribed } : null,
+        );
       } catch {
         if (!cancelled) {
           setUserProfile(null);
@@ -644,11 +643,11 @@ export const ChatPage: React.FC = () => {
             const convertedMessages: ChatMessage[] = historyData.messages.map(
               (msg, index) => ({
                 id: `msg_history_${index}_${Date.now()}`,
-          role:
-            msg.type === "festival_memory_prompt" ||
-            msg.type === "surprise_snap"
-              ? "assistant"
-              : (msg.role ?? "assistant"),
+                role:
+                  msg.type === "festival_memory_prompt" ||
+                  msg.type === "surprise_snap"
+                    ? "assistant"
+                    : (msg.role ?? "assistant"),
                 content: msg.content || "",
                 timestamp: msg.timestamp,
                 remoteId: msg.id ? String(msg.id) : `remote_${index}`, // 安全地访问id字段
@@ -1639,109 +1638,116 @@ export const ChatPage: React.FC = () => {
                                       >
                                         {message.type ===
                                         "festival_memory_prompt" ? (
-                                      <>
-                                        {(message.content || "")
-                                          .replace(
-                                            /\{char\}/g,
-                                            selectedAgent?.name ?? "角色",
-                                          )
-                                          .replace("静静查看", "")
-                                          .trim()}{" "}
-                                        <a
-                                          onClick={() =>
-                                            setFestivalMemoryModalOpen(true)
-                                          }
-                                          style={{
-                                            color: "#722ed1",
-                                            textDecoration: "underline",
-                                            cursor: "pointer",
-                                          }}
-                                        >
-                                          静静查看
-                                        </a>
-                                      </>
-                                    ) : message.content &&
-                                      message.role === "assistant" ? (
-                                      formatMessageContent(message.content)
-                                    ) : (
-                                      message.content || ""
-                                    )}
-                                  </Paragraph>
-
-                                  {/* 如果有生成的图片，在文本下方显示 */}
-                                  {message.role === "assistant" &&
-                                    message.meta_data?.generated_image && (
-                                      <div style={{ marginTop: "12px" }}>
-                                        <Image
-                                          src={
-                                            message.meta_data.generated_image
-                                              .image_url
-                                          }
-                                          alt="Generated image"
-                                          style={{
-                                            maxWidth: "300px",
-                                            borderRadius: "8px",
-                                          }}
-                                          placeholder={<Spin size="small" />}
-                                        />
-                                        {/* 匹配图片标识 */}
-                                        {message.meta_data.generated_image
-                                          .is_matched && (
-                                          <div style={{ marginTop: "6px" }}>
-                                            <Tooltip
-                                              title={`相似度: ${Math.round((message.meta_data.generated_image.similarity || 0) * 100)}%`}
-                                            >
-                                              <Tag color="orange">匹配图片</Tag>
-                                            </Tooltip>
-                                          </div>
-                                        )}
-                                        {/* 非匹配图片：显示生图耗时和模型 */}
-                                        {!message.meta_data.generated_image
-                                          .is_matched &&
-                                          (message.meta_data.generated_image
-                                            .model ||
-                                            message.meta_data.generated_image
-                                              .generation_time_ms) && (
-                                            <div
+                                          <>
+                                            {(message.content || "")
+                                              .replace(
+                                                /\{char\}/g,
+                                                selectedAgent?.name ?? "角色",
+                                              )
+                                              .replace("静静查看", "")
+                                              .trim()}{" "}
+                                            <a
+                                              onClick={() =>
+                                                setFestivalMemoryModalOpen(true)
+                                              }
                                               style={{
-                                                marginTop: "6px",
-                                                fontSize: "11px",
-                                                color: "#888",
+                                                color: "#722ed1",
+                                                textDecoration: "underline",
+                                                cursor: "pointer",
                                               }}
                                             >
-                                              {message.meta_data.generated_image
-                                                .model && (
-                                                <span>
-                                                  模型:{" "}
-                                                  {
-                                                    message.meta_data
-                                                      .generated_image.model
-                                                  }
-                                                </span>
-                                              )}
-                                              {message.meta_data.generated_image
-                                                .model &&
+                                              静静查看
+                                            </a>
+                                          </>
+                                        ) : message.content &&
+                                          message.role === "assistant" ? (
+                                          formatMessageContent(message.content)
+                                        ) : (
+                                          message.content || ""
+                                        )}
+                                      </Paragraph>
+
+                                      {/* 如果有生成的图片，在文本下方显示 */}
+                                      {message.role === "assistant" &&
+                                        message.meta_data?.generated_image && (
+                                          <div style={{ marginTop: "12px" }}>
+                                            <Image
+                                              src={
+                                                message.meta_data
+                                                  .generated_image.image_url
+                                              }
+                                              alt="Generated image"
+                                              style={{
+                                                maxWidth: "300px",
+                                                borderRadius: "8px",
+                                              }}
+                                              placeholder={
+                                                <Spin size="small" />
+                                              }
+                                            />
+                                            {/* 匹配图片标识 */}
+                                            {message.meta_data.generated_image
+                                              .is_matched && (
+                                              <div style={{ marginTop: "6px" }}>
+                                                <Tooltip
+                                                  title={`相似度: ${Math.round((message.meta_data.generated_image.similarity || 0) * 100)}%`}
+                                                >
+                                                  <Tag color="orange">
+                                                    匹配图片
+                                                  </Tag>
+                                                </Tooltip>
+                                              </div>
+                                            )}
+                                            {/* 非匹配图片：显示生图耗时和模型 */}
+                                            {!message.meta_data.generated_image
+                                              .is_matched &&
+                                              (message.meta_data.generated_image
+                                                .model ||
                                                 message.meta_data
                                                   .generated_image
-                                                  .generation_time_ms && (
-                                                  <span> | </span>
-                                                )}
-                                              {message.meta_data.generated_image
-                                                .generation_time_ms && (
-                                                <span>
-                                                  耗时:{" "}
-                                                  {(
+                                                  .generation_time_ms) && (
+                                                <div
+                                                  style={{
+                                                    marginTop: "6px",
+                                                    fontSize: "11px",
+                                                    color: "#888",
+                                                  }}
+                                                >
+                                                  {message.meta_data
+                                                    .generated_image.model && (
+                                                    <span>
+                                                      模型:{" "}
+                                                      {
+                                                        message.meta_data
+                                                          .generated_image.model
+                                                      }
+                                                    </span>
+                                                  )}
+                                                  {message.meta_data
+                                                    .generated_image.model &&
                                                     message.meta_data
                                                       .generated_image
-                                                      .generation_time_ms / 1000
-                                                  ).toFixed(1)}
-                                                  s
-                                                </span>
+                                                      .generation_time_ms && (
+                                                      <span> | </span>
+                                                    )}
+                                                  {message.meta_data
+                                                    .generated_image
+                                                    .generation_time_ms && (
+                                                    <span>
+                                                      耗时:{" "}
+                                                      {(
+                                                        message.meta_data
+                                                          .generated_image
+                                                          .generation_time_ms /
+                                                        1000
+                                                      ).toFixed(1)}
+                                                      s
+                                                    </span>
+                                                  )}
+                                                </div>
                                               )}
-                                            </div>
-                                          )}
-                                      </div>
-                                    )}
+                                          </div>
+                                        )}
                                     </>
                                   )}
                                   <div

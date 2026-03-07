@@ -206,9 +206,7 @@ async def get_agent_chat_messages(
                 await db.rollback()
                 logger.warning(f"投递日常记忆提示失败: {e}")
 
-        unlocked_ids = await get_unlocked_surprise_snap_message_ids(
-            db, current_user_id
-        )
+        unlocked_ids = await get_unlocked_surprise_snap_message_ids(db, current_user_id)
         messages_data = await asyncio.to_thread(
             chat_history_service.get_messages_paginated,
             session_id=session_id,
@@ -248,9 +246,7 @@ async def surprise_snap_unlock(
     body: SurpriseSnapUnlockRequest,
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
-    ok = await record_surprise_snap_unlock(
-        db, current_user.id, body.message_id
-    )
+    ok = await record_surprise_snap_unlock(db, current_user.id, body.message_id)
     if not ok:
         raise HTTPException(
             status_code=403,

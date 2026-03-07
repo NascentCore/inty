@@ -52,7 +52,8 @@ internal fun buildExploreThemeSections(
                     agents = theme.flattenAgents(),
                     isChristmas = theme.isChristmasTheme(),
                 )
-            }.filter { it.agents.isNotEmpty() }
+            }
+            .filter { it.agents.isNotEmpty() }
 
     if (newlyCreatedAgents.isEmpty()) return remoteThemeSections
     val latestAgents = newlyCreatedAgents.take(NEWLY_IMATES_MAX_COUNT)

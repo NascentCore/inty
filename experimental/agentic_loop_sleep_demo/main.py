@@ -67,7 +67,9 @@ def _extract_sleep_seconds_from_context(messages: list[dict]) -> int:
     return int(re.search(r"\d+", latest_user_text).group(0))
 
 
-def _execute_sleep_tool(messages: list[dict], tool_input: SleepToolInput) -> SleepToolOutput:
+def _execute_sleep_tool(
+    messages: list[dict], tool_input: SleepToolInput
+) -> SleepToolOutput:
     """
     工具执行层：根据上下文决定 sleep 秒数，然后真正阻塞等待。
     """
@@ -203,4 +205,3 @@ def main(
 
 if __name__ == "__main__":
     app()
-

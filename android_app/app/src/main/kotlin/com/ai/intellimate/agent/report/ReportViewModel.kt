@@ -286,7 +286,9 @@ class ReportViewModel : BaseVM() {
                     // 原文件已经小于 1024KB，直接上传
                     val uploadedUrl = uploadReportImage(tempFile, "report-image.jpg")
                     if (uploadedUrl != null) {
-                        LogUtils.i("Image uploaded successfully (no compression needed): $uploadedUrl")
+                        LogUtils.i(
+                            "Image uploaded successfully (no compression needed): $uploadedUrl"
+                        )
                     }
                     return@withContext uploadedUrl
                 }

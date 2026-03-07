@@ -1430,7 +1430,9 @@ async def generate_chat_image(
     message_id: int,
     subscription_service: SubscriptionService,
     history_count: Optional[int] = None,
-    model: Optional[str] = None,  # TODO: 移除未使用的 model 参数，与 schema/API 一并清理
+    model: Optional[
+        str
+    ] = None,  # TODO: 移除未使用的 model 参数，与 schema/API 一并清理
 ) -> Union[schemas.ChatImageGenerationResponse, UsageLimitExceeded, BizError]:
     """
     基于聊天上下文生成图片（公共函数）
@@ -1952,8 +1954,8 @@ async def generate_chat_music(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    is_allowed, used_count, daily_limit = await subscription_service.check_music_gen_limit(
-        db, user
+    is_allowed, used_count, daily_limit = (
+        await subscription_service.check_music_gen_limit(db, user)
     )
     if not is_allowed:
         logger.warning(f"用户 {user_id} 已达到音乐生成限额: {used_count}/{daily_limit}")
@@ -1984,7 +1986,9 @@ async def generate_chat_music(
         logger.error(f"消息未找到: message_id={message_id}")
         raise HTTPException(status_code=404, detail=f"Message not found: {message_id}")
 
-    latest_ai_message_id = await chat_history_service.get_latest_ai_message_id(db, session_id)
+    latest_ai_message_id = await chat_history_service.get_latest_ai_message_id(
+        db, session_id
+    )
     if latest_ai_message_id != message_id:
         logger.warning(
             f"只能对最后一条AI回复生成音乐: latest={latest_ai_message_id}, requested={message_id}"
@@ -1999,7 +2003,9 @@ async def generate_chat_music(
         logger.error(f"Agent数据未找到: {chat.agent_id}")
         raise HTTPException(status_code=404, detail="Agent data not found")
 
-    subscription_status = await subscription_service.get_user_subscription_status(db, user.id)
+    subscription_status = await subscription_service.get_user_subscription_status(
+        db, user.id
+    )
     resolved_model = model
     if not resolved_model:
         resolved_model = select_chat_music_model(
@@ -2007,15 +2013,17 @@ async def generate_chat_music(
         )
 
     generation_start_time = time.time()
-    music_generation_result = await music_generation_service.generate_chat_music_for_message(
-        db=db,
-        session_id=session_id,
-        message_id=message_id,
-        agent_data=agent_data,
-        message_content=message_content,
-        model=resolved_model,
-        user_id=user_id,
-        history_count=history_count,
+    music_generation_result = (
+        await music_generation_service.generate_chat_music_for_message(
+            db=db,
+            session_id=session_id,
+            message_id=message_id,
+            agent_data=agent_data,
+            message_content=message_content,
+            model=resolved_model,
+            user_id=user_id,
+            history_count=history_count,
+        )
     )
     generation_time_ms = int((time.time() - generation_start_time) * 1000)
 

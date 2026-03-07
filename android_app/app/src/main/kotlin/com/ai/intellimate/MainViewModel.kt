@@ -403,9 +403,7 @@ class MainViewModel : BaseVM() {
         try {
             when (
                 val result =
-                    withTimeout(timeoutMs) {
-                        NetServiceMgr.getCommonApi().checkAppUpgrade()
-                    }
+                    withTimeout(timeoutMs) { NetServiceMgr.getCommonApi().checkAppUpgrade() }
             ) {
                 is HttpResult.Success -> {
                     val rsp = result.data

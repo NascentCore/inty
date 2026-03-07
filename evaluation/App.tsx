@@ -538,15 +538,15 @@ const AppContent: React.FC = () => {
               alignItems: "center",
             }}
           >
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              {getPageTitle()}
-            </Title>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <AssumeUserSelector />
-            <UserInfo onShowApiKeyModal={() => setShowApiKeyModal(true)} />
-          </div>
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                {getPageTitle()}
+              </Title>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <AssumeUserSelector />
+              <UserInfo onShowApiKeyModal={() => setShowApiKeyModal(true)} />
+            </div>
           </div>
 
           {/* 页面内容 */}

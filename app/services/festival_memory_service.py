@@ -107,11 +107,13 @@ def get_pairs_with_min_rounds_in_window_sync(
             raise
     try:
         with conn.cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT user_id, agent_id, id
                 FROM chats
                 WHERE is_active = true
-                """)
+                """
+            )
             rows = cur.fetchall()
         if not rows:
             return []

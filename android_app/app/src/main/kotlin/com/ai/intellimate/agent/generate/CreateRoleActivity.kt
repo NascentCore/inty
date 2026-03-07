@@ -345,12 +345,11 @@ fun CreateRolePage(
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
     var isUploadingFromGallery by remember { mutableStateOf(false) }
 
-    val createEntrySource =
-        remember {
-            navController.previousBackStackEntry
-                ?.savedStateHandle
-                ?.get<String>(CreateRoleNavigationState.EntrySourceKey)
-        }
+    val createEntrySource = remember {
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.get<String>(CreateRoleNavigationState.EntrySourceKey)
+    }
 
     // AI 实现小结：
     // 1) 创建页只在进入时读取一次入口来源；

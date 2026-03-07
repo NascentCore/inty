@@ -8,5 +8,7 @@ import retrofit2.http.POST
 
 interface IReportApi {
     @POST("/api/v1/report/")
-    suspend fun createReport(@Body request: ReportCreateRequest): HttpResult<ReportCreateApiResponse>
+    suspend fun createReport(
+        @Body request: ReportCreateRequest
+    ): HttpResult<ReportCreateApiResponse>
 }

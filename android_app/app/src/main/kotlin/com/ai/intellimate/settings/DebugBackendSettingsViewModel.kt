@@ -90,9 +90,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         // 统一清除两套网络栈缓存，确保切换地址后使用新客户端
         NetworkStackCoordinator.clearAllRuntimeCaches()
 
-        _uiState.update {
-            it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "")
-        }
+        _uiState.update { it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "") }
     }
 
     fun setCustomUrlInput(value: String) {

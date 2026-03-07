@@ -20,9 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -130,11 +128,7 @@ fun PremiumPlanCard(
     val cardBg =
         if (isSelected)
             Brush.verticalGradient(
-                listOf(
-                    colorScheme.tertiary,
-                    colorScheme.secondary,
-                    colorScheme.primary,
-                )
+                listOf(colorScheme.tertiary, colorScheme.secondary, colorScheme.primary)
             )
         else
             Brush.verticalGradient(
@@ -152,12 +146,9 @@ fun PremiumPlanCard(
 
     Box(
         modifier =
-            modifier
-                .fillMaxHeight()
-                .then(subModifier)
-                .clickable(enabled = !isSubscribed) {
-                    onClick()
-                },
+            modifier.fillMaxHeight().then(subModifier).clickable(enabled = !isSubscribed) {
+                onClick()
+            },
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -174,15 +165,10 @@ fun PremiumPlanCard(
                     .padding(1.dp)
             ) {
                 Box(
-                    modifier =
-                        Modifier
-                            .matchParentSize()
-                            .background(innerBg, shape = shapes.small)
+                    modifier = Modifier.matchParentSize().background(innerBg, shape = shapes.small)
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 4.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -195,8 +181,7 @@ fun PremiumPlanCard(
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier =
-                                Modifier
-                                    .fillMaxWidth()
+                                Modifier.fillMaxWidth()
                                     .height(1.dp)
                                     .background(colorScheme.outline.copy(alpha = 0.4f))
                         )
@@ -233,9 +218,7 @@ fun PremiumPlanCard(
         if (plan.discountRate < 1) {
             DiscountTag(
                 discountRate = plan.discountRate,
-                modifier = Modifier
-                    .then(subModifier)
-                    .align(Alignment.TopEnd),
+                modifier = Modifier.then(subModifier).align(Alignment.TopEnd),
             )
         }
     }
@@ -251,10 +234,7 @@ fun PremiumPlanList(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(122.dp)
-            .padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().height(122.dp).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         plans.forEachIndexed { idx, plan ->
@@ -270,8 +250,8 @@ fun PremiumPlanList(
 }
 
 /**
- * 购买按钮组件，使用 MaterialTheme 颜色、字体与形状。
- * 当 [selectedPlanPrice] 非空且未订阅时，按钮文案为「价格 Get Premium」；否则为「Subscribe」/「Subscribed」。
+ * 购买按钮组件，使用 MaterialTheme 颜色、字体与形状。 当 [selectedPlanPrice] 非空且未订阅时，按钮文案为「价格 Get
+ * Premium」；否则为「Subscribe」/「Subscribed」。
  */
 @Composable
 fun PurchaseButton(
@@ -309,10 +289,7 @@ fun PurchaseButton(
             color = colorScheme.secondaryContainer,
             modifier = Modifier.fillMaxSize(),
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         color = colorScheme.onPrimary,
@@ -352,10 +329,7 @@ fun AutoRenewalNotice(modifier: Modifier = Modifier) {
 /** 权益对比表格的一行数据：左侧为权益名称，中间为 Free 列文案，右侧为 Premium 列文案。 */
 data class BenefitRow(val label: String, val free: String, val premium: String)
 
-/**
- * 订阅页「Benefit Details」对比表格：Free | Premium 两列，多行权益对比。
- * 使用 MaterialTheme 颜色与字体。
- */
+/** 订阅页「Benefit Details」对比表格：Free | Premium 两列，多行权益对比。 使用 MaterialTheme 颜色与字体。 */
 @Composable
 fun BenefitDetailsTable(
     rows: List<BenefitRow>,
@@ -371,45 +345,37 @@ fun BenefitDetailsTable(
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        LazyColumn(
-            modifier = Modifier
-        ) {
+        LazyColumn(modifier = Modifier) {
             item {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "$headerTitle >",
                         style = typography.titleSmall,
                         color = textColor,
-                        modifier = Modifier.weight(2f)
-                            .padding(start = dimensionResource(R.dimen.padding_large))
+                        modifier =
+                            Modifier.weight(2f)
+                                .padding(start = dimensionResource(R.dimen.padding_large)),
                     )
                     Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface
-                            ),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier.fillMaxHeight()
+                                .weight(1f)
+                                .background(color = MaterialTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = freeColumnTitle,
                             style = typography.labelLarge,
-                            color = textColor
+                            color = textColor,
                         )
                     }
 
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         Text(
                             text = premiumColumnTitle,
                             style = typography.labelLarge,
@@ -421,71 +387,60 @@ fun BenefitDetailsTable(
 
             itemsIndexed(rows) { index, row ->
                 Row(
-                    modifier = Modifier
-                        .height(IntrinsicSize.Max)
-                        .fillMaxWidth(),
+                    modifier = Modifier.height(IntrinsicSize.Max).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val containerColor = if (index % 2 == 0) {
-                        Color.Transparent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    }
+                    val containerColor =
+                        if (index % 2 == 0) {
+                            Color.Transparent
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        }
 
                     Box(
                         contentAlignment = Alignment.CenterStart,
-                        modifier = Modifier
-                            .weight(2f)
-                            .background(containerColor)
-                            .padding(
-                                start = dimensionResource(R.dimen.padding_large),
-                                top = dimensionResource(R.dimen.padding_small),
-                                bottom = dimensionResource(R.dimen.padding_small)
-                            ),
+                        modifier =
+                            Modifier.weight(2f)
+                                .background(containerColor)
+                                .padding(
+                                    start = dimensionResource(R.dimen.padding_large),
+                                    top = dimensionResource(R.dimen.padding_small),
+                                    bottom = dimensionResource(R.dimen.padding_small),
+                                ),
                     ) {
-                        Text(
-                            text = row.label,
-                            style = typography.bodyLarge,
-                            color = textColor,
-                        )
+                        Text(text = row.label, style = typography.bodyLarge, color = textColor)
                     }
 
                     Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface
-                            ),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier.fillMaxHeight()
+                                .weight(1f)
+                                .background(color = MaterialTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = row.free,
                             style = typography.labelLarge,
                             color = textColor,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                     }
 
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .background(containerColor),
+                        modifier = Modifier.fillMaxHeight().weight(1f).background(containerColor),
                     ) {
                         Text(
                             text = row.premium,
                             style = typography.labelLarge,
                             color = textColor,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
             }
         }
     }
-
 }
 
 /** 订阅页使用的 12 条权益对比行（Free | Premium），与文档 订阅页修改0304 一致。 */
@@ -502,28 +457,56 @@ fun subscriptionBenefitRows(): List<BenefitRow> =
             stringResource(R.string.benefit_value_short_term),
             stringResource(R.string.benefit_value_long_term),
         ),
-        BenefitRow(stringResource(R.string.benefit_customize_chat_style), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
-        BenefitRow(stringResource(R.string.benefit_smarter_ai_model), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_customize_chat_style),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
+        BenefitRow(
+            stringResource(R.string.benefit_smarter_ai_model),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
         BenefitRow(
             stringResource(R.string.benefit_voice),
             stringResource(R.string.benefit_value_limited),
             stringResource(R.string.benefit_value_unlimited),
         ),
-        BenefitRow(stringResource(R.string.benefit_hd_voice), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_hd_voice),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
         BenefitRow(
             stringResource(R.string.benefit_voice_call_time),
             stringResource(R.string.benefit_value_5_min_per_day),
             stringResource(R.string.benefit_value_30_min_per_day),
         ),
-        BenefitRow(stringResource(R.string.benefit_more_image_generations), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_more_image_generations),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
         BenefitRow(
             stringResource(R.string.benefit_photo_quality),
             stringResource(R.string.benefit_value_standard),
             stringResource(R.string.benefit_value_hd),
         ),
-        BenefitRow(stringResource(R.string.benefit_vip_exclusive_characters), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
-        BenefitRow(stringResource(R.string.benefit_early_access_new_features), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
-        BenefitRow(stringResource(R.string.benefit_advanced_functions), stringResource(R.string.benefit_value_dash), stringResource(R.string.benefit_value_check)),
+        BenefitRow(
+            stringResource(R.string.benefit_vip_exclusive_characters),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
+        BenefitRow(
+            stringResource(R.string.benefit_early_access_new_features),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
+        BenefitRow(
+            stringResource(R.string.benefit_advanced_functions),
+            stringResource(R.string.benefit_value_dash),
+            stringResource(R.string.benefit_value_check),
+        ),
     )
 
 /** 空状态组件，使用 MaterialTheme 颜色与字体。 */
@@ -543,12 +526,7 @@ fun EmptyPlanState(modifier: Modifier = Modifier) {
 @Preview
 @Composable
 private fun BenefitDetailsTablePreview() {
-    IntelliMateTheme {
-        BenefitDetailsTable(
-            rows = subscriptionBenefitRows(),
-            modifier = Modifier
-        )
-    }
+    IntelliMateTheme { BenefitDetailsTable(rows = subscriptionBenefitRows(), modifier = Modifier) }
 }
 
 @Preview(showBackground = true)

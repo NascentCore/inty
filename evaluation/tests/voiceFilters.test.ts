@@ -33,9 +33,9 @@ describe("voiceFilters", () => {
     ];
 
     expect(filterVoicesByGender(voices, "all")).toEqual(voices);
-    expect(filterVoicesByGender(voices, "male").map((voice) => voice.voice_id)).toEqual(
-      ["v-male"],
-    );
+    expect(
+      filterVoicesByGender(voices, "male").map((voice) => voice.voice_id),
+    ).toEqual(["v-male"]);
     expect(
       filterVoicesByGender(voices, "female").map((voice) => voice.voice_id),
     ).toEqual(["v-female"]);

@@ -55,11 +55,11 @@ def create_google_genai_client():
     使用 Vertex AI 配置创建并返回包装后的 Google Gen AI 客户端。
     使用与 GCS 相同的 service account 凭证；可抛出 ValueError 或 genai 相关异常。
     """
-    credentials_path = (
-        global_config_loaded_from_config_yaml.app.gcp_service_account_key
-    )
+    credentials_path = global_config_loaded_from_config_yaml.app.gcp_service_account_key
     if not os.path.exists(credentials_path):
-        raise ValueError(f"Service account credentials file not found at: {credentials_path}")
+        raise ValueError(
+            f"Service account credentials file not found at: {credentials_path}"
+        )
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
     location = global_config_loaded_from_config_yaml.agent.vertex_ai_location
@@ -98,7 +98,10 @@ def get_genai_client():
         if _google_genai_client is None:
             from app.core.config import Environment
 
-            if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+            if (
+                global_config_loaded_from_config_yaml.app.environment
+                == Environment.TEST
+            ):
                 logger.info("Using FakeGeminiClient in test environment")
                 _google_genai_client = FakeGeminiClient()
             else:

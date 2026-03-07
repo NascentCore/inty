@@ -19,7 +19,8 @@ def analyze_agent_data():
 
     try:
         # 1. 基础统计
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 COUNT(*) as total_agents,
                 COUNT(CASE WHEN prompt IS NOT NULL AND LENGTH(TRIM(prompt)) > 0 THEN 1 END) as has_prompt,
@@ -28,7 +29,8 @@ def analyze_agent_data():
                 COUNT(CASE WHEN first_message IS NOT NULL AND LENGTH(TRIM(first_message)) > 0 THEN 1 END) as has_first_message
             FROM agents 
             WHERE deleted_at IS NULL
-        """)
+        """
+        )
         stats = cursor.fetchone()
 
         print("=== Agent字段使用统计 ===")
@@ -41,7 +43,8 @@ def analyze_agent_data():
             print(f"有first_message字段: {stats[4]} ({stats[4]/stats[0]*100:.1f}%)")
 
             # 2. 长度分析
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     ROUND(AVG(LENGTH(prompt))) as avg_prompt_length,
                     ROUND(AVG(LENGTH(personality))) as avg_personality_length,
@@ -49,7 +52,8 @@ def analyze_agent_data():
                     COUNT(CASE WHEN LENGTH(prompt) > 0 AND LENGTH(personality) > 0 THEN 1 END) as has_both
                 FROM agents 
                 WHERE deleted_at IS NULL
-            """)
+            """
+            )
             lengths = cursor.fetchone()
 
             print(f"\n=== 字段长度分析 ===")
@@ -59,7 +63,8 @@ def analyze_agent_data():
             print(f"同时有prompt和personality: {lengths[3]}个")
 
             # 3. 示例数据
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT name, 
                        CASE WHEN LENGTH(prompt) > 50 THEN LEFT(prompt, 50) || '...' ELSE prompt END as prompt_preview,
                        CASE WHEN LENGTH(personality) > 50 THEN LEFT(personality, 50) || '...' ELSE personality END as personality_preview
@@ -67,7 +72,8 @@ def analyze_agent_data():
                 WHERE deleted_at IS NULL 
                   AND (prompt IS NOT NULL OR personality IS NOT NULL)
                 LIMIT 3
-            """)
+            """
+            )
             examples = cursor.fetchall()
 
             print(f"\n=== 示例数据 ===")

@@ -1,5 +1,6 @@
 package com.ai.intellimate.agent.report
 
+import ai.sxwl.android.data.api.model.ReportReasonCode
 import ai.sxwl.android.design.noRippleClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -29,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ai.sxwl.android.data.api.model.ReportReasonCode
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.components.ReportDescriptionContainer
 import com.ai.intellimate.ui.components.ReportImageEvidenceContainer
@@ -178,10 +178,7 @@ fun ReportScreenPreview() {
                 ReportReasonCode.MISINFORMATION,
                 R.string.report_reason_misinformation,
             ),
-            ReportReasonItem(
-                ReportReasonCode.FRAUD_SCAMS,
-                R.string.report_reason_fraud_scams,
-            ),
+            ReportReasonItem(ReportReasonCode.FRAUD_SCAMS, R.string.report_reason_fraud_scams),
         )
 
     ReportScreen(

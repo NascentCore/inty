@@ -63,7 +63,13 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
   });
 
   return (
-    <Modal title={title} open={open} onCancel={onClose} footer={footer} width={width}>
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onClose}
+      footer={footer}
+      width={width}
+    >
       {agent && (
         <AgentInfoDisplay
           agent={agent}

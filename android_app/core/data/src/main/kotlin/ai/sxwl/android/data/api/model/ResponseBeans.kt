@@ -31,7 +31,11 @@ data class PagedResponse<T>(
 )
 
 @JsonClass(generateAdapter = true)
-data class APIResponse<T>(val code: Int = 200, val message: String = "success", val data: T? = null)
+data class APIResponse<T>(
+    val code: Int = 200,
+    val message: String = "success",
+    val data: T? = null,
+)
 
 typealias PaginationResponse = APIResponse<PaginationData<*>>
 

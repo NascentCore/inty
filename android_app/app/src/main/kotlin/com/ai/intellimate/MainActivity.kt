@@ -459,39 +459,34 @@ class MainActivity : BaseActivity() {
             } else {
                 ReviewManagerFactory.create(context)
             }
-
         }
         var reviewInfo by remember { mutableStateOf<ReviewInfo?>(null) }
 
         LaunchedEffect(Unit) {
-            chatViewModel.showRankDialog
-                .collect {
-                    LogUtils.d("InAPPReview:ShouldRankRequest")
-                    reviewManager.requestReviewFlow()
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                reviewInfo = task.result
-                            } else {
-                                LogUtils.e(task.exception?.message)
-                            }
-                        }
+            chatViewModel.showRankDialog.collect {
+                LogUtils.d("InAPPReview:ShouldRankRequest")
+                reviewManager.requestReviewFlow().addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        reviewInfo = task.result
+                    } else {
+                        LogUtils.e(task.exception?.message)
+                    }
                 }
+            }
         }
-
 
         reviewInfo?.let { info ->
             RankDialog(
-                onCancel = {
-                    reviewInfo = null
-                },
+                onCancel = { reviewInfo = null },
                 onSubmit = { rank ->
                     if (rank >= 4) {
                         LogUtils.d("InAPPReview:ShouldShowReview")
-                        reviewManager.launchReviewFlow(this@MainActivity, info)
+                        reviewManager
+                            .launchReviewFlow(this@MainActivity, info)
                             .addOnCompleteListener {
                                 if (it.isSuccessful) {
                                     FirebaseManager.Events.RANK_DIALOG_REVIEW_COMPLETED.logEvent(
-                                        "user_id" to IntySetting.getCurUserID(),
+                                        "user_id" to IntySetting.getCurUserID()
                                     )
                                 }
                             }
@@ -499,7 +494,7 @@ class MainActivity : BaseActivity() {
                         navController.navigate(Routes.Me.reportPage(isFeedback = true))
                     }
                     reviewInfo = null
-                }
+                },
             )
         }
 
@@ -923,7 +918,7 @@ fun SplashLoginUI(
                             R.drawable.login_banner_2,
                             R.drawable.login_banner_6,
                             R.drawable.login_banner_3,
-                            R.drawable.login_banner_7
+                            R.drawable.login_banner_7,
                         ),
                     onPageChange = { bannerIndex = it },
                 )
@@ -943,9 +938,7 @@ fun SplashLoginUI(
                             textAlign = TextAlign.Center,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         )
                     }
 
@@ -955,18 +948,27 @@ fun SplashLoginUI(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val dotSizeSelected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_selected)
-                        val dotSizeUnselected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_unselected)
-                        val dotSpacing = dimensionResource(R.dimen.login_carousel_indicator_dot_spacing)
+                        val dotSizeSelected =
+                            dimensionResource(R.dimen.login_carousel_indicator_dot_size_selected)
+                        val dotSizeUnselected =
+                            dimensionResource(R.dimen.login_carousel_indicator_dot_size_unselected)
+                        val dotSpacing =
+                            dimensionResource(R.dimen.login_carousel_indicator_dot_spacing)
                         repeat(bannerText.size) { index ->
                             Box(
-                                modifier = Modifier
-                                    .padding(horizontal = dotSpacing)
-                                    .size(if (index == bannerIndex) dotSizeSelected else dotSizeUnselected)
-                                    .background(
-                                        color = Color.White.copy(alpha = if (index == bannerIndex) 1f else 0.4f),
-                                        shape = CircleShape,
-                                    ),
+                                modifier =
+                                    Modifier.padding(horizontal = dotSpacing)
+                                        .size(
+                                            if (index == bannerIndex) dotSizeSelected
+                                            else dotSizeUnselected
+                                        )
+                                        .background(
+                                            color =
+                                                Color.White.copy(
+                                                    alpha = if (index == bannerIndex) 1f else 0.4f
+                                                ),
+                                            shape = CircleShape,
+                                        )
                             )
                         }
                     }
@@ -996,8 +998,7 @@ fun SplashLoginUI(
                     Box(
                         contentAlignment = Alignment.BottomCenter,
                         modifier =
-                            Modifier
-                                .height(150.dp)
+                            Modifier.height(150.dp)
                                 .windowInsetsPadding(WindowInsets.navigationBars)
                                 .padding(bottom = 16.dp),
                     ) {

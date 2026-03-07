@@ -22,14 +22,18 @@ async def analyze_debug_messages():
     async for session in get_async_db():
         try:
             # 统计debug_messages使用情况
-            result = await session.execute(text("""
+            result = await session.execute(
+                text(
+                    """
                 SELECT 
                     COUNT(*) as total_chats,
                     COUNT(CASE WHEN debug_messages IS NOT NULL THEN 1 END) as has_debug_messages,
                     AVG(CASE WHEN debug_messages IS NOT NULL THEN 
                         LENGTH(debug_messages::text) ELSE 0 END) as avg_debug_size
                 FROM chats
-            """))
+            """
+                )
+            )
             stats = result.first()
 
             logger.info(f"总聊天记录数: {stats[0]}")
@@ -39,7 +43,9 @@ async def analyze_debug_messages():
             logger.info(f"平均debug_messages大小: {stats[2]:.0f}字符")
 
             # 查看最近的debug_messages示例
-            result2 = await session.execute(text("""
+            result2 = await session.execute(
+                text(
+                    """
                 SELECT id, agent_id, updated_at, 
                        CASE WHEN debug_messages IS NOT NULL THEN 
                             LEFT(debug_messages::text, 100) || '...'
@@ -48,7 +54,9 @@ async def analyze_debug_messages():
                 WHERE debug_messages IS NOT NULL
                 ORDER BY updated_at DESC
                 LIMIT 5
-            """))
+            """
+                )
+            )
             examples = result2.fetchall()
 
             logger.info(f"\n=== 最近的debug_messages示例 ===")
@@ -101,10 +109,14 @@ async def cleanup_debug_messages(dry_run: bool = True):
 
             # 检查清理后的状态
             if not dry_run:
-                result_after = await session.execute(text("""
+                result_after = await session.execute(
+                    text(
+                        """
                     SELECT COUNT(CASE WHEN debug_messages IS NOT NULL THEN 1 END) as remaining_debug
                     FROM chats
-                """))
+                """
+                    )
+                )
                 remaining = result_after.scalar()
                 logger.info(f"清理后剩余debug_messages记录: {remaining}")
 

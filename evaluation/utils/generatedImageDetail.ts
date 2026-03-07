@@ -94,7 +94,9 @@ function normalizeImageUrl(value: string): string {
 
 function isLikelyImageUrl(value: string): boolean {
   const normalizedUrl = normalizeImageUrl(value);
-  return normalizedUrl.startsWith("http://") || normalizedUrl.startsWith("https://");
+  return (
+    normalizedUrl.startsWith("http://") || normalizedUrl.startsWith("https://")
+  );
 }
 
 function readGeneratedImageMetaNode(
@@ -107,7 +109,9 @@ function readGeneratedImageMetaNode(
   return generatedImage;
 }
 
-function parseGeneratedImageMeta(metaData: UnknownRecord): ParsedGeneratedImageMeta {
+function parseGeneratedImageMeta(
+  metaData: UnknownRecord,
+): ParsedGeneratedImageMeta {
   const generatedImage = readGeneratedImageMetaNode(metaData);
   return {
     imageUrl: readString(generatedImage?.image_url),
@@ -170,7 +174,10 @@ function buildReferenceImageAssets({
 function buildFallbackMetaDataFromGeneratedImage(
   image: GeneratedImage,
 ): UnknownRecord {
-  const referenceImageUrls = [image.reference_image_url, image.user_reference_image_url]
+  const referenceImageUrls = [
+    image.reference_image_url,
+    image.user_reference_image_url,
+  ]
     .map((value) => readString(value))
     .filter((value): value is string => value !== null);
   return {
@@ -207,7 +214,8 @@ export function buildGeneratedImageDetailFromDailyReportItem(
   const normalizedMetaData = isRecord(item.meta_data) ? item.meta_data : {};
   const parsedMeta = parseGeneratedImageMeta(normalizedMetaData);
   const roleReferenceImageUrl =
-    parsedMeta.referenceImageUrl ?? readString(normalizedMetaData.reference_image_url);
+    parsedMeta.referenceImageUrl ??
+    readString(normalizedMetaData.reference_image_url);
   const userReferenceImageUrl =
     parsedMeta.userReferenceImageUrl ??
     readString(normalizedMetaData.user_reference_image_url) ??

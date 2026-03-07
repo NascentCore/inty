@@ -342,9 +342,11 @@ def _generate_falai_image(
         mime_type = (
             content_type
             if isinstance(content_type, str)
-            else item.get("mime_type")
-            if isinstance(item.get("mime_type"), str)
-            else None
+            else (
+                item.get("mime_type")
+                if isinstance(item.get("mime_type"), str)
+                else None
+            )
         )
 
         images.append(

@@ -90,11 +90,13 @@ def get_users_by_emails(emails: List[str]) -> List[UserInfo]:
                 session_to_user[session_id] = chat["user_id"]
 
             # 查询消息数量
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT session_id::text, COUNT(*) as msg_count 
                 FROM chat_history 
                 GROUP BY session_id
-            """)
+            """
+            )
             session_counts = cur.fetchall()
 
             # 按用户聚合消息数
@@ -150,11 +152,13 @@ def get_top_users_by_message_count(limit: int = 20) -> List[UserInfo]:
                 session_to_user[session_id] = chat["user_id"]
 
             # 查询每个 session 的消息数量
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT session_id::text, COUNT(*) as msg_count 
                 FROM chat_history 
                 GROUP BY session_id
-            """)
+            """
+            )
             session_counts = cur.fetchall()
 
             # 按用户聚合消息数

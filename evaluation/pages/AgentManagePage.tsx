@@ -502,10 +502,9 @@ export const AgentManagePage: React.FC = () => {
     if (!currentAgentForAvatar) return;
 
     try {
-      const updatedAgent = await updateAgentFromHook(
-        currentAgentForAvatar.id,
-        { extensions: { avatar_crop: cropData } },
-      );
+      const updatedAgent = await updateAgentFromHook(currentAgentForAvatar.id, {
+        extensions: { avatar_crop: cropData },
+      });
       if (updatedAgent) {
         message.success("头像坐标设置成功");
         showAgentSavedCacheNotice();

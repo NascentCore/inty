@@ -84,12 +84,12 @@ import androidx.paging.ItemSnapshotList
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
-import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
@@ -110,11 +110,8 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
-import com.ai.intellimate.ui.components.RankDialog
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
-import com.google.android.play.core.review.ReviewInfo
-import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -286,7 +283,6 @@ internal fun ChatPage(
     val lastReportedKey = remember(agentInfo?.id) { mutableStateOf<String?>(null) }
     // 记录上一个 Agent ID，用于判断是否从其他 agent 滑动而来（HorizontalPager 场景）
     val previousAgentId = remember { mutableStateOf<String?>(null) }
-
 
     LaunchedEffect(Unit) {
         chatViewModel.vipRequest.collect {
@@ -639,7 +635,9 @@ internal fun ChatPage(
                             modifier =
                                 Modifier.fillMaxWidth()
                                     .padding(
-                                        horizontal = UiConfigs.ChatPage.OfficialAssistantFaq.HorizontalPadding
+                                        horizontal =
+                                            UiConfigs.ChatPage.OfficialAssistantFaq
+                                                .HorizontalPadding
                                     ),
                             items = officialAssistantFaqQuickItems,
                             onQuestionClick = { item ->
@@ -656,7 +654,9 @@ internal fun ChatPage(
                                 )
                             },
                         )
-                        Spacer(Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing))
+                        Spacer(
+                            Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing)
+                        )
                     }
                 }
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
@@ -1195,9 +1195,7 @@ internal fun ChatPage(
             selectedChatVoiceId = agentInfo?.id?.let { chatSettings[it]?.voice_id },
             chatVoiceOptions = chatVoiceOptions,
             isLoadingChatVoices = isLoadingChatVoices,
-            onChatVoiceSelected = { voiceId ->
-                chatViewModel.updateChatVoiceSetting(voiceId)
-            },
+            onChatVoiceSelected = { voiceId -> chatViewModel.updateChatVoiceSetting(voiceId) },
             showBackButton = showBackButton,
         )
 
@@ -1311,6 +1309,7 @@ internal fun ChatPage(
  * - 文案由参数传入，字体与高度与上方 FAQ 按钮保持一致。
  *
  * 可配置项：
+ *
  * @param modifier 外层布局修饰符（用于定位到输入框上方并设置间距）
  * @param text 按钮文案
  * @param onClick 点击回调（可用于回填提示词或导航到创建角色页面）
@@ -1342,11 +1341,7 @@ private fun OfficialAssistantQuickActionButton(
                     vertical = config.ContentVerticalPadding,
                 )
     ) {
-        Text(
-            text = text,
-            color = Color.White,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Text(text = text, color = Color.White, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

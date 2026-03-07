@@ -26,11 +26,11 @@ data class MessageEntity(
     val userVote: UserVote? = null,
     @Embedded val metaData: MetaData,
     // 以下为本地字段
-    //val isSending: Boolean = false,
+    // val isSending: Boolean = false,
     val status: Status? = Status.SUCCESS,
     val type: String? = null,
     val festivalMemoryId: Long? = null,
-    @Embedded("moment_") val momentExtra: MomentExtra? = null
+    @Embedded("moment_") val momentExtra: MomentExtra? = null,
 ) {
     val isVoice: Boolean
         get() = metaData.isVoice
@@ -85,9 +85,9 @@ data class MessageEntity(
     }
 
     enum class Status {
-        SUCCESS, //成功
-        SENDING, //发送中
-        SENDING_FAILED //发送失败
+        SUCCESS, // 成功
+        SENDING, // 发送中
+        SENDING_FAILED, // 发送失败
     }
 }
 
@@ -99,11 +99,11 @@ data class MessageUpdate(
     val timestamp: String? = null,
     val audioUrl: String? = null,
     @Embedded val metaData: MetaData,
-    //val isSending: Boolean = false,
-    //val status: Status? = null,
+    // val isSending: Boolean = false,
+    // val status: Status? = null,
     val type: String? = null,
     val festivalMemoryId: Long? = null,
-    @Embedded("moment_") val momentExtra: MomentExtra? = null
+    @Embedded("moment_") val momentExtra: MomentExtra? = null,
 )
 
 fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
@@ -112,10 +112,7 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
     return MessageUpdate(
         id = id,
         role = role,
-        content =
-            content
-                .ifBlank { extractedTextFromContentParts }
-                .ifBlank { caption.orEmpty() },
+        content = content.ifBlank { extractedTextFromContentParts }.ifBlank { caption.orEmpty() },
         timestamp = timestamp,
         audioUrl = audio_url,
         metaData =
@@ -144,13 +141,14 @@ fun MsgInfo.toUpdate(agentId: String): MessageUpdate {
             } ?: MetaData(agentId),
         type = type,
         festivalMemoryId = festivalMemoryId,
-        momentExtra = if (type == "surprise_snap") {
-            MessageEntity.MomentExtra(
-                image = mediaUrl,
-                price = price,
-                isPurchased = !unPurchased
-            )
-        } else null
+        momentExtra =
+            if (type == "surprise_snap") {
+                MessageEntity.MomentExtra(
+                    image = mediaUrl,
+                    price = price,
+                    isPurchased = !unPurchased,
+                )
+            } else null,
     )
 }
 
@@ -160,10 +158,7 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
     return MessageEntity(
         id = id,
         role = role,
-        content =
-            content
-                .ifBlank { extractedTextFromContentParts }
-                .ifBlank { caption.orEmpty() },
+        content = content.ifBlank { extractedTextFromContentParts }.ifBlank { caption.orEmpty() },
         timestamp = timestamp,
         audioUrl = audio_url,
         userVote = user_vote?.let { runCatching { UserVote.valueOf(it) }.getOrNull() },
@@ -187,19 +182,20 @@ fun MsgInfo.toEntity(agentId: String): MessageEntity {
                                     width = null,
                                     height = null,
                                 )
-                        },
+                            },
                 )
             } ?: MessageEntity.MetaData(agentId),
         status = MessageEntity.Status.SUCCESS,
         type = type,
         festivalMemoryId = festivalMemoryId,
-        momentExtra = if (type == "surprise_snap") {
-            MessageEntity.MomentExtra(
-                image = mediaUrl,
-                price = price,
-                isPurchased = !unPurchased
-            )
-        } else null
+        momentExtra =
+            if (type == "surprise_snap") {
+                MessageEntity.MomentExtra(
+                    image = mediaUrl,
+                    price = price,
+                    isPurchased = !unPurchased,
+                )
+            } else null,
     )
 }
 
@@ -234,8 +230,9 @@ fun MessageEntity.toModel(): MsgInfo {
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
 /**
- * 创建“正在发送”的用户消息临时实体。id 使用当前最后一条消息的 id，indexId 为最后一条的 indexId + 1。
- * 用于发送前插入本地，发送成功后删除并用 user_message_id 更新为正式消息。
+ * 创建“正在发送”的用户消息临时实体。id 使用当前最后一条消息的 id，indexId 为最后一条的 indexId + 1。 用于发送前插入本地，发送成功后删除并用
+ * user_message_id 更新为正式消息。
+ *
  * @param lastMessageId 当前最后一条消息的 id，无消息时传 null（此时 id 为 "0"）
  * @param lastMessageIndexId 当前最后一条消息的 indexId，无消息时传 null（此时 indexId 为 "1"）
  * @param userImageUrl 用户附带图片的 URL，可选

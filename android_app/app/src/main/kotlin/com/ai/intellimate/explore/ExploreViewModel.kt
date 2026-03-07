@@ -22,10 +22,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import com.ai.intellimate.utils.UserProfileManager
 
 /** Explore页面ViewModel 负责管理推荐agents的Paging数据流、刷新、缓存等逻辑 */
 class ExploreViewModel : BaseVM(), ExploreFetchCallback {
@@ -68,10 +66,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     val currentUiAgentsCount = _currentUiAgentsCount
 
     // 主题专区列表（最多显示两个）
-    private val _characterThemes =
-        MutableStateFlow<List<CharacterThemeItem>>(emptyList())
-    val characterThemes: StateFlow<List<CharacterThemeItem>> =
-        _characterThemes.asStateFlow()
+    private val _characterThemes = MutableStateFlow<List<CharacterThemeItem>>(emptyList())
+    val characterThemes: StateFlow<List<CharacterThemeItem>> = _characterThemes.asStateFlow()
 
     // 最近创建角色列表（用于 Explore 顶部 Newly iMates 分区）
     private val _newlyCreatedAgents = MutableStateFlow<List<AgentInfo>>(emptyList())
@@ -396,7 +392,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         viewModelScope.launch {
             _isLoadingThemes.value = true
             try {
-                when (val result = NetServiceMgr.getAgentApi().getCharacterThemes(skip = skip, limit = limit)) {
+                when (
+                    val result =
+                        NetServiceMgr.getAgentApi().getCharacterThemes(skip = skip, limit = limit)
+                ) {
                     is HttpResult.Success -> {
                         val themes =
                             result.data.filter { theme ->
@@ -431,17 +430,21 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         }
     }
 
-    /** 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区）。使用 created_desc_with_opposite_gender 由后端按用户性别过滤异性角色；空列表时回退请求 created_desc 以保持分区可见。 */
+    /**
+     * 加载最近创建的角色（用于 Explore 顶部 Newly iMates 分区）。使用 created_desc_with_opposite_gender
+     * 由后端按用户性别过滤异性角色；空列表时回退请求 created_desc 以保持分区可见。
+     */
     fun loadNewlyCreatedAgents(limit: Int = NEWLY_CREATED_SECTION_LIMIT) {
         viewModelScope.launch {
             try {
                 suspend fun fetchNewlyCreated(sort: String) =
-                    NetServiceMgr.getAgentApi().exploreAgents(
-                        page = 1,
-                        pageSize = limit,
-                        sort_seed = "newly_imates",
-                        sort = sort,
-                    )
+                    NetServiceMgr.getAgentApi()
+                        .exploreAgents(
+                            page = 1,
+                            pageSize = limit,
+                            sort_seed = "newly_imates",
+                            sort = sort,
+                        )
                 when (val result = fetchNewlyCreated("created_desc_with_opposite_gender")) {
                     is HttpResult.Success -> {
                         var latestAgents = result.data.list.orEmpty().take(limit)
@@ -451,9 +454,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                                 latestAgents = fallback.data.list.orEmpty().take(limit)
                             }
                         }
-                        LogUtils.d(
-                            "ExploreViewModel - 获取最近创建角色成功: latest=${latestAgents.size}"
-                        )
+                        LogUtils.d("ExploreViewModel - 获取最近创建角色成功: latest=${latestAgents.size}")
                         _newlyCreatedAgents.value = latestAgents
                     }
 
@@ -499,8 +500,7 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
                 val allCachedAgents =
                     mergeAgentsUniqueById(recommendedAgents + chatAgents + userCreatedAgents)
 
-                val cacheResults =
-                    filterAgentsByNameOrTag(allCachedAgents, parsed.query)
+                val cacheResults = filterAgentsByNameOrTag(allCachedAgents, parsed.query)
 
                 LogUtils.d(
                     "ExploreViewModel - 数据库无结果，从缓存搜索(name+tag): " +
@@ -562,7 +562,10 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
         viewModelScope.launch {
             _isLoadingThemes.value = true
             try {
-                when (val result = NetServiceMgr.getAgentApi().getCharacterThemes(skip = skip, limit = limit)) {
+                when (
+                    val result =
+                        NetServiceMgr.getAgentApi().getCharacterThemes(skip = skip, limit = limit)
+                ) {
                     is HttpResult.Success -> {
                         val themes =
                             result.data.filter { theme ->

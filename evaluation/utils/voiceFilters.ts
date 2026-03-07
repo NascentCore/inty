@@ -7,7 +7,9 @@ import type { Voice } from "../types";
 export type VoiceGenderFilter = "all" | "male" | "female" | "unknown";
 type NormalizedVoiceGender = Exclude<VoiceGenderFilter, "all">;
 
-export const normalizeVoiceGender = (gender?: string): NormalizedVoiceGender => {
+export const normalizeVoiceGender = (
+  gender?: string,
+): NormalizedVoiceGender => {
   const normalizedGender = (gender ?? "").trim().toLowerCase();
   if (normalizedGender === "male") {
     return "male";

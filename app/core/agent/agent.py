@@ -35,7 +35,10 @@ from app.core.agent.agent_prompt_configs import (
     INTELLIMATE_AGENT_NAME,
     get_agent_prompt_override,
 )
-from app.core.config import Environment, global_config_loaded_from_config_yaml as global_config
+from app.core.config import (
+    Environment,
+    global_config_loaded_from_config_yaml as global_config,
+)
 from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
@@ -116,8 +119,7 @@ OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
                     "mbti_type": {
                         "type": "string",
                         "description": (
-                            "Final MBTI type, one of: "
-                            + ", ".join(sorted(MBTI_TYPES))
+                            "Final MBTI type, one of: " + ", ".join(sorted(MBTI_TYPES))
                         ),
                     }
                 },
@@ -284,8 +286,7 @@ def get_sync_engine():
 
         _sync_engine = create_engine(
             global_config.database.url,
-            pool_size=global_config.database.pool_size
-            // 2,  # 同步引擎使用一半的连接池
+            pool_size=global_config.database.pool_size // 2,  # 同步引擎使用一半的连接池
             max_overflow=global_config.database.max_overflow,
             pool_timeout=global_config.database.pool_timeout,
             pool_recycle=global_config.database.pool_recycle,
@@ -308,8 +309,7 @@ def get_connection_pool():
     if _connection_pool is None:
         _connection_pool = ConnectionPool(
             global_config.database.url,
-            min_size=global_config.database.pool_size
-            // 4,  # 最小连接数
+            min_size=global_config.database.pool_size // 4,  # 最小连接数
             max_size=global_config.database.pool_size,  # 最大连接数
             max_idle=300,  # 连接最大空闲时间（秒）
             max_lifetime=1800,  # 连接最大生命周期（秒）
@@ -498,7 +498,9 @@ class Agent:
             system_messages.append(SystemMessage(content=rendered_mode_prompt))
 
         if chat_settings and chat_settings.style_prompt:
-            logger.debug(f"Using style prompt: {chat_settings.style_prompt} for agent: {self.agent_id} user: {user_name}")
+            logger.debug(
+                f"Using style prompt: {chat_settings.style_prompt} for agent: {self.agent_id} user: {user_name}"
+            )
             system_messages.append(SystemMessage(content=chat_settings.style_prompt))
 
         if user_profile:
@@ -534,9 +536,7 @@ class Agent:
                 SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
             )
             system_messages.append(
-                SystemMessage(
-                    content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
-                )
+                SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
             )
 
         return system_messages
@@ -586,9 +586,7 @@ class Agent:
             SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
         )
         system_messages.append(
-            SystemMessage(
-                content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
-            )
+            SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
         )
 
         return system_messages
@@ -683,11 +681,13 @@ class Agent:
             try:
                 sync_engine = get_sync_engine()
                 with sync_engine.connect() as conn:
-                    query = text("""
+                    query = text(
+                        """
                         SELECT nickname, gender, age_group, description, system_language, meta_data
                         FROM users 
                         WHERE id = :user_id
-                    """)
+                    """
+                    )
                     result = conn.execute(query, {"user_id": user_id})
                     row = result.fetchone()
 
@@ -696,7 +696,14 @@ class Agent:
                         cache_service.set_user_info(user_id, user_info_text, ttl=60)
                     else:
                         user_info_parts = []
-                        nickname, gender, age_group, description, system_language, meta_data = row
+                        (
+                            nickname,
+                            gender,
+                            age_group,
+                            description,
+                            system_language,
+                            meta_data,
+                        ) = row
                         if nickname:
                             user_info_parts.append(f"Name: {nickname}")
                         if gender:
@@ -833,7 +840,9 @@ class Agent:
         if not history_messages and not current_messages:
             return []
 
-        current_time_utc = now_utc if now_utc is not None else datetime.now(timezone.utc)
+        current_time_utc = (
+            now_utc if now_utc is not None else datetime.now(timezone.utc)
+        )
         current_date_iso = current_time_utc.date().isoformat()
 
         all_messages = history_messages + current_messages
@@ -859,13 +868,17 @@ class Agent:
         for index, message in enumerate(all_messages):
             if index == first_today_index:
                 messages_with_date_prompts.append(
-                    SystemMessage(content=self._build_date_system_prompt(current_date_iso))
+                    SystemMessage(
+                        content=self._build_date_system_prompt(current_date_iso)
+                    )
                 )
             messages_with_date_prompts.append(message)
 
         return messages_with_date_prompts
 
-    def _build_assistant_tool_call_message(self, assistant_message: Any) -> Dict[str, Any]:
+    def _build_assistant_tool_call_message(
+        self, assistant_message: Any
+    ) -> Dict[str, Any]:
         tool_calls = getattr(assistant_message, "tool_calls", None) or []
         serialized_tool_calls = []
         for tool_call in tool_calls:
@@ -1006,10 +1019,12 @@ class Agent:
             for tool_call in tool_calls:
                 tool_name = tool_call.function.name
                 raw_arguments = tool_call.function.arguments or ""
-                tool_result, injected_system_message = self._execute_official_assistant_tool_call(
-                    tool_name=tool_name,
-                    raw_arguments=raw_arguments,
-                    user_id=user_id,
+                tool_result, injected_system_message = (
+                    self._execute_official_assistant_tool_call(
+                        tool_name=tool_name,
+                        raw_arguments=raw_arguments,
+                        user_id=user_id,
+                    )
                 )
                 logger.info(
                     f"Official assistant tool executed: tool={tool_name}, user_id={user_id}, round={tool_round + 1}"
@@ -1121,13 +1136,13 @@ class Agent:
 
         # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
         enable_tracing = global_config.app.environment != Environment.TEST
-        normalized_labels = normalize_langsmith_metadata(labels) if enable_tracing else {}
+        normalized_labels = (
+            normalize_langsmith_metadata(labels) if enable_tracing else {}
+        )
         trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
-            should_trace = (
-                enable_tracing and _should_trace()
-            )
+            should_trace = enable_tracing and _should_trace()
             try:
                 create_kwargs: Dict[str, Any] = {
                     "messages": openai_messages,
@@ -1347,12 +1362,8 @@ class Agent:
                 logger.debug(f"开始Agent推理 - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                default_temperature = (
-                    global_config.agent.temperature
-                )
-                default_max_tokens = (
-                    global_config.agent.max_tokens
-                )
+                default_temperature = global_config.agent.temperature
+                default_max_tokens = global_config.agent.max_tokens
                 default_top_p = global_config.agent.top_p
 
                 client = get_base_openai_client()
@@ -1476,7 +1487,10 @@ class Agent:
                 content_filter_reasons = {"content_filter", "safety"}
 
                 # 处理内容过滤情况：用 "continue" 替换用户消息重试一次
-                if finish_reason in content_filter_reasons and not enable_official_assistant_tools:
+                if (
+                    finish_reason in content_filter_reasons
+                    and not enable_official_assistant_tools
+                ):
                     logger.warning(
                         f"内容过滤触发 - Agent: {self.agent_id}, User: {user_id}, "
                         f"Session: {session_id}, finish_reason: {finish_reason}, "
@@ -1687,12 +1701,8 @@ class Agent:
                 logger.debug(f"开始Agent推理（推送消息） - Agent: {self.agent_id}")
 
                 chat_name = f"{user_name}:{self.name}"
-                default_temperature = (
-                    global_config.agent.temperature
-                )
-                default_max_tokens = (
-                    global_config.agent.max_tokens
-                )
+                default_temperature = global_config.agent.temperature
+                default_max_tokens = global_config.agent.max_tokens
                 default_top_p = global_config.agent.top_p
 
                 client = get_base_openai_client()

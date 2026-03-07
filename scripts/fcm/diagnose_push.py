@@ -411,9 +411,7 @@ async def diagnose_user_push(
             else:
                 for stage, history in result["recent_chat_push_history"].items():
                     if history["has_sent_push"]:
-                        result["diagnosis"].append(
-                            f"⚠️  最近聊天推送 {stage}: 已发送过"
-                        )
+                        result["diagnosis"].append(f"⚠️  最近聊天推送 {stage}: 已发送过")
                     else:
                         result["diagnosis"].append(f"✅ 最近聊天推送 {stage}: 满足条件")
 

@@ -3,6 +3,7 @@
 Ref: https://docs.langchain.com/langsmith/trace-with-google-gemini#configure-tracing
 Implementation: app.utils.google_genai_client.wrap_google_genai_client_with_langsmith
 """
+
 from __future__ import annotations
 
 import base64
@@ -60,7 +61,11 @@ from google import genai
 from loguru import logger
 from pydantic import BaseModel
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.google_genai.utils import get_jpeg_url_and_text_mixed_parts, get_text_part, get_text_parts
+from app.core.google_genai.utils import (
+    get_jpeg_url_and_text_mixed_parts,
+    get_text_part,
+    get_text_parts,
+)
 from google.genai import types as gemini_types
 from langsmith.run_helpers import traceable
 
@@ -139,7 +144,9 @@ class LangSmithTraceRunType(StrEnum):
     PARSER = "parser"
 
 
-def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResult | None) -> GeneratedImageProcessResult | None:
+def _langsmith_process_outputs_generate_image(
+    result: GeneratedImageProcessResult | None,
+) -> GeneratedImageProcessResult | None:
     """
     process_outputs：供 LangSmith @traceable 使用，仅将 raw_data 的前 N 字节写入 trace，
     避免大块二进制数据；实际返回值不受影响。
@@ -151,7 +158,9 @@ def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResul
     total = len(raw_data)
     truncated = raw_data[:_LANGSMITH_RAW_DATA_TRACE_BYTES]
     if result.gcs_uri:
-        trace_raw_response = _sanitize_provider_response_for_trace(result.raw_response_from_provider)
+        trace_raw_response = _sanitize_provider_response_for_trace(
+            result.raw_response_from_provider
+        )
     else:
         trace_raw_response = result.raw_response_from_provider
     return result.model_copy(
@@ -175,14 +184,15 @@ class WrappedClient:
         process_outputs=_langsmith_process_outputs_generate_image,
     )
     async def async_generate_image(
-        self, 
+        self,
         model: Literal[
             NANO_BANANA.id_on_provider,
             NANO_BANANA_PRO.id_on_provider,
         ],
         contents: list[str],
         gcs_uri_base: str,
-        system_instructions: list[str] | None = None) -> GeneratedImageProcessResult:
+        system_instructions: list[str] | None = None,
+    ) -> GeneratedImageProcessResult:
         """
         使用指定的模型生成图片。
         contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
@@ -227,7 +237,9 @@ class WrappedClient:
                 logger.debug("Gemini generate_content response: {}", response)
                 try:
                     image_part = _extract_image_part_from_gemini_response(response)
-                    result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
+                    result = _process_image_part_to_generated_image(
+                        image_part, gcs_uri_base
+                    )
                 except Exception:
                     # 失败路径保留完整响应，便于排障；成功路径会在 trace 中脱敏图片数据。
                     attach_provider_response_to_langsmith_run(response)
@@ -303,7 +315,9 @@ def _extract_image_part_from_gemini_response(
         if hasattr(r, "blocked") and r.blocked
     ]
     if blocked_ratings:
-        error_msg = f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
+        error_msg = (
+            f"Image generation blocked by safety filter: {', '.join(blocked_ratings)}"
+        )
         logger.error(error_msg)
         raise ValueError(error_msg)
 
@@ -352,9 +366,7 @@ def _process_image_part_to_generated_image(
         logger.debug("数据已经是 bytes，直接使用")
     else:
         logger.error("未知的数据类型: {}", type(raw_data))
-        raise ValueError(
-            f"Unsupported image data type: {type(raw_data)}"
-        )
+        raise ValueError(f"Unsupported image data type: {type(raw_data)}")
 
     logger.info("成功提取图片数据，大小: {} bytes", len(image_data))
     if len(image_data) == 0:
@@ -381,9 +393,7 @@ def _process_image_part_to_generated_image(
         pil_image = PIL.Image.open(io.BytesIO(image_data))
         width, height = pil_image.size
         image_format = pil_image.format
-        logger.info(
-            "成功解析图片: {}x{}, 格式: {}", width, height, image_format
-        )
+        logger.info("成功解析图片: {}x{}, 格式: {}", width, height, image_format)
     except Exception as e:
         logger.error("PIL 无法解析图片: {}", str(e))
         try:
@@ -432,6 +442,8 @@ def _process_image_part_to_generated_image(
 
 _wrapped_client = None
 _wrapped_client_lock = threading.Lock()
+
+
 def get_wrapped_client() -> WrappedClient:
     """
     获取 wrapped client。

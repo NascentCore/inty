@@ -250,8 +250,7 @@ fun ChatSettingsDrawer(
                                     else ->
                                         chatVoiceOptions
                                             .firstOrNull { it.voiceId == selectedChatVoiceId }
-                                            ?.name
-                                            ?: selectedChatVoiceId
+                                            ?.name ?: selectedChatVoiceId
                                 }
 
                             SettingsArrowItem(
@@ -295,9 +294,10 @@ fun ChatSettingsDrawer(
                                 expanded = showVoiceMenu,
                                 onDismissRequest = { showVoiceMenu = false },
                                 modifier =
-                                    Modifier.heightIn(max = voiceMenuMaxHeight).background(
-                                        MaterialTheme.colorScheme.surfaceContainerLowest
-                                    ),
+                                    Modifier.heightIn(max = voiceMenuMaxHeight)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceContainerLowest
+                                        ),
                             ) {
                                 DropdownMenuItem(
                                     text = {

@@ -66,9 +66,7 @@ class VoiceCacheService:
             if cache_entry:
                 # 检查文件是否还存在
                 if self.gcs_service.check_voice_file_exists(cache_entry.audio_url):
-                    logger.debug(
-                        f"语音缓存命中: {content_hash}"
-                    )
+                    logger.debug(f"语音缓存命中: {content_hash}")
 
                     # 异步更新访问统计，不阻塞主流程
                     import asyncio

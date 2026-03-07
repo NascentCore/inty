@@ -1,6 +1,7 @@
 """
 公共的数据类型用于图片生成。
 """
+
 from __future__ import annotations
 
 import datetime

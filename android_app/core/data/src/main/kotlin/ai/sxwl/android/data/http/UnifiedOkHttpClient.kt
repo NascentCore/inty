@@ -30,8 +30,8 @@ object UnifiedOkHttpClient {
         }
 
     /**
-     * 聊天生图接口专用超时：POST /api/v1/chat/images/{agent_id} 使用 60 秒读超时。
-     * 其他请求仍使用 NetworkConfig 的默认 readTimeout。
+     * 聊天生图接口专用超时：POST /api/v1/chat/images/{agent_id} 使用 60 秒读超时。 其他请求仍使用 NetworkConfig 的默认
+     * readTimeout。
      */
     private object ChatImageTimeoutInterceptor : Interceptor {
         private const val CHAT_IMAGES_PATH = "chat/images"
@@ -51,26 +51,27 @@ object UnifiedOkHttpClient {
     fun create(): OkHttpClient {
         val environmentConfig = NetworkConfig.getCurrentEnvironmentConfig()
 
-        val builder = OkHttpClient.Builder()
-            // 超时配置（根据环境配置）
-            .connectTimeout(environmentConfig.timeout.connectTimeoutMs, TimeUnit.MILLISECONDS)
-            .writeTimeout(environmentConfig.timeout.writeTimeoutMs, TimeUnit.MILLISECONDS)
-            .readTimeout(environmentConfig.timeout.readTimeoutMs, TimeUnit.MILLISECONDS)
-            // 连接池配置
-            .connectionPool(
-                ConnectionPool(
-                    environmentConfig.connection.maxConnections,
-                    environmentConfig.connection.keepAliveDurationMs,
-                    TimeUnit.MILLISECONDS,
+        val builder =
+            OkHttpClient.Builder()
+                // 超时配置（根据环境配置）
+                .connectTimeout(environmentConfig.timeout.connectTimeoutMs, TimeUnit.MILLISECONDS)
+                .writeTimeout(environmentConfig.timeout.writeTimeoutMs, TimeUnit.MILLISECONDS)
+                .readTimeout(environmentConfig.timeout.readTimeoutMs, TimeUnit.MILLISECONDS)
+                // 连接池配置
+                .connectionPool(
+                    ConnectionPool(
+                        environmentConfig.connection.maxConnections,
+                        environmentConfig.connection.keepAliveDurationMs,
+                        TimeUnit.MILLISECONDS,
+                    )
                 )
-            )
-            // DNS缓存（如果启用）
-            .dns(if (environmentConfig.connection.enableDnsCache) CachedDns() else Dns.SYSTEM)
-            // 拦截器（注意顺序：性能监控 -> 聊天生图超时 -> 设备信息 -> 认证 -> 调试）
-            .addInterceptor(PerformanceInterceptor())
-            .addInterceptor(ChatImageTimeoutInterceptor)
-            .addInterceptor(DeviceInfoInterceptor())
-            .addInterceptor(AuthInterceptor())
+                // DNS缓存（如果启用）
+                .dns(if (environmentConfig.connection.enableDnsCache) CachedDns() else Dns.SYSTEM)
+                // 拦截器（注意顺序：性能监控 -> 聊天生图超时 -> 设备信息 -> 认证 -> 调试）
+                .addInterceptor(PerformanceInterceptor())
+                .addInterceptor(ChatImageTimeoutInterceptor)
+                .addInterceptor(DeviceInfoInterceptor())
+                .addInterceptor(AuthInterceptor())
 
         if (environmentConfig.logging.enableChuckerLogging) {
             builder.addInterceptor(ChuckerInterceptor(Utils.getApp()))

@@ -56,13 +56,14 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         userImageUrl: String? = null,
     ) {
         val last = chatMessageDao.getLatestMessage(agentId)
-        val userEntity = createTempSendingUserEntity(
-            agentId = agentId,
-            content = userContent,
-            lastMessageId = last?.id,
-            lastMessageIndexId = last?.indexId,
-            userImageUrl = userImageUrl,
-        )
+        val userEntity =
+            createTempSendingUserEntity(
+                agentId = agentId,
+                content = userContent,
+                lastMessageId = last?.id,
+                lastMessageIndexId = last?.indexId,
+                userImageUrl = userImageUrl,
+            )
         val loadingEntity = createTempSendingLoadingEntity(agentId = agentId)
         chatMessageDao.upsert(listOf(userEntity, loadingEntity))
     }
@@ -86,7 +87,6 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
             chatMessageDao.markSendingUserAsFailed(agentId)
             chatMessageDao.deleteSendingLoadingOnly(agentId)
         }
-
     }
 
     suspend fun appendUserMessage(

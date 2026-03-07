@@ -650,8 +650,10 @@ async def agent_chat_completions(
                 with log_time(
                     f"投递日常记忆提示: user_id={current_user.id}, agent_id={agent_id}"
                 ):
-                    delivered_daily_prompts = await deliver_daily_memories_for_user_agent(
-                        db, current_user.id, agent_id
+                    delivered_daily_prompts = (
+                        await deliver_daily_memories_for_user_agent(
+                            db, current_user.id, agent_id
+                        )
                     )
             except Exception as e:
                 await db.rollback()

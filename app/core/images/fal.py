@@ -59,9 +59,19 @@ from pydantic import BaseModel, Field
 from app.core.config import global_config_loaded_from_config_yaml as global_config
 from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import upload_to_gcs
-from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, compress_png_to_jpeg, parse_image_data_uri
+from app.utils.image import (
+    IMAGE_SIZE_720_1280,
+    ImageFormat,
+    ImageSize,
+    compress_png_to_jpeg,
+    parse_image_data_uri,
+)
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
-from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO, Z_IMAGE_TURBO_IMAGE_TO_IMAGE
+from app.utils.models_catalog import (
+    SEEDREAM_V4_5_EDIT,
+    Z_IMAGE_TURBO,
+    Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
+)
 
 
 class _DataUriUploadResult(NamedTuple):
@@ -139,8 +149,9 @@ def _sanitize_provider_response_for_trace(response: Any) -> Any:
 class ImageSizeEnum(StrEnum):
     """
     https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-input-image_size
-    仅供参考，默认值为 
+    仅供参考，默认值为
     """
+
     SQUARE_HD = "square_hd"
     SQUARE = "square"
     PORTRAIT_4_3 = "portrait_4_3"
@@ -160,6 +171,7 @@ class FalSeedreamV4_5EditInput(BaseModel):
     """
     https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-input
     """
+
     prompt: str
     image_size: ImageSize | ImageSizeEnum = IMAGE_SIZE_720_1280
     num_images: int = 1
@@ -168,10 +180,11 @@ class FalSeedreamV4_5EditInput(BaseModel):
     sync_mode: bool = True
     enable_safety_checker: bool = False
     enhance_prompt_mode: EnhancePromptModeEnum = EnhancePromptModeEnum.STANDARD
-    image_urls: list[str] = Field(...,
+    image_urls: list[str] = Field(
+        ...,
         description="""The URLs of the images to edit. Must be a list of two URLs.
         Example: ["https://example.com/image1.png", "https://example.com/image2.png"]
-        """
+        """,
     )
 
 
@@ -179,6 +192,7 @@ class Image(BaseModel):
     """
     https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#type-Image
     """
+
     url: str
     content_type: str
     file_name: str
@@ -186,10 +200,12 @@ class Image(BaseModel):
     width: int | None = None
     height: int | None = None
 
+
 class FalSeedreamV4_5EditOutput(BaseModel):
     """
     https://fal.ai/models/fal-ai/bytedance/seedream/v4.5/edit/api#schema-output
     """
+
     images: list[Image] | None = None
 
 
@@ -198,7 +214,9 @@ async def seedream_v4_5_edit(
     args: FalSeedreamV4_5EditInput,
     gcs_uri_base: str,
 ) -> GeneratedImageProcessResult:
-    handler = await fal_client.submit_async(SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump())
+    handler = await fal_client.submit_async(
+        SEEDREAM_V4_5_EDIT.id_on_provider, arguments=args.model_dump()
+    )
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
     result = FalSeedreamV4_5EditOutput(**raw_result)
@@ -236,11 +254,14 @@ class ZImageTurboInput(BaseModel):
     """
     https://fal.ai/models/fal-ai/z-image/turbo/api#schema-input
     """
+
     prompt: str
     image_size: ImageSize | ImageSizeEnum = IMAGE_SIZE_720_1280
     num_inference_steps: int = 8
     seed: int | None = None
-    sync_mode: bool = Field(default=True, description="""
+    sync_mode: bool = Field(
+        default=True,
+        description="""
         If True, the media will be returned as a data URI
         and the output data won't be available in the request history.
         Example:
@@ -249,7 +270,8 @@ class ZImageTurboInput(BaseModel):
         }
         If False, the function will return a url to the fal CDN.
         考虑统一，我们用 sync_mode=True 来处理，并自己上传文件到 GCS。
-    """)
+    """,
+    )
     num_images: int = 1
     enable_safety_checker: bool = False
     output_format: ImageFormat = ImageFormat.JPEG
@@ -262,6 +284,7 @@ class ImageFile(BaseModel):
     https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api#type-ImageFile
     Used for testing fal ai API, z-image is fast and cheap.
     """
+
     url: str
     content_type: str
     file_name: str | None = None
@@ -275,6 +298,7 @@ class ZImageTurboOutput(BaseModel):
     """
     https://fal.ai/models/fal-ai/z-image/turbo/api#schema-output
     """
+
     images: list[ImageFile] | None = None
     timings: dict[str, float] | None = None
     seed: int | None = None
@@ -320,11 +344,15 @@ async def z_image_turbo(
     args: ZImageTurboInput,
     gcs_uri_base: str,
 ) -> list[GeneratedImageProcessResult]:
-    handler = await fal_client.submit_async(Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump())
+    handler = await fal_client.submit_async(
+        Z_IMAGE_TURBO.id_on_provider, arguments=args.model_dump()
+    )
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
     result = ZImageTurboOutput(**raw_result)
-    logger.debug("ZImageTurbo raw result before processing and uploading to GCS: {}", raw_result)
+    logger.debug(
+        "ZImageTurbo raw result before processing and uploading to GCS: {}", raw_result
+    )
     if not result.images:
         raise ValueError("No images returned from ZImageTurbo")
     processed_results: list[GeneratedImageProcessResult] = []
@@ -356,6 +384,7 @@ async def z_image_turbo(
 
 class ZImageTurboImageToImageImageSizeEnum(StrEnum):
     """Preset names for image_size; use ImageSize(width=..., height=...) for custom."""
+
     SQUARE_HD = "square_hd"
     SQUARE = "square"
     PORTRAIT_4_3 = "portrait_4_3"
@@ -370,6 +399,7 @@ class ZImageTurboImageToImageInput(BaseModel):
     https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api
     https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api#schema-input
     """
+
     prompt: str = Field(description="The prompt to generate an image from.")
     image_url: str = Field(description="URL of Image for Image-to-Image generation.")
     image_size: ImageSize | ZImageTurboImageToImageImageSizeEnum = (
@@ -399,6 +429,7 @@ class ZImageTurboImageToImageOutput(BaseModel):
     """
     https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api#schema-output
     """
+
     images: list[ImageFile] | None = Field(
         default=None,
         description="The generated image files info.",
@@ -423,11 +454,16 @@ async def z_image_turbo_image_to_image(
     args: ZImageTurboImageToImageInput,
     gcs_uri_base: str,
 ) -> GeneratedImageProcessResult:
-    handler = await fal_client.submit_async(Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider, arguments=args.model_dump())
+    handler = await fal_client.submit_async(
+        Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider, arguments=args.model_dump()
+    )
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
     result = ZImageTurboImageToImageOutput(**raw_result)
-    logger.debug("ZImageTurboImageToImage raw result before processing and uploading to GCS: {}", raw_result)
+    logger.debug(
+        "ZImageTurboImageToImage raw result before processing and uploading to GCS: {}",
+        raw_result,
+    )
     if not result.images:
         raise ValueError("No images returned from ZImageTurboImageToImage")
     first_img = result.images[0]
@@ -436,7 +472,10 @@ async def z_image_turbo_image_to_image(
     upload_result = _upload_image_file_to_gcs_and_return_url(
         first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
     )
-    logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)
+    logger.debug(
+        "Uploaded ZImageTurboImageToImage data URI to GCS: {}",
+        upload_result.gcs_http_url,
+    )
     trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
     attach_provider_response_to_langsmith_run(trace_raw_result)
     return GeneratedImageProcessResult(

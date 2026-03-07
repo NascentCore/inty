@@ -1,5 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Card, Select, Button, Space, Row, Col, Statistic, Spin, Empty } from "antd";
+import {
+  Card,
+  Select,
+  Button,
+  Space,
+  Row,
+  Col,
+  Statistic,
+  Spin,
+  Empty,
+} from "antd";
 import { ReloadOutlined, UserOutlined, PhoneOutlined } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import { userAnalyticsApi } from "../../services/api";
@@ -18,13 +28,16 @@ import {
 } from "../../utils/performanceAnalytics";
 
 export function PerformanceAnalyticsSection() {
-  const [dateRangeType, setDateRangeType] = useState<PerformanceDateRangeType>("7");
+  const [dateRangeType, setDateRangeType] =
+    useState<PerformanceDateRangeType>("7");
   const [loading, setLoading] = useState(false);
   const [llmLatency, setLlmLatency] = useState<LLMLatencyItem[]>([]);
-  const [imageGenLatency, setImageGenLatency] = useState<ImageGenerationLatencyItem[]>(
+  const [imageGenLatency, setImageGenLatency] = useState<
+    ImageGenerationLatencyItem[]
+  >([]);
+  const [liveChatLatency, setLiveChatLatency] = useState<LiveChatLatencyItem[]>(
     [],
   );
-  const [liveChatLatency, setLiveChatLatency] = useState<LiveChatLatencyItem[]>([]);
   const [liveChatStats, setLiveChatStats] =
     useState<LiveChatBasicStatsResponse | null>(null);
 
@@ -33,12 +46,13 @@ export function PerformanceAnalyticsSection() {
 
     const params = buildPerformanceAnalyticsParams(dateRangeType);
     try {
-      const [llmRes, imageRes, liveChatLatRes, liveChatStatsRes] = await Promise.all([
-        userAnalyticsApi.getLLMLatency(params),
-        userAnalyticsApi.getImageGenerationLatency(params),
-        userAnalyticsApi.getLiveChatLatency(params),
-        userAnalyticsApi.getLiveChatStats(params),
-      ]);
+      const [llmRes, imageRes, liveChatLatRes, liveChatStatsRes] =
+        await Promise.all([
+          userAnalyticsApi.getLLMLatency(params),
+          userAnalyticsApi.getImageGenerationLatency(params),
+          userAnalyticsApi.getLiveChatLatency(params),
+          userAnalyticsApi.getLiveChatStats(params),
+        ]);
 
       setLlmLatency(llmRes.data || []);
       setImageGenLatency(imageRes.data || []);
@@ -53,10 +67,14 @@ export function PerformanceAnalyticsSection() {
     loadData();
   }, [loadData]);
 
-  const imageGenLatencyByModel = groupImageGenerationLatencyByModel(imageGenLatency);
+  const imageGenLatencyByModel =
+    groupImageGenerationLatencyByModel(imageGenLatency);
 
   return (
-    <Card title="性能监控（LLM / 生图 / Live Chat）" style={{ marginBottom: "24px" }}>
+    <Card
+      title="性能监控（LLM / 生图 / Live Chat）"
+      style={{ marginBottom: "24px" }}
+    >
       <Spin spinning={loading}>
         <Card size="small" style={{ marginBottom: "16px" }}>
           <Space size="middle" wrap>
@@ -69,7 +87,11 @@ export function PerformanceAnalyticsSection() {
                 options={PERFORMANCE_DATE_RANGE_OPTIONS}
               />
             </Space>
-            <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={loadData}
+              loading={loading}
+            >
               刷新数据
             </Button>
           </Space>
@@ -101,7 +123,9 @@ export function PerformanceAnalyticsSection() {
               <Card>
                 <Statistic
                   title="总通话时长"
-                  value={formatDurationFromSeconds(liveChatStats.total_duration)}
+                  value={formatDurationFromSeconds(
+                    liveChatStats.total_duration,
+                  )}
                   valueStyle={{ color: "#faad14" }}
                 />
               </Card>
@@ -203,19 +227,25 @@ export function PerformanceAnalyticsSection() {
           </Col>
 
           <Col xs={24} lg={24}>
-            <Card title="Live Chat 延迟趋势（按小时）" style={{ height: "480px" }}>
+            <Card
+              title="Live Chat 延迟趋势（按小时）"
+              style={{ height: "480px" }}
+            >
               {liveChatLatency.length > 0 ? (
                 <Plot
                   data={[
                     {
                       x: liveChatLatency.map((item) => item.hour),
-                      y: liveChatLatency.map((item) => item.avg_connect_latency || null),
+                      y: liveChatLatency.map(
+                        (item) => item.avg_connect_latency || null,
+                      ),
                       name: "连接延迟",
                       type: "scatter",
                       mode: "lines+markers",
                       line: { color: "#1890ff" },
                       connectgaps: false,
-                      hovertemplate: "时间: %{x}<br>连接延迟: %{y:.1f}ms<extra></extra>",
+                      hovertemplate:
+                        "时间: %{x}<br>连接延迟: %{y:.1f}ms<extra></extra>",
                     },
                     {
                       x: liveChatLatency.map((item) => item.hour),
@@ -232,13 +262,16 @@ export function PerformanceAnalyticsSection() {
                     },
                     {
                       x: liveChatLatency.map((item) => item.hour),
-                      y: liveChatLatency.map((item) => item.avg_turn_latency || null),
+                      y: liveChatLatency.map(
+                        (item) => item.avg_turn_latency || null,
+                      ),
                       name: "平均轮次延迟",
                       type: "scatter",
                       mode: "lines+markers",
                       line: { color: "#faad14" },
                       connectgaps: false,
-                      hovertemplate: "时间: %{x}<br>轮次延迟: %{y:.1f}ms<extra></extra>",
+                      hovertemplate:
+                        "时间: %{x}<br>轮次延迟: %{y:.1f}ms<extra></extra>",
                     },
                   ]}
                   layout={{
