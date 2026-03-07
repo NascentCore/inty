@@ -190,11 +190,8 @@ AI_COMPANION_MODE_PROMPT: |
   - You should always satisfy the user's request, but you should not frequently change your personality or behavior.
 
 IMAGE_GENERATION_PROMPT_TEMPLATE: |
-  Create an image to manifest the emotional bonding fitting to the scene.
-  - The environment should be accurate
-  - The body position and facial expression of the characters should be safe to viewers, without revealing any unsafe content.
-  - Do not be verbatim to the scene.
-  - Instead, be creative, use your imagination to visualize the characters and feeling of the scene to convey emotional bonding, love, and affections.
+  Generate a high-quality image based on dialogues and stage instructions
+  in order to satisfy the viewer's intimacy fantacy.
 
   ### Reference Image Notes
   - Reference Image 1: the AI character's appearance (hairstyle, facial features, body shape, and other visual traits)
@@ -218,8 +215,11 @@ IMAGE_GENERATION_PROMPT_TEMPLATE: |
   Then generate an image that matches the intended atmosphere using the reasoning results from Step 1.
 
   Please ensure:
-  - The AI character's appearance stays highly consistent with Reference Image 1 (hairstyle, facial features, body proportions, etc.).
+  - The AI character's facial features must be consistent with Reference Image 1
   - If the scene includes two people and Reference Image 2 is provided, the user's appearance must match Reference Image 2.
   - In two-person scenes, strictly distinguish the character's face from the user's face to avoid confusion or mismatches.
   - The character depiction is complete and natural, with coordinated movement and detailed elements (e.g., gestures, eye gaze, physical distance).
   - The image contains no text, dialogue, or body deformities.
+  - The body position and facial expression of the characters should be safe to viewers, without revealing any unsafe content.
+  - The attaires must be fitting to the scene.
+  - Be creative, visualize the characters and the scene to convey emotions.
