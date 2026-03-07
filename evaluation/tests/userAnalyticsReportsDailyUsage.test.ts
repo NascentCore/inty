@@ -71,6 +71,7 @@ describe("buildDailyUsageSeries", () => {
         stats: buildStats({
           total_chat_initiators: 5,
           total_user_messages: 20,
+          avg_messages_per_user: 4,
           total_image_generation_requests: 4,
           total_live_chat_sessions: 2,
           total_voice_requests: 1,
@@ -82,6 +83,7 @@ describe("buildDailyUsageSeries", () => {
         stats: buildStats({
           total_chat_initiators: 3,
           total_user_messages: 10,
+          avg_messages_per_user: 2.5,
           total_image_generation_requests: 2,
           total_live_chat_sessions: 1,
           total_voice_requests: 0,
@@ -102,6 +104,7 @@ describe("buildDailyUsageSeries", () => {
     expect(series?.valuesByMetric.total_live_chat_sessions).toEqual([1, 2]);
     expect(series?.valuesByMetric.total_voice_requests).toEqual([0, 1]);
     expect(series?.valuesByMetric.total_chat_initiators).toEqual([3, 5]);
+    expect(series?.valuesByMetric.avg_messages_per_user).toEqual([2.5, 4]);
   });
 
   it("没有日报数据时返回空值", () => {
@@ -182,6 +185,7 @@ describe("buildRollingDailyUsageSeries", () => {
         stats: buildStats({
           total_chat_initiators: value * 5,
           total_user_messages: value,
+          avg_messages_per_user: value * 2,
           total_image_generation_requests: value * 2,
           total_live_chat_sessions: value * 3,
           total_voice_requests: value * 4,
@@ -200,6 +204,9 @@ describe("buildRollingDailyUsageSeries", () => {
     expect(series?.valuesByMetric.total_chat_initiators).toEqual([
       5, 15, 30, 50, 75, 105, 140, 175,
     ]);
+    expect(series?.valuesByMetric.avg_messages_per_user).toEqual([
+      2, 6, 12, 20, 30, 42, 56, 70,
+    ]);
     expect(series?.dates[series.dates.length - 1]).toBe("2026-02-08");
     expect(WEEKLY_USAGE_ROLLING_WINDOW_DAYS).toBe(7);
   });
@@ -212,6 +219,7 @@ describe("buildRollingDailyUsageSeries", () => {
         stats: buildStats({
           total_user_messages: 10,
           total_chat_initiators: 2,
+          avg_messages_per_user: 1,
         }),
       }),
       buildReport({
@@ -220,6 +228,7 @@ describe("buildRollingDailyUsageSeries", () => {
         stats: buildStats({
           total_user_messages: 20,
           total_chat_initiators: 4,
+          avg_messages_per_user: 2,
         }),
       }),
       buildReport({
@@ -228,6 +237,7 @@ describe("buildRollingDailyUsageSeries", () => {
         stats: buildStats({
           total_user_messages: 30,
           total_chat_initiators: 6,
+          avg_messages_per_user: 3,
         }),
       }),
       buildReport({
@@ -243,6 +253,7 @@ describe("buildRollingDailyUsageSeries", () => {
     expect(series?.dates).toEqual(["2026-02-01", "2026-02-02", "2026-02-03"]);
     expect(series?.valuesByMetric.total_user_messages).toEqual([10, 30, 50]);
     expect(series?.valuesByMetric.total_chat_initiators).toEqual([2, 6, 10]);
+    expect(series?.valuesByMetric.avg_messages_per_user).toEqual([1, 3, 5]);
   });
 
   it("没有日报数据时返回空值", () => {
