@@ -1,5 +1,7 @@
 # 与运维相关的任务
 
+- [ ] z@sxwl.ai 改为 unpaid admin，然后建立个人的 max plan <img width="600" height="864" alt="image" src="https://github.com/user-attachments/assets/2f8359dd-28e1-435a-b57e-72d6ae0fc410" />
+
 - [ ] 对接飞书 MCAP <https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/mcp_integration/mcp_introduction>
 
 - [ ] 创建新的 dev-intellimate GCE VM 实例
