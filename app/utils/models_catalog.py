@@ -302,6 +302,15 @@ NANO_BANANA_2 = GenAIModel(
     notes="<= 200k input tokens, <= 14 reference images.",
 )
 
+# All Gemini models in this catalog (id_on_provider contains "gemini"). Used by tools/verify_gcp_service_account_json_on_genai.py.
+ALL_GEMINI_MODELS = (
+    GEMINI_2_5_FLASH_LITE,
+    GEMINI_2_5_FLASH,
+    NANO_BANANA,
+    NANO_BANANA_PRO,
+    NANO_BANANA_2,
+)
+
 
 IMAGEN_4_FAST = GenAIModel(
     nickname="Imagen 4.0 Fast",
