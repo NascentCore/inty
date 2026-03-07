@@ -163,6 +163,18 @@ def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResul
     )
 
 
+def _langsmith_process_outputs_generate_images(
+    results: list[GeneratedImageProcessResult] | None,
+) -> list[GeneratedImageProcessResult] | None:
+    """
+    process_outputs for async_generate_images: delegates to _langsmith_process_outputs_generate_image
+    per item so LangSmith trace receives a list of sanitized results (truncated raw_data).
+    """
+    if results is None:
+        return None
+    return [_langsmith_process_outputs_generate_image(r) for r in results]
+
+
 class WrappedClient:
     def __init__(self, client: genai.Client):
         self.client = client
@@ -172,7 +184,7 @@ class WrappedClient:
         # LLM 是语言模型，生图模型就作为工具调用类型
         run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,
-        process_outputs=_langsmith_process_outputs_generate_image,
+        process_outputs=_langsmith_process_outputs_generate_images,
     )
     async def async_generate_images(
         self, 
@@ -201,7 +213,7 @@ class WrappedClient:
         参数要简单，不能太复杂，否则 LangSmith 无法抓取主要信息。
 
         Returns:
-            GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。
+            list[GeneratedImageProcessResult]（每项含 size, format, raw_data, gcs_uri, generated_at）。
             当前仅支持 Gemini（NANO_BANANA*）路径；Imagen 模型会抛出 ValueError。
         """
         match model:
@@ -234,6 +246,7 @@ class WrappedClient:
                 results = []
                 for part in parts:
                     result = _process_image_part_to_generated_image(part, gcs_uri_base)
+                    result.raw_response_from_provider = response
                     results.append(result)
                 return results
 

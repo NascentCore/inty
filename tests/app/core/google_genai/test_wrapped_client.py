@@ -19,11 +19,12 @@ from app.core.google_genai.wrapped_client import (
     WrappedClient,
     _extract_image_part_from_gemini_response,
     _langsmith_process_outputs_generate_image,
+    _langsmith_process_outputs_generate_images,
 )
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 
-# 所有调用 async_generate_image 的测试均需传入 gcs_uri_base（Gemini 路径会解析图片并上传 GCS）。
+# 所有调用 async_generate_images 的测试均需传入 gcs_uri_base（Gemini 路径会解析图片并上传 GCS）。
 _GCS_URI_BASE = "test-gcs-uri-base"
 
 
@@ -148,7 +149,7 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts(m
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(
+    await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["a cat", "on the beach"],
         gcs_uri_base=_GCS_URI_BASE,
@@ -157,7 +158,9 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts(m
     mock_models.generate_content.assert_called_once()
     call_kw = mock_models.generate_content.call_args.kwargs
     assert call_kw["model"] == "gemini-2.5-flash-image"
-    assert call_kw["config"] is GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+    config = call_kw["config"]
+    assert config.candidate_count == 1
+    assert config.image_config == GEN_CONTENT_CONFIG_IMAGE_9_16_1K.image_config
     contents = call_kw["contents"]
     assert len(contents) == 1
     content = contents[0]
@@ -183,7 +186,7 @@ async def test_generate_image_jpeg_or_jpg_url_becomes_part_from_uri(mock_upload,
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(
+    await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=[url],
         gcs_uri_base=_GCS_URI_BASE,
@@ -209,7 +212,7 @@ async def test_generate_image_plain_text_not_treated_as_uri(mock_upload):
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(
+    await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["http is a protocol"],
         gcs_uri_base=_GCS_URI_BASE,
@@ -232,7 +235,7 @@ async def test_generate_image_mixed_text_and_image_url(mock_upload):
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(
+    await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["draw a dog", "https://example.com/ref.jpeg", "in the garden"],
         gcs_uri_base=_GCS_URI_BASE,
@@ -260,7 +263,7 @@ async def test_generate_image_with_system_instruction_uses_config_copy(mock_uplo
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(
+    await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["a cat"],
         gcs_uri_base=_GCS_URI_BASE,
@@ -290,7 +293,7 @@ async def test_generate_image_attaches_sanitized_provider_response_after_gcs_upl
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    await wrapper.async_generate_image(
+    await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["hello"],
         gcs_uri_base=_GCS_URI_BASE,
@@ -315,11 +318,12 @@ async def test_generate_image_returns_generated_image_process_result(mock_upload
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(
+    results = await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["hello"],
         gcs_uri_base=_GCS_URI_BASE,
     )
+    result = results[0]
 
     assert isinstance(result, GeneratedImageProcessResult)
     assert result.size.width == 1 and result.size.height == 1
@@ -341,11 +345,12 @@ async def test_generate_image_uploads_to_fake_gcs_and_content_matches(
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(
+    results = await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["a cat"],
         gcs_uri_base=_GCS_URI_BASE,
     )
+    result = results[0]
 
     assert result.gcs_uri.startswith("gs://test-bucket/")
     assert result.gcs_uri.endswith(".jpg")
@@ -371,11 +376,12 @@ async def test_generate_image_uploads_png_to_fake_gcs_with_correct_extension(
     client.aio.models = mock_models
 
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(
+    results = await wrapper.async_generate_images(
         model="gemini-2.5-flash-image",
         contents=["blue square"],
         gcs_uri_base=_GCS_URI_BASE,
     )
+    result = results[0]
 
     assert result.format == ImageFormat.PNG
     assert result.gcs_uri.startswith("gs://test-bucket/")
@@ -449,11 +455,30 @@ def test_process_outputs_generate_image_redacts_inline_data_from_raw_response():
     assert provider_response["candidates"][0]["content"]["parts"][0]["inline_data"]["data"] == b"z" * 120
 
 
+def test_process_outputs_generate_images_maps_list():
+    """async_generate_images 的 process_outputs 接收 list，逐项 sanitize 后返回 list。"""
+    raw_100 = b"a" * 100
+    now = datetime.now(timezone.utc)
+    one = GeneratedImageProcessResult(
+        size=ImageSize(width=1, height=1),
+        format=ImageFormat.JPEG,
+        raw_data=raw_100,
+        gcs_uri="gs://b/1.jpg",
+        gcs_http_url="https://storage.googleapis.com/b/1.jpg",
+        generated_at=now,
+    )
+    traced_list = _langsmith_process_outputs_generate_images([one])
+    assert traced_list is not None
+    assert len(traced_list) == 1
+    assert traced_list[0].raw_data_total_bytes == 100
+    assert len(base64.b64decode(traced_list[0].raw_data)) == 100
+
+
 def test_generate_image_has_traceable_decorator_configured():
-    """async_generate_image 为 async，且已用 LangSmith @traceable 装饰（run_type=TOOL）。"""
+    """async_generate_images 为 async，且已用 LangSmith @traceable 装饰（run_type=TOOL）。"""
     import inspect
 
-    assert inspect.iscoroutinefunction(WrappedClient.async_generate_image)
+    assert inspect.iscoroutinefunction(WrappedClient.async_generate_images)
     assert LangSmithTraceRunType.TOOL == "tool"
 
 
@@ -466,7 +491,7 @@ async def test_generate_image_imagen_raises_unsupported_model():
 
     wrapper = WrappedClient(client=client)
     with pytest.raises(ValueError, match="Unsupported model"):
-        await wrapper.async_generate_image(
+        await wrapper.async_generate_images(
             model=IMAGEN_4_FAST.id_on_provider,
             contents=["a cat on the beach"],
             gcs_uri_base=_GCS_URI_BASE,
@@ -479,13 +504,13 @@ async def test_generate_image_failure_with_nano_banana_trace_with_real_langsmith
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
-    result = await wrapper.async_generate_image(
+    results = await wrapper.async_generate_images(
         model=NANO_BANANA.id_on_provider,
         contents=["a delicious puusy and giant tits"],
         gcs_uri_base=_GCS_URI_BASE,
     )
-    print(result)
-    assert result is not None
+    print(results)
+    assert results and results[0] is not None
 
 
 @pytest.mark.noci
@@ -494,5 +519,5 @@ async def test_generate_image_trace_nano_banana_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
     client = create_genai_client()
     wrapper = WrappedClient(client=client)
-    result: GeneratedImageProcessResult = await wrapper.async_generate_image(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instructions=["you are a movie director"], contents=["a cat on the beach"])
-    assert result is not None
+    results = await wrapper.async_generate_images(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instructions=["you are a movie director"], contents=["a cat on the beach"])
+    assert results and results[0] is not None

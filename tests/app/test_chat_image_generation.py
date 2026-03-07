@@ -49,7 +49,7 @@ class TestImageGenerationService:
         """统一函数应支持 nickname，并自动路由到 Gemini 输入格式。"""
         captured = {}
 
-        async def fake_async_generate_image(
+        async def fake_async_generate_images(
             wrapped_client_self,
             model,
             contents,
@@ -60,7 +60,7 @@ class TestImageGenerationService:
             captured["contents"] = contents
             captured["gcs_uri_base"] = gcs_uri_base
             captured["system_instructions"] = system_instructions
-            return GeneratedImageProcessResult(
+            result = GeneratedImageProcessResult(
                 size=ImageSize(width=64, height=64),
                 format=ImageFormat.JPEG,
                 raw_data=b"fake-image",
@@ -70,10 +70,11 @@ class TestImageGenerationService:
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=None,
             )
+            return [result]
 
         with patch(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
-            new=fake_async_generate_image,
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+            new=fake_async_generate_images,
         ), patch(
             "app.services.image_generation_service.get_genai_client",
             return_value=FakeGeminiClient(),
@@ -204,7 +205,7 @@ class TestImageGenerationService:
         unique_suffix = uuid.uuid4().hex[:8]
         gcs_path = f"chat_images/agent-prompt/gemini_test_{unique_suffix}.jpg"
 
-        async def fake_async_generate_image(
+        async def fake_async_generate_images(
             wrapped_client_self,
             model,
             contents,
@@ -212,7 +213,7 @@ class TestImageGenerationService:
             system_instructions=None,
         ):
             captured["prompt"] = contents[-1]
-            return GeneratedImageProcessResult(
+            result = GeneratedImageProcessResult(
                 size=ImageSize(width=64, height=64),
                 format=ImageFormat.JPEG,
                 raw_data=b"fake-image",
@@ -222,14 +223,15 @@ class TestImageGenerationService:
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=None,
             )
+            return [result]
 
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
         )
         monkeypatch.setattr(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
-            fake_async_generate_image,
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+            fake_async_generate_images,
         )
         monkeypatch.setattr(
             "app.core.google_genai.wrapped_client.upload_to_gcs",
