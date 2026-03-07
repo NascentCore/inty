@@ -38,7 +38,7 @@ CREATED_BY_AGENT
   - 新用户：总消息数 ≥ `trigger_new_user_messages`
   - 已提取用户：自上次 `extracted_at` 后新增消息数 ≥ `trigger_incremental_messages`
 - **get_all_messages_for_user(user_id)**：拉取该用户在所有会话中的全部消息 `(role, content)`，按 `created_at` 升序；不按 agent 过滤，不限制条数。
-- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`app.utils.openai_client.chat_completion_for_extraction`，默认模型 `mistralai/devstral-2512`）调用 LLM；优先使用 **structured output**（`response_format` + json_schema，仅 `part1_summary` 字段），若模型不支持则回退自由文本；从响应 `usage` 读取 token 消耗、记录端到端耗时、用 `_part1_from_content` 解析 Part 1（先 JSON 取 `part1_summary`，否则 `_extract_part1_summary`）、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
+- **extract_and_save(db, user_id)**：拉取全量消息、拼接 `# User chat history` 与提示词、使用 **OpenRouter**（`app.utils.openai_client.chat_completion_for_extraction`，模型由 `config.memory_extraction.model` 配置，默认 `x-ai/grok-4`）调用 LLM；优先使用 **structured output**（`response_format` + json_schema，仅 `part1_summary` 字段），若模型不支持则回退自由文本；从响应 `usage` 读取 token 消耗、记录端到端耗时、用 `_part1_from_content` 解析 Part 1（先 JSON 取 `part1_summary`，否则 `_extract_part1_summary`）、`DELETE` 该用户 `user_common` 且 `agent_id IS NULL` 的旧记忆后 `INSERT` 新记忆与 `memory_extraction_log`（含 `duration_seconds`、`prompt_tokens`、`completion_tokens`）。
 - **提示词**：`app/core/prompting/memory_extraction_prompt.txt`（英文）；输出要求为 JSON 单字段 `part1_summary`。
 - **\_part1_from_content(content)**：若 content 为 JSON 且含 `part1_summary` 且长度≥50 则使用该字段，否则回退 **\_extract_part1_summary(full_analysis)**（支持 `Part 1`、`**About this user**`、`**关于这位用户**` 等正则；过短时回退到约 2000 字或全文）。
 

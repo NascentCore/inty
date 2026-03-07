@@ -26,7 +26,7 @@ from openai import AsyncOpenAI, OpenAI
 from app.api.types.llm_config import LLMConfig
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.external_services.fakes.openai import FakeOpenAI
-from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
+from app.utils.config import MemoryExtractionConfig
 
 
 class Role(StrEnum):
@@ -141,17 +141,17 @@ def get_async_openai_client() -> AsyncOpenAI:
 
 
 def _default_extraction_llm_config() -> LLMConfig:
-    """默认记忆抽取用 LLM 配置，与原先 chat_completion_for_extraction 行为一致。"""
-    return LLMConfig(
-        model=DEFAULT_MEMORY_EXTRACTION_MODEL,
-        max_tokens=4000,
-        temperature=0.3,
-    )
+    """默认记忆抽取用 LLM 配置，从 config.memory_extraction.model 读取。"""
+    cfg = global_config_loaded_from_config_yaml.memory_extraction
+    model = (cfg.model or "").strip() or MemoryExtractionConfig().model
+    return LLMConfig(model=model, max_tokens=4000, temperature=0.3)
 
 
 def _llm_config_to_create_kwargs(llm_config: LLMConfig) -> dict:
     """从 LLMConfig 构建 client.chat.completions.create 的参数字典，仅包含非 None 字段。"""
-    model = (llm_config.model or "").strip() or DEFAULT_MEMORY_EXTRACTION_MODEL
+    cfg = global_config_loaded_from_config_yaml.memory_extraction
+    default = (cfg.model or "").strip() or MemoryExtractionConfig().model
+    model = (llm_config.model or "").strip() or default
     kwargs: dict = {
         "model": model,
         "max_tokens": llm_config.max_tokens,
@@ -174,7 +174,7 @@ async def chat_completion_for_extraction(
     """
     异步调用 chat completions 用于记忆抽取。
     返回 (content, prompt_tokens, completion_tokens)。
-    llm_config 为 None 时使用默认配置（DEFAULT_MEMORY_EXTRACTION_MODEL、max_tokens=4000、temperature=0.3）。
+    llm_config 为 None 时使用默认配置（config.memory_extraction.model、max_tokens=4000、temperature=0.3）。
     response_format 非空时传入 create（OpenRouter/OpenAI 结构化输出），content 为 JSON 字符串，由调用方解析。
     """
     cfg = llm_config if llm_config is not None else _default_extraction_llm_config()

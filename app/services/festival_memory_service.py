@@ -33,10 +33,8 @@ from app.services.memory_service import (
     build_festival_memory_metadata,
     resolve_festival_name_and_date,
 )
+from app.utils.config import MemoryExtractionConfig
 from app.utils.openai_client import chat_completion_for_extraction
-from app.utils.openrouter_memory import (
-    DEFAULT_MEMORY_EXTRACTION_MODEL as DEFAULT_FESTIVAL_EXTRACTION_MODEL,
-)
 
 _MAX_IN_PARAMS = 5000
 DEFAULT_MIN_ROUNDS_IN_WINDOW = 15
@@ -275,8 +273,8 @@ Festival date: {date_str}
         return (full_prompt, llm_config)
     cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
     model_name = (
-        cfg.model.strip() if cfg and cfg.model else None
-    ) or DEFAULT_FESTIVAL_EXTRACTION_MODEL
+        (cfg.model or "").strip() if cfg else ""
+    ) or MemoryExtractionConfig().model
     default_llm_config = LLMConfig(
         model=model_name,
         max_tokens=2000,

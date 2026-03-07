@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-用 call_openrouter_for_extraction 演示 temperature 对输出的影响：temperature=0 是否总是得到相同结果。
+用 chat_completion_for_extraction 演示 temperature 对输出的影响：temperature=0 是否总是得到相同结果。
 配置由 app 从当前工作目录的 config.yaml 加载，因此须在仓库根目录执行，例如：
   PYTHONPATH=. python experimental/samples/openrouter_extraction_temperature.py
 """
 
 import asyncio
 
-from app.utils.openrouter_memory import (
-    DEFAULT_MEMORY_EXTRACTION_MODEL,
-    call_openrouter_for_extraction,
-)
+from app.api.types.llm_config import LLMConfig
+from app.core.config import global_config_loaded_from_config_yaml
+from app.utils.config import MemoryExtractionConfig
+from app.utils.openai_client import chat_completion_for_extraction
 
 PROMPT = """
 Heartbeat Diary System Prompt
@@ -102,34 +102,31 @@ Example C — opens with a confession:
 All temperature=0 outputs identical? No
 """
 
-MODEL = DEFAULT_MEMORY_EXTRACTION_MODEL
+def _extraction_model() -> str:
+    cfg = getattr(global_config_loaded_from_config_yaml, "memory_extraction", None)
+    return (getattr(cfg, "model", None) or "").strip() or MemoryExtractionConfig().model
+
+
 N_TEMP_ZERO = 5
 N_TEMP_HIGH = 2
 TEMP_HIGH = 0.7
 
 
 async def main():
+    model = _extraction_model()
     # temperature=0 多次调用，观察是否一致
     outputs_temp_zero = []
     for i in range(N_TEMP_ZERO):
-        content, _, _ = await call_openrouter_for_extraction(
-            PROMPT,
-            model=MODEL,
-            max_tokens=4000,
-            temperature=0,
-        )
+        llm_config = LLMConfig(model=model, max_tokens=4000, temperature=0)
+        content, _, _ = await chat_completion_for_extraction(PROMPT, llm_config=llm_config)
         text = (content or "").strip()
         outputs_temp_zero.append(text)
         print(f"  run={i+1} temperature=0 -> {text!r}")
 
     # temperature>0 少量调用，展示方差
     for i in range(N_TEMP_HIGH):
-        content, _, _ = await call_openrouter_for_extraction(
-            PROMPT,
-            model=MODEL,
-            max_tokens=4000,
-            temperature=TEMP_HIGH,
-        )
+        llm_config = LLMConfig(model=model, max_tokens=4000, temperature=TEMP_HIGH)
+        content, _, _ = await chat_completion_for_extraction(PROMPT, llm_config=llm_config)
         text = (content or "").strip()
         print(f"  run={i+1} temperature={TEMP_HIGH} -> {text!r}")
 

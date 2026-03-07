@@ -371,12 +371,10 @@ class ElevenLabsConfig:
 
 @dataclass
 class MemoryExtractionConfig:
-    """记忆抽取定时任务配置；默认使用 OpenRouter mistralai/devstral-2512。"""
+    """记忆抽取定时任务配置；默认使用 OpenRouter x-ai/grok-4，可在 config.yaml memory_extraction.model 覆盖。"""
 
     enabled: bool = True
-    model: str = (
-        ""  # OpenRouter 模型 id，为空时使用代码内默认（mistralai/devstral-2512）
-    )
+    model: str = "x-ai/grok-4"  # OpenRouter 模型 id，可在 config.yaml 中覆盖
     cron_hour: int = 3  # UTC 小时，每日执行
     trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
     trigger_incremental_messages: int = (

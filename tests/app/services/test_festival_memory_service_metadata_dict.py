@@ -127,8 +127,8 @@ def _load_festival_memory_service_module():
         _dummy_chat_completion_for_extraction
     )
 
-    fake_openrouter_module = types.ModuleType("app.utils.openrouter_memory")
-    fake_openrouter_module.DEFAULT_MEMORY_EXTRACTION_MODEL = "fake-model"
+    # fake_config.memory_extraction.model is used as default extraction model
+    fake_core_config_module.global_config_loaded_from_config_yaml.memory_extraction.model = "fake-model"
 
     sys.modules.pop("app.services.festival_memory_service", None)
     with pytest.MonkeyPatch.context() as mp:
@@ -144,7 +144,6 @@ def _load_festival_memory_service_module():
         mp.setitem(sys.modules, "app.services.chat_service", fake_chat_service_module)
         mp.setitem(sys.modules, "app.services.memory_service", fake_memory_service_module)
         mp.setitem(sys.modules, "app.utils.openai_client", fake_openai_client_module)
-        mp.setitem(sys.modules, "app.utils.openrouter_memory", fake_openrouter_module)
         module = importlib.import_module("app.services.festival_memory_service")
     return module
 

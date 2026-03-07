@@ -16,7 +16,7 @@ def _load_memory_extraction_service_module():
         memory_extraction=types.SimpleNamespace(
             trigger_new_user_messages=30,
             trigger_incremental_messages=30,
-            model="",
+            model="mistralai/devstral-2512",
         ),
     )
     fake_core_config_module = types.ModuleType("app.core.config")
@@ -32,9 +32,6 @@ def _load_memory_extraction_service_module():
 
     fake_chat_service_module = types.ModuleType("app.services.chat_service")
     fake_chat_service_module.generate_session_id = lambda chat_id: f"session-{chat_id}"
-
-    fake_openrouter_module = types.ModuleType("app.utils.openrouter_memory")
-    fake_openrouter_module.DEFAULT_MEMORY_EXTRACTION_MODEL = "mistralai/devstral-2512"
 
     fake_openai_client_module = types.ModuleType("app.utils.openai_client")
 
@@ -52,7 +49,6 @@ def _load_memory_extraction_service_module():
             "app.services.chat_history_service": fake_chat_history_module,
             "app.services.chat_service": fake_chat_service_module,
             "app.utils.openai_client": fake_openai_client_module,
-            "app.utils.openrouter_memory": fake_openrouter_module,
         },
     ):
         return importlib.import_module("app.services.memory_extraction_service")

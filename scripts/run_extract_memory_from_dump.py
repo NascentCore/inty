@@ -27,8 +27,8 @@ from app.services.memory_extraction_service import (
     _load_prompt,
     _part1_from_content,
 )
+from app.utils.config import MemoryExtractionConfig
 from app.utils.openai_client import chat_completion_for_extraction
-from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
 
 def _full_prompt_from_json(json_path: Path) -> str:
@@ -40,20 +40,14 @@ def _full_prompt_from_json(json_path: Path) -> str:
 
 
 def _llm_config_from_app() -> LLMConfig:
-    """与 extract_and_save 一致：优先使用 memory_extraction 配置。"""
+    """与 extract_and_save 一致：使用 config.memory_extraction.model。"""
     cfg = getattr(
         global_config_loaded_from_config_yaml,
         "memory_extraction",
         None,
     )
-    if cfg and getattr(cfg, "model", None) and str(cfg.model).strip():
-        model_name = str(cfg.model).strip()
-        return LLMConfig(model=model_name, max_tokens=4000, temperature=0.3)
-    return LLMConfig(
-        model=DEFAULT_MEMORY_EXTRACTION_MODEL,
-        max_tokens=4000,
-        temperature=0.3,
-    )
+    model = (getattr(cfg, "model", None) or "").strip() or MemoryExtractionConfig().model
+    return LLMConfig(model=model, max_tokens=4000, temperature=0.3)
 
 
 async def run(

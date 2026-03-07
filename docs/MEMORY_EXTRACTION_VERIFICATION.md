@@ -60,7 +60,7 @@ python scripts/run_extract_memory_from_dump.py \
   --output output/part1.txt
 ```
 
-- 模型与参数：与线上一致，优先使用 `config.yaml` 中 `memory_extraction.model`，未配置则使用 [DEFAULT_MEMORY_EXTRACTION_MODEL](app/utils/openrouter_memory.py)（如 `mistralai/devstral-2512`）。
+- 模型与参数：与线上一致，使用 `config.yaml` 中 `memory_extraction.model`（默认 `x-ai/grok-4`，见 [MemoryExtractionConfig](app/utils/config.py)）。
 - 抽取使用 **structured output**（`response_format` + json_schema，仅 `part1_summary` 字段）；若模型不支持则自动回退为自由文本并用 `_extract_part1_summary` 解析。
 - 脚本会先打印 **full_analysis**（模型完整返回，可能为 JSON 或自由文本），再打印 **Part1**（解析出的用户画像摘要）。
 
@@ -86,7 +86,7 @@ python scripts/run_extract_memory_from_dump.py \
    ```bash
    python scripts/run_extract_memory_from_dump.py --prompt-file output/user_messages_<short>_prompt.txt --output output/part1_grok4.txt
    ```  
-   对比 Part1 是否为「**About this user, you should know:**」等结构化摘要。若新模型输出符合预期，可考虑将线上默认模型改为该模型（改 `memory_extraction.model` 或 [DEFAULT_MEMORY_EXTRACTION_MODEL](app/utils/openrouter_memory.py)）。
+   对比 Part1 是否为「**About this user, you should know:**」等结构化摘要。若新模型输出符合预期，可在 `config.yaml` 的 `memory_extraction.model` 中配置该模型。
 
 5. **验证 prompt/解析修改**  
    修改 [memory_extraction_prompt.txt](app/core/prompting/memory_extraction_prompt.txt) 或 [\_part1_from_content](app/services/memory_extraction_service.py) / [MEMORY_EXTRACTION_RESPONSE_FORMAT](app/services/memory_extraction_service.py) 后，用同一份 dump 的 prompt 反复执行 run_extract，对比 full_analysis 与 Part1 是否改善。
@@ -107,5 +107,5 @@ python scripts/run_extract_memory_from_dump.py \
 - 记忆功能总览：[evaluation/docs/MEMORY_FEATURE_IMPLEMENTATION_SUMMARY.md](evaluation/docs/MEMORY_FEATURE_IMPLEMENTATION_SUMMARY.md)
 - 抽取与解析逻辑：[app/services/memory_extraction_service.py](app/services/memory_extraction_service.py)
 - 抽取用 LLM 调用：[app/utils/openai_client.py](app/utils/openai_client.py)（`chat_completion_for_extraction`）
-- 默认模型常量：[app/utils/openrouter_memory.py](app/utils/openrouter_memory.py)
+- 默认模型（可配置）：[app/utils/config.py](app/utils/config.py) 中 `MemoryExtractionConfig.model`，默认 `x-ai/grok-4`；可通过 `config.yaml` 的 `memory_extraction.model` 覆盖。
 - 手动对单用户执行抽取（写 DB）：[scripts/run_memory_extraction.py](scripts/run_memory_extraction.py)（`--user-id`，可选 `--dry-run`）
