@@ -178,3 +178,37 @@ async def test_get_users_to_extract_passes_replica_read_url_to_sync_computation(
     called_args = mock_to_thread.await_args.args
     assert called_args[0] is service._compute_users_to_extract_sync
     assert called_args[-1] == "postgresql://replica-host:5432/inty"
+
+
+def test_trim_messages_for_extraction_keeps_latest_messages_only():
+    messages = [
+        ("user", "m1"),
+        ("assistant", "m2"),
+        ("user", "m3"),
+        ("assistant", "m4"),
+    ]
+
+    trimmed = service._trim_messages_for_extraction(messages, max_messages_per_user=2)
+
+    assert trimmed == [("user", "m3"), ("assistant", "m4")]
+
+
+def test_structured_output_unsupported_model_is_cached():
+    service._STRUCTURED_OUTPUT_UNSUPPORTED_MODELS.clear()
+    model_name = "google/gemini-2.5-flash-lite"
+
+    assert service._should_try_structured_output(model_name) is True
+
+    service._remember_response_format_unsupported_model(model_name)
+
+    assert service._should_try_structured_output(model_name) is False
+
+
+def test_response_format_unsupported_error_detection():
+    unsupported_error = ValueError(
+        "Unsupported response_format json_schema for this model"
+    )
+    timeout_error = TimeoutError("request timeout")
+
+    assert service._is_response_format_unsupported_error(unsupported_error) is True
+    assert service._is_response_format_unsupported_error(timeout_error) is False

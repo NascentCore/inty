@@ -371,17 +371,19 @@ class ElevenLabsConfig:
 
 @dataclass
 class MemoryExtractionConfig:
-    """记忆抽取定时任务配置；默认使用 OpenRouter mistralai/devstral-2512。"""
+    """记忆抽取定时任务配置；默认使用 OpenRouter google/gemini-2.5-flash-lite。"""
 
     enabled: bool = True
     model: str = (
-        ""  # OpenRouter 模型 id，为空时使用代码内默认（mistralai/devstral-2512）
+        ""  # OpenRouter 模型 id，为空时使用代码内默认（google/gemini-2.5-flash-lite）
     )
     cron_hour: int = 3  # UTC 小时，每日执行
     trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
+    # 记忆抽取送入 LLM 的最大消息条数；<=0 表示不截断。
+    max_messages_per_user: int = 300
 
 
 def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":

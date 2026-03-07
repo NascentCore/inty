@@ -124,6 +124,67 @@ def _part1_from_content(content: str) -> str:
     return _extract_part1_summary(content)
 
 
+_STRUCTURED_OUTPUT_UNSUPPORTED_MODELS: set[str] = set()
+
+
+def _normalize_model_name(model_name: Optional[str]) -> str:
+    return (model_name or "").strip().lower()
+
+
+def _is_response_format_unsupported_error(error: Exception) -> bool:
+    message = str(error).lower()
+    has_response_format_signal = any(
+        token in message
+        for token in (
+            "response_format",
+            "json_schema",
+            "structured output",
+            "structured_outputs",
+        )
+    )
+    has_unsupported_signal = any(
+        token in message
+        for token in (
+            "unsupported",
+            "not support",
+            "not supported",
+            "unknown parameter",
+            "invalid",
+            "not allowed",
+        )
+    )
+    return has_response_format_signal and has_unsupported_signal
+
+
+def _should_try_structured_output(model_name: str) -> bool:
+    normalized_model_name = _normalize_model_name(model_name)
+    if not normalized_model_name:
+        return True
+    return normalized_model_name not in _STRUCTURED_OUTPUT_UNSUPPORTED_MODELS
+
+
+def _remember_response_format_unsupported_model(model_name: str) -> None:
+    normalized_model_name = _normalize_model_name(model_name)
+    if not normalized_model_name:
+        return
+    if normalized_model_name in _STRUCTURED_OUTPUT_UNSUPPORTED_MODELS:
+        return
+    _STRUCTURED_OUTPUT_UNSUPPORTED_MODELS.add(normalized_model_name)
+    logger.warning(
+        f"记忆抽取模型不支持 structured output，后续将跳过该能力: {model_name}"
+    )
+
+
+def _trim_messages_for_extraction(
+    messages: List[Tuple[str, str]], max_messages_per_user: int
+) -> List[Tuple[str, str]]:
+    if max_messages_per_user <= 0:
+        return messages
+    if len(messages) <= max_messages_per_user:
+        return messages
+    return messages[-max_messages_per_user:]
+
+
 def get_all_messages_for_user(
     user_id: str, prefer_replica_read: bool = False
 ) -> List[Tuple[str, str]]:
@@ -364,33 +425,58 @@ async def extract_and_save(
     messages = await asyncio.to_thread(
         get_all_messages_for_user, user_id, prefer_replica_read
     )
-    msg_count = len(messages)
-    if msg_count == 0:
+    total_msg_count = len(messages)
+    if total_msg_count == 0:
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
         return
+
+    max_messages_per_user = int(getattr(cfg, "max_messages_per_user", 0) or 0)
+    messages = _trim_messages_for_extraction(messages, max_messages_per_user)
+    msg_count = len(messages)
+    if msg_count < total_msg_count:
+        logger.info(
+            f"记忆抽取消息已截断 user_id={user_id} total_messages={total_msg_count} "
+            f"used_messages={msg_count} max_messages={max_messages_per_user}"
+        )
 
     chat_text = _format_chat_for_prompt(messages)
     full_prompt = f"{prompt}\n\n---\n\n# User chat history\n\n{chat_text}"
 
     start_time = time.perf_counter()
     try:
-        model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+        model_name = (
+            cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+        )
         llm_config = LLMConfig(
             model=model_name or None,
             max_tokens=4000,
             temperature=0.3,
         )
-        try:
-            full_analysis, prompt_tokens, completion_tokens = (
-                await chat_completion_for_extraction(
-                    full_prompt,
-                    llm_config=llm_config,
-                    response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
+        if _should_try_structured_output(model_name):
+            try:
+                full_analysis, prompt_tokens, completion_tokens = (
+                    await chat_completion_for_extraction(
+                        full_prompt,
+                        llm_config=llm_config,
+                        response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
+                    )
                 )
-            )
-        except Exception as format_err:
+            except Exception as format_err:
+                if _is_response_format_unsupported_error(format_err):
+                    _remember_response_format_unsupported_model(model_name)
+                    logger.debug(
+                        f"记忆抽取 structured output 不受支持，回退自由文本 user_id={user_id}: {format_err}"
+                    )
+                    full_analysis, prompt_tokens, completion_tokens = (
+                        await chat_completion_for_extraction(
+                            full_prompt, llm_config=llm_config
+                        )
+                    )
+                else:
+                    raise
+        else:
             logger.debug(
-                f"记忆抽取 structured output 失败，回退自由文本 user_id={user_id}: {format_err}"
+                f"记忆抽取跳过 structured output（模型已标记不支持）user_id={user_id} model={model_name}"
             )
             full_analysis, prompt_tokens, completion_tokens = (
                 await chat_completion_for_extraction(
