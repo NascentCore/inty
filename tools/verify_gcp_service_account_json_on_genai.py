@@ -42,6 +42,11 @@ def main(
     failed: list[str] = []
     for model in vertex_gemini:
         model_id = model.id_on_provider
+        if model_id.startswith("gemini-live-"):
+            print(f"--- {model.nickname} ({model_id}) ---")
+            print("(Live API model; skipping generate_content test)")
+            print()
+            continue
         print(f"--- {model.nickname} ({model_id}) ---")
         try:
             for i in range(count):

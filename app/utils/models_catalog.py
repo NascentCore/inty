@@ -302,6 +302,244 @@ NANO_BANANA_2 = GenAIModel(
     notes="<= 200k input tokens, <= 14 reference images.",
 )
 
+# Vertex AI–only Gemini text/multimodal models (used by tools/verify_gcp_service_account_json_on_genai.py).
+VERTEX_GEMINI_2_5_FLASH_LITE = GenAIModel(
+    nickname="Gemini 2.5 Flash Lite (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-2.5-flash-lite",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.1, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.4, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            )
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite",
+)
+
+VERTEX_GEMINI_2_5_FLASH = GenAIModel(
+    nickname="Gemini 2.5 Flash (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-2.5-flash",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.30, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=2.50, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash",
+)
+
+VERTEX_GEMINI_2_5_PRO = GenAIModel(
+    nickname="Gemini 2.5 Pro (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-2.5-pro",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=1.25, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=10.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-pro",
+)
+
+VERTEX_GEMINI_2_0_FLASH = GenAIModel(
+    nickname="Gemini 2.0 Flash (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-2.0-flash-001",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.10, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.40, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash",
+)
+
+VERTEX_GEMINI_2_0_FLASH_LITE = GenAIModel(
+    nickname="Gemini 2.0 Flash Lite (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-2.0-flash-lite-001",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.075, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.30, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash-lite",
+)
+
+VERTEX_GEMINI_3_1_FLASH_LITE_PREVIEW = GenAIModel(
+    nickname="Gemini 3.1 Flash Lite Preview (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-3.1-flash-lite-preview",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.15, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.60, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-1-flash-lite",
+)
+
+VERTEX_GEMINI_3_1_PRO_PREVIEW = GenAIModel(
+    nickname="Gemini 3.1 Pro Preview (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-3.1-pro-preview",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=1.25, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=10.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-1-pro",
+)
+
+VERTEX_GEMINI_3_FLASH_PREVIEW = GenAIModel(
+    nickname="Gemini 3 Flash Preview (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-3-flash-preview",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.35, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=1.05, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash",
+)
+
+VERTEX_GEMINI_3_PRO_PREVIEW = GenAIModel(
+    nickname="Gemini 3 Pro Preview (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-3-pro-preview",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=1.25, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=10.0, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-pro",
+)
+
+VERTEX_GEMINI_2_5_FLASH_LITE_PREVIEW_09_2025 = GenAIModel(
+    nickname="Gemini 2.5 Flash Lite Preview 09-2025 (Vertex)",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-2.5-flash-lite-preview-09-2025",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.1, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.4, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            )
+        ],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models-2.5",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-lite",
+)
+
+VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO = GenAIModel(
+    nickname="Gemini Live 2.5 Flash Native Audio (Vertex)",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.AUDIO], outputs=[DataModality.TEXT, DataModality.AUDIO]
+    ),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
+    id_on_provider="gemini-live-2.5-flash-native-audio",
+    pricing=Pricing(
+        inputs=[],
+        outputs=[],
+        official_url="https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    ),
+    official_url="https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-flash-live-api",
+    notes="Live API only; generate_content not supported. Skipped in verify script.",
+)
+
 # All Gemini models in this catalog (id_on_provider contains "gemini"). Used by tools/verify_gcp_service_account_json_on_genai.py.
 ALL_GEMINI_MODELS = (
     GEMINI_2_5_FLASH_LITE,
@@ -309,6 +547,17 @@ ALL_GEMINI_MODELS = (
     NANO_BANANA,
     NANO_BANANA_PRO,
     NANO_BANANA_2,
+    VERTEX_GEMINI_2_5_FLASH_LITE,
+    VERTEX_GEMINI_2_5_FLASH,
+    VERTEX_GEMINI_2_5_PRO,
+    VERTEX_GEMINI_2_0_FLASH,
+    VERTEX_GEMINI_2_0_FLASH_LITE,
+    VERTEX_GEMINI_3_1_FLASH_LITE_PREVIEW,
+    VERTEX_GEMINI_3_1_PRO_PREVIEW,
+    VERTEX_GEMINI_3_FLASH_PREVIEW,
+    VERTEX_GEMINI_3_PRO_PREVIEW,
+    VERTEX_GEMINI_2_5_FLASH_LITE_PREVIEW_09_2025,
+    VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO,
 )
 
 
