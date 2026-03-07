@@ -243,6 +243,42 @@ class TestBuildImagePrompt:
         assert "{{ char }}" not in result
         assert "{{ user }}" not in result
 
+    def test_official_intellimate_agent_includes_avatar_facial_constraints(self):
+        """官方 Inty/IntelliMate 角色应注入头像五官一致性约束，避免生图漂移为真人脸。"""
+        agent_data = {
+            "id": "879e5e14-fec2-4d63-9704-4f3141bed74f",
+            "name": "IntelliMate",
+            "personality": "Helpful assistant.",
+            "intro": "Official in-app helper.",
+        }
+        result = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=[],
+            user_message="Show a friendly greeting scene",
+            user_info="",
+        )
+
+        assert "Official iMate avatar facial identity constraints" in result
+        assert "not a photorealistic human face" in result
+        assert "exactly two vertical black oval eyes" in result
+
+    def test_non_official_agent_does_not_include_avatar_facial_constraints(self):
+        """非官方角色不应注入 iMate 专属头像约束，避免影响普通角色生图。"""
+        agent_data = {
+            "id": "agent-random",
+            "name": "Ava",
+            "personality": "Friendly",
+            "scenario": "Coffee shop",
+        }
+        result = image_generation_service.build_image_prompt(
+            agent_data=agent_data,
+            chat_history=[],
+            user_message="Draw a portrait",
+            user_info="",
+        )
+
+        assert "Official iMate avatar facial identity constraints" not in result
+
 
 class TestSerializeGeminiResponseForLog:
     """_serialize_gemini_response_for_log 防御性序列化"""

@@ -212,6 +212,7 @@ IMAGE_GENERATION_PROMPT_TEMPLATE: |
 
   ### Step 2: Scene Generation
   Based on the character personality: {agent_personality} and character background: {agent_background}, confirm the character's hairstyle, facial features, and body traits.
+  {avatar_facial_constraints_block}
   Then generate an image that matches the intended atmosphere using the reasoning results from Step 1.
 
   Please ensure:

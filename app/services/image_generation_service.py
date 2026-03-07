@@ -27,6 +27,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent import prompts as agent_prompts
+from app.core.agent.agent_prompt_configs import (
+    INTELLIMATE_AGENT_ID,
+    INTELLIMATE_AGENT_NAME,
+    INTELLIMATE_AGENT_NAME_LEGACY,
+)
 from app.core.agent.prompt_template import render_prompt_jinja2_template
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.images.fal import (
@@ -67,6 +72,20 @@ from app.utils.models_catalog import (
 # 生图失败时日志中提示词最大长度，避免泄露过多用户内容并控制日志体积
 _MAX_PROMPT_LOG_LEN = 800000
 _MAX_TRACE_TEXT_PREVIEW_LEN = 500
+
+_INTELLIMATE_OFFICIAL_NAMES = {
+    INTELLIMATE_AGENT_NAME.lower(),
+    INTELLIMATE_AGENT_NAME_LEGACY.lower(),
+    "imate",
+}
+_INTELLIMATE_AVATAR_FACIAL_FEATURES_DESCRIPTION = """
+### Official iMate avatar facial identity constraints
+- The character is a minimalist mascot icon, not a photorealistic human face.
+- Keep a smooth ghost-like rounded head and soft speech-bubble body silhouette.
+- Keep exactly two vertical black oval eyes with no mouth, nose, eyebrows, eyelashes, or ears.
+- Keep a secondary smaller speech-bubble element in front with the same two-eye style.
+- Keep the visual identity clean and flat, avoiding skin texture, realistic pores, or human facial anatomy.
+""".strip()
 
 
 class ChatImageGenInput(BaseModel):
@@ -224,6 +243,21 @@ def _log_image_generation_failure(prompt: Optional[str], response: Any) -> None:
 class ImageGenerationService:
     """图片生成服务，是提供了内部服务中间件抽象的对 Gemini 图像生成的封装"""
 
+    def _is_intellimate_official_agent(self, agent_data: dict) -> bool:
+        agent_id = str(agent_data.get("id", "")).strip()
+        if agent_id == INTELLIMATE_AGENT_ID:
+            return True
+
+        agent_name = str(agent_data.get("name", "")).strip().lower()
+        return agent_name in _INTELLIMATE_OFFICIAL_NAMES
+
+    def _build_avatar_facial_constraints_block(self, agent_data: dict) -> str:
+        # Key intermediate step: fetched production official assistant avatar from app.inty.cc
+        # and distilled stable visual traits into explicit constraints to reduce identity drift.
+        if not self._is_intellimate_official_agent(agent_data):
+            return ""
+        return _INTELLIMATE_AVATAR_FACIAL_FEATURES_DESCRIPTION
+
     def build_image_prompt(
         self,
         agent_data: dict,
@@ -275,6 +309,9 @@ class ImageGenerationService:
 
         # 使用统一的图片生成提示词模板
         template = agent_prompts.IMAGE_GENERATION_PROMPT_TEMPLATE
+        avatar_facial_constraints_block = self._build_avatar_facial_constraints_block(
+            agent_data
+        )
 
         # 替换模板变量
         prompt = template.format(
@@ -283,6 +320,7 @@ class ImageGenerationService:
             chat_history=history_text,
             user_message=user_message,
             user_info=user_info,
+            avatar_facial_constraints_block=avatar_facial_constraints_block,
         )
 
         logger.debug("构建的生图提示词: {}", prompt)
