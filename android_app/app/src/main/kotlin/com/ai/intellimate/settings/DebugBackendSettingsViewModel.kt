@@ -1,9 +1,11 @@
 package com.ai.intellimate.settings
 
 import ai.sxwl.android.data.http.NetworkStackCoordinator
+import ai.sxwl.android.data.chat.data.ChatWebSocketSessionManager
 import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
+import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.AppUtils
 import ai.sxwl.android.utils.LogUtils
 import androidx.lifecycle.ViewModel
@@ -35,6 +37,8 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val remixButtonVisible: Boolean,
         // 用户时间上下文上报（仅在 debug 构建中有效）
         val userTimeContextReportingEnabled: Boolean,
+        // 聊天是否走 WebSocket（仅在 debug 构建中有效）
+        val chatWebSocketEnabled: Boolean,
     )
 
     val quickPresets =
@@ -59,6 +63,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val remixButtonVisible = getRemixButtonEffectiveVisibility()
         val userTimeContextReportingEnabled =
             DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
+        val chatWebSocketEnabled = DebugBackendEndpointStore.getChatWebSocketEnabled()
         return UiState(
             buildType = NetworkConfig.getCurrentBuildType().value,
             activeBaseUrl = activeBaseUrl,
@@ -66,6 +71,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
             debugModeEnabled = debugModeEnabled,
             remixButtonVisible = remixButtonVisible,
             userTimeContextReportingEnabled = userTimeContextReportingEnabled,
+            chatWebSocketEnabled = chatWebSocketEnabled,
         )
     }
 
@@ -89,6 +95,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
 
         // 统一清除两套网络栈缓存，确保切换地址后使用新客户端
         NetworkStackCoordinator.clearAllRuntimeCaches()
+        viewModelScope.launch { ChatWebSocketSessionManager.closeSession() }
 
         _uiState.update {
             it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "")
@@ -111,6 +118,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         DebugBackendEndpointStore.clearOverride()
         // 统一清除两套网络栈缓存，确保重置地址后使用新客户端
         NetworkStackCoordinator.clearAllRuntimeCaches()
+        viewModelScope.launch { ChatWebSocketSessionManager.closeSession() }
 
         val active = NetworkConfig.getBaseUrl()
         _uiState.update { it.copy(activeBaseUrl = active, customUrlInput = "") }
@@ -149,6 +157,23 @@ class DebugBackendSettingsViewModel : ViewModel() {
         val updated = !current
         DebugBackendEndpointStore.persistUserTimeContextReportingEnabled(updated)
         _uiState.update { it.copy(userTimeContextReportingEnabled = updated) }
+    }
+
+    fun toggleChatWebSocketEnabled() {
+        val current = _uiState.value.chatWebSocketEnabled
+        val updated = !current
+        DebugBackendEndpointStore.persistChatWebSocketEnabled(updated)
+        _uiState.update { it.copy(chatWebSocketEnabled = updated) }
+        FirebaseManager.logEvent(
+            FirebaseManager.Events.SELECT_CONTENT,
+            FirebaseManager.safeEventParams(
+                "content_type" to "debug_chat_websocket_toggle",
+                "item_id" to updated.toString(),
+            ),
+        )
+        if (!updated) {
+            viewModelScope.launch { ChatWebSocketSessionManager.closeSession() }
+        }
     }
 }
 

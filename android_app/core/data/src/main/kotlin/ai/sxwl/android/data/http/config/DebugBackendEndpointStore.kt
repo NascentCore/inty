@@ -12,6 +12,7 @@ object DebugBackendEndpointStore {
     private const val KEY_BASE_URL = "override_base_url"
     private const val KEY_REMIX_BUTTON_VISIBLE = "char_remix_button_visible"
     private const val KEY_USER_TIME_CONTEXT_REPORTING = "chat_user_time_context_reporting"
+    private const val KEY_CHAT_WEBSOCKET_ENABLED = "chat_websocket_enabled"
 
     private val prefs by lazy {
         Utils.getApp().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -92,5 +93,21 @@ object DebugBackendEndpointStore {
         if (!prefs.contains(KEY_USER_TIME_CONTEXT_REPORTING)) return
         prefs.edit().remove(KEY_USER_TIME_CONTEXT_REPORTING).apply()
         LogUtils.i("DebugBackendEndpointStore", "Runtime user time context override cleared")
+    }
+
+    fun getChatWebSocketEnabled(): Boolean {
+        if (!isRuntimeOverrideSupported()) return false
+        return prefs.getBoolean(KEY_CHAT_WEBSOCKET_ENABLED, false)
+    }
+
+    fun persistChatWebSocketEnabled(enabled: Boolean) {
+        require(isRuntimeOverrideSupported()) {
+            "Runtime chat websocket toggle is only available for debug builds"
+        }
+        prefs.edit().putBoolean(KEY_CHAT_WEBSOCKET_ENABLED, enabled).apply()
+        LogUtils.i(
+            "DebugBackendEndpointStore",
+            "Runtime chat websocket updated to $enabled",
+        )
     }
 }

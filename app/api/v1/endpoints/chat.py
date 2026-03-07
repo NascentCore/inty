@@ -3,7 +3,7 @@ import uuid
 from types import SimpleNamespace
 from typing import Any, List, Optional, TypeAlias, Union
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, WebSocket, WebSocketDisconnect
 from langchain_core.messages import HumanMessage
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +25,7 @@ from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType
-from app.schemas.chat import ChatCompletionRequest
+from app.schemas.chat import ChatCompletionRequest, ChatWebSocketRequest
 from app.schemas.response import (
     BizError,
     BusinessErrorCode,
@@ -48,6 +48,22 @@ from app.services.voice_service import voice_service
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+
+async def _get_current_user_from_websocket(
+    websocket: WebSocket, db: AsyncSession
+) -> Optional[schemas.User]:
+    auth = websocket.headers.get("authorization")
+    token = None
+    if auth:
+        parts = auth.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1].strip()
+    if token is None or token == "":
+        token = websocket.query_params.get("token")
+    if token is None or token == "":
+        return None
+    return await deps.get_user_from_token(token, db)
 
 
 def _handle_subscription_limit_error(
@@ -215,6 +231,7 @@ def _build_chat_response(
     latest_message_info: Optional[dict],
     audio_url: Optional[str],
     request: ChatCompletionRequest,
+    source_image_id: Optional[str],
     user_message_id: Optional[int] = None,
     subscription_actions: Optional[List[BizAction]] = None,
 ) -> dict:
@@ -239,7 +256,7 @@ def _build_chat_response(
     if message.get("audio_url"):
         logger.debug(f"响应包含语音URL: {message['audio_url']}")
 
-    return {
+    response = {
         "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
         "object": "chat.completion",
         "created": int(time.time()),
@@ -254,6 +271,9 @@ def _build_chat_response(
             + len(response_text_content.split()),
         },
     }
+    if source_image_id is not None:
+        response["source_image_id"] = source_image_id
+    return response
 
 
 def _should_trigger_premium_preview(
@@ -666,6 +686,7 @@ async def agent_chat_completions(
             latest_message_info,
             audio_url,
             request,
+            source_image_id=request.target_image_id,
             user_message_id=user_message_id,
             subscription_actions=subscription_actions,
         )
@@ -744,6 +765,43 @@ async def agent_chat_completions(
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@router.websocket("/ws")
+async def chat_completions_websocket(
+    websocket: WebSocket,
+    db: AsyncSession = Depends(deps.get_async_db),
+):
+    await websocket.accept()
+    current_user = await _get_current_user_from_websocket(websocket, db)
+    if current_user is None:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
+    app_version_code_header = websocket.headers.get("appVersionCode")
+    app_version_code = (
+        int(app_version_code_header)
+        if app_version_code_header is not None and app_version_code_header.isdigit()
+        else None
+    )
+
+    try:
+        while True:
+            websocket_request = ChatWebSocketRequest.model_validate_json(
+                await websocket.receive_text()
+            )
+            response = await agent_chat_completions(
+                db=db,
+                agent_id=websocket_request.agent_id,
+                request=websocket_request.request,
+                current_user=current_user,
+                app_version_code=app_version_code,
+            )
+            response_data = response.model_dump(exclude_none=True)
+            response_data["agent_id"] = websocket_request.agent_id
+            await websocket.send_json(response_data)
+    except WebSocketDisconnect:
+        return
 
 
 class ChatImageBizErrorData(BizError):

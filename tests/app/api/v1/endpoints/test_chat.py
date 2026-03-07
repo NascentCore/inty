@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient as FastAPITestClient
 from jose import jwt
 from loguru import logger
 from sqlalchemy import create_engine
@@ -17,7 +18,7 @@ from app.core.agent import agent as agent_module
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
-from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
+from app.schemas.response import APIResponse, BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services.voice_service import VoiceGenerationResult
 from app.services import agent_service, chat_history_service, chat_service
 from app.services.global_services import subscription_service
@@ -639,6 +640,92 @@ def test_v1_chat_completions_accepts_multimodal_user_content(
     assert sent_content[0]["text"] == "Please describe this picture."
     assert sent_content[1]["type"] == "image_url"
     assert sent_content[1]["image_url"]["url"] == "https://cdn.example.com/test.jpg"
+
+
+def test_v1_chat_completions_returns_source_image_id_when_target_image_id_sent(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_success_chat_completion_with_multimodal_response(
+        monkeypatch,
+        response_content="source image id response",
+    )
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "show me"}],
+        "target_image_id": "image-target-1",
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+    assert body["data"]["source_image_id"] == "image-target-1"
+
+
+def test_chat_websocket_reuses_connection_for_multiple_agents(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(
+        *,
+        db,
+        agent_id,
+        request,
+        current_user,
+        app_version_code,
+    ):
+        return APIResponse.success(
+            data={
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": f"reply:{agent_id}"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "source_image_id": request.target_image_id,
+            }
+        )
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-a",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hello a"}],
+                        "target_image_id": "image-a",
+                    },
+                }
+            )
+            first_response = websocket.receive_json()
+
+            websocket.send_json(
+                {
+                    "agent_id": "agent-b",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hello b"}],
+                        "target_image_id": "image-b",
+                    },
+                }
+            )
+            second_response = websocket.receive_json()
+
+    assert first_response["code"] == 200
+    assert first_response["agent_id"] == "agent-a"
+    assert first_response["data"]["source_image_id"] == "image-a"
+
+    assert second_response["code"] == 200
+    assert second_response["agent_id"] == "agent-b"
+    assert second_response["data"]["source_image_id"] == "image-b"
 
 
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(

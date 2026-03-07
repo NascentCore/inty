@@ -67,6 +67,7 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v1/chat/completions/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
+| `/api/v1/chat/ws` | WebSocket | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/images/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/music/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 

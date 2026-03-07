@@ -101,8 +101,19 @@ class ChatRemoteDataSource {
                     )
                 }
             val request =
-                SendMsgReq(messages = listOf(requestMessage), timeContext = buildUserTimeContext())
-            NetServiceMgr.getChatApi().sendMsg(agentId, request)
+                SendMsgReq(
+                    messages = listOf(requestMessage),
+                    timeContext = buildUserTimeContext(),
+                    targetImageId = agentId,
+                )
+            if (
+                DebugBackendEndpointStore.isRuntimeOverrideSupported() &&
+                    DebugBackendEndpointStore.getChatWebSocketEnabled()
+            ) {
+                ChatWebSocketSessionManager.sendMessage(agentId, request)
+            } else {
+                NetServiceMgr.getChatApi().sendMsg(agentId, request)
+            }
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
