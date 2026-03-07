@@ -46,6 +46,12 @@ export const DAILY_USAGE_CHART_METRICS = [
     color: "#ff4d4f",
     axis: "y2",
   },
+  {
+    key: "avg_messages_per_user",
+    label: "人均消息数",
+    color: "#2f54eb",
+    axis: "y2",
+  },
 ] as const satisfies ReadonlyArray<UsageMetricConfig>;
 
 export const DAILY_IMAGE_USAGE_CHART_METRICS = [
