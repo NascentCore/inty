@@ -46,6 +46,8 @@ NOTES:
 import datetime
 import copy
 import io
+from os import path
+from pathlib import Path
 import uuid
 from enum import StrEnum
 from typing import Any, NamedTuple
@@ -58,7 +60,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml as global_config
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.gcs import upload_to_gcs
+from app.external_services.gcs import upload_to_gcs as upload_file_to_gcs
 from app.utils.image import IMAGE_SIZE_720_1280, ImageFormat, ImageSize, compress_png_to_jpeg, parse_image_data_uri
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
 from app.utils.models_catalog import SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO, Z_IMAGE_TURBO_IMAGE_TO_IMAGE
@@ -298,7 +300,7 @@ def _upload_image_file_to_gcs_and_return_url(
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
     gcs_uri = f"gs://{global_config.gcs.bucket}/{gcs_path}"
-    gcs_http_url = upload_to_gcs(
+    gcs_http_url = upload_file_to_gcs(
         file_data=file_data,
         content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
         bucket_name=global_config.gcs.bucket,
@@ -324,7 +326,10 @@ async def z_image_turbo(
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
     result = ZImageTurboOutput(**raw_result)
-    logger.debug("ZImageTurbo raw result before processing and uploading to GCS: {}", raw_result)
+    logger.debug(
+        "ZImageTurbo raw result before processing and uploading to GCS: {}",
+        _sanitize_provider_response_for_trace(raw_result),
+    )
     if not result.images:
         raise ValueError("No images returned from ZImageTurbo")
     processed_results: list[GeneratedImageProcessResult] = []
@@ -422,30 +427,66 @@ class ZImageTurboImageToImageOutput(BaseModel):
 async def z_image_turbo_image_to_image(
     args: ZImageTurboImageToImageInput,
     gcs_uri_base: str,
+    upload_to_gcs: bool = True,
 ) -> GeneratedImageProcessResult:
+    """
+    Run z-image turbo image-to-image and return the result.
+    When upload_to_gcs is False (e.g. local testing), skip GCS upload and save the image to a local file instead.
+    """
     handler = await fal_client.submit_async(Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider, arguments=args.model_dump())
     attach_provider_response_to_langsmith_run(handler, key="handler")
     raw_result = await handler.get()
     result = ZImageTurboImageToImageOutput(**raw_result)
-    logger.debug("ZImageTurboImageToImage raw result before processing and uploading to GCS: {}", raw_result)
+    logger.debug(
+        "ZImageTurboImageToImage raw result before processing and uploading to GCS: {}",
+        _sanitize_provider_response_for_trace(raw_result),
+    )
     if not result.images:
         raise ValueError("No images returned from ZImageTurboImageToImage")
     first_img = result.images[0]
     if not first_img.url.startswith("data:"):
         raise ValueError(f"Image URL is not a data URI: {first_img.url}")
-    upload_result = _upload_image_file_to_gcs_and_return_url(
-        first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
-    )
-    logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)
+    file_data, image_format = parse_image_data_uri(first_img.url)
+    if image_format == ImageFormat.PNG:
+        file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
+    image_size = ImageSize(width=first_img.width, height=first_img.height)
     trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
     attach_provider_response_to_langsmith_run(trace_raw_result)
+
+    if upload_to_gcs:
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
+        gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{image_format.value}"
+        gcs_uri = f"gs://{global_config.gcs.bucket}/{gcs_path}"
+        gcs_http_url = upload_file_to_gcs(
+            file_data=file_data,
+            content_type=_IMAGE_FORMAT_TO_CONTENT_TYPE[image_format],
+            bucket_name=global_config.gcs.bucket,
+            path=gcs_path,
+        )
+        logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", gcs_http_url)
+        return GeneratedImageProcessResult(
+            size=image_size,
+            format=image_format,
+            raw_data=file_data,
+            raw_data_total_bytes=len(file_data),
+            gcs_uri=gcs_uri,
+            gcs_http_url=gcs_http_url,
+            generated_at=datetime.datetime.now(datetime.timezone.utc),
+            raw_response_from_provider=raw_result,
+        )
+
+    # Local only: save to a file under /tmp and return file:// URLs.
+    local_path = Path("/tmp") / f"z_image_turbo_{uuid.uuid4().hex[:8]}.{image_format.value}"
+    local_path.write_bytes(file_data)
+    file_uri = local_path.as_uri()
+    logger.debug("Saved ZImageTurboImageToImage to local file (upload_to_gcs=False): {}", local_path)
     return GeneratedImageProcessResult(
-        size=upload_result.image_size,
-        format=upload_result.image_format,
-        raw_data=upload_result.file_data,
-        raw_data_total_bytes=len(upload_result.file_data),
-        gcs_uri=upload_result.gcs_uri,
-        gcs_http_url=upload_result.gcs_http_url,
+        size=image_size,
+        format=image_format,
+        raw_data=file_data,
+        raw_data_total_bytes=len(file_data),
+        gcs_uri=str(local_path),
+        gcs_http_url=file_uri,
         generated_at=datetime.datetime.now(datetime.timezone.utc),
         raw_response_from_provider=raw_result,
     )
