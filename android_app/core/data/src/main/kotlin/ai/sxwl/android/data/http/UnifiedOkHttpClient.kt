@@ -29,18 +29,24 @@ object UnifiedOkHttpClient {
             Thread(r, "PerformanceMonitor").apply { isDaemon = true }
         }
 
+    internal const val CHAT_IMAGE_READ_TIMEOUT_SECONDS = 60
+
     /**
      * 聊天生图接口专用超时：POST /api/v1/chat/images/{agent_id} 使用 60 秒读超时。
      * 其他请求仍使用 NetworkConfig 的默认 readTimeout。
      */
+    internal fun shouldApplyChatImageReadTimeout(request: Request): Boolean {
+        val path = request.url.encodedPath
+        return request.method == "POST" && path.startsWith("/api/v1/chat/images/")
+    }
+
     private object ChatImageTimeoutInterceptor : Interceptor {
-        private const val CHAT_IMAGES_PATH = "chat/images"
-        private const val READ_TIMEOUT_SECONDS = 60
 
         override fun intercept(chain: Interceptor.Chain): Response {
             val request = chain.request()
-            return if (request.url.encodedPath.contains(CHAT_IMAGES_PATH)) {
-                chain.withReadTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS).proceed(request)
+            return if (shouldApplyChatImageReadTimeout(request)) {
+                chain.withReadTimeout(CHAT_IMAGE_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    .proceed(request)
             } else {
                 chain.proceed(request)
             }
