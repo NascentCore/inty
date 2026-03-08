@@ -886,6 +886,13 @@ class TestChatHistoryService:
             "app.services.image_generation_service.image_transform_service.transform_desktop",
             lambda url: "https://cdn.example.com/{}".format(url.split("/", 3)[-1]),
         )
+        monkeypatch.setattr(
+            "app.services.image_generation_service.get_current_trace_info",
+            lambda: (
+                "trace-id-for-test-chat-image",
+                "https://smith.langchain.com/o/test/projects/p/test/r/trace-id-for-test-chat-image",
+            ),
+        )
 
         session = db_session
         user_id = "user-{}".format(uuid.uuid4().hex[:8])
@@ -1011,11 +1018,11 @@ class TestChatHistoryService:
             agent.background,
             "https://storage.googleapis.com/test-bucket/user-selfie.jpg",
         ]
-        trace_id = meta.get("langsmith_trace_id")
-        trace_url = meta.get("langsmith_trace_url")
-        assert isinstance(trace_id, str) and len(trace_id) > 0
-        assert isinstance(trace_url, str) and len(trace_url) > 0
-        assert trace_id in trace_url
+        assert meta.get("langsmith_trace_id") == "trace-id-for-test-chat-image"
+        assert (
+            meta.get("langsmith_trace_url")
+            == "https://smith.langchain.com/o/test/projects/p/test/r/trace-id-for-test-chat-image"
+        )
 
         await session.delete(resource)
         await session.delete(chat_msg)
