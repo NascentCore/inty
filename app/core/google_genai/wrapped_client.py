@@ -204,8 +204,9 @@ class WrappedClient:
 
         Parameters:
             model: 模型 ID，用于在代码中唯一标识一个模型。
-            system_instruction: 系统指令列表。
+            system_instructions: 系统指令列表。
             contents: 提示词列表，用于生成图片。
+            count: 请求的候选数量（对应 Gemini candidate_count），默认 1。
 
         为了 traceable 可以争取抓取主要信息，必须把对结果有影响的参数暴露在这个函数的
         输入参数列表内，这是 LangSmith 的要求。LangSmith 无法抓取 GenAI.generate_contents() 参数。
@@ -219,8 +220,7 @@ class WrappedClient:
         match model:
             case NANO_BANANA.id_on_provider | NANO_BANANA_PRO.id_on_provider:
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
-                # 默认参数不影响系统生成效果，不需要追踪。
-                # 仅在需要改写 system_instruction 时复制 config，避免污染全局预设。
+                # 复制 config 以设置 candidate_count 及可选的 system_instruction，避免污染全局预设。
                 config = copy.copy(GEN_CONTENT_CONFIG_IMAGE_9_16_1K)
                 config.candidate_count = count
                 if system_instructions is not None:

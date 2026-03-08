@@ -104,6 +104,42 @@ def _make_gemini_image_response_png():
     return response
 
 
+def _make_gemini_image_response_two_candidates():
+    """构建含两个候选图片的 mock 响应，用于测试 count=2 时返回两条结果。"""
+    img1 = Image.new("RGB", (1, 1), color="red")
+    img2 = Image.new("RGB", (1, 1), color="blue")
+    buf1, buf2 = io.BytesIO(), io.BytesIO()
+    img1.save(buf1, format="JPEG")
+    img2.save(buf2, format="JPEG")
+    jpeg1, jpeg2 = buf1.getvalue(), buf2.getvalue()
+
+    def _candidate(data: bytes):
+        inline_data = Mock()
+        inline_data.data = data
+        inline_data.mime_type = "image/jpeg"
+        part = Mock()
+        part.inline_data = inline_data
+        content = Mock()
+        content.parts = [part]
+        candidate = Mock()
+        candidate.content = content
+        candidate.finish_reason = "STOP"
+        candidate.safety_ratings = []
+        return candidate
+
+    response = Mock()
+    response.candidates = [_candidate(jpeg1), _candidate(jpeg2)]
+    response.prompt_feedback = None
+    response.model_dump.return_value = {
+        "candidates": [
+            _make_gemini_response_payload_with_inline_data(jpeg1, "image/jpeg")["candidates"][0],
+            _make_gemini_response_payload_with_inline_data(jpeg2, "image/jpeg")["candidates"][0],
+        ],
+        "prompt_feedback": None,
+    }
+    return response
+
+
 @pytest.fixture
 def fake_gcs_for_wrapped_client(monkeypatch, tmp_path):
     """注入 FakeGCSClient 到 app.external_services.gcs，并 stub wrapped_client 使用的 gcs.bucket 配置。"""
@@ -169,6 +205,34 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts(m
     assert len(content.parts) == 2
     assert content.parts[0].text == "a cat"
     assert content.parts[1].text == "on the beach"
+
+
+@pytest.mark.asyncio
+@patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
+@patch("app.core.google_genai.wrapped_client.upload_to_gcs")
+async def test_generate_images_count_two_passes_config_and_returns_two_results(mock_upload):
+    """count=2 时传入 config.candidate_count=2，且 mock 返回两候选时得到两条 GeneratedImageProcessResult。"""
+    mock_models = Mock()
+    mock_models.generate_content = AsyncMock(
+        return_value=_make_gemini_image_response_two_candidates()
+    )
+    client = Mock()
+    client.aio = Mock()
+    client.aio.models = mock_models
+
+    wrapper = WrappedClient(client=client)
+    results = await wrapper.async_generate_images(
+        model="gemini-2.5-flash-image",
+        contents=["two cats"],
+        gcs_uri_base=_GCS_URI_BASE,
+        count=2,
+    )
+
+    call_kw = mock_models.generate_content.call_args.kwargs
+    assert call_kw["config"].candidate_count == 2
+    assert len(results) == 2
+    assert all(isinstance(r, GeneratedImageProcessResult) for r in results)
+    assert mock_upload.call_count == 2
 
 
 @pytest.mark.asyncio
