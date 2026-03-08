@@ -500,6 +500,10 @@ class TTSConfig:
 
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
     use_gemini_prompted_tts: bool = True
+    # 实验开关：ElevenLabs 目标音色走 Gemini 先合成，再 ElevenLabs speech-to-speech 变声
+    # - 仅作用于 ElevenLabs 音色（11labs/...）；Gemini 音色不受影响
+    # - 默认关闭，避免影响线上稳定路径
+    enable_gemini_tts_then_elevenlabs_voice_changer_for_imate: bool = False
 
 
 @dataclass
