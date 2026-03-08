@@ -450,8 +450,6 @@ async def z_image_turbo_image_to_image(
     if image_format == ImageFormat.PNG:
         file_data, image_format = compress_png_to_jpeg(file_data), ImageFormat.JPEG
     image_size = ImageSize(width=first_img.width, height=first_img.height)
-    trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
-    attach_provider_response_to_langsmith_run(trace_raw_result)
 
     if upload_to_gcs:
         timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -464,6 +462,9 @@ async def z_image_turbo_image_to_image(
             path=gcs_path,
         )
         logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", gcs_http_url)
+        # GCS 上传成功后，trace 中脱敏 data URI，与 seedream_v4_5_edit / z_image_turbo 一致。
+        trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
+        attach_provider_response_to_langsmith_run(trace_raw_result)
         return GeneratedImageProcessResult(
             size=image_size,
             format=image_format,
@@ -480,6 +481,8 @@ async def z_image_turbo_image_to_image(
     local_path.write_bytes(file_data)
     file_uri = local_path.as_uri()
     logger.debug("Saved ZImageTurboImageToImage to local file (upload_to_gcs=False): {}", local_path)
+    trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
+    attach_provider_response_to_langsmith_run(trace_raw_result)
     return GeneratedImageProcessResult(
         size=image_size,
         format=image_format,
