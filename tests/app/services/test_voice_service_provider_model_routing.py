@@ -18,7 +18,10 @@ from app.core.voice.tts_api import (
     TTSResult,
     VoiceMessageNarrationMode,
 )
-from app.services.voice_service import VoiceService
+from app.services.voice_service import (
+    VoiceService,
+    get_voice_message_narration_mode_from_agent_settings,
+)
 
 
 @pytest.fixture
@@ -170,3 +173,15 @@ async def test_call_tts_api_passes_voice_message_narration_mode_to_gemini(
         request.voice_message_narration_mode
         == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS
     )
+
+
+def test_get_voice_message_narration_mode_falls_back_to_tts_config():
+    previous = global_config.tts.voice_message_narration_mode
+    try:
+        global_config.tts.voice_message_narration_mode = (
+            VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS
+        )
+        mode = get_voice_message_narration_mode_from_agent_settings(None)
+        assert mode == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS
+    finally:
+        global_config.tts.voice_message_narration_mode = previous

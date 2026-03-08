@@ -500,6 +500,10 @@ class TTSConfig:
 
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
     use_gemini_prompted_tts: bool = True
+    # iMate 语音播报模式：
+    # - dialogue_only: 仅朗读对白（默认，当前行为）
+    # - dialogue_and_stage_directions: 朗读对白 + 括号内舞台说明
+    voice_message_narration_mode: str = "dialogue_only"
 
 
 @dataclass

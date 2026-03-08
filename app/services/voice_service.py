@@ -62,10 +62,12 @@ def get_voice_message_narration_mode_from_agent_settings(
     agent_settings: Any,
 ) -> VoiceMessageNarrationMode:
     if isinstance(agent_settings, dict):
-        return resolve_voice_message_narration_mode(
-            agent_settings.get(VOICE_MESSAGE_NARRATION_MODE_SETTINGS_KEY)
-        )
-    return VoiceMessageNarrationMode.DIALOGUE_ONLY
+        raw_mode = agent_settings.get(VOICE_MESSAGE_NARRATION_MODE_SETTINGS_KEY)
+        if raw_mode is not None:
+            return resolve_voice_message_narration_mode(raw_mode)
+    return resolve_voice_message_narration_mode(
+        global_config_loaded_from_config_yaml.tts.voice_message_narration_mode
+    )
 
 
 @dataclass(frozen=True)
