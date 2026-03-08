@@ -12,8 +12,13 @@ from __future__ import annotations
 
 import asyncio
 
-from app.core.images.fal import AccelerationEnum, ImageSizeEnum, ZImageTurboImageToImageInput, z_image_turbo_image_to_image
-from app.utils.image import ImageFormat, ImageSize
+from app.core.images.fal import (
+    AccelerationEnum,
+    ZImageTurboImageToImageImageSizeEnum,
+    ZImageTurboImageToImageInput,
+    z_image_turbo_image_to_image,
+)
+from app.utils.image import ImageFormat
 
 
 # 这里的提示词是完全重新写的。仅用来测试 z-image turbo image-to-image 本身的行为特点。
@@ -68,7 +73,7 @@ sample_args = ZImageTurboImageToImageInput(
     acceleration=AccelerationEnum.REGULAR,
     enable_prompt_expansion=False,
     enable_safety_checker=False,
-    image_size=ImageSizeEnum.PORTRAIT_16_9,
+    image_size=ZImageTurboImageToImageImageSizeEnum.PORTRAIT_16_9,
     image_url=reference_image_url,
     num_images=1,
     num_inference_steps=16,
