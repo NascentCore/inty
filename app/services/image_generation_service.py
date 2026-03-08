@@ -117,7 +117,7 @@ def _process_inputs_generate_chat_image(inputs: Dict[str, Any]) -> Dict[str, Any
         "user_id": inputs.get("user_id"),
         "history_count": inputs.get("history_count"),
         "message_content_len": len(message_content),
-        "message_content_preview": _truncate_trace_text(message_content),
+        "message_content": message_content,
     }
     return output
 
@@ -420,27 +420,30 @@ class ImageGenerationService:
             logger.info("添加用户自拍照片作为参考图: {}", user_reference_image_url)
         contents.append(prompt)
 
+        async def _generate_images() -> list[GeneratedImageProcessResult]:
+            return await client.async_generate_images(
+                model=model_id,
+                contents=contents,
+                gcs_uri_base=gcs_uri_base,
+                system_instructions=system_instructions,
+            )
+
         if timeout_seconds is not None and timeout_seconds > 0:
             try:
-                return await asyncio.wait_for(
-                    client.async_generate_image(
-                        model=model_id,
-                        contents=contents,
-                        gcs_uri_base=gcs_uri_base,
-                        system_instructions=system_instructions,
-                    ),
+                results = await asyncio.wait_for(
+                    _generate_images(),
                     timeout=float(timeout_seconds),
                 )
             except asyncio.TimeoutError as e:
                 raise TimeoutError(
                     f"Chat image generation timeout after {timeout_seconds}s for model {model_id}"
                 ) from e
-        return await client.async_generate_image(
-            model=model_id,
-            contents=contents,
-            gcs_uri_base=gcs_uri_base,
-            system_instructions=system_instructions,
-        )
+        else:
+            results = await _generate_images()
+
+        if not results:
+            raise ValueError(f"No images generated for model {model_id}")
+        return results[0]
 
     async def _generate_chat_image_with_resolved_fal_model(
         self,

@@ -19,7 +19,11 @@ from app.external_services.fakes.gemini import FakeGeminiClient
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
-from app.services.image_generation_service import ChatImageGenModelInput, image_generation_service
+from app.services.image_generation_service import (
+    ChatImageGenModelInput,
+    _process_inputs_generate_chat_image,
+    image_generation_service,
+)
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
     NANO_BANANA,
@@ -45,11 +49,30 @@ async def db_session():
 class TestImageGenerationService:
     """测试图片生成服务"""
 
+    def test_trace_inputs_include_full_message_content(self):
+        """LangSmith tracing 输入应保留完整 message_content，且不再返回 preview 字段。"""
+        full_message_content = "x" * 600 + "-tail"
+        inputs = {
+            "session_id": "session-1",
+            "message_id": 123,
+            "agent_data": {"id": "agent-1"},
+            "model": "gemini-2.5-flash-image",
+            "user_id": "user-1",
+            "history_count": 5,
+            "message_content": full_message_content,
+        }
+
+        output = _process_inputs_generate_chat_image(inputs)
+
+        assert output["message_content"] == full_message_content
+        assert output["message_content_len"] == len(full_message_content)
+        assert "message_content_preview" not in output
+
     @pytest.mark.asyncio
     async def test_generate_chat_image_by_model_raises_timeout_for_slow_gemini(self):
         """Gemini 路径传入 timeout_seconds 后，慢请求应抛出 TimeoutError。"""
 
-        async def fake_async_generate_image(
+        async def fake_async_generate_images(
             wrapped_client_self,
             model,
             contents,
@@ -57,7 +80,7 @@ class TestImageGenerationService:
             system_instructions=None,
         ):
             await asyncio.sleep(2)
-            return GeneratedImageProcessResult(
+            result = GeneratedImageProcessResult(
                 size=ImageSize(width=64, height=64),
                 format=ImageFormat.JPEG,
                 raw_data=b"fake-image",
@@ -67,10 +90,11 @@ class TestImageGenerationService:
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=None,
             )
+            return [result]
 
         with patch(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
-            new=fake_async_generate_image,
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+            new=fake_async_generate_images,
         ):
             with pytest.raises(TimeoutError, match="timeout after 1s"):
                 await image_generation_service.generate_chat_image_by_model(
@@ -89,7 +113,7 @@ class TestImageGenerationService:
         """统一函数应支持 nickname，并自动路由到 Gemini 输入格式。"""
         captured = {}
 
-        async def fake_async_generate_image(
+        async def fake_async_generate_images(
             wrapped_client_self,
             model,
             contents,
@@ -100,7 +124,7 @@ class TestImageGenerationService:
             captured["contents"] = contents
             captured["gcs_uri_base"] = gcs_uri_base
             captured["system_instructions"] = system_instructions
-            return GeneratedImageProcessResult(
+            result = GeneratedImageProcessResult(
                 size=ImageSize(width=64, height=64),
                 format=ImageFormat.JPEG,
                 raw_data=b"fake-image",
@@ -110,10 +134,11 @@ class TestImageGenerationService:
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=None,
             )
+            return [result]
 
         with patch(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
-            new=fake_async_generate_image,
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+            new=fake_async_generate_images,
         ), patch(
             "app.services.image_generation_service.get_genai_client",
             return_value=FakeGeminiClient(),
@@ -244,7 +269,7 @@ class TestImageGenerationService:
         unique_suffix = uuid.uuid4().hex[:8]
         gcs_path = f"chat_images/agent-prompt/gemini_test_{unique_suffix}.jpg"
 
-        async def fake_async_generate_image(
+        async def fake_async_generate_images(
             wrapped_client_self,
             model,
             contents,
@@ -252,7 +277,7 @@ class TestImageGenerationService:
             system_instructions=None,
         ):
             captured["prompt"] = contents[-1]
-            return GeneratedImageProcessResult(
+            result = GeneratedImageProcessResult(
                 size=ImageSize(width=64, height=64),
                 format=ImageFormat.JPEG,
                 raw_data=b"fake-image",
@@ -262,14 +287,15 @@ class TestImageGenerationService:
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=None,
             )
+            return [result]
 
         monkeypatch.setattr(
             "app.services.image_generation_service.get_genai_client",
             lambda: FakeGeminiClient(),
         )
         monkeypatch.setattr(
-            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
-            fake_async_generate_image,
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_images",
+            fake_async_generate_images,
         )
         monkeypatch.setattr(
             "app.core.google_genai.wrapped_client.upload_to_gcs",
