@@ -34,3 +34,13 @@ Dev & prod sharing the same VM on GCP.
 2. 点击 "Dify 定时聊天调用" workflow
 3. 点击 "Run workflow" 手动触发
 4. 查看执行日志，确认 API 调用成功（状态码 200）
+
+## 用户数据分析日报周报兜底任务
+
+运行 [user_analytics_report_fallback.yaml](https://github.com/NascentCore/inty-app/actions/workflows/user_analytics_report_fallback.yaml) 作为 `push_worker` 之外的兜底入口：
+
+- **不替换主链路**：日报/周报主任务仍由 `push_worker` 定时执行。
+- **自动兜底**：
+  - 每日 UTC 08:00 自动补算 `T-1` 日报
+  - 每周一 UTC 09:00 自动补算上一周周报（周一日期）
+- **手动重算**：支持 `workflow_dispatch` 传入 `report_type`、`report_date`，并可用 `force=true` 覆盖重算。
