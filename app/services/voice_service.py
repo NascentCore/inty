@@ -11,7 +11,7 @@ import wave
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from langsmith.run_helpers import traceable
+from langsmith.run_helpers import get_current_run_tree, traceable
 from loguru import logger
 from mutagen.mp3 import MP3
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,6 +75,47 @@ class VoiceGenerationResult:
         """
         yield self.gcs_http_url
         yield self.duration_seconds
+
+
+def _process_outputs_generate_voice(
+    output: Optional[VoiceGenerationResult],
+) -> Dict[str, Any]:
+    if output is None:
+        return {"status": "no_result"}
+    return {
+        "status": "success",
+        "gcs_url": output.gcs_url,
+        "gcs_http_url": output.gcs_http_url,
+        "duration_seconds": output.duration_seconds,
+    }
+
+
+def _process_outputs_tts_fallback(
+    output: Optional[Tuple[bytes, str]],
+) -> Dict[str, Any]:
+    if output is None:
+        return {"status": "no_result"}
+    audio_bytes, mime_type = output
+    return {
+        "status": "success",
+        "audio_bytes_len": len(audio_bytes),
+        "mime_type": mime_type,
+    }
+
+
+def _process_outputs_call_tts_api(
+    output: Optional[Tuple[bytes, float, str, str]],
+) -> Dict[str, Any]:
+    if output is None:
+        return {"status": "no_result"}
+    audio_bytes, duration_seconds, mime_type, provider_used = output
+    return {
+        "status": "success",
+        "audio_bytes_len": len(audio_bytes),
+        "duration_seconds": duration_seconds,
+        "mime_type": mime_type,
+        "provider_used": provider_used,
+    }
 
 
 class VoiceService:
@@ -165,7 +206,30 @@ class VoiceService:
 
         return cleaned_text
 
-    @traceable
+    @staticmethod
+    def _set_trace_metadata(**metadata: Any) -> None:
+        run = get_current_run_tree()
+        if run is None:
+            return
+        if run.metadata is None:
+            run.metadata = {}
+        for key, value in metadata.items():
+            if value is not None:
+                run.metadata[key] = value
+
+    def _trace_and_return_none(self, reason: str, **metadata: Any) -> None:
+        self._set_trace_metadata(
+            status="no_result",
+            failure_reason=reason,
+            **metadata,
+        )
+        return None
+
+    @traceable(
+        name="generate_voice",
+        run_type="chain",
+        process_outputs=_process_outputs_generate_voice,
+    )
     async def generate_voice(
         self,
         text: str,
@@ -193,11 +257,11 @@ class VoiceService:
         """
         if not self.config.enabled:
             logger.warning("ElevenLabs语音生成已禁用")
-            return None
+            return self._trace_and_return_none("tts_disabled")
 
         if not text.strip():
             logger.warning("文本内容为空，跳过语音生成")
-            return None
+            return self._trace_and_return_none("empty_input_text")
 
         # 如果提供了用户信息，检查语音生成限制
         if user and db:
@@ -213,7 +277,11 @@ class VoiceService:
                 logger.warning(
                     f"用户 {user.id} 已达到语音生成限制: {used_count}/{limit}"
                 )
-                return None
+                return self._trace_and_return_none(
+                    "voice_generation_limit_reached",
+                    used_count=used_count,
+                    limit=limit,
+                )
 
         # Resolve voice_id so we know whether to skip cleaning (prompted Gemini
         # uses full text with parentheticals for delivery).
@@ -238,7 +306,7 @@ class VoiceService:
 
         if not text.strip():
             logger.warning("文本清理后为空（可能全部是心理/动作描写），跳过语音生成")
-            return None
+            return self._trace_and_return_none("empty_text_after_cleaning")
 
         if text != original_text:
             logger.debug(
@@ -254,7 +322,7 @@ class VoiceService:
                 logger.warning(
                     f"无法确定音色ID: agent_gender={agent_gender}, 配置文件voice_id={self.config.voice_id}"
                 )
-                return None
+                return self._trace_and_return_none("missing_voice_id")
 
             provider_selected = (
                 TTS_PROVIDER_GEMINI
@@ -314,6 +382,13 @@ class VoiceService:
                             logger.warning(f"记录语音生成用量失败: {str(e)}")
 
                     gcs_url, gcs_http_url = self._build_gcs_urls(cached_url)
+                    self._set_trace_metadata(
+                        status="success",
+                        cache_hit=True,
+                        provider_selected=provider_selected,
+                        model_selected=model,
+                        model_source=model_source,
+                    )
                     return VoiceGenerationResult(
                         gcs_url=gcs_url,
                         gcs_http_url=gcs_http_url,
@@ -333,7 +408,12 @@ class VoiceService:
                     model_source,
                     "failed",
                 )
-                return None
+                return self._trace_and_return_none(
+                    "tts_provider_returned_empty",
+                    provider_selected=provider_selected,
+                    model_selected=model,
+                    model_source=model_source,
+                )
 
             audio_data, duration, mime_type, provider_used = audio_result
             final_model_selected = model
@@ -371,7 +451,11 @@ class VoiceService:
 
             if not audio_url:
                 logger.error("GCS上传失败")
-                return None
+                return self._trace_and_return_none(
+                    "gcs_upload_failed",
+                    provider_selected=provider_selected,
+                    model_selected=model,
+                )
 
             gcs_url, gcs_http_url = self._build_gcs_urls(audio_url)
             logger.debug(f"GCS上传成功: gcs_url={gcs_url}, gcs_http_url={gcs_http_url}")
@@ -424,6 +508,14 @@ class VoiceService:
                 provider_used,
                 "success",
             )
+            self._set_trace_metadata(
+                status="success",
+                cache_hit=False,
+                provider_selected=provider_selected,
+                model_selected=final_model_selected,
+                model_source=model_source,
+                final_provider=provider_used,
+            )
             return VoiceGenerationResult(
                 gcs_url=gcs_url,
                 gcs_http_url=gcs_http_url,
@@ -432,11 +524,19 @@ class VoiceService:
 
         except ValueError:
             logger.error("语音生成参数校验失败（provider/model 不一致）")
+            self._set_trace_metadata(
+                status="error",
+                failure_reason="provider_model_mismatch",
+            )
             raise
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
             logger.exception("语音生成异常详细信息:")
-            return None
+            return self._trace_and_return_none(
+                "unexpected_exception",
+                exception_type=type(e).__name__,
+                exception_message=str(e),
+            )
 
     def _get_audio_extension(self, mime_type: str) -> str:
         normalized = (mime_type or "").lower()
@@ -450,6 +550,7 @@ class VoiceService:
     @traceable(
         name="tts_fallback_elevenlabs",
         run_type="chain",
+        process_outputs=_process_outputs_tts_fallback,
     )
     async def _synthesize_elevenlabs_fallback(
         self,
@@ -471,12 +572,18 @@ class VoiceService:
         )
         result = await self.tts_api.synthesize(fallback_req)
         if result is None:
+            self._set_trace_metadata(
+                status="no_result",
+                failure_reason="elevenlabs_fallback_empty",
+            )
             return None
+        self._set_trace_metadata(status="success")
         return (result.audio_bytes, result.mime_type)
 
     @traceable(
         name="call_tts_api",
         run_type="chain",
+        process_outputs=_process_outputs_call_tts_api,
     )
     async def _call_tts_api(
         self, text: str, voice_id: str, model: str, language: str
@@ -529,6 +636,10 @@ class VoiceService:
                 if not tts_result:
                     # Gemini TTS 失败（如未配置凭据），回退到 ElevenLabs
                     logger.warning("Gemini TTS 失败，回退到 ElevenLabs（使用默认音色）")
+                    self._set_trace_metadata(
+                        fallback_used=True,
+                        fallback_provider=TTS_PROVIDER_ELEVENLABS,
+                    )
                     self._validate_model_provider_match(
                         provider_selected=TTS_PROVIDER_ELEVENLABS,
                         model_selected=self.config.model,
@@ -542,6 +653,10 @@ class VoiceService:
                     )
                     if fallback_result is None:
                         logger.error("ElevenLabs TTS 回退也失败")
+                        self._set_trace_metadata(
+                            status="no_result",
+                            failure_reason="gemini_and_fallback_elevenlabs_failed",
+                        )
                         return None
                     audio_bytes_fb, mime_type_fb = fallback_result
                     tts_result = TTSResult(audio_bytes=audio_bytes_fb, mime_type=mime_type_fb)
@@ -551,6 +666,10 @@ class VoiceService:
                 tts_result = await self.tts_api.synthesize(req)
                 if not tts_result:
                     logger.error("ElevenLabs TTS 返回空数据")
+                    self._set_trace_metadata(
+                        status="no_result",
+                        failure_reason="elevenlabs_empty_response",
+                    )
                     return None
 
             audio_data = tts_result.audio_bytes
@@ -563,14 +682,30 @@ class VoiceService:
                 f"TTS 调用成功 (provider={provider_used})，音频大小: {len(audio_data)} bytes, "
                 f"时长: {duration:.2f}秒, mime_type={mime_type}"
             )
+            self._set_trace_metadata(
+                status="success",
+                provider_selected=provider_name,
+                provider_used=provider_used,
+                mime_type=mime_type,
+            )
             return (audio_data, duration, mime_type, provider_used)
 
         except ValueError:
             logger.error("TTS provider/model 校验失败")
+            self._set_trace_metadata(
+                status="error",
+                failure_reason="provider_model_mismatch",
+            )
             raise
         except Exception as e:
             logger.error(f"TTS 调用异常: {str(e)}")
             logger.exception("TTS 调用异常详细信息:")
+            self._set_trace_metadata(
+                status="error",
+                failure_reason="unexpected_exception",
+                exception_type=type(e).__name__,
+                exception_message=str(e),
+            )
             return None
 
     def _build_gcs_urls(self, storage_url: str) -> Tuple[str, str]:
