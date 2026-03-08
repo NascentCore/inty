@@ -365,7 +365,7 @@ class ChatCompletionRequest(BaseModel):
     message_id: Optional[str] = (
         None  # Android 端生成的消息唯一标识；前后端用该 ID 确认该信息，ID 由生成方产生。
     )
-    target_image_id: Optional[str] = None
+    target_imate_id: Optional[str] = None
 
     @model_validator(mode="after")
     def check_deprecated_fields(self) -> "ChatCompletionRequest":
@@ -387,7 +387,7 @@ class ChatCompletionResponse(BaseModel):
     model: str
     # 无实际效果数据，仅用于测试 Kotlin 客户端代码接收到了这个字段（Kotlin 客户端类型代码定义正确）。
     business_actions: List[BizAction] = Field(default_factory=list)
-    source_image_id: Optional[str] = None
+    source_imate_id: Optional[str] = None
     choices: List[dict]
     usage: dict
 

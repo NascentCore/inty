@@ -104,7 +104,7 @@ class ChatRemoteDataSource {
                 SendMsgReq(
                     messages = listOf(requestMessage),
                     timeContext = buildUserTimeContext(),
-                    targetImageId = agentId,
+                    targetImateId = agentId,
                 )
             if (
                 DebugBackendEndpointStore.isRuntimeOverrideSupported() &&

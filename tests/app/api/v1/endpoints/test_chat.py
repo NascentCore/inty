@@ -642,7 +642,7 @@ def test_v1_chat_completions_accepts_multimodal_user_content(
     assert sent_content[1]["image_url"]["url"] == "https://cdn.example.com/test.jpg"
 
 
-def test_v1_chat_completions_returns_source_image_id_when_target_image_id_sent(
+def test_v1_chat_completions_returns_source_imate_id_when_target_imate_id_sent(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     _stub_success_chat_completion_with_multimodal_response(
@@ -652,7 +652,7 @@ def test_v1_chat_completions_returns_source_image_id_when_target_image_id_sent(
     user = _make_user(auth_type=AuthType.GOOGLE)
     payload = {
         "messages": [{"role": "user", "content": "show me"}],
-        "target_image_id": "image-target-1",
+        "target_imate_id": "imate-target-1",
     }
     with _client_with_user(chat_business_error_app, user) as client:
         response = client.post("/api/v1/chat/completions/agent-1", json=payload)
@@ -660,7 +660,7 @@ def test_v1_chat_completions_returns_source_image_id_when_target_image_id_sent(
     body = response.json()
     assert response.status_code == 200
     assert body["code"] == 200
-    assert body["data"]["source_image_id"] == "image-target-1"
+    assert body["data"]["source_imate_id"] == "imate-target-1"
 
 
 def test_chat_websocket_reuses_connection_for_multiple_agents(
@@ -688,7 +688,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                         "finish_reason": "stop",
                     }
                 ],
-                "source_image_id": request.target_image_id,
+                "source_imate_id": request.target_imate_id,
             }
         )
 
@@ -702,7 +702,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                     "agent_id": "agent-a",
                     "request": {
                         "messages": [{"role": "user", "content": "hello a"}],
-                        "target_image_id": "image-a",
+                        "target_imate_id": "imate-a",
                     },
                 }
             )
@@ -713,7 +713,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                     "agent_id": "agent-b",
                     "request": {
                         "messages": [{"role": "user", "content": "hello b"}],
-                        "target_image_id": "image-b",
+                        "target_imate_id": "imate-b",
                     },
                 }
             )
@@ -721,11 +721,11 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
 
     assert first_response["code"] == 200
     assert first_response["agent_id"] == "agent-a"
-    assert first_response["data"]["source_image_id"] == "image-a"
+    assert first_response["data"]["source_imate_id"] == "imate-a"
 
     assert second_response["code"] == 200
     assert second_response["agent_id"] == "agent-b"
-    assert second_response["data"]["source_image_id"] == "image-b"
+    assert second_response["data"]["source_imate_id"] == "imate-b"
 
 
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(

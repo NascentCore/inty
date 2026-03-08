@@ -231,7 +231,7 @@ def _build_chat_response(
     latest_message_info: Optional[dict],
     audio_url: Optional[str],
     request: ChatCompletionRequest,
-    source_image_id: Optional[str],
+    source_imate_id: Optional[str],
     user_message_id: Optional[int] = None,
     subscription_actions: Optional[List[BizAction]] = None,
 ) -> dict:
@@ -271,8 +271,8 @@ def _build_chat_response(
             + len(response_text_content.split()),
         },
     }
-    if source_image_id is not None:
-        response["source_image_id"] = source_image_id
+    if source_imate_id is not None:
+        response["source_imate_id"] = source_imate_id
     return response
 
 
@@ -686,7 +686,7 @@ async def agent_chat_completions(
             latest_message_info,
             audio_url,
             request,
-            source_image_id=request.target_image_id,
+            source_imate_id=request.target_imate_id,
             user_message_id=user_message_id,
             subscription_actions=subscription_actions,
         )
