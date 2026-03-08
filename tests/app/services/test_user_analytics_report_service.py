@@ -1,6 +1,7 @@
 # CREATED_BY_AGENT
 """用户数据分析预计算报告服务测试"""
 
+from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -301,6 +302,66 @@ async def test_compute_and_save_weekly_report_creates_new(mock_db, sample_stats)
         result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
 
     assert result is not None
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_compute_and_save_weekly_report_fallbacks_to_primary_when_replica_conflicts(
+    mock_db, sample_stats
+):
+    """周报副本持续 conflict with recovery 时，应回退主库读取并成功保存周报。"""
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    replica_error = OperationalError(
+        statement="SELECT 1",
+        params={},
+        orig=Exception("canceling statement due to conflict with recovery"),
+    )
+
+    @asynccontextmanager
+    async def fake_replica_session():
+        replica_db = AsyncMock(spec=AsyncSession)
+        yield replica_db
+
+    service_get_stats_side_effects = [replica_error] * REPLICA_READ_MAX_ATTEMPTS + [
+        sample_stats
+    ]
+
+    with (
+        patch(
+            "app.services.user_analytics_report_service.AsyncSessionLocalReplica",
+            lambda: fake_replica_session(),
+        ),
+        patch(
+            "app.services.user_analytics_report_service.UserAnalyticsService"
+        ) as MockService,
+        patch(
+            "app.services.user_analytics_report_service.asyncio.sleep",
+            new=AsyncMock(),
+        ) as mock_sleep,
+    ):
+        mock_service_instance = AsyncMock()
+        mock_service_instance.get_analytics_stats = AsyncMock(
+            side_effect=service_get_stats_side_effects
+        )
+        mock_service_instance.get_new_users = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_popular_agents = AsyncMock(return_value=[])
+        MockService.return_value = mock_service_instance
+
+        result = await compute_and_save_weekly_report(mock_db, date(2026, 1, 27))
+
+    assert result is not None
+    assert (
+        mock_service_instance.get_analytics_stats.await_count
+        == REPLICA_READ_MAX_ATTEMPTS + 1
+    )
+    assert mock_sleep.await_count == REPLICA_READ_MAX_ATTEMPTS - 1
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()
 
