@@ -29,6 +29,8 @@ export interface GeneratedImageDetail {
   model: string | null;
   generationTimeMs: number | null;
   modelFallbackDueTo429: boolean | null;
+  langsmithTraceId: string | null;
+  langsmithTraceUrl: string | null;
   metaData: UnknownRecord;
 }
 
@@ -45,6 +47,8 @@ interface ParsedGeneratedImageMeta {
   model: string | null;
   generationTimeMs: number | null;
   modelFallbackDueTo429: boolean | null;
+  langsmithTraceId: string | null;
+  langsmithTraceUrl: string | null;
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -129,6 +133,8 @@ function parseGeneratedImageMeta(metaData: UnknownRecord): ParsedGeneratedImageM
     modelFallbackDueTo429: readBoolean(
       generatedImage?.model_fallback_due_to_429,
     ),
+    langsmithTraceId: readString(metaData.langsmith_trace_id),
+    langsmithTraceUrl: readString(metaData.langsmith_trace_url),
   };
 }
 
@@ -235,6 +241,8 @@ export function buildGeneratedImageDetailFromDailyReportItem(
     model: parsedMeta.model,
     generationTimeMs: parsedMeta.generationTimeMs,
     modelFallbackDueTo429: parsedMeta.modelFallbackDueTo429,
+    langsmithTraceId: parsedMeta.langsmithTraceId,
+    langsmithTraceUrl: parsedMeta.langsmithTraceUrl,
     metaData: normalizedMetaData,
   };
 }
@@ -280,6 +288,8 @@ export function buildGeneratedImageDetailFromGeneratedImage(
     generationTimeMs: image.generation_time_ms ?? parsedMeta.generationTimeMs,
     modelFallbackDueTo429:
       image.model_fallback_due_to_429 ?? parsedMeta.modelFallbackDueTo429,
+    langsmithTraceId: image.langsmith_trace_id ?? parsedMeta.langsmithTraceId,
+    langsmithTraceUrl: image.langsmith_trace_url ?? parsedMeta.langsmithTraceUrl,
     metaData: normalizedMetaData,
   };
 }

@@ -2615,6 +2615,8 @@ async def get_agent_generated_images(
             model = None
             generation_time_ms = None
             model_fallback_due_to_429 = None
+            langsmith_trace_id = metadata.get("langsmith_trace_id")
+            langsmith_trace_url = metadata.get("langsmith_trace_url")
             if isinstance(generated_image_meta, dict):
                 model = generated_image_meta.get("model")
                 generation_time_ms = generated_image_meta.get("generation_time_ms")
@@ -2653,6 +2655,8 @@ async def get_agent_generated_images(
                     "model": model,
                     "generation_time_ms": generation_time_ms,
                     "model_fallback_due_to_429": model_fallback_due_to_429,
+                    "langsmith_trace_id": langsmith_trace_id,
+                    "langsmith_trace_url": langsmith_trace_url,
                     "session_id": metadata.get("session_id"),
                     "meta_data": metadata,
                 }

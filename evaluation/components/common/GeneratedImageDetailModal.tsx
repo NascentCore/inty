@@ -2,11 +2,14 @@
  * 生成图片详情弹窗（支持完整 metadata 展示）
  * CREATED_BY_AGENT
  */
-import React, { useMemo } from "react";
-import { Card, Image, Modal, Space, Tag, Typography } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Card, Image, List, Modal, Space, Spin, Tag, Typography } from "antd";
 import { PictureOutlined } from "@ant-design/icons";
 import { formatUtcTimeRaw } from "../../utils/dateUtils";
 import type { GeneratedImageDetail } from "../../utils/generatedImageDetail";
+import { reportApi } from "../../services/api";
+import type { ReportItem } from "../../types";
+import { buildImageFeedbackTargetId } from "../../utils/imageFeedbackReport";
 
 const { Text, Paragraph, Title } = Typography;
 
@@ -31,12 +34,82 @@ function formatGenerationTimeMs(generationTimeMs: number | null): string | null 
   return `${(generationTimeMs / 1000).toFixed(2)}s (${Math.round(generationTimeMs)}ms)`;
 }
 
+function parseFeedbackVote(description: string | null): "like" | "dislike" | null {
+  if (!description) {
+    return null;
+  }
+  const matched = description.match(/\[vote=(like|dislike)\]/);
+  if (!matched) {
+    return null;
+  }
+  return matched[1] as "like" | "dislike";
+}
+
+function parseFeedbackContent(description: string | null): string {
+  if (!description) {
+    return "（无文字反馈）";
+  }
+  const cleanedDescription = description
+    .replace("[IMAGE_FEEDBACK]", "")
+    .replace(/\[vote=(like|dislike)\]/, "")
+    .trim();
+  return cleanedDescription || "（无文字反馈）";
+}
+
 export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps> = ({
   open,
   onClose,
   detail,
   title = "图片详情",
 }) => {
+  const [feedbackItems, setFeedbackItems] = useState<ReportItem[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !detail?.imageUrl) {
+      setFeedbackItems([]);
+      return;
+    }
+    const targetImageUrl = detail.imageUrl;
+    const targetId = buildImageFeedbackTargetId(targetImageUrl);
+    let cancelled = false;
+    setFeedbackLoading(true);
+    reportApi
+      .list({
+        report_type: "FEEDBACK",
+        target_id: targetId,
+        order_by: "created_at_desc",
+        limit: 20,
+      })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        const matchedItems = result.items.filter((item) => {
+          if (item.target_id === targetId) {
+            return true;
+          }
+          return item.image_urls.includes(targetImageUrl);
+        });
+        setFeedbackItems(matchedItems);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        console.error("Failed to load image feedbacks:", error);
+        setFeedbackItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setFeedbackLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail?.imageUrl, open]);
+
   const metadataJson = useMemo(() => {
     if (!detail || Object.keys(detail.metaData).length === 0) {
       return "暂无 metadata";
@@ -157,7 +230,51 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
               {detail.sessionId && (
                 <Text type="secondary">会话ID: {detail.sessionId}</Text>
               )}
+              {detail.langsmithTraceId && (
+                <Text type="secondary">Trace ID: {detail.langsmithTraceId}</Text>
+              )}
+              {detail.langsmithTraceUrl && (
+                <a href={detail.langsmithTraceUrl} target="_blank" rel="noreferrer">
+                  LangSmith Trace
+                </a>
+              )}
             </Space>
+          </Card>
+
+          <Card size="small" style={{ marginTop: 12 }}>
+            <Title level={5} style={{ marginBottom: 12 }}>
+              图片反馈
+            </Title>
+            {feedbackLoading ? (
+              <Spin size="small" />
+            ) : feedbackItems.length === 0 ? (
+              <Text type="secondary">暂无图片反馈</Text>
+            ) : (
+              <List
+                size="small"
+                dataSource={feedbackItems}
+                renderItem={(item) => {
+                  const vote = parseFeedbackVote(item.description);
+                  const voteTagColor =
+                    vote === "like" ? "green" : vote === "dislike" ? "red" : "blue";
+                  const voteTagText =
+                    vote === "like" ? "点赞反馈" : vote === "dislike" ? "点踩反馈" : "反馈";
+                  return (
+                    <List.Item key={item.id}>
+                      <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                        <Space>
+                          <Tag color={voteTagColor}>{voteTagText}</Tag>
+                          <Text type="secondary">
+                            {formatDateTime(item.created_at)}
+                          </Text>
+                        </Space>
+                        <Text>{parseFeedbackContent(item.description)}</Text>
+                      </Space>
+                    </List.Item>
+                  );
+                }}
+              />
+            )}
           </Card>
 
           <Card size="small" style={{ marginTop: 12 }}>
