@@ -16,6 +16,12 @@ from app.core.images.fal import AccelerationEnum, ImageSizeEnum, ZImageTurboImag
 from app.utils.image import ImageFormat, ImageSize
 
 
+# 这里的提示词是完全重新写的。仅用来测试 z-image turbo image-to-image 本身的行为特点。
+#
+# 下面是是通过添加对原图的文本描述来增强对原图进行大幅修改时的角色一致性：
+# 1. https://gemini.google.com/share/0dea70e9aac6 是用 Gemini 来反向描述原图的问答。
+# 2. Artistic Style 和 Facial Features 等等都是 Gemini 对原图的描述。
+# 3. LangSmith 中拷贝完整提示词，并注入来自 Gemini 的原图描述，意在增强生图的一致性。
 prompt="""
 Generate an image of the character in the reference image.
 The scene is a close-up shot of the character's face.
