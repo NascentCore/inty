@@ -109,3 +109,20 @@ python scripts/run_extract_memory_from_dump.py \
 - 抽取用 LLM 调用：[app/utils/openai_client.py](app/utils/openai_client.py)（`chat_completion_for_extraction`）
 - 默认模型常量：[app/utils/openrouter_memory.py](app/utils/openrouter_memory.py)
 - 手动对单用户执行抽取（写 DB）：[scripts/run_memory_extraction.py](scripts/run_memory_extraction.py)（`--user-id`，可选 `--dry-run`）
+
+## 7. 记忆抽取工作流模式（新增）
+
+`memory_extraction.workflow_mode` 支持 2 种值：
+
+- `always_summarize_full_chat_messages_history`（默认，原有逻辑不变）  
+  每次抽取读取用户全量历史消息，直接生成并覆盖 `user_common`。
+- `daily_incremental_summarization`（增量模式）  
+  每日读取用户前一 UTC 日消息，先生成 daily profile，再基于「旧 `user_common` + daily profile」更新并覆盖 `user_common`。
+
+验证增量模式时，建议在 `config.yaml` 中先设置：
+
+```yaml
+memory_extraction:
+  enabled: true
+  workflow_mode: daily_incremental_summarization
+```
