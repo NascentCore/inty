@@ -4,6 +4,7 @@
 
 import uuid
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -194,6 +195,7 @@ class TestChatService:
         assert generate_call_args[1]["agent_data"]["id"] == agent_id
         assert generate_call_args[1]["message_content"] == ai_message_content
         assert generate_call_args[1]["history_count"] == history_count
+        assert generate_call_args[1]["timeout_seconds"] == 30
 
         # 验证用量记录
         mock_subscription_svc.record_usage.assert_called_once()
@@ -754,6 +756,117 @@ class TestChatService:
         assert result.daily_limit == 6
         mock_subscription_svc.check_music_gen_limit.assert_called_once()
 
+        await db_session.delete(chat)
+        await db_session.delete(test_agent)
+        await db_session.delete(test_user)
+        await db_session.commit()
+
+    @pytest.mark.asyncio
+    @patch("app.core.model_selection.select_chat_image_model")
+    @patch("app.services.image_generation_service.image_generation_service.generate_chat_image")
+    async def test_generate_chat_image_subscribed_premium_model_uses_60s_timeout(
+        self,
+        mock_generate_image: AsyncMock,
+        mock_select_chat_image_model,
+        db_session: AsyncSession,
+    ):
+        """订阅用户使用 gemini-3-pro-image-preview 时，应将消息生图超时设置为 60 秒。"""
+        user_id = f"test_user_{uuid.uuid4().hex[:8]}"
+        agent_id = f"test_agent_{uuid.uuid4().hex[:8]}"
+
+        test_user = models.User(
+            id=user_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            auth_type=AuthType.PHONE,
+            nickname="Test User",
+            email="test@example.com",
+            system_language="en",
+        )
+        db_session.add(test_user)
+        await db_session.commit()
+        await db_session.refresh(test_user)
+
+        test_agent = models.Agent(
+            id=agent_id,
+            readable_id=str(uuid.uuid4().int)[:8],
+            name="Test Agent",
+            gender=Gender.FEMALE,
+            avatar="https://example.com/avatar.jpg",
+            background="https://example.com/background.jpg",
+            personality="温柔",
+            scenario="咖啡厅",
+            intro="AI助手",
+            opening="你好！",
+            visibility=AgentVisibility.PUBLIC,
+            status=AgentStatus.APPROVED,
+            creator_id=user_id,
+        )
+        db_session.add(test_agent)
+        await db_session.commit()
+        await db_session.refresh(test_agent)
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db_session, user_id=user_id, agent_id=agent_id
+        )
+        await db_session.refresh(chat)
+        session_id = chat_service.generate_session_id(chat.id)
+
+        user_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "human", "data": {"content": "你好"}},
+            meta_data={},
+        )
+        db_session.add(user_message)
+        await db_session.flush()
+
+        ai_message_content = "画一张图"
+        ai_message = models.ChatHistory(
+            session_id=session_id,
+            message={"type": "ai", "data": {"content": ai_message_content}},
+            meta_data={},
+        )
+        db_session.add(ai_message)
+        await db_session.commit()
+        await db_session.refresh(ai_message)
+        message_id = ai_message.id
+
+        mock_subscription_svc = AsyncMock()
+        mock_subscription_svc.get_user_subscription_status.return_value = (
+            SubscriptionStatusResponse(
+                is_subscribed=True,
+                subscription_status="subscribed",
+            )
+        )
+        mock_subscription_svc.check_image_gen_limit.return_value = (True, 2, 10)
+        mock_subscription_svc.record_usage.return_value = None
+        mock_select_chat_image_model.return_value = SimpleNamespace(
+            nickname="Nano Banana Pro",
+            id_on_provider="gemini-3-pro-image-preview",
+        )
+        mock_generate_image.return_value = {
+            "message_id": message_id,
+            "image_url": "https://cdn.example.com/premium.jpg",
+            "image_metadata": {"width": 1024, "height": 1024, "format": "jpeg"},
+            "prompt": "构建的提示词",
+        }
+
+        result = await chat_service.generate_chat_image(
+            db=db_session,
+            agent_id=agent_id,
+            user_id=user_id,
+            message_id=message_id,
+            subscription_service=mock_subscription_svc,
+            history_count=10,
+        )
+
+        assert isinstance(result, ChatImageGenerationResponse)
+        assert mock_generate_image.call_count == 1
+        call_kwargs = mock_generate_image.call_args[1]
+        assert call_kwargs["model"] == "gemini-3-pro-image-preview"
+        assert call_kwargs["timeout_seconds"] == 60
+
+        await db_session.delete(ai_message)
+        await db_session.delete(user_message)
         await db_session.delete(chat)
         await db_session.delete(test_agent)
         await db_session.delete(test_user)

@@ -7,6 +7,7 @@
 output_gcs_uri 由 SDK 直接写 GCS。
 """
 
+import asyncio
 import base64
 import io
 import os
@@ -407,6 +408,7 @@ class ImageGenerationService:
         user_reference_image_url: Optional[str],
         gcs_uri_base: str,
         system_instructions: Optional[List[str]] = None,
+        timeout_seconds: Optional[int] = None,
     ) -> GeneratedImageProcessResult:
         if model_id not in [m.id_on_provider for m in NANO_BANANA_MODELS]:
             raise ValueError(f"{model_id!r} not supported by WrappedClient")
@@ -418,12 +420,29 @@ class ImageGenerationService:
             logger.info("添加用户自拍照片作为参考图: {}", user_reference_image_url)
         contents.append(prompt)
 
-        results = await client.async_generate_images(
-            model=model_id,
-            contents=contents,
-            gcs_uri_base=gcs_uri_base,
-            system_instructions=system_instructions,
-        )
+        async def _generate_images() -> list[GeneratedImageProcessResult]:
+            return await client.async_generate_images(
+                model=model_id,
+                contents=contents,
+                gcs_uri_base=gcs_uri_base,
+                system_instructions=system_instructions,
+            )
+
+        if timeout_seconds is not None and timeout_seconds > 0:
+            try:
+                results = await asyncio.wait_for(
+                    _generate_images(),
+                    timeout=float(timeout_seconds),
+                )
+            except asyncio.TimeoutError as e:
+                raise TimeoutError(
+                    f"Chat image generation timeout after {timeout_seconds}s for model {model_id}"
+                ) from e
+        else:
+            results = await _generate_images()
+
+        if not results:
+            raise ValueError(f"No images generated for model {model_id}")
         return results[0]
 
     async def _generate_chat_image_with_resolved_fal_model(
@@ -468,6 +487,7 @@ class ImageGenerationService:
         chat_input: ChatImageGenModelInput,
         gcs_uri_base: str,
         system_instructions: Optional[List[str]] = None,
+        timeout_seconds: Optional[int] = None,
     ) -> GeneratedImageProcessResult:
         """
         统一聊天生图模型入口：
@@ -502,6 +522,7 @@ class ImageGenerationService:
                 user_reference_image_url=chat_input.user_reference_image_url,
                 gcs_uri_base=gcs_uri_base,
                 system_instructions=system_instructions,
+                timeout_seconds=timeout_seconds,
             )
         raise ValueError(
             f"Chat image model family unsupported for {resolved_model_id!r}; "
@@ -849,6 +870,7 @@ class ImageGenerationService:
         model: str,
         user_id: Optional[str] = None,
         history_count: Optional[int] = None,
+        timeout_seconds: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         统一聊天生图入口（替代 generate_chat_image_with_gemini / generate_chat_image_with_fal）：
@@ -920,6 +942,7 @@ class ImageGenerationService:
             ),
             gcs_uri_base=gcs_uri_base,
             system_instructions=system_instructions,
+            timeout_seconds=timeout_seconds,
         )
 
         gcs_uri = result.gcs_uri
