@@ -237,3 +237,26 @@ def test_build_system_messages_includes_time_context(monkeypatch):
     assert "Asia/Shanghai" in combined
     assert "UTC+08:00" in combined
     assert "Do not claim to need sleep or be offline." in combined
+
+
+def test_build_system_messages_can_omit_output_format_prompt():
+    agent = Agent(
+        agent_id="agent_output_format",
+        name="OutputFormatAgent",
+        model_config={},
+        mode_prompt="purity_mode_0725",
+    )
+
+    with_output_format = _get_contents(
+        agent.build_system_messages("", None, include_output_format_prompt=True)
+    )
+    without_output_format = _get_contents(
+        agent.build_system_messages("", None, include_output_format_prompt=False)
+    )
+
+    output_format_marker = (
+        "All actions, expressions, psychology or scene descriptions must be enclosed in brackets ()."
+    )
+    assert any(output_format_marker in content for content in with_output_format)
+    assert not any(output_format_marker in content for content in without_output_format)
+    assert any("## Purity Mode" in content for content in without_output_format)

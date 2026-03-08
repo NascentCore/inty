@@ -165,18 +165,30 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         return {"id": agent_id, "voice_id": "google/Zephyr", "gender": "FEMALE"}
 
     class _FakeAgent:
+        include_output_format_prompt_value = None
+
         def _get_user_profile_sync(self, user_id):
             return "##User Information\nName: John"
 
-        def build_system_messages(self, user_profile, chat_settings, user_time_context=None):
+        def build_system_messages(
+            self,
+            user_profile,
+            chat_settings,
+            user_time_context=None,
+            include_output_format_prompt=True,
+        ):
+            self.include_output_format_prompt_value = include_output_format_prompt
             return [
                 SystemMessage(content="System Prompt A"),
                 SystemMessage(content="System Prompt B"),
                 SystemMessage(content=user_profile),
             ]
 
+    fake_agent_holder = {"agent": None}
+
     async def fake_get_agent(agent_data):
-        return _FakeAgent()
+        fake_agent_holder["agent"] = _FakeAgent()
+        return fake_agent_holder["agent"]
 
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(premium_mode=False, style_prompt=None)
@@ -277,3 +289,5 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
     assert turns[1].role == "model"
     assert turns[1].parts[0].text == "A1"
     assert live_chat_module.LiveChatStatus.CONNECTED in status_events
+    assert fake_agent_holder["agent"] is not None
+    assert fake_agent_holder["agent"].include_output_format_prompt_value is False
