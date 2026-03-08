@@ -15,15 +15,36 @@
 7. 完成后必须回看 diff，确保无无关改动、无敏感信息泄漏。
 8. 提交时附一句话总结 + 详细描述（便于追溯）。
 
-## 概述
+## General background
+
+- Components
+  - IntelliMate app
+    - [IntelliMate: the user-facing Android App](/android_app)
+    - [Inty backend: IntelliMate Android APP's backend](/backend/inty/)
+    - [Push worker: offline scheduled tasks processor](/backend/push_worker/)
+    - [Ops: Inty operational web app](/web_app) and [corresponding Ops backend](/backend/ops)
+      - Extract memory from user and AI chat messages
+- Deployment
+  - IntelliMate is published on Google Play
+  - Inty backend, push worker, ops backend, are all deployed on 1 same GCE VM
+    - TODO: Add service account key or SSH key for accessing the VM
+  - All backend services have 2 stages `dev` `prod`
+    - IntelliMate `debug` build type talks to `dev` backend, `release` build type talks to `prod` backend
+
+## Android App Tips
 
 - Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm
 - Use standard components: https://developer.android.com/develop/ui/compose/components
 
-### 产品概述
-
-- IntelliMate 定位为面向 35+、有较好社会地位与自我认知的美国男性用户的长期 AI 陪伴产品，提供可持续进化的情感陪伴。
-- 后端有两个 FastAPI 应用：`backend/inty`（主 API，面向 Android）、`backend/ops` serving `evaluation/`
+## Backend 
+- Backend services
+  - Inty backend: `backend/inty` 支持 Android App 的主 API 后端，提供对话、生图、语音播报、语音通话等功能
+  - Operational app:
+    - `backend/ops` backend`evaluation/` operational app, creating iMates, view user behavior data etc. 
+  -  serving 
+  - 部署在一台 GCP VM
+  - 后端所有应用都有 2 个环境：dev prod
+    - .secrets/alien-paratext-461204-i9-cursor-log-viewer.json 可以用来访问
 
 ## 代码库内的一般性约定
 
