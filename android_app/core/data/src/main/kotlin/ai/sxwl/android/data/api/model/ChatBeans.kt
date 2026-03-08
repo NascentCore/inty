@@ -30,6 +30,7 @@ data class SendMsgResponse(
         val model: String = "",
         @Json(name = "object") val objectX: String = "",
         val usage: Usage = Usage(),
+        @Json(name = "source_imate_id") val sourceImateId: String? = null,
     )
 }
 
@@ -69,6 +70,13 @@ data class SendMsgReq(
     val model: String = "chatbot",
     val stream: Boolean = false,
     @Json(name = "time_context") val timeContext: UserTimeContext? = null,
+    @Json(name = "target_imate_id") val targetImateId: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ChatWebSocketReq(
+    @Json(name = "agent_id") val agentId: String,
+    val request: SendMsgReq,
 )
 
 @JsonClass(generateAdapter = true)
