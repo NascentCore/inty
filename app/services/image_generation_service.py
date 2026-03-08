@@ -418,12 +418,13 @@ class ImageGenerationService:
             logger.info("添加用户自拍照片作为参考图: {}", user_reference_image_url)
         contents.append(prompt)
 
-        return await client.async_generate_image(
+        results = await client.async_generate_images(
             model=model_id,
             contents=contents,
             gcs_uri_base=gcs_uri_base,
             system_instructions=system_instructions,
         )
+        return results[0]
 
     async def _generate_chat_image_with_resolved_fal_model(
         self,
