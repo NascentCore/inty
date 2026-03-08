@@ -13,7 +13,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.config import global_config_loaded_from_config_yaml as global_config
-from app.core.voice.tts_api import TTS_PROVIDER_ELEVENLABS, TTSResult
+from app.core.voice.tts_api import (
+    TTS_PROVIDER_ELEVENLABS,
+    TTSResult,
+    VoiceMessageNarrationMode,
+)
 from app.services.voice_service import VoiceService
 
 
@@ -140,3 +144,29 @@ async def test_call_tts_api_rejects_gemini_model_on_elevenlabs_path(
         )
 
     assert mock_elevenlabs_synthesize.await_count == 0
+
+
+@pytest.mark.asyncio
+@patch("app.services.voice_service.GeminiTTSAPI.synthesize_with_roleplay_prompt", new_callable=AsyncMock)
+async def test_call_tts_api_passes_voice_message_narration_mode_to_gemini(
+    mock_gemini_prompted: AsyncMock,
+    voice_service: VoiceService,
+):
+    mock_gemini_prompted.return_value = TTSResult(
+        audio_bytes=b"gemini-audio",
+        mime_type="audio/wav",
+    )
+
+    await voice_service._call_tts_api(
+        text='(whispers) "hello"',
+        voice_id="google/Zephyr",
+        model=global_config.agent.free_user_chat_tts_model,
+        language="en",
+        voice_message_narration_mode=VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS,
+    )
+
+    request = mock_gemini_prompted.await_args.args[0]
+    assert (
+        request.voice_message_narration_mode
+        == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS
+    )

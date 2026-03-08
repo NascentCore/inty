@@ -47,7 +47,10 @@ from app.services.surprise_snap_service import (
     get_unlocked_surprise_snap_message_ids,
     record_surprise_snap_unlock,
 )
-from app.services.voice_service import voice_service
+from app.services.voice_service import (
+    get_voice_message_narration_mode_from_agent_settings,
+    voice_service,
+)
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
@@ -398,6 +401,11 @@ async def generate_message_voice(
         )
         agent_voice_id = agent_data.get("voice_id")
         resolved_voice_id = selected_chat_voice_id or agent_voice_id
+        voice_message_narration_mode = (
+            get_voice_message_narration_mode_from_agent_settings(
+                agent_data.get("settings")
+            )
+        )
         voice_result = await voice_service.generate_voice(
             text=message_content,
             voice_id=resolved_voice_id,
@@ -405,6 +413,7 @@ async def generate_message_voice(
             db=db,
             agent_gender=agent_data.get("gender"),
             user=current_user,
+            voice_message_narration_mode=voice_message_narration_mode,
         )
 
         if not voice_result:

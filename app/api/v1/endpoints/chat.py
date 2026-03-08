@@ -44,7 +44,10 @@ from app.services.surprise_snap_service import (
     try_trigger_surprise_snap,
 )
 from app.services.push_notification_service import mark_user_push_notifications_as_read
-from app.services.voice_service import voice_service
+from app.services.voice_service import (
+    get_voice_message_narration_mode_from_agent_settings,
+    voice_service,
+)
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
@@ -567,6 +570,11 @@ async def agent_chat_completions(
                 # Voice resolution order for MVP:
                 # 1) per-chat selected voice_id, 2) agent default voice_id, 3) service fallback.
                 resolved_voice_id = selected_chat_voice_id or agent_voice_id
+                voice_message_narration_mode = (
+                    get_voice_message_narration_mode_from_agent_settings(
+                        agent_data.get("settings")
+                    )
+                )
 
                 with log_time(
                     f"语音生成: voice_id={resolved_voice_id}, text_length={len(response_text_content)}, language={request.language}"
@@ -578,6 +586,7 @@ async def agent_chat_completions(
                         db=db,
                         agent_gender=agent_data.get("gender"),
                         user=current_user,
+                        voice_message_narration_mode=voice_message_narration_mode,
                     )
                 if voice_result:
                     audio_url, audio_duration = voice_result

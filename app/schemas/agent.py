@@ -120,7 +120,15 @@ class AgentBase(BaseModel):
     background_images: Optional[List[str]] = None
     background_animated: Optional[str] = None  # 视频URL
     voice_id: Optional[str] = None
-    settings: Optional[Dict[str, Any]] = None
+    settings: Optional[Dict[str, Any]] = Field(
+        None,
+        description=(
+            "Agent runtime settings. "
+            "Supports `llm_config` and optional "
+            "`voice_message_narration_mode` enum: "
+            "`dialogue_only` (default) | `dialogue_and_stage_directions`."
+        ),
+    )
     intro: Optional[str] = None
     opening: Optional[str] = None
     opening_audio_url: Optional[str] = None
