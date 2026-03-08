@@ -5,9 +5,11 @@ from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.user_analytics_report_service import (
+    REPLICA_READ_MAX_ATTEMPTS,
     _first_monday_of_year,
     _mondays_in_first_half,
     compute_and_save_daily_report,
@@ -188,6 +190,61 @@ async def test_compute_and_save_daily_report_creates_new(
     assert result.charts["daily_top_agents_by_rounds"][0]["agent_name"] == "Agent B"
     assert result.charts["daily_top_agents_by_rounds"][0]["total_rounds"] == 120
     assert result.charts["daily_most_discussed_agent"]["agent_name"] == "Agent B"
+    mock_service_instance.get_generated_images_on_date.assert_awaited_once_with(
+        datetime(2026, 2, 1, tzinfo=timezone.utc),
+        datetime(2026, 2, 2, tzinfo=timezone.utc),
+    )
+
+
+@pytest.mark.asyncio
+async def test_compute_and_save_daily_report_fallbacks_to_primary_when_replica_conflicts(
+    mock_db, sample_stats, sample_popular_agents
+):
+    """副本持续 conflict with recovery 时，应回退主库读取并成功保存日报。"""
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    replica_error = OperationalError(
+        statement="SELECT 1",
+        params={},
+        orig=Exception("canceling statement due to conflict with recovery"),
+    )
+
+    with (
+        patch(
+            "app.services.user_analytics_report_service.AsyncSessionLocalReplica",
+            object(),
+        ),
+        patch(
+            "app.services.user_analytics_report_service._read_daily_report_from_replica",
+            new=AsyncMock(side_effect=[replica_error] * REPLICA_READ_MAX_ATTEMPTS),
+        ) as mock_replica_reader,
+        patch(
+            "app.services.user_analytics_report_service.UserAnalyticsService"
+        ) as MockService,
+    ):
+        mock_service_instance = AsyncMock()
+        mock_service_instance.get_analytics_stats = AsyncMock(return_value=sample_stats)
+        mock_service_instance.get_active_session_ids_on_date = AsyncMock(
+            return_value=set()
+        )
+        mock_service_instance.get_new_users = AsyncMock(return_value=[])
+        mock_service_instance.get_conversation_rounds = AsyncMock(return_value=[])
+        mock_service_instance.get_user_rounds_distribution = AsyncMock(return_value=[])
+        mock_service_instance.get_users_hitting_chat_limit = AsyncMock(return_value=[])
+        mock_service_instance.get_popular_agents = AsyncMock(
+            return_value=sample_popular_agents
+        )
+        mock_service_instance.get_generated_images_on_date = AsyncMock(return_value=[])
+        MockService.return_value = mock_service_instance
+
+        result = await compute_and_save_daily_report(mock_db, date(2026, 2, 1))
+
+    assert result is not None
+    assert mock_replica_reader.await_count == REPLICA_READ_MAX_ATTEMPTS
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_called_once()
     mock_service_instance.get_generated_images_on_date.assert_awaited_once_with(
         datetime(2026, 2, 1, tzinfo=timezone.utc),
         datetime(2026, 2, 2, tzinfo=timezone.utc),
