@@ -229,8 +229,8 @@ class LiveChatService:
     def _build_live_response_constraints(self) -> str:
         """构建 Live 对话回复约束。"""
         parts = [
-            "## 输出格式\n"
-            "这是实时语音对话，请直接以角色身份自然口语回复，不要使用括号描述动作或场景，也不要朗读舞台说明。"
+            "## Output format\n"
+            "Speak as the character, do not speak actions and scenes, do not speak stage directions."
         ]
 
         response_language_name = (
