@@ -128,3 +128,6 @@ tts:
 surprise_snap:
   enabled_since: "2026-02-24T08:00:00"
   trigger_rounds: [2,4,7,11]
+
+memory_extraction:
+  workflow_mode: "daily_incremental_summarization"
