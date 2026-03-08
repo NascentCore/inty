@@ -2,7 +2,7 @@
 
 ## Goal
 
-Validate whether adding explicit iMate avatar facial-feature constraints improves avatar consistency for chat image-to-image generation.
+Validate whether adding explicit Inty avatar facial-feature constraints improves avatar consistency for chat image-to-image generation.
 
 ## 1) Production trace record located (LangSmith)
 
@@ -27,14 +27,14 @@ Validate whether adding explicit iMate avatar facial-feature constraints improve
 
 Result: local call succeeds with the same provider model and expected output image format/size (JPEG, 576x1024).
 
-## 3) A/B experiment design for iMate consistency
+## 3) A/B experiment design for Inty consistency
 
-Reference avatar (official iMate/IntelliMate):
+Reference avatar (official Inty assistant):
 - `/opt/cursor/artifacts/imate_reference_avatar.jpeg`
 
 Prompt variants:
-- **Baseline**: chat-image prompt without iMate-specific facial-feature block.
-- **Enhanced**: same prompt plus iMate-specific block:
+- **Baseline**: chat-image prompt without Inty-specific facial-feature block.
+- **Enhanced**: same prompt plus Inty-specific block:
   - non-human mascot identity
   - ghost-like rounded silhouette
   - exactly two vertical black oval eyes
@@ -77,4 +77,4 @@ Key observation:
 
 ## 5) Conclusion
 
-Adding explicit iMate avatar facial-feature constraints is effective for improving identity consistency in chat-to-image results, especially reducing facial drift toward non-mascot details while maintaining the official avatar style.
+Adding explicit Inty avatar facial-feature constraints is effective for improving identity consistency in chat-to-image results, especially reducing facial drift toward non-mascot details while maintaining the official avatar style.

@@ -110,7 +110,7 @@
 
   - `{chat_history}`: 格式化的聊天历史
   - `{user_info}`: 用户信息块（`##User Information` 格式，包含 Name/Gender/Age/Description/Selfie Persona）
-  - `{avatar_facial_constraints_block}`: 角色专属外观约束块（当前用于官方 iMate/IntelliMate 助手，强化头像五官与图标形象一致性）
+  - `{avatar_facial_constraints_block}`: 角色专属外观约束块（当前用于官方 Inty 助手，强化头像五官与图标形象一致性）
 
 - **提示词模板**（默认）:
 
@@ -132,7 +132,7 @@
 
 提示词模板在 `app/core/agent/prompts.py` 的 `IMAGE_GENERATION_PROMPT_TEMPLATE` 中维护，必要时可通过评测面板 API `/api/v1/ai/agents/image-generation/config` 在运行时动态覆盖。
 
-当角色为官方 iMate/IntelliMate 助手（`agent_id=879e5e14-fec2-4d63-9704-4f3141bed74f` 或对应名称）时，后端会额外注入 “Official iMate avatar facial identity constraints” 提示词块，明确其应保持为非真人的简化吉祥物头像（双黑色椭圆眼、无口鼻等），以降低聊天生图的人脸漂移。
+当角色为官方 Inty 助手（`agent_id=879e5e14-fec2-4d63-9704-4f3141bed74f`，并兼容历史名称匹配）时，后端会额外注入 “Official Inty avatar facial identity constraints” 提示词块，明确其应保持为非真人的简化吉祥物头像（双黑色椭圆眼、无口鼻等），以降低聊天生图的人脸漂移。
 
 #### 3.2 图片生成流程
 

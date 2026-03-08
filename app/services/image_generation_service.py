@@ -79,7 +79,7 @@ _INTELLIMATE_OFFICIAL_NAMES = {
     "imate",
 }
 _INTELLIMATE_AVATAR_FACIAL_FEATURES_DESCRIPTION = """
-### Official iMate avatar facial identity constraints
+### Official Inty avatar facial identity constraints
 - The character is a minimalist mascot icon, not a photorealistic human face.
 - Keep a smooth ghost-like rounded head and soft speech-bubble body silhouette.
 - Keep exactly two vertical black oval eyes with no mouth, nose, eyebrows, eyelashes, or ears.
