@@ -169,7 +169,7 @@ async def generate_chat_image_for_message(
 
 5. **根据模型路由到对应 provider**
    - 模型：支持配置中的 nickname（`free_user_chat_image_model` / `sub_user_chat_image_model`）或 provider model id，仅允许四款（Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
-   - 当模型为 Gemini（Nano Banana / Nano Banana Pro）时，使用 `WrappedClient.async_generate_image()`，输入为参考图 +（可选）用户自拍 + 提示词
+   - 当模型为 Gemini（Nano Banana / Nano Banana Pro）时，使用 `WrappedClient.async_generate_images()`，输入为参考图 +（可选）用户自拍 + 提示词
    - 当模型为 fal（Seedream / Z Image Turbo I2I）时，自动转换为各自 API 所需输入（`image_url` 或 `image_urls`）
 
 6. **提取图片数据**

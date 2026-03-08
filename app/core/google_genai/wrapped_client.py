@@ -163,6 +163,18 @@ def _langsmith_process_outputs_generate_image(result: GeneratedImageProcessResul
     )
 
 
+def _langsmith_process_outputs_generate_images(
+    results: list[GeneratedImageProcessResult] | None,
+) -> list[GeneratedImageProcessResult] | None:
+    """
+    process_outputs for async_generate_images: delegates to _langsmith_process_outputs_generate_image
+    per item so LangSmith trace receives a list of sanitized results (truncated raw_data).
+    """
+    if results is None:
+        return None
+    return [_langsmith_process_outputs_generate_image(r) for r in results]
+
+
 class WrappedClient:
     def __init__(self, client: genai.Client):
         self.client = client
@@ -172,9 +184,9 @@ class WrappedClient:
         # LLM 是语言模型，生图模型就作为工具调用类型
         run_type=LangSmithTraceRunType.TOOL,
         # process_inputs=_process_inputs_generate_image,
-        process_outputs=_langsmith_process_outputs_generate_image,
+        process_outputs=_langsmith_process_outputs_generate_images,
     )
-    async def async_generate_image(
+    async def async_generate_images(
         self, 
         model: Literal[
             NANO_BANANA.id_on_provider,
@@ -182,7 +194,9 @@ class WrappedClient:
         ],
         contents: list[str],
         gcs_uri_base: str,
-        system_instructions: list[str] | None = None) -> GeneratedImageProcessResult:
+        system_instructions: list[str] | None = None,
+        count: int = 1,
+    ) -> list[GeneratedImageProcessResult]:
         """
         使用指定的模型生成图片。
         contents 是 jpeg/jpg 文件 http url、或文本提示词；这个设计符合目前消息生图的需求。
@@ -199,7 +213,7 @@ class WrappedClient:
         参数要简单，不能太复杂，否则 LangSmith 无法抓取主要信息。
 
         Returns:
-            GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。
+            list[GeneratedImageProcessResult]（每项含 size, format, raw_data, gcs_uri, generated_at）。
             当前仅支持 Gemini（NANO_BANANA*）路径；Imagen 模型会抛出 ValueError。
         """
         match model:
@@ -207,11 +221,10 @@ class WrappedClient:
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
                 # 默认参数不影响系统生成效果，不需要追踪。
                 # 仅在需要改写 system_instruction 时复制 config，避免污染全局预设。
+                config = copy.copy(GEN_CONTENT_CONFIG_IMAGE_9_16_1K)
+                config.candidate_count = count
                 if system_instructions is not None:
-                    config = copy.copy(GEN_CONTENT_CONFIG_IMAGE_9_16_1K)
                     config.system_instruction = get_text_parts(system_instructions)
-                else:
-                    config = GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 
                 contents_parts = get_jpeg_url_and_text_mixed_parts(contents)
                 response = await self.client.aio.models.generate_content(
@@ -224,48 +237,52 @@ class WrappedClient:
                     ],
                     config=config,
                 )
-                logger.debug("Gemini generate_content response: {}", response)
-                try:
-                    image_part = _extract_image_part_from_gemini_response(response)
-                    result = _process_image_part_to_generated_image(image_part, gcs_uri_base)
-                except Exception:
-                    # 失败路径保留完整响应，便于排障；成功路径会在 trace 中脱敏图片数据。
-                    attach_provider_response_to_langsmith_run(response)
-                    raise
-
-                # 上传 GCS 成功后，在 trace metadata 中去除 raw image data，降低 trace 体积。
                 trace_response = _sanitize_provider_response_for_trace(response)
                 attach_provider_response_to_langsmith_run(trace_response)
-                result.raw_response_from_provider = response
-                return result
+                _validate_gemini_image_response(response)
+                parts = []
+                for candidate in response.candidates:
+                    parts.append(_process_one_candidate(candidate))
+                results = []
+                for part in parts:
+                    result = _process_image_part_to_generated_image(part, gcs_uri_base)
+                    result.raw_response_from_provider = response
+                    results.append(result)
+                return results
+
             case _:
                 raise ValueError(f"Unsupported model: {model}")
 
 
-def _extract_image_part_from_gemini_response(
-    response: gemini_types.GeneratedContent,
-) -> gemini_types.Part:
+def _validate_gemini_image_response(response: Any) -> None:
     """
-    校验 Gemini generate_content 响应并提取图片 part。
-    成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
+    校验 Gemini generate_content 响应级别的反馈与候选数量。
+    若 prompt 被安全策略阻止或没有候选，记录日志并抛出 ValueError。
     """
-    # 检查 prompt_feedback（响应级别的反馈）
     if hasattr(response, "prompt_feedback") and response.prompt_feedback:
         prompt_feedback = response.prompt_feedback
         logger.warning("Prompt feedback: {}", prompt_feedback)
-        if hasattr(prompt_feedback, "block_reason"):
-            block_reason = prompt_feedback.block_reason
-            logger.warning("请求被阻止，原因: {}", block_reason)
+        if hasattr(prompt_feedback, "block_reason") and prompt_feedback.block_reason:
+            logger.warning("请求被阻止，原因: {}", prompt_feedback.block_reason)
             raise ValueError(
-                f"Image generation request blocked by safety filter: {block_reason}"
+                f"Image generation request blocked by safety filter: {prompt_feedback.block_reason}"
             )
 
     if not response.candidates:
         logger.error("Gemini 未返回任何候选结果")
         raise ValueError("Gemini returned no candidates")
 
-    candidate = response.candidates[0]
 
+def _format_safety_rating(r: Any) -> str:
+    """Single safety rating line for logging/error messages."""
+    return f"{r.category}={r.probability}(blocked={r.blocked})"
+
+
+def _process_one_candidate(candidate: Any) -> gemini_types.Part:
+    """
+    校验单个 Gemini 候选结果并提取图片 part。
+    成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
+    """
     # 检查 finish_reason（完成原因）
     finish_reason = getattr(candidate, "finish_reason", None)
     finish_reason_text = str(finish_reason) if finish_reason is not None else ""
@@ -280,10 +297,7 @@ def _extract_image_part_from_gemini_response(
             "IMAGE_PROHIBITED_CONTENT",
         }:
             safety_ratings = getattr(candidate, "safety_ratings", None) or []
-            safety_details = [
-                f"{r.category}={r.probability}(blocked={r.blocked})"
-                for r in safety_ratings
-            ]
+            safety_details = [_format_safety_rating(r) for r in safety_ratings]
             error_msg = (
                 "Image generation blocked by safety filter "
                 f"(finish_reason: {finish_reason_text})"
@@ -298,7 +312,7 @@ def _extract_image_part_from_gemini_response(
     # 检查 safety_ratings（即使 finish_reason 不是 SAFETY，也可能有安全评级）
     candidate_safety_ratings = getattr(candidate, "safety_ratings", None) or []
     blocked_ratings = [
-        f"{r.category}={r.probability}(blocked={r.blocked})"
+        _format_safety_rating(r)
         for r in candidate_safety_ratings
         if hasattr(r, "blocked") and r.blocked
     ]
@@ -326,6 +340,17 @@ def _extract_image_part_from_gemini_response(
         raise ValueError("No image data found in response")
 
     return image_part
+
+
+def _extract_image_part_from_gemini_response(
+    response: gemini_types.GeneratedContent,
+) -> gemini_types.Part:
+    """
+    校验 Gemini generate_content 响应并提取图片 part。
+    成功时返回含有 inline_data 的 part；失败时记录日志并抛出 ValueError。
+    """
+    _validate_gemini_image_response(response)
+    return _process_one_candidate(response.candidates[0])
 
 
 def _process_image_part_to_generated_image(
