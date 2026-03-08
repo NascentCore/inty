@@ -116,7 +116,7 @@ def _process_inputs_generate_chat_image(inputs: Dict[str, Any]) -> Dict[str, Any
         "user_id": inputs.get("user_id"),
         "history_count": inputs.get("history_count"),
         "message_content_len": len(message_content),
-        "message_content_preview": _truncate_trace_text(message_content),
+        "message_content": message_content,
     }
     return output
 
