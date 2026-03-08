@@ -19,6 +19,7 @@ from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 from app.services.user_service import build_user_info_prompt_block
+from app.utils.models_catalog import NANO_BANANA_PRO
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -1225,6 +1226,16 @@ def _is_429_resource_exhausted(exception: Exception) -> bool:
     return "429" in msg and "RESOURCE_EXHAUSTED" in msg.upper()
 
 
+_DEFAULT_CHAT_IMAGE_TIMEOUT_SECONDS = 30
+_SUBSCRIBED_PREMIUM_CHAT_IMAGE_TIMEOUT_SECONDS = 60
+
+
+def _resolve_chat_image_timeout_seconds(*, is_subscribed: bool, model_id: str) -> int:
+    if is_subscribed and model_id == NANO_BANANA_PRO.id_on_provider:
+        return _SUBSCRIBED_PREMIUM_CHAT_IMAGE_TIMEOUT_SECONDS
+    return _DEFAULT_CHAT_IMAGE_TIMEOUT_SECONDS
+
+
 async def _record_chat_image_failure(
     db: AsyncSession,
     subscription_service: SubscriptionService,
@@ -1631,6 +1642,10 @@ async def generate_chat_image(
     try:
         primary_model = resolved_model.id_on_provider
         primary_model_family = detect_model_name_family(primary_model)
+        primary_timeout_seconds = _resolve_chat_image_timeout_seconds(
+            is_subscribed=is_subscribed,
+            model_id=primary_model,
+        )
         if is_subscribed and primary_model_family == ModelNameFamily.GEMINI:
             fallback_model = (
                 global_config_loaded_from_config_yaml.agent.sub_user_chat_image_gemini_fallback_model
@@ -1646,6 +1661,7 @@ async def generate_chat_image(
                         user_id=user_id,
                         history_count=history_count,
                         model=primary_model,
+                        timeout_seconds=primary_timeout_seconds,
                     )
                 )
                 actual_model = primary_model
@@ -1667,6 +1683,10 @@ async def generate_chat_image(
                             user_id=user_id,
                             history_count=history_count,
                             model=fallback_model,
+                            timeout_seconds=_resolve_chat_image_timeout_seconds(
+                                is_subscribed=is_subscribed,
+                                model_id=fallback_model,
+                            ),
                         )
                     )
                     actual_model = fallback_model
@@ -1684,6 +1704,7 @@ async def generate_chat_image(
                     user_id=user_id,
                     history_count=history_count,
                     model=primary_model,
+                    timeout_seconds=primary_timeout_seconds,
                 )
             )
             actual_model = primary_model

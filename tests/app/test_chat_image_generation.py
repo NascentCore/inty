@@ -2,6 +2,7 @@
 聊天生图功能集成测试 - 使用 Gemini 2.5 Flash Image 与 Fal（z_image_turbo、seedream）
 """
 
+import asyncio
 import datetime
 import uuid
 from unittest.mock import patch
@@ -43,6 +44,45 @@ async def db_session():
 
 class TestImageGenerationService:
     """测试图片生成服务"""
+
+    @pytest.mark.asyncio
+    async def test_generate_chat_image_by_model_raises_timeout_for_slow_gemini(self):
+        """Gemini 路径传入 timeout_seconds 后，慢请求应抛出 TimeoutError。"""
+
+        async def fake_async_generate_image(
+            wrapped_client_self,
+            model,
+            contents,
+            gcs_uri_base,
+            system_instructions=None,
+        ):
+            await asyncio.sleep(2)
+            return GeneratedImageProcessResult(
+                size=ImageSize(width=64, height=64),
+                format=ImageFormat.JPEG,
+                raw_data=b"fake-image",
+                raw_data_total_bytes=len(b"fake-image"),
+                gcs_uri="gs://test-bucket/chat_images/agent-timeout/output.jpg",
+                gcs_http_url="https://storage.googleapis.com/test-bucket/chat_images/agent-timeout/output.jpg",
+                generated_at=datetime.datetime.now(datetime.timezone.utc),
+                raw_response_from_provider=None,
+            )
+
+        with patch(
+            "app.core.google_genai.wrapped_client.WrappedClient.async_generate_image",
+            new=fake_async_generate_image,
+        ):
+            with pytest.raises(TimeoutError, match="timeout after 1s"):
+                await image_generation_service.generate_chat_image_by_model(
+                    chat_input=ChatImageGenModelInput(
+                        prompt="draw us in a cafe",
+                        reference_image_url="https://example.com/reference.jpg",
+                        message_history=[],
+                        model_id_on_provider=NANO_BANANA.id_on_provider,
+                    ),
+                    gcs_uri_base="chat_images/agent-timeout",
+                    timeout_seconds=1,
+                )
 
     @pytest.mark.asyncio
     async def test_generate_chat_image_by_model_routes_nano_banana_nickname(self):
