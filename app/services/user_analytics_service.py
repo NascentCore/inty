@@ -1645,6 +1645,42 @@ class UserAnalyticsService:
             for row in rows
         ]
 
+    async def get_daily_messages_for_all_users(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> List[Dict[str, Any]]:
+        """统计全量用户在日期范围内的每日消息数。"""
+        query = text("""
+            SELECT
+                DATE(ch.created_at AT TIME ZONE 'UTC') as date,
+                COUNT(*) as message_count,
+                COUNT(DISTINCT ch.session_id) as session_count
+            FROM chat_history ch
+            WHERE ch.message->>'type' = 'human'
+              AND (ch.meta_data->>'isOpening' IS NULL OR ch.meta_data->>'isOpening' != 'true')
+              AND ch.created_at >= :start_date
+              AND ch.created_at < :end_date
+            GROUP BY DATE(ch.created_at AT TIME ZONE 'UTC')
+            ORDER BY date
+        """)
+        params = {
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        result = await self.db.execute(query, params)
+        rows = result.fetchall()
+        return [
+            {
+                "date": (
+                    row[0].isoformat() if isinstance(row[0], datetime) else str(row[0])
+                ),
+                "message_count": row[1],
+                "session_count": row[2],
+            }
+            for row in rows
+        ]
+
     async def get_user_generated_images_count(self, user_id: str) -> int:
         """获取用户总的生图数"""
         try:
