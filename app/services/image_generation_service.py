@@ -455,10 +455,9 @@ class ImageGenerationService:
     ) -> GeneratedImageProcessResult:
         if model_id == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
             args = ZImageTurboImageToImageInput(
-                prompt=prompt,
                 image_url=reference_image_url,
-                strength=0.75,
-                num_images=1,
+                prompt=prompt,
+                # strength=0.6（官方推荐平衡性较好的数值、越大 strength 意味着会更按照提示词进行修改）num_images=1
             )
             return await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
 
