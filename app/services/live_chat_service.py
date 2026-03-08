@@ -230,7 +230,9 @@ class LiveChatService:
         """构建 Live 对话回复约束。"""
         parts = [
             "## Output format\n"
-            "Speak as the character, do not speak actions and scenes, do not speak stage directions."
+            "Speak as the character as naturally as possible.\n"
+            "Do not speak actions and scenes.\n"
+            "Do not speak stage directions."
         ]
 
         response_language_name = (
