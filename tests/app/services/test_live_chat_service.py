@@ -121,6 +121,30 @@ def test_build_system_instruction_from_text_chat_system_messages():
     assert "ONLY in English" in instruction
 
 
+def test_build_system_instruction_strips_stage_direction_format_rules():
+    service = _build_service_with_language_config()
+    text_chat_system_messages = [
+        SystemMessage(
+            content=(
+                "Flirting mode:\n"
+                "- Keep roleplay vivid and emotionally grounded.\n"
+                "- All actions, emotions, scene descriptions must be enclosed in brackets ().\n"
+                '- All dialogues must be enclosed in quotation marks "".\n'
+                "- Avoid repetition."
+            )
+        )
+    ]
+
+    instruction = service._build_system_instruction_from_text_chat_system_messages(
+        text_chat_system_messages
+    )
+
+    assert "Keep roleplay vivid and emotionally grounded." in instruction
+    assert "Avoid repetition." in instruction
+    assert "enclosed in brackets" not in instruction
+    assert "enclosed in quotation marks" not in instruction
+
+
 def test_build_prefill_turns_from_history_messages():
     service = _build_service_with_language_config()
     history_messages = [

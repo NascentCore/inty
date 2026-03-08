@@ -230,7 +230,7 @@ class LiveChatService:
         """构建 Live 对话回复约束。"""
         parts = [
             "## 输出格式\n"
-            "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
+            "这是实时语音对话，请直接以角色身份自然口语回复，不要使用括号描述动作或场景，也不要朗读舞台说明。"
         ]
 
         response_language_name = (
@@ -271,10 +271,29 @@ class LiveChatService:
         instruction_parts: List[str] = []
         for message in system_messages:
             text = self._message_content_to_text(getattr(message, "content", ""))
+            text = self._strip_stage_direction_format_rules(text)
             if text:
                 instruction_parts.append(text)
         instruction_parts.append(self._build_live_response_constraints())
         return "\n\n".join(instruction_parts)
+
+    def _strip_stage_direction_format_rules(self, text: str) -> str:
+        """
+        Live 语音通话保留角色信息，但移除舞台指令格式化规则，
+        避免初始化 prompt 驱动模型朗读动作描述。
+        """
+        if not text:
+            return ""
+        kept_lines: List[str] = []
+        for line in text.splitlines():
+            lowered = line.strip().lower()
+            if any(
+                keyword in lowered
+                for keyword in self._LIVE_STAGE_DIRECTION_RULE_KEYWORDS
+            ):
+                continue
+            kept_lines.append(line)
+        return "\n".join(kept_lines).strip()
 
     def _build_prefill_turns_from_history_messages(
         self, history_messages: List[BaseMessage]
@@ -325,6 +344,13 @@ class LiveChatService:
     _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
     _CJK_SPACE_RE = re.compile(r"([\u4e00-\u9fff])\s+([\u4e00-\u9fff])")
     _DIGIT_SPACE_RE = re.compile(r"(\d)\s+(?=\d)")
+    _LIVE_STAGE_DIRECTION_RULE_KEYWORDS = (
+        "enclosed in brackets",
+        "enclosed in quotation marks",
+        "all actions, emotions, scene descriptions",
+        "all dialogues must be enclosed",
+        "all dialogues must",
+    )
 
     def _merge_transcription_piece(self, current: str, new_piece: str) -> str:
         if not new_piece:
