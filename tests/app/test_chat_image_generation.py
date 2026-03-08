@@ -18,7 +18,11 @@ from app.external_services.fakes.gemini import FakeGeminiClient
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
 from app.services import chat_history_service
-from app.services.image_generation_service import ChatImageGenModelInput, image_generation_service
+from app.services.image_generation_service import (
+    ChatImageGenModelInput,
+    _process_inputs_generate_chat_image,
+    image_generation_service,
+)
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.models_catalog import (
     NANO_BANANA,
@@ -43,6 +47,25 @@ async def db_session():
 
 class TestImageGenerationService:
     """测试图片生成服务"""
+
+    def test_trace_inputs_include_full_message_content(self):
+        """LangSmith tracing 输入应保留完整 message_content，且不再返回 preview 字段。"""
+        full_message_content = "x" * 600 + "-tail"
+        inputs = {
+            "session_id": "session-1",
+            "message_id": 123,
+            "agent_data": {"id": "agent-1"},
+            "model": "gemini-2.5-flash-image",
+            "user_id": "user-1",
+            "history_count": 5,
+            "message_content": full_message_content,
+        }
+
+        output = _process_inputs_generate_chat_image(inputs)
+
+        assert output["message_content"] == full_message_content
+        assert output["message_content_len"] == len(full_message_content)
+        assert "message_content_preview" not in output
 
     @pytest.mark.asyncio
     async def test_generate_chat_image_by_model_routes_nano_banana_nickname(self):
