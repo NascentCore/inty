@@ -124,6 +124,7 @@ fal:
 
 tts:
   use_gemini_prompted_tts: true
+  enable_gemini_tts_then_elevenlabs_voice_changer_for_imate: true
 
 surprise_snap:
   enabled_since: "2026-02-24T08:00:00"
