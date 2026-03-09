@@ -46,6 +46,7 @@ class ModelBuilder(StrEnum):
     OPENAI = "openai"
     ELEVENLABS = "11labs"
     ALIBABA_TONGYI = "alibaba_tongyi"
+    DEEPSEEK = "deepseek"
 
 
 class PricingModel(StrEnum):
@@ -160,6 +161,30 @@ class GenAIModel(BaseModel):
         模型的一些备注信息，比如模型的使用技巧和功能限制、注意事项等。""",
         default="",
     )
+
+
+DEEPSEEK_V3_2 = GenAIModel(
+    nickname="DeepSeek V3.2",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.DEEPSEEK,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="deepseek/deepseek-v3.2",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.25, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.40, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://openrouter.ai/deepseek/deepseek-v3.2",
+    ),
+    official_url="https://huggingface.co/deepseek-ai/DeepSeek-V3.2",
+    notes="163,840 context window. Supports reasoning via `reasoning.enabled` parameter.",
+)
 
 
 GEMINI_2_5_FLASH_LITE = GenAIModel(
@@ -850,3 +875,10 @@ def is_gemini_model(model: str) -> bool:
     Check if a model is a gemini model.
     """
     return detect_model_name_family(model) == ModelNameFamily.GEMINI
+
+
+def is_deepseek_on_openrouter(model: str) -> bool:
+    """
+    Check if a model is a DeepSeek model on OpenRouter (id starts with "deepseek/").
+    """
+    return normalize_model_name(model).startswith("deepseek/")

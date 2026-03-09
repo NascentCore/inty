@@ -1226,6 +1226,21 @@ def _is_429_resource_exhausted(exception: Exception) -> bool:
     return "429" in msg and "RESOURCE_EXHAUSTED" in msg.upper()
 
 
+def _is_image_generation_policy_block(error_message: str) -> bool:
+    """判定是否为内容安全/合规拦截（Gemini/Fal 等）。"""
+    error_message_lower = error_message.lower()
+    return (
+        "被阻止" in error_message
+        or "安全过滤器" in error_message
+        or "blocked" in error_message_lower
+        or "safety" in error_message_lower
+        or "image_prohibited_content" in error_message_lower
+        or "finishreason.image_" in error_message_lower
+        or "content_policy_violation" in error_message_lower
+        or "content checker" in error_message_lower
+    )
+
+
 _DEFAULT_CHAT_IMAGE_TIMEOUT_SECONDS = 30
 _SUBSCRIBED_PREMIUM_CHAT_IMAGE_TIMEOUT_SECONDS = 60
 
@@ -1758,15 +1773,7 @@ async def generate_chat_image(
             )
 
         # 检查是否是安全过滤器阻止（用于记录日志和返回业务错误）
-        error_message_lower = error_message.lower()
-        is_safety_filter = (
-            "被阻止" in error_message
-            or "安全过滤器" in error_message
-            or "blocked" in error_message_lower
-            or "safety" in error_message_lower
-            or "image_prohibited_content" in error_message_lower
-            or "finishreason.image_" in error_message_lower
-        )
+        is_safety_filter = _is_image_generation_policy_block(error_message)
 
         if is_safety_filter:
             block_reason = None
@@ -1850,6 +1857,31 @@ async def generate_chat_image(
             logger.info(
                 f"消息生图失败后跳过兜底匹配 - agent_id={agent_id} "
                 f"message_id={message_id} reason={fallback_skip_reason}"
+            )
+
+        if _is_image_generation_policy_block(error_message):
+            failure_type = "safety_filter"
+            logger.warning(
+                f"图片生成被安全策略阻止 - Agent ID: {agent_id}, "
+                f"Message ID: {message_id}, Reason: {failure_reason}"
+            )
+            await _record_chat_image_failure(
+                db=db,
+                subscription_service=subscription_service,
+                session_id=session_id,
+                message_id=message_id,
+                user_id=user_id,
+                agent_id=agent_id,
+                message_content=message_content,
+                resolved_model_id=resolved_model.id_on_provider,
+                current_prompt=current_prompt,
+                failure_reason=failure_reason,
+                failure_type=failure_type,
+            )
+            return BizError(
+                code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["code"],
+                error_code=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"],
+                message=BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"],
             )
 
         logger.error(

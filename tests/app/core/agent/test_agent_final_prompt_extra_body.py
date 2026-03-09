@@ -45,17 +45,28 @@ def test_build_agent_from_data_uses_config():
     assert agent.personality == "Personality"
 
 
-def test_chat_extra_body_returns_expected_dict():
-    """_chat_extra_body 返回 generation_config.thinking_budget 与 user。"""
+def test_chat_extra_body_gemini_model():
+    """Non-DeepSeek models get generation_config.thinking_budget."""
     agent = _minimal_agent()
-    got = agent._chat_extra_body("user_123")
+    got = agent._chat_extra_body("user_123", "google/gemini-2.5-flash")
     assert got == {
         "generation_config": {"thinking_budget": 0},
         "user": "user_123",
     }
 
 
+def test_chat_extra_body_deepseek_model():
+    """DeepSeek models on OpenRouter get reasoning config instead of thinking_budget."""
+    agent = _minimal_agent()
+    got = agent._chat_extra_body("user_123", "deepseek/deepseek-v3.2")
+    assert got == {
+        "reasoning": {"effort": "low", "exclude": True},
+        "user": "user_123",
+    }
+    assert "generation_config" not in got
+
+
 def test_chat_extra_body_different_user_id():
     """_chat_extra_body 的 user 字段与传入的 user_id 一致。"""
     agent = _minimal_agent()
-    assert agent._chat_extra_body("another_user")["user"] == "another_user"
+    assert agent._chat_extra_body("another_user", "google/gemini-2.5-flash")["user"] == "another_user"
