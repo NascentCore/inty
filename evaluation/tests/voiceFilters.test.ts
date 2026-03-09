@@ -51,6 +51,20 @@ describe("voiceFilters", () => {
     ).toEqual(["v-unknown"]);
   });
 
+  it("falls back to unknown voices when strict male/female match is empty", () => {
+    const voices = [
+      buildVoice("v-unknown-1"),
+      buildVoice("v-unknown-2", undefined, { age: "young" }),
+    ];
+
+    expect(filterVoicesByGender(voices, "male").map((voice) => voice.voice_id)).toEqual(
+      ["v-unknown-1", "v-unknown-2"],
+    );
+    expect(
+      filterVoicesByGender(voices, "female").map((voice) => voice.voice_id),
+    ).toEqual(["v-unknown-1", "v-unknown-2"]);
+  });
+
   it("uses labels.gender when top-level gender is missing", () => {
     const voices = [
       buildVoice("v-el-female", undefined, { gender: "female" }),

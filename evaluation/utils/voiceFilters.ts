@@ -54,7 +54,17 @@ export const filterVoicesByGender = (
   if (genderFilter === "all") {
     return voices;
   }
-  return voices.filter((voice) => getNormalizedVoiceGender(voice) === genderFilter);
+
+  const strictlyMatchedVoices = voices.filter(
+    (voice) => getNormalizedVoiceGender(voice) === genderFilter,
+  );
+  if (strictlyMatchedVoices.length > 0 || genderFilter === "unknown") {
+    return strictlyMatchedVoices;
+  }
+
+  // ElevenLabs 音色常存在缺失性别标签的情况：
+  // 当 male/female 严格匹配为空时，回退到 unknown，避免“有音色但列表全空”。
+  return voices.filter((voice) => getNormalizedVoiceGender(voice) === "unknown");
 };
 
 export const getVoiceGenderStats = (voices: Voice[]) => {

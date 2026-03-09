@@ -246,7 +246,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     if (requiredGenderFilter === "all") {
       return;
     }
-    if (getNormalizedVoiceGender(selectedVoiceInfo) !== requiredGenderFilter) {
+    const selectedVoiceGender = getNormalizedVoiceGender(selectedVoiceInfo);
+    if (
+      selectedVoiceGender !== requiredGenderFilter &&
+      selectedVoiceGender !== "unknown"
+    ) {
       message.warning("当前音色与角色性别不匹配，已自动清除，请重新选择");
       onChange?.(undefined);
       setSelectedVoiceInfo(null);
