@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
@@ -166,18 +167,21 @@ fun VipCenterContent(
                         color = colorScheme.onBackground.copy(alpha = 0.85f),
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(dimensionResource(R.dimen.padding_large)))
                 BenefitDetailsTable(
-                    rows = subscriptionBenefitRows()
+                    rows = subscriptionBenefitRows(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = dimensionResource(R.dimen.padding_large))
                 )
-
-                Spacer(Modifier.weight(1f).heightIn(min = 16.dp))
+                Spacer(Modifier.height(dimensionResource(R.dimen.padding_large)))
                 PurchaseButton(
                     isSubscribed = vipStatus.isSubscribed,
                     hasSelectedPlan = viewModel.hasSelectedPlan(),
                     onPurchase = { onPurchase() },
                     isLoading = isPurchasing,
                     selectedPlanPrice = selectedPlan?.price,
+                    modifier = Modifier.padding(horizontal = dimensionResource(R.dimen.padding_large))
                 )
                 Spacer(Modifier.height(12.dp))
                 // 会员与续订条款链接（参考 Talkie+ 底部）
