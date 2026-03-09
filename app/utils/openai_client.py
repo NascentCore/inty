@@ -3,11 +3,17 @@ OpenAI API client helpers and shared client singleton.
 
 Chat LLM (e.g. google/gemini-2.5-flash-lite) is invoked via this client against the
 OpenRouter endpoint (agent.base_url, agent.api_key). Do not use Vertex/genai client
-for chat; use get_base_openai_client() and pass OpenRouter model ids.
+for chat; use get_chat_openai_client() for Agent chat, get_base_openai_client() for
+default/extraction. When agent.chat_llm_base_url and agent.chat_llm_api_key are set,
+chat uses that endpoint (e.g. LiteLLM); otherwise chat uses base_url + api_key.
 
 LangSmith tracing is done at call site (e.g. agent._call_openai_api_with_retry),
 not via client wrapping.
 """
+
+# LLM provider 标识，用于 meta_data.llm_provider（openrouter / litellm）
+LLM_PROVIDER_OPENROUTER = "openrouter"
+LLM_PROVIDER_LITELLM = "litellm"
 
 # TODO: 写一个 Wrapper 来完成常见功能，包括：
 # 1. structured output
@@ -74,6 +80,9 @@ _client_lock = threading.Lock()
 _async_client: Optional[AsyncOpenAI] = None
 _async_client_lock = threading.Lock()
 
+_chat_client: Optional[OpenAI] = None
+_chat_client_lock = threading.Lock()
+
 
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
@@ -110,6 +119,46 @@ def get_base_openai_client() -> OpenAI:
                 logger.debug("创建全局基础OpenAI客户端")
                 _base_client = _create_openai_client()
     return _base_client
+
+
+def _create_chat_openai_client() -> OpenAI:
+    """创建 Agent 聊天专用 OpenAI 客户端。若配置了 chat_llm_base_url 与 chat_llm_api_key 则使用二者，否则使用 base_url + api_key。"""
+    from app.core.config import Environment
+
+    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
+        logger.info("Using FakeOpenAI in test environment (chat client)")
+        return FakeOpenAI()
+
+    cfg = global_config_loaded_from_config_yaml.agent
+    base_url = cfg.chat_llm_base_url or cfg.base_url
+    api_key = cfg.chat_llm_api_key or cfg.api_key
+    return OpenAI(
+        base_url=base_url,
+        api_key=api_key,
+        default_headers={
+            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
+            "X-Title": global_config_loaded_from_config_yaml.app.name,
+        },
+    )
+
+
+def get_chat_openai_client() -> OpenAI:
+    """
+    获取 Agent 聊天专用 OpenAI 客户端单例。
+    当配置了 agent.chat_llm_base_url 与 agent.chat_llm_api_key 时使用该端点（如 LiteLLM），否则与 get_base_openai_client() 相同。
+    """
+    global _chat_client
+    if _chat_client is None:
+        with _chat_client_lock:
+            if _chat_client is None:
+                logger.debug("创建 Agent 聊天专用 OpenAI 客户端")
+                _chat_client = _create_chat_openai_client()
+    return _chat_client
+
+
+def get_chat_llm_provider() -> str:
+    """返回当前 chat 使用的 LLM 网关标识（来自配置 agent.chat_llm_provider），用于写入 meta_data.llm_provider。"""
+    return global_config_loaded_from_config_yaml.agent.chat_llm_provider
 
 
 def _create_async_openai_client() -> AsyncOpenAI:

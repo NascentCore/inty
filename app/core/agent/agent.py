@@ -41,7 +41,8 @@ from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
 from app.utils.openai_client import (
-    get_base_openai_client,
+    get_chat_llm_provider,
+    get_chat_openai_client,
     langchain_message_to_openai_message,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
@@ -406,7 +407,7 @@ class Agent:
         )
 
         # 使用配置中的模型设置（model/temperature/max_tokens 等由 self.model_config 在 chat 时读取）
-        # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用全局 client（app.utils.openai_client.get_base_openai_client）
+        # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用 get_chat_openai_client（可配置为 LiteLLM）
 
     def _is_intellimate_official(self) -> bool:
         return self.agent_id == INTELLIMATE_AGENT_ID
@@ -1355,7 +1356,7 @@ class Agent:
                 )
                 default_top_p = global_config.agent.top_p
 
-                client = get_base_openai_client()
+                client = get_chat_openai_client()
 
                 # API调用（带重试机制）
                 # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
@@ -1547,13 +1548,16 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录（包含LLM调用时间），并返回插入后的 message id 供调用方使用
+                # 保存AI响应到历史记录（包含LLM调用时间与 provider），并返回插入后的 message id 供调用方使用
                 save_response_start = time.time()
                 ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
                     agent_id=self.agent_id,
-                    meta_data={"llm_invoke_time": api_time},
+                    meta_data={
+                        "llm_invoke_time": api_time,
+                        "llm_provider": get_chat_llm_provider(),
+                    },
                 )
                 save_response_time = time.time() - save_response_start
                 logger.debug(
@@ -1695,7 +1699,7 @@ class Agent:
                 )
                 default_top_p = global_config.agent.top_p
 
-                client = get_base_openai_client()
+                client = get_chat_openai_client()
 
                 # API调用（使用统一的重试和 trace 逻辑）
                 # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
