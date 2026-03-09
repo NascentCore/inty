@@ -6,6 +6,7 @@ import type { Voice } from "../types";
 import {
   filterVoicesByGender,
   getVoiceGenderStats,
+  mapImateGenderToVoiceGenderFilter,
   normalizeVoiceGender,
 } from "../utils/voiceFilters";
 
@@ -42,6 +43,14 @@ describe("voiceFilters", () => {
     expect(
       filterVoicesByGender(voices, "unknown").map((voice) => voice.voice_id),
     ).toEqual(["v-unknown"]);
+  });
+
+  it("maps iMate gender to voice gender filter", () => {
+    expect(mapImateGenderToVoiceGenderFilter("MALE")).toBe("male");
+    expect(mapImateGenderToVoiceGenderFilter("female")).toBe("female");
+    expect(mapImateGenderToVoiceGenderFilter("OTHER")).toBe("unknown");
+    expect(mapImateGenderToVoiceGenderFilter("")).toBe("all");
+    expect(mapImateGenderToVoiceGenderFilter(undefined)).toBe("all");
   });
 
   it("counts gender stats with unknown fallback", () => {
