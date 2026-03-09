@@ -70,6 +70,8 @@ ROLEPLAY_MAIN_PROMPT_1225 = _get_prompt_text("ROLEPLAY_MAIN_PROMPT_1225")
 
 RP_MODE_PROMPT_1225 = _get_prompt_text("RP_MODE_PROMPT_1225")
 
+IMMERSIVE_MODE_PROMPT_0309 = _get_prompt_text("IMMERSIVE_MODE_PROMPT_0309")
+
 AI_COMPANION_MAIN_PROMPT = _get_prompt_text("AI_COMPANION_MAIN_PROMPT")
 
 AI_COMPANION_MODE_PROMPT = _get_prompt_text("AI_COMPANION_MODE_PROMPT")
@@ -142,6 +144,12 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
         name="RP模式 (1225)",
         description="角色扮演模式提示词（1225版本），强调主动推动剧情和场景变化",
         content=RP_MODE_PROMPT_1225,
+    ),
+    PromptOption(
+        id="immersive_mode_0309",
+        name="Immersive Mode0309",
+        description="沉浸模式提示词（0309版本），强调剧情推进、场景变化与输出格式",
+        content=IMMERSIVE_MODE_PROMPT_0309,
     ),
     PromptOption(
         id="ai_companion_mode",
