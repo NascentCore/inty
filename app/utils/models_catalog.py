@@ -875,3 +875,10 @@ def is_gemini_model(model: str) -> bool:
     Check if a model is a gemini model.
     """
     return detect_model_name_family(model) == ModelNameFamily.GEMINI
+
+
+def is_deepseek_on_openrouter(model: str) -> bool:
+    """
+    Check if a model is a DeepSeek model on OpenRouter (id starts with "deepseek/").
+    """
+    return normalize_model_name(model).startswith("deepseek/")

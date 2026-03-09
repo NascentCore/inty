@@ -40,6 +40,7 @@ from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
+from app.utils.models_catalog import is_deepseek_on_openrouter
 from app.utils.openai_client import (
     get_base_openai_client,
     langchain_message_to_openai_message,
@@ -662,12 +663,14 @@ class Agent:
         with self._last_used_lock:
             self.last_used = time.time()
 
-    def _chat_extra_body(self, user_id: str) -> Dict[str, Any]:
-        """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), user (tracking)."""
-        return {
-            "generation_config": {"thinking_budget": 0},
-            "user": user_id,
-        }
+    def _chat_extra_body(self, user_id: str, model: str) -> Dict[str, Any]:
+        """OpenAI/OpenRouter chat completion extra_body with model-specific reasoning config."""
+        body: Dict[str, Any] = {"user": user_id}
+        if is_deepseek_on_openrouter(model):
+            body["reasoning"] = {"effort": "low", "exclude": True}
+        else:
+            body["generation_config"] = {"thinking_budget": 0}
+        return body
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
@@ -1387,7 +1390,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id),
+                        extra_body=self._chat_extra_body(user_id, model_name),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -1411,7 +1414,7 @@ class Agent:
                                 temperature=temperature,
                                 max_tokens=max_tokens,
                                 top_p=top_p,
-                                extra_body=self._chat_extra_body(user_id),
+                                extra_body=self._chat_extra_body(user_id, model_name),
                                 user_id=user_id,
                                 chat_name=chat_name,
                                 labels=labels,
@@ -1494,7 +1497,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id),
+                        extra_body=self._chat_extra_body(user_id, model_name),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -1725,7 +1728,7 @@ class Agent:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     top_p=top_p,
-                    extra_body=self._chat_extra_body(user_id),
+                    extra_body=self._chat_extra_body(user_id, model_name),
                     user_id=user_id,
                     max_retries=3,
                     initial_delay=1.0,
