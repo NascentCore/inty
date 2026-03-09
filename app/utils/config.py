@@ -244,6 +244,11 @@ class AgentConfig:
     # - app/services/evaluation_service.py (updated to use select_chat_model)
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     base_url: str = OPENROUTER_BASE_URL
+    # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
+    chat_llm_base_url: Optional[str] = None
+    chat_llm_api_key: Optional[str] = None
+    # Chat 使用的 LLM 网关标识，用于 meta_data.llm_provider；可选值为 openrouter / litellm。
+    chat_llm_provider: str = "openrouter"
     temperature: float = 0.7
     max_tokens: int = 1000
     top_p: float = 1.0
@@ -622,6 +627,11 @@ def _validate_config(config: Config):
     # 消息生图模型 nickname 必须能解析为允许的模型
     models_catalog.must_resolve_nickname(config.agent.free_user_chat_image_model)
     models_catalog.must_resolve_nickname(config.agent.sub_user_chat_image_model)
+
+    if config.agent.chat_llm_provider not in ("openrouter", "litellm"):
+        raise ValueError(
+            f"agent.chat_llm_provider must be 'openrouter' or 'litellm', got: {config.agent.chat_llm_provider!r}"
+        )
 
     # 校验并自动修正 limits 配置
     limits = config.app.limits
