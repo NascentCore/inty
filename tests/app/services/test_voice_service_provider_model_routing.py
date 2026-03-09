@@ -242,7 +242,7 @@ async def test_call_tts_api_uses_gemini_then_voice_changer_for_elevenlabs_voice(
 
         changer_kwargs = mock_voice_changer.await_args.kwargs
         assert changer_kwargs["target_voice_id"] == "11labs/JBFqnCBsd6RMkjVDRZzb"
-        assert changer_kwargs["model_id"] == voice_service.config.model
+        assert changer_kwargs["model_id"] == voice_service.config.voice_change_model
     finally:
         global_config.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate = (
             old_flag
