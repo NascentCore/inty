@@ -12,11 +12,12 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.utils.models_catalog import NANO_BANANA_2
+
 if TYPE_CHECKING:
     from google.genai import Client
 
 RECENT_MESSAGES_LIMIT = 10
-DEFAULT_CHAT_IMAGE_MODEL = "gemini-2.5-flash-image"
 
 _THIS_DIR = Path(__file__).resolve().parent
 DEFAULT_COMPANION_PROFILE_DIR = _THIS_DIR / "companion_profile"
@@ -106,7 +107,7 @@ class GenerateImageToolInput(BaseModel):
     char_name: str = "AI Companion"
     user_name: str = "the user"
     history_count: int = RECENT_MESSAGES_LIMIT
-    model: str = DEFAULT_CHAT_IMAGE_MODEL
+    model: str = NANO_BANANA_2.id_on_provider
     ai_reference_image: str | None = None
     user_reference_image: str | None = None
     runtime_paths: RuntimePaths = Field(default_factory=RuntimePaths)
@@ -545,10 +546,42 @@ def _write_generated_image_and_metadata(
     )
 
 
+def _summarize_gemini_response(response: Any) -> dict[str, Any]:
+    """提取 Gemini 响应的关键信息用于日志（不含原始图片数据）。"""
+    summary: dict[str, Any] = {}
+    candidates = getattr(response, "candidates", None) or []
+    summary["candidates_count"] = len(candidates)
+    parts_summary: list[dict[str, Any]] = []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) if content is not None else None
+        for part in parts or []:
+            text = getattr(part, "text", None)
+            if text:
+                parts_summary.append({"type": "text", "length": len(text), "preview": text[:200]})
+                continue
+            inline_data = getattr(part, "inline_data", None)
+            if inline_data is not None:
+                data = getattr(inline_data, "data", None)
+                mime = getattr(inline_data, "mime_type", None)
+                size = len(data) if isinstance(data, (bytes, str)) else None
+                parts_summary.append({"type": "inline_data", "mime_type": mime, "size_bytes": size})
+    summary["parts"] = parts_summary
+    usage = getattr(response, "usage_metadata", None)
+    if usage is not None:
+        summary["usage"] = {
+            "prompt_tokens": getattr(usage, "prompt_token_count", None),
+            "candidates_tokens": getattr(usage, "candidates_token_count", None),
+            "total_tokens": getattr(usage, "total_token_count", None),
+        }
+    return summary
+
+
 def generate_image_with_chat_to_image_behavior(
     *,
     client: "Client",
     input_data: GenerateImageToolInput,
+    _logger=None,
 ) -> GeneratedImageToolResult:
     """复刻 app 消息生图主流程（experimental 版本）。"""
     companion_profile = load_companion_profile(input_data.runtime_paths)
@@ -579,6 +612,16 @@ def generate_image_with_chat_to_image_behavior(
         user_profile=user_profile,
     )
 
+    if _logger is not None:
+        _logger.info(
+            "Gemini 生图请求: model=%s, prompt 长度=%d, ai_ref=%s, user_ref=%s",
+            input_data.model,
+            len(prompt),
+            reference_selection.ai_reference_image_path,
+            reference_selection.user_reference_image_path,
+        )
+        _logger.debug("Gemini 生图完整 prompt:\n%s", prompt)
+
     response = _call_generate_content_for_chat_image(
         client=client,
         model=input_data.model,
@@ -586,6 +629,9 @@ def generate_image_with_chat_to_image_behavior(
         ai_reference_image_path=reference_selection.ai_reference_image_path,
         user_reference_image_path=reference_selection.user_reference_image_path,
     )
+
+    if _logger is not None:
+        _logger.info("Gemini 生图响应: %s", json.dumps(_summarize_gemini_response(response), ensure_ascii=False))
 
     image_bytes = _extract_inline_image_bytes(response)
     return _write_generated_image_and_metadata(

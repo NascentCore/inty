@@ -8,6 +8,8 @@ from typing import Annotated
 
 import cyclopts
 
+from app.utils.models_catalog import DEEPSEEK_V3_2
+
 # 尽早加载 .env（显式路径，避免工作目录影响）
 _THIS_DIR = Path(__file__).resolve().parent
 _ENV_PATH = _THIS_DIR / ".env"
@@ -34,28 +36,30 @@ class _LoggerWrapper:
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = enabled
 
-    def _log(self, level: str, msg: str, *args, **kwargs) -> None:
+    def _log(self, level: str, msg: str, *args) -> None:
         if self._enabled:
-            getattr(self._real, level)(msg, *args, **kwargs, stacklevel=3)
+            formatted = msg % args if args else msg
+            self._real.opt(depth=2).log(level.upper(), formatted)
 
-    def debug(self, msg: str, *args, **kwargs) -> None:
-        self._log("debug", msg, *args, **kwargs)
+    def debug(self, msg: str, *args) -> None:
+        self._log("debug", msg, *args)
 
-    def info(self, msg: str, *args, **kwargs) -> None:
-        self._log("info", msg, *args, **kwargs)
+    def info(self, msg: str, *args) -> None:
+        self._log("info", msg, *args)
 
-    def warning(self, msg: str, *args, **kwargs) -> None:
-        self._log("warning", msg, *args, **kwargs)
+    def warning(self, msg: str, *args) -> None:
+        self._log("warning", msg, *args)
 
-    def error(self, msg: str, *args, **kwargs) -> None:
-        self._log("error", msg, *args, **kwargs)
+    def error(self, msg: str, *args) -> None:
+        self._log("error", msg, *args)
 
-    def critical(self, msg: str, *args, **kwargs) -> None:
-        self._log("critical", msg, *args, **kwargs)
+    def critical(self, msg: str, *args) -> None:
+        self._log("critical", msg, *args)
 
-    def exception(self, msg: str, *args, **kwargs) -> None:
+    def exception(self, msg: str, *args) -> None:
         if self._enabled:
-            self._real.exception(msg, *args, **kwargs, stacklevel=3)
+            formatted = msg % args if args else msg
+            self._real.opt(depth=1, exception=True).error(formatted)
 
 
 logger: _LoggerWrapper = _LoggerWrapper(_real_logger, enabled=False)
@@ -69,7 +73,7 @@ from . import prompts
 from . import tools
 from .repl import run_repl
 
-OPENROUTER_MODEL = "google/gemini-2.5-flash"
+OPENROUTER_MODEL = DEEPSEEK_V3_2
 CHAR_NAME = "Ms. Sophie Walsh"
 USER_NAME = "Yaxiong Zhao"
 
@@ -112,7 +116,7 @@ def main(
     run_repl(
         char_name=CHAR_NAME,
         user_name=USER_NAME,
-        model=OPENROUTER_MODEL,
+        model=OPENROUTER_MODEL.id_on_provider,
         build_system_messages=_build_system_messages,
         create_openai_client=clients.create_openai_client,
         get_gemini_client=clients.get_gemini_client,

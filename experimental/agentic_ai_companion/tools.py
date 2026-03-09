@@ -205,6 +205,7 @@ def execute_generate_image(
                 ai_reference_image=ai_reference_image,
                 user_reference_image=user_reference_image,
             ),
+            _logger=_logger,
         )
         if _logger is not None:
             _logger.info(
