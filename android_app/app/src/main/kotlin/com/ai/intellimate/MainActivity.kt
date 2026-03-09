@@ -23,6 +23,9 @@ import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,6 +34,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -39,6 +44,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -55,13 +61,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -97,10 +109,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.KoinApplication
 import org.koin.core.option.viewModelScopeFactory
+import java.text.BreakIterator
+import java.text.StringCharacterIterator
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -931,23 +946,66 @@ fun SplashLoginUI(
                     modifier = Modifier.align(Alignment.BottomCenter),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    AnimatedContent(
-                        targetState = bannerText[bannerIndex],
-                        transitionSpec = {
-                            fadeIn(tween(1500, 300)).togetherWith(fadeOut(tween(300)))
-                        },
-                    ) { text ->
-                        Text(
-                            text = text,
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                        )
+
+                    val words = remember(bannerIndex) { bannerText[bannerIndex].split(" ") }
+                    var wordIndex by remember(bannerIndex) { mutableIntStateOf(0) }
+                    //val breakIterator = remember(bannerIndex) { BreakIterator.getWordInstance() }
+                    //val typingDelayInMs = 300L
+
+                    val substringText = remember(bannerIndex) {
+                        StringBuilder()
                     }
+                    val textAlphaAnim = remember {
+                        Animatable(0f)
+                    }
+
+                    LaunchedEffect(bannerIndex) {
+                        words.forEachIndexed { index, string ->
+
+                            textAlphaAnim.snapTo(0f)
+
+                            wordIndex = index
+
+                            if (index > 0) {
+                                substringText.append(words[index - 1])
+                                substringText.append(" ")
+                            }
+
+                            textAlphaAnim.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(500)
+                            )
+                        }
+                    }
+
+//                    LaunchedEffect(text) {
+//                        // Initial start delay of the typing animation
+//                        //delay(300)
+//                        breakIterator.text = StringCharacterIterator(text)
+//
+//                        var nextIndex = breakIterator.next()
+//                        // Iterate over the string, by index boundary
+//                        while (nextIndex != BreakIterator.DONE) {
+//                            substringText = text.subSequence(0, nextIndex).toString()
+//                            // Go to the next logical character boundary
+//                            nextIndex = breakIterator.next(2)
+//                            delay(typingDelayInMs)
+//                        }
+//                    }
+
+                    Text(
+                        text = buildAnnotatedString {
+                            append(substringText.toString())
+
+                            withStyle(style = SpanStyle(color = Color.White.copy(alpha = textAlphaAnim.value))) {
+                                append(words[wordIndex])
+                            }
+                        },
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold
+                    )
 
                     Spacer(Modifier.height(32.dp))
                     Row(
