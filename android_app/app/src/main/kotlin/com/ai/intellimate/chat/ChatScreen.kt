@@ -47,6 +47,8 @@ internal fun ChatScreen(
 ) {
     val agentInfo by chatViewModel.agentInfo.collectAsState()
     val showFeedbackDialog by chatViewModel.showFeedbackRequestDialog.collectAsState()
+    val showImageFeedbackDialog by chatViewModel.showImageFeedbackRequestDialog.collectAsState()
+    val imageFeedbackPayload by chatViewModel.imageFeedbackNavigationPayload.collectAsState()
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
@@ -72,8 +74,37 @@ internal fun ChatScreen(
             refreshMessageCount = refreshMessageCount,
         )
 
-        // 反馈请求对话框
-        if (showFeedbackDialog) {
+        if (showImageFeedbackDialog) {
+            FeedbackRequestDialog(
+                onCancel = { chatViewModel.hideImageFeedbackRequestDialog() },
+                onSendSuggestions = {
+                    val payload = imageFeedbackPayload
+                    if (payload != null) {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(
+                                Routes.Me.ReportInitialEvidenceImageUrlKey,
+                                payload.imageUrl,
+                            )
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(
+                                Routes.Me.ReportImageFeedbackVoteKey,
+                                payload.vote,
+                            )
+                        navController.navigate(
+                            Routes.Me.reportPage(
+                                isFeedback = true,
+                                targetType = "USER",
+                                targetId = payload.targetId,
+                            )
+                        )
+                    }
+                    chatViewModel.hideImageFeedbackRequestDialog()
+                },
+            )
+        } else if (showFeedbackDialog) {
+            // 通用反馈请求对话框
             FeedbackRequestDialog(
                 onCancel = { chatViewModel.hideFeedbackRequestDialog() },
                 onSendSuggestions = {

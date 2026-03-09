@@ -244,6 +244,11 @@ class AgentConfig:
     # - app/services/evaluation_service.py (updated to use select_chat_model)
     # OpenAI-compatible endpoint; use OPENROUTER_BASE_URL to invoke e.g. google/gemini-2.5-flash-lite via OpenRouter.
     base_url: str = OPENROUTER_BASE_URL
+    # Chat 专用 LLM 端点（可选）。若两者均配置则 Agent 聊天使用此端点，否则使用 base_url + api_key。记忆抽取始终使用 base_url + api_key。
+    chat_llm_base_url: Optional[str] = None
+    chat_llm_api_key: Optional[str] = None
+    # Chat 使用的 LLM 网关标识，用于 meta_data.llm_provider；可选值为 openrouter / litellm。
+    chat_llm_provider: str = "openrouter"
     temperature: float = 0.7
     max_tokens: int = 1000
     top_p: float = 1.0
@@ -373,15 +378,29 @@ class ElevenLabsConfig:
 class MemoryExtractionConfig:
     """记忆抽取定时任务配置；默认使用 OpenRouter mistralai/devstral-2512。"""
 
+    class WorkflowMode(str, Enum):
+        ALWAYS_SUMMARIZE_FULL_CHAT_MESSAGES_HISTORY = (
+            "always_summarize_full_chat_messages_history"
+        )
+        DAILY_INCREMENTAL_SUMMARIZATION = "daily_incremental_summarization"
+
     enabled: bool = True
     model: str = (
         ""  # OpenRouter 模型 id，为空时使用代码内默认（mistralai/devstral-2512）
+    )
+    workflow_mode: WorkflowMode = (
+        WorkflowMode.ALWAYS_SUMMARIZE_FULL_CHAT_MESSAGES_HISTORY
     )
     cron_hour: int = 3  # UTC 小时，每日执行
     trigger_new_user_messages: int = 30  # 新用户总聊天次数阈值（subscription_usage）
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
+
+    def __post_init__(self):
+        mode = self.workflow_mode
+        if isinstance(mode, str):
+            self.workflow_mode = self.WorkflowMode(mode)
 
 
 def _parse_surprise_snap_config(data: dict) -> "SurpriseSnapConfig":
@@ -500,6 +519,10 @@ class TTSConfig:
 
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
     use_gemini_prompted_tts: bool = True
+    # 实验开关：ElevenLabs 目标音色走 Gemini 先合成，再 ElevenLabs speech-to-speech 变声
+    # - 仅作用于 ElevenLabs 音色（11labs/...）；Gemini 音色不受影响
+    # - 默认关闭，避免影响线上稳定路径
+    enable_gemini_tts_then_elevenlabs_voice_changer_for_imate: bool = False
 
 
 @dataclass
@@ -604,6 +627,11 @@ def _validate_config(config: Config):
     # 消息生图模型 nickname 必须能解析为允许的模型
     models_catalog.must_resolve_nickname(config.agent.free_user_chat_image_model)
     models_catalog.must_resolve_nickname(config.agent.sub_user_chat_image_model)
+
+    if config.agent.chat_llm_provider not in ("openrouter", "litellm"):
+        raise ValueError(
+            f"agent.chat_llm_provider must be 'openrouter' or 'litellm', got: {config.agent.chat_llm_provider!r}"
+        )
 
     # 校验并自动修正 limits 配置
     limits = config.app.limits

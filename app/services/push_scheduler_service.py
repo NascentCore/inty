@@ -23,7 +23,13 @@ from app.services.memory_extraction_service import (
     extract_and_save as memory_extract_and_save,
 )
 from app.services.memory_extraction_service import (
+    extract_and_save_incremental_daily as memory_extract_and_save_incremental_daily,
+)
+from app.services.memory_extraction_service import (
     get_users_to_extract as memory_get_users_to_extract,
+)
+from app.services.memory_extraction_service import (
+    get_users_with_messages_in_utc_day as memory_get_users_with_messages_in_utc_day,
 )
 from app.services.push_notification_service import (
     discover_new_users_for_push,
@@ -394,6 +400,21 @@ class PushSchedulerService:
         """每日记忆抽取：筛选待抽取用户并逐个 extract_and_save。"""
         try:
             logger.info("[记忆抽取] 开始...")
+            mem_cfg = getattr(
+                global_config_loaded_from_config_yaml,
+                "memory_extraction",
+                None,
+            )
+            workflow_mode = (
+                getattr(mem_cfg, "workflow_mode", None).value
+                if getattr(mem_cfg, "workflow_mode", None) is not None
+                and hasattr(getattr(mem_cfg, "workflow_mode", None), "value")
+                else getattr(
+                    mem_cfg,
+                    "workflow_mode",
+                    "always_summarize_full_chat_messages_history",
+                )
+            )
             read_session_factory = (
                 AsyncSessionLocalReplica
                 if AsyncSessionLocalReplica is not None
@@ -405,17 +426,43 @@ class PushSchedulerService:
             logger.info(f"[记忆抽取] 用户筛选与历史读取将优先使用: {read_source}")
 
             async with read_session_factory() as read_db:
-                user_ids = await memory_get_users_to_extract(
-                    read_db, prefer_replica_read=True
-                )
+                if workflow_mode == "daily_incremental_summarization":
+                    target_date_utc = (
+                        datetime.datetime.now(datetime.timezone.utc).date()
+                        - datetime.timedelta(days=1)
+                    )
+                    logger.info(
+                        "[记忆抽取] 模式=daily_incremental_summarization "
+                        f"target_date_utc={target_date_utc}"
+                    )
+                    user_ids = await memory_get_users_with_messages_in_utc_day(
+                        read_db,
+                        target_date_utc=target_date_utc,
+                        prefer_replica_read=True,
+                    )
+                else:
+                    logger.info(
+                        "[记忆抽取] 模式=always_summarize_full_chat_messages_history"
+                    )
+                    user_ids = await memory_get_users_to_extract(
+                        read_db, prefer_replica_read=True
+                    )
 
             logger.info(f"[记忆抽取] 待处理用户数: {len(user_ids)}")
             async with AsyncSessionLocal() as write_db:
                 for uid in user_ids:
                     try:
-                        await memory_extract_and_save(
-                            write_db, uid, prefer_replica_read=True
-                        )
+                        if workflow_mode == "daily_incremental_summarization":
+                            await memory_extract_and_save_incremental_daily(
+                                write_db,
+                                uid,
+                                target_date_utc=target_date_utc,
+                                prefer_replica_read=True,
+                            )
+                        else:
+                            await memory_extract_and_save(
+                                write_db, uid, prefer_replica_read=True
+                            )
                     except Exception as e:
                         await write_db.rollback()
                         logger.warning(f"[记忆抽取] user_id={uid} 失败: {e}")

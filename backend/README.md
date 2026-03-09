@@ -39,6 +39,12 @@ GCS public access
 
 <img width="3018" height="1218" alt="image" src="https://github.com/user-attachments/assets/df5c7bfb-b4ad-4d0a-b4cb-65b25c7d4560" />
 
+## Chat LLM 与记忆抽取分离配置
+
+- **默认**：Agent 聊天与记忆抽取均使用 `agent.base_url` + `agent.api_key`（如 OpenRouter）。
+- **可选**：在配置中设置 `agent.chat_llm_base_url` 与 `agent.chat_llm_api_key` 后，**仅 Agent 聊天**使用该端点（如自建 LiteLLM）；**记忆抽取**仍使用 `base_url` + `api_key`。
+- 每条 AI 聊天消息的 `meta_data.llm_provider` 会记录实际使用的网关：`openrouter` 或 `litellm`。
+
 ## 部署
 
 详情查看：.github/workflows/build_and_deploy_backend.yml

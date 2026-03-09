@@ -54,6 +54,23 @@ You are given stage directions and dialogue.
 You should speak the dialogues based on the stage directions.
 """
 
+# Full-dialogue conversion for Gemini->ElevenLabs voice changing:
+# - no text filtering
+# - no stage-direction/dialogue splitting
+TTS_FULL_DIALOGUE_CONVERSION_INSTRUCTION = """
+You are an erotic movie voice actor.
+You are acting as a fictional character in an intimate scene.
+You are given a full dialogue script that may include stage directions and spoken lines.
+Convert the full script into natural spoken audio in one pass.
+Use the original script as provided without splitting parts into separate sections.
+"""
+
+IMATE_GENDER_TO_DEFAULT_GEMINI_SOURCE_VOICE: Dict[str, str] = {
+    "MALE": "Puck",
+    "FEMALE": "Zephyr",
+    "OTHER": DEFAULT_GEMINI_TTS_VOICE_NAME,
+}
+
 # How the per-voice "keywords" were generated (for reference):
 #
 # 1. Pulled official samples from the Chirp 3 HD doc page (all 30 voice .wav URLs).
@@ -445,6 +462,19 @@ def get_gemini_voices() -> List[Dict[str, Any]]:
     for voice in result:
         voice["voice_id"] = f"{VOICE_ID_PREFIX_GEMINI}/{voice['voice_id']}"
     return result
+
+
+def select_default_gemini_voice_for_imate_gender(agent_gender: Optional[str]) -> str:
+    """
+    选择 Gemini 源音色（用于 Gemini->ElevenLabs 变声链路）。
+    未知性别或空值回退到 DEFAULT_GEMINI_TTS_VOICE_NAME。
+    """
+    if not agent_gender:
+        return DEFAULT_GEMINI_TTS_VOICE_NAME
+    normalized = agent_gender.strip().upper()
+    return IMATE_GENDER_TO_DEFAULT_GEMINI_SOURCE_VOICE.get(
+        normalized, DEFAULT_GEMINI_TTS_VOICE_NAME
+    )
 
 
 # 语速：1.0 = 正常；<1 减慢，>1 加快。与 Cloud TTS 文档一致。
@@ -853,6 +883,89 @@ class GeminiTTSAPI:
             logger.exception("Gemini TTS 异常详细信息:")
             return None
 
+    @traceable
+    async def synthesize_with_full_dialogue_prompt(
+        self, request: TTSRequest
+    ) -> Optional[TTSResult]:
+        """
+        Full-dialogue Gemini TTS:
+        - sends role instruction + original text
+        - does not split stage directions and dialogues
+        """
+        if not (request.text or "").strip():
+            logger.warning("synthesize_with_full_dialogue_prompt: 文本为空，跳过")
+            return None
+
+        client = self._get_client()
+        if client is None:
+            logger.info("Gemini TTS 未配置可用凭据，跳过并回退到其它 TTS provider")
+            return None
+
+        prefix, raw = parse_voice_id(request.voice_id)
+        if prefix == VOICE_ID_PREFIX_GEMINI:
+            voice_name = raw
+        elif prefix == "":
+            voice_name = (
+                request.voice_id
+                if _looks_like_gemini_voice_name(request.voice_id)
+                else self._default_voice_name
+            )
+        else:
+            voice_name = self._default_voice_name
+
+        pace = _pace_instruction_for_gemini(request.speaking_rate)
+        full_dialogue_text = request.text
+        if pace:
+            full_dialogue_text = pace + full_dialogue_text
+
+        contents = [
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_text(text=TTS_FULL_DIALOGUE_CONVERSION_INSTRUCTION)
+                ],
+            ),
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=full_dialogue_text)],
+            ),
+        ]
+
+        config = types.GenerateContentConfig(
+            temperature=self._temperature,
+            response_modalities=["audio"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=voice_name
+                    )
+                )
+            ),
+        )
+
+        model_to_use = request.model_id or self._model
+        try:
+            audio_bytes, mime_type = await asyncio.to_thread(
+                _generate_gemini_tts, client, model_to_use, contents, config
+            )
+
+            if not audio_bytes:
+                logger.error("Gemini TTS 返回空音频数据")
+                return None
+
+            if mime_type and mime_type.startswith("audio/L"):
+                audio_bytes = _pcm_to_wav(audio_bytes, mime_type=mime_type)
+                mime_type = "audio/wav"
+
+            return TTSResult(
+                audio_bytes=audio_bytes,
+                mime_type=mime_type or "application/octet-stream",
+            )
+        except Exception as e:
+            logger.error(f"Gemini TTS 调用失败: {str(e)}")
+            logger.exception("Gemini TTS 异常详细信息:")
+            return None
+
 
 class ElevenLabsTTSAPI:
     """
@@ -905,6 +1018,69 @@ class ElevenLabsTTSAPI:
         except Exception as e:
             logger.error(f"ElevenLabs TTS 调用失败: {str(e)}")
             logger.exception("ElevenLabs TTS 异常详细信息:")
+            return None
+
+    @staticmethod
+    def _mime_type_from_output_format(output_format: str) -> str:
+        normalized = (output_format or "").lower()
+        if normalized.startswith("mp3_"):
+            return "audio/mpeg"
+        if normalized.startswith("pcm_"):
+            return "audio/pcm"
+        if normalized.startswith("ulaw_"):
+            return "audio/basic"
+        if normalized.startswith("alaw_"):
+            return "audio/basic"
+        if normalized.startswith("opus_"):
+            return "audio/ogg"
+        return "application/octet-stream"
+
+    async def convert_with_voice_changer(
+        self,
+        *,
+        source_audio_bytes: bytes,
+        source_mime_type: str,
+        target_voice_id: str,
+        model_id: str,
+        output_format: str,
+    ) -> Optional[TTSResult]:
+        """
+        ElevenLabs speech-to-speech voice changer。
+        """
+        if not source_audio_bytes:
+            logger.warning("ElevenLabs voice changer 输入音频为空")
+            return None
+
+        prefix, raw = parse_voice_id(target_voice_id)
+        elevenlabs_voice_id = (
+            raw if prefix == VOICE_ID_PREFIX_ELEVENLABS else target_voice_id
+        )
+        filename = "source.wav" if "wav" in (source_mime_type or "").lower() else "source.mp3"
+        content_type = source_mime_type or "application/octet-stream"
+        audio_payload = (filename, source_audio_bytes, content_type)
+
+        try:
+            audio_chunks = await asyncio.to_thread(
+                lambda: list(
+                    self._client.speech_to_speech.convert(
+                        voice_id=elevenlabs_voice_id,
+                        audio=audio_payload,
+                        model_id=model_id,
+                        output_format=output_format,
+                    )
+                )
+            )
+            converted_audio = b"".join(audio_chunks)
+            if not converted_audio:
+                logger.error("ElevenLabs voice changer 返回空音频数据")
+                return None
+            return TTSResult(
+                audio_bytes=converted_audio,
+                mime_type=self._mime_type_from_output_format(output_format),
+            )
+        except Exception as e:
+            logger.error(f"ElevenLabs voice changer 调用失败: {str(e)}")
+            logger.exception("ElevenLabs voice changer 异常详细信息:")
             return None
 
     async def get_all_voices(self, *, show_legacy: bool = True) -> Any:

@@ -200,6 +200,73 @@ async def _read_daily_report_from_replica(
     return stats, charts
 
 
+async def _read_daily_report_from_primary(
+    db: AsyncSession,
+    reg_start: datetime,
+    reg_end: datetime,
+    act_start: datetime,
+    act_end: datetime,
+) -> tuple[dict, dict]:
+    """从主库读取日报所需统计与图表数据。"""
+    await _ensure_statement_timeout(db)
+    service = UserAnalyticsService(db)
+    active_session_ids = await service.get_active_session_ids_on_date(act_start, act_end)
+    logger.info(
+        f"[用户数据分析日报] 当日有活动的 session 数: {len(active_session_ids)}，"
+        "仅对上述 session 做聚合"
+    )
+    stats = await service.get_analytics_stats(
+        register_start_date=reg_start,
+        register_end_date=reg_end,
+        activity_start_date=act_start,
+        activity_end_date=act_end,
+        active_session_ids=active_session_ids,
+    )
+    new_users = await service.get_new_users(reg_start, reg_end)
+    conversation_rounds = await service.get_conversation_rounds(
+        reg_start,
+        reg_end,
+        act_start,
+        act_end,
+        active_session_ids=active_session_ids,
+    )
+    user_rounds_distribution = await service.get_user_rounds_distribution(
+        reg_start,
+        reg_end,
+        act_start,
+        act_end,
+        active_session_ids=active_session_ids,
+    )
+    users_hitting_limit = await service.get_users_hitting_chat_limit(act_start, act_end)
+    popular_agents_ranked = await service.get_popular_agents(
+        reg_start,
+        reg_end,
+        act_start,
+        act_end,
+        limit=POPULAR_AGENTS_QUERY_LIMIT,
+        active_session_ids=active_session_ids,
+    )
+    popular_agents = popular_agents_ranked[:20]
+    daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(
+        popular_agents_ranked, DAILY_TOP_AGENTS_LIMIT
+    )
+    daily_most_discussed_agent = (
+        daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
+    )
+    generated_images = await service.get_generated_images_on_date(act_start, act_end)
+    charts = _build_daily_charts(
+        new_users,
+        conversation_rounds,
+        user_rounds_distribution,
+        users_hitting_limit,
+        popular_agents,
+        generated_images,
+        daily_top_agents_by_rounds,
+        daily_most_discussed_agent,
+    )
+    return stats, charts
+
+
 def _is_conflict_with_recovery(exc: BaseException) -> bool:
     """是否为 PostgreSQL standby conflict with recovery 导致的错误。"""
     return "conflict with recovery" in str(exc)
@@ -223,17 +290,17 @@ async def compute_and_save_daily_report(
     act_end = reg_end
 
     if AsyncSessionLocalReplica is not None:
-        last_error: Exception | None = None
+        replica_read_succeeded = False
         for attempt in range(REPLICA_READ_MAX_ATTEMPTS):
             try:
                 stats, charts = await _read_daily_report_from_replica(
                     reg_start, reg_end, act_start, act_end
                 )
+                replica_read_succeeded = True
                 break
             except OperationalError as e:
                 if not _is_conflict_with_recovery(e):
                     raise
-                last_error = e
                 if attempt < REPLICA_READ_MAX_ATTEMPTS - 1:
                     logger.warning(
                         f"日报副本读 conflict with recovery，{REPLICA_READ_RETRY_SLEEP_SEC}s 后重试 "
@@ -241,69 +308,16 @@ async def compute_and_save_daily_report(
                     )
                     await asyncio.sleep(REPLICA_READ_RETRY_SLEEP_SEC)
                 else:
-                    raise last_error from e
+                    logger.warning(
+                        "日报副本读多次 conflict with recovery，回退主库读取以避免缺失日报"
+                    )
+        if not replica_read_succeeded:
+            stats, charts = await _read_daily_report_from_primary(
+                db, reg_start, reg_end, act_start, act_end
+            )
     else:
-        await _ensure_statement_timeout(db)
-        service = UserAnalyticsService(db)
-        active_session_ids = await service.get_active_session_ids_on_date(
-            act_start, act_end
-        )
-        logger.info(
-            f"[用户数据分析日报] 当日有活动的 session 数: {len(active_session_ids)}，"
-            "仅对上述 session 做聚合"
-        )
-        stats = await service.get_analytics_stats(
-            register_start_date=reg_start,
-            register_end_date=reg_end,
-            activity_start_date=act_start,
-            activity_end_date=act_end,
-            active_session_ids=active_session_ids,
-        )
-        new_users = await service.get_new_users(reg_start, reg_end)
-        conversation_rounds = await service.get_conversation_rounds(
-            reg_start,
-            reg_end,
-            act_start,
-            act_end,
-            active_session_ids=active_session_ids,
-        )
-        user_rounds_distribution = await service.get_user_rounds_distribution(
-            reg_start,
-            reg_end,
-            act_start,
-            act_end,
-            active_session_ids=active_session_ids,
-        )
-        users_hitting_limit = await service.get_users_hitting_chat_limit(
-            act_start, act_end
-        )
-        popular_agents_ranked = await service.get_popular_agents(
-            reg_start,
-            reg_end,
-            act_start,
-            act_end,
-            limit=POPULAR_AGENTS_QUERY_LIMIT,
-            active_session_ids=active_session_ids,
-        )
-        popular_agents = popular_agents_ranked[:20]
-        daily_top_agents_by_rounds = _build_daily_top_agents_by_rounds(
-            popular_agents_ranked, DAILY_TOP_AGENTS_LIMIT
-        )
-        daily_most_discussed_agent = (
-            daily_top_agents_by_rounds[0] if daily_top_agents_by_rounds else None
-        )
-        generated_images = await service.get_generated_images_on_date(
-            act_start, act_end
-        )
-        charts = _build_daily_charts(
-            new_users,
-            conversation_rounds,
-            user_rounds_distribution,
-            users_hitting_limit,
-            popular_agents,
-            generated_images,
-            daily_top_agents_by_rounds,
-            daily_most_discussed_agent,
+        stats, charts = await _read_daily_report_from_primary(
+            db, reg_start, reg_end, act_start, act_end
         )
 
     existing = await db.execute(
@@ -387,39 +401,9 @@ async def compute_and_save_weekly_report(
     )
     act_end = reg_end
 
-    if AsyncSessionLocalReplica is not None:
-        async with AsyncSessionLocalReplica() as read_db:
-            await _ensure_statement_timeout(read_db)
-            service = UserAnalyticsService(read_db)
-            stats = await service.get_analytics_stats(
-                register_start_date=reg_start,
-                register_end_date=reg_end,
-                activity_start_date=act_start,
-                activity_end_date=act_end,
-            )
-            new_users = await service.get_new_users(reg_start, reg_end)
-            conversation_rounds = await service.get_conversation_rounds(
-                reg_start, reg_end, act_start, act_end
-            )
-            user_rounds_distribution = await service.get_user_rounds_distribution(
-                reg_start, reg_end, act_start, act_end
-            )
-            users_hitting_limit = await service.get_users_hitting_chat_limit(
-                act_start, act_end
-            )
-            popular_agents = await service.get_popular_agents(
-                reg_start, reg_end, act_start, act_end, limit=20
-            )
-            charts = _build_weekly_charts(
-                new_users,
-                conversation_rounds,
-                user_rounds_distribution,
-                users_hitting_limit,
-                popular_agents,
-            )
-    else:
-        await _ensure_statement_timeout(db)
-        service = UserAnalyticsService(db)
+    async def _read_weekly_report_with_service(
+        service: UserAnalyticsService,
+    ) -> tuple[dict, dict]:
         stats = await service.get_analytics_stats(
             register_start_date=reg_start,
             register_end_date=reg_end,
@@ -446,6 +430,43 @@ async def compute_and_save_weekly_report(
             users_hitting_limit,
             popular_agents,
         )
+        return stats, charts
+
+    async def _read_weekly_report_from_primary() -> tuple[dict, dict]:
+        await _ensure_statement_timeout(db)
+        service = UserAnalyticsService(db)
+        return await _read_weekly_report_with_service(service)
+
+    async def _read_weekly_report_from_replica() -> tuple[dict, dict]:
+        async with AsyncSessionLocalReplica() as read_db:
+            await _ensure_statement_timeout(read_db)
+            service = UserAnalyticsService(read_db)
+            return await _read_weekly_report_with_service(service)
+
+    if AsyncSessionLocalReplica is not None:
+        replica_read_succeeded = False
+        for attempt in range(REPLICA_READ_MAX_ATTEMPTS):
+            try:
+                stats, charts = await _read_weekly_report_from_replica()
+                replica_read_succeeded = True
+                break
+            except OperationalError as e:
+                if not _is_conflict_with_recovery(e):
+                    raise
+                if attempt < REPLICA_READ_MAX_ATTEMPTS - 1:
+                    logger.warning(
+                        f"周报副本读 conflict with recovery，{REPLICA_READ_RETRY_SLEEP_SEC}s 后重试 "
+                        f"（第 {attempt + 1}/{REPLICA_READ_MAX_ATTEMPTS} 次）"
+                    )
+                    await asyncio.sleep(REPLICA_READ_RETRY_SLEEP_SEC)
+                else:
+                    logger.warning(
+                        "周报副本读多次 conflict with recovery，回退主库读取以避免缺失周报"
+                    )
+        if not replica_read_succeeded:
+            stats, charts = await _read_weekly_report_from_primary()
+    else:
+        stats, charts = await _read_weekly_report_from_primary()
 
     existing = await db.execute(
         select(UserAnalyticsReport).where(

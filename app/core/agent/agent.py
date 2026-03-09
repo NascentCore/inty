@@ -40,8 +40,10 @@ from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
+from app.utils.models_catalog import is_deepseek_on_openrouter
 from app.utils.openai_client import (
-    get_base_openai_client,
+    get_chat_llm_provider,
+    get_chat_openai_client,
     langchain_message_to_openai_message,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
@@ -408,7 +410,7 @@ class Agent:
         )
 
         # 使用配置中的模型设置（model/temperature/max_tokens 等由 self.model_config 在 chat 时读取）
-        # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用全局 client（app.utils.openai_client.get_base_openai_client）
+        # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用 get_chat_openai_client（可配置为 LiteLLM）
 
     def _is_intellimate_official(self) -> bool:
         return self.agent_id == INTELLIMATE_AGENT_ID
@@ -677,12 +679,14 @@ class Agent:
         with self._last_used_lock:
             self.last_used = time.time()
 
-    def _chat_extra_body(self, user_id: str) -> Dict[str, Any]:
-        """OpenAI/OpenRouter chat completion extra_body: thinking_budget (Gemini), user (tracking)."""
-        return {
-            "generation_config": {"thinking_budget": 0},
-            "user": user_id,
-        }
+    def _chat_extra_body(self, user_id: str, model: str) -> Dict[str, Any]:
+        """OpenAI/OpenRouter chat completion extra_body with model-specific reasoning config."""
+        body: Dict[str, Any] = {"user": user_id}
+        if is_deepseek_on_openrouter(model):
+            body["reasoning"] = {"effort": "low", "exclude": True}
+        else:
+            body["generation_config"] = {"thinking_budget": 0}
+        return body
 
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
@@ -1370,7 +1374,7 @@ class Agent:
                 )
                 default_top_p = global_config.agent.top_p
 
-                client = get_base_openai_client()
+                client = get_chat_openai_client()
 
                 # API调用（带重试机制）
                 # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
@@ -1402,7 +1406,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id),
+                        extra_body=self._chat_extra_body(user_id, model_name),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -1426,7 +1430,7 @@ class Agent:
                                 temperature=temperature,
                                 max_tokens=max_tokens,
                                 top_p=top_p,
-                                extra_body=self._chat_extra_body(user_id),
+                                extra_body=self._chat_extra_body(user_id, model_name),
                                 user_id=user_id,
                                 chat_name=chat_name,
                                 labels=labels,
@@ -1509,7 +1513,7 @@ class Agent:
                         temperature=temperature,
                         max_tokens=max_tokens,
                         top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id),
+                        extra_body=self._chat_extra_body(user_id, model_name),
                         user_id=user_id,
                         max_retries=3,
                         initial_delay=1.0,
@@ -1562,13 +1566,16 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录（包含LLM调用时间），并返回插入后的 message id 供调用方使用
+                # 保存AI响应到历史记录（包含LLM调用时间与 provider），并返回插入后的 message id 供调用方使用
                 save_response_start = time.time()
                 ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
                     agent_id=self.agent_id,
-                    meta_data={"llm_invoke_time": api_time},
+                    meta_data={
+                        "llm_invoke_time": api_time,
+                        "llm_provider": get_chat_llm_provider(),
+                    },
                 )
                 save_response_time = time.time() - save_response_start
                 logger.debug(
@@ -1710,7 +1717,7 @@ class Agent:
                 )
                 default_top_p = global_config.agent.top_p
 
-                client = get_base_openai_client()
+                client = get_chat_openai_client()
 
                 # API调用（使用统一的重试和 trace 逻辑）
                 # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
@@ -1740,7 +1747,7 @@ class Agent:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     top_p=top_p,
-                    extra_body=self._chat_extra_body(user_id),
+                    extra_body=self._chat_extra_body(user_id, model_name),
                     user_id=user_id,
                     max_retries=3,
                     initial_delay=1.0,

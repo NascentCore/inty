@@ -33,8 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -208,9 +212,9 @@ fun PremiumPlanCard(
                                         .filter { it.isDigit() || it == '.' || it == ',' }
                                         .length
                                 when {
-                                    priceLength <= 3 -> typography.titleMedium
-                                    priceLength <= 5 -> typography.titleSmall
-                                    priceLength <= 7 -> typography.bodyLarge
+                                    priceLength <= 3 -> typography.titleLarge
+                                    priceLength <= 5 -> typography.titleMedium
+                                    priceLength <= 7 -> typography.titleSmall
                                     else -> typography.labelLarge
                                 }
                             }
@@ -367,14 +371,25 @@ fun BenefitDetailsTable(
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val textColor = Color(0xFFEAD1FF)
+    val premiumGradientBrush =
+        Brush.horizontalGradient(
+            colors =
+                listOf(
+                    colorScheme.tertiary,
+                    colorScheme.secondary,
+                    colorScheme.primary,
+                )
+        )
 
-    Surface(
+    Box(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         LazyColumn(
             modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainer
+                )
         ) {
             item {
                 Row(
@@ -387,16 +402,13 @@ fun BenefitDetailsTable(
                         text = "$headerTitle >",
                         style = typography.titleSmall,
                         color = textColor,
-                        modifier = Modifier.weight(2f)
+                        modifier = Modifier
+                            .weight(2f)
                             .padding(start = dimensionResource(R.dimen.padding_large))
                     )
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface
-                            ),
+                            .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -407,13 +419,20 @@ fun BenefitDetailsTable(
                     }
 
                     Box(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
+
                         Text(
                             text = premiumColumnTitle,
-                            style = typography.labelLarge,
-                            color = textColor,
+                            style = typography.labelLarge.copy(
+                                brush = premiumGradientBrush
+                            )
                         )
                     }
                 }
@@ -454,9 +473,7 @@ fun BenefitDetailsTable(
                         modifier = Modifier
                             .fillMaxHeight()
                             .weight(1f)
-                            .background(
-                                color = MaterialTheme.colorScheme.surface
-                            ),
+                            .background(containerColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -472,12 +489,15 @@ fun BenefitDetailsTable(
                         modifier = Modifier
                             .fillMaxHeight()
                             .weight(1f)
-                            .background(containerColor),
+                            .background(
+                                color = MaterialTheme.colorScheme.surface
+                            ),
                     ) {
                         Text(
                             text = row.premium,
-                            style = typography.labelLarge,
-                            color = textColor,
+                            style = typography.labelLarge.copy(
+                                brush = premiumGradientBrush
+                            ),
                             textAlign = TextAlign.Center
                         )
                     }

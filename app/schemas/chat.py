@@ -6,6 +6,10 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.schemas.biz_action import BizAction
+from app.core.agent.prompt_template import (
+    has_template_variable,
+    render_prompt_jinja2_template,
+)
 
 
 class MessageType(str, enum.Enum):
@@ -296,6 +300,28 @@ class Chat(ChatInDB):
             return image_transform_service.transform_desktop(agent_background_animated)
         except Exception:
             return agent_background_animated
+
+    @field_serializer("agent_intro")
+    def serialize_agent_intro(self, agent_intro: Optional[str]) -> Optional[str]:
+        """渲染 agent_intro 中的模板变量，避免客户端展示原始 {{ char }}。"""
+        if not agent_intro or not has_template_variable(agent_intro):
+            return agent_intro
+        return render_prompt_jinja2_template(
+            agent_intro,
+            char=self.agent_name or "IntelliMate",
+            user="you",
+        )
+
+    @field_serializer("agent_opening")
+    def serialize_agent_opening(self, agent_opening: Optional[str]) -> Optional[str]:
+        """渲染 agent_opening 中的模板变量，保证接口返回可直接展示。"""
+        if not agent_opening or not has_template_variable(agent_opening):
+            return agent_opening
+        return render_prompt_jinja2_template(
+            agent_opening,
+            char=self.agent_name or "IntelliMate",
+            user="you",
+        )
 
 
 # OpenAI style message model

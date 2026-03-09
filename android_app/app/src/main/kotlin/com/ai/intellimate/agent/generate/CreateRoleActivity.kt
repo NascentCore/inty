@@ -562,7 +562,7 @@ fun CreateRolePage(
                             UCropHelper.getIntent(
                                 context,
                                 finalUri,
-                                context.getString(R.string.crop_image),
+                                context.getString(R.string.crop_portrait),
                             )
                         cropLauncher.launch(intentCrop)
                     }
@@ -724,9 +724,11 @@ fun CreateRolePage(
                 navigationIcon = {
                     Image(
                         modifier =
-                            Modifier.padding(horizontal = 12.dp).noRippleClickable {
-                                handleExitRequest()
-                            },
+                            Modifier
+                                .padding(horizontal = 12.dp)
+                                .noRippleClickable {
+                                    handleExitRequest()
+                                },
                         painter = painterResource(R.drawable.close),
                         contentDescription = null,
                     )
@@ -736,7 +738,8 @@ fun CreateRolePage(
     ) { padding ->
         Column(
             modifier =
-                Modifier.fillMaxSize()
+                Modifier
+                    .fillMaxSize()
                     .imePadding()
                     .padding(
                         top = padding.calculateTopPadding(),
@@ -1420,7 +1423,8 @@ private fun AvatarUploadSection(
     val isEmpty = avatarUrls.isEmpty() && avatarUrl == null && croppedAvatarUrl == null
     Column(
         modifier =
-            Modifier.fillMaxWidth()
+            Modifier
+                .fillMaxWidth()
                 .padding(vertical = UiConfigs.CreateRole.VisualAppearance.SectionVerticalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1443,7 +1447,9 @@ private fun AvatarUploadSection(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Box(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()) {
                 when {
                     isGenerating || isUploadingGallery -> {
                         ThreeDotLoadingAnimation()
@@ -1462,7 +1468,8 @@ private fun AvatarUploadSection(
                             contentDescription =
                                 stringResource(R.string.content_desc_selected_avatar),
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
                                     .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop,
@@ -1495,7 +1502,8 @@ private fun AvatarUploadSection(
                             contentDescription =
                                 stringResource(R.string.content_desc_generated_avatar),
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
                                     .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop,
@@ -1528,7 +1536,8 @@ private fun AvatarUploadSection(
                             contentDescription =
                                 stringResource(R.string.content_desc_generated_avatar),
                             modifier =
-                                Modifier.fillMaxWidth()
+                                Modifier
+                                    .fillMaxWidth()
                                     .aspectRatio(UiConfigs.CreateRole.VisualAppearance.ASPECT_RATIO)
                                     .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop,
@@ -1637,7 +1646,8 @@ private fun AvatarUploadSection(
                         contentDescription = stringResource(R.string.generate_avatar),
                         contentScale = ContentScale.Crop,
                         modifier =
-                            Modifier.align(Alignment.TopStart)
+                            Modifier
+                                .align(Alignment.TopStart)
                                 .padding(Config.AvatarCrop.Preview.PADDING.dp)
                                 .border(width = 1.dp, color = Color.White, shape = CircleShape)
                                 .size(Config.AvatarCrop.Preview.SIZE.dp)
@@ -1648,7 +1658,9 @@ private fun AvatarUploadSection(
                 // Face edit and Report buttons - show only when there's an avatar
                 if (avatarUrls.isNotEmpty() || avatarUrl != null) {
                     Row(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -1666,7 +1678,8 @@ private fun AvatarUploadSection(
                         // Share button
                         Box(
                             modifier =
-                                Modifier.background(
+                                Modifier
+                                    .background(
                                         color = Color.Black.copy(alpha = 0.5f),
                                         shape = RoundedCornerShape(16.dp),
                                     )
@@ -1708,7 +1721,8 @@ private fun AvatarUploadSection(
 
                         Box(
                             modifier =
-                                Modifier.background(
+                                Modifier
+                                    .background(
                                         color = Color.Black.copy(alpha = 0.5f),
                                         shape = RoundedCornerShape(16.dp),
                                     )
@@ -1752,7 +1766,8 @@ private fun AvatarUploadSection(
                         // Crop button
                         Box(
                             modifier =
-                                Modifier.background(
+                                Modifier
+                                    .background(
                                         color = Color.Black.copy(alpha = 0.5f),
                                         shape = RoundedCornerShape(16.dp),
                                     )
@@ -1787,7 +1802,8 @@ private fun AvatarUploadSection(
         if (avatarUrls.isNotEmpty()) {
             Row(
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier
+                        .fillMaxWidth()
                         .background(
                             color = Color.Black.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp),
@@ -1797,7 +1813,9 @@ private fun AvatarUploadSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Fixed Regen button on the left
-                Box(modifier = Modifier.width(88.dp).aspectRatio(9 / 16f)) {
+                Box(modifier = Modifier
+                    .width(88.dp)
+                    .aspectRatio(9 / 16f)) {
                     RegenButton(
                         onClick = { onRegenerate(AvatarManager.getGenerationPrompt()) },
                         enabled = !isGenerating,
@@ -1819,7 +1837,8 @@ private fun AvatarUploadSection(
                                         getCdnImageUrl(imageUrl, width = 80, quality = 60)
                                     Box(
                                         modifier =
-                                            Modifier.width(88.dp)
+                                            Modifier
+                                                .width(88.dp)
                                                 .aspectRatio(9 / 16f)
                                                 .background(
                                                     color = Color(0x1A78599A),
@@ -1845,14 +1864,16 @@ private fun AvatarUploadSection(
                                                     index,
                                                 ),
                                             modifier =
-                                                Modifier.fillMaxSize()
+                                                Modifier
+                                                    .fillMaxSize()
                                                     .clip(RoundedCornerShape(8.dp)),
                                             contentScale = ContentScale.Crop,
                                         )
 
                                         Box(
                                             modifier =
-                                                Modifier.align(Alignment.TopEnd)
+                                                Modifier
+                                                    .align(Alignment.TopEnd)
                                                     .padding(4.dp)
                                                     .size(22.dp)
                                                     .clip(CircleShape)
@@ -1993,7 +2014,8 @@ private fun VisibilitySwitchSection(
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier =
-                Modifier.fillMaxWidth()
+                Modifier
+                    .fillMaxWidth()
                     .background(
                         color = UiConfigs.Colors.InputSurface,
                         shape = RoundedCornerShape(12.dp),

@@ -18,6 +18,22 @@ export const normalizeVoiceGender = (gender?: string): NormalizedVoiceGender => 
   return "unknown";
 };
 
+export const mapImateGenderToVoiceGenderFilter = (
+  imateGender?: string,
+): VoiceGenderFilter => {
+  const normalizedImateGender = (imateGender ?? "").trim().toUpperCase();
+  if (normalizedImateGender === "MALE") {
+    return "male";
+  }
+  if (normalizedImateGender === "FEMALE") {
+    return "female";
+  }
+  if (normalizedImateGender === "OTHER") {
+    return "unknown";
+  }
+  return "all";
+};
+
 export const filterVoicesByGender = (
   voices: Voice[],
   genderFilter: VoiceGenderFilter,

@@ -18,6 +18,7 @@ object RoutesMe {
 
     const val ReportPage = "report_page/{isFeedback}/{targetType}/{targetId}"
     const val ReportInitialEvidenceImageUrlKey = "report_initial_evidence_image_url"
+    const val ReportImageFeedbackVoteKey = "report_image_feedback_vote"
 
     fun vipCenter(pageSource: String) = "vip_center?pageSource=${pageSource}"
 

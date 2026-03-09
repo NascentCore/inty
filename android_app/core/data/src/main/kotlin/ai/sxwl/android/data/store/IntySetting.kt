@@ -29,6 +29,8 @@ private const val KEY_MESSAGES_TAB_HAS_PUSH = "messages_tab_has_push"
 private const val KEY_CONVERSATION_PUSH_PREFIX = "conversation_has_push_"
 private const val KEY_PREFIX_EXPLORE_FAVORITE = "explore_favorite_"
 private const val KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME = "feedback_dialog_last_show_time"
+private const val KEY_IMAGE_FEEDBACK_PROMPT_LAST_LOCAL_DATE =
+    "image_feedback_prompt_last_local_date"
 private const val KEY_INTELLIMATE_TIP_LAST_SHOW_TIME = "intellimate_tip_last_show_time"
 
 // IntelliMate Tips 展示频率：最多每 8 小时一次（降低打扰）
@@ -164,6 +166,11 @@ object IntySetting {
                                         KEY_FEEDBACK_DIALOG_LAST_SHOW_TIME,
                                         -1L
                                     ),
+                                imageFeedbackPromptLastLocalDate =
+                                    curUserSetting.decodeString(
+                                        KEY_IMAGE_FEEDBACK_PROMPT_LAST_LOCAL_DATE,
+                                        ""
+                                    ) ?: "",
                                 messagesTabHasPush =
                                     curUserSetting.decodeBool(KEY_MESSAGES_TAB_HAS_PUSH, false),
                                 conversationHasPush = conversationHasPush,
@@ -500,6 +507,23 @@ object IntySetting {
         runBlocking {
             updateIntySetting {
                 it.copy(userCache = it.userCache.copy(feedbackDialogLastShowTime = timestampMillis))
+            }
+        }
+    }
+
+    fun getImageFeedbackPromptLastLocalDate(): String {
+        return getIntySettingCache()?.userCache?.imageFeedbackPromptLastLocalDate.orEmpty()
+    }
+
+    fun setImageFeedbackPromptLastLocalDate(localDateKey: String) {
+        runBlocking {
+            updateIntySetting {
+                it.copy(
+                    userCache =
+                        it.userCache.copy(
+                            imageFeedbackPromptLastLocalDate = localDateKey.trim()
+                        )
+                )
             }
         }
     }
@@ -853,6 +877,7 @@ data class IntySettingsCache(
         val resubReminderLastTime: Long = 0L,
         val resubReminderShowCount: Int = 0,
         val feedbackDialogLastShowTime: Long = -1L,
+        val imageFeedbackPromptLastLocalDate: String = "",
         val messagesTabHasPush: Boolean = false,
         val conversationHasPush: Map<String, Boolean> = emptyMap(),
         val hasAppUpdateTips: Boolean = false,

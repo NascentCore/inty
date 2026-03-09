@@ -86,6 +86,8 @@ def create_image_resource(
     generation_prompt: Optional[str] = None,
     generation_model: Optional[str] = None,
     text_to_image_request: Optional[dict[str, Any]] = None,
+    langsmith_trace_id: Optional[str] = None,
+    langsmith_trace_url: Optional[str] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数
@@ -107,6 +109,8 @@ def create_image_resource(
         generation_prompt=generation_prompt,
         generation_model=generation_model,
         text_to_image_request=text_to_image_request,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_trace_url=langsmith_trace_url,
     )
 
     # Convert to dict for database storage
@@ -158,6 +162,8 @@ async def async_create_image_resource(
     only_include_ai_character: bool = False,
     generation_model: Optional[str] = None,
     text_to_image_request: Optional[dict[str, Any]] = None,
+    langsmith_trace_id: Optional[str] = None,
+    langsmith_trace_url: Optional[str] = None,
 ) -> None:
     """
     创建图片资源记录的辅助函数 (异步版本)
@@ -187,6 +193,8 @@ async def async_create_image_resource(
             if url is not None
         ],
         only_include_ai_character=only_include_ai_character,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_trace_url=langsmith_trace_url,
     )
 
     # Convert to dict for database storage

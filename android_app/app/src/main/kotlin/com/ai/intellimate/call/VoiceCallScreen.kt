@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -369,12 +370,15 @@ private fun VoiceCallContent(
     val promptText: String? =
         if (isSpeaking) stringResource(R.string.voice_call_tap_to_interrupt_ai) else null
 
-    Box(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Column(
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier.weight(1f),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.TopSpacerHeight))
             uiState.agent?.run {
                 val avatarModifier =
                     Modifier.size(UiConfigs.VoiceCall.Layout.AvatarSize)
@@ -411,16 +415,7 @@ private fun VoiceCallContent(
                 Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.NameToStatusSpacing))
             }
 
-            Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.StatusToInterruptSpacing))
-
-            VoiceCallInterruptButton(
-                statusText = statusText,
-                promptText = promptText,
-                isSpeaking = isSpeaking,
-                onInterrupt = onInterrupt,
-            )
-
-            Spacer(Modifier.height(UiConfigs.VoiceCall.Layout.InterruptToTimeSpacing))
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_large)))
 
             uiState.time?.run {
                 Text(
@@ -447,11 +442,21 @@ private fun VoiceCallContent(
                     color = Color.White,
                 )
             }
+
+            Spacer(Modifier.height(dimensionResource(R.dimen.padding_large)))
+
+            VoiceCallInterruptButton(
+                statusText = statusText,
+                promptText = promptText,
+                isSpeaking = isSpeaking,
+                onInterrupt = onInterrupt,
+                modifier = Modifier.size(80.dp)
+            )
         }
 
         Row(
             modifier =
-                Modifier.align(Alignment.BottomCenter)
+                Modifier
                     .fillMaxWidth()
                     .padding(bottom = UiConfigs.VoiceCall.Layout.BottomBarPadding),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -559,9 +564,7 @@ private fun VoiceCallInterruptButton(
                         text = promptText,
                         color = Color.White,
                         style =
-                            MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = UiConfigs.Typography.Body
-                            ),
+                            MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                     )
@@ -661,7 +664,7 @@ private fun MenuItem(
     }
 }
 
-@Preview
+@Preview(device = "id:Galaxy Nexus")
 @Composable
 private fun VoiceCallPreview() {
     IntelliMateTheme {

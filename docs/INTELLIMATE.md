@@ -101,6 +101,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 - Chat input supports **image + text** multimodal sending: tap the image button, pick one photo, optionally type text, then send both together.
 - After selecting a local chat image, IntelliMate starts image upload immediately in the background; after tapping send, the outgoing bubble uses that local image as a placeholder while waiting for AI reply (so the screen no longer looks blank).
 - Chat message bubbles can render multimodal replies from `/api/v1/chat/completions/{agent_id}` when the assistant returns both text and image content.
+- After you tap 👍/👎 on a generated chat image, IntelliMate may show a once-per-local-day feedback popup; choosing **Send Suggestions** opens Feedback with the image auto-attached and image-quality options prefilled for faster reporting.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
 - VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
 - If a subscribed user reaches the daily chat quota, IntelliMate shows a dedicated dialog (**“Daily Premium Chat Limit Reached”**) instead of the upgrade-to-premium prompt.

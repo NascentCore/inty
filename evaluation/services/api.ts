@@ -1459,6 +1459,7 @@ export const reportApi = {
   // 获取举报/反馈列表
   list: (params?: {
     target_type?: import("../types").ReportTargetType;
+    target_id?: string;
     status?: import("../types").ReportStatus;
     report_type?: import("../types").ReportType;
     order_by?: "created_at_desc" | "created_at_asc";
@@ -1470,6 +1471,16 @@ export const reportApi = {
   // 按 id 获取单条举报详情（用于永久链接）
   get: (reportId: string): Promise<import("../types").ReportItem> =>
     apiClient.get(`/report/${reportId}`),
+
+  // 创建举报/反馈记录（聊天图片反馈复用该接口）
+  create: (payload: {
+    target_id: string;
+    target_type: import("../types").ReportTargetType;
+    reason_codes: string[];
+    image_urls?: string[];
+    description?: string;
+    report_type?: import("../types").ReportType;
+  }): Promise<null> => apiClient.post("/report/", payload),
 
   // 更新举报/反馈关联的 GitHub issue 链接
   updateGithubIssue: (

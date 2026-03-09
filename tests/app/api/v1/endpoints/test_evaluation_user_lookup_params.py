@@ -76,6 +76,10 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
         async def get_user_daily_messages(self, user_id: str, start_date=None, end_date=None):
             return []
 
+        async def get_daily_messages_for_all_users(self, start_date, end_date):
+            calls.append(("all_users", f"{start_date.date()}~{end_date.date()}"))
+            return []
+
         async def get_user_today_stats(self, user_id: str):
             return {"today_message_count": 0, "today_session_count": 0}
 
@@ -123,10 +127,34 @@ def test_user_daily_messages_supports_lookup_by_email(evaluation_app: FastAPI):
     assert evaluation_app.state._calls == [("email", "a@example.com")]
 
 
+def test_user_daily_messages_supports_date_range_without_identifier(
+    evaluation_app: FastAPI,
+):
+    with TestClient(evaluation_app) as client:
+        resp = client.get(
+            "/api/v1/evaluation/user-analytics/user-daily-messages",
+            params={"start_date": "2026-03-01", "end_date": "2026-03-08"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == "ALL_USERS"
+    assert body["auth_type"] == "ALL_USERS"
+    assert evaluation_app.state._calls == [("all_users", "2026-03-01~2026-03-09")]
+
+
+def test_user_daily_messages_requires_date_range_when_identifier_missing(
+    evaluation_app: FastAPI,
+):
+    with TestClient(evaluation_app) as client:
+        missing = client.get("/api/v1/evaluation/user-analytics/user-daily-messages")
+
+    assert missing.status_code == 400
+
+
 @pytest.mark.parametrize(
     "endpoint",
     [
-        "/api/v1/evaluation/user-analytics/user-daily-messages",
         "/api/v1/evaluation/user-analytics/user-today-stats",
         "/api/v1/evaluation/user-analytics/user-sessions",
     ],

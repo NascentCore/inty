@@ -114,44 +114,61 @@ export const UserDailyMessagesPage: React.FC = () => {
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
     const trimmed = searchValue.trim();
-    if (!trimmed) {
-      message.warning(
-        searchType === "email" ? "请输入用户邮箱" : "请输入用户ID",
-      );
+    const hasIdentifier = Boolean(trimmed);
+    const hasDateRange = Boolean(dateRange && dateRange[0] && dateRange[1]);
+    if (!hasIdentifier && !hasDateRange) {
+      message.warning("不输入用户ID/邮箱时，请选择日期范围");
       return;
     }
 
     setLoading(true);
     try {
-      const identifierParams =
-        searchType === "email" ? { email: trimmed } : { user_id: trimmed };
-
-      const params: typeof identifierParams & {
+      const params: {
+        email?: string;
+        user_id?: string;
         start_date?: string;
         end_date?: string;
-      } = { ...identifierParams };
+      } = {};
+
+      if (hasIdentifier) {
+        if (searchType === "email") {
+          params.email = trimmed;
+        } else {
+          params.user_id = trimmed;
+        }
+      }
 
       if (dateRange && dateRange[0] && dateRange[1]) {
         params.start_date = dateRange[0].format("YYYY-MM-DD");
         params.end_date = dateRange[1].format("YYYY-MM-DD");
       }
 
-      const [dailyMessagesData, todayStatsData] = await Promise.all([
-        userAnalyticsApi.getUserDailyMessages(params),
-        userAnalyticsApi.getUserTodayStats(identifierParams),
-      ]);
+      if (hasIdentifier) {
+        const identifierParams =
+          searchType === "email" ? { email: trimmed } : { user_id: trimmed };
+        const [dailyMessagesData, todayStatsData] = await Promise.all([
+          userAnalyticsApi.getUserDailyMessages(params),
+          userAnalyticsApi.getUserTodayStats(identifierParams),
+        ]);
+        setUserInfo(dailyMessagesData);
+        setTodayStats(todayStatsData);
 
-      setUserInfo(dailyMessagesData);
-      setTodayStats(todayStatsData);
-
-      // 自动加载会话列表
-      try {
-        const sessionsData =
-          await userAnalyticsApi.getUserSessions(identifierParams);
-        setSessions(sessionsData.sessions);
-      } catch (error: unknown) {
-        console.error("加载会话列表失败:", error);
-        // 不显示错误，因为这不是主要功能
+        // 自动加载会话列表
+        try {
+          const sessionsData =
+            await userAnalyticsApi.getUserSessions(identifierParams);
+          setSessions(sessionsData.sessions);
+        } catch (error: unknown) {
+          console.error("加载会话列表失败:", error);
+          // 不显示错误，因为这不是主要功能
+        }
+      } else {
+        const dailyMessagesData = await userAnalyticsApi.getUserDailyMessages(params);
+        setUserInfo(dailyMessagesData);
+        setTodayStats(null);
+        setSessions([]);
+        setSessionMessages({});
+        setExpandedSessions(new Set());
       }
 
       message.success("查询成功");
@@ -480,6 +497,7 @@ export const UserDailyMessagesPage: React.FC = () => {
       (sum, item) => sum + item.message_count,
       0,
     ) || 0;
+  const isAllUsersResult = userInfo?.user_id === "ALL_USERS";
 
   return (
     <div style={{ padding: "24px" }}>
@@ -496,10 +514,12 @@ export const UserDailyMessagesPage: React.FC = () => {
               <Option value="email">邮箱</Option>
               <Option value="user_id">用户ID</Option>
             </Select>
-            <span>查询值：</span>
+            <span>查询值（可选）：</span>
             <Input
               placeholder={
-                searchType === "email" ? "请输入用户邮箱" : "请输入用户ID"
+                searchType === "email"
+                  ? "请输入用户邮箱（可留空）"
+                  : "请输入用户ID（可留空）"
               }
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
@@ -520,7 +540,7 @@ export const UserDailyMessagesPage: React.FC = () => {
             >
               查询
             </Button>
-            {userInfo && (
+            {userInfo && !isAllUsersResult && (
               <Button onClick={loadSessions} loading={loadingSessions}>
                 加载会话列表
               </Button>
@@ -532,103 +552,105 @@ export const UserDailyMessagesPage: React.FC = () => {
       {userInfo && (
         <>
           {/* 用户信息卡片 */}
-          <Card style={{ marginBottom: "24px" }}>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Statistic
-                  title="用户ID"
-                  value={userInfo.user_id}
-                  prefix={<UserOutlined />}
-                  valueStyle={{ fontSize: "14px" }}
-                />
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="邮箱"
-                  value={userInfo.email || "N/A"}
-                  prefix={<UserOutlined />}
-                  valueStyle={{ fontSize: "14px" }}
-                />
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="昵称"
-                  value={userInfo.nickname || "N/A"}
-                  prefix={<UserOutlined />}
-                  valueStyle={{ fontSize: "14px" }}
-                />
-              </Col>
-              <Col span={6}>
-                <div>
-                  <div
-                    style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}
-                  >
-                    认证类型
-                  </div>
-                  <Tag
-                    color={userInfo.auth_type === "GOOGLE" ? "blue" : "orange"}
-                  >
-                    {userInfo.auth_type}
-                  </Tag>
-                </div>
-              </Col>
-            </Row>
-            <Row gutter={16} style={{ marginTop: 16 }}>
-              <Col span={6}>
-                <div>
-                  <div
-                    style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}
-                  >
-                    性别
-                  </div>
-                  {userInfo.gender ? (
-                    <Tag
-                      color={
-                        userInfo.gender === "MALE"
-                          ? "blue"
-                          : userInfo.gender === "FEMALE"
-                            ? "pink"
-                            : "default"
-                      }
-                    >
-                      {userInfo.gender === "MALE"
-                        ? "男"
-                        : userInfo.gender === "FEMALE"
-                          ? "女"
-                          : "其他"}
-                    </Tag>
-                  ) : (
-                    <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>未设置</span>
-                  )}
-                </div>
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="年龄段"
-                  value={userInfo.age_group || "未设置"}
-                  valueStyle={{
-                    fontSize: "14px",
-                    color: userInfo.age_group
-                      ? "inherit"
-                      : "rgba(0, 0, 0, 0.25)",
-                  }}
-                />
-              </Col>
-              {userInfo.created_at && (
-                <Col span={12}>
+          {!isAllUsersResult && (
+            <Card style={{ marginBottom: "24px" }}>
+              <Row gutter={16}>
+                <Col span={6}>
                   <Statistic
-                    title="注册时间 (UTC)"
-                    value={formatUtcTimeRaw(userInfo.created_at)}
-                    prefix={<CalendarOutlined />}
+                    title="用户ID"
+                    value={userInfo.user_id}
+                    prefix={<UserOutlined />}
                     valueStyle={{ fontSize: "14px" }}
                   />
                 </Col>
-              )}
-            </Row>
-          </Card>
+                <Col span={6}>
+                  <Statistic
+                    title="邮箱"
+                    value={userInfo.email || "N/A"}
+                    prefix={<UserOutlined />}
+                    valueStyle={{ fontSize: "14px" }}
+                  />
+                </Col>
+                <Col span={6}>
+                  <Statistic
+                    title="昵称"
+                    value={userInfo.nickname || "N/A"}
+                    prefix={<UserOutlined />}
+                    valueStyle={{ fontSize: "14px" }}
+                  />
+                </Col>
+                <Col span={6}>
+                  <div>
+                    <div
+                      style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}
+                    >
+                      认证类型
+                    </div>
+                    <Tag
+                      color={userInfo.auth_type === "GOOGLE" ? "blue" : "orange"}
+                    >
+                      {userInfo.auth_type}
+                    </Tag>
+                  </div>
+                </Col>
+              </Row>
+              <Row gutter={16} style={{ marginTop: 16 }}>
+                <Col span={6}>
+                  <div>
+                    <div
+                      style={{ marginBottom: 4, color: "rgba(0, 0, 0, 0.45)" }}
+                    >
+                      性别
+                    </div>
+                    {userInfo.gender ? (
+                      <Tag
+                        color={
+                          userInfo.gender === "MALE"
+                            ? "blue"
+                            : userInfo.gender === "FEMALE"
+                              ? "pink"
+                              : "default"
+                        }
+                      >
+                        {userInfo.gender === "MALE"
+                          ? "男"
+                          : userInfo.gender === "FEMALE"
+                            ? "女"
+                            : "其他"}
+                      </Tag>
+                    ) : (
+                      <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>未设置</span>
+                    )}
+                  </div>
+                </Col>
+                <Col span={6}>
+                  <Statistic
+                    title="年龄段"
+                    value={userInfo.age_group || "未设置"}
+                    valueStyle={{
+                      fontSize: "14px",
+                      color: userInfo.age_group
+                        ? "inherit"
+                        : "rgba(0, 0, 0, 0.25)",
+                    }}
+                  />
+                </Col>
+                {userInfo.created_at && (
+                  <Col span={12}>
+                    <Statistic
+                      title="注册时间 (UTC)"
+                      value={formatUtcTimeRaw(userInfo.created_at)}
+                      prefix={<CalendarOutlined />}
+                      valueStyle={{ fontSize: "14px" }}
+                    />
+                  </Col>
+                )}
+              </Row>
+            </Card>
+          )}
 
           {/* 当日统计卡片 */}
-          {todayStats && (
+          {!isAllUsersResult && todayStats && (
             <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
               <Col xs={24} sm={12} md={6}>
                 <Card>
@@ -733,19 +755,20 @@ export const UserDailyMessagesPage: React.FC = () => {
           </Card>
 
           {/* 会话列表和对话历史 */}
-          <Card
-            title="会话列表和对话历史"
-            style={{ marginBottom: "24px" }}
-            extra={
-              sessions.length > 0 && (
-                <span style={{ fontSize: "12px", color: "#666" }}>
-                  点击行展开查看对话记录
-                </span>
-              )
-            }
-          >
-            {sessions.length > 0 ? (
-              <Table
+          {!isAllUsersResult && (
+            <Card
+              title="会话列表和对话历史"
+              style={{ marginBottom: "24px" }}
+              extra={
+                sessions.length > 0 && (
+                  <span style={{ fontSize: "12px", color: "#666" }}>
+                    点击行展开查看对话记录
+                  </span>
+                )
+              }
+            >
+              {sessions.length > 0 ? (
+                <Table
                 columns={sessionsColumns}
                 dataSource={sessions}
                 rowKey="chat_id"
@@ -975,23 +998,24 @@ export const UserDailyMessagesPage: React.FC = () => {
                     );
                   },
                 }}
-              />
-            ) : (
-              <Empty
-                description={
-                  loadingSessions
-                    ? "加载中..."
-                    : "暂无会话数据，会话列表会在查询用户信息后自动加载"
-                }
-              />
-            )}
-          </Card>
+                />
+              ) : (
+                <Empty
+                  description={
+                    loadingSessions
+                      ? "加载中..."
+                      : "暂无会话数据，会话列表会在查询用户信息后自动加载"
+                  }
+                />
+              )}
+            </Card>
+          )}
         </>
       )}
 
       {!userInfo && !loading && (
         <Card>
-          <Empty description="请输入用户邮箱或用户ID并点击查询" />
+          <Empty description="请输入用户邮箱或用户ID，或仅选择日期范围后点击查询" />
         </Card>
       )}
 

@@ -8,6 +8,7 @@ from app.core.voice.tts_api import (
     get_gemini_voices,
     is_gemini_voice,
     parse_voice_id,
+    select_default_gemini_voice_for_imate_gender,
 )
 
 
@@ -63,3 +64,17 @@ class TestGetGeminiVoices:
         assert first["voice_id"] == f"{VOICE_ID_PREFIX_GEMINI}/{first['name']}"
         assert first["provider"] == "gemini"
         assert first["category"] == "prebuilt"
+
+
+class TestSelectDefaultGeminiVoiceForImateGender:
+    def test_maps_male_to_puck(self):
+        assert select_default_gemini_voice_for_imate_gender("MALE") == "Puck"
+
+    def test_maps_female_to_zephyr(self):
+        assert select_default_gemini_voice_for_imate_gender("FEMALE") == "Zephyr"
+
+    def test_unknown_gender_falls_back_to_default(self):
+        assert (
+            select_default_gemini_voice_for_imate_gender("UNKNOWN")
+            == "Zephyr"
+        )
