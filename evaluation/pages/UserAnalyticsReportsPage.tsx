@@ -240,8 +240,23 @@ function VoiceAudiosGroupCard({
             borderRadius: 8,
           }}
         >
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-            用户 {group.user_id.slice(0, 8)}… · {group.agent_name || group.agent_id}
+          <div
+            style={{
+              fontSize: 12,
+              color: "#666",
+              marginBottom: 8,
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <div style={{ wordBreak: "break-all" }}>
+              用户ID: <span style={{ fontFamily: "monospace" }}>{group.user_id}</span>
+            </div>
+            <div style={{ wordBreak: "break-all" }}>
+              角色: {group.agent_name || "-"} · Agent ID:{" "}
+              <span style={{ fontFamily: "monospace" }}>{group.agent_id}</span>
+            </div>
           </div>
           {group.audios.map((a, i) => (
             <div key={i} style={{ marginTop: 8 }}>

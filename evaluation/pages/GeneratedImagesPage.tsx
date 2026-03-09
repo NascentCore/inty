@@ -320,6 +320,9 @@ const GeneratedImagesPage: React.FC = () => {
                 <Space>
                   <PictureOutlined />
                   <span>{selectedAgent.name} 的生成图片</span>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Agent ID: {selectedAgent.id}
+                  </Text>
                   <Tag color="green">{images.length} 张</Tag>
                 </Space>
               ) : (
@@ -374,8 +377,12 @@ const GeneratedImagesPage: React.FC = () => {
                       <Space>
                         <UserOutlined />
                         <Text strong>{group.user_nickname || "未知用户"}</Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          ({group.user_id.slice(0, 16)}...)
+                        <Text
+                          copyable={{ text: group.user_id }}
+                          type="secondary"
+                          style={{ fontSize: 12, fontFamily: "monospace" }}
+                        >
+                          {group.user_id}
                         </Text>
                         <Popover
                           title="用户详情"

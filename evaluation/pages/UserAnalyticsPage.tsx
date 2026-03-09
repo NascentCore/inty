@@ -434,8 +434,12 @@ export const UserAnalyticsPage: React.FC = () => {
       title: "用户ID",
       dataIndex: "user_id",
       key: "user_id",
-      width: 200,
-      ellipsis: true,
+      width: 320,
+      render: (userId: string) => (
+        <span style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+          {userId}
+        </span>
+      ),
     },
     {
       title: "认证类型",
@@ -1118,8 +1122,10 @@ export const UserAnalyticsPage: React.FC = () => {
                       }}
                     >
                       <Space>
-                        <span>
-                          {user.user_id.substring(0, 20)}...
+                        <span style={{ wordBreak: "break-all" }}>
+                          <span style={{ fontFamily: "monospace" }}>
+                            {user.user_id}
+                          </span>
                           {user.nickname && ` (${user.nickname})`}
                         </span>
                         <Tag
