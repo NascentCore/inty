@@ -64,6 +64,11 @@ const REASON_CODE_LABELS: Record<string, string> = {
   FEATURE_HARD_TO_FIND: "功能难找",
   UI_INCONVENIENT: "UI不便",
   NEW_FEATURE: "新功能建议",
+  IMAGE_LOW_QUALITY: "画质差/细节差",
+  IMAGE_STYLE_MISMATCH: "风格不匹配参考图",
+  IMAGE_CONTENT_MISMATCH: "内容不符预期",
+  IMAGE_ANATOMY_OR_STRUCTURE_ERROR: "肢体/结构异常",
+  IMAGE_OTHER: "其他（图片反馈）",
 };
 
 // 状态颜色映射
