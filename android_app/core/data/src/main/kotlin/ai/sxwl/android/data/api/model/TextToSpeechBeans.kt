@@ -8,5 +8,6 @@ data class TextToSpeechVoiceOption(
     @Json(name = "voice_id") val voiceId: String = "",
     val name: String = "",
     val provider: String = "",
+    val gender: String? = null,
     val category: String? = null,
 )

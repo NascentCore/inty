@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -241,6 +242,13 @@ fun ChatSettingsDrawer(
 
                         // Voice 音色（每个聊天独立设置）
                         androidx.compose.foundation.layout.Box {
+                            val voiceOptionsForCurrentAgent =
+                                remember(agentInfo?.gender, chatVoiceOptions) {
+                                    filterChatVoiceOptionsByAgentGender(
+                                        voices = chatVoiceOptions,
+                                        agentGender = agentInfo?.gender,
+                                    )
+                                }
                             val selectedVoiceLabel =
                                 when {
                                     isLoadingChatVoices ->
@@ -248,10 +256,10 @@ fun ChatSettingsDrawer(
                                     selectedChatVoiceId.isNullOrBlank() ->
                                         stringResource(R.string.chat_settings_voice_default)
                                     else ->
-                                        chatVoiceOptions
+                                        voiceOptionsForCurrentAgent
                                             .firstOrNull { it.voiceId == selectedChatVoiceId }
                                             ?.name
-                                            ?: selectedChatVoiceId
+                                            ?: stringResource(R.string.chat_settings_voice_default)
                                 }
 
                             SettingsArrowItem(
@@ -324,7 +332,7 @@ fun ChatSettingsDrawer(
                                     },
                                 )
 
-                                chatVoiceOptions.forEach { option ->
+                                voiceOptionsForCurrentAgent.forEach { option ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
