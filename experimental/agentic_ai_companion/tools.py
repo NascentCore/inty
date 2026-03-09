@@ -183,7 +183,7 @@ def execute_generate_image(
     **kwargs: Any,
 ) -> tuple[str, str | None]:
     """根据工具参数 input 或对话上下文生成图片并写入本地文件，返回 (结果文案, 可点击绝对路径或 None)。"""
-    from .image_gen import (
+    from .chat_image_gen import (
         GenerateImageToolInput,
         generate_image_with_chat_to_image_behavior,
     )

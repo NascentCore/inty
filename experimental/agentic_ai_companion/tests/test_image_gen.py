@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from experimental.agentic_ai_companion.image_gen import (
+from experimental.agentic_ai_companion.chat_image_gen import (
     CompanionProfile,
     GenerateImageToolInput,
     RuntimePaths,
