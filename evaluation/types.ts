@@ -819,6 +819,8 @@ export interface GeneratedImage {
   model?: string | null;
   generation_time_ms?: number | null;
   model_fallback_due_to_429?: boolean | null;
+  langsmith_trace_id?: string | null;
+  langsmith_trace_url?: string | null;
   session_id?: string | null;
   meta_data?: Record<string, unknown> | null;
 }

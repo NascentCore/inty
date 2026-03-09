@@ -42,4 +42,17 @@ object ReportReasonMappings {
             ReportReasonCode.NEW_FEATURE to R.string.feedback_reason_new_feature,
             ReportReasonCode.OTHER to R.string.feedback_reason_other,
         )
+
+    /** 聊天生图反馈原因代码到字符串资源ID的映射 */
+    val IMAGE_FEEDBACK_REASON_CODE_TO_STRING_RES: Map<ReportReasonCode, Int> =
+        mapOf(
+            ReportReasonCode.IMAGE_LOW_QUALITY to R.string.feedback_reason_image_low_quality,
+            ReportReasonCode.IMAGE_STYLE_MISMATCH to
+                R.string.feedback_reason_image_style_mismatch,
+            ReportReasonCode.IMAGE_CONTENT_MISMATCH to
+                R.string.feedback_reason_image_content_mismatch,
+            ReportReasonCode.IMAGE_ANATOMY_OR_STRUCTURE_ERROR to
+                R.string.feedback_reason_image_anatomy_or_structure_error,
+            ReportReasonCode.IMAGE_OTHER to R.string.feedback_reason_image_other,
+        )
 }

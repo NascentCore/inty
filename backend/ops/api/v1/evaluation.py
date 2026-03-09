@@ -1101,12 +1101,16 @@ def _parse_analytics_date_ranges(
 
 
 def _normalize_user_lookup_params(
-    email: Optional[str], user_id: Optional[str]
+    email: Optional[str], user_id: Optional[str], *, allow_empty: bool = False
 ) -> tuple[Optional[str], Optional[str]]:
     normalized_email = email.strip() if email else None
     normalized_user_id = user_id.strip() if user_id else None
 
-    # 必须且只能提供其中一个
+    # allow_empty=True 时，允许两者都不提供（用于全量日期范围查询）
+    if allow_empty and not normalized_email and not normalized_user_id:
+        return None, None
+
+    # 默认规则：必须且只能提供其中一个
     if bool(normalized_email) == bool(normalized_user_id):
         raise HTTPException(
             status_code=400, detail="Provide either email or user_id, but not both"
@@ -2221,10 +2225,8 @@ async def get_user_daily_messages(
         from app.services.user_analytics_service import UserAnalyticsService
 
         service = UserAnalyticsService(db)
-
-        # 查找用户
-        user_info = await _find_user_info_by_identifier(
-            service, email=email, user_id=user_id
+        normalized_email, normalized_user_id = _normalize_user_lookup_params(
+            email, user_id, allow_empty=True
         )
 
         # 解析日期范围
@@ -2243,7 +2245,36 @@ async def get_user_daily_messages(
                 hour=23, minute=59, second=59
             ) + timedelta(seconds=1)
 
-        # 获取每日消息统计
+        # 日期范围模式：未提供用户标识时，按全量用户查询
+        if not normalized_email and not normalized_user_id:
+            if not start_date_obj or not end_date_obj:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Provide start_date and end_date when email and user_id "
+                        "are omitted"
+                    ),
+                )
+            daily_messages = await service.get_daily_messages_for_all_users(
+                start_date_obj, end_date_obj
+            )
+            return {
+                "user_id": "ALL_USERS",
+                "email": None,
+                "nickname": "全部用户",
+                "auth_type": "ALL_USERS",
+                "created_at": None,
+                "gender": None,
+                "age_group": None,
+                "daily_messages": daily_messages,
+            }
+
+        # 查找用户
+        user_info = await _find_user_info_by_identifier(
+            service, email=normalized_email, user_id=normalized_user_id
+        )
+
+        # 获取单用户每日消息统计
         daily_messages = await service.get_user_daily_messages(
             user_info["id"], start_date_obj, end_date_obj
         )
@@ -2615,6 +2646,8 @@ async def get_agent_generated_images(
             model = None
             generation_time_ms = None
             model_fallback_due_to_429 = None
+            langsmith_trace_id = metadata.get("langsmith_trace_id")
+            langsmith_trace_url = metadata.get("langsmith_trace_url")
             if isinstance(generated_image_meta, dict):
                 model = generated_image_meta.get("model")
                 generation_time_ms = generated_image_meta.get("generation_time_ms")
@@ -2653,6 +2686,8 @@ async def get_agent_generated_images(
                     "model": model,
                     "generation_time_ms": generation_time_ms,
                     "model_fallback_due_to_429": model_fallback_due_to_429,
+                    "langsmith_trace_id": langsmith_trace_id,
+                    "langsmith_trace_url": langsmith_trace_url,
                     "session_id": metadata.get("session_id"),
                     "meta_data": metadata,
                 }

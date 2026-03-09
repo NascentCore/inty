@@ -27,6 +27,7 @@ import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.report.buildImageFeedbackTargetId
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.audio.OpeningPlayState
 import com.ai.intellimate.boost.BoostConfig
@@ -78,6 +79,12 @@ private object ManualImageGenSession {
 }
 
 class ChatViewModel : BaseVM() {
+    data class ImageFeedbackNavigationPayload(
+        val imageUrl: String,
+        val vote: String,
+        val targetId: String,
+    )
+
     private data class PendingInputImageUpload(
         val localImageUri: String,
         val uploadTask: Deferred<HttpResult<String>>,
@@ -176,6 +183,13 @@ class ChatViewModel : BaseVM() {
     // 反馈对话框显示状态
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog = _showFeedbackRequestDialog.asStateFlow()
+
+    // 生图反馈弹窗显示状态（thumb up/down 后触发）
+    private val _showImageFeedbackRequestDialog = MutableStateFlow(false)
+    val showImageFeedbackRequestDialog = _showImageFeedbackRequestDialog.asStateFlow()
+    private val _imageFeedbackNavigationPayload =
+        MutableStateFlow<ImageFeedbackNavigationPayload?>(null)
+    val imageFeedbackNavigationPayload = _imageFeedbackNavigationPayload.asStateFlow()
 
     private val _imagePickMessageId = MutableStateFlow<String?>(null)
     val imagePickMessageId = _imagePickMessageId.asStateFlow()
@@ -887,6 +901,11 @@ class ChatViewModel : BaseVM() {
         _showFeedbackRequestDialog.value = false
     }
 
+    fun hideImageFeedbackRequestDialog() {
+        _showImageFeedbackRequestDialog.value = false
+        _imageFeedbackNavigationPayload.value = null
+    }
+
     /** 重置会话消息计数（当 app 进入后台或退出时调用） */
     fun resetSessionMessageCount() {
         sessionMessageCount = 0
@@ -1226,6 +1245,41 @@ class ChatViewModel : BaseVM() {
                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                 "timestamp" to System.currentTimeMillis(),
             )
+
+            maybePromptImageFeedback(message = message, userVote = userVote)
+        }
+    }
+
+    private suspend fun maybePromptImageFeedback(
+        message: MessageEntity?,
+        userVote: MessageEntity.UserVote,
+    ) {
+        val imageUrl = message?.metaData?.generatedImage?.imageUrl?.trim().orEmpty()
+        if (imageUrl.isEmpty()) {
+            return
+        }
+        val normalizedVote =
+            when (userVote) {
+                MessageEntity.UserVote.LIKE -> "like"
+                MessageEntity.UserVote.DISLIKE -> "dislike"
+                else -> null
+            }
+        if (normalizedVote == null) {
+            return
+        }
+        val todayLocalDateKey = LocalDate.now().toString()
+        if (IntySetting.getImageFeedbackPromptLastLocalDate() == todayLocalDateKey) {
+            return
+        }
+        IntySetting.setImageFeedbackPromptLastLocalDate(todayLocalDateKey)
+        _imageFeedbackNavigationPayload.value =
+            ImageFeedbackNavigationPayload(
+                imageUrl = imageUrl,
+                vote = normalizedVote,
+                targetId = buildImageFeedbackTargetId(imageUrl),
+            )
+        withContext(Dispatchers.Main) {
+            _showImageFeedbackRequestDialog.value = true
         }
     }
 

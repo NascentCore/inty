@@ -6,7 +6,12 @@
 
 - Only user-visible changes are recorded.
 - Changes only affect debug build type's app is not listed.
+- Each feature 1 sentence, be very concise.
 
+
+## 2026-03-09
+
+- After you react with 👍/👎 to a generated chat image, IntelliMate can show a once-per-local-day feedback prompt that opens a prefilled image-quality feedback form with the image attached.
 
 ## 2026-03-06
 

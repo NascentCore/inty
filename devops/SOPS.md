@@ -1,5 +1,11 @@
 # DevOps 日常操作
 
+## 查询用户 emotional needs profile
+
+```
+WITH latest AS (SELECT DISTINCT ON (m.user_id) m.user_id, m.created_at, m.content FROM memory m WHERE m.memory_type = 'user_common' AND m.content IS NOT NULL AND btrim(m.content) <> '' ORDER BY m.user_id, m.created_at DESC) SELECT user_id, created_at, content AS emotional_needs_profile FROM latest ORDER BY created_at DESC LIMIT 10;
+```
+
 ## 创建 Email+Password （测试）用户
 
 ```bash

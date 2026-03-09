@@ -7,7 +7,7 @@ import asyncio
 import json
 import re
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -57,6 +57,82 @@ MEMORY_EXTRACTION_RESPONSE_FORMAT = {
         },
     },
 }
+
+DAILY_PROFILE_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "memory_extraction_daily_profile",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "daily_profile_summary": {
+                    "type": "string",
+                    "description": (
+                        "Daily user companionship profile summary derived only from today's messages. "
+                        "Include emotional signals, companionship needs, notable preference shifts, and boundaries."
+                    ),
+                }
+            },
+            "required": ["daily_profile_summary"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+_DAILY_PROFILE_PROMPT_TEMPLATE = """
+You are a user companionship analyst.
+
+Task:
+Summarize the user's companionship-relevant profile ONLY from the provided one-day chat history.
+Do not use assumptions outside the conversation.
+
+Focus on:
+1) emotional state and companionship needs shown today,
+2) stable or changing preferences shown today,
+3) boundaries/dislikes shown today,
+4) concrete details useful for future empathetic conversations.
+
+Output requirement:
+Return a JSON object with exactly one field:
+- daily_profile_summary (string)
+
+Target UTC day: {target_day}
+""".strip()
+
+_INCREMENTAL_UPDATE_PROMPT_TEMPLATE = """
+You are updating a persistent cross-character user companionship profile.
+
+You are given:
+1) the previous persisted profile,
+2) a newly summarized one-day profile.
+
+Update rules:
+- Keep stable facts/preferences unless the new daily summary clearly updates them.
+- Incorporate new companionship needs if evidenced in today's summary.
+- Remove or soften outdated items when today's summary conflicts with old profile.
+- Keep only user information (never AI output-style rules).
+- The final profile must remain cross-character usable.
+
+Output requirement:
+Return a JSON object with exactly one field:
+- part1_summary (string)
+
+The part1_summary must follow this structure:
+**About this user, you should know:**
+[2-4 sentences]
+
+**When talking to this user, note:**
+- ...
+
+**This user likes:**
+- ...
+
+**This user dislikes / avoid:**
+- ...
+
+Target UTC day: {target_day}
+""".strip()
 
 _PROMPT_PATH = (
     Path(__file__).resolve().parents[1]
@@ -124,6 +200,67 @@ def _part1_from_content(content: str) -> str:
     return _extract_part1_summary(content)
 
 
+def _summary_field_from_content(
+    content: str, field_name: str, min_length: int = 20
+) -> str:
+    stripped = content.strip()
+    if stripped.startswith("{"):
+        try:
+            data = json.loads(content)
+            value = (data.get(field_name) or "").strip()
+            if value and len(value) >= min_length:
+                return value
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return content[:2000] if len(content) > 2000 else content
+
+
+def _utc_day_bounds(target_date_utc: date) -> tuple[datetime, datetime]:
+    start = datetime.combine(target_date_utc, dt_time.min, tzinfo=timezone.utc)
+    end = start + timedelta(days=1)
+    return start, end
+
+
+def _build_daily_profile_prompt(chat_text: str, target_date_utc: date) -> str:
+    header = _DAILY_PROFILE_PROMPT_TEMPLATE.format(target_day=target_date_utc.isoformat())
+    return f"{header}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
+
+
+def _build_incremental_update_prompt(
+    existing_profile: str, daily_profile: str, target_date_utc: date
+) -> str:
+    header = _INCREMENTAL_UPDATE_PROMPT_TEMPLATE.format(
+        target_day=target_date_utc.isoformat()
+    )
+    existing = existing_profile.strip() if existing_profile else "(empty)"
+    return (
+        f"{header}\n\n---\n\n# Previous persisted profile\n\n{existing}\n\n---\n\n"
+        f"# New daily profile\n\n{daily_profile}"
+    )
+
+
+def _sum_optional_int(values: list[int | None]) -> int | None:
+    ints = [v for v in values if isinstance(v, int)]
+    if not ints:
+        return None
+    return sum(ints)
+
+
+async def _chat_completion_with_structured_fallback(
+    prompt: str,
+    llm_config: LLMConfig,
+    response_format: dict,
+    log_prefix: str,
+) -> tuple[str, int | None, int | None]:
+    try:
+        return await chat_completion_for_extraction(
+            prompt, llm_config=llm_config, response_format=response_format
+        )
+    except Exception as format_err:
+        logger.debug(f"{log_prefix} structured output 失败，回退自由文本: {format_err}")
+        return await chat_completion_for_extraction(prompt, llm_config=llm_config)
+
+
 def get_all_messages_for_user(
     user_id: str, prefer_replica_read: bool = False
 ) -> List[Tuple[str, str]]:
@@ -170,6 +307,69 @@ def get_all_messages_for_user(
                 else:
                     data = json.loads(str(raw))
             except Exception:
+                continue
+            msg_type = data.get("type", "human")
+            content = ""
+            if (
+                "data" in data
+                and isinstance(data["data"], dict)
+                and "content" in data["data"]
+            ):
+                content = data["data"]["content"] or ""
+            elif "content" in data:
+                content = data["content"] or ""
+            role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
+            out.append((role, str(content)))
+    return out
+
+
+def get_messages_for_user_in_utc_day(
+    user_id: str, target_date_utc: date, prefer_replica_read: bool = False
+) -> List[Tuple[str, str]]:
+    """
+    拉取该用户在指定 UTC 日内的全部消息 (role, content)，按 created_at 升序。
+    """
+    start_at, end_at = _utc_day_bounds(target_date_utc)
+    conn = None
+    if prefer_replica_read:
+        try:
+            conn = get_chat_history_replica_connection()
+        except psycopg.Error as e:
+            logger.warning(f"[记忆抽取] 获取副本连接失败，回退主库读取消息: {e}")
+    if conn is None:
+        conn = get_chat_history_connection()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM chats WHERE user_id = %s AND is_active = true",
+            (user_id,),
+        )
+        chat_ids = [r[0] for r in cur.fetchall()]
+    if not chat_ids:
+        return []
+    session_ids = [generate_session_id(cid) for cid in chat_ids]
+    placeholders = ",".join("%s" for _ in session_ids)
+    query = f"""
+        SELECT message
+        FROM chat_history
+        WHERE session_id::text IN ({placeholders})
+          AND deleted_at IS NULL
+          AND created_at >= %s
+          AND created_at < %s
+        ORDER BY created_at ASC
+    """
+    out: List[Tuple[str, str]] = []
+    with conn.cursor() as cur:
+        cur.execute(query, session_ids + [start_at, end_at])
+        for row in cur.fetchall():
+            raw = row[0]
+            try:
+                if isinstance(raw, str):
+                    data = json.loads(raw)
+                elif isinstance(raw, dict):
+                    data = raw
+                else:
+                    data = json.loads(str(raw))
+            except (json.JSONDecodeError, TypeError, ValueError):
                 continue
             msg_type = data.get("type", "human")
             content = ""
@@ -298,6 +498,46 @@ def _compute_users_to_extract_sync(
         conn.close()
 
 
+def _compute_users_with_messages_in_utc_day_sync(
+    target_date_utc: date, read_db_url: Optional[str] = None
+) -> List[str]:
+    """
+    在工作线程中执行：按 UTC 日窗口从 subscription_usage 中筛选有 chat 行为的 user_id。
+    """
+    start_at, end_at = _utc_day_bounds(target_date_utc)
+    primary_db_url = global_config_loaded_from_config_yaml.database.url
+    db_url = read_db_url or primary_db_url
+    try:
+        conn = psycopg.connect(db_url, autocommit=True)
+    except psycopg.Error as e:
+        if read_db_url and db_url != primary_db_url:
+            logger.warning(f"[记忆抽取] 副本连接失败，回退主库继续筛选用户: {e}")
+            conn = psycopg.connect(primary_db_url, autocommit=True)
+        else:
+            raise
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT su.user_id
+                FROM subscription_usage su
+                WHERE su.usage_type = %s
+                  AND su.usage_date >= %s
+                  AND su.usage_date < %s
+                  AND EXISTS (
+                      SELECT 1
+                      FROM chats c
+                      WHERE c.user_id = su.user_id
+                        AND c.is_active = true
+                  )
+                """,
+                (_USAGE_TYPE_CHAT, start_at, end_at),
+            )
+            return [row[0] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
 async def get_users_to_extract(
     db: AsyncSession, prefer_replica_read: bool = False
 ) -> List[str]:
@@ -346,6 +586,52 @@ async def get_users_to_extract(
     return result
 
 
+async def get_users_with_messages_in_utc_day(
+    db: AsyncSession,
+    target_date_utc: date,
+    prefer_replica_read: bool = False,
+) -> List[str]:
+    """
+    获取指定 UTC 日内有新 chat 消息的用户列表，用于增量记忆抽取。
+    """
+    _ = db
+    return await asyncio.to_thread(
+        _compute_users_with_messages_in_utc_day_sync,
+        target_date_utc,
+        _resolve_sync_read_db_url(prefer_replica_read),
+    )
+
+
+def _memory_llm_config(cfg) -> LLMConfig:
+    model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
+    return LLMConfig(
+        model=model_name or None,
+        max_tokens=4000,
+        temperature=0.3,
+    )
+
+
+async def _latest_user_common_memory_content(db: AsyncSession, user_id: str) -> str:
+    result = await db.execute(
+        text(
+            """
+            SELECT content
+            FROM memory
+            WHERE user_id = :user_id
+              AND memory_type = :memory_type
+              AND agent_id IS NULL
+            ORDER BY extracted_at DESC
+            LIMIT 1
+            """
+        ),
+        {"user_id": user_id, "memory_type": MEMORY_TYPE_USER_COMMON},
+    )
+    row = result.first()
+    if row is None:
+        return ""
+    return row[0] or ""
+
+
 async def extract_and_save(
     db: AsyncSession, user_id: str, prefer_replica_read: bool = False
 ) -> None:
@@ -374,29 +660,15 @@ async def extract_and_save(
 
     start_time = time.perf_counter()
     try:
-        model_name = cfg.model.strip() if cfg.model else DEFAULT_MEMORY_EXTRACTION_MODEL
-        llm_config = LLMConfig(
-            model=model_name or None,
-            max_tokens=4000,
-            temperature=0.3,
+        llm_config = _memory_llm_config(cfg)
+        full_analysis, prompt_tokens, completion_tokens = (
+            await _chat_completion_with_structured_fallback(
+                full_prompt,
+                llm_config=llm_config,
+                response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
+                log_prefix=f"记忆抽取 user_id={user_id}",
+            )
         )
-        try:
-            full_analysis, prompt_tokens, completion_tokens = (
-                await chat_completion_for_extraction(
-                    full_prompt,
-                    llm_config=llm_config,
-                    response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
-                )
-            )
-        except Exception as format_err:
-            logger.debug(
-                f"记忆抽取 structured output 失败，回退自由文本 user_id={user_id}: {format_err}"
-            )
-            full_analysis, prompt_tokens, completion_tokens = (
-                await chat_completion_for_extraction(
-                    full_prompt, llm_config=llm_config
-                )
-            )
         if not full_analysis or len(full_analysis.strip()) < 10:
             raise ValueError(
                 "Unable to extract text from response or content too short"
@@ -455,3 +727,138 @@ async def extract_and_save(
     )
     await db.commit()
     logger.debug(f"记忆抽取完成 user_id={user_id} messages={msg_count}")
+
+
+async def extract_and_save_incremental_daily(
+    db: AsyncSession,
+    user_id: str,
+    target_date_utc: date,
+    prefer_replica_read: bool = False,
+) -> None:
+    """
+    增量记忆抽取：仅使用指定 UTC 日消息生成 daily profile，再更新 user_common 画像。
+    """
+    cfg = getattr(
+        global_config_loaded_from_config_yaml,
+        "memory_extraction",
+        None,
+    )
+    if not cfg:
+        return
+
+    messages = await asyncio.to_thread(
+        get_messages_for_user_in_utc_day,
+        user_id,
+        target_date_utc,
+        prefer_replica_read,
+    )
+    msg_count = len(messages)
+    if msg_count == 0:
+        logger.debug(
+            f"记忆抽取增量跳过：user_id={user_id} target_date_utc={target_date_utc} 无消息"
+        )
+        return
+
+    chat_text = _format_chat_for_prompt(messages)
+    daily_prompt = _build_daily_profile_prompt(chat_text, target_date_utc)
+    start_time = time.perf_counter()
+    try:
+        llm_config = _memory_llm_config(cfg)
+        daily_analysis, daily_prompt_tokens, daily_completion_tokens = (
+            await _chat_completion_with_structured_fallback(
+                daily_prompt,
+                llm_config=llm_config,
+                response_format=DAILY_PROFILE_RESPONSE_FORMAT,
+                log_prefix=(
+                    "记忆抽取增量-日总结 "
+                    f"user_id={user_id} target_date_utc={target_date_utc}"
+                ),
+            )
+        )
+        if not daily_analysis or len(daily_analysis.strip()) < 10:
+            raise ValueError("Unable to extract daily profile from response")
+        daily_profile = _summary_field_from_content(
+            daily_analysis, field_name="daily_profile_summary", min_length=20
+        )
+        if not daily_profile or len(daily_profile.strip()) < 10:
+            raise ValueError("Daily profile summary is empty or too short")
+
+        previous_profile = await _latest_user_common_memory_content(db, user_id)
+        update_prompt = _build_incremental_update_prompt(
+            previous_profile, daily_profile, target_date_utc
+        )
+        full_analysis, update_prompt_tokens, update_completion_tokens = (
+            await _chat_completion_with_structured_fallback(
+                update_prompt,
+                llm_config=llm_config,
+                response_format=MEMORY_EXTRACTION_RESPONSE_FORMAT,
+                log_prefix=(
+                    "记忆抽取增量-画像更新 "
+                    f"user_id={user_id} target_date_utc={target_date_utc}"
+                ),
+            )
+        )
+        if not full_analysis or len(full_analysis.strip()) < 10:
+            raise ValueError("Unable to extract updated profile from response")
+        part1 = _part1_from_content(full_analysis)
+    except Exception as e:
+        logger.warning(
+            "记忆抽取增量 LLM 调用失败 "
+            f"user_id={user_id} target_date_utc={target_date_utc}: {e}"
+        )
+        duration_seconds = time.perf_counter() - start_time
+        log = MemoryExtractionLog(
+            user_id=user_id,
+            memory_type=MEMORY_TYPE_USER_COMMON,
+            extracted_at=datetime.now(timezone.utc),
+            messages_processed_count=msg_count,
+            memory_items_count=0,
+            status="failed",
+            duration_seconds=duration_seconds,
+            prompt_tokens=None,
+            completion_tokens=None,
+        )
+        db.add(log)
+        await db.commit()
+        return
+
+    duration_seconds = time.perf_counter() - start_time
+    extracted_at = datetime.now(timezone.utc)
+    await db.execute(
+        delete(Memory).where(
+            Memory.user_id == user_id,
+            Memory.memory_type == MEMORY_TYPE_USER_COMMON,
+            Memory.agent_id.is_(None),
+        )
+    )
+    db.add(
+        Memory(
+            user_id=user_id,
+            memory_type=MEMORY_TYPE_USER_COMMON,
+            agent_id=None,
+            content=part1,
+            extracted_at=extracted_at,
+        )
+    )
+    db.add(
+        MemoryExtractionLog(
+            user_id=user_id,
+            memory_type=MEMORY_TYPE_USER_COMMON,
+            extracted_at=extracted_at,
+            messages_processed_count=msg_count,
+            memory_items_count=1,
+            status="success",
+            duration_seconds=duration_seconds,
+            prompt_tokens=_sum_optional_int(
+                [daily_prompt_tokens, update_prompt_tokens]
+            ),
+            completion_tokens=_sum_optional_int(
+                [daily_completion_tokens, update_completion_tokens]
+            ),
+        )
+    )
+    await db.commit()
+    logger.debug(
+        "记忆抽取增量完成 "
+        f"user_id={user_id} target_date_utc={target_date_utc} messages={msg_count}"
+    )

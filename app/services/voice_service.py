@@ -38,6 +38,7 @@ from app.core.voice.tts_api import (
     is_gemini_voice,
     parse_voice_id,
     resolve_voice_message_narration_mode,
+    select_default_gemini_voice_for_imate_gender,
 )
 from app.external_services.gcs import (
     GCS_GS_PREFIX,
@@ -316,11 +317,16 @@ class VoiceService:
             is_gemini_voice(_voice_id_for_decision)
             and global_config_loaded_from_config_yaml.tts.use_gemini_prompted_tts
         )
+        use_gemini_then_elevenlabs_voice_changer = (
+            (not is_gemini_voice(_voice_id_for_decision))
+            and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
+        )
         voice_id = _voice_id_for_decision
 
-        # 清理文本内容，移除心理和动作描写（prompted Gemini 不清理，保留括号内舞台说明）
+        # 清理文本内容，移除心理和动作描写。
+        # Gemini 提示词链路与 Gemini->ElevenLabs 变声链路都需要保留原文。
         original_text = text
-        if not use_prompted_gemini:
+        if not (use_prompted_gemini or use_gemini_then_elevenlabs_voice_changer):
             logger.debug(f"清理文本: {text}")
             text = self._clean_text_for_voice(text)
 
@@ -359,6 +365,21 @@ class VoiceService:
                 provider_selected=provider_selected,
                 model_selected=model,
             )
+            gemini_source_model = None
+            if (
+                provider_selected == TTS_PROVIDER_ELEVENLABS
+                and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
+            ):
+                gemini_source_model, _ = await self._resolve_model_and_source(
+                    provider_selected=TTS_PROVIDER_GEMINI,
+                    requested_model=None,
+                    db=db,
+                    user=user,
+                )
+                self._validate_model_provider_match(
+                    provider_selected=TTS_PROVIDER_GEMINI,
+                    model_selected=gemini_source_model,
+                )
 
             logger.debug(
                 f"开始语音生成: voice_id={voice_id}, provider_selected={provider_selected}, "
@@ -419,11 +440,13 @@ class VoiceService:
             # 生成语音文件
             logger.debug("调用 TTS 生成接口（根据 voice_id 选择 Gemini 或 ElevenLabs）")
             audio_result = await self._call_tts_api(
-                text,
-                voice_id,
-                model,
-                language,
+                text=text,
+                voice_id=voice_id,
+                model=model,
+                language=language,
                 voice_message_narration_mode=narration_mode,
+                agent_gender=agent_gender,
+                gemini_source_model=gemini_source_model,
             )
             if not audio_result:
                 logger.error(
@@ -618,6 +641,8 @@ class VoiceService:
         model: str,
         language: str,
         voice_message_narration_mode: VoiceMessageNarrationMode = VoiceMessageNarrationMode.DIALOGUE_ONLY,
+        agent_gender: Optional[str] = None,
+        gemini_source_model: Optional[str] = None,
     ) -> Optional[Tuple[bytes, float, str, str]]:
         """
         调用 TTS 生成语音
@@ -655,6 +680,11 @@ class VoiceService:
                 output_format=self.config.output_format,
                 language_code=language,
                 voice_message_narration_mode=narration_mode,
+            )
+
+            use_voice_changer = (
+                (not use_gemini)
+                and global_config_loaded_from_config_yaml.tts.enable_gemini_tts_then_elevenlabs_voice_changer_for_imate
             )
 
             if use_gemini:
@@ -697,6 +727,49 @@ class VoiceService:
                     audio_bytes_fb, mime_type_fb = fallback_result
                     tts_result = TTSResult(audio_bytes=audio_bytes_fb, mime_type=mime_type_fb)
                     provider_used = TTS_PROVIDER_ELEVENLABS
+            elif use_voice_changer:
+                provider_used = TTS_PROVIDER_ELEVENLABS
+                source_voice_name = select_default_gemini_voice_for_imate_gender(
+                    agent_gender
+                )
+                source_model = (
+                    gemini_source_model
+                    or global_config_loaded_from_config_yaml.agent.free_user_chat_tts_model
+                )
+                gemini_source_req = TTSRequest(
+                    text=text,
+                    voice_id=f"{VOICE_ID_PREFIX_GEMINI}/{source_voice_name}",
+                    model_id=source_model,
+                    output_format=self.config.output_format,
+                    language_code=language,
+                )
+                source_audio = (
+                    await self.gemini_tts_api.synthesize_with_full_dialogue_prompt(
+                        gemini_source_req
+                    )
+                )
+                if source_audio is None:
+                    logger.error("Gemini full-dialogue TTS 返回空数据，无法进行 ElevenLabs 变声")
+                    self._set_trace_metadata(
+                        status="no_result",
+                        failure_reason="gemini_source_audio_empty_for_voice_changer",
+                    )
+                    return None
+
+                tts_result = await self.tts_api.convert_with_voice_changer(
+                    source_audio_bytes=source_audio.audio_bytes,
+                    source_mime_type=source_audio.mime_type,
+                    target_voice_id=voice_id,
+                    model_id=model,
+                    output_format=self.config.output_format,
+                )
+                if tts_result is None:
+                    logger.error("ElevenLabs voice changer 返回空数据")
+                    self._set_trace_metadata(
+                        status="no_result",
+                        failure_reason="elevenlabs_voice_changer_empty_response",
+                    )
+                    return None
             else:
                 provider_used = TTS_PROVIDER_ELEVENLABS
                 tts_result = await self.tts_api.synthesize(req)
@@ -723,6 +796,7 @@ class VoiceService:
                 provider_selected=provider_name,
                 provider_used=provider_used,
                 mime_type=mime_type,
+                voice_changer_enabled=use_voice_changer,
             )
             return (audio_data, duration, mime_type, provider_used)
 

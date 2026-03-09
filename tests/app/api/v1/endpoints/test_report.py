@@ -313,6 +313,44 @@ def test_create_feedback_with_reason_codes(integration_client, db_session, repor
     ), f"Feedback status should be PENDING, got {feedback.status}"
 
 
+def test_create_image_feedback_with_new_reason_codes(
+    integration_client, db_session, report_superuser
+):
+    """测试图片反馈可使用新增的图片质量 reason_codes。"""
+    feedback_payload = {
+        "target_id": "IMAGE_FEEDBACK_deadbeef",
+        "target_type": "USER",
+        "reason_codes": [
+            "IMAGE_LOW_QUALITY",
+            "IMAGE_CONTENT_MISMATCH",
+            "IMAGE_OTHER",
+        ],
+        "description": "[IMAGE_FEEDBACK][vote=dislike] image quality is too low",
+        "image_urls": ["https://cdn.example.com/chat_images/test.png"],
+        "report_type": "FEEDBACK",
+    }
+
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=feedback_payload,
+    )
+    assert response.status_code == 200, f"Image feedback creation failed: {response.text}"
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"Unexpected response: {response_data}"
+
+    reporter_id = _get_reporter_id(integration_client)
+    feedback = _find_feedback(db_session, reporter_id)
+    assert feedback is not None, "Image feedback not found in database"
+    assert feedback.target_id == "IMAGE_FEEDBACK_deadbeef"
+    assert feedback.target_type == "USER"
+    assert feedback.reason_codes == [
+        "IMAGE_LOW_QUALITY",
+        "IMAGE_CONTENT_MISMATCH",
+        "IMAGE_OTHER",
+    ]
+    assert feedback.report_type == ReportType.FEEDBACK
+
+
 def test_create_feedback_with_reason_ids(integration_client, db_session, report_superuser):
     """测试使用 reason_ids 创建反馈（向后兼容，旧 API）
 
@@ -549,6 +587,63 @@ def test_list_reports_includes_reporter_user_info(
     assert reporter_user_info["id"] == reporter_id
     assert reporter_user_info["nickname"] == "ReportDetailTester"
     assert reporter_user_info["email"] == "report-detail-tester@example.com"
+
+
+def test_list_reports_filters_by_target_id(
+    integration_client, db_session, report_superuser
+):
+    """验证举报列表支持按 target_id 过滤。"""
+    target_agent_id = integration_client.create_agent(
+        name="Target Agent For Target ID Filter",
+        visibility="PUBLIC",
+    )
+    other_agent_id = integration_client.create_agent(
+        name="Other Agent For Target ID Filter",
+        visibility="PUBLIC",
+    )
+
+    target_payload = {
+        "target_id": target_agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["SENSITIVE_CONTENT"],
+        "description": "Report for target_id filter test",
+        "image_urls": [],
+    }
+    other_payload = {
+        "target_id": other_agent_id,
+        "target_type": "AGENT",
+        "reason_codes": ["MISINFORMATION"],
+        "description": "Noise report for target_id filter test",
+        "image_urls": [],
+    }
+
+    target_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=target_payload,
+    )
+    assert target_resp.status_code == 200, target_resp.text
+    assert target_resp.json().get("code") == 200, target_resp.text
+
+    other_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=other_payload,
+    )
+    assert other_resp.status_code == 200, other_resp.text
+    assert other_resp.json().get("code") == 200, other_resp.text
+
+    list_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/report/",
+        params={
+            "target_id": target_agent_id,
+            "skip": 0,
+            "limit": 50,
+            "order_by": "created_at_desc",
+        },
+    )
+    assert list_resp.status_code == 200, list_resp.text
+    list_data = list_resp.json()
+    assert len(list_data["items"]) >= 1
+    assert all(item["target_id"] == target_agent_id for item in list_data["items"])
 
 
 def test_update_report_github_issue_success(

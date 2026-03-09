@@ -34,6 +34,8 @@ describe("generatedImageDetail", () => {
       image_url: "https://cdn.example.com/image.webp",
       meta_data: {
         user_id: "user-1",
+        langsmith_trace_id: "trace-123",
+        langsmith_trace_url: "https://smith.langchain.com/o/x/projects/p/y/r/trace-123",
         user_reference_image_url: "https://cdn.example.com/selfie.webp",
         generated_image: {
           image_url: "gs://bucket/image.webp",
@@ -71,6 +73,10 @@ describe("generatedImageDetail", () => {
     expect(detail.model).toBe("openai/gpt-image-1");
     expect(detail.generationTimeMs).toBe(2450);
     expect(detail.modelFallbackDueTo429).toBe(true);
+    expect(detail.langsmithTraceId).toBe("trace-123");
+    expect(detail.langsmithTraceUrl).toBe(
+      "https://smith.langchain.com/o/x/projects/p/y/r/trace-123",
+    );
   });
 
   it("falls back to synthesized metadata for generated image list item", () => {

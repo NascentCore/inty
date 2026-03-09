@@ -1311,7 +1311,18 @@ export const AgentManagePage: React.FC = () => {
               label="性别"
               rules={[{ required: true, message: "请选择性别" }]}
             >
-              <Radio.Group>
+              <Radio.Group
+                onChange={(e) => {
+                  form.setFieldValue("voice_id", undefined);
+                  if (isEdit && agentCopy) {
+                    setAgentCopy({
+                      ...agentCopy,
+                      gender: e.target.value,
+                      voice_id: undefined,
+                    });
+                  }
+                }}
+              >
                 <Radio value="MALE">男</Radio>
                 <Radio value="FEMALE">女</Radio>
                 <Radio value="OTHER">其他</Radio>
@@ -1494,12 +1505,19 @@ export const AgentManagePage: React.FC = () => {
         {/* 音色设置 */}
         <Divider>音色设置</Divider>
 
-        <Form.Item
-          name="voice_id"
-          label="角色音色"
-          tooltip="选择角色的语音音色，用于文字转语音功能"
-        >
-          <VoiceSelector placeholder="请选择角色音色（可选）" />
+        <Form.Item shouldUpdate={(prev, next) => prev.gender !== next.gender} noStyle>
+          {({ getFieldValue }) => (
+            <Form.Item
+              name="voice_id"
+              label="角色音色"
+              tooltip="选择角色的语音音色，用于文字转语音功能"
+            >
+              <VoiceSelector
+                placeholder="请选择角色音色（可选）"
+                imateGender={getFieldValue("gender")}
+              />
+            </Form.Item>
+          )}
         </Form.Item>
 
         {/* 评分设置 */}

@@ -50,6 +50,7 @@ from app.services.user_service import (
 )
 from app.utils.gemini import get_genai_client
 from app.utils.image import ImageFormat, ImageSize
+from app.utils.langsmith import get_current_trace_info
 from app.utils.models_catalog import (
     CHAT_IMAGE_FAL_IDS,
     CHAT_IMAGE_GEN_MODELS,
@@ -455,10 +456,9 @@ class ImageGenerationService:
     ) -> GeneratedImageProcessResult:
         if model_id == Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider:
             args = ZImageTurboImageToImageInput(
-                prompt=prompt,
                 image_url=reference_image_url,
-                strength=0.75,
-                num_images=1,
+                prompt=prompt,
+                # strength=0.6（官方推荐平衡性较好的数值、越大 strength 意味着会更按照提示词进行修改）num_images=1
             )
             return await z_image_turbo_image_to_image(args, gcs_uri_base=gcs_uri_base)
 
@@ -985,6 +985,7 @@ class ImageGenerationService:
 
         if user_id:
             try:
+                langsmith_trace_id, langsmith_trace_url = get_current_trace_info()
                 byte_size = result.raw_data_total_bytes
                 if byte_size <= 0 and isinstance(result.raw_data, bytes):
                     byte_size = len(result.raw_data)
@@ -1003,6 +1004,8 @@ class ImageGenerationService:
                     user_reference_image_url=prepared.user_photo_url,
                     agent_id=agent_id,
                     only_include_ai_character=prepared.user_photo_url is None,
+                    langsmith_trace_id=langsmith_trace_id,
+                    langsmith_trace_url=langsmith_trace_url,
                 )
                 logger.info("图片已保存到resources表: {}", gcs_uri)
             except Exception as e:

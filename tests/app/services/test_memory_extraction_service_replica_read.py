@@ -1,6 +1,7 @@
 import importlib
 import sys
 import types
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import psycopg
@@ -178,3 +179,26 @@ async def test_get_users_to_extract_passes_replica_read_url_to_sync_computation(
     called_args = mock_to_thread.await_args.args
     assert called_args[0] is service._compute_users_to_extract_sync
     assert called_args[-1] == "postgresql://replica-host:5432/inty"
+
+
+@pytest.mark.asyncio
+async def test_get_users_with_messages_in_utc_day_passes_replica_read_url():
+    db = AsyncMock()
+    target_day = date(2026, 3, 7)
+    with (
+        patch.object(
+            service,
+            "_resolve_sync_read_db_url",
+            return_value="postgresql://replica-host:5432/inty",
+        ),
+        patch.object(service.asyncio, "to_thread", AsyncMock(return_value=["user-1"])) as mock_to_thread,
+    ):
+        user_ids = await service.get_users_with_messages_in_utc_day(
+            db, target_day, prefer_replica_read=True
+        )
+
+    assert user_ids == ["user-1"]
+    called_args = mock_to_thread.await_args.args
+    assert called_args[0] is service._compute_users_with_messages_in_utc_day_sync
+    assert called_args[1] == target_day
+    assert called_args[2] == "postgresql://replica-host:5432/inty"

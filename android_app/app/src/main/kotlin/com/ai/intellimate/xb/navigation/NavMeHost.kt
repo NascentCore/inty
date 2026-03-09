@@ -71,12 +71,19 @@ fun NavGraphBuilder.meGraph(
                     ?.remove<String>(Routes.Me.ReportInitialEvidenceImageUrlKey)
                     .orEmpty()
             }
+        val imageFeedbackVote =
+            remember(backStackEntry) {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.remove<String>(Routes.Me.ReportImageFeedbackVoteKey)
+            }
         ReportPage(
             navController = navController,
             isFeedbackModel = isFeedback ?: false,
             targetType = targetType ?: "USER",
             targetId = targetId ?: "",
             initialEvidenceImageUrl = initialEvidenceImageUrl,
+            imageFeedbackVote = imageFeedbackVote,
         )
     }
 

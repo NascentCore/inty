@@ -28,6 +28,7 @@ router = APIRouter(prefix="/report", route_class=LoggerRoute)
 @router.get("/", response_model=ReportsList, tags=[WEB_APP_TAG])
 async def list_reports(
     target_type: Optional[TargetType] = None,
+    target_id: Optional[str] = None,
     status: Optional[ReportStatus] = None,
     report_type: Optional[ReportType] = None,
     order_by: Optional[str] = "created_at_desc",
@@ -39,6 +40,7 @@ async def list_reports(
     """查询 Report/Feedback 列表，支持按创建时间排序（order_by: created_at_desc 或 created_at_asc）"""
     query = ReportQuery(
         target_type=target_type,
+        target_id=target_id,
         status=status,
         report_type=report_type,
         order_by=order_by,

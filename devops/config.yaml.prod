@@ -65,6 +65,7 @@ agent:
   # LangSmith try@sxwl.ai IntelliMate-prod project, inty-prod API key 名字
   langchain_api_key: "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"
   force_default_prompts: false
+  free_user_chat_model: "DeepSeek V3.2"
   # 消息生图模型配置：prod 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
   # free_user_chat_image_model: "Nano Banana" # 效果更好，但是相对鸡肋：审核严导致成功率低、速度比 z-image 慢很多
   free_user_chat_image_model: "Z Image Turbo Image to Image" # 示例效果：https://github.com/user-attachments/assets/8fb4df85-4469-4bb1-aefc-68f43eb7bc34

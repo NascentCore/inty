@@ -55,6 +55,12 @@ import {
   formatUtcTimeRaw,
   getCurrentUtcTime,
 } from "../utils/dateUtils";
+import {
+  IMAGE_FEEDBACK_PROMPT_LAST_DATE_KEY,
+  shouldShowImageFeedbackPrompt,
+  toLocalCalendarDateKey,
+} from "../utils/imageFeedbackPromptGate";
+import { buildImageFeedbackTargetId } from "../utils/imageFeedbackReport";
 
 const { Content } = Layout;
 const { Text, Paragraph } = Typography;
@@ -102,6 +108,11 @@ interface ChatMessage {
   };
 }
 
+interface PendingImageFeedback {
+  imageUrl: string;
+  vote: "like" | "dislike";
+}
+
 export const ChatPage: React.FC = () => {
   // 状态管理
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
@@ -117,6 +128,11 @@ export const ChatPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<Map<string, string>>(
     new Map(),
   );
+  const [pendingImageFeedback, setPendingImageFeedback] =
+    useState<PendingImageFeedback | null>(null);
+  const [imageFeedbackFormVisible, setImageFeedbackFormVisible] = useState(false);
+  const [imageFeedbackText, setImageFeedbackText] = useState("");
+  const [submittingImageFeedback, setSubmittingImageFeedback] = useState(false);
   const [festivalMemoryModalOpen, setFestivalMemoryModalOpen] = useState(false);
   const [agentWithFestivalMemories, setAgentWithFestivalMemories] =
     useState<Agent | null>(null);
@@ -351,6 +367,69 @@ export const ChatPage: React.FC = () => {
   }, [loadChatHistory]);
 
   // 处理消息投票（点赞/点踩）
+  const maybePromptImageFeedback = useCallback(
+    (msg: ChatMessage, vote: "like" | "dislike" | null) => {
+      if (vote === null) {
+        return;
+      }
+      const imageUrl = msg.meta_data?.generated_image?.image_url;
+      if (!imageUrl) {
+        return;
+      }
+      const now = new Date();
+      const lastShownDate = localStorage.getItem(
+        IMAGE_FEEDBACK_PROMPT_LAST_DATE_KEY,
+      );
+      if (!shouldShowImageFeedbackPrompt(lastShownDate, now)) {
+        return;
+      }
+      localStorage.setItem(
+        IMAGE_FEEDBACK_PROMPT_LAST_DATE_KEY,
+        toLocalCalendarDateKey(now),
+      );
+      Modal.confirm({
+        title: "请给这张图片一点反馈",
+        content: "每天最多弹一次。点击“去反馈”后会自动带上图片 URL。",
+        okText: "去反馈",
+        cancelText: "暂不反馈",
+        onOk: () => {
+          setPendingImageFeedback({ imageUrl, vote });
+          setImageFeedbackText("");
+          setImageFeedbackFormVisible(true);
+        },
+      });
+    },
+    [],
+  );
+
+  const handleSubmitImageFeedback = useCallback(async () => {
+    if (!pendingImageFeedback) {
+      return;
+    }
+    setSubmittingImageFeedback(true);
+    try {
+      const trimmedFeedbackText = imageFeedbackText.trim();
+      const description = `[IMAGE_FEEDBACK][vote=${pendingImageFeedback.vote}] ${trimmedFeedbackText}`.trim();
+      await api.report.create({
+        target_id: buildImageFeedbackTargetId(pendingImageFeedback.imageUrl),
+        target_type: "USER",
+        reason_codes: ["OTHER"],
+        image_urls: [pendingImageFeedback.imageUrl],
+        description,
+        report_type: "FEEDBACK",
+      });
+      message.success("图片反馈已提交");
+      setImageFeedbackFormVisible(false);
+      setPendingImageFeedback(null);
+      setImageFeedbackText("");
+    } catch (error) {
+      console.error("提交图片反馈失败:", error);
+      message.error("提交失败，请稍后重试");
+    } finally {
+      setSubmittingImageFeedback(false);
+    }
+  }, [imageFeedbackText, pendingImageFeedback]);
+
   const handleMessageVote = useCallback(
     async (msg: ChatMessage, newVote: "like" | "dislike" | null) => {
       if (!selectedAgent?.id || !msg.remoteId) {
@@ -435,6 +514,7 @@ export const ChatPage: React.FC = () => {
               ? "已点赞"
               : "已点踩",
         );
+        maybePromptImageFeedback(msg, finalVote);
       } catch (error) {
         console.error("更新投票失败:", error, {
           messageId: msg.remoteId,
@@ -459,7 +539,7 @@ export const ChatPage: React.FC = () => {
         message.error("更新投票失败，请重试");
       }
     },
-    [selectedAgent?.id],
+    [maybePromptImageFeedback, selectedAgent?.id],
   );
 
   const [unlockingSurpriseSnapId, setUnlockingSurpriseSnapId] = useState<
@@ -2327,6 +2407,47 @@ export const ChatPage: React.FC = () => {
                 <Empty description="暂无节日记忆" />
               )}
             </div>
+          )}
+        </Modal>
+
+        <Modal
+          title="图片反馈表单"
+          open={imageFeedbackFormVisible}
+          onCancel={() => {
+            if (submittingImageFeedback) {
+              return;
+            }
+            setImageFeedbackFormVisible(false);
+            setPendingImageFeedback(null);
+            setImageFeedbackText("");
+          }}
+          onOk={handleSubmitImageFeedback}
+          okText="提交反馈"
+          cancelText="取消"
+          confirmLoading={submittingImageFeedback}
+        >
+          {pendingImageFeedback && (
+            <Space direction="vertical" style={{ width: "100%" }} size={12}>
+              <div style={{ color: "#666", fontSize: 13 }}>
+                已自动记录图片 URL，你可以补充文字反馈。
+              </div>
+              <Image
+                src={pendingImageFeedback.imageUrl}
+                alt="反馈图片"
+                style={{ maxWidth: 280, borderRadius: 8 }}
+              />
+              <Input value={pendingImageFeedback.imageUrl} readOnly />
+              <Tag color={pendingImageFeedback.vote === "like" ? "green" : "red"}>
+                {pendingImageFeedback.vote === "like" ? "点赞反馈" : "点踩反馈"}
+              </Tag>
+              <TextArea
+                value={imageFeedbackText}
+                onChange={(event) => setImageFeedbackText(event.target.value)}
+                placeholder="请补充你对这张图的看法（可选）"
+                autoSize={{ minRows: 3, maxRows: 6 }}
+                maxLength={500}
+              />
+            </Space>
           )}
         </Modal>
       </Content>

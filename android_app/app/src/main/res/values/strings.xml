@@ -235,6 +235,11 @@
     <string name="feedback_reason_ui_inconvenient">UI or interaction feels inconvenient</string>
     <string name="feedback_reason_new_feature">Suggest a new feature or improvement</string>
     <string name="feedback_reason_other">Other, please describe below</string>
+    <string name="feedback_reason_image_low_quality">Low image quality (low definition, poor details, etc.)</string>
+    <string name="feedback_reason_image_style_mismatch">Artistic style not matching the reference image</string>
+    <string name="feedback_reason_image_content_mismatch">Image does not match my expectation</string>
+    <string name="feedback_reason_image_anatomy_or_structure_error">Body distortion, weird posture, AI glitches, etc.</string>
+    <string name="feedback_reason_image_other">Other, please write in the details</string>
     <string name="feedback_description">Feedback description</string>
     <string name="feedback_description_placeholder">Please describe your experience or suggestions…</string>
     <string name="toast_feedback_submitted">Thanks for helping improve the experience.</string>
@@ -741,6 +746,7 @@
     <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
     <string name="heartbeat_empty">No Love Journal yet</string>
     <string name="my_own_imates">My own iMates</string>
+    <string name="crop_portrait">Crop Portrait</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A voice that stays</item>

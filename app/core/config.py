@@ -44,18 +44,20 @@ logger.debug(
 _validate_config(global_config_loaded_from_config_yaml)
 
 
-# 设置 LangSmith 环境变量用于支持 tracing，因为其只支持从环境变量读取设置，而非依赖注入。
-os.environ["LANGSMITH_TRACING_V2"] = "true"
-os.environ["LANGSMITH_PROJECT"] = (
-    f"{global_config_loaded_from_config_yaml.app.name}-{global_config_loaded_from_config_yaml.app.environment.value}"
-)
-os.environ["LANGCHAIN_API_KEY"] = (
-    global_config_loaded_from_config_yaml.agent.langchain_api_key
-)
-logger.debug(f"Setting LangSmith environment variables for project: ")
-logger.debug(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
-logger.debug(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
-logger.debug(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")
+def set_langsmith_environment_variables(config: Config) -> None:
+    # LangSmith 仅支持通过环境变量控制 tracing，不支持依赖注入。
+    langsmith_project = f"{config.app.name}-{config.app.environment.value}"
+    tracing_enabled = config.app.environment != Environment.TEST
+    os.environ["LANGSMITH_TRACING_V2"] = "true" if tracing_enabled else "false"
+    os.environ["LANGSMITH_PROJECT"] = langsmith_project
+    os.environ["LANGCHAIN_API_KEY"] = config.agent.langchain_api_key
+    logger.debug("Setting LangSmith environment variables")
+    logger.debug(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
+    logger.debug(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
+    logger.debug(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")
+
+
+set_langsmith_environment_variables(global_config_loaded_from_config_yaml)
 
 os.environ["FAL_KEY"] = global_config_loaded_from_config_yaml.fal.api_key
 logger.debug(f"fal_client 读取环境变量：Setting FAL_KEY environment variable: {os.getenv('FAL_KEY')}")
