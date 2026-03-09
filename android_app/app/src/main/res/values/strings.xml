@@ -741,6 +741,7 @@
     <string name="heartbeat_subtitle_from_agent">%1$d Love Journals from %2$s about you</string>
     <string name="heartbeat_empty">No Love Journal yet</string>
     <string name="my_own_imates">My own iMates</string>
+    <string name="crop_portrait">Crop Portrait</string>
     <string-array name="login_banner_text">
         <item>A friend to spill to</item>
         <item>A voice that stays</item>
