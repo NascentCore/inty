@@ -1,6 +1,5 @@
 package com.ai.intellimate.ui.components
 
-import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.data.api.model.UserProfile
 import ai.sxwl.android.design.noRippleClickable
@@ -40,7 +39,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -95,7 +93,6 @@ fun ProfileInfoScreen(
     onClickAppearance: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val hasUserPhoto = !userProfile.userPhoto.isNullOrBlank()
 
     Scaffold(
         modifier = Modifier.background(HeartColor.primaryColor),
@@ -109,43 +106,7 @@ fun ProfileInfoScreen(
             )
         },
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            // 背景图片区域
-            if (hasUserPhoto) {
-                // 有用户照片时，显示用户照片作为背景
-                val photoUrl = getCdnImageUrl(userProfile.userPhoto, width = 1024)
-                AsyncImage(
-                    modifier = Modifier.fillMaxSize(),
-                    model = ImageRequest.Builder(context).data(photoUrl).build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter,
-                    placeholder = painterResource(R.drawable.img_profile_header_bg),
-                    error = painterResource(R.drawable.img_profile_header_bg),
-                )
-
-                // 渐变遮罩，确保内容可读性
-                Box(
-                    modifier =
-                        Modifier.matchParentSize()
-                            .background(
-                                brush =
-                                    Brush.verticalGradient(
-                                        colors =
-                                            listOf(
-                                                HeartColor.primaryColor.copy(alpha = 0.0f),
-                                                HeartColor.primaryColor.copy(alpha = 0.3f),
-                                                HeartColor.primaryColor.copy(alpha = 0.6f),
-                                                HeartColor.primaryColor.copy(alpha = 0.9f),
-                                            )
-                                    )
-                            )
-                )
-            } else {
-                // 没有用户照片时，保持现状（显示纯色背景）
-                Box(modifier = Modifier.matchParentSize().background(HeartColor.primaryColor))
-            }
-
+        Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
             Column(
                 modifier = Modifier.padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
