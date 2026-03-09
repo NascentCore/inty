@@ -29,7 +29,7 @@
 - **范围**：暂不接入 Android，仅验证“从被动到主动”的逻辑转移。
 - **目标**：识别“状态切换 + 主动时机”的未知点与不确定性。
 
-- **工具**：当前支持 `send_app_icon`、`send_zun_long_photo`、`send_selfie_photo`、`generate_image`、`text_to_speech`、`live_voice_message_reply`、`erotic_scene_generate`。`generate_image` 根据**当前对话上下文**（最近 10 条消息）生成图片，调用 Imagen 4 Fast（Gemini API），执行后会再调用 LLM 输出文字以配合图片；`text_to_speech` 将 LLM 返回的文本转为语音（Gemini TTS），生成 WAV 文件，适合精确朗读给定句子；`live_voice_message_reply` 使用 Gemini Live API，带系统指令与最近 10 条消息上下文，生成更自然、对话式的短语音消息（类似微信语音消息，点击播放），与 TTS 对比用于验证 Live 语音能力；`erotic_scene_generate` 在对话暗示用户亢奋或用户明确要求亲密/色情场景时，根据最近对话生成连续多段**文字** scene 描述，仅文字、不生成图片，无需用户输入 continue。上述 Gemini 相关工具均需在 `.env` 中配置 `GEMINI_API_KEY`。REPL 中打印图片或语音的绝对路径，用户可在终端中点击路径自行打开查看或播放。
+- **工具**：当前支持 `send_app_icon`、`send_zun_long_photo`、`send_selfie_photo`、`generate_image`、`text_to_speech`、`live_voice_message_reply`、`erotic_scene_generate`。`generate_image` 已按 `app/` 聊天生图思路实现：基于最近 10 条对话构建 chat-to-image 提示词，并优先使用 `companion_profile` 与 `user_profile` 的参考图（可被工具参数覆盖）生成 intimacy role-play 场景图；若生成失败会尝试按提示词相似度复用历史已生成图片兜底。执行后仍会再调用 LLM 输出文字以配合图片。`text_to_speech` 将 LLM 返回的文本转为语音（Gemini TTS），生成 WAV 文件，适合精确朗读给定句子；`live_voice_message_reply` 使用 Gemini Live API，带系统指令与最近 10 条消息上下文，生成更自然、对话式的短语音消息（类似微信语音消息，点击播放），与 TTS 对比用于验证 Live 语音能力；`erotic_scene_generate` 在对话暗示用户亢奋或用户明确要求亲密/色情场景时，根据最近对话生成连续多段**文字** scene 描述，仅文字、不生成图片，无需用户输入 continue。上述 Gemini 相关工具均需在 `.env` 中配置 `GEMINI_API_KEY`。REPL 中打印图片或语音的绝对路径，用户可在终端中点击路径自行打开查看或播放。
 
 ## 快速开始
 
