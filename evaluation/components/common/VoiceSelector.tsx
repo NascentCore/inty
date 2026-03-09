@@ -32,8 +32,8 @@ import type { Voice } from "../../types";
 import {
   filterVoicesByGender,
   getVoiceGenderStats,
+  getNormalizedVoiceGender,
   mapImateGenderToVoiceGenderFilter,
-  normalizeVoiceGender,
   type VoiceGenderFilter,
 } from "../../utils/voiceFilters";
 import VoicePreviewPlayer from "./VoicePreviewPlayer";
@@ -246,7 +246,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     if (requiredGenderFilter === "all") {
       return;
     }
-    if (normalizeVoiceGender(selectedVoiceInfo.gender) !== requiredGenderFilter) {
+    const selectedVoiceGender = getNormalizedVoiceGender(selectedVoiceInfo);
+    if (
+      selectedVoiceGender !== requiredGenderFilter &&
+      selectedVoiceGender !== "unknown"
+    ) {
       message.warning("当前音色与角色性别不匹配，已自动清除，请重新选择");
       onChange?.(undefined);
       setSelectedVoiceInfo(null);
@@ -326,7 +330,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   // 音色卡片组件
   const VoiceCard: React.FC<{ voice: Voice }> = ({ voice }) => {
     const isSelected = value === voice.voice_id;
-    const normalizedGender = normalizeVoiceGender(voice.gender);
+    const normalizedGender = getNormalizedVoiceGender(voice);
 
     return (
       <Card

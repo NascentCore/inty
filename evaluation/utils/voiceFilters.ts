@@ -18,6 +18,19 @@ export const normalizeVoiceGender = (gender?: string): NormalizedVoiceGender => 
   return "unknown";
 };
 
+const getVoiceGenderFromLabels = (
+  labels?: Record<string, string>,
+): string | undefined => {
+  if (!labels) {
+    return undefined;
+  }
+  return labels.gender ?? labels.Gender ?? labels.sex ?? labels.Sex;
+};
+
+export const getNormalizedVoiceGender = (voice: Voice): NormalizedVoiceGender => {
+  return normalizeVoiceGender(voice.gender ?? getVoiceGenderFromLabels(voice.labels));
+};
+
 export const mapImateGenderToVoiceGenderFilter = (
   imateGender?: string,
 ): VoiceGenderFilter => {
@@ -41,9 +54,17 @@ export const filterVoicesByGender = (
   if (genderFilter === "all") {
     return voices;
   }
-  return voices.filter(
-    (voice) => normalizeVoiceGender(voice.gender) === genderFilter,
+
+  const strictlyMatchedVoices = voices.filter(
+    (voice) => getNormalizedVoiceGender(voice) === genderFilter,
   );
+  if (strictlyMatchedVoices.length > 0 || genderFilter === "unknown") {
+    return strictlyMatchedVoices;
+  }
+
+  // ElevenLabs 音色常存在缺失性别标签的情况：
+  // 当 male/female 严格匹配为空时，回退到 unknown，避免“有音色但列表全空”。
+  return voices.filter((voice) => getNormalizedVoiceGender(voice) === "unknown");
 };
 
 export const getVoiceGenderStats = (voices: Voice[]) => {
@@ -53,7 +74,7 @@ export const getVoiceGenderStats = (voices: Voice[]) => {
     unknown: 0,
   };
   voices.forEach((voice) => {
-    stats[normalizeVoiceGender(voice.gender)] += 1;
+    stats[getNormalizedVoiceGender(voice)] += 1;
   });
 
   return {
