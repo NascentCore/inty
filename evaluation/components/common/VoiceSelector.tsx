@@ -3,7 +3,7 @@
  * 用于在角色创建/编辑时选择音色
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   Card,
   Input,
@@ -32,6 +32,7 @@ import type { Voice } from "../../types";
 import {
   filterVoicesByGender,
   getVoiceGenderStats,
+  mapImateGenderToVoiceGenderFilter,
   normalizeVoiceGender,
   type VoiceGenderFilter,
 } from "../../utils/voiceFilters";
@@ -45,24 +46,33 @@ interface VoiceSelectorProps {
   onChange?: (voiceId: string | undefined) => void;
   disabled?: boolean;
   placeholder?: string;
+  imateGender?: string;
 }
 
 export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   value,
   onChange,
   disabled = false,
+  imateGender,
 }) => {
+  const requiredGenderFilter = useMemo(
+    () => mapImateGenderToVoiceGenderFilter(imateGender),
+    [imateGender],
+  );
   // 状态管理
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [providerFilter, setProviderFilter] = useState<string>("all");
-  const [genderFilter, setGenderFilter] = useState<VoiceGenderFilter>("all");
+  const [genderFilter, setGenderFilter] = useState<VoiceGenderFilter>(
+    requiredGenderFilter,
+  );
   const [expanded, setExpanded] = useState(false);
   const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(
     null,
   );
+  const latestLoadRequestIdRef = useRef(0);
 
   // 加载音色列表
   const loadVoices = useCallback(
@@ -73,6 +83,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       provider = "all",
       gender: VoiceGenderFilter = "all",
     ) => {
+      const requestId = ++latestLoadRequestIdRef.current;
       setLoading(true);
       try {
         const params: { search?: string; provider?: string } = {
@@ -99,17 +110,26 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
         filteredVoices = filterVoicesByGender(filteredVoices, gender);
 
+        if (requestId !== latestLoadRequestIdRef.current) {
+          return;
+        }
+
         setVoices(filteredVoices);
 
         if (forceRefresh) {
           message.success("音色列表已刷新");
         }
       } catch (error) {
+        if (requestId !== latestLoadRequestIdRef.current) {
+          return;
+        }
         console.error("加载音色列表失败:", error);
         message.error("加载音色列表失败");
         setVoices([]);
       } finally {
-        setLoading(false);
+        if (requestId === latestLoadRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [],
@@ -193,8 +213,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
   // 初始加载
   useEffect(() => {
-    loadVoices(false, "", "all", "all", "all");
-  }, [loadVoices]);
+    loadVoices(false, "", "all", "all", requiredGenderFilter);
+  }, [loadVoices, requiredGenderFilter]);
+
+  useEffect(() => {
+    setGenderFilter(requiredGenderFilter);
+  }, [requiredGenderFilter]);
 
   // 当 value 变化时，立即显示基本信息并异步加载详细信息
   useEffect(() => {
@@ -214,6 +238,20 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       setSelectedVoiceInfo(null);
     }
   }, [value, loadVoiceById]);
+
+  useEffect(() => {
+    if (!value || !selectedVoiceInfo || selectedVoiceInfo.voice_id !== value) {
+      return;
+    }
+    if (requiredGenderFilter === "all") {
+      return;
+    }
+    if (normalizeVoiceGender(selectedVoiceInfo.gender) !== requiredGenderFilter) {
+      message.warning("当前音色与角色性别不匹配，已自动清除，请重新选择");
+      onChange?.(undefined);
+      setSelectedVoiceInfo(null);
+    }
+  }, [value, selectedVoiceInfo, requiredGenderFilter, onChange]);
 
   // 搜索和筛选变化时的防抖处理
   useEffect(() => {
@@ -545,7 +583,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               style={{ width: "100%" }}
               value={genderFilter}
               onChange={setGenderFilter}
-              disabled={disabled}
+              disabled={disabled || requiredGenderFilter !== "all"}
             >
               <Option value="all">全部性别 ({voiceStats.total})</Option>
               <Option value="male">男 ({voiceStats.male})</Option>
@@ -582,6 +620,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             </Space>
           </Col>
         </Row>
+        {requiredGenderFilter !== "all" && (
+          <div style={{ marginTop: 8, fontSize: "12px", color: "#666" }}>
+            音色已按角色性别自动筛选，仅显示匹配音色
+          </div>
+        )}
       </div>
 
       {/* 音色列表 */}
