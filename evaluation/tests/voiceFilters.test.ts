@@ -5,16 +5,22 @@ import { describe, expect, it } from "vitest";
 import type { Voice } from "../types";
 import {
   filterVoicesByGender,
+  getNormalizedVoiceGender,
   getVoiceGenderStats,
   mapImateGenderToVoiceGenderFilter,
   normalizeVoiceGender,
 } from "../utils/voiceFilters";
 
-const buildVoice = (voiceId: string, gender?: string): Voice =>
+const buildVoice = (
+  voiceId: string,
+  gender?: string,
+  labels?: Record<string, string>,
+): Voice =>
   ({
     voice_id: voiceId,
     name: voiceId,
     gender,
+    labels,
   }) as Voice;
 
 describe("voiceFilters", () => {
@@ -43,6 +49,25 @@ describe("voiceFilters", () => {
     expect(
       filterVoicesByGender(voices, "unknown").map((voice) => voice.voice_id),
     ).toEqual(["v-unknown"]);
+  });
+
+  it("uses labels.gender when top-level gender is missing", () => {
+    const voices = [
+      buildVoice("v-el-female", undefined, { gender: "female" }),
+      buildVoice("v-el-male", undefined, { gender: "male" }),
+      buildVoice("v-el-unknown", undefined, { age: "young" }),
+    ];
+
+    expect(getNormalizedVoiceGender(voices[0])).toBe("female");
+    expect(getNormalizedVoiceGender(voices[1])).toBe("male");
+    expect(getNormalizedVoiceGender(voices[2])).toBe("unknown");
+
+    expect(
+      filterVoicesByGender(voices, "female").map((voice) => voice.voice_id),
+    ).toEqual(["v-el-female"]);
+    expect(filterVoicesByGender(voices, "male").map((voice) => voice.voice_id)).toEqual(
+      ["v-el-male"],
+    );
   });
 
   it("maps iMate gender to voice gender filter", () => {

@@ -18,6 +18,19 @@ export const normalizeVoiceGender = (gender?: string): NormalizedVoiceGender => 
   return "unknown";
 };
 
+const getVoiceGenderFromLabels = (
+  labels?: Record<string, string>,
+): string | undefined => {
+  if (!labels) {
+    return undefined;
+  }
+  return labels.gender ?? labels.Gender ?? labels.sex ?? labels.Sex;
+};
+
+export const getNormalizedVoiceGender = (voice: Voice): NormalizedVoiceGender => {
+  return normalizeVoiceGender(voice.gender ?? getVoiceGenderFromLabels(voice.labels));
+};
+
 export const mapImateGenderToVoiceGenderFilter = (
   imateGender?: string,
 ): VoiceGenderFilter => {
@@ -41,9 +54,7 @@ export const filterVoicesByGender = (
   if (genderFilter === "all") {
     return voices;
   }
-  return voices.filter(
-    (voice) => normalizeVoiceGender(voice.gender) === genderFilter,
-  );
+  return voices.filter((voice) => getNormalizedVoiceGender(voice) === genderFilter);
 };
 
 export const getVoiceGenderStats = (voices: Voice[]) => {
@@ -53,7 +64,7 @@ export const getVoiceGenderStats = (voices: Voice[]) => {
     unknown: 0,
   };
   voices.forEach((voice) => {
-    stats[normalizeVoiceGender(voice.gender)] += 1;
+    stats[getNormalizedVoiceGender(voice)] += 1;
   });
 
   return {
