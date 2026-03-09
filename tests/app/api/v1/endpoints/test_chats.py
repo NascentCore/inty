@@ -10,6 +10,7 @@ from sqlalchemy.exc import MissingGreenlet
 
 from app.api import deps
 from app.api.v1.endpoints import chats as chats_v1
+from app.core.voice.tts_api import VoiceMessageNarrationMode
 from app.models.user import AuthType
 from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
@@ -156,8 +157,10 @@ def test_generate_message_voice_limit_reached_for_signed_in_user(
 def test_generate_message_voice_success_includes_gcs_urls(
     monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
 ):
+    captured = {}
+
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"voice_id": "google/Zephyr", "gender": "FEMALE"}
+        return {"voice_id": "google/Zephyr", "gender": "FEMALE", "settings": {}}
 
     async def fake_get_chat_by_user_and_agent(db, user_id, agent_id):
         return SimpleNamespace(id="chat-1", agent_id=agent_id)
@@ -166,6 +169,9 @@ def test_generate_message_voice_success_includes_gcs_urls(
         return "hello"
 
     async def fake_generate_voice(*args, **kwargs):
+        captured["voice_message_narration_mode"] = kwargs.get(
+            "voice_message_narration_mode"
+        )
         return VoiceGenerationResult(
             gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
             gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
@@ -221,6 +227,10 @@ def test_generate_message_voice_success_includes_gcs_urls(
         == "https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav"
     )
     assert body["data"]["audio_duration"] == 1.23
+    assert (
+        captured["voice_message_narration_mode"]
+        == VoiceMessageNarrationMode.DIALOGUE_ONLY
+    )
 
 
 def test_generate_message_voice_prefers_chat_settings_voice_id(
@@ -229,7 +239,13 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
     captured = {}
 
     async def fake_get_agent_for_chat(db, agent_id):
-        return {"voice_id": "google/Puck", "gender": "FEMALE"}
+        return {
+            "voice_id": "google/Puck",
+            "gender": "FEMALE",
+            "settings": {
+                "voice_message_narration_mode": "dialogue_and_stage_directions"
+            },
+        }
 
     async def fake_get_chat_by_user_and_agent(db, user_id, agent_id):
         return SimpleNamespace(
@@ -243,6 +259,9 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
 
     async def fake_generate_voice(*args, **kwargs):
         captured["voice_id"] = kwargs.get("voice_id")
+        captured["voice_message_narration_mode"] = kwargs.get(
+            "voice_message_narration_mode"
+        )
         return VoiceGenerationResult(
             gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
             gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
@@ -289,6 +308,10 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
     assert response.status_code == 200
     assert body["code"] == 200
     assert captured["voice_id"] == "google/Zephyr"
+    assert (
+        captured["voice_message_narration_mode"]
+        == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS
+    )
     assert body["data"]["voice_id"] == "google/Zephyr"
 
 

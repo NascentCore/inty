@@ -38,7 +38,11 @@ from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
-from app.services.voice_service import GENDER_VOICE_MAPPING, VoiceService
+from app.services.voice_service import (
+    GENDER_VOICE_MAPPING,
+    VoiceService,
+    get_voice_message_narration_mode_from_agent_settings,
+)
 from app.utils.crop_avatar import CROPPED_AVATAR_FILENAME_SUFFIX, crop_avatar
 from app.utils.image import ImageFormat, ImageSize, get_jpg_bytes_from_pil_image
 
@@ -118,10 +122,15 @@ async def generate_agent_opening_voice(
         )
 
         voice_service = VoiceService()
+        voice_message_narration_mode = get_voice_message_narration_mode_from_agent_settings(
+            agent.settings
+        )
 
         # 生成开场白语音
         voice_result = await voice_service.generate_voice(
-            text=opening, voice_id=voice_id_to_use
+            text=opening,
+            voice_id=voice_id_to_use,
+            voice_message_narration_mode=voice_message_narration_mode,
         )
 
         if not voice_result:

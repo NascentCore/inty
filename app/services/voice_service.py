@@ -28,13 +28,16 @@ from app.core.voice.tts_api import (
     TTS_PROVIDER_GEMINI,
     VOICE_ID_PREFIX_ELEVENLABS,
     VOICE_ID_PREFIX_GEMINI,
+    VOICE_MESSAGE_NARRATION_MODE_SETTINGS_KEY,
     ElevenLabsTTSAPI,
     GeminiTTSAPI,
     TTSRequest,
     TTSResult,
+    VoiceMessageNarrationMode,
     get_gemini_voices,
     is_gemini_voice,
     parse_voice_id,
+    resolve_voice_message_narration_mode,
     select_default_gemini_voice_for_imate_gender,
 )
 from app.external_services.gcs import (
@@ -54,6 +57,18 @@ GENDER_VOICE_MAPPING = {
 TTS_MODEL_SOURCE_EXPLICIT = "explicit"
 TTS_MODEL_SOURCE_CONFIG = "config"
 TTS_MODEL_SOURCE_SUBSCRIPTION = "subscription"
+
+
+def get_voice_message_narration_mode_from_agent_settings(
+    agent_settings: Any,
+) -> VoiceMessageNarrationMode:
+    if isinstance(agent_settings, dict):
+        raw_mode = agent_settings.get(VOICE_MESSAGE_NARRATION_MODE_SETTINGS_KEY)
+        if raw_mode is not None:
+            return resolve_voice_message_narration_mode(raw_mode)
+    return resolve_voice_message_narration_mode(
+        global_config_loaded_from_config_yaml.tts.voice_message_narration_mode
+    )
 
 
 @dataclass(frozen=True)
@@ -240,6 +255,7 @@ class VoiceService:
         db: Optional[AsyncSession] = None,
         agent_gender: Optional[str] = None,
         user: Optional[Any] = None,
+        voice_message_narration_mode: Optional[Any] = None,
     ) -> Optional[VoiceGenerationResult]:
         """
         生成语音并上传到GCS
@@ -256,6 +272,10 @@ class VoiceService:
         Returns:
             语音文件 URL 结果（含 gs:// 与 https:// URL 及音频时长），失败返回 None
         """
+        narration_mode = resolve_voice_message_narration_mode(
+            voice_message_narration_mode
+        )
+
         if not self.config.enabled:
             logger.warning("ElevenLabs语音生成已禁用")
             return self._trace_and_return_none("tts_disabled")
@@ -424,6 +444,7 @@ class VoiceService:
                 voice_id=voice_id,
                 model=model,
                 language=language,
+                voice_message_narration_mode=narration_mode,
                 agent_gender=agent_gender,
                 gemini_source_model=gemini_source_model,
             )
@@ -615,13 +636,13 @@ class VoiceService:
     )
     async def _call_tts_api(
         self,
-        *,
         text: str,
         voice_id: str,
         model: str,
         language: str,
-        agent_gender: Optional[str],
-        gemini_source_model: Optional[str],
+        voice_message_narration_mode: VoiceMessageNarrationMode = VoiceMessageNarrationMode.DIALOGUE_ONLY,
+        agent_gender: Optional[str] = None,
+        gemini_source_model: Optional[str] = None,
     ) -> Optional[Tuple[bytes, float, str, str]]:
         """
         调用 TTS 生成语音
@@ -634,6 +655,9 @@ class VoiceService:
             音频数据的字节流、时长(秒)、mime_type、实际 provider
         """
         try:
+            narration_mode = resolve_voice_message_narration_mode(
+                voice_message_narration_mode
+            )
             use_gemini = is_gemini_voice(voice_id)
             provider_name = (
                 TTS_PROVIDER_GEMINI if use_gemini else TTS_PROVIDER_ELEVENLABS
@@ -645,7 +669,8 @@ class VoiceService:
 
             logger.debug(
                 f"TTS 请求数据: voice_id={voice_id}, model={model}, language={language}, "
-                f"text_length={len(text)}, provider={provider_name}"
+                f"text_length={len(text)}, provider={provider_name}, "
+                f"voice_message_narration_mode={narration_mode}"
             )
 
             req = TTSRequest(
@@ -654,6 +679,7 @@ class VoiceService:
                 model_id=model,
                 output_format=self.config.output_format,
                 language_code=language,
+                voice_message_narration_mode=narration_mode,
             )
 
             use_voice_changer = (

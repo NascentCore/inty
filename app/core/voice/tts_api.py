@@ -19,6 +19,7 @@ import base64
 import os
 import struct
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any, Dict, List, Optional, Protocol, Set, Tuple
 
 import google.genai as genai
@@ -44,6 +45,13 @@ TTS_PROVIDER_ELEVENLABS = "elevenlabs"
 VOICE_ID_PREFIX_GEMINI = ModelBuilder.GOOGLE.value
 VOICE_ID_PREFIX_ELEVENLABS = ModelBuilder.ELEVENLABS.value
 
+VOICE_MESSAGE_NARRATION_MODE_SETTINGS_KEY = "voice_message_narration_mode"
+
+
+class VoiceMessageNarrationMode(StrEnum):
+    DIALOGUE_ONLY = "dialogue_only"
+    DIALOGUE_AND_STAGE_DIRECTIONS = "dialogue_and_stage_directions"
+
 # Prompted TTS: instruction so Gemini acts as voice actor; parentheticals = stage directions.
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
 # (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
@@ -54,6 +62,11 @@ You are given stage directions and dialogue.
 You should speak the dialogues based on the stage directions.
 """
 
+TTS_FULL_NARRATION_INSTRUCTION = """
+You are an erotic movie voice actor.
+You are acting as a fictional character in an intimate scene.
+Narrate the full script exactly as written, including both dialogue and any stage directions in parentheses.
+"""
 # Full-dialogue conversion for Gemini->ElevenLabs voice changing:
 # - no text filtering
 # - no stage-direction/dialogue splitting
@@ -70,7 +83,6 @@ IMATE_GENDER_TO_DEFAULT_GEMINI_SOURCE_VOICE: Dict[str, str] = {
     "FEMALE": "Zephyr",
     "OTHER": DEFAULT_GEMINI_TTS_VOICE_NAME,
 }
-
 # How the per-voice "keywords" were generated (for reference):
 #
 # 1. Pulled official samples from the Chirp 3 HD doc page (all 30 voice .wav URLs).
@@ -464,6 +476,23 @@ def get_gemini_voices() -> List[Dict[str, Any]]:
     return result
 
 
+def resolve_voice_message_narration_mode(
+    raw_mode: Any,
+) -> VoiceMessageNarrationMode:
+    if isinstance(raw_mode, VoiceMessageNarrationMode):
+        return raw_mode
+    if isinstance(raw_mode, str):
+        try:
+            return VoiceMessageNarrationMode(raw_mode)
+        except ValueError:
+            logger.warning(
+                "Unknown voice message narration mode: {}; fallback to {}",
+                raw_mode,
+                VoiceMessageNarrationMode.DIALOGUE_ONLY,
+            )
+    return VoiceMessageNarrationMode.DIALOGUE_ONLY
+
+
 def select_default_gemini_voice_for_imate_gender(agent_gender: Optional[str]) -> str:
     """
     选择 Gemini 源音色（用于 Gemini->ElevenLabs 变声链路）。
@@ -495,6 +524,9 @@ class TTSRequest:
     similarity_boost: float = DEFAULT_SIMILARITY_BOOST
     # 语速倍数，仅 Gemini TTS 通过 prompt 生效；1.0=正常，0.5~2.0 有效范围；与 SPEAKING_RATE_DEFAULT 一致以免默认请求误加 pace 指令
     speaking_rate: float = SPEAKING_RATE_DEFAULT
+    voice_message_narration_mode: VoiceMessageNarrationMode = (
+        VoiceMessageNarrationMode.DIALOGUE_ONLY
+    )
 
 
 @dataclass(frozen=True)
@@ -823,29 +855,55 @@ class GeminiTTSAPI:
 
         # TTS 模型不支持 system_instruction（流式/非流式均 400），将角色说明放入 user 内容
         pace = _pace_instruction_for_gemini(request.speaking_rate)
-        stage_directions, dialogues = sanitize_text_for_gemini_tts(request.text)
-        dialogue_text = "Do not speak the stage directions, only speak the dialogues: " + " ".join(dialogues)
-        if pace:
-            dialogue_text = pace + dialogue_text
-        contents = [
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=TTS_ROLEPLAY_INSTRUCTION)],
-            ),
-        ]
-        if stage_directions:
+        narration_mode = resolve_voice_message_narration_mode(
+            request.voice_message_narration_mode
+        )
+        if narration_mode == VoiceMessageNarrationMode.DIALOGUE_AND_STAGE_DIRECTIONS:
+            full_text = request.text
+            if pace:
+                full_text = pace + full_text
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=TTS_FULL_NARRATION_INSTRUCTION)],
+                ),
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=full_text)],
+                ),
+            ]
+        else:
+            stage_directions, dialogues = sanitize_text_for_gemini_tts(request.text)
+            dialogue_text = (
+                "Do not speak the stage directions, only speak the dialogues: "
+                + " ".join(dialogues)
+            )
+            if pace:
+                dialogue_text = pace + dialogue_text
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=TTS_ROLEPLAY_INSTRUCTION)],
+                ),
+            ]
+            if stage_directions:
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part.from_text(
+                                text="Stage directions to describe the scene: "
+                                + "\n".join(stage_directions)
+                            )
+                        ],
+                    )
+                )
             contents.append(
                 types.Content(
                     role="user",
-                    parts=[types.Part.from_text(text="Stage directions to describe the scene: " + "\n".join(stage_directions))],
+                    parts=[types.Part.from_text(text=dialogue_text)],
                 )
             )
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=dialogue_text)],
-            )
-        )
 
         config = types.GenerateContentConfig(
             temperature=self._temperature,
