@@ -685,6 +685,7 @@ class LiveChatService:
                     user_profile=user_profile,
                     chat_settings=chat_settings,
                     user_time_context=None,
+                    include_output_format_prompt=False,
                 )
                 history_messages = chat_history_service.get_history_messages(
                     session.session_id

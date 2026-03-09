@@ -262,6 +262,7 @@ def build_agent_from_data(agent_id: str, agent_data: dict) -> "Agent":
         description=description,
         main_prompt=agent_data.get("main_prompt", ""),
         mode_prompt=agent_data.get("mode_prompt", ""),
+        output_format_prompt=agent_data.get("output_format_prompt", ""),
         personality=agent_data.get("personality", ""),
         scenario=agent_data.get("scenario", ""),
         message_example=agent_data.get("message_example", ""),
@@ -386,6 +387,7 @@ class Agent:
             "name": name,
             "main_prompt": main_prompt,  # 主提示词
             "mode_prompt": mode_prompt,  # 模式提示词
+            "output_format_prompt": output_format_prompt,  # 输出格式提示词
             "description": description,
             "model_config": model_config,
             "personality": personality,
@@ -450,16 +452,21 @@ class Agent:
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
 
     def _get_effective_output_format_prompt(self) -> str:
-        return (
-            self.output_format_prompt
-            or prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
-        )
+        if self.output_format_prompt:
+            return self.output_format_prompt
+        if self.mode_prompt:
+            try:
+                return prompts.get_mode_output_format_prompt_by_id(self.mode_prompt)
+            except ValueError:
+                return ""
+        return prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
 
     def build_system_messages(
         self,
         user_profile: str,
         chat_settings: models.chat_settings.ChatSettings,
         user_time_context: Optional[UserTimeContext] = None,
+        include_output_format_prompt: bool = True,
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
         user_name = self._extract_user_name_from_profile(user_profile)
@@ -487,17 +494,25 @@ class Agent:
         override = get_agent_prompt_override(self.agent_id, self.name)
         if override is not None and override.mode_prompt is not None:
             mode_prompt = override.mode_prompt
+            output_format_prompt = ""
         elif chat_settings and chat_settings.premium_mode:
             logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
             mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
+            output_format_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
         else:
             logger.debug(f"Using normal mode prompt")
             mode_prompt = self._get_effective_mode_prompt()
+            output_format_prompt = self._get_effective_output_format_prompt()
         if mode_prompt:
             rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
                 tmpl=mode_prompt, char=self.name, user=user_name
             )
             system_messages.append(SystemMessage(content=rendered_mode_prompt))
+        if include_output_format_prompt and output_format_prompt:
+            rendered_output_format_prompt = prompt_template.render_prompt_jinja2_template(
+                tmpl=output_format_prompt, char=self.name, user=user_name
+            )
+            system_messages.append(SystemMessage(content=rendered_output_format_prompt))
 
         if chat_settings and chat_settings.style_prompt:
             logger.debug(f"Using style prompt: {chat_settings.style_prompt} for agent: {self.agent_id} user: {user_name}")
@@ -2073,6 +2088,9 @@ class AgentManager:
                     # 主提示词和模式提示词字段
                     "main_prompt": getattr(agent_db, "main_prompt", ""),
                     "mode_prompt": getattr(agent_db, "mode_prompt", ""),
+                    "output_format_prompt": getattr(
+                        agent_db, "output_format_prompt", ""
+                    ),
                     # 角色设定相关字段
                     "personality": getattr(agent_db, "personality", ""),
                     "scenario": getattr(agent_db, "scenario", ""),

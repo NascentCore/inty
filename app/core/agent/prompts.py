@@ -60,15 +60,23 @@ FLIRTING_MODE_PROMPT = _get_prompt_text("FLIRTING_MODE_PROMPT")
 
 FLIRTING_MODE_PROMPT_20250902 = _get_prompt_text("FLIRTING_MODE_PROMPT_20250902")
 
+FLIRTING_OUTPUT_FORMAT_PROMPT_20250902 = _get_prompt_text(
+    "FLIRTING_OUTPUT_FORMAT_PROMPT_20250902"
+)
+
 FRIENDLY_MODE_PROMPT = _get_prompt_text("FRIENDLY_MODE_PROMPT")
 
 PURITY_MAIN_PROMPT_0725 = _get_prompt_text("PURITY_MAIN_PROMPT_0725")
 
 PURITY_MODE_PROMPT_0725 = _get_prompt_text("PURITY_MODE_PROMPT_0725")
 
+PURITY_OUTPUT_FORMAT_PROMPT_0725 = _get_prompt_text("PURITY_OUTPUT_FORMAT_PROMPT_0725")
+
 ROLEPLAY_MAIN_PROMPT_1225 = _get_prompt_text("ROLEPLAY_MAIN_PROMPT_1225")
 
 RP_MODE_PROMPT_1225 = _get_prompt_text("RP_MODE_PROMPT_1225")
+
+RP_OUTPUT_FORMAT_PROMPT_1225 = _get_prompt_text("RP_OUTPUT_FORMAT_PROMPT_1225")
 
 IMMERSIVE_MODE_PROMPT_0309 = _get_prompt_text("IMMERSIVE_MODE_PROMPT_0309")
 
@@ -85,6 +93,7 @@ class PromptOption:
     name: str
     description: str
     content: str
+    output_format_content: str = ""
 
 
 AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
@@ -126,6 +135,7 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
         name="调情模式 (20250902)",
         description="调情模式提示词（2025年9月2日版本），用于浪漫角色扮演",
         content=FLIRTING_MODE_PROMPT_20250902,
+        output_format_content=FLIRTING_OUTPUT_FORMAT_PROMPT_20250902,
     ),
     PromptOption(
         id="friendly_mode",
@@ -138,12 +148,14 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
         name="纯净模式 (0725)",
         description="纯净模式提示词（0725版本），用于更安全的对话",
         content=PURITY_MODE_PROMPT_0725,
+        output_format_content=PURITY_OUTPUT_FORMAT_PROMPT_0725,
     ),
     PromptOption(
         id="rp_mode_1225",
         name="RP模式 (1225)",
         description="角色扮演模式提示词（1225版本），强调主动推动剧情和场景变化",
         content=RP_MODE_PROMPT_1225,
+        output_format_content=RP_OUTPUT_FORMAT_PROMPT_1225,
     ),
     PromptOption(
         id="immersive_mode_0309",
@@ -179,6 +191,14 @@ def get_mode_prompt_by_id(prompt_id: str) -> str:
     raise ValueError(f"Mode prompt with id '{prompt_id}' not found")
 
 
+def get_mode_output_format_prompt_by_id(prompt_id: str) -> str:
+    """根据 ID 获取 mode 对应的输出格式提示词。"""
+    for prompt in AVAILABLE_MODE_PROMPTS:
+        if prompt.id == prompt_id:
+            return prompt.output_format_content
+    raise ValueError(f"Mode prompt with id '{prompt_id}' not found")
+
+
 class StructuredPrompt(BaseModel):
     """
     Prompt, in a moderately accurate way, refers to the *tokens* given to the LLM.
@@ -205,15 +225,22 @@ class StructuredPrompt(BaseModel):
     mode_prompt: str = Field(
         description="For further steering the assumed {{char}}'s conversational style and tone."
     )
+    output_format_prompt: str = Field(
+        default="",
+        description="For response output format constraints (e.g. action/dialogue markup).",
+    )
 
     def assemble(self) -> list[dict]:
         """
         Assemble the structured prompt into a list of messages.
         """
-        return [
+        messages = [
             {"role": "system", "content": self.main_prompt},
             {"role": "system", "content": self.mode_prompt},
         ]
+        if self.output_format_prompt:
+            messages.append({"role": "system", "content": self.output_format_prompt})
+        return messages
 
 
 PROACTIVE_CHAT_SYSTEM_PROMPT = _get_prompt_text("PROACTIVE_CHAT_SYSTEM_PROMPT")
@@ -221,6 +248,7 @@ PROACTIVE_CHAT_SYSTEM_PROMPT = _get_prompt_text("PROACTIVE_CHAT_SYSTEM_PROMPT")
 ROMANTIC_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=ROLEPLAY_MAIN_PROMPT,
     mode_prompt=FLIRTING_MODE_PROMPT_20250902,
+    output_format_prompt=FLIRTING_OUTPUT_FORMAT_PROMPT_20250902,
 )
 
 FRIENDLY_ROLEPLAY_PROMPT = StructuredPrompt(
@@ -231,6 +259,7 @@ FRIENDLY_ROLEPLAY_PROMPT = StructuredPrompt(
 PURITY_ROLEPLAY_PROMPT = StructuredPrompt(
     main_prompt=PURITY_MAIN_PROMPT_0725,
     mode_prompt=PURITY_MODE_PROMPT_0725,
+    output_format_prompt=PURITY_OUTPUT_FORMAT_PROMPT_0725,
 )
 
 ###############################################################################
