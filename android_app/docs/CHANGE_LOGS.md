@@ -6,6 +6,7 @@
 
 - Only user-visible changes are recorded.
 - Changes only affect debug build type's app is not listed.
+- Each feature 1 sentence, be very concise.
 
 
 ## 2026-03-06
