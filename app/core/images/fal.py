@@ -84,6 +84,14 @@ _IMAGE_FORMAT_TO_CONTENT_TYPE: dict[ImageFormat, str] = {
     ImageFormat.GIF: "image/gif",
     ImageFormat.AVIF: "image/avif",
 }
+_CONTENT_TYPE_TO_IMAGE_FORMAT: dict[str, ImageFormat] = {
+    "image/jpeg": ImageFormat.JPEG,
+    "image/jpg": ImageFormat.JPEG,
+    "image/png": ImageFormat.PNG,
+    "image/webp": ImageFormat.WEBP,
+    "image/gif": ImageFormat.GIF,
+    "image/avif": ImageFormat.AVIF,
+}
 
 _LANGSMITH_OMITTED_DATA_URI_TEXT = "[omitted data URI after GCS upload]"
 
@@ -205,25 +213,43 @@ async def seedream_v4_5_edit(
     if not result.images:
         raise ValueError("No images returned from SeedreamV4_5Edit")
     first_img = result.images[0]
-    if not first_img.url.startswith("data:"):
-        raise ValueError(f"Image URL is not a data URI: {first_img.url}")
-    logger.debug("Uploaded SeedreamV4_5Edit data URI to GCS (first image)")
-    upload_result = _upload_image_file_to_gcs_and_return_url(
-        first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
-    )
+    if first_img.url.startswith("data:"):
+        logger.debug("Uploaded SeedreamV4_5Edit data URI to GCS (first image)")
+        upload_result = _upload_image_file_to_gcs_and_return_url(
+            first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
+        )
+        generated_result = GeneratedImageProcessResult(
+            size=upload_result.image_size,
+            format=upload_result.image_format,
+            raw_data=upload_result.file_data,
+            raw_data_total_bytes=len(upload_result.file_data),
+            gcs_uri=upload_result.gcs_uri,
+            gcs_http_url=upload_result.gcs_http_url,
+            generated_at=datetime.datetime.now(datetime.timezone.utc),
+            raw_response_from_provider=raw_result,
+        )
+    elif first_img.url.startswith("http://") or first_img.url.startswith("https://"):
+        logger.info(
+            "SeedreamV4_5Edit returned remote URL output; skipping GCS re-upload: {}",
+            first_img.url,
+        )
+        generated_result = _build_result_from_remote_image_url(
+            image_url=first_img.url,
+            content_type=first_img.content_type,
+            file_name=first_img.file_name,
+            file_size=first_img.file_size,
+            width=first_img.width,
+            height=first_img.height,
+            raw_result=raw_result,
+        )
+    else:
+        raise ValueError(
+            f"Unsupported image URL format from SeedreamV4_5Edit: {first_img.url}"
+        )
     # GCS 上传成功后，trace 中脱敏 data URI，减少 LangSmith 存储压力。
     trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
     attach_provider_response_to_langsmith_run(trace_raw_result)
-    return GeneratedImageProcessResult(
-        size=upload_result.image_size,
-        format=upload_result.image_format,
-        raw_data=upload_result.file_data,
-        raw_data_total_bytes=len(upload_result.file_data),
-        gcs_uri=upload_result.gcs_uri,
-        gcs_http_url=upload_result.gcs_http_url,
-        generated_at=datetime.datetime.now(datetime.timezone.utc),
-        raw_response_from_provider=raw_result,
-    )
+    return generated_result
 
 
 class AccelerationEnum(StrEnum):
@@ -315,6 +341,73 @@ def _upload_image_file_to_gcs_and_return_url(
     )
 
 
+def _infer_image_format_from_remote_image(
+    *,
+    content_type: str | None,
+    file_name: str | None,
+    image_url: str,
+) -> ImageFormat:
+    if isinstance(content_type, str):
+        normalized_content_type = content_type.strip().lower()
+        from_content_type = _CONTENT_TYPE_TO_IMAGE_FORMAT.get(normalized_content_type)
+        if from_content_type is not None:
+            return from_content_type
+
+    candidate = file_name or image_url
+    candidate_without_query = candidate.split("?", 1)[0]
+    if "." in candidate_without_query:
+        ext = candidate_without_query.rsplit(".", 1)[1].strip().lower()
+        if ext in ("jpg", "jpeg"):
+            return ImageFormat.JPEG
+        if ext == "png":
+            return ImageFormat.PNG
+        if ext == "webp":
+            return ImageFormat.WEBP
+        if ext == "gif":
+            return ImageFormat.GIF
+        if ext == "avif":
+            return ImageFormat.AVIF
+
+    logger.warning(
+        "无法从 Fal 返回结果推断图片格式，默认使用 JPEG: content_type={}, file_name={}, url={}",
+        content_type,
+        file_name,
+        image_url,
+    )
+    return ImageFormat.JPEG
+
+
+def _build_result_from_remote_image_url(
+    *,
+    image_url: str,
+    content_type: str | None,
+    file_name: str | None,
+    file_size: int | None,
+    width: int | None,
+    height: int | None,
+    raw_result: Any,
+) -> GeneratedImageProcessResult:
+    if width is None or height is None:
+        raise ValueError(
+            "Fal returned remote image URL but did not provide width/height metadata"
+        )
+    image_format = _infer_image_format_from_remote_image(
+        content_type=content_type,
+        file_name=file_name,
+        image_url=image_url,
+    )
+    return GeneratedImageProcessResult(
+        size=ImageSize(width=width, height=height),
+        format=image_format,
+        raw_data=None,
+        raw_data_total_bytes=file_size if isinstance(file_size, int) and file_size > 0 else 0,
+        gcs_uri=image_url,
+        gcs_http_url=image_url,
+        generated_at=datetime.datetime.now(datetime.timezone.utc),
+        raw_response_from_provider=raw_result,
+    )
+
+
 @traceable
 async def z_image_turbo(
     args: ZImageTurboInput,
@@ -329,24 +422,44 @@ async def z_image_turbo(
         raise ValueError("No images returned from ZImageTurbo")
     processed_results: list[GeneratedImageProcessResult] = []
     for i, image in enumerate(result.images):
-        if not image.url.startswith("data:"):
-            raise ValueError(f"Image URL is not a data URI: {image.url}")
-        upload_result = _upload_image_file_to_gcs_and_return_url(
-            image, gcs_uri_base, enable_compress_png_to_jpeg=True
-        )
-        logger.debug("Uploaded ZImageTurbo data URI to GCS (image index: {})", i)
-        processed_results.append(
-            GeneratedImageProcessResult(
-                size=upload_result.image_size,
-                format=upload_result.image_format,
-                raw_data=upload_result.file_data,
-                raw_data_total_bytes=len(upload_result.file_data),
-                gcs_uri=upload_result.gcs_uri,
-                gcs_http_url=upload_result.gcs_http_url,
-                generated_at=datetime.datetime.now(datetime.timezone.utc),
-                raw_response_from_provider=raw_result,
+        if image.url.startswith("data:"):
+            upload_result = _upload_image_file_to_gcs_and_return_url(
+                image, gcs_uri_base, enable_compress_png_to_jpeg=True
             )
-        )
+            logger.debug("Uploaded ZImageTurbo data URI to GCS (image index: {})", i)
+            processed_results.append(
+                GeneratedImageProcessResult(
+                    size=upload_result.image_size,
+                    format=upload_result.image_format,
+                    raw_data=upload_result.file_data,
+                    raw_data_total_bytes=len(upload_result.file_data),
+                    gcs_uri=upload_result.gcs_uri,
+                    gcs_http_url=upload_result.gcs_http_url,
+                    generated_at=datetime.datetime.now(datetime.timezone.utc),
+                    raw_response_from_provider=raw_result,
+                )
+            )
+            continue
+
+        if image.url.startswith("http://") or image.url.startswith("https://"):
+            logger.info(
+                "ZImageTurbo returned remote URL output; skipping GCS re-upload: {}",
+                image.url,
+            )
+            processed_results.append(
+                _build_result_from_remote_image_url(
+                    image_url=image.url,
+                    content_type=image.content_type,
+                    file_name=image.file_name,
+                    file_size=image.file_size,
+                    width=image.width,
+                    height=image.height,
+                    raw_result=raw_result,
+                )
+            )
+            continue
+
+        raise ValueError(f"Unsupported image URL format from ZImageTurbo: {image.url}")
     if not processed_results:
         raise ValueError("No valid images returned from ZImageTurbo")
     trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
@@ -431,21 +544,42 @@ async def z_image_turbo_image_to_image(
     if not result.images:
         raise ValueError("No images returned from ZImageTurboImageToImage")
     first_img = result.images[0]
-    if not first_img.url.startswith("data:"):
-        raise ValueError(f"Image URL is not a data URI: {first_img.url}")
-    upload_result = _upload_image_file_to_gcs_and_return_url(
-        first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
-    )
-    logger.debug("Uploaded ZImageTurboImageToImage data URI to GCS: {}", upload_result.gcs_http_url)
+    if first_img.url.startswith("data:"):
+        upload_result = _upload_image_file_to_gcs_and_return_url(
+            first_img, gcs_uri_base, enable_compress_png_to_jpeg=True
+        )
+        logger.debug(
+            "Uploaded ZImageTurboImageToImage data URI to GCS: {}",
+            upload_result.gcs_http_url,
+        )
+        generated_result = GeneratedImageProcessResult(
+            size=upload_result.image_size,
+            format=upload_result.image_format,
+            raw_data=upload_result.file_data,
+            raw_data_total_bytes=len(upload_result.file_data),
+            gcs_uri=upload_result.gcs_uri,
+            gcs_http_url=upload_result.gcs_http_url,
+            generated_at=datetime.datetime.now(datetime.timezone.utc),
+            raw_response_from_provider=raw_result,
+        )
+    elif first_img.url.startswith("http://") or first_img.url.startswith("https://"):
+        logger.info(
+            "ZImageTurboImageToImage returned remote URL output; skipping GCS re-upload: {}",
+            first_img.url,
+        )
+        generated_result = _build_result_from_remote_image_url(
+            image_url=first_img.url,
+            content_type=first_img.content_type,
+            file_name=first_img.file_name,
+            file_size=first_img.file_size,
+            width=first_img.width,
+            height=first_img.height,
+            raw_result=raw_result,
+        )
+    else:
+        raise ValueError(
+            f"Unsupported image URL format from ZImageTurboImageToImage: {first_img.url}"
+        )
     trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
     attach_provider_response_to_langsmith_run(trace_raw_result)
-    return GeneratedImageProcessResult(
-        size=upload_result.image_size,
-        format=upload_result.image_format,
-        raw_data=upload_result.file_data,
-        raw_data_total_bytes=len(upload_result.file_data),
-        gcs_uri=upload_result.gcs_uri,
-        gcs_http_url=upload_result.gcs_http_url,
-        generated_at=datetime.datetime.now(datetime.timezone.utc),
-        raw_response_from_provider=raw_result,
-    )
+    return generated_result
