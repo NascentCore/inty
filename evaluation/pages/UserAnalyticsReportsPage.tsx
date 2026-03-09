@@ -457,7 +457,9 @@ function ReportContent({
                         <div
                           style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
                         >
-                          模型: {detail.model || "未知模型"}
+                          {detail.isMatchedFallback
+                            ? "类型: 兜底生图（命中历史图）"
+                            : `模型: ${detail.model || "未知模型"}`}
                         </div>
                       </div>
                     </Col>

@@ -40,6 +40,7 @@ describe("generatedImageDetail", () => {
         generated_image: {
           image_url: "gs://bucket/image.webp",
           prompt: "test prompt",
+          original_request: "请基于这段对话生成一张图片",
           reference_image_url: "https://cdn.example.com/ref.webp",
           user_reference_image_url: "https://cdn.example.com/selfie.webp",
           reference_image_urls: [
@@ -49,6 +50,8 @@ describe("generatedImageDetail", () => {
           width: 768,
           height: 1024,
           model: "openai/gpt-image-1",
+          generation_mode: "fallback_matched_image",
+          is_matched: true,
           generation_time_ms: 2450,
           model_fallback_due_to_429: true,
         },
@@ -60,6 +63,7 @@ describe("generatedImageDetail", () => {
     expect(detail.imageUrl).toBe("https://cdn.example.com/image.webp");
     expect(detail.gcsUrl).toBe("gs://bucket/image.webp");
     expect(detail.generationPrompt).toBe("test prompt");
+    expect(detail.originalRequest).toBe("请基于这段对话生成一张图片");
     expect(detail.referenceImageUrl).toBe("https://cdn.example.com/ref.webp");
     expect(detail.userReferenceImageUrl).toBe("https://cdn.example.com/selfie.webp");
     expect(detail.referenceImages).toEqual([
@@ -71,6 +75,8 @@ describe("generatedImageDetail", () => {
     expect(detail.userId).toBe("user-1");
     expect(detail.sessionId).toBe("session-1");
     expect(detail.model).toBe("openai/gpt-image-1");
+    expect(detail.generationMode).toBe("fallback_matched_image");
+    expect(detail.isMatchedFallback).toBe(true);
     expect(detail.generationTimeMs).toBe(2450);
     expect(detail.modelFallbackDueTo429).toBe(true);
     expect(detail.langsmithTraceId).toBe("trace-123");
