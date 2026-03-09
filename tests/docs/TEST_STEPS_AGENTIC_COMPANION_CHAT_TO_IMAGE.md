@@ -5,8 +5,7 @@
 验证 `experimental/agentic_ai_companion` 中 `generate_image` 工具已复刻 `app/` 聊天生图关键行为：  
 - 基于最近对话构建 prompt  
 - 使用 AI/用户参考图生图  
-- 429 自动模型回退  
-- 失败时按提示词相似度复用历史图兜底
+- 失败时直接抛出错误（不做自动模型回退或历史图兜底）
 
 ## Automated checks
 

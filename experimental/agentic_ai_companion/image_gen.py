@@ -1,4 +1,4 @@
-"""复刻 app 聊天生图核心流程：提示词、双参考图、模型回退、失败兜底匹配。"""
+"""复刻 app 聊天生图核心流程：提示词、双参考图、严格失败。"""
 
 from __future__ import annotations
 
@@ -15,13 +15,8 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from google.genai import Client
 
-from loguru import logger
-from google.genai.errors import ClientError
-
 RECENT_MESSAGES_LIMIT = 10
 DEFAULT_CHAT_IMAGE_MODEL = "gemini-2.5-flash-image"
-DEFAULT_CHAT_IMAGE_FALLBACK_MODEL = "gemini-2.5-flash-image"
-PREMIUM_CHAT_IMAGE_MODEL = "gemini-3-pro-image-preview"
 
 _THIS_DIR = Path(__file__).resolve().parent
 DEFAULT_COMPANION_PROFILE_DIR = _THIS_DIR / "companion_profile"
@@ -112,10 +107,8 @@ class GenerateImageToolInput(BaseModel):
     user_name: str = "the user"
     history_count: int = RECENT_MESSAGES_LIMIT
     model: str = DEFAULT_CHAT_IMAGE_MODEL
-    fallback_model: str = DEFAULT_CHAT_IMAGE_FALLBACK_MODEL
     ai_reference_image: str | None = None
     user_reference_image: str | None = None
-    enable_match_fallback: bool = True
     runtime_paths: RuntimePaths = Field(default_factory=RuntimePaths)
 
 
@@ -144,16 +137,13 @@ class StoredGeneratedImage(BaseModel):
 class GeneratedImageToolResult(BaseModel):
     """工具层返回结构。"""
 
-    status: Literal["generated", "matched_fallback"]
+    status: Literal["generated"]
     image_path: str
     metadata_path: str | None = None
     prompt: str
     model: str
-    model_fallback_due_to_429: bool = False
     image_metadata: dict[str, Any]
     tool_message: str
-    matched_similarity: float | None = None
-    matched_from_image_path: str | None = None
 
 
 def _load_profile_json(profile_dir: Path) -> dict[str, Any]:
@@ -442,24 +432,6 @@ def _extract_image_size(image_data: bytes, image_format: str) -> tuple[int | Non
     return (None, None)
 
 
-def _tokenize_text(text_input: str) -> set[str]:
-    if not text_input:
-        return set()
-    normalized = re.sub(r"[^\w\s\u4e00-\u9fff]", "", text_input)
-    return set(re.findall(r"[\u4e00-\u9fff]|\w+", normalized.lower()))
-
-
-def calculate_prompt_similarity(prompt1: str, prompt2: str) -> float:
-    tokens1 = _tokenize_text(prompt1)
-    tokens2 = _tokenize_text(prompt2)
-    if len(tokens1) == 0 or len(tokens2) == 0:
-        return 0.0
-    union = len(tokens1 | tokens2)
-    if union == 0:
-        return 0.0
-    return len(tokens1 & tokens2) / union
-
-
 def _load_history_index(history_path: Path) -> list[StoredGeneratedImage]:
     if not history_path.exists():
         return []
@@ -474,37 +446,6 @@ def _save_history_index(history_path: Path, records: list[StoredGeneratedImage])
     history_path.parent.mkdir(parents=True, exist_ok=True)
     with history_path.open("w", encoding="utf-8") as fp:
         json.dump([record.model_dump() for record in records], fp, ensure_ascii=False, indent=2)
-
-
-def _find_most_similar_fallback_image(
-    *,
-    prompt: str,
-    runtime_paths: RuntimePaths,
-) -> tuple[StoredGeneratedImage | None, float]:
-    candidates = _load_history_index(runtime_paths.history_index_path)
-    best_record: StoredGeneratedImage | None = None
-    best_score = 0.0
-    for candidate in candidates:
-        if not candidate.only_include_ai_character:
-            continue
-        if not Path(candidate.image_path).exists():
-            continue
-        score = calculate_prompt_similarity(prompt, candidate.prompt)
-        if score > best_score:
-            best_score = score
-            best_record = candidate
-    if best_record is None or best_score <= 0:
-        return (None, 0.0)
-    return (best_record, best_score)
-
-
-def _is_429_resource_exhausted(exception: Exception) -> bool:
-    status_code = getattr(exception, "status_code", None)
-    if status_code == 429:
-        return True
-    message = str(exception)
-    return "429" in message and "RESOURCE_EXHAUSTED" in message.upper()
-
 
 def _call_generate_content_for_chat_image(
     *,
@@ -539,7 +480,6 @@ def _write_generated_image_and_metadata(
     model: str,
     reference_selection: ChatImageReferenceSelection,
     runtime_paths: RuntimePaths,
-    model_fallback_due_to_429: bool,
 ) -> GeneratedImageToolResult:
     image_format = _detect_image_format(image_data)
     width, height = _extract_image_size(image_data, image_format)
@@ -571,7 +511,6 @@ def _write_generated_image_and_metadata(
             "height": height,
             "format": image_format,
         },
-        "model_fallback_due_to_429": model_fallback_due_to_429,
     }
     with metadata_path.open("w", encoding="utf-8") as fp:
         json.dump(metadata, fp, ensure_ascii=False, indent=2)
@@ -598,7 +537,6 @@ def _write_generated_image_and_metadata(
         metadata_path=str(metadata_path.resolve()),
         prompt=prompt,
         model=model,
-        model_fallback_due_to_429=model_fallback_due_to_429,
         image_metadata=metadata["image_metadata"],
         tool_message=(
             "generate_image: Chat-to-image generated successfully. "
@@ -641,71 +579,19 @@ def generate_image_with_chat_to_image_behavior(
         user_profile=user_profile,
     )
 
-    model_fallback_due_to_429 = False
-    actual_model = input_data.model
-    try:
-        response = _call_generate_content_for_chat_image(
-            client=client,
-            model=input_data.model,
-            prompt=prompt,
-            ai_reference_image_path=reference_selection.ai_reference_image_path,
-            user_reference_image_path=reference_selection.user_reference_image_path,
-        )
-    except (ClientError, ValueError, OSError, RuntimeError, TypeError) as primary_error:
-        if (
-            _is_429_resource_exhausted(primary_error)
-            and input_data.fallback_model
-            and input_data.fallback_model != input_data.model
-        ):
-            logger.info(
-                "chat-to-image 首轮429，切换备用模型重试: primary={} fallback={}",
-                input_data.model,
-                input_data.fallback_model,
-            )
-            response = _call_generate_content_for_chat_image(
-                client=client,
-                model=input_data.fallback_model,
-                prompt=prompt,
-                ai_reference_image_path=reference_selection.ai_reference_image_path,
-                user_reference_image_path=reference_selection.user_reference_image_path,
-            )
-            actual_model = input_data.fallback_model
-            model_fallback_due_to_429 = True
-        else:
-            if input_data.enable_match_fallback:
-                matched, similarity = _find_most_similar_fallback_image(
-                    prompt=prompt,
-                    runtime_paths=input_data.runtime_paths,
-                )
-                if matched is not None:
-                    return GeneratedImageToolResult(
-                        status="matched_fallback",
-                        image_path=matched.image_path,
-                        metadata_path=None,
-                        prompt=prompt,
-                        model=matched.model,
-                        image_metadata={
-                            "width": matched.width,
-                            "height": matched.height,
-                            "format": matched.format or "jpeg",
-                            "is_matched": True,
-                            "similarity": similarity,
-                        },
-                        tool_message=(
-                            "generate_image: Generation failed; reused closest historical image "
-                            f"(similarity={similarity:.3f})."
-                        ),
-                        matched_similarity=similarity,
-                        matched_from_image_path=matched.image_path,
-                    )
-            raise
+    response = _call_generate_content_for_chat_image(
+        client=client,
+        model=input_data.model,
+        prompt=prompt,
+        ai_reference_image_path=reference_selection.ai_reference_image_path,
+        user_reference_image_path=reference_selection.user_reference_image_path,
+    )
 
     image_bytes = _extract_inline_image_bytes(response)
     return _write_generated_image_and_metadata(
         image_data=image_bytes,
         prompt=prompt,
-        model=actual_model,
+        model=input_data.model,
         reference_selection=reference_selection,
         runtime_paths=input_data.runtime_paths,
-        model_fallback_due_to_429=model_fallback_due_to_429,
     )

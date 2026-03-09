@@ -448,7 +448,7 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
             description=(
                 "Generate an intimacy role-play scene image using chat context and reference photos. "
                 "Input should describe the fantasized scene between the user and the AI companion. "
-                "The tool automatically uses AI/user profile images as references, and will try fallback matching if generation fails."
+                "The tool automatically uses AI/user profile images as references."
             ),
             parameters={
                 "type": "object",

@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from experimental.agentic_ai_companion.image_gen import (
     CompanionProfile,
     GenerateImageToolInput,
     RuntimePaths,
-    StoredGeneratedImage,
     UserProfile,
-    _save_history_index,
     build_chat_image_prompt,
     generate_image_with_chat_to_image_behavior,
     select_reference_images,
@@ -130,7 +130,7 @@ def test_select_reference_images_resolves_profile_paths(tmp_path: Path):
     assert selection.only_include_ai_character is False
 
 
-def test_generate_image_retries_with_fallback_model_after_429(tmp_path: Path):
+def test_generate_image_raises_on_429_without_model_fallback(tmp_path: Path):
     companion_dir = tmp_path / "companion_profile"
     user_dir = tmp_path / "user_profile"
     _write_dummy_image(companion_dir / "avatar.png")
@@ -145,39 +145,27 @@ def test_generate_image_retries_with_fallback_model_after_429(tmp_path: Path):
     fake_client = _FakeClient(
         outcomes=[
             RuntimeError("429 RESOURCE_EXHAUSTED"),
-            _FakeResponse(_minimal_png_bytes(64, 48)),
         ]
     )
 
-    result = generate_image_with_chat_to_image_behavior(
-        client=fake_client,
-        input_data=GenerateImageToolInput(
-            scene_description="romantic role-play scene",
-            messages=[{"role": "user", "content": "Show us in a warm embrace."}],
-            runtime_paths=runtime_paths,
-            model="gemini-3-pro-image-preview",
-            fallback_model="gemini-2.5-flash-image",
-        ),
-    )
-
-    assert result.status == "generated"
-    assert result.model == "gemini-2.5-flash-image"
-    assert result.model_fallback_due_to_429 is True
-    assert Path(result.image_path).exists()
-    assert fake_client.models.calls == [
-        "gemini-3-pro-image-preview",
-        "gemini-2.5-flash-image",
-    ]
+    with pytest.raises(RuntimeError, match="429 RESOURCE_EXHAUSTED"):
+        generate_image_with_chat_to_image_behavior(
+            client=fake_client,
+            input_data=GenerateImageToolInput(
+                scene_description="romantic role-play scene",
+                messages=[{"role": "user", "content": "Show us in a warm embrace."}],
+                runtime_paths=runtime_paths,
+                model="gemini-3-pro-image-preview",
+            ),
+        )
+    assert fake_client.models.calls == ["gemini-3-pro-image-preview"]
 
 
-def test_generate_image_uses_similarity_fallback_when_generation_fails(tmp_path: Path):
+def test_generate_image_raises_when_generation_fails_without_similarity_fallback(tmp_path: Path):
     companion_dir = tmp_path / "companion_profile"
     user_dir = tmp_path / "user_profile"
     _write_dummy_image(companion_dir / "avatar.png")
-    # 不写 user avatar，确保历史图按 only_include_ai_character 参与匹配。
-
-    fallback_image = tmp_path / "fallback" / "matched.png"
-    _write_dummy_image(fallback_image)
+    _write_dummy_image(user_dir / "avatar.png")
 
     runtime_paths = RuntimePaths(
         companion_profile_dir=companion_dir,
@@ -185,37 +173,16 @@ def test_generate_image_uses_similarity_fallback_when_generation_fails(tmp_path:
         output_dir=tmp_path / "out",
         history_index_path=tmp_path / "history.json",
     )
-    _save_history_index(
-        runtime_paths.history_index_path,
-        [
-            StoredGeneratedImage(
-                image_id="img-1",
-                image_path=str(fallback_image.resolve()),
-                prompt="A romantic embrace in a candle-lit room between user and companion.",
-                width=32,
-                height=24,
-                format="png",
-                model="gemini-2.5-flash-image",
-                only_include_ai_character=True,
-                created_at="2026-01-01T00:00:00+00:00",
-            )
-        ],
-    )
-
     fake_client = _FakeClient(outcomes=[RuntimeError("network timeout")])
-    result = generate_image_with_chat_to_image_behavior(
-        client=fake_client,
-        input_data=GenerateImageToolInput(
-            scene_description="Create a romantic embrace in a candle-lit room.",
-            messages=[{"role": "user", "content": "Please make it romantic."}],
-            runtime_paths=runtime_paths,
-            enable_match_fallback=True,
-        ),
-    )
-
-    assert result.status == "matched_fallback"
-    assert result.image_path == str(fallback_image.resolve())
-    assert result.image_metadata.get("is_matched") is True
+    with pytest.raises(RuntimeError, match="network timeout"):
+        generate_image_with_chat_to_image_behavior(
+            client=fake_client,
+            input_data=GenerateImageToolInput(
+                scene_description="Create a romantic embrace in a candle-lit room.",
+                messages=[{"role": "user", "content": "Please make it romantic."}],
+                runtime_paths=runtime_paths,
+            ),
+        )
 
 
 def test_execute_generate_image_returns_tool_message_and_path(tmp_path: Path):
