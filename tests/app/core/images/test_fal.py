@@ -234,6 +234,46 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
         assert blob.download_as_bytes() == result.raw_data
 
 
+@pytest.mark.asyncio
+async def test_z_image_turbo_image_to_image_accepts_http_url_output_without_data_uri():
+    """Fal 返回 HTTPS 图片 URL 时也应返回可用结果（不再要求必须 data URI）。"""
+    http_url = "https://v3.fal.media/files/demo/generated_image.jpg"
+    raw_result = {
+        "images": [
+            {
+                "url": http_url,
+                "content_type": "image/jpeg",
+                "file_name": "generated_image.jpg",
+                "file_size": 456789,
+                "width": 720,
+                "height": 1280,
+            }
+        ],
+        "timings": {},
+        "seed": 42,
+        "prompt": "test",
+    }
+    mock_handler = Mock()
+    mock_handler.get = AsyncMock(return_value=raw_result)
+
+    with patch("app.core.images.fal.fal_client") as mock_fal:
+        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+        args = ZImageTurboImageToImageInput(
+            prompt="test prompt",
+            image_url="https://example.com/reference.jpg",
+        )
+        result = await z_image_turbo_image_to_image(args, gcs_uri_base="fal_test")
+
+    assert isinstance(result, GeneratedImageProcessResult)
+    assert result.gcs_uri == http_url
+    assert result.gcs_http_url == http_url
+    assert result.raw_data is None
+    assert result.raw_data_total_bytes == 456789
+    assert result.size.width == 720
+    assert result.size.height == 1280
+    assert result.format.value == "jpeg"
+
+
 def test_sanitize_provider_response_for_trace_redacts_data_uri_without_mutating_input():
     """trace 脱敏副本应替换 data URI，且不应就地修改原始 provider response。"""
     data_uri = _make_minimal_jpeg_data_uri()
