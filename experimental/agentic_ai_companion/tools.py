@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 from langsmith.run_helpers import trace
 from loguru import logger
+from google.genai.errors import ClientError
 from pydantic import BaseModel, ConfigDict, Field
 
 _THIS_DIR = Path(__file__).resolve().parent
@@ -19,7 +20,7 @@ APP_ICON_PATH = _THIS_DIR / "app_icon.png"
 ZUN_LONG_PHOTO_PATH = _THIS_DIR / "尊龙.png"
 COMPANION_PROFILE_DIR = _THIS_DIR / "companion_profile"
 
-RECENT_MESSAGES_FOR_IMAGE = 6
+RECENT_MESSAGES_FOR_IMAGE = 10
 RECENT_MESSAGES_FOR_LIVE = 10
 RECENT_MESSAGES_FOR_SCENE = 10
 
@@ -174,30 +175,49 @@ def execute_generate_image(
     messages: list[dict[str, Any]],
     client: Any,
     input: str | None = None,
+    char_name: str = "",
+    user_name: str = "",
+    ai_reference_image: str | None = None,
+    user_reference_image: str | None = None,
     _logger=None,
     **kwargs: Any,
 ) -> tuple[str, str | None]:
     """根据工具参数 input 或对话上下文生成图片并写入本地文件，返回 (结果文案, 可点击绝对路径或 None)。"""
-    from .image_gen import _prompt_from_messages, generate_image_from_messages
+    from .chat_image_gen import (
+        GenerateImageToolInput,
+        generate_image_with_chat_to_image_behavior,
+    )
 
     recent = (
         messages[-RECENT_MESSAGES_FOR_IMAGE:]
         if len(messages) > RECENT_MESSAGES_FOR_IMAGE
         else messages
     )
-    prompt = (input or "").strip() or _prompt_from_messages(recent)
+    scene_description = (input or "").strip()
     try:
-        from experimental.eval_nana_banana.lib import generate
-
-        out_image_path, out_json_path = generate(
-            prompt=prompt,
-            char_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",
-            user_avatar_path="experimental/agentic_ai_companion/companion_profile/avatar.jpg",
-            output_dir="tmp",
+        result = generate_image_with_chat_to_image_behavior(
+            client=client,
+            input_data=GenerateImageToolInput(
+                scene_description=scene_description,
+                messages=recent,
+                char_name=char_name,
+                user_name=user_name,
+                ai_reference_image=ai_reference_image,
+                user_reference_image=user_reference_image,
+            ),
         )
-        logger.debug(f"generate_image result: {out_image_path}, {out_json_path}")
-        return ("generate_image: Image generated.", out_image_path)
-    except (ValueError, OSError, AttributeError) as e:
+        if _logger is not None:
+            _logger.info(
+                "generate_image 成功 status=%s image=%s metadata=%s",
+                result.status,
+                result.image_path,
+                result.metadata_path,
+            )
+        tool_message = result.tool_message
+        if result.metadata_path:
+            tool_message = f"{tool_message} metadata={result.metadata_path}"
+        return (tool_message, result.image_path)
+    except (ClientError, ValueError, OSError, AttributeError, RuntimeError, TypeError) as e:
         if _logger is not None:
             _logger.warning("generate_image 失败: %s", e)
         return (f"generate_image: Failed ({e}).", None)
@@ -340,9 +360,26 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
     def exec_send_selfie(**kw):
         return execute_send_selfie_photo(_logger=_logger)
 
-    def exec_gen_image(*, messages, client, input=None, **kw):
+    def exec_gen_image(
+        *,
+        messages,
+        client,
+        input=None,
+        char_name="",
+        user_name="",
+        ai_reference_image=None,
+        user_reference_image=None,
+        **kw,
+    ):
         return execute_generate_image(
-            messages=messages, client=client, input=input, _logger=_logger
+            messages=messages,
+            client=client,
+            input=input,
+            char_name=char_name,
+            user_name=user_name,
+            ai_reference_image=ai_reference_image,
+            user_reference_image=user_reference_image,
+            _logger=_logger,
         )
 
     def exec_tts(*, text, client, **kw):
@@ -408,18 +445,30 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ToolDefinition(
             # generate_image is non-TERMINAL: after execution LLM continues to output text (e.g. interpretation or emotion) for the generated image.
             name="generate_image",
-            description="Generate an image based on the input prompt. When the user requests an image, or want to see the character or user, or visulize their dialogues, extract or summarize their description into the input parameter.",
+            description=(
+                "Generate an intimacy role-play scene image using chat context and reference photos. "
+                "Input should describe the fantasized scene between the user and the AI companion. "
+                "The tool automatically uses AI/user profile images as references."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
                     "input": {
                         "type": "string",
-                        "description": "The image generation prompt. Describe the scene, subject, style. When the user requests an image, extract or summarize their description here.",
-                    }
+                        "description": "Scene description of the intimacy role-play that should be visualized.",
+                    },
+                    "ai_reference_image": {
+                        "type": "string",
+                        "description": "Optional override path to AI reference image.",
+                    },
+                    "user_reference_image": {
+                        "type": "string",
+                        "description": "Optional override path to user reference image.",
+                    },
                 },
                 "additionalProperties": False,
             },
-            context_type=ToolContextType.GEMINI_CLIENT_WITH_MESSAGES,
+            context_type=ToolContextType.GEMINI_CLIENT_WITH_MESSAGES_AND_NAMES,
             type=ToolType.TERMINAL,
             executor=exec_gen_image,
         ),
