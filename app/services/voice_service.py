@@ -760,7 +760,7 @@ class VoiceService:
                     source_audio_bytes=source_audio.audio_bytes,
                     source_mime_type=source_audio.mime_type,
                     target_voice_id=voice_id,
-                    model_id=model,
+                    model_id=self.config.voice_change_model,
                     output_format=self.config.output_format,
                 )
                 if tts_result is None:

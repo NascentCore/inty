@@ -372,6 +372,7 @@ class ElevenLabsConfig:
     enabled: bool = True
     max_text_length: int = 5000  # 最大文本长度限制
     ssl_verify: bool = True  # SSL证书验证开关
+    voice_change_model: str = "eleven_english_sts_v2"
 
 
 @dataclass
