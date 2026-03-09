@@ -17,13 +17,20 @@ internal fun ReportPage(
     targetType: String,
     targetId: String,
     initialEvidenceImageUrl: String,
+    imageFeedbackVote: String?,
     viewModel: ReportViewModel = viewModel(),
 ) {
-    LaunchedEffect(isFeedbackModel, targetType, targetId, initialEvidenceImageUrl) {
+    LaunchedEffect(isFeedbackModel, targetType, targetId, initialEvidenceImageUrl, imageFeedbackVote) {
         viewModel.isFeedbackMode = isFeedbackModel
-        viewModel.updateReasonsForMode()
         viewModel.targetID = targetId
         viewModel.targetType = targetType
+        viewModel.configureImageFeedbackContext(
+            vote = imageFeedbackVote,
+            evidenceImageUrl = initialEvidenceImageUrl,
+            feedbackTargetType = targetType,
+            feedbackTargetId = targetId,
+        )
+        viewModel.updateReasonsForMode()
         viewModel.setInitialEvidenceImage(initialEvidenceImageUrl)
     }
 

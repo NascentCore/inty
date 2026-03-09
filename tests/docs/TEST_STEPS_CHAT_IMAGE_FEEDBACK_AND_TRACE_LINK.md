@@ -14,3 +14,18 @@
 7. Go to `生成图片管理` and verify generated image detail shows:
    - LangSmith trace link
    - saved image feedback entry
+
+## Android app manual regression (chat-to-image thumbs prompt)
+
+1. Open chat with an iMate and generate an image from a message.
+2. Tap 👍 or 👎 below the generated image preview.
+3. Verify the feedback request popup appears on first thumbs action of the local day.
+4. Tap **Send Suggestions** and verify Feedback page opens with:
+   - the generated image prefilled in evidence list
+   - image-quality reason options (`IMAGE_LOW_QUALITY`, `IMAGE_STYLE_MISMATCH`, `IMAGE_CONTENT_MISMATCH`, `IMAGE_ANATOMY_OR_STRUCTURE_ERROR`, `IMAGE_OTHER`)
+5. Submit feedback and verify in ops `举报与反馈` page:
+   - `report_type = FEEDBACK`
+   - `target_id` starts with `IMAGE_FEEDBACK_`
+   - `description` starts with `[IMAGE_FEEDBACK][vote=like|dislike]`
+   - `image_urls` contains the generated image URL
+6. Repeat thumbs action on the same local day and verify popup does not show again.

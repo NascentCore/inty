@@ -313,6 +313,44 @@ def test_create_feedback_with_reason_codes(integration_client, db_session, repor
     ), f"Feedback status should be PENDING, got {feedback.status}"
 
 
+def test_create_image_feedback_with_new_reason_codes(
+    integration_client, db_session, report_superuser
+):
+    """测试图片反馈可使用新增的图片质量 reason_codes。"""
+    feedback_payload = {
+        "target_id": "IMAGE_FEEDBACK_deadbeef",
+        "target_type": "USER",
+        "reason_codes": [
+            "IMAGE_LOW_QUALITY",
+            "IMAGE_CONTENT_MISMATCH",
+            "IMAGE_OTHER",
+        ],
+        "description": "[IMAGE_FEEDBACK][vote=dislike] image quality is too low",
+        "image_urls": ["https://cdn.example.com/chat_images/test.png"],
+        "report_type": "FEEDBACK",
+    }
+
+    response = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json=feedback_payload,
+    )
+    assert response.status_code == 200, f"Image feedback creation failed: {response.text}"
+    response_data = response.json()
+    assert response_data.get("code") == 200, f"Unexpected response: {response_data}"
+
+    reporter_id = _get_reporter_id(integration_client)
+    feedback = _find_feedback(db_session, reporter_id)
+    assert feedback is not None, "Image feedback not found in database"
+    assert feedback.target_id == "IMAGE_FEEDBACK_deadbeef"
+    assert feedback.target_type == "USER"
+    assert feedback.reason_codes == [
+        "IMAGE_LOW_QUALITY",
+        "IMAGE_CONTENT_MISMATCH",
+        "IMAGE_OTHER",
+    ]
+    assert feedback.report_type == ReportType.FEEDBACK
+
+
 def test_create_feedback_with_reason_ids(integration_client, db_session, report_superuser):
     """测试使用 reason_ids 创建反馈（向后兼容，旧 API）
 

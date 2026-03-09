@@ -52,6 +52,7 @@ function parseFeedbackContent(description: string | null): string {
   const cleanedDescription = description
     .replace("[IMAGE_FEEDBACK]", "")
     .replace(/\[vote=(like|dislike)\]/, "")
+    .replace(/\[reason_codes=[A-Z0-9_,]+\]/, "")
     .trim();
   return cleanedDescription || "（无文字反馈）";
 }

@@ -42,6 +42,21 @@ enum class ReportReasonCode {
 
     @Json(name = "NEW_FEATURE")
     NEW_FEATURE,
+
+    @Json(name = "IMAGE_LOW_QUALITY")
+    IMAGE_LOW_QUALITY,
+
+    @Json(name = "IMAGE_STYLE_MISMATCH")
+    IMAGE_STYLE_MISMATCH,
+
+    @Json(name = "IMAGE_CONTENT_MISMATCH")
+    IMAGE_CONTENT_MISMATCH,
+
+    @Json(name = "IMAGE_ANATOMY_OR_STRUCTURE_ERROR")
+    IMAGE_ANATOMY_OR_STRUCTURE_ERROR,
+
+    @Json(name = "IMAGE_OTHER")
+    IMAGE_OTHER,
 }
 
 enum class ReportTargetType {

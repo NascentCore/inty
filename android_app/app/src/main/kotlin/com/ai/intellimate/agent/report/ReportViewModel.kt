@@ -99,6 +99,10 @@ internal fun mergeEvidenceImageUrls(
 }
 
 class ReportViewModel : BaseVM() {
+    private data class ImageFeedbackContext(
+        val vote: String,
+        val targetId: String,
+    )
 
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
@@ -112,6 +116,7 @@ class ReportViewModel : BaseVM() {
     var isFeedbackMode: Boolean = false
     var targetID: String = ""
     var targetType: String = "USER"
+    private var imageFeedbackContext: ImageFeedbackContext? = null
 
     // 使用本地 ReportReasonCode 枚举和映射（从 ReportReasonMappings 生成，避免硬编码）
     private val reportReasons =
@@ -125,15 +130,46 @@ class ReportViewModel : BaseVM() {
             ReportReasonItem(reasonCode, stringResId)
         }
 
+    private val imageFeedbackReasons =
+        ReportReasonMappings.IMAGE_FEEDBACK_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
+            ReportReasonItem(reasonCode, stringResId)
+        }
+
     private val _reasons = MutableStateFlow(reportReasons)
     val reasons = _reasons.asStateFlow()
 
     fun updateReasonsForMode() {
         _reasons.value =
-            if (isFeedbackMode) {
+            if (isFeedbackMode && imageFeedbackContext != null) {
+                imageFeedbackReasons
+            } else if (isFeedbackMode) {
                 feedbackReasons
             } else {
                 reportReasons
+            }
+    }
+
+    fun configureImageFeedbackContext(
+        vote: String?,
+        evidenceImageUrl: String,
+        feedbackTargetType: String,
+        feedbackTargetId: String,
+    ) {
+        val normalizedVote = normalizeImageFeedbackVote(vote)
+        val normalizedImageUrl = evidenceImageUrl.trim()
+        val normalizedTargetId = feedbackTargetId.trim()
+        val isImageFeedbackTarget = normalizedTargetId.startsWith(IMAGE_FEEDBACK_TARGET_PREFIX)
+        imageFeedbackContext =
+            if (
+                isFeedbackMode &&
+                    normalizedVote != null &&
+                    normalizedImageUrl.isNotEmpty() &&
+                    feedbackTargetType == ReportTargetType.USER.name &&
+                    isImageFeedbackTarget
+            ) {
+                ImageFeedbackContext(vote = normalizedVote, targetId = normalizedTargetId)
+            } else {
+                null
             }
     }
 
@@ -197,23 +233,42 @@ class ReportViewModel : BaseVM() {
                     }
                 }
 
+                val selectedReasonCodesList = selectedReasonCodes.toList()
+                val imageFeedbackReasonCodes =
+                    selectedReasonCodesList.filter { it in IMAGE_FEEDBACK_REASON_CODES }
+
                 val request =
                     ReportCreateRequest(
-                        targetId = if (isFeedbackMode) "" else targetID,
+                        targetId =
+                            if (isFeedbackMode) {
+                                imageFeedbackContext?.targetId ?: ""
+                            } else {
+                                targetID
+                            },
                         targetType =
-                            if (!isFeedbackMode && targetType == ReportTargetType.USER.name) {
+                            if (imageFeedbackContext != null) {
+                                ReportTargetType.USER
+                            } else if (!isFeedbackMode && targetType == ReportTargetType.USER.name) {
                                 ReportTargetType.USER
                             } else {
                                 ReportTargetType.AGENT
                             },
-                        reasonCodes = selectedReasonCodes.toList(),
+                        reasonCodes = selectedReasonCodesList,
                         description =
-                            buildReportDescriptionWithAppVersion(
-                                userDescription = trimmedDescription,
-                                versionName = BuildConfig.VERSION_NAME,
-                                versionCode = BuildConfig.VERSION_CODE,
-                                agentId = if (isFeedbackMode) targetID else "",
-                            ),
+                            if (imageFeedbackContext != null) {
+                                buildImageFeedbackDescription(
+                                    userDescription = trimmedDescription,
+                                    vote = imageFeedbackContext?.vote,
+                                    selectedReasonCodes = imageFeedbackReasonCodes,
+                                )
+                            } else {
+                                buildReportDescriptionWithAppVersion(
+                                    userDescription = trimmedDescription,
+                                    versionName = BuildConfig.VERSION_NAME,
+                                    versionCode = BuildConfig.VERSION_CODE,
+                                    agentId = if (isFeedbackMode) targetID else "",
+                                )
+                            },
                         imageUrls = uploadedImageUrls + remoteImages.toList(),
                         reportType =
                             if (isFeedbackMode) {
@@ -223,7 +278,13 @@ class ReportViewModel : BaseVM() {
                             },
                     )
 
-                when (val result = NetServiceMgr.getReportApi().createReport(request)) {
+                when (
+                    val result =
+                        createReportWithImageFeedbackCompatibility(
+                            request = request,
+                            imageFeedbackReasonCodes = imageFeedbackReasonCodes,
+                        )
+                ) {
                     is HttpResult.Success -> {
                         val responseCode = result.data.code ?: 200
                         if (responseCode == 200) {
@@ -260,6 +321,23 @@ class ReportViewModel : BaseVM() {
                 _isSubmitting.value = false
             }
         }
+    }
+
+    private suspend fun createReportWithImageFeedbackCompatibility(
+        request: ReportCreateRequest,
+        imageFeedbackReasonCodes: List<ReportReasonCode>,
+    ): HttpResult<ai.sxwl.android.data.api.model.ReportCreateApiResponse> {
+        val firstAttemptResult = NetServiceMgr.getReportApi().createReport(request)
+        if (
+            firstAttemptResult is HttpResult.Failure &&
+                imageFeedbackContext != null &&
+                imageFeedbackReasonCodes.isNotEmpty() &&
+                firstAttemptResult.code == 422
+        ) {
+            val fallbackRequest = request.copy(reasonCodes = listOf(ReportReasonCode.OTHER))
+            return NetServiceMgr.getReportApi().createReport(fallbackRequest)
+        }
+        return firstAttemptResult
     }
 
     fun onAddImage(imageUri: Uri) {
