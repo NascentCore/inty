@@ -72,7 +72,9 @@ agent:
   langsmith_text_chat_sample_rate: 1.0
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
   enable_chat_image_match_fallback: true
+  
   # dev 环境 Agent 聊天使用自建 LiteLLM 网关；记忆抽取仍用 base_url + api_key（OpenRouter）
+  # 这些配置会覆盖 openrouter 配置
   chat_llm_base_url: "http://10.128.0.5:4000/v1"
   chat_llm_api_key: "sk-Ea4XEWaoVX-T_NhprAdQwQ"
   chat_llm_provider: "litellm"
