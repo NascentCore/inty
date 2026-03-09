@@ -233,6 +233,10 @@ class ReportViewModel : BaseVM() {
                     }
                 }
 
+                val selectedReasonCodesList = selectedReasonCodes.toList()
+                val imageFeedbackReasonCodes =
+                    selectedReasonCodesList.filter { it in IMAGE_FEEDBACK_REASON_CODES }
+
                 val request =
                     ReportCreateRequest(
                         targetId =
@@ -249,12 +253,13 @@ class ReportViewModel : BaseVM() {
                             } else {
                                 ReportTargetType.AGENT
                             },
-                        reasonCodes = selectedReasonCodes.toList(),
+                        reasonCodes = selectedReasonCodesList,
                         description =
                             if (imageFeedbackContext != null) {
                                 buildImageFeedbackDescription(
                                     userDescription = trimmedDescription,
                                     vote = imageFeedbackContext?.vote,
+                                    selectedReasonCodes = imageFeedbackReasonCodes,
                                 )
                             } else {
                                 buildReportDescriptionWithAppVersion(
@@ -273,7 +278,13 @@ class ReportViewModel : BaseVM() {
                             },
                     )
 
-                when (val result = NetServiceMgr.getReportApi().createReport(request)) {
+                when (
+                    val result =
+                        createReportWithImageFeedbackCompatibility(
+                            request = request,
+                            imageFeedbackReasonCodes = imageFeedbackReasonCodes,
+                        )
+                ) {
                     is HttpResult.Success -> {
                         val responseCode = result.data.code ?: 200
                         if (responseCode == 200) {
@@ -310,6 +321,23 @@ class ReportViewModel : BaseVM() {
                 _isSubmitting.value = false
             }
         }
+    }
+
+    private suspend fun createReportWithImageFeedbackCompatibility(
+        request: ReportCreateRequest,
+        imageFeedbackReasonCodes: List<ReportReasonCode>,
+    ): HttpResult<ai.sxwl.android.data.api.model.ReportCreateApiResponse> {
+        val firstAttemptResult = NetServiceMgr.getReportApi().createReport(request)
+        if (
+            firstAttemptResult is HttpResult.Failure &&
+                imageFeedbackContext != null &&
+                imageFeedbackReasonCodes.isNotEmpty() &&
+                firstAttemptResult.code == 422
+        ) {
+            val fallbackRequest = request.copy(reasonCodes = listOf(ReportReasonCode.OTHER))
+            return NetServiceMgr.getReportApi().createReport(fallbackRequest)
+        }
+        return firstAttemptResult
     }
 
     fun onAddImage(imageUri: Uri) {

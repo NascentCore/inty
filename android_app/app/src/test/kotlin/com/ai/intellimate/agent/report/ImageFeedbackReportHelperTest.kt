@@ -29,6 +29,25 @@ class ImageFeedbackReportHelperTest {
     }
 
     @Test
+    fun `buildImageFeedbackDescription appends selected reason codes marker`() {
+        val description =
+            buildImageFeedbackDescription(
+                userDescription = "style mismatch",
+                vote = "dislike",
+                selectedReasonCodes =
+                    listOf(
+                        ai.sxwl.android.data.api.model.ReportReasonCode.IMAGE_STYLE_MISMATCH,
+                        ai.sxwl.android.data.api.model.ReportReasonCode.IMAGE_OTHER,
+                    ),
+            )
+
+        assertEquals(
+            "[IMAGE_FEEDBACK][vote=dislike][reason_codes=IMAGE_STYLE_MISMATCH,IMAGE_OTHER] style mismatch",
+            description,
+        )
+    }
+
+    @Test
     fun `normalizeImageFeedbackVote only accepts like and dislike`() {
         assertEquals("like", normalizeImageFeedbackVote("LIKE"))
         assertEquals("dislike", normalizeImageFeedbackVote(" dislike "))
