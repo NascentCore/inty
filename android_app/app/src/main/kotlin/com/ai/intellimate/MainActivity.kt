@@ -949,62 +949,46 @@ fun SplashLoginUI(
 
                     val words = remember(bannerIndex) { bannerText[bannerIndex].split(" ") }
                     var wordIndex by remember(bannerIndex) { mutableIntStateOf(0) }
-                    //val breakIterator = remember(bannerIndex) { BreakIterator.getWordInstance() }
-                    //val typingDelayInMs = 300L
-
-                    val substringText = remember(bannerIndex) {
-                        StringBuilder()
-                    }
-                    val textAlphaAnim = remember {
-                        Animatable(0f)
-                    }
+                    val textAlphaAnim = remember { Animatable(0f) }
 
                     LaunchedEffect(bannerIndex) {
-                        words.forEachIndexed { index, string ->
-
+                        for (i in 0 until words.size) {
                             textAlphaAnim.snapTo(0f)
 
-                            wordIndex = index
-
-                            if (index > 0) {
-                                substringText.append(words[index - 1])
-                                substringText.append(" ")
-                            }
+                            wordIndex = i
 
                             textAlphaAnim.animateTo(
                                 targetValue = 1f,
-                                animationSpec = tween(500)
+                                animationSpec = tween(350)
                             )
                         }
                     }
 
-//                    LaunchedEffect(text) {
-//                        // Initial start delay of the typing animation
-//                        //delay(300)
-//                        breakIterator.text = StringCharacterIterator(text)
-//
-//                        var nextIndex = breakIterator.next()
-//                        // Iterate over the string, by index boundary
-//                        while (nextIndex != BreakIterator.DONE) {
-//                            substringText = text.subSequence(0, nextIndex).toString()
-//                            // Go to the next logical character boundary
-//                            nextIndex = breakIterator.next(2)
-//                            delay(typingDelayInMs)
-//                        }
-//                    }
-
                     Text(
                         text = buildAnnotatedString {
-                            append(substringText.toString())
+                            for (i in 0 until wordIndex) {
+                                append(words[i])
+                                append(" ")
+                            }
 
                             withStyle(style = SpanStyle(color = Color.White.copy(alpha = textAlphaAnim.value))) {
                                 append(words[wordIndex])
+                            }
+
+                            if (wordIndex < words.size - 1) {
+                                withStyle(SpanStyle(color = Color.Transparent)) {
+                                    for (i in wordIndex + 1 until words.size) {
+                                        append(" ")
+                                        append(words[i])
+                                    }
+                                }
                             }
                         },
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(dimensionResource(R.dimen.padding_large))
                     )
 
                     Spacer(Modifier.height(32.dp))
