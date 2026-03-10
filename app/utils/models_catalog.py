@@ -116,6 +116,15 @@ class ModelAPIProvider(StrEnum):
     LOCAL_LITELLM = "local_litellm"
 
 
+class ModelAPIBaseURL(StrEnum):
+    """
+    模型 API base URL。
+    """
+
+    OPENROUTER = "https://openrouter.ai/api/v1"
+    LOCAL_LITELLM = "http://10.128.0.5:4000/v1"
+
+
 class GenAIModel(BaseModel):
     """
     用于准确指代一个 AI 模型，包括模型构建者、模型名称。
