@@ -1,4 +1,5 @@
 cyclopts
+fal-client
 google-genai
 langsmith
 openai

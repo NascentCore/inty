@@ -173,12 +173,13 @@ def execute_send_selfie_photo(*, _logger=None) -> tuple[str, str | None]:
 def execute_generate_image(
     *,
     messages: list[dict[str, Any]],
-    client: Any,
+    client: Any = None,
     input: str | None = None,
     char_name: str = "",
     user_name: str = "",
     ai_reference_image: str | None = None,
     user_reference_image: str | None = None,
+    model: str | None = None,
     _logger=None,
     **kwargs: Any,
 ) -> tuple[str, str | None]:
@@ -194,17 +195,20 @@ def execute_generate_image(
         else messages
     )
     scene_description = (input or "").strip()
+    input_kwargs: dict[str, Any] = {
+        "scene_description": scene_description,
+        "messages": recent,
+        "char_name": char_name,
+        "user_name": user_name,
+        "ai_reference_image": ai_reference_image,
+        "user_reference_image": user_reference_image,
+    }
+    if model is not None:
+        input_kwargs["model"] = model
     try:
         result = generate_image_with_chat_to_image_behavior(
             client=client,
-            input_data=GenerateImageToolInput(
-                scene_description=scene_description,
-                messages=recent,
-                char_name=char_name,
-                user_name=user_name,
-                ai_reference_image=ai_reference_image,
-                user_reference_image=user_reference_image,
-            ),
+            input_data=GenerateImageToolInput(**input_kwargs),
             _logger=_logger,
         )
         if _logger is not None:
@@ -445,10 +449,16 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
         ),
         ToolDefinition(
             # generate_image is non-TERMINAL: after execution LLM continues to output text (e.g. interpretation or emotion) for the generated image.
-            name="generate_image",
+            name="generate_scene_image",
             description=(
-                "Generate an intimacy role-play scene image using chat context and reference photos. "
-                "Input should describe the fantasized scene between the user and the AI companion. "
+                "Called this when:\n"
+                "- the user explicitly asks for a scene image. "
+                "- the user is sexually aroused. "
+                "- the scene is particularly emotional or erotic. "
+                "- the dialogue focuses on the AI character's outfit/appearance/body and other visual elements. "
+                "Generate a scene image from the user's perspective, given the chat context and reference photos. "
+                "Input should describe the scene that should be visualized in great detail. "
+                "The description should be detailed enough to guide the image generation process. "
                 "The tool automatically uses AI/user profile images as references."
             ),
             parameters={
@@ -456,16 +466,21 @@ def build_tool_definitions(*, _logger=None) -> list[ToolDefinition]:
                 "properties": {
                     "input": {
                         "type": "string",
-                        "description": "Scene description of the intimacy role-play that should be visualized.",
+                        "description": (
+                            "Scene description from the user's perspective.\n"
+                            "The description should be detailed enough to guide the image generation process.\n"
+                            "The description should be in the user's perspective, not the AI character's perspective."
+                            "Describe the AI character's outfit/appearance/body and other visual elements in great detail."
+                        ),
                     },
                     "ai_reference_image": {
                         "type": "string",
                         "description": "Optional override path to AI reference image.",
                     },
-                    "user_reference_image": {
-                        "type": "string",
-                        "description": "Optional override path to user reference image.",
-                    },
+                    # "user_reference_image": {
+                    #     "type": "string",
+                    #     "description": "Optional override path to user reference image.",
+                    # },
                 },
                 "additionalProperties": False,
             },

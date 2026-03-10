@@ -181,6 +181,7 @@ def test_generate_image_raises_when_generation_fails_without_similarity_fallback
                 scene_description="Create a romantic embrace in a candle-lit room.",
                 messages=[{"role": "user", "content": "Please make it romantic."}],
                 runtime_paths=runtime_paths,
+                model="gemini-3-pro-image-preview",
             ),
         )
 
@@ -208,6 +209,7 @@ def test_execute_generate_image_returns_tool_message_and_path(tmp_path: Path):
         input="romantic role-play in a warm room",
         ai_reference_image=str((companion_dir / "avatar.png").resolve()),
         user_reference_image=str((user_dir / "avatar.png").resolve()),
+        model="gemini-3-pro-image-preview",
     )
     assert image_path is not None
     assert Path(image_path).exists()

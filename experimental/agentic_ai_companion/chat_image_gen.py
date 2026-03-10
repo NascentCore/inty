@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.utils.models_catalog import NANO_BANANA_2
+from app.utils.models_catalog import NANO_BANANA_2, Z_IMAGE_TURBO_IMAGE_TO_IMAGE, is_fal_model
 
 if TYPE_CHECKING:
     from google.genai import Client
@@ -25,7 +25,7 @@ DEFAULT_USER_PROFILE_DIR = _THIS_DIR / "user_profile"
 DEFAULT_OUTPUT_DIR = _THIS_DIR / "tmp" / "chat_images"
 DEFAULT_HISTORY_PATH = _THIS_DIR / "tmp" / "chat_image_history.json"
 
-IMAGE_GENERATION_PROMPT_TEMPLATE = """Generate a high-quality image based on dialogues and stage instructions
+CHAT_IMAGE_GENERATION_PROMPT_TEMPLATE = """Generate a high-quality image based on dialogues and stage instructions
 in order to satisfy the viewer's intimacy fantacy.
 
 ### Reference Image Notes
@@ -107,7 +107,7 @@ class GenerateImageToolInput(BaseModel):
     char_name: str = "AI Companion"
     user_name: str = "the user"
     history_count: int = RECENT_MESSAGES_LIMIT
-    model: str = NANO_BANANA_2.id_on_provider
+    model: str = Z_IMAGE_TURBO_IMAGE_TO_IMAGE.id_on_provider
     ai_reference_image: str | None = None
     user_reference_image: str | None = None
     runtime_paths: RuntimePaths = Field(default_factory=RuntimePaths)
@@ -242,7 +242,7 @@ def build_chat_image_prompt(
 
     history_text = _format_message_history_for_prompt(chat_history)
     user_message = scene_description.strip() or _last_user_message(chat_history)
-    return IMAGE_GENERATION_PROMPT_TEMPLATE.format(
+    return CHAT_IMAGE_GENERATION_PROMPT_TEMPLATE.format(
         agent_background=agent_background,
         agent_personality=agent_personality,
         chat_history=history_text,
@@ -474,6 +474,54 @@ def _call_generate_content_for_chat_image(
     )
 
 
+def _call_fal_image_to_image_for_chat_image(
+    *,
+    model: str,
+    prompt: str,
+    ai_reference_image_path: str,
+    user_reference_image_path: str | None,
+) -> bytes:
+    """通过 fal_client 调用 image-to-image 模型，返回生成图片的原始字节。"""
+    import fal_client
+
+    # 将本地参考图上传到 fal CDN
+    ai_ref_url = fal_client.sync_client.upload_file(ai_reference_image_path)
+    arguments: dict[str, Any] = {
+        "prompt": prompt,
+        # "sync_mode": True,
+        "num_images": 1,
+        "enable_safety_checker": False,
+    }
+
+    # seedream edit 使用 image_urls 数组；z-image 等使用 image_url 单值
+    if "seedream" in model.lower() or "gpt-image" in model.lower():
+        image_urls = [ai_ref_url]
+        if user_reference_image_path is not None:
+            image_urls.append(fal_client.sync_client.upload_file(user_reference_image_path))
+        arguments["image_urls"] = image_urls
+    else:
+        arguments["image_url"] = ai_ref_url
+        arguments["strength"] = 0.6
+
+    result = fal_client.subscribe(model, arguments=arguments, with_logs=False)
+    if not isinstance(result, dict):
+        raise TypeError(f"fal_client.subscribe returned non-dict: {type(result)}")
+    images = result.get("images")
+    if not images or not isinstance(images, list) or len(images) == 0:
+        raise ValueError("fal 返回无图片结果")
+
+    first_url = images[0].get("url", "")
+    if first_url.startswith("data:"):
+        # data URI → 解码 base64
+        _, encoded = first_url.split(",", 1)
+        return base64.b64decode(encoded)
+
+    # 远程 URL → 下载
+    import urllib.request
+    with urllib.request.urlopen(first_url) as resp:
+        return resp.read()
+
+
 def _write_generated_image_and_metadata(
     *,
     image_data: bytes,
@@ -579,11 +627,11 @@ def _summarize_gemini_response(response: Any) -> dict[str, Any]:
 
 def generate_image_with_chat_to_image_behavior(
     *,
-    client: "Client",
+    client: "Client | None" = None,
     input_data: GenerateImageToolInput,
     _logger=None,
 ) -> GeneratedImageToolResult:
-    """复刻 app 消息生图主流程（experimental 版本）。"""
+    """复刻 app 消息生图主流程（experimental 版本）。支持 Gemini 与 fal 两类模型。"""
     companion_profile = load_companion_profile(input_data.runtime_paths)
     user_profile = load_user_profile(input_data.runtime_paths)
     effective_char_name = input_data.char_name or companion_profile.name
@@ -612,28 +660,41 @@ def generate_image_with_chat_to_image_behavior(
         user_profile=user_profile,
     )
 
+    use_fal = is_fal_model(input_data.model)
+
     if _logger is not None:
+        provider_tag = "fal" if use_fal else "Gemini"
         _logger.info(
-            "Gemini 生图请求: model=%s, prompt 长度=%d, ai_ref=%s, user_ref=%s",
+            "%s 生图请求: model=%s, prompt 长度=%d, ai_ref=%s, user_ref=%s",
+            provider_tag,
             input_data.model,
             len(prompt),
             reference_selection.ai_reference_image_path,
             reference_selection.user_reference_image_path,
         )
-        _logger.debug("Gemini 生图完整 prompt:\n%s", prompt)
+        _logger.debug("%s 生图完整 prompt:\n%s", provider_tag, prompt)
 
-    response = _call_generate_content_for_chat_image(
-        client=client,
-        model=input_data.model,
-        prompt=prompt,
-        ai_reference_image_path=reference_selection.ai_reference_image_path,
-        user_reference_image_path=reference_selection.user_reference_image_path,
-    )
+    if use_fal:
+        image_bytes = _call_fal_image_to_image_for_chat_image(
+            model=input_data.model,
+            prompt=input_data.scene_description,
+            ai_reference_image_path=reference_selection.ai_reference_image_path,
+            user_reference_image_path=reference_selection.user_reference_image_path,
+        )
+    else:
+        if client is None:
+            raise ValueError("Gemini 模型需要传入 client 参数")
+        response = _call_generate_content_for_chat_image(
+            client=client,
+            model=input_data.model,
+            prompt=prompt,
+            ai_reference_image_path=reference_selection.ai_reference_image_path,
+            user_reference_image_path=None,
+        )
+        if _logger is not None:
+            _logger.info("Gemini 生图响应: %s", json.dumps(_summarize_gemini_response(response), ensure_ascii=False))
+        image_bytes = _extract_inline_image_bytes(response)
 
-    if _logger is not None:
-        _logger.info("Gemini 生图响应: %s", json.dumps(_summarize_gemini_response(response), ensure_ascii=False))
-
-    image_bytes = _extract_inline_image_bytes(response)
     return _write_generated_image_and_metadata(
         image_data=image_bytes,
         prompt=prompt,
