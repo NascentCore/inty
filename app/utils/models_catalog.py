@@ -107,6 +107,14 @@ class ModelAPIProvider(StrEnum):
     # Google 还有其他的 API 服务比如 AI Studio，所以明确指出。
     GOOGLE_VERTEX_AI = "google"
 
+    # 本地部署的 litellm 端点；这是用于对接第三方代金券提供者的本地部署大模型网关。
+    # 部署于与后端服务器同一台虚机上，可以对接第三方代金券所有者提供的 service account
+    # 或其他的 API 凭证。可以访问各类模型，实际支付成本远低于官方报价。
+    #
+    # 这里使用的 API input & output schema 仍然是兼容 openai（还包括兼容 Claude 等等）
+    # 但是其 API base URL 需要修改。
+    LOCAL_LITELLM = "local_litellm"
+
 
 class GenAIModel(BaseModel):
     """
