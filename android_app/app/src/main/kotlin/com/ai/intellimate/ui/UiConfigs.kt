@@ -784,7 +784,7 @@ object UiConfigs {
         const val showSubscriptionButton = false
 
         /** 消息列表非全屏模式下，上部分空白区占比 */
-        const val chatListBlankZone = 1f / 3f
+        const val chatListBlankZone = 0.5f
 
         /** 消息列表顶部留白距离 */
         val chatPageLazyColumnGapTop = 360.dp

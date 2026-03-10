@@ -64,9 +64,17 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -542,11 +550,10 @@ internal fun ChatPage(
             }
 
             Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                // 键盘弹起或语音输入激活时隐藏顶部栏，把视觉面积留给角色展示
-                if (!isKeyboardVisible && !isVoiceInputActive) {
-                    Spacer(Modifier.height(48.dp))
+                // 标题栏始终固定在顶部，不随键盘弹起而隐藏
+                Spacer(Modifier.height(48.dp))
 
-                    agentInfo?.let { info ->
+                agentInfo?.let { info ->
                         ChatTopBar(
                             navController,
                             modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
@@ -658,23 +665,11 @@ internal fun ChatPage(
                         )
                         Spacer(Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing))
                     }
-                }
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
-                // 非全屏模式下，先添加空白区域
-                if (!chatListFullScreen) {
-                    Spacer(Modifier.weight(UiConfigs.ChatPage.chatListBlankZone))
-                }
+                // 消息列表：全屏/半屏均占满高度；半屏时在 LazyColumn 顶部叠加渐变，使消息从顶部渐变消失
 
                 val lazyColumnModifier =
-                    if (chatListFullScreen) {
-                        // 全屏模式：使用 weight(1f) 保持现有布局
-                        Modifier.weight(1f).padding(horizontal = 16.dp)
-                    } else {
-                        // 非全屏模式：使用剩余空间（1 - chatListBlankZone）
-                        Modifier.weight(1f - UiConfigs.ChatPage.chatListBlankZone)
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    }
+                    Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)
 
                 BoxWithConstraints(modifier = lazyColumnModifier) {
                     val density = LocalDensity.current
@@ -682,8 +677,28 @@ internal fun ChatPage(
                         with(density) { (maxHeight - 48.dp).roundToPx() }
                     }
 
+                    val listModifier =
+                        if (chatListFullScreen) {
+                            Modifier.fillMaxSize()
+                        } else {
+                            Modifier.fillMaxSize()
+                                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                                .drawWithCache {
+                                    onDrawWithContent {
+                                        drawContent()
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                0.25f to Color.Transparent,
+                                                UiConfigs.ChatPage.chatListBlankZone to Color.Black
+                                            ),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    }
+                                }
+                        }
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = listModifier,
                         state = listState,
                         reverseLayout = true,
                         contentPadding =
