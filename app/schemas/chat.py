@@ -78,6 +78,15 @@ class MessageList(BaseModel):
     items: List[Message]
 
 
+class ChatModeOption(BaseModel):
+    """Chat mode option for list API (id, short_name, name, description)."""
+
+    id: str
+    short_name: str = ""
+    name: str = ""
+    description: str = ""
+
+
 class ChatSettingsBase(BaseModel):
     """聊天设置基础模型。
 
@@ -90,6 +99,7 @@ class ChatSettingsBase(BaseModel):
     # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
+    chat_mode: Optional[str] = None  # User-selected chat mode id; null = use agent default
 
 
 class ChatSettingsCreate(ChatSettingsBase):
@@ -107,6 +117,7 @@ class ChatSettingsUpdate(ChatSettingsBase):
     # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: Optional[bool] = None  # 高级模式开关，仅订阅用户可设置
+    chat_mode: Optional[str] = None  # User-selected chat mode id
     request_id: Optional[str] = None
 
 
@@ -119,6 +130,7 @@ class ChatSettingsInDB(ChatSettingsBase):
     chat_id: str
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
+    chat_mode: Optional[str] = None  # User-selected chat mode id
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -146,7 +158,7 @@ class ChatSettingsInDB(ChatSettingsBase):
 class ChatSettings(ChatSettingsInDB):
     """聊天设置"""
 
-    pass
+    available_chat_modes: Optional[List["ChatModeOption"]] = None  # Only set when agent default is in user-facing modes
 
 
 class ChatBase(BaseModel):

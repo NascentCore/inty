@@ -46,6 +46,7 @@ import api from "../services/api";
 import type { Agent, FestivalMemoryItem } from "../types";
 import VoicePlayer from "../components/common/VoicePlayer";
 import { PremiumModeToggle } from "../components/common/PremiumModeToggle";
+import { ChatModeSelector } from "../components/common/ChatModeSelector";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
 import { SingleAgentSelectorPanel } from "../components/common/SingleAgentSelectorPanel";
 import AgentDetailModal from "../components/common/AgentDetailModal";
@@ -1346,6 +1347,7 @@ export const ChatPage: React.FC = () => {
                 }
                 extra={
                   <Space>
+                    <ChatModeSelector agentId={selectedAgent.id} />
                     <PremiumModeToggle
                       agentId={selectedAgent.id}
                       onToggle={(enabled) => {
