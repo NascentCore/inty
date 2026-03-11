@@ -86,6 +86,7 @@
 |------|------|----------|
 | `/api/v1/chats/` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/` | POST | `app/api/v1/endpoints/chats.py` |
+| `/api/v1/chats/modes` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/{chat_id}` | DELETE | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/status` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/initialize` | POST | `app/api/v1/endpoints/chats.py` |

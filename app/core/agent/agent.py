@@ -495,6 +495,16 @@ class Agent:
         if override is not None and override.mode_prompt is not None:
             mode_prompt = override.mode_prompt
             output_format_prompt = ""
+        elif (
+            chat_settings
+            and getattr(chat_settings, "chat_mode", None)
+            and getattr(chat_settings, "chat_mode") in prompts.USER_FACING_CHAT_MODE_IDS
+        ):
+            chat_mode_id = chat_settings.chat_mode
+            mode_prompt = prompts.get_mode_prompt_by_id(chat_mode_id)
+            output_format_prompt = prompts.get_mode_output_format_prompt_by_id(
+                chat_mode_id
+            )
         elif chat_settings and chat_settings.premium_mode:
             logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
             mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt

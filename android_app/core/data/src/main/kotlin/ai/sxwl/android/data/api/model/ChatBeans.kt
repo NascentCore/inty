@@ -286,6 +286,15 @@ data class ConversationItem(
 
 // chat settings
 
+/** Chat mode option for list API (id, short_name, name, description). */
+@JsonClass(generateAdapter = true)
+data class ChatModeOption(
+    val id: String = "",
+    @Json(name = "short_name") val shortName: String = "",
+    val name: String = "",
+    val description: String = "",
+)
+
 /** 聊天相关的设置接口，注意一个接口多个使用，不需要的参数，保持null，避免覆盖 */
 @JsonClass(generateAdapter = true)
 data class ChatSettingsReq(
@@ -295,6 +304,7 @@ data class ChatSettingsReq(
     val style_prompt: String? = null,
     val voice_enabled: Boolean? = null,
     val voice_id: String? = null,
+    @Json(name = "chat_mode") val chatMode: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -321,6 +331,8 @@ data class ChatSettingsResponse(
         val voice_id: String? = null, // 选中的语音 ID（MVP: google/*）
         val keep_talking: Boolean? = null, // 连续回复,似乎客户端实现，不需要接口字段
         val premium_mode: Boolean? = null, // 是否会员模式
+        @Json(name = "chat_mode") val chatMode: String? = null, // 用户选择的聊天模式 id；空表示使用角色默认
+        @Json(name = "available_chat_modes") val availableChatModes: List<ChatModeOption>? = null, // 可选模式列表，仅当角色默认在开放三模式内时非空
     )
 }
 

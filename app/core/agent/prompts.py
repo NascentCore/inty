@@ -94,6 +94,7 @@ class PromptOption:
     description: str
     content: str
     output_format_content: str = ""
+    short_name: str = ""  # Chat page abbreviated name, e.g. Flirt, Story, Vivid
 
 
 AVAILABLE_MAIN_PROMPTS: list[PromptOption] = [
@@ -132,10 +133,11 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
     ),
     PromptOption(
         id="flirting_mode_20250902",
-        name="调情模式 (20250902)",
-        description="调情模式提示词（2025年9月2日版本），用于浪漫角色扮演",
+        name="🔥Flirt Mode",
+        description="Fast, playful — every message pulls you closer.",
         content=FLIRTING_MODE_PROMPT_20250902,
         output_format_content=FLIRTING_OUTPUT_FORMAT_PROMPT_20250902,
+        short_name="Flirt",
     ),
     PromptOption(
         id="friendly_mode",
@@ -152,16 +154,18 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
     ),
     PromptOption(
         id="rp_mode_1225",
-        name="RP模式 (1225)",
-        description="角色扮演模式提示词（1225版本），强调主动推动剧情和场景变化",
+        name="🎭Story Mode",
+        description="Character-driven stories with dynamic scenes and twists.",
         content=RP_MODE_PROMPT_1225,
         output_format_content=RP_OUTPUT_FORMAT_PROMPT_1225,
+        short_name="Story",
     ),
     PromptOption(
         id="immersive_mode_0309",
-        name="Immersive Mode0309",
-        description="沉浸模式提示词（0309版本），强调剧情推进、场景变化与输出格式",
+        name="🌙Vivid Mode",
+        description="Rich detail, lingering emotions, and moments that feel real.",
         content=IMMERSIVE_MODE_PROMPT_0309,
+        short_name="Vivid",
     ),
     PromptOption(
         id="ai_companion_mode",
@@ -173,6 +177,19 @@ AVAILABLE_MODE_PROMPTS: list[PromptOption] = [
 
 DEFAULT_MAIN_PROMPT_ID = "purity_main_0725"
 DEFAULT_MODE_PROMPT_ID = "purity_mode_0725"
+
+# User-facing chat mode IDs (only these three are selectable in chat settings).
+# If agent default mode_prompt is not in this list, GET settings returns chat_mode=null.
+USER_FACING_CHAT_MODE_IDS: tuple[str, ...] = (
+    "flirting_mode_20250902",
+    "rp_mode_1225",
+    "immersive_mode_0309",
+)
+
+
+def get_user_facing_chat_mode_options() -> list[PromptOption]:
+    """Return mode options for the three user-facing chat modes (id, short_name, name, description)."""
+    return [p for p in AVAILABLE_MODE_PROMPTS if p.id in USER_FACING_CHAT_MODE_IDS]
 
 
 def get_main_prompt_by_id(prompt_id: str) -> str:

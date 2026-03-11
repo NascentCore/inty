@@ -585,6 +585,7 @@ def test_get_agent_chat_settings_uses_cached_user_id_after_chat_creation_rollbac
             voice_enabled=True,
             style_prompt=None,
             premium_mode=False,
+            chat_mode=None,
             created_at=datetime.now(timezone.utc),
             updated_at=None,
         )
@@ -608,3 +609,202 @@ def test_get_agent_chat_settings_uses_cached_user_id_after_chat_creation_rollbac
 
     assert response.status_code == 200
     assert response.json()["id"] == "settings-2"
+
+
+def test_list_chat_modes_returns_three_modes(chats_business_error_app: FastAPI):
+    """GET /chats/modes without agent_id returns the three user-facing chat modes."""
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.get("/api/v1/chats/modes")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 3
+    ids = [m["id"] for m in data]
+    assert "flirting_mode_20250902" in ids
+    assert "rp_mode_1225" in ids
+    assert "immersive_mode_0309" in ids
+    for m in data:
+        assert "short_name" in m
+        assert "name" in m
+        assert "description" in m
+
+
+def test_get_agent_chat_settings_returns_chat_mode_when_agent_default_in_three(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    """When agent mode_prompt is in USER_FACING_CHAT_MODE_IDS, GET settings returns chat_mode and available_chat_modes."""
+    from app.core.agent.prompts import USER_FACING_CHAT_MODE_IDS
+
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id, mode_prompt=USER_FACING_CHAT_MODE_IDS[0])
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            id="settings-1",
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            language="en",
+            voice_enabled=True,
+            style_prompt=None,
+            premium_mode=False,
+            chat_mode=None,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
+        )
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+    )
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.get("/api/v1/chats/agents/agent-1/settings")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["chat_mode"] == USER_FACING_CHAT_MODE_IDS[0]
+    assert "available_chat_modes" not in body
+
+
+def test_get_agent_chat_settings_returns_null_chat_mode_when_agent_default_not_in_three(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    """When agent mode_prompt is not in USER_FACING_CHAT_MODE_IDS, GET settings returns chat_mode=null, available_chat_modes=null."""
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id, mode_prompt="purity_mode_0725")
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            id="settings-1",
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
+            language="en",
+            voice_enabled=True,
+            style_prompt=None,
+            premium_mode=False,
+            chat_mode=None,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
+        )
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+    )
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.get("/api/v1/chats/agents/agent-1/settings")
+    assert response.status_code == 200
+    body = response.json()
+    assert body.get("chat_mode") is None
+    assert "available_chat_modes" not in body
+
+
+def test_update_chat_settings_accepts_valid_chat_mode(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    """PUT settings with chat_mode in USER_FACING_CHAT_MODE_IDS succeeds."""
+    from app.core.agent.prompts import USER_FACING_CHAT_MODE_IDS
+
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            id="settings-1",
+            chat_id=chat_id,
+            chat_mode=None,
+        )
+
+    async def fake_get_subscription_status(db, user_id):
+        return SimpleNamespace(is_subscribed=True)
+
+    async def fake_update_chat_settings(db, chat_id, settings_update):
+        return SimpleNamespace(
+            id="settings-1",
+            user_id="user-1",
+            agent_id="agent-1",
+            chat_id=chat_id,
+            chat_mode=settings_update.chat_mode,
+            language="en",
+            voice_enabled=True,
+            style_prompt=None,
+            premium_mode=False,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
+        )
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+    )
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+    )
+    monkeypatch.setattr(
+        subscription_service, "get_user_subscription_status", fake_get_subscription_status
+    )
+    monkeypatch.setattr(chat_service, "update_chat_settings", fake_update_chat_settings)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.put(
+            "/api/v1/chats/agents/agent-1/settings",
+            json={"chat_mode": USER_FACING_CHAT_MODE_IDS[0]},
+        )
+    assert response.status_code == 200
+
+
+def test_update_chat_settings_rejects_invalid_chat_mode(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    """PUT settings with chat_mode not in USER_FACING_CHAT_MODE_IDS returns 400."""
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(id="settings-1", chat_id=chat_id)
+
+    async def fake_get_subscription_status(db, user_id):
+        return SimpleNamespace(is_subscribed=True)
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+    )
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+    )
+    monkeypatch.setattr(
+        subscription_service, "get_user_subscription_status", fake_get_subscription_status
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.put(
+            "/api/v1/chats/agents/agent-1/settings",
+            json={"chat_mode": "invalid_mode_id"},
+        )
+    assert response.status_code == 400

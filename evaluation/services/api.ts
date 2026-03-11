@@ -61,6 +61,15 @@ export const getAssumeUserId = (): string | null => {
 
 type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
 type QueryParamValue = string | number | boolean | null | undefined;
+
+/** 对话模式选项（与后端 GET /chats/modes 一致） */
+export interface ChatModeOptionCompat {
+  id: string;
+  short_name: string;
+  name: string;
+  description: string;
+}
+
 type IntyCompatClient = {
   api: {
     v1: {
@@ -78,6 +87,9 @@ type IntyCompatClient = {
             agentId: string,
           ) => Promise<{ premium_mode?: boolean; [key: string]: unknown }>;
         };
+        getModes: (
+          agentId?: string | null,
+        ) => Promise<ChatModeOptionCompat[]>;
       };
       ai: {
         agents: {
@@ -365,6 +377,8 @@ const intyClient: IntyCompatClient = {
           getSettings: (agentId: string) =>
             apiClient.get(`/chats/agents/${agentId}/settings`),
         },
+        getModes: (agentId?: string | null) =>
+          apiClient.get<ChatModeOptionCompat[]>("/chats/modes", agentId ? { agent_id: agentId } : undefined),
       },
       ai: {
         agents: {
@@ -1309,6 +1323,7 @@ export const chatApi = {
       language?: string;
       voice_enabled?: boolean;
       style_prompt?: string;
+      chat_mode?: string | null;
     },
   ): Promise<{ [key: string]: unknown }> =>
     apiClient.put(`/chats/agents/${agentId}/settings`, settings),

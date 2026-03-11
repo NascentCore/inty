@@ -24,6 +24,10 @@ from app.api.utils.feature_gating import (
 )
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
+from app.core.agent.prompts import (
+    USER_FACING_CHAT_MODE_IDS,
+    get_user_facing_chat_mode_options,
+)
 from app.core.chat import generate_chat_stream
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.voice.tts_api import is_gemini_voice
@@ -54,6 +58,34 @@ from app.services.voice_service import (
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
+
+
+@router.get(
+    "/modes",
+    response_model=List[schemas.chat.ChatModeOption],
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+    summary="List conversation modes",
+    description="Return the three user-facing chat modes (id, short_name, name, description). If agent_id is provided and the agent default mode is not in the three, returns empty list.",
+)
+async def list_chat_modes(
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: Optional[str] = Query(None, description="When set, return empty list if agent default mode is not in the three user-facing modes"),
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
+) -> Any:
+    if agent_id:
+        agent_db = await agent_service.get_agent(db, agent_id=agent_id)
+        if not agent_db or getattr(agent_db, "mode_prompt", None) not in USER_FACING_CHAT_MODE_IDS:
+            return []
+    opts = get_user_facing_chat_mode_options()
+    return [
+        schemas.chat.ChatModeOption(
+            id=p.id,
+            short_name=p.short_name,
+            name=p.name,
+            description=p.description,
+        )
+        for p in opts
+    ]
 
 
 @router.get(
@@ -600,6 +632,12 @@ async def update_agent_chat_settings(
                 detail="Only Gemini voices are supported in chat settings for now.",
             )
 
+        if settings_update.chat_mode is not None and settings_update.chat_mode not in USER_FACING_CHAT_MODE_IDS:
+            raise HTTPException(
+                status_code=400,
+                detail="chat_mode must be one of: " + ", ".join(USER_FACING_CHAT_MODE_IDS),
+            )
+
         # Then update settings
         settings = await chat_service.update_chat_settings(
             db=db, chat_id=chat.id, settings_update=settings_update
@@ -625,7 +663,7 @@ async def update_agent_chat_settings(
 # TODO: Should we switch to /chats/{chat_id}/settings?
 @router.get(
     "/agents/{agent_id}/settings",
-    response_model=schemas.ChatSettings,
+    response_model=schemas.chat.ChatSettingsInDB,
     tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
     summary="Get Agent Chat Settings",
     description=(
@@ -665,11 +703,21 @@ async def get_agent_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user_id, agent_id=agent_id
         )
 
+        agent_default_mode = getattr(agent_db, "mode_prompt", None)
+        if agent_default_mode not in USER_FACING_CHAT_MODE_IDS:
+            chat_mode_value = None
+        else:
+            chat_mode_value = settings.chat_mode or agent_default_mode
+
+        response = schemas.chat.ChatSettingsInDB.model_validate(settings).model_copy(
+            update={"chat_mode": chat_mode_value}
+        )
+
         logger.info(
             f"Successfully got Agent chat settings - Agent ID: {agent_id}, Settings ID: {settings.id}"
         )
 
-        return settings
+        return response
 
     except HTTPException:
         raise

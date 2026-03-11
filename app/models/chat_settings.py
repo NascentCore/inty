@@ -31,6 +31,11 @@ class ChatSettings(Base):
     premium_mode = Column(
         Boolean, default=False, comment="高级模式开关，仅订阅用户可设置"
     )
+    chat_mode = Column(
+        String,
+        nullable=True,
+        comment="User-selected chat mode id (e.g. flirting_mode_20250902). Null = use agent default.",
+    )
     created_at = Column(DateTime(timezone=True), server_default=sa.text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sa.text("now()"))
 
@@ -44,6 +49,3 @@ class ChatSettings(Base):
 
     chat_id = Column(String, ForeignKey("chats.id"))
     chat = relationship("Chat", back_populates="settings")
-
-    # TODO: 增加 mode，enum (vanila, standard, premium)
-    # TODO: 增加 features，list[str] (keep_talking, style_prompt, auto_play_voice)
