@@ -74,6 +74,11 @@ import {
   buildGeneratedImageDetailFromDailyReportItem,
   type GeneratedImageDetail,
 } from "../utils/generatedImageDetail";
+import {
+  buildAgentProfilePageUrl,
+  buildUserProfilePageUrl,
+  getEvaluationBaseUrl,
+} from "../utils/profileLinks";
 
 type ReportType = "daily" | "weekly";
 
@@ -217,6 +222,8 @@ function VoiceAudiosGroupCard({
   groups: VoiceAudioGroupByUserAgent[];
   previewLimit: number;
 }) {
+  const baseUrl = getEvaluationBaseUrl();
+
   if (groups.length === 0) {
     return (
       <Card title={title} style={{ marginTop: "24px" }}>
@@ -251,11 +258,26 @@ function VoiceAudiosGroupCard({
             }}
           >
             <div style={{ wordBreak: "break-all" }}>
-              用户ID: <span style={{ fontFamily: "monospace" }}>{group.user_id}</span>
+              用户ID:{" "}
+              <a
+                href={buildUserProfilePageUrl(baseUrl, group.user_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontFamily: "monospace" }}
+              >
+                {group.user_id}
+              </a>
             </div>
             <div style={{ wordBreak: "break-all" }}>
               角色: {group.agent_name || "-"} · Agent ID:{" "}
-              <span style={{ fontFamily: "monospace" }}>{group.agent_id}</span>
+              <a
+                href={buildAgentProfilePageUrl(baseUrl, group.agent_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontFamily: "monospace" }}
+              >
+                {group.agent_id}
+              </a>
             </div>
           </div>
           {group.audios.map((a, i) => (

@@ -38,6 +38,7 @@ import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
 import { AssumeUserSelector } from "./components/AssumeUserSelector";
+import { parseEvaluationHashRoute } from "./utils/profileLinks";
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -62,6 +63,22 @@ type PageKey =
   | "report-feedback"
   | "festival-memory";
 
+const HASH_PAGE_KEYS = new Set<PageKey>([
+  "evaluation",
+  "history",
+  "chat",
+  "voice-chat",
+  "agents",
+  "settings",
+  "user-analytics",
+  "user-analytics-reports",
+  "user-daily-messages",
+  "character-themes",
+  "generated-images",
+  "report-feedback",
+  "festival-memory",
+]);
+
 interface NavigationItem {
   key: PageKey;
   icon: React.ReactNode;
@@ -73,11 +90,11 @@ interface NavigationItem {
 const AppContent: React.FC = () => {
   // 状态管理
   const [currentPage, setCurrentPage] = useState<PageKey>(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.location.hash.startsWith("#report-feedback")
-    ) {
-      return "report-feedback";
+    if (typeof window !== "undefined") {
+      const { pageKey } = parseEvaluationHashRoute(window.location.hash);
+      if (HASH_PAGE_KEYS.has(pageKey as PageKey)) {
+        return pageKey as PageKey;
+      }
     }
     const savedPage = localStorage.getItem("lastVisitedPage");
     if (savedPage === "live2d") {

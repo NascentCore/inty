@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Card,
   Button,
@@ -51,6 +51,7 @@ import { hasAgentChanged } from "../utils/agentComparison";
 import ImageCropModal from "../components/common/ImageCropModal";
 import BackgroundCropModal from "../components/common/BackgroundCropModal";
 import AvatarDisplay from "../components/common/AvatarDisplay";
+import { getDeepLinkedAgentIdFromHash } from "../utils/profileLinks";
 
 const { TextArea } = Input;
 const { Search } = Input;
@@ -99,6 +100,13 @@ export const AgentManagePage: React.FC = () => {
     useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [creatorFilter, setCreatorFilter] = useState<string>("admin");
+  const deepLinkedAgentId = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return getDeepLinkedAgentIdFromHash(window.location.hash);
+  }, []);
+  const hasAppliedAgentDeepLinkRef = useRef(false);
 
   // 分页
   const [pagination, setPagination] = useState({
@@ -345,13 +353,14 @@ export const AgentManagePage: React.FC = () => {
     // 搜索筛选
     if (normalizedSearchText) {
       filteredAgents = filteredAgents.filter((agent) => {
+        const idMatch = agent.id.toLowerCase().includes(normalizedSearchText);
         const nameMatch = agent.name
           ?.toLowerCase()
           .includes(normalizedSearchText);
         const introMatch = agent.intro
           ? agent.intro.toLowerCase().includes(normalizedSearchText)
           : false;
-        return nameMatch || introMatch;
+        return idMatch || nameMatch || introMatch;
       });
     }
 
@@ -443,6 +452,29 @@ export const AgentManagePage: React.FC = () => {
     loadModels(); // 加载模型列表
     loadAvailablePrompts(); // 加载 prompt 列表
   }, [agents.length, loadAgents, loadModels, loadAvailablePrompts]);
+
+  useEffect(() => {
+    if (!deepLinkedAgentId) {
+      return;
+    }
+    setSearchText(deepLinkedAgentId);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  }, [deepLinkedAgentId]);
+
+  useEffect(() => {
+    if (!deepLinkedAgentId || hasAppliedAgentDeepLinkRef.current) {
+      return;
+    }
+    if (agents.length === 0) {
+      return;
+    }
+    hasAppliedAgentDeepLinkRef.current = true;
+    const matchedAgent = agents.find((agent) => agent.id === deepLinkedAgentId);
+    if (matchedAgent) {
+      setCurrentAgent(matchedAgent);
+      setDetailModalVisible(true);
+    }
+  }, [agents, deepLinkedAgentId]);
 
   // 处理头像上传（创建模式，打开截取弹窗）
   const handleAvatarChange: UploadProps["beforeUpload"] = (file) => {
