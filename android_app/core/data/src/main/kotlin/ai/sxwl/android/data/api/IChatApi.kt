@@ -3,6 +3,7 @@ package ai.sxwl.android.data.api
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatImageGenerationApiResponse
 import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
+import ai.sxwl.android.data.api.model.ChatMode
 import ai.sxwl.android.data.api.model.ChatMusicGenerationApiResponse
 import ai.sxwl.android.data.api.model.ChatMusicGenerationRequest
 import ai.sxwl.android.data.api.model.ChatSettingsReq
@@ -93,4 +94,7 @@ interface IChatApi {
         @Path("agent_id") agent_id: String,
         @Body req: ClearMessagesRequest,
     ): HttpResult<ClearMessagesResponse>
+
+    @GET("/api/v1/chats/modes")
+    suspend fun fetchChatModes(): HttpResult<List<ChatMode>>
 }

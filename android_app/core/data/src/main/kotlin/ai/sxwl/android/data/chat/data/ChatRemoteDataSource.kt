@@ -4,6 +4,9 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.ChatMessageContentPart
 import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
 import ai.sxwl.android.data.api.model.ChatImageGenerationResult
+import ai.sxwl.android.data.api.model.ChatMode
+import ai.sxwl.android.data.api.model.ChatSettingsReq
+import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.ClearMessagesRequest
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
@@ -19,11 +22,26 @@ import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
+import com.inty.api.models.api.v1.chats.Chat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
+
+    suspend fun getChatModes(): HttpResult<List<ChatMode>> {
+
+        return NetServiceMgr.getChatApi().fetchChatModes()
+    }
+
+    suspend fun updateChatSettings(agentId: String, chatSettingsReq: ChatSettingsReq): HttpResult<ChatSettingsResponse> {
+        return NetServiceMgr.getChatApi().updateChatSettings(agentId, chatSettingsReq)
+    }
+
+    suspend fun getChatSettings(agentId: String): HttpResult<ChatSettingsResponse.ChatSettingRspData> {
+        return NetServiceMgr.getChatApi().getChatSettings(agentId)
+    }
+
     suspend fun unlockSurpriseSnap(messageId: Long): HttpResult<SurpriseSnapUnlockResp> {
         return NetServiceMgr.getChatApi().unlockSurpriseSnap(SurpriseSnapUnlockReq(messageId))
     }

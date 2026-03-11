@@ -132,3 +132,22 @@
 - 提交：事件筛选 `event_name = rank_dialog_submit_click`，可按参数 `rating` 筛选星级分布。
 - 取消：事件筛选 `event_name = rank_dialog_cancel_click`。
 - 评分完成：事件筛选 `event_name = rank_dialog_review_completed`，可按参数 `user_id` 筛选。
+
+---
+
+## Chat Mode（聊天模式选择）相关事件
+
+聊天页顶部栏提供 Chat Mode 按钮，点击后弹出 ChatModeSelectorDialog 选择活人感/娱乐/剧情/怀旧等模式；IntelliMate 官方助手聊天时不显示该按钮。
+
+- **触发位置**：`ChatPage.kt`（按钮点击）、`ChatModeSelectorDialog.kt`（弹窗内选择某一模式）。
+- **事件与参数**：
+
+| 事件名 | 代码常量 | 触发时机 | 参数 |
+|--------|----------|----------|------|
+| `chat_mode_button_click` | `FirebaseManager.Events.CHAT_MODE_BUTTON_CLICK` | 用户点击顶部栏 Chat Mode 按钮 | `agent_id`、`agent_name`、`user_type` |
+| `chat_mode_selector_select` | `FirebaseManager.Events.CHAT_MODE_SELECTOR_SELECT` | 用户在弹窗内选择某一模式并生效 | `chat_mode_id`（如 real_person、entertainment）、`chat_mode_name` |
+
+### Firebase 侧查看方式（Chat Mode）
+
+- 按钮点击：事件筛选 `event_name = chat_mode_button_click`，可按 `agent_id`、`user_type` 筛选。
+- 模式选择：事件筛选 `event_name = chat_mode_selector_select`，可按 `chat_mode_id`、`chat_mode_name` 筛选。

@@ -721,6 +721,23 @@
     <string name="voice_call_permission_rationale">Voice call requires microphone permission to record audio. Please enable it in Settings.</string>
     <string name="voice_call_open_settings">Open Settings</string>
     <string name="call">Call</string>
+    <string name="chat_mode_label">Chat Mode</string>
+    <string name="chat_mode_content_description">Chat Mode</string>
+    <!-- Chat Mode Selector bottom sheet -->
+    <string name="chat_mode_selector_title">Chat Mode Selection</string>
+    <string name="chat_mode_selector_close_content_desc">Close</string>
+    <string name="chat_mode_real_person_title">Real Person Mode</string>
+    <string name="chat_mode_real_person_desc">Relaxed conversation, lively and real</string>
+    <string name="chat_mode_real_person_sub">Dream Girl-oriented</string>
+    <string name="chat_mode_entertainment_title">Entertainment Mode</string>
+    <string name="chat_mode_entertainment_desc">Bracket literature, role-playing</string>
+    <string name="chat_mode_entertainment_sub">Resonance</string>
+    <string name="chat_mode_story_title">Story Mode</string>
+    <string name="chat_mode_story_desc">Immersive conversation, rich storyline</string>
+    <string name="chat_mode_story_sub">Storyline</string>
+    <string name="chat_mode_nostalgia_title">Nostalgia Mode</string>
+    <string name="chat_mode_nostalgia_desc">Models you\'ve chatted with before are all here~</string>
+    <string name="chat_mode_nostalgia_sub">Nostalgia</string>
     <string name="end">end</string>
     <string name="mute">mute</string>
     <string name="voice_call_duration">Call Duration</string>

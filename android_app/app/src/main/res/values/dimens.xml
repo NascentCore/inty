@@ -50,6 +50,14 @@
     <dimen name="rank_dialog_button_spacing">12dp</dimen>
     <!-- Chat settings voice dropdown -->
     <dimen name="chat_settings_dropdown_item_height">48dp</dimen>
+    <!-- Chat Mode Selector bottom sheet -->
+    <dimen name="chat_mode_selector_handle_height">24dp</dimen>
+    <dimen name="chat_mode_selector_title_bottom">16dp</dimen>
+    <dimen name="chat_mode_selector_card_spacing">12dp</dimen>
+    <dimen name="chat_mode_selector_card_padding">16dp</dimen>
+    <dimen name="chat_mode_selector_icon_size">24dp</dimen>
+    <dimen name="chat_mode_selector_sub_icon_size">16dp</dimen>
+    <dimen name="chat_mode_selector_radio_size">24dp</dimen>
     <!-- 登录页轮播指示器 -->
     <dimen name="login_carousel_indicator_dot_size_selected">8dp</dimen>
     <dimen name="login_carousel_indicator_dot_size_unselected">6dp</dimen>

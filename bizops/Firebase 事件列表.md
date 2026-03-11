@@ -127,6 +127,14 @@
 | `rank_dialog_cancel_click` | RankDialog.kt | 无 | 用户点击 Cancel 关闭弹窗 | 🔴 100% |
 | `rank_dialog_review_completed` | MainActivity.kt | `user_id` | 评分完成（用户选 4～5 星并完成应用内评价流程后上报） | 🔴 100% |
 
+**Chat Mode（聊天模式选择）**  
+聊天页顶部栏 Chat Mode 按钮点击打开弹窗，用户在弹窗内选择某一模式（活人感/娱乐/剧情/怀旧等）并生效时上报；IntelliMate 官方助手聊天时不显示该按钮。
+
+| 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |
+|---------|---------|------|---------|--------|
+| `chat_mode_button_click` | ChatPage.kt | `agent_id`, `agent_name`, `user_type` | 顶部栏 Chat Mode 按钮点击 | 🔴 100% |
+| `chat_mode_selector_select` | ChatModeSelectorDialog.kt | `chat_mode_id`（如 real_person、entertainment）, `chat_mode_name` | 弹窗内选择某一模式并生效 | 🔴 100% |
+
 ### 1.9 订阅与计费事件
 
 | 事件名称 | 使用位置 | 参数 | 业务含义 | 采样率 |

@@ -4,6 +4,7 @@ import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.ChatMode
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.MsgInfo
@@ -65,6 +66,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -1581,6 +1583,23 @@ class ChatViewModel : BaseVM() {
     private val _isLoadingChatVoices = MutableStateFlow(false)
     val isLoadingChatVoices = _isLoadingChatVoices.asStateFlow()
 
+    val agentChatSettings = combine(_agentId, chatSettings) { id, settings ->
+        settings[id]
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        null
+    )
+    val chatModes = chatMessageRepository.fetchChatModes()
+        .stateIn(
+            viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList()
+        )
+    val selectedChatMode = combine(agentChatSettings, chatModes) { settings, chatModes ->
+        chatModes.find { settings?.chat_mode == it.id }
+    }
+
     /** 获取指定agent的聊天设置 */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
         return _chatSettings.value[agentId]
@@ -1588,21 +1607,16 @@ class ChatViewModel : BaseVM() {
 
     private fun getChatSetting() = launchBackground {
         val agentId = agentInfo.value?.id ?: return@launchBackground
-        // 有agent信息，才请求
-        val result = NetServiceMgr.getChatApi().getChatSettings(agentId)
-        when (result) {
-            is HttpResult.Failure -> {
-                // 此设置，暂时不用toast显示
-                LogUtils.e(result.message)
-                //                showNetworkAwareError(result.message)
-            }
 
-            is HttpResult.Success -> {
-                // 更新指定agent的设置，保持其他agent的设置不变
-                _chatSettings.update { currentSettings ->
-                    currentSettings + (agentId to result.data)
-                }
+        try {
+            // 有agent信息，才请求
+            val result = chatMessageRepository.getChatSettings(agentId)//NetServiceMgr.getChatApi().getChatSettings(agentId)
+
+            _chatSettings.update { currentSettings ->
+                currentSettings + (agentId to result)
             }
+        } catch (error: Exception) {
+            LogUtils.e(error.message)
         }
     }
 
@@ -1769,6 +1783,29 @@ class ChatViewModel : BaseVM() {
         _isQueryMsgsCompleted.value = true
 
         LogUtils.i("ChatViewModel.resetChatState completed for $agentId")
+    }
+
+    private var chatModeJob: Job? = null
+
+    fun setChatMode(mode: ChatMode) {
+        chatModeJob?.cancel()
+
+        chatModeJob = viewModelScope.launch {
+            val agentId = _agentId.value ?: return@launch
+            val settings = agentChatSettings.value ?: return@launch
+
+            try {
+                chatMessageRepository.updateChatSettings(agentId, ChatSettingsReq(chat_mode = mode.id))
+
+                if (isActive) {
+                    _chatSettings.update {
+                        it + (agentId to settings.copy(chat_mode = mode.id))
+                    }
+                }
+            } catch (error: Exception) {
+                ToastUtils.showShort(error.message.orEmpty())
+            }
+        }
     }
 
     fun testRank() {

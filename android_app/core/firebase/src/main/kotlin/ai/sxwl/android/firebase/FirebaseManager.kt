@@ -142,6 +142,10 @@ object FirebaseManager {
                     Events.RANK_DIALOG_CANCEL_CLICK to 1.0,
                     Events.RANK_DIALOG_REVIEW_COMPLETED to 1.0,
 
+                    // 🔴 Chat Mode 事件 - 100%采样
+                    Events.CHAT_MODE_BUTTON_CLICK to 1.0,
+                    Events.CHAT_MODE_SELECTOR_SELECT to 1.0,
+
                     // 🟡 性能相关事件 - 保持现有采样配置
                     Events.SLOW_REQUEST to if (AppUtils.isAppDebug()) 1.0 else 0.3, // 调试100%，发布30%
 
@@ -614,6 +618,10 @@ object FirebaseManager {
         const val RANK_DIALOG_CANCEL_CLICK = "rank_dialog_cancel_click" // 评分弹窗取消
         const val RANK_DIALOG_REVIEW_COMPLETED =
             "rank_dialog_review_completed" // 评分完成（用户选 4～5 星并完成应用内评价流程）
+
+        // Chat Mode 相关事件
+        const val CHAT_MODE_BUTTON_CLICK = "chat_mode_button_click" // 顶部栏 Chat Mode 按钮点击
+        const val CHAT_MODE_SELECTOR_SELECT = "chat_mode_selector_select" // 弹窗内选择某一模式（含 chat_mode_id）
     }
 
     /** 预定义的用户属性常量 */
