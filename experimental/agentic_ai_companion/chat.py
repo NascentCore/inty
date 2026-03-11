@@ -95,6 +95,19 @@ def _build_system_messages(char_name: str, user_name: str):
     return prompts.build_system_messages_openai(char_name, user_name, _logger=logger)
 
 
+def _build_system_messages_heartbeat(char_name: str, user_name: str):
+    return prompts.build_system_messages_openai(
+        char_name, user_name, heartbeat_enabled=True, _logger=logger
+    )
+
+
+def _suppress_noisy_loggers() -> None:
+    """非 debug 模式下静默第三方库的 INFO 日志。"""
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("google_genai").setLevel(logging.WARNING)
+
+
 def main(
     debug: Annotated[
         bool,
@@ -130,13 +143,25 @@ def main(
             help="构建情节记忆时每个 episode 的最大消息数",
         ),
     ] = 8,
+    heartbeat: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--heartbeat",
+            help="启用 heartbeat 模式：Agent 在用户无输入时定期主动发消息",
+        ),
+    ] = False,
+    heartbeat_interval: Annotated[
+        float,
+        cyclopts.Parameter(
+            name="--heartbeat-interval",
+            help="心跳间隔（秒），仅在 --heartbeat 模式下生效",
+        ),
+    ] = 120.0,
 ) -> None:
     logger.set_enabled(debug)
     if not debug:
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        logging.getLogger("httpcore").setLevel(logging.WARNING)
-        # 非 debug 时隐藏 Google GenAI SDK 的 INFO（如 "AFC is enabled with max remote calls"）
-        logging.getLogger("google_genai").setLevel(logging.WARNING)
+        _suppress_noisy_loggers()
+
     memory_compactor = None
     if enable_memory_compaction:
         memory_config = CompactionConfig(
@@ -152,20 +177,48 @@ def main(
         )
         memory_compactor = ConversationCompactor(config=memory_config)
         logger.info("已启用 memory compaction: %s", memory_config.model_dump())
-    logger.info("入口 main() 调用 run_repl")
-    run_repl(
-        char_name=CHAR_NAME,
-        user_name=USER_NAME,
-        model=OPENROUTER_MODEL,
-        build_system_messages=_build_system_messages,
-        create_openai_client=clients.create_openai_client,
-        get_gemini_client=clients.get_gemini_client,
-        tools=TOOLS,
-        tool_executors=TOOL_EXECUTORS,
-        tool_types=TOOL_TYPES,
-        tool_context_types=TOOL_CONTEXT_TYPES,
-        process_response_with_tools=tools.process_response_with_tools,
-        logger=logger,
-        memory_compactor=memory_compactor,
-    )
-    logger.info("run_repl 已退出")
+
+    if heartbeat:
+        import asyncio
+
+        from .async_repl import run_async_repl
+        from .heartbeat import HeartbeatConfig
+
+        config = HeartbeatConfig(interval_seconds=heartbeat_interval)
+        logger.info("入口 main() 调用 run_async_repl（heartbeat 模式）")
+        asyncio.run(
+            run_async_repl(
+                char_name=CHAR_NAME,
+                user_name=USER_NAME,
+                model=OPENROUTER_MODEL,
+                build_system_messages=_build_system_messages_heartbeat,
+                create_openai_client=clients.create_openai_client,
+                get_gemini_client=clients.get_gemini_client,
+                tools=TOOLS,
+                tool_executors=TOOL_EXECUTORS,
+                tool_types=TOOL_TYPES,
+                tool_context_types=TOOL_CONTEXT_TYPES,
+                process_response_with_tools=tools.process_response_with_tools,
+                logger=logger,
+                heartbeat_config=config,
+            )
+        )
+        logger.info("run_async_repl 已退出")
+    else:
+        logger.info("入口 main() 调用 run_repl（同步模式）")
+        run_repl(
+            char_name=CHAR_NAME,
+            user_name=USER_NAME,
+            model=OPENROUTER_MODEL,
+            build_system_messages=_build_system_messages,
+            create_openai_client=clients.create_openai_client,
+            get_gemini_client=clients.get_gemini_client,
+            tools=TOOLS,
+            tool_executors=TOOL_EXECUTORS,
+            tool_types=TOOL_TYPES,
+            tool_context_types=TOOL_CONTEXT_TYPES,
+            process_response_with_tools=tools.process_response_with_tools,
+            logger=logger,
+            memory_compactor=memory_compactor,
+        )
+        logger.info("run_repl 已退出")

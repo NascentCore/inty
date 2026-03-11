@@ -12,10 +12,10 @@
   - [ ] **记忆获取工具**：根据用户反馈，决定从最近哪些核心记忆选项中抓取新的记忆用于后续的聊天交互
 - [x] **记忆压缩（experimental）**：新增 `memory_compaction.py`，实现上下文超预算时的分层压缩（episodic + semantic + running summary），并在 `chat.py` / `repl.py` 通过 `--enable-memory-compaction` 接入
 - [ ] 隐含信号：比如用户上线、用户停留、用户打字、等等，这些信号输入到模型里让他反应
+- [x] 隐含信号：比如用户上线、用户停留、用户打字、等等，这些信号输入到模型里让他反应；已实现：Heartbeat 机制（`heartbeat.py` + `async_repl.py`），通过 `--heartbeat` 启动，定期注入 `[SYSTEM HEARTBEAT]` 信号让 LLM 根据上下文决定是否主动发消息，支持指数退避和静默上限
 - [ ] 记忆提取工具，记录用户和角色之间重要事件的事实性信息，包括时间、地点、事件、影响等等
 - [x] Erotic scene generation 工具，当用户处于亢奋状态（sexually aroused），为其提供连续的 **文字** scene 描述，而无需用户输入 continue；仅生成文字描述，不生成图片；已实现：`erotic_scene_generate` 工具，根据最近 N=10 条消息与角色/用户名调用 Gemini 文本模型生成 3–5 段连续 scene 文字
-- [ ] 连发消息功能，当场景需要推进、需要更多描述时、或者描述不完整时、应该持续发消息给用户，而不是等待下一条用户输入；
-  【这个还在考虑】不太清楚是否合适
+- [x] 连发消息功能，当场景需要推进、需要更多描述时、或者描述不完整时、应该持续发消息给用户，而不是等待下一条用户输入；已通过 Heartbeat 机制初步实现：Agent 可在用户无输入时通过心跳信号主动发送后续消息
 - [ ] Erotic scene **image** generation 工具（follow-up）：当用户处于亢奋状态时，连续生成多张场景图，无需用户输入 continue
 - [ ] Erotic voice message 工具，当用户处于亢奋状态，为其提供 erotic voice message 消息，发送一段语音，并自动播放（听筒）
 - [ ] 自拍 video 工具，输入角色形象照片、根据聊天内容，返回相应的视频给用户，符合聊天上下文

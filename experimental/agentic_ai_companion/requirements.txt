@@ -1,3 +1,4 @@
+aioconsole
 cyclopts
 google-genai
 langsmith

@@ -36,7 +36,14 @@
 在仓库根目录执行（当前入口为 `main.py`，最小化 role play 示例）：
 
 ```bash
+# 同步模式（传统 REPL，等待用户输入后回复）
 python -m experimental.agentic_ai_companion.main
+
+# Heartbeat 模式（Agent 始终在线，定期主动发消息）
+python -m experimental.agentic_ai_companion.main --heartbeat
+
+# 自定义心跳间隔（默认 120 秒）
+python -m experimental.agentic_ai_companion.main --heartbeat --heartbeat-interval 60
 ```
 
 ### 实验性：记忆压缩（Memory Compaction）
@@ -53,6 +60,12 @@ python -m experimental.agentic_ai_companion.main \
 
 - 设计与调研结论见：`FR_MEMORY_COMPACTION_STRATEGY.md`
 - 默认关闭，避免影响现有对话行为
+### Heartbeat 模式
+
+使用 `--heartbeat` 启动后，Agent 不再仅等待用户输入。每隔一段时间（默认 120 秒），系统会向 LLM 注入一条 `[SYSTEM HEARTBEAT]` 信号，LLM 根据对话上下文、角色性格和时间流逝决定是否主动发消息：
+- 有话说时：自然地输出主动消息（问候、分享想法、追问等）
+- 无话说时：回复 `[SILENT]`，终端无任何输出
+- 连续静默超过阈值后，心跳间隔自动延长（指数退避），达到上限后暂停心跳直到用户下次输入
 
 ## 如何测试 live_voice_message_reply
 
