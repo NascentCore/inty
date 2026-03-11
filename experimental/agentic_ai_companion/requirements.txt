@@ -1,5 +1,6 @@
 aioconsole
 cyclopts
+loguru
 google-genai
 langsmith
 openai

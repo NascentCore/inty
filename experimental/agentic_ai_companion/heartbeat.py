@@ -118,8 +118,11 @@ def build_heartbeat_signal(state: HeartbeatState, messages: list[dict]) -> str:
 
 
 def is_heartbeat_response_silent(response_content: str) -> bool:
-    """判断 LLM 回复是否为静默（包含 SILENT_TOKEN 或内容为空）。"""
+    """判断 LLM 回复是否为静默（包含 SILENT_TOKEN 或内容为空）。
+
+    大小写不敏感：LLM 可能输出 [SILENT]、[Silent]、[silent] 等变体。
+    """
     text = (response_content or "").strip()
     if not text:
         return True
-    return SILENT_TOKEN in text
+    return SILENT_TOKEN.lower() in text.lower()

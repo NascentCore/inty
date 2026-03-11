@@ -24,13 +24,13 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-_real_logger = logging.getLogger(__name__)
+from loguru import logger as _real_logger
 
 
 class _LoggerWrapper:
     """包装器：当 enabled=False 时所有 logger.* 调用不输出，用于 --debug=false 减少屏幕干扰。"""
 
-    def __init__(self, real: logging.Logger, enabled: bool = False) -> None:
+    def __init__(self, real, enabled: bool = False) -> None:
         self._real = real
         self._enabled = enabled
 
@@ -39,7 +39,10 @@ class _LoggerWrapper:
 
     def _log(self, level: str, msg: str, *args, **kwargs) -> None:
         if self._enabled:
-            getattr(self._real, level)(msg, *args, **kwargs, stacklevel=3)
+            formatted = msg % args if args else msg
+            # loguru 使用 str.format()，需要转义花括号以避免 JSON 内容被误解析
+            safe = formatted.replace("{", "{{").replace("}", "}}")
+            getattr(self._real.opt(depth=3), level)(safe)
 
     def debug(self, msg: str, *args, **kwargs) -> None:
         self._log("debug", msg, *args, **kwargs)
@@ -58,7 +61,9 @@ class _LoggerWrapper:
 
     def exception(self, msg: str, *args, **kwargs) -> None:
         if self._enabled:
-            self._real.exception(msg, *args, **kwargs, stacklevel=3)
+            formatted = msg % args if args else msg
+            safe = formatted.replace("{", "{{").replace("}", "}}")
+            self._real.opt(depth=3).exception(safe)
 
 
 logger: _LoggerWrapper = _LoggerWrapper(_real_logger, enabled=False)
@@ -70,7 +75,7 @@ from . import prompts
 from . import tools
 from .repl import run_repl
 
-OPENROUTER_MODEL = "google/gemini-2.5-flash"
+OPENROUTER_MODEL = "deepseek/deepseek-v3.2"
 CHAR_NAME = "Ms. Sophie Walsh"
 USER_NAME = "Yaxiong Zhao"
 
