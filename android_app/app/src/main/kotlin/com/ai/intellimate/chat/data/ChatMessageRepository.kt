@@ -25,6 +25,9 @@ import androidx.paging.PagingData
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostStorage
 import com.ai.intellimate.boost.PointSource
+import ai.sxwl.android.data.api.model.ChatMode
+import ai.sxwl.android.data.api.model.ChatSettingsReq
+import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import com.architecture.httplib.core.HttpResult
 import java.io.File
 import java.io.FileOutputStream
@@ -32,14 +35,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import kotlin.getOrDefault
 
 /**
  * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
@@ -404,5 +410,46 @@ class ChatMessageRepository(
     /** 清除 last_rank_date 缓存，仅用于 Debug 设置页调试。 */
     suspend fun clearLastRankDateCache() {
         dataStore().edit { it.remove(KEY_LAST_RANK_DATE) }
+    }
+
+    fun fetchChatModes(): Flow<List<ChatMode>> {
+
+        return channelFlow {
+            launch {
+                localDataSource.getChatModes()
+                    .collect { send(it) }
+            }
+            launch {
+                val result = remoteDataSource.getChatModes()
+
+                if (result is HttpResult.Success) {
+                    localDataSource.setChatModes(result.data)
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取聊天设置
+     */
+    suspend fun getChatSettings(agentId: String): ChatSettingsResponse.ChatSettingRspData {
+        return withContext(Dispatchers.IO) {
+            when (val result = remoteDataSource.getChatSettings(agentId)) {
+                is HttpResult.Success -> result.data
+                is HttpResult.Failure -> throw Exception(result.message)
+            }
+        }
+    }
+
+    /**
+     *  更新聊天设置
+     */
+    suspend fun updateChatSettings(agentId: String, settings: ChatSettingsReq) {
+        return withContext(Dispatchers.IO) {
+            when (val result = remoteDataSource.updateChatSettings(agentId, settings)) {
+                is HttpResult.Success -> result.data
+                is HttpResult.Failure -> throw Exception(result.message)
+            }
+        }
     }
 }

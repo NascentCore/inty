@@ -99,6 +99,7 @@ import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
 import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.chat.ui.ChatInput
+import com.ai.intellimate.chat.ui.ChatModeSelectorDialog
 import com.ai.intellimate.chat.ui.ChatMorePanel
 import com.ai.intellimate.chat.ui.ChatSettingsDrawer
 import com.ai.intellimate.chat.ui.ChatTopBar
@@ -531,6 +532,8 @@ internal fun ChatPage(
             // - 在历史消息位置：显示滚动到底部按钮
             var isAtLatestMessage by remember { mutableStateOf(true) }
             var isAtChatStart by remember { mutableStateOf(false) }
+            val chatModel by chatViewModel.selectedChatMode.collectAsState(null)
+            var showChatModeSelector by remember { mutableStateOf(false) }
 
             // 监听滚动位置变化，实时更新 isAtLatestMessage 状态
             // 当 firstVisibleItemIndex == 0 且 scrollOffset == 0 时，表示用户正在查看最新消息
@@ -558,10 +561,18 @@ internal fun ChatPage(
                             navController,
                             modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                             agentInfo = info,
-                            fontSize = 15.sp,
-                            avatarWidth = UiConfigs.ChatTopBar.AvatarSize,
                             earnedPoints = null,
                             showBackButton = showBackButton,
+                            onClickChatMode = {
+                                FirebaseManager.Events.CHAT_MODE_BUTTON_CLICK.logEvent(
+                                    "agent_id" to agent?.agentId,
+                                    "agent_name" to agent?.name,
+                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                )
+                                showChatModeSelector = true
+                            },
+                            chatMode = chatModel,
+                            showChatModeButton = !isOfficialAssistantChat,
                             onClickCall = {
                                 FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
                                     "click_type" to "call",
@@ -670,6 +681,14 @@ internal fun ChatPage(
 
                 val lazyColumnModifier =
                     Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)
+
+                if (showChatModeSelector) {
+                    ChatModeSelectorDialog(
+                        onDismiss = { showChatModeSelector = false},
+                        selectedChatModeId = chatModel?.id,
+                        viewModel = chatViewModel
+                    )
+                }
 
                 BoxWithConstraints(modifier = lazyColumnModifier) {
                     val density = LocalDensity.current

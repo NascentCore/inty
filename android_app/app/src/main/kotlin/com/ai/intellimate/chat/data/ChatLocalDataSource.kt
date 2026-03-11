@@ -5,9 +5,15 @@ import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.MessageUpdate
 import ai.sxwl.android.data.chat.local.db.createTempSendingLoadingEntity
 import ai.sxwl.android.data.chat.local.db.createTempSendingUserEntity
+import ai.sxwl.android.data.store.jsonDataStore
 import ai.sxwl.android.utils.LogUtils
+import ai.sxwl.android.utils.Utils
+import android.content.Context
 import androidx.room.withTransaction
+import ai.sxwl.android.data.api.model.ChatMode
 import kotlinx.coroutines.flow.Flow
+
+private val Context.chatModes by jsonDataStore("chatModes", emptyList<ChatMode>())
 
 class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatabase.getInstance()) {
     val chatMessageDao = database.chatMessageDao()
@@ -150,5 +156,11 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
 
     suspend fun updateMessage(message: MessageEntity) {
         chatMessageDao.updateMessage(message)
+    }
+
+    fun getChatModes() = Utils.getApp().chatModes.data
+
+    suspend fun setChatModes(chatModes: List<ChatMode>) {
+        Utils.getApp().chatModes.updateData { chatModes }
     }
 }

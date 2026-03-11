@@ -2,6 +2,7 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.getCdnImageUrl
 import ai.sxwl.android.data.api.model.AgentInfo
+import ai.sxwl.android.data.api.model.ChatMode
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
@@ -15,17 +16,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.rounded.EnergySavingsLeaf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -108,7 +113,11 @@ private fun FavoriteButton(
     }
 }
 
-/** 聊天页面顶部栏组件 */
+/** 聊天页面顶部栏组件
+ *
+ * 布局：返回按钮(可选) | Chat Mode 胶囊按钮 | 角色头像+姓名+收藏(紧凑) | 弹性空白 | VIP(可选) | 电话 | 更多
+ * 为给 Chat Mode 按钮腾出空间，头像与姓名使用紧凑尺寸（CompactAvatarSize / CompactNameFontSize）。
+ */
 @Composable
 fun ChatTopBar(
     navController: NavController,
@@ -116,8 +125,11 @@ fun ChatTopBar(
     agentInfo: AgentInfo,
     onClickMore: () -> Unit,
     onClickCall: () -> Unit,
-    avatarWidth: Dp = UiConfigs.ChatTopBar.AvatarSize,
-    fontSize: TextUnit = 14.sp,
+    onClickChatMode: () -> Unit = {},
+    chatMode: ChatMode? = null,
+    showChatModeButton: Boolean = true,
+    avatarWidth: Dp = UiConfigs.ChatTopBar.CompactAvatarSize,
+    fontSize: TextUnit = UiConfigs.ChatTopBar.CompactNameFontSize,
     earnedPoints: Int? = null,
     showBackButton: Boolean = false,
 ) {
@@ -144,94 +156,136 @@ fun ChatTopBar(
             }
             Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.BackButtonToAvatarSpacing))
         }
+
         Row(
-            modifier =
-                Modifier.background(
-                        color = UiConfigs.ChatTopBar.BackgroundColor,
-                        shape = RoundedCornerShape(UiConfigs.ChatTopBar.CornerRadius),
-                    )
-                    .noRippleClickable {
-                        scope.launch {
-                            // 如果是已经删除的agent，则不可点击，并提示
-                            if (agentInfo.isDeleted) {
-                                ToastUtils.showShort(R.string.str_agent_is_deleted)
-                            } else {
-                                AgentStore.addAgent(agentInfo)
-                                navController.navigate(Routes.Home.agentInfPage(agentInfo.id))
-                            }
-                        }
-                    },
+            modifier = Modifier.weight(1f, fill = false).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AsyncImage(
-                modifier =
-                    Modifier.padding(UiConfigs.ChatTopBar.AvatarPadding)
-                        .size(avatarWidth)
-                        .clip(CircleShape),
-                model =
-                    ImageRequest.Builder(context)
-                        .data(getCdnImageUrl(agentInfo.avatar, width = 64))
-                        .build(),
-                placeholder = painterResource(R.drawable.img_default_avatar),
-                error = painterResource(R.drawable.img_default_avatar),
-                contentDescription = null,
-                alignment = Alignment.TopCenter,
-                contentScale = ContentScale.Crop,
-            )
+            Box(Modifier.weight(1f).padding(end = 4.dp)) {
+                Row(
+                    modifier =
+                        Modifier
+                            .height(UiConfigs.ChatTopBar.ActionButtonContainerHeight)
+                            .background(
+                                color = UiConfigs.ChatTopBar.BackgroundColor,
+                                shape = RoundedCornerShape(UiConfigs.ChatTopBar.CornerRadius),
+                            )
+                            .padding(horizontal = 2.dp)
+                            .noRippleClickable {
+                                scope.launch {
+                                    // 如果是已经删除的agent，则不可点击，并提示
+                                    if (agentInfo.isDeleted) {
+                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                    } else {
+                                        AgentStore.addAgent(agentInfo)
+                                        navController.navigate(Routes.Home.agentInfPage(agentInfo.id))
+                                    }
+                                }
+                            },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AsyncImage(
+                        modifier =
+                            Modifier.size(avatarWidth)
+                                .clip(CircleShape),
+                        model =
+                            ImageRequest.Builder(context)
+                                .data(getCdnImageUrl(agentInfo.avatar, width = 64))
+                                .build(),
+                        placeholder = painterResource(R.drawable.img_default_avatar),
+                        error = painterResource(R.drawable.img_default_avatar),
+                        contentDescription = null,
+                        alignment = Alignment.TopCenter,
+                        contentScale = ContentScale.Crop,
+                    )
 
-            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.AvatarToContentSpacing))
+                    Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.AvatarToContentSpacing))
 
-            val showPoints = earnedPoints != null
+                    val showPoints = earnedPoints != null
 
-            // 名字区域 - 不使用 weight，让所有元素靠左对齐
-            Column {
-                // 能量点数区域，目前还未开放显示角色能量点数；需要不断跟踪角色跟用户聊天的共享点数
-                // 而不是角色总共的 credits，因为那样用户感觉没有实际的提升。
-                if (showPoints) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.EnergySavingsLeaf,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
-                        )
-                        Spacer(
-                            modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
-                        )
+                    Column {
+                        // 能量点数区域，目前还未开放显示角色能量点数；需要不断跟踪角色跟用户聊天的共享点数
+                        // 而不是角色总共的 credits，因为那样用户感觉没有实际的提升。
+                        if (showPoints) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Rounded.EnergySavingsLeaf,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
+                                )
+                                Spacer(
+                                    modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
+                                )
+                                Text(
+                                    text =
+                                        stringResource(id = R.string.energy_points_counter, earnedPoints),
+                                    fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
+                            Spacer(
+                                modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
+                            )
+                        }
                         Text(
-                            text =
-                                stringResource(id = R.string.energy_points_counter, earnedPoints),
-                            fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium,
+                            text = agentInfo.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Spacer(
-                        modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
-                    )
+
+                    // 名字与收藏按钮之间的间距 - 紧贴名字右侧
+                    //Spacer(modifier = Modifier.width(0.dp))
+
+                    // 收藏按钮 - 移动到横幅内，名字的右侧
+                    FavoriteButton(agentId = agentInfo.id, containerColor = Color.Transparent)
                 }
-                Text(
-                    text = agentInfo.name,
-                    fontSize = fontSize,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
-
-            // 名字与收藏按钮之间的间距 - 紧贴名字右侧
-            Spacer(modifier = Modifier.width(0.dp))
-
-            // 收藏按钮 - 移动到横幅内，名字的右侧
-            FavoriteButton(agentId = agentInfo.id, containerColor = Color.Transparent)
-
-            // 收藏按钮右侧内边距
-            Spacer(modifier = Modifier.width(4.dp))
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
+        // Chat Mode 胶囊按钮：IntelliMate 官方助手聊天时不显示
+        if (showChatModeButton) {
+            Box(
+                modifier =
+                    Modifier
+                        .height(UiConfigs.ChatTopBar.ActionButtonContainerHeight)
+                        .background(
+                            color =
+                                Color.Black.copy(
+                                    alpha = UiConfigs.ChatTopBar.ActionButtonContainerAlpha
+                                ),
+                            shape =
+                                RoundedCornerShape(
+                                    UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
+                                ),
+                        ).padding(horizontal = 4.dp)
+                        .noRippleClickable { onClickChatMode() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = chatMode?.shortName ?: stringResource(R.string.chat_mode_content_description),
+                        fontSize = UiConfigs.ChatTopBar.ChatModeButtonFontSize,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White,
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Icon(
+                        imageVector = Icons.Filled.SwapHoriz,
+                        contentDescription = stringResource(R.string.chat_mode_content_description),
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(UiConfigs.ChatTopBar.ActionButtonSpacing))
+        }
         // VIP 角标：仅当角色 tags 含 vip 时展示，与 Explore 页逻辑一致
         if (isVipByTag) {
             Box(

@@ -748,22 +748,22 @@ object UiConfigs {
         val EnergyPointsFontSize = 10.sp
 
         /** 收藏按钮大小 */
-        val FavoriteButtonSize = 36.dp
+        val FavoriteButtonSize = 20.dp
 
         /** 收藏图标大小 */
         val FavoriteIconSize = 18.dp
 
         /** 操作按钮之间的间距 */
-        val ActionButtonSpacing = 8.dp
+        val ActionButtonSpacing = 4.dp
 
         /** 操作按钮容器透明度 */
         const val ActionButtonContainerAlpha = 0.3f
 
         /** 右上角操作按钮容器宽度（电话/更多） */
-        val ActionButtonContainerWidth = 48.dp
+        val ActionButtonContainerWidth = 36.dp
 
         /** 右上角操作按钮容器高度（电话/更多） */
-        val ActionButtonContainerHeight = 32.dp
+        val ActionButtonContainerHeight = 28.dp
 
         /** 右上角操作按钮容器圆角（电话/更多） */
         val ActionButtonContainerCornerRadius = 16.dp
@@ -776,6 +776,27 @@ object UiConfigs {
 
         /** 收藏按钮未激活状态颜色（白色） */
         val FavoriteInactiveTint = Color.White
+
+        /** 有 Chat Mode 按钮时使用的紧凑头像尺寸（缩小以腾出空间） */
+        val CompactAvatarSize = 20.dp
+
+        /** 有 Chat Mode 按钮时使用的名称字号 */
+        val CompactNameFontSize = 13.sp
+
+        /** Chat Mode 胶囊按钮高度（与电话/更多按钮一致） */
+        val ChatModeButtonHeight = 32.dp
+
+        /** Chat Mode 胶囊按钮水平内边距 */
+        val ChatModeButtonHorizontalPadding = 12.dp
+
+        /** Chat Mode 胶囊按钮内文字与图标间距 */
+        val ChatModeButtonTextToIconSpacing = 6.dp
+
+        /** Chat Mode 胶囊按钮文字字号 */
+        val ChatModeButtonFontSize = 12.sp
+
+        /** Chat Mode 胶囊按钮图标尺寸 */
+        val ChatModeButtonIconSize = 18.dp
     }
 
     /** 聊天页面配置 - 适用于聊天页面的功能开关，如 Remix 按钮可见性等 */
