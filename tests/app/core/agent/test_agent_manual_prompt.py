@@ -2,6 +2,7 @@
 from app.core.agent import agent as agent_module
 from app.core.agent import prompts
 from app.core.agent.agent import Agent, INTELLIMATE_AGENT_ID, INTELLIMATE_AGENT_NAME
+from langchain_core.messages import SystemMessage
 
 
 def _build_agent(*, agent_id: str, name: str, personality: str) -> Agent:
@@ -260,3 +261,77 @@ def test_build_system_messages_can_omit_output_format_prompt():
     assert any(output_format_marker in content for content in with_output_format)
     assert not any(output_format_marker in content for content in without_output_format)
     assert any("## Purity Mode" in content for content in without_output_format)
+
+
+def test_build_system_messages_for_chat_uses_official_builder(monkeypatch):
+    agent = _build_agent(
+        agent_id=INTELLIMATE_AGENT_ID,
+        name=INTELLIMATE_AGENT_NAME,
+        personality="Warm personality.",
+    )
+    official_messages = [SystemMessage(content="OFFICIAL_SYSTEM")]
+
+    monkeypatch.setattr(
+        agent,
+        "build_system_messages_for_intellimate_official_assistant",
+        lambda user_profile, chat_settings, user_time_context: official_messages,
+    )
+
+    def _unexpected_default_builder(*args, **kwargs):
+        raise AssertionError("default builder should not be used for official assistant")
+
+    monkeypatch.setattr(agent, "build_system_messages", _unexpected_default_builder)
+
+    result = agent._build_system_messages_for_chat(
+        user_profile="Name: Alice",
+        chat_settings=None,
+        user_time_context=None,
+    )
+
+    assert result == official_messages
+
+
+def test_build_system_messages_for_chat_uses_default_builder_for_non_official(
+    monkeypatch,
+):
+    agent = _build_agent(
+        agent_id="not_intellimate",
+        name="Not IntelliMate",
+        personality="Warm personality.",
+    )
+    default_messages = [SystemMessage(content="DEFAULT_SYSTEM")]
+    captured: dict[str, bool] = {"include_output_format_prompt": False}
+
+    monkeypatch.setattr(
+        agent,
+        "build_system_messages_for_intellimate_official_assistant",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("official builder should not be used for non-official agent")
+        ),
+    )
+
+    def _default_builder(
+        user_profile, chat_settings, user_time_context, include_output_format_prompt
+    ):
+        captured["include_output_format_prompt"] = include_output_format_prompt
+        return default_messages
+
+    monkeypatch.setattr(agent, "build_system_messages", _default_builder)
+
+    result = agent._build_system_messages_for_chat(
+        user_profile="Name: Bob",
+        chat_settings=None,
+        user_time_context=None,
+    )
+
+    assert result == default_messages
+    assert captured["include_output_format_prompt"] is True
+
+
+def test_official_tool_usage_prompt_guides_feature_question_answers():
+    assert "step-by-step" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    assert "prerequisites" in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    assert (
+        "ask one concise clarifying question"
+        in agent_module.INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE
+    )

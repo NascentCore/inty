@@ -8,7 +8,7 @@
   - [x] 创建独立部署脚本和代码改动：https://github.com/NascentCore/inty/pull/2373
   - [x] 创建独立部署[github 工作流](/.github/workflows/build_and_deploy_ops.yml)
   - [x] 主后端移除 ops 过渡层：`app/api/v1/router.py` 不再挂载 evaluation/festival_memory，删除 re-export 模块 `app/api/v1/endpoints/evaluation.py` 与 `app/api/v1/endpoints/festival_memory.py`，`backend/inty` 不再提供 `/evaluation`。
-- [ ] Optimize official assistant's prompts
+- [x] Optimize official assistant's prompts
   - [x] Added a separate build system messages API for official assistant
-  - [ ] Integrate the new system messages building API in the agent workflow
-  - [ ] Revise the prompt to make the official assistant more helpful in answering user's question on app features
+  - [x] Integrate the new system messages building API in the agent workflow
+  - [x] Revise the prompt to make the official assistant more helpful in answering user's question on app features
