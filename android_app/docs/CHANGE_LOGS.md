@@ -9,6 +9,10 @@
 - Each feature 1 sentence, be very concise.
 
 
+## 2026-03-12
+
+- Chat image sending now preprocesses selected photos to a JPEG at ~57,600 total pixels before upload, keeps showing the original thumbnail during compression, switches to the compressed thumbnail when ready, and reuses that compressed local cache after upload to avoid an immediate re-download flicker.
+
 ## 2026-03-09
 
 - Chat settings **Voice** picker now enforces gender matching for MALE/FEMALE iMates, so only same-gender Gemini voices are shown in the dropdown.

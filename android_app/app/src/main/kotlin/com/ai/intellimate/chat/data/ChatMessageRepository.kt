@@ -14,6 +14,10 @@ import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.dataStore
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -45,7 +49,20 @@ import kotlin.time.Duration.Companion.milliseconds
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import kotlin.getOrDefault
+
+data class ChatPreparedImageUpload(
+    val uploadedImageUrl: String,
+    val localCompressedImageUri: String,
+    val width: Int,
+    val height: Int,
+)
+
+data class ChatPreparedLocalImage(
+    val localCompressedFile: File,
+    val localCompressedImageUri: String,
+    val width: Int,
+    val height: Int,
+)
 
 /**
  * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
@@ -94,7 +111,7 @@ class ChatMessageRepository(
         agentId: String,
         content: String,
         localImageUri: String? = null,
-        preUploadTask: Deferred<HttpResult<String>>? = null,
+        preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>? = null,
     ): HttpResult<SendMsgResponse> {
         LogUtils.d("RoomImpl.sendMessage called for $agentId: $content")
 
@@ -106,14 +123,29 @@ class ChatMessageRepository(
         // 3) keep the temporary user bubble image as local URI to avoid blank waiting state.
         localDataSource.appendSendingMessages(agentId, trimmed, localImageUri)
 
-        val uploadedImageUrl =
-            when (val resolvedUpload = resolveChatInputImageUrl(localImageUri, preUploadTask)) {
-                is HttpResult.Success -> resolvedUpload.data.ifBlank { null }
-                is HttpResult.Failure -> {
-                    localDataSource.removeSendingMessage(agentId)
-                    return HttpResult.Failure(resolvedUpload.message, resolvedUpload.code)
+        val preparedImageUpload =
+            if (localImageUri.isNullOrBlank()) {
+                null
+            } else {
+                when (val resolvedUpload = resolveChatInputImage(localImageUri, preUploadTask)) {
+                    is HttpResult.Success -> resolvedUpload.data
+                    is HttpResult.Failure -> {
+                        localDataSource.removeSendingMessage(agentId)
+                        return HttpResult.Failure(resolvedUpload.message, resolvedUpload.code)
+                    }
                 }
             }
+        val compressedImageUri = preparedImageUpload?.localCompressedImageUri
+        if (!compressedImageUri.isNullOrBlank() && compressedImageUri != localImageUri) {
+            localDataSource.updateSendingUserImage(
+                agentId = agentId,
+                imageUrl = compressedImageUri,
+                width = preparedImageUpload.width,
+                height = preparedImageUpload.height,
+            )
+        }
+        val uploadedImageUrl = preparedImageUpload?.uploadedImageUrl
+        val userBubbleImageUri = compressedImageUri ?: localImageUri
 
         val result =
             try {
@@ -139,11 +171,11 @@ class ChatMessageRepository(
                                 MessageEntity.MetaData(
                                     agentId = agentId,
                                     generatedImage =
-                                        uploadedImageUrl?.let {
+                                        userBubbleImageUri?.let {
                                             MessageEntity.MetaData.GeneratedImage(
                                                 imageUrl = it,
-                                                width = null,
-                                                height = null,
+                                                width = preparedImageUpload?.width,
+                                                height = preparedImageUpload?.height,
                                             )
                                         },
                                 ),
@@ -166,27 +198,42 @@ class ChatMessageRepository(
         return result
     }
 
-    suspend fun preUploadChatInputImage(localImageUri: String): HttpResult<String> {
-        return uploadChatInputImage(localImageUri.toUri())
+    suspend fun preUploadChatInputImage(localImageUri: String): HttpResult<ChatPreparedImageUpload> {
+        val preparedImageResult = prepareChatInputImage(localImageUri)
+        return when (preparedImageResult) {
+            is HttpResult.Success -> uploadPreparedChatInputImage(preparedImageResult.data)
+            is HttpResult.Failure ->
+                HttpResult.Failure(preparedImageResult.message, preparedImageResult.code)
+        }
     }
 
-    private suspend fun resolveChatInputImageUrl(
-        localImageUri: String?,
-        preUploadTask: Deferred<HttpResult<String>>?,
-    ): HttpResult<String> {
-        if (localImageUri.isNullOrBlank()) {
-            return HttpResult.Success("")
-        }
+    suspend fun updateSendingUserImage(
+        agentId: String,
+        imageUrl: String,
+        width: Int?,
+        height: Int?,
+    ) {
+        localDataSource.updateSendingUserImage(agentId, imageUrl, width, height)
+    }
+
+    private suspend fun resolveChatInputImage(
+        localImageUri: String,
+        preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>?,
+    ): HttpResult<ChatPreparedImageUpload> {
         val preUploadResult = awaitPreUploadResult(preUploadTask)
         if (preUploadResult is HttpResult.Success) {
             return preUploadResult
         }
-        return uploadChatInputImage(localImageUri.toUri())
+        return when (val directUploadResult = uploadChatInputImage(localImageUri.toUri())) {
+            is HttpResult.Success -> directUploadResult
+            is HttpResult.Failure ->
+                HttpResult.Failure(directUploadResult.message, directUploadResult.code)
+        }
     }
 
     private suspend fun awaitPreUploadResult(
-        preUploadTask: Deferred<HttpResult<String>>?,
-    ): HttpResult<String>? {
+        preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>?,
+    ): HttpResult<ChatPreparedImageUpload>? {
         if (preUploadTask == null) {
             return null
         }
@@ -197,33 +244,54 @@ class ChatMessageRepository(
         }
     }
 
-    private suspend fun uploadChatInputImage(imageUri: Uri): HttpResult<String> {
+    suspend fun prepareChatInputImage(localImageUri: String): HttpResult<ChatPreparedLocalImage> {
         return withContext(Dispatchers.IO) {
-            var tempFile: File? = null
+            val imageUri = localImageUri.toUri()
             try {
-                val context = Utils.getApp()
-                val inputStream =
-                    context.contentResolver.openInputStream(imageUri)
-                        ?: return@withContext HttpResult.Failure(
-                            "Failed to read selected image",
-                            -1,
-                        )
-                tempFile = File.createTempFile("chat_input_", ".jpg", context.cacheDir)
-                inputStream.use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                val preparedImage = prepareChatInputImageInternal(imageUri)
+                if (preparedImage.isFailure) {
+                    val error = preparedImage.exceptionOrNull()
+                    HttpResult.Failure(
+                        error?.message ?: "Failed to prepare selected image",
+                        -1,
+                    )
+                } else {
+                    HttpResult.Success(preparedImage.getOrThrow())
                 }
-                val requestBody = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
+            } catch (e: Exception) {
+                LogUtils.e("prepareChatInputImage exception: ${e.message}")
+                HttpResult.Failure(e.message ?: "Failed to prepare selected image", -1)
+            }
+        }
+    }
+
+    suspend fun uploadPreparedChatInputImage(
+        preparedImage: ChatPreparedLocalImage,
+    ): HttpResult<ChatPreparedImageUpload> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val requestBody =
+                    preparedImage.localCompressedFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val multipart =
-                    MultipartBody.Part.createFormData("file", tempFile.name, requestBody)
+                    MultipartBody.Part.createFormData(
+                        "file",
+                        preparedImage.localCompressedFile.name,
+                        requestBody,
+                    )
                 when (val uploadResult = NetServiceMgr.getUserApi().uploadAvatar(multipart)) {
                     is HttpResult.Success -> {
                         val resolvedUrl = uploadResult.data.url.ifBlank { uploadResult.data.avatar_url }
                         if (resolvedUrl.isBlank()) {
                             HttpResult.Failure("Image upload returned empty url", -1)
                         } else {
-                            HttpResult.Success(resolvedUrl)
+                            HttpResult.Success(
+                                ChatPreparedImageUpload(
+                                    uploadedImageUrl = resolvedUrl,
+                                    localCompressedImageUri = preparedImage.localCompressedImageUri,
+                                    width = preparedImage.width,
+                                    height = preparedImage.height,
+                                )
+                            )
                         }
                     }
                     is HttpResult.Failure -> {
@@ -233,8 +301,153 @@ class ChatMessageRepository(
             } catch (e: Exception) {
                 LogUtils.e("uploadChatInputImage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "Image upload failed", -1)
-            } finally {
-                tempFile?.delete()
+            }
+        }
+    }
+
+    private suspend fun uploadChatInputImage(imageUri: Uri): HttpResult<ChatPreparedImageUpload> {
+        val preparedImageResult = prepareChatInputImage(imageUri.toString())
+        return when (preparedImageResult) {
+            is HttpResult.Success -> uploadPreparedChatInputImage(preparedImageResult.data)
+            is HttpResult.Failure ->
+                HttpResult.Failure(preparedImageResult.message, preparedImageResult.code)
+        }
+    }
+
+    private fun prepareChatInputImageInternal(imageUri: Uri): Result<ChatPreparedLocalImage> {
+        val context = Utils.getApp()
+        val (originalWidth, originalHeight) =
+            decodeImageBounds(imageUri).getOrElse { error -> return Result.failure(error) }
+        val scaledSize =
+            ChatInputImageScaling.scaleToTargetArea(
+                originalWidth = originalWidth,
+                originalHeight = originalHeight,
+            )
+        val sampleSize =
+            maxOf(
+                originalWidth / scaledSize.width,
+                originalHeight / scaledSize.height,
+                1,
+            )
+        val decodedBitmap =
+            decodeBitmapWithSample(imageUri, sampleSize).getOrElse { error ->
+                return Result.failure(error)
+            }
+        val orientation =
+            readExifOrientation(imageUri).getOrElse { ExifInterface.ORIENTATION_NORMAL }
+        val orientedBitmap =
+            applyExifOrientation(decodedBitmap, orientation).let { oriented ->
+                if (oriented.width == scaledSize.width && oriented.height == scaledSize.height) {
+                    oriented
+                } else {
+                    Bitmap.createScaledBitmap(oriented, scaledSize.width, scaledSize.height, true).also {
+                        if (it !== oriented) {
+                            oriented.recycle()
+                        }
+                    }
+                }
+            }
+        val compressedFile =
+            File.createTempFile(
+                "chat_input_compressed_",
+                ".jpg",
+                context.cacheDir,
+            )
+        return try {
+            FileOutputStream(compressedFile).use { output ->
+                if (!orientedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)) {
+                    return Result.failure(IllegalStateException("Failed to compress image"))
+                }
+            }
+            Result.success(
+                ChatPreparedLocalImage(
+                    localCompressedFile = compressedFile,
+                    localCompressedImageUri = Uri.fromFile(compressedFile).toString(),
+                    width = orientedBitmap.width,
+                    height = orientedBitmap.height,
+                )
+            )
+        } finally {
+            orientedBitmap.recycle()
+        }
+    }
+
+    private fun decodeImageBounds(imageUri: Uri): Result<Pair<Int, Int>> {
+        val context = Utils.getApp()
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(imageUri)?.use { input ->
+                BitmapFactory.decodeStream(input, null, options)
+            } ?: return Result.failure(IllegalStateException("Failed to read selected image"))
+            if (options.outWidth <= 0 || options.outHeight <= 0) {
+                Result.failure(IllegalStateException("Failed to decode selected image bounds"))
+            } else {
+                Result.success(options.outWidth to options.outHeight)
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
+    private fun decodeBitmapWithSample(imageUri: Uri, sampleSize: Int): Result<Bitmap> {
+        val context = Utils.getApp()
+        return try {
+            val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bitmap =
+                context.contentResolver.openInputStream(imageUri)?.use { input ->
+                    BitmapFactory.decodeStream(input, null, options)
+                }
+            if (bitmap == null) {
+                Result.failure(IllegalStateException("Failed to decode selected image"))
+            } else {
+                Result.success(bitmap)
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
+    private fun readExifOrientation(imageUri: Uri): Result<Int> {
+        val context = Utils.getApp()
+        return try {
+            val orientation =
+                context.contentResolver.openInputStream(imageUri)?.use { input ->
+                    ExifInterface(input).getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_NORMAL,
+                    )
+                } ?: ExifInterface.ORIENTATION_NORMAL
+            Result.success(orientation)
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
+    private fun applyExifOrientation(bitmap: Bitmap, orientation: Int): Bitmap {
+        val matrix =
+            Matrix().apply {
+                when (orientation) {
+                    ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> postScale(-1f, 1f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
+                    ExifInterface.ORIENTATION_FLIP_VERTICAL -> postScale(1f, -1f)
+                    ExifInterface.ORIENTATION_TRANSPOSE -> {
+                        postRotate(90f)
+                        postScale(-1f, 1f)
+                    }
+                    ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
+                    ExifInterface.ORIENTATION_TRANSVERSE -> {
+                        postRotate(-90f)
+                        postScale(-1f, 1f)
+                    }
+                    ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
+                }
+            }
+        if (matrix.isIdentity) {
+            return bitmap
+        }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true).also {
+            if (it !== bitmap) {
+                bitmap.recycle()
             }
         }
     }

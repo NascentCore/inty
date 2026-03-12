@@ -64,6 +64,11 @@ interface ChatMessageDao {
     )
     suspend fun markSendingUserAsFailed(agentId: String)
 
+    @Query(
+        "UPDATE message SET generate_image_imageUrl = :imageUrl, generate_image_width = :width, generate_image_height = :height WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user'"
+    )
+    suspend fun updateSendingUserImage(agentId: String, imageUrl: String, width: Int?, height: Int?)
+
     /** 仅删除 createTempSendingLoadingEntity 创建的 loading 占位消息（role=assistant 且 status=SENDING） */
     @Query(
         "DELETE FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'assistant'"

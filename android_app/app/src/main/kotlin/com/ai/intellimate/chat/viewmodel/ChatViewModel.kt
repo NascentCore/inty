@@ -35,6 +35,7 @@ import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.chat.data.ChatPreparedImageUpload
 import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.utils.VipChatCreditPolicy
@@ -45,6 +46,7 @@ import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -88,9 +90,16 @@ class ChatViewModel : BaseVM() {
     )
 
     private data class PendingInputImageUpload(
-        val localImageUri: String,
-        val uploadTask: Deferred<HttpResult<String>>,
-    )
+        val originalImageUri: String,
+        val uploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>,
+        var compressedImageUri: String? = null,
+    ) {
+        fun matchesCurrentUri(uri: String?): Boolean {
+            if (uri.isNullOrBlank()) return false
+            if (uri == originalImageUri) return true
+            return uri == compressedImageUri
+        }
+    }
 
     /** 聊天消息额度弹窗类型。 */
     enum class ChatLimitDialogType {
@@ -531,9 +540,10 @@ class ChatViewModel : BaseVM() {
 
         val inputMsg = inputData.value
         val selectedImageUri = inputImageUri.value
+        val pendingImageUpload = pendingInputImageUpload
         val selectedImageUploadTask =
-            pendingInputImageUpload
-                ?.takeIf { it.localImageUri == selectedImageUri }
+            pendingImageUpload
+                ?.takeIf { it.matchesCurrentUri(selectedImageUri) }
                 ?.uploadTask
         if (selectedImageUploadTask != null) {
             pendingInputImageUpload = null
@@ -561,7 +571,7 @@ class ChatViewModel : BaseVM() {
                 if (!selectedImageUri.isNullOrBlank() && selectedImageUploadTask != null) {
                     pendingInputImageUpload =
                         PendingInputImageUpload(
-                            localImageUri = selectedImageUri,
+                            originalImageUri = selectedImageUri,
                             uploadTask = selectedImageUploadTask,
                         )
                 }
@@ -1159,18 +1169,53 @@ class ChatViewModel : BaseVM() {
         // 2) reuse this task when user taps send;
         // 3) keep UI responsive by avoiding synchronous upload at selection callback.
         val uploadTask =
-            viewModelScope.async(Dispatchers.IO) {
-                chatMessageRepository.preUploadChatInputImage(selectedUri)
+            viewModelScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                when (val preparedImageResult = chatMessageRepository.prepareChatInputImage(selectedUri)) {
+                    is HttpResult.Failure ->
+                        HttpResult.Failure(
+                            preparedImageResult.message,
+                            preparedImageResult.code,
+                        )
+                    is HttpResult.Success -> {
+                        val preparedImage = preparedImageResult.data
+                        val currentPending = pendingInputImageUpload
+                        if (currentPending?.originalImageUri == selectedUri) {
+                            currentPending.compressedImageUri = preparedImage.localCompressedImageUri
+                        }
+                        if (inputImageUri.value == selectedUri) {
+                            inputImageUri.value = preparedImage.localCompressedImageUri
+                        } else {
+                            val currentAgentId = _agentInfo.value?.id
+                            if (!currentAgentId.isNullOrBlank()) {
+                                chatMessageRepository.updateSendingUserImage(
+                                    agentId = currentAgentId,
+                                    imageUrl = preparedImage.localCompressedImageUri,
+                                    width = preparedImage.width,
+                                    height = preparedImage.height,
+                                )
+                            }
+                        }
+                        chatMessageRepository.uploadPreparedChatInputImage(preparedImage)
+                    }
+                }
             }
         pendingInputImageUpload =
             PendingInputImageUpload(
-                localImageUri = selectedUri,
+                originalImageUri = selectedUri,
                 uploadTask = uploadTask,
             )
+        uploadTask.start()
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 when (val uploadResult = uploadTask.await()) {
                     is HttpResult.Success -> {
+                        val compressedUri = uploadResult.data.localCompressedImageUri
+                        pendingInputImageUpload
+                            ?.takeIf { it.uploadTask == uploadTask }
+                            ?.compressedImageUri = compressedUri
+                        if (inputImageUri.value == selectedUri) {
+                            inputImageUri.value = compressedUri
+                        }
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.CHAT_PAGE_CLICK,
                             FirebaseManager.safeEventParams(
