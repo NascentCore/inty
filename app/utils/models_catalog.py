@@ -789,6 +789,28 @@ Z_IMAGE_TURBO_MODELS = [Z_IMAGE_TURBO, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
 CHAT_IMAGE_FAL_MODELS = [SEEDREAM_V4_5_EDIT, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
 CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
 
+# Chat text (LLM) models: config may use nickname or id_on_provider; resolve to id before API call.
+CHAT_TEXT_MODELS = [
+    DEEPSEEK_V3_2,
+    GEMINI_2_5_FLASH_LITE,
+    GEMINI_2_5_FLASH,
+]
+
+
+def resolve_chat_model_to_id(value: str) -> str:
+    """
+    Resolve chat model config (nickname or id_on_provider) to provider model ID.
+    If value matches a CHAT_TEXT_MODELS nickname or id_on_provider, returns that model's id_on_provider.
+    Otherwise returns value unchanged (e.g. custom OpenRouter IDs like z-ai/glm-4.5-air:free).
+    """
+    normalized = value.strip() if value else ""
+    if not normalized:
+        return value
+    for model in CHAT_TEXT_MODELS:
+        if model.nickname == normalized or model.id_on_provider == normalized:
+            return model.id_on_provider
+    return value
+
 
 class ModelNameFamily(StrEnum):
     """

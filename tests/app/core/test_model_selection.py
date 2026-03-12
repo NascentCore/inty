@@ -16,6 +16,7 @@ from app.core.model_selection import (
     select_text_to_image_model,
 )
 from app.utils.models_catalog import (
+    DEEPSEEK_V3_2,
     NANO_BANANA,
     NANO_BANANA_PRO,
     SEEDREAM_V4_5_EDIT,
@@ -33,6 +34,21 @@ def test_select_chat_model_subscribed_user_uses_sub_model():
     user = SimpleNamespace(is_superuser=False, email=None)
     model = select_chat_model(user=user, is_subscribed=True)
     assert model == global_config.agent.sub_user_chat_model
+
+
+def test_select_chat_model_resolves_nickname_to_id():
+    """Config 使用 nickname（如 DeepSeek V3.2）时，返回 id_on_provider 供 API 调用。"""
+    user = SimpleNamespace()
+    mock_agent = SimpleNamespace(
+        free_user_chat_model=DEEPSEEK_V3_2.nickname,
+        sub_user_chat_model=GEMINI_2_5_FLASH,
+    )
+    mock_config = SimpleNamespace(agent=mock_agent)
+    with patch("app.core.model_selection.global_config_loaded_from_config_yaml", mock_config):
+        model_free = select_chat_model(user=user, is_subscribed=False)
+        assert model_free == DEEPSEEK_V3_2.id_on_provider
+        model_sub = select_chat_model(user=user, is_subscribed=True)
+        assert model_sub == GEMINI_2_5_FLASH
 
 
 def test_select_chat_tts_model_free_user_uses_free_model():
