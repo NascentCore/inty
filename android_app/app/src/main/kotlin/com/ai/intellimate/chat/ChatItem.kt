@@ -1816,84 +1816,89 @@ fun VoiceChatHistoryExpandedContainer(
     val durationText = remember(durationSeconds) { formatDuration(durationSeconds) }
     val messageCount = messages.size
 
-    Column(
-        modifier =
-            modifier
-                .padding(bottom = 16.dp)
-                .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.5f), containerShape)
-                .padding(12.dp)
+    Box(
+        modifier = modifier.padding(bottom = 8.dp)
     ) {
-        // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
-        Box(
+        Column(
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .noRippleClickable(onClick = onCollapse)
-                    .padding(bottom = 8.dp)
+                modifier
+                    .fillMaxWidth(UiConfigs.ChatMessagePane.AI_WIDTH_RATIO)
+                    .padding(end = 28.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), containerShape)
+                    .padding(12.dp)
         ) {
-            Row(
+            // 顶部折叠提示卡片（与折叠状态相同样式，但提示文字不同）
+            Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(
-                            color = Color.Black.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(12.dp),
-                        )
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                        .noRippleClickable(onClick = onCollapse)
+                        .padding(bottom = 8.dp)
             ) {
-                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                    // 标题
-                    Text(
-                        text = stringResource(R.string.voice_chat_history_title),
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    // 时长和消息数量
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_mic),
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = Color.Black.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                        // 标题
                         Text(
-                            text =
-                                stringResource(
-                                    R.string.voice_chat_history_duration_messages,
-                                    durationText,
-                                    messageCount,
-                                ),
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
+                            text = stringResource(R.string.voice_chat_history_title),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        // 时长和消息数量
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_mic),
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text =
+                                    stringResource(
+                                        R.string.voice_chat_history_duration_messages,
+                                        durationText,
+                                        messageCount,
+                                    ),
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        // 点击提示（展开状态显示"Tap to collapse"）
+                        Text(
+                            text = stringResource(R.string.voice_chat_history_tap_to_collapse),
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 11.sp,
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    // 点击提示（展开状态显示"Tap to collapse"）
-                    Text(
-                        text = stringResource(R.string.voice_chat_history_tap_to_collapse),
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 11.sp,
+
+                    // 向上箭头图标（表示可折叠）
+                    Image(
+                        imageVector = Icons.Rounded.KeyboardArrowUp,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-
-                // 向上箭头图标（表示可折叠）
-                Image(
-                    imageVector = Icons.Rounded.KeyboardArrowUp,
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.7f)),
-                    modifier = Modifier.size(20.dp),
-                )
             }
-        }
 
-        // 消息内容
-        content()
+            // 消息内容
+            content()
+        }
     }
+
 }
 
 /**
