@@ -13,9 +13,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.runBlocking
@@ -222,6 +225,12 @@ object IntySetting {
 //        }
 //    }
 
+    fun isLoginFlow(): Flow<Boolean> {
+        return contextRef?.get()?.intySettingsCache?.data?.map {
+            it.curUID.isNotBlank() && it.userCache.token.isNotBlank()
+        } ?: flowOf(false)
+    }
+
     fun getCurUserID(): String {
         //return allUserSetting.decodeString("cur_uid") ?: ""
         return getIntySettingCache()?.curUID ?: ""
@@ -258,7 +267,6 @@ object IntySetting {
     }
 
     fun isLogin(): Boolean {
-        //return getCurUserID().isNotEmpty() && getCurToken().isNotEmpty()
         return getIntySettingCache()?.let {
             it.curUID.isNotBlank() && it.userCache.token.isNotBlank()
         } ?: false

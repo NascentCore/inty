@@ -20,32 +20,38 @@ val networkModule = module { single<HttpClient> { provideHttpClient() } }
 
 /** 创建Ktor HttpClient */
 private fun provideHttpClient(): HttpClient {
-    return HttpClient(OkHttp) {
-        // 使用统一的OkHttpClient，复用所有拦截器和配置
-        engine { preconfigured = UnifiedOkHttpClient.create() }
+    return HttpClientProvider.ktorClient
+}
 
-        // 安装内容协商插件，支持JSON序列化
-        install(ContentNegotiation) {
-            json(
-                Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
-                    encodeDefaults = false
-                }
-            )
-        }
+object HttpClientProvider {
+    val ktorClient by lazy {
+        HttpClient(OkHttp) {
+            // 使用统一的OkHttpClient，复用所有拦截器和配置
+            engine { preconfigured = UnifiedOkHttpClient.create() }
 
-        // 安装WebSocket插件
-        install(WebSockets) {
-            // WebSocket相关配置可以在这里添加
-            contentConverter =
-                KotlinxWebsocketSerializationConverter(
+            // 安装内容协商插件，支持JSON序列化
+            install(ContentNegotiation) {
+                json(
                     Json {
                         ignoreUnknownKeys = true
                         isLenient = true
                         encodeDefaults = false
                     }
                 )
+            }
+
+            // 安装WebSocket插件
+            install(WebSockets) {
+                // WebSocket相关配置可以在这里添加
+                contentConverter =
+                    KotlinxWebsocketSerializationConverter(
+                        Json {
+                            ignoreUnknownKeys = true
+                            isLenient = true
+                            encodeDefaults = false
+                        }
+                    )
+            }
         }
     }
 }

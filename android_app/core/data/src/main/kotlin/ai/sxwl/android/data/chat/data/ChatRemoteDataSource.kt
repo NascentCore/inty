@@ -124,14 +124,7 @@ class ChatRemoteDataSource {
                     timeContext = buildUserTimeContext(),
                     targetImateId = agentId,
                 )
-            if (
-                DebugBackendEndpointStore.isRuntimeOverrideSupported() &&
-                    DebugBackendEndpointStore.getChatWebSocketEnabled()
-            ) {
-                ChatWebSocketSessionManager.sendMessage(agentId, request)
-            } else {
-                NetServiceMgr.getChatApi().sendMsg(agentId, request)
-            }
+            NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
