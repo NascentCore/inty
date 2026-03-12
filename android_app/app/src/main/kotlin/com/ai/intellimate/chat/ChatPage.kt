@@ -3,6 +3,7 @@ package com.ai.intellimate.chat
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.utils.HeartAppUtils
 import ai.sxwl.android.data.api.model.AgentConstants
+import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatusHelper
@@ -16,6 +17,7 @@ import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -57,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -72,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -79,6 +83,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -107,6 +112,9 @@ import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
 import com.ai.intellimate.chat.ui.officialAssistantFaqItems
+import com.ai.intellimate.chat.touch.CharacterBackgroundLayout
+import com.ai.intellimate.chat.touch.CharacterTouchActionFormatter
+import com.ai.intellimate.chat.touch.CharacterTouchCoordinateMapper
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -117,8 +125,17 @@ import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
+import com.google.android.play.core.review.ReviewInfo
+import com.google.android.play.core.review.ReviewManagerFactory
+import coil3.SingletonImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.size.Size as CoilSize
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val LOAD_MORE_NEAR_TOP_THRESHOLD = 3
 private const val LOAD_MORE_MIN_EXTRA_ITEMS = 5
@@ -446,6 +463,18 @@ internal fun ChatPage(
     val inputFocusRequester = remember(agentInfo?.id) { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by chatViewModel.uiState.collectAsState()
+    val backgroundTouchSourceUrl =
+        remember(agentInfo?.id, agentInfo?.background, agentInfo?.avatar) {
+            resolveBackgroundTouchSourceUrl(agentInfo)
+        }
+    val backgroundSourceImageSize =
+        rememberBackgroundTouchSourceImageSize(
+            imageUrl = backgroundTouchSourceUrl,
+            isOfficialAssistantChat = isOfficialAssistantChat,
+        )
+    var backgroundCaptureSize by remember(agentInfo?.id) { mutableStateOf(IntSize.Zero) }
+    val backgroundTouchMinSwipeDistancePx =
+        with(density) { UiConfigs.ChatPage.backgroundTouchMinSwipeDistance.toPx() }
 
     if (
         uiState.vipAgentLockType == ChatUIState.VipAgentLockType.DIALOG &&
@@ -499,6 +528,133 @@ internal fun ChatPage(
                 enableAnimatedBackground = autoPlayAnimation,
             )
         }
+
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .onSizeChanged { size -> backgroundCaptureSize = size }
+                    .pointerInput(
+                        isCurrentPage,
+                        uiState.vipAgentLockType,
+                        backgroundCaptureSize,
+                        backgroundSourceImageSize,
+                        backgroundTouchMinSwipeDistancePx,
+                        agentInfo?.id,
+                    ) {
+                        val sourceSize = backgroundSourceImageSize ?: return@pointerInput
+                        val backgroundLayout =
+                            buildCharacterBackgroundLayout(
+                                containerSize = backgroundCaptureSize,
+                                sourceImageSize = sourceSize,
+                            ) ?: return@pointerInput
+                        val shouldIgnoreTouch: (Offset) -> Boolean = { point ->
+                            !isCurrentPage ||
+                                uiState.vipAgentLockType != ChatUIState.VipAgentLockType.NONE ||
+                                point.y >
+                                    backgroundCaptureSize.height *
+                                        UiConfigs.ChatPage.backgroundTouchCaptureMaxYRatio
+                        }
+
+                        detectTapGestures(
+                            onTap = { tapPoint ->
+                                if (shouldIgnoreTouch(tapPoint)) return@detectTapGestures
+                                val mappedPoint =
+                                    CharacterTouchCoordinateMapper.mapPoint(
+                                        layout = backgroundLayout,
+                                        touchX = tapPoint.x,
+                                        touchY = tapPoint.y,
+                                    ) ?: return@detectTapGestures
+                                val action =
+                                    CharacterTouchActionFormatter.buildTapAction(
+                                        startPoint = mappedPoint,
+                                        sourceImageWidth = sourceSize.width,
+                                        sourceImageHeight = sourceSize.height,
+                                        useAsteriskMarker =
+                                            agentInfo?.useDoubleAsteriskActionMarker() == true,
+                                    )
+                                chatViewModel.sendBackgroundTouchAction(action)
+                            }
+                        )
+                    }
+                    .pointerInput(
+                        isCurrentPage,
+                        uiState.vipAgentLockType,
+                        backgroundCaptureSize,
+                        backgroundSourceImageSize,
+                        backgroundTouchMinSwipeDistancePx,
+                        agentInfo?.id,
+                    ) {
+                        val sourceSize = backgroundSourceImageSize ?: return@pointerInput
+                        val backgroundLayout =
+                            buildCharacterBackgroundLayout(
+                                containerSize = backgroundCaptureSize,
+                                sourceImageSize = sourceSize,
+                            ) ?: return@pointerInput
+                        val shouldIgnoreTouch: (Offset) -> Boolean = { point ->
+                            !isCurrentPage ||
+                                uiState.vipAgentLockType != ChatUIState.VipAgentLockType.NONE ||
+                                point.y >
+                                    backgroundCaptureSize.height *
+                                        UiConfigs.ChatPage.backgroundTouchCaptureMaxYRatio
+                        }
+
+                        var swipeStartPoint: Offset? = null
+                        var swipeEndPoint: Offset? = null
+                        detectDragGestures(
+                            onDragStart = { startOffset ->
+                                swipeStartPoint = startOffset
+                                swipeEndPoint = startOffset
+                            },
+                            onDrag = { _, dragAmount ->
+                                val currentPoint = swipeEndPoint ?: return@detectDragGestures
+                                swipeEndPoint = currentPoint + dragAmount
+                            },
+                            onDragEnd = {
+                                val start = swipeStartPoint
+                                val end = swipeEndPoint
+                                swipeStartPoint = null
+                                swipeEndPoint = null
+                                if (start == null || end == null) return@detectDragGestures
+                                if (shouldIgnoreTouch(start) || shouldIgnoreTouch(end)) {
+                                    return@detectDragGestures
+                                }
+                                val dx = end.x - start.x
+                                val dy = end.y - start.y
+                                val movedDistance = kotlin.math.sqrt(dx * dx + dy * dy)
+                                if (movedDistance < backgroundTouchMinSwipeDistancePx) {
+                                    return@detectDragGestures
+                                }
+
+                                val mappedStart =
+                                    CharacterTouchCoordinateMapper.mapPoint(
+                                        layout = backgroundLayout,
+                                        touchX = start.x,
+                                        touchY = start.y,
+                                    ) ?: return@detectDragGestures
+                                val mappedEnd =
+                                    CharacterTouchCoordinateMapper.mapPoint(
+                                        layout = backgroundLayout,
+                                        touchX = end.x,
+                                        touchY = end.y,
+                                    ) ?: return@detectDragGestures
+                                val action =
+                                    CharacterTouchActionFormatter.buildSwipeAction(
+                                        startPoint = mappedStart,
+                                        endPoint = mappedEnd,
+                                        sourceImageWidth = sourceSize.width,
+                                        sourceImageHeight = sourceSize.height,
+                                        useAsteriskMarker =
+                                            agentInfo?.useDoubleAsteriskActionMarker() == true,
+                                    )
+                                chatViewModel.sendBackgroundTouchAction(action)
+                            },
+                            onDragCancel = {
+                                swipeStartPoint = null
+                                swipeEndPoint = null
+                            },
+                        )
+                    }
+        )
 
         val drawerState = remember { mutableStateOf(DrawerValue.Closed) }
         val keyboard = LocalSoftwareKeyboardController.current
@@ -1323,6 +1479,79 @@ internal fun ChatPage(
             focusManager.clearFocus()
         }
     }
+}
+
+private fun resolveBackgroundTouchSourceUrl(agentInfo: AgentInfo?): String? {
+    val currentAgentId = agentInfo?.id ?: return null
+    val customBackgroundUrl = IntySetting.getChatBackgroundImage(currentAgentId)
+    if (!customBackgroundUrl.isNullOrBlank()) {
+        return customBackgroundUrl
+    }
+    return agentInfo.getOriginShowImage()?.takeIf { it.isNotBlank() }
+}
+
+@Composable
+private fun rememberBackgroundTouchSourceImageSize(
+    imageUrl: String?,
+    isOfficialAssistantChat: Boolean,
+): IntSize? {
+    val context = LocalContext.current
+    val imageSizeState =
+        produceState<IntSize?>(initialValue = null, imageUrl, isOfficialAssistantChat) {
+            if (isOfficialAssistantChat) {
+                val drawable = context.getDrawable(R.drawable.img_official_agent_background)
+                val width = drawable?.intrinsicWidth ?: 0
+                val height = drawable?.intrinsicHeight ?: 0
+                value = if (width > 0 && height > 0) IntSize(width, height) else null
+                return@produceState
+            }
+            if (imageUrl.isNullOrBlank()) {
+                value = null
+                return@produceState
+            }
+
+            value = loadOriginalImageSize(context, imageUrl)
+        }
+    return imageSizeState.value
+}
+
+private suspend fun loadOriginalImageSize(context: android.content.Context, imageUrl: String): IntSize? {
+    return withContext(Dispatchers.IO) {
+        val request = ImageRequest.Builder(context).data(imageUrl).size(CoilSize.ORIGINAL).build()
+        val result = SingletonImageLoader.get(context).execute(request)
+        if (result !is SuccessResult) {
+            return@withContext null
+        }
+
+        val drawable = result.image.asDrawable(context.resources)
+        val width = drawable.intrinsicWidth
+        val height = drawable.intrinsicHeight
+        if (width <= 0 || height <= 0) {
+            null
+        } else {
+            IntSize(width, height)
+        }
+    }
+}
+
+private fun buildCharacterBackgroundLayout(
+    containerSize: IntSize,
+    sourceImageSize: IntSize,
+): CharacterBackgroundLayout? {
+    if (
+        containerSize.width <= 0 ||
+            containerSize.height <= 0 ||
+            sourceImageSize.width <= 0 ||
+            sourceImageSize.height <= 0
+    ) {
+        return null
+    }
+    return CharacterBackgroundLayout(
+        containerWidthPx = containerSize.width.toFloat(),
+        containerHeightPx = containerSize.height.toFloat(),
+        sourceImageWidthPx = sourceImageSize.width.toFloat(),
+        sourceImageHeightPx = sourceImageSize.height.toFloat(),
+    )
 }
 
 /**

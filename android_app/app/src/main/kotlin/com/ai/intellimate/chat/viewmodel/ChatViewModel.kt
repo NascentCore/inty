@@ -37,6 +37,7 @@ import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
 import com.ai.intellimate.chat.data.ChatPreparedImageUpload
+import com.ai.intellimate.chat.touch.CharacterTouchAction
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.utils.VipChatCreditPolicy
 import com.ai.intellimate.ui.UiConfigs
@@ -822,6 +823,190 @@ class ChatViewModel : BaseVM() {
                 _isWaitingForReply.value = false
             } finally {
                 // 确保状态在最后被正确重置
+                if (_isWaitingForReply.value) {
+                    _isWaitingForReply.value = false
+                }
+            }
+        }
+    }
+
+    fun sendBackgroundTouchAction(action: CharacterTouchAction) {
+        val actionDescription = action.description.trim()
+        if (actionDescription.isBlank()) return
+
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
+            return
+        }
+        lastSendTime = currentTime
+
+        if (_isWaitingForReply.value) {
+            return
+        }
+
+        val agentId = _agentInfo.value?.id ?: return
+        val agent = _agentInfo.value ?: return
+        _isWaitingForReply.value = true
+        val endToEndStartTime = currentTime
+
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!deductVipChatCreditsIfNeeded(agent)) {
+                _isWaitingForReply.value = false
+                return@launch
+            }
+
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
+                FirebaseManager.safeEventParams(
+                    "click_type" to "background_touch_action_sent",
+                    "gesture_type" to action.gestureType.analyticsValue,
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "start_x" to action.startPoint.x,
+                    "start_y" to action.startPoint.y,
+                    "end_x" to action.endPoint?.x,
+                    "end_y" to action.endPoint?.y,
+                    "source_image_width" to action.sourceImageWidth,
+                    "source_image_height" to action.sourceImageHeight,
+                    "timestamp" to endToEndStartTime,
+                ),
+            )
+
+            val aiResponseStartTime = System.currentTimeMillis()
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.MESSAGE_SENT,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "message_type" to "background_touch_${action.gestureType.analyticsValue}",
+                    "message_length" to actionDescription.length,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to aiResponseStartTime,
+                ),
+            )
+
+            try {
+                when (val result = chatMessageRepository.sendMessage(agentId, actionDescription)) {
+                    is HttpResult.Success -> {
+                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agent.id,
+                                "agent_name" to agent.name,
+                                "message_type" to
+                                    "background_touch_${action.gestureType.analyticsValue}",
+                                "response_code" to (result.data.code ?: 0),
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "ai_response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
+                            ),
+                        )
+
+                        sessionMessageCount++
+                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                        val elapsedTimeSinceLastShow = System.currentTimeMillis() - lastShowTime
+                        if (
+                            sessionMessageCount >=
+                                UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                                elapsedTimeSinceLastShow >=
+                                    UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
+                        ) {
+                            IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+                            withContext(Dispatchers.Main) {
+                                _showFeedbackRequestDialog.value = true
+                            }
+                        }
+
+                        result.data.data?.choices?.getOrNull(0)?.let {
+                            if (it.message.agentId() == _agentId.value) {
+                                enableFlowShowIfAllowed()
+                                if (chatMessageRepository.shouldShowRank()) {
+                                    _showRankDialog.send(true)
+                                }
+                            }
+                        }
+
+                        runCatching {
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    emitChatLimitDialog(agent.id)
+                                }
+                            }
+                            .onFailure {
+                                LogUtils.e(
+                                    "Error processing background touch action response: ${it.message}"
+                                )
+                                _isWaitingForReply.value = false
+                            }
+                    }
+
+                    is HttpResult.Failure -> {
+                        if (
+                            runCatching { ensureActive() }.isFailure ||
+                                isCancellationError(result.message)
+                        ) {
+                            LogUtils.d(
+                                "ChatViewModel.sendBackgroundTouchAction: 请求被取消，不显示错误 Toast: ${result.message}"
+                            )
+                            return@launch
+                        }
+
+                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agent.id,
+                                "agent_name" to agent.name,
+                                "message_type" to
+                                    "background_touch_${action.gestureType.analyticsValue}",
+                                "error_message" to "failure: ${result.message.take(100)}",
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "ai_response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
+                            ),
+                        )
+                        NetworkErrorHandler.showNetworkAwareError(
+                            "Failed to send background touch action."
+                        )
+                        _isWaitingForReply.value = false
+                    }
+                }
+            } catch (e: Exception) {
+                if (
+                    e is CancellationException ||
+                        runCatching { ensureActive() }.isFailure ||
+                        isCancellationError(e.message)
+                ) {
+                    LogUtils.d(
+                        "ChatViewModel.sendBackgroundTouchAction: 请求被取消，不显示错误 Toast: ${e.message}"
+                    )
+                    return@launch
+                }
+
+                val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
+                        "message_type" to "background_touch_${action.gestureType.analyticsValue}",
+                        "error_message" to
+                            "exception: ${e.javaClass.simpleName}, ${e.message?.take(100) ?: "unknown error"}",
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "end_to_end_time" to endToEndTime,
+                    ),
+                )
+                NetworkErrorHandler.showNetworkAwareError(
+                    "Unexpected error while sending touch action."
+                )
+                _isWaitingForReply.value = false
+            } finally {
                 if (_isWaitingForReply.value) {
                     _isWaitingForReply.value = false
                 }

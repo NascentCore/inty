@@ -807,6 +807,12 @@ object UiConfigs {
         /** 消息列表非全屏模式下，上部分空白区占比 */
         const val chatListBlankZone = 0.5f
 
+        /** 背景触摸动作采集区域（从顶部开始）占聊天页高度比例 */
+        const val backgroundTouchCaptureMaxYRatio = 0.55f
+
+        /** 背景触摸动作识别为“滑动”所需的最小距离 */
+        val backgroundTouchMinSwipeDistance = 24.dp
+
         /** 消息列表顶部留白距离 */
         val chatPageLazyColumnGapTop = 360.dp
 

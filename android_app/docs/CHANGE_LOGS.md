@@ -18,6 +18,10 @@
 - Chat settings **Voice** picker now enforces gender matching for MALE/FEMALE iMates, so only same-gender Gemini voices are shown in the dropdown.
 - After you react with 👍/👎 to a generated chat image, IntelliMate can show a once-per-local-day feedback prompt that opens a prefilled image-quality feedback form with the image attached.
 
+## 2026-03-12
+
+- In chat, tapping or swiping on the character background now auto-sends a scene action message with coordinates mapped to the original background image so the AI can understand the touched area.
+
 ## 2026-03-06
 
 - Subscription (Premium) page layout and copy updated: title/subtitle now show **Upgrade to Premium** / **Premium enabled** and **Unlock 12 perks now!** / **12 perks Unlocked!** depending on subscription status; billing notice **Will charge [price] in the next billing cycle, cancel at any time** appears below plan cards; a **Benefit Details** table compares Free vs Premium (Daily Chat, Chat Memory, Voice, HD Voice, Voice Call Time, etc.); purchase button shows selected plan price and **Get Premium**; **Membership & Renewal Terms** link added at bottom.
