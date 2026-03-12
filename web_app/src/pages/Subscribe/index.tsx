@@ -14,8 +14,8 @@ import EmptyState from '@/components/EmptyState';
 import ErrorAlert from '@/components/ErrorAlert';
 import Icon from '@/components/Icon';
 import Loading from '@/components/Loading';
+import { getSubscriptionPlans } from '@/services/subscription';
 import type { ISubscriptionPlan, ISubscriptionPlansData } from '@/types';
-import { createIntyClient } from '@/utils/intyClient';
 import { logger } from '@/utils/logger';
 import { PlanCard } from './components';
 import './index.less';
@@ -32,25 +32,20 @@ const Subscribe: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const client = await createIntyClient(true);
-      const response = await client.api.v1.subscription.listPlans();
+      const responseData = await getSubscriptionPlans();
 
-      if (response.code === 200 && response.data) {
-        // 确保 currency 字段存在，如果不存在则使用默认值
-        const plansData = {
-          ...response.data,
-          plans: response.data.plans.map((plan: any) => ({
-            ...plan,
-            currency: plan.currency || 'USD',
-          })),
-        };
-        setPlansData(plansData as ISubscriptionPlansData);
-        logger.info('Successfully fetched subscription plans', {
-          planCount: plansData.plans.length,
-        });
-      } else {
-        throw new Error(response.message || 'Failed to fetch subscription plans');
-      }
+      // 确保 currency 字段存在，如果不存在则使用默认值
+      const plansData = {
+        ...responseData,
+        plans: responseData.plans.map((plan: ISubscriptionPlan) => ({
+          ...plan,
+          currency: plan.currency || 'USD',
+        })),
+      };
+      setPlansData(plansData as ISubscriptionPlansData);
+      logger.info('Successfully fetched subscription plans', {
+        planCount: plansData.plans.length,
+      });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
