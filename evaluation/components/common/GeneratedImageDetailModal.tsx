@@ -20,6 +20,16 @@ interface GeneratedImageDetailModalProps {
   title?: string;
 }
 
+function getGenerationModeLabel(detail: GeneratedImageDetail): string | null {
+  if (detail.isMatchedFallback || detail.generationMode === "fallback_matched_image") {
+    return "兜底生图（命中历史图）";
+  }
+  if (detail.generationMode === "fresh_generation") {
+    return "新生成";
+  }
+  return null;
+}
+
 function formatDateTime(dateTime: string | null): string {
   if (!dateTime) {
     return "时间未知";
@@ -121,6 +131,7 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
   const generationTimeText = detail
     ? formatGenerationTimeMs(detail.generationTimeMs)
     : null;
+  const generationModeLabel = detail ? getGenerationModeLabel(detail) : null;
 
   return (
     <Modal
@@ -133,6 +144,7 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
         <Space>
           <PictureOutlined />
           <span>{title}</span>
+          {generationModeLabel && <Tag color="gold">{generationModeLabel}</Tag>}
           {detail?.model && <Tag color="blue">{detail.model}</Tag>}
         </Space>
       }
@@ -165,6 +177,19 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
               }}
             >
               {detail.generationPrompt || "暂无生成提示词"}
+            </Paragraph>
+            <Title level={5} style={{ marginBottom: 12, marginTop: 16 }}>
+              生图原始请求
+            </Title>
+            <Paragraph
+              style={{
+                backgroundColor: "#f5f5f5",
+                padding: 12,
+                borderRadius: 8,
+                marginBottom: 12,
+              }}
+            >
+              {detail.originalRequest || "暂无原始请求记录"}
             </Paragraph>
             {detail.referenceImages.length > 0 && (
               <>
@@ -205,7 +230,14 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
               wrap
               split={<span style={{ color: "#d9d9d9" }}>|</span>}
             >
-              <Text type="secondary">模型: {detail.model || "未知模型"}</Text>
+              {generationModeLabel && (
+                <Text type="secondary">生图方式: {generationModeLabel}</Text>
+              )}
+              <Text type="secondary">
+                模型:{" "}
+                {detail.model ||
+                  (detail.isMatchedFallback ? "兜底匹配（无主模型）" : "未知模型")}
+              </Text>
               {detail.userReferenceImageUrl && (
                 <Text type="secondary">包含用户参考图: 是</Text>
               )}

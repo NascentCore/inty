@@ -1370,6 +1370,13 @@ async def _try_match_existing_image(
                     "height": similar_image.get("height"),
                     "format": similar_image.get("format", "jpeg"),
                     "prompt": current_prompt,
+                    "original_request": message_content,
+                    "generation_mode": "fallback_matched_image",
+                    "fallback_reason": (
+                        "primary_network_error"
+                        if is_network_error
+                        else "primary_generation_failed"
+                    ),
                     "generated_at": datetime.utcnow().isoformat(),
                     "is_matched": True,
                     "similarity": similar_image.get("similarity", 0),
@@ -1397,6 +1404,7 @@ async def _try_match_existing_image(
                         "message_content": message_content[:100],
                         "success": True,
                         "is_matched": True,
+                        "generation_mode": "fallback_matched_image",
                         "similarity": similar_image.get("similarity", 0),
                         "matched_from_user_id": matched_user_id,
                         "is_from_other_user": is_other_user,
@@ -1939,6 +1947,8 @@ async def generate_chat_image(
                     "generation_time_ms": generation_time_ms,
                     "model_fallback_due_to_429": model_fallback_due_to_429,
                     "prompt": image_generation_result.get("prompt"),
+                    "original_request": message_content,
+                    "generation_mode": "fresh_generation",
                 }
             },
         )

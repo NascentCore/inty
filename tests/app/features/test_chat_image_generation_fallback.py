@@ -144,9 +144,10 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     db_session.add(user_msg)
     await db_session.flush()
 
+    ai_message_content = "给我画一张图片"
     ai_msg = models.ChatHistory(
         session_id=session_id,
-        message={"type": "ai", "data": {"content": "给我画一张图片"}},
+        message={"type": "ai", "data": {"content": ai_message_content}},
         meta_data=None,
     )
     db_session.add(ai_msg)
@@ -210,7 +211,16 @@ async def test_chat_image_generation_fallback_returns_matched_image(
     assert data.get("image_metadata", {}).get("is_matched") is True
     assert data.get("image_url") == expected_cdn
 
-    # 8) 可选：兜底图 id 已写入 chat.sent_fallback_images
+    # 8) 兜底生图消息 metadata 应包含兜底标记与原始请求文本
+    result = await db_session.execute(
+        select(models.ChatHistory).where(models.ChatHistory.id == message_id)
+    )
+    updated_msg = result.scalar_one()
+    generated_image_meta = (updated_msg.meta_data or {}).get("generated_image", {})
+    assert generated_image_meta.get("generation_mode") == "fallback_matched_image"
+    assert generated_image_meta.get("original_request") == ai_message_content
+
+    # 9) 可选：兜底图 id 已写入 chat.sent_fallback_images
     await db_session.refresh(chat)
     sent = list(chat.sent_fallback_images or [])
     assert fallback_gcs in sent

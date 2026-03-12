@@ -18,6 +18,7 @@ export interface GeneratedImageDetail {
   imageUrl: string;
   gcsUrl: string | null;
   generationPrompt: string | null;
+  originalRequest: string | null;
   referenceImageUrl: string | null;
   userReferenceImageUrl: string | null;
   referenceImages: GeneratedImageReferenceAsset[];
@@ -27,6 +28,8 @@ export interface GeneratedImageDetail {
   userId: string | null;
   sessionId: string | null;
   model: string | null;
+  generationMode: string | null;
+  isMatchedFallback: boolean;
   generationTimeMs: number | null;
   modelFallbackDueTo429: boolean | null;
   langsmithTraceId: string | null;
@@ -37,6 +40,7 @@ export interface GeneratedImageDetail {
 interface ParsedGeneratedImageMeta {
   imageUrl: string | null;
   generationPrompt: string | null;
+  originalRequest: string | null;
   referenceImageUrl: string | null;
   userReferenceImageUrl: string | null;
   referenceImageUrls: string[];
@@ -45,6 +49,8 @@ interface ParsedGeneratedImageMeta {
   userId: string | null;
   sessionId: string | null;
   model: string | null;
+  generationMode: string | null;
+  isMatchedFallback: boolean;
   generationTimeMs: number | null;
   modelFallbackDueTo429: boolean | null;
   langsmithTraceId: string | null;
@@ -113,11 +119,17 @@ function readGeneratedImageMetaNode(
 
 function parseGeneratedImageMeta(metaData: UnknownRecord): ParsedGeneratedImageMeta {
   const generatedImage = readGeneratedImageMetaNode(metaData);
+  const generationMode = readString(generatedImage?.generation_mode);
+  const isMatchedByFlag = readBoolean(generatedImage?.is_matched) === true;
+  const isMatchedByMode = generationMode === "fallback_matched_image";
   return {
     imageUrl: readString(generatedImage?.image_url),
     generationPrompt:
       readString(generatedImage?.prompt) ??
       readString(generatedImage?.generation_prompt),
+    originalRequest:
+      readString(generatedImage?.original_request) ??
+      readString(metaData.original_request),
     referenceImageUrl: readString(generatedImage?.reference_image_url),
     userReferenceImageUrl:
       readString(generatedImage?.user_reference_image_url) ??
@@ -129,6 +141,8 @@ function parseGeneratedImageMeta(metaData: UnknownRecord): ParsedGeneratedImageM
     userId: readString(metaData.user_id),
     sessionId: readString(metaData.session_id),
     model: readString(generatedImage?.model),
+    generationMode,
+    isMatchedFallback: isMatchedByFlag || isMatchedByMode,
     generationTimeMs: readNumber(generatedImage?.generation_time_ms),
     modelFallbackDueTo429: readBoolean(
       generatedImage?.model_fallback_due_to_429,
@@ -230,6 +244,7 @@ export function buildGeneratedImageDetailFromDailyReportItem(
     imageUrl: item.image_url,
     gcsUrl: parsedMeta.imageUrl,
     generationPrompt: parsedMeta.generationPrompt,
+    originalRequest: parsedMeta.originalRequest,
     referenceImageUrl: roleReferenceImageUrl,
     userReferenceImageUrl,
     referenceImages,
@@ -239,6 +254,8 @@ export function buildGeneratedImageDetailFromDailyReportItem(
     userId: parsedMeta.userId,
     sessionId: item.session_id,
     model: parsedMeta.model,
+    generationMode: parsedMeta.generationMode,
+    isMatchedFallback: parsedMeta.isMatchedFallback,
     generationTimeMs: parsedMeta.generationTimeMs,
     modelFallbackDueTo429: parsedMeta.modelFallbackDueTo429,
     langsmithTraceId: parsedMeta.langsmithTraceId,
@@ -276,6 +293,7 @@ export function buildGeneratedImageDetailFromGeneratedImage(
     imageUrl: image.url,
     gcsUrl: image.gcs_url || parsedMeta.imageUrl,
     generationPrompt: image.generation_prompt || parsedMeta.generationPrompt,
+    originalRequest: parsedMeta.originalRequest,
     referenceImageUrl: roleReferenceImageUrl,
     userReferenceImageUrl,
     referenceImages,
@@ -285,6 +303,8 @@ export function buildGeneratedImageDetailFromGeneratedImage(
     userId: image.user_id || parsedMeta.userId,
     sessionId: image.session_id || parsedMeta.sessionId,
     model: image.model ?? parsedMeta.model,
+    generationMode: parsedMeta.generationMode,
+    isMatchedFallback: parsedMeta.isMatchedFallback,
     generationTimeMs: image.generation_time_ms ?? parsedMeta.generationTimeMs,
     modelFallbackDueTo429:
       image.model_fallback_due_to_429 ?? parsedMeta.modelFallbackDueTo429,
