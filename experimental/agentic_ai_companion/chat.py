@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Annotated
 
 import cyclopts
+from dotenv import load_dotenv
+
+from .memory_compaction import CompactionConfig, ConversationCompactor
 
 # 尽早加载 .env（显式路径，避免工作目录影响）
 _THIS_DIR = Path(__file__).resolve().parent
 _ENV_PATH = _THIS_DIR / ".env"
 assert _ENV_PATH.exists(), f"环境变量文件不存在: {_ENV_PATH}"
-from dotenv import load_dotenv
 
 load_dotenv(_ENV_PATH)
 
@@ -21,7 +24,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-_real_from loguru import logger
+_real_logger = logging.getLogger(__name__)
 
 
 class _LoggerWrapper:
@@ -59,8 +62,6 @@ class _LoggerWrapper:
 
 
 logger: _LoggerWrapper = _LoggerWrapper(_real_logger, enabled=False)
-
-import os
 
 assert os.getenv("OPENROUTER_API_KEY") is not None, "OPENROUTER_API_KEY 未设置"
 
@@ -101,6 +102,34 @@ def main(
             name="--debug", help="开启时输出 logger 日志，默认关闭以减少屏幕干扰"
         ),
     ] = False,
+    enable_memory_compaction: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--enable-memory-compaction",
+            help="开启实验性的记忆压缩：超预算时将历史对话压缩为情节+语义快照",
+        ),
+    ] = False,
+    memory_max_context_chars: Annotated[
+        int,
+        cyclopts.Parameter(
+            name="--memory-max-context-chars",
+            help="触发压缩的上下文字符预算（近似 token）",
+        ),
+    ] = 9000,
+    memory_keep_recent_messages: Annotated[
+        int,
+        cyclopts.Parameter(
+            name="--memory-keep-recent-messages",
+            help="压缩时保留最近原始消息数量",
+        ),
+    ] = 18,
+    memory_max_messages_per_episode: Annotated[
+        int,
+        cyclopts.Parameter(
+            name="--memory-max-messages-per-episode",
+            help="构建情节记忆时每个 episode 的最大消息数",
+        ),
+    ] = 8,
 ) -> None:
     logger.set_enabled(debug)
     if not debug:
@@ -108,6 +137,21 @@ def main(
         logging.getLogger("httpcore").setLevel(logging.WARNING)
         # 非 debug 时隐藏 Google GenAI SDK 的 INFO（如 "AFC is enabled with max remote calls"）
         logging.getLogger("google_genai").setLevel(logging.WARNING)
+    memory_compactor = None
+    if enable_memory_compaction:
+        memory_config = CompactionConfig(
+            max_context_chars=memory_max_context_chars,
+            keep_recent_messages=memory_keep_recent_messages,
+            max_messages_per_episode=memory_max_messages_per_episode,
+            max_episodic_entries=80,
+            max_semantic_entries=80,
+            summary_max_chars=1200,
+            retrieval_episode_count=4,
+            retrieval_semantic_count=8,
+            retrieval_open_loop_count=6,
+        )
+        memory_compactor = ConversationCompactor(config=memory_config)
+        logger.info("已启用 memory compaction: %s", memory_config.model_dump())
     logger.info("入口 main() 调用 run_repl")
     run_repl(
         char_name=CHAR_NAME,
@@ -122,5 +166,6 @@ def main(
         tool_context_types=TOOL_CONTEXT_TYPES,
         process_response_with_tools=tools.process_response_with_tools,
         logger=logger,
+        memory_compactor=memory_compactor,
     )
     logger.info("run_repl 已退出")
