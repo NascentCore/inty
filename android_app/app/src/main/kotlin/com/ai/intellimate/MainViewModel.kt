@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.boost.BoostManager
+import com.ai.intellimate.main.data.MainRepository
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
@@ -47,6 +48,8 @@ enum class HomeTabIndex {
 }
 
 class MainViewModel : BaseVM() {
+
+    private val mainRepository = MainRepository()
 
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
 
@@ -146,6 +149,10 @@ class MainViewModel : BaseVM() {
             } else {
                 LogUtils.d("MainViewModel", "用户已手动切换过tab，跳过 Remote Config 的自动更新")
             }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            mainRepository.connectWebSocket()
         }
     }
 

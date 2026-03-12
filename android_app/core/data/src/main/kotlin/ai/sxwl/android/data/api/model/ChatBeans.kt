@@ -4,20 +4,24 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.TimeUtils
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
 
 /** 单条业务动作（如 subscription_popup），用于 chat completions。 注意：biz action 仍处于探索阶段，尚未确定使用。 */
+@Serializable
 @JsonClass(generateAdapter = true)
 data class BizAction(
     @Json(name = "action_type") val actionType: String = "none",
     val message: String = "",
 )
 
+@Serializable
 @JsonClass(generateAdapter = true)
 data class SendMsgResponse(
     val code: Int? = null,
     val message: String? = null,
     val data: SentMsgRspData? = null,
 ) {
+    @Serializable
     data class SentMsgRspData(
         val error_code: String? = null,
         val description: String? = null,
@@ -34,12 +38,14 @@ data class SendMsgResponse(
     )
 }
 
+@Serializable
 @JsonClass(generateAdapter = true)
 data class ChatMessageContentPart(
     val type: String = "text",
     val text: String? = null,
     @Json(name = "image_url") val imageUrl: ImageUrlPayload? = null,
 ) {
+    @Serializable
     @JsonClass(generateAdapter = true)
     data class ImageUrlPayload(
         val url: String = "",
@@ -86,6 +92,7 @@ data class UserTimeContext(
     @Json(name = "utc_offset_minutes") val utcOffsetMinutes: Int,
 )
 
+@Serializable
 @JsonClass(generateAdapter = true)
 data class Choice(
     @Json(name = "finish_reason") val finishReason: String = "",
@@ -93,6 +100,7 @@ data class Choice(
     val message: MsgInfo = MsgInfo(),
 )
 
+@Serializable
 @JsonClass(generateAdapter = true)
 data class Usage(
     @Json(name = "completion_tokens") val completionTokens: Int = 0,
@@ -124,6 +132,7 @@ data class QueryMsgsResponse(
 //  "additional_kwargs": {},
 //  "response_metadata": {}
 // }
+@Serializable
 @JsonClass(generateAdapter = true)
 data class MsgInfo(
     val id: String = "", // 服务端对应的消息id
@@ -201,6 +210,7 @@ data class MsgInfo(
         return meta_data?.isVoice == true
     }
 
+    @Serializable
     @JsonClass(generateAdapter = true)
     data class MsgMetaData(
         val agentId: String? = null,
@@ -210,6 +220,7 @@ data class MsgInfo(
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
         @Json(name = "generated_music") val generatedMusic: GeneratedMusic? = null,
     ) {
+        @Serializable
         @JsonClass(generateAdapter = true)
         data class GeneratedImage(
             @Json(name = "image_url") val imageUrl: String = "",
@@ -217,6 +228,7 @@ data class MsgInfo(
             val height: Int = 0,
         )
 
+        @Serializable
         @JsonClass(generateAdapter = true)
         data class GeneratedMusic(
             @Json(name = "audio_url") val audioUrl: String = "",
