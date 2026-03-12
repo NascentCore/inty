@@ -39,6 +39,21 @@
 python -m experimental.agentic_ai_companion.main
 ```
 
+### 实验性：记忆压缩（Memory Compaction）
+
+长对话时可开启实验性记忆压缩（分层 episodic + semantic + running summary）：
+
+```bash
+python -m experimental.agentic_ai_companion.main \
+  --enable-memory-compaction \
+  --memory-max-context-chars 9000 \
+  --memory-keep-recent-messages 18 \
+  --memory-max-messages-per-episode 8
+```
+
+- 设计与调研结论见：`FR_MEMORY_COMPACTION_STRATEGY.md`
+- 默认关闭，避免影响现有对话行为
+
 ## 如何测试 live_voice_message_reply
 
 **环境**：在仓库根目录或 `experimental/agentic_ai_companion/` 下配置 `.env`（或 export），需包含 `GEMINI_API_KEY` 与 `OPENROUTER_API_KEY`。

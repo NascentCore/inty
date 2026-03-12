@@ -95,9 +95,20 @@ def _execute_turn(
     logger,
     *,
     build_system_messages=None,
+    memory_compactor=None,
 ) -> list:
     """执行单轮对话：用户输入 -> API 调用 -> 可能多轮 tool 循环 -> 输出。"""
     messages.append({"role": "user", "content": line})
+    if memory_compactor is not None:
+        outcome = memory_compactor.maybe_compact(messages=messages, turn=turn)
+        messages = outcome.messages
+        logger.info(
+            "memory_compaction did_compact=%s reason=%s chars_before=%d chars_after=%d",
+            outcome.did_compact,
+            outcome.reason,
+            outcome.approx_chars_before,
+            outcome.approx_chars_after,
+        )
 
     with trace(
         "AgenticAICompanion_turn",
@@ -164,6 +175,7 @@ def run_repl(
     tool_context_types: dict,
     process_response_with_tools,
     logger,
+    memory_compactor=None,
 ) -> None:
     logger.info(
         "REPL 启动 char_name=%s user_name=%s model=%s", char_name, user_name, model
@@ -217,4 +229,5 @@ def run_repl(
                 get_gemini_client,
                 logger,
                 build_system_messages=build_system_messages,
+                memory_compactor=memory_compactor,
             )

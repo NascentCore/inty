@@ -10,6 +10,7 @@
   消息给用户；还会有工具运行在后台，需要用户稍后回来查看/或等待完成通知。
 - [ ] **记忆抓取工具**：根据用户反馈，将当前消息中的重要事项记录下来，写入另一个存储，从而在未来交流对话中调用该记忆；
   - [ ] **记忆获取工具**：根据用户反馈，决定从最近哪些核心记忆选项中抓取新的记忆用于后续的聊天交互
+- [x] **记忆压缩（experimental）**：新增 `memory_compaction.py`，实现上下文超预算时的分层压缩（episodic + semantic + running summary），并在 `chat.py` / `repl.py` 通过 `--enable-memory-compaction` 接入
 - [ ] 隐含信号：比如用户上线、用户停留、用户打字、等等，这些信号输入到模型里让他反应
 - [ ] 记忆提取工具，记录用户和角色之间重要事件的事实性信息，包括时间、地点、事件、影响等等
 - [x] Erotic scene generation 工具，当用户处于亢奋状态（sexually aroused），为其提供连续的 **文字** scene 描述，而无需用户输入 continue；仅生成文字描述，不生成图片；已实现：`erotic_scene_generate` 工具，根据最近 N=10 条消息与角色/用户名调用 Gemini 文本模型生成 3–5 段连续 scene 文字
