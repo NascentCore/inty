@@ -37,7 +37,11 @@ from app.core.images.fal import (
     z_image_turbo_image_to_image,
 )
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.gcs import GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
+from app.external_services.gcs import (
+    GCS_GS_PREFIX,
+    GCS_PUBLIC_HTTPS_PREFIX,
+    upload_to_gcs,
+)
 from app import models as app_models
 from app.models.resource import ResourceType
 from app.models.user import User
@@ -372,7 +376,9 @@ class ImageGenerationService:
         allowed_nicknames = [m.nickname for m in CHAT_IMAGE_GEN_MODELS]
         allowed_ids_on_provider = [m.id_on_provider for m in CHAT_IMAGE_GEN_MODELS]
         allowed = allowed_nicknames + allowed_ids_on_provider
-        raise ValueError(f"Chat image model {id_or_nickname!r} not allowed; allowed: {', '.join(allowed)}")
+        raise ValueError(
+            f"Chat image model {id_or_nickname!r} not allowed; allowed: {', '.join(allowed)}"
+        )
 
     def _format_message_history_for_model_prompt(
         self, message_history: List[Dict[str, Any]]
@@ -827,9 +833,7 @@ class ImageGenerationService:
 
         reference_url = agent_data.get("background") or agent_data.get("avatar")
         if not reference_url:
-            raise ValueError(
-                "Agent has no background or avatar; cannot generate image"
-            )
+            raise ValueError("Agent has no background or avatar; cannot generate image")
         if reference_url.startswith(GCS_GS_PREFIX):
             reference_url = reference_url.replace(
                 GCS_GS_PREFIX, GCS_PUBLIC_HTTPS_PREFIX
@@ -1012,7 +1016,9 @@ class ImageGenerationService:
                 # Rollback 以便调用方继续使用同一 session（如重复 url 导致 IntegrityError）
                 await db.rollback()
                 if isinstance(e, IntegrityError):
-                    logger.warning("保存图片到resources表失败（可能已存在）: {}", str(e))
+                    logger.warning(
+                        "保存图片到resources表失败（可能已存在）: {}", str(e)
+                    )
                 else:
                     logger.warning("保存图片到resources表失败: {}", str(e))
                     traceback.print_exc()

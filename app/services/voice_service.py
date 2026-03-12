@@ -725,7 +725,9 @@ class VoiceService:
                         )
                         return None
                     audio_bytes_fb, mime_type_fb = fallback_result
-                    tts_result = TTSResult(audio_bytes=audio_bytes_fb, mime_type=mime_type_fb)
+                    tts_result = TTSResult(
+                        audio_bytes=audio_bytes_fb, mime_type=mime_type_fb
+                    )
                     provider_used = TTS_PROVIDER_ELEVENLABS
             elif use_voice_changer:
                 provider_used = TTS_PROVIDER_ELEVENLABS
@@ -749,7 +751,9 @@ class VoiceService:
                     )
                 )
                 if source_audio is None:
-                    logger.error("Gemini full-dialogue TTS 返回空数据，无法进行 ElevenLabs 变声")
+                    logger.error(
+                        "Gemini full-dialogue TTS 返回空数据，无法进行 ElevenLabs 变声"
+                    )
                     self._set_trace_metadata(
                         status="no_result",
                         failure_reason="gemini_source_audio_empty_for_voice_changer",

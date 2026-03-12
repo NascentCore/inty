@@ -3,7 +3,6 @@ package ai.sxwl.android.data.store
 import android.content.Context
 import android.os.Build
 import kotlinx.coroutines.runBlocking
-import org.robolectric.RuntimeEnvironment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -11,13 +10,14 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
  * IntySetting 单元测试。
  *
- * 使用 Robolectric 提供 Context，在 @Before 中通过 resetCacheForTest 将 DataStore 置为已迁移状态，
- * 避免 initialize 触发 MMKV 迁移（MMKV 需真机/模拟器）。测试覆盖由 intySettingsCache 支撑的读写行为。
+ * 使用 Robolectric 提供 Context，在 @Before 中通过 resetCacheForTest 将 DataStore 置为已迁移状态， 避免 initialize 触发
+ * MMKV 迁移（MMKV 需真机/模拟器）。测试覆盖由 intySettingsCache 支撑的读写行为。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.P])
@@ -171,18 +171,19 @@ class IntySettingTest {
     }
 
     @Test
-    fun setExploreAgentFavorite_then_isExploreAgentFavorite_and_getExploreFavoriteAgentIds() = runBlocking {
-        IntySetting.setExploreAgentFavorite("agent-x", true)
-        IntySetting.setExploreAgentFavorite("agent-y", true)
-        assertTrue(IntySetting.isExploreAgentFavorite("agent-x"))
-        assertTrue(IntySetting.isExploreAgentFavorite("agent-y"))
-        val ids = IntySetting.getExploreFavoriteAgentIds()
-        assertTrue(ids.contains("agent-x"))
-        assertTrue(ids.contains("agent-y"))
-        IntySetting.setExploreAgentFavorite("agent-x", false)
-        assertFalse(IntySetting.isExploreAgentFavorite("agent-x"))
-        assertTrue(IntySetting.isExploreAgentFavorite("agent-y"))
-    }
+    fun setExploreAgentFavorite_then_isExploreAgentFavorite_and_getExploreFavoriteAgentIds() =
+        runBlocking {
+            IntySetting.setExploreAgentFavorite("agent-x", true)
+            IntySetting.setExploreAgentFavorite("agent-y", true)
+            assertTrue(IntySetting.isExploreAgentFavorite("agent-x"))
+            assertTrue(IntySetting.isExploreAgentFavorite("agent-y"))
+            val ids = IntySetting.getExploreFavoriteAgentIds()
+            assertTrue(ids.contains("agent-x"))
+            assertTrue(ids.contains("agent-y"))
+            IntySetting.setExploreAgentFavorite("agent-x", false)
+            assertFalse(IntySetting.isExploreAgentFavorite("agent-x"))
+            assertTrue(IntySetting.isExploreAgentFavorite("agent-y"))
+        }
 
     @Test
     fun setChatBackgroundImage_getChatBackgroundImage_clearChatBackgroundImage() = runBlocking {
@@ -201,14 +202,15 @@ class IntySettingTest {
     }
 
     @Test
-    fun setConversationHidden_then_isConversationHidden_and_getConversationHiddenTime() = runBlocking {
-        IntySetting.setConversationHidden("agent-hide", true)
-        assertTrue(IntySetting.isConversationHidden("agent-hide"))
-        assertTrue(IntySetting.getConversationHiddenTime("agent-hide") > 0L)
-        IntySetting.setConversationHidden("agent-hide", false)
-        assertFalse(IntySetting.isConversationHidden("agent-hide"))
-        assertEquals(0L, IntySetting.getConversationHiddenTime("agent-hide"))
-    }
+    fun setConversationHidden_then_isConversationHidden_and_getConversationHiddenTime() =
+        runBlocking {
+            IntySetting.setConversationHidden("agent-hide", true)
+            assertTrue(IntySetting.isConversationHidden("agent-hide"))
+            assertTrue(IntySetting.getConversationHiddenTime("agent-hide") > 0L)
+            IntySetting.setConversationHidden("agent-hide", false)
+            assertFalse(IntySetting.isConversationHidden("agent-hide"))
+            assertEquals(0L, IntySetting.getConversationHiddenTime("agent-hide"))
+        }
 
     @Test
     fun updateSortSeed_then_sortSeed_returnsValue() = runBlocking {

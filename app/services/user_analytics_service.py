@@ -253,7 +253,11 @@ class UserAnalyticsService:
             chat_id, user_id, agent_id, agent_name = row
             sid = generate_session_id(str(chat_id))
             if sid in active_session_ids:
-                session_to_user_agent[sid] = (str(user_id), str(agent_id), agent_name or "")
+                session_to_user_agent[sid] = (
+                    str(user_id),
+                    str(agent_id),
+                    agent_name or "",
+                )
 
         session_ids = [s for s in active_session_ids if s in session_to_user_agent]
         if not session_ids:
@@ -283,8 +287,12 @@ class UserAnalyticsService:
                 return float(d)
             return None
 
-        voice_message_key_to_audios: Dict[tuple, List[Dict[str, Any]]] = defaultdict(list)
-        voice_call_key_to_seen_url: Dict[tuple, Dict[str, Dict[str, Any]]] = defaultdict(dict)
+        voice_message_key_to_audios: Dict[tuple, List[Dict[str, Any]]] = defaultdict(
+            list
+        )
+        voice_call_key_to_seen_url: Dict[tuple, Dict[str, Dict[str, Any]]] = (
+            defaultdict(dict)
+        )
         key_to_agent_name: Dict[tuple, str] = {}
 
         for row in rows_audio:
@@ -324,9 +332,7 @@ class UserAnalyticsService:
         ) -> List[Dict[str, Any]]:
             out = []
             for (user_id, agent_id), audios in key_to_audios.items():
-                audios_list = (
-                    audios if values_are_list else list(audios.values())
-                )
+                audios_list = audios if values_are_list else list(audios.values())
                 out.append(
                     {
                         "user_id": user_id,

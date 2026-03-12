@@ -47,26 +47,16 @@ data class ChatMessageContentPart(
 ) {
     @Serializable
     @JsonClass(generateAdapter = true)
-    data class ImageUrlPayload(
-        val url: String = "",
-    )
+    data class ImageUrlPayload(val url: String = "")
 }
 
 @JsonClass(generateAdapter = true)
-data class SendMsgReqMessage(
-    val role: String = "",
-    val content: Any = "",
-) {
+data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
     companion object {
-        fun text(
-            role: String,
-            text: String,
-        ) = SendMsgReqMessage(role = role, content = text)
+        fun text(role: String, text: String) = SendMsgReqMessage(role = role, content = text)
 
-        fun multimodal(
-            role: String,
-            parts: List<ChatMessageContentPart>,
-        ) = SendMsgReqMessage(role = role, content = parts)
+        fun multimodal(role: String, parts: List<ChatMessageContentPart>) =
+            SendMsgReqMessage(role = role, content = parts)
     }
 }
 
@@ -80,10 +70,7 @@ data class SendMsgReq(
 )
 
 @JsonClass(generateAdapter = true)
-data class ChatWebSocketReq(
-    @Json(name = "agent_id") val agentId: String,
-    val request: SendMsgReq,
-)
+data class ChatWebSocketReq(@Json(name = "agent_id") val agentId: String, val request: SendMsgReq)
 
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(
@@ -153,7 +140,7 @@ data class MsgInfo(
     @Json(name = "media_url") val mediaUrl: String? = null,
     val price: Int = 0,
     @Json(name = "is_locked") val unPurchased: Boolean = true,
-    val caption: String? = null
+    val caption: String? = null,
 ) {
 
     fun isOpening(): Boolean {
@@ -316,7 +303,7 @@ data class ChatSettingsReq(
     val style_prompt: String? = null,
     val voice_enabled: Boolean? = null,
     val voice_id: String? = null,
-    val chat_mode: String? = null
+    val chat_mode: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -343,7 +330,7 @@ data class ChatSettingsResponse(
         val voice_id: String? = null, // 选中的语音 ID（MVP: google/*）
         val keep_talking: Boolean? = null, // 连续回复,似乎客户端实现，不需要接口字段
         val premium_mode: Boolean? = null, // 是否会员模式
-        val chat_mode: String? = null
+        val chat_mode: String? = null,
     )
 }
 
@@ -368,9 +355,7 @@ data class MsgVoiceRsp(
     )
 }
 
-/**
- * 聊天消息生图请求（Retrofit 目标类型）。
- */
+/** 聊天消息生图请求（Retrofit 目标类型）。 */
 @JsonClass(generateAdapter = true)
 data class ChatImageGenerationRequest(
     @Json(name = "message_id") val messageId: Long,
@@ -385,9 +370,7 @@ data class ChatMusicGenerationRequest(
     val model: String? = null,
 )
 
-/**
- * 聊天消息生图数据载荷（兼容成功与业务失败两类 data 结构）。
- */
+/** 聊天消息生图数据载荷（兼容成功与业务失败两类 data 结构）。 */
 @JsonClass(generateAdapter = true)
 data class ChatImageGenerationPayload(
     @Json(name = "image_url") val imageUrl: String? = null,
@@ -404,9 +387,7 @@ data class ChatImageGenerationPayload(
     @Json(name = "used_count") val usedCount: Int? = null,
 )
 
-/**
- * 聊天消息生图响应（保留 `code/message/data` 包装，供 no-wrapper Retrofit 解析）。
- */
+/** 聊天消息生图响应（保留 `code/message/data` 包装，供 no-wrapper Retrofit 解析）。 */
 @JsonClass(generateAdapter = true)
 data class ChatImageGenerationApiResponse(
     val code: Int? = null,
@@ -436,9 +417,7 @@ data class ChatMusicGenerationApiResponse(
     val data: ChatMusicGenerationPayload? = null,
 )
 
-/**
- * 聊天消息生图结果（供业务层直接使用的本地 DTO）。
- */
+/** 聊天消息生图结果（供业务层直接使用的本地 DTO）。 */
 @JsonClass(generateAdapter = true)
 data class ChatImageGenerationResult(
     @Json(name = "image_url") val imageUrl: String,

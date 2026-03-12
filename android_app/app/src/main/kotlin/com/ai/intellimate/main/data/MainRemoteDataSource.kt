@@ -17,29 +17,31 @@ import kotlinx.coroutines.flow.retry
 private const val CHAT_WEBSOCKET_PATH = "api/v1/chat/ws"
 
 class MainRemoteDataSource(private val httpClient: HttpClient = HttpClientProvider.ktorClient) {
-    fun connectWebsocket() = channelFlow<SendMsgResponse> {
-        httpClient.webSocket(
-            request = {
-                url(buildChatWebSocketUrl())
-                val token = IntySetting.getCurToken()
+    fun connectWebsocket() =
+        channelFlow<SendMsgResponse> {
+                httpClient.webSocket(
+                    request = {
+                        url(buildChatWebSocketUrl())
+                        val token = IntySetting.getCurToken()
 
-                if (token.isNotBlank()) {
-                    header("Authorization", "Bearer $token")
+                        if (token.isNotBlank()) {
+                            header("Authorization", "Bearer $token")
+                        }
+                    }
+                ) {
+                    LogUtils.d("Main WebSocket已连接")
+                    while (true) {
+                        val response = receiveDeserialized<SendMsgResponse>()
+
+                        send(response)
+                    }
                 }
             }
-        ) {
-            LogUtils.d("Main WebSocket已连接")
-            while (true) {
-                val response = receiveDeserialized<SendMsgResponse>()
-
-                send(response)
+            .retry {
+                LogUtils.e("Main WebSocket连接断开，5s后重试:\n${it.message}")
+                delay(5000L)
+                true
             }
-        }
-    }.retry {
-        LogUtils.e("Main WebSocket连接断开，5s后重试:\n${it.message}")
-        delay(5000L)
-        true
-    }
 
     private fun buildChatWebSocketUrl(): String {
         val httpBase = NetworkConfig.getBaseUrl().trimEnd('/')

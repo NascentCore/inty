@@ -1,6 +1,7 @@
 import type { Agent } from "../types";
 
-const normalizeSearchText = (value: string): string => value.trim().toLowerCase();
+const normalizeSearchText = (value: string): string =>
+  value.trim().toLowerCase();
 
 export const filterAgentsForSingleSelector = (
   agents: Agent[],
@@ -28,4 +29,3 @@ export const shouldShowSingleSelectorEmptySearch = (
     filteredAgentsCount === 0
   );
 };
-

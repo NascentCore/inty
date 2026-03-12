@@ -422,7 +422,9 @@ def _extract_size_jpeg(image_data: bytes) -> tuple[int | None, int | None]:
     return (None, None)
 
 
-def _extract_image_size(image_data: bytes, image_format: str) -> tuple[int | None, int | None]:
+def _extract_image_size(
+    image_data: bytes, image_format: str
+) -> tuple[int | None, int | None]:
     if image_format == "png":
         return _extract_size_png(image_data)
     if image_format == "gif":
@@ -442,10 +444,18 @@ def _load_history_index(history_path: Path) -> list[StoredGeneratedImage]:
     return [StoredGeneratedImage.model_validate(item) for item in raw]
 
 
-def _save_history_index(history_path: Path, records: list[StoredGeneratedImage]) -> None:
+def _save_history_index(
+    history_path: Path, records: list[StoredGeneratedImage]
+) -> None:
     history_path.parent.mkdir(parents=True, exist_ok=True)
     with history_path.open("w", encoding="utf-8") as fp:
-        json.dump([record.model_dump() for record in records], fp, ensure_ascii=False, indent=2)
+        json.dump(
+            [record.model_dump() for record in records],
+            fp,
+            ensure_ascii=False,
+            indent=2,
+        )
+
 
 def _call_generate_content_for_chat_image(
     *,
@@ -457,13 +467,18 @@ def _call_generate_content_for_chat_image(
 ) -> Any:
     from google.genai import types
 
-    parts = [types.Part.from_text(text=prompt), _image_part_from_file(ai_reference_image_path)]
+    parts = [
+        types.Part.from_text(text=prompt),
+        _image_part_from_file(ai_reference_image_path),
+    ]
     if user_reference_image_path is not None:
         parts.append(_image_part_from_file(user_reference_image_path))
     config = types.GenerateContentConfig(
         response_modalities=["IMAGE"],
         system_instruction=[
-            types.Part.from_text(text=R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT)
+            types.Part.from_text(
+                text=R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
+            )
         ],
     )
     return client.models.generate_content(

@@ -81,9 +81,7 @@ class DailyBondingMemoryMetadata(BaseModel):
 
     local_date: Optional[str] = Field(None, description="本地日期（YYYY-MM-DD）")
     timezone: Optional[str] = Field(None, description="IANA 时区")
-    emotional_salience: Optional[float] = Field(
-        None, description="情绪显著性分数，0~1"
-    )
+    emotional_salience: Optional[float] = Field(None, description="情绪显著性分数，0~1")
     source_message_count: Optional[int] = Field(None, description="来源消息数量")
     risk_tier: Optional[str] = Field(None, description="风险等级：low|medium|high")
 
@@ -101,7 +99,9 @@ class Memory(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     memory_type = Column(
-        String, nullable=False, comment="user_common | user_agent | festival | daily_bonding"
+        String,
+        nullable=False,
+        comment="user_common | user_agent | festival | daily_bonding",
     )
     agent_id = Column(
         String, ForeignKey("agents.id"), nullable=True, comment="user_common 为 NULL"

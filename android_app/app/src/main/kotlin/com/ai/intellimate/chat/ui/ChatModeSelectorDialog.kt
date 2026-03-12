@@ -1,8 +1,10 @@
 package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.data.api.model.ChatMode
+import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,13 +27,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -40,16 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
-import ai.sxwl.android.design.theme.IntelliMateTheme
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.firebase.logEvent
 import com.ai.intellimate.R
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.ui.UiConfigs
@@ -58,9 +56,8 @@ import kotlinx.coroutines.launch
 /**
  * 聊天模式选择底部弹窗（Chat Mode Selector）
  *
- * 使用场景：在聊天页由用户点击「Chat Mode」后弹出，用于选择活人感 / 娱乐 / 剧情 / 怀旧等模式。
- * 预期视觉效果：底部滑出、顶部有拖拽条与标题「Chat Mode Selection」、右侧关闭按钮；主体为四个模式卡片，
- * 每卡为标题 + 描述，右侧为单选；不展示图标与 subLabel。
+ * 使用场景：在聊天页由用户点击「Chat Mode」后弹出，用于选择活人感 / 娱乐 / 剧情 / 怀旧等模式。 预期视觉效果：底部滑出、顶部有拖拽条与标题「Chat Mode
+ * Selection」、右侧关闭按钮；主体为四个模式卡片， 每卡为标题 + 描述，右侧为单选；不展示图标与 subLabel。
  *
  * 可配置项：
  * - [onDismiss] 关闭弹窗回调
@@ -71,7 +68,7 @@ import kotlinx.coroutines.launch
 fun ChatModeSelectorDialog(
     onDismiss: () -> Unit,
     selectedChatModeId: String? = null,
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = viewModel(),
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -87,25 +84,19 @@ fun ChatModeSelectorDialog(
         onDismissRequest = {
             scope
                 .launch { sheetState.hide() }
-                .invokeOnCompletion {
-                    if (!sheetState.isVisible) onDismiss()
-                }
+                .invokeOnCompletion { if (!sheetState.isVisible) onDismiss() }
         },
         sheetState = sheetState,
         dragHandle = {
             Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(handleHeight)
-                    .padding(top = UiConfigs.Spacing.Small),
+                Modifier.fillMaxWidth().height(handleHeight).padding(top = UiConfigs.Spacing.Small),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
-                    Modifier
-                        .width(32.dp)
+                    Modifier.width(32.dp)
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(colorScheme.outlineVariant),
+                        .background(colorScheme.outlineVariant)
                 )
             }
         },
@@ -134,8 +125,7 @@ fun ChatModeSelectorDialog(
 }
 
 /**
- * 聊天模式选择弹窗的主体内容（标题 + 模式卡片列表）。
- * 可在预览或非 ModalBottomSheet 容器中单独使用。
+ * 聊天模式选择弹窗的主体内容（标题 + 模式卡片列表）。 可在预览或非 ModalBottomSheet 容器中单独使用。
  *
  * @param chatModes 可选模式列表（来自 ViewModel / 接口）
  * @param selectedId 当前选中的模式 id，为 null 时无选中
@@ -160,7 +150,7 @@ fun ChatModeSelectorContent(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .background(color = MaterialTheme.colorScheme.surfaceContainer)
-            .padding(bottom = UiConfigs.Padding.DialogContentVertical),
+            .padding(bottom = UiConfigs.Padding.DialogContentVertical)
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -171,12 +161,13 @@ fun ChatModeSelectorContent(
                 text = stringResource(R.string.chat_mode_selector_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = colorScheme.onSurface,
-                modifier = Modifier.padding(start = dimensionResource(R.dimen.padding_large))
+                modifier = Modifier.padding(start = dimensionResource(R.dimen.padding_large)),
             )
             IconButton(onClick = onCloseClick) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.chat_mode_selector_close_content_desc),
+                    contentDescription =
+                        stringResource(R.string.chat_mode_selector_close_content_desc),
                     tint = colorScheme.onSurface,
                 )
             }
@@ -203,10 +194,25 @@ fun ChatModeSelectorContent(
 private fun PreviewChatModeSelectorContent() {
     val previewModes =
         listOf(
-            ChatMode("real_person", "Real Person Mode", "Dream Girl-oriented", "Relaxed conversation, lively and real"),
-            ChatMode("entertainment", "Entertainment Mode", "Resonance", "Bracket literature, role-playing"),
+            ChatMode(
+                "real_person",
+                "Real Person Mode",
+                "Dream Girl-oriented",
+                "Relaxed conversation, lively and real",
+            ),
+            ChatMode(
+                "entertainment",
+                "Entertainment Mode",
+                "Resonance",
+                "Bracket literature, role-playing",
+            ),
             ChatMode("story", "Story Mode", "Storyline", "Immersive conversation, rich storyline"),
-            ChatMode("nostalgia", "Nostalgia Mode", "Nostalgia", "Models you've chatted with before are all here~ Models you've chatted with before are all here~"),
+            ChatMode(
+                "nostalgia",
+                "Nostalgia Mode",
+                "Nostalgia",
+                "Models you've chatted with before are all here~ Models you've chatted with before are all here~",
+            ),
         )
     IntelliMateTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
@@ -232,16 +238,14 @@ private fun ChatModeSelectorItem(
     val radioSize = dimensionResource(R.dimen.chat_mode_selector_radio_size)
 
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = dimensionResource(R.dimen.padding_large)),
+        modifier =
+            Modifier.fillMaxWidth().padding(horizontal = dimensionResource(R.dimen.padding_large)),
         shape = MaterialTheme.shapes.medium,
         color = colorScheme.surfaceContainerLow,
-        onClick = onClick
+        onClick = onClick,
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .height(90.dp)
                 .padding(horizontal = dimensionResource(R.dimen.padding_large)),
             verticalAlignment = Alignment.CenterVertically,
@@ -259,17 +263,18 @@ private fun ChatModeSelectorItem(
                     color = colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             RadioButton(
                 selected = isSelected,
                 onClick = onClick,
                 modifier = Modifier.size(radioSize),
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = colorScheme.primary,
-                    unselectedColor = colorScheme.outline,
-                ),
+                colors =
+                    RadioButtonDefaults.colors(
+                        selectedColor = colorScheme.primary,
+                        unselectedColor = colorScheme.outline,
+                    ),
             )
         }
     }

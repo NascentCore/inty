@@ -22,20 +22,12 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -44,7 +36,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -62,8 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
@@ -109,13 +98,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.KoinApplication
 import org.koin.core.option.viewModelScopeFactory
-import java.text.BreakIterator
-import java.text.StringCharacterIterator
 
 /** 主页面，包含聊天、消息与关注、创建模型、模型列表、"我的" */
 class MainActivity : BaseActivity() {
@@ -474,39 +460,34 @@ class MainActivity : BaseActivity() {
             } else {
                 ReviewManagerFactory.create(context)
             }
-
         }
         var reviewInfo by remember { mutableStateOf<ReviewInfo?>(null) }
 
         LaunchedEffect(Unit) {
-            chatViewModel.showRankDialog
-                .collect {
-                    LogUtils.d("InAPPReview:ShouldRankRequest")
-                    reviewManager.requestReviewFlow()
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                reviewInfo = task.result
-                            } else {
-                                LogUtils.e(task.exception?.message)
-                            }
-                        }
+            chatViewModel.showRankDialog.collect {
+                LogUtils.d("InAPPReview:ShouldRankRequest")
+                reviewManager.requestReviewFlow().addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        reviewInfo = task.result
+                    } else {
+                        LogUtils.e(task.exception?.message)
+                    }
                 }
+            }
         }
-
 
         reviewInfo?.let { info ->
             RankDialog(
-                onCancel = {
-                    reviewInfo = null
-                },
+                onCancel = { reviewInfo = null },
                 onSubmit = { rank ->
                     if (rank >= 4) {
                         LogUtils.d("InAPPReview:ShouldShowReview")
-                        reviewManager.launchReviewFlow(this@MainActivity, info)
+                        reviewManager
+                            .launchReviewFlow(this@MainActivity, info)
                             .addOnCompleteListener {
                                 if (it.isSuccessful) {
                                     FirebaseManager.Events.RANK_DIALOG_REVIEW_COMPLETED.logEvent(
-                                        "user_id" to IntySetting.getCurUserID(),
+                                        "user_id" to IntySetting.getCurUserID()
                                     )
                                 }
                             }
@@ -514,7 +495,7 @@ class MainActivity : BaseActivity() {
                         navController.navigate(Routes.Me.reportPage(isFeedback = true))
                     }
                     reviewInfo = null
-                }
+                },
             )
         }
 
@@ -938,7 +919,7 @@ fun SplashLoginUI(
                             R.drawable.login_banner_2,
                             R.drawable.login_banner_6,
                             R.drawable.login_banner_3,
-                            R.drawable.login_banner_7
+                            R.drawable.login_banner_7,
                         ),
                     onPageChange = { bannerIndex = it },
                 )
@@ -946,7 +927,6 @@ fun SplashLoginUI(
                     modifier = Modifier.align(Alignment.BottomCenter),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-
                     val words = remember(bannerIndex) { bannerText[bannerIndex].split(" ") }
                     var wordIndex by remember(bannerIndex) { mutableIntStateOf(0) }
                     val textAlphaAnim = remember { Animatable(0f) }
@@ -957,38 +937,41 @@ fun SplashLoginUI(
 
                             wordIndex = i
 
-                            textAlphaAnim.animateTo(
-                                targetValue = 1f,
-                                animationSpec = tween(350)
-                            )
+                            textAlphaAnim.animateTo(targetValue = 1f, animationSpec = tween(350))
                         }
                     }
 
                     Text(
-                        text = buildAnnotatedString {
-                            for (i in 0 until wordIndex) {
-                                append(words[i])
-                                append(" ")
-                            }
+                        text =
+                            buildAnnotatedString {
+                                for (i in 0 until wordIndex) {
+                                    append(words[i])
+                                    append(" ")
+                                }
 
-                            withStyle(style = SpanStyle(color = Color.White.copy(alpha = textAlphaAnim.value))) {
-                                append(words[wordIndex])
-                            }
+                                withStyle(
+                                    style =
+                                        SpanStyle(
+                                            color = Color.White.copy(alpha = textAlphaAnim.value)
+                                        )
+                                ) {
+                                    append(words[wordIndex])
+                                }
 
-                            if (wordIndex < words.size - 1) {
-                                withStyle(SpanStyle(color = Color.Transparent)) {
-                                    for (i in wordIndex + 1 until words.size) {
-                                        append(" ")
-                                        append(words[i])
+                                if (wordIndex < words.size - 1) {
+                                    withStyle(SpanStyle(color = Color.Transparent)) {
+                                        for (i in wordIndex + 1 until words.size) {
+                                            append(" ")
+                                            append(words[i])
+                                        }
                                     }
                                 }
-                            }
-                        },
+                            },
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(dimensionResource(R.dimen.padding_large))
+                        modifier = Modifier.padding(dimensionResource(R.dimen.padding_large)),
                     )
 
                     Spacer(Modifier.height(32.dp))
@@ -997,18 +980,27 @@ fun SplashLoginUI(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val dotSizeSelected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_selected)
-                        val dotSizeUnselected = dimensionResource(R.dimen.login_carousel_indicator_dot_size_unselected)
-                        val dotSpacing = dimensionResource(R.dimen.login_carousel_indicator_dot_spacing)
+                        val dotSizeSelected =
+                            dimensionResource(R.dimen.login_carousel_indicator_dot_size_selected)
+                        val dotSizeUnselected =
+                            dimensionResource(R.dimen.login_carousel_indicator_dot_size_unselected)
+                        val dotSpacing =
+                            dimensionResource(R.dimen.login_carousel_indicator_dot_spacing)
                         repeat(bannerText.size) { index ->
                             Box(
-                                modifier = Modifier
-                                    .padding(horizontal = dotSpacing)
-                                    .size(if (index == bannerIndex) dotSizeSelected else dotSizeUnselected)
-                                    .background(
-                                        color = Color.White.copy(alpha = if (index == bannerIndex) 1f else 0.4f),
-                                        shape = CircleShape,
-                                    ),
+                                modifier =
+                                    Modifier.padding(horizontal = dotSpacing)
+                                        .size(
+                                            if (index == bannerIndex) dotSizeSelected
+                                            else dotSizeUnselected
+                                        )
+                                        .background(
+                                            color =
+                                                Color.White.copy(
+                                                    alpha = if (index == bannerIndex) 1f else 0.4f
+                                                ),
+                                            shape = CircleShape,
+                                        )
                             )
                         }
                     }
@@ -1038,8 +1030,7 @@ fun SplashLoginUI(
                     Box(
                         contentAlignment = Alignment.BottomCenter,
                         modifier =
-                            Modifier
-                                .height(150.dp)
+                            Modifier.height(150.dp)
                                 .windowInsetsPadding(WindowInsets.navigationBars)
                                 .padding(bottom = 16.dp),
                     ) {

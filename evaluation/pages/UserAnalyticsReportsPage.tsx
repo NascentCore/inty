@@ -302,7 +302,12 @@ function VoiceAudiosGroupCard({
                 src={a.audio_url}
                 controls
                 preload="metadata"
-                style={{ width: "100%", maxWidth: 320, height: 32, marginTop: 4 }}
+                style={{
+                  width: "100%",
+                  maxWidth: 320,
+                  height: 32,
+                  marginTop: 4,
+                }}
               />
               <div
                 style={{
@@ -368,12 +373,7 @@ function ReportContent({
         }));
       })
       .finally(() => setVoiceAudiosLoading(false));
-  }, [
-    reportType,
-    reportDate,
-    voiceAudiosCache,
-    setVoiceAudiosCache,
-  ]);
+  }, [reportType, reportDate, voiceAudiosCache, setVoiceAudiosCache]);
   const roundsDistributionBySession = useMemo(
     () =>
       charts
@@ -449,7 +449,8 @@ function ReportContent({
               )}
               <Row gutter={[12, 12]}>
                 {previewGeneratedImages.map((item) => {
-                  const detail = buildGeneratedImageDetailFromDailyReportItem(item);
+                  const detail =
+                    buildGeneratedImageDetailFromDailyReportItem(item);
                   return (
                     <Col key={item.id} xs={12} sm={8} md={6} lg={4} xl={3}>
                       <div
@@ -470,14 +471,22 @@ function ReportContent({
                           onClick={() => setPreviewImageDetail(detail)}
                         />
                         <div
-                          style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                          style={{
+                            color: "#999",
+                            fontSize: 12,
+                            lineHeight: 1.2,
+                          }}
                         >
                           {item.created_at
                             ? item.created_at.replace("T", " ").slice(0, 19)
                             : "时间未知"}
                         </div>
                         <div
-                          style={{ color: "#999", fontSize: 12, lineHeight: 1.2 }}
+                          style={{
+                            color: "#999",
+                            fontSize: 12,
+                            lineHeight: 1.2,
+                          }}
                         >
                           {detail.isMatchedFallback
                             ? "类型: 兜底生图（命中历史图）"
@@ -497,7 +506,10 @@ function ReportContent({
       {reportType === "daily" && reportDate && (
         <>
           {voiceAudiosLoading ? (
-            <Card title="当天语音播报（按用户-角色）" style={{ marginTop: "24px" }}>
+            <Card
+              title="当天语音播报（按用户-角色）"
+              style={{ marginTop: "24px" }}
+            >
               <Spin />
             </Card>
           ) : voiceAudiosCache[reportDate] ? (

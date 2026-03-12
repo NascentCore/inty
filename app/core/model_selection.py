@@ -38,7 +38,9 @@ def select_chat_image_model(*, user: object, is_subscribed: bool) -> GenAIModel:
     """
     config = global_config_loaded_from_config_yaml.agent
     nickname = (
-        config.sub_user_chat_image_model if is_subscribed else config.free_user_chat_image_model
+        config.sub_user_chat_image_model
+        if is_subscribed
+        else config.free_user_chat_image_model
     )
     return must_resolve_nickname(nickname)
 

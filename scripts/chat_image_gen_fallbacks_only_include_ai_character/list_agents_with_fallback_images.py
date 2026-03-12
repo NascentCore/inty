@@ -73,8 +73,7 @@ async def run(
         .where(
             Resource.type == ResourceType.IMAGE,
             Resource.agent_id.isnot(None),
-            Resource.resource_metadata.op("->>")("only_include_ai_character")
-            == "true",
+            Resource.resource_metadata.op("->>")("only_include_ai_character") == "true",
         )
         .group_by(Agent.id, Agent.name)
         .order_by(func.count(Resource.url).desc())

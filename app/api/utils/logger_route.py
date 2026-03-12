@@ -138,9 +138,7 @@ class LoggerRoute(APIRoute):
                                 json.dumps(error_log_data, ensure_ascii=False)
                             )
                         else:
-                            logger.error(
-                                json.dumps(error_log_data, ensure_ascii=False)
-                            )
+                            logger.error(json.dumps(error_log_data, ensure_ascii=False))
                     else:
                         if is_401:
                             logger.warning(

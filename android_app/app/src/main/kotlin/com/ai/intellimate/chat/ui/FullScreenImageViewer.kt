@@ -245,10 +245,7 @@ internal fun FullScreenImageViewer(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = { onDismiss() },
-                modifier = Modifier.padding(8.dp),
-            ) {
+            IconButton(onClick = { onDismiss() }, modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = "✕",
                     color = Color.White,
@@ -260,163 +257,163 @@ internal fun FullScreenImageViewer(
             // 操作按钮区域：宽度不足时可左右滑动，不压缩按钮、不覆盖关闭按钮
             Row(
                 modifier =
-                    Modifier
-                        .weight(1f)
+                    Modifier.weight(1f)
                         .horizontalScroll(rememberScrollState())
                         .padding(start = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-            Box(
-                modifier =
-                    Modifier.clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                        .noRippleClickable {
-                            if (ShareUtils.canShareAsUrl(cdnImageUrl)) {
-                                ShareUtils.shareUrl(
-                                    context = context,
-                                    url = cdnImageUrl,
-                                    chooserTitle = context.getString(R.string.share_button),
-                                )
-                            } else {
-                                ToastUtils.showShort(R.string.toast_no_shareable_image)
+                Box(
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .noRippleClickable {
+                                if (ShareUtils.canShareAsUrl(cdnImageUrl)) {
+                                    ShareUtils.shareUrl(
+                                        context = context,
+                                        url = cdnImageUrl,
+                                        chooserTitle = context.getString(R.string.share_button),
+                                    )
+                                } else {
+                                    ToastUtils.showShort(R.string.toast_no_shareable_image)
+                                }
                             }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Share,
-                        contentDescription =
-                            stringResource(R.string.share_image_content_description),
-                        modifier =
-                            Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
-                        tint = Color.White,
-                    )
-                    Text(
-                        text = stringResource(R.string.share_button),
-                        color = Color.White,
-                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
-
-            Box(
-                modifier =
-                    Modifier.clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                        .noRippleClickable {
-                            trackUpscaleEvent("click_button")
-                            if (canUseUpscaleFeature) {
-                                trackUpscaleEvent("open_options_dialog")
-                                showUpscaleOptionsDialog = true
-                            } else {
-                                trackUpscaleEvent("open_unlock_dialog")
-                                showUpscaleCreditsDialog = true
-                            }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Box(
-                        modifier =
-                            Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.ZoomIn,
+                            imageVector = Icons.Filled.Share,
                             contentDescription =
-                                stringResource(R.string.upscale_image_content_description),
+                                stringResource(R.string.share_image_content_description),
                             modifier =
-                                Modifier.align(Alignment.Center)
-                                    .size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
+                                Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
                             tint = Color.White,
                         )
-                        Image(
-                            modifier =
-                                Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 1.dp),
-                            painter = painterResource(R.drawable.ic_vip_badge),
-                            contentDescription = null,
+                        Text(
+                            text = stringResource(R.string.share_button),
+                            color = Color.White,
+                            fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
+                            fontWeight = FontWeight.Medium,
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.upscale_button),
-                        color = Color.White,
-                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
-                        fontWeight = FontWeight.Medium,
-                    )
                 }
-            }
 
-            Box(
-                modifier =
-                    Modifier.clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
-                            else Color.Black.copy(alpha = 0.7f),
-                            RoundedCornerShape(8.dp),
-                        )
-                        .noRippleClickable(enabled = !isSavingToGallery) {
-                            if (isSavingToGallery) return@noRippleClickable
-                            isSavingToGallery = true
-                            scope.launch {
-                                val saveResult: Result<android.net.Uri>
-                                try {
-                                    saveResult =
-                                        GalleryImageDownloadUtils.saveImageUrlToGallery(
-                                            context = context,
-                                            imageUrl = cdnImageUrl,
-                                        )
-                                } finally {
-                                    isSavingToGallery = false
-                                }
-
-                                if (saveResult.isSuccess) {
-                                    ToastUtils.showShort(R.string.toast_image_saved_to_album)
+                Box(
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .noRippleClickable {
+                                trackUpscaleEvent("click_button")
+                                if (canUseUpscaleFeature) {
+                                    trackUpscaleEvent("open_options_dialog")
+                                    showUpscaleOptionsDialog = true
                                 } else {
-                                    ToastUtils.showShort(R.string.toast_image_save_failed)
+                                    trackUpscaleEvent("open_unlock_dialog")
+                                    showUpscaleCreditsDialog = true
                                 }
                             }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Download,
-                        contentDescription =
-                            stringResource(R.string.download_image_content_description),
-                        modifier =
-                            Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
-                        tint = Color.White,
-                    )
-                    Text(
-                        text = stringResource(R.string.download_button),
-                        color = Color.White,
-                        fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
-                        fontWeight = FontWeight.Medium,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(
+                            modifier =
+                                Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ZoomIn,
+                                contentDescription =
+                                    stringResource(R.string.upscale_image_content_description),
+                                modifier =
+                                    Modifier.align(Alignment.Center)
+                                        .size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
+                                tint = Color.White,
+                            )
+                            Image(
+                                modifier =
+                                    Modifier.align(Alignment.TopEnd)
+                                        .padding(top = 5.dp, end = 1.dp),
+                                painter = painterResource(R.drawable.ic_vip_badge),
+                                contentDescription = null,
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.upscale_button),
+                            color = Color.White,
+                            fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isSavingToGallery) Color.Gray.copy(alpha = 0.5f)
+                                else Color.Black.copy(alpha = 0.7f),
+                                RoundedCornerShape(8.dp),
+                            )
+                            .noRippleClickable(enabled = !isSavingToGallery) {
+                                if (isSavingToGallery) return@noRippleClickable
+                                isSavingToGallery = true
+                                scope.launch {
+                                    val saveResult: Result<android.net.Uri>
+                                    try {
+                                        saveResult =
+                                            GalleryImageDownloadUtils.saveImageUrlToGallery(
+                                                context = context,
+                                                imageUrl = cdnImageUrl,
+                                            )
+                                    } finally {
+                                        isSavingToGallery = false
+                                    }
+
+                                    if (saveResult.isSuccess) {
+                                        ToastUtils.showShort(R.string.toast_image_saved_to_album)
+                                    } else {
+                                        ToastUtils.showShort(R.string.toast_image_save_failed)
+                                    }
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Download,
+                            contentDescription =
+                                stringResource(R.string.download_image_content_description),
+                            modifier =
+                                Modifier.size(UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize),
+                            tint = Color.White,
+                        )
+                        Text(
+                            text = stringResource(R.string.download_button),
+                            color = Color.White,
+                            fontSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonTextFontSize,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+
+                if (onReport != null) {
+                    ReportButton(
+                        onClick = { onReport() },
+                        iconSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize,
+                        textFontSize = 14.sp,
                     )
                 }
-            }
-
-            if (onReport != null) {
-                ReportButton(
-                    onClick = { onReport() },
-                    iconSize = UiConfigs.ChatPage.PhotoAlbum.Preview.ButtonIconSize,
-                    textFontSize = 14.sp,
-                )
-            }
             }
         }
 

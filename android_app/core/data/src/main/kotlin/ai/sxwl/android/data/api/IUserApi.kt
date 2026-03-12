@@ -13,8 +13,8 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
-import retrofit2.http.Part
 import retrofit2.http.PUT
+import retrofit2.http.Part
 
 interface IUserApi {
 
@@ -33,8 +33,7 @@ interface IUserApi {
     @POST("/api/v1/users/device/register")
     suspend fun registerDeviceToken(@Body request: DeviceTokenRegisterRequest): HttpResult<Any>
 
-    @GET("/api/v1/users/me")
-    suspend fun getMe(): HttpResult<UserProfile>
+    @GET("/api/v1/users/me") suspend fun getMe(): HttpResult<UserProfile>
 
     @PUT("/api/v1/users/profile")
     suspend fun updateProfile(@Body request: UserProfileUpdateRequest): HttpResult<UserProfile>

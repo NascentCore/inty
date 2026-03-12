@@ -158,7 +158,9 @@ def _normalize_run_record(run: Any) -> TraceRunRecord:
     )
 
 
-def _choose_root_run_id(runs: list[TraceRunRecord], preferred_run_id: str | None) -> str | None:
+def _choose_root_run_id(
+    runs: list[TraceRunRecord], preferred_run_id: str | None
+) -> str | None:
     if preferred_run_id:
         return preferred_run_id
     for run in runs:
@@ -205,7 +207,9 @@ def _list_trace_runs(
         )
     candidates = list(client.list_runs(**filtered_fallback_kwargs))
     return [
-        run for run in candidates if str(getattr(run, "trace_id", "")).strip() == trace_id
+        run
+        for run in candidates
+        if str(getattr(run, "trace_id", "")).strip() == trace_id
     ]
 
 
@@ -217,7 +221,9 @@ def _fetch_trace_record(
     max_runs: int,
 ) -> TraceRecord:
     if not run_id and not trace_id:
-        raise ValueError("Pass either --run-id or --trace-id when not using --trace-record-path.")
+        raise ValueError(
+            "Pass either --run-id or --trace-id when not using --trace-record-path."
+        )
 
     try:
         from langsmith import Client
@@ -250,7 +256,9 @@ def _fetch_trace_record(
     )
     if root_run_obj is not None:
         root_id = str(getattr(root_run_obj, "id", ""))
-        if root_id and all(str(getattr(candidate, "id", "")) != root_id for candidate in run_objects):
+        if root_id and all(
+            str(getattr(candidate, "id", "")) != root_id for candidate in run_objects
+        ):
             run_objects.append(root_run_obj)
     if not run_objects:
         raise ValueError(f"No runs found for trace_id={trace_id_final}.")
@@ -284,7 +292,9 @@ def _load_trace_record(path: Path) -> TraceRecord:
     return record.model_copy(update={"source": "local_json"})
 
 
-def _select_source_run(trace_record: TraceRecord, target_run_id: str | None) -> TraceRunRecord:
+def _select_source_run(
+    trace_record: TraceRecord, target_run_id: str | None
+) -> TraceRunRecord:
     if target_run_id:
         for run in trace_record.runs:
             if run.id == target_run_id:
@@ -323,7 +333,9 @@ def _is_http_url(value: Any) -> bool:
 
 
 def _extract_gemini_prompt(contents: list[Any]) -> str | None:
-    text_parts = [item for item in contents if isinstance(item, str) and not _is_http_url(item)]
+    text_parts = [
+        item for item in contents if isinstance(item, str) and not _is_http_url(item)
+    ]
     if not text_parts:
         return None
     if len(text_parts) == 1:
@@ -365,7 +377,11 @@ def _build_replay_request_from_run(
         gcs_uri_base = str(inputs.get("gcs_uri_base") or fallback_gcs_uri_base)
         prompt = args.get("prompt")
         image_urls = args.get("image_urls")
-        refs = [u for u in image_urls if _is_http_url(u)] if isinstance(image_urls, list) else []
+        refs = (
+            [u for u in image_urls if _is_http_url(u)]
+            if isinstance(image_urls, list)
+            else []
+        )
         return ReplayRequest(
             provider="fal_seedream_v4_5_edit",
             source_run_id=run.id,
@@ -399,12 +415,17 @@ def _build_replay_request_from_run(
             },
         )
 
-    raise ValueError(f"Unsupported run for replay: run_name={run.name!r}, run_id={run.id}")
+    raise ValueError(
+        f"Unsupported run for replay: run_name={run.name!r}, run_id={run.id}"
+    )
 
 
 async def _execute_replay(request: ReplayRequest) -> ReplayExecutionResult:
     if request.provider == "fal_z_image_turbo_image_to_image":
-        from app.core.images.fal import ZImageTurboImageToImageInput, z_image_turbo_image_to_image
+        from app.core.images.fal import (
+            ZImageTurboImageToImageInput,
+            z_image_turbo_image_to_image,
+        )
 
         result = await z_image_turbo_image_to_image(
             args=ZImageTurboImageToImageInput(**request.provider_arguments),
@@ -425,18 +446,24 @@ async def _execute_replay(request: ReplayRequest) -> ReplayExecutionResult:
             raise ValueError("Gemini replay requires string model in trace inputs.")
         contents = request.provider_arguments.get("contents")
         if not isinstance(contents, list) or not contents:
-            raise ValueError("Gemini replay requires non-empty list contents in trace inputs.")
+            raise ValueError(
+                "Gemini replay requires non-empty list contents in trace inputs."
+            )
         system_instructions = request.provider_arguments.get("system_instructions")
-        if system_instructions is not None and not isinstance(system_instructions, list):
+        if system_instructions is not None and not isinstance(
+            system_instructions, list
+        ):
             raise ValueError("Gemini system_instructions must be list[str] or null.")
         wrapped_client = get_wrapped_client()
         result = await wrapped_client.async_generate_image(
             model=model,
             contents=[str(item) for item in contents],
             gcs_uri_base=request.gcs_uri_base,
-            system_instructions=[str(item) for item in system_instructions]
-            if isinstance(system_instructions, list)
-            else None,
+            system_instructions=(
+                [str(item) for item in system_instructions]
+                if isinstance(system_instructions, list)
+                else None
+            ),
         )
     else:
         raise ValueError(f"Unsupported provider: {request.provider}")

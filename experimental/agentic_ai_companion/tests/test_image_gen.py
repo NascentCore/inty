@@ -21,9 +21,7 @@ def _minimal_png_bytes(width: int = 32, height: int = 24) -> bytes:
     # 仅用于单元测试，构造一个最小可识别 PNG 头。
     signature = b"\x89PNG\r\n\x1a\n"
     ihdr_data = (
-        width.to_bytes(4, "big")
-        + height.to_bytes(4, "big")
-        + b"\x08\x02\x00\x00\x00"
+        width.to_bytes(4, "big") + height.to_bytes(4, "big") + b"\x08\x02\x00\x00\x00"
     )
     ihdr = len(ihdr_data).to_bytes(4, "big") + b"IHDR" + ihdr_data + b"\x00\x00\x00\x00"
     iend = b"\x00\x00\x00\x00IEND\xaeB`\x82"
@@ -161,7 +159,9 @@ def test_generate_image_raises_on_429_without_model_fallback(tmp_path: Path):
     assert fake_client.models.calls == ["gemini-3-pro-image-preview"]
 
 
-def test_generate_image_raises_when_generation_fails_without_similarity_fallback(tmp_path: Path):
+def test_generate_image_raises_when_generation_fails_without_similarity_fallback(
+    tmp_path: Path,
+):
     companion_dir = tmp_path / "companion_profile"
     user_dir = tmp_path / "user_profile"
     _write_dummy_image(companion_dir / "avatar.png")

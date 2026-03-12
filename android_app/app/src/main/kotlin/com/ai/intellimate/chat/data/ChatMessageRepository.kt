@@ -3,6 +3,9 @@ package com.ai.intellimate.chat.data
 // CREATED_BY_AGENT
 
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.ChatMode
+import ai.sxwl.android.data.api.model.ChatSettingsReq
+import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
@@ -15,9 +18,9 @@ import ai.sxwl.android.data.store.dataStore
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.core.net.toUri
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -25,12 +28,11 @@ import androidx.paging.PagingData
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostStorage
 import com.ai.intellimate.boost.PointSource
-import ai.sxwl.android.data.api.model.ChatMode
-import ai.sxwl.android.data.api.model.ChatSettingsReq
-import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import com.architecture.httplib.core.HttpResult
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -40,12 +42,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.milliseconds
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import kotlin.getOrDefault
 
 /**
  * 聊天消息的 Paging Repository 使用 RemoteMediator 实现数据库查询和网络同步
@@ -185,7 +184,7 @@ class ChatMessageRepository(
     }
 
     private suspend fun awaitPreUploadResult(
-        preUploadTask: Deferred<HttpResult<String>>?,
+        preUploadTask: Deferred<HttpResult<String>>?
     ): HttpResult<String>? {
         if (preUploadTask == null) {
             return null
@@ -210,16 +209,15 @@ class ChatMessageRepository(
                         )
                 tempFile = File.createTempFile("chat_input_", ".jpg", context.cacheDir)
                 inputStream.use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
+                    FileOutputStream(tempFile).use { output -> input.copyTo(output) }
                 }
                 val requestBody = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
                 val multipart =
                     MultipartBody.Part.createFormData("file", tempFile.name, requestBody)
                 when (val uploadResult = NetServiceMgr.getUserApi().uploadAvatar(multipart)) {
                     is HttpResult.Success -> {
-                        val resolvedUrl = uploadResult.data.url.ifBlank { uploadResult.data.avatar_url }
+                        val resolvedUrl =
+                            uploadResult.data.url.ifBlank { uploadResult.data.avatar_url }
                         if (resolvedUrl.isBlank()) {
                             HttpResult.Failure("Image upload returned empty url", -1)
                         } else {
@@ -253,17 +251,14 @@ class ChatMessageRepository(
             lastAssistantMessage.id,
             lastAssistantMessage.indexId,
         )
-        //localDataSource.appendSendingLoadingOnly(agentId)
+        // localDataSource.appendSendingLoadingOnly(agentId)
 
         val loadingMsg = createTempSendingLoadingEntity(agentId)
         localDataSource.appendMessages(listOf(loadingMsg))
 
         val result =
             try {
-                remoteDataSource.sendMessage(
-                    agentId,
-                    userText = "recall",
-                )
+                remoteDataSource.sendMessage(agentId, userText = "recall")
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.recallLastAssistantMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)
@@ -398,13 +393,15 @@ class ChatMessageRepository(
         val lastRankDate = dataStore().data.map { it[KEY_LAST_RANK_DATE] }.first() ?: 0
         val currentDate = System.currentTimeMillis()
 
-        return (localDataSource.getYesterdaySendCount() > 20 && currentDate.milliseconds - lastRankDate.milliseconds > 7.days).also {
-                    if (it) {
-                        dataStore().edit { preferences ->
-                            preferences[KEY_LAST_RANK_DATE] = currentDate
-                        }
+        return (localDataSource.getYesterdaySendCount() > 20 &&
+                currentDate.milliseconds - lastRankDate.milliseconds > 7.days)
+            .also {
+                if (it) {
+                    dataStore().edit { preferences ->
+                        preferences[KEY_LAST_RANK_DATE] = currentDate
                     }
-        }
+                }
+            }
     }
 
     /** 清除 last_rank_date 缓存，仅用于 Debug 设置页调试。 */
@@ -415,10 +412,7 @@ class ChatMessageRepository(
     fun fetchChatModes(): Flow<List<ChatMode>> {
 
         return channelFlow {
-            launch {
-                localDataSource.getChatModes()
-                    .collect { send(it) }
-            }
+            launch { localDataSource.getChatModes().collect { send(it) } }
             launch {
                 val result = remoteDataSource.getChatModes()
 
@@ -429,9 +423,7 @@ class ChatMessageRepository(
         }
     }
 
-    /**
-     * 获取聊天设置
-     */
+    /** 获取聊天设置 */
     suspend fun getChatSettings(agentId: String): ChatSettingsResponse.ChatSettingRspData {
         return withContext(Dispatchers.IO) {
             when (val result = remoteDataSource.getChatSettings(agentId)) {
@@ -441,9 +433,7 @@ class ChatMessageRepository(
         }
     }
 
-    /**
-     *  更新聊天设置
-     */
+    /** 更新聊天设置 */
     suspend fun updateChatSettings(agentId: String, settings: ChatSettingsReq) {
         return withContext(Dispatchers.IO) {
             when (val result = remoteDataSource.updateChatSettings(agentId, settings)) {

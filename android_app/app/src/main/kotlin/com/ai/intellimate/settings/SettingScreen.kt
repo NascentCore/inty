@@ -3,8 +3,9 @@ package com.ai.intellimate.settings
 // import com.ai.intellimate.vip.VipCenterActivity
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
-import ai.sxwl.android.data.billing.VipStatusHelper
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.design.theme.HeartColor
+import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.design.ui.HeartTopAppBar
 import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
@@ -20,8 +21,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,11 +33,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,20 +48,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.core.net.toUri
-import ai.sxwl.android.data.store.IntySetting
-import ai.sxwl.android.design.theme.VibeModeColors
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.BuildConfig
@@ -72,7 +71,6 @@ import com.ai.intellimate.ui.components.DeleteAccountDialog
 import com.ai.intellimate.ui.components.LogoutConfirmDialog
 import com.ai.intellimate.xb.navigation.Routes
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 private const val GOOGLE_PLAY_MARKET_URL_PREFIX = "market://details?id="
 
@@ -144,7 +142,9 @@ fun SettingScreen(
         ) {
             VibeModeBanner(
                 isSubscribed = state.isVipSubscribed,
-                onRequestSubscribe = { navController.navigate(Routes.Me.vipCenter("settings_vibe_mode")) },
+                onRequestSubscribe = {
+                    navController.navigate(Routes.Me.vipCenter("settings_vibe_mode"))
+                },
             )
             Spacer(Modifier.height(16.dp))
             AccountInfoSection(userId = state.userId, userEmail = state.userEmail)
@@ -228,7 +228,7 @@ private fun DebugVipStatus() {
                         BillingRepository.setDebugVipStatus(
                             VipStatus(
                                 isSubscribed = true,
-                                subscriptionStatus = VipStatus.UI_SUBSCRIBED
+                                subscriptionStatus = VipStatus.UI_SUBSCRIBED,
                             )
                         )
                     },
@@ -238,7 +238,12 @@ private fun DebugVipStatus() {
 
                 FilterChip(
                     onClick = {
-                        BillingRepository.setDebugVipStatus(VipStatus(isSubscribed = false, subscriptionStatus = VipStatus.UI_UNSUBSCRIBED))
+                        BillingRepository.setDebugVipStatus(
+                            VipStatus(
+                                isSubscribed = false,
+                                subscriptionStatus = VipStatus.UI_UNSUBSCRIBED,
+                            )
+                        )
                     },
                     selected = vipStatus?.isSubscribed == false,
                     label = { Text("非订阅") },
@@ -409,7 +414,7 @@ private fun VibeModeBanner(
             baseModifier.then(
                 if (isSubscribed) Modifier else Modifier.clickable(onClick = onRequestSubscribe)
             ),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -686,18 +691,19 @@ private fun DebugBoostPointsEntry() {
 }
 
 /**
- * Debug 下清除 KEY_LAST_RANK_DATE 缓存入口。
- * 使用范围：仅 build type 为 debug 时在 Me → Settings 页展示。点击后直接调用 ChatViewModel.testRank()。
+ * Debug 下清除 KEY_LAST_RANK_DATE 缓存入口。 使用范围：仅 build type 为 debug 时在 Me → Settings 页展示。点击后直接调用
+ * ChatViewModel.testRank()。
  */
 @Composable
 private fun DebugClearLastRankDateEntry(chatViewModel: ChatViewModel) {
     SettingsItemGroup {
         SettingsArrowItem(
-            item = SettingsItemData.CommonItemData(
-                title = stringResource(R.string.settings_debug_clear_last_rank_date),
-                content = stringResource(R.string.settings_debug_clear_last_rank_date_hint),
-                arrow = false,
-            ),
+            item =
+                SettingsItemData.CommonItemData(
+                    title = stringResource(R.string.settings_debug_clear_last_rank_date),
+                    content = stringResource(R.string.settings_debug_clear_last_rank_date_hint),
+                    arrow = false,
+                ),
             isInGroup = true,
             onItemClick = { chatViewModel.testRank() },
         )

@@ -12,7 +12,10 @@ export function buildAgentProfilePageUrl(
   return `${baseUrl}#agents?agentId=${encodeURIComponent(agentId)}`;
 }
 
-export function buildUserProfilePageUrl(baseUrl: string, userId: string): string {
+export function buildUserProfilePageUrl(
+  baseUrl: string,
+  userId: string,
+): string {
   return `${baseUrl}#user-daily-messages?userId=${encodeURIComponent(userId)}`;
 }
 

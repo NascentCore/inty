@@ -57,8 +57,7 @@ object VersionService {
         return when (rawAction) {
             VersionReminderAction.BLOCK_ACCESS.name -> VersionReminderAction.BLOCK_ACCESS
             VersionReminderAction.POP_UP_REMINDER.name -> VersionReminderAction.POP_UP_REMINDER
-            VersionReminderAction.SETTINGS_REMINDER.name ->
-                VersionReminderAction.SETTINGS_REMINDER
+            VersionReminderAction.SETTINGS_REMINDER.name -> VersionReminderAction.SETTINGS_REMINDER
             else -> VersionReminderAction.NONE
         }
     }

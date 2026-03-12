@@ -312,8 +312,10 @@ export const buildVoiceRequestsPerMessageRatioValues = (
   if (!usageSeries) {
     return [];
   }
-  const totalVoiceRequestsValues = usageSeries.valuesByMetric.total_voice_requests;
-  const totalUserMessagesValues = usageSeries.valuesByMetric.total_user_messages;
+  const totalVoiceRequestsValues =
+    usageSeries.valuesByMetric.total_voice_requests;
+  const totalUserMessagesValues =
+    usageSeries.valuesByMetric.total_user_messages;
   return totalVoiceRequestsValues.map((voiceRequests, index) =>
     toVoiceRequestsPerMessageRatio(
       voiceRequests,

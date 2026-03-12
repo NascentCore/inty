@@ -80,7 +80,9 @@ class User(Base):
     password = Column(String, nullable=True, comment="密码哈希，用于 email 登录")
     device_id = Column(String, unique=True, comment="设备ID，唯一，用于设备识别")
     system_language = Column(String, default="en", comment="系统语言偏好，默认英语")
-    meta_data = Column(JSON, nullable=True, comment="用户元数据（可扩展，例如 MBTI 类型）")
+    meta_data = Column(
+        JSON, nullable=True, comment="用户元数据（可扩展，例如 MBTI 类型）"
+    )
     is_superuser = Column(Boolean, default=False, comment="是否为超级管理员")
     created_at = Column(
         DateTime(timezone=True), server_default=sa.text("now()"), comment="创建时间"

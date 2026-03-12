@@ -16,7 +16,9 @@ describe("getAgentDetailModalActionKeys", () => {
   });
 
   it("有智能体但不可编辑时仅返回关闭按钮", () => {
-    expect(getAgentDetailModalActionKeys(buildAgent(), false)).toEqual(["close"]);
+    expect(getAgentDetailModalActionKeys(buildAgent(), false)).toEqual([
+      "close",
+    ]);
   });
 
   it("有智能体且可编辑时返回关闭和编辑按钮", () => {

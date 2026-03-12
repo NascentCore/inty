@@ -1,14 +1,13 @@
 package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.NetServiceMgr
-import ai.sxwl.android.data.api.model.ChatMessageContentPart
 import ai.sxwl.android.data.api.model.ChatImageGenerationRequest
 import ai.sxwl.android.data.api.model.ChatImageGenerationResult
+import ai.sxwl.android.data.api.model.ChatMessageContentPart
 import ai.sxwl.android.data.api.model.ChatMode
 import ai.sxwl.android.data.api.model.ChatSettingsReq
 import ai.sxwl.android.data.api.model.ChatSettingsResponse
 import ai.sxwl.android.data.api.model.ClearMessagesRequest
-import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.QueryMsgsResponse
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgReqMessage
@@ -22,7 +21,6 @@ import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
-import com.inty.api.models.api.v1.chats.Chat
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -34,11 +32,16 @@ class ChatRemoteDataSource {
         return NetServiceMgr.getChatApi().fetchChatModes()
     }
 
-    suspend fun updateChatSettings(agentId: String, chatSettingsReq: ChatSettingsReq): HttpResult<ChatSettingsResponse> {
+    suspend fun updateChatSettings(
+        agentId: String,
+        chatSettingsReq: ChatSettingsReq,
+    ): HttpResult<ChatSettingsResponse> {
         return NetServiceMgr.getChatApi().updateChatSettings(agentId, chatSettingsReq)
     }
 
-    suspend fun getChatSettings(agentId: String): HttpResult<ChatSettingsResponse.ChatSettingRspData> {
+    suspend fun getChatSettings(
+        agentId: String
+    ): HttpResult<ChatSettingsResponse.ChatSettingRspData> {
         return NetServiceMgr.getChatApi().getChatSettings(agentId)
     }
 
@@ -111,7 +114,7 @@ class ChatRemoteDataSource {
                                         type = "image_url",
                                         imageUrl =
                                             ChatMessageContentPart.ImageUrlPayload(
-                                                url = userImageUrl,
+                                                url = userImageUrl
                                             ),
                                     )
                                 )
@@ -159,10 +162,11 @@ class ChatRemoteDataSource {
             LogUtils.i("ChatRemoteDataSource.generateImage: agentId=$agentId, messageId=$messageId")
             when (
                 val result =
-                    NetServiceMgr.getChatApi().generateMessageImage(
-                        agentId,
-                        ChatImageGenerationRequest(messageId = messageId.toLongOrNull() ?: 0L),
-                    )
+                    NetServiceMgr.getChatApi()
+                        .generateMessageImage(
+                            agentId,
+                            ChatImageGenerationRequest(messageId = messageId.toLongOrNull() ?: 0L),
+                        )
             ) {
                 is HttpResult.Success -> {
                     mapGenerateImageResponse(messageId, result.data)
@@ -184,7 +188,8 @@ class ChatRemoteDataSource {
     ): HttpResult<ChatImageGenerationResult> {
         val payload = response.data
         val responseCode = response.code
-        val hasBusinessError = (responseCode != null && responseCode != 200) || !payload?.errorCode.isNullOrBlank()
+        val hasBusinessError =
+            (responseCode != null && responseCode != 200) || !payload?.errorCode.isNullOrBlank()
 
         if (hasBusinessError) {
             val mappedCode = mapBusinessErrorCode(payload?.errorCode, responseCode)
@@ -265,7 +270,9 @@ class ChatRemoteDataSource {
 
     /** Reset聊天 */
     suspend fun clearMessage(agentId: String): Boolean {
-        return when (val result = NetServiceMgr.getChatApi().clearMessages(agentId, ClearMessagesRequest())) {
+        return when (
+            val result = NetServiceMgr.getChatApi().clearMessages(agentId, ClearMessagesRequest())
+        ) {
             is HttpResult.Success -> {
                 result.data.success
             }

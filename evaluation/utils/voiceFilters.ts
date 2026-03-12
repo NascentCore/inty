@@ -7,7 +7,9 @@ import type { Voice } from "../types";
 export type VoiceGenderFilter = "all" | "male" | "female" | "unknown";
 type NormalizedVoiceGender = Exclude<VoiceGenderFilter, "all">;
 
-export const normalizeVoiceGender = (gender?: string): NormalizedVoiceGender => {
+export const normalizeVoiceGender = (
+  gender?: string,
+): NormalizedVoiceGender => {
   const normalizedGender = (gender ?? "").trim().toLowerCase();
   if (normalizedGender === "male") {
     return "male";
@@ -27,8 +29,12 @@ const getVoiceGenderFromLabels = (
   return labels.gender ?? labels.Gender ?? labels.sex ?? labels.Sex;
 };
 
-export const getNormalizedVoiceGender = (voice: Voice): NormalizedVoiceGender => {
-  return normalizeVoiceGender(voice.gender ?? getVoiceGenderFromLabels(voice.labels));
+export const getNormalizedVoiceGender = (
+  voice: Voice,
+): NormalizedVoiceGender => {
+  return normalizeVoiceGender(
+    voice.gender ?? getVoiceGenderFromLabels(voice.labels),
+  );
 };
 
 export const mapImateGenderToVoiceGenderFilter = (
@@ -64,7 +70,9 @@ export const filterVoicesByGender = (
 
   // ElevenLabs 音色常存在缺失性别标签的情况：
   // 当 male/female 严格匹配为空时，回退到 unknown，避免“有音色但列表全空”。
-  return voices.filter((voice) => getNormalizedVoiceGender(voice) === "unknown");
+  return voices.filter(
+    (voice) => getNormalizedVoiceGender(voice) === "unknown",
+  );
 };
 
 export const getVoiceGenderStats = (voices: Voice[]) => {

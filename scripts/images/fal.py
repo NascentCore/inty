@@ -2,8 +2,12 @@ import asyncio
 import cyclopts
 
 from app.core.agent.prompts import R_RATED_ROMANCE_DIRECTOR_SYSTEM_INSTRUCTION_PROMPT
-from app.core.images.fal import ZImageTurboImageToImageInput, ZImageTurboInput, z_image_turbo, z_image_turbo_image_to_image
-
+from app.core.images.fal import (
+    ZImageTurboImageToImageInput,
+    ZImageTurboInput,
+    z_image_turbo,
+    z_image_turbo_image_to_image,
+)
 
 PROMPT = """
 The girl should lay on the floor, and open her legs wide.
