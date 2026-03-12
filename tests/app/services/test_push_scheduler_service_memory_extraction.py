@@ -185,6 +185,26 @@ class _DummyQuery:
         return self
 
 
+class _FakeScheduler:
+    def __init__(self):
+        self.started = False
+        self.add_job_calls = []
+
+    def start(self):
+        self.started = True
+
+    def add_job(self, *args, **kwargs):
+        self.add_job_calls.append((args, kwargs))
+
+    def get_jobs(self):
+        return []
+
+
+def _close_coro_task(coro):
+    coro.close()
+    return None
+
+
 @pytest.mark.asyncio
 async def test_run_memory_extraction_uses_replica_for_read_and_primary_for_write():
     read_db = AsyncMock()
@@ -335,3 +355,25 @@ async def test_run_festival_memory_extraction_uses_replica_read_url_and_replica_
     assert mock_extract.await_count == 1
     assert mock_extract.await_args.args[0] is write_db
     assert mock_extract.await_args.kwargs["prefer_replica_read"] is True
+
+
+def test_start_memory_extraction_job_uses_cron_without_immediate_run():
+    fake_scheduler = _FakeScheduler()
+    with (
+        patch.object(
+            push_scheduler_module, "AsyncIOScheduler", return_value=fake_scheduler
+        ),
+        patch.object(push_scheduler_module.asyncio, "create_task", _close_coro_task),
+    ):
+        scheduler = PushSchedulerService()
+        scheduler.start()
+
+    assert fake_scheduler.started is True
+    run_memory_job_kwargs = None
+    for _args, kwargs in fake_scheduler.add_job_calls:
+        if kwargs.get("id") == "run_memory_extraction":
+            run_memory_job_kwargs = kwargs
+            break
+    assert run_memory_job_kwargs is not None
+    assert run_memory_job_kwargs["trigger"].__class__.__name__ == "CronTrigger"
+    assert "next_run_time" not in run_memory_job_kwargs
