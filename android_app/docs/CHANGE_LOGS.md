@@ -20,7 +20,7 @@
 
 ## 2026-03-12
 
-- In chat, tapping or swiping on the character background now auto-sends a scene action message with coordinates mapped to the original background image so the AI can understand the touched area.
+- Added a new Me → Settings toggle, **Send UX/UI gesture signals** (default off), that controls whether chat background taps/swipes are sent to AI as original-image coordinate action messages.
 
 ## 2026-03-06
 

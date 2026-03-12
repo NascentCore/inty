@@ -296,6 +296,7 @@ internal fun ChatPage(
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState(false)
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
+    val sendUxUiGestureSignals by SettingStateManager.sendUxUiGestureSignalsFlow.collectAsState()
     val chatFontSizeSp by SettingStateManager.chatFontSizeFlow.collectAsState()
     val chatListFullScreen by SettingStateManager.chatListFullScreenFlow.collectAsState()
     val chatSettings by chatViewModel.chatSettings.collectAsState()
@@ -535,6 +536,7 @@ internal fun ChatPage(
                     .onSizeChanged { size -> backgroundCaptureSize = size }
                     .pointerInput(
                         isCurrentPage,
+                        sendUxUiGestureSignals,
                         uiState.vipAgentLockType,
                         backgroundCaptureSize,
                         backgroundSourceImageSize,
@@ -549,6 +551,7 @@ internal fun ChatPage(
                             ) ?: return@pointerInput
                         val shouldIgnoreTouch: (Offset) -> Boolean = { point ->
                             !isCurrentPage ||
+                                !sendUxUiGestureSignals ||
                                 uiState.vipAgentLockType != ChatUIState.VipAgentLockType.NONE ||
                                 point.y >
                                     backgroundCaptureSize.height *
@@ -578,6 +581,7 @@ internal fun ChatPage(
                     }
                     .pointerInput(
                         isCurrentPage,
+                        sendUxUiGestureSignals,
                         uiState.vipAgentLockType,
                         backgroundCaptureSize,
                         backgroundSourceImageSize,
@@ -592,6 +596,7 @@ internal fun ChatPage(
                             ) ?: return@pointerInput
                         val shouldIgnoreTouch: (Offset) -> Boolean = { point ->
                             !isCurrentPage ||
+                                !sendUxUiGestureSignals ||
                                 uiState.vipAgentLockType != ChatUIState.VipAgentLockType.NONE ||
                                 point.y >
                                     backgroundCaptureSize.height *

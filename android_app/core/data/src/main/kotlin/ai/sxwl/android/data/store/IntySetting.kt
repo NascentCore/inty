@@ -427,6 +427,15 @@ object IntySetting {
         return IntySettingsDataStore.getShowSceneActionButton(getCurUserID())
     }
 
+    /** 发送 UX/UI gesture signals（全局设置，默认关闭） */
+    fun setSendUxUiGestureSignals(enabled: Boolean) {
+        IntySettingsDataStore.setSendUxUiGestureSignals(getCurUserID(), enabled)
+    }
+
+    fun isSendUxUiGestureSignals(): Boolean {
+        return IntySettingsDataStore.getSendUxUiGestureSignals(getCurUserID())
+    }
+
     /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
     fun hasUserSetSceneActionButton(): Boolean {
         return getIntySettingCache()?.userCache?.userSetSceneActionButton ?: false

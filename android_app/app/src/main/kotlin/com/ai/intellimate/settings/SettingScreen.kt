@@ -11,7 +11,9 @@ import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
+import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ActivityNotFoundException
@@ -88,6 +90,7 @@ fun SettingScreen(
 ) {
     val context = LocalContext.current
     val state = viewModel.state.collectAsState().value
+    val sendUxUiGestureSignals by SettingStateManager.sendUxUiGestureSignalsFlow.collectAsState()
 
     fun onLogout(isDelete: Boolean) {
         mainViewModel.logout()
@@ -151,6 +154,13 @@ fun SettingScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            GestureSignalSettingsSection(
+                enabled = sendUxUiGestureSignals,
+                onEnabledChange = { enabled -> SettingStateManager.updateSendUxUiGestureSignals(enabled) },
+            )
+
+            Spacer(Modifier.height(16.dp))
+
             // 支持与帮助区域
             SupportAndHelpSection(
                 navController,
@@ -197,6 +207,21 @@ fun SettingScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+    SettingsItemGroup {
+        SettingsSwitchItem(
+            item =
+                SettingsItemData.SwitchItemData(
+                    title = stringResource(R.string.settings_send_ux_ui_gesture_signals),
+                    checked = enabled,
+                ),
+            isInGroup = true,
+            onCheckChanged = onEnabledChange,
+        )
     }
 }
 
