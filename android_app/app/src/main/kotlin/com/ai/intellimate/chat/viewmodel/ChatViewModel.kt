@@ -1593,7 +1593,7 @@ class ChatViewModel : BaseVM() {
     val chatModes = chatMessageRepository.fetchChatModes()
         .stateIn(
             viewModelScope,
-            started = SharingStarted.Eagerly,
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
     val selectedChatMode = combine(agentChatSettings, chatModes) { settings, chatModes ->

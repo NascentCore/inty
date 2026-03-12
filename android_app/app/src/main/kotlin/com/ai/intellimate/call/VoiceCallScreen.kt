@@ -450,7 +450,7 @@ private fun VoiceCallContent(
                 promptText = promptText,
                 isSpeaking = isSpeaking,
                 onInterrupt = onInterrupt,
-                modifier = Modifier.size(90.dp)
+                modifier = Modifier.size(100.dp)
             )
         }
 
