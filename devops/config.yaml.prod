@@ -8,7 +8,7 @@ app:
 
   limits:
     guest_user_chat_24h_limit: 10
-    free_user_chat_24h_limit: 80
+    free_user_chat_24h_limit: 100
     guest_user_voice_24h_limit: 1
     free_user_voice_24h_limit: 5
     subscribed_user_voice_24h_limit: 100
