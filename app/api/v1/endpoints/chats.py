@@ -69,12 +69,18 @@ router = APIRouter(prefix="/chats", route_class=LoggerRoute)
 )
 async def list_chat_modes(
     db: AsyncSession = Depends(deps.get_async_db),
-    agent_id: Optional[str] = Query(None, description="When set, return empty list if agent default mode is not in the three user-facing modes"),
+    agent_id: Optional[str] = Query(
+        None,
+        description="When set, return empty list if agent default mode is not in the three user-facing modes",
+    ),
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
     if agent_id:
         agent_db = await agent_service.get_agent(db, agent_id=agent_id)
-        if not agent_db or getattr(agent_db, "mode_prompt", None) not in USER_FACING_CHAT_MODE_IDS:
+        if (
+            not agent_db
+            or getattr(agent_db, "mode_prompt", None) not in USER_FACING_CHAT_MODE_IDS
+        ):
             return []
     opts = get_user_facing_chat_mode_options()
     return [
@@ -241,9 +247,7 @@ async def get_agent_chat_messages(
                 await db.rollback()
                 logger.warning(f"投递日常记忆提示失败: {e}")
 
-        unlocked_ids = await get_unlocked_surprise_snap_message_ids(
-            db, current_user_id
-        )
+        unlocked_ids = await get_unlocked_surprise_snap_message_ids(db, current_user_id)
         messages_data = await asyncio.to_thread(
             chat_history_service.get_messages_paginated,
             session_id=session_id,
@@ -283,9 +287,7 @@ async def surprise_snap_unlock(
     body: SurpriseSnapUnlockRequest,
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
 ) -> Any:
-    ok = await record_surprise_snap_unlock(
-        db, current_user.id, body.message_id
-    )
+    ok = await record_surprise_snap_unlock(db, current_user.id, body.message_id)
     if not ok:
         raise HTTPException(
             status_code=403,
@@ -632,10 +634,14 @@ async def update_agent_chat_settings(
                 detail="Only Gemini voices are supported in chat settings for now.",
             )
 
-        if settings_update.chat_mode is not None and settings_update.chat_mode not in USER_FACING_CHAT_MODE_IDS:
+        if (
+            settings_update.chat_mode is not None
+            and settings_update.chat_mode not in USER_FACING_CHAT_MODE_IDS
+        ):
             raise HTTPException(
                 status_code=400,
-                detail="chat_mode must be one of: " + ", ".join(USER_FACING_CHAT_MODE_IDS),
+                detail="chat_mode must be one of: "
+                + ", ".join(USER_FACING_CHAT_MODE_IDS),
             )
 
         # Then update settings

@@ -122,8 +122,8 @@ async def generate_agent_opening_voice(
         )
 
         voice_service = VoiceService()
-        voice_message_narration_mode = get_voice_message_narration_mode_from_agent_settings(
-            agent.settings
+        voice_message_narration_mode = (
+            get_voice_message_narration_mode_from_agent_settings(agent.settings)
         )
 
         # 生成开场白语音
@@ -646,10 +646,18 @@ async def get_balanced_score_based_agents(
     order_by_clauses = []
     if current_user_gender == Gender.FEMALE:
         is_opposite = case((models.Agent.gender == Gender.MALE, 1), else_=0)
-        order_by_clauses = [is_opposite.desc(), base_score.desc(), models.Agent.id.asc()]
+        order_by_clauses = [
+            is_opposite.desc(),
+            base_score.desc(),
+            models.Agent.id.asc(),
+        ]
     elif current_user_gender == Gender.MALE:
         is_opposite = case((models.Agent.gender == Gender.FEMALE, 1), else_=0)
-        order_by_clauses = [is_opposite.desc(), base_score.desc(), models.Agent.id.asc()]
+        order_by_clauses = [
+            is_opposite.desc(),
+            base_score.desc(),
+            models.Agent.id.asc(),
+        ]
     else:
         order_by_clauses = [base_score.desc(), models.Agent.id.asc()]
 
@@ -727,9 +735,13 @@ async def get_recommended_agents_paginated(
 
             # CREATED_DESC_WITH_GENDER: filter by opposite user gender when MALE/FEMALE
             opposite_gender = None
-            if sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER and current_user.gender in (
-                Gender.MALE,
-                Gender.FEMALE,
+            if (
+                sort_by == AgentSortOption.CREATED_DESC_WITH_OPPOSITE_GENDER
+                and current_user.gender
+                in (
+                    Gender.MALE,
+                    Gender.FEMALE,
+                )
             ):
                 opposite_gender = (
                     Gender.FEMALE if current_user.gender == Gender.MALE else Gender.MALE
@@ -752,7 +764,8 @@ async def get_recommended_agents_paginated(
                 result = await db.execute(data_query)
                 query_results = result.all()
                 agents_list = [
-                    _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
+                    _fill_agent_image_sizes(row[0], row[1], row[2])
+                    for row in query_results
                 ]
             else:
                 # 确定排序方式
@@ -784,7 +797,8 @@ async def get_recommended_agents_paginated(
 
                 # 处理查询结果，提取agent和metadata信息
                 agents_list = [
-                    _fill_agent_image_sizes(row[0], row[1], row[2]) for row in query_results
+                    _fill_agent_image_sizes(row[0], row[1], row[2])
+                    for row in query_results
                 ]
 
         # 为所有 agents 设置关注相关默认值（关注功能已下线）

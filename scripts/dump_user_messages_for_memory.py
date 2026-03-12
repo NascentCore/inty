@@ -54,11 +54,7 @@ def _parse_message_row(raw) -> Optional[tuple[str, str]]:
         return None
     msg_type = data.get("type", "human")
     content = ""
-    if (
-        "data" in data
-        and isinstance(data["data"], dict)
-        and "content" in data["data"]
-    ):
+    if "data" in data and isinstance(data["data"], dict) and "content" in data["data"]:
         content = data["data"]["content"] or ""
     elif "content" in data:
         content = data["content"] or ""
@@ -188,9 +184,7 @@ def run(
         [(m["role"], m["content"]) for m in messages]
     )
     prompt_template = _load_prompt()
-    full_prompt = (
-        f"{prompt_template}\n\n---\n\n# User chat history\n\n{formatted_chat}"
-    )
+    full_prompt = f"{prompt_template}\n\n---\n\n# User chat history\n\n{formatted_chat}"
 
     result = {
         "user_id": user_id,

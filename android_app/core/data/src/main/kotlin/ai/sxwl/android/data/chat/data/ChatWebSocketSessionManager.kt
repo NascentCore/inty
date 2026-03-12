@@ -23,9 +23,7 @@ import kotlinx.coroutines.sync.withLock
 
 private const val CHAT_WEBSOCKET_PATH = "api/v1/chat/ws"
 
-/**
- * 复用单条聊天 WebSocket 连接，支持不同 agent 的消息复用同一个 session。
- */
+/** 复用单条聊天 WebSocket 连接，支持不同 agent 的消息复用同一个 session。 */
 object ChatWebSocketSessionManager {
     private val connectionMutex = Mutex()
     private val requestMutex = Mutex()
@@ -85,12 +83,13 @@ object ChatWebSocketSessionManager {
                 return@withLock existing
             }
             closeSessionLocked()
-            val newSession = httpClient.webSocketSession {
-                url(buildChatWebSocketUrl())
-                if (token.isNotBlank()) {
-                    header("Authorization", "Bearer $token")
+            val newSession =
+                httpClient.webSocketSession {
+                    url(buildChatWebSocketUrl())
+                    if (token.isNotBlank()) {
+                        header("Authorization", "Bearer $token")
+                    }
                 }
-            }
             session = newSession
             sessionToken = token
             newSession

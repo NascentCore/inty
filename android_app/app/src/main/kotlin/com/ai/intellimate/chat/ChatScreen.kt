@@ -82,16 +82,10 @@ internal fun ChatScreen(
                     if (payload != null) {
                         navController.currentBackStackEntry
                             ?.savedStateHandle
-                            ?.set(
-                                Routes.Me.ReportInitialEvidenceImageUrlKey,
-                                payload.imageUrl,
-                            )
+                            ?.set(Routes.Me.ReportInitialEvidenceImageUrlKey, payload.imageUrl)
                         navController.currentBackStackEntry
                             ?.savedStateHandle
-                            ?.set(
-                                Routes.Me.ReportImageFeedbackVoteKey,
-                                payload.vote,
-                            )
+                            ?.set(Routes.Me.ReportImageFeedbackVoteKey, payload.vote)
                         navController.navigate(
                             Routes.Me.reportPage(
                                 isFeedback = true,

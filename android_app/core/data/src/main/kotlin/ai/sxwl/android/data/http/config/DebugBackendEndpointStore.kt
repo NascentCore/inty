@@ -105,9 +105,6 @@ object DebugBackendEndpointStore {
             "Runtime chat websocket toggle is only available for debug builds"
         }
         prefs.edit().putBoolean(KEY_CHAT_WEBSOCKET_ENABLED, enabled).apply()
-        LogUtils.i(
-            "DebugBackendEndpointStore",
-            "Runtime chat websocket updated to $enabled",
-        )
+        LogUtils.i("DebugBackendEndpointStore", "Runtime chat websocket updated to $enabled")
     }
 }

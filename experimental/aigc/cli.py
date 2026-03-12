@@ -16,6 +16,7 @@ from multistage_generator import MultiStageCharacterGenerator
 def main():
     """Main CLI function"""
     from loguru import logger
+
     logger.info("Starting CLI interface...")
 
     parser = argparse.ArgumentParser(

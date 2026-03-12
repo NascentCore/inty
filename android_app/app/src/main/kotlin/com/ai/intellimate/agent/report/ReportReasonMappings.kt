@@ -1,7 +1,7 @@
 package com.ai.intellimate.agent.report
 
-import com.ai.intellimate.R
 import ai.sxwl.android.data.api.model.ReportReasonCode
+import com.ai.intellimate.R
 
 /**
  * 举报和反馈原因代码到字符串资源ID的映射
@@ -47,8 +47,7 @@ object ReportReasonMappings {
     val IMAGE_FEEDBACK_REASON_CODE_TO_STRING_RES: Map<ReportReasonCode, Int> =
         mapOf(
             ReportReasonCode.IMAGE_LOW_QUALITY to R.string.feedback_reason_image_low_quality,
-            ReportReasonCode.IMAGE_STYLE_MISMATCH to
-                R.string.feedback_reason_image_style_mismatch,
+            ReportReasonCode.IMAGE_STYLE_MISMATCH to R.string.feedback_reason_image_style_mismatch,
             ReportReasonCode.IMAGE_CONTENT_MISMATCH to
                 R.string.feedback_reason_image_content_mismatch,
             ReportReasonCode.IMAGE_ANATOMY_OR_STRUCTURE_ERROR to

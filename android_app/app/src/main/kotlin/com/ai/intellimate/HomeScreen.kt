@@ -58,9 +58,7 @@ import com.ai.intellimate.xb.navigation.Routes
 import java.util.concurrent.TimeUnit
 
 internal sealed interface CreateRoleSuccessAction {
-    data class NavigateToCreatedChat(
-        val agentId: String,
-    ) : CreateRoleSuccessAction
+    data class NavigateToCreatedChat(val agentId: String) : CreateRoleSuccessAction
 
     data object NavigateToProfile : CreateRoleSuccessAction
 }
@@ -131,8 +129,7 @@ fun HomeScreen(
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
     val savedStateHandle = currentEntry?.savedStateHandle
-    val createResult =
-        savedStateHandle?.getLiveData<Int>(CreateRoleNavigationState.ResultCodeKey)
+    val createResult = savedStateHandle?.getLiveData<Int>(CreateRoleNavigationState.ResultCodeKey)
     LaunchedEffect(createResult?.value) {
         if (createResult?.value != Activity.RESULT_OK) return@LaunchedEffect
 
@@ -228,11 +225,7 @@ fun HomeScreen(
                         }
                     } else {
                         // 正常点击，更新记录
-                        handleTabSelection(
-                            navController,
-                            tabIndex,
-                            mainViewModel,
-                        )
+                        handleTabSelection(navController, tabIndex, mainViewModel)
                     }
                 },
                 textSize = (UiConfigs.BottomBar.TabIconSize.value * 0.45f).sp,
@@ -586,8 +579,7 @@ private fun ProfileTabContent(
     // 处理从CreateRoleScreen 页面返回的数据
     val currentEntry = navController.currentBackStackEntry
     val savedStateHandle = currentEntry?.savedStateHandle
-    val result =
-        savedStateHandle?.getLiveData<Int>(CreateRoleNavigationState.ResultCodeKey)
+    val result = savedStateHandle?.getLiveData<Int>(CreateRoleNavigationState.ResultCodeKey)
     LaunchedEffect(result?.value) {
         result?.value?.let {
             if (result.value == Activity.RESULT_OK) {

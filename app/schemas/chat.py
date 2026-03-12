@@ -99,7 +99,9 @@ class ChatSettingsBase(BaseModel):
     # keep_talking 字段已弃用，不再在 API 中暴露
     style_prompt: Optional[str] = None  # 风格提示词，仅订阅用户可设置
     premium_mode: bool = False  # 高级模式开关，仅订阅用户可设置
-    chat_mode: Optional[str] = None  # User-selected chat mode id; null = use agent default
+    chat_mode: Optional[str] = (
+        None  # User-selected chat mode id; null = use agent default
+    )
 
 
 class ChatSettingsCreate(ChatSettingsBase):
@@ -158,7 +160,9 @@ class ChatSettingsInDB(ChatSettingsBase):
 class ChatSettings(ChatSettingsInDB):
     """聊天设置"""
 
-    available_chat_modes: Optional[List["ChatModeOption"]] = None  # Only set when agent default is in user-facing modes
+    available_chat_modes: Optional[List["ChatModeOption"]] = (
+        None  # Only set when agent default is in user-facing modes
+    )
 
 
 class ChatBase(BaseModel):

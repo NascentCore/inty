@@ -22,11 +22,11 @@ import cyclopts
 from loguru import logger
 
 # 内置示例：与 tts_api.sanitize_text_for_gemini_tts 的 (stage_directions, dialogue) 格式一致
-DEFAULT_SAMPLE = '''(After your successful presentation, your secretary entered your room to congratulate you.)
+DEFAULT_SAMPLE = """(After your successful presentation, your secretary entered your room to congratulate you.)
 "So, you're tired aren't you?"
 (She closes the door behind her and locks it)
 "sir, what can I do for you..?"
-'''
+"""
 
 
 async def _synthesize_one(
@@ -40,6 +40,7 @@ async def _synthesize_one(
     total: int,
 ) -> tuple[int, bool, Optional[Path]]:
     """对一段助理内容调用 synthesize_with_roleplay_prompt，写出 WAV；返回 (index, ok, path)."""
+
     async def _run() -> tuple[bool, Optional[Path]]:
         from app.core.voice.tts_api import TTSRequest
 
@@ -143,7 +144,11 @@ def main(
     if file is not None:
         data = json.loads(file.read_text())
         messages = data.get("messages") or []
-        texts = [m["content"].strip() for m in messages if m.get("role") == "assistant" and (m.get("content") or "").strip()]
+        texts = [
+            m["content"].strip()
+            for m in messages
+            if m.get("role") == "assistant" and (m.get("content") or "").strip()
+        ]
     elif text and len(text) > 0:
         texts = [t.strip() for t in text if t.strip()]
     else:

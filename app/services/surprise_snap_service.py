@@ -113,9 +113,7 @@ async def try_trigger_surprise_snap(
     return None
 
 
-async def get_unlocked_surprise_snap_message_ids(
-    db: AsyncSession, user_id: str
-) -> set:
+async def get_unlocked_surprise_snap_message_ids(db: AsyncSession, user_id: str) -> set:
     """返回该用户已解锁的 surprise_snap 消息 ID 集合。"""
     stmt = select(SurpriseSnapUnlock.message_id).where(
         SurpriseSnapUnlock.user_id == user_id

@@ -66,5 +66,6 @@ from app.schemas.verification_code import (
 from app.schemas.verification_code import (
     VerificationCodeVerify as VerificationCodeVerify,
 )
+
 # THE EXISTING IMPORTS ARE KEPT FOR BACKWARD COMPATIBILITY ONLY !!!
 # DO NOT ADD ANY NEW IMPORTS IN THIS FILE !!!

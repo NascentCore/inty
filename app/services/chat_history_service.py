@@ -320,7 +320,9 @@ def add_user_message(
         if meta_data is None and isinstance(message, str):
             history = get_chat_history(session_id)
             history.add_messages([HumanMessage(content=message)])
-            logger.debug(f"添加用户消息到会话 {session_id}: {_message_preview_for_log(message)}")
+            logger.debug(
+                f"添加用户消息到会话 {session_id}: {_message_preview_for_log(message)}"
+            )
             return None
         conn = get_chat_history_connection()
         message_data = {"type": "human", "data": {"content": message}}
@@ -414,7 +416,9 @@ FESTIVAL_MEMORY_PROMPT_CONTENT = (
     "{char} wrote you a secret heartbeat diary. Take a quiet look."
 )
 META_MESSAGE_TYPE_FESTIVAL_MEMORY_PROMPT = "festival_memory_prompt"
-DAILY_MEMORY_PROMPT_CONTENT = "{char} kept a small note from yesterday. Want to read it?"
+DAILY_MEMORY_PROMPT_CONTENT = (
+    "{char} kept a small note from yesterday. Want to read it?"
+)
 META_MESSAGE_TYPE_DAILY_MEMORY_PROMPT = "daily_memory_prompt"
 META_MESSAGE_TYPE_SURPRISE_SNAP = "surprise_snap"
 
@@ -557,7 +561,9 @@ def add_daily_memory_prompt_message_sync(
     向 chat_history 插入一条日常记忆提示消息。
     按 (session_id, agent_id, local_date) 幂等：已存在则返回已有 id 不插入。
     """
-    local_date_str = local_date.isoformat() if isinstance(local_date, date) else str(local_date)
+    local_date_str = (
+        local_date.isoformat() if isinstance(local_date, date) else str(local_date)
+    )
     try:
         conn = get_chat_history_connection()
         with conn.cursor() as cur:
@@ -726,14 +732,18 @@ async def count_user_messages_since(
 ) -> int:
     """统计该会话中自 since_at 以来的用户（human）消息条数。"""
     sid = uuid.UUID(session_id) if isinstance(session_id, str) else session_id
-    stmt = select(func.count()).select_from(ChatHistory).where(
-        ChatHistory.session_id == sid,
-        ChatHistory.deleted_at.is_(None),
-        ChatHistory.created_at >= since_at,
-        or_(
-            ChatHistory.message["type"].astext == "human",
-            ChatHistory.message["type"].astext == "HumanMessage",
-        ),
+    stmt = (
+        select(func.count())
+        .select_from(ChatHistory)
+        .where(
+            ChatHistory.session_id == sid,
+            ChatHistory.deleted_at.is_(None),
+            ChatHistory.created_at >= since_at,
+            or_(
+                ChatHistory.message["type"].astext == "human",
+                ChatHistory.message["type"].astext == "HumanMessage",
+            ),
+        )
     )
     result = await db.execute(stmt)
     return result.scalar() or 0
@@ -1190,7 +1200,9 @@ async def get_ai_message_infos_by_ids(
             try:
                 message_data = chat_history.message
                 if "data" in message_data and "content" in message_data["data"]:
-                    content = _extract_text_from_content(message_data["data"]["content"])
+                    content = _extract_text_from_content(
+                        message_data["data"]["content"]
+                    )
                 elif "content" in message_data:
                     content = _extract_text_from_content(message_data["content"])
             except (TypeError, KeyError) as e:
@@ -1250,12 +1262,11 @@ async def get_surprise_snap_message_display_info(
             from app.services.image_transform_service import (
                 image_transform_service,
             )
+
             media_url = image_transform_service.transform_desktop(image_url_raw)
         return {
             "id": row.id,
-            "timestamp": (
-                row.created_at.isoformat() if row.created_at else None
-            ),
+            "timestamp": (row.created_at.isoformat() if row.created_at else None),
             "meta_data": row.meta_data,
             "media_url": media_url,
             "caption": data.get("caption") or "",
@@ -1437,6 +1448,7 @@ def get_messages_paginated(
                             from app.services.image_transform_service import (
                                 image_transform_service,
                             )
+
                             message_obj["media_url"] = (
                                 image_transform_service.transform_desktop(image_url_raw)
                             )

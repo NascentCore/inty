@@ -188,9 +188,7 @@ class PushSchedulerService:
                     coalesce=True,
                     max_instances=1,
                 )
-                logger.info(
-                    f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00 执行"
-                )
+                logger.info(f"已添加记忆抽取任务: 每日 UTC {mem_cfg.cron_hour}:00 执行")
 
             # 节日记忆抽取：每 5 分钟扫描，仅执行 run_at 已到且未跑过的配置
             self.scheduler.add_job(
@@ -426,10 +424,9 @@ class PushSchedulerService:
 
             async with read_session_factory() as read_db:
                 if workflow_mode == "daily_incremental_summarization":
-                    target_date_utc = (
-                        datetime.datetime.now(datetime.timezone.utc).date()
-                        - datetime.timedelta(days=1)
-                    )
+                    target_date_utc = datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).date() - datetime.timedelta(days=1)
                     logger.info(
                         "[记忆抽取] 模式=daily_incremental_summarization "
                         f"target_date_utc={target_date_utc}"

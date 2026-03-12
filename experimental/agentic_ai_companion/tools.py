@@ -217,7 +217,14 @@ def execute_generate_image(
         if result.metadata_path:
             tool_message = f"{tool_message} metadata={result.metadata_path}"
         return (tool_message, result.image_path)
-    except (ClientError, ValueError, OSError, AttributeError, RuntimeError, TypeError) as e:
+    except (
+        ClientError,
+        ValueError,
+        OSError,
+        AttributeError,
+        RuntimeError,
+        TypeError,
+    ) as e:
         if _logger is not None:
             _logger.warning("generate_image 失败: %s", e)
         return (f"generate_image: Failed ({e}).", None)

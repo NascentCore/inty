@@ -210,7 +210,9 @@ async def _read_daily_report_from_primary(
     """从主库读取日报所需统计与图表数据。"""
     await _ensure_statement_timeout(db)
     service = UserAnalyticsService(db)
-    active_session_ids = await service.get_active_session_ids_on_date(act_start, act_end)
+    active_session_ids = await service.get_active_session_ids_on_date(
+        act_start, act_end
+    )
     logger.info(
         f"[用户数据分析日报] 当日有活动的 session 数: {len(active_session_ids)}，"
         "仅对上述 session 做聚合"

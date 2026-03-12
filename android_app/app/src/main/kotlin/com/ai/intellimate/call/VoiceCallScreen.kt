@@ -370,14 +370,11 @@ private fun VoiceCallContent(
     val promptText: String? =
         if (isSpeaking) stringResource(R.string.voice_call_tap_to_interrupt_ai) else null
 
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Column(
             modifier = Modifier.weight(1f),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             uiState.agent?.run {
                 val avatarModifier =
@@ -450,14 +447,13 @@ private fun VoiceCallContent(
                 promptText = promptText,
                 isSpeaking = isSpeaking,
                 onInterrupt = onInterrupt,
-                modifier = Modifier.size(100.dp)
+                modifier = Modifier.size(100.dp),
             )
         }
 
         Row(
             modifier =
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .padding(bottom = UiConfigs.VoiceCall.Layout.BottomBarPadding),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
@@ -563,8 +559,7 @@ private fun VoiceCallInterruptButton(
                     Text(
                         text = promptText,
                         color = Color.White,
-                        style =
-                            MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                     )

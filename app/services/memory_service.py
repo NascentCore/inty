@@ -554,7 +554,9 @@ async def get_undelivered_daily_memories(
         if local_date is None:
             continue
         items.append({"id": memory_id, "local_date": local_date})
-    items.sort(key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"]))
+    items.sort(
+        key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"])
+    )
     return items
 
 
@@ -590,7 +592,9 @@ async def deliver_daily_memories_for_user_agent(
         mid = item["id"]
         local_date = item["local_date"]
         local_date_val: date = (
-            local_date if isinstance(local_date, date) else date.fromisoformat(str(local_date))
+            local_date
+            if isinstance(local_date, date)
+            else date.fromisoformat(str(local_date))
         )
         msg_id = await asyncio.to_thread(
             add_daily_memory_prompt_message_sync,
@@ -641,11 +645,15 @@ def _get_undelivered_daily_memories_sync(user_id: str, agent_id: str) -> list[di
         if local_date is None:
             continue
         items.append({"id": memory_id, "local_date": local_date})
-    items.sort(key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"]))
+    items.sort(
+        key=lambda item: (_daily_local_date_sort_key(item["local_date"]), item["id"])
+    )
     return items
 
 
-def _mark_daily_memories_delivered_sync(memory_ids: list[int], delivered_at: datetime) -> None:
+def _mark_daily_memories_delivered_sync(
+    memory_ids: list[int], delivered_at: datetime
+) -> None:
     """同步批量更新日常记忆 delivery_at，供 to_thread 调用。"""
     if not memory_ids:
         return

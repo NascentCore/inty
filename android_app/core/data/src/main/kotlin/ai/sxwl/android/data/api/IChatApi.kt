@@ -95,6 +95,5 @@ interface IChatApi {
         @Body req: ClearMessagesRequest,
     ): HttpResult<ClearMessagesResponse>
 
-    @GET("/api/v1/chats/modes")
-    suspend fun fetchChatModes(): HttpResult<List<ChatMode>>
+    @GET("/api/v1/chats/modes") suspend fun fetchChatModes(): HttpResult<List<ChatMode>>
 }

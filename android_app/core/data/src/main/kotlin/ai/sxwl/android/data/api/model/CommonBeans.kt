@@ -8,17 +8,10 @@ import com.squareup.moshi.JsonClass
 data class ReportItem(val code: String = "", val description: String = "", val id: Int = 0)
 
 enum class VersionReminderAction {
-    @Json(name = "NONE")
-    NONE,
-
-    @Json(name = "SETTINGS_REMINDER")
-    SETTINGS_REMINDER,
-
-    @Json(name = "POP_UP_REMINDER")
-    POP_UP_REMINDER,
-
-    @Json(name = "BLOCK_ACCESS")
-    BLOCK_ACCESS,
+    @Json(name = "NONE") NONE,
+    @Json(name = "SETTINGS_REMINDER") SETTINGS_REMINDER,
+    @Json(name = "POP_UP_REMINDER") POP_UP_REMINDER,
+    @Json(name = "BLOCK_ACCESS") BLOCK_ACCESS,
 }
 
 /** 检查App版本号，判断更新与否，强制更新与否的接口返回 */

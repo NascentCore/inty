@@ -59,11 +59,8 @@ fun BoostLeaderboardScreen(navController: NavController, onClick: (() -> Unit)? 
         val previousCache = BoostLeaderboardRankStore.readCache(context)
         when (
             val result =
-                NetServiceMgr.getAgentApi().boostLeaderboardAgents(
-                    page = 1,
-                    pageSize = 10,
-                    sortSeed = "",
-                )
+                NetServiceMgr.getAgentApi()
+                    .boostLeaderboardAgents(page = 1, pageSize = 10, sortSeed = "")
         ) {
             is HttpResult.Success -> {
                 val baseEntries =

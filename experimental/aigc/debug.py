@@ -141,6 +141,7 @@ def check_logging():
         setup_verbose_logging()
 
         from loguru import logger
+
         logger.info("Test log message - INFO level")
         logger.debug("Test log message - DEBUG level")
         logger.warning("Test log message - WARNING level")

@@ -1,8 +1,8 @@
 package ai.sxwl.android.data.chat.repository
 
+import ai.sxwl.android.data.api.model.ChatImageGenerationResult
 import ai.sxwl.android.data.api.model.MsgInfo
 import ai.sxwl.android.data.api.model.VoteConstants
-import ai.sxwl.android.data.api.model.ChatImageGenerationResult
 import ai.sxwl.android.data.chat.data.ChatLocalDataSource
 import ai.sxwl.android.data.chat.data.ChatRemoteDataSource
 import ai.sxwl.android.data.chat.domain.ChatRepository

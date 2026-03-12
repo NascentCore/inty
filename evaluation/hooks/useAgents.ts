@@ -270,7 +270,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
                 return;
               }
 
-              const filteredAgents = filterAgentsByType(accumulatedAgents, type);
+              const filteredAgents = filterAgentsByType(
+                accumulatedAgents,
+                type,
+              );
               setAgents(filteredAgents);
 
               // 第一批返回后立即展示，避免长时间整页 loading

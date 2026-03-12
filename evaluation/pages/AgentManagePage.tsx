@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   Card,
   Button,
@@ -534,10 +540,9 @@ export const AgentManagePage: React.FC = () => {
     if (!currentAgentForAvatar) return;
 
     try {
-      const updatedAgent = await updateAgentFromHook(
-        currentAgentForAvatar.id,
-        { extensions: { avatar_crop: cropData } },
-      );
+      const updatedAgent = await updateAgentFromHook(currentAgentForAvatar.id, {
+        extensions: { avatar_crop: cropData },
+      });
       if (updatedAgent) {
         message.success("头像坐标设置成功");
         showAgentSavedCacheNotice();
@@ -1537,7 +1542,10 @@ export const AgentManagePage: React.FC = () => {
         {/* 音色设置 */}
         <Divider>音色设置</Divider>
 
-        <Form.Item shouldUpdate={(prev, next) => prev.gender !== next.gender} noStyle>
+        <Form.Item
+          shouldUpdate={(prev, next) => prev.gender !== next.gender}
+          noStyle
+        >
           {({ getFieldValue }) => (
             <Form.Item
               name="voice_id"

@@ -60,4 +60,6 @@ def set_langsmith_environment_variables(config: Config) -> None:
 set_langsmith_environment_variables(global_config_loaded_from_config_yaml)
 
 os.environ["FAL_KEY"] = global_config_loaded_from_config_yaml.fal.api_key
-logger.debug(f"fal_client 读取环境变量：Setting FAL_KEY environment variable: {os.getenv('FAL_KEY')}")
+logger.debug(
+    f"fal_client 读取环境变量：Setting FAL_KEY environment variable: {os.getenv('FAL_KEY')}"
+)

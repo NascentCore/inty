@@ -16,10 +16,26 @@ import { chatImageApi } from "../services/api";
 
 // 消息生图模型：仅允许 models_catalog 中的四个 nickname
 const CHAT_IMAGE_MODEL_OPTIONS = [
-  { value: "Nano Banana", label: "Nano Banana", description: "Gemini 2.5 Flash Image" },
-  { value: "Nano Banana Pro", label: "Nano Banana Pro", description: "Gemini 3 Pro Image Preview" },
-  { value: "Seedream V4.5 Edit", label: "Seedream V4.5 Edit", description: "fal.ai Seedream 编辑" },
-  { value: "Z Image Turbo Image to Image", label: "Z Image Turbo Image to Image", description: "fal.ai Z-Image image-to-image" },
+  {
+    value: "Nano Banana",
+    label: "Nano Banana",
+    description: "Gemini 2.5 Flash Image",
+  },
+  {
+    value: "Nano Banana Pro",
+    label: "Nano Banana Pro",
+    description: "Gemini 3 Pro Image Preview",
+  },
+  {
+    value: "Seedream V4.5 Edit",
+    label: "Seedream V4.5 Edit",
+    description: "fal.ai Seedream 编辑",
+  },
+  {
+    value: "Z Image Turbo Image to Image",
+    label: "Z Image Turbo Image to Image",
+    description: "fal.ai Z-Image image-to-image",
+  },
 ];
 
 const { Title, Text } = Typography;
@@ -175,7 +191,8 @@ export const SettingsPage: React.FC = () => {
               type="secondary"
               style={{ display: "block", marginBottom: 16 }}
             >
-              使用 models_catalog 中的模型 nickname（仅允许：Nano Banana、Nano Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
+              使用 models_catalog 中的模型 nickname（仅允许：Nano Banana、Nano
+              Banana Pro、Seedream V4.5 Edit、Z Image Turbo Image to Image）
             </Text>
 
             <Form.Item

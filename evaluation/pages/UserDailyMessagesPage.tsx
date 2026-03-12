@@ -3,7 +3,13 @@
  * 通过邮箱或用户 ID 查询用户的每日聊天记录和当日统计，并可查看每个会话的详细对话历史
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import {
   Card,
   DatePicker,
@@ -171,7 +177,8 @@ export const UserDailyMessagesPage: React.FC = () => {
           // 不显示错误，因为这不是主要功能
         }
       } else {
-        const dailyMessagesData = await userAnalyticsApi.getUserDailyMessages(params);
+        const dailyMessagesData =
+          await userAnalyticsApi.getUserDailyMessages(params);
         setUserInfo(dailyMessagesData);
         setTodayStats(null);
         setSessions([]);
@@ -614,7 +621,9 @@ export const UserDailyMessagesPage: React.FC = () => {
                       认证类型
                     </div>
                     <Tag
-                      color={userInfo.auth_type === "GOOGLE" ? "blue" : "orange"}
+                      color={
+                        userInfo.auth_type === "GOOGLE" ? "blue" : "orange"
+                      }
                     >
                       {userInfo.auth_type}
                     </Tag>
@@ -646,7 +655,9 @@ export const UserDailyMessagesPage: React.FC = () => {
                             : "其他"}
                       </Tag>
                     ) : (
-                      <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>未设置</span>
+                      <span style={{ color: "rgba(0, 0, 0, 0.25)" }}>
+                        未设置
+                      </span>
                     )}
                   </div>
                 </Col>
@@ -796,162 +807,185 @@ export const UserDailyMessagesPage: React.FC = () => {
             >
               {sessions.length > 0 ? (
                 <Table
-                columns={sessionsColumns}
-                dataSource={sessions}
-                rowKey="chat_id"
-                loading={loadingSessions}
-                pagination={false}
-                expandable={{
-                  expandedRowKeys: Array.from(expandedSessions),
-                  onExpand: (expanded, record) => {
-                    handleSessionExpand(record.chat_id, expanded);
-                  },
-                  expandedRowRender: (record) => {
-                    const messagesData = sessionMessages[record.chat_id];
-                    const isLoading = loadingMessages[record.chat_id];
+                  columns={sessionsColumns}
+                  dataSource={sessions}
+                  rowKey="chat_id"
+                  loading={loadingSessions}
+                  pagination={false}
+                  expandable={{
+                    expandedRowKeys: Array.from(expandedSessions),
+                    onExpand: (expanded, record) => {
+                      handleSessionExpand(record.chat_id, expanded);
+                    },
+                    expandedRowRender: (record) => {
+                      const messagesData = sessionMessages[record.chat_id];
+                      const isLoading = loadingMessages[record.chat_id];
 
-                    if (isLoading) {
+                      if (isLoading) {
+                        return (
+                          <div style={{ textAlign: "center", padding: "20px" }}>
+                            <Spin />
+                          </div>
+                        );
+                      }
+
+                      if (!messagesData || messagesData.messages.length === 0) {
+                        return <Empty description="暂无消息" />;
+                      }
+
                       return (
-                        <div style={{ textAlign: "center", padding: "20px" }}>
-                          <Spin />
-                        </div>
-                      );
-                    }
-
-                    if (!messagesData || messagesData.messages.length === 0) {
-                      return <Empty description="暂无消息" />;
-                    }
-
-                    return (
-                      <div style={{ padding: "16px" }}>
-                        {messagesData.messages.map(
-                          (msg: SessionMessageItem) => (
-                            <div
-                              key={msg.id}
-                              style={{
-                                marginBottom: 12,
-                                padding: 12,
-                                backgroundColor:
-                                  msg.message_type === "human" ||
-                                  msg.message_type === "HumanMessage"
-                                    ? "#e6f7ff"
-                                    : "#f0f0f0",
-                                borderRadius: 8,
-                                textAlign:
-                                  msg.message_type === "human" ||
-                                  msg.message_type === "HumanMessage"
-                                    ? "right"
-                                    : "left",
-                                maxWidth: "80%",
-                                marginLeft:
-                                  msg.message_type === "human" ||
-                                  msg.message_type === "HumanMessage"
-                                    ? "auto"
-                                    : 0,
-                                marginRight:
-                                  msg.message_type === "human" ||
-                                  msg.message_type === "HumanMessage"
-                                    ? 0
-                                    : "auto",
-                              }}
-                            >
+                        <div style={{ padding: "16px" }}>
+                          {messagesData.messages.map(
+                            (msg: SessionMessageItem) => (
                               <div
+                                key={msg.id}
                                 style={{
-                                  fontSize: 12,
-                                  color: "#666",
-                                  marginBottom: 4,
+                                  marginBottom: 12,
+                                  padding: 12,
+                                  backgroundColor:
+                                    msg.message_type === "human" ||
+                                    msg.message_type === "HumanMessage"
+                                      ? "#e6f7ff"
+                                      : "#f0f0f0",
+                                  borderRadius: 8,
+                                  textAlign:
+                                    msg.message_type === "human" ||
+                                    msg.message_type === "HumanMessage"
+                                      ? "right"
+                                      : "left",
+                                  maxWidth: "80%",
+                                  marginLeft:
+                                    msg.message_type === "human" ||
+                                    msg.message_type === "HumanMessage"
+                                      ? "auto"
+                                      : 0,
+                                  marginRight:
+                                    msg.message_type === "human" ||
+                                    msg.message_type === "HumanMessage"
+                                      ? 0
+                                      : "auto",
                                 }}
                               >
-                                {msg.message_type === "human" ||
-                                msg.message_type === "HumanMessage"
-                                  ? "👤 用户"
-                                  : "🤖 AI"}{" "}
-                                •{" "}
-                                {msg.created_at
-                                  ? formatUtcTimeRaw(msg.created_at)
-                                  : ""}
-                              </div>
-                              <div
-                                style={{
-                                  wordBreak: "break-word",
-                                  whiteSpace: "pre-wrap",
-                                }}
-                              >
-                                {msg.content ? (
-                                  msg.content.length > 1000 ? (
-                                    <span>
-                                      {msg.content.substring(0, 1000)}...
-                                      <span
-                                        style={{
-                                          color: "#999",
-                                          fontSize: "12px",
-                                        }}
-                                      >
-                                        （内容过长，已截断）
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#666",
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  {msg.message_type === "human" ||
+                                  msg.message_type === "HumanMessage"
+                                    ? "👤 用户"
+                                    : "🤖 AI"}{" "}
+                                  •{" "}
+                                  {msg.created_at
+                                    ? formatUtcTimeRaw(msg.created_at)
+                                    : ""}
+                                </div>
+                                <div
+                                  style={{
+                                    wordBreak: "break-word",
+                                    whiteSpace: "pre-wrap",
+                                  }}
+                                >
+                                  {msg.content ? (
+                                    msg.content.length > 1000 ? (
+                                      <span>
+                                        {msg.content.substring(0, 1000)}...
+                                        <span
+                                          style={{
+                                            color: "#999",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          （内容过长，已截断）
+                                        </span>
                                       </span>
-                                    </span>
+                                    ) : (
+                                      msg.content
+                                    )
                                   ) : (
-                                    msg.content
-                                  )
-                                ) : (
-                                  <span
-                                    style={{
-                                      color: "#999",
-                                      fontStyle: "italic",
-                                    }}
-                                  >
-                                    无文本内容
-                                  </span>
-                                )}
-                              </div>
-                              {msg.audio_url && (
-                                <div style={{ marginTop: 8 }}>
-                                  <div style={{ marginBottom: 6 }}>
-                                    <Tag color="purple">Voice message</Tag>
-                                    <a
-                                      href={msg.audio_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      title="Open recording in new tab"
+                                    <span
                                       style={{
-                                        marginLeft: 8,
-                                        fontSize: 12,
+                                        color: "#999",
+                                        fontStyle: "italic",
                                       }}
                                     >
-                                      Open recording
-                                    </a>
-                                  </div>
-                                  <audio
-                                    src={msg.audio_url}
-                                    controls
-                                    preload="metadata"
-                                    style={{
-                                      width: "100%",
-                                      maxWidth: 320,
-                                      height: 32,
-                                    }}
-                                  />
-                                  <div
-                                    style={{
-                                      marginTop: 6,
-                                      fontSize: 11,
-                                      fontFamily: "monospace",
-                                      color: "#666",
-                                      wordBreak: "break-all",
-                                    }}
-                                    title={msg.audio_url}
-                                  >
-                                    GCS: {msg.audio_url}
-                                  </div>
+                                      无文本内容
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                              {/* 显示独立图片消息（type="image"） */}
-                              {msg.message_type === "image" &&
-                                msg.image_url && (
+                                {msg.audio_url && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <div style={{ marginBottom: 6 }}>
+                                      <Tag color="purple">Voice message</Tag>
+                                      <a
+                                        href={msg.audio_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Open recording in new tab"
+                                        style={{
+                                          marginLeft: 8,
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        Open recording
+                                      </a>
+                                    </div>
+                                    <audio
+                                      src={msg.audio_url}
+                                      controls
+                                      preload="metadata"
+                                      style={{
+                                        width: "100%",
+                                        maxWidth: 320,
+                                        height: 32,
+                                      }}
+                                    />
+                                    <div
+                                      style={{
+                                        marginTop: 6,
+                                        fontSize: 11,
+                                        fontFamily: "monospace",
+                                        color: "#666",
+                                        wordBreak: "break-all",
+                                      }}
+                                      title={msg.audio_url}
+                                    >
+                                      GCS: {msg.audio_url}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* 显示独立图片消息（type="image"） */}
+                                {msg.message_type === "image" &&
+                                  msg.image_url && (
+                                    <div style={{ marginTop: 8 }}>
+                                      <img
+                                        src={msg.image_url}
+                                        alt="图片消息"
+                                        style={{
+                                          maxWidth: "100%",
+                                          maxHeight: "400px",
+                                          borderRadius: 8,
+                                          border: "1px solid #e0e0e0",
+                                        }}
+                                        onError={(e) => {
+                                          // 图片加载失败时的处理
+                                          (
+                                            e.target as HTMLImageElement
+                                          ).style.display = "none";
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                {/* 显示文本消息中包含的生成图片（meta_data.generated_image） */}
+                                {msg.meta_data?.generated_image?.image_url && (
                                   <div style={{ marginTop: 8 }}>
                                     <img
-                                      src={msg.image_url}
-                                      alt="图片消息"
+                                      src={
+                                        msg.meta_data.generated_image.image_url
+                                      }
+                                      alt="生成的图片"
                                       style={{
                                         maxWidth: "100%",
                                         maxHeight: "400px",
@@ -965,66 +999,46 @@ export const UserDailyMessagesPage: React.FC = () => {
                                         ).style.display = "none";
                                       }}
                                     />
+                                    {msg.meta_data.generated_image.width &&
+                                      msg.meta_data.generated_image.height && (
+                                        <div
+                                          style={{
+                                            fontSize: "12px",
+                                            color: "#999",
+                                            marginTop: 4,
+                                          }}
+                                        >
+                                          尺寸:{" "}
+                                          {msg.meta_data.generated_image.width}{" "}
+                                          ×{" "}
+                                          {msg.meta_data.generated_image.height}
+                                        </div>
+                                      )}
                                   </div>
                                 )}
-                              {/* 显示文本消息中包含的生成图片（meta_data.generated_image） */}
-                              {msg.meta_data?.generated_image?.image_url && (
-                                <div style={{ marginTop: 8 }}>
-                                  <img
-                                    src={
-                                      msg.meta_data.generated_image.image_url
-                                    }
-                                    alt="生成的图片"
-                                    style={{
-                                      maxWidth: "100%",
-                                      maxHeight: "400px",
-                                      borderRadius: 8,
-                                      border: "1px solid #e0e0e0",
-                                    }}
-                                    onError={(e) => {
-                                      // 图片加载失败时的处理
-                                      (
-                                        e.target as HTMLImageElement
-                                      ).style.display = "none";
-                                    }}
-                                  />
-                                  {msg.meta_data.generated_image.width &&
-                                    msg.meta_data.generated_image.height && (
-                                      <div
-                                        style={{
-                                          fontSize: "12px",
-                                          color: "#999",
-                                          marginTop: 4,
-                                        }}
-                                      >
-                                        尺寸:{" "}
-                                        {msg.meta_data.generated_image.width} ×{" "}
-                                        {msg.meta_data.generated_image.height}
-                                      </div>
-                                    )}
-                                </div>
-                              )}
+                              </div>
+                            ),
+                          )}
+                          {shouldShowSessionMessagesPagination(
+                            messagesData,
+                          ) && (
+                            <div style={{ textAlign: "center", marginTop: 16 }}>
+                              <Pagination
+                                current={messagesData.page}
+                                total={messagesData.total}
+                                pageSize={messagesData.size}
+                                showTotal={(total) => `共 ${total} 条消息`}
+                                onChange={(page) =>
+                                  handleMessagePageChange(record.chat_id, page)
+                                }
+                                {...sessionMessagesPaginationProps}
+                              />
                             </div>
-                          ),
-                        )}
-                        {shouldShowSessionMessagesPagination(messagesData) && (
-                          <div style={{ textAlign: "center", marginTop: 16 }}>
-                            <Pagination
-                              current={messagesData.page}
-                              total={messagesData.total}
-                              pageSize={messagesData.size}
-                              showTotal={(total) => `共 ${total} 条消息`}
-                              onChange={(page) =>
-                                handleMessagePageChange(record.chat_id, page)
-                              }
-                              {...sessionMessagesPaginationProps}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  },
-                }}
+                          )}
+                        </div>
+                      );
+                    },
+                  }}
                 />
               ) : (
                 <Empty

@@ -419,7 +419,9 @@ object UnifiedStartupManager {
                 return
             }
 
-            when (val result = NetServiceMgr.getAgentApi().getCharacterThemes(skip = 0, limit = 100)) {
+            when (
+                val result = NetServiceMgr.getAgentApi().getCharacterThemes(skip = 0, limit = 100)
+            ) {
                 is HttpResult.Success -> {
                     val themes =
                         result.data.filter { theme ->

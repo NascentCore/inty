@@ -136,7 +136,10 @@ async def _run(
         return
 
     if not dry_run and not yes:
-        print(f"About to update up to {to_process} resources (total with one_character=true: {total}). Proceed? [y/N] ", end="")
+        print(
+            f"About to update up to {to_process} resources (total with one_character=true: {total}). Proceed? [y/N] ",
+            end="",
+        )
         if input().strip().lower() != "y":
             print("Aborted.")
             return
@@ -147,7 +150,9 @@ async def _run(
         for it in one_character_entries:
             image_url = it.get("image_url") or it.get("gcs_uri")
             if not image_url:
-                logger.warning("Entry missing image_url, skip: {}", it.get("message_id"))
+                logger.warning(
+                    "Entry missing image_url, skip: {}", it.get("message_id")
+                )
                 continue
             gcs_uri = image_url_to_gcs_uri(image_url)
             if not gcs_uri:
@@ -175,7 +180,9 @@ async def _run(
                 continue
             meta["only_include_ai_character"] = True
             if dry_run:
-                logger.debug("[dry-run] would set only_include_ai_character=True: {}", gcs_uri)
+                logger.debug(
+                    "[dry-run] would set only_include_ai_character=True: {}", gcs_uri
+                )
                 stats["updated"] += 1
                 continue
             resource.resource_metadata = meta

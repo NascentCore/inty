@@ -23,10 +23,7 @@ class UnifiedOkHttpClientTest {
     @Test
     fun shouldApplyChatImageReadTimeout_returnsFalse_forChatImageGetEndpoint() {
         val request =
-            Request.Builder()
-                .url("https://example.com/api/v1/chat/images/agent-123")
-                .get()
-                .build()
+            Request.Builder().url("https://example.com/api/v1/chat/images/agent-123").get().build()
 
         assertFalse(UnifiedOkHttpClient.shouldApplyChatImageReadTimeout(request))
     }

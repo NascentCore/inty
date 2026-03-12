@@ -144,7 +144,9 @@ class ConversationCompactor:
         next_state = self._absorb_old_dialogue(old_dialogue=old_dialogue, turn=turn)
         memory_msg = {
             "role": "system",
-            "content": self._build_compaction_system_prompt(state=next_state, turn=turn),
+            "content": self._build_compaction_system_prompt(
+                state=next_state, turn=turn
+            ),
         }
         compacted_messages = [*system_messages, memory_msg, *recent_dialogue]
         after_chars = estimate_messages_chars(compacted_messages)
@@ -155,7 +157,11 @@ class ConversationCompactor:
                     state=next_state, turn=turn
                 ),
             }
-            compacted_messages = [*system_messages, minimal_memory_msg, *recent_dialogue]
+            compacted_messages = [
+                *system_messages,
+                minimal_memory_msg,
+                *recent_dialogue,
+            ]
             after_chars = estimate_messages_chars(compacted_messages)
         if after_chars >= before_chars:
             compacted_messages = [*system_messages, *recent_dialogue]
@@ -281,7 +287,9 @@ def _is_compaction_message(message: dict[str, Any]) -> bool:
 def _chunk_messages(
     *, messages: list[dict[str, Any]], max_messages: int
 ) -> list[list[dict[str, Any]]]:
-    return [messages[i : i + max_messages] for i in range(0, len(messages), max_messages)]
+    return [
+        messages[i : i + max_messages] for i in range(0, len(messages), max_messages)
+    ]
 
 
 def _build_episode(*, chunk: list[dict[str, Any]], turn: int) -> MemoryEpisode:
@@ -290,7 +298,9 @@ def _build_episode(*, chunk: list[dict[str, Any]], turn: int) -> MemoryEpisode:
     start_turn = _guess_turn_from_chunk(chunk=chunk, fallback=turn)
     end_turn = turn
 
-    summary = _build_episode_summary(user_texts=user_texts, assistant_texts=assistant_texts)
+    summary = _build_episode_summary(
+        user_texts=user_texts, assistant_texts=assistant_texts
+    )
     salient_facts = _extract_salient_facts(user_texts=user_texts)
     emotional_tags = _extract_emotional_tags(texts=user_texts + assistant_texts)
     open_loops = _extract_open_loops(user_texts=user_texts)
@@ -334,9 +344,7 @@ def _guess_turn_from_chunk(*, chunk: list[dict[str, Any]], fallback: int) -> int
     return max(1, fallback - len(user_messages))
 
 
-def _build_episode_summary(
-    *, user_texts: list[str], assistant_texts: list[str]
-) -> str:
+def _build_episode_summary(*, user_texts: list[str], assistant_texts: list[str]) -> str:
     user_preview = " ".join(user_texts)[:_MAX_TEXT_PREVIEW].strip()
     assistant_preview = " ".join(assistant_texts)[:_MAX_TEXT_PREVIEW].strip()
     if user_preview and assistant_preview:
@@ -387,15 +395,21 @@ def _extract_open_loops(*, user_texts: list[str]) -> list[str]:
             if s.endswith("?"):
                 loops.append(s)
                 continue
-            if "please" in lowered or lowered.startswith("can you") or lowered.startswith(
-                "could you"
+            if (
+                "please" in lowered
+                or lowered.startswith("can you")
+                or lowered.startswith("could you")
             ):
                 loops.append(s)
     return _dedupe_keep_order(loops)
 
 
 def _split_sentences(text: str) -> list[str]:
-    return [segment.strip() for segment in re.split(r"(?<=[.!?])\s+", text) if segment.strip()]
+    return [
+        segment.strip()
+        for segment in re.split(r"(?<=[.!?])\s+", text)
+        if segment.strip()
+    ]
 
 
 def _score_importance(
@@ -457,7 +471,9 @@ def _merge_semantic_memory(
                 updated_turn=turn,
             )
     merged = sorted(
-        by_key.values(), key=lambda item: (item.confidence, item.updated_turn), reverse=True
+        by_key.values(),
+        key=lambda item: (item.confidence, item.updated_turn),
+        reverse=True,
     )
     return merged[:max_entries]
 
