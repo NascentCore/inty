@@ -3,7 +3,7 @@
  * 通过邮箱或用户 ID 查询用户的每日聊天记录和当日统计，并可查看每个会话的详细对话历史
  */
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Card,
   DatePicker,
@@ -54,6 +54,7 @@ import type {
   SessionMessageItem,
   UserGeneratedImageItem,
 } from "../types";
+import { getDeepLinkedUserIdFromHash } from "../utils/profileLinks";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -95,6 +96,13 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
+  const deepLinkedUserId = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return getDeepLinkedUserIdFromHash(window.location.hash);
+  }, []);
+  const hasTriggeredDeepLinkSearchRef = useRef(false);
 
   const getErrorMessage = (error: unknown, fallback: string): string => {
     if (error instanceof Error && error.message) {
@@ -181,6 +189,25 @@ export const UserDailyMessagesPage: React.FC = () => {
       setLoading(false);
     }
   }, [searchType, searchValue, dateRange]);
+
+  useEffect(() => {
+    if (!deepLinkedUserId) {
+      return;
+    }
+    setSearchType("user_id");
+    setSearchValue(deepLinkedUserId);
+  }, [deepLinkedUserId]);
+
+  useEffect(() => {
+    if (!deepLinkedUserId || hasTriggeredDeepLinkSearchRef.current) {
+      return;
+    }
+    if (searchType !== "user_id" || searchValue.trim() !== deepLinkedUserId) {
+      return;
+    }
+    hasTriggeredDeepLinkSearchRef.current = true;
+    handleSearch();
+  }, [deepLinkedUserId, searchType, searchValue, handleSearch]);
 
   // 加载会话列表
   const loadSessions = useCallback(async () => {
