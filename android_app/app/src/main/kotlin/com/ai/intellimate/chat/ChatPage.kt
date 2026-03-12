@@ -157,6 +157,8 @@ private fun proFixMessages(messages: ItemSnapshotList<MessageEntity>): List<Mess
     var voiceSessionId: String? = null
 
     messages.forEachIndexed { index, info ->
+        if (info?.content == "continue" && info.role == "user") return@forEachIndexed
+
         if (info == null) {
             if (currentVoiceGroupIndices.isNotEmpty()) {
                 result.add(MessageItem.CallMessageIndexs(currentVoiceGroupIndices.reversed()))
