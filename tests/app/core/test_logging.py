@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 
 from loguru import logger
 
@@ -77,3 +78,12 @@ def test_logging_config_colorize():
     color_tag_pattern = re.compile(r"</?(?:green|level|magenta|white)>")
     stripped = color_tag_pattern.sub("", cfg_color.format)
     assert stripped == cfg_plain.format, "colorized format must equal plain format after stripping color tags"
+
+
+def test_logging_suppresses_openai_request_payload_debug_logs():
+    init_logger()
+
+    assert logging.getLogger("openai").level == logging.WARNING
+    assert logging.getLogger("openai._base_client").level == logging.WARNING
+    assert logging.getLogger("httpx").level == logging.WARNING
+    assert logging.getLogger("httpcore").level == logging.WARNING

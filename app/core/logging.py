@@ -77,3 +77,8 @@ def init_logger():
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("websockets.client").setLevel(logging.WARNING)
     logging.getLogger("websockets.protocol").setLevel(logging.WARNING)
+    # 抑制 OpenAI/httpx 调试日志，避免将 request payload（含聊天内容）写入日志
+    logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("openai._base_client").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
