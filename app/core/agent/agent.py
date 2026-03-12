@@ -97,7 +97,10 @@ INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE = """##Official Assistant Naming Upda
 INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE = """##Official Assistant Tool Usage
 - When the user asks how to use IntelliMate features or workflows, call the `read_user_manual` tool before answering.
 - When the user asks about recent updates, version changes, or release notes, call the `read_change_logs` tool before answering.
-- After reading tool content, answer with concrete details from the loaded material."""
+- For app feature questions, provide step-by-step actions, include prerequisites, and mention where to tap in the app.
+- If the feature has platform/version limits, state them clearly and provide the nearest fallback path.
+- If key details are missing (user goal, platform, or app version), ask one concise clarifying question before final instructions.
+- After reading tool content, answer with concrete details from the loaded material and avoid guessing."""
 # agent.py 位于 app/core/agent，向上 3 层到仓库根目录
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INTELLIMATE_USER_MANUAL_PATH = REPO_ROOT / "docs" / "INTELLIMATE.md"
@@ -619,6 +622,26 @@ class Agent:
         )
 
         return system_messages
+
+    def _build_system_messages_for_chat(
+        self,
+        user_profile: str,
+        chat_settings: models.chat_settings.ChatSettings,
+        user_time_context: Optional[UserTimeContext],
+        include_output_format_prompt: bool = True,
+    ) -> List[SystemMessage]:
+        if self._is_intellimate_official():
+            return self.build_system_messages_for_intellimate_official_assistant(
+                user_profile=user_profile,
+                chat_settings=chat_settings,
+                user_time_context=user_time_context,
+            )
+        return self.build_system_messages(
+            user_profile=user_profile,
+            chat_settings=chat_settings,
+            user_time_context=user_time_context,
+            include_output_format_prompt=include_output_format_prompt,
+        )
 
     def _build_character_context(self, user_name: str = None) -> List[SystemMessage]:
         """
@@ -1369,8 +1392,10 @@ class Agent:
                     "chat_settings": chat_settings,
                 }
 
-                system_messages = self.build_system_messages(
-                    user_profile, chat_settings, user_time_context
+                system_messages = self._build_system_messages_for_chat(
+                    user_profile=user_profile,
+                    chat_settings=chat_settings,
+                    user_time_context=user_time_context,
                 )
 
                 messages: list[BaseMessage] = system_messages + all_messages
@@ -1708,8 +1733,10 @@ class Agent:
                     "chat_settings": chat_settings,
                 }
 
-                system_messages = self.build_system_messages(
-                    user_profile, chat_settings, user_time_context
+                system_messages = self._build_system_messages_for_chat(
+                    user_profile=user_profile,
+                    chat_settings=chat_settings,
+                    user_time_context=user_time_context,
                 )
 
                 messages_list: list[BaseMessage] = system_messages + all_messages
