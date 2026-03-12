@@ -1,6 +1,9 @@
 # AGENTS.md · tests/（测试）
 
-- 不需要单元测试、只需要功能测试：通过调用 API Endpoints 完成一个功能的端到端测试
+- Do not write unit tests
+- Write feature tests: call backend service running locally to test a feature end-to-end
+- Access real database, and do not patch sqlalchemy
+- Use [fake external services](/app/external_services/fakes) when writing tests.
 
 ## Feature tests
 
@@ -13,14 +16,14 @@
     -e POSTGRES_DB=inty \
     -d postgres:16
   cp devops/config.yaml.test config.yaml
-  backend/inty/start.sh --test
+  backend/inty/start.sh
   
   # Create a admin bearer token, and write the token to a .txt file
   python scripts/init_admin_user.py --token-file ./admin_token.txt
-  ```
 
-  - Access real database, and do not patch sqlalchemy
-- Use [fake external services](/app/external_services/fakes) when writing tests.
+  # 运行测试
+  pytest -m "not noci" -v -s tests/features/
+  ```
 
 ## 新功能 / API+客户端联调时的防遗漏
 
