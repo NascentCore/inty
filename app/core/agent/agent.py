@@ -40,7 +40,7 @@ from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
-from app.utils.models_catalog import is_deepseek_on_openrouter
+from app.utils.models_catalog import is_deepseek_on_openrouter, resolve_chat_model_to_id
 from app.utils.openai_client import (
     get_chat_llm_provider,
     get_chat_openai_client,
@@ -1395,12 +1395,13 @@ class Agent:
                     raise ValueError(
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
+                model_name = resolve_chat_model_to_id(model_name)
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
                 model_source = (
                     "agent_config"
-                    if (agent_model and model_name == agent_model)
+                    if agent_model
                     else "override"
                 )
                 logger.debug(
@@ -1738,12 +1739,13 @@ class Agent:
                     raise ValueError(
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
+                model_name = resolve_chat_model_to_id(model_name)
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
                 model_source = (
                     "agent_config"
-                    if (agent_model and model_name == agent_model)
+                    if agent_model
                     else "override"
                 )
                 logger.debug(
