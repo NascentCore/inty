@@ -4,6 +4,7 @@ package com.ai.intellimate.settings
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.design.ui.HeartTopAppBar
@@ -11,6 +12,7 @@ import ai.sxwl.android.design.ui.IntelliMateDivider
 import ai.sxwl.android.design.ui.SettingsArrowItem
 import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
+import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
@@ -88,6 +90,7 @@ fun SettingScreen(
 ) {
     val context = LocalContext.current
     val state = viewModel.state.collectAsState().value
+    val llmStreamingMode by SettingStateManager.llmStreamingMode.collectAsState()
 
     fun onLogout(isDelete: Boolean) {
         mainViewModel.logout()
@@ -151,6 +154,23 @@ fun SettingScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            StreamingModeSection(
+                enabled = llmStreamingMode,
+                onToggle = { enabled ->
+                    SettingStateManager.updateLlmStreamingMode(enabled)
+                    FirebaseManager.logEvent(
+                        "settings_streaming_mode_toggle",
+                        FirebaseManager.safeEventParams(
+                            "enabled" to enabled,
+                            "entry" to "me_settings",
+                            "timestamp" to System.currentTimeMillis(),
+                        ),
+                    )
+                },
+            )
+
+            Spacer(Modifier.height(16.dp))
+
             // 支持与帮助区域
             SupportAndHelpSection(
                 navController,
@@ -197,6 +217,22 @@ fun SettingScreen(
                 },
             )
         }
+    }
+}
+
+/** Me 设置中的 LLM 流式模式开关（LLM Streaming Mode）。 */
+@Composable
+private fun StreamingModeSection(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    SettingsItemGroup {
+        SettingsSwitchItem(
+            item =
+                SettingsItemData.SwitchItemData(
+                    title = stringResource(R.string.settings_llm_streaming_mode_title),
+                    checked = enabled,
+                ),
+            isInGroup = true,
+            onCheckChanged = onToggle,
+        )
     }
 }
 

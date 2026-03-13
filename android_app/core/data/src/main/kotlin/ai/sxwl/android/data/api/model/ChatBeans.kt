@@ -73,6 +73,17 @@ data class SendMsgReq(
 data class ChatWebSocketReq(@Json(name = "agent_id") val agentId: String, val request: SendMsgReq)
 
 @JsonClass(generateAdapter = true)
+data class ChatWebSocketStreamFrame(
+    val type: String? = null,
+    @Json(name = "agent_id") val agentId: String? = null,
+    val delta: String? = null,
+    val response: SendMsgResponse? = null,
+    val code: Int? = null,
+    val message: String? = null,
+    val data: SendMsgResponse.SentMsgRspData? = null,
+)
+
+@JsonClass(generateAdapter = true)
 data class UserTimeContext(
     @Json(name = "local_time") val localTime: String,
     val timezone: String,

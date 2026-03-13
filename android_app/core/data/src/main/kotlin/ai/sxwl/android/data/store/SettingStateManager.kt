@@ -36,6 +36,9 @@ object SettingStateManager {
 
     private val _textStreamingFlow = MutableStateFlow(IntySetting.isTextStreaming())
     val textStreaming = _textStreamingFlow.asStateFlow()
+    private val _llmStreamingModeFlow =
+        MutableStateFlow(IntySetting.isLlmStreamingModeEnabled())
+    val llmStreamingMode = _llmStreamingModeFlow.asStateFlow()
 
     // 显示场景动作输入按钮状态
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
@@ -168,6 +171,11 @@ object SettingStateManager {
         IntySetting.setTextStreaming(enabled)
         IntySetting.markUserTextStreaming()
         _textStreamingFlow.value = enabled
+    }
+
+    fun updateLlmStreamingMode(enabled: Boolean) {
+        IntySetting.setLlmStreamingModeEnabled(enabled)
+        _llmStreamingModeFlow.value = enabled
     }
 
     /** 更新显示场景动作输入按钮状态 */

@@ -19,6 +19,7 @@ import ai.sxwl.android.data.api.model.VoteMessageReq
 import ai.sxwl.android.data.api.model.VoteMessageRsp
 import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
+import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.architecture.httplib.core.HttpResult
 import java.time.ZonedDateTime
@@ -87,11 +88,13 @@ class ChatRemoteDataSource {
         agentId: String,
         userText: String,
         userImageUrl: String? = null,
+        onStreamingDelta: (suspend (String) -> Unit)? = null,
     ): HttpResult<SendMsgResponse> {
         return try {
             val trimmedUserText = userText.trimEnd()
+            val useLlmStreamingMode = IntySetting.isLlmStreamingModeEnabled()
             LogUtils.i(
-                "ChatRemoteDataSource.sendMessage: agentId=$agentId, hasImage=${!userImageUrl.isNullOrBlank()}"
+                "ChatRemoteDataSource.sendMessage: agentId=$agentId, hasImage=${!userImageUrl.isNullOrBlank()}, streamingMode=$useLlmStreamingMode"
             )
             val requestMessage =
                 if (userImageUrl.isNullOrBlank()) {
@@ -124,10 +127,19 @@ class ChatRemoteDataSource {
             val request =
                 SendMsgReq(
                     messages = listOf(requestMessage),
+                    stream = useLlmStreamingMode,
                     timeContext = buildUserTimeContext(),
                     targetImateId = agentId,
                 )
-            NetServiceMgr.getChatApi().sendMsg(agentId, request)
+            if (useLlmStreamingMode) {
+                ChatWebSocketSessionManager.sendMessage(
+                    agentId = agentId,
+                    request = request,
+                    onStreamingDelta = onStreamingDelta,
+                )
+            } else {
+                NetServiceMgr.getChatApi().sendMsg(agentId, request)
+            }
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)

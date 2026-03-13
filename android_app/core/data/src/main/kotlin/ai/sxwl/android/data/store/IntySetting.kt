@@ -350,6 +350,16 @@ object IntySetting {
         return IntySettingsDataStore.getTextStreaming(getCurUserID())
     }
 
+    /** 是否启用 LLM token 流式网络读取（开启后聊天请求会走 websocket stream）。 */
+    fun isLlmStreamingModeEnabled(): Boolean {
+        return IntySettingsDataStore.getLlmStreamingMode(getCurUserID())
+    }
+
+    /** 设置 LLM token 流式网络读取模式。 */
+    fun setLlmStreamingModeEnabled(enabled: Boolean) {
+        IntySettingsDataStore.setLlmStreamingMode(getCurUserID(), enabled)
+    }
+
     /** Vibe Mode 开关状态（仅限订阅用户） */
     fun setVibeModeEnabled(enabled: Boolean) {
         runBlocking {

@@ -104,6 +104,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 - Chat message bubbles can render multimodal replies from `/api/v1/chat/completions/{agent_id}` when the assistant returns both text and image content.
 - After you tap 👍/👎 on a generated chat image, IntelliMate may show a once-per-local-day feedback popup; choosing **Send Suggestions** opens Feedback with the image auto-attached and image-quality options prefilled for faster reporting.
 - **文本流式显示**：聊天页设置抽屉中可关闭该开关，关闭后 AI 回复一次性显示，不再逐字出现。
+- **LLM streaming mode**: in Me → Settings, you can turn real token streaming on/off for chat responses; when enabled, the first token appears as soon as it arrives from the model.
 - VIP-tagged iMates deduct **1 credit per message** for non-subscribed users. Subscribed users are exempt; insufficient credits block sending.
 - If a subscribed user reaches the daily chat quota, IntelliMate shows a dedicated dialog (**“Daily Premium Chat Limit Reached”**) instead of the upgrade-to-premium prompt.
 - Fullscreen image viewer includes a VIP **Upscale** action (next to Share) with **1x / 2x / 4x** options. Non-subscribed users can still use it by spending **10 credits** once per open viewer session.
@@ -124,6 +125,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 
 ### 5. Settings
 - **Debug Backend Endpoint** (debug builds only): Change the API base URL at runtime; cache clears automatically so the next request uses the new server.
+- **LLM streaming mode**: Toggle model token streaming for chat replies in Me → Settings.
 - **Help & Feedback**: Add your FAQ or form link here so end users can submit issues without leaving the app.
 - **Remote Config**: Features such as auto-enabling Keep Talking are controlled centrally. Sudden UI changes may come from new Remote Config values.
 

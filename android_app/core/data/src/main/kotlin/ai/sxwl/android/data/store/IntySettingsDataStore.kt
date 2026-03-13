@@ -30,6 +30,7 @@ object IntySettingsDataStore {
     private const val KEY_SHOW_SCENE_ACTION_BUTTON = "show_scene_action_button"
     private const val KEY_SHOW_KEEP_TALKING = "show_keep_talking"
     private const val KEY_AUTO_PLAY_AUDIO = "auto_play_audio"
+    private const val KEY_LLM_STREAMING_MODE = "llm_streaming_mode"
 
     private const val DEFAULT_CHAT_FONT_SIZE_SP = 14f
     private const val DEFAULT_CHAT_MODEL_ID = "gemini_3_flash"
@@ -39,6 +40,7 @@ object IntySettingsDataStore {
     private const val DEFAULT_SHOW_SCENE_ACTION_BUTTON = false
     private const val DEFAULT_SHOW_KEEP_TALKING = false
     private const val DEFAULT_AUTO_PLAY_AUDIO = true
+    private const val DEFAULT_LLM_STREAMING_MODE = false
 
     private val lock = Any()
     private var cachedUid: String? = null
@@ -58,6 +60,7 @@ object IntySettingsDataStore {
         var showSceneActionButton: Boolean = DEFAULT_SHOW_SCENE_ACTION_BUTTON,
         var showKeepTalking: Boolean = DEFAULT_SHOW_KEEP_TALKING,
         var autoPlayAudio: Boolean = DEFAULT_AUTO_PLAY_AUDIO,
+        var llmStreamingMode: Boolean = DEFAULT_LLM_STREAMING_MODE,
     )
 
     private fun store(uid: String): DataStore<Preferences> {
@@ -105,6 +108,9 @@ object IntySettingsDataStore {
                             ?: DEFAULT_SHOW_KEEP_TALKING,
                     autoPlayAudio =
                         prefs[booleanPreferencesKey(KEY_AUTO_PLAY_AUDIO)] ?: DEFAULT_AUTO_PLAY_AUDIO,
+                    llmStreamingMode =
+                        prefs[booleanPreferencesKey(KEY_LLM_STREAMING_MODE)]
+                            ?: DEFAULT_LLM_STREAMING_MODE,
                 )
             cachedUid = uid
         }
@@ -269,6 +275,25 @@ object IntySettingsDataStore {
             val job =
                 GlobalScope.launch(Dispatchers.IO) {
                     store(uid).putBoolean(KEY_AUTO_PLAY_AUDIO, value)
+                }
+            registerPendingWrite(uid, job)
+        }
+    }
+
+    fun getLlmStreamingMode(uid: String): Boolean {
+        return synchronized(lock) {
+            ensureCacheUnderLock(uid)
+            cache.llmStreamingMode
+        }
+    }
+
+    fun setLlmStreamingMode(uid: String, value: Boolean) {
+        synchronized(lock) {
+            ensureCacheUnderLock(uid)
+            cache.llmStreamingMode = value
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_LLM_STREAMING_MODE, value)
                 }
             registerPendingWrite(uid, job)
         }
