@@ -6,8 +6,8 @@ export default defineConfig({
     // 测试文件匹配模式
     include: ["tests/**/*.{ts,tsx}"],
 
-    // 排除生成的 SDK 代码
-    exclude: ["**/node_modules/**", "**/inty_sdk/**"],
+    // 排除依赖目录
+    exclude: ["**/node_modules/**"],
 
     // 测试环境
     // 适用于后端代码、工具函数、API 测试
