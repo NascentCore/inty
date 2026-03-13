@@ -9,6 +9,10 @@
 - Each feature 1 sentence, be very concise.
 
 
+## 2026-03-13
+
+- Me → Settings now includes an **LLM streaming mode** switch that lets you turn real-time token streaming on or off for chat replies (when on, replies start appearing as soon as the first token arrives).
+
 ## 2026-03-09
 
 - Chat settings **Voice** picker now enforces gender matching for MALE/FEMALE iMates, so only same-gender Gemini voices are shown in the dropdown.

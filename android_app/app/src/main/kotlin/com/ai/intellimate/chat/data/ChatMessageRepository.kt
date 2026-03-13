@@ -104,6 +104,13 @@ class ChatMessageRepository(
         // 2) resolve uploaded URL via pre-upload task first, fallback to direct upload;
         // 3) keep the temporary user bubble image as local URI to avoid blank waiting state.
         localDataSource.appendSendingMessages(agentId, trimmed, localImageUri)
+        val streamingContentBuffer = StringBuilder()
+        var streamingLoadingMessage =
+            localDataSource
+                .getLatestMessage(agentId)
+                ?.takeIf {
+                    it.role == "assistant" && it.status == MessageEntity.Status.SENDING
+                }
 
         val uploadedImageUrl =
             when (val resolvedUpload = resolveChatInputImageUrl(localImageUri, preUploadTask)) {
@@ -116,7 +123,20 @@ class ChatMessageRepository(
 
         val result =
             try {
-                remoteDataSource.sendMessage(agentId, trimmed, uploadedImageUrl)
+                remoteDataSource.sendMessage(
+                    agentId = agentId,
+                    userText = trimmed,
+                    userImageUrl = uploadedImageUrl,
+                    onStreamingDelta = streamingDelta@{ deltaText ->
+                        val loadingMessage = streamingLoadingMessage ?: return@streamingDelta
+                        if (deltaText.isEmpty()) return@streamingDelta
+                        streamingContentBuffer.append(deltaText)
+                        val updatedLoadingMessage =
+                            loadingMessage.copy(content = streamingContentBuffer.toString())
+                        localDataSource.updateMessage(updatedLoadingMessage)
+                        streamingLoadingMessage = updatedLoadingMessage
+                    },
+                )
             } catch (e: Exception) {
                 LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
                 HttpResult.Failure(e.message ?: "unknown error", -1)

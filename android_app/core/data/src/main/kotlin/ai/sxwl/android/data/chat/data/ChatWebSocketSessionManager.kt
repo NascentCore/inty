@@ -1,6 +1,7 @@
 package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.model.ChatWebSocketReq
+import ai.sxwl.android.data.api.model.ChatWebSocketStreamFrame
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.http.UnifiedOkHttpClient
@@ -40,30 +41,86 @@ object ChatWebSocketSessionManager {
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
     private val requestAdapter = moshi.adapter(ChatWebSocketReq::class.java)
     private val responseAdapter = moshi.adapter(SendMsgResponse::class.java)
+    private val streamFrameAdapter = moshi.adapter(ChatWebSocketStreamFrame::class.java)
 
-    suspend fun sendMessage(agentId: String, request: SendMsgReq): HttpResult<SendMsgResponse> {
+    suspend fun sendMessage(
+        agentId: String,
+        request: SendMsgReq,
+        onStreamingDelta: (suspend (String) -> Unit)? = null,
+    ): HttpResult<SendMsgResponse> {
         return try {
             // AI implementation summary:
-            // 1) 按 token 维度复用单连接；2) 每次请求按顺序发送并等待单条响应；
-            // 3) 解析成与 HTTP 相同的 SendMsgResponse，保持上层逻辑不变。
+            // 1) 复用单连接并串行处理请求；2) 支持 stream.start/stream.delta/stream.final 帧；
+            // 3) 兼容旧单帧响应，统一返回 SendMsgResponse。
             requestMutex.withLock {
                 val activeSession = ensureSession()
                 val websocketPayload = ChatWebSocketReq(agentId = agentId, request = request)
                 activeSession.send(Frame.Text(requestAdapter.toJson(websocketPayload)))
-
-                val frame = activeSession.incoming.receive()
-                val result: HttpResult<SendMsgResponse> =
+                while (true) {
+                    val frame = activeSession.incoming.receive()
                     if (frame !is Frame.Text) {
-                        HttpResult.Failure("Unexpected websocket frame type", -1)
-                    } else {
-                        val payload = responseAdapter.fromJson(frame.data.decodeToString())
-                        if (payload == null) {
-                            HttpResult.Failure("Invalid websocket response body", -1)
-                        } else {
-                            HttpResult.Success(payload)
+                        return@withLock HttpResult.Failure("Unexpected websocket frame type", -1)
+                    }
+                    val payloadText = frame.data.decodeToString()
+                    val streamFrame = streamFrameAdapter.fromJson(payloadText)
+                    if (streamFrame == null) {
+                        val legacyPayload = responseAdapter.fromJson(payloadText)
+                        if (legacyPayload == null) {
+                            return@withLock HttpResult.Failure(
+                                "Invalid websocket response body",
+                                -1,
+                            )
+                        }
+                        return@withLock HttpResult.Success(legacyPayload)
+                    }
+
+                    if (
+                        streamFrame.type == null &&
+                            (streamFrame.code != null ||
+                                streamFrame.message != null ||
+                                streamFrame.data != null)
+                    ) {
+                        return@withLock HttpResult.Success(
+                            SendMsgResponse(
+                                code = streamFrame.code,
+                                message = streamFrame.message,
+                                data = streamFrame.data,
+                            )
+                        )
+                    }
+
+                    when (streamFrame.type) {
+                        "stream.start" -> {
+                            continue
+                        }
+                        "stream.delta" -> {
+                            val delta = streamFrame.delta
+                            if (!delta.isNullOrEmpty() && onStreamingDelta != null) {
+                                onStreamingDelta(delta)
+                            }
+                        }
+                        "stream.final" -> {
+                            val finalResponse =
+                                streamFrame.response
+                                    ?: SendMsgResponse(
+                                        code = streamFrame.code,
+                                        message = streamFrame.message,
+                                        data = streamFrame.data,
+                                    )
+                            return@withLock HttpResult.Success(finalResponse)
+                        }
+                        else -> {
+                            val fallbackPayload = responseAdapter.fromJson(payloadText)
+                            if (fallbackPayload != null) {
+                                return@withLock HttpResult.Success(fallbackPayload)
+                            }
+                            return@withLock HttpResult.Failure(
+                                "Unknown websocket response frame type",
+                                -1,
+                            )
                         }
                     }
-                result
+                }
             }
         } catch (e: Exception) {
             closeSession()
