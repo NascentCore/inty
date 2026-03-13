@@ -52,7 +52,7 @@ object ChatWebSocketSessionManager {
             // AI implementation summary:
             // 1) 复用单连接并串行处理请求；2) 支持 stream.start/stream.delta/stream.final 帧；
             // 3) 兼容旧单帧响应，统一返回 SendMsgResponse。
-            requestMutex.withLock {
+            requestMutex.withLock<HttpResult<SendMsgResponse>> {
                 val activeSession = ensureSession()
                 val websocketPayload = ChatWebSocketReq(agentId = agentId, request = request)
                 activeSession.send(Frame.Text(requestAdapter.toJson(websocketPayload)))
@@ -121,6 +121,7 @@ object ChatWebSocketSessionManager {
                         }
                     }
                 }
+                HttpResult.Failure("WebSocket stream ended unexpectedly", -1)
             }
         } catch (e: Exception) {
             closeSession()
