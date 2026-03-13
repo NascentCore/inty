@@ -1,7 +1,9 @@
+import asyncio
+import contextvars
 import time
 import uuid
 from types import SimpleNamespace
-from typing import Any, List, Optional, TypeAlias, Union
+from typing import Any, Awaitable, Callable, List, Optional, TypeAlias, Union
 
 from fastapi import (
     APIRouter,
@@ -58,6 +60,10 @@ from app.services.voice_service import (
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+_chat_stream_delta_callback_ctx: contextvars.ContextVar[
+    Optional[Callable[[str], Awaitable[None]]]
+] = contextvars.ContextVar("chat_stream_delta_callback_ctx", default=None)
 
 
 async def _get_current_user_from_websocket(
@@ -399,8 +405,12 @@ async def agent_chat_completions(
         raise HTTPException(
             status_code=404, detail="API v1 chat completions is disabled"
         )
-    if request.stream:
-        raise HTTPException(status_code=400, detail="Stream is not supported")
+    stream_delta_callback = _chat_stream_delta_callback_ctx.get()
+    if request.stream and stream_delta_callback is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Stream mode is only supported over websocket",
+        )
 
     try:
         request_handling_timer = Timer("请求处理")
@@ -486,15 +496,40 @@ async def agent_chat_completions(
                 logger.debug(
                     f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
-                chat_result = await agent.chat(
-                    user_id=current_user.id,
-                    session_id=session_id,
-                    messages=messages,
-                    chat_settings=chat_settings,
-                    user_time_context=user_time_context,
-                    model_override=model_override,
-                    is_subscribed=is_subscribed,
-                )
+                if request.stream:
+                    stream_event_loop = asyncio.get_running_loop()
+
+                    def _stream_text_callback(delta_text: str) -> None:
+                        if delta_text == "":
+                            return
+                        if stream_delta_callback is None:
+                            return
+                        future = asyncio.run_coroutine_threadsafe(
+                            stream_delta_callback(delta_text),
+                            stream_event_loop,
+                        )
+                        future.result()
+
+                    chat_result = await agent.chat(
+                        user_id=current_user.id,
+                        session_id=session_id,
+                        messages=messages,
+                        chat_settings=chat_settings,
+                        user_time_context=user_time_context,
+                        model_override=model_override,
+                        is_subscribed=is_subscribed,
+                        stream_text_callback=_stream_text_callback,
+                    )
+                else:
+                    chat_result = await agent.chat(
+                        user_id=current_user.id,
+                        session_id=session_id,
+                        messages=messages,
+                        chat_settings=chat_settings,
+                        user_time_context=user_time_context,
+                        model_override=model_override,
+                        is_subscribed=is_subscribed,
+                    )
                 response_content, ai_message_id = (
                     (chat_result[0], chat_result[1])
                     if isinstance(chat_result, tuple)
@@ -808,16 +843,57 @@ async def chat_completions_websocket(
             websocket_request = ChatWebSocketRequest.model_validate_json(
                 await websocket.receive_text()
             )
-            response = await agent_chat_completions(
-                db=db,
-                agent_id=websocket_request.agent_id,
-                request=websocket_request.request,
-                current_user=current_user,
-                app_version_code=app_version_code,
-            )
-            response_data = response.model_dump(exclude_none=True)
-            response_data["agent_id"] = websocket_request.agent_id
-            await websocket.send_json(response_data)
+            if websocket_request.request.stream:
+                await websocket.send_json(
+                    {
+                        "type": "stream.start",
+                        "agent_id": websocket_request.agent_id,
+                    }
+                )
+
+                async def _send_stream_delta(delta_text: str) -> None:
+                    await websocket.send_json(
+                        {
+                            "type": "stream.delta",
+                            "agent_id": websocket_request.agent_id,
+                            "delta": delta_text,
+                        }
+                    )
+
+                stream_ctx_token = _chat_stream_delta_callback_ctx.set(
+                    _send_stream_delta
+                )
+                try:
+                    response = await agent_chat_completions(
+                        db=db,
+                        agent_id=websocket_request.agent_id,
+                        request=websocket_request.request,
+                        current_user=current_user,
+                        app_version_code=app_version_code,
+                    )
+                finally:
+                    _chat_stream_delta_callback_ctx.reset(stream_ctx_token)
+
+                response_data = response.model_dump(exclude_none=True)
+                response_data["agent_id"] = websocket_request.agent_id
+                await websocket.send_json(
+                    {
+                        "type": "stream.final",
+                        "agent_id": websocket_request.agent_id,
+                        "response": response_data,
+                    }
+                )
+            else:
+                response = await agent_chat_completions(
+                    db=db,
+                    agent_id=websocket_request.agent_id,
+                    request=websocket_request.request,
+                    current_user=current_user,
+                    app_version_code=app_version_code,
+                )
+                response_data = response.model_dump(exclude_none=True)
+                response_data["agent_id"] = websocket_request.agent_id
+                await websocket.send_json(response_data)
     except WebSocketDisconnect:
         return
 

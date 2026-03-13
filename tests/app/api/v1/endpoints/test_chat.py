@@ -562,6 +562,18 @@ def test_v1_chat_completions_subscription_required(
     assert body["data"]["daily_limit"] == 5
 
 
+def test_v1_chat_completions_stream_requires_websocket(chat_business_error_app: FastAPI):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": True,
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Stream mode is only supported over websocket"
+
+
 def test_v1_chat_completions_adds_premium_preview_and_popup_action(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -726,6 +738,71 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     assert second_response["code"] == 200
     assert second_response["agent_id"] == "agent-b"
     assert second_response["data"]["source_imate_id"] == "imate-b"
+
+
+def test_chat_websocket_stream_emits_delta_and_final_frames(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(
+        *,
+        db,
+        agent_id,
+        request,
+        current_user,
+        app_version_code,
+    ):
+        callback = chat_v1._chat_stream_delta_callback_ctx.get()
+        if request.stream and callback is not None:
+            await callback("Hello")
+            await callback(" world")
+        return APIResponse.success(
+            data={
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "Hello world"},
+                        "finish_reason": "stop",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-stream",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hello"}],
+                        "stream": True,
+                    },
+                }
+            )
+            start_frame = websocket.receive_json()
+            delta_frame_1 = websocket.receive_json()
+            delta_frame_2 = websocket.receive_json()
+            final_frame = websocket.receive_json()
+
+    assert start_frame["type"] == "stream.start"
+    assert start_frame["agent_id"] == "agent-stream"
+    assert delta_frame_1["type"] == "stream.delta"
+    assert delta_frame_1["delta"] == "Hello"
+    assert delta_frame_2["type"] == "stream.delta"
+    assert delta_frame_2["delta"] == " world"
+    assert final_frame["type"] == "stream.final"
+    assert final_frame["agent_id"] == "agent-stream"
+    assert final_frame["response"]["code"] == 200
+    assert (
+        final_frame["response"]["data"]["choices"][0]["message"]["content"] == "Hello world"
+    )
 
 
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
