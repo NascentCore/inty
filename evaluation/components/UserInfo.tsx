@@ -38,7 +38,7 @@ export const UserInfo: React.FC<UserInfoProps> = ({ onShowApiKeyModal }) => {
 
     try {
       setLoading(true);
-      const response = (await api.users.me()) as UserProfile | null;
+      const response = (await api.users.me()) as unknown as UserProfile | null;
       setUserInfo(response || null);
     } catch (error) {
       console.error("获取用户信息失败:", error);
