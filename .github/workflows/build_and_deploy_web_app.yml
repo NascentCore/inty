@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '20'
           # 不使用 cache: 'yarn'，因为 setup-node 的自动缓存只在仓库根目录查找 yarn.lock
-          # 而本项目的 yarn.lock 文件位于子目录（web_app/ 和 evaluation/inty_sdk/）
+          # 而本项目的 yarn.lock 文件位于子目录（web_app/）
           # 因此使用下方的手动缓存配置来处理多个子目录的依赖缓存
       - id: yarn-cache-dir-path
         run: |
@@ -31,15 +31,9 @@ jobs:
           path: |
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
             web_app/node_modules
-            evaluation/inty_sdk/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('web_app/yarn.lock') }}-${{ hashFiles('evaluation/inty_sdk/yarn.lock') }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('web_app/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-      - name: Build inty_sdk
-        working-directory: evaluation/inty_sdk
-        run: |
-          yarn install --frozen-lockfile
-          yarn build
       - name: Build web app
         working-directory: web_app
         run: |
