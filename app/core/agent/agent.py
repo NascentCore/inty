@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock, RLock
-from typing import Any, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
@@ -1330,6 +1330,7 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
+        stream_text_callback: Optional[Callable[[str], None]] = None,
     ) -> Tuple[str | List[Dict[str, Any]], Optional[int]]:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -1441,44 +1442,82 @@ class Agent:
                 )
 
                 enable_official_assistant_tools = self._is_intellimate_official()
-                try:
-                    response = self._call_openai_api_with_retry(
-                        client=client,
-                        model=model_name,
-                        openai_messages=openai_messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id, model_name),
-                        user_id=user_id,
-                        max_retries=3,
-                        initial_delay=1.0,
-                        chat_name=chat_name,
-                        labels=labels,
-                        tools=(
-                            OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
-                            if enable_official_assistant_tools
-                            else None
-                        ),
-                        tool_choice="auto" if enable_official_assistant_tools else None,
+                stream_mode_enabled = stream_text_callback is not None
+                if stream_mode_enabled and enable_official_assistant_tools:
+                    logger.warning(
+                        "Streaming mode skips official assistant tool-call loop"
                     )
+                try:
                     openai_messages_for_response = openai_messages
-                    if enable_official_assistant_tools:
-                        response, openai_messages_for_response = (
-                            self._resolve_official_assistant_tool_calls(
-                                response=response,
-                                openai_messages=openai_messages,
-                                client=client,
-                                model=model_name,
-                                temperature=temperature,
-                                max_tokens=max_tokens,
-                                top_p=top_p,
-                                extra_body=self._chat_extra_body(user_id, model_name),
-                                user_id=user_id,
-                                chat_name=chat_name,
-                                labels=labels,
-                            )
+                    finish_reason: Optional[str] = None
+                    if stream_mode_enabled:
+                        streamed_chunks: List[str] = []
+                        stream = client.chat.completions.create(
+                            messages=openai_messages,
+                            model=model_name,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=self._chat_extra_body(user_id, model_name),
+                            stream=True,
                         )
+                        for chunk in stream:
+                            if (
+                                chunk is None
+                                or not getattr(chunk, "choices", None)
+                                or len(chunk.choices) == 0
+                            ):
+                                continue
+                            choice = chunk.choices[0]
+                            if choice.finish_reason is not None:
+                                finish_reason = choice.finish_reason
+                            delta = getattr(choice, "delta", None)
+                            delta_content = (
+                                getattr(delta, "content", None)
+                                if delta is not None
+                                else None
+                            )
+                            if isinstance(delta_content, str) and delta_content:
+                                streamed_chunks.append(delta_content)
+                                stream_text_callback(delta_content)
+                        response_text = "".join(streamed_chunks)
+                    else:
+                        response = self._call_openai_api_with_retry(
+                            client=client,
+                            model=model_name,
+                            openai_messages=openai_messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=self._chat_extra_body(user_id, model_name),
+                            user_id=user_id,
+                            max_retries=3,
+                            initial_delay=1.0,
+                            chat_name=chat_name,
+                            labels=labels,
+                            tools=(
+                                OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
+                                if enable_official_assistant_tools
+                                else None
+                            ),
+                            tool_choice="auto" if enable_official_assistant_tools else None,
+                        )
+                        if enable_official_assistant_tools:
+                            response, openai_messages_for_response = (
+                                self._resolve_official_assistant_tool_calls(
+                                    response=response,
+                                    openai_messages=openai_messages,
+                                    client=client,
+                                    model=model_name,
+                                    temperature=temperature,
+                                    max_tokens=max_tokens,
+                                    top_p=top_p,
+                                    extra_body=self._chat_extra_body(user_id, model_name),
+                                    user_id=user_id,
+                                    chat_name=chat_name,
+                                    labels=labels,
+                                )
+                            )
                 except Exception as api_error:
                     # 记录详细的错误信息
                     error_context = {
@@ -1521,24 +1560,35 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
-                if (
-                    response is None
-                    or not getattr(response, "choices", None)
-                    or len(response.choices) == 0
-                ):
-                    logger.error(
-                        f"LLM 返回无 choices - Agent: {self.agent_id}, User: {user_id}, "
-                        f"Session: {session_id}, Model: {model_name}"
-                    )
-                    raise ValueError("LLM returned no choices")
-                finish_reason = response.choices[0].finish_reason
-                response_text = response.choices[0].message.content
+                if stream_mode_enabled:
+                    if not response_text:
+                        logger.error(
+                            f"LLM 流式返回无内容 - Agent: {self.agent_id}, User: {user_id}, "
+                            f"Session: {session_id}, Model: {model_name}"
+                        )
+                        raise ValueError("LLM streaming returned no content")
+                else:
+                    if (
+                        response is None
+                        or not getattr(response, "choices", None)
+                        or len(response.choices) == 0
+                    ):
+                        logger.error(
+                            f"LLM 返回无 choices - Agent: {self.agent_id}, User: {user_id}, "
+                            f"Session: {session_id}, Model: {model_name}"
+                        )
+                        raise ValueError("LLM returned no choices")
+                    finish_reason = response.choices[0].finish_reason
+                    response_text = response.choices[0].message.content
 
                 # 定义需要重试的 finish_reason
                 content_filter_reasons = {"content_filter", "safety"}
 
                 # 处理内容过滤情况：用 "continue" 替换用户消息重试一次
                 if (
+                    not stream_mode_enabled
+                    and response is not None
+                    and
                     finish_reason in content_filter_reasons
                     and not enable_official_assistant_tools
                 ):
@@ -1895,6 +1945,7 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
+        stream_text_callback: Optional[Callable[[str], None]] = None,
     ) -> Tuple[str | List[Dict[str, Any]], Optional[int]]:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里。
         成功时返回 (响应内容, 插入的 AI 消息 ID)；响应内容可能是文本或 OpenAI content parts。
@@ -1923,6 +1974,7 @@ class Agent:
                 user_time_context,
                 model_override,
                 is_subscribed,
+                stream_text_callback,
             )
             return result
         except Exception as e:
