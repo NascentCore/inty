@@ -48,10 +48,15 @@ import {
   getCurrentUtcTime,
 } from "../utils/dateUtils";
 import {
+  buildAllUsersMessageRows,
+  type AllUsersMessageRow,
+} from "../utils/allUsersMessages";
+import {
   sessionMessagesPaginationProps,
   shouldShowSessionMessagesPagination,
 } from "../utils/sessionMessagesPagination";
 import type {
+  ConversationsDetailResponse,
   UserDailyMessagesResponse,
   UserTodayStatsResponse,
   SessionMessagesResponse,
@@ -99,6 +104,9 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [loadingUserImages, setLoadingUserImages] = useState(false);
   const [userImages, setUserImages] = useState<UserGeneratedImageItem[]>([]);
   const [userImagesTotal, setUserImagesTotal] = useState(0);
+  const [allUsersConversationDetails, setAllUsersConversationDetails] = useState<
+    ConversationsDetailResponse[]
+  >([]);
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
@@ -176,10 +184,17 @@ export const UserDailyMessagesPage: React.FC = () => {
           console.error("加载会话列表失败:", error);
           // 不显示错误，因为这不是主要功能
         }
+        setAllUsersConversationDetails([]);
       } else {
-        const dailyMessagesData =
-          await userAnalyticsApi.getUserDailyMessages(params);
+        const [dailyMessagesData, conversationsDetailData] = await Promise.all([
+          userAnalyticsApi.getUserDailyMessages(params),
+          userAnalyticsApi.getConversationsDetail({
+            activity_start_date: params.start_date,
+            activity_end_date: params.end_date,
+          }),
+        ]);
         setUserInfo(dailyMessagesData);
+        setAllUsersConversationDetails(conversationsDetailData);
         setTodayStats(null);
         setSessions([]);
         setSessionMessages({});
@@ -192,6 +207,7 @@ export const UserDailyMessagesPage: React.FC = () => {
       message.error(getErrorMessage(error, "查询失败"));
       setUserInfo(null);
       setTodayStats(null);
+      setAllUsersConversationDetails([]);
     } finally {
       setLoading(false);
     }
@@ -525,6 +541,63 @@ export const UserDailyMessagesPage: React.FC = () => {
     },
   ];
 
+  const allUsersMessagesColumns: ColumnsType<AllUsersMessageRow> = [
+    {
+      title: "时间 (UTC)",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 190,
+      render: (value: string | null) => (value ? formatUtcTimeRaw(value) : "N/A"),
+    },
+    {
+      title: "用户",
+      key: "user",
+      width: 240,
+      render: (_value: unknown, record: AllUsersMessageRow) => (
+        <div>
+          <div>{record.nickname || "未设置昵称"}</div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.email || record.user_id}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "角色",
+      dataIndex: "agent_name",
+      key: "agent_name",
+      width: 160,
+    },
+    {
+      title: "会话 ID",
+      dataIndex: "chat_id",
+      key: "chat_id",
+      width: 220,
+      ellipsis: true,
+    },
+    {
+      title: "发送方",
+      dataIndex: "sender_type",
+      key: "sender_type",
+      width: 120,
+      render: (value: AllUsersMessageRow["sender_type"]) =>
+        value === "USER" ? "👤 用户" : "🤖 AI",
+    },
+    {
+      title: "消息内容",
+      dataIndex: "content",
+      key: "content",
+      render: (value: string) =>
+        value ? (
+          <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            {value}
+          </div>
+        ) : (
+          <Text type="secondary">[无文本内容]</Text>
+        ),
+    },
+  ];
+
   // 计算总消息数
   const totalMessages =
     userInfo?.daily_messages.reduce(
@@ -532,6 +605,19 @@ export const UserDailyMessagesPage: React.FC = () => {
       0,
     ) || 0;
   const isAllUsersResult = userInfo?.user_id === "ALL_USERS";
+  const allUsersMessageRows = useMemo(
+    () => buildAllUsersMessageRows(allUsersConversationDetails),
+    [allUsersConversationDetails],
+  );
+  const allUsersSessionCount = useMemo(
+    () =>
+      allUsersConversationDetails.reduce(
+        (sessionCount, userConversation) =>
+          sessionCount + userConversation.sessions.length,
+        0,
+      ),
+    [allUsersConversationDetails],
+  );
 
   return (
     <div style={{ padding: "24px" }}>
@@ -791,6 +877,38 @@ export const UserDailyMessagesPage: React.FC = () => {
               }}
             />
           </Card>
+
+          {isAllUsersResult && (
+            <Card
+              title="全量用户与 AI 消息明细（按日期范围）"
+              style={{ marginBottom: "24px" }}
+              extra={
+                <Space size="middle">
+                  <Text type="secondary">用户数：{allUsersConversationDetails.length}</Text>
+                  <Text type="secondary">会话数：{allUsersSessionCount}</Text>
+                  <Text type="secondary">消息数：{allUsersMessageRows.length}</Text>
+                </Space>
+              }
+            >
+              {allUsersMessageRows.length > 0 ? (
+                <Table
+                  columns={allUsersMessagesColumns}
+                  dataSource={allUsersMessageRows}
+                  rowKey="key"
+                  loading={loading}
+                  pagination={{
+                    pageSize: 50,
+                    showSizeChanger: true,
+                    pageSizeOptions: [50, 100, 200],
+                    showTotal: (total) => `共 ${total} 条消息`,
+                  }}
+                  scroll={{ x: 1200 }}
+                />
+              ) : (
+                <Empty description="该日期范围内暂无用户或 AI 消息明细" />
+              )}
+            </Card>
+          )}
 
           {/* 会话列表和对话历史 */}
           {!isAllUsersResult && (
