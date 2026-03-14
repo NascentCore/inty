@@ -28,6 +28,7 @@
     <string name="settings_email_inty">IntelliMate@inty.cc</string>
     <string name="settings_version">Version</string>
     <string name="settings_rate_us">Rate IntelliMate</string>
+    <string name="settings_send_ux_ui_gesture_signals">Send UX/UI gesture signals</string>
     <string name="settings_user_id">User ID</string>
     <string name="settings_user_id_unavailable">Unavailable</string>
     <string name="settings_user_email">User Email</string>
