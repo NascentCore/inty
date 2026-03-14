@@ -66,6 +66,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
@@ -125,8 +126,6 @@ import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
-import com.google.android.play.core.review.ReviewInfo
-import com.google.android.play.core.review.ReviewManagerFactory
 import coil3.SingletonImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
@@ -576,33 +575,8 @@ internal fun ChatPage(
                                             agentInfo?.useDoubleAsteriskActionMarker() == true,
                                     )
                                 chatViewModel.sendBackgroundTouchAction(action)
-                            }
+                            },
                         )
-                    }
-                    .pointerInput(
-                        isCurrentPage,
-                        sendUxUiGestureSignals,
-                        uiState.vipAgentLockType,
-                        backgroundCaptureSize,
-                        backgroundSourceImageSize,
-                        backgroundTouchMinSwipeDistancePx,
-                        agentInfo?.id,
-                    ) {
-                        val sourceSize = backgroundSourceImageSize ?: return@pointerInput
-                        val backgroundLayout =
-                            buildCharacterBackgroundLayout(
-                                containerSize = backgroundCaptureSize,
-                                sourceImageSize = sourceSize,
-                            ) ?: return@pointerInput
-                        val shouldIgnoreTouch: (Offset) -> Boolean = { point ->
-                            !isCurrentPage ||
-                                !sendUxUiGestureSignals ||
-                                uiState.vipAgentLockType != ChatUIState.VipAgentLockType.NONE ||
-                                point.y >
-                                    backgroundCaptureSize.height *
-                                        UiConfigs.ChatPage.backgroundTouchCaptureMaxYRatio
-                        }
-
                         var swipeStartPoint: Offset? = null
                         var swipeEndPoint: Offset? = null
                         detectDragGestures(

@@ -12,15 +12,12 @@
 ## 2026-03-12
 
 - Chat image sending now preprocesses selected photos to a JPEG at ~57,600 total pixels before upload, keeps showing the original thumbnail during compression, switches to the compressed thumbnail when ready, and reuses that compressed local cache after upload to avoid an immediate re-download flicker.
+- Added a new Me → Settings toggle, **Send UX/UI gesture signals** (default off), that controls whether chat background taps/swipes are sent to AI as original-image coordinate action messages.
 
 ## 2026-03-09
 
 - Chat settings **Voice** picker now enforces gender matching for MALE/FEMALE iMates, so only same-gender Gemini voices are shown in the dropdown.
 - After you react with 👍/👎 to a generated chat image, IntelliMate can show a once-per-local-day feedback prompt that opens a prefilled image-quality feedback form with the image attached.
-
-## 2026-03-12
-
-- Added a new Me → Settings toggle, **Send UX/UI gesture signals** (default off), that controls whether chat background taps/swipes are sent to AI as original-image coordinate action messages.
 
 ## 2026-03-06
 
