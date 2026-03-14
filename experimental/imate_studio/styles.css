@@ -170,6 +170,13 @@ button:hover {
   gap: 8px;
 }
 
+.aspect-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 8px;
+}
+
 .timeline-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(120px, 1fr));

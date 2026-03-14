@@ -57,6 +57,7 @@ const scenes = Array.from({ length: 12 }, (_, idx) => {
 
 const state = {
   drafts: [],
+  licensedPacks: [],
   cast: {
     lead: "",
     partner: "",
@@ -67,6 +68,7 @@ const state = {
   intentPrompt: "",
   intentSummary: "No intent scaffold yet. Describe your film idea to get agentic setup.",
   commandResult: "No command executed yet.",
+  licensedResult: "No licensed pack ingested yet.",
   plotChecklist: structuredClone(plotChecklistTemplate),
   logs: ["Studio initialized: start building your 6-minute story."]
 };
@@ -81,6 +83,7 @@ function bindEvents() {
   document.getElementById("scaffold-intent").addEventListener("click", onScaffoldIntent);
   document.getElementById("smart-cast").addEventListener("click", onSmartCast);
   document.getElementById("run-ai-command").addEventListener("click", onRunAiCommand);
+  document.getElementById("run-ingestion-agent").addEventListener("click", onRunIngestionAgent);
   document.getElementById("rewind").addEventListener("click", () => shiftTime(-15));
   document.getElementById("advance").addEventListener("click", () => shiftTime(15));
   document.getElementById("prev-scene").addEventListener("click", () => jumpScene(-1));
@@ -97,6 +100,56 @@ function bindEvents() {
       renderAll();
     });
   });
+}
+
+function onRunIngestionAgent() {
+  const source = document.getElementById("licensed-source").value.trim();
+  const dealId = document.getElementById("licensed-deal-id").value.trim();
+  const rebornPrompt = document.getElementById("licensed-reborn").value.trim();
+  const bioMode = document.getElementById("aspect-bio-mode").value;
+  const appearanceMode = document.getElementById("aspect-appearance-mode").value;
+  const voiceMode = document.getElementById("aspect-voice-mode").value;
+  const musicMode = document.getElementById("aspect-music-mode").value;
+
+  if (!source || !dealId) {
+    state.licensedResult = "Source reference and license deal ID are required.";
+    renderAll();
+    return;
+  }
+
+  const packName = buildPackName(source, rebornPrompt);
+  const aspects = {
+    bio: bioMode,
+    appearance: appearanceMode,
+    voice: voiceMode,
+    music: musicMode
+  };
+
+  const selectedCount = Object.values(aspects).filter((mode) => mode !== "none").length;
+  if (selectedCount === 0) {
+    state.licensedResult = "Select at least one aspect to ingest.";
+    renderAll();
+    return;
+  }
+
+  const pack = {
+    id: `licensed-${Date.now()}`,
+    source,
+    name: packName,
+    archetype: "Licensed hybrid persona",
+    desire: rebornPrompt || "No reborn prompt set.",
+    secret: `Derived under license ${dealId}`,
+    sourceType: "licensed-ingestion",
+    dealId,
+    rebornPrompt,
+    aspects
+  };
+
+  state.licensedPacks.unshift(pack);
+  state.licensedResult = `Ingestion agent created "${packName}" with ${selectedCount} licensed aspect(s).`;
+  pushLog(`Licensed ingestion: ${source} -> ${packName} (${dealId}).`);
+
+  renderAll();
 }
 
 function onScaffoldIntent() {
@@ -131,7 +184,7 @@ function onSmartCast() {
     state.cast.rival = repositoryCharacters[2].name;
   }
   if (!state.cast.mentor) {
-    state.cast.mentor = repositoryCharacters[3].name;
+    state.cast.mentor = state.licensedPacks[0]?.name || repositoryCharacters[3].name;
   }
 
   pushLog("Smart cast assigned from character repository.");
@@ -354,12 +407,14 @@ function currentScene() {
 }
 
 function allCharacters() {
-  return [...repositoryCharacters, ...state.drafts];
+  return [...repositoryCharacters, ...state.licensedPacks, ...state.drafts];
 }
 
 function renderAll() {
   renderRepository();
   renderDrafts();
+  renderLicensedPackResult();
+  renderLicensedRepo();
   renderCastSelectors();
   renderIntentSummary();
   renderTimelineOnly();
@@ -377,6 +432,33 @@ function renderRepository() {
         <strong>${character.name}</strong>
         <div class="meta">${character.archetype}</div>
         <div class="meta">Desire: ${character.desire}</div>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderLicensedPackResult() {
+  const root = document.getElementById("licensed-result");
+  root.innerHTML = `
+    <strong>Ingestion result</strong>
+    <div class="meta">${state.licensedResult}</div>
+  `;
+}
+
+function renderLicensedRepo() {
+  const root = document.getElementById("licensed-repo");
+  if (state.licensedPacks.length === 0) {
+    root.innerHTML = `<div class="card"><span class="meta">No licensed aspect packs yet.</span></div>`;
+    return;
+  }
+
+  root.innerHTML = state.licensedPacks.map((pack) => {
+    return `
+      <article class="card">
+        <strong>${pack.name}</strong>
+        <div class="meta">Source: ${pack.source}</div>
+        <div class="meta">Deal ID: ${pack.dealId}</div>
+        <div class="meta">Aspects: ${formatAspectModes(pack.aspects)}</div>
       </article>
     `;
   }).join("");
@@ -483,6 +565,21 @@ function markChecklistItemDone(id) {
 
 function clampSceneIndex(idx) {
   return Math.max(0, Math.min(scenes.length - 1, idx));
+}
+
+function buildPackName(source, rebornPrompt) {
+  if (!rebornPrompt) {
+    return `Licensed Aspect Pack: ${source}`;
+  }
+
+  return `Reborn from ${source}`;
+}
+
+function formatAspectModes(aspects) {
+  return Object.entries(aspects)
+    .filter(([, mode]) => mode !== "none")
+    .map(([name, mode]) => `${name}:${mode}`)
+    .join(", ");
 }
 
 function renderEventLog() {

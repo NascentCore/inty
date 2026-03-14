@@ -13,6 +13,10 @@ Design inspiration: **be part of the story you enjoyed, and help others enjoy it
 - Advance and rewind scenes while role-playing as any cast role.
 - Detect missing story/design ingredients, then auto-fill concrete suggestions.
 - Run natural-language studio commands (rewind, betray, mark payoff, smart cast).
+- Run a licensed character ingestion agent with aspect-level controls:
+  - import only bio and reborn into a new persona;
+  - import only appearance for a romance lead;
+  - import only voice/music style for performance roles.
 
 ## What was missing (and now added)
 
@@ -47,3 +51,4 @@ Open:
 - Character chemistry simulator with dialogue turn quality scoring.
 - Export to structured JSON for downstream video generation workflows.
 - Collaborative mode with "director" and "writer" cursors.
+- Production license compliance pipeline (contract verification, provenance watermarking, automated policy checks).

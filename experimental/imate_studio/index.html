@@ -81,6 +81,62 @@
       </div>
     </section>
 
+    <section class="panel">
+      <h2>2.5) Licensed character ingestion agent (aspect import)</h2>
+      <p class="help">Pull licensed references into repo, then keep only approved aspects (bio, look, voice, music style).</p>
+      <label>
+        Source reference
+        <input id="licensed-source" placeholder="Li Shimin / Marilyn Monroe / Bob Dylan">
+      </label>
+      <label>
+        License deal ID
+        <input id="licensed-deal-id" placeholder="DEAL-2026-IMATE-001">
+      </label>
+      <label>
+        Reborn persona prompt
+        <textarea id="licensed-reborn" rows="2" placeholder="Reborn as a startup strategist in a futuristic city."></textarea>
+      </label>
+      <div class="aspect-grid">
+        <label>
+          Bio mode
+          <select id="aspect-bio-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed bio</option>
+          </select>
+        </label>
+        <label>
+          Appearance mode
+          <select id="aspect-appearance-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed look</option>
+          </select>
+        </label>
+        <label>
+          Voice mode
+          <select id="aspect-voice-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed voice</option>
+          </select>
+        </label>
+        <label>
+          Music style mode
+          <select id="aspect-music-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed style</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="run-ingestion-agent">Run ingestion agent</button>
+      </div>
+      <div id="licensed-result" class="card"></div>
+      <div id="licensed-repo" class="card-list"></div>
+    </section>
+
     <section class="panel wide">
       <h2>3) Scene timeline (6 minutes)</h2>
       <div class="timeline-controls">
