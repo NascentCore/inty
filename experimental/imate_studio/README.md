@@ -17,6 +17,10 @@ Design inspiration: **be part of the story you enjoyed, and help others enjoy it
   - import only bio and reborn into a new persona;
   - import only appearance for a romance lead;
   - import only voice/music style for performance roles.
+- Run a music relevance agent that:
+  - accepts mixed-media reference links;
+  - excludes photo/visual content by default;
+  - extracts audio traits and applies scene-level cues for the full 6-minute timeline.
 
 ## What was missing (and now added)
 

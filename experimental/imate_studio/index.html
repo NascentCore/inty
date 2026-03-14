@@ -191,6 +191,38 @@
       <ul id="plot-list" class="check-list"></ul>
     </section>
 
+    <section class="panel">
+      <h2>5.5) Music relevance agent (audio-first)</h2>
+      <p class="help">Use reference links for music direction only. Photos/visual frames are excluded from analysis.</p>
+      <label>
+        Music reference link
+        <input id="music-reference-link" placeholder="https://photos.app.goo.gl/... (music track reference)">
+      </label>
+      <label>
+        Audience feeling target
+        <input id="music-feeling-target" placeholder="Bittersweet hope that turns into romantic lift by ending.">
+      </label>
+      <label>
+        Music focus
+        <select id="music-focus-mode">
+          <option value="voice_texture">Voice texture and vocal identity</option>
+          <option value="melody_harmony">Melody and harmonic color</option>
+          <option value="rhythm_energy">Rhythm and energy arc</option>
+          <option value="full_stack">Full stack: voice + harmony + rhythm</option>
+        </select>
+      </label>
+      <label class="inline-check">
+        <input id="music-ignore-visuals" type="checkbox" checked>
+        Ignore photos/visual frames and use audio signal only
+      </label>
+      <div class="row">
+        <button id="analyze-music-reference">Analyze music relevance</button>
+        <button id="apply-music-cues">Apply cues to timeline</button>
+      </div>
+      <div id="music-result" class="card"></div>
+      <ul id="music-cues" class="check-list"></ul>
+    </section>
+
     <section class="panel wide">
       <h2>Session event log</h2>
       <div id="event-log" class="event-log"></div>

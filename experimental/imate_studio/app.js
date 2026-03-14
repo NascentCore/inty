@@ -69,6 +69,8 @@ const state = {
   intentSummary: "No intent scaffold yet. Describe your film idea to get agentic setup.",
   commandResult: "No command executed yet.",
   licensedResult: "No licensed pack ingested yet.",
+  musicResult: "No music analysis yet.",
+  musicProfile: null,
   plotChecklist: structuredClone(plotChecklistTemplate),
   logs: ["Studio initialized: start building your 6-minute story."]
 };
@@ -92,6 +94,8 @@ function bindEvents() {
   document.getElementById("perform-action").addEventListener("click", onPerformAction);
   document.getElementById("analyze-gaps").addEventListener("click", onAnalyzeGaps);
   document.getElementById("auto-fill-gaps").addEventListener("click", onAutoFillGaps);
+  document.getElementById("analyze-music-reference").addEventListener("click", onAnalyzeMusicReference);
+  document.getElementById("apply-music-cues").addEventListener("click", onApplyMusicCues);
 
   ["lead", "partner", "rival", "mentor"].forEach((slot) => {
     document.getElementById(`cast-${slot}`).addEventListener("change", (event) => {
@@ -167,9 +171,74 @@ function onScaffoldIntent() {
   scenes[3].note = "Connection beat: audience sees why this story matters to you.";
   scenes[7].note = "Reversal: trust breaks and raises stakes for everyone.";
   scenes[11].note = "Payoff: shared joy lands and audience feels included.";
+  scenes[0].musicCue = "Sparse motif with intimate vocal texture.";
+  scenes[7].musicCue = "Darkened harmony with pulsing low rhythm.";
+  scenes[11].musicCue = "Warm callback motif with open-ended lift.";
 
   pushLog("Intent scaffold generated from natural language prompt.");
   state.commandResult = "Scaffold complete: timeline now reflects your emotional intent.";
+  renderAll();
+}
+
+function onAnalyzeMusicReference() {
+  const referenceLink = document.getElementById("music-reference-link").value.trim();
+  const feelingTarget = document.getElementById("music-feeling-target").value.trim();
+  const focusMode = document.getElementById("music-focus-mode").value;
+  const ignoreVisuals = document.getElementById("music-ignore-visuals").checked;
+
+  if (!referenceLink) {
+    state.musicResult = "Music reference link is required.";
+    renderAll();
+    return;
+  }
+
+  const traits = inferMusicTraits({ referenceLink, feelingTarget, focusMode });
+  const relevanceScore = calculateMusicRelevance({ ignoreVisuals, feelingTarget });
+
+  state.musicProfile = {
+    referenceLink,
+    feelingTarget: feelingTarget || "No audience feeling target specified.",
+    focusMode,
+    ignoreVisuals,
+    traits,
+    relevanceScore
+  };
+
+  state.musicResult = `Music profile extracted. Relevance ${relevanceScore}/100. Visual inputs ${ignoreVisuals ? "excluded" : "included"}.`;
+  pushLog(`Music analysis completed (${relevanceScore}/100) from reference link.`);
+  renderAll();
+}
+
+function onApplyMusicCues() {
+  if (!state.musicProfile) {
+    state.musicResult = "Run music analysis first.";
+    renderAll();
+    return;
+  }
+
+  const profile = state.musicProfile;
+  const progression = [
+    "gentle intro",
+    "curious pulse",
+    "warm theme growth",
+    "romantic tension",
+    "rising uncertainty",
+    "decision pressure",
+    "fracture accent",
+    "dark turn",
+    "repair motif",
+    "reconnection shimmer",
+    "hope escalation",
+    "shared catharsis"
+  ];
+
+  scenes.forEach((scene, idx) => {
+    const shape = progression[idx] || "narrative support";
+    scene.musicCue = `${shape} | ${profile.traits.instrumentation} | ${profile.traits.vocalColor}`;
+  });
+
+  state.musicResult = "Scene-level music cues applied across the 6-minute timeline.";
+  pushLog("Music cues applied to all scenes.");
   renderAll();
 }
 
@@ -328,6 +397,7 @@ function onAnalyzeGaps() {
 
 function onAutoFillGaps() {
   const gaps = calculateGaps();
+  let shouldApplyMusic = false;
   gaps.forEach((gap) => {
     if (gap.type === "plot") {
       const item = state.plotChecklist.find((entry) => entry.id === gap.id);
@@ -339,7 +409,13 @@ function onAutoFillGaps() {
       state.cast.mentor = "Mira Holt";
       document.getElementById("cast-mentor").value = "Mira Holt";
     }
+    if (gap.type === "music" && state.musicProfile) {
+      shouldApplyMusic = true;
+    }
   });
+  if (shouldApplyMusic) {
+    onApplyMusicCues();
+  }
   pushLog(`Auto-fill applied for ${gaps.length} issue(s).`);
   state.commandResult = "Missing ideas auto-filled to keep momentum for AI-native creators.";
   renderAll();
@@ -376,6 +452,25 @@ function calculateGaps() {
       severity: "warn",
       id: "scene-density",
       text: "Role-play across at least 4 scenes to avoid flat pacing."
+    });
+  }
+
+  if (!state.musicProfile) {
+    gaps.push({
+      type: "music",
+      severity: "warn",
+      id: "music-profile",
+      text: "No music relevance profile yet. Analyze a music reference link."
+    });
+  }
+
+  const musicCuesCount = scenes.filter((scene) => Boolean(scene.musicCue)).length;
+  if (musicCuesCount < 6) {
+    gaps.push({
+      type: "music",
+      severity: "warn",
+      id: "music-cues",
+      text: "Music cues are too sparse. Apply cues across scenes for emotional continuity."
     });
   }
 
@@ -421,6 +516,8 @@ function renderAll() {
   renderPlotChecklist();
   renderGapList(calculateGaps());
   renderCommandResult();
+  renderMusicResult();
+  renderMusicCues();
   renderEventLog();
 }
 
@@ -508,12 +605,14 @@ function renderTimelineOnly() {
   sceneRoot.innerHTML = scenes.map((entry, idx) => {
     const activeClass = idx === currentSceneIndex() ? "scene active" : "scene";
     const lastAction = entry.actions.length > 0 ? entry.actions[entry.actions.length - 1].action : "No role action yet";
+    const musicCue = entry.musicCue || "No music cue yet";
     return `
       <article class="${activeClass}">
         <strong>${entry.title}</strong>
         <div class="stamp">${formatTime(entry.start)}-${formatTime(entry.end)}</div>
         <p class="meta">${entry.note}</p>
         <p class="meta">Latest: ${lastAction}</p>
+        <p class="meta">Music: ${musicCue}</p>
       </article>
     `;
   }).join("");
@@ -556,6 +655,39 @@ function renderCommandResult() {
   `;
 }
 
+function renderMusicResult() {
+  const root = document.getElementById("music-result");
+  if (!state.musicProfile) {
+    root.innerHTML = `
+      <strong>Music relevance</strong>
+      <div class="meta">${state.musicResult}</div>
+    `;
+    return;
+  }
+
+  const profile = state.musicProfile;
+  root.innerHTML = `
+    <strong>Music relevance (${profile.relevanceScore}/100)</strong>
+    <div class="meta">Reference: ${profile.referenceLink}</div>
+    <div class="meta">Focus: ${profile.focusMode}</div>
+    <div class="meta">Audio-only mode: ${profile.ignoreVisuals ? "enabled" : "disabled"}</div>
+    <div class="meta">Traits: ${profile.traits.vocalColor}, ${profile.traits.harmonicMood}, ${profile.traits.instrumentation}</div>
+  `;
+}
+
+function renderMusicCues() {
+  const root = document.getElementById("music-cues");
+  if (!state.musicProfile) {
+    root.innerHTML = `<li class="warn">No music cues yet. Analyze a reference first.</li>`;
+    return;
+  }
+
+  const cueLines = scenes.slice(0, 6).map((scene) => {
+    return `<li>${scene.title}: ${scene.musicCue || "pending cue"}</li>`;
+  });
+  root.innerHTML = cueLines.join("");
+}
+
 function markChecklistItemDone(id) {
   const item = state.plotChecklist.find((entry) => entry.id === id);
   if (item) {
@@ -573,6 +705,37 @@ function buildPackName(source, rebornPrompt) {
   }
 
   return `Reborn from ${source}`;
+}
+
+function inferMusicTraits({ referenceLink, feelingTarget, focusMode }) {
+  const normalized = `${referenceLink} ${feelingTarget}`.toLowerCase();
+  const romantic = normalized.includes("romantic") || normalized.includes("love");
+  const melancholic = normalized.includes("bittersweet") || normalized.includes("healing");
+  const energetic = normalized.includes("energy") || normalized.includes("action");
+
+  const vocalColor = focusMode === "voice_texture" || focusMode === "full_stack"
+    ? "textured lead vocal"
+    : "subtle backing vocal";
+  const harmonicMood = melancholic ? "minor-to-major healing arc" : (romantic ? "lush romantic extensions" : "cinematic neutral contour");
+  const instrumentation = energetic ? "driving drums + warm synth bass" : "piano, strings, and restrained percussion";
+
+  return { vocalColor, harmonicMood, instrumentation };
+}
+
+function calculateMusicRelevance({ ignoreVisuals, feelingTarget }) {
+  let score = 52;
+  if (ignoreVisuals) {
+    score += 18;
+  }
+  if (state.intentPrompt) {
+    score += 12;
+  }
+  if (feelingTarget) {
+    score += 10;
+  }
+  const castedRoles = Object.values(state.cast).filter(Boolean).length;
+  score += Math.min(castedRoles * 2, 8);
+  return Math.min(score, 98);
 }
 
 function formatAspectModes(aspects) {

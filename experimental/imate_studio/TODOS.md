@@ -3,6 +3,7 @@
 ## Licensed character ingestion (agentic) - production backlog
 
 - [ ] Connect ingestion agent to real source connectors (licensed biography feeds, image libraries, voice/music vaults).
+- [ ] Build audio-first reference ingestion for mixed-media links (extract music signal, ignore photos by default, keep override audit).
 - [ ] Add hard license gate: block ingestion when `license_deal_id` cannot be validated by contract service.
 - [ ] Persist provenance for every imported aspect (`source`, `deal_id`, `aspect_mode`, `transform_prompt`, timestamp).
 - [ ] Add policy checks for disallowed combinations (for example, direct voice + unlicensed likeness).
