@@ -373,13 +373,22 @@ class ChatMessageRepository(
         }
     }
 
+    /**
+     * Decodes only image dimensions (width, height) without loading pixel data.
+     * Uses [BitmapFactory.Options.inJustDecodeBounds]; the stream is read only to fill options.
+     */
     private fun decodeImageBounds(imageUri: Uri): Result<Pair<Int, Int>> {
         val context = Utils.getApp()
         return try {
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(imageUri)?.use { input ->
+            val inputStream = context.contentResolver.openInputStream(imageUri)
+            if (inputStream == null) {
+                return Result.failure(IllegalStateException("Failed to read selected image"))
+            }
+            inputStream.use { input ->
                 BitmapFactory.decodeStream(input, null, options)
-            } ?: return Result.failure(IllegalStateException("Failed to read selected image"))
+                // inJustDecodeBounds: decodeStream returns null; dimensions are in options.
+            }
             if (options.outWidth <= 0 || options.outHeight <= 0) {
                 Result.failure(IllegalStateException("Failed to decode selected image bounds"))
             } else {
