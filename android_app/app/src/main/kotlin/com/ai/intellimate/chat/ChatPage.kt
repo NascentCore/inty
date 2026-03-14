@@ -326,6 +326,7 @@ internal fun ChatPage(
         agentInfo?.id,
         showKeepTalking,
         autoPlayVoice,
+        sendUxUiGestureSignals,
         pageSourceOverride,
     ) {
         // 确保 ChatPage 页面曝光事件（CHAT_PAGE_VIEW）在所有场景下都能正确上报
@@ -354,7 +355,7 @@ internal fun ChatPage(
             // 生成唯一 key，用于判断是否需要上报（避免在同一状态下重复上报）
             // 包含 Agent ID、页面来源和开关状态，确保这些关键参数变化时会重新上报
             val currentKey =
-                "${agentInfo?.id}_${pageSource}_${showKeepTalking}_${autoPlayVoice}_${autoPlayAnimation}"
+                "${agentInfo?.id}_${pageSource}_${showKeepTalking}_${autoPlayVoice}_${autoPlayAnimation}_${sendUxUiGestureSignals}"
 
             // 如果 key 发生变化，说明需要上报新的事件
             // 这确保了：1) 首次曝光时上报 2) Agent 切换时上报 3) 页面来源变化时上报 4) 开关状态变化时上报
@@ -370,6 +371,7 @@ internal fun ChatPage(
                         "keep_talking_enabled" to showKeepTalking,
                         "auto_play_voice_enabled" to autoPlayVoice,
                         "auto_play_animation_enabled" to autoPlayAnimation,
+                        "send_ux_ui_gesture_signals" to sendUxUiGestureSignals,
                     ),
                 )
 
@@ -398,6 +400,7 @@ internal fun ChatPage(
                     "keep_talking_enabled" to showKeepTalking,
                     "auto_play_voice_enabled" to autoPlayVoice,
                     "auto_play_animation_enabled" to autoPlayAnimation,
+                    "send_ux_ui_gesture_signals" to sendUxUiGestureSignals,
                 ),
             )
         }

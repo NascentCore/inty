@@ -154,13 +154,6 @@ fun SettingScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            GestureSignalSettingsSection(
-                enabled = sendUxUiGestureSignals,
-                onEnabledChange = { enabled -> SettingStateManager.updateSendUxUiGestureSignals(enabled) },
-            )
-
-            Spacer(Modifier.height(16.dp))
-
             // 支持与帮助区域
             SupportAndHelpSection(
                 navController,
@@ -175,6 +168,13 @@ fun SettingScreen(
             LogoutButton(
                 onLogout = { viewModel.showLogoutConfirmDialog() },
                 onDeleteAccount = { viewModel.showDeleteAccountDialog() },
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            GestureSignalSettingsSection(
+                enabled = sendUxUiGestureSignals,
+                onEnabledChange = { enabled -> SettingStateManager.updateSendUxUiGestureSignals(enabled) },
             )
 
             // Debug 环境后端切换（仅 debug 可见）
