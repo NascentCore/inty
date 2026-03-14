@@ -259,7 +259,6 @@ private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boo
         )
     }
 }
-
 @Composable
 private fun DebugVipStatus() {
     SettingsItemGroup(modifier = Modifier.padding(12.dp)) {
