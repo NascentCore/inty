@@ -971,6 +971,15 @@ class ChatViewModel : BaseVM() {
                                 "end_to_end_time" to endToEndTime,
                             ),
                         )
+                        FirebaseManager.recordException(
+                            Exception("Background touch action send failed: ${result.message}"),
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agent.id,
+                                "agent_name" to agent.name,
+                                "response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
+                            ),
+                        )
                         NetworkErrorHandler.showNetworkAwareError(
                             "Failed to send background touch action."
                         )
@@ -999,6 +1008,14 @@ class ChatViewModel : BaseVM() {
                         "error_message" to
                             "exception: ${e.javaClass.simpleName}, ${e.message?.take(100) ?: "unknown error"}",
                         "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "end_to_end_time" to endToEndTime,
+                    ),
+                )
+                FirebaseManager.recordException(
+                    e,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
                         "end_to_end_time" to endToEndTime,
                     ),
                 )

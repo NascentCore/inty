@@ -32,6 +32,10 @@ data class CharacterBackgroundLayout(
     val sourceImageHeightPx: Float,
 )
 
+/**
+ * Maps touch coordinates from the chat background container to the original source image,
+ * matching [ContentScale.Crop] (scale to cover, then center both axes).
+ */
 object CharacterTouchCoordinateMapper {
     fun mapPoint(
         layout: CharacterBackgroundLayout,
@@ -55,13 +59,16 @@ object CharacterTouchCoordinateMapper {
         if (scale <= 0f || !scale.isFinite()) return null
 
         val displayedWidth = layout.sourceImageWidthPx * scale
+        val displayedHeight = layout.sourceImageHeightPx * scale
         val offsetX = (layout.containerWidthPx - displayedWidth) / 2f
+        val offsetY = (layout.containerHeightPx - displayedHeight) / 2f
         val mappedX =
             ((touchX - offsetX) / scale).coerceIn(
                 0f,
                 layout.sourceImageWidthPx - 1f,
             )
-        val mappedY = (touchY / scale).coerceIn(0f, layout.sourceImageHeightPx - 1f)
+        val mappedY =
+            ((touchY - offsetY) / scale).coerceIn(0f, layout.sourceImageHeightPx - 1f)
 
         val normalizedX =
             if (layout.sourceImageWidthPx <= 1f) 0f

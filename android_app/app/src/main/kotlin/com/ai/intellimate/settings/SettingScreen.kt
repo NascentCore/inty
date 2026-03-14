@@ -210,6 +210,7 @@ fun SettingScreen(
     }
 }
 
+/** Settings section for the "Send UX/UI gesture signals" toggle (chat background tap/swipe → AI). */
 @Composable
 private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     SettingsItemGroup {

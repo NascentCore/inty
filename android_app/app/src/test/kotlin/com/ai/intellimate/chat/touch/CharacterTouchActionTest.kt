@@ -5,8 +5,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CharacterTouchActionTest {
+    /** Scale-from-height: container taller than source aspect; offsetX non-zero, offsetY zero. */
     @Test
-    fun mapPoint_withCropTopCenter_mapsToOriginalImageCoordinates() {
+    fun mapPoint_scaleFromHeight_mapsToOriginalImageCoordinates() {
         val layout =
             CharacterBackgroundLayout(
                 containerWidthPx = 800f,
@@ -23,6 +24,28 @@ class CharacterTouchActionTest {
             )
 
         assertEquals(60, point?.x)
+        assertEquals(960, point?.y)
+    }
+
+    /** Scale-from-width: container wider than source aspect; offsetY non-zero (center-crop). */
+    @Test
+    fun mapPoint_scaleFromWidth_centerCropMapsCorrectly() {
+        val layout =
+            CharacterBackgroundLayout(
+                containerWidthPx = 1080f,
+                containerHeightPx = 1080f,
+                sourceImageWidthPx = 1080f,
+                sourceImageHeightPx = 1920f,
+            )
+
+        val point =
+            CharacterTouchCoordinateMapper.mapPoint(
+                layout = layout,
+                touchX = 540f,
+                touchY = 540f,
+            )
+
+        assertEquals(540, point?.x)
         assertEquals(960, point?.y)
     }
 

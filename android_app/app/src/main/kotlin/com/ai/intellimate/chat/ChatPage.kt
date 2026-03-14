@@ -532,6 +532,8 @@ internal fun ChatPage(
             )
         }
 
+        // Full-size layer: captures tap/swipe in the top fraction of the background (when gesture
+        // signals are on), maps to source image coordinates, and sends a touch action message.
         Box(
             modifier =
                 Modifier.fillMaxSize()
@@ -1463,6 +1465,7 @@ internal fun ChatPage(
     }
 }
 
+/** URL used for background touch coordinate mapping: custom chat background or agent origin image. */
 private fun resolveBackgroundTouchSourceUrl(agentInfo: AgentInfo?): String? {
     val currentAgentId = agentInfo?.id ?: return null
     val customBackgroundUrl = IntySetting.getChatBackgroundImage(currentAgentId)
@@ -1472,6 +1475,7 @@ private fun resolveBackgroundTouchSourceUrl(agentInfo: AgentInfo?): String? {
     return agentInfo.getOriginShowImage()?.takeIf { it.isNotBlank() }
 }
 
+/** Resolves the background image size (px) for touch mapping; official assistant uses drawable, else loads via Coil. */
 @Composable
 private fun rememberBackgroundTouchSourceImageSize(
     imageUrl: String?,
@@ -1516,6 +1520,7 @@ private suspend fun loadOriginalImageSize(context: android.content.Context, imag
     }
 }
 
+/** Builds layout for container→source coordinate mapping; returns null if any dimension is invalid. */
 private fun buildCharacterBackgroundLayout(
     containerSize: IntSize,
     sourceImageSize: IntSize,
