@@ -198,7 +198,9 @@ class ChatMessageRepository(
         return result
     }
 
-    suspend fun preUploadChatInputImage(localImageUri: String): HttpResult<ChatPreparedImageUpload> {
+    suspend fun preUploadChatInputImage(
+        localImageUri: String
+    ): HttpResult<ChatPreparedImageUpload> {
         val preparedImageResult = prepareChatInputImage(localImageUri)
         return when (preparedImageResult) {
             is HttpResult.Success -> uploadPreparedChatInputImage(preparedImageResult.data)
@@ -232,7 +234,7 @@ class ChatMessageRepository(
     }
 
     private suspend fun awaitPreUploadResult(
-        preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>?,
+        preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>?
     ): HttpResult<ChatPreparedImageUpload>? {
         if (preUploadTask == null) {
             return null
@@ -251,10 +253,7 @@ class ChatMessageRepository(
                 val preparedImage = prepareChatInputImageInternal(imageUri)
                 if (preparedImage.isFailure) {
                     val error = preparedImage.exceptionOrNull()
-                    HttpResult.Failure(
-                        error?.message ?: "Failed to prepare selected image",
-                        -1,
-                    )
+                    HttpResult.Failure(error?.message ?: "Failed to prepare selected image", -1)
                 } else {
                     HttpResult.Success(preparedImage.getOrThrow())
                 }
@@ -266,12 +265,14 @@ class ChatMessageRepository(
     }
 
     suspend fun uploadPreparedChatInputImage(
-        preparedImage: ChatPreparedLocalImage,
+        preparedImage: ChatPreparedLocalImage
     ): HttpResult<ChatPreparedImageUpload> {
         return withContext(Dispatchers.IO) {
             try {
                 val requestBody =
-                    preparedImage.localCompressedFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                    preparedImage.localCompressedFile.asRequestBody(
+                        "image/jpeg".toMediaTypeOrNull()
+                    )
                 val multipart =
                     MultipartBody.Part.createFormData(
                         "file",
@@ -318,18 +319,16 @@ class ChatMessageRepository(
     private fun prepareChatInputImageInternal(imageUri: Uri): Result<ChatPreparedLocalImage> {
         val context = Utils.getApp()
         val (originalWidth, originalHeight) =
-            decodeImageBounds(imageUri).getOrElse { error -> return Result.failure(error) }
+            decodeImageBounds(imageUri).getOrElse { error ->
+                return Result.failure(error)
+            }
         val scaledSize =
             ChatInputImageScaling.scaleToTargetArea(
                 originalWidth = originalWidth,
                 originalHeight = originalHeight,
             )
         val sampleSize =
-            maxOf(
-                originalWidth / scaledSize.width,
-                originalHeight / scaledSize.height,
-                1,
-            )
+            maxOf(originalWidth / scaledSize.width, originalHeight / scaledSize.height, 1)
         val decodedBitmap =
             decodeBitmapWithSample(imageUri, sampleSize).getOrElse { error ->
                 return Result.failure(error)
@@ -341,19 +340,15 @@ class ChatMessageRepository(
                 if (oriented.width == scaledSize.width && oriented.height == scaledSize.height) {
                     oriented
                 } else {
-                    Bitmap.createScaledBitmap(oriented, scaledSize.width, scaledSize.height, true).also {
-                        if (it !== oriented) {
-                            oriented.recycle()
+                    Bitmap.createScaledBitmap(oriented, scaledSize.width, scaledSize.height, true)
+                        .also {
+                            if (it !== oriented) {
+                                oriented.recycle()
+                            }
                         }
-                    }
                 }
             }
-        val compressedFile =
-            File.createTempFile(
-                "chat_input_compressed_",
-                ".jpg",
-                context.cacheDir,
-            )
+        val compressedFile = File.createTempFile("chat_input_compressed_", ".jpg", context.cacheDir)
         return try {
             FileOutputStream(compressedFile).use { output ->
                 if (!orientedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)) {
@@ -374,8 +369,8 @@ class ChatMessageRepository(
     }
 
     /**
-     * Decodes only image dimensions (width, height) without loading pixel data.
-     * Uses [BitmapFactory.Options.inJustDecodeBounds]; the stream is read only to fill options.
+     * Decodes only image dimensions (width, height) without loading pixel data. Uses
+     * [BitmapFactory.Options.inJustDecodeBounds]; the stream is read only to fill options.
      */
     private fun decodeImageBounds(imageUri: Uri): Result<Pair<Int, Int>> {
         val context = Utils.getApp()
@@ -422,10 +417,11 @@ class ChatMessageRepository(
         return try {
             val orientation =
                 context.contentResolver.openInputStream(imageUri)?.use { input ->
-                    ExifInterface(input).getAttributeInt(
-                        ExifInterface.TAG_ORIENTATION,
-                        ExifInterface.ORIENTATION_NORMAL,
-                    )
+                    ExifInterface(input)
+                        .getAttributeInt(
+                            ExifInterface.TAG_ORIENTATION,
+                            ExifInterface.ORIENTATION_NORMAL,
+                        )
                 } ?: ExifInterface.ORIENTATION_NORMAL
             Result.success(orientation)
         } catch (error: Exception) {

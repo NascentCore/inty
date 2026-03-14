@@ -1102,10 +1102,7 @@ export const chatApi = {
 
   // 获取对话模式列表（可按 agent 过滤）
   getModes: (agentId?: string | null): Promise<ChatModeOptionCompat[]> =>
-    apiClient.get(
-      "/chats/modes",
-      agentId ? { agent_id: agentId } : undefined,
-    ),
+    apiClient.get("/chats/modes", agentId ? { agent_id: agentId } : undefined),
 
   // 获取轻量级消息列表（后端使用 limit/offset；此处兼容 page/size 并转换）
   getMessages: (

@@ -1,11 +1,9 @@
-import type { ChatMessageResponse, ConversationsDetailResponse } from "../types";
+import type {
+  ChatMessageResponse,
+  ConversationsDetailResponse,
+} from "../types";
 
-const USER_MESSAGE_TYPES = new Set([
-  "human",
-  "HumanMessage",
-  "user",
-  "USER",
-]);
+const USER_MESSAGE_TYPES = new Set(["human", "HumanMessage", "user", "USER"]);
 
 export interface AllUsersMessageRow {
   key: string;
@@ -81,7 +79,8 @@ export const buildAllUsersMessageRows = (
       return -1;
     }
     return (
-      new Date(second.created_at).getTime() - new Date(first.created_at).getTime()
+      new Date(second.created_at).getTime() -
+      new Date(first.created_at).getTime()
     );
   });
 

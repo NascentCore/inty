@@ -10,7 +10,9 @@ class ChatInputImageScalingTest {
     fun `scaleToTargetArea keeps area near 57600 and ratio for landscape image`() {
         val result = ChatInputImageScaling.scaleToTargetArea(1200, 800)
 
-        assertTrue(abs(result.width * result.height - ChatInputImageScaling.TARGET_TOTAL_PIXELS) <= 200)
+        assertTrue(
+            abs(result.width * result.height - ChatInputImageScaling.TARGET_TOTAL_PIXELS) <= 200
+        )
         assertTrue(abs(result.width.toDouble() / result.height.toDouble() - 1.5) < 0.02)
     }
 
@@ -18,7 +20,9 @@ class ChatInputImageScalingTest {
     fun `scaleToTargetArea keeps area near 57600 and ratio for portrait image`() {
         val result = ChatInputImageScaling.scaleToTargetArea(800, 1200)
 
-        assertTrue(abs(result.width * result.height - ChatInputImageScaling.TARGET_TOTAL_PIXELS) <= 200)
+        assertTrue(
+            abs(result.width * result.height - ChatInputImageScaling.TARGET_TOTAL_PIXELS) <= 200
+        )
         assertTrue(abs(result.width.toDouble() / result.height.toDouble() - (2.0 / 3.0)) < 0.02)
     }
 
