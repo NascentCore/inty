@@ -30,9 +30,7 @@ export const PremiumModeToggle: React.FC<PremiumModeToggleProps> = ({
     setError(null);
 
     try {
-      const settings = (await api
-        .getIntyClient()
-        .api.v1.chats.agents.getSettings(agentId)) as {
+      const settings = (await api.chat.getAgentSettings(agentId)) as {
         premium_mode?: boolean;
       };
       setPremiumMode(settings.premium_mode || false);

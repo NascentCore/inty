@@ -6,8 +6,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "preinstall": "mkdir -p inty_sdk/dist",
-    "prebuild": "test -f inty_sdk/dist/index.mjs || (cd inty_sdk && yarn install --ignore-scripts && yarn run build)",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 vite build",
     "preview": "vite preview",
     "start": "vite --mode production",
@@ -26,7 +24,6 @@
     "@types/plotly.js": "^2.12.29",
     "antd": "^5.12.0",
     "dayjs": "^1.11.10",
-    "inty": "file:./inty_sdk/dist",
     "lodash": "^4.17.21",
     "plotly.js": "^2.27.1",
     "prettier": "^3.6.2",

@@ -70,48 +70,6 @@ export interface ChatModeOptionCompat {
   description: string;
 }
 
-type IntyCompatClient = {
-  api: {
-    v1: {
-      users: {
-        profile: {
-          me: () => Promise<{ data?: Record<string, unknown> | null }>;
-        };
-      };
-      subscription: {
-        getStatus: () => Promise<{ data?: Record<string, unknown> | null }>;
-      };
-      chats: {
-        agents: {
-          getSettings: (
-            agentId: string,
-          ) => Promise<{ premium_mode?: boolean; [key: string]: unknown }>;
-        };
-        getModes: (agentId?: string | null) => Promise<ChatModeOptionCompat[]>;
-      };
-      ai: {
-        agents: {
-          create: (
-            data: AgentCreateRequest,
-          ) => Promise<{ data?: Agent | null }>;
-          retrieve: (agentId: string) => Promise<Agent>;
-          update: (
-            agentId: string,
-            data: Partial<AgentUpdateRequest> & {
-              replace_background_images?: boolean;
-            },
-          ) => Promise<Agent>;
-          delete: (agentId: string) => Promise<{ message?: string } | null>;
-        };
-      };
-      uploadImage: (params: {
-        file: File;
-        cropping_avatar?: boolean;
-      }) => Promise<{ data?: { avatar_url?: string; url?: string } | null }>;
-    };
-  };
-};
-
 class ApiClient {
   private baseURL: string;
   private apiPrefix: string;
@@ -350,87 +308,7 @@ class ApiClient {
 // 创建API客户端实例
 const apiClient = new ApiClient(window.location.origin);
 
-// 兼容层：移除 Stainless SDK 依赖后，保留旧调用链（api.getIntyClient().api.v1...）
-const intyClient: IntyCompatClient = {
-  api: {
-    v1: {
-      users: {
-        profile: {
-          me: async () => {
-            const profile =
-              await apiClient.get<Record<string, unknown>>("/users/me");
-            return { data: profile };
-          },
-        },
-      },
-      subscription: {
-        getStatus: async () => {
-          const subscriptionStatus = await apiClient.get<
-            Record<string, unknown>
-          >("/subscription/status");
-          return { data: subscriptionStatus };
-        },
-      },
-      chats: {
-        agents: {
-          getSettings: (agentId: string) =>
-            apiClient.get(`/chats/agents/${agentId}/settings`),
-        },
-        getModes: (agentId?: string | null) =>
-          apiClient.get<ChatModeOptionCompat[]>(
-            "/chats/modes",
-            agentId ? { agent_id: agentId } : undefined,
-          ),
-      },
-      ai: {
-        agents: {
-          create: async (data: AgentCreateRequest) => {
-            const createdAgent = await apiClient.post<Agent>(
-              "/ai/agents",
-              data,
-            );
-            return { data: createdAgent };
-          },
-          retrieve: (agentId: string) => apiClient.get(`/ai/agents/${agentId}`),
-          update: (
-            agentId: string,
-            data: Partial<AgentUpdateRequest> & {
-              replace_background_images?: boolean;
-            },
-          ) => apiClient.put(`/ai/agents/${agentId}`, data),
-          delete: (agentId: string) =>
-            apiClient.delete(`/ai/agents/${agentId}`),
-        },
-      },
-      uploadImage: async ({
-        file,
-        cropping_avatar,
-      }: {
-        file: File;
-        cropping_avatar?: boolean;
-      }) => {
-        const additionalData =
-          cropping_avatar === undefined ? undefined : { cropping_avatar };
-        const uploadResponse = await apiClient.upload<UploadAvatarResponse>(
-          "/images",
-          file,
-          additionalData,
-        );
-        const normalizedUrl = uploadResponse.url ?? uploadResponse.data?.url;
-        const normalizedAvatarUrl =
-          uploadResponse.data?.avatar_url ?? normalizedUrl;
-        return {
-          data: {
-            avatar_url: normalizedAvatarUrl,
-            url: normalizedUrl,
-          },
-        };
-      },
-    },
-  },
-};
-
-// 兼容旧调用入口：保留该函数，但不再创建 SDK 客户端实例
+// 保留旧入口函数名，兼容现有调用链，内部仅维护全局 API Key
 export const updateIntyClient = (apiKey: string | null) => {
   setGlobalApiKey(apiKey);
 };
@@ -526,7 +404,9 @@ export const agentApi = {
   // 更新智能体 - 使用现有API
   update: (
     agentId: string,
-    data: Partial<AgentUpdateRequest>,
+    data: Partial<AgentUpdateRequest> & {
+      replace_background_images?: boolean;
+    },
   ): Promise<Agent> => apiClient.put(`/ai/agents/${agentId}`, data),
 
   // 删除智能体 - 使用现有API
@@ -782,6 +662,15 @@ export const statsApi = {
     format: string;
     session_count: number;
   }> => apiClient.post("/evaluation/results/export", data),
+};
+
+// =============================================================================
+// 订阅信息 API
+// =============================================================================
+
+export const subscriptionApi = {
+  getStatus: (): Promise<Record<string, unknown>> =>
+    apiClient.get("/subscription/status"),
 };
 
 // =============================================================================
@@ -1205,6 +1094,19 @@ export const chatApi = {
     };
   }> => apiClient.get(`/chats/agents/${agentId}/detail`, params),
 
+  // 获取智能体聊天设置
+  getAgentSettings: (
+    agentId: string,
+  ): Promise<{ premium_mode?: boolean; [key: string]: unknown }> =>
+    apiClient.get(`/chats/agents/${agentId}/settings`),
+
+  // 获取对话模式列表（可按 agent 过滤）
+  getModes: (agentId?: string | null): Promise<ChatModeOptionCompat[]> =>
+    apiClient.get(
+      "/chats/modes",
+      agentId ? { agent_id: agentId } : undefined,
+    ),
+
   // 获取轻量级消息列表（后端使用 limit/offset；此处兼容 page/size 并转换）
   getMessages: (
     agentId: string,
@@ -1344,6 +1246,9 @@ export const chatApi = {
 // =============================================================================
 
 export const userApi = {
+  // 获取当前用户信息
+  me: (): Promise<Record<string, unknown>> => apiClient.get("/users/me"),
+
   // 搜索用户列表
   searchUsers: (params?: {
     search?: string;
@@ -1615,6 +1520,7 @@ export default {
   questions: questionApi,
   scoring: scoringApi,
   stats: statsApi,
+  subscription: subscriptionApi,
   chat: chatApi,
   users: userApi,
   characterThemes: characterThemeApi,
@@ -1625,13 +1531,5 @@ export default {
   generatedImages: generatedImagesApi,
   report: reportApi,
   festivalMemory: festivalMemoryApi,
-  inty: intyClient,
   WebSocketManager,
-  // 获取 Inty 客户端的函数，确保只有在有 API Key 时才返回客户端
-  getIntyClient: () => {
-    if (!getGlobalApiKey()) {
-      throw new Error("API Key 未设置，请先设置 API Key");
-    }
-    return intyClient;
-  },
 };

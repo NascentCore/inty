@@ -7,19 +7,6 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo "🎯 构建 evaluation 并同步至 app/static/evaluation"
 
-echo "📦 构建 inty_sdk..."
-pushd "${SCRIPT_DIR}/inty_sdk" >/dev/null
-
-# 先创建 dist 目录，避免 evaluation/package.json 中的 file:./inty_sdk/dist 引用失败
-# 这在 CI 环境中很重要，因为 yarn 可能会检查整个工作区的依赖
-mkdir -p dist
-
-# tsc-multi 从 npm 安装，用于 inty_sdk 多目标构建
-yarn add -D tsc-multi
-yarn install
-NODE_OPTIONS="--max-old-space-size=4096" yarn run build
-popd >/dev/null
-
 echo "📦 安装前端依赖..."
 pushd "${SCRIPT_DIR}" >/dev/null
 npm install

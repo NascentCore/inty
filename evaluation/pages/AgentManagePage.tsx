@@ -1076,12 +1076,10 @@ export const AgentManagePage: React.FC = () => {
             replace_background_images: true,
           };
 
-          const updatedAgent = (await api
-            .getIntyClient()
-            .api.v1.ai.agents.update(
-              currentAgent.id,
-              updatePayload,
-            )) as unknown as Agent;
+          const updatedAgent = (await api.agents.update(
+            currentAgent.id,
+            updatePayload,
+          )) as Agent;
 
           if (updatedAgent) {
             setCurrentAgent({

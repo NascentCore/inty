@@ -37,8 +37,7 @@
     "node_modules",
     "dist",
     "vite.config.ts",
-    "vitest.config.ts",
-    "inty_sdk"
+    "vitest.config.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
