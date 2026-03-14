@@ -104,9 +104,8 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [loadingUserImages, setLoadingUserImages] = useState(false);
   const [userImages, setUserImages] = useState<UserGeneratedImageItem[]>([]);
   const [userImagesTotal, setUserImagesTotal] = useState(0);
-  const [allUsersConversationDetails, setAllUsersConversationDetails] = useState<
-    ConversationsDetailResponse[]
-  >([]);
+  const [allUsersConversationDetails, setAllUsersConversationDetails] =
+    useState<ConversationsDetailResponse[]>([]);
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
@@ -547,7 +546,8 @@ export const UserDailyMessagesPage: React.FC = () => {
       dataIndex: "created_at",
       key: "created_at",
       width: 190,
-      render: (value: string | null) => (value ? formatUtcTimeRaw(value) : "N/A"),
+      render: (value: string | null) =>
+        value ? formatUtcTimeRaw(value) : "N/A",
     },
     {
       title: "用户",
@@ -884,9 +884,13 @@ export const UserDailyMessagesPage: React.FC = () => {
               style={{ marginBottom: "24px" }}
               extra={
                 <Space size="middle">
-                  <Text type="secondary">用户数：{allUsersConversationDetails.length}</Text>
+                  <Text type="secondary">
+                    用户数：{allUsersConversationDetails.length}
+                  </Text>
                   <Text type="secondary">会话数：{allUsersSessionCount}</Text>
-                  <Text type="secondary">消息数：{allUsersMessageRows.length}</Text>
+                  <Text type="secondary">
+                    消息数：{allUsersMessageRows.length}
+                  </Text>
                 </Space>
               }
             >

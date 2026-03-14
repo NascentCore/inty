@@ -6,10 +6,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-internal data class ScaledImageSize(
-    val width: Int,
-    val height: Int,
-)
+internal data class ScaledImageSize(val width: Int, val height: Int)
 
 internal object ChatInputImageScaling {
     const val TARGET_TOTAL_PIXELS: Int = 57_600
@@ -36,10 +33,9 @@ internal object ChatInputImageScaling {
                 .filter { it.width > 0 && it.height > 0 }
                 .minWithOrNull(
                     compareBy<ScaledImageSize> {
-                        abs(it.width.toLong() * it.height.toLong() - targetTotalPixels.toLong())
-                    }.thenBy {
-                        abs((it.width.toDouble() / it.height.toDouble()) - aspectRatio)
-                    }
+                            abs(it.width.toLong() * it.height.toLong() - targetTotalPixels.toLong())
+                        }
+                        .thenBy { abs((it.width.toDouble() / it.height.toDouble()) - aspectRatio) }
                 )
 
         return best ?: ScaledImageSize(originalWidth, originalHeight)
