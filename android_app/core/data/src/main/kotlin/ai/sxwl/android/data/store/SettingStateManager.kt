@@ -44,6 +44,10 @@ object SettingStateManager {
     private val _showSceneActionButtonFlow = MutableStateFlow(IntySetting.isShowSceneActionButton())
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
 
+    // 是否发送 UX/UI 手势信号（背景点击/滑动）
+    private val _sendUxUiGestureSignalsFlow = MutableStateFlow(IntySetting.isSendUxUiGestureSignals())
+    val sendUxUiGestureSignalsFlow: StateFlow<Boolean> = _sendUxUiGestureSignalsFlow.asStateFlow()
+
     private val _keyboardHeight = MutableStateFlow(IntySetting.getKeyboardHeight())
     val keyboardHeight = _keyboardHeight.asStateFlow()
 
@@ -183,6 +187,11 @@ object SettingStateManager {
         IntySetting.setShowSceneActionButton(enabled)
         IntySetting.markUserSetSceneActionButton()
         _showSceneActionButtonFlow.value = enabled
+    }
+
+    fun updateSendUxUiGestureSignals(enabled: Boolean) {
+        IntySetting.setSendUxUiGestureSignals(enabled)
+        _sendUxUiGestureSignalsFlow.value = enabled
     }
 
     /** 更新聊天消息字体大小（sp） */

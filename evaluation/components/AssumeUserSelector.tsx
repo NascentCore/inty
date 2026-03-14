@@ -27,11 +27,10 @@ export const AssumeUserSelector: React.FC = () => {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const client = api.getIntyClient();
-      const res = (await client.api.v1.users.profile.me()) as {
-        data?: { is_superuser?: boolean } | null;
-      };
-      setIsSuperuser(Boolean(res?.data?.is_superuser));
+      const profile = (await api.users.me()) as {
+        is_superuser?: boolean;
+      } | null;
+      setIsSuperuser(Boolean(profile?.is_superuser));
     } catch {
       setIsSuperuser(false);
     }

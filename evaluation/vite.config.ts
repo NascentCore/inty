@@ -22,14 +22,6 @@ export default defineConfig(() => {
     // background-image: url('/evaluation/images/logo.png');
     base: "/evaluation/",
 
-    // 依赖优化配置
-    optimizeDeps: {
-      // 包含 inty 包进行优化
-      include: ["inty"],
-      // 强制预构建本地包
-      force: true,
-    },
-
     // 构建配置
     build: {
       outDir: "dist",
@@ -77,7 +69,6 @@ export default defineConfig(() => {
         "@types": resolve(__dirname, "./types"),
         "@styles": resolve(__dirname, "./styles"),
       },
-      dedupe: ["inty"],
     },
   };
 });

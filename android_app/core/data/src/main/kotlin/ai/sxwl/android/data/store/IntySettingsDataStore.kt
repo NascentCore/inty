@@ -28,6 +28,7 @@ object IntySettingsDataStore {
     private const val KEY_AUTO_PLAY_ANIMATION = "auto_play_animation"
     private const val KEY_TEXT_STREAMING = "text_streaming"
     private const val KEY_SHOW_SCENE_ACTION_BUTTON = "show_scene_action_button"
+    private const val KEY_SEND_UX_UI_GESTURE_SIGNALS = "send_ux_ui_gesture_signals"
     private const val KEY_SHOW_KEEP_TALKING = "show_keep_talking"
     private const val KEY_AUTO_PLAY_AUDIO = "auto_play_audio"
     private const val KEY_LLM_STREAMING_MODE = "llm_streaming_mode"
@@ -38,6 +39,7 @@ object IntySettingsDataStore {
     private const val DEFAULT_AUTO_PLAY_ANIMATION = true
     private const val DEFAULT_TEXT_STREAMING = true
     private const val DEFAULT_SHOW_SCENE_ACTION_BUTTON = false
+    private const val DEFAULT_SEND_UX_UI_GESTURE_SIGNALS = false
     private const val DEFAULT_SHOW_KEEP_TALKING = false
     private const val DEFAULT_AUTO_PLAY_AUDIO = true
     private const val DEFAULT_LLM_STREAMING_MODE = false
@@ -58,6 +60,7 @@ object IntySettingsDataStore {
         var autoPlayAnimation: Boolean = DEFAULT_AUTO_PLAY_ANIMATION,
         var textStreaming: Boolean = DEFAULT_TEXT_STREAMING,
         var showSceneActionButton: Boolean = DEFAULT_SHOW_SCENE_ACTION_BUTTON,
+        var sendUxUiGestureSignals: Boolean = DEFAULT_SEND_UX_UI_GESTURE_SIGNALS,
         var showKeepTalking: Boolean = DEFAULT_SHOW_KEEP_TALKING,
         var autoPlayAudio: Boolean = DEFAULT_AUTO_PLAY_AUDIO,
         var llmStreamingMode: Boolean = DEFAULT_LLM_STREAMING_MODE,
@@ -103,6 +106,9 @@ object IntySettingsDataStore {
                     showSceneActionButton =
                         prefs[booleanPreferencesKey(KEY_SHOW_SCENE_ACTION_BUTTON)]
                             ?: DEFAULT_SHOW_SCENE_ACTION_BUTTON,
+                    sendUxUiGestureSignals =
+                        prefs[booleanPreferencesKey(KEY_SEND_UX_UI_GESTURE_SIGNALS)]
+                            ?: DEFAULT_SEND_UX_UI_GESTURE_SIGNALS,
                     showKeepTalking =
                         prefs[booleanPreferencesKey(KEY_SHOW_KEEP_TALKING)]
                             ?: DEFAULT_SHOW_KEEP_TALKING,
@@ -237,6 +243,25 @@ object IntySettingsDataStore {
             val job =
                 GlobalScope.launch(Dispatchers.IO) {
                     store(uid).putBoolean(KEY_SHOW_SCENE_ACTION_BUTTON, value)
+                }
+            registerPendingWrite(uid, job)
+        }
+    }
+
+    fun getSendUxUiGestureSignals(uid: String): Boolean {
+        return synchronized(lock) {
+            ensureCacheUnderLock(uid)
+            cache.sendUxUiGestureSignals
+        }
+    }
+
+    fun setSendUxUiGestureSignals(uid: String, value: Boolean) {
+        synchronized(lock) {
+            ensureCacheUnderLock(uid)
+            cache.sendUxUiGestureSignals = value
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_SEND_UX_UI_GESTURE_SIGNALS, value)
                 }
             registerPendingWrite(uid, job)
         }

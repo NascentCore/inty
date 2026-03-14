@@ -1,6 +1,3 @@
-# Generated SDK code - should not be formatted
-inty_sdk/
-
 # Build outputs
 dist/
 build/

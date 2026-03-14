@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - web_app/**
-      - evaluation/inty_sdk/**
       - .github/workflows/ci_web_app.yaml
 
 concurrency:
@@ -40,17 +39,10 @@ jobs:
         with:
           path: |
             ${{ steps.yarn-cache-dir-path.outputs.dir }}
-            evaluation/inty_sdk/node_modules
             web_app/node_modules
-          key: ${{ runner.os }}-webapp-yarn-${{ hashFiles('evaluation/inty_sdk/yarn.lock', 'web_app/yarn.lock') }}
+          key: ${{ runner.os }}-webapp-yarn-${{ hashFiles('web_app/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-webapp-yarn-
-
-      - name: Install and build inty SDK
-        working-directory: evaluation/inty_sdk
-        run: |
-          yarn install --frozen-lockfile
-          yarn build
 
       - name: Install web app dependencies
         working-directory: web_app

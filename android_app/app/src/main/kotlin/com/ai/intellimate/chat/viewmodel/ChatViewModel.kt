@@ -36,6 +36,8 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
+import com.ai.intellimate.chat.data.ChatPreparedImageUpload
+import com.ai.intellimate.chat.touch.CharacterTouchAction
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.utils.VipChatCreditPolicy
 import com.ai.intellimate.ui.UiConfigs
@@ -45,6 +47,7 @@ import com.ai.intellimate.xb.helper.AgentStore
 import com.architecture.httplib.core.HttpResult
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -85,9 +88,16 @@ class ChatViewModel : BaseVM() {
     )
 
     private data class PendingInputImageUpload(
-        val localImageUri: String,
-        val uploadTask: Deferred<HttpResult<String>>,
-    )
+        val originalImageUri: String,
+        val uploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>,
+        var compressedImageUri: String? = null,
+    ) {
+        fun matchesCurrentUri(uri: String?): Boolean {
+            if (uri.isNullOrBlank()) return false
+            if (uri == originalImageUri) return true
+            return uri == compressedImageUri
+        }
+    }
 
     /** 聊天消息额度弹窗类型。 */
     enum class ChatLimitDialogType {
@@ -528,8 +538,9 @@ class ChatViewModel : BaseVM() {
 
         val inputMsg = inputData.value
         val selectedImageUri = inputImageUri.value
+        val pendingImageUpload = pendingInputImageUpload
         val selectedImageUploadTask =
-            pendingInputImageUpload?.takeIf { it.localImageUri == selectedImageUri }?.uploadTask
+            pendingImageUpload?.takeIf { it.matchesCurrentUri(selectedImageUri) }?.uploadTask
         if (selectedImageUploadTask != null) {
             pendingInputImageUpload = null
         }
@@ -556,7 +567,7 @@ class ChatViewModel : BaseVM() {
                 if (!selectedImageUri.isNullOrBlank() && selectedImageUploadTask != null) {
                     pendingInputImageUpload =
                         PendingInputImageUpload(
-                            localImageUri = selectedImageUri,
+                            originalImageUri = selectedImageUri,
                             uploadTask = selectedImageUploadTask,
                         )
                 }
@@ -812,6 +823,207 @@ class ChatViewModel : BaseVM() {
                 _isWaitingForReply.value = false
             } finally {
                 // 确保状态在最后被正确重置
+                if (_isWaitingForReply.value) {
+                    _isWaitingForReply.value = false
+                }
+            }
+        }
+    }
+
+    fun sendBackgroundTouchAction(action: CharacterTouchAction) {
+        val actionDescription = action.description.trim()
+        if (actionDescription.isBlank()) return
+
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
+            return
+        }
+        lastSendTime = currentTime
+
+        if (_isWaitingForReply.value) {
+            return
+        }
+
+        val agentId = _agentInfo.value?.id ?: return
+        val agent = _agentInfo.value ?: return
+        _isWaitingForReply.value = true
+        val endToEndStartTime = currentTime
+
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!deductVipChatCreditsIfNeeded(agent)) {
+                _isWaitingForReply.value = false
+                return@launch
+            }
+
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.CHAT_PAGE_CLICK,
+                FirebaseManager.safeEventParams(
+                    "click_type" to "background_touch_action_sent",
+                    "gesture_type" to action.gestureType.analyticsValue,
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "start_x" to action.startPoint.x,
+                    "start_y" to action.startPoint.y,
+                    "end_x" to action.endPoint?.x,
+                    "end_y" to action.endPoint?.y,
+                    "source_image_width" to action.sourceImageWidth,
+                    "source_image_height" to action.sourceImageHeight,
+                    "timestamp" to endToEndStartTime,
+                ),
+            )
+
+            val aiResponseStartTime = System.currentTimeMillis()
+            FirebaseManager.logEvent(
+                FirebaseManager.Events.MESSAGE_SENT,
+                FirebaseManager.safeEventParams(
+                    "agent_id" to agent.id,
+                    "agent_name" to agent.name,
+                    "message_type" to "background_touch_${action.gestureType.analyticsValue}",
+                    "message_length" to actionDescription.length,
+                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                    "timestamp" to aiResponseStartTime,
+                ),
+            )
+
+            try {
+                when (val result = chatMessageRepository.sendMessage(agentId, actionDescription)) {
+                    is HttpResult.Success -> {
+                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agent.id,
+                                "agent_name" to agent.name,
+                                "message_type" to
+                                    "background_touch_${action.gestureType.analyticsValue}",
+                                "response_code" to (result.data.code ?: 0),
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "ai_response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
+                            ),
+                        )
+
+                        sessionMessageCount++
+                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                        val elapsedTimeSinceLastShow = System.currentTimeMillis() - lastShowTime
+                        if (
+                            sessionMessageCount >=
+                                UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                                elapsedTimeSinceLastShow >=
+                                    UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
+                        ) {
+                            IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
+                            withContext(Dispatchers.Main) {
+                                _showFeedbackRequestDialog.value = true
+                            }
+                        }
+
+                        result.data.data?.choices?.getOrNull(0)?.let {
+                            if (it.message.agentId() == _agentId.value) {
+                                enableFlowShowIfAllowed()
+                                if (chatMessageRepository.shouldShowRank()) {
+                                    _showRankDialog.send(true)
+                                }
+                            }
+                        }
+
+                        runCatching {
+                                if (
+                                    result.data.code ==
+                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                ) {
+                                    emitChatLimitDialog(agent.id)
+                                }
+                            }
+                            .onFailure {
+                                LogUtils.e(
+                                    "Error processing background touch action response: ${it.message}"
+                                )
+                                _isWaitingForReply.value = false
+                            }
+                    }
+
+                    is HttpResult.Failure -> {
+                        if (
+                            runCatching { ensureActive() }.isFailure ||
+                                isCancellationError(result.message)
+                        ) {
+                            LogUtils.d(
+                                "ChatViewModel.sendBackgroundTouchAction: 请求被取消，不显示错误 Toast: ${result.message}"
+                            )
+                            return@launch
+                        }
+
+                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agent.id,
+                                "agent_name" to agent.name,
+                                "message_type" to
+                                    "background_touch_${action.gestureType.analyticsValue}",
+                                "error_message" to "failure: ${result.message.take(100)}",
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                "ai_response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
+                            ),
+                        )
+                        FirebaseManager.recordException(
+                            Exception("Background touch action send failed: ${result.message}"),
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to agent.id,
+                                "agent_name" to agent.name,
+                                "response_time" to responseTime,
+                                "end_to_end_time" to endToEndTime,
+                            ),
+                        )
+                        NetworkErrorHandler.showNetworkAwareError(
+                            "Failed to send background touch action."
+                        )
+                        _isWaitingForReply.value = false
+                    }
+                }
+            } catch (e: Exception) {
+                if (
+                    e is CancellationException ||
+                        runCatching { ensureActive() }.isFailure ||
+                        isCancellationError(e.message)
+                ) {
+                    LogUtils.d(
+                        "ChatViewModel.sendBackgroundTouchAction: 请求被取消，不显示错误 Toast: ${e.message}"
+                    )
+                    return@launch
+                }
+
+                val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                FirebaseManager.logEvent(
+                    FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
+                        "message_type" to "background_touch_${action.gestureType.analyticsValue}",
+                        "error_message" to
+                            "exception: ${e.javaClass.simpleName}, ${e.message?.take(100) ?: "unknown error"}",
+                        "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                        "end_to_end_time" to endToEndTime,
+                    ),
+                )
+                FirebaseManager.recordException(
+                    e,
+                    FirebaseManager.safeEventParams(
+                        "agent_id" to agent.id,
+                        "agent_name" to agent.name,
+                        "end_to_end_time" to endToEndTime,
+                    ),
+                )
+                NetworkErrorHandler.showNetworkAwareError(
+                    "Unexpected error while sending touch action."
+                )
+                _isWaitingForReply.value = false
+            } finally {
                 if (_isWaitingForReply.value) {
                     _isWaitingForReply.value = false
                 }
@@ -1153,15 +1365,51 @@ class ChatViewModel : BaseVM() {
         // 2) reuse this task when user taps send;
         // 3) keep UI responsive by avoiding synchronous upload at selection callback.
         val uploadTask =
-            viewModelScope.async(Dispatchers.IO) {
-                chatMessageRepository.preUploadChatInputImage(selectedUri)
+            viewModelScope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                when (
+                    val preparedImageResult =
+                        chatMessageRepository.prepareChatInputImage(selectedUri)
+                ) {
+                    is HttpResult.Failure ->
+                        HttpResult.Failure(preparedImageResult.message, preparedImageResult.code)
+                    is HttpResult.Success -> {
+                        val preparedImage = preparedImageResult.data
+                        val currentPending = pendingInputImageUpload
+                        if (currentPending?.originalImageUri == selectedUri) {
+                            currentPending.compressedImageUri =
+                                preparedImage.localCompressedImageUri
+                        }
+                        if (inputImageUri.value == selectedUri) {
+                            inputImageUri.value = preparedImage.localCompressedImageUri
+                        } else {
+                            val currentAgentId = _agentInfo.value?.id
+                            if (!currentAgentId.isNullOrBlank()) {
+                                chatMessageRepository.updateSendingUserImage(
+                                    agentId = currentAgentId,
+                                    imageUrl = preparedImage.localCompressedImageUri,
+                                    width = preparedImage.width,
+                                    height = preparedImage.height,
+                                )
+                            }
+                        }
+                        chatMessageRepository.uploadPreparedChatInputImage(preparedImage)
+                    }
+                }
             }
         pendingInputImageUpload =
-            PendingInputImageUpload(localImageUri = selectedUri, uploadTask = uploadTask)
+            PendingInputImageUpload(originalImageUri = selectedUri, uploadTask = uploadTask)
+        uploadTask.start()
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 when (val uploadResult = uploadTask.await()) {
                     is HttpResult.Success -> {
+                        val compressedUri = uploadResult.data.localCompressedImageUri
+                        pendingInputImageUpload
+                            ?.takeIf { it.uploadTask == uploadTask }
+                            ?.compressedImageUri = compressedUri
+                        if (inputImageUri.value == selectedUri) {
+                            inputImageUri.value = compressedUri
+                        }
                         FirebaseManager.logEvent(
                             FirebaseManager.Events.CHAT_PAGE_CLICK,
                             FirebaseManager.safeEventParams(

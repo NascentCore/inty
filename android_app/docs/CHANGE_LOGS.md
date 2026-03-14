@@ -13,6 +13,11 @@
 
 - Me → Settings now includes an **LLM streaming mode** switch that lets you turn real-time token streaming on or off for chat replies (when on, replies start appearing as soon as the first token arrives).
 
+## 2026-03-12
+
+- Chat image sending now preprocesses selected photos to a JPEG at ~57,600 total pixels before upload, keeps showing the original thumbnail during compression, switches to the compressed thumbnail when ready, and reuses that compressed local cache after upload to avoid an immediate re-download flicker.
+- Added a new Me → Settings toggle, **Send UX/UI gesture signals** (default off), that controls whether chat background taps/swipes are sent to AI as original-image coordinate action messages.
+
 ## 2026-03-09
 
 - Chat settings **Voice** picker now enforces gender matching for MALE/FEMALE iMates, so only same-gender Gemini voices are shown in the dropdown.

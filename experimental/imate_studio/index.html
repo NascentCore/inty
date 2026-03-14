@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iMate Studio - Interactive AI Video Design Sketch</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>iMate Studio</h1>
+      <p class="subtitle">AI-native studio: describe intent in plain language, let agents scaffold scenes, cast, and pacing.</p>
+    </div>
+    <div class="timing-chip">
+      <span id="current-time-label">00:00</span>
+      <small>/ 06:00</small>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>0) AI Director Copilot (intent-first)</h2>
+      <p class="help">No prior tool knowledge needed. Start with intent, then let studio AI scaffold structure.</p>
+      <label>
+        Story intent prompt
+        <textarea id="intent-prompt" rows="3" placeholder="I loved this coming-of-age mystery and want audience to feel the same wonder, heartbreak, and healing in 6 minutes."></textarea>
+      </label>
+      <div class="row">
+        <button id="scaffold-intent">Scaffold from intent</button>
+        <button id="smart-cast">Smart cast from repository</button>
+      </div>
+      <div id="intent-summary" class="card"></div>
+    </section>
+
+    <section class="panel">
+      <h2>1) Generate character (Dify workflow)</h2>
+      <form id="dify-form" class="stack">
+        <label>
+          Character Name
+          <input id="dify-name" required placeholder="Ari Stone">
+        </label>
+        <label>
+          Archetype
+          <input id="dify-archetype" required placeholder="Reluctant innovator">
+        </label>
+        <label>
+          Core Desire
+          <input id="dify-desire" required placeholder="Save family's theatre">
+        </label>
+        <label>
+          Hidden Secret
+          <input id="dify-secret" required placeholder="Faked audition results">
+        </label>
+        <button type="submit">Generate character draft</button>
+      </form>
+      <div id="dify-drafts" class="card-list"></div>
+    </section>
+
+    <section class="panel">
+      <h2>2) Character repository and casting</h2>
+      <p class="help">Cast from repository iMates or your generated drafts.</p>
+      <div id="repository" class="card-list"></div>
+      <div class="casting-grid">
+        <div>
+          <label for="cast-lead">Lead</label>
+          <select id="cast-lead"></select>
+        </div>
+        <div>
+          <label for="cast-partner">Partner</label>
+          <select id="cast-partner"></select>
+        </div>
+        <div>
+          <label for="cast-rival">Rival</label>
+          <select id="cast-rival"></select>
+        </div>
+        <div>
+          <label for="cast-mentor">Mentor</label>
+          <select id="cast-mentor"></select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>2.5) Licensed character ingestion agent (aspect import)</h2>
+      <p class="help">Pull licensed references into repo, then keep only approved aspects (bio, look, voice, music style).</p>
+      <label>
+        Source reference
+        <input id="licensed-source" placeholder="Li Shimin / Marilyn Monroe / Bob Dylan">
+      </label>
+      <label>
+        License deal ID
+        <input id="licensed-deal-id" placeholder="DEAL-2026-IMATE-001">
+      </label>
+      <label>
+        Reborn persona prompt
+        <textarea id="licensed-reborn" rows="2" placeholder="Reborn as a startup strategist in a futuristic city."></textarea>
+      </label>
+      <div class="aspect-grid">
+        <label>
+          Bio mode
+          <select id="aspect-bio-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed bio</option>
+          </select>
+        </label>
+        <label>
+          Appearance mode
+          <select id="aspect-appearance-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed look</option>
+          </select>
+        </label>
+        <label>
+          Voice mode
+          <select id="aspect-voice-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed voice</option>
+          </select>
+        </label>
+        <label>
+          Music style mode
+          <select id="aspect-music-mode">
+            <option value="none">Do not import</option>
+            <option value="derived">Import as transformed derivative</option>
+            <option value="direct">Import direct licensed style</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="run-ingestion-agent">Run ingestion agent</button>
+      </div>
+      <div id="licensed-result" class="card"></div>
+      <div id="licensed-repo" class="card-list"></div>
+    </section>
+
+    <section class="panel wide">
+      <h2>3) Scene timeline (6 minutes)</h2>
+      <div class="timeline-controls">
+        <button id="rewind">Rewind 15s</button>
+        <button id="advance">Advance 15s</button>
+        <button id="prev-scene">Previous scene</button>
+        <button id="next-scene">Next scene</button>
+      </div>
+      <input id="timeline" type="range" min="0" max="360" step="15" value="0">
+      <p id="scene-focus" class="help"></p>
+      <div id="scenes" class="scene-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>4) Role play controls</h2>
+      <label>
+        Play as role
+        <select id="active-role">
+          <option value="lead">Lead</option>
+          <option value="partner">Partner</option>
+          <option value="rival">Rival</option>
+          <option value="mentor">Mentor</option>
+        </select>
+      </label>
+      <label>
+        Scene action
+        <select id="scene-action">
+          <option>Reveal hidden motive</option>
+          <option>Raise stakes with hard choice</option>
+          <option>Trigger relationship reversal</option>
+          <option>Plant setup for climax</option>
+          <option>Deliver emotional callback</option>
+          <option>Twist mission objective</option>
+        </select>
+      </label>
+      <label>
+        Improvised line
+        <textarea id="improv-line" rows="3" placeholder="Add one line to steer the scene..."></textarea>
+      </label>
+      <button id="perform-action">Perform in current scene</button>
+    </section>
+
+    <section class="panel">
+      <h2>5) Missing ideas analyzer</h2>
+      <p class="help">Check if the draft has enough plot and interaction quality for a meaningful 6-minute story.</p>
+      <div class="row">
+        <button id="analyze-gaps">Analyze gaps</button>
+        <button id="auto-fill-gaps">Auto-fill suggestions</button>
+      </div>
+      <ul id="gap-list" class="check-list"></ul>
+      <h3>Plot coverage</h3>
+      <ul id="plot-list" class="check-list"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>5.5) Music relevance agent (audio-first)</h2>
+      <p class="help">Use reference links for music direction only. Photos/visual frames are excluded from analysis.</p>
+      <label>
+        Music reference link
+        <input id="music-reference-link" placeholder="https://photos.app.goo.gl/... (music track reference)">
+      </label>
+      <label>
+        Audience feeling target
+        <input id="music-feeling-target" placeholder="Bittersweet hope that turns into romantic lift by ending.">
+      </label>
+      <label>
+        Music focus
+        <select id="music-focus-mode">
+          <option value="voice_texture">Voice texture and vocal identity</option>
+          <option value="melody_harmony">Melody and harmonic color</option>
+          <option value="rhythm_energy">Rhythm and energy arc</option>
+          <option value="full_stack">Full stack: voice + harmony + rhythm</option>
+        </select>
+      </label>
+      <label class="inline-check">
+        <input id="music-ignore-visuals" type="checkbox" checked>
+        Ignore photos/visual frames and use audio signal only
+      </label>
+      <div class="row">
+        <button id="analyze-music-reference">Analyze music relevance</button>
+        <button id="apply-music-cues">Apply cues to timeline</button>
+      </div>
+      <div id="music-result" class="card"></div>
+      <ul id="music-cues" class="check-list"></ul>
+    </section>
+
+    <section class="panel wide">
+      <h2>Session event log</h2>
+      <div id="event-log" class="event-log"></div>
+    </section>
+
+    <section class="panel wide">
+      <h2>Ask Studio AI (natural language commands)</h2>
+      <p class="help">Example: "rewind to scene 3", "make rival betray in scene 8", "mark payoff done".</p>
+      <div class="ask-row">
+        <input id="ai-command" placeholder="Type command in plain language...">
+        <button id="run-ai-command">Run command</button>
+      </div>
+      <div id="command-result" class="card"></div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -105,7 +105,6 @@ evaluation/
 │       └── index.ts              # 更新：添加组件导出
 ├── pages/
 │   └── AgentManagePage.tsx       # 更新：集成截取和尺寸选择功能
-├── inty_sdk/
 ├── package.json                  # 更新：添加 react-image-crop 依赖
 ├── AVATAR_CROP_FEATURE.md        # 新增：功能使用说明
 └── IMPLEMENTATION_SUMMARY.md      # 更新：实现总结

@@ -91,6 +91,7 @@ fun SettingScreen(
     val context = LocalContext.current
     val state = viewModel.state.collectAsState().value
     val llmStreamingMode by SettingStateManager.llmStreamingMode.collectAsState()
+    val sendUxUiGestureSignals by SettingStateManager.sendUxUiGestureSignalsFlow.collectAsState()
 
     fun onLogout(isDelete: Boolean) {
         mainViewModel.logout()
@@ -187,6 +188,13 @@ fun SettingScreen(
                 onDeleteAccount = { viewModel.showDeleteAccountDialog() },
             )
 
+            Spacer(Modifier.height(16.dp))
+
+            GestureSignalSettingsSection(
+                enabled = sendUxUiGestureSignals,
+                onEnabledChange = { enabled -> SettingStateManager.updateSendUxUiGestureSignals(enabled) },
+            )
+
             // Debug 环境后端切换（仅 debug 可见）
             if (BuildConfig.BUILD_TYPE.equals("debug", ignoreCase = true)) {
                 Spacer(Modifier.height(16.dp))
@@ -232,6 +240,22 @@ private fun StreamingModeSection(enabled: Boolean, onToggle: (Boolean) -> Unit) 
                 ),
             isInGroup = true,
             onCheckChanged = onToggle,
+        )
+    }
+}
+
+/** Settings section for the "Send UX/UI gesture signals" toggle (chat background tap/swipe → AI). */
+@Composable
+private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+    SettingsItemGroup {
+        SettingsSwitchItem(
+            item =
+                SettingsItemData.SwitchItemData(
+                    title = stringResource(R.string.settings_send_ux_ui_gesture_signals),
+                    checked = enabled,
+                ),
+            isInGroup = true,
+            onCheckChanged = onEnabledChange,
         )
     }
 }

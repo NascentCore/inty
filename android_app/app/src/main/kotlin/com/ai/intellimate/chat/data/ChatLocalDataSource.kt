@@ -95,6 +95,15 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         }
     }
 
+    suspend fun updateSendingUserImage(
+        agentId: String,
+        imageUrl: String,
+        width: Int?,
+        height: Int?,
+    ) {
+        chatMessageDao.updateSendingUserImage(agentId, imageUrl, width, height)
+    }
+
     suspend fun appendUserMessage(
         agentId: String,
         messageId: String,

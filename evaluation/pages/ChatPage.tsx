@@ -163,16 +163,13 @@ export const ChatPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const client = api.getIntyClient();
         const [profileRes, subRes] = await Promise.all([
-          client.api.v1.users.profile.me(),
-          client.api.v1.subscription.getStatus(),
+          api.users.me(),
+          api.subscription.getStatus(),
         ]);
         if (cancelled) return;
-        const data = (profileRes as { data?: { is_superuser?: boolean } })
-          ?.data;
-        const subData = (subRes as { data?: { is_subscribed?: boolean } })
-          ?.data;
+        const data = profileRes as { is_superuser?: boolean };
+        const subData = subRes as { is_subscribed?: boolean };
         setUserProfile(data ? { is_superuser: data.is_superuser } : null);
         setSubscriptionStatus(
           subData ? { is_subscribed: subData.is_subscribed } : null,
@@ -604,9 +601,7 @@ export const ChatPage: React.FC = () => {
       setSending(true);
 
       try {
-        const currentSettings = await api
-          .getIntyClient()
-          .api.v1.chats.agents.getSettings(agent.id);
+        const currentSettings = await api.chat.getAgentSettings(agent.id);
         console.log(`智能体 ${agent.name} 的当前聊天设置:`, currentSettings);
         // 使用聊天消息接口获取历史（GET /chats/agents/{agent_id}/messages）
         const messagesResponse = await api.chat.getMessages(agent.id, {
