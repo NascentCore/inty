@@ -34,8 +34,10 @@ export const ChatModeSelector: React.FC<ChatModeSelectorProps> = ({
     setLoading(true);
     try {
       const [settings, modes] = await Promise.all([
-        api.getIntyClient().api.v1.chats.agents.getSettings(agentId) as { chat_mode?: string | null },
-        api.getIntyClient().api.v1.chats.getModes(agentId),
+        api.chat.getAgentSettings(agentId) as {
+          chat_mode?: string | null;
+        },
+        api.chat.getModes(agentId),
       ]);
       setChatMode(settings.chat_mode ?? null);
       setAvailableModes(Array.isArray(modes) ? modes : []);

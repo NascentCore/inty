@@ -21,7 +21,10 @@ interface GeneratedImageDetailModalProps {
 }
 
 function getGenerationModeLabel(detail: GeneratedImageDetail): string | null {
-  if (detail.isMatchedFallback || detail.generationMode === "fallback_matched_image") {
+  if (
+    detail.isMatchedFallback ||
+    detail.generationMode === "fallback_matched_image"
+  ) {
     return "兜底生图（命中历史图）";
   }
   if (detail.generationMode === "fresh_generation") {
@@ -37,14 +40,18 @@ function formatDateTime(dateTime: string | null): string {
   return `${formatUtcTimeRaw(dateTime, "YYYY-MM-DD HH:mm:ss")} (UTC)`;
 }
 
-function formatGenerationTimeMs(generationTimeMs: number | null): string | null {
+function formatGenerationTimeMs(
+  generationTimeMs: number | null,
+): string | null {
   if (generationTimeMs === null) {
     return null;
   }
   return `${(generationTimeMs / 1000).toFixed(2)}s (${Math.round(generationTimeMs)}ms)`;
 }
 
-function parseFeedbackVote(description: string | null): "like" | "dislike" | null {
+function parseFeedbackVote(
+  description: string | null,
+): "like" | "dislike" | null {
   if (!description) {
     return null;
   }
@@ -67,12 +74,9 @@ function parseFeedbackContent(description: string | null): string {
   return cleanedDescription || "（无文字反馈）";
 }
 
-export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps> = ({
-  open,
-  onClose,
-  detail,
-  title = "图片详情",
-}) => {
+export const GeneratedImageDetailModal: React.FC<
+  GeneratedImageDetailModalProps
+> = ({ open, onClose, detail, title = "图片详情" }) => {
   const [feedbackItems, setFeedbackItems] = useState<ReportItem[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
 
@@ -200,7 +204,8 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
                   style={{
                     marginBottom: 12,
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(180px, 1fr))",
                     gap: 12,
                   }}
                 >
@@ -236,7 +241,9 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
               <Text type="secondary">
                 模型:{" "}
                 {detail.model ||
-                  (detail.isMatchedFallback ? "兜底匹配（无主模型）" : "未知模型")}
+                  (detail.isMatchedFallback
+                    ? "兜底匹配（无主模型）"
+                    : "未知模型")}
               </Text>
               {detail.userReferenceImageUrl && (
                 <Text type="secondary">包含用户参考图: 是</Text>
@@ -264,10 +271,16 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
                 <Text type="secondary">会话ID: {detail.sessionId}</Text>
               )}
               {detail.langsmithTraceId && (
-                <Text type="secondary">Trace ID: {detail.langsmithTraceId}</Text>
+                <Text type="secondary">
+                  Trace ID: {detail.langsmithTraceId}
+                </Text>
               )}
               {detail.langsmithTraceUrl && (
-                <a href={detail.langsmithTraceUrl} target="_blank" rel="noreferrer">
+                <a
+                  href={detail.langsmithTraceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   LangSmith Trace
                 </a>
               )}
@@ -289,12 +302,24 @@ export const GeneratedImageDetailModal: React.FC<GeneratedImageDetailModalProps>
                 renderItem={(item) => {
                   const vote = parseFeedbackVote(item.description);
                   const voteTagColor =
-                    vote === "like" ? "green" : vote === "dislike" ? "red" : "blue";
+                    vote === "like"
+                      ? "green"
+                      : vote === "dislike"
+                        ? "red"
+                        : "blue";
                   const voteTagText =
-                    vote === "like" ? "点赞反馈" : vote === "dislike" ? "点踩反馈" : "反馈";
+                    vote === "like"
+                      ? "点赞反馈"
+                      : vote === "dislike"
+                        ? "点踩反馈"
+                        : "反馈";
                   return (
                     <List.Item key={item.id}>
-                      <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                      <Space
+                        direction="vertical"
+                        size={2}
+                        style={{ width: "100%" }}
+                      >
                         <Space>
                           <Tag color={voteTagColor}>{voteTagText}</Tag>
                           <Text type="secondary">

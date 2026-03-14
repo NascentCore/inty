@@ -15,10 +15,7 @@ class HomeScreenCreateRoleNavigationResolverTest {
             )
 
         assertTrue(action is CreateRoleSuccessAction.NavigateToCreatedChat)
-        assertEquals(
-            "agent_123",
-            (action as CreateRoleSuccessAction.NavigateToCreatedChat).agentId,
-        )
+        assertEquals("agent_123", (action as CreateRoleSuccessAction.NavigateToCreatedChat).agentId)
     }
 
     @Test

@@ -106,7 +106,9 @@ async def _run(
 
         if gcs_uri_normalized:
             if gcs_uri_normalized in image_ids:
-                print(f"OK: {gcs_uri_normalized} is in get_generated_images_for_agent(..., only_include_ai_character=True)")
+                print(
+                    f"OK: {gcs_uri_normalized} is in get_generated_images_for_agent(..., only_include_ai_character=True)"
+                )
             else:
                 print(
                     f"FAIL: {gcs_uri_normalized} is NOT in fallback list (agent_id={agent_id}, count={len(images)})",

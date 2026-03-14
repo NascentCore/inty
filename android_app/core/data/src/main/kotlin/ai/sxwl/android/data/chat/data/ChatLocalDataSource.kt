@@ -1,7 +1,6 @@
 package ai.sxwl.android.data.chat.data
 
 import ai.sxwl.android.data.api.model.MsgInfo
-import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

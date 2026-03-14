@@ -31,7 +31,9 @@ def get_jpeg_url_and_text_mixed_parts(contents: list[str]) -> list[types.Part]:
     parts = []
     for content in contents:
         # 如果是 jpeg url，则转换为 Part.from_uri
-        if content.startswith("http") and (content.endswith(".jpeg") or content.endswith(".jpg")):
+        if content.startswith("http") and (
+            content.endswith(".jpeg") or content.endswith(".jpg")
+        ):
             parts.append(types.Part.from_uri(file_uri=content, mime_type="image/jpeg"))
         else:
             parts.append(types.Part.from_text(text=content))

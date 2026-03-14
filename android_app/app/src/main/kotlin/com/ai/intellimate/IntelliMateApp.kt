@@ -6,8 +6,8 @@ import ai.sxwl.android.data.api.NetServiceMgr
 import ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.di.DataModule
-import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.http.NetworkStackCoordinator
+import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FCMTokenUploadCallback
@@ -21,7 +21,6 @@ import com.ai.intellimate.utils.AgentCacheProviderImpl
 import com.ai.intellimate.utils.RecommendedAgentCacheProviderImpl
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.architecture.httplib.core.HttpResult
-import com.tencent.mmkv.MMKV
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

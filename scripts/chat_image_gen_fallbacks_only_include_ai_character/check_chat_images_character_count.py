@@ -158,14 +158,19 @@ async def _main(
 
         gcs_url = image_url_raw
         if gcs_url.startswith("gs://"):
-            https_url = "https://storage.googleapis.com/" + gcs_url.removeprefix("gs://")
+            https_url = "https://storage.googleapis.com/" + gcs_url.removeprefix(
+                "gs://"
+            )
         else:
             https_url = gcs_url
 
         if not no_preview:
             try:
                 import subprocess
-                filename = f"image_{message_id}.{https_url.split('/')[-1].split('.')[-1]}"
+
+                filename = (
+                    f"image_{message_id}.{https_url.split('/')[-1].split('.')[-1]}"
+                )
                 subprocess.run(["wget", https_url, "-O", filename])
                 image_bytes = open(filename, "rb").read()
                 img = Image.open(io.BytesIO(image_bytes))
@@ -173,7 +178,11 @@ async def _main(
             except Exception as e:
                 logger.warning("Preview failed for message_id={}: {}", message_id, e)
 
-        meta_format = (meta_data.get("generated_image") or {}).get("format") if meta_data else None
+        meta_format = (
+            (meta_data.get("generated_image") or {}).get("format")
+            if meta_data
+            else None
+        )
         if not meta_format and gcs_url:
             meta_format = "png" if gcs_url.lower().endswith(".png") else "jpeg"
         mime_type = f"image/{meta_format or 'jpeg'}"
@@ -211,7 +220,11 @@ async def _main(
             continue
 
         count_val: Optional[int] = None
-        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+        if (
+            response.candidates
+            and response.candidates[0].content
+            and response.candidates[0].content.parts
+        ):
             part = response.candidates[0].content.parts[0]
             text_out = getattr(part, "text", None) or ""
             if text_out.strip():

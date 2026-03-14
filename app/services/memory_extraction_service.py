@@ -222,7 +222,9 @@ def _utc_day_bounds(target_date_utc: date) -> tuple[datetime, datetime]:
 
 
 def _build_daily_profile_prompt(chat_text: str, target_date_utc: date) -> str:
-    header = _DAILY_PROFILE_PROMPT_TEMPLATE.format(target_day=target_date_utc.isoformat())
+    header = _DAILY_PROFILE_PROMPT_TEMPLATE.format(
+        target_day=target_date_utc.isoformat()
+    )
     return f"{header}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
 
 
@@ -613,8 +615,7 @@ def _memory_llm_config(cfg) -> LLMConfig:
 
 async def _latest_user_common_memory_content(db: AsyncSession, user_id: str) -> str:
     result = await db.execute(
-        text(
-            """
+        text("""
             SELECT content
             FROM memory
             WHERE user_id = :user_id
@@ -622,8 +623,7 @@ async def _latest_user_common_memory_content(db: AsyncSession, user_id: str) -> 
               AND agent_id IS NULL
             ORDER BY extracted_at DESC
             LIMIT 1
-            """
-        ),
+            """),
         {"user_id": user_id, "memory_type": MEMORY_TYPE_USER_COMMON},
     )
     row = result.first()

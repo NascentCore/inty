@@ -151,9 +151,7 @@ class MainViewModel : BaseVM() {
             }
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            mainRepository.connectWebSocket()
-        }
+        viewModelScope.launch(Dispatchers.IO) { mainRepository.connectWebSocket() }
     }
 
     private fun getInitialTabFromRemoteConfig(): HomeTabIndex {
@@ -410,9 +408,7 @@ class MainViewModel : BaseVM() {
         try {
             when (
                 val result =
-                    withTimeout(timeoutMs) {
-                        NetServiceMgr.getCommonApi().checkAppUpgrade()
-                    }
+                    withTimeout(timeoutMs) { NetServiceMgr.getCommonApi().checkAppUpgrade() }
             ) {
                 is HttpResult.Success -> {
                     val rsp = result.data

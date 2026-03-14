@@ -37,7 +37,10 @@ export const getSharedAgentsCache = (
   return cacheEntry.agents;
 };
 
-export const setSharedAgentsCache = (cacheKey: string, agents: Agent[]): void => {
+export const setSharedAgentsCache = (
+  cacheKey: string,
+  agents: Agent[],
+): void => {
   sharedAgentsCache.set(cacheKey, {
     agents,
     updatedAt: Date.now(),

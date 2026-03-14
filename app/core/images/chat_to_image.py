@@ -5,5 +5,4 @@
 from app.core.google_genai.wrapped_client import WrappedClient
 from app.core.images.fal import z_image_turbo_image_to_image
 
-
 WrappedClient(client=get_genai_client())

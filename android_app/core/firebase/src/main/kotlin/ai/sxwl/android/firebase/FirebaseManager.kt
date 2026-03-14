@@ -621,7 +621,8 @@ object FirebaseManager {
 
         // Chat Mode 相关事件
         const val CHAT_MODE_BUTTON_CLICK = "chat_mode_button_click" // 顶部栏 Chat Mode 按钮点击
-        const val CHAT_MODE_SELECTOR_SELECT = "chat_mode_selector_select" // 弹窗内选择某一模式（含 chat_mode_id）
+        const val CHAT_MODE_SELECTOR_SELECT =
+            "chat_mode_selector_select" // 弹窗内选择某一模式（含 chat_mode_id）
     }
 
     /** 预定义的用户属性常量 */

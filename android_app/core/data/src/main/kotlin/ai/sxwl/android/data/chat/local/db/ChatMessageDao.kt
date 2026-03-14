@@ -139,16 +139,13 @@ interface ChatMessageDao {
     )
     suspend fun setForMomentPurchaseState(agentId: String, messageId: String, isPurchased: Boolean)
 
-
     /** 查询前一天（本地日期）用户发送的消息总数（role = 'user'，按 timestamp 所在本地日统计） */
     @Query(
         "SELECT COUNT(*) FROM message WHERE role = 'user' AND timestamp IS NOT NULL AND date(timestamp, 'localtime') = date('now', 'localtime', '-1 day')"
     )
     suspend fun getYesterdayMessageCount(): Int
 
-    @Delete
-    suspend fun deleteMessage(messages: List<MessageEntity>)
+    @Delete suspend fun deleteMessage(messages: List<MessageEntity>)
 
-    @Update
-    suspend fun updateMessage(message: MessageEntity)
+    @Update suspend fun updateMessage(message: MessageEntity)
 }

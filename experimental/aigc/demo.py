@@ -14,6 +14,7 @@ def main():
     """Run a demo of the character generation system"""
 
     from loguru import logger
+
     logger.info("Starting AI Character Generator Demo")
 
     print("🎭 AI Character Generator Demo")

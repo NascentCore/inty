@@ -27,11 +27,10 @@ export const AssumeUserSelector: React.FC = () => {
 
   const fetchProfile = useCallback(async () => {
     try {
-      const client = api.getIntyClient();
-      const res = (await client.api.v1.users.profile.me()) as {
-        data?: { is_superuser?: boolean } | null;
-      };
-      setIsSuperuser(Boolean(res?.data?.is_superuser));
+      const profile = (await api.users.me()) as {
+        is_superuser?: boolean;
+      } | null;
+      setIsSuperuser(Boolean(profile?.is_superuser));
     } catch {
       setIsSuperuser(false);
     }
@@ -49,10 +48,14 @@ export const AssumeUserSelector: React.FC = () => {
         limit: 50,
         skip: 0,
       });
-      const list = (result?.users ?? []).map((u: { id: string; nickname?: string; readable_id?: string }) => ({
-        id: u.id,
-        label: [u.nickname, u.readable_id, u.id].filter(Boolean).join(" · ") || u.id,
-      }));
+      const list = (result?.users ?? []).map(
+        (u: { id: string; nickname?: string; readable_id?: string }) => ({
+          id: u.id,
+          label:
+            [u.nickname, u.readable_id, u.id].filter(Boolean).join(" · ") ||
+            u.id,
+        }),
+      );
       setUsers(list);
     } catch {
       setUsers([]);
@@ -83,9 +86,14 @@ export const AssumeUserSelector: React.FC = () => {
   ];
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 200 }}>
+    <div
+      style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 200 }}
+    >
       <UserSwitchOutlined style={{ color: "#666" }} />
-      <Typography.Text type="secondary" style={{ whiteSpace: "nowrap", fontSize: 12 }}>
+      <Typography.Text
+        type="secondary"
+        style={{ whiteSpace: "nowrap", fontSize: 12 }}
+      >
         Assume user:
       </Typography.Text>
       <Select

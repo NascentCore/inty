@@ -240,7 +240,9 @@ async def get_user_display_name_for_prompt(db: AsyncSession, user_id: str) -> st
         if user and user.nickname and user.nickname.strip():
             return user.nickname.strip()
     except SQLAlchemyError as e:
-        logger.debug("get_user_display_name_for_prompt: user_id={}, error={}", user_id, e)
+        logger.debug(
+            "get_user_display_name_for_prompt: user_id={}, error={}", user_id, e
+        )
     return "the user"
 
 

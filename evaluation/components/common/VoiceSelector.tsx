@@ -3,7 +3,13 @@
  * 用于在角色创建/编辑时选择音色
  */
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from "react";
 import {
   Card,
   Input,
@@ -65,9 +71,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   const [searchText, setSearchText] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [providerFilter, setProviderFilter] = useState<string>("all");
-  const [genderFilter, setGenderFilter] = useState<VoiceGenderFilter>(
-    requiredGenderFilter,
-  );
+  const [genderFilter, setGenderFilter] =
+    useState<VoiceGenderFilter>(requiredGenderFilter);
   const [expanded, setExpanded] = useState(false);
   const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<Voice | null>(
     null,

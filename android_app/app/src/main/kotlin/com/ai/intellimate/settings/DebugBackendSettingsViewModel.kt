@@ -1,7 +1,7 @@
 package com.ai.intellimate.settings
 
-import ai.sxwl.android.data.http.NetworkStackCoordinator
 import ai.sxwl.android.data.chat.data.ChatWebSocketSessionManager
+import ai.sxwl.android.data.http.NetworkStackCoordinator
 import ai.sxwl.android.data.http.config.Constant
 import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
@@ -97,9 +97,7 @@ class DebugBackendSettingsViewModel : ViewModel() {
         NetworkStackCoordinator.clearAllRuntimeCaches()
         viewModelScope.launch { ChatWebSocketSessionManager.closeSession() }
 
-        _uiState.update {
-            it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "")
-        }
+        _uiState.update { it.copy(activeBaseUrl = NetworkConfig.getBaseUrl(), customUrlInput = "") }
     }
 
     fun setCustomUrlInput(value: String) {

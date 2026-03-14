@@ -15,10 +15,9 @@ import kotlinx.coroutines.runBlocking
 /**
  * DataStore 读写实现：8 个低优先级用户级设置项（不迁移 MMKV 旧值，无值时用默认值）。
  *
- * 提供同步 get 与异步 set，内部通过内存缓存 + runBlocking 首值加载满足 [IntySetting] 门面的同步读需求；
- * 用户切换时调用 [onUserChanged] 失效缓存。
- * 为避免 set 后异步写未完成时 onUserChanged 或 ensureCacheUnderLock 重载从 DataStore 读到旧值，对每个 uid 记录未完成的写 Job 列表，
- * 在 [onUserChanged] 与 [ensureCacheUnderLock] 重载前等待该 uid 全部写完成。
+ * 提供同步 get 与异步 set，内部通过内存缓存 + runBlocking 首值加载满足 [IntySetting] 门面的同步读需求； 用户切换时调用 [onUserChanged]
+ * 失效缓存。 为避免 set 后异步写未完成时 onUserChanged 或 ensureCacheUnderLock 重载从 DataStore 读到旧值，对每个 uid 记录未完成的写
+ * Job 列表， 在 [onUserChanged] 与 [ensureCacheUnderLock] 重载前等待该 uid 全部写完成。
  */
 object IntySettingsDataStore {
 
@@ -44,7 +43,10 @@ object IntySettingsDataStore {
     private val lock = Any()
     private var cachedUid: String? = null
     private var cache = Cache()
-    /** 每个 uid 未完成的 DataStore 写 Job 列表；onUserChanged/ensureCacheUnderLock 重载前会 join 该 uid 全部 Job 以免读到未落盘的值。 */
+    /**
+     * 每个 uid 未完成的 DataStore 写 Job 列表；onUserChanged/ensureCacheUnderLock 重载前会 join 该 uid 全部 Job
+     * 以免读到未落盘的值。
+     */
     private val pendingWrites = mutableMapOf<String, MutableList<Job>>()
 
     private data class Cache(
@@ -80,16 +82,30 @@ object IntySettingsDataStore {
         pendingWrites.remove(uid)
         runBlocking {
             val prefs = store(uid).data.first()
-            cache = Cache(
-                chatFontSizeSp = prefs[floatPreferencesKey(KEY_CHAT_FONT_SIZE_SP)] ?: DEFAULT_CHAT_FONT_SIZE_SP,
-                chatModelId = prefs[stringPreferencesKey(KEY_CHAT_MODEL_ID)] ?: DEFAULT_CHAT_MODEL_ID,
-                chatListFullScreen = prefs[booleanPreferencesKey(KEY_CHAT_LIST_FULL_SCREEN)] ?: DEFAULT_CHAT_LIST_FULL_SCREEN,
-                autoPlayAnimation = prefs[booleanPreferencesKey(KEY_AUTO_PLAY_ANIMATION)] ?: DEFAULT_AUTO_PLAY_ANIMATION,
-                textStreaming = prefs[booleanPreferencesKey(KEY_TEXT_STREAMING)] ?: DEFAULT_TEXT_STREAMING,
-                showSceneActionButton = prefs[booleanPreferencesKey(KEY_SHOW_SCENE_ACTION_BUTTON)] ?: DEFAULT_SHOW_SCENE_ACTION_BUTTON,
-                showKeepTalking = prefs[booleanPreferencesKey(KEY_SHOW_KEEP_TALKING)] ?: DEFAULT_SHOW_KEEP_TALKING,
-                autoPlayAudio = prefs[booleanPreferencesKey(KEY_AUTO_PLAY_AUDIO)] ?: DEFAULT_AUTO_PLAY_AUDIO,
-            )
+            cache =
+                Cache(
+                    chatFontSizeSp =
+                        prefs[floatPreferencesKey(KEY_CHAT_FONT_SIZE_SP)]
+                            ?: DEFAULT_CHAT_FONT_SIZE_SP,
+                    chatModelId =
+                        prefs[stringPreferencesKey(KEY_CHAT_MODEL_ID)] ?: DEFAULT_CHAT_MODEL_ID,
+                    chatListFullScreen =
+                        prefs[booleanPreferencesKey(KEY_CHAT_LIST_FULL_SCREEN)]
+                            ?: DEFAULT_CHAT_LIST_FULL_SCREEN,
+                    autoPlayAnimation =
+                        prefs[booleanPreferencesKey(KEY_AUTO_PLAY_ANIMATION)]
+                            ?: DEFAULT_AUTO_PLAY_ANIMATION,
+                    textStreaming =
+                        prefs[booleanPreferencesKey(KEY_TEXT_STREAMING)] ?: DEFAULT_TEXT_STREAMING,
+                    showSceneActionButton =
+                        prefs[booleanPreferencesKey(KEY_SHOW_SCENE_ACTION_BUTTON)]
+                            ?: DEFAULT_SHOW_SCENE_ACTION_BUTTON,
+                    showKeepTalking =
+                        prefs[booleanPreferencesKey(KEY_SHOW_KEEP_TALKING)]
+                            ?: DEFAULT_SHOW_KEEP_TALKING,
+                    autoPlayAudio =
+                        prefs[booleanPreferencesKey(KEY_AUTO_PLAY_AUDIO)] ?: DEFAULT_AUTO_PLAY_AUDIO,
+                )
             cachedUid = uid
         }
     }
@@ -117,7 +133,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.chatFontSizeSp = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putFloat(KEY_CHAT_FONT_SIZE_SP, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putFloat(KEY_CHAT_FONT_SIZE_SP, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -133,7 +152,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.chatModelId = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putString(KEY_CHAT_MODEL_ID, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putString(KEY_CHAT_MODEL_ID, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -149,7 +171,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.chatListFullScreen = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_CHAT_LIST_FULL_SCREEN, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_CHAT_LIST_FULL_SCREEN, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -165,7 +190,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.autoPlayAnimation = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_AUTO_PLAY_ANIMATION, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_AUTO_PLAY_ANIMATION, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -181,7 +209,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.textStreaming = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_TEXT_STREAMING, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_TEXT_STREAMING, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -197,7 +228,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.showSceneActionButton = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_SHOW_SCENE_ACTION_BUTTON, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_SHOW_SCENE_ACTION_BUTTON, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -213,7 +247,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.showKeepTalking = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_SHOW_KEEP_TALKING, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_SHOW_KEEP_TALKING, value)
+                }
             registerPendingWrite(uid, job)
         }
     }
@@ -229,7 +266,10 @@ object IntySettingsDataStore {
         synchronized(lock) {
             ensureCacheUnderLock(uid)
             cache.autoPlayAudio = value
-            val job = GlobalScope.launch(Dispatchers.IO) { store(uid).putBoolean(KEY_AUTO_PLAY_AUDIO, value) }
+            val job =
+                GlobalScope.launch(Dispatchers.IO) {
+                    store(uid).putBoolean(KEY_AUTO_PLAY_AUDIO, value)
+                }
             registerPendingWrite(uid, job)
         }
     }

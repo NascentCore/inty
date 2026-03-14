@@ -33,9 +33,7 @@ def list_report_reasons() -> List[ReportReason]:
     ]
 
 
-async def _get_users_by_ids(
-    db: AsyncSession, user_ids: List[str]
-) -> dict[str, User]:
+async def _get_users_by_ids(db: AsyncSession, user_ids: List[str]) -> dict[str, User]:
     unique_user_ids = list({user_id for user_id in user_ids if user_id})
     if not unique_user_ids:
         return {}

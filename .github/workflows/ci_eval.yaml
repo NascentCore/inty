@@ -30,26 +30,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache yarn dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ steps.yarn-cache-dir-path.outputs.dir }}
-            evaluation/inty_sdk/node_modules
-          key: ${{ runner.os }}-evaluation-yarn-${{ hashFiles('evaluation/inty_sdk/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-evaluation-yarn-
-
-      - name: Install and build inty SDK
-        working-directory: evaluation/inty_sdk
-        run: |
-          yarn install --frozen-lockfile
-          yarn build
-
       - name: Cache npm dependencies
         uses: actions/cache@v4
         with:

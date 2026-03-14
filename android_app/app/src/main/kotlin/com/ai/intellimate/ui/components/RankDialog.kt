@@ -3,8 +3,8 @@ package com.ai.intellimate.ui.components
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.design.theme.brushes
-import ai.sxwl.android.design.ui.HeartPrimaryButton
-import android.widget.Button
+import ai.sxwl.android.firebase.FirebaseManager
+import ai.sxwl.android.firebase.logEvent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,11 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,12 +33,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -53,14 +46,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
-import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.firebase.logEvent
 
 /**
  * 评分弹窗（RankDialog）
  *
- * 使用场景：在用户与 iMate 聊天一段时间后，用于收集用户对聊天体验的 1～5 星评分。
- * 预期视觉效果：圆角弹窗、虚化背景，顶部标题与副标题，中间为可点击的五星组件与可选的角色图，
+ * 使用场景：在用户与 iMate 聊天一段时间后，用于收集用户对聊天体验的 1～5 星评分。 预期视觉效果：圆角弹窗、虚化背景，顶部标题与副标题，中间为可点击的五星组件与可选的角色图，
  * 底部为主操作「Submit」与次要「Cancel」。
  *
  * 可配置项：
@@ -87,9 +77,7 @@ fun RankDialog(
 
     var selectedRating by remember { mutableIntStateOf(defaultRating.coerceIn(0, 5)) }
 
-    LaunchedEffect(Unit) {
-        FirebaseManager.Events.RANK_DIALOG_SHOW.logEvent()
-    }
+    LaunchedEffect(Unit) { FirebaseManager.Events.RANK_DIALOG_SHOW.logEvent() }
 
     Dialog(
         onDismissRequest = onCancel,
@@ -101,20 +89,22 @@ fun RankDialog(
             ),
     ) {
         Box(
-            modifier = Modifier
-                .clip(
-                    MaterialTheme.shapes.extraLarge
-                )
-                .border(
-                    width = 1.dp,
-                    color = Color.White,
-                    shape = MaterialTheme.shapes.extraLarge
-                )
-                .paint(
-                    painter = painterResource(R.drawable.bg_rank_dialog),
-                    contentScale = ContentScale.Crop,
-                    colorFilter = ColorFilter.tint(Color.Black.copy(alpha = 0.6f), blendMode = BlendMode.Multiply)
-                )
+            modifier =
+                Modifier.clip(MaterialTheme.shapes.extraLarge)
+                    .border(
+                        width = 1.dp,
+                        color = Color.White,
+                        shape = MaterialTheme.shapes.extraLarge,
+                    )
+                    .paint(
+                        painter = painterResource(R.drawable.bg_rank_dialog),
+                        contentScale = ContentScale.Crop,
+                        colorFilter =
+                            ColorFilter.tint(
+                                Color.Black.copy(alpha = 0.6f),
+                                blendMode = BlendMode.Multiply,
+                            ),
+                    )
         ) {
             Column(
                 modifier =
@@ -155,10 +145,7 @@ fun RankDialog(
                             painter = if (filled) starFilled else star,
                             contentDescription = null,
                             modifier =
-                                Modifier.size(starSize)
-                                    .noRippleClickable {
-                                        selectedRating = index
-                                    }
+                                Modifier.size(starSize).noRippleClickable { selectedRating = index },
                         )
                     }
                 }
@@ -176,51 +163,47 @@ fun RankDialog(
                 Spacer(Modifier.height(imageButtonsSpacing))
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(100))
-                        .alpha(if (selectedRating > 0) 1f else .6f)
-                        .background(
-                            brush = MaterialTheme.brushes.vertical.gradientBrush1
-                        )
-                        .clickable(enabled = selectedRating > 0) {
-                            FirebaseManager.Events.RANK_DIALOG_SUBMIT_CLICK.logEvent(
-                                "rating" to selectedRating
-                            )
-                            onSubmit(selectedRating)
-                        }
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(100))
+                            .alpha(if (selectedRating > 0) 1f else .6f)
+                            .background(brush = MaterialTheme.brushes.vertical.gradientBrush1)
+                            .clickable(enabled = selectedRating > 0) {
+                                FirebaseManager.Events.RANK_DIALOG_SUBMIT_CLICK.logEvent(
+                                    "rating" to selectedRating
+                                )
+                                onSubmit(selectedRating)
+                            },
                 ) {
                     Text(
                         text = stringResource(R.string.submit_button),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
                 Spacer(Modifier.height(dimensionResource(R.dimen.padding_small)))
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(100))
-                        .background(
-                            brush = MaterialTheme.brushes.vertical.gradientBrush3
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(.2f),
-                            shape = RoundedCornerShape(100)
-                        )
-                        .clickable {
-                            FirebaseManager.Events.RANK_DIALOG_CANCEL_CLICK.logEvent()
-                            onCancel()
-                        }
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(100))
+                            .background(brush = MaterialTheme.brushes.vertical.gradientBrush3)
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(.2f),
+                                shape = RoundedCornerShape(100),
+                            )
+                            .clickable {
+                                FirebaseManager.Events.RANK_DIALOG_CANCEL_CLICK.logEvent()
+                                onCancel()
+                            },
                 ) {
                     Text(
                         text = stringResource(R.string.cancel),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }
@@ -231,12 +214,5 @@ fun RankDialog(
 @Preview
 @Composable
 private fun PreviewRankDialog() {
-    IntelliMateTheme {
-        RankDialog(
-            onCancel = {},
-            onSubmit = {},
-            characterImageRes = 0,
-        )
-    }
-
+    IntelliMateTheme { RankDialog(onCancel = {}, onSubmit = {}, characterImageRes = 0) }
 }

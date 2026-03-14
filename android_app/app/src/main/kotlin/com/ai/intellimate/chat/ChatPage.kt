@@ -64,14 +64,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
@@ -92,12 +88,12 @@ import androidx.paging.ItemSnapshotList
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.ai.intellimate.R
+import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.boost.BoostConfig
 import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
-import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatModeSelectorDialog
 import com.ai.intellimate.chat.ui.ChatMorePanel
@@ -119,11 +115,8 @@ import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
-import com.ai.intellimate.ui.components.RankDialog
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
-import com.google.android.play.core.review.ReviewInfo
-import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -297,7 +290,6 @@ internal fun ChatPage(
     val lastReportedKey = remember(agentInfo?.id) { mutableStateOf<String?>(null) }
     // 记录上一个 Agent ID，用于判断是否从其他 agent 滑动而来（HorizontalPager 场景）
     val previousAgentId = remember { mutableStateOf<String?>(null) }
-
 
     LaunchedEffect(Unit) {
         chatViewModel.vipRequest.collect {
@@ -559,125 +551,123 @@ internal fun ChatPage(
                 Spacer(Modifier.height(48.dp))
 
                 agentInfo?.let { info ->
-                        ChatTopBar(
-                            navController,
-                            modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
-                            agentInfo = info,
-                            earnedPoints = null,
-                            showBackButton = showBackButton,
-                            onClickChatMode = {
-                                FirebaseManager.Events.CHAT_MODE_BUTTON_CLICK.logEvent(
-                                    "agent_id" to agent?.agentId,
-                                    "agent_name" to agent?.name,
-                                    "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                )
-                                showChatModeSelector = true
-                            },
-                            chatMode = chatModel,
-                            showChatModeButton = !isOfficialAssistantChat,
-                            onClickCall = {
-                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
-                                    "click_type" to "call",
-                                    "agent_id" to agent?.agentId,
-                                    "agent_name" to agent?.name,
-                                    "user_type" to
-                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                )
-
-                                scope.launch {
-                                    if (agentInfo?.isDeleted == true) {
-                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                    } else {
-                                        onCall()
-                                    }
-                                }
-                            },
-                            onClickMore = {
-                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
-                                    "click_type" to "sidebar",
-                                    "agent_id" to agent?.agentId,
-                                    "agent_name" to agent?.name,
-                                    "user_type" to
-                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                )
-                                scope.launch {
-                                    if (agentInfo?.isDeleted == true) {
-                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
-                                    } else {
-                                        if (drawerState.value == DrawerValue.Closed) {
-                                            drawerState.value = DrawerValue.Open
-                                        } else {
-                                            drawerState.value = DrawerValue.Closed
-                                        }
-                                    }
-                                }
-                            },
-                        )
-
-                        if (isDebugMode && debugAgentIndex != null) {
-                            Spacer(Modifier.height(8.dp))
-                            DebugAgentIndexBadge(
-                                modifier = Modifier.padding(start = 18.dp),
-                                index = debugAgentIndex,
-                                agentName = info.name,
+                    ChatTopBar(
+                        navController,
+                        modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
+                        agentInfo = info,
+                        earnedPoints = null,
+                        showBackButton = showBackButton,
+                        onClickChatMode = {
+                            FirebaseManager.Events.CHAT_MODE_BUTTON_CLICK.logEvent(
+                                "agent_id" to agent?.agentId,
+                                "agent_name" to agent?.name,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                             )
-                        }
-                    }
+                            showChatModeSelector = true
+                        },
+                        chatMode = chatModel,
+                        showChatModeButton = !isOfficialAssistantChat,
+                        onClickCall = {
+                            FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                "click_type" to "call",
+                                "agent_id" to agent?.agentId,
+                                "agent_name" to agent?.name,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            )
 
-                    Spacer(Modifier.height(16.dp))
-
-                    if (
-                        agentInfo != null &&
-                            !vipStatus.isSubscribed &&
-                            UiConfigs.ChatPage.showSubscriptionButton
-                    ) {
-                        PremiumModelTag(
-                            onClick = {
-                                scope.launch {
-                                    if (agentInfo?.isDeleted == true) {
-                                        ToastUtils.showShort(R.string.str_agent_is_deleted)
+                            scope.launch {
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                } else {
+                                    onCall()
+                                }
+                            }
+                        },
+                        onClickMore = {
+                            FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                "click_type" to "sidebar",
+                                "agent_id" to agent?.agentId,
+                                "agent_name" to agent?.name,
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            )
+                            scope.launch {
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                } else {
+                                    if (drawerState.value == DrawerValue.Closed) {
+                                        drawerState.value = DrawerValue.Open
                                     } else {
-                                        showPremiumDialog = true
+                                        drawerState.value = DrawerValue.Closed
                                     }
                                 }
                             }
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        if (showPremiumDialog) {
-                            if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                                navController.navigate(Routes.Me.vipCenter("chat_premium_dialog"))
-                                //
-                                // VipCenterActivity.launch(context,
-                                // VipCenterActivity.CHAT_PAGE)
-                            }
-                            showPremiumDialog = false
-                        }
-                    }
+                        },
+                    )
 
-                    if (isOfficialAssistantChat) {
-                        OfficialAssistantFaqQuestions(
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(
-                                        horizontal = UiConfigs.ChatPage.OfficialAssistantFaq.HorizontalPadding
-                                    ),
-                            items = officialAssistantFaqQuickItems,
-                            onQuestionClick = { item ->
-                                chatViewModel.setInputMessage(context.getString(item.questionResId))
-                                inputFocusRequester.requestFocus()
-                                onInputFocusChange(true)
-                                FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
-                                    "click_type" to "official_faq_question",
-                                    "agent_id" to agentInfo?.id,
-                                    "agent_name" to agentInfo?.name,
-                                    "faq_title" to context.getString(item.titleResId),
-                                    "user_type" to
-                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                )
-                            },
+                    if (isDebugMode && debugAgentIndex != null) {
+                        Spacer(Modifier.height(8.dp))
+                        DebugAgentIndexBadge(
+                            modifier = Modifier.padding(start = 18.dp),
+                            index = debugAgentIndex,
+                            agentName = info.name,
                         )
-                        Spacer(Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing))
                     }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                if (
+                    agentInfo != null &&
+                        !vipStatus.isSubscribed &&
+                        UiConfigs.ChatPage.showSubscriptionButton
+                ) {
+                    PremiumModelTag(
+                        onClick = {
+                            scope.launch {
+                                if (agentInfo?.isDeleted == true) {
+                                    ToastUtils.showShort(R.string.str_agent_is_deleted)
+                                } else {
+                                    showPremiumDialog = true
+                                }
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (showPremiumDialog) {
+                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                            navController.navigate(Routes.Me.vipCenter("chat_premium_dialog"))
+                            //
+                            // VipCenterActivity.launch(context,
+                            // VipCenterActivity.CHAT_PAGE)
+                        }
+                        showPremiumDialog = false
+                    }
+                }
+
+                if (isOfficialAssistantChat) {
+                    OfficialAssistantFaqQuestions(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(
+                                    horizontal =
+                                        UiConfigs.ChatPage.OfficialAssistantFaq.HorizontalPadding
+                                ),
+                        items = officialAssistantFaqQuickItems,
+                        onQuestionClick = { item ->
+                            chatViewModel.setInputMessage(context.getString(item.questionResId))
+                            inputFocusRequester.requestFocus()
+                            onInputFocusChange(true)
+                            FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                "click_type" to "official_faq_question",
+                                "agent_id" to agentInfo?.id,
+                                "agent_name" to agentInfo?.name,
+                                "faq_title" to context.getString(item.titleResId),
+                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                            )
+                        },
+                    )
+                    Spacer(Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing))
+                }
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
                 // 消息列表：全屏/半屏均占满高度；半屏时在 LazyColumn 顶部叠加渐变，使消息从顶部渐变消失
 
@@ -686,9 +676,9 @@ internal fun ChatPage(
 
                 if (showChatModeSelector) {
                     ChatModeSelectorDialog(
-                        onDismiss = { showChatModeSelector = false},
+                        onDismiss = { showChatModeSelector = false },
                         selectedChatModeId = chatModel?.id,
-                        viewModel = chatViewModel
+                        viewModel = chatViewModel,
                     )
                 }
 
@@ -708,11 +698,13 @@ internal fun ChatPage(
                                     onDrawWithContent {
                                         drawContent()
                                         drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0f to Color.Transparent,
-                                                0.25f to Color.Transparent,
-                                                UiConfigs.ChatPage.chatListBlankZone to Color.Black
-                                            ),
+                                            brush =
+                                                Brush.verticalGradient(
+                                                    0f to Color.Transparent,
+                                                    0.25f to Color.Transparent,
+                                                    UiConfigs.ChatPage.chatListBlankZone to
+                                                        Color.Black,
+                                                ),
                                             blendMode = BlendMode.DstIn,
                                         )
                                     }
@@ -1231,9 +1223,7 @@ internal fun ChatPage(
             selectedChatVoiceId = agentInfo?.id?.let { chatSettings[it]?.voice_id },
             chatVoiceOptions = chatVoiceOptions,
             isLoadingChatVoices = isLoadingChatVoices,
-            onChatVoiceSelected = { voiceId ->
-                chatViewModel.updateChatVoiceSetting(voiceId)
-            },
+            onChatVoiceSelected = { voiceId -> chatViewModel.updateChatVoiceSetting(voiceId) },
             showBackButton = showBackButton,
         )
 
@@ -1347,6 +1337,7 @@ internal fun ChatPage(
  * - 文案由参数传入，字体与高度与上方 FAQ 按钮保持一致。
  *
  * 可配置项：
+ *
  * @param modifier 外层布局修饰符（用于定位到输入框上方并设置间距）
  * @param text 按钮文案
  * @param onClick 点击回调（可用于回填提示词或导航到创建角色页面）
@@ -1378,11 +1369,7 @@ private fun OfficialAssistantQuickActionButton(
                     vertical = config.ContentVerticalPadding,
                 )
     ) {
-        Text(
-            text = text,
-            color = Color.White,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Text(text = text, color = Color.White, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

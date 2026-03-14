@@ -54,10 +54,9 @@ interface SingleAgentSelectorPanelProps {
 // 1) 将 ChatPage 与 VoiceChatPage 的单选侧栏统一为一个组件，确保视觉和交互一致。
 // 2) 保留“刷新/搜索/选中高亮/标签展示/空态与错误态”这一套完整行为，避免页面间出现交互差异。
 // 3) 页面仅保留业务差异逻辑（例如语音通话中的“通话中禁止切换角色”校验），侧栏只负责展示与选择。
-export const SingleAgentSelectorPanel: React.FC<SingleAgentSelectorPanelProps> = ({
-  selectedAgentId,
-  onSelectAgent,
-}) => {
+export const SingleAgentSelectorPanel: React.FC<
+  SingleAgentSelectorPanelProps
+> = ({ selectedAgentId, onSelectAgent }) => {
   const [searchText, setSearchText] = useState("");
   const {
     agents,
@@ -189,7 +188,9 @@ export const SingleAgentSelectorPanel: React.FC<SingleAgentSelectorPanelProps> =
                           </Text>
                           <div style={{ marginTop: 4 }}>
                             {genderTag && (
-                              <Tag color={genderTag.color}>{genderTag.label}</Tag>
+                              <Tag color={genderTag.color}>
+                                {genderTag.label}
+                              </Tag>
                             )}
                             <Tag color={visibilityTag.color}>
                               {visibilityTag.label}
@@ -208,4 +209,3 @@ export const SingleAgentSelectorPanel: React.FC<SingleAgentSelectorPanelProps> =
     </Card>
   );
 };
-

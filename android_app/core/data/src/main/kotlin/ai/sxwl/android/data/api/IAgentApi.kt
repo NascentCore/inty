@@ -1,8 +1,8 @@
 package ai.sxwl.android.data.api
 
+import ai.sxwl.android.data.api.model.AgentEnergyPointsUpdateRequest
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.AgentInfoResponse
-import ai.sxwl.android.data.api.model.AgentEnergyPointsUpdateRequest
 import ai.sxwl.android.data.api.model.CharacterThemeItem
 import ai.sxwl.android.data.api.model.CreateAgentRequest
 import ai.sxwl.android.data.api.model.GenerateBackgroundRequest

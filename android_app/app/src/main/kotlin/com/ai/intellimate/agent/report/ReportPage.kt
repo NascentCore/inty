@@ -20,7 +20,13 @@ internal fun ReportPage(
     imageFeedbackVote: String?,
     viewModel: ReportViewModel = viewModel(),
 ) {
-    LaunchedEffect(isFeedbackModel, targetType, targetId, initialEvidenceImageUrl, imageFeedbackVote) {
+    LaunchedEffect(
+        isFeedbackModel,
+        targetType,
+        targetId,
+        initialEvidenceImageUrl,
+        imageFeedbackVote,
+    ) {
         viewModel.isFeedbackMode = isFeedbackModel
         viewModel.targetID = targetId
         viewModel.targetType = targetType

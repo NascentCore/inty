@@ -130,7 +130,10 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
 
             Spacer(Modifier.height(Spacing.MediumSpacer))
             TextButton(onClick = viewModel::resetOverride) {
-                Text(text = stringResource(R.string.settings_debug_reset_to_default), color = Color.White)
+                Text(
+                    text = stringResource(R.string.settings_debug_reset_to_default),
+                    color = Color.White,
+                )
             }
 
             // Remix 按钮可见性配置
@@ -157,7 +160,10 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(Spacing.SmallSpacer))
             TextButton(onClick = viewModel::resetRemixButtonOverride) {
-                Text(text = stringResource(R.string.settings_debug_reset_to_default), color = Color.White)
+                Text(
+                    text = stringResource(R.string.settings_debug_reset_to_default),
+                    color = Color.White,
+                )
             }
 
             Spacer(Modifier.height(Spacing.MediumSpacer * 2))

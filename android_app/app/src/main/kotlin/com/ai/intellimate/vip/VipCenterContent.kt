@@ -10,19 +10,17 @@ import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -32,14 +30,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ai.intellimate.MainActivity
@@ -126,9 +123,7 @@ fun VipCenterContent(
 
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
-    Box(
-        modifier = Modifier.fillMaxSize().background(colorScheme.background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(colorScheme.background)) {
         val selectedPlan = plans.getOrNull(selectedPlanIndex)
         val scrollState = rememberScrollState()
         Column(modifier = Modifier.fillMaxSize()) {
@@ -161,8 +156,13 @@ fun VipCenterContent(
                 // 当前选中计划价格与续费说明（参考 Talkie+）
                 if (selectedPlan != null) {
                     Text(
-                        text = stringResource(R.string.subscription_billing_cycle_notice, selectedPlan.price),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp),
+                        text =
+                            stringResource(
+                                R.string.subscription_billing_cycle_notice,
+                                selectedPlan.price,
+                            ),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp),
                         style = typography.labelSmall,
                         color = colorScheme.onBackground.copy(alpha = 0.85f),
                     )
@@ -170,9 +170,9 @@ fun VipCenterContent(
                 Spacer(Modifier.height(dimensionResource(R.dimen.padding_large)))
                 BenefitDetailsTable(
                     rows = subscriptionBenefitRows(),
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = dimensionResource(R.dimen.padding_large))
+                    modifier =
+                        Modifier.weight(1f)
+                            .padding(horizontal = dimensionResource(R.dimen.padding_large)),
                 )
                 Spacer(Modifier.height(dimensionResource(R.dimen.padding_large)))
                 PurchaseButton(
@@ -181,7 +181,8 @@ fun VipCenterContent(
                     onPurchase = { onPurchase() },
                     isLoading = isPurchasing,
                     selectedPlanPrice = selectedPlan?.price,
-                    modifier = Modifier.padding(horizontal = dimensionResource(R.dimen.padding_large))
+                    modifier =
+                        Modifier.padding(horizontal = dimensionResource(R.dimen.padding_large)),
                 )
                 Spacer(Modifier.height(12.dp))
                 // 会员与续订条款链接（参考 Talkie+ 底部）

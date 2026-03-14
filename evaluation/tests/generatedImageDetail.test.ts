@@ -24,7 +24,9 @@ describe("generatedImageDetail", () => {
 
   it("returns null model for invalid metadata", () => {
     expect(extractGeneratedImageModel(null)).toBeNull();
-    expect(extractGeneratedImageModel({ generated_image: "not-an-object" })).toBeNull();
+    expect(
+      extractGeneratedImageModel({ generated_image: "not-an-object" }),
+    ).toBeNull();
   });
 
   it("builds detail data from daily report item", () => {
@@ -35,7 +37,8 @@ describe("generatedImageDetail", () => {
       meta_data: {
         user_id: "user-1",
         langsmith_trace_id: "trace-123",
-        langsmith_trace_url: "https://smith.langchain.com/o/x/projects/p/y/r/trace-123",
+        langsmith_trace_url:
+          "https://smith.langchain.com/o/x/projects/p/y/r/trace-123",
         user_reference_image_url: "https://cdn.example.com/selfie.webp",
         generated_image: {
           image_url: "gs://bucket/image.webp",
@@ -65,7 +68,9 @@ describe("generatedImageDetail", () => {
     expect(detail.generationPrompt).toBe("test prompt");
     expect(detail.originalRequest).toBe("请基于这段对话生成一张图片");
     expect(detail.referenceImageUrl).toBe("https://cdn.example.com/ref.webp");
-    expect(detail.userReferenceImageUrl).toBe("https://cdn.example.com/selfie.webp");
+    expect(detail.userReferenceImageUrl).toBe(
+      "https://cdn.example.com/selfie.webp",
+    );
     expect(detail.referenceImages).toEqual([
       { label: "角色参考图", url: "https://cdn.example.com/ref.webp" },
       { label: "用户参考图", url: "https://cdn.example.com/selfie.webp" },

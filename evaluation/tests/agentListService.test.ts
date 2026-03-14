@@ -35,9 +35,7 @@ describe("agentListService", () => {
   it("loads admin agents with paginated strategy", async () => {
     vi.mocked(agentApi.listAll)
       .mockResolvedValueOnce(buildAgents(AGENT_LIST_PAGE_SIZE, 0, "PUBLIC"))
-      .mockResolvedValueOnce(
-        buildAgents(3, AGENT_LIST_PAGE_SIZE, "PRIVATE"),
-      );
+      .mockResolvedValueOnce(buildAgents(3, AGENT_LIST_PAGE_SIZE, "PRIVATE"));
 
     const onBatchLoaded = vi.fn();
     const agents = await loadAdminAgentList({ onBatchLoaded });

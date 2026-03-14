@@ -180,10 +180,11 @@ object BoostManager {
         scope.launch {
             try {
                 val updateResult =
-                    NetServiceMgr.getAgentApi().updateAgentEnergyPoints(
-                        agentId = agentInfo.id,
-                        request = AgentEnergyPointsUpdateRequest(energyPoints = normalized),
-                    )
+                    NetServiceMgr.getAgentApi()
+                        .updateAgentEnergyPoints(
+                            agentId = agentInfo.id,
+                            request = AgentEnergyPointsUpdateRequest(energyPoints = normalized),
+                        )
                 when (updateResult) {
                     is HttpResult.Success -> {
                         LogUtils.d(

@@ -86,9 +86,12 @@ class Pricing(BaseModel):
     outputs: list[PriceInfo] = Field(
         description="模型输出价格信息列表，用于计算用量和成本。"
     )
-    official_url: str = Field(default="", description="""
+    official_url: str = Field(
+        default="",
+        description="""
         模型 API 提供者的官方定价页面 URL，比如 fal.ai 的定价页面。
-        """)
+        """,
+    )
     notes: str = Field(description="模型价格的一些备注信息", default="")
 
 
@@ -168,10 +171,12 @@ class GenAIModel(BaseModel):
 
     pricing: Pricing = Field(description="模型价格，用于计算用量和成本。")
 
-    
-    official_url: str = Field(default="", description="""
+    official_url: str = Field(
+        default="",
+        description="""
         模型 API 提供者的官方 URL，多为 Hugging Face 或 GitHub 地址。
-        """)
+        """,
+    )
 
     notes: str = Field(
         description="""
@@ -316,7 +321,8 @@ NANO_BANANA_PRO = GenAIModel(
 NANO_BANANA_2 = GenAIModel(
     nickname="Nano Banana 2",
     modalities=ModelModalities(
-        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.TEXT, DataModality.IMAGE]
+        inputs=[DataModality.TEXT, DataModality.IMAGE],
+        outputs=[DataModality.TEXT, DataModality.IMAGE],
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
@@ -328,7 +334,7 @@ NANO_BANANA_2 = GenAIModel(
             ),
             PriceInfo(
                 price=0.5, model=PricingModel.BY_1M_TOKEN, modality=DataModality.IMAGE
-            )
+            ),
         ],
         outputs=[
             PriceInfo(
@@ -568,7 +574,8 @@ VERTEX_GEMINI_2_5_FLASH_LITE_PREVIEW_09_2025 = GenAIModel(
 VERTEX_GEMINI_LIVE_2_5_FLASH_NATIVE_AUDIO = GenAIModel(
     nickname="Gemini Live 2.5 Flash Native Audio (Vertex)",
     modalities=ModelModalities(
-        inputs=[DataModality.TEXT, DataModality.AUDIO], outputs=[DataModality.TEXT, DataModality.AUDIO]
+        inputs=[DataModality.TEXT, DataModality.AUDIO],
+        outputs=[DataModality.TEXT, DataModality.AUDIO],
     ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.GOOGLE_VERTEX_AI,
@@ -842,7 +849,9 @@ def must_resolve_nickname(nickname: str) -> GenAIModel:
     model = resolve_nickname(nickname)
     if not model:
         allowed_nicknames = [m.nickname for m in CHAT_IMAGE_GEN_MODELS]
-        raise ValueError(f"Chat image model nickname {nickname!r} not allowed; allowed: {allowed_nicknames}")
+        raise ValueError(
+            f"Chat image model nickname {nickname!r} not allowed; allowed: {allowed_nicknames}"
+        )
     return model
 
 

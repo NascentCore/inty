@@ -35,10 +35,12 @@ def _load_agent_data(path: Path) -> dict[str, Any]:
         return agents[0]
     if isinstance(raw, dict) and "id" in raw:
         return raw
-    raise SystemExit("JSON must be a single agent object or { \"agents\": [ {...} ] }")
+    raise SystemExit('JSON must be a single agent object or { "agents": [ {...} ] }')
 
 
-def _json_to_orm_kwargs(data: dict[str, Any], creator_id_override: str | None) -> dict[str, Any]:
+def _json_to_orm_kwargs(
+    data: dict[str, Any], creator_id_override: str | None
+) -> dict[str, Any]:
     """Build kwargs for models.Agent from export JSON. Converts timestamps and renames energy_points."""
     # Move llm_config into settings (same as create_agent)
     if "llm_config" in data:
@@ -48,7 +50,11 @@ def _json_to_orm_kwargs(data: dict[str, Any], creator_id_override: str | None) -
         if isinstance(data["settings"], dict):
             data["settings"]["llm_config"] = llm
 
-    creator_id = creator_id_override if creator_id_override is not None else data.get("creator_id")
+    creator_id = (
+        creator_id_override
+        if creator_id_override is not None
+        else data.get("creator_id")
+    )
     if not creator_id:
         raise ValueError("creator_id is required (in JSON or --creator-id)")
 
@@ -62,7 +68,9 @@ def _json_to_orm_kwargs(data: dict[str, Any], creator_id_override: str | None) -
             kwargs["points"] = value if value is not None else 0
             continue
         if key in ("created_at", "updated_at", "deleted_at") and isinstance(value, int):
-            kwargs[key] = datetime.fromtimestamp(value, tz=timezone.utc) if value else None
+            kwargs[key] = (
+                datetime.fromtimestamp(value, tz=timezone.utc) if value else None
+            )
             continue
         if key == "creator_id":
             kwargs[key] = creator_id
@@ -108,7 +116,9 @@ async def _import_agent(
             select(Agent.id).where(Agent.id == agent_id, Agent.deleted_at.is_(None))
         )
         if existing.scalar_one_or_none() is not None:
-            raise SystemExit(f"Agent id={agent_id} already exists; delete or use another fixture")
+            raise SystemExit(
+                f"Agent id={agent_id} already exists; delete or use another fixture"
+            )
 
         if dry_run:
             logger.info(
@@ -121,7 +131,10 @@ async def _import_agent(
             return
 
         if not yes:
-            print(f"\nInsert agent id={agent_id} name={kwargs.get('name')}? (y/N): ", end="")
+            print(
+                f"\nInsert agent id={agent_id} name={kwargs.get('name')}? (y/N): ",
+                end="",
+            )
             if input().strip().lower() != "y":
                 logger.info("Aborted")
                 return
@@ -136,7 +149,9 @@ async def _import_agent(
 def main(
     input_path: Annotated[
         str,
-        cyclopts.Parameter(name="input", help="Path to agent JSON file (export format)"),
+        cyclopts.Parameter(
+            name="input", help="Path to agent JSON file (export format)"
+        ),
     ],
     creator_id: Annotated[
         str | None,

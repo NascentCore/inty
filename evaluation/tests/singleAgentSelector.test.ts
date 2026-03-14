@@ -32,4 +32,3 @@ describe("singleAgentSelector utils", () => {
     expect(shouldShowSingleSelectorEmptySearch(3, "abc", 1)).toBe(false);
   });
 });
-

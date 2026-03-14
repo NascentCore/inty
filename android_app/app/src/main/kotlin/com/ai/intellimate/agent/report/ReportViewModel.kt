@@ -99,10 +99,7 @@ internal fun mergeEvidenceImageUrls(
 }
 
 class ReportViewModel : BaseVM() {
-    private data class ImageFeedbackContext(
-        val vote: String,
-        val targetId: String,
-    )
+    private data class ImageFeedbackContext(val vote: String, val targetId: String)
 
     // 事件通知机制
     private val _events = MutableSharedFlow<ViewModelEvent>()
@@ -131,7 +128,8 @@ class ReportViewModel : BaseVM() {
         }
 
     private val imageFeedbackReasons =
-        ReportReasonMappings.IMAGE_FEEDBACK_REASON_CODE_TO_STRING_RES.map { (reasonCode, stringResId) ->
+        ReportReasonMappings.IMAGE_FEEDBACK_REASON_CODE_TO_STRING_RES.map {
+            (reasonCode, stringResId) ->
             ReportReasonItem(reasonCode, stringResId)
         }
 
@@ -248,7 +246,9 @@ class ReportViewModel : BaseVM() {
                         targetType =
                             if (imageFeedbackContext != null) {
                                 ReportTargetType.USER
-                            } else if (!isFeedbackMode && targetType == ReportTargetType.USER.name) {
+                            } else if (
+                                !isFeedbackMode && targetType == ReportTargetType.USER.name
+                            ) {
                                 ReportTargetType.USER
                             } else {
                                 ReportTargetType.AGENT
@@ -364,7 +364,9 @@ class ReportViewModel : BaseVM() {
                     // 原文件已经小于 1024KB，直接上传
                     val uploadedUrl = uploadReportImage(tempFile, "report-image.jpg")
                     if (uploadedUrl != null) {
-                        LogUtils.i("Image uploaded successfully (no compression needed): $uploadedUrl")
+                        LogUtils.i(
+                            "Image uploaded successfully (no compression needed): $uploadedUrl"
+                        )
                     }
                     return@withContext uploadedUrl
                 }

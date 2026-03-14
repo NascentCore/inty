@@ -1,6 +1,7 @@
 """
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
+
 from typing import Any, Dict, Generator
 from typing import Generator, Optional
 
@@ -34,8 +35,7 @@ def get_db() -> Generator:
 
 def _build_user_auth_snapshot(user: User) -> Dict[str, Any]:
     return {
-        column.name: getattr(user, column.name)
-        for column in User.__table__.columns
+        column.name: getattr(user, column.name) for column in User.__table__.columns
     }
 
 
@@ -63,7 +63,9 @@ def _get_user_from_auth_snapshot(
     try:
         return User(**cached_snapshot)
     except Exception as cache_error:
-        logger.warning(f"恢复用户鉴权快照失败，回源数据库: user_id={user_id}, error={cache_error}")
+        logger.warning(
+            f"恢复用户鉴权快照失败，回源数据库: user_id={user_id}, error={cache_error}"
+        )
         cache_service.invalidate_user_auth_snapshot(user_id)
         return None
 

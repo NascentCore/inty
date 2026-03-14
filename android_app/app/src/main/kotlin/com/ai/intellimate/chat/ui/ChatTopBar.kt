@@ -13,12 +13,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,7 +51,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -113,10 +111,11 @@ private fun FavoriteButton(
     }
 }
 
-/** 聊天页面顶部栏组件
+/**
+ * 聊天页面顶部栏组件
  *
- * 布局：返回按钮(可选) | Chat Mode 胶囊按钮 | 角色头像+姓名+收藏(紧凑) | 弹性空白 | VIP(可选) | 电话 | 更多
- * 为给 Chat Mode 按钮腾出空间，头像与姓名使用紧凑尺寸（CompactAvatarSize / CompactNameFontSize）。
+ * 布局：返回按钮(可选) | Chat Mode 胶囊按钮 | 角色头像+姓名+收藏(紧凑) | 弹性空白 | VIP(可选) | 电话 | 更多 为给 Chat Mode
+ * 按钮腾出空间，头像与姓名使用紧凑尺寸（CompactAvatarSize / CompactNameFontSize）。
  */
 @Composable
 fun ChatTopBar(
@@ -164,8 +163,7 @@ fun ChatTopBar(
             Box(Modifier.weight(1f).padding(end = 4.dp)) {
                 Row(
                     modifier =
-                        Modifier
-                            .height(UiConfigs.ChatTopBar.ActionButtonContainerHeight)
+                        Modifier.height(UiConfigs.ChatTopBar.ActionButtonContainerHeight)
                             .background(
                                 color = UiConfigs.ChatTopBar.BackgroundColor,
                                 shape = RoundedCornerShape(UiConfigs.ChatTopBar.CornerRadius),
@@ -178,16 +176,16 @@ fun ChatTopBar(
                                         ToastUtils.showShort(R.string.str_agent_is_deleted)
                                     } else {
                                         AgentStore.addAgent(agentInfo)
-                                        navController.navigate(Routes.Home.agentInfPage(agentInfo.id))
+                                        navController.navigate(
+                                            Routes.Home.agentInfPage(agentInfo.id)
+                                        )
                                     }
                                 }
                             },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
-                        modifier =
-                            Modifier.size(avatarWidth)
-                                .clip(CircleShape),
+                        modifier = Modifier.size(avatarWidth).clip(CircleShape),
                         model =
                             ImageRequest.Builder(context)
                                 .data(getCdnImageUrl(agentInfo.avatar, width = 64))
@@ -215,18 +213,23 @@ fun ChatTopBar(
                                     modifier = Modifier.size(UiConfigs.ChatTopBar.EnergyIconSize),
                                 )
                                 Spacer(
-                                    modifier = Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
+                                    modifier =
+                                        Modifier.width(UiConfigs.ChatTopBar.EnergyIconToTextSpacing)
                                 )
                                 Text(
                                     text =
-                                        stringResource(id = R.string.energy_points_counter, earnedPoints),
+                                        stringResource(
+                                            id = R.string.energy_points_counter,
+                                            earnedPoints,
+                                        ),
                                     fontSize = UiConfigs.ChatTopBar.EnergyPointsFontSize,
                                     color = Color.White.copy(alpha = 0.9f),
                                     fontWeight = FontWeight.Medium,
                                 )
                             }
                             Spacer(
-                                modifier = Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
+                                modifier =
+                                    Modifier.height(UiConfigs.ChatTopBar.EnergyPointsToNameSpacing)
                             )
                         }
                         Text(
@@ -234,12 +237,12 @@ fun ChatTopBar(
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
 
                     // 名字与收藏按钮之间的间距 - 紧贴名字右侧
-                    //Spacer(modifier = Modifier.width(0.dp))
+                    // Spacer(modifier = Modifier.width(0.dp))
 
                     // 收藏按钮 - 移动到横幅内，名字的右侧
                     FavoriteButton(agentId = agentInfo.id, containerColor = Color.Transparent)
@@ -251,8 +254,7 @@ fun ChatTopBar(
         if (showChatModeButton) {
             Box(
                 modifier =
-                    Modifier
-                        .height(UiConfigs.ChatTopBar.ActionButtonContainerHeight)
+                    Modifier.height(UiConfigs.ChatTopBar.ActionButtonContainerHeight)
                         .background(
                             color =
                                 Color.Black.copy(
@@ -262,15 +264,16 @@ fun ChatTopBar(
                                 RoundedCornerShape(
                                     UiConfigs.ChatTopBar.ActionButtonContainerCornerRadius
                                 ),
-                        ).padding(horizontal = 4.dp)
+                        )
+                        .padding(horizontal = 4.dp)
                         .noRippleClickable { onClickChatMode() },
                 contentAlignment = Alignment.Center,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = chatMode?.shortName ?: stringResource(R.string.chat_mode_content_description),
+                        text =
+                            chatMode?.shortName
+                                ?: stringResource(R.string.chat_mode_content_description),
                         fontSize = UiConfigs.ChatTopBar.ChatModeButtonFontSize,
                         fontWeight = FontWeight.Medium,
                         color = Color.White,

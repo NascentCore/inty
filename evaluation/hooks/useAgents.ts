@@ -63,10 +63,6 @@ interface IntyUploadImageResponse {
   };
 }
 
-interface IntyAgentMutationResponse {
-  data?: Agent;
-}
-
 const isFile = (value: unknown): value is File => {
   return value instanceof File;
 };
@@ -270,7 +266,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
                 return;
               }
 
-              const filteredAgents = filterAgentsByType(accumulatedAgents, type);
+              const filteredAgents = filterAgentsByType(
+                accumulatedAgents,
+                type,
+              );
               setAgents(filteredAgents);
 
               // 第一批返回后立即展示，避免长时间整页 loading
@@ -341,12 +340,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         ) {
           // data.avatar 是 File 对象，需要上传
           try {
-            const uploadResponse = (await api
-              .getIntyClient()
-              .api.v1.uploadImage({
-                file: data.avatar,
-                cropping_avatar: true,
-              })) as IntyUploadImageResponse;
+            const uploadResponse = (await api.agents.uploadAvatar(
+              data.avatar,
+              true,
+            )) as IntyUploadImageResponse;
             console.log("uploadResponse:", uploadResponse);
             // 上传成功后，将返回的 avatar_url 和 url 赋值给 agentData
             (agentData as AgentCreateRequest).avatar = uploadResponse.data
@@ -369,10 +366,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           agentData.voice_id = data.voice_id;
         }
 
-        const response = (await api
-          .getIntyClient()
-          .api.v1.ai.agents.create(agentData)) as IntyAgentMutationResponse;
-        const newAgent = (response.data as Agent | undefined) ?? null;
+        const newAgent = (await api.agents.create(agentData)) ?? null;
 
         // 将新 agent 插入本地列表第 1 位，不重载全量列表
         if (newAgent) {
@@ -415,21 +409,17 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           isFile(data.avatar)
         ) {
           try {
-            const uploadResponse = (await api
-              .getIntyClient()
-              .api.v1.uploadImage({
-                file: data.avatar,
-                cropping_avatar: true,
-              })) as IntyUploadImageResponse;
+            const uploadResponse = (await api.agents.uploadAvatar(
+              data.avatar,
+              true,
+            )) as IntyUploadImageResponse;
             console.log("uploadResponse:", uploadResponse);
             (updateData as AgentUpdateRequest).avatar = uploadResponse.data
               ?.avatar_url as string;
             (updateData as AgentUpdateRequest).background = uploadResponse.data
               ?.url as string;
 
-            const currentAgent = (await api
-              .getIntyClient()
-              .api.v1.ai.agents.retrieve(agentId)) as unknown as Agent;
+            const currentAgent = (await api.agents.get(agentId)) as Agent;
             if (
               currentAgent.extensions &&
               currentAgent.extensions.avatar_crop
@@ -454,9 +444,10 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
           updateData.voice_id = data.voice_id;
         }
 
-        const updatedAgent = (await api
-          .getIntyClient()
-          .api.v1.ai.agents.update(agentId, updateData)) as unknown as Agent;
+        const updatedAgent = (await api.agents.update(
+          agentId,
+          updateData,
+        )) as Agent;
 
         // 仅更新本地内存态，避免保存动作被“全量分页刷新列表”阻塞
         setAgents((prevAgents) => {
@@ -490,7 +481,7 @@ export const useAgents = (options: UseAgentsOptions = {}): UseAgentsReturn => {
         setLoading(true);
         setError(null);
 
-        await api.getIntyClient().api.v1.ai.agents.delete(agentId);
+        await api.agents.delete(agentId);
 
         // 更新本地状态
         setAgents((prev) => {

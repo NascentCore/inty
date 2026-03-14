@@ -40,9 +40,9 @@ describe("voiceFilters", () => {
     ];
 
     expect(filterVoicesByGender(voices, "all")).toEqual(voices);
-    expect(filterVoicesByGender(voices, "male").map((voice) => voice.voice_id)).toEqual(
-      ["v-male"],
-    );
+    expect(
+      filterVoicesByGender(voices, "male").map((voice) => voice.voice_id),
+    ).toEqual(["v-male"]);
     expect(
       filterVoicesByGender(voices, "female").map((voice) => voice.voice_id),
     ).toEqual(["v-female"]);
@@ -57,9 +57,9 @@ describe("voiceFilters", () => {
       buildVoice("v-unknown-2", undefined, { age: "young" }),
     ];
 
-    expect(filterVoicesByGender(voices, "male").map((voice) => voice.voice_id)).toEqual(
-      ["v-unknown-1", "v-unknown-2"],
-    );
+    expect(
+      filterVoicesByGender(voices, "male").map((voice) => voice.voice_id),
+    ).toEqual(["v-unknown-1", "v-unknown-2"]);
     expect(
       filterVoicesByGender(voices, "female").map((voice) => voice.voice_id),
     ).toEqual(["v-unknown-1", "v-unknown-2"]);
@@ -79,9 +79,9 @@ describe("voiceFilters", () => {
     expect(
       filterVoicesByGender(voices, "female").map((voice) => voice.voice_id),
     ).toEqual(["v-el-female"]);
-    expect(filterVoicesByGender(voices, "male").map((voice) => voice.voice_id)).toEqual(
-      ["v-el-male"],
-    );
+    expect(
+      filterVoicesByGender(voices, "male").map((voice) => voice.voice_id),
+    ).toEqual(["v-el-male"]);
   });
 
   it("maps iMate gender to voice gender filter", () => {

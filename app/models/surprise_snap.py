@@ -14,7 +14,11 @@ class SurpriseSnapProgress(Base):
     user_id = Column(String, nullable=False, index=True)
     agent_id = Column(String, nullable=False, index=True)
     next_photo_index = Column(Integer, nullable=False, default=0)
-    __table_args__ = (UniqueConstraint("user_id", "agent_id", name="uq_surprise_snap_progress_user_agent"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "agent_id", name="uq_surprise_snap_progress_user_agent"
+        ),
+    )
 
 
 class SurpriseSnapUnlock(Base):
@@ -30,4 +34,8 @@ class SurpriseSnapUnlock(Base):
         nullable=False,
         index=True,
     )
-    __table_args__ = (UniqueConstraint("user_id", "message_id", name="uq_surprise_snap_unlock_user_message"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "message_id", name="uq_surprise_snap_unlock_user_message"
+        ),
+    )

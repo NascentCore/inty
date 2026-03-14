@@ -1,5 +1,6 @@
 package com.ai.intellimate.chat.data
 
+import ai.sxwl.android.data.api.model.ChatMode
 import ai.sxwl.android.data.chat.local.db.IntyChatDatabase
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.MessageUpdate
@@ -10,7 +11,6 @@ import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.Utils
 import android.content.Context
 import androidx.room.withTransaction
-import ai.sxwl.android.data.api.model.ChatMode
 import kotlinx.coroutines.flow.Flow
 
 private val Context.chatModes by jsonDataStore("chatModes", emptyList<ChatMode>())
@@ -62,13 +62,14 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         userImageUrl: String? = null,
     ) {
         val last = chatMessageDao.getLatestMessage(agentId)
-        val userEntity = createTempSendingUserEntity(
-            agentId = agentId,
-            content = userContent,
-            lastMessageId = last?.id,
-            lastMessageIndexId = last?.indexId,
-            userImageUrl = userImageUrl,
-        )
+        val userEntity =
+            createTempSendingUserEntity(
+                agentId = agentId,
+                content = userContent,
+                lastMessageId = last?.id,
+                lastMessageIndexId = last?.indexId,
+                userImageUrl = userImageUrl,
+            )
         val loadingEntity = createTempSendingLoadingEntity(agentId = agentId)
         chatMessageDao.upsert(listOf(userEntity, loadingEntity))
     }
@@ -92,7 +93,6 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
             chatMessageDao.markSendingUserAsFailed(agentId)
             chatMessageDao.deleteSendingLoadingOnly(agentId)
         }
-
     }
 
     suspend fun updateSendingUserImage(

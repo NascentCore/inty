@@ -74,10 +74,7 @@ import kotlinx.coroutines.withContext
 
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
 
-/**
- * 进程内会话状态：用户在本轮 APP 运行中是否已点击过「跳过」上传照片提示。
- * 用于手动生图时：若已跳过，则本会话内不再弹出上传卡片，直接生图。
- */
+/** 进程内会话状态：用户在本轮 APP 运行中是否已点击过「跳过」上传照片提示。 用于手动生图时：若已跳过，则本会话内不再弹出上传卡片，直接生图。 */
 private object ManualImageGenSession {
     var skippedUploadPromptThisSession: Boolean = false
 }
@@ -657,7 +654,8 @@ class ChatViewModel : BaseVM() {
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "message_type" to
-                                    if (selectedImageUri.isNullOrBlank()) "normal" else "image_text",
+                                    if (selectedImageUri.isNullOrBlank()) "normal"
+                                    else "image_text",
                                 "response_code" to (result.data.code ?: 0),
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
@@ -744,7 +742,8 @@ class ChatViewModel : BaseVM() {
                                 "agent_id" to agentId,
                                 "agent_name" to (_agentInfo.value?.name),
                                 "message_type" to
-                                    if (selectedImageUri.isNullOrBlank()) "normal" else "image_text",
+                                    if (selectedImageUri.isNullOrBlank()) "normal"
+                                    else "image_text",
                                 "error_message" to "failure: ${result.message.take(100)}",
                                 "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
                                 "ai_response_time" to responseTime,
@@ -861,10 +860,7 @@ class ChatViewModel : BaseVM() {
         forMomentExposedInCycle.clear()
     }
 
-    /**
-     * For Moment 消息曝光：当前 ChatPage 周期内仅上报一次。
-     * 消息展示时调用，若本周期已上报过该 messageKey 则不再上报。
-     */
+    /** For Moment 消息曝光：当前 ChatPage 周期内仅上报一次。 消息展示时调用，若本周期已上报过该 messageKey 则不再上报。 */
     fun reportForMomentExposureIfNeeded(messageKey: String, agentId: String) {
         if (messageKey in forMomentExposedInCycle) return
         forMomentExposedInCycle.add(messageKey)
@@ -1325,9 +1321,7 @@ class ChatViewModel : BaseVM() {
                 vote = normalizedVote,
                 targetId = buildImageFeedbackTargetId(imageUrl),
             )
-        withContext(Dispatchers.Main) {
-            _showImageFeedbackRequestDialog.value = true
-        }
+        withContext(Dispatchers.Main) { _showImageFeedbackRequestDialog.value = true }
     }
 
     /** Like 消息 - 通过 Repository 更新并上报 Firebase 事件 */
@@ -1628,22 +1622,17 @@ class ChatViewModel : BaseVM() {
     private val _isLoadingChatVoices = MutableStateFlow(false)
     val isLoadingChatVoices = _isLoadingChatVoices.asStateFlow()
 
-    val agentChatSettings = combine(_agentId, chatSettings) { id, settings ->
-        settings[id]
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        null
-    )
-    val chatModes = chatMessageRepository.fetchChatModes()
-        .stateIn(
-            viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = emptyList()
-        )
-    val selectedChatMode = combine(agentChatSettings, chatModes) { settings, chatModes ->
-        chatModes.find { settings?.chat_mode == it.id }
-    }
+    val agentChatSettings =
+        combine(_agentId, chatSettings) { id, settings -> settings[id] }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val chatModes =
+        chatMessageRepository
+            .fetchChatModes()
+            .stateIn(viewModelScope, started = SharingStarted.Lazily, initialValue = emptyList())
+    val selectedChatMode =
+        combine(agentChatSettings, chatModes) { settings, chatModes ->
+            chatModes.find { settings?.chat_mode == it.id }
+        }
 
     /** 获取指定agent的聊天设置 */
     fun getChatSettingForAgent(agentId: String): ChatSettingsResponse.ChatSettingRspData? {
@@ -1655,11 +1644,12 @@ class ChatViewModel : BaseVM() {
 
         try {
             // 有agent信息，才请求
-            val result = chatMessageRepository.getChatSettings(agentId)//NetServiceMgr.getChatApi().getChatSettings(agentId)
+            val result =
+                chatMessageRepository.getChatSettings(
+                    agentId
+                ) // NetServiceMgr.getChatApi().getChatSettings(agentId)
 
-            _chatSettings.update { currentSettings ->
-                currentSettings + (agentId to result)
-            }
+            _chatSettings.update { currentSettings -> currentSettings + (agentId to result) }
         } catch (error: Exception) {
             LogUtils.e(error.message)
         }
@@ -1835,22 +1825,26 @@ class ChatViewModel : BaseVM() {
     fun setChatMode(mode: ChatMode) {
         chatModeJob?.cancel()
 
-        chatModeJob = viewModelScope.launch {
-            val agentId = _agentId.value ?: return@launch
-            val settings = agentChatSettings.value ?: return@launch
+        chatModeJob =
+            viewModelScope.launch {
+                val agentId = _agentId.value ?: return@launch
+                val settings = agentChatSettings.value ?: return@launch
 
-            try {
-                chatMessageRepository.updateChatSettings(agentId, ChatSettingsReq(chat_mode = mode.id))
+                try {
+                    chatMessageRepository.updateChatSettings(
+                        agentId,
+                        ChatSettingsReq(chat_mode = mode.id),
+                    )
 
-                if (isActive) {
-                    _chatSettings.update {
-                        it + (agentId to settings.copy(chat_mode = mode.id))
+                    if (isActive) {
+                        _chatSettings.update {
+                            it + (agentId to settings.copy(chat_mode = mode.id))
+                        }
                     }
+                } catch (error: Exception) {
+                    ToastUtils.showShort(error.message.orEmpty())
                 }
-            } catch (error: Exception) {
-                ToastUtils.showShort(error.message.orEmpty())
             }
-        }
     }
 
     fun testRank() {

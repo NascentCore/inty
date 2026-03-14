@@ -305,9 +305,10 @@ fun ChatSettingsDrawer(
                                 expanded = showVoiceMenu,
                                 onDismissRequest = { showVoiceMenu = false },
                                 modifier =
-                                    Modifier.heightIn(max = voiceMenuMaxHeight).background(
-                                        MaterialTheme.colorScheme.surfaceContainerLowest
-                                    ),
+                                    Modifier.heightIn(max = voiceMenuMaxHeight)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceContainerLowest
+                                        ),
                             ) {
                                 DropdownMenuItem(
                                     text = {

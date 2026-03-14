@@ -78,18 +78,22 @@ docker compose up pgvector -d
 ### 本地联调：本地后端+ Android Studio App
 
 ```bash
-docker compose up pgvector -d
-cp devops/config.yaml.test config.yaml
+docker run --rm --name pg-inty -p 5432:5432 \                                              
+  -e POSTGRES_PASSWORD=sxwl666! \
+  -e POSTGRES_DB=inty \
+  -d postgres:16
 
 # 修改相关 py 代码，会自动加载，无需重启
+cp devops/config.yaml.test config.yaml
 ./backend/inty/start.sh --dev
 
 # 打开 Android Studio
-# 选择 local build type，编译运行
+# 选择 debug build type，编译运行
+# 然后在 me->settings->backend 选择 local
 
 # 同时打开端口代理、让模拟器可以访问本机端口
 # -s 在多个模拟器时可以指向特定模拟器
-adb reverse [-s 34181JEHN02316] tcp:8000 tcp:8000
+adb reverse [-s <设备 ID>] tcp:8000 tcp:8000
 ```
 
 ### 相关链接

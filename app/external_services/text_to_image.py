@@ -30,7 +30,6 @@ from app.utils.models_catalog import (
     normalize_model_name,
 )
 
-
 GOOGLE_MODEL_PREFIX = "google/"
 OPENAI_MODEL_PREFIX = "openai/"
 FALAI_MODEL_PREFIX = "fal-ai/"
@@ -342,9 +341,11 @@ def _generate_falai_image(
         mime_type = (
             content_type
             if isinstance(content_type, str)
-            else item.get("mime_type")
-            if isinstance(item.get("mime_type"), str)
-            else None
+            else (
+                item.get("mime_type")
+                if isinstance(item.get("mime_type"), str)
+                else None
+            )
         )
 
         images.append(

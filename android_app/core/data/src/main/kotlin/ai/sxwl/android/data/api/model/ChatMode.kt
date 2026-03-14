@@ -9,7 +9,6 @@ import kotlinx.serialization.Serializable
 data class ChatMode(
     val id: String,
     val name: String = "",
-    @Json(name = "short_name")
-    val shortName: String = "",
-    val description: String = ""
+    @Json(name = "short_name") val shortName: String = "",
+    val description: String = "",
 )

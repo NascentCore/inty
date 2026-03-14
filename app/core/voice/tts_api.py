@@ -52,6 +52,7 @@ class VoiceMessageNarrationMode(StrEnum):
     DIALOGUE_ONLY = "dialogue_only"
     DIALOGUE_AND_STAGE_DIRECTIONS = "dialogue_and_stage_directions"
 
+
 # Prompted TTS: instruction so Gemini acts as voice actor; parentheticals = stage directions.
 # Enhanced per https://ai.google.dev/gemini-api/docs/speech-generation#prompting-guide
 # (Director's Notes: natural, expressive delivery; transcript rules preserved from speech_gen.)
@@ -1113,7 +1114,9 @@ class ElevenLabsTTSAPI:
         elevenlabs_voice_id = (
             raw if prefix == VOICE_ID_PREFIX_ELEVENLABS else target_voice_id
         )
-        filename = "source.wav" if "wav" in (source_mime_type or "").lower() else "source.mp3"
+        filename = (
+            "source.wav" if "wav" in (source_mime_type or "").lower() else "source.mp3"
+        )
         content_type = source_mime_type or "application/octet-stream"
         audio_payload = (filename, source_audio_bytes, content_type)
 

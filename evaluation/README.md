@@ -60,35 +60,6 @@ evaluation/build.sh
 npm install && npm run build && npm run preview
 ```
 
-## SDK 子模块与版本
-
-更新 evaluation/inty_sdk 子模块：
-
-```bash
-pushd evaluation/inty_sdk
-git checkout main
-git pull
-popd
-git commit -a -m '更新 evaluation/inty_sdk submodule'
-
-# 同步生成 dist 并刷新 evaluation/package-lock.json
-evaluation/start.sh
-git commit -a -m '更新 package-lock.json'
-git push
-```
-
-更新 inty_sdk 版本：
-
-```bash
-# 在仓库根目录运行
-./evaluation/build.sh
-
-# 若 evaluation/package-lock.json 中的 inty_sdk/dist 版本发生变化
-# 请提交改动，创建 PR 并合并
-```
-
-示例参考：`https://github.com/NascentCore/inty/pull/655/files`
-
 ## 环境变量说明
 
 - 集成构建（生产访问）：构建时不注入环境变量，前端使用相对路径访问后端 API。
@@ -100,7 +71,6 @@ git push
 脚本还会：
 
 - 检测并尝试释放 `:3000` 端口
-- 构建 `evaluation/inty_sdk`（含通过 npm 安装的 `tsc-multi`）
 
 ## 目录与页面
 
@@ -139,7 +109,6 @@ git push
 
 - 端口被占用：`http://localhost:3000` 必须使用 3000 端口；`evaluation/start.sh` 会尝试终止占用进程
 - Node/npm 未安装：脚本提供 nvm 自动安装选项；在 CI/服务器环境请自行安装
-- `tsc-multi` 安装失败：依赖来自 npm，构建时会执行 `yarn add -D tsc-multi`（见 `evaluation/build.sh`）
 
 ## 与后端集成（代码位置）
 
@@ -158,5 +127,4 @@ git push
 - 集成访问：后端在 `/` 提供页面入口，静态资源仍经 `/evaluation/{path}` 提供
 - 启动脚本：`evaluation/start.sh`（本地联调/HMR）
 - 环境变量：`REACT_APP_API_BASE_URL`、`INTY_BASE_URL`、`INTY_API_KEY`
-- 子模块：`evaluation/inty_sdk`；通过脚本或手动指令同步与构建
 - 主要页面：`AgentManagePage`、`ChatPage`、`EvaluationPage`、`EvaluationHistoryPage`

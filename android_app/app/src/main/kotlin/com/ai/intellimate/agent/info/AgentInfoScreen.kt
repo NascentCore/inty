@@ -122,7 +122,7 @@ internal fun AiAgentInfoScreen(
 ) {
     val context = LocalContext.current
     val isDebugMode = HeartAppUtils.isAppDebugMode()
-    val enableRemix = false//UiConfigs.ChatPage.enableRemix()
+    val enableRemix = false // UiConfigs.ChatPage.enableRemix()
     val displayId = remember(agent.id, context) { formatDisplayId(agent.id, context = context) }
 
     // 用户自建私有角色不展示 Boost 相关功能
@@ -275,8 +275,6 @@ internal fun AiAgentInfoScreen(
 
                         // 角色应援/Boost 功能
                         Spacer(Modifier.height(16.dp))
-
-
 
                         Column(
                             modifier =

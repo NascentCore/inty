@@ -15,11 +15,7 @@ class ChatVoiceGenderFilterTest {
                     name = "Zephyr",
                     gender = "female",
                 ),
-                TextToSpeechVoiceOption(
-                    voiceId = "google/kore",
-                    name = "Kore",
-                    gender = "FEMALE",
-                ),
+                TextToSpeechVoiceOption(voiceId = "google/kore", name = "Kore", gender = "FEMALE"),
             )
 
         val filtered = filterChatVoiceOptionsByAgentGender(voices, agentGender = "Female")
