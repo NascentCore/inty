@@ -120,5 +120,7 @@ tmp/
 
 # Cursor plans
 .cursor/plans/
+# Cursor intermediate data files
+.cursor/hooks/state
 
 output/
