@@ -17,11 +17,7 @@ class CharacterTouchActionTest {
             )
 
         val point =
-            CharacterTouchCoordinateMapper.mapPoint(
-                layout = layout,
-                touchX = 0f,
-                touchY = 800f,
-            )
+            CharacterTouchCoordinateMapper.mapPoint(layout = layout, touchX = 0f, touchY = 800f)
 
         assertEquals(60, point?.x)
         assertEquals(960, point?.y)
@@ -39,11 +35,7 @@ class CharacterTouchActionTest {
             )
 
         val point =
-            CharacterTouchCoordinateMapper.mapPoint(
-                layout = layout,
-                touchX = 540f,
-                touchY = 540f,
-            )
+            CharacterTouchCoordinateMapper.mapPoint(layout = layout, touchX = 540f, touchY = 540f)
 
         assertEquals(540, point?.x)
         assertEquals(960, point?.y)
@@ -60,11 +52,7 @@ class CharacterTouchActionTest {
             )
 
         val point =
-            CharacterTouchCoordinateMapper.mapPoint(
-                layout = layout,
-                touchX = -200f,
-                touchY = 4000f,
-            )
+            CharacterTouchCoordinateMapper.mapPoint(layout = layout, touchX = -200f, touchY = 4000f)
 
         assertEquals(0, point?.x)
         assertEquals(1919, point?.y)

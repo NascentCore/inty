@@ -66,10 +66,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -93,6 +93,11 @@ import androidx.navigation.NavController
 import androidx.paging.ItemSnapshotList
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
+import coil3.SingletonImageLoader
+import coil3.asDrawable
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.size.Size as CoilSize
 import com.ai.intellimate.R
 import com.ai.intellimate.agent.generate.CreateRoleNavigationState
 import com.ai.intellimate.boost.BoostConfig
@@ -100,6 +105,9 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.ui.BoostSheet
+import com.ai.intellimate.chat.touch.CharacterBackgroundLayout
+import com.ai.intellimate.chat.touch.CharacterTouchActionFormatter
+import com.ai.intellimate.chat.touch.CharacterTouchCoordinateMapper
 import com.ai.intellimate.chat.ui.ChatInput
 import com.ai.intellimate.chat.ui.ChatModeSelectorDialog
 import com.ai.intellimate.chat.ui.ChatMorePanel
@@ -113,9 +121,6 @@ import com.ai.intellimate.chat.ui.PremiumModelTag
 import com.ai.intellimate.chat.ui.ScrollToBottomButton
 import com.ai.intellimate.chat.ui.VipAgentUnlockDialog
 import com.ai.intellimate.chat.ui.officialAssistantFaqItems
-import com.ai.intellimate.chat.touch.CharacterBackgroundLayout
-import com.ai.intellimate.chat.touch.CharacterTouchActionFormatter
-import com.ai.intellimate.chat.touch.CharacterTouchCoordinateMapper
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.uistate.MessageItem
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
@@ -126,11 +131,6 @@ import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.AgentBackground
 import com.ai.intellimate.utils.isUserCreatedPrivateRole
 import com.ai.intellimate.xb.navigation.Routes
-import coil3.SingletonImageLoader
-import coil3.asDrawable
-import coil3.request.ImageRequest
-import coil3.request.SuccessResult
-import coil3.size.Size as CoilSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -580,7 +580,7 @@ internal fun ChatPage(
                                             agentInfo?.useDoubleAsteriskActionMarker() == true,
                                     )
                                 chatViewModel.sendBackgroundTouchAction(action)
-                            },
+                            }
                         )
                         var swipeStartPoint: Offset? = null
                         var swipeEndPoint: Offset? = null
@@ -1465,7 +1465,9 @@ internal fun ChatPage(
     }
 }
 
-/** URL used for background touch coordinate mapping: custom chat background or agent origin image. */
+/**
+ * URL used for background touch coordinate mapping: custom chat background or agent origin image.
+ */
 private fun resolveBackgroundTouchSourceUrl(agentInfo: AgentInfo?): String? {
     val currentAgentId = agentInfo?.id ?: return null
     val customBackgroundUrl = IntySetting.getChatBackgroundImage(currentAgentId)
@@ -1475,7 +1477,10 @@ private fun resolveBackgroundTouchSourceUrl(agentInfo: AgentInfo?): String? {
     return agentInfo.getOriginShowImage()?.takeIf { it.isNotBlank() }
 }
 
-/** Resolves the background image size (px) for touch mapping; official assistant uses drawable, else loads via Coil. */
+/**
+ * Resolves the background image size (px) for touch mapping; official assistant uses drawable, else
+ * loads via Coil.
+ */
 @Composable
 private fun rememberBackgroundTouchSourceImageSize(
     imageUrl: String?,
@@ -1501,7 +1506,10 @@ private fun rememberBackgroundTouchSourceImageSize(
     return imageSizeState.value
 }
 
-private suspend fun loadOriginalImageSize(context: android.content.Context, imageUrl: String): IntSize? {
+private suspend fun loadOriginalImageSize(
+    context: android.content.Context,
+    imageUrl: String,
+): IntSize? {
     return withContext(Dispatchers.IO) {
         val request = ImageRequest.Builder(context).data(imageUrl).size(CoilSize.ORIGINAL).build()
         val result = SingletonImageLoader.get(context).execute(request)
@@ -1520,7 +1528,9 @@ private suspend fun loadOriginalImageSize(context: android.content.Context, imag
     }
 }
 
-/** Builds layout for container→source coordinate mapping; returns null if any dimension is invalid. */
+/**
+ * Builds layout for container→source coordinate mapping; returns null if any dimension is invalid.
+ */
 private fun buildCharacterBackgroundLayout(
     containerSize: IntSize,
     sourceImageSize: IntSize,

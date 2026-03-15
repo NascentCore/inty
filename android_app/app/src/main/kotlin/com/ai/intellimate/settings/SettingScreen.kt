@@ -4,6 +4,7 @@ package com.ai.intellimate.settings
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.billing.VipStatus
 import ai.sxwl.android.data.store.IntySetting
+import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
 import ai.sxwl.android.design.theme.VibeModeColors
 import ai.sxwl.android.design.ui.HeartTopAppBar
@@ -13,7 +14,6 @@ import ai.sxwl.android.design.ui.SettingsItemData
 import ai.sxwl.android.design.ui.SettingsItemGroup
 import ai.sxwl.android.design.ui.SettingsSwitchItem
 import ai.sxwl.android.firebase.FirebaseManager
-import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.utils.ClipboardUtils
 import ai.sxwl.android.utils.ToastUtils
 import android.content.ActivityNotFoundException
@@ -174,7 +174,9 @@ fun SettingScreen(
 
             GestureSignalSettingsSection(
                 enabled = sendUxUiGestureSignals,
-                onEnabledChange = { enabled -> SettingStateManager.updateSendUxUiGestureSignals(enabled) },
+                onEnabledChange = { enabled ->
+                    SettingStateManager.updateSendUxUiGestureSignals(enabled)
+                },
             )
 
             // Debug 环境后端切换（仅 debug 可见）
@@ -210,7 +212,9 @@ fun SettingScreen(
     }
 }
 
-/** Settings section for the "Send UX/UI gesture signals" toggle (chat background tap/swipe → AI). */
+/**
+ * Settings section for the "Send UX/UI gesture signals" toggle (chat background tap/swipe → AI).
+ */
 @Composable
 private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     SettingsItemGroup {
