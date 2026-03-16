@@ -62,8 +62,7 @@ export const getAssumeUserId = (): string | null => {
 /** 构建 WebSocket 校验端点 URL（用于验证页，不落库）；token 通过 query 传递。 */
 export const getChatWsVerifyUrl = (baseUrl?: string): string => {
   const base =
-    baseUrl ??
-    (typeof window !== "undefined" ? window.location.origin : "");
+    baseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
   const scheme = base.startsWith("https") ? "wss" : "ws";
   const host = base.replace(/^https?:\/\//, "");
   const token = getGlobalApiKey() ?? "";

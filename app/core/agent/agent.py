@@ -751,7 +751,9 @@ class Agent:
     def _get_user_email_for_trace(self, user_id: str) -> Optional[str]:
         cached_snapshot = cache_service.get_user_auth_snapshot(user_id)
         if isinstance(cached_snapshot, dict):
-            cached_email = _normalize_email_for_trace_match(cached_snapshot.get("email"))
+            cached_email = _normalize_email_for_trace_match(
+                cached_snapshot.get("email")
+            )
             if cached_email is not None:
                 return cached_email
 
