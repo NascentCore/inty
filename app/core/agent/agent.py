@@ -26,6 +26,7 @@ from openai import (
 from pydantic import ValidationError
 from psycopg_pool import ConnectionPool
 from sqlalchemy import text, update
+from sqlalchemy.exc import SQLAlchemyError
 from typing_extensions import deprecated
 
 from app import models
@@ -74,10 +75,36 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
 CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
 
 
-def _should_trace() -> bool:
+def _normalize_email_for_trace_match(email: Optional[str]) -> Optional[str]:
+    if not isinstance(email, str):
+        return None
+    normalized_email = email.strip().lower()
+    return normalized_email or None
+
+
+def _should_trace(user_email: Optional[str] = None) -> bool:
+    normalized_user_email = _normalize_email_for_trace_match(user_email)
+    always_trace_user_emails = (
+        global_config.agent.langsmith_text_chat_always_trace_user_emails
+    )
+    if normalized_user_email is not None:
+        for configured_email in always_trace_user_emails:
+            if (
+                _normalize_email_for_trace_match(configured_email)
+                == normalized_user_email
+            ):
+                logger.debug(
+                    "LangSmith text chat tracing forced by email allowlist: "
+                    f"user_email={normalized_user_email}"
+                )
+                return True
+
     sample_rate = global_config.agent.langsmith_text_chat_sample_rate
     rand = random.random()
-    logger.debug(f"LangSmith text chat sample rate: {sample_rate}, random: {rand}")
+    logger.debug(
+        "LangSmith text chat sample rate: "
+        f"{sample_rate}, random: {rand}, user_email={normalized_user_email}"
+    )
     return rand < sample_rate
 
 
@@ -721,6 +748,35 @@ class Agent:
             body["generation_config"] = {"thinking_budget": 0}
         return body
 
+    def _get_user_email_for_trace(self, user_id: str) -> Optional[str]:
+        cached_snapshot = cache_service.get_user_auth_snapshot(user_id)
+        if isinstance(cached_snapshot, dict):
+            cached_email = _normalize_email_for_trace_match(cached_snapshot.get("email"))
+            if cached_email is not None:
+                return cached_email
+
+        sync_engine = get_sync_engine()
+        try:
+            with sync_engine.connect() as conn:
+                result = conn.execute(
+                    text("""
+                        SELECT email
+                        FROM users
+                        WHERE id = :user_id
+                    """),
+                    {"user_id": user_id},
+                )
+                row = result.fetchone()
+        except SQLAlchemyError as db_error:
+            logger.warning(
+                "Load user email for LangSmith trace failed: "
+                f"user_id={user_id}, error={db_error!s}"
+            )
+            return None
+        if row is None:
+            return None
+        return _normalize_email_for_trace_match(row[0])
+
     @deprecated("Should be moved to user service")
     def _get_user_profile_sync(self, user_id: str) -> str:
         """
@@ -1058,6 +1114,7 @@ class Agent:
         labels: Dict[str, Any],
         initial_trace_id: Optional[str] = None,
         initial_trace_url: Optional[str] = None,
+        user_email: Optional[str] = None,
     ) -> Tuple[Any, List[Dict[str, Any]], Optional[str], Optional[str]]:
         """返回 (response, messages, trace_id, trace_url)"""
         messages_with_tool_results = [*openai_messages]
@@ -1111,6 +1168,7 @@ class Agent:
                 initial_delay=1.0,
                 chat_name=chat_name,
                 labels=labels,
+                user_email=user_email,
                 tools=OFFICIAL_ASSISTANT_TOOL_DEFINITIONS,
                 tool_choice="auto",
             )
@@ -1164,6 +1222,7 @@ class Agent:
         initial_delay: float = 1.0,
         chat_name: str = None,
         labels: Dict[str, Any] = None,
+        user_email: Optional[str] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: Optional[Any] = None,
     ):
@@ -1194,13 +1253,17 @@ class Agent:
 
         # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
         enable_tracing = global_config.app.environment != Environment.TEST
+        trace_user_email = user_email or self._get_user_email_for_trace(user_id)
+        metadata_labels = dict(labels or {})
+        if trace_user_email is not None and "user_email" not in metadata_labels:
+            metadata_labels["user_email"] = trace_user_email
         normalized_labels = (
-            normalize_langsmith_metadata(labels) if enable_tracing else {}
+            normalize_langsmith_metadata(metadata_labels) if enable_tracing else {}
         )
         trace_name = chat_name or f"{user_id}:{self.name}"
 
         for attempt in range(max_retries):
-            should_trace = enable_tracing and _should_trace()
+            should_trace = enable_tracing and _should_trace(trace_user_email)
             try:
                 create_kwargs: Dict[str, Any] = {
                     "messages": openai_messages,
@@ -1397,9 +1460,11 @@ class Agent:
 
                 input_build_start = time.time()
                 user_name = self._extract_user_name_from_profile(user_profile)
+                user_email = self._get_user_email_for_trace(user_id)
                 labels = {
                     "user_id": user_id,
                     "user_name": user_name,
+                    "user_email": user_email,
                     "agent_id": self.agent_id,
                     "agent_name": self.name,
                     "chat_settings": chat_settings,
@@ -1470,6 +1535,7 @@ class Agent:
                         initial_delay=1.0,
                         chat_name=chat_name,
                         labels=labels,
+                        user_email=user_email,
                         tools=(
                             OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
                             if enable_official_assistant_tools
@@ -1494,6 +1560,7 @@ class Agent:
                                 labels=labels,
                                 initial_trace_id=trace_id,
                                 initial_trace_url=trace_url,
+                                user_email=user_email,
                             )
                         )
                 except Exception as api_error:
@@ -1751,9 +1818,11 @@ class Agent:
 
                 input_build_start = time.time()
                 user_name = self._extract_user_name_from_profile(user_profile)
+                user_email = self._get_user_email_for_trace(user_id)
                 labels = {
                     "user_id": user_id,
                     "user_name": user_name,
+                    "user_email": user_email,
                     "agent_id": self.agent_id,
                     "agent_name": self.name,
                     "chat_settings": chat_settings,
@@ -1820,6 +1889,7 @@ class Agent:
                     initial_delay=1.0,
                     chat_name=chat_name,
                     labels=labels,
+                    user_email=user_email,
                 )
                 api_time = time.time() - api_start
                 logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")

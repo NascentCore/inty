@@ -24,13 +24,59 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-_real_logger = logging.getLogger(__name__)
+from loguru import logger as _real_logger
+
+# #region agent log
+import json as _dbg_json
+import time as _dbg_time
+import traceback as _dbg_tb
+_DBG_LOG_PATH = "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug-7eab40.log"
+
+def _debug_loguru_sink(message):
+    """自定义 loguru sink：写入调试日志，捕获 handler 内部异常。"""
+    record = message.record
+    try:
+        formatted_str = str(message)
+        _payload = {
+            "sessionId": "7eab40", "hypothesisId": "H1-sink",
+            "location": "chat.py:_debug_loguru_sink",
+            "message": "sink_success",
+            "data": {
+                "level": record["level"].name,
+                "func": record["function"],
+                "line": record["line"],
+                "name": record["module"],
+                "msg_preview": str(record["message"])[:300],
+                "has_braces": "{" in str(record["message"]) or "}" in str(record["message"]),
+            },
+            "timestamp": int(_dbg_time.time() * 1000),
+        }
+        with open(_DBG_LOG_PATH, "a") as _f:
+            _f.write(_dbg_json.dumps(_payload) + "\n")
+    except Exception as _exc:
+        _err_payload = {
+            "sessionId": "7eab40", "hypothesisId": "H1-sink-error",
+            "location": "chat.py:_debug_loguru_sink:except",
+            "message": "sink_raised_exception",
+            "data": {
+                "exc_type": type(_exc).__name__,
+                "exc_str": str(_exc)[:500],
+                "traceback": _dbg_tb.format_exc()[:1500],
+                "msg_raw": str(record.get("message", ""))[:200],
+            },
+            "timestamp": int(_dbg_time.time() * 1000),
+        }
+        with open(_DBG_LOG_PATH, "a") as _f:
+            _f.write(_dbg_json.dumps(_err_payload) + "\n")
+
+_real_logger.add(_debug_loguru_sink, level="DEBUG", format="{message}")
+# #endregion
 
 
 class _LoggerWrapper:
     """包装器：当 enabled=False 时所有 logger.* 调用不输出，用于 --debug=false 减少屏幕干扰。"""
 
-    def __init__(self, real: logging.Logger, enabled: bool = False) -> None:
+    def __init__(self, real, enabled: bool = False) -> None:
         self._real = real
         self._enabled = enabled
 
@@ -39,7 +85,18 @@ class _LoggerWrapper:
 
     def _log(self, level: str, msg: str, *args, **kwargs) -> None:
         if self._enabled:
-            getattr(self._real, level)(msg, *args, **kwargs, stacklevel=3)
+            formatted = msg % args if args else msg
+            # #region agent log
+            _has_braces = "{" in formatted or "}" in formatted
+            _payload = {"sessionId":"7eab40","hypothesisId":"H1-postfix","location":"chat.py:_log","message":"_log_call","data":{"level":level,"has_braces":_has_braces,"msg_len":len(formatted),"msg_preview":formatted[:200]},"timestamp":int(_dbg_time.time()*1000)}
+            try:
+                with open(_DBG_LOG_PATH, "a") as _f:
+                    _f.write(_dbg_json.dumps(_payload)+"\n")
+            except Exception:
+                pass
+            # #endregion
+            safe = formatted.replace("{", "{{").replace("}", "}}")
+            getattr(self._real.opt(depth=2), level)(safe)
 
     def debug(self, msg: str, *args, **kwargs) -> None:
         self._log("debug", msg, *args, **kwargs)
@@ -58,7 +115,9 @@ class _LoggerWrapper:
 
     def exception(self, msg: str, *args, **kwargs) -> None:
         if self._enabled:
-            self._real.exception(msg, *args, **kwargs, stacklevel=3)
+            formatted = msg % args if args else msg
+            safe = formatted.replace("{", "{{").replace("}", "}}")
+            self._real.opt(depth=2).exception(safe)
 
 
 logger: _LoggerWrapper = _LoggerWrapper(_real_logger, enabled=False)
@@ -70,7 +129,7 @@ from . import prompts
 from . import tools
 from .repl import run_repl
 
-OPENROUTER_MODEL = "google/gemini-2.5-flash"
+OPENROUTER_MODEL = "deepseek/deepseek-v3.2"
 CHAR_NAME = "Ms. Sophie Walsh"
 USER_NAME = "Yaxiong Zhao"
 
@@ -93,6 +152,19 @@ TOOL_CONTEXT_TYPES = {d.name: d.context_type for d in TOOL_DEFINITIONS}
 
 def _build_system_messages(char_name: str, user_name: str):
     return prompts.build_system_messages_openai(char_name, user_name, _logger=logger)
+
+
+def _build_system_messages_heartbeat(char_name: str, user_name: str):
+    return prompts.build_system_messages_openai(
+        char_name, user_name, heartbeat_enabled=True, _logger=logger
+    )
+
+
+def _suppress_noisy_loggers() -> None:
+    """非 debug 模式下静默第三方库的 INFO 日志。"""
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("google_genai").setLevel(logging.WARNING)
 
 
 def main(
@@ -130,13 +202,25 @@ def main(
             help="构建情节记忆时每个 episode 的最大消息数",
         ),
     ] = 8,
+    heartbeat: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--heartbeat",
+            help="启用 heartbeat 模式：Agent 在用户无输入时定期主动发消息",
+        ),
+    ] = False,
+    heartbeat_interval: Annotated[
+        float,
+        cyclopts.Parameter(
+            name="--heartbeat-interval",
+            help="心跳间隔（秒），仅在 --heartbeat 模式下生效",
+        ),
+    ] = 120.0,
 ) -> None:
     logger.set_enabled(debug)
     if not debug:
-        logging.getLogger("httpx").setLevel(logging.WARNING)
-        logging.getLogger("httpcore").setLevel(logging.WARNING)
-        # 非 debug 时隐藏 Google GenAI SDK 的 INFO（如 "AFC is enabled with max remote calls"）
-        logging.getLogger("google_genai").setLevel(logging.WARNING)
+        _suppress_noisy_loggers()
+
     memory_compactor = None
     if enable_memory_compaction:
         memory_config = CompactionConfig(
@@ -152,20 +236,48 @@ def main(
         )
         memory_compactor = ConversationCompactor(config=memory_config)
         logger.info("已启用 memory compaction: %s", memory_config.model_dump())
-    logger.info("入口 main() 调用 run_repl")
-    run_repl(
-        char_name=CHAR_NAME,
-        user_name=USER_NAME,
-        model=OPENROUTER_MODEL,
-        build_system_messages=_build_system_messages,
-        create_openai_client=clients.create_openai_client,
-        get_gemini_client=clients.get_gemini_client,
-        tools=TOOLS,
-        tool_executors=TOOL_EXECUTORS,
-        tool_types=TOOL_TYPES,
-        tool_context_types=TOOL_CONTEXT_TYPES,
-        process_response_with_tools=tools.process_response_with_tools,
-        logger=logger,
-        memory_compactor=memory_compactor,
-    )
-    logger.info("run_repl 已退出")
+
+    if heartbeat:
+        import asyncio
+
+        from .async_repl import run_async_repl
+        from .heartbeat import HeartbeatConfig
+
+        config = HeartbeatConfig(interval_seconds=heartbeat_interval)
+        logger.info("入口 main() 调用 run_async_repl（heartbeat 模式）")
+        asyncio.run(
+            run_async_repl(
+                char_name=CHAR_NAME,
+                user_name=USER_NAME,
+                model=OPENROUTER_MODEL,
+                build_system_messages=_build_system_messages_heartbeat,
+                create_openai_client=clients.create_openai_client,
+                get_gemini_client=clients.get_gemini_client,
+                tools=TOOLS,
+                tool_executors=TOOL_EXECUTORS,
+                tool_types=TOOL_TYPES,
+                tool_context_types=TOOL_CONTEXT_TYPES,
+                process_response_with_tools=tools.process_response_with_tools,
+                logger=logger,
+                heartbeat_config=config,
+            )
+        )
+        logger.info("run_async_repl 已退出")
+    else:
+        logger.info("入口 main() 调用 run_repl（同步模式）")
+        run_repl(
+            char_name=CHAR_NAME,
+            user_name=USER_NAME,
+            model=OPENROUTER_MODEL,
+            build_system_messages=_build_system_messages,
+            create_openai_client=clients.create_openai_client,
+            get_gemini_client=clients.get_gemini_client,
+            tools=TOOLS,
+            tool_executors=TOOL_EXECUTORS,
+            tool_types=TOOL_TYPES,
+            tool_context_types=TOOL_CONTEXT_TYPES,
+            process_response_with_tools=tools.process_response_with_tools,
+            logger=logger,
+            memory_compactor=memory_compactor,
+        )
+        logger.info("run_repl 已退出")
