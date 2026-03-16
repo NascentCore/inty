@@ -262,6 +262,10 @@ class AgentConfig:
     # 文本聊天的失败概率也极低，因此不需要特别关注错误信息。
     # 图片生成不使用该采样率限制，保持全量追踪。
     langsmith_text_chat_sample_rate: float = 0.1
+    # 若用户邮箱命中该名单，则文本聊天调用始终写入 LangSmith trace（忽略采样率）。
+    langsmith_text_chat_always_trace_user_emails: list[str] = field(
+        default_factory=list
+    )
     # 官方 IntelliMate 助手的对话历史窗口条数（不按订阅分档，仅此一个限制）
     official_assistant_chat_messages_limit: int = 50
 
