@@ -45,7 +45,8 @@ object SettingStateManager {
     val showSceneActionButtonFlow: StateFlow<Boolean> = _showSceneActionButtonFlow.asStateFlow()
 
     // 是否发送 UX/UI 手势信号（背景点击/滑动）
-    private val _sendUxUiGestureSignalsFlow = MutableStateFlow(IntySetting.isSendUxUiGestureSignals())
+    private val _sendUxUiGestureSignalsFlow =
+        MutableStateFlow(IntySetting.isSendUxUiGestureSignals())
     val sendUxUiGestureSignalsFlow: StateFlow<Boolean> = _sendUxUiGestureSignalsFlow.asStateFlow()
 
     private val _keyboardHeight = MutableStateFlow(IntySetting.getKeyboardHeight())

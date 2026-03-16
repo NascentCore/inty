@@ -68,6 +68,7 @@
 |------|------|----------|
 | `/api/v1/chat/completions/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/ws` | WebSocket | `app/api/v1/endpoints/chat.py` |
+| `/api/v1/chat/ws/verify` | WebSocket | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/images/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/music/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 
@@ -79,6 +80,8 @@
 > - 示例：
 >   - 文本：`{"role":"user","content":"hello"}`
 >   - 图文：`{"role":"user","content":[{"type":"text","text":"describe this"},{"type":"image_url","image_url":{"url":"https://..."}}]}`
+
+> **`/api/v1/chat/ws/verify`**：仅用于验证 WebSocket 对话效果；协议与 `/api/v1/chat/ws` 一致，但**不写入 chat_history**（不落库）。
 
 ### 聊天会话 (Chats)
 

@@ -192,7 +192,9 @@ fun SettingScreen(
 
             GestureSignalSettingsSection(
                 enabled = sendUxUiGestureSignals,
-                onEnabledChange = { enabled -> SettingStateManager.updateSendUxUiGestureSignals(enabled) },
+                onEnabledChange = { enabled ->
+                    SettingStateManager.updateSendUxUiGestureSignals(enabled)
+                },
             )
 
             // Debug 环境后端切换（仅 debug 可见）
@@ -244,7 +246,9 @@ private fun StreamingModeSection(enabled: Boolean, onToggle: (Boolean) -> Unit) 
     }
 }
 
-/** Settings section for the "Send UX/UI gesture signals" toggle (chat background tap/swipe → AI). */
+/**
+ * Settings section for the "Send UX/UI gesture signals" toggle (chat background tap/swipe → AI).
+ */
 @Composable
 private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     SettingsItemGroup {
@@ -259,6 +263,7 @@ private fun GestureSignalSettingsSection(enabled: Boolean, onEnabledChange: (Boo
         )
     }
 }
+
 @Composable
 private fun DebugVipStatus() {
     SettingsItemGroup(modifier = Modifier.padding(12.dp)) {
