@@ -1649,7 +1649,7 @@ async def generate_agent_message(
 
         # 使用新方法生成消息（不保存用户消息）
         # user_profile 为 None 时，方法内部会自动获取
-        response_content = await agent.generate_message_without_user_save(
+        gen_result = await agent.generate_message_without_user_save(
             user_id=user_id,
             session_id=session_id,
             messages=messages,
@@ -1659,21 +1659,31 @@ async def generate_agent_message(
             is_subscribed=bool(subscription),
         )
 
-        if not response_content:
+        if not gen_result:
             logger.warning(f"Agent未生成消息: user_id={user_id}, agent_id={agent_id}")
             return None
 
-        response_content = response_content.strip()
+        response_content, trace_id, trace_url = (
+            gen_result if isinstance(gen_result, tuple) else (gen_result, None, None)
+        )
+        response_content = response_content.strip() if response_content else ""
+
+        if not response_content:
+            return None
 
         # 根据参数决定是否保存AI消息到聊天历史
         if save_to_history:
             try:
                 # 构建推送元数据
-                push_meta_data = {
+                push_meta_data: dict = {
                     "isPushMessage": True,
                     "pushStage": stage,
                     "pushType": push_type,
                 }
+                if trace_id:
+                    push_meta_data["langsmith_trace_id"] = trace_id
+                if trace_url:
+                    push_meta_data["langsmith_trace_url"] = trace_url
 
                 # 保存AI消息
                 await add_ai_message(

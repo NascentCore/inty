@@ -357,7 +357,7 @@ async def _try_generate_premium_preview_choice(
         "Return only the reply text in one paragraph (max 80 words).\n"
         f"User latest message: {last_user_text or '[No plain text content provided]'}"
     )
-    preview_content = await agent.generate_message_without_user_save(
+    gen_result = await agent.generate_message_without_user_save(
         user_id=current_user.id,
         session_id=session_id,
         messages=[HumanMessage(content=premium_preview_prompt)],
@@ -366,9 +366,12 @@ async def _try_generate_premium_preview_choice(
         model_override=premium_model_override,
         is_subscribed=True,
     )
-    if not preview_content:
+    if not gen_result:
         return None
-    preview_content = _truncate_premium_preview_content(preview_content.strip())
+    preview_content, _trace_id, _trace_url = (
+        gen_result if isinstance(gen_result, tuple) else (gen_result, None, None)
+    )
+    preview_content = _truncate_premium_preview_content(preview_content.strip() if preview_content else "")
     if not preview_content:
         return None
     return _build_premium_preview_choice(preview_content)
@@ -907,7 +910,7 @@ async def chat_completions_websocket_verify(
                 user_time_context = None
 
             try:
-                response_text = await agent.generate_message_without_user_save(
+                gen_result = await agent.generate_message_without_user_save(
                     user_id=current_user.id,
                     session_id=session_id,
                     messages=messages,
@@ -928,8 +931,13 @@ async def chat_completions_websocket_verify(
                 )
                 continue
 
-            if response_text is None:
+            if gen_result is None:
                 response_text = ""
+            else:
+                response_text, _trace_id, _trace_url = (
+                    gen_result if isinstance(gen_result, tuple) else (gen_result, None, None)
+                )
+                response_text = response_text or ""
 
             response_text_content, response_content_parts = _normalize_chat_response_content(
                 response_text

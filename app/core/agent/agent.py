@@ -1056,14 +1056,19 @@ class Agent:
         user_id: str,
         chat_name: str,
         labels: Dict[str, Any],
-    ) -> Tuple[Any, List[Dict[str, Any]]]:
+        initial_trace_id: Optional[str] = None,
+        initial_trace_url: Optional[str] = None,
+    ) -> Tuple[Any, List[Dict[str, Any]], Optional[str], Optional[str]]:
+        """返回 (response, messages, trace_id, trace_url)"""
         messages_with_tool_results = [*openai_messages]
         current_response = response
+        last_trace_id = initial_trace_id
+        last_trace_url = initial_trace_url
         for tool_round in range(OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS):
             current_message = current_response.choices[0].message
             tool_calls = getattr(current_message, "tool_calls", None) or []
             if not tool_calls:
-                return current_response, messages_with_tool_results
+                return current_response, messages_with_tool_results, last_trace_id, last_trace_url
 
             messages_with_tool_results.append(
                 self._build_assistant_tool_call_message(current_message)
@@ -1093,7 +1098,7 @@ class Agent:
                         openai_messages=messages_with_tool_results,
                         system_message_content=injected_system_message,
                     )
-            current_response = self._call_openai_api_with_retry(
+            _resp, last_trace_id, last_trace_url = self._call_openai_api_with_retry(
                 client=client,
                 model=model,
                 openai_messages=messages_with_tool_results,
@@ -1109,6 +1114,7 @@ class Agent:
                 tools=OFFICIAL_ASSISTANT_TOOL_DEFINITIONS,
                 tool_choice="auto",
             )
+            current_response = _resp
         raise ValueError(
             f"Official assistant tool call rounds exceeded limit={OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS}"
         )
@@ -1208,6 +1214,8 @@ class Agent:
                     create_kwargs["tools"] = tools
                 if tool_choice is not None:
                     create_kwargs["tool_choice"] = tool_choice
+                trace_id: Optional[str] = None
+                trace_url: Optional[str] = None
                 if should_trace:
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
@@ -1252,19 +1260,24 @@ class Agent:
                                     ),
                                 }
                             )
+                        trace_id_raw = getattr(run, "trace_id", None) or getattr(
+                            run, "id", None
+                        )
+                        trace_id = str(trace_id_raw) if trace_id_raw else None
+                        trace_url = run.get_url() if trace_id else None
                 else:
                     # 未采样或 tracing 关闭时，直接调用 API。
                     response = client.chat.completions.create(
                         **create_kwargs,
                     )
-                # 成功则返回
+                # 成功则返回 (response, trace_id, trace_url)
                 if attempt > 0:
                     logger.info(
                         f"OpenRouter API调用成功（重试后） - "
                         f"Agent: {self.agent_id}, User: {user_id}, "
                         f"Model: {model}, Attempt: {attempt + 1}/{max_retries}"
                     )
-                return response
+                return (response, trace_id, trace_url)
 
             except Exception as e:
                 last_error = e
@@ -1441,8 +1454,10 @@ class Agent:
                 )
 
                 enable_official_assistant_tools = self._is_intellimate_official()
+                trace_id: Optional[str] = None
+                trace_url: Optional[str] = None
                 try:
-                    response = self._call_openai_api_with_retry(
+                    response, trace_id, trace_url = self._call_openai_api_with_retry(
                         client=client,
                         model=model_name,
                         openai_messages=openai_messages,
@@ -1464,7 +1479,7 @@ class Agent:
                     )
                     openai_messages_for_response = openai_messages
                     if enable_official_assistant_tools:
-                        response, openai_messages_for_response = (
+                        response, openai_messages_for_response, trace_id, trace_url = (
                             self._resolve_official_assistant_tool_calls(
                                 response=response,
                                 openai_messages=openai_messages,
@@ -1477,6 +1492,8 @@ class Agent:
                                 user_id=user_id,
                                 chat_name=chat_name,
                                 labels=labels,
+                                initial_trace_id=trace_id,
+                                initial_trace_url=trace_url,
                             )
                         )
                 except Exception as api_error:
@@ -1552,19 +1569,21 @@ class Agent:
                         "role": "user",
                         "content": "continue",
                     }
-                    retry_response = self._call_openai_api_with_retry(
-                        client=client,
-                        model=model_name,
-                        openai_messages=openai_messages_for_response,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id, model_name),
-                        user_id=user_id,
-                        max_retries=3,
-                        initial_delay=1.0,
-                        chat_name=chat_name,
-                        labels=labels,
+                    retry_response, retry_trace_id, retry_trace_url = (
+                        self._call_openai_api_with_retry(
+                            client=client,
+                            model=model_name,
+                            openai_messages=openai_messages_for_response,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=self._chat_extra_body(user_id, model_name),
+                            user_id=user_id,
+                            max_retries=3,
+                            initial_delay=1.0,
+                            chat_name=chat_name,
+                            labels=labels,
+                        )
                     )
                     if (
                         retry_response is None
@@ -1592,6 +1611,8 @@ class Agent:
                             f"Session: {session_id}"
                         )
                     response_text = retry_response_text
+                    trace_id = retry_trace_id
+                    trace_url = retry_trace_url
 
                 # 处理长度限制情况
                 elif finish_reason == "length":
@@ -1612,16 +1633,21 @@ class Agent:
                     f"响应处理耗时: {response_process_time:.3f}秒 - Agent: {self.agent_id}"
                 )
 
-                # 保存AI响应到历史记录（包含LLM调用时间与 provider），并返回插入后的 message id 供调用方使用
+                # 保存AI响应到历史记录（包含LLM调用时间、provider、LangSmith trace），并返回插入后的 message id 供调用方使用
                 save_response_start = time.time()
+                meta_data: Dict[str, Any] = {
+                    "llm_invoke_time": api_time,
+                    "llm_provider": get_chat_llm_provider(),
+                }
+                if trace_id:
+                    meta_data["langsmith_trace_id"] = trace_id
+                if trace_url:
+                    meta_data["langsmith_trace_url"] = trace_url
                 ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
                     agent_id=self.agent_id,
-                    meta_data={
-                        "llm_invoke_time": api_time,
-                        "llm_provider": get_chat_llm_provider(),
-                    },
+                    meta_data=meta_data,
                 )
                 save_response_time = time.time() - save_response_start
                 logger.debug(
@@ -1781,7 +1807,7 @@ class Agent:
                     f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
                 )
 
-                response = self._call_openai_api_with_retry(
+                response, trace_id, trace_url = self._call_openai_api_with_retry(
                     client=client,
                     model=model_name,
                     openai_messages=openai_messages,
@@ -1826,7 +1852,7 @@ class Agent:
                     f"推送消息生成完成（未保存到历史记录） - Agent: {self.agent_id}, Session: {session_id}"
                 )
 
-                return response_text
+                return (response_text, trace_id, trace_url)
             except Exception as e:
                 logger.error(
                     f"推送消息生成失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"

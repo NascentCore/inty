@@ -734,6 +734,8 @@ export interface SessionGeneratedImageMeta {
 
 export interface SessionMessageMetaData {
   generated_image?: SessionGeneratedImageMeta;
+  /** LangSmith trace URL for AI messages; links to trace record for debugging */
+  langsmith_trace_url?: string;
   [key: string]: unknown;
 }
 
