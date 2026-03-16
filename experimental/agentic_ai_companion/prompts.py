@@ -77,14 +77,38 @@ def build_imate_photo_album_system_message(*, _logger=None) -> dict[str, str] | 
     return {"role": "system", "content": content}
 
 
+HEARTBEAT_SYSTEM_PROMPT = """\
+## Proactive Messaging (Heartbeat)
+You will occasionally receive [SYSTEM HEARTBEAT] messages as if from the user.
+These are NOT real user messages — they are system signals indicating time has
+passed since the user's last message. Based on the conversation context, your
+character's personality, and the time elapsed, decide whether to proactively
+send a message.
+
+Rules:
+- If you have something meaningful, natural, or emotionally fitting to say,
+  respond in character as you normally would.
+- If there is nothing appropriate to say right now, respond with exactly:
+  [SILENT]
+- Do NOT acknowledge, mention, or reference the heartbeat system itself.
+- Do NOT say things like "I noticed some time has passed" or "the system
+  told me to check in".
+- Proactive messages should feel natural: a passing thought, a playful
+  question, sharing something you "just saw", or a warm check-in.
+- Vary your approach — don't always use the same pattern for proactive
+  messages.
+"""
+
+
 def build_system_messages_openai(
     char_name: str,
     user_name: str,
     *,
+    heartbeat_enabled: bool = False,
     _logger=None,
 ) -> list[dict[str, str]]:
     if _logger is not None:
-        _logger.debug("构建系统消息 char_name=%s user_name=%s", char_name, user_name)
+        _logger.debug("构建系统消息 char_name=%s user_name=%s heartbeat=%s", char_name, user_name, heartbeat_enabled)
     # 使用本文件内的本地副本，用 prompt_utils 做占位符替换（含多行 ROLEPLAY_TEXT_OUTPUT_FORMAT 的缩进折叠）
     main_prompt = ROLEPLAY_MAIN_PROMPT_1225_LOCAL
     mode_prompt = FLIRTING_MODE_PROMPT_20250902_LOCAL
@@ -113,9 +137,11 @@ def build_system_messages_openai(
         {"role": "system", "content": rendered_mode},
         {"role": "system", "content": tool_instruction},
     ]
+    if heartbeat_enabled:
+        msgs.append({"role": "system", "content": HEARTBEAT_SYSTEM_PROMPT})
     photo_album_msg = build_imate_photo_album_system_message(_logger=_logger)
     if photo_album_msg is not None:
         msgs.append(photo_album_msg)
     if _logger is not None:
-        _logger.info("系统消息已构建，共 %d 条", len(msgs))
+        _logger.info("系统消息已构建，共 %d 条（heartbeat=%s）", len(msgs), heartbeat_enabled)
     return msgs
