@@ -312,3 +312,25 @@ def test_chat_messages_window_limit_defaults():
 
     assert limits.free_user_chat_messages_limit == 10
     assert limits.sub_user_chat_messages_limit == 1000
+
+
+def test_agent_config_langsmith_always_trace_user_emails_defaults_to_empty_list():
+    agent_config = AgentConfig(api_key="test", langchain_api_key="test")
+
+    assert agent_config.langsmith_text_chat_always_trace_user_emails == []
+
+
+def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_values():
+    agent_config = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        langsmith_text_chat_always_trace_user_emails=[
+            "dev1@example.com",
+            "dev2@example.com",
+        ],
+    )
+
+    assert agent_config.langsmith_text_chat_always_trace_user_emails == [
+        "dev1@example.com",
+        "dev2@example.com",
+    ]
