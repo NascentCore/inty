@@ -59,6 +59,17 @@ export const getAssumeUserId = (): string | null => {
   return assumeUserId;
 };
 
+/** 构建 WebSocket 校验端点 URL（用于验证页，不落库）；token 通过 query 传递。 */
+export const getChatWsVerifyUrl = (baseUrl?: string): string => {
+  const base =
+    baseUrl ??
+    (typeof window !== "undefined" ? window.location.origin : "");
+  const scheme = base.startsWith("https") ? "wss" : "ws";
+  const host = base.replace(/^https?:\/\//, "");
+  const token = getGlobalApiKey() ?? "";
+  return `${scheme}://${host}/api/v1/chat/ws/verify?token=${encodeURIComponent(token)}`;
+};
+
 type RequestOptions = NonNullable<Parameters<typeof fetch>[1]>;
 type QueryParamValue = string | number | boolean | null | undefined;
 

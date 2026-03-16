@@ -822,6 +822,137 @@ async def chat_completions_websocket(
         return
 
 
+@router.websocket("/ws/verify")
+async def chat_completions_websocket_verify(
+    websocket: WebSocket,
+    db: AsyncSession = Depends(deps.get_async_db),
+):
+    """
+    WebSocket 校验端点：与 /ws 协议一致，但不写入 chat_history，仅用于验证连接与对话效果。
+    """
+    await websocket.accept()
+    current_user = await _get_current_user_from_websocket(websocket, db)
+    if current_user is None:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            websocket_request = ChatWebSocketRequest.model_validate_json(raw)
+            agent_id = websocket_request.agent_id
+            request = websocket_request.request
+
+            user_messages = [msg for msg in request.messages if msg.role == "user"]
+            if not user_messages:
+                await websocket.send_json(
+                    {
+                        "code": 400,
+                        "message": "No user message found",
+                        "data": None,
+                        "agent_id": agent_id,
+                    }
+                )
+                continue
+
+            last_user_message = user_messages[-1].to_model_content()
+            last_user_text = user_messages[-1].extract_text_content()
+            messages = [HumanMessage(content=last_user_message)]
+
+            chat = await chat_service.get_or_create_chat_by_agent(
+                db=db, user_id=current_user.id, agent_id=agent_id
+            )
+            if chat.agent_id != agent_id:
+                await websocket.send_json(
+                    {
+                        "code": 500,
+                        "message": "Agent ID mismatch",
+                        "data": None,
+                        "agent_id": agent_id,
+                    }
+                )
+                continue
+
+            agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+            if not agent_data:
+                await websocket.send_json(
+                    {
+                        "code": 404,
+                        "message": "Agent not found",
+                        "data": None,
+                        "agent_id": agent_id,
+                    }
+                )
+                continue
+
+            agent = await agent_manager.get_agent(agent_data)
+            session_id = generate_session_id(chat.id)
+
+            chat_settings = await chat_service.get_or_create_chat_settings(
+                db, chat.id, current_user.id, agent_id
+            )
+            subscription = await subscription_service.get_user_current_subscription(
+                db, current_user.id
+            )
+            is_subscribed = bool(subscription)
+            model_override = select_chat_model(
+                user=current_user, is_subscribed=is_subscribed
+            )
+            user_time_context = (
+                request.user_time_context.model_dump(exclude_none=True)
+                if request.user_time_context
+                else None
+            )
+            if user_time_context == {}:
+                user_time_context = None
+
+            try:
+                response_text = await agent.generate_message_without_user_save(
+                    user_id=current_user.id,
+                    session_id=session_id,
+                    messages=messages,
+                    chat_settings=chat_settings,
+                    user_time_context=user_time_context,
+                    model_override=model_override,
+                    is_subscribed=is_subscribed,
+                )
+            except Exception as e:
+                logger.exception("ws/verify generate_message_without_user_save failed")
+                await websocket.send_json(
+                    {
+                        "code": 500,
+                        "message": str(e),
+                        "data": None,
+                        "agent_id": agent_id,
+                    }
+                )
+                continue
+
+            if response_text is None:
+                response_text = ""
+
+            response_text_content, response_content_parts = _normalize_chat_response_content(
+                response_text
+            )
+            data = _build_chat_response(
+                response_text_content,
+                response_content_parts,
+                last_user_text,
+                latest_message_info=None,
+                audio_url=None,
+                request=request,
+                source_imate_id=request.target_imate_id,
+                user_message_id=None,
+                subscription_actions=[],
+            )
+            response = schemas.APIResponse.success(data=data)
+            response_data = response.model_dump(exclude_none=True)
+            response_data["agent_id"] = agent_id
+            await websocket.send_json(response_data)
+    except WebSocketDisconnect:
+        return
+
+
 class ChatImageBizErrorData(BizError):
     description: Optional[str] = None
     suggestion: Optional[str] = None
