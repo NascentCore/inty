@@ -47,6 +47,7 @@ import {
   formatUtcTimeRaw,
   getCurrentUtcTime,
 } from "../utils/dateUtils";
+import { getLangsmithTraceUrl } from "../utils/langsmithUrl";
 import {
   buildAllUsersMessageRows,
   type AllUsersMessageRow,
@@ -1011,9 +1012,13 @@ export const UserDailyMessagesPage: React.FC = () => {
                                   </span>
                                   {(msg.message_type === "ai" ||
                                     msg.message_type === "AIMessage") &&
-                                    msg.meta_data?.langsmith_trace_url && (
+                                    msg.meta_data?.langsmith_trace_id && (
                                       <a
-                                        href={msg.meta_data.langsmith_trace_url}
+                                        href={
+                                          getLangsmithTraceUrl(
+                                            msg.meta_data.langsmith_trace_id,
+                                          )!
+                                        }
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         style={{

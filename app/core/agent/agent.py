@@ -1113,19 +1113,17 @@ class Agent:
         chat_name: str,
         labels: Dict[str, Any],
         initial_trace_id: Optional[str] = None,
-        initial_trace_url: Optional[str] = None,
         user_email: Optional[str] = None,
-    ) -> Tuple[Any, List[Dict[str, Any]], Optional[str], Optional[str]]:
-        """返回 (response, messages, trace_id, trace_url)"""
+    ) -> Tuple[Any, List[Dict[str, Any]], Optional[str]]:
+        """返回 (response, messages, trace_id)"""
         messages_with_tool_results = [*openai_messages]
         current_response = response
         last_trace_id = initial_trace_id
-        last_trace_url = initial_trace_url
         for tool_round in range(OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS):
             current_message = current_response.choices[0].message
             tool_calls = getattr(current_message, "tool_calls", None) or []
             if not tool_calls:
-                return current_response, messages_with_tool_results, last_trace_id, last_trace_url
+                return current_response, messages_with_tool_results, last_trace_id
 
             messages_with_tool_results.append(
                 self._build_assistant_tool_call_message(current_message)
@@ -1155,7 +1153,7 @@ class Agent:
                         openai_messages=messages_with_tool_results,
                         system_message_content=injected_system_message,
                     )
-            _resp, last_trace_id, last_trace_url = self._call_openai_api_with_retry(
+            _resp, last_trace_id = self._call_openai_api_with_retry(
                 client=client,
                 model=model,
                 openai_messages=messages_with_tool_results,
@@ -1278,7 +1276,6 @@ class Agent:
                 if tool_choice is not None:
                     create_kwargs["tool_choice"] = tool_choice
                 trace_id: Optional[str] = None
-                trace_url: Optional[str] = None
                 if should_trace:
                     # 使用 langsmith.trace 创建单个顶级 trace
                     with ls.trace(
@@ -1327,20 +1324,19 @@ class Agent:
                             run, "id", None
                         )
                         trace_id = str(trace_id_raw) if trace_id_raw else None
-                        trace_url = run.get_url() if trace_id else None
                 else:
                     # 未采样或 tracing 关闭时，直接调用 API。
                     response = client.chat.completions.create(
                         **create_kwargs,
                     )
-                # 成功则返回 (response, trace_id, trace_url)
+                # 成功则返回 (response, trace_id)
                 if attempt > 0:
                     logger.info(
                         f"OpenRouter API调用成功（重试后） - "
                         f"Agent: {self.agent_id}, User: {user_id}, "
                         f"Model: {model}, Attempt: {attempt + 1}/{max_retries}"
                     )
-                return (response, trace_id, trace_url)
+                return (response, trace_id)
 
             except Exception as e:
                 last_error = e
@@ -1520,9 +1516,8 @@ class Agent:
 
                 enable_official_assistant_tools = self._is_intellimate_official()
                 trace_id: Optional[str] = None
-                trace_url: Optional[str] = None
                 try:
-                    response, trace_id, trace_url = self._call_openai_api_with_retry(
+                    response, trace_id = self._call_openai_api_with_retry(
                         client=client,
                         model=model_name,
                         openai_messages=openai_messages,
@@ -1545,7 +1540,7 @@ class Agent:
                     )
                     openai_messages_for_response = openai_messages
                     if enable_official_assistant_tools:
-                        response, openai_messages_for_response, trace_id, trace_url = (
+                        response, openai_messages_for_response, trace_id = (
                             self._resolve_official_assistant_tool_calls(
                                 response=response,
                                 openai_messages=openai_messages,
@@ -1559,7 +1554,6 @@ class Agent:
                                 chat_name=chat_name,
                                 labels=labels,
                                 initial_trace_id=trace_id,
-                                initial_trace_url=trace_url,
                                 user_email=user_email,
                             )
                         )
@@ -1636,8 +1630,7 @@ class Agent:
                         "role": "user",
                         "content": "continue",
                     }
-                    retry_response, retry_trace_id, retry_trace_url = (
-                        self._call_openai_api_with_retry(
+                    retry_response, retry_trace_id = self._call_openai_api_with_retry(
                             client=client,
                             model=model_name,
                             openai_messages=openai_messages_for_response,
@@ -1650,7 +1643,6 @@ class Agent:
                             initial_delay=1.0,
                             chat_name=chat_name,
                             labels=labels,
-                        )
                     )
                     if (
                         retry_response is None
@@ -1679,7 +1671,6 @@ class Agent:
                         )
                     response_text = retry_response_text
                     trace_id = retry_trace_id
-                    trace_url = retry_trace_url
 
                 # 处理长度限制情况
                 elif finish_reason == "length":
@@ -1708,8 +1699,6 @@ class Agent:
                 }
                 if trace_id:
                     meta_data["langsmith_trace_id"] = trace_id
-                if trace_url:
-                    meta_data["langsmith_trace_url"] = trace_url
                 ai_message_id = chat_history_service.add_ai_message_sync(
                     session_id=session_id,
                     message=response_text,
@@ -1876,7 +1865,7 @@ class Agent:
                     f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
                 )
 
-                response, trace_id, trace_url = self._call_openai_api_with_retry(
+                response, trace_id = self._call_openai_api_with_retry(
                     client=client,
                     model=model_name,
                     openai_messages=openai_messages,
@@ -1922,7 +1911,7 @@ class Agent:
                     f"推送消息生成完成（未保存到历史记录） - Agent: {self.agent_id}, Session: {session_id}"
                 )
 
-                return (response_text, trace_id, trace_url)
+                return (response_text, trace_id)
             except Exception as e:
                 logger.error(
                     f"推送消息生成失败 - Agent: {self.agent_id}, Session: {session_id}, Error: {str(e)}"

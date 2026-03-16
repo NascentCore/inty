@@ -136,7 +136,6 @@ def _stub_success_chat_completion_with_premium_preview(
             return (
                 "A warmer and more personalized premium-only response sample.",
                 None,
-                None,
             )
 
     async def fake_get_agent(agent_data):

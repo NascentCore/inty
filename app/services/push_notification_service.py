@@ -1663,8 +1663,8 @@ async def generate_agent_message(
             logger.warning(f"Agent未生成消息: user_id={user_id}, agent_id={agent_id}")
             return None
 
-        response_content, trace_id, trace_url = (
-            gen_result if isinstance(gen_result, tuple) else (gen_result, None, None)
+        response_content, trace_id = (
+            gen_result if isinstance(gen_result, tuple) else (gen_result, None)
         )
         response_content = response_content.strip() if response_content else ""
 
@@ -1682,8 +1682,6 @@ async def generate_agent_message(
                 }
                 if trace_id:
                     push_meta_data["langsmith_trace_id"] = trace_id
-                if trace_url:
-                    push_meta_data["langsmith_trace_url"] = trace_url
 
                 # 保存AI消息
                 await add_ai_message(

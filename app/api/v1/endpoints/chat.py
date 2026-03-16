@@ -368,8 +368,8 @@ async def _try_generate_premium_preview_choice(
     )
     if not gen_result:
         return None
-    preview_content, _trace_id, _trace_url = (
-        gen_result if isinstance(gen_result, tuple) else (gen_result, None, None)
+    preview_content, _trace_id = (
+        gen_result if isinstance(gen_result, tuple) else (gen_result, None)
     )
     preview_content = _truncate_premium_preview_content(preview_content.strip() if preview_content else "")
     if not preview_content:
@@ -934,8 +934,8 @@ async def chat_completions_websocket_verify(
             if gen_result is None:
                 response_text = ""
             else:
-                response_text, _trace_id, _trace_url = (
-                    gen_result if isinstance(gen_result, tuple) else (gen_result, None, None)
+                response_text, _trace_id = (
+                    gen_result if isinstance(gen_result, tuple) else (gen_result, None)
                 )
                 response_text = response_text or ""
 
