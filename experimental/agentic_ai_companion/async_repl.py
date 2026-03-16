@@ -96,9 +96,7 @@ def _execute_heartbeat_turn(
         # 有内容：作为主动消息输出
         messages.append({"role": "assistant", "content": content})
         display = content or EMPTY_RESPONSE
-        logger.info(
-            "Heartbeat turn %d 主动消息，长度=%d", turn, len(content)
-        )
+        logger.info("Heartbeat turn %d 主动消息，长度=%d", turn, len(content))
         print(f"\n{char_name}> {display}\n")
         return messages, False
 
@@ -141,27 +139,44 @@ async def run_async_repl(
     # 闭包：捕获会话作用域参数，避免在循环中重复传递 14 个参数
     def do_user_turn(msgs: list, line: str, t: int) -> list:
         return _execute_turn(
-            msgs, line, t, char_name, user_name, model, client,
-            tools, tool_types, tool_context_types,
-            process_response_with_tools, tool_executors,
-            get_gemini_client, logger,
+            msgs,
+            line,
+            t,
+            char_name,
+            user_name,
+            model,
+            client,
+            tools,
+            tool_types,
+            tool_context_types,
+            process_response_with_tools,
+            tool_executors,
+            get_gemini_client,
+            logger,
             build_system_messages=build_system_messages,
         )
 
     def do_heartbeat_turn(msgs: list, signal: str, t: int) -> tuple[list, bool]:
         return _execute_heartbeat_turn(
-            msgs, signal, t, char_name, model, client,
-            tools, tool_types, tool_context_types,
-            process_response_with_tools, tool_executors,
-            get_gemini_client, logger,
+            msgs,
+            signal,
+            t,
+            char_name,
+            model,
+            client,
+            tools,
+            tool_types,
+            tool_context_types,
+            process_response_with_tools,
+            tool_executors,
+            get_gemini_client,
+            logger,
             build_system_messages=build_system_messages,
             user_name=user_name,
         )
 
     print(f"角色: {char_name} | 用户: {user_name} | 模型: {model}")
-    print(
-        f"Heartbeat 模式已开启，间隔: {heartbeat_config.interval_seconds:.0f}s"
-    )
+    print(f"Heartbeat 模式已开启，间隔: {heartbeat_config.interval_seconds:.0f}s")
     print("输入内容后回车发送，空行跳过，Ctrl+C 退出。\n")
 
     with trace(
@@ -175,14 +190,10 @@ async def run_async_repl(
         },
     ):
         while True:
-            interval = state.compute_next_interval(
-                heartbeat_config.interval_seconds
-            )
+            interval = state.compute_next_interval(heartbeat_config.interval_seconds)
 
             # 同时等待用户输入和心跳超时
-            input_task = asyncio.ensure_future(
-                ainput(f"{user_name}> ")
-            )
+            input_task = asyncio.ensure_future(ainput(f"{user_name}> "))
 
             try:
                 done, _ = await asyncio.wait(
@@ -230,9 +241,7 @@ async def run_async_repl(
                     interval,
                 )
                 signal = build_heartbeat_signal(state, messages)
-                messages, was_silent = do_heartbeat_turn(
-                    messages, signal, turn
-                )
+                messages, was_silent = do_heartbeat_turn(messages, signal, turn)
                 state.record_heartbeat(was_silent)
 
                 if (

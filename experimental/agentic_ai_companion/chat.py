@@ -30,7 +30,9 @@ from loguru import logger as _real_logger
 import json as _dbg_json
 import time as _dbg_time
 import traceback as _dbg_tb
+
 _DBG_LOG_PATH = "/Users/yzhao/Workspace/NascentCore/inty/.cursor/debug-7eab40.log"
+
 
 def _debug_loguru_sink(message):
     """自定义 loguru sink：写入调试日志，捕获 handler 内部异常。"""
@@ -38,7 +40,8 @@ def _debug_loguru_sink(message):
     try:
         formatted_str = str(message)
         _payload = {
-            "sessionId": "7eab40", "hypothesisId": "H1-sink",
+            "sessionId": "7eab40",
+            "hypothesisId": "H1-sink",
             "location": "chat.py:_debug_loguru_sink",
             "message": "sink_success",
             "data": {
@@ -47,7 +50,8 @@ def _debug_loguru_sink(message):
                 "line": record["line"],
                 "name": record["module"],
                 "msg_preview": str(record["message"])[:300],
-                "has_braces": "{" in str(record["message"]) or "}" in str(record["message"]),
+                "has_braces": "{" in str(record["message"])
+                or "}" in str(record["message"]),
             },
             "timestamp": int(_dbg_time.time() * 1000),
         }
@@ -55,7 +59,8 @@ def _debug_loguru_sink(message):
             _f.write(_dbg_json.dumps(_payload) + "\n")
     except Exception as _exc:
         _err_payload = {
-            "sessionId": "7eab40", "hypothesisId": "H1-sink-error",
+            "sessionId": "7eab40",
+            "hypothesisId": "H1-sink-error",
             "location": "chat.py:_debug_loguru_sink:except",
             "message": "sink_raised_exception",
             "data": {
@@ -68,6 +73,7 @@ def _debug_loguru_sink(message):
         }
         with open(_DBG_LOG_PATH, "a") as _f:
             _f.write(_dbg_json.dumps(_err_payload) + "\n")
+
 
 _real_logger.add(_debug_loguru_sink, level="DEBUG", format="{message}")
 # #endregion
@@ -88,10 +94,22 @@ class _LoggerWrapper:
             formatted = msg % args if args else msg
             # #region agent log
             _has_braces = "{" in formatted or "}" in formatted
-            _payload = {"sessionId":"7eab40","hypothesisId":"H1-postfix","location":"chat.py:_log","message":"_log_call","data":{"level":level,"has_braces":_has_braces,"msg_len":len(formatted),"msg_preview":formatted[:200]},"timestamp":int(_dbg_time.time()*1000)}
+            _payload = {
+                "sessionId": "7eab40",
+                "hypothesisId": "H1-postfix",
+                "location": "chat.py:_log",
+                "message": "_log_call",
+                "data": {
+                    "level": level,
+                    "has_braces": _has_braces,
+                    "msg_len": len(formatted),
+                    "msg_preview": formatted[:200],
+                },
+                "timestamp": int(_dbg_time.time() * 1000),
+            }
             try:
                 with open(_DBG_LOG_PATH, "a") as _f:
-                    _f.write(_dbg_json.dumps(_payload)+"\n")
+                    _f.write(_dbg_json.dumps(_payload) + "\n")
             except Exception:
                 pass
             # #endregion

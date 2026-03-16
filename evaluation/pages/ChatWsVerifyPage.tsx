@@ -16,7 +16,11 @@ import {
   Tag,
   message as antMessage,
 } from "antd";
-import { SendOutlined, DisconnectOutlined, ApiOutlined } from "@ant-design/icons";
+import {
+  SendOutlined,
+  DisconnectOutlined,
+  ApiOutlined,
+} from "@ant-design/icons";
 import type { Agent } from "../types";
 import { SingleAgentSelectorPanel } from "../components/common/SingleAgentSelectorPanel";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
@@ -74,7 +78,7 @@ export const ChatWsVerifyPage: React.FC = () => {
               role: "assistant",
               content: "",
               error: payload.message ?? "Unknown error",
-            })
+            }),
           );
           setSending(false);
           return;
@@ -86,7 +90,7 @@ export const ChatWsVerifyPage: React.FC = () => {
             id: `ai-${Date.now()}`,
             role: "assistant",
             content,
-          })
+          }),
         );
       } catch {
         setMessages((prev) =>
@@ -95,7 +99,7 @@ export const ChatWsVerifyPage: React.FC = () => {
             role: "assistant",
             content: "",
             error: "Invalid response",
-          })
+          }),
         );
       }
       setSending(false);
@@ -113,7 +117,12 @@ export const ChatWsVerifyPage: React.FC = () => {
 
   const sendMessage = useCallback(() => {
     const text = inputValue.trim();
-    if (!text || !selectedAgent || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (
+      !text ||
+      !selectedAgent ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    ) {
       if (!selectedAgent) antMessage.warning("请先选择角色");
       else if (!connected) antMessage.warning("请先连接 WebSocket");
       return;
@@ -121,7 +130,7 @@ export const ChatWsVerifyPage: React.FC = () => {
     setSending(true);
     setInputValue("");
     setMessages((prev) =>
-      prev.concat({ id: `user-${Date.now()}`, role: "user", content: text })
+      prev.concat({ id: `user-${Date.now()}`, role: "user", content: text }),
     );
     const payload = {
       agent_id: selectedAgent.id,
@@ -206,10 +215,8 @@ export const ChatWsVerifyPage: React.FC = () => {
                                 <Avatar icon={<span>A</span>} />
                               )
                             }
-                              title={item.role === "user" ? "用户" : "助手"}
-                            description={
-                              item.error ?? (item.content || "(空)")
-                            }
+                            title={item.role === "user" ? "用户" : "助手"}
+                            description={item.error ?? (item.content || "(空)")}
                           />
                         </List.Item>
                       )}

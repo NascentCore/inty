@@ -931,8 +931,8 @@ async def chat_completions_websocket_verify(
             if response_text is None:
                 response_text = ""
 
-            response_text_content, response_content_parts = _normalize_chat_response_content(
-                response_text
+            response_text_content, response_content_parts = (
+                _normalize_chat_response_content(response_text)
             )
             data = _build_chat_response(
                 response_text_content,
