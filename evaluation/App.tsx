@@ -24,6 +24,7 @@ import {
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
 import { ChatPage } from "./pages/ChatPage";
+import { ChatWsVerifyPage } from "./pages/ChatWsVerifyPage";
 import AgentManagePage from "./pages/AgentManagePage";
 import CharacterThemeManagePage from "./pages/CharacterThemeManagePage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -52,6 +53,7 @@ type PageKey =
   | "evaluation"
   | "history"
   | "chat"
+  | "chat-ws-verify"
   | "voice-chat"
   | "agents"
   | "settings"
@@ -67,6 +69,7 @@ const HASH_PAGE_KEYS = new Set<PageKey>([
   "evaluation",
   "history",
   "chat",
+  "chat-ws-verify",
   "voice-chat",
   "agents",
   "settings",
@@ -206,6 +209,12 @@ const AppContent: React.FC = () => {
       description: "与智能体进行一对一聊天",
     },
     {
+      key: "chat-ws-verify",
+      icon: <MessageOutlined />,
+      label: "WebSocket 对话验证",
+      description: "验证 WS 连接与对话效果（不落库）",
+    },
+    {
       key: "voice-chat",
       icon: <PhoneOutlined />,
       label: "语音通话",
@@ -270,6 +279,8 @@ const AppContent: React.FC = () => {
         return "智能体评测记录";
       case "chat":
         return "单角色聊天";
+      case "chat-ws-verify":
+        return "WebSocket 对话验证";
       case "voice-chat":
         return "语音通话";
       case "agents":
@@ -308,6 +319,8 @@ const AppContent: React.FC = () => {
         );
       case "chat":
         return <ChatPage />;
+      case "chat-ws-verify":
+        return <ChatWsVerifyPage />;
       case "voice-chat":
         return (
           <VoiceChatPage
