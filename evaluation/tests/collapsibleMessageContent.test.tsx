@@ -5,7 +5,9 @@ import { CollapsibleMessageContent } from "../components/CollapsibleMessageConte
 
 describe("CollapsibleMessageContent", () => {
   it("shows placeholder when content is empty", () => {
-    const html = renderToStaticMarkup(<CollapsibleMessageContent content={null} />);
+    const html = renderToStaticMarkup(
+      <CollapsibleMessageContent content={null} />,
+    );
     expect(html.includes("[无文本内容]")).toBe(true);
   });
 
