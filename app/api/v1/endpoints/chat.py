@@ -1,3 +1,5 @@
+import asyncio
+import json
 import time
 import uuid
 from types import SimpleNamespace
@@ -58,6 +60,9 @@ from app.services.voice_service import (
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+# WebSocket 应用层心跳：由客户端发 ping，服务端仅回 pong；服务端空闲超时关闭连接
+CHAT_WS_IDLE_TIMEOUT_SECONDS = 60
 
 
 async def _get_current_user_from_websocket(
@@ -805,9 +810,22 @@ async def chat_completions_websocket(
 
     try:
         while True:
-            websocket_request = ChatWebSocketRequest.model_validate_json(
-                await websocket.receive_text()
-            )
+            try:
+                raw = await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=CHAT_WS_IDLE_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                await websocket.close()
+                return
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                data = None
+            if isinstance(data, dict) and data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+                continue
+            websocket_request = ChatWebSocketRequest.model_validate_json(raw)
             response = await agent_chat_completions(
                 db=db,
                 agent_id=websocket_request.agent_id,
@@ -838,7 +856,21 @@ async def chat_completions_websocket_verify(
 
     try:
         while True:
-            raw = await websocket.receive_text()
+            try:
+                raw = await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=CHAT_WS_IDLE_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                await websocket.close()
+                return
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                data = None
+            if isinstance(data, dict) and data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+                continue
             websocket_request = ChatWebSocketRequest.model_validate_json(raw)
             agent_id = websocket_request.agent_id
             request = websocket_request.request
