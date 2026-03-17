@@ -141,7 +141,12 @@ async def run_realtime_voice_call(settings: LiveVoiceSettings) -> None:
 def main() -> None:
     from openai import APIConnectionError, APIStatusError, AuthenticationError
 
-    settings = load_settings()
+    try:
+        settings = load_settings()
+    except ValueError as error:
+        print(error)
+        raise SystemExit(2) from error
+
     print("Starting GPT live voice demo...")
     print(f"Model: {settings.model}")
     print(f"Voice: {settings.voice}")
