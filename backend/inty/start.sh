@@ -52,7 +52,7 @@ export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/alembic/alembic.ini}"
 # 即：init_admin_user.py 需要 users 表存在。所以要先运行 alembic upgrade head。
 # 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
 # python scripts/init_admin_user.py
-alembic -c "$ALEMBIC_CONFIG" upgrade head
+python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
 python scripts/init_subscription_plans_simple.py
@@ -67,8 +67,8 @@ if [ "$DEV" = true ]; then
   # python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   # 生成测试用户用于本地 app 登陆
   python scripts/create_email_password_superuser.py --email test@sxwl.ai --password test --yes
-  uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
+  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
 else
   echo "Starting in normal mode without reloading..."
-  uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000
+  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000
 fi

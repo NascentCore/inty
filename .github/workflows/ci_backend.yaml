@@ -113,10 +113,10 @@ jobs:
         run: |
           export PYTHONPATH=.
           export ALEMBIC_CONFIG=alembic/alembic.ini
-          heads_count=$(alembic heads | wc -l)
+          heads_count=$(python -m alembic heads | wc -l)
           if [ "$heads_count" -ne 1 ]; then
             echo "Expected exactly one alembic head, got $heads_count:"
-            alembic heads
+            python -m alembic heads
             exit 1
           fi
 
@@ -147,7 +147,7 @@ jobs:
 
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
-          pytest -m "not noci" -v -s tests/
+          python -m pytest -m "not noci" -v -s tests/
 
       - name: Start push worker and verify startup
         run: |

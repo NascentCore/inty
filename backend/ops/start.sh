@@ -44,8 +44,8 @@ if [ "$LOCAL" = true ]; then
   echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
   echo "cd evaluation && npm run dev"
   echo "Starting ops backend server in dev mode on port $OPS_PORT..."
-  uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload
 else
   echo "Starting ops in normal mode on port $OPS_PORT..."
-  uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT"
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT"
 fi
