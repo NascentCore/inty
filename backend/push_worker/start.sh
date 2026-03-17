@@ -40,7 +40,7 @@ done
 echo "Starting database migrations..."
 export PYTHONPATH=.
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-$ROOT/alembic/alembic.ini}"
-alembic -c "$ALEMBIC_CONFIG" upgrade head
+python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 
 # 启动推送服务
