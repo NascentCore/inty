@@ -1043,7 +1043,10 @@ class UserAnalyticsService:
                 SELECT
                     ch.session_id::text as session_id,
                     ch.message->>'type' as message_type,
-                    ch.message->>'content' as content,
+                    COALESCE(
+                        ch.message->'data'->>'content',
+                        ch.message->>'content'
+                    ) as content,
                     ch.created_at,
                     ch.audio_url
                 FROM chat_history ch

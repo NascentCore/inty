@@ -55,6 +55,7 @@ import {
   sessionMessagesPaginationProps,
   shouldShowSessionMessagesPagination,
 } from "../utils/sessionMessagesPagination";
+import { CollapsibleMessageContent } from "../components/CollapsibleMessageContent";
 import type {
   ConversationsDetailResponse,
   UserDailyMessagesResponse,
@@ -587,14 +588,8 @@ export const UserDailyMessagesPage: React.FC = () => {
       title: "消息内容",
       dataIndex: "content",
       key: "content",
-      render: (value: string) =>
-        value ? (
-          <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-            {value}
-          </div>
-        ) : (
-          <Text type="secondary">[无文本内容]</Text>
-        ),
+      width: 420,
+      render: (value: string) => <CollapsibleMessageContent content={value} />,
     },
   ];
 
