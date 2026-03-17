@@ -83,50 +83,58 @@ class ChatRemoteDataSource {
         }
     }
 
+    /** 构建与 HTTP/WebSocket 发送一致的 SendMsgReq，供 sendMessage 与主 WebSocket 发送复用。 */
+    fun buildSendMsgReq(
+        agentId: String,
+        userText: String,
+        userImageUrl: String? = null,
+    ): SendMsgReq {
+        val trimmedUserText = userText.trimEnd()
+        val requestMessage =
+            if (userImageUrl.isNullOrBlank()) {
+                SendMsgReqMessage.text(role = "user", text = trimmedUserText)
+            } else {
+                SendMsgReqMessage.multimodal(
+                    role = "user",
+                    parts =
+                        buildList {
+                            if (trimmedUserText.isNotBlank()) {
+                                add(
+                                    ChatMessageContentPart(
+                                        type = "text",
+                                        text = trimmedUserText,
+                                    )
+                                )
+                            }
+                            add(
+                                ChatMessageContentPart(
+                                    type = "image_url",
+                                    imageUrl =
+                                        ChatMessageContentPart.ImageUrlPayload(
+                                            url = userImageUrl
+                                        ),
+                                )
+                            )
+                        },
+                )
+            }
+        return SendMsgReq(
+            messages = listOf(requestMessage),
+            timeContext = buildUserTimeContext(),
+            targetImateId = agentId,
+        )
+    }
+
     suspend fun sendMessage(
         agentId: String,
         userText: String,
         userImageUrl: String? = null,
     ): HttpResult<SendMsgResponse> {
         return try {
-            val trimmedUserText = userText.trimEnd()
             LogUtils.i(
                 "ChatRemoteDataSource.sendMessage: agentId=$agentId, hasImage=${!userImageUrl.isNullOrBlank()}"
             )
-            val requestMessage =
-                if (userImageUrl.isNullOrBlank()) {
-                    SendMsgReqMessage.text(role = "user", text = trimmedUserText)
-                } else {
-                    SendMsgReqMessage.multimodal(
-                        role = "user",
-                        parts =
-                            buildList {
-                                if (trimmedUserText.isNotBlank()) {
-                                    add(
-                                        ChatMessageContentPart(
-                                            type = "text",
-                                            text = trimmedUserText,
-                                        )
-                                    )
-                                }
-                                add(
-                                    ChatMessageContentPart(
-                                        type = "image_url",
-                                        imageUrl =
-                                            ChatMessageContentPart.ImageUrlPayload(
-                                                url = userImageUrl
-                                            ),
-                                    )
-                                )
-                            },
-                    )
-                }
-            val request =
-                SendMsgReq(
-                    messages = listOf(requestMessage),
-                    timeContext = buildUserTimeContext(),
-                    targetImateId = agentId,
-                )
+            val request = buildSendMsgReq(agentId, userText, userImageUrl)
             NetServiceMgr.getChatApi().sendMsg(agentId, request)
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")

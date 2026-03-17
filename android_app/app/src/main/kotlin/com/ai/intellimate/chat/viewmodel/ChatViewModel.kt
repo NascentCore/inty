@@ -16,6 +16,7 @@ import ai.sxwl.android.data.chat.domain.ChatRepository
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.BusinessErrorCodes
+import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.firebase.FirebaseManager
@@ -36,6 +37,7 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
+import com.ai.intellimate.main.data.MainRepository
 import com.ai.intellimate.chat.data.ChatPreparedImageUpload
 import com.ai.intellimate.chat.touch.CharacterTouchAction
 import com.ai.intellimate.chat.uistate.ChatUIState
@@ -115,8 +117,8 @@ class ChatViewModel : BaseVM() {
         }
     }
 
-    // 依赖注入 - 使用新的架构
-    private val chatMessageRepository = ChatMessageRepository()
+    // 依赖注入 - 使用新的架构；传入 MainRepository 以支持 sendMessageViaMainWebSocket
+    private val chatMessageRepository = ChatMessageRepository(mainRepository = MainRepository())
     private val chatRepository: ChatRepository = DataModule.getChatRepository()
     private val characterRepository: CharacterRepository = DataModule.getCharacterRepository()
     private val generateImageUseCase = DataModule.generateImageUseCase
@@ -632,17 +634,30 @@ class ChatViewModel : BaseVM() {
             )
 
             try {
-                // 处理发送结果
-                when (
-                    val result =
-                        chatMessageRepository.sendMessage(
-                            agentId = agentId,
-                            content = inputMsg.trimEnd(),
-                            localImageUri = selectedImageUri,
-                            preUploadTask = selectedImageUploadTask,
-                        )
-                ) {
-                    is HttpResult.Success -> {
+                val useMainWebSocket =
+                    DebugBackendEndpointStore.isRuntimeOverrideSupported() &&
+                        DebugBackendEndpointStore.getChatWebSocketEnabled()
+                if (useMainWebSocket) {
+                    chatMessageRepository.sendMessageViaMainWebSocket(
+                        agentId = agentId,
+                        content = inputMsg.trimEnd(),
+                        localImageUri = selectedImageUri,
+                        preUploadTask = selectedImageUploadTask,
+                    )
+                    sessionMessageCount++
+                    _isWaitingForReply.value = false
+                } else {
+                    // 处理发送结果
+                    when (
+                        val result =
+                            chatMessageRepository.sendMessage(
+                                agentId = agentId,
+                                content = inputMsg.trimEnd(),
+                                localImageUri = selectedImageUri,
+                                preUploadTask = selectedImageUploadTask,
+                            )
+                    ) {
+                        is HttpResult.Success -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
@@ -771,6 +786,7 @@ class ChatViewModel : BaseVM() {
                         _isWaitingForReply.value = false
                     }
                 }
+                }
             } catch (e: Exception) {
                 // 检查是否是取消相关的异常，如果是则不显示错误 Toast
                 if (
@@ -886,8 +902,16 @@ class ChatViewModel : BaseVM() {
             )
 
             try {
-                when (val result = chatMessageRepository.sendMessage(agentId, actionDescription)) {
-                    is HttpResult.Success -> {
+                val useMainWebSocket =
+                    DebugBackendEndpointStore.isRuntimeOverrideSupported() &&
+                        DebugBackendEndpointStore.getChatWebSocketEnabled()
+                if (useMainWebSocket) {
+                    chatMessageRepository.sendMessageViaMainWebSocket(agentId, actionDescription)
+                    sessionMessageCount++
+                    _isWaitingForReply.value = false
+                } else {
+                    when (val result = chatMessageRepository.sendMessage(agentId, actionDescription)) {
+                        is HttpResult.Success -> {
                         val responseTime = System.currentTimeMillis() - aiResponseStartTime
                         val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
@@ -985,6 +1009,7 @@ class ChatViewModel : BaseVM() {
                         )
                         _isWaitingForReply.value = false
                     }
+                }
                 }
             } catch (e: Exception) {
                 if (
@@ -1206,11 +1231,18 @@ class ChatViewModel : BaseVM() {
                         ),
                     )
 
-                    val result = chatMessageRepository.sendMessage(agent.id, keepTalkingMsg)
-                    _isWaitingForReply.value = false
+                    val useMainWebSocket =
+                        DebugBackendEndpointStore.isRuntimeOverrideSupported() &&
+                            DebugBackendEndpointStore.getChatWebSocketEnabled()
+                    if (useMainWebSocket) {
+                        chatMessageRepository.sendMessageViaMainWebSocket(agent.id, keepTalkingMsg)
+                        _isWaitingForReply.value = false
+                    } else {
+                        val result = chatMessageRepository.sendMessage(agent.id, keepTalkingMsg)
+                        _isWaitingForReply.value = false
 
-                    when (result) {
-                        is HttpResult.Success -> {
+                        when (result) {
+                            is HttpResult.Success -> {
                             val responseTime = System.currentTimeMillis() - aiResponseStartTime
                             val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
 
@@ -1288,6 +1320,7 @@ class ChatViewModel : BaseVM() {
                             // 错误恢复：确保状态正确
                             _isWaitingForReply.value = false
                         }
+                    }
                     }
                 } catch (e: Exception) {
                     // 检查是否是取消相关的异常，如果是则不显示错误 Toast
