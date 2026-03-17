@@ -66,11 +66,12 @@ FirebaseManager.logEvent(
 ### 3. 设置用户属性
 
 ```kotlin
-// 推荐：使用 setUserInfo 方法，它会自动设置 userId 和用户属性
+// 推荐：使用 setUserInfo 方法，它会自动设置 userId 和用户属性（含可选 user_gender 用于埋点）
 FirebaseManager.setUserInfo(
     userId = "user123",
     userType = "premium",
-    subscriptionLevel = "gold"
+    subscriptionLevel = "gold",
+    gender = "MALE"  // 可选，用户性别（如 MALE/FEMALE/OTHER），空串则不设置该属性
 )
 
 // 单独设置用户属性（如果需要单独更新某个属性）
@@ -132,8 +133,8 @@ FirebaseManager.setUserProperty(FirebaseManager.UserProperties.SUBSCRIPTION_LEVE
 - ✅ 在 Firebase Console 中，可以通过 `user_id` 用户属性筛选所有事件
 
 ```kotlin
-// 推荐方式：使用用户属性（自动关联到所有事件）
-FirebaseManager.setUserInfo(userId, userType, subscriptionLevel)
+// 推荐方式：使用用户属性（自动关联到所有事件，含可选 gender）
+FirebaseManager.setUserInfo(userId, userType, subscriptionLevel, gender)
 
 // 记录事件（会自动关联 user_id 用户属性，无需手动添加）
 FirebaseManager.logEvent(

@@ -275,11 +275,12 @@ object UnifiedStartupManager {
             if (userProfile != null) {
                 UserProfileManager.saveUserProfile(userProfile)
 
-                // 设置Firebase用户信息
+                // 设置Firebase用户信息（含埋点用用户性别）
                 val userId = IntySetting.getCurUserID()
                 val userType = if (VipStatusHelper.isUserVip()) "vip" else "free"
                 val subscriptionLevel = VipStatusHelper.getSubscriptionLevel()
-                FirebaseManager.setUserInfo(userId, userType, subscriptionLevel)
+                val gender = userProfile.gender.orEmpty()
+                FirebaseManager.setUserInfo(userId, userType, subscriptionLevel, gender)
 
                 LogUtils.i("UnifiedStartupManager - 用户信息同步成功: ${userProfile.nickname}")
             } else {
