@@ -17,7 +17,11 @@ export const CollapsibleMessageContent: React.FC<
 
   return (
     <Paragraph
-      style={{ marginBottom: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+      style={{
+        marginBottom: 0,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}
       ellipsis={{ rows: 2, expandable: true, symbol: "展开" }}
     >
       {normalizedContent}

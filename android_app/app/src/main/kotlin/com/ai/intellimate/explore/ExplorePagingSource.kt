@@ -56,8 +56,8 @@ class ExplorePagingSource(
 ) : PagingSource<Int, AgentInfo>() {
 
     /**
-     * 允许 nextKey 复用：当用户账户未就绪时我们会返回空数据且 nextKey = INITIAL_PAGE，
-     * 以便下次加载重试；若连续两次加载都未就绪则会返回相同的 nextKey，必须显式启用 keyReuseSupported。
+     * 允许 nextKey 复用：当用户账户未就绪时我们会返回空数据且 nextKey = INITIAL_PAGE， 以便下次加载重试；若连续两次加载都未就绪则会返回相同的
+     * nextKey，必须显式启用 keyReuseSupported。
      */
     override val keyReuseSupported: Boolean = true
 

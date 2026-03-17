@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from experimental.perpetual_agent import main
 
 
-def _tool_call(call_id: str, name: str, arguments: dict[str, object]) -> SimpleNamespace:
+def _tool_call(
+    call_id: str, name: str, arguments: dict[str, object]
+) -> SimpleNamespace:
     return SimpleNamespace(
         id=call_id,
         type="function",
@@ -18,9 +20,7 @@ def _tool_call(call_id: str, name: str, arguments: dict[str, object]) -> SimpleN
 def _tool_response(call: SimpleNamespace) -> SimpleNamespace:
     return SimpleNamespace(
         choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="", tool_calls=[call])
-            )
+            SimpleNamespace(message=SimpleNamespace(content="", tool_calls=[call]))
         ]
     )
 
@@ -87,7 +87,10 @@ def test_call_prompt_forces_call_user_tool_choice(monkeypatch):
                 _tool_call(
                     "call-1",
                     "call_user",
-                    {"phone_number": "+14155550123", "reason": "User requested a call."},
+                    {
+                        "phone_number": "+14155550123",
+                        "reason": "User requested a call.",
+                    },
                 )
             )
         ]
@@ -187,5 +190,5 @@ def test_create_twilio_call_posts_expected_form_data():
     assert captured["timeout"] == 30
     assert encoded["From"] == ["+15005550006"]
     assert encoded["To"] == ["+14155550123"]
-    assert "<Stream url=\"wss://bridge.example/ws\">" in encoded["Twiml"][0]
+    assert '<Stream url="wss://bridge.example/ws">' in encoded["Twiml"][0]
     assert "Call requested by user" in encoded["Twiml"][0]
