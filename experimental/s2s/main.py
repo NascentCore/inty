@@ -4,13 +4,9 @@ import asyncio
 import base64
 import os
 from dataclasses import dataclass
+from typing import Any
 
-import sounddevice as sd
 from dotenv import load_dotenv
-from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError
-from openai.resources.beta.realtime.realtime import AsyncRealtimeConnection
-
-from audio_util import AudioPlayerAsync, CHANNELS, SAMPLE_RATE
 
 OPENAI_API_KEY_PLACEHOLDER = "YOUR_OPENAI_API_KEY_HERE"
 
@@ -50,10 +46,15 @@ async def run_realtime_voice_call(settings: LiveVoiceSettings) -> None:
     # Implementation follows OpenAI realtime push-to-talk streaming pattern:
     # 1) send microphone PCM chunks to input_audio_buffer
     # 2) receive response.audio.delta chunks and play in near real-time.
+    import sounddevice as sd
+    from openai import AsyncOpenAI
+
+    from audio_util import AudioPlayerAsync, CHANNELS, SAMPLE_RATE
+
     client = AsyncOpenAI(api_key=settings.api_key)
     audio_player = AudioPlayerAsync()
     connection_ready = asyncio.Event()
-    connection: AsyncRealtimeConnection | None = None
+    connection: Any | None = None
     last_audio_item_id: str | None = None
 
     async def handle_realtime_events() -> None:
@@ -138,6 +139,8 @@ async def run_realtime_voice_call(settings: LiveVoiceSettings) -> None:
 
 
 def main() -> None:
+    from openai import APIConnectionError, APIStatusError, AuthenticationError
+
     settings = load_settings()
     print("Starting GPT live voice demo...")
     print(f"Model: {settings.model}")
