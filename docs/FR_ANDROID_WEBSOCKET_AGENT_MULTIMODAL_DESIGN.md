@@ -4,17 +4,18 @@ CREATED_BY_AGENT
 
 ## 1. 目标与范围
 
-本设计用于支持 Android App 与后端 AI Agent 之间的实时双向通信，统一承载三类输入：
+本设计用于支持 Android App 与后端 AI Agent 之间的实时双向通信，统一承载四类输入：
 
 1. 文本（text）
 2. 语音（voice）
-3. 视频信号（video）
+3. 图片（image）
+4. 视频信号（video）
 
 并支持后端实时返回：
 
 1. 文本增量输出（text delta/final）
 2. 语音输出（audio delta/final）
-3. 多模态理解事件（vision/audio understanding event）
+3. 图像/视频理解事件（image/vision understanding event）
 
 本设计聚焦在线实时会话，不覆盖离线批处理。
 
@@ -22,8 +23,8 @@ CREATED_BY_AGENT
 
 满足以下条件可判定设计被正确实现：
 
-1. Android 通过单个 WebSocket 会话即可在同一 `session_id` 下发送文本、语音 chunk、视频帧。
-2. 后端能对三类输入进行有序处理，并返回可增量渲染的 AI 响应事件。
+1. Android 通过单个 WebSocket 会话即可在同一 `session_id` 下发送文本、语音 chunk、图片与视频帧。
+2. 后端能对四类输入进行有序处理，并返回可增量渲染的 AI 响应事件。
 3. 断线重连后，客户端可基于 `last_acked_seq` 恢复会话，避免重复处理已确认消息。
 4. 服务端能够通过流控事件限制客户端发送速率，避免内存和队列失控。
 5. 全链路具备鉴权、审计追踪（`trace_id`）和错误可观测性。
@@ -33,9 +34,10 @@ CREATED_BY_AGENT
 ### 3.1 Android 侧
 
 - `WsSessionManager`：会话生命周期管理（connect/start/stop/reconnect）。
-- `OutboundMuxer`：统一封装文本、音频、视频三类上行消息为协议包。
+- `OutboundMuxer`：统一封装文本、音频、图片、视频四类上行消息为协议包。
 - `InboundDemuxer`：按消息类型分发到 UI、播放器、状态机。
 - `AudioCapturePipeline`：录音、编码（PCM16/Opus）、分片发送。
+- `ImageCapturePipeline`：相册/拍照图片压缩（JPEG/WebP）与上送。
 - `VideoCapturePipeline`：相机帧采样、压缩（JPEG/WebP）、分片发送。
 - `SessionStateStore`：保存 `session_id`、`next_seq`、`last_acked_seq` 用于重连恢复。
 
@@ -43,8 +45,8 @@ CREATED_BY_AGENT
 
 - `WebSocket Gateway`：连接接入、JWT 校验、协议解包与基础限流。
 - `Session Router`：将同一 `session_id` 路由到同一 Agent Runtime 实例。
-- `Agent Runtime`：融合文本/语音/视频上下文，驱动 LLM/VLM/ASR/TTS。
-- `Media Preprocessor`：音频 VAD/ASR、视频关键帧抽取与特征化。
+- `Agent Runtime`：融合文本/语音/图片/视频上下文，驱动 LLM/VLM/ASR/TTS。
+- `Media Preprocessor`：音频 VAD/ASR、图片标准化、视频关键帧抽取与特征化。
 - `Response Streamer`：将 AI 结果切分为增量事件下发。
 - `Observability`：记录 `trace_id`、时延、丢包、重试、错误码指标。
 
@@ -68,10 +70,11 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 
 ### 4.2 会话阶段
 
-1. `session.start`：声明本会话能力（text/audio/video）和编解码参数。
+1. `session.start`：声明本会话能力（text/audio/image/video）和编解码参数。
 2. 上行多模态数据：
    - 文本：`text.input`
    - 语音：`audio.chunk` ... `audio.end`
+   - 图片：`image.input`
    - 视频：`video.frame` ... `video.end`
 3. 下行 AI 结果：
    - `text.delta` / `text.final`
@@ -131,17 +134,22 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
    - `data_b64`
 4. `audio.end`
    - 表示一段语音输入结束
-5. `video.frame`
+5. `image.input`
+   - `codec`（建议 `jpeg` 或 `webp`）
+   - `width`, `height`, `orientation`
+   - `source`（`camera` / `gallery` / `screenshot`）
+   - `data_b64`
+6. `video.frame`
    - `codec`（建议 `jpeg` 或 `webp`）
    - `width`, `height`, `rotation`
    - `frame_ts_ms`
    - `data_b64`
-6. `video.end`
+7. `video.end`
    - 表示一次视频片段输入结束
-7. `session.stop`
-8. `ack`
+8. `session.stop`
+9. `ack`
    - 回执服务端下行 `seq`
-9. `ping`
+10. `ping`
 
 ## 5.2 下行消息类型（Backend -> Android）
 
@@ -150,16 +158,18 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 3. `text.final`
 4. `audio.delta`
 5. `audio.final`
-6. `vision.result`
+6. `image.result`
+   - 图片理解结果（标签、OCR、对象摘要）
+7. `vision.result`
    - 视频理解结果（标签、场景、OCR/对象摘要）
-7. `agent.event`
+8. `agent.event`
    - Agent 中间状态（思考阶段、工具调用阶段、完成阶段）
-8. `flow.control`
+9. `flow.control`
    - 流控参数（`max_inflight_bytes`, `send_interval_ms`）
-9. `error`
+10. `error`
    - 结构化错误：`code`, `message`, `retryable`
-10. `pong`
-11. `session.stopped`
+11. `pong`
+12. `session.stopped`
 
 ## 6. 顺序、可靠性与流控
 
@@ -167,7 +177,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 
 - 每个方向独立 `seq`。
 - 会话内按 `seq` 排序处理，检测乱序与重复包。
-- 对高频媒体包（`audio.chunk`, `video.frame`）允许在可配置窗口内轻微乱序重排。
+- 对高频媒体包（`audio.chunk`, `video.frame`）允许在可配置窗口内轻微乱序重排；`image.input` 按单包原子处理。
 
 ### 6.2 ACK 与重传
 
@@ -180,6 +190,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 - 服务端通过 `flow.control` 动态下发发送预算。
 - 客户端超过预算时降采样：
   - 音频：增大 `chunk_ms` 或切换 Opus 低码率。
+  - 图片：降低分辨率或压缩质量（quality）。
   - 视频：降低帧率或分辨率，仅保留关键帧。
 
 ## 7. 安全与合规
@@ -188,7 +199,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 2. 使用短期 JWT，服务端在握手和续期时校验。
 3. 会话级 `resume_token` 必须绑定 `user_id + session_id + expiry`。
 4. Android 端需在录音/摄像前获取显式权限与用户同意。
-5. 生产日志不记录原始音视频内容，仅记录哈希、大小、时长、错误码。
+5. 生产日志不记录原始音视频图片内容，仅记录哈希、大小、时长、错误码。
 
 ## 8. 可观测性指标
 
@@ -198,6 +209,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 - 上行/下行吞吐（bytes/s）
 - 文本首 token 延迟（TTFT）
 - 语音端到端延迟（capture -> first audio.delta）
+- 图片处理延迟（image ingest -> image.result）
 - 视频帧处理延迟（frame ingest -> vision.result）
 - 重连成功率、重传率、丢包率
 
@@ -216,6 +228,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 3. 业务层通过 `ChatRepository` 暴露统一接口：
    - `sendText(...)`
    - `sendAudioChunk(...)`
+   - `sendImage(...)`
    - `sendVideoFrame(...)`
    - `observeAgentEvents(...)`
 
@@ -223,7 +236,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 
 1. `app/api/ws/agent_ws_endpoint.py`：仅负责连接、鉴权、协议收发。
 2. `app/services/agent_session_service.py`：会话状态机、路由、ACK/重传窗口。
-3. `app/services/multimodal_ingest_service.py`：音视频预处理与标准化输入。
+3. `app/services/multimodal_ingest_service.py`：音频/图片/视频预处理与标准化输入。
 4. `app/services/agent_runtime_service.py`：编排 LLM/VLM/ASR/TTS。
 5. `app/schemas/ws_agent.py`：协议 DTO（实现时与 Android DTO 同步）。
 
@@ -248,6 +261,8 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
    - 客户端触发 `session.start` 新会话，并提示用户上下文可能中断。
 5. `INTERNAL_ERROR`
    - 服务端返回 `retryable=true/false`，客户端按策略重连或终止。
+6. `IMAGE_TOO_LARGE`
+   - 服务端返回 `max_image_bytes`，客户端压缩后重试。
 
 ## 13. 实现里程碑建议
 
@@ -255,9 +270,11 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
    - `session.start`, `text.input`, `text.delta/final`, `ack`, `error`
 2. M2（语音上/下行）
    - `audio.chunk/end`, `audio.delta/final`, 基础流控
-3. M3（视频输入）
+3. M3（图片输入）
+   - `image.input`, `image.result`, 图片压缩与大小限制策略
+4. M4（视频输入）
    - `video.frame/end`, `vision.result`, 关键帧策略
-4. M4（可靠性增强）
+5. M5（可靠性增强）
    - `session.resume`, 重放窗口, 观测指标完善
 
 ## 14. 对应测试文档建议
@@ -266,6 +283,7 @@ Android `OkHttp WebSocket` -> Backend `FastAPI WebSocket endpoint` -> `Session R
 
 1. 文本单模态回归
 2. 语音端到端回归
-3. 视频理解回归
-4. 弱网断线重连回归
-5. 流控与降级策略验证
+3. 图片理解回归
+4. 视频理解回归
+5. 弱网断线重连回归
+6. 流控与降级策略验证
