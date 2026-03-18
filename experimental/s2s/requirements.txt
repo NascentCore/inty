@@ -1,9 +1,9 @@
 openai
 openai[realtime]
+python-dotenv
 sounddevice
 numpy
 textual
 pydub
 pyaudio
-textual
 certifi

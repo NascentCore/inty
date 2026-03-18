@@ -61,7 +61,8 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         userContent: String,
         userImageUrl: String? = null,
     ) {
-        val last = chatMessageDao.getLatestMessage(agentId)
+        chatMessageDao.deleteSendingLoadingOnly(agentId)
+        val last = chatMessageDao.getLatestMessageExcludingSendingLoading(agentId)
         val userEntity =
             createTempSendingUserEntity(
                 agentId = agentId,
@@ -87,10 +88,38 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         chatMessageDao.deleteSendingMsg(agentId)
     }
 
+    /** 获取当前发送中的用户消息（主 WebSocket 收到响应时用于落库用户消息）。 */
+    suspend fun getSendingUserMessage(agentId: String): MessageEntity? =
+        chatMessageDao.getSendingUserMessage(agentId)
+
+    /** 获取最早一条发送中且未失败的用户消息（连发时只更新对应的一条）。 */
+    suspend fun getEarliestSendingUserMessage(agentId: String): MessageEntity? =
+        chatMessageDao.getEarliestSendingUserMessage(agentId)
+
+    /** 仅移除最早一条发送中的用户消息；若该条移除后已无发送中用户，则再移除 loading 占位。 */
+    suspend fun removeEarliestSendingUserAndLoadingIfLast(agentId: String) {
+        val earliest = chatMessageDao.getEarliestSendingUserMessage(agentId) ?: return
+        chatMessageDao.deleteMessage(agentId, earliest.id, earliest.indexId)
+        if (chatMessageDao.getEarliestSendingUserMessage(agentId) == null) {
+            chatMessageDao.deleteSendingLoadingOnly(agentId)
+        }
+    }
+
     /** 发送失败时：将发送中的用户消息标记为 SENDING_FAILED，仅删除 loading 占位。 */
     suspend fun markSendingFailedAndRemoveLoading(agentId: String) {
         database.withTransaction {
             chatMessageDao.markSendingUserAsFailed(agentId)
+            chatMessageDao.deleteSendingLoadingOnly(agentId)
+        }
+    }
+
+    /** 仅将最早一条发送中用户标记为 SENDING_FAILED；若无其余发送中用户则删除 loading。用于 WebSocket 错误响应时只影响对应一条。 */
+    suspend fun markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(agentId: String) {
+        val earliest = chatMessageDao.getEarliestSendingUserMessage(agentId) ?: return
+        chatMessageDao.updateMessage(
+            earliest.copy(status = MessageEntity.Status.SENDING_FAILED),
+        )
+        if (chatMessageDao.getEarliestSendingUserMessage(agentId) == null) {
             chatMessageDao.deleteSendingLoadingOnly(agentId)
         }
     }
@@ -101,7 +130,15 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
         width: Int?,
         height: Int?,
     ) {
-        chatMessageDao.updateSendingUserImage(agentId, imageUrl, width, height)
+        val latest = chatMessageDao.getLatestSendingUserMessage(agentId) ?: return
+        chatMessageDao.updateSendingUserImageByKey(
+            agentId = agentId,
+            messageId = latest.id,
+            indexId = latest.indexId,
+            imageUrl = imageUrl,
+            width = width,
+            height = height,
+        )
     }
 
     suspend fun appendUserMessage(

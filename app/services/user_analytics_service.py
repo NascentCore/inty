@@ -1021,7 +1021,12 @@ class UserAnalyticsService:
             **live_chat_stats,
         }
 
-    async def get_chat_messages(self, chat_ids: List[str]) -> List[Dict[str, Any]]:
+    async def get_chat_messages(
+        self,
+        chat_ids: List[str],
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
         """查询聊天会话的具体消息"""
         if not chat_ids:
             return []
@@ -1039,21 +1044,42 @@ class UserAnalyticsService:
 
         for batch in _batch_list(session_ids, self._batch_size):
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
-            query = text(f"""
-                SELECT
-                    ch.session_id::text as session_id,
-                    ch.message->>'type' as message_type,
-                    COALESCE(
-                        ch.message->'data'->>'content',
-                        ch.message->>'content'
-                    ) as content,
-                    ch.created_at,
-                    ch.audio_url
-                FROM chat_history ch
-                WHERE ch.session_id::text IN ({placeholders})
-                ORDER BY ch.created_at
-            """)
-            params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+            if activity_start_date and activity_end_date:
+                query = text(f"""
+                    SELECT
+                        ch.session_id::text as session_id,
+                        ch.message->>'type' as message_type,
+                        COALESCE(
+                            ch.message->'data'->>'content',
+                            ch.message->>'content'
+                        ) as content,
+                        ch.created_at,
+                        ch.audio_url
+                    FROM chat_history ch
+                    WHERE ch.session_id::text IN ({placeholders})
+                      AND ch.created_at >= :activity_start_date
+                      AND ch.created_at < :activity_end_date
+                    ORDER BY ch.created_at
+                """)
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+                params["activity_start_date"] = activity_start_date
+                params["activity_end_date"] = activity_end_date
+            else:
+                query = text(f"""
+                    SELECT
+                        ch.session_id::text as session_id,
+                        ch.message->>'type' as message_type,
+                        COALESCE(
+                            ch.message->'data'->>'content',
+                            ch.message->>'content'
+                        ) as content,
+                        ch.created_at,
+                        ch.audio_url
+                    FROM chat_history ch
+                    WHERE ch.session_id::text IN ({placeholders})
+                    ORDER BY ch.created_at
+                """)
+                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
             result = await self.db.execute(query, params)
 
             for row in result.fetchall():
@@ -1071,6 +1097,105 @@ class UserAnalyticsService:
                     )
 
         return data
+
+    async def get_paginated_user_agent_conversations_detail(
+        self,
+        register_start_date: datetime,
+        register_end_date: datetime,
+        activity_start_date: Optional[datetime] = None,
+        activity_end_date: Optional[datetime] = None,
+        page: int = 1,
+        size: int = 10,
+    ) -> Dict[str, Any]:
+        """按 user_id + agent_id 分组返回会话与消息详情（分页）"""
+        sessions_detail = await self.get_user_sessions_detail(
+            register_start_date, register_end_date, activity_start_date, activity_end_date
+        )
+        if not sessions_detail:
+            return {
+                "items": [],
+                "total": 0,
+                "page": page,
+                "size": size,
+                "has_more": False,
+            }
+
+        grouped: Dict[tuple[str, str], Dict[str, Any]] = {}
+        for item in sessions_detail:
+            user_id = item["user_id"]
+            agent_id = item["agent_id"]
+            grouping_key = (user_id, agent_id)
+            if grouping_key not in grouped:
+                grouped[grouping_key] = {
+                    "user_id": user_id,
+                    "auth_type": item["auth_type"],
+                    "user_created_at": item["user_created_at"],
+                    "nickname": item["nickname"],
+                    "email": item["email"],
+                    "agent_id": agent_id,
+                    "agent_name": item["agent_name"],
+                    "session_count": 0,
+                    "message_count": 0,
+                    "voice_message_count": 0,
+                    "sessions": [],
+                }
+
+            grouped_item = grouped[grouping_key]
+            grouped_item["session_count"] += 1
+            grouped_item["voice_message_count"] += item["voice_message_count"]
+            grouped_item["sessions"].append(
+                {
+                    "chat_id": item["chat_id"],
+                    "message_count": item["message_count"],
+                    "voice_message_count": item["voice_message_count"],
+                    "messages": [],
+                }
+            )
+
+        sorted_group_keys = sorted(grouped.keys(), key=lambda key: (key[0], key[1]))
+        grouped_items = [grouped[key] for key in sorted_group_keys]
+
+        total = len(grouped_items)
+        offset = (page - 1) * size
+        paged_items = grouped_items[offset : offset + size]
+        if not paged_items:
+            return {
+                "items": [],
+                "total": total,
+                "page": page,
+                "size": size,
+                "has_more": False,
+            }
+
+        chat_ids: List[str] = []
+        for item in paged_items:
+            chat_ids.extend([session["chat_id"] for session in item["sessions"]])
+
+        messages = await self.get_chat_messages(
+            chat_ids, activity_start_date, activity_end_date
+        )
+        chat_to_messages: Dict[str, List[Dict[str, Any]]] = {}
+        for message in messages:
+            chat_id = message["chat_id"]
+            if chat_id not in chat_to_messages:
+                chat_to_messages[chat_id] = []
+            chat_to_messages[chat_id].append(message)
+
+        for grouped_item in paged_items:
+            all_messages_count = 0
+            for session in grouped_item["sessions"]:
+                session_messages = chat_to_messages.get(session["chat_id"], [])
+                session["messages"] = session_messages
+                all_messages_count += len(session_messages)
+            grouped_item["message_count"] = all_messages_count
+
+        return {
+            "items": paged_items,
+            "total": total,
+            "page": page,
+            "size": size,
+            "has_more": offset + size < total,
+        }
 
     async def _get_users_hitting_chat_limit_single_day(
         self,
@@ -1395,6 +1520,7 @@ class UserAnalyticsService:
                 u.nickname,
                 u.email,
                 c.id as chat_id,
+                a.id as agent_id,
                 a.name as agent_name
             FROM users u
             INNER JOIN chats c ON u.id = c.user_id AND c.is_active = true
@@ -1459,7 +1585,8 @@ class UserAnalyticsService:
                     "nickname": row[3],
                     "email": row[4],
                     "chat_id": chat_id,
-                    "agent_name": row[6],
+                    "agent_id": row[6],
+                    "agent_name": row[7],
                     "message_count": message_count,
                     "voice_message_count": voice_count,
                 }
@@ -1769,10 +1896,13 @@ class UserAnalyticsService:
 
     async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
         """获取用户的所有会话列表"""
+        from app.services.image_transform_service import image_transform_service
+
         query = text("""
             SELECT 
                 c.id as chat_id,
                 a.name as agent_name,
+                a.avatar as agent_avatar_url,
                 c.created_at,
                 c.updated_at
             FROM chats c
@@ -1840,12 +1970,16 @@ class UserAnalyticsService:
             last_user_message_time = session_to_last_user_message_time.get(session_id)
             last_message_time = session_to_last_message_time.get(session_id)
             updated_at = last_user_message_time or last_message_time
+            agent_avatar_url = (
+                image_transform_service.transform_desktop(row[2]) if row[2] else None
+            )
 
             data.append(
                 {
                     "chat_id": chat_id,
                     "agent_name": row[1],
-                    "created_at": row[2].isoformat() if row[2] else None,
+                    "agent_avatar_url": agent_avatar_url,
+                    "created_at": row[3].isoformat() if row[3] else None,
                     "updated_at": (updated_at.isoformat() if updated_at else None),
                     "message_count": message_count,
                 }

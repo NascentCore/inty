@@ -32,6 +32,7 @@ import androidx.paging.PagingData
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.boost.BoostStorage
 import com.ai.intellimate.boost.PointSource
+import com.ai.intellimate.main.data.MainRepository
 import com.architecture.httplib.core.HttpResult
 import java.io.File
 import java.io.FileOutputStream
@@ -82,6 +83,7 @@ class ChatMessageRepository(
     private val database: IntyChatDatabase = IntyChatDatabase.getInstance(),
     private val remoteDataSource: ChatRemoteDataSource = ChatRemoteDataSource(),
     private val localDataSource: ChatLocalDataSource = ChatLocalDataSource(database),
+    private val mainRepository: MainRepository? = null,
 ) {
     companion object {
         private val KEY_LAST_RANK_DATE = longPreferencesKey("last_rank_date")
@@ -123,6 +125,103 @@ class ChatMessageRepository(
         // 3) keep the temporary user bubble image as local URI to avoid blank waiting state.
         localDataSource.appendSendingMessages(agentId, trimmed, localImageUri)
 
+        return try {
+            val preparedImageUpload =
+                if (localImageUri.isNullOrBlank()) {
+                    null
+                } else {
+                    when (val resolvedUpload = resolveChatInputImage(localImageUri, preUploadTask)) {
+                        is HttpResult.Success -> resolvedUpload.data
+                        is HttpResult.Failure -> {
+                            localDataSource.removeSendingMessage(agentId)
+                            return HttpResult.Failure(resolvedUpload.message, resolvedUpload.code)
+                        }
+                    }
+                }
+            val compressedImageUri = preparedImageUpload?.localCompressedImageUri
+            if (!compressedImageUri.isNullOrBlank() && compressedImageUri != localImageUri) {
+                localDataSource.updateSendingUserImage(
+                    agentId = agentId,
+                    imageUrl = compressedImageUri,
+                    width = preparedImageUpload.width,
+                    height = preparedImageUpload.height,
+                )
+            }
+            val uploadedImageUrl = preparedImageUpload?.uploadedImageUrl
+            val userBubbleImageUri = compressedImageUri ?: localImageUri
+
+            val result =
+                try {
+                    remoteDataSource.sendMessage(agentId, trimmed, uploadedImageUrl)
+                } catch (e: Exception) {
+                    LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
+                    HttpResult.Failure(e.message ?: "unknown error", -1)
+                }
+
+            if (
+                result is HttpResult.Success &&
+                    result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+            ) {
+                localDataSource.removeSendingMessage(agentId)
+                result.data.data?.let { data ->
+                    val buildMessages = buildList {
+                        add(
+                            MessageEntity(
+                                id = data.user_message_id.toString(),
+                                content = trimmed,
+                                role = "user",
+                                metaData =
+                                    MessageEntity.MetaData(
+                                        agentId = agentId,
+                                        generatedImage =
+                                            userBubbleImageUri?.let {
+                                                MessageEntity.MetaData.GeneratedImage(
+                                                    imageUrl = it,
+                                                    width = preparedImageUpload?.width,
+                                                    height = preparedImageUpload?.height,
+                                                )
+                                            },
+                                    ),
+                                timestamp = timestamp,
+                            )
+                        )
+                        addAll(data.choices.map { it.message.toEntity(agentId) })
+                    }
+
+                    localDataSource.appendMessages(buildMessages)
+
+                    LogUtils.d(
+                        "RoomImpl.sendMessage saving ${buildMessages.size} assistant messages for agentId=$agentId"
+                    )
+                }
+            } else {
+                localDataSource.markSendingFailedAndRemoveLoading(agentId)
+            }
+
+            result
+        } catch (e: Exception) {
+            localDataSource.markSendingFailedAndRemoveLoading(agentId)
+            throw e
+        }
+    }
+
+    /**
+     * 通过 mainRepository 的主 WebSocket 发送消息，不等待响应；参数与 [ChatWebSocketSessionManager] 的 WebSocket 一致。
+     * 本地先追加 sending 占位、解析图片并更新占位图；发送后不落库用户/助手消息，由主 WebSocket 收到响应时在 MainRepository 中处理。
+     * 要求 [mainRepository] 已注入且主 WebSocket 已连接，否则会抛错。
+     */
+    suspend fun sendMessageViaMainWebSocket(
+        agentId: String,
+        content: String,
+        localImageUri: String? = null,
+        preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>? = null,
+    ) {
+        val main = mainRepository ?: throw IllegalStateException("MainRepository not set for WebSocket send")
+        LogUtils.d("RoomImpl.sendMessageViaMainWebSocket called for $agentId: $content")
+
+        val trimmed = content.trimEnd()
+        localDataSource.appendSendingMessages(agentId, trimmed, localImageUri)
+
         val preparedImageUpload =
             if (localImageUri.isNullOrBlank()) {
                 null
@@ -131,7 +230,7 @@ class ChatMessageRepository(
                     is HttpResult.Success -> resolvedUpload.data
                     is HttpResult.Failure -> {
                         localDataSource.removeSendingMessage(agentId)
-                        return HttpResult.Failure(resolvedUpload.message, resolvedUpload.code)
+                        throw Exception(resolvedUpload.message)
                     }
                 }
             }
@@ -145,57 +244,14 @@ class ChatMessageRepository(
             )
         }
         val uploadedImageUrl = preparedImageUpload?.uploadedImageUrl
-        val userBubbleImageUri = compressedImageUri ?: localImageUri
 
-        val result =
-            try {
-                remoteDataSource.sendMessage(agentId, trimmed, uploadedImageUrl)
-            } catch (e: Exception) {
-                LogUtils.e("RoomImpl.sendMessage exception: ${e.message}")
-                HttpResult.Failure(e.message ?: "unknown error", -1)
-            }
-
-        if (
-            result is HttpResult.Success &&
-                result.data.code != BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-        ) {
-            localDataSource.removeSendingMessage(agentId)
-            result.data.data?.let { data ->
-                val buildMessages = buildList {
-                    add(
-                        MessageEntity(
-                            id = data.user_message_id.toString(),
-                            content = trimmed,
-                            role = "user",
-                            metaData =
-                                MessageEntity.MetaData(
-                                    agentId = agentId,
-                                    generatedImage =
-                                        userBubbleImageUri?.let {
-                                            MessageEntity.MetaData.GeneratedImage(
-                                                imageUrl = it,
-                                                width = preparedImageUpload?.width,
-                                                height = preparedImageUpload?.height,
-                                            )
-                                        },
-                                ),
-                            timestamp = timestamp,
-                        )
-                    )
-                    addAll(data.choices.map { it.message.toEntity(agentId) })
-                }
-
-                localDataSource.appendMessages(buildMessages)
-
-                LogUtils.d(
-                    "RoomImpl.sendMessage saving ${buildMessages.size} assistant messages for agentId=$agentId"
-                )
-            }
-        } else {
+        val request = remoteDataSource.buildSendMsgReq(agentId, trimmed, uploadedImageUrl)
+        try {
+            main.sendMessageViaWebSocketFireAndForget(agentId, request)
+        } catch (e: Exception) {
             localDataSource.markSendingFailedAndRemoveLoading(agentId)
+            throw e
         }
-
-        return result
     }
 
     suspend fun preUploadChatInputImage(

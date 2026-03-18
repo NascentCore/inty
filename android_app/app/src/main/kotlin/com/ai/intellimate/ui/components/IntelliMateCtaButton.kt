@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.ai.intellimate.ui.UiConfigs
 
 /**
- * 与「Create My IntelliMate」一致的 CTA 按钮组件，粉→橙水平渐变、全宽圆角、白字。
+ * 与「Create My iMate」一致的 CTA 按钮组件，粉→橙水平渐变、全宽圆角、白字。
  *
  * 适用范围：创建/编辑 IntelliMate 页底部、Explore 列表底部「Explore More」等需要强 CTA 的场景。
  *

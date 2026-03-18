@@ -43,21 +43,24 @@ import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
 import {
-  formatUtcTime,
   formatUtcTimeRaw,
   getCurrentUtcTime,
 } from "../utils/dateUtils";
 import {
-  buildAllUsersMessageRows,
-  type AllUsersMessageRow,
-} from "../utils/allUsersMessages";
-import {
   sessionMessagesPaginationProps,
   shouldShowSessionMessagesPagination,
 } from "../utils/sessionMessagesPagination";
+import { buildSessionExportContent } from "../utils/sessionExport";
+import {
+  countUserAgentConversationMessages,
+  countUserAgentConversationSessions,
+  isUserMessageType,
+} from "../utils/userAgentConversations";
 import { CollapsibleMessageContent } from "../components/CollapsibleMessageContent";
 import type {
-  ConversationsDetailResponse,
+  ChatMessageResponse,
+  PaginatedUserAgentConversationsResponse,
+  UserAgentConversationItem,
   UserDailyMessagesResponse,
   UserTodayStatsResponse,
   SessionMessagesResponse,
@@ -105,8 +108,12 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [loadingUserImages, setLoadingUserImages] = useState(false);
   const [userImages, setUserImages] = useState<UserGeneratedImageItem[]>([]);
   const [userImagesTotal, setUserImagesTotal] = useState(0);
-  const [allUsersConversationDetails, setAllUsersConversationDetails] =
-    useState<ConversationsDetailResponse[]>([]);
+  const [allUsersConversationPage, setAllUsersConversationPage] =
+    useState<PaginatedUserAgentConversationsResponse | null>(null);
+  const [allUsersConversationQuery, setAllUsersConversationQuery] = useState<{
+    activity_start_date?: string;
+    activity_end_date?: string;
+  } | null>(null);
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
@@ -132,6 +139,19 @@ export const UserDailyMessagesPage: React.FC = () => {
     }
     return fallback;
   };
+
+  const loadAllUsersConversationPage = useCallback(
+    async (page: number, queryParams: { activity_start_date?: string; activity_end_date?: string }) => {
+      const data =
+        await userAnalyticsApi.getUserAgentConversationsDetailPaginated({
+          ...queryParams,
+          page,
+          size: 10,
+        });
+      setAllUsersConversationPage(data);
+    },
+    [],
+  );
 
   // 查询用户每日消息
   const handleSearch = useCallback(async () => {
@@ -184,17 +204,24 @@ export const UserDailyMessagesPage: React.FC = () => {
           console.error("加载会话列表失败:", error);
           // 不显示错误，因为这不是主要功能
         }
-        setAllUsersConversationDetails([]);
+        setAllUsersConversationPage(null);
+        setAllUsersConversationQuery(null);
       } else {
+        const conversationQuery = {
+          activity_start_date: params.start_date,
+          activity_end_date: params.end_date,
+        };
         const [dailyMessagesData, conversationsDetailData] = await Promise.all([
           userAnalyticsApi.getUserDailyMessages(params),
-          userAnalyticsApi.getConversationsDetail({
-            activity_start_date: params.start_date,
-            activity_end_date: params.end_date,
+          userAnalyticsApi.getUserAgentConversationsDetailPaginated({
+            ...conversationQuery,
+            page: 1,
+            size: 10,
           }),
         ]);
         setUserInfo(dailyMessagesData);
-        setAllUsersConversationDetails(conversationsDetailData);
+        setAllUsersConversationPage(conversationsDetailData);
+        setAllUsersConversationQuery(conversationQuery);
         setTodayStats(null);
         setSessions([]);
         setSessionMessages({});
@@ -207,7 +234,8 @@ export const UserDailyMessagesPage: React.FC = () => {
       message.error(getErrorMessage(error, "查询失败"));
       setUserInfo(null);
       setTodayStats(null);
-      setAllUsersConversationDetails([]);
+      setAllUsersConversationPage(null);
+      setAllUsersConversationQuery(null);
     } finally {
       setLoading(false);
     }
@@ -303,6 +331,24 @@ export const UserDailyMessagesPage: React.FC = () => {
     [loadSessionMessages],
   );
 
+  const handleAllUsersPageChange = useCallback(
+    async (page: number) => {
+      if (!allUsersConversationQuery) {
+        return;
+      }
+      setLoading(true);
+      try {
+        await loadAllUsersConversationPage(page, allUsersConversationQuery);
+      } catch (error: unknown) {
+        console.error("加载分页聊天详情失败:", error);
+        message.error(getErrorMessage(error, "加载分页聊天详情失败"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [allUsersConversationQuery, loadAllUsersConversationPage],
+  );
+
   // 加载用户生成图片
   const loadUserGeneratedImages = useCallback(async () => {
     const trimmed = searchValue.trim();
@@ -369,73 +415,6 @@ export const UserDailyMessagesPage: React.FC = () => {
           return;
         }
 
-        // 按时间排序
-        allMessages.sort((a, b) => {
-          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return timeA - timeB;
-        });
-
-        // 格式化消息为 TXT
-        const lines: string[] = [];
-        lines.push("会话导出记录");
-        lines.push("====================");
-        lines.push(`角色名称: ${agentName}`);
-        lines.push(`会话ID: ${chatId}`);
-        lines.push(`创建时间: ${formatUtcTime(session.created_at)}`);
-        lines.push(`更新时间: ${formatUtcTime(session.updated_at)}`);
-        lines.push(`消息总数: ${allMessages.length}`);
-        lines.push("");
-        lines.push("对话记录");
-        lines.push("====================");
-        lines.push("");
-
-        allMessages.forEach((msg) => {
-          const timestamp = formatUtcTime(msg.created_at);
-          const isUser =
-            msg.message_type === "human" || msg.message_type === "HumanMessage";
-          const sender = isUser ? "👤 用户" : "🤖 AI";
-
-          lines.push(`[${timestamp}] ${sender}`);
-          lines.push("");
-
-          // 处理消息内容
-          if (msg.message_type === "image" && msg.image_url) {
-            lines.push(`[图片消息]`);
-            lines.push(`图片URL: ${msg.image_url}`);
-          } else if (msg.content) {
-            lines.push(msg.content);
-          } else {
-            lines.push("[无文本内容]");
-          }
-
-          // 处理语音消息
-          if (msg.audio_url) {
-            lines.push("");
-            lines.push(`[语音消息]`);
-            lines.push(`语音URL: ${msg.audio_url}`);
-          }
-
-          // 处理生成的图片
-          if (msg.meta_data?.generated_image?.image_url) {
-            lines.push("");
-            lines.push(`[生成的图片]`);
-            lines.push(`图片URL: ${msg.meta_data.generated_image.image_url}`);
-            if (
-              msg.meta_data.generated_image.width &&
-              msg.meta_data.generated_image.height
-            ) {
-              lines.push(
-                `尺寸: ${msg.meta_data.generated_image.width} × ${msg.meta_data.generated_image.height}`,
-              );
-            }
-          }
-
-          lines.push("");
-          lines.push("---");
-          lines.push("");
-        });
-
         // 生成文件名（处理特殊字符）
         const sanitizeFileName = (name: string) => {
           return name.replace(/[<>:"/\\|?*]/g, "_");
@@ -447,7 +426,12 @@ export const UserDailyMessagesPage: React.FC = () => {
         const filename = `session_${safeAgentName}_${safeChatId}_${timestamp}.txt`;
 
         // 创建并下载文件
-        const content = lines.join("\n");
+        const content = buildSessionExportContent({
+          chatId,
+          agentName,
+          session,
+          messages: allMessages,
+        });
         const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -541,20 +525,62 @@ export const UserDailyMessagesPage: React.FC = () => {
     },
   ];
 
-  const allUsersMessagesColumns: ColumnsType<AllUsersMessageRow> = [
+  const renderConversationMessages = (
+    sessions: UserAgentConversationItem["sessions"],
+  ) => {
+    if (sessions.length === 0) {
+      return <Text type="secondary">暂无会话</Text>;
+    }
+
+    return (
+      <div style={{ maxHeight: 360, overflowY: "auto" }}>
+        {sessions.map((session) => (
+          <div key={session.chat_id} style={{ marginBottom: 16 }}>
+            <Text strong>
+              会话 {session.chat_id}（{session.messages.length} 条）
+            </Text>
+            <div style={{ marginTop: 8 }}>
+              {session.messages.length === 0 ? (
+                <Text type="secondary">该会话在查询范围内暂无消息</Text>
+              ) : (
+                session.messages.map((msg: ChatMessageResponse, index: number) => {
+                  const isUserMessage = isUserMessageType(msg.message_type);
+                  return (
+                    <div
+                      key={`${session.chat_id}-${msg.created_at ?? "no-time"}-${index}`}
+                      style={{ marginBottom: 10 }}
+                    >
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {isUserMessage ? "👤 用户" : "🤖 AI"} ·{" "}
+                        {msg.created_at ? formatUtcTimeRaw(msg.created_at) : "N/A"}
+                      </Text>
+                      <div>
+                        <CollapsibleMessageContent content={msg.content ?? ""} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const allUsersMessagesColumns: ColumnsType<UserAgentConversationItem> = [
     {
-      title: "时间 (UTC)",
-      dataIndex: "created_at",
-      key: "created_at",
-      width: 190,
-      render: (value: string | null) =>
-        value ? formatUtcTimeRaw(value) : "N/A",
+      title: "用户:角色",
+      key: "user_agent",
+      width: 280,
+      render: (_value: unknown, record: UserAgentConversationItem) =>
+        `${record.user_id}:${record.agent_id}`,
     },
     {
       title: "用户",
       key: "user",
-      width: 240,
-      render: (_value: unknown, record: AllUsersMessageRow) => (
+      width: 220,
+      render: (_value: unknown, record: UserAgentConversationItem) => (
         <div>
           <div>{record.nickname || "未设置昵称"}</div>
           <Text type="secondary" style={{ fontSize: 12 }}>
@@ -570,26 +596,23 @@ export const UserDailyMessagesPage: React.FC = () => {
       width: 160,
     },
     {
-      title: "会话 ID",
-      dataIndex: "chat_id",
-      key: "chat_id",
-      width: 220,
-      ellipsis: true,
+      title: "会话数",
+      dataIndex: "session_count",
+      key: "session_count",
+      width: 100,
     },
     {
-      title: "发送方",
-      dataIndex: "sender_type",
-      key: "sender_type",
-      width: 120,
-      render: (value: AllUsersMessageRow["sender_type"]) =>
-        value === "USER" ? "👤 用户" : "🤖 AI",
+      title: "消息数",
+      dataIndex: "message_count",
+      key: "message_count",
+      width: 100,
     },
     {
-      title: "消息内容",
-      dataIndex: "content",
-      key: "content",
-      width: 420,
-      render: (value: string) => <CollapsibleMessageContent content={value} />,
+      title: "聊天信息（查询范围内）",
+      key: "messages",
+      width: 720,
+      render: (_value: unknown, record: UserAgentConversationItem) =>
+        renderConversationMessages(record.sessions),
     },
   ];
 
@@ -600,18 +623,13 @@ export const UserDailyMessagesPage: React.FC = () => {
       0,
     ) || 0;
   const isAllUsersResult = userInfo?.user_id === "ALL_USERS";
-  const allUsersMessageRows = useMemo(
-    () => buildAllUsersMessageRows(allUsersConversationDetails),
-    [allUsersConversationDetails],
-  );
   const allUsersSessionCount = useMemo(
-    () =>
-      allUsersConversationDetails.reduce(
-        (sessionCount, userConversation) =>
-          sessionCount + userConversation.sessions.length,
-        0,
-      ),
-    [allUsersConversationDetails],
+    () => countUserAgentConversationSessions(allUsersConversationPage?.items || []),
+    [allUsersConversationPage],
+  );
+  const allUsersMessageCount = useMemo(
+    () => countUserAgentConversationMessages(allUsersConversationPage?.items || []),
+    [allUsersConversationPage],
   );
 
   return (
@@ -875,36 +893,42 @@ export const UserDailyMessagesPage: React.FC = () => {
 
           {isAllUsersResult && (
             <Card
-              title="全量用户与 AI 消息明细（按日期范围）"
+              title="按 user_id:agent_id 分组的聊天明细（按日期范围）"
               style={{ marginBottom: "24px" }}
               extra={
                 <Space size="middle">
                   <Text type="secondary">
-                    用户数：{allUsersConversationDetails.length}
+                    分组总数：{allUsersConversationPage?.total ?? 0}
                   </Text>
-                  <Text type="secondary">会话数：{allUsersSessionCount}</Text>
                   <Text type="secondary">
-                    消息数：{allUsersMessageRows.length}
+                    当前页会话数：{allUsersSessionCount}
+                  </Text>
+                  <Text type="secondary">
+                    当前页消息数：{allUsersMessageCount}
                   </Text>
                 </Space>
               }
             >
-              {allUsersMessageRows.length > 0 ? (
+              {(allUsersConversationPage?.items.length ?? 0) > 0 ? (
                 <Table
                   columns={allUsersMessagesColumns}
-                  dataSource={allUsersMessageRows}
-                  rowKey="key"
+                  dataSource={allUsersConversationPage?.items ?? []}
+                  rowKey={(record) => `${record.user_id}:${record.agent_id}`}
                   loading={loading}
                   pagination={{
-                    pageSize: 50,
-                    showSizeChanger: true,
-                    pageSizeOptions: [50, 100, 200],
-                    showTotal: (total) => `共 ${total} 条消息`,
+                    current: allUsersConversationPage?.page ?? 1,
+                    pageSize: 10,
+                    total: allUsersConversationPage?.total ?? 0,
+                    showSizeChanger: false,
+                    showTotal: (total) => `共 ${total} 组 user_id:agent_id`,
+                    onChange: (page) => {
+                      handleAllUsersPageChange(page);
+                    },
                   }}
-                  scroll={{ x: 1200 }}
+                  scroll={{ x: 1700 }}
                 />
               ) : (
-                <Empty description="该日期范围内暂无用户或 AI 消息明细" />
+                <Empty description="该日期范围内暂无 user_id:agent_id 聊天明细" />
               )}
             </Card>
           )}

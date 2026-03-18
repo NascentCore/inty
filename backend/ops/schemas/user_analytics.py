@@ -156,6 +156,41 @@ class ConversationsDetailResponse(BaseModel):
     sessions: List[Dict[str, Any]]
 
 
+class UserAgentConversationSessionItem(BaseModel):
+    """用户-角色分组内的会话详情"""
+
+    chat_id: str
+    message_count: int
+    voice_message_count: int
+    messages: List[ChatMessageResponse]
+
+
+class UserAgentConversationItem(BaseModel):
+    """按 user_id + agent_id 分组的聊天详情"""
+
+    user_id: str
+    auth_type: str
+    user_created_at: Optional[str]
+    nickname: Optional[str]
+    email: Optional[str]
+    agent_id: str
+    agent_name: str
+    session_count: int
+    message_count: int
+    voice_message_count: int
+    sessions: List[UserAgentConversationSessionItem]
+
+
+class PaginatedUserAgentConversationsResponse(BaseModel):
+    """按 user_id + agent_id 分组后的分页聊天详情"""
+
+    items: List[UserAgentConversationItem]
+    total: int
+    page: int
+    size: int
+    has_more: bool
+
+
 class UserAnalyticsStatsResponse(BaseModel):
     """用户数据分析统计概览（与原始脚本逻辑一致）"""
 
@@ -240,6 +275,7 @@ class UserSessionItem(BaseModel):
 
     chat_id: str
     agent_name: str
+    agent_avatar_url: Optional[str] = Field(None, description="角色形象图片 URL")
     created_at: Optional[str]
     updated_at: Optional[str]
     message_count: int
