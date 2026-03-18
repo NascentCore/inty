@@ -1896,10 +1896,13 @@ class UserAnalyticsService:
 
     async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
         """获取用户的所有会话列表"""
+        from app.services.image_transform_service import image_transform_service
+
         query = text("""
             SELECT 
                 c.id as chat_id,
                 a.name as agent_name,
+                a.avatar as agent_avatar_url,
                 c.created_at,
                 c.updated_at
             FROM chats c
@@ -1967,12 +1970,16 @@ class UserAnalyticsService:
             last_user_message_time = session_to_last_user_message_time.get(session_id)
             last_message_time = session_to_last_message_time.get(session_id)
             updated_at = last_user_message_time or last_message_time
+            agent_avatar_url = (
+                image_transform_service.transform_desktop(row[2]) if row[2] else None
+            )
 
             data.append(
                 {
                     "chat_id": chat_id,
                     "agent_name": row[1],
-                    "created_at": row[2].isoformat() if row[2] else None,
+                    "agent_avatar_url": agent_avatar_url,
+                    "created_at": row[3].isoformat() if row[3] else None,
                     "updated_at": (updated_at.isoformat() if updated_at else None),
                     "message_count": message_count,
                 }
