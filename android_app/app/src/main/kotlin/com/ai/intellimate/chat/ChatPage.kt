@@ -1382,7 +1382,6 @@ internal fun ChatPage(
             )
         }
 
-        ShowLimitDialog(navController, chatViewModel)
         ShowImageGenerationDialog(navController, chatViewModel)
 
         // Boost 功能弹窗：显示半屏底部弹窗，允许用户投入积分
@@ -1625,59 +1624,6 @@ private fun DebugAgentIndexBadge(modifier: Modifier = Modifier, index: Int, agen
                 .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(text = label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-/** 聊天消息受限的dialog */
-@Composable
-private fun ShowLimitDialog(navController: NavController, chatViewModel: ChatViewModel) {
-    val dialogType by chatViewModel.showChatLimitDialog.collectAsState()
-    dialogType?.let { type ->
-        when (type) {
-            ChatViewModel.ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
-                val data =
-                    ChatDialogData(
-                        R.drawable.img_unlimit_dialog_bg,
-                        stringResource(R.string.str_unlimit_dialog_content),
-                        stringResource(R.string.str_unlimit_btn_text),
-                    )
-                UnlimitChatDialog(
-                    data,
-                    onCancel = { chatViewModel.dismissChatLimitDialog() },
-                    onSure = {
-                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
-                        }
-                        chatViewModel.dismissChatLimitDialog()
-                    },
-                    onMoreInfo = {
-                        if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
-                            navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
-                        }
-                        chatViewModel.dismissChatLimitDialog()
-                    },
-                )
-            }
-            ChatViewModel.ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED -> {
-                AlertDialog(
-                    onDismissRequest = { chatViewModel.dismissChatLimitDialog() },
-                    confirmButton = {
-                        TextButton(onClick = { chatViewModel.dismissChatLimitDialog() }) {
-                            Text(
-                                text =
-                                    stringResource(R.string.chat_subscriber_limit_reached_confirm)
-                            )
-                        }
-                    },
-                    title = {
-                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_title))
-                    },
-                    text = {
-                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_content))
-                    },
-                )
-            }
-        }
     }
 }
 

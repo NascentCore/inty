@@ -1,8 +1,11 @@
 package com.ai.intellimate.main.data
 
+import ai.sxwl.android.common.event.ChatEvent
+import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.chat.local.db.MessageEntity
 import ai.sxwl.android.data.chat.local.db.toEntity
+import ai.sxwl.android.data.http.BusinessErrorCodes
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
 import com.ai.intellimate.chat.data.ChatLocalDataSource
@@ -23,9 +26,20 @@ class MainRepository(
         IntySetting.isLoginFlow().distinctUntilChanged().collectLatest {
             if (it) {
                 mainRemoteDataSource.connectWebsocket().collect { message ->
+                    val agentIdForError =
+                        message.agentId ?: message.data?.sourceImateId
+                    if (message.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
+                        if (!agentIdForError.isNullOrBlank()) {
+                            chatLocalDataSource
+                                .markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(agentIdForError)
+                        }
+                        EventBus.postOnMainThread(
+                            ChatEvent.WebSocketSubscriptionRequired(agentIdForError ?: ""),
+                        )
+                        return@collect
+                    }
                     val data = message.data ?: return@collect
                     val agentId = message.agentId ?: data.sourceImateId ?: return@collect
-                    // 与 HTTP 一致：非 200 视为失败，只将最早一条发送中标记为失败（与成功路径一致）
                     if (message.code != null && message.code != 200) {
                         chatLocalDataSource.markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(
                             agentId
