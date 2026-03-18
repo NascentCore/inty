@@ -133,7 +133,10 @@ def _stub_success_chat_completion_with_premium_preview(
             return ("free-mode response", 101)
 
         async def generate_message_without_user_save(self, *args, **kwargs):
-            return "A warmer and more personalized premium-only response sample."
+            return (
+                "A warmer and more personalized premium-only response sample.",
+                None,
+            )
 
     async def fake_get_agent(agent_data):
         return DummyAgent()

@@ -95,7 +95,7 @@ def test_resolve_official_tool_calls_executes_tool_and_returns_final_response(
         )
         assert openai_messages[-1]["role"] == "tool"
         assert openai_messages[-1]["content"] == "Saved MBTI type: ENFP"
-        return final_response
+        return (final_response, None)
 
     monkeypatch.setattr(
         agent,
@@ -108,7 +108,7 @@ def test_resolve_official_tool_calls_executes_tool_and_returns_final_response(
         fake_call_openai_api_with_retry,
     )
 
-    response, messages = agent._resolve_official_assistant_tool_calls(
+    response, messages, _ = agent._resolve_official_assistant_tool_calls(
         response=initial_response,
         openai_messages=[{"role": "user", "content": "Please test my MBTI."}],
         client=object(),
@@ -187,11 +187,11 @@ def test_resolve_official_tool_calls_injects_manual_as_system_message(
             == INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX + "MANUAL_XYZ"
             for message in openai_messages
         )
-        return final_response
+        return (final_response, None)
 
     monkeypatch.setattr(agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry)
 
-    response, _ = agent._resolve_official_assistant_tool_calls(
+    response, _, _ = agent._resolve_official_assistant_tool_calls(
         response=initial_response,
         openai_messages=[{"role": "system", "content": "BASE_SYSTEM"}],
         client=object(),
@@ -232,11 +232,11 @@ def test_resolve_official_tool_calls_injects_change_logs_as_system_message(
             == INTELLIMATE_CHANGE_LOGS_SYSTEM_MESSAGE_PREFIX + "CHANGE_LOGS_XYZ"
             for message in openai_messages
         )
-        return final_response
+        return (final_response, None)
 
     monkeypatch.setattr(agent, "_call_openai_api_with_retry", fake_call_openai_api_with_retry)
 
-    response, _ = agent._resolve_official_assistant_tool_calls(
+    response, _, _ = agent._resolve_official_assistant_tool_calls(
         response=initial_response,
         openai_messages=[{"role": "system", "content": "BASE_SYSTEM"}],
         client=object(),

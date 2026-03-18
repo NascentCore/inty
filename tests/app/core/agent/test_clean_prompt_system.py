@@ -207,7 +207,7 @@ def test_clean_tool_loop_matches_legacy_manual_tool_message_flow(
 
     def fake_old_call_openai_api_with_retry(**kwargs):
         captured_old["messages"] = kwargs["openai_messages"]
-        return old_final_response
+        return (old_final_response, None)
 
     monkeypatch.setattr(
         old_agent,
@@ -216,7 +216,7 @@ def test_clean_tool_loop_matches_legacy_manual_tool_message_flow(
     )
     monkeypatch.setattr(legacy_agent_module, "_load_intellimate_user_manual", lambda: "MANUAL_X")
 
-    old_response, _ = old_agent._resolve_official_assistant_tool_calls(
+    old_response, _, _ = old_agent._resolve_official_assistant_tool_calls(
         response=old_initial_response,
         openai_messages=[{"role": "system", "content": "BASE_SYSTEM"}],
         client=object(),

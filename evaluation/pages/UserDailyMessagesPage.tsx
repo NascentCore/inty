@@ -46,6 +46,7 @@ import {
   formatUtcTimeRaw,
   getCurrentUtcTime,
 } from "../utils/dateUtils";
+import { getLangsmithTraceUrl } from "../utils/langsmithUrl";
 import {
   sessionMessagesPaginationProps,
   shouldShowSessionMessagesPagination,
@@ -1012,16 +1013,42 @@ export const UserDailyMessagesPage: React.FC = () => {
                                     fontSize: 12,
                                     color: "#666",
                                     marginBottom: 4,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    flexWrap: "wrap",
                                   }}
                                 >
-                                  {msg.message_type === "human" ||
-                                  msg.message_type === "HumanMessage"
-                                    ? "👤 用户"
-                                    : "🤖 AI"}{" "}
-                                  •{" "}
-                                  {msg.created_at
-                                    ? formatUtcTimeRaw(msg.created_at)
-                                    : ""}
+                                  <span>
+                                    {msg.message_type === "human" ||
+                                    msg.message_type === "HumanMessage"
+                                      ? "👤 用户"
+                                      : "🤖 AI"}{" "}
+                                    •{" "}
+                                    {msg.created_at
+                                      ? formatUtcTimeRaw(msg.created_at)
+                                      : ""}
+                                  </span>
+                                  {(msg.message_type === "ai" ||
+                                    msg.message_type === "AIMessage") &&
+                                    msg.meta_data?.langsmith_trace_id && (
+                                      <a
+                                        href={
+                                          getLangsmithTraceUrl(
+                                            msg.meta_data.langsmith_trace_id,
+                                          )!
+                                        }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          fontSize: 11,
+                                          color: "#1890ff",
+                                        }}
+                                        title="View LangSmith trace"
+                                      >
+                                        LangSmith trace
+                                      </a>
+                                    )}
                                 </div>
                                 <div
                                   style={{
