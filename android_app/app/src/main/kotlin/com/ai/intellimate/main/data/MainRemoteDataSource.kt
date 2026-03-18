@@ -1,22 +1,53 @@
 package com.ai.intellimate.main.data
 
+import ai.sxwl.android.data.api.model.ChatWebSocketReq
+import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
 import ai.sxwl.android.data.di.HttpClientProvider
+import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.utils.LogUtils
+import com.squareup.moshi.Json
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.websocket.receiveDeserialized
+import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.client.request.header
 import io.ktor.client.request.url
+import io.ktor.websocket.Frame
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.retry
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 
 private const val CHAT_WEBSOCKET_PATH = "api/v1/chat/ws"
+private const val CHAT_WEBSOCKET_VERIFY_PATH = "api/v1/chat/ws/verify"
+private const val PING_INTERVAL_MS = 25_000L
 
-class MainRemoteDataSource(private val httpClient: HttpClient = HttpClientProvider.ktorClient) {
+/** 应用层心跳帧，用于识别服务端 pong。 */
+private data class WsPingPong(@Json(name = "type") val type: String?)
+
+/** 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接。对接 FR_CHAT_WS_VERIFY。 */
+object MainRemoteDataSource {
+    private val httpClient: HttpClient = HttpClientProvider.ktorClient
+    private val currentSession = AtomicReference<DefaultClientWebSocketSession?>(null)
+    private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+    private val requestAdapter = moshi.adapter(ChatWebSocketReq::class.java)
+    private val responseAdapter = moshi.adapter(SendMsgResponse::class.java)
+    private val pingPongAdapter = moshi.adapter(WsPingPong::class.java)
+
+    /** 通过主 WebSocket 发送消息，不等待响应（fire-and-forget）。参数与 ChatWebSocketSessionManager 一致。 */
+    suspend fun sendMessageFireAndForget(agentId: String, request: SendMsgReq) {
+        val session = currentSession.get() ?: throw IllegalStateException("Main WebSocket not connected")
+        val payload = ChatWebSocketReq(agentId = agentId, request = request)
+        session.send(Frame.Text(requestAdapter.toJson(payload)))
+    }
+
     fun connectWebsocket() =
         channelFlow<SendMsgResponse> {
                 httpClient.webSocket(
@@ -29,11 +60,34 @@ class MainRemoteDataSource(private val httpClient: HttpClient = HttpClientProvid
                         }
                     }
                 ) {
-                    LogUtils.d("Main WebSocket已连接")
-                    while (true) {
-                        val response = receiveDeserialized<SendMsgResponse>()
-
-                        send(response)
+                    val session = this
+                    currentSession.set(session)
+                    try {
+                        LogUtils.d("Main WebSocket已连接")
+                        coroutineScope {
+                            launch {
+                                while (isActive) {
+                                    delay(PING_INTERVAL_MS)
+                                    session.send(Frame.Text("""{"type":"ping"}"""))
+                                }
+                            }
+                            while (true) {
+                                val frame = session.incoming.receive()
+                                if (frame is Frame.Close) break
+                                if (frame !is Frame.Text) continue
+                                val text = frame.data.decodeToString()
+                                val pingPong = kotlin.runCatching { pingPongAdapter.fromJson(text) }.getOrNull()
+                                if (pingPong?.type == "pong") continue
+                                val response = kotlin.runCatching { responseAdapter.fromJson(text) }.getOrNull()
+                                if (response != null) {
+                                    send(response)
+                                } else {
+                                    LogUtils.w("Main WebSocket: 无法解析为聊天响应，已忽略: ${text.take(200)}")
+                                }
+                            }
+                        }
+                    } finally {
+                        currentSession.set(null)
                     }
                 }
             }
@@ -51,6 +105,9 @@ class MainRemoteDataSource(private val httpClient: HttpClient = HttpClientProvid
                 httpBase.startsWith("http://") -> "ws://${httpBase.removePrefix("http://")}"
                 else -> httpBase
             }
-        return "$websocketBase/$CHAT_WEBSOCKET_PATH"
+        val path =
+            if (DebugBackendEndpointStore.getChatWebSocketUseVerifyPath()) CHAT_WEBSOCKET_VERIFY_PATH
+            else CHAT_WEBSOCKET_PATH
+        return "$websocketBase/$path"
     }
 }

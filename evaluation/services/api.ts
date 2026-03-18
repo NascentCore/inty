@@ -784,6 +784,15 @@ export const userAnalyticsApi = {
   ): Promise<import("../types").ConversationsDetailResponse[]> =>
     apiClient.get("/evaluation/user-analytics/conversations-detail", params),
 
+  // 获取按 user_id + agent_id 分组的分页对话详情
+  getUserAgentConversationsDetailPaginated: (
+    params?: AnalyticsDateParams & { page?: number; size?: number },
+  ): Promise<import("../types").PaginatedUserAgentConversationsResponse> =>
+    apiClient.get(
+      "/evaluation/user-analytics/conversations-detail/user-agent-paginated",
+      params,
+    ),
+
   // 获取用户每日消息统计
   getUserDailyMessages: (
     params: UserLookupParams & {

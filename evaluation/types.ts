@@ -581,6 +581,35 @@ export interface ConversationsDetailResponse {
   sessions: ConversationsDetailSession[];
 }
 
+export interface UserAgentConversationSession {
+  chat_id: string;
+  message_count: number;
+  voice_message_count: number;
+  messages: ChatMessageResponse[];
+}
+
+export interface UserAgentConversationItem {
+  user_id: string;
+  auth_type: string;
+  user_created_at: string | null;
+  nickname: string | null;
+  email: string | null;
+  agent_id: string;
+  agent_name: string;
+  session_count: number;
+  message_count: number;
+  voice_message_count: number;
+  sessions: UserAgentConversationSession[];
+}
+
+export interface PaginatedUserAgentConversationsResponse {
+  items: UserAgentConversationItem[];
+  total: number;
+  page: number;
+  size: number;
+  has_more: boolean;
+}
+
 export interface UserAnalyticsReportGeneratedImageItem {
   id: number;
   session_id: string;
