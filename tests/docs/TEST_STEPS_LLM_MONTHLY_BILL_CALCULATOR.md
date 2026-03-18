@@ -34,8 +34,8 @@ python scripts/calculate_llm_monthly_bill.py \
 预期：
 - 输出两个模型的输入/输出/缓存读/缓存写费用与总费用
 - 结果为：
-  - `gpt-4o-mini` 总费用 = `1.297500` USD
-  - `gemini-2.5-flash` 总费用 = `0.865000` USD
+  - `gpt-4o-mini` 总费用 = `0.997500` USD
+  - `gemini-2.5-flash` 总费用 = `0.665000` USD
 
 ## 用例 2：交互模式（验证流程顺序）
 

@@ -132,19 +132,25 @@ def parse_model_pricings(pricing_lines: list[str]) -> dict[str, ModelPricing]:
 
 
 def calculate_bill_for_model(usage: UsageData, pricing: ModelPricing) -> ModelBill:
-    input_cost = usage.input_tokens / TOKENS_PER_MILLION * pricing.input_per_million_usd
-    output_cost = usage.output_tokens / TOKENS_PER_MILLION * pricing.output_per_million_usd
-    cache_read_cost = (
+    input_cost = round(
+        usage.input_tokens / TOKENS_PER_MILLION * pricing.input_per_million_usd, 6
+    )
+    output_cost = round(
+        usage.output_tokens / TOKENS_PER_MILLION * pricing.output_per_million_usd, 6
+    )
+    cache_read_cost = round(
         usage.cache_read_tokens
         / TOKENS_PER_MILLION
-        * pricing.cache_read_per_million_usd
+        * pricing.cache_read_per_million_usd,
+        6,
     )
-    cache_write_cost = (
+    cache_write_cost = round(
         usage.cache_write_tokens
         / TOKENS_PER_MILLION
-        * pricing.cache_write_per_million_usd
+        * pricing.cache_write_per_million_usd,
+        6,
     )
-    total_cost = input_cost + output_cost + cache_read_cost + cache_write_cost
+    total_cost = round(input_cost + output_cost + cache_read_cost + cache_write_cost, 6)
     return ModelBill(
         model_id=pricing.model_id,
         input_cost_usd=input_cost,
@@ -339,7 +345,7 @@ def _write_output_json(
     payload = {
         "usage": asdict(usage),
         "bills": [asdict(item) for item in bills],
-        "selected_models_total_usd": sum(item.total_cost_usd for item in bills),
+        "selected_models_total_usd": round(sum(item.total_cost_usd for item in bills), 6),
     }
     output_path = Path(output_json)
     output_path.parent.mkdir(parents=True, exist_ok=True)
