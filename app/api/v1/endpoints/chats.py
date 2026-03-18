@@ -58,6 +58,30 @@ from app.services.voice_service import (
 
 # TODO: Prefix should be /chat instead of /chats.
 router = APIRouter(prefix="/chats", route_class=LoggerRoute)
+CHAT_SETTINGS_DEFAULT_VOICE_SENTINEL = "default"
+
+
+def _normalize_chat_settings_voice_id(
+    settings_update: schemas.ChatSettingsUpdate,
+) -> schemas.ChatSettingsUpdate:
+    """
+    Normalize default voice sentinel into explicit null.
+    """
+    raw_voice_id = settings_update.voice_id
+    if raw_voice_id is None:
+        return settings_update
+
+    normalized_voice_id = raw_voice_id.strip()
+    if (
+        normalized_voice_id == ""
+        or normalized_voice_id.lower() == CHAT_SETTINGS_DEFAULT_VOICE_SENTINEL
+    ):
+        return settings_update.model_copy(update={"voice_id": None})
+
+    if normalized_voice_id == raw_voice_id:
+        return settings_update
+
+    return settings_update.model_copy(update={"voice_id": normalized_voice_id})
 
 
 @router.get(
@@ -625,6 +649,8 @@ async def update_agent_chat_settings(
             return create_business_error_response(
                 error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED
             )
+
+        settings_update = _normalize_chat_settings_voice_id(settings_update)
 
         if settings_update.voice_id is not None and not is_gemini_voice(
             settings_update.voice_id
