@@ -20,6 +20,7 @@ import {
   PhoneOutlined,
   FileTextOutlined,
   CalendarOutlined,
+  CalculatorOutlined,
 } from "@ant-design/icons";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { EvaluationHistoryPage } from "./pages/EvaluationHistoryPage";
@@ -35,6 +36,7 @@ import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
 import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
+import { LlmMonthlyBillingPage } from "./pages/LlmMonthlyBillingPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
 import { ApiKeyModal } from "./components/ApiKeyModal";
 import { UserInfo } from "./components/UserInfo";
@@ -63,7 +65,8 @@ type PageKey =
   | "character-themes"
   | "generated-images"
   | "report-feedback"
-  | "festival-memory";
+  | "festival-memory"
+  | "llm-monthly-billing";
 
 const HASH_PAGE_KEYS = new Set<PageKey>([
   "evaluation",
@@ -80,6 +83,7 @@ const HASH_PAGE_KEYS = new Set<PageKey>([
   "generated-images",
   "report-feedback",
   "festival-memory",
+  "llm-monthly-billing",
 ]);
 
 interface NavigationItem {
@@ -263,6 +267,12 @@ const AppContent: React.FC = () => {
       description: "配置节日与提示词，抽取用户与角色的节日回忆",
     },
     {
+      key: "llm-monthly-billing",
+      icon: <CalculatorOutlined />,
+      label: "模型月度账单",
+      description: "按模型定价与用量计算月度费用",
+    },
+    {
       key: "settings",
       icon: <SettingOutlined />,
       label: "消息生图系统设置",
@@ -301,6 +311,8 @@ const AppContent: React.FC = () => {
         return "举报与反馈";
       case "festival-memory":
         return "节日记忆提取";
+      case "llm-monthly-billing":
+        return "模型月度账单计算器";
       default:
         return "智能体评测系统";
     }
@@ -347,6 +359,8 @@ const AppContent: React.FC = () => {
         return <ReportFeedbackPage />;
       case "festival-memory":
         return <FestivalMemoryPage />;
+      case "llm-monthly-billing":
+        return <LlmMonthlyBillingPage />;
 
       default:
         return null;
