@@ -62,8 +62,7 @@ export const getAssumeUserId = (): string | null => {
 /** 构建 WebSocket 校验端点 URL（用于验证页，不落库）；token 通过 query 传递。 */
 export const getChatWsVerifyUrl = (baseUrl?: string): string => {
   const base =
-    baseUrl ??
-    (typeof window !== "undefined" ? window.location.origin : "");
+    baseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
   const scheme = base.startsWith("https") ? "wss" : "ws";
   const host = base.replace(/^https?:\/\//, "");
   const token = getGlobalApiKey() ?? "";
@@ -784,6 +783,15 @@ export const userAnalyticsApi = {
     params?: AnalyticsDateParams,
   ): Promise<import("../types").ConversationsDetailResponse[]> =>
     apiClient.get("/evaluation/user-analytics/conversations-detail", params),
+
+  // 获取按 user_id + agent_id 分组的分页对话详情
+  getUserAgentConversationsDetailPaginated: (
+    params?: AnalyticsDateParams & { page?: number; size?: number },
+  ): Promise<import("../types").PaginatedUserAgentConversationsResponse> =>
+    apiClient.get(
+      "/evaluation/user-analytics/conversations-detail/user-agent-paginated",
+      params,
+    ),
 
   // 获取用户每日消息统计
   getUserDailyMessages: (

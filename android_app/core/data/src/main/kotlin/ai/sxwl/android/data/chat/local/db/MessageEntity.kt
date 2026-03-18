@@ -91,11 +91,12 @@ data class MessageEntity(
     }
 }
 
+/** 用于 @Upsert 的 DTO，role/content 必须非空以满足 message 表 NOT NULL 约束 */
 data class MessageUpdate(
     val id: String,
     val indexId: String = "",
-    val role: String? = null,
-    val content: String? = null,
+    val role: String = "",
+    val content: String = "",
     val timestamp: String? = null,
     val audioUrl: String? = null,
     @Embedded val metaData: MetaData,
@@ -328,6 +329,7 @@ fun createTempSendingLoadingEntity(agentId: String): MessageEntity {
     val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     return MessageEntity(
         id = "${(Long.MAX_VALUE)}",
+        indexId = System.nanoTime().toString(),
         role = "assistant",
         content = LOADING_PLACEHOLDER_CONTENT,
         timestamp = timestamp,

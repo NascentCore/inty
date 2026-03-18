@@ -630,6 +630,7 @@ object FirebaseManager {
         const val USER_ID = "user_id" // 用户ID，用于在Firebase Console中按userId筛选和查看数据
         const val USER_TYPE = "user_type"
         const val SUBSCRIPTION_LEVEL = "subscription_level"
+        const val USER_GENDER = "user_gender" // 用户性别，用于埋点维度筛选（如 MALE / FEMALE / OTHER）
         const val APP_VERSION = "app_version"
         const val DEVICE_TYPE = "device_type"
         const val DEVICE_MODEL = "device_model"
@@ -763,7 +764,12 @@ object FirebaseManager {
      * - ⚠️ 用户属性是用户级别的元数据，不会作为事件参数出现在事件详情中
      * - ⚠️ 如果需要在事件参数中也包含 user_id（例如用于 BigQuery 查询），需要手动添加
      */
-    fun setUserInfo(userId: String, userType: String = "free", subscriptionLevel: String = "none") {
+    fun setUserInfo(
+        userId: String,
+        userType: String = "free",
+        subscriptionLevel: String = "none",
+        gender: String = "",
+    ) {
         try {
             // 设置用户ID（用于Firebase Analytics的用户标识，可在 User Explorer 和 BigQuery 中使用）
             setUserId(userId)
@@ -773,6 +779,9 @@ object FirebaseManager {
             setUserProperty(UserProperties.USER_ID, userId)
             setUserProperty(UserProperties.USER_TYPE, userType)
             setUserProperty(UserProperties.SUBSCRIPTION_LEVEL, subscriptionLevel)
+            if (gender.isNotBlank()) {
+                setUserProperty(UserProperties.USER_GENDER, gender)
+            }
         } catch (e: Exception) {
             logError("setUserInfo", "Failed to set user info: ${e.message}")
         }

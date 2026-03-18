@@ -58,6 +58,18 @@ interface ChatMessageDao {
     @Query("DELETE FROM message WHERE agentId = :agentId AND status = 'SENDING'")
     suspend fun deleteSendingMsg(agentId: String)
 
+    /** 获取当前发送中的用户消息（用于主 WebSocket 收到响应时落库用户消息）。 */
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user' LIMIT 1"
+    )
+    suspend fun getSendingUserMessage(agentId: String): MessageEntity?
+
+    /** 获取最早一条发送中且未失败的用户消息（用于连发时只更新对应的一条）。 */
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user' ORDER BY Cast(id as INTEGER) ASC, Cast(indexId as INTEGER) ASC, indexId ASC LIMIT 1"
+    )
+    suspend fun getEarliestSendingUserMessage(agentId: String): MessageEntity?
+
     /** 将发送中的用户消息标记为 SENDING_FAILED（仅更新 status，不删记录） */
     @Query(
         "UPDATE message SET status = 'SENDING_FAILED' WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user'"
@@ -133,6 +145,33 @@ interface ChatMessageDao {
         "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 ORDER BY Cast(id as INTEGER) DESC, Cast(indexId as INTEGER) DESC, indexId DESC LIMIT 1"
     )
     suspend fun getLatestMessage(agentId: String): MessageEntity?
+
+    /**
+     * 最后一条非「发送中 loading」的消息。连续发送时若用 [getLatestMessage] 会取到 loading（id 极大），导致第二条发送中用户主键错乱、
+     * 收包时误删多条。
+     */
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 AND NOT (status = 'SENDING' AND role = 'assistant' AND content = 'loading_animation') ORDER BY Cast(id as INTEGER) DESC, Cast(indexId as INTEGER) DESC, indexId DESC LIMIT 1"
+    )
+    suspend fun getLatestMessageExcludingSendingLoading(agentId: String): MessageEntity?
+
+    /** 最近一条发送中的用户消息（用于只更新刚发送那条的图片）。 */
+    @Query(
+        "SELECT * FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user' ORDER BY Cast(id as INTEGER) DESC, Cast(indexId as INTEGER) DESC, indexId DESC LIMIT 1"
+    )
+    suspend fun getLatestSendingUserMessage(agentId: String): MessageEntity?
+
+    @Query(
+        "UPDATE message SET generate_image_imageUrl = :imageUrl, generate_image_width = :width, generate_image_height = :height WHERE agentId = :agentId AND id = :messageId AND indexId = :indexId"
+    )
+    suspend fun updateSendingUserImageByKey(
+        agentId: String,
+        messageId: String,
+        indexId: String,
+        imageUrl: String,
+        width: Int?,
+        height: Int?,
+    )
 
     @Query(
         "UPDATE message SET moment_isPurchased = :isPurchased WHERE agentId = :agentId AND id = :messageId"

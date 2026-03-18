@@ -108,7 +108,12 @@ def build_system_messages_openai(
     _logger=None,
 ) -> list[dict[str, str]]:
     if _logger is not None:
-        _logger.debug("构建系统消息 char_name=%s user_name=%s heartbeat=%s", char_name, user_name, heartbeat_enabled)
+        _logger.debug(
+            "构建系统消息 char_name=%s user_name=%s heartbeat=%s",
+            char_name,
+            user_name,
+            heartbeat_enabled,
+        )
     # 使用本文件内的本地副本，用 prompt_utils 做占位符替换（含多行 ROLEPLAY_TEXT_OUTPUT_FORMAT 的缩进折叠）
     main_prompt = ROLEPLAY_MAIN_PROMPT_1225_LOCAL
     mode_prompt = FLIRTING_MODE_PROMPT_20250902_LOCAL
@@ -143,5 +148,7 @@ def build_system_messages_openai(
     if photo_album_msg is not None:
         msgs.append(photo_album_msg)
     if _logger is not None:
-        _logger.info("系统消息已构建，共 %d 条（heartbeat=%s）", len(msgs), heartbeat_enabled)
+        _logger.info(
+            "系统消息已构建，共 %d 条（heartbeat=%s）", len(msgs), heartbeat_enabled
+        )
     return msgs
