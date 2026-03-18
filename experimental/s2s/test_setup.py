@@ -6,6 +6,8 @@ Test script to verify setup for OpenAI Speech-to-Speech Demo
 import os
 import sys
 
+from dotenv import load_dotenv
+
 
 def test_imports():
     """Test if all required packages can be imported."""
@@ -71,11 +73,16 @@ def test_audio_devices():
 def test_openai_api():
     """Test OpenAI API key and connectivity."""
     print("\n🔑 Testing OpenAI API...")
+    load_dotenv()
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         print("❌ OPENAI_API_KEY environment variable not set")
-        print("   Set it with: export OPENAI_API_KEY='your-api-key-here'")
+        print("   Fix: copy .env.example to .env and fill OPENAI_API_KEY")
+        return False
+    if api_key == "YOUR_OPENAI_API_KEY_HERE":
+        print("❌ OPENAI_API_KEY is still placeholder value")
+        print("   Fix: replace placeholder in .env with a real key")
         return False
 
     if len(api_key) < 20:
@@ -123,7 +130,7 @@ def main():
     if all_tests_passed:
         print("🎉 All tests passed! You're ready to run the demo.")
         print("\nTo start the demo:")
-        print("  python simple_s2s_demo.py")
+        print("  python main.py")
     else:
         print("❌ Some tests failed. Please fix the issues above.")
         print("\nCommon fixes:")

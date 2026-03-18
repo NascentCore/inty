@@ -420,6 +420,65 @@ def test_update_chat_settings_rejects_non_gemini_voice_id(
     )
 
 
+def test_update_chat_settings_accepts_default_voice_sentinel_and_clears_voice_id(
+    monkeypatch: pytest.MonkeyPatch, chats_business_error_app: FastAPI
+):
+    captured_voice_id = "not-called"
+
+    async def fake_get_agent(db, agent_id):
+        return SimpleNamespace(id=agent_id)
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(id="settings-1", chat_id=chat_id, voice_id="google/Puck")
+
+    async def fake_get_subscription_status(db, user_id):
+        return SimpleNamespace(is_subscribed=True)
+
+    async def fake_update_chat_settings(db, chat_id, settings_update):
+        nonlocal captured_voice_id
+        captured_voice_id = settings_update.voice_id
+        return SimpleNamespace(
+            id="settings-1",
+            user_id="user-1",
+            agent_id="agent-1",
+            chat_id=chat_id,
+            chat_mode=None,
+            language="en",
+            voice_enabled=True,
+            voice_id=settings_update.voice_id,
+            style_prompt=None,
+            premium_mode=False,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
+        )
+
+    monkeypatch.setattr(agent_service, "get_agent", fake_get_agent)
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_by_agent", fake_get_or_create_chat_by_agent
+    )
+    monkeypatch.setattr(
+        chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
+    )
+    monkeypatch.setattr(
+        subscription_service, "get_user_subscription_status", fake_get_subscription_status
+    )
+    monkeypatch.setattr(chat_service, "update_chat_settings", fake_update_chat_settings)
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    with _client_with_user(chats_business_error_app, user) as client:
+        response = client.put(
+            "/api/v1/chats/agents/agent-1/settings",
+            json={"voice_id": " default "},
+        )
+
+    assert response.status_code == 200
+    assert captured_voice_id is None
+    assert response.json()["data"]["voice_id"] is None
+
+
 def test_get_agent_chat_messages_recovers_when_festival_delivery_hits_missing_greenlet(
     monkeypatch: pytest.MonkeyPatch,
 ):

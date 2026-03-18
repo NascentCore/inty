@@ -22,6 +22,7 @@ from backend.ops.schemas.user_analytics import (
     LiveChatBasicStatsResponse,
     LiveChatLatencyResponse,
     LLMLatencyResponse,
+    PaginatedUserAgentConversationsResponse,
     PopularAgentsResponse,
     SessionMessagesResponse,
     UserAnalyticsReportCharts,
@@ -1653,6 +1654,70 @@ async def get_conversations_detail(
         logger.error(f"获取对话详情失败: {str(e)}")
         raise HTTPException(
             status_code=500, detail="Failed to fetch conversation details"
+        )
+
+
+@router.get(
+    "/user-analytics/conversations-detail/user-agent-paginated",
+    response_model=PaginatedUserAgentConversationsResponse,
+)
+async def get_user_agent_conversations_detail_paginated(
+    *,
+    db: AsyncSession = Depends(deps.get_async_replica_db),
+    current_user: schemas.User = Depends(deps.get_current_superuser),
+    register_start_date: Optional[str] = Query(
+        None, description="注册开始日期 (YYYY-MM-DD)"
+    ),
+    register_end_date: Optional[str] = Query(
+        None, description="注册结束日期 (YYYY-MM-DD)"
+    ),
+    register_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="注册最近N天"
+    ),
+    activity_start_date: Optional[str] = Query(
+        None, description="活跃开始日期 (YYYY-MM-DD)"
+    ),
+    activity_end_date: Optional[str] = Query(
+        None, description="活跃结束日期 (YYYY-MM-DD)"
+    ),
+    activity_last_days: Optional[int] = Query(
+        None, ge=1, le=365, description="活跃最近N天"
+    ),
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(10, ge=1, le=100, description="每页分组数量"),
+) -> Any:
+    """按 user_id + agent_id 分组，分页返回查询范围内聊天详情"""
+    try:
+        from app.services.user_analytics_service import UserAnalyticsService
+
+        reg_start, reg_end, act_start, act_end = _parse_analytics_date_ranges(
+            register_start_date,
+            register_end_date,
+            register_last_days,
+            activity_start_date,
+            activity_end_date,
+            activity_last_days,
+        )
+
+        service = UserAnalyticsService(db)
+        result = await service.get_paginated_user_agent_conversations_detail(
+            reg_start,
+            reg_end,
+            act_start,
+            act_end,
+            page,
+            size,
+        )
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取分页对话详情失败: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch paginated conversation details"
         )
 
 

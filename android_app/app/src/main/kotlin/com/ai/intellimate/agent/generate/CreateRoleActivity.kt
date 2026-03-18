@@ -997,7 +997,7 @@ fun CreateRolePage(
 
             // Create Button
             IntelliMateCtaButton(
-                text = if (isEditMode) "Update My IntelliMate" else "Create My IntelliMate",
+                text = if (isEditMode) "Update My iMate" else "Create My iMate",
                 isLoading = isLoading,
                 onClick = click@{
 
