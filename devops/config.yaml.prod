@@ -79,7 +79,7 @@ agent:
   langsmith_text_chat_sample_rate: 0.05
   # 邮件列表中对应的用户的文字聊天始终 trace
   langsmith_text_chat_always_trace_user_emails:
-    - "anonymoussocialforreal@gmail.com“
+    - "anonymoussocialforreal@gmail.com"
     - "charlesfengyu@gmail.com"
     - "donggangcj@gmail.com"
     - "it@sxwl.ai"
