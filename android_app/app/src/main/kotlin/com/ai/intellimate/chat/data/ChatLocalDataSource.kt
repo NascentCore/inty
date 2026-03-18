@@ -116,9 +116,7 @@ class ChatLocalDataSource(private val database: IntyChatDatabase = IntyChatDatab
     /** 仅将最早一条发送中用户标记为 SENDING_FAILED；若无其余发送中用户则删除 loading。用于 WebSocket 错误响应时只影响对应一条。 */
     suspend fun markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(agentId: String) {
         val earliest = chatMessageDao.getEarliestSendingUserMessage(agentId) ?: return
-        chatMessageDao.updateMessage(
-            earliest.copy(status = MessageEntity.Status.SENDING_FAILED),
-        )
+        chatMessageDao.updateMessage(earliest.copy(status = MessageEntity.Status.SENDING_FAILED))
         if (chatMessageDao.getEarliestSendingUserMessage(agentId) == null) {
             chatMessageDao.deleteSendingLoadingOnly(agentId)
         }

@@ -42,10 +42,7 @@ import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import { userAnalyticsApi } from "../services/api";
-import {
-  formatUtcTimeRaw,
-  getCurrentUtcTime,
-} from "../utils/dateUtils";
+import { formatUtcTimeRaw, getCurrentUtcTime } from "../utils/dateUtils";
 import { getLangsmithTraceUrl } from "../utils/langsmithUrl";
 import {
   sessionMessagesPaginationProps,
@@ -142,7 +139,10 @@ export const UserDailyMessagesPage: React.FC = () => {
   };
 
   const loadAllUsersConversationPage = useCallback(
-    async (page: number, queryParams: { activity_start_date?: string; activity_end_date?: string }) => {
+    async (
+      page: number,
+      queryParams: { activity_start_date?: string; activity_end_date?: string },
+    ) => {
       const data =
         await userAnalyticsApi.getUserAgentConversationsDetailPaginated({
           ...queryParams,
@@ -544,23 +544,29 @@ export const UserDailyMessagesPage: React.FC = () => {
               {session.messages.length === 0 ? (
                 <Text type="secondary">该会话在查询范围内暂无消息</Text>
               ) : (
-                session.messages.map((msg: ChatMessageResponse, index: number) => {
-                  const isUserMessage = isUserMessageType(msg.message_type);
-                  return (
-                    <div
-                      key={`${session.chat_id}-${msg.created_at ?? "no-time"}-${index}`}
-                      style={{ marginBottom: 10 }}
-                    >
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {isUserMessage ? "👤 用户" : "🤖 AI"} ·{" "}
-                        {msg.created_at ? formatUtcTimeRaw(msg.created_at) : "N/A"}
-                      </Text>
-                      <div>
-                        <CollapsibleMessageContent content={msg.content ?? ""} />
+                session.messages.map(
+                  (msg: ChatMessageResponse, index: number) => {
+                    const isUserMessage = isUserMessageType(msg.message_type);
+                    return (
+                      <div
+                        key={`${session.chat_id}-${msg.created_at ?? "no-time"}-${index}`}
+                        style={{ marginBottom: 10 }}
+                      >
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {isUserMessage ? "👤 用户" : "🤖 AI"} ·{" "}
+                          {msg.created_at
+                            ? formatUtcTimeRaw(msg.created_at)
+                            : "N/A"}
+                        </Text>
+                        <div>
+                          <CollapsibleMessageContent
+                            content={msg.content ?? ""}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  },
+                )
               )}
             </div>
           </div>
@@ -625,11 +631,13 @@ export const UserDailyMessagesPage: React.FC = () => {
     ) || 0;
   const isAllUsersResult = userInfo?.user_id === "ALL_USERS";
   const allUsersSessionCount = useMemo(
-    () => countUserAgentConversationSessions(allUsersConversationPage?.items || []),
+    () =>
+      countUserAgentConversationSessions(allUsersConversationPage?.items || []),
     [allUsersConversationPage],
   );
   const allUsersMessageCount = useMemo(
-    () => countUserAgentConversationMessages(allUsersConversationPage?.items || []),
+    () =>
+      countUserAgentConversationMessages(allUsersConversationPage?.items || []),
     [allUsersConversationPage],
   );
 

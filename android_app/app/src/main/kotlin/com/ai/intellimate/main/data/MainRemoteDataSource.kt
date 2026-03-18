@@ -17,13 +17,13 @@ import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.websocket.Frame
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicReference
 
 private const val CHAT_WEBSOCKET_PATH = "api/v1/chat/ws"
 private const val CHAT_WEBSOCKET_VERIFY_PATH = "api/v1/chat/ws/verify"
@@ -32,7 +32,9 @@ private const val PING_INTERVAL_MS = 25_000L
 /** 应用层心跳帧，用于识别服务端 pong。 */
 private data class WsPingPong(@Json(name = "type") val type: String?)
 
-/** 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接。对接 FR_CHAT_WS_VERIFY。 */
+/**
+ * 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接。对接 FR_CHAT_WS_VERIFY。
+ */
 object MainRemoteDataSource {
     private val httpClient: HttpClient = HttpClientProvider.ktorClient
     private val currentSession = AtomicReference<DefaultClientWebSocketSession?>(null)
@@ -43,7 +45,8 @@ object MainRemoteDataSource {
 
     /** 通过主 WebSocket 发送消息，不等待响应（fire-and-forget）。参数与 ChatWebSocketSessionManager 一致。 */
     suspend fun sendMessageFireAndForget(agentId: String, request: SendMsgReq) {
-        val session = currentSession.get() ?: throw IllegalStateException("Main WebSocket not connected")
+        val session =
+            currentSession.get() ?: throw IllegalStateException("Main WebSocket not connected")
         val payload = ChatWebSocketReq(agentId = agentId, request = request)
         session.send(Frame.Text(requestAdapter.toJson(payload)))
     }
@@ -76,9 +79,15 @@ object MainRemoteDataSource {
                                 if (frame is Frame.Close) break
                                 if (frame !is Frame.Text) continue
                                 val text = frame.data.decodeToString()
-                                val pingPong = kotlin.runCatching { pingPongAdapter.fromJson(text) }.getOrNull()
+                                val pingPong =
+                                    kotlin
+                                        .runCatching { pingPongAdapter.fromJson(text) }
+                                        .getOrNull()
                                 if (pingPong?.type == "pong") continue
-                                val response = kotlin.runCatching { responseAdapter.fromJson(text) }.getOrNull()
+                                val response =
+                                    kotlin
+                                        .runCatching { responseAdapter.fromJson(text) }
+                                        .getOrNull()
                                 if (response != null) {
                                     send(response)
                                 } else {
@@ -106,7 +115,8 @@ object MainRemoteDataSource {
                 else -> httpBase
             }
         val path =
-            if (DebugBackendEndpointStore.getChatWebSocketUseVerifyPath()) CHAT_WEBSOCKET_VERIFY_PATH
+            if (DebugBackendEndpointStore.getChatWebSocketUseVerifyPath())
+                CHAT_WEBSOCKET_VERIFY_PATH
             else CHAT_WEBSOCKET_PATH
         return "$websocketBase/$path"
     }

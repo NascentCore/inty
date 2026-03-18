@@ -19,7 +19,9 @@ from app.core.config import (
 from app.services.cache_service import cache_service
 
 
-def _build_agent_prompt_context_from_row(agent_id: str, row: tuple) -> AgentPromptContext:
+def _build_agent_prompt_context_from_row(
+    agent_id: str, row: tuple
+) -> AgentPromptContext:
     raw_settings = row[3]
     settings: Optional[AgentRuntimeSettings] = None
     if raw_settings is not None:

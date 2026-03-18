@@ -120,6 +120,9 @@ object DebugBackendEndpointStore {
             "Runtime chat websocket verify path is only available for debug builds"
         }
         prefs.edit().putBoolean(KEY_CHAT_WEBSOCKET_VERIFY_PATH, useVerify).apply()
-        LogUtils.i("DebugBackendEndpointStore", "Runtime chat websocket verify path updated to $useVerify")
+        LogUtils.i(
+            "DebugBackendEndpointStore",
+            "Runtime chat websocket verify path updated to $useVerify",
+        )
     }
 }

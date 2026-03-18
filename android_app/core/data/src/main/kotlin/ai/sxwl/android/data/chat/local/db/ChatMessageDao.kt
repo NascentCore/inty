@@ -147,8 +147,7 @@ interface ChatMessageDao {
     suspend fun getLatestMessage(agentId: String): MessageEntity?
 
     /**
-     * 最后一条非「发送中 loading」的消息。连续发送时若用 [getLatestMessage] 会取到 loading（id 极大），导致第二条发送中用户主键错乱、
-     * 收包时误删多条。
+     * 最后一条非「发送中 loading」的消息。连续发送时若用 [getLatestMessage] 会取到 loading（id 极大），导致第二条发送中用户主键错乱、 收包时误删多条。
      */
     @Query(
         "SELECT * FROM message WHERE agentId = :agentId AND isOpening = 0 AND NOT (status = 'SENDING' AND role = 'assistant' AND content = 'loading_animation') ORDER BY Cast(id as INTEGER) DESC, Cast(indexId as INTEGER) DESC, indexId DESC LIMIT 1"
