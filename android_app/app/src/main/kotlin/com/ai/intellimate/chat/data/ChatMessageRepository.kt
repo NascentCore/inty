@@ -130,7 +130,9 @@ class ChatMessageRepository(
                 if (localImageUri.isNullOrBlank()) {
                     null
                 } else {
-                    when (val resolvedUpload = resolveChatInputImage(localImageUri, preUploadTask)) {
+                    when (
+                        val resolvedUpload = resolveChatInputImage(localImageUri, preUploadTask)
+                    ) {
                         is HttpResult.Success -> resolvedUpload.data
                         is HttpResult.Failure -> {
                             localDataSource.removeSendingMessage(agentId)
@@ -207,8 +209,8 @@ class ChatMessageRepository(
 
     /**
      * 通过 mainRepository 的主 WebSocket 发送消息，不等待响应；参数与 [ChatWebSocketSessionManager] 的 WebSocket 一致。
-     * 本地先追加 sending 占位、解析图片并更新占位图；发送后不落库用户/助手消息，由主 WebSocket 收到响应时在 MainRepository 中处理。
-     * 要求 [mainRepository] 已注入且主 WebSocket 已连接，否则会抛错。
+     * 本地先追加 sending 占位、解析图片并更新占位图；发送后不落库用户/助手消息，由主 WebSocket 收到响应时在 MainRepository 中处理。 要求
+     * [mainRepository] 已注入且主 WebSocket 已连接，否则会抛错。
      */
     suspend fun sendMessageViaMainWebSocket(
         agentId: String,
@@ -216,7 +218,9 @@ class ChatMessageRepository(
         localImageUri: String? = null,
         preUploadTask: Deferred<HttpResult<ChatPreparedImageUpload>>? = null,
     ) {
-        val main = mainRepository ?: throw IllegalStateException("MainRepository not set for WebSocket send")
+        val main =
+            mainRepository
+                ?: throw IllegalStateException("MainRepository not set for WebSocket send")
         LogUtils.d("RoomImpl.sendMessageViaMainWebSocket called for $agentId: $content")
 
         val trimmed = content.trimEnd()

@@ -37,11 +37,11 @@ import com.ai.intellimate.boost.BoostError
 import com.ai.intellimate.boost.BoostException
 import com.ai.intellimate.boost.BoostManager
 import com.ai.intellimate.chat.data.ChatMessageRepository
-import com.ai.intellimate.main.data.MainRepository
 import com.ai.intellimate.chat.data.ChatPreparedImageUpload
 import com.ai.intellimate.chat.touch.CharacterTouchAction
 import com.ai.intellimate.chat.uistate.ChatUIState
 import com.ai.intellimate.chat.utils.VipChatCreditPolicy
+import com.ai.intellimate.main.data.MainRepository
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
 import com.ai.intellimate.utils.UserProfileManager
@@ -659,134 +659,138 @@ class ChatViewModel : BaseVM() {
                             )
                     ) {
                         is HttpResult.Success -> {
-                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
-                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                            val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
-                        // Firebase Analytics - 记录消息发送成功、AI响应时间和端到端时间
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
-                                "agent_name" to (_agentInfo.value?.name),
-                                "message_type" to
-                                    if (selectedImageUri.isNullOrBlank()) "normal"
-                                    else "image_text",
-                                "response_code" to (result.data.code ?: 0),
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "ai_response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                            ),
-                        )
-
-                        // 记录AI响应时间性能指标（API调用时间）
-                        FirebaseManager.logPerformanceMetric(
-                            FirebaseManager.Events.AI_RESPONSE_TIME,
-                            responseTime,
-                            "ms",
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
-                                "agent_name" to (_agentInfo.value?.name),
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            ),
-                        )
-
-                        // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
-                        sessionMessageCount++
-                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
-                        val currentTime = System.currentTimeMillis()
-                        val timeSinceLastShow = currentTime - lastShowTime
-
-                        if (
-                            // 会话消息数达到阈值
-                            sessionMessageCount >=
-                                UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
-                                // 距离上次显示已超过最小间隔时间
-                                timeSinceLastShow >= UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
-                        ) {
-                            IntySetting.setFeedbackDialogLastShowTime(currentTime)
-                            // 确保在主线程更新 UI 状态
-                            withContext(Dispatchers.Main) {
-                                _showFeedbackRequestDialog.value = true
-                            }
-                        }
-
-                        result.data.data?.choices?.getOrNull(0)?.let {
-                            if (it.message.agentId() == _agentId.value) {
-                                enableFlowShowIfAllowed()
-                                if (chatMessageRepository.shouldShowRank()) {
-                                    _showRankDialog.send(true)
-                                }
-                            }
-                        }
-
-                        runCatching {
-                                // 有免费次数限制，需要vip订阅
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    emitChatLimitDialog(agentId)
-                                }
-                            }
-                            .onFailure {
-                                LogUtils.e("Error processing AI response: ${it.message}")
-                                it.printStackTrace()
-                                _isWaitingForReply.value = false
-                            }
-                    }
-
-                    is HttpResult.Failure -> {
-                        // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
-                        if (
-                            runCatching { ensureActive() }.isFailure ||
-                                isCancellationError(result.message)
-                        ) {
-                            LogUtils.d(
-                                "ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${result.message}"
+                            // Firebase Analytics - 记录消息发送成功、AI响应时间和端到端时间
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agentId,
+                                    "agent_name" to (_agentInfo.value?.name),
+                                    "message_type" to
+                                        if (selectedImageUri.isNullOrBlank()) "normal"
+                                        else "image_text",
+                                    "response_code" to (result.data.code ?: 0),
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "ai_response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime,
+                                ),
                             )
-                            return@launch
+
+                            // 记录AI响应时间性能指标（API调用时间）
+                            FirebaseManager.logPerformanceMetric(
+                                FirebaseManager.Events.AI_RESPONSE_TIME,
+                                responseTime,
+                                "ms",
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agentId,
+                                    "agent_name" to (_agentInfo.value?.name),
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                ),
+                            )
+
+                            // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
+                            sessionMessageCount++
+                            val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                            val currentTime = System.currentTimeMillis()
+                            val timeSinceLastShow = currentTime - lastShowTime
+
+                            if (
+                                // 会话消息数达到阈值
+                                sessionMessageCount >=
+                                    UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                                    // 距离上次显示已超过最小间隔时间
+                                    timeSinceLastShow >=
+                                        UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
+                            ) {
+                                IntySetting.setFeedbackDialogLastShowTime(currentTime)
+                                // 确保在主线程更新 UI 状态
+                                withContext(Dispatchers.Main) {
+                                    _showFeedbackRequestDialog.value = true
+                                }
+                            }
+
+                            result.data.data?.choices?.getOrNull(0)?.let {
+                                if (it.message.agentId() == _agentId.value) {
+                                    enableFlowShowIfAllowed()
+                                    if (chatMessageRepository.shouldShowRank()) {
+                                        _showRankDialog.send(true)
+                                    }
+                                }
+                            }
+
+                            runCatching {
+                                    // 有免费次数限制，需要vip订阅
+                                    if (
+                                        result.data.code ==
+                                            BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                    ) {
+                                        emitChatLimitDialog(agentId)
+                                    }
+                                }
+                                .onFailure {
+                                    LogUtils.e("Error processing AI response: ${it.message}")
+                                    it.printStackTrace()
+                                    _isWaitingForReply.value = false
+                                }
                         }
 
-                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
-                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                        is HttpResult.Failure -> {
+                            // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
+                            if (
+                                runCatching { ensureActive() }.isFailure ||
+                                    isCancellationError(result.message)
+                            ) {
+                                LogUtils.d(
+                                    "ChatViewModel.sendMsg: 请求被取消，不显示错误 Toast: ${result.message}"
+                                )
+                                return@launch
+                            }
 
-                        // Firebase Analytics - 记录消息发送错误（包含API响应时间和端到端时间）
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
-                                "agent_name" to (_agentInfo.value?.name),
-                                "message_type" to
-                                    if (selectedImageUri.isNullOrBlank()) "normal"
-                                    else "image_text",
-                                "error_message" to "failure: ${result.message.take(100)}",
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "ai_response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                            ),
-                        )
+                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                            val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
-                        // Firebase Crashlytics - 记录非致命错误
-                        FirebaseManager.recordException(
-                            Exception("Message send failed: ${result.message}"),
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agentId,
-                                "agent_name" to (_agentInfo.value?.name),
-                                "response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                            ),
-                        )
+                            // Firebase Analytics - 记录消息发送错误（包含API响应时间和端到端时间）
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agentId,
+                                    "agent_name" to (_agentInfo.value?.name),
+                                    "message_type" to
+                                        if (selectedImageUri.isNullOrBlank()) "normal"
+                                        else "image_text",
+                                    "error_message" to "failure: ${result.message.take(100)}",
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "ai_response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime,
+                                ),
+                            )
 
-                        // 显示网络错误；恢复输入框与已选图片（含图片上传失败时未插入临时消息的情况）
-                        NetworkErrorHandler.showNetworkAwareError(
-                            "Something went wrong. Please try again later."
-                        )
-                        inputData.value = inputMsg
-                        inputSelection.value = inputMsg.length
-                        inputImageUri.value = selectedImageUri
-                        _isWaitingForReply.value = false
+                            // Firebase Crashlytics - 记录非致命错误
+                            FirebaseManager.recordException(
+                                Exception("Message send failed: ${result.message}"),
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agentId,
+                                    "agent_name" to (_agentInfo.value?.name),
+                                    "response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime,
+                                ),
+                            )
+
+                            // 显示网络错误；恢复输入框与已选图片（含图片上传失败时未插入临时消息的情况）
+                            NetworkErrorHandler.showNetworkAwareError(
+                                "Something went wrong. Please try again later."
+                            )
+                            inputData.value = inputMsg
+                            inputSelection.value = inputMsg.length
+                            inputImageUri.value = selectedImageUri
+                            _isWaitingForReply.value = false
+                        }
                     }
-                }
                 }
             } catch (e: Exception) {
                 // 检查是否是取消相关的异常，如果是则不显示错误 Toast
@@ -911,106 +915,112 @@ class ChatViewModel : BaseVM() {
                     sessionMessageCount++
                     _isWaitingForReply.value = false
                 } else {
-                    when (val result = chatMessageRepository.sendMessage(agentId, actionDescription)) {
+                    when (
+                        val result = chatMessageRepository.sendMessage(agentId, actionDescription)
+                    ) {
                         is HttpResult.Success -> {
-                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
-                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                            val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agent.id,
-                                "agent_name" to agent.name,
-                                "message_type" to
-                                    "background_touch_${action.gestureType.analyticsValue}",
-                                "response_code" to (result.data.code ?: 0),
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "ai_response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                            ),
-                        )
-
-                        sessionMessageCount++
-                        val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
-                        val elapsedTimeSinceLastShow = System.currentTimeMillis() - lastShowTime
-                        if (
-                            sessionMessageCount >=
-                                UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
-                                elapsedTimeSinceLastShow >=
-                                    UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
-                        ) {
-                            IntySetting.setFeedbackDialogLastShowTime(System.currentTimeMillis())
-                            withContext(Dispatchers.Main) {
-                                _showFeedbackRequestDialog.value = true
-                            }
-                        }
-
-                        result.data.data?.choices?.getOrNull(0)?.let {
-                            if (it.message.agentId() == _agentId.value) {
-                                enableFlowShowIfAllowed()
-                                if (chatMessageRepository.shouldShowRank()) {
-                                    _showRankDialog.send(true)
-                                }
-                            }
-                        }
-
-                        runCatching {
-                                if (
-                                    result.data.code ==
-                                        BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                ) {
-                                    emitChatLimitDialog(agent.id)
-                                }
-                            }
-                            .onFailure {
-                                LogUtils.e(
-                                    "Error processing background touch action response: ${it.message}"
-                                )
-                                _isWaitingForReply.value = false
-                            }
-                    }
-
-                    is HttpResult.Failure -> {
-                        if (
-                            runCatching { ensureActive() }.isFailure ||
-                                isCancellationError(result.message)
-                        ) {
-                            LogUtils.d(
-                                "ChatViewModel.sendBackgroundTouchAction: 请求被取消，不显示错误 Toast: ${result.message}"
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agent.id,
+                                    "agent_name" to agent.name,
+                                    "message_type" to
+                                        "background_touch_${action.gestureType.analyticsValue}",
+                                    "response_code" to (result.data.code ?: 0),
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "ai_response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime,
+                                ),
                             )
-                            return@launch
+
+                            sessionMessageCount++
+                            val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                            val elapsedTimeSinceLastShow = System.currentTimeMillis() - lastShowTime
+                            if (
+                                sessionMessageCount >=
+                                    UiConfigs.FeedbackDialog.SESSION_MESSAGES_COUNT_THRESHOLD &&
+                                    elapsedTimeSinceLastShow >=
+                                        UiConfigs.FeedbackDialog.MIN_SHOW_INTERVAL_MS
+                            ) {
+                                IntySetting.setFeedbackDialogLastShowTime(
+                                    System.currentTimeMillis()
+                                )
+                                withContext(Dispatchers.Main) {
+                                    _showFeedbackRequestDialog.value = true
+                                }
+                            }
+
+                            result.data.data?.choices?.getOrNull(0)?.let {
+                                if (it.message.agentId() == _agentId.value) {
+                                    enableFlowShowIfAllowed()
+                                    if (chatMessageRepository.shouldShowRank()) {
+                                        _showRankDialog.send(true)
+                                    }
+                                }
+                            }
+
+                            runCatching {
+                                    if (
+                                        result.data.code ==
+                                            BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                    ) {
+                                        emitChatLimitDialog(agent.id)
+                                    }
+                                }
+                                .onFailure {
+                                    LogUtils.e(
+                                        "Error processing background touch action response: ${it.message}"
+                                    )
+                                    _isWaitingForReply.value = false
+                                }
                         }
 
-                        val responseTime = System.currentTimeMillis() - aiResponseStartTime
-                        val endToEndTime = System.currentTimeMillis() - endToEndStartTime
-                        FirebaseManager.logEvent(
-                            FirebaseManager.Events.MESSAGE_SEND_FAILURE,
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agent.id,
-                                "agent_name" to agent.name,
-                                "message_type" to
-                                    "background_touch_${action.gestureType.analyticsValue}",
-                                "error_message" to "failure: ${result.message.take(100)}",
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                "ai_response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                            ),
-                        )
-                        FirebaseManager.recordException(
-                            Exception("Background touch action send failed: ${result.message}"),
-                            FirebaseManager.safeEventParams(
-                                "agent_id" to agent.id,
-                                "agent_name" to agent.name,
-                                "response_time" to responseTime,
-                                "end_to_end_time" to endToEndTime,
-                            ),
-                        )
-                        NetworkErrorHandler.showNetworkAwareError(
-                            "Failed to send background touch action."
-                        )
-                        _isWaitingForReply.value = false
+                        is HttpResult.Failure -> {
+                            if (
+                                runCatching { ensureActive() }.isFailure ||
+                                    isCancellationError(result.message)
+                            ) {
+                                LogUtils.d(
+                                    "ChatViewModel.sendBackgroundTouchAction: 请求被取消，不显示错误 Toast: ${result.message}"
+                                )
+                                return@launch
+                            }
+
+                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                            val endToEndTime = System.currentTimeMillis() - endToEndStartTime
+                            FirebaseManager.logEvent(
+                                FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agent.id,
+                                    "agent_name" to agent.name,
+                                    "message_type" to
+                                        "background_touch_${action.gestureType.analyticsValue}",
+                                    "error_message" to "failure: ${result.message.take(100)}",
+                                    "user_type" to
+                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                    "ai_response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime,
+                                ),
+                            )
+                            FirebaseManager.recordException(
+                                Exception("Background touch action send failed: ${result.message}"),
+                                FirebaseManager.safeEventParams(
+                                    "agent_id" to agent.id,
+                                    "agent_name" to agent.name,
+                                    "response_time" to responseTime,
+                                    "end_to_end_time" to endToEndTime,
+                                ),
+                            )
+                            NetworkErrorHandler.showNetworkAwareError(
+                                "Failed to send background touch action."
+                            )
+                            _isWaitingForReply.value = false
+                        }
                     }
-                }
                 }
             } catch (e: Exception) {
                 if (
@@ -1244,84 +1254,84 @@ class ChatViewModel : BaseVM() {
 
                         when (result) {
                             is HttpResult.Success -> {
-                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
-                            val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
+                                val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                                val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
 
-                            // Firebase Analytics - 记录 Keep Talking 消息发送成功
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
-                                FirebaseManager.safeEventParams(
-                                    "agent_id" to agent.id,
-                                    "agent_name" to agent.name,
-                                    "message_type" to "keep_talking",
-                                    "response_code" to (result.data.code ?: 0),
-                                    "user_type" to
-                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    "ai_response_time" to responseTime,
-                                    "end_to_end_time" to endToEndTime,
-                                ),
-                            )
+                                // Firebase Analytics - 记录 Keep Talking 消息发送成功
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.MESSAGE_SEND_SUCCESS,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agent.id,
+                                        "agent_name" to agent.name,
+                                        "message_type" to "keep_talking",
+                                        "response_code" to (result.data.code ?: 0),
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                        "ai_response_time" to responseTime,
+                                        "end_to_end_time" to endToEndTime,
+                                    ),
+                                )
 
-                            runCatching {
-                                    // 有免费次数限制，需要vip订阅
-                                    if (
-                                        result.data.code ==
-                                            BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
-                                    ) {
-                                        emitChatLimitDialog(agent.id)
+                                runCatching {
+                                        // 有免费次数限制，需要vip订阅
+                                        if (
+                                            result.data.code ==
+                                                BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE
+                                        ) {
+                                            emitChatLimitDialog(agent.id)
+                                        }
+                                    }
+                                    .onFailure {
+                                        LogUtils.e(
+                                            "Error processing keep talking AI response: ${it.message}"
+                                        )
+                                        it.printStackTrace()
+                                        // 错误恢复：确保状态正确
+                                        _isWaitingForReply.value = false
+                                    }
+
+                                result.data.data?.choices?.getOrNull(0)?.let {
+                                    if (it.message.agentId() == _agentId.value) {
+                                        enableFlowShowIfAllowed()
                                     }
                                 }
-                                .onFailure {
-                                    LogUtils.e(
-                                        "Error processing keep talking AI response: ${it.message}"
+                            }
+
+                            is HttpResult.Failure -> {
+                                // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
+                                if (
+                                    runCatching { ensureActive() }.isFailure ||
+                                        isCancellationError(result.message)
+                                ) {
+                                    LogUtils.d(
+                                        "ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${result.message}"
                                     )
-                                    it.printStackTrace()
-                                    // 错误恢复：确保状态正确
-                                    _isWaitingForReply.value = false
+                                    return@launchBackground
                                 }
 
-                            result.data.data?.choices?.getOrNull(0)?.let {
-                                if (it.message.agentId() == _agentId.value) {
-                                    enableFlowShowIfAllowed()
-                                }
-                            }
-                        }
+                                val responseTime = System.currentTimeMillis() - aiResponseStartTime
+                                val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
 
-                        is HttpResult.Failure -> {
-                            // 检查是否是取消相关的错误，避免在 Activity 退出后显示 Toast
-                            if (
-                                runCatching { ensureActive() }.isFailure ||
-                                    isCancellationError(result.message)
-                            ) {
-                                LogUtils.d(
-                                    "ChatViewModel.sendKeepTalkingMessage: 请求被取消，不显示错误 Toast: ${result.message}"
+                                // Firebase Analytics - 记录 Keep Talking 消息发送错误
+                                FirebaseManager.logEvent(
+                                    FirebaseManager.Events.MESSAGE_SEND_FAILURE,
+                                    FirebaseManager.safeEventParams(
+                                        "agent_id" to agent.id,
+                                        "agent_name" to agent.name,
+                                        "message_type" to "keep_talking",
+                                        "error_message" to "failure: ${result.message.take(100)}",
+                                        "user_type" to
+                                            if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                        "ai_response_time" to responseTime,
+                                        "end_to_end_time" to endToEndTime,
+                                    ),
                                 )
-                                return@launchBackground
+
+                                NetworkErrorHandler.showNetworkAwareError(result.message)
+                                // 错误恢复：确保状态正确
+                                _isWaitingForReply.value = false
                             }
-
-                            val responseTime = System.currentTimeMillis() - aiResponseStartTime
-                            val endToEndTime = System.currentTimeMillis() - keepTalkingStartTime
-
-                            // Firebase Analytics - 记录 Keep Talking 消息发送错误
-                            FirebaseManager.logEvent(
-                                FirebaseManager.Events.MESSAGE_SEND_FAILURE,
-                                FirebaseManager.safeEventParams(
-                                    "agent_id" to agent.id,
-                                    "agent_name" to agent.name,
-                                    "message_type" to "keep_talking",
-                                    "error_message" to "failure: ${result.message.take(100)}",
-                                    "user_type" to
-                                        if (VipStatusHelper.isUserVip()) "vip" else "free",
-                                    "ai_response_time" to responseTime,
-                                    "end_to_end_time" to endToEndTime,
-                                ),
-                            )
-
-                            NetworkErrorHandler.showNetworkAwareError(result.message)
-                            // 错误恢复：确保状态正确
-                            _isWaitingForReply.value = false
                         }
-                    }
                     }
                 } catch (e: Exception) {
                     // 检查是否是取消相关的异常，如果是则不显示错误 Toast

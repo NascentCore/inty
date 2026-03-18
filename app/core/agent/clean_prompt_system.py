@@ -43,7 +43,9 @@ from app.schemas.user import UserMetadata
 
 
 def _render_prompt(*, tmpl: str, char: str, user: Optional[str]) -> str:
-    return prompt_template.render_prompt_jinja2_template(tmpl=tmpl, char=char, user=user)
+    return prompt_template.render_prompt_jinja2_template(
+        tmpl=tmpl, char=char, user=user
+    )
 
 
 def _is_user_time_context_enabled() -> bool:
@@ -153,8 +155,8 @@ PromptOverrideLookupFn: TypeAlias = Callable[[str, str], Any]
 
 @dataclass(frozen=True)
 class PromptAssemblyDeps:
-    render_prompt: RenderPromptFn = (
-        lambda tmpl, char, user: _render_prompt(tmpl=tmpl, char=char, user=user)
+    render_prompt: RenderPromptFn = lambda tmpl, char, user: _render_prompt(
+        tmpl=tmpl, char=char, user=user
     )
     lookup_prompt_override: PromptOverrideLookupFn = get_agent_prompt_override
     is_user_time_context_enabled: Callable[[], bool] = _is_user_time_context_enabled
@@ -302,7 +304,9 @@ def build_system_messages(
         system_messages.append(SystemMessage(content=request.user_profile))
 
     if request.user_time_context and deps.is_user_time_context_enabled():
-        prompt = _build_user_time_context_prompt(request.user_time_context.to_runtime_dict())
+        prompt = _build_user_time_context_prompt(
+            request.user_time_context.to_runtime_dict()
+        )
         if prompt:
             system_messages.append(SystemMessage(content=prompt))
 
@@ -344,12 +348,16 @@ def build_system_messages_for_official_assistant(
         _build_character_context(context=context, user_name=user_name, deps=deps)
     )
     if request.chat_settings and request.chat_settings.style_prompt:
-        system_messages.append(SystemMessage(content=request.chat_settings.style_prompt))
+        system_messages.append(
+            SystemMessage(content=request.chat_settings.style_prompt)
+        )
     if request.user_profile:
         system_messages.append(SystemMessage(content=request.user_profile))
 
     if request.user_time_context and deps.is_user_time_context_enabled():
-        prompt = _build_user_time_context_prompt(request.user_time_context.to_runtime_dict())
+        prompt = _build_user_time_context_prompt(
+            request.user_time_context.to_runtime_dict()
+        )
         if prompt:
             system_messages.append(SystemMessage(content=prompt))
 
@@ -366,7 +374,9 @@ def build_system_messages_for_official_assistant(
             + context.intro
         )
     )
-    system_messages.append(SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE))
+    system_messages.append(
+        SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
+    )
     system_messages.append(
         SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
     )

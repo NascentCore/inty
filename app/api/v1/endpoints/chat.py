@@ -376,7 +376,9 @@ async def _try_generate_premium_preview_choice(
     preview_content, _trace_id = (
         gen_result if isinstance(gen_result, tuple) else (gen_result, None)
     )
-    preview_content = _truncate_premium_preview_content(preview_content.strip() if preview_content else "")
+    preview_content = _truncate_premium_preview_content(
+        preview_content.strip() if preview_content else ""
+    )
     if not preview_content:
         return None
     return _build_premium_preview_choice(preview_content)

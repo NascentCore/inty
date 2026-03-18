@@ -99,20 +99,13 @@ class ChatRemoteDataSource {
                     parts =
                         buildList {
                             if (trimmedUserText.isNotBlank()) {
-                                add(
-                                    ChatMessageContentPart(
-                                        type = "text",
-                                        text = trimmedUserText,
-                                    )
-                                )
+                                add(ChatMessageContentPart(type = "text", text = trimmedUserText))
                             }
                             add(
                                 ChatMessageContentPart(
                                     type = "image_url",
                                     imageUrl =
-                                        ChatMessageContentPart.ImageUrlPayload(
-                                            url = userImageUrl
-                                        ),
+                                        ChatMessageContentPart.ImageUrlPayload(url = userImageUrl),
                                 )
                             )
                         },

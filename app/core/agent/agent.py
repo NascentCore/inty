@@ -1633,18 +1633,18 @@ class Agent:
                         "content": "continue",
                     }
                     retry_response, retry_trace_id = self._call_openai_api_with_retry(
-                            client=client,
-                            model=model_name,
-                            openai_messages=openai_messages_for_response,
-                            temperature=temperature,
-                            max_tokens=max_tokens,
-                            top_p=top_p,
-                            extra_body=self._chat_extra_body(user_id, model_name),
-                            user_id=user_id,
-                            max_retries=3,
-                            initial_delay=1.0,
-                            chat_name=chat_name,
-                            labels=labels,
+                        client=client,
+                        model=model_name,
+                        openai_messages=openai_messages_for_response,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body=self._chat_extra_body(user_id, model_name),
+                        user_id=user_id,
+                        max_retries=3,
+                        initial_delay=1.0,
+                        chat_name=chat_name,
+                        labels=labels,
                     )
                     if (
                         retry_response is None

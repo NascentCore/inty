@@ -27,7 +27,9 @@ class MainRepository(
                     val agentId = message.agentId ?: data.sourceImateId ?: return@collect
                     // 与 HTTP 一致：非 200 视为失败，只将最早一条发送中标记为失败（与成功路径一致）
                     if (message.code != null && message.code != 200) {
-                        chatLocalDataSource.markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(agentId)
+                        chatLocalDataSource.markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(
+                            agentId
+                        )
                         return@collect
                     }
                     val sendingUser = chatLocalDataSource.getEarliestSendingUserMessage(agentId)

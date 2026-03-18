@@ -1109,7 +1109,10 @@ class UserAnalyticsService:
     ) -> Dict[str, Any]:
         """按 user_id + agent_id 分组返回会话与消息详情（分页）"""
         sessions_detail = await self.get_user_sessions_detail(
-            register_start_date, register_end_date, activity_start_date, activity_end_date
+            register_start_date,
+            register_end_date,
+            activity_start_date,
+            activity_end_date,
         )
         if not sessions_detail:
             return {
