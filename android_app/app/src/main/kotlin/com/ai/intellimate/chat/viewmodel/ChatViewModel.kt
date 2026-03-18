@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val LOADING_PLACEHOLDER_CONTENT = "loading_animation"
+private const val CHAT_SETTINGS_DEFAULT_VOICE_SENTINEL = "default"
 
 /** 进程内会话状态：用户在本轮 APP 运行中是否已点击过「跳过」上传照片提示。 用于手动生图时：若已跳过，则本会话内不再弹出上传卡片，直接生图。 */
 private object ManualImageGenSession {
@@ -1914,7 +1915,8 @@ class ChatViewModel : BaseVM() {
 
     fun updateChatVoiceSetting(voiceId: String?) = launchBackground {
         val agentId = agentInfo.value?.id ?: return@launchBackground
-        val req = ChatSettingsReq(voice_id = voiceId)
+        val normalizedVoiceId = voiceId ?: CHAT_SETTINGS_DEFAULT_VOICE_SENTINEL
+        val req = ChatSettingsReq(voice_id = normalizedVoiceId)
         when (val result = NetServiceMgr.getChatApi().updateChatSettings(agentId, req)) {
             is HttpResult.Failure -> {
                 NetworkErrorHandler.showNetworkAwareError(result.message)
