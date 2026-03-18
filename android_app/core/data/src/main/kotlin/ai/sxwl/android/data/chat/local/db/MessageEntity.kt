@@ -329,6 +329,7 @@ fun createTempSendingLoadingEntity(agentId: String): MessageEntity {
     val timestamp = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     return MessageEntity(
         id = "${(Long.MAX_VALUE)}",
+        indexId = System.nanoTime().toString(),
         role = "assistant",
         content = LOADING_PLACEHOLDER_CONTENT,
         timestamp = timestamp,
