@@ -84,7 +84,16 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
             return {"today_message_count": 0, "today_session_count": 0}
 
         async def get_user_sessions(self, user_id: str):
-            return []
+            return [
+                {
+                    "chat_id": "chat-1",
+                    "agent_name": "Amber",
+                    "agent_avatar_url": "https://cdn.example.com/amber.webp",
+                    "created_at": None,
+                    "updated_at": None,
+                    "message_count": 3,
+                }
+            ]
 
         async def get_session_messages(self, chat_id: str, page: int = 1, size: int = 50):
             return {"messages": [], "total": 0, "page": page, "size": size, "has_more": False}
@@ -238,6 +247,29 @@ def test_user_lookup_requires_exactly_one_identifier(
 
     assert missing.status_code == 400
     assert both.status_code == 400
+
+
+def test_user_sessions_response_includes_agent_avatar_url(evaluation_app: FastAPI):
+    with TestClient(evaluation_app) as client:
+        resp = client.get(
+            "/api/v1/evaluation/user-analytics/user-sessions",
+            params={"user_id": "user-1"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {
+        "sessions": [
+            {
+                "chat_id": "chat-1",
+                "agent_name": "Amber",
+                "agent_avatar_url": "https://cdn.example.com/amber.webp",
+                "created_at": None,
+                "updated_at": None,
+                "message_count": 3,
+            }
+        ]
+    }
 
 
 def test_user_agent_conversations_detail_defaults_to_page_size_10(

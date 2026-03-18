@@ -275,6 +275,7 @@ class UserSessionItem(BaseModel):
 
     chat_id: str
     agent_name: str
+    agent_avatar_url: Optional[str] = Field(None, description="角色形象图片 URL")
     created_at: Optional[str]
     updated_at: Optional[str]
     message_count: int
