@@ -498,6 +498,7 @@ internal fun ChatPage(
                 onDismissRequest = {
                     navController.navigateUp()
 
+                    chatViewModel.clearAgent()
                     FirebaseManager.Events.VIP_AGENT_UNLOCK.logEvent(
                         "agent_id" to agent.id,
                         "unlock_method" to "close_dialog",
@@ -692,11 +693,17 @@ internal fun ChatPage(
 
                 agentInfo?.let { info ->
                     ChatTopBar(
-                        navController,
                         modifier = Modifier.fillMaxWidth().padding(start = 18.dp),
                         agentInfo = info,
                         earnedPoints = null,
                         showBackButton = showBackButton,
+                        onBack = {
+                            navController.popBackStack()
+                            chatViewModel.clearAgent()
+                        },
+                        onAgentDetail = {
+                            navController.navigate(Routes.Home.agentInfPage(it))
+                        },
                         onClickChatMode = {
                             FirebaseManager.Events.CHAT_MODE_BUTTON_CLICK.logEvent(
                                 "agent_id" to agent?.agentId,

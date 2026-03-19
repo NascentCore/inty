@@ -119,9 +119,10 @@ private fun FavoriteButton(
  */
 @Composable
 fun ChatTopBar(
-    navController: NavController,
     modifier: Modifier,
     agentInfo: AgentInfo,
+    onBack: () -> Unit,
+    onAgentDetail: (String) -> Unit,
     onClickMore: () -> Unit,
     onClickCall: () -> Unit,
     onClickChatMode: () -> Unit = {},
@@ -143,7 +144,7 @@ fun ChatTopBar(
         // 返回按钮：showBackButton 为 true 时显示，样式与电话/更多按钮一致（半透明圆角背景），图标使用 R.drawable.back 与其他页面统一
         if (showBackButton) {
             Box(
-                modifier = Modifier.noRippleClickable { navController.popBackStack() },
+                modifier = Modifier.noRippleClickable { onBack() },
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
@@ -176,9 +177,7 @@ fun ChatTopBar(
                                         ToastUtils.showShort(R.string.str_agent_is_deleted)
                                     } else {
                                         AgentStore.addAgent(agentInfo)
-                                        navController.navigate(
-                                            Routes.Home.agentInfPage(agentInfo.id)
-                                        )
+                                        onAgentDetail(agentInfo.id)
                                     }
                                 }
                             },

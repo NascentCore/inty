@@ -2,12 +2,14 @@ package com.ai.intellimate.chat
 
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.theme.HeartColor
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -50,6 +52,11 @@ internal fun ChatScreen(
     val showImageFeedbackDialog by chatViewModel.showImageFeedbackRequestDialog.collectAsState()
     val imageFeedbackPayload by chatViewModel.imageFeedbackNavigationPayload.collectAsState()
     val autoPlayAnimation by SettingStateManager.autoPlayAnimationFlow.collectAsState()
+
+    BackHandler(showBackButton) {
+        navController.popBackStack()
+        chatViewModel.clearAgent()
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(HeartColor.primaryColor)) {
         // 背景图放在最底层，不受 imePadding 影响
