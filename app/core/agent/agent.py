@@ -491,6 +491,60 @@ class Agent:
                 return ""
         return prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
 
+    def _build_clean_prompt_context(self):
+        from app.core.agent.clean_prompt_system import AgentPromptContext
+
+        return AgentPromptContext(
+            agent_id=self.agent_id,
+            name=self.name,
+            main_prompt=self.main_prompt or "",
+            mode_prompt=self.mode_prompt or "",
+            output_format_prompt=self.output_format_prompt or "",
+            personality=self.personality or "",
+            scenario=self.scenario or "",
+            message_example=self.message_example or "",
+            creator_notes=self.creator_notes or "",
+            tags=list(self.tags or []),
+            character_version=self.character_version or "1.0",
+            extensions=dict(self.extensions or {}),
+            intro=self.intro or "",
+        )
+
+    def _build_clean_prompt_input(
+        self,
+        *,
+        user_profile: str,
+        chat_settings: Optional[models.chat_settings.ChatSettings],
+        user_time_context: Optional[UserTimeContext],
+        include_output_format_prompt: bool,
+    ):
+        from app.core.agent.clean_prompt_system import (
+            ChatSettingsSnapshot,
+            PromptBuildInput,
+            UserTimeContextSnapshot,
+        )
+
+        chat_settings_snapshot = None
+        if chat_settings is not None:
+            chat_settings_snapshot = ChatSettingsSnapshot(
+                style_prompt=getattr(chat_settings, "style_prompt", None),
+                premium_mode=bool(getattr(chat_settings, "premium_mode", False)),
+                chat_mode=getattr(chat_settings, "chat_mode", None),
+            )
+
+        user_time_context_snapshot = None
+        if user_time_context is not None:
+            user_time_context_snapshot = UserTimeContextSnapshot.model_validate(
+                user_time_context
+            )
+
+        return PromptBuildInput(
+            user_profile=user_profile or "",
+            chat_settings=chat_settings_snapshot,
+            user_time_context=user_time_context_snapshot,
+            include_output_format_prompt=include_output_format_prompt,
+        )
+
     def build_system_messages(
         self,
         user_profile: str,
@@ -499,106 +553,17 @@ class Agent:
         include_output_format_prompt: bool = True,
     ) -> List[SystemMessage]:
         """构建系统消息列表，从state中获取用户信息，state 是 LangChain 运行时系统的一部分。"""
-        user_name = self._extract_user_name_from_profile(user_profile)
+        from app.core.agent.clean_prompt_system import build_system_messages
 
-        system_messages = []
-
-        # 过往逻辑：如缺少任一默认提示词，则认为是用户创建的角色。
-        # 此为短期解决方案，未来任何对提示词组装机制的改造，都需要重新考虑这个判定的正确性。
-        # 目前不考虑这个区分，未来可能要做一些变化，目前的重点是预置角色而非用户自创角色，
-        # 因此不做更深的考虑。由于预置角色也可能没有 mode_prompt，因此无法精确判断。
-        # 而应该检查角色的 creator 字段是否是普通用户。
-        # is_char_user_created = not self.main_prompt or not self.mode_prompt
-        # logger.debug(f"角色是否用户创建: {is_char_user_created}")
-
-        main_prompt = self._get_effective_main_prompt()
-        if main_prompt:
-            rendered_main_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=main_prompt, char=self.name, user=user_name
-            )
-            system_messages.append(SystemMessage(content=rendered_main_prompt))
-
-        character_messages = self._build_character_context(user_name=user_name)
-        system_messages.extend(character_messages)
-
-        override = get_agent_prompt_override(self.agent_id, self.name)
-        if override is not None and override.mode_prompt is not None:
-            mode_prompt = override.mode_prompt
-            output_format_prompt = ""
-        elif (
-            chat_settings
-            and getattr(chat_settings, "chat_mode", None)
-            and getattr(chat_settings, "chat_mode") in prompts.USER_FACING_CHAT_MODE_IDS
-        ):
-            chat_mode_id = chat_settings.chat_mode
-            mode_prompt = prompts.get_mode_prompt_by_id(chat_mode_id)
-            output_format_prompt = prompts.get_mode_output_format_prompt_by_id(
-                chat_mode_id
-            )
-        elif chat_settings and chat_settings.premium_mode:
-            logger.debug(f"Using premium mode prompt: {chat_settings.premium_mode}")
-            mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
-            output_format_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
-        else:
-            logger.debug(f"Using normal mode prompt")
-            mode_prompt = self._get_effective_mode_prompt()
-            output_format_prompt = self._get_effective_output_format_prompt()
-        if mode_prompt:
-            rendered_mode_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=mode_prompt, char=self.name, user=user_name
-            )
-            system_messages.append(SystemMessage(content=rendered_mode_prompt))
-        if include_output_format_prompt and output_format_prompt:
-            rendered_output_format_prompt = (
-                prompt_template.render_prompt_jinja2_template(
-                    tmpl=output_format_prompt, char=self.name, user=user_name
-                )
-            )
-            system_messages.append(SystemMessage(content=rendered_output_format_prompt))
-
-        if chat_settings and chat_settings.style_prompt:
-            logger.debug(
-                f"Using style prompt: {chat_settings.style_prompt} for agent: {self.agent_id} user: {user_name}"
-            )
-            system_messages.append(SystemMessage(content=chat_settings.style_prompt))
-
-        if user_profile:
-            system_messages.append(SystemMessage(content=user_profile))
-
-        if (
-            user_time_context
-            and global_config.app.features.experimental_enable_chat_with_user_time_context
-        ):
-            user_time_context_prompt = _build_user_time_context_prompt(
-                user_time_context
-            )
-            if user_time_context_prompt:
-                system_messages.append(SystemMessage(content=user_time_context_prompt))
-
-        if global_config.agent.enable_christmas_prompt:
-            rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
-            )
-            system_messages.append(SystemMessage(content=rendered_prompt))
-
-        if self.intro:
-            system_messages.append(
-                SystemMessage(
-                    content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
-                    + self.intro
-                )
-            )
-
-        if self._is_intellimate_official():
-            # Keep rename guidance explicit so old history can be normalized.
-            system_messages.append(
-                SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
-            )
-            system_messages.append(
-                SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
-            )
-
-        return system_messages
+        return build_system_messages(
+            context=self._build_clean_prompt_context(),
+            request=self._build_clean_prompt_input(
+                user_profile=user_profile,
+                chat_settings=chat_settings,
+                user_time_context=user_time_context,
+                include_output_format_prompt=include_output_format_prompt,
+            ),
+        )
 
     def build_system_messages_for_intellimate_official_assistant(
         self,
@@ -607,48 +572,19 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
     ) -> List[SystemMessage]:
         """构建官方 IntelliMate 助手的系统消息列表；与 build_system_messages 在官方角色时的组装顺序一致，不含 main/mode prompt。"""
-        user_name = self._extract_user_name_from_profile(user_profile)
-        system_messages: List[SystemMessage] = []
-
-        character_messages = self._build_character_context(user_name=user_name)
-        system_messages.extend(character_messages)
-
-        if chat_settings and chat_settings.style_prompt:
-            system_messages.append(SystemMessage(content=chat_settings.style_prompt))
-
-        if user_profile:
-            system_messages.append(SystemMessage(content=user_profile))
-
-        if (
-            user_time_context
-            and global_config.app.features.experimental_enable_chat_with_user_time_context
-        ):
-            user_time_context_prompt = _build_user_time_context_prompt(
-                user_time_context
-            )
-            if user_time_context_prompt:
-                system_messages.append(SystemMessage(content=user_time_context_prompt))
-
-        if global_config.agent.enable_christmas_prompt:
-            rendered_prompt = prompt_template.render_prompt_jinja2_template(
-                tmpl=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, char=self.name, user=user_name
-            )
-            system_messages.append(SystemMessage(content=rendered_prompt))
-
-        system_messages.append(
-            SystemMessage(
-                content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
-                + self.intro
-            )
-        )
-        system_messages.append(
-            SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
-        )
-        system_messages.append(
-            SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
+        from app.core.agent.clean_prompt_system import (
+            build_system_messages_for_official_assistant,
         )
 
-        return system_messages
+        return build_system_messages_for_official_assistant(
+            context=self._build_clean_prompt_context(),
+            request=self._build_clean_prompt_input(
+                user_profile=user_profile,
+                chat_settings=chat_settings,
+                user_time_context=user_time_context,
+                include_output_format_prompt=True,
+            ),
+        )
 
     def _build_system_messages_for_chat(
         self,
