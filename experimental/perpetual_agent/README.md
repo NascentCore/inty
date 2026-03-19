@@ -1,8 +1,11 @@
 # Perpetual Agent Demo
 
-Minimal perpetual agent demo with two tools: `pulse` and `call_user`.
+This directory now contains **two** perpetual-agent prototypes:
 
-## Behavior
+1. `pulse` mode: perpetual loop demo with `pulse` and `call_user` tools.
+2. `living` mode: a virtual AI companion that orchestrates different model tiers, proactively reaches out over multiple channels, adapts expression from emotional cues, and ages using a configurable virtual clock ratio.
+
+## Pulse mode behavior
 
 1. The agent runs in a loop (`max_steps` for demo safety).
 2. If the model calls `pulse(seconds)`, the tool:
@@ -13,27 +16,65 @@ Minimal perpetual agent demo with two tools: `pulse` and `call_user`.
 4. `call_user` places an outbound Twilio call and injects TwiML `<Connect><Stream ... /></Connect>` to bridge call audio to your Gemini Live bridge websocket.
 5. The pulse counter is injected into the system message on every step.
 
-## Run
+## Living companion behavior
+
+`living` mode simulates:
+
+- **Model orchestration**:
+  - Fast tier for routine text turns.
+  - Reasoning tier for analysis-heavy turns.
+  - Multimodal tier for voice-call style interactions.
+- **Proactive communication** via channel abstraction:
+  - `email`
+  - `sms`
+  - `voice_call`
+- **Emotion-driven expression**:
+  - Emotional cues in user text update the companion emotion and outward expression.
+- **Virtual aging**:
+  - `clock_rate=10` means the companion ages 10x faster than world time.
+  - `clock_rate=0.1` means aging is slowed to 0.1x.
+
+## Run living mode (default)
 
 From repo root:
 
 ```bash
 python -m experimental.perpetual_agent.main \
+  --mode living \
+  --clock-rate 10 \
+  --initial-virtual-age-years 2 \
+  --user-message "I feel lonely tonight. Can you text me?" \
+  --user-message "Please call me and help me think through tomorrow." \
+  --user-message "Email me a reflective summary."
+```
+
+Useful flags:
+
+- `--proactive-interval-seconds`: idle interval before autonomous outreach
+- `--tick-seconds`: simulated world-time elapsed between user turns
+- `--user-contact`: destination string used by the channel transport
+
+## Run pulse mode
+
+```bash
+python -m experimental.perpetual_agent.main \
+  --mode pulse \
   --user-prompt "Run in a loop. Use pulse." \
   --model "z-ai/glm-4.5-air:free" \
   --max-steps 5
 ```
 
-Call flow demo prompt:
+Pulse mode requires:
+
+Call-flow demo prompt:
 
 ```bash
 python -m experimental.perpetual_agent.main \
+  --mode pulse \
   --user-prompt "Call me at +14155550123 and check in on me." \
   --model "z-ai/glm-4.5-air:free" \
   --max-steps 1
 ```
-
-Requires:
 
 - `OPENROUTER_API_KEY` in environment (or pass a different `--api-key-env`)
 - OpenAI-compatible endpoint (default: OpenRouter)
