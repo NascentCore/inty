@@ -100,7 +100,9 @@ export const LlmMonthlyBillingPage: React.FC = () => {
   );
 
   useEffect(() => {
-    setSelectedModelIds((prev) => prev.filter((modelId) => pricingMap.has(modelId)));
+    setSelectedModelIds((prev) =>
+      prev.filter((modelId) => pricingMap.has(modelId)),
+    );
   }, [pricingMap]);
 
   const canConfirmUsage = isUsageDataValid(usageDraft);
@@ -238,7 +240,8 @@ export const LlmMonthlyBillingPage: React.FC = () => {
           大模型月度账单计算器（TypeScript Web UI）
         </Title>
         <Text type="secondary">
-          流程固定：先输入用量数据，再选择 1 个或多个模型，最后计算各模型分项费用。
+          流程固定：先输入用量数据，再选择 1
+          个或多个模型，最后计算各模型分项费用。
         </Text>
 
         <Divider />
@@ -298,7 +301,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
           </Row>
 
           <Space style={{ marginTop: 16 }}>
-            <Button type="primary" onClick={handleConfirmUsage} disabled={!canConfirmUsage}>
+            <Button
+              type="primary"
+              onClick={handleConfirmUsage}
+              disabled={!canConfirmUsage}
+            >
               确认用量并进入模型选择
             </Button>
             {confirmedUsage ? (
@@ -309,7 +316,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
           </Space>
         </Card>
 
-        <Card title="模型定价录入（手动）" size="small" style={{ marginBottom: 16 }}>
+        <Card
+          title="模型定价录入（手动）"
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
           <Space direction="vertical" style={{ width: "100%" }} size={12}>
             {pricingRows.map((row) => (
               <Card key={row.rowId} size="small">
@@ -319,7 +330,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
                     <Input
                       value={row.modelId}
                       onChange={(event) =>
-                        updatePricingRow(row.rowId, "modelId", event.target.value)
+                        updatePricingRow(
+                          row.rowId,
+                          "modelId",
+                          event.target.value,
+                        )
                       }
                       placeholder="例如：gpt-4o-mini"
                     />
@@ -341,7 +356,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
                       min={0}
                       value={row.outputPerMillionUsd}
                       onChange={(value) =>
-                        updatePricingRow(row.rowId, "outputPerMillionUsd", value)
+                        updatePricingRow(
+                          row.rowId,
+                          "outputPerMillionUsd",
+                          value,
+                        )
                       }
                       style={{ width: "100%" }}
                     />
@@ -352,7 +371,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
                       min={0}
                       value={row.cacheReadPerMillionUsd}
                       onChange={(value) =>
-                        updatePricingRow(row.rowId, "cacheReadPerMillionUsd", value)
+                        updatePricingRow(
+                          row.rowId,
+                          "cacheReadPerMillionUsd",
+                          value,
+                        )
                       }
                       style={{ width: "100%" }}
                     />
@@ -363,7 +386,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
                       min={0}
                       value={row.cacheWritePerMillionUsd}
                       onChange={(value) =>
-                        updatePricingRow(row.rowId, "cacheWritePerMillionUsd", value)
+                        updatePricingRow(
+                          row.rowId,
+                          "cacheWritePerMillionUsd",
+                          value,
+                        )
                       }
                       style={{ width: "100%" }}
                     />
@@ -411,7 +438,11 @@ export const LlmMonthlyBillingPage: React.FC = () => {
               style={{ width: "100%" }}
             />
 
-            <Button type="primary" onClick={handleCalculate} disabled={!canCalculate}>
+            <Button
+              type="primary"
+              onClick={handleCalculate}
+              disabled={!canCalculate}
+            >
               计算各类模型月度账单
             </Button>
           </Space>

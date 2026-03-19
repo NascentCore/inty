@@ -87,7 +87,11 @@ describe("monthlyBillingCalculator", () => {
       },
     ]);
 
-    const bills = calculateMonthlyBills(usage, ["gpt-4o-mini", "gemini-2.5-flash"], pricingMap);
+    const bills = calculateMonthlyBills(
+      usage,
+      ["gpt-4o-mini", "gemini-2.5-flash"],
+      pricingMap,
+    );
     expect(bills).toEqual([
       {
         modelId: "gpt-4o-mini",

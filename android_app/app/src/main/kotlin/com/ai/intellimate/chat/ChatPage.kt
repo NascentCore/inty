@@ -701,9 +701,7 @@ internal fun ChatPage(
                             navController.popBackStack()
                             chatViewModel.clearAgent()
                         },
-                        onAgentDetail = {
-                            navController.navigate(Routes.Home.agentInfPage(it))
-                        },
+                        onAgentDetail = { navController.navigate(Routes.Home.agentInfPage(it)) },
                         onClickChatMode = {
                             FirebaseManager.Events.CHAT_MODE_BUTTON_CLICK.logEvent(
                                 "agent_id" to agent?.agentId,
