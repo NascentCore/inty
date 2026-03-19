@@ -69,13 +69,11 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 
 1. 【已自动化】[每日构建并上传 AAB 到内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
    测试发布负责人不需要检查这个，如有问题联系 @亚雄
-2. 【手动完成】打开 Google Play 下载内测轨道版本，确保能看到自己打开的 Internal Tester 版本
+2. 【手动完成】打开 Google Play 更新内测轨道版本，确保能看到自己打开的 Internal Tester 版本
 
    <img width="200" height="696" alt="image" src="https://github.com/user-attachments/assets/bdde0572-bf2d-473b-9865-cbaca556af4c" />
    <img width="200" height="694" alt="image" src="https://github.com/user-attachments/assets/7a2cb850-dfc4-4d74-b238-59bcd95a1248" />
-
 3. 【手动测试】使用下面的测试账户来测试 App 各项功能
-
    ```text
    test@sxwl.ai
    sxwltest
@@ -88,7 +86,6 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
    <img width="600" height="1288" alt="image" src="https://github.com/user-attachments/assets/89c1d846-ab5c-4d74-b1ee-8c935d7916d0" />
 
    1. 参考 [Change logs](/android_app/docs/CHANGE_LOGS.md) 找到距离上次发布依赖的改动，填写 release notes
-
 5. 审核通过后，正式发布
 6. 完成后使用非内测账户检查 Google Play 商店打开 https://play.google.com/store/apps/details?id=com.ai.intellimate 确认版本可见
 7. 发布完成后，需要把后端用于版本检查的 `current_version_code` 更新到最新 app version code：
