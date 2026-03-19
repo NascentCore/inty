@@ -2,12 +2,12 @@
 
 ## Goal
 
-Add a review-only clean agent prompts system that:
+Add a clean agent prompts system that:
 
 1. Matches current `app/core/agent/agent.py` prompt + official assistant tool-loop behavior.
 2. Avoids DB access inside the agent tool loop.
 3. Uses dependency passing and structured types at calling boundaries.
-4. Does **not** change current production behavior until explicit integration.
+4. Supports gradual integration into production behavior with clear boundaries.
 
 ## Current system summary (existing behavior)
 
@@ -24,7 +24,7 @@ Add a review-only clean agent prompts system that:
 - Existing `save_user_mbti_type` implementation writes DB in loop.
 - Existing service call chain largely passes `dict` payloads (`agent_data`).
 
-## New review-only clean implementation
+## New clean implementation
 
 ### New files
 
@@ -59,9 +59,16 @@ The clean module keeps:
 - same MBTI argument validation semantics
 - same tool loop max-round behavior and injected system-message insertion logic
 
-## Integration plan (later, after review)
+## Integration status
+
+### Integrated in production
+
+1. `Agent.build_system_messages` now delegates to `clean_prompt_system.build_system_messages`.
+2. `Agent.build_system_messages_for_intellimate_official_assistant` now delegates to `clean_prompt_system.build_system_messages_for_official_assistant`.
+3. Existing production call sites that invoke `Agent._build_system_messages_for_chat` now run through the clean prompt assembly API.
+
+### Remaining integration items
 
 1. Replace dict-based `agent_data` fetch path with `get_agent_for_chat_structured`.
-2. Convert current chat loop to call clean prompt assembly and tool-loop module.
-3. Wire side-effect persistence at orchestration boundary (outside loop).
-4. Keep old path behind a temporary fallback switch until parity verification is complete.
+2. Convert current official assistant tool loop to call `clean_prompt_system.resolve_official_assistant_tool_calls`.
+3. Wire MBTI side-effect persistence at orchestration boundary (outside loop) once clean tool-loop is enabled.
