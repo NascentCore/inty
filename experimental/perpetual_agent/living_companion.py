@@ -139,7 +139,9 @@ class CompanionState:
     def advance_age(self, *, now: float) -> None:
         elapsed_world_seconds = max(0.0, now - self.last_world_timestamp)
         elapsed_virtual_seconds = elapsed_world_seconds * self.clock_rate
-        self.virtual_age_years += elapsed_virtual_seconds / self.seconds_per_virtual_year
+        self.virtual_age_years += (
+            elapsed_virtual_seconds / self.seconds_per_virtual_year
+        )
         self.last_world_timestamp = now
 
 
@@ -166,7 +168,11 @@ def select_channel(user_message: str | None) -> ChannelType:
     normalized = user_message.lower()
     if "email" in normalized or "mail me" in normalized:
         return ChannelType.EMAIL
-    if "call me" in normalized or "voice call" in normalized or "phone me" in normalized:
+    if (
+        "call me" in normalized
+        or "voice call" in normalized
+        or "phone me" in normalized
+    ):
         return ChannelType.VOICE_CALL
     return ChannelType.SMS
 
@@ -178,11 +184,14 @@ def select_model_tier(*, user_message: str | None, channel: ChannelType) -> Mode
         return ModelTier.FAST
     normalized = user_message.lower()
     requires_reasoning = any(
-        token in normalized for token in ("why", "analyze", "plan", "compare", "strategy")
+        token in normalized
+        for token in ("why", "analyze", "plan", "compare", "strategy")
     )
     if requires_reasoning or len(normalized) > 220:
         return ModelTier.REASONING
-    needs_multimodal = any(token in normalized for token in ("image", "video", "see", "look"))
+    needs_multimodal = any(
+        token in normalized for token in ("image", "video", "see", "look")
+    )
     if needs_multimodal:
         return ModelTier.MULTIMODAL
     return ModelTier.FAST
@@ -204,7 +213,9 @@ class PerpetualCompanionAgent:
     channel_transport: ChannelTransport
     proactive_interval_seconds: float = 300.0
 
-    def tick(self, *, now: float, user_message: str | None = None) -> list[OutboundEvent]:
+    def tick(
+        self, *, now: float, user_message: str | None = None
+    ) -> list[OutboundEvent]:
         self.state.advance_age(now=now)
         if user_message is not None:
             return [self._handle_user_turn(now=now, user_message=user_message)]
@@ -247,7 +258,9 @@ class PerpetualCompanionAgent:
         if (now - self.state.last_outreach_timestamp) < self.proactive_interval_seconds:
             return []
         channel = ChannelType.SMS
-        tier = ModelTier.MULTIMODAL if self.state.emotion == "joyful" else ModelTier.FAST
+        tier = (
+            ModelTier.MULTIMODAL if self.state.emotion == "joyful" else ModelTier.FAST
+        )
         model = pick_model_from_tier(self.model_catalog, tier)
         content = self.model_executor.generate(
             model=model,

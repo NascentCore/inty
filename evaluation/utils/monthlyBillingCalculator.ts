@@ -8,65 +8,70 @@
  * - 对外提供纯函数，便于页面复用与 vitest 校验
  */
 
-export const TOKENS_PER_MILLION = 1_000_000
+export const TOKENS_PER_MILLION = 1_000_000;
 
 export interface MonthlyUsageData {
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
 }
 
 export interface ModelPricingData {
-  modelId: string
-  inputPerMillionUsd: number
-  outputPerMillionUsd: number
-  cacheReadPerMillionUsd: number
-  cacheWritePerMillionUsd: number
+  modelId: string;
+  inputPerMillionUsd: number;
+  outputPerMillionUsd: number;
+  cacheReadPerMillionUsd: number;
+  cacheWritePerMillionUsd: number;
 }
 
 export interface ModelMonthlyBill {
-  modelId: string
-  inputCostUsd: number
-  outputCostUsd: number
-  cacheReadCostUsd: number
-  cacheWriteCostUsd: number
-  totalCostUsd: number
+  modelId: string;
+  inputCostUsd: number;
+  outputCostUsd: number;
+  cacheReadCostUsd: number;
+  cacheWriteCostUsd: number;
+  totalCostUsd: number;
 }
 
-export const roundUsd = (value: number): number => Math.round(value * 1_000_000) / 1_000_000
+export const roundUsd = (value: number): number =>
+  Math.round(value * 1_000_000) / 1_000_000;
 
 export const isUsageDataValid = (usage: MonthlyUsageData): boolean =>
   usage.inputTokens >= 0 &&
   usage.outputTokens >= 0 &&
   usage.cacheReadTokens >= 0 &&
-  usage.cacheWriteTokens >= 0
+  usage.cacheWriteTokens >= 0;
 
-export const findDuplicateModelIds = (pricings: ModelPricingData[]): string[] => {
-  const counts = new Map<string, number>()
+export const findDuplicateModelIds = (
+  pricings: ModelPricingData[],
+): string[] => {
+  const counts = new Map<string, number>();
   for (const pricing of pricings) {
-    const modelId = pricing.modelId.trim()
-    if (!modelId) continue
-    counts.set(modelId, (counts.get(modelId) ?? 0) + 1)
+    const modelId = pricing.modelId.trim();
+    if (!modelId) continue;
+    counts.set(modelId, (counts.get(modelId) ?? 0) + 1);
   }
   return Array.from(counts.entries())
     .filter(([, count]) => count > 1)
-    .map(([modelId]) => modelId)
-}
+    .map(([modelId]) => modelId);
+};
 
-export const toPricingMap = (pricings: ModelPricingData[]): Map<string, ModelPricingData> => {
-  const duplicates = findDuplicateModelIds(pricings)
+export const toPricingMap = (
+  pricings: ModelPricingData[],
+): Map<string, ModelPricingData> => {
+  const duplicates = findDuplicateModelIds(pricings);
   if (duplicates.length > 0) {
-    throw new Error(`模型标识重复: ${duplicates.join(", ")}`)
+    throw new Error(`模型标识重复: ${duplicates.join(", ")}`);
   }
-  const map = new Map<string, ModelPricingData>()
+  const map = new Map<string, ModelPricingData>();
   for (const pricing of pricings) {
-    const modelId = pricing.modelId.trim()
-    if (!modelId) continue
-    map.set(modelId, { ...pricing, modelId })
+    const modelId = pricing.modelId.trim();
+    if (!modelId) continue;
+    map.set(modelId, { ...pricing, modelId });
   }
-  return map
-}
+  return map;
+};
 
 export const calculateModelBill = (
   usage: MonthlyUsageData,
@@ -74,19 +79,21 @@ export const calculateModelBill = (
 ): ModelMonthlyBill => {
   const inputCostUsd = roundUsd(
     (usage.inputTokens / TOKENS_PER_MILLION) * pricing.inputPerMillionUsd,
-  )
+  );
   const outputCostUsd = roundUsd(
     (usage.outputTokens / TOKENS_PER_MILLION) * pricing.outputPerMillionUsd,
-  )
+  );
   const cacheReadCostUsd = roundUsd(
-    (usage.cacheReadTokens / TOKENS_PER_MILLION) * pricing.cacheReadPerMillionUsd,
-  )
+    (usage.cacheReadTokens / TOKENS_PER_MILLION) *
+      pricing.cacheReadPerMillionUsd,
+  );
   const cacheWriteCostUsd = roundUsd(
-    (usage.cacheWriteTokens / TOKENS_PER_MILLION) * pricing.cacheWritePerMillionUsd,
-  )
+    (usage.cacheWriteTokens / TOKENS_PER_MILLION) *
+      pricing.cacheWritePerMillionUsd,
+  );
   const totalCostUsd = roundUsd(
     inputCostUsd + outputCostUsd + cacheReadCostUsd + cacheWriteCostUsd,
-  )
+  );
   return {
     modelId: pricing.modelId,
     inputCostUsd,
@@ -94,8 +101,8 @@ export const calculateModelBill = (
     cacheReadCostUsd,
     cacheWriteCostUsd,
     totalCostUsd,
-  }
-}
+  };
+};
 
 export const calculateMonthlyBills = (
   usage: MonthlyUsageData,
@@ -103,12 +110,13 @@ export const calculateMonthlyBills = (
   pricingMap: Map<string, ModelPricingData>,
 ): ModelMonthlyBill[] =>
   selectedModelIds.map((modelId) => {
-    const pricing = pricingMap.get(modelId)
+    const pricing = pricingMap.get(modelId);
     if (!pricing) {
-      throw new Error(`未找到模型定价: ${modelId}`)
+      throw new Error(`未找到模型定价: ${modelId}`);
     }
-    return calculateModelBill(usage, pricing)
-  })
+    return calculateModelBill(usage, pricing);
+  });
 
-export const calculateSelectedModelsTotal = (bills: ModelMonthlyBill[]): number =>
-  roundUsd(bills.reduce((sum, bill) => sum + bill.totalCostUsd, 0))
+export const calculateSelectedModelsTotal = (
+  bills: ModelMonthlyBill[],
+): number => roundUsd(bills.reduce((sum, bill) => sum + bill.totalCostUsd, 0));

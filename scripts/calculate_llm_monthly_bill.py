@@ -100,7 +100,9 @@ def parse_model_pricing(pricing_line: str) -> ModelPricing:
         raise ValueError("model_id 不能为空")
 
     input_price = _require_non_negative_float(float(parts[1]), "input_per_million_usd")
-    output_price = _require_non_negative_float(float(parts[2]), "output_per_million_usd")
+    output_price = _require_non_negative_float(
+        float(parts[2]), "output_per_million_usd"
+    )
     if len(parts) == 3:
         cache_read_price = 0.0
         cache_write_price = 0.0
@@ -255,7 +257,9 @@ def _collect_models_interactively(model_pricings: dict[str, ModelPricing]) -> li
         raw = input("模型> ").strip()
         try:
             selected = _normalize_selected_models([raw])
-            missing = [model_id for model_id in selected if model_id not in model_pricings]
+            missing = [
+                model_id for model_id in selected if model_id not in model_pricings
+            ]
             if missing:
                 print(f"以下模型不存在: {', '.join(missing)}")
                 continue
@@ -345,7 +349,9 @@ def _write_output_json(
     payload = {
         "usage": asdict(usage),
         "bills": [asdict(item) for item in bills],
-        "selected_models_total_usd": round(sum(item.total_cost_usd for item in bills), 6),
+        "selected_models_total_usd": round(
+            sum(item.total_cost_usd for item in bills), 6
+        ),
     }
     output_path = Path(output_json)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -382,11 +388,15 @@ def main(
     ] = None,
     usage_cache_read_tokens: Annotated[
         int | None,
-        cyclopts.Parameter(name="--usage-cache-read-tokens", help="月缓存读 token 用量"),
+        cyclopts.Parameter(
+            name="--usage-cache-read-tokens", help="月缓存读 token 用量"
+        ),
     ] = None,
     usage_cache_write_tokens: Annotated[
         int | None,
-        cyclopts.Parameter(name="--usage-cache-write-tokens", help="月缓存写 token 用量"),
+        cyclopts.Parameter(
+            name="--usage-cache-write-tokens", help="月缓存写 token 用量"
+        ),
     ] = None,
     select_model: Annotated[
         list[str] | None,
