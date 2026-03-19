@@ -395,6 +395,10 @@ class ChatViewModel : BaseVM() {
         loadChatVoiceOptionsIfNeeded()
     }
 
+    fun clearAgent() {
+        _agentId.value = null
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun checkVipAgentUnlock() {
 
