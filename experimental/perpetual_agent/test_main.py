@@ -95,6 +95,27 @@ def _layer_names_for_call(messages: list[dict[str, object]]) -> list[str]:
     return layer_names
 
 
+def _layer_nesting_levels_for_call(messages: list[dict[str, object]]) -> dict[str, int]:
+    nesting_levels: dict[str, int] = {}
+    for message in messages:
+        if message.get("role") != "system":
+            continue
+        content = str(message.get("content", ""))
+        if not content.startswith("[character_layer name="):
+            continue
+        first_line = content.splitlines()[0]
+        name_fragment = first_line.split("name=", maxsplit=1)[1]
+        layer_name = name_fragment.split(" ", maxsplit=1)[0].strip("]")
+        match = main.re.search(r"nesting_level=(\d+)", first_line)
+        assert match is not None
+        nesting_levels[layer_name] = int(match.group(1))
+    return nesting_levels
+
+
+def _tool_messages_for_call(messages: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [message for message in messages if message.get("role") == "tool"]
+
+
 class _FakeTelegramBotApi:
     def __init__(self, polled_messages: list[list[tuple[int, str, str]]]):
         self._polled_messages = polled_messages
@@ -364,10 +385,27 @@ def test_compacting_recent_conversation_inserts_new_layer_before_conversation() 
         "night_reflection",
         "conversation",
     ]
+    third_call_layer_levels = _layer_nesting_levels_for_call(
+        fake_client.seen_messages_per_call[2]
+    )
+    assert third_call_layer_levels == {
+        "fundamental_identity": 0,
+        "interaction_style": 0,
+        "night_reflection": 1,
+        "conversation": 0,
+    }
 
     third_call_tools = fake_client.seen_tool_names_per_call[2]
     assert "update_layer_night_reflection" in third_call_tools
     assert "update_layer_conversation" not in third_call_tools
+    compact_tool_message = next(
+        message
+        for message in _tool_messages_for_call(fake_client.seen_messages_per_call[2])
+        if str(message.get("name")) == "compact_recent_conversation_into_layer"
+    )
+    compact_tool_payload = json.loads(str(compact_tool_message["content"]))
+    assert compact_tool_payload["created_layer_nesting_level"] == 1
+    assert len(compact_tool_payload["raw_compacted_messages"]) == 2
 
 
 def test_layer_rename_rejects_normalized_name_collision() -> None:
@@ -530,3 +568,82 @@ def test_repeated_compaction_in_same_turn_preserves_all_tool_results() -> None:
     ]
     assert tool_message_ids.count("compact-1") == 1
     assert tool_message_ids.count("compact-2") == 1
+
+
+def test_named_layer_compaction_increases_nesting_level_and_preserves_raw_messages() -> None:
+    layers = main._build_default_character_layers()
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_a",
+            content="first compacted memory",
+            nesting_level=1,
+            raw_messages=[{"role": "user", "content": "raw-a"}],
+        ),
+    )
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_b",
+            content="second compacted memory",
+            nesting_level=1,
+            raw_messages=[
+                {"role": "assistant", "content": "raw-b-1"},
+                {"role": "assistant", "content": "raw-b-2"},
+            ],
+        ),
+    )
+
+    output = main._execute_compact_named_layers_tool(
+        layers=layers,
+        layer_name="merged_memory",
+        layer_content="merged content",
+        source_layer_names=["memory_a", "memory_b"],
+    )
+
+    assert output["created_layer_nesting_level"] == 2
+    assert output["compacted_source_nesting_level"] == 1
+    assert output["compacted_layer_names"] == ["memory_a", "memory_b"]
+    assert output["raw_source_message_count"] == 3
+    merged_layer = next(layer for layer in layers if layer.name == "merged_memory")
+    assert merged_layer.nesting_level == 2
+    assert merged_layer.raw_messages == [
+        {"role": "user", "content": "raw-a"},
+        {"role": "assistant", "content": "raw-b-1"},
+        {"role": "assistant", "content": "raw-b-2"},
+    ]
+
+
+def test_named_layer_compaction_rejects_mixed_nesting_levels() -> None:
+    layers = main._build_default_character_layers()
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_a",
+            content="first compacted memory",
+            nesting_level=1,
+            raw_messages=[{"role": "user", "content": "raw-a"}],
+        ),
+    )
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_b",
+            content="second compacted memory",
+            nesting_level=2,
+            raw_messages=[{"role": "assistant", "content": "raw-b"}],
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Named-layer compaction requires all source layers to share the same nesting_level."
+        ),
+    ):
+        main._execute_compact_named_layers_tool(
+            layers=layers,
+            layer_name="merged_memory",
+            layer_content="merged content",
+            source_layer_names=["memory_a", "memory_b"],
+        )
