@@ -216,6 +216,17 @@ def _validate_character_layers(layers: list[CharacterLayer]) -> None:
         raise ValueError("Exactly one conversation layer is required.")
     if not layers[-1].is_conversation_layer:
         raise ValueError("Conversation layer must be the shallowest (last) layer.")
+    normalized_non_conversation_names = [
+        _normalize_layer_name(layer.name)
+        for layer in layers
+        if not layer.is_conversation_layer
+    ]
+    if len(normalized_non_conversation_names) != len(
+        set(normalized_non_conversation_names)
+    ):
+        raise ValueError(
+            "Duplicate non-conversation layer names are not allowed after normalization."
+        )
 
 
 def _render_layer_message(layer: CharacterLayer) -> str:
@@ -262,18 +273,37 @@ def _execute_layer_update_tool(
     layer = _find_layer_by_update_tool_name(layers=layers, tool_name=tool_name)
     if layer is None:
         raise ValueError(f"Unsupported layer update tool call: {tool_name}")
-    updated_name = layer.name
     if rename_to is not None:
-        updated_name = _normalize_layer_name(rename_to)
-        if updated_name == "conversation":
+        normalized_updated_name = _normalize_layer_name(rename_to)
+        if normalized_updated_name == "conversation":
             raise ValueError("Only the shallow conversation layer may be named conversation.")
-        layer.name = updated_name
+        for existing_layer in layers:
+            if existing_layer is layer or existing_layer.is_conversation_layer:
+                continue
+            if _normalize_layer_name(existing_layer.name) == normalized_updated_name:
+                raise ValueError(
+                    "Layer rename would collide with an existing layer name after normalization."
+                )
+        layer.name = normalized_updated_name
+    _validate_character_layers(layers)
     layer.content = content
     return {
         "updated_layer_name": layer.name,
         "updated_layer_tool_name": _layer_update_tool_name(layer.name),
         "layer_content": layer.content,
     }
+
+
+def _ensure_unique_compacted_layer_name(
+    *, layers: list[CharacterLayer], normalized_layer_name: str
+) -> None:
+    for layer in layers:
+        if layer.is_conversation_layer:
+            continue
+        if _normalize_layer_name(layer.name) == normalized_layer_name:
+            raise ValueError(
+                "Compacted layer name collides with an existing layer after normalization."
+            )
 
 
 def _extract_message_preview(message: dict[str, Any]) -> str:
@@ -303,6 +333,9 @@ def _execute_compact_conversation_layer_tool(
     normalized_name = _normalize_layer_name(layer_name)
     if normalized_name == "conversation":
         raise ValueError("Compacted layer name cannot be conversation.")
+    _ensure_unique_compacted_layer_name(
+        layers=layers, normalized_layer_name=normalized_name
+    )
     compacted_slice = conversation_messages[-recent_message_count:]
     del conversation_messages[-recent_message_count:]
 
@@ -315,6 +348,7 @@ def _execute_compact_conversation_layer_tool(
     )
     conversation_layer_index = len(layers) - 1
     layers.insert(conversation_layer_index, compacted_layer)
+    _validate_character_layers(layers)
     return {
         "created_layer_name": compacted_layer.name,
         "created_layer_tool_name": _layer_update_tool_name(compacted_layer.name),

@@ -4,6 +4,8 @@ import json
 import urllib.parse
 from types import SimpleNamespace
 
+import pytest
+
 from experimental.perpetual_agent import main
 
 
@@ -359,3 +361,37 @@ def test_compacting_recent_conversation_inserts_new_layer_before_conversation() 
     second_call_tools = fake_client.seen_tool_names_per_call[1]
     assert "update_layer_night_reflection" in second_call_tools
     assert "update_layer_conversation" not in second_call_tools
+
+
+def test_layer_rename_rejects_normalized_name_collision() -> None:
+    layers = main._build_default_character_layers()
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Layer rename would collide with an existing layer name after normalization."
+        ),
+    ):
+        main._execute_layer_update_tool(
+            layers=layers,
+            tool_name="update_layer_fundamental_identity",
+            content="keep content",
+            rename_to="interaction style",
+        )
+
+
+def test_compaction_rejects_normalized_name_collision() -> None:
+    layers = main._build_default_character_layers()
+    conversation_messages = [{"role": "user", "content": "hello"}]
+
+    with pytest.raises(
+        ValueError,
+        match="Compacted layer name collides with an existing layer after normalization.",
+    ):
+        main._execute_compact_conversation_layer_tool(
+            layers=layers,
+            conversation_messages=conversation_messages,
+            layer_name="interaction style",
+            layer_content="summary",
+            recent_message_count=1,
+        )
