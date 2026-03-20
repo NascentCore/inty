@@ -405,7 +405,9 @@ def test_compacting_recent_conversation_inserts_new_layer_before_conversation() 
     )
     compact_tool_payload = json.loads(str(compact_tool_message["content"]))
     assert compact_tool_payload["created_layer_nesting_level"] == 1
-    assert len(compact_tool_payload["raw_compacted_messages"]) == 2
+    assert compact_tool_payload["raw_compacted_message_count"] == 2
+    assert compact_tool_payload["raw_compacted_messages_omitted"] is True
+    assert "raw_compacted_messages" not in compact_tool_payload
 
 
 def test_layer_rename_rejects_normalized_name_collision() -> None:
@@ -440,6 +442,30 @@ def test_compaction_rejects_normalized_name_collision() -> None:
             layer_content="summary",
             recent_message_count=1,
         )
+
+
+def test_direct_conversation_compaction_records_raw_messages() -> None:
+    layers = main._build_default_character_layers()
+    conversation_messages = [
+        {"role": "user", "content": "I need support."},
+        {"role": "assistant", "content": "I am here with you."},
+    ]
+
+    output = main._execute_compact_conversation_layer_tool(
+        layers=layers,
+        conversation_messages=conversation_messages,
+        layer_name="support_memory",
+        layer_content="Compacted support exchange.",
+        recent_message_count=2,
+    )
+
+    assert output["created_layer_nesting_level"] == 1
+    assert len(output["raw_compacted_messages"]) == 2
+    created_layer = next(layer for layer in layers if layer.name == "support_memory")
+    assert created_layer.raw_messages == [
+        {"role": "user", "content": "I need support."},
+        {"role": "assistant", "content": "I am here with you."},
+    ]
 
 
 def test_compaction_rejects_current_tool_call_envelope_messages() -> None:
@@ -647,3 +673,102 @@ def test_named_layer_compaction_rejects_mixed_nesting_levels() -> None:
             layer_content="merged content",
             source_layer_names=["memory_a", "memory_b"],
         )
+
+
+def test_named_layer_compaction_rejects_non_contiguous_layers() -> None:
+    layers = main._build_default_character_layers()
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_a",
+            content="first compacted memory",
+            nesting_level=1,
+            raw_messages=[{"role": "user", "content": "raw-a"}],
+        ),
+    )
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_b",
+            content="middle compacted memory",
+            nesting_level=1,
+            raw_messages=[{"role": "assistant", "content": "raw-b"}],
+        ),
+    )
+    layers.insert(
+        len(layers) - 1,
+        main.CharacterLayer(
+            name="memory_c",
+            content="third compacted memory",
+            nesting_level=1,
+            raw_messages=[{"role": "assistant", "content": "raw-c"}],
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Named-layer compaction requires source layers to be contiguous in the layer stack."
+        ),
+    ):
+        main._execute_compact_named_layers_tool(
+            layers=layers,
+            layer_name="merged_memory",
+            layer_content="merged content",
+            source_layer_names=["memory_a", "memory_c"],
+        )
+
+
+def test_run_perpetual_agent_dispatches_named_layer_compaction() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "compact-named-1",
+                    "compact_named_layers_into_layer",
+                    {
+                        "layer_name": "merged_base",
+                        "layer_content": "Merged base memory.",
+                        "source_layer_names": [
+                            "fundamental_identity",
+                            "interaction_style",
+                        ],
+                    },
+                )
+            ),
+            _assistant_response("Named-layer compaction done."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="Please compact your base layers.",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[0])
+    second_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[1])
+    assert first_call_layer_names == [
+        "fundamental_identity",
+        "interaction_style",
+        "conversation",
+    ]
+    assert second_call_layer_names == [
+        "merged_base",
+        "conversation",
+    ]
+    second_call_tools = fake_client.seen_tool_names_per_call[1]
+    assert "update_layer_merged_base" in second_call_tools
+    compact_named_tool_message = next(
+        message
+        for message in _tool_messages_for_call(fake_client.seen_messages_per_call[1])
+        if str(message.get("name")) == "compact_named_layers_into_layer"
+    )
+    compact_named_payload = json.loads(str(compact_named_tool_message["content"]))
+    assert compact_named_payload["created_layer_nesting_level"] == 1
+    assert compact_named_payload["raw_source_message_count"] == 2
+    assert compact_named_payload["raw_source_messages_omitted"] is True
+    assert "raw_source_messages" not in compact_named_payload

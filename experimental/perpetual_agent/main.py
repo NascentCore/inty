@@ -416,6 +416,23 @@ def _extract_layer_preview(layer: CharacterLayer) -> str:
     )
 
 
+def _sanitize_tool_output_for_conversation(
+    *, tool_name: str, tool_output: dict[str, Any]
+) -> dict[str, Any]:
+    sanitized_output = copy.deepcopy(tool_output)
+    if tool_name == "compact_recent_conversation_into_layer":
+        raw_messages = sanitized_output.pop("raw_compacted_messages", None)
+        if isinstance(raw_messages, list):
+            sanitized_output["raw_compacted_message_count"] = len(raw_messages)
+            sanitized_output["raw_compacted_messages_omitted"] = True
+    if tool_name == "compact_named_layers_into_layer":
+        raw_messages = sanitized_output.pop("raw_source_messages", None)
+        if isinstance(raw_messages, list):
+            sanitized_output["raw_source_message_count"] = len(raw_messages)
+            sanitized_output["raw_source_messages_omitted"] = True
+    return sanitized_output
+
+
 def _execute_compact_conversation_layer_tool(
     *,
     layers: list[CharacterLayer],
@@ -506,6 +523,11 @@ def _execute_compact_named_layers_tool(
             raise ValueError(f"Unknown source layer for compaction: {normalized_name}")
         selected_indices.append(index_by_name[normalized_name])
     selected_indices = sorted(selected_indices)
+    for idx in range(1, len(selected_indices)):
+        if selected_indices[idx] != selected_indices[idx - 1] + 1:
+            raise ValueError(
+                "Named-layer compaction requires source layers to be contiguous in the layer stack."
+            )
     selected_layers = [layers[idx] for idx in selected_indices]
 
     source_nesting_levels = {layer.nesting_level for layer in selected_layers}
@@ -829,12 +851,15 @@ def run_perpetual_agent(
                 )
             else:
                 raise ValueError(f"Unsupported tool call: {tool_call.function.name}")
+            tool_output_for_conversation = _sanitize_tool_output_for_conversation(
+                tool_name=tool_call.function.name, tool_output=tool_output
+            )
             conversation_messages.append(
                 {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": tool_call.function.name,
-                    "content": json.dumps(tool_output),
+                    "content": json.dumps(tool_output_for_conversation),
                 }
             )
 
