@@ -6,7 +6,7 @@
 
 - Only user-visible changes are recorded.
 - Changes only affect debug build type's app is not listed.
-- Each feature 1 sentence, be very concise.
+- Write 1 sentence summary, this is for filling in Google Play release notes. And then nested with detailed description.
 
 
 ## 2026-03-12
