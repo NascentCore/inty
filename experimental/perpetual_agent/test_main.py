@@ -55,6 +55,31 @@ class _FakeClient:
         )
 
 
+class _FakeTelegramBotApi:
+    def __init__(self, polled_messages: list[list[tuple[int, str, str]]]):
+        self._polled_messages = polled_messages
+        self.sent_messages: list[tuple[str, str]] = []
+        self.seen_offsets: list[int | None] = []
+        self.seen_timeouts: list[int] = []
+
+    def get_text_messages(self, *, offset, timeout_seconds):  # noqa: ANN001
+        self.seen_offsets.append(offset)
+        self.seen_timeouts.append(timeout_seconds)
+        next_batch = self._polled_messages.pop(0)
+        incoming = [
+            SimpleNamespace(update_id=update_id, chat_id=chat_id, text=text)
+            for update_id, chat_id, text in next_batch
+        ]
+        next_offset = offset
+        if incoming:
+            next_offset = incoming[-1].update_id + 1
+        return incoming, next_offset
+
+    def send_message(self, *, chat_id, text):  # noqa: ANN001
+        self.sent_messages.append((chat_id, text))
+        return {"ok": True}
+
+
 def test_pulse_sleeps_and_counter_updates_system_message(monkeypatch):
     responses = [
         _tool_response(_tool_call("pulse-call-1", "pulse", {"seconds": 2})),
@@ -192,3 +217,32 @@ def test_create_twilio_call_posts_expected_form_data():
     assert encoded["To"] == ["+14155550123"]
     assert '<Stream url="wss://bridge.example/ws">' in encoded["Twiml"][0]
     assert "Call requested by user" in encoded["Twiml"][0]
+
+
+def test_run_living_companion_telegram_loop_handles_inbound_message() -> None:
+    fake_bot_api = _FakeTelegramBotApi(
+        polled_messages=[
+            [(1, "12345", "I feel lonely tonight.")],
+            [],
+        ]
+    )
+    fake_now_values = iter([1000.0, 1010.0])
+
+    main.run_living_companion_telegram_loop(
+        companion_name="Ivy",
+        user_name="Alex",
+        initial_virtual_age_years=2.0,
+        clock_rate=10.0,
+        proactive_interval_seconds=300.0,
+        telegram_bot_token="token123",
+        telegram_chat_id="12345",
+        telegram_poll_timeout_seconds=12,
+        telegram_max_user_turns=1,
+        now_provider=lambda: next(fake_now_values),
+        bot_api=fake_bot_api,  # type: ignore[arg-type]
+    )
+
+    assert fake_bot_api.seen_offsets == [None]
+    assert fake_bot_api.seen_timeouts == [12]
+    assert len(fake_bot_api.sent_messages) == 1
+    assert fake_bot_api.sent_messages[0][0] == "12345"

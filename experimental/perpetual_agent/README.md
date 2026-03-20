@@ -54,6 +54,27 @@ Useful flags:
 - `--tick-seconds`: simulated world-time elapsed between user turns
 - `--user-contact`: destination string used by the channel transport
 
+## Run living mode via Telegram
+
+This mode lets the perpetual companion receive user text from Telegram and reply in the same chat.
+
+```bash
+export TELEGRAM_BOT_TOKEN="<your-bot-token>"
+
+python -m experimental.perpetual_agent.main \
+  --mode living \
+  --telegram \
+  --telegram-chat-id "<chat-id>" \
+  --telegram-max-user-turns 50 \
+  --proactive-interval-seconds 120
+```
+
+Notes:
+
+- If `--telegram-chat-id` is omitted, the first incoming chat message becomes the bound chat.
+- You can set `TELEGRAM_CHAT_ID` in env instead of passing `--telegram-chat-id`.
+- In Telegram mode, the companion's default outbound channel is `telegram`.
+
 ## Run pulse mode
 
 ```bash
