@@ -1108,11 +1108,28 @@ class UserAnalyticsService:
         size: int = 10,
     ) -> Dict[str, Any]:
         """按 user_id + agent_id 分组返回会话与消息详情（分页）"""
+        active_session_ids: Optional[Set[str]] = None
+        if activity_start_date and activity_end_date:
+            # When querying by activity date range, pre-filter to active sessions first.
+            # This avoids loading all historical chats for all users.
+            active_session_ids = await self.get_active_session_ids_on_date(
+                activity_start_date, activity_end_date
+            )
+            if not active_session_ids:
+                return {
+                    "items": [],
+                    "total": 0,
+                    "page": page,
+                    "size": size,
+                    "has_more": False,
+                }
+
         sessions_detail = await self.get_user_sessions_detail(
             register_start_date,
             register_end_date,
             activity_start_date,
             activity_end_date,
+            active_session_ids=active_session_ids,
         )
         if not sessions_detail:
             return {
@@ -1614,12 +1631,13 @@ class UserAnalyticsService:
         session_to_voice_count: Dict[str, int] = {}
 
         for batch in _batch_list(session_ids, self._batch_size):
+            uuid_batch = [uuid.UUID(sid) for sid in batch]
             placeholders = ",".join([f":session_id_{i}" for i in range(len(batch))])
 
             if activity_start_date and activity_end_date:
                 messages_query = text(f"""
                     SELECT
-                        ch.session_id::text as session_id,
+                        ch.session_id as session_id,
                         COUNT(*) FILTER (
                             WHERE ch.message->>'type' = 'human'
                             AND (
@@ -1637,18 +1655,18 @@ class UserAnalyticsService:
                             )
                         ) as voice_message_count
                     FROM chat_history ch
-                    WHERE ch.session_id::text IN ({placeholders})
+                    WHERE ch.session_id IN ({placeholders})
                       AND ch.created_at >= :activity_start_date
                       AND ch.created_at < :activity_end_date
                     GROUP BY ch.session_id
                 """)
-                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+                params = {f"session_id_{i}": sid for i, sid in enumerate(uuid_batch)}
                 params["activity_start_date"] = activity_start_date
                 params["activity_end_date"] = activity_end_date
             else:
                 messages_query = text(f"""
                     SELECT
-                        ch.session_id::text as session_id,
+                        ch.session_id as session_id,
                         COUNT(*) FILTER (
                             WHERE ch.message->>'type' = 'human'
                             AND (
@@ -1666,15 +1684,16 @@ class UserAnalyticsService:
                             )
                         ) as voice_message_count
                     FROM chat_history ch
-                    WHERE ch.session_id::text IN ({placeholders})
+                    WHERE ch.session_id IN ({placeholders})
                     GROUP BY ch.session_id
                 """)
-                params = {f"session_id_{i}": sid for i, sid in enumerate(batch)}
+                params = {f"session_id_{i}": sid for i, sid in enumerate(uuid_batch)}
 
             result = await self.db.execute(messages_query, params)
             for row in result.fetchall():
-                session_to_msg_count[row[0]] = row[1]
-                session_to_voice_count[row[0]] = row[2]
+                session_key = str(row[0])
+                session_to_msg_count[session_key] = row[1]
+                session_to_voice_count[session_key] = row[2]
 
         return session_to_msg_count, session_to_voice_count
 
