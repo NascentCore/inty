@@ -918,6 +918,41 @@ export interface ReportsListResponse {
   total: number;
 }
 
+export interface ReportConversationGroupItem {
+  user_id: string;
+  agent_id: string;
+  agent_name: string | null;
+  chat_count: number;
+  total_rounds: number;
+  latest_message_at: string | null;
+}
+
+export interface ReportConversationGroupsResponse {
+  items: ReportConversationGroupItem[];
+  total: number;
+}
+
+export interface ReportConversationMessageItem {
+  id: number;
+  chat_id: string;
+  message_type: string;
+  content: string | null;
+  image_url: string | null;
+  created_at: string | null;
+  audio_url: string | null;
+  meta_data: Record<string, unknown> | null;
+}
+
+export interface ReportConversationMessagesResponse {
+  user_id: string;
+  agent_id: string;
+  page: number;
+  size: number;
+  total_rounds: number;
+  has_more: boolean;
+  messages: ReportConversationMessageItem[];
+}
+
 // 节日记忆配置与执行
 export interface FestivalMemoryConfigItem {
   id: number;

@@ -12,10 +12,14 @@
 """
 
 import pytest
+import uuid
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.models.chat import Chat
+from app.models.chat_history import ChatHistory
 from app.models.report import Report, ReportStatus, ReportType
 from app.models.user import User
 from tests.app.api.v1.endpoints.conftest import integration_client
@@ -109,6 +113,51 @@ def _set_reporter_profile_for_detail_check(db_session, reporter_id):
     assert db_user is not None
     db_user.nickname = "ReportDetailTester"
     db_user.email = "report-detail-tester@example.com"
+    db_session.commit()
+
+
+def _seed_chat_rounds(
+    db_session,
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str,
+    rounds: int,
+    start_at: datetime,
+) -> None:
+    db_session.add(
+        Chat(
+            id=chat_id,
+            user_id=user_id,
+            agent_id=agent_id,
+            is_active=True,
+        )
+    )
+    session_id = uuid.uuid5(uuid.NAMESPACE_DNS, chat_id)
+    current_time = start_at
+    for index in range(rounds):
+        db_session.add(
+            ChatHistory(
+                session_id=session_id,
+                message={
+                    "type": "human",
+                    "data": {"content": f"user-{index}"},
+                },
+                created_at=current_time,
+            )
+        )
+        current_time += timedelta(seconds=1)
+        db_session.add(
+            ChatHistory(
+                session_id=session_id,
+                message={
+                    "type": "ai",
+                    "data": {"content": f"ai-{index}"},
+                },
+                created_at=current_time,
+            )
+        )
+        current_time += timedelta(seconds=1)
     db_session.commit()
 
 
@@ -725,3 +774,128 @@ def test_update_report_github_issue_invalid_url(
     unchanged_report = db_session.query(Report).filter(Report.id == report.id).first()
     assert unchanged_report is not None
     assert unchanged_report.github_issue is None
+
+
+def test_get_report_conversation_groups(integration_client, db_session, report_superuser):
+    """验证举报详情可返回举报人的 user_id:agent_id 聊天分组列表。"""
+    reporter_id = _get_reporter_id(integration_client)
+    target_agent_id = integration_client.create_agent(
+        name="Report Conversation Target Agent",
+        visibility="PUBLIC",
+    )
+    another_agent_id = integration_client.create_agent(
+        name="Report Conversation Another Agent",
+        visibility="PUBLIC",
+    )
+
+    now = datetime.now(timezone.utc)
+    _seed_chat_rounds(
+        db_session,
+        user_id=reporter_id,
+        agent_id=target_agent_id,
+        chat_id=f"chat-{uuid.uuid4().hex[:12]}",
+        rounds=5,
+        start_at=now - timedelta(hours=2),
+    )
+    _seed_chat_rounds(
+        db_session,
+        user_id=reporter_id,
+        agent_id=another_agent_id,
+        chat_id=f"chat-{uuid.uuid4().hex[:12]}",
+        rounds=3,
+        start_at=now - timedelta(hours=1),
+    )
+
+    create_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json={
+            "target_id": target_agent_id,
+            "target_type": "AGENT",
+            "reason_codes": ["MISINFORMATION"],
+            "description": "Seeded report for conversation groups",
+            "image_urls": [],
+        },
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    assert create_resp.json().get("code") == 200, create_resp.text
+    report = _find_report(db_session, target_agent_id, reporter_id)
+    assert report is not None
+
+    response = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/report/{report.id}/conversation-groups"
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["total"] == 2
+
+    grouped_by_agent = {item["agent_id"]: item for item in payload["items"]}
+    assert grouped_by_agent[target_agent_id]["user_id"] == reporter_id
+    assert grouped_by_agent[target_agent_id]["total_rounds"] == 5
+    assert grouped_by_agent[another_agent_id]["total_rounds"] == 3
+
+
+def test_get_report_conversation_messages_round_pagination(
+    integration_client, db_session, report_superuser
+):
+    """验证聊天明细按轮次分页：每页 20 轮，第一页最新，下一页更旧。"""
+    reporter_id = _get_reporter_id(integration_client)
+    target_agent_id = integration_client.create_agent(
+        name="Report Conversation Paging Agent",
+        visibility="PUBLIC",
+    )
+    chat_id = f"chat-{uuid.uuid4().hex[:12]}"
+    _seed_chat_rounds(
+        db_session,
+        user_id=reporter_id,
+        agent_id=target_agent_id,
+        chat_id=chat_id,
+        rounds=25,
+        start_at=datetime.now(timezone.utc) - timedelta(hours=3),
+    )
+
+    create_resp = integration_client.client.post(
+        f"{integration_client.base_url}/api/v1/report/",
+        json={
+            "target_id": target_agent_id,
+            "target_type": "AGENT",
+            "reason_codes": ["SENSITIVE_CONTENT"],
+            "description": "Seeded report for conversation paging",
+            "image_urls": [],
+        },
+    )
+    assert create_resp.status_code == 200, create_resp.text
+    assert create_resp.json().get("code") == 200, create_resp.text
+    report = _find_report(db_session, target_agent_id, reporter_id)
+    assert report is not None
+
+    page_one_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/report/{report.id}/conversation-messages",
+        params={
+            "user_id": reporter_id,
+            "agent_id": target_agent_id,
+            "page": 1,
+            "size": 20,
+        },
+    )
+    assert page_one_resp.status_code == 200, page_one_resp.text
+    page_one = page_one_resp.json()
+    assert page_one["total_rounds"] == 25
+    assert page_one["has_more"] is True
+    assert len(page_one["messages"]) == 40
+    assert page_one["messages"][0]["content"] == "ai-24"
+    assert page_one["messages"][1]["content"] == "user-24"
+
+    page_two_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/report/{report.id}/conversation-messages",
+        params={
+            "user_id": reporter_id,
+            "agent_id": target_agent_id,
+            "page": 2,
+            "size": 20,
+        },
+    )
+    assert page_two_resp.status_code == 200, page_two_resp.text
+    page_two = page_two_resp.json()
+    assert page_two["has_more"] is False
+    assert len(page_two["messages"]) == 10
+    assert page_two["messages"][-1]["content"] == "user-0"

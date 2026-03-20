@@ -19,6 +19,13 @@ export function buildUserProfilePageUrl(
   return `${baseUrl}#user-daily-messages?userId=${encodeURIComponent(userId)}`;
 }
 
+export function buildReportUserConversationsPageUrl(
+  baseUrl: string,
+  reportId: string,
+): string {
+  return `${baseUrl}#report-user-conversations?reportId=${encodeURIComponent(reportId)}`;
+}
+
 export function parseEvaluationHashRoute(hash: string): {
   pageKey: string;
   params: URLSearchParams;
@@ -49,4 +56,8 @@ export function getDeepLinkedAgentIdFromHash(hash: string): string {
 
 export function getDeepLinkedUserIdFromHash(hash: string): string {
   return getHashParamForPage(hash, "user-daily-messages", "userId");
+}
+
+export function getDeepLinkedReportIdFromHash(hash: string): string {
+  return getHashParamForPage(hash, "report-user-conversations", "reportId");
 }

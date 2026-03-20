@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,8 @@ from app.models.report import ReportStatus, ReportType
 from app.models.user import User
 from app.schemas.report import (
     ReportCreate,
+    ReportConversationGroups,
+    ReportConversationMessages,
     ReportGithubIssueUpdate,
     ReportOut,
     ReportQuery,
@@ -60,6 +62,62 @@ async def get_report(
     """按 id 获取单条举报详情（用于永久链接打开）。"""
     report = await report_service.get_report(db, report_id)
     return ReportOut.model_validate(report)
+
+
+@router.get(
+    "/{report_id}/conversation-groups",
+    response_model=ReportConversationGroups,
+    tags=[WEB_APP_TAG],
+)
+async def get_report_conversation_groups(
+    report_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_superuser),
+):
+    """获取举报人全部聊天记录的 user_id:agent_id 分组列表。"""
+    try:
+        report = await report_service.get_report(db, report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    items = await report_service.get_report_conversation_groups(db, report.reporter_id)
+    return ReportConversationGroups(items=items, total=len(items))
+
+
+@router.get(
+    "/{report_id}/conversation-messages",
+    response_model=ReportConversationMessages,
+    tags=[WEB_APP_TAG],
+)
+async def get_report_conversation_messages(
+    report_id: str,
+    user_id: str = Query(..., description="User ID from group key"),
+    agent_id: str = Query(..., description="Agent ID from group key"),
+    page: int = Query(1, ge=1, description="Round-based page number"),
+    size: int = Query(20, ge=1, le=100, description="Rounds per page"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(deps.get_current_superuser),
+):
+    """按轮次分页加载某个 user_id:agent_id 分组的聊天消息（默认每页 20 轮）。"""
+    try:
+        report = await report_service.get_report(db, report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if user_id != report.reporter_id:
+        raise HTTPException(
+            status_code=400,
+            detail="user_id must match report reporter_id",
+        )
+
+    data = await report_service.get_report_conversation_messages(
+        db,
+        user_id=user_id,
+        agent_id=agent_id,
+        page=page,
+        size=size,
+    )
+    return ReportConversationMessages.model_validate(data)
 
 
 @router.put("/{report_id}/github-issue", response_model=ReportOut, tags=[WEB_APP_TAG])
