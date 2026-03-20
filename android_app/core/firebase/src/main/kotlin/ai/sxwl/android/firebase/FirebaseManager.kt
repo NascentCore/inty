@@ -23,6 +23,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -40,6 +42,9 @@ object FirebaseManager {
 
     // 使用AtomicBoolean确保线程安全
     private val isInitialized = AtomicBoolean(false)
+
+    // 确保懒初始化只会执行一次（避免首个事件并发触发多次初始化）
+    private val initMutex = Mutex()
 
     // 缓存 Firebase 实例，避免重复获取
     @Volatile private var analytics: FirebaseAnalytics? = null
@@ -197,6 +202,10 @@ object FirebaseManager {
 
             // 初始化 Firebase Analytics
             analytics = FirebaseAnalytics.getInstance(appContext)
+            if (AppUtils.isAppDebug()) {
+                // 仅在 debug 下开启 Analytics 采集，避免启动期阻塞
+                analytics?.setAnalyticsCollectionEnabled(true)
+            }
 
             // 初始化 Firebase Crashlytics
             crashlytics = FirebaseCrashlytics.getInstance()
@@ -222,6 +231,15 @@ object FirebaseManager {
             // 即使初始化失败，也不应该崩溃应用
             // 重置状态，允许重试
             isInitialized.set(false)
+        }
+    }
+
+    /** 在协程上下文中执行 Firebase 初始化（懒初始化），避免在主线程做重活 */
+    private suspend fun ensureInitialized() {
+        if (isInitialized.get()) return
+        initMutex.withLock {
+            if (isInitialized.get()) return
+            initialize(Utils.getApp())
         }
     }
 
@@ -276,22 +294,6 @@ object FirebaseManager {
             LogUtils.d("尝试记录事件: $eventName, 参数数量: ${parameters.size}", "参数详情: $parameters")
         }
 
-        if (!shouldLogEvent(eventName)) {
-            if (!AppUtils.isAppDebug()) {
-                // 关键事件即使非调试模式也输出警告，便于排查问题
-                if (
-                    eventName in
-                        listOf(
-                            Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
-                            Events.MESSAGE_SEND_FAILURE,
-                        )
-                ) {
-                    LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
-                }
-            }
-            return
-        }
-
         // 验证参数数量
         if (parameters.size > MAX_PARAMS_PER_EVENT) {
             logError(
@@ -300,45 +302,59 @@ object FirebaseManager {
             )
         }
 
-        try {
-            val analytics = getAnalytics() ?: return
+        // 使用firebaseScope确保异常隔离（并把初始化放到协程中，避免主线程/启动期阻塞）
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            // 使用firebaseScope确保异常隔离
-            firebaseScope.launch {
-                try {
-                    val bundle = createBundle(parameters)
-
-                    // 调试模式下输出 Bundle 信息
-                    if (AppUtils.isAppDebug()) {
-                        val bundleSize = bundle.size()
-                        LogUtils.d(
-                            "FirebaseManager",
-                            "Bundle 创建成功: 事件=$eventName, 参数数量=${bundle.size()}, Bundle大小=$bundleSize",
-                        )
-                        // 输出每个参数的键值对，便于调试
-                        bundle.keySet().forEach { key ->
-                            val value = bundle.get(key)
-                            LogUtils.d(
-                                "FirebaseManager",
-                                "  参数: $key = $value (类型: ${value?.javaClass?.simpleName})",
-                            )
+                if (!shouldLogEvent(eventName)) {
+                    if (!AppUtils.isAppDebug()) {
+                        // 关键事件即使非调试模式也输出警告，便于排查问题
+                        if (
+                            eventName in
+                                listOf(
+                                    Events.MESSAGE_TO_IMAGE_GENERATION_FAILURE,
+                                    Events.MESSAGE_SEND_FAILURE,
+                                )
+                        ) {
+                            LogUtils.w("FirebaseManager", "事件被过滤: $eventName（非调试模式）")
                         }
                     }
-                    analytics.logEvent(eventName, bundle)
+                    return@launch
+                }
 
-                    // 事件已发送（调试模式下输出详细日志）
-                    if (AppUtils.isAppDebug()) {
+                val analytics = getAnalytics() ?: return@launch
+                val bundle = createBundle(parameters)
+
+                // 调试模式下输出 Bundle 信息
+                if (AppUtils.isAppDebug()) {
+                    val bundleSize = bundle.size()
+                    LogUtils.d(
+                        "FirebaseManager",
+                        "Bundle 创建成功: 事件=$eventName, 参数数量=${bundle.size()}, Bundle大小=$bundleSize",
+                    )
+                    // 输出每个参数的键值对，便于调试
+                    bundle.keySet().forEach { key ->
+                        val value = bundle.get(key)
                         LogUtils.d(
                             "FirebaseManager",
-                            "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
+                            "  参数: $key = $value (类型: ${value?.javaClass?.simpleName})",
                         )
                     }
-                } catch (e: Exception) {
-                    logError("logEvent", "Failed to log event '$eventName': ${e.message}")
                 }
+
+                analytics.logEvent(eventName, bundle)
+
+                // 事件已发送（调试模式下输出详细日志）
+                if (AppUtils.isAppDebug()) {
+                    LogUtils.d(
+                        "FirebaseManager",
+                        "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
+                    )
+                }
+            } catch (e: Exception) {
+                logError("logEvent", "Failed to log event '$eventName': ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("logEvent", "Failed to create event '$eventName': ${e.message}")
         }
     }
 
@@ -348,43 +364,37 @@ object FirebaseManager {
         screenClass: String,
         additionalParams: Map<String, Any> = emptyMap(),
     ) {
-        try {
-            val analytics = getAnalytics() ?: return
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            firebaseScope.launch {
-                try {
-                    val bundle =
-                        Bundle().apply {
-                            putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
-                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
-                            putParamsToBundle(this, additionalParams)
-                        }
-                    analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
-                } catch (e: Exception) {
-                    logError("logScreenView", "Failed to log screen view: ${e.message}")
-                }
+                val analytics = getAnalytics() ?: return@launch
+                val bundle =
+                    Bundle().apply {
+                        putString(FirebaseAnalytics.Param.SCREEN_NAME, screenName)
+                        putString(FirebaseAnalytics.Param.SCREEN_CLASS, screenClass)
+                        putParamsToBundle(this, additionalParams)
+                    }
+                analytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+            } catch (e: Exception) {
+                logError("logScreenView", "Failed to log screen view: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("logScreenView", "Failed to create screen view: ${e.message}")
         }
     }
 
     /** 安全地设置用户属性 使用SupervisorJob确保异常隔离 */
     fun setUserProperty(property: String, value: String) {
-        try {
-            val analytics = getAnalytics()
-            val crashlytics = getCrashlytics()
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            firebaseScope.launch {
-                try {
-                    analytics?.setUserProperty(property, value)
-                    crashlytics?.setCustomKey("user_$property", value)
-                } catch (e: Exception) {
-                    logError("setUserProperty", "Failed to set user property: ${e.message}")
-                }
+                val analytics = getAnalytics()
+                val crashlytics = getCrashlytics()
+                analytics?.setUserProperty(property, value)
+                crashlytics?.setCustomKey("user_$property", value)
+            } catch (e: Exception) {
+                logError("setUserProperty", "Failed to set user property: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("setUserProperty", "Failed to create user property: ${e.message}")
         }
     }
 
@@ -413,80 +423,69 @@ object FirebaseManager {
      * 此方法为内部方法，外部应使用 setUserInfo() 来设置用户信息。
      */
     internal fun setUserId(userId: String) {
-        try {
-            val analytics = getAnalytics()
-            val crashlytics = getCrashlytics()
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            firebaseScope.launch {
-                try {
-                    analytics?.setUserId(userId)
-                    crashlytics?.setUserId(userId)
-                } catch (e: Exception) {
-                    logError("setUserId", "Failed to set user ID: ${e.message}")
-                }
+                val analytics = getAnalytics()
+                val crashlytics = getCrashlytics()
+                analytics?.setUserId(userId)
+                crashlytics?.setUserId(userId)
+            } catch (e: Exception) {
+                logError("setUserId", "Failed to set user ID: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("setUserId", "Failed to create user ID: ${e.message}")
         }
     }
 
     /** 安全地记录异常 使用SupervisorJob确保异常隔离 */
     fun recordException(exception: Throwable, customKeys: Map<String, String> = emptyMap()) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            firebaseScope.launch {
-                try {
-                    customKeys.forEach { (key, value) -> crashlytics.setCustomKey(key, value) }
-                    crashlytics.recordException(exception)
-                } catch (e: Exception) {
-                    logError("recordException", "Failed to record exception: ${e.message}")
-                }
+                val crashlytics = getCrashlytics() ?: return@launch
+                customKeys.forEach { (key, value) -> crashlytics.setCustomKey(key, value) }
+                crashlytics.recordException(exception)
+            } catch (e: Exception) {
+                logError("recordException", "Failed to record exception: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("recordException", "Failed to create exception record: ${e.message}")
         }
     }
 
     /** 设置Crashlytics自定义键 - 支持多种类型 */
     fun setCustomKey(key: String, value: Any?) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    when (value) {
-                        is String -> crashlytics.setCustomKey(key, value)
-                        is Boolean -> crashlytics.setCustomKey(key, value)
-                        is Int -> crashlytics.setCustomKey(key, value)
-                        is Long -> crashlytics.setCustomKey(key, value)
-                        is Float -> crashlytics.setCustomKey(key, value)
-                        is Double -> crashlytics.setCustomKey(key, value)
-                        null -> crashlytics.setCustomKey(key, "null")
-                        else -> crashlytics.setCustomKey(key, value.toString())
-                    }
-                } catch (e: Exception) {
-                    logError("setCustomKey", "Failed to set custom key: ${e.message}")
+                val crashlytics = getCrashlytics() ?: return@launch
+                when (value) {
+                    is String -> crashlytics.setCustomKey(key, value)
+                    is Boolean -> crashlytics.setCustomKey(key, value)
+                    is Int -> crashlytics.setCustomKey(key, value)
+                    is Long -> crashlytics.setCustomKey(key, value)
+                    is Float -> crashlytics.setCustomKey(key, value)
+                    is Double -> crashlytics.setCustomKey(key, value)
+                    null -> crashlytics.setCustomKey(key, "null")
+                    else -> crashlytics.setCustomKey(key, value.toString())
                 }
+            } catch (e: Exception) {
+                logError("setCustomKey", "Failed to set custom key: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("setCustomKey", "Failed to create custom key: ${e.message}")
         }
     }
 
     /** 记录自定义日志 */
     fun log(message: String) {
-        try {
-            val crashlytics = getCrashlytics() ?: return
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    crashlytics.log(message)
-                } catch (e: Exception) {
-                    logError("log", "Failed to log message: ${e.message}")
-                }
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
+
+                val crashlytics = getCrashlytics() ?: return@launch
+                crashlytics.log(message)
+            } catch (e: Exception) {
+                logError("log", "Failed to log message: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("log", "Failed to create log: ${e.message}")
         }
     }
 
@@ -1017,18 +1016,15 @@ object FirebaseManager {
      * @param defaults 默认值映射，键为参数名，值为参数值（支持 String, Boolean, Long, Double）
      */
     fun setRemoteConfigDefaults(defaults: Map<String, Any>) {
-        try {
-            val remoteConfig = getRemoteConfig() ?: return
+        firebaseScope.launch {
+            try {
+                ensureInitialized()
 
-            firebaseScope.launch {
-                try {
-                    remoteConfig.setDefaultsAsync(defaults)
-                } catch (e: Exception) {
-                    logError("setRemoteConfigDefaults", "Failed to set defaults: ${e.message}")
-                }
+                val remoteConfig = getRemoteConfig() ?: return@launch
+                remoteConfig.setDefaultsAsync(defaults)
+            } catch (e: Exception) {
+                logError("setRemoteConfigDefaults", "Failed to set defaults: ${e.message}")
             }
-        } catch (e: Exception) {
-            logError("setRemoteConfigDefaults", "Failed to create defaults: ${e.message}")
         }
     }
 
@@ -1039,6 +1035,7 @@ object FirebaseManager {
      */
     suspend fun fetchAndActivateRemoteConfig(): Boolean {
         return try {
+            ensureInitialized()
             val remoteConfig = getRemoteConfig() ?: return false
             remoteConfig.fetchAndActivate().await()
         } catch (e: Exception) {
@@ -1049,6 +1046,7 @@ object FirebaseManager {
 
     suspend fun fetchAndActivateRemoteConfigForced(): Boolean {
         return try {
+            ensureInitialized()
             val remoteConfig = getRemoteConfig() ?: return false
 
             val originalMinInterval = config.remoteConfigMinFetchIntervalSeconds
@@ -1081,6 +1079,7 @@ object FirebaseManager {
      */
     suspend fun fetchRemoteConfig(): Boolean {
         return try {
+            ensureInitialized()
             val remoteConfig = getRemoteConfig() ?: return false
 
             remoteConfig.fetch().await()
@@ -1098,6 +1097,7 @@ object FirebaseManager {
      */
     suspend fun activateRemoteConfig(): Boolean {
         return try {
+            ensureInitialized()
             val remoteConfig = getRemoteConfig() ?: return false
 
             remoteConfig.activate().await()
