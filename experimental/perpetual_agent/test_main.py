@@ -4,6 +4,8 @@ import json
 import urllib.parse
 from types import SimpleNamespace
 
+import pytest
+
 from experimental.perpetual_agent import main
 
 
@@ -25,20 +27,34 @@ def _tool_response(call: SimpleNamespace) -> SimpleNamespace:
     )
 
 
+def _tool_response_with_calls(calls: list[SimpleNamespace]) -> SimpleNamespace:
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="", tool_calls=calls))]
+    )
+
+
 class _FakeCompletions:
     def __init__(
         self,
         responses: list[SimpleNamespace],
         seen_system_messages: list[str],
         seen_tool_choices: list[str | dict[str, object]],
+        seen_messages_per_call: list[list[dict[str, object]]],
+        seen_tool_names_per_call: list[list[str]],
     ):
         self._responses = responses
         self._seen_system_messages = seen_system_messages
         self._seen_tool_choices = seen_tool_choices
+        self._seen_messages_per_call = seen_messages_per_call
+        self._seen_tool_names_per_call = seen_tool_names_per_call
 
     def create(self, *, model, messages, tools, tool_choice):  # noqa: ANN001
         self._seen_system_messages.append(messages[0]["content"])
         self._seen_tool_choices.append(tool_choice)
+        self._seen_messages_per_call.append(json.loads(json.dumps(messages)))
+        self._seen_tool_names_per_call.append(
+            [tool["function"]["name"] for tool in tools]
+        )
         return self._responses.pop(0)
 
 
@@ -46,13 +62,37 @@ class _FakeClient:
     def __init__(self, responses: list[SimpleNamespace]):
         self.seen_system_messages: list[str] = []
         self.seen_tool_choices: list[str | dict[str, object]] = []
+        self.seen_messages_per_call: list[list[dict[str, object]]] = []
+        self.seen_tool_names_per_call: list[list[str]] = []
         self.chat = SimpleNamespace(
             completions=_FakeCompletions(
                 responses=responses,
                 seen_system_messages=self.seen_system_messages,
                 seen_tool_choices=self.seen_tool_choices,
+                seen_messages_per_call=self.seen_messages_per_call,
+                seen_tool_names_per_call=self.seen_tool_names_per_call,
             )
         )
+
+
+def _assistant_response(content: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=content, tool_calls=[]))]
+    )
+
+
+def _layer_names_for_call(messages: list[dict[str, object]]) -> list[str]:
+    layer_names: list[str] = []
+    for message in messages:
+        if message.get("role") != "system":
+            continue
+        content = str(message.get("content", ""))
+        if not content.startswith("[character_layer name="):
+            continue
+        first_line = content.splitlines()[0]
+        name_fragment = first_line.split("name=", maxsplit=1)[1]
+        layer_names.append(name_fragment.split(" ", maxsplit=1)[0].strip("]"))
+    return layer_names
 
 
 class _FakeTelegramBotApi:
@@ -246,3 +286,247 @@ def test_run_living_companion_telegram_loop_handles_inbound_message() -> None:
     assert fake_bot_api.seen_timeouts == [12]
     assert len(fake_bot_api.sent_messages) == 1
     assert fake_bot_api.sent_messages[0][0] == "12345"
+
+
+def test_layer_tool_name_changes_when_layer_renamed() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "layer-rename-1",
+                    "update_layer_fundamental_identity",
+                    {
+                        "content": "Identity now emphasizes grounded clarity.",
+                        "rename_to": "identity_kernel",
+                    },
+                )
+            ),
+            _assistant_response("Layer rename acknowledged."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="Start with your normal loop.",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_tools = fake_client.seen_tool_names_per_call[0]
+    second_call_tools = fake_client.seen_tool_names_per_call[1]
+    assert "update_layer_fundamental_identity" in first_call_tools
+    assert "update_layer_identity_kernel" in second_call_tools
+    assert "update_layer_fundamental_identity" not in second_call_tools
+    assert "update_layer_conversation" not in first_call_tools
+    assert "update_layer_conversation" not in second_call_tools
+
+
+def test_compacting_recent_conversation_inserts_new_layer_before_conversation() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _assistant_response("Prelude turn before compaction."),
+            _tool_response(
+                _tool_call(
+                    "compact-1",
+                    "compact_recent_conversation_into_layer",
+                    {
+                        "layer_name": "Night Reflection",
+                        "layer_content": "Summarize the night-time emotional thread.",
+                        "recent_message_count": 2,
+                    },
+                )
+            ),
+            _assistant_response("Compaction complete."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="I feel lonely and want to process today.",
+        model="demo-model",
+        max_steps=3,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[0])
+    third_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[2])
+    assert first_call_layer_names == [
+        "fundamental_identity",
+        "interaction_style",
+        "conversation",
+    ]
+    assert third_call_layer_names == [
+        "fundamental_identity",
+        "interaction_style",
+        "night_reflection",
+        "conversation",
+    ]
+
+    third_call_tools = fake_client.seen_tool_names_per_call[2]
+    assert "update_layer_night_reflection" in third_call_tools
+    assert "update_layer_conversation" not in third_call_tools
+
+
+def test_layer_rename_rejects_normalized_name_collision() -> None:
+    layers = main._build_default_character_layers()
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Layer rename would collide with an existing layer name after normalization."
+        ),
+    ):
+        main._execute_layer_update_tool(
+            layers=layers,
+            tool_name="update_layer_fundamental_identity",
+            content="keep content",
+            rename_to="interaction style",
+        )
+
+
+def test_compaction_rejects_normalized_name_collision() -> None:
+    layers = main._build_default_character_layers()
+    conversation_messages = [{"role": "user", "content": "hello"}]
+
+    with pytest.raises(
+        ValueError,
+        match="Compacted layer name collides with an existing layer after normalization.",
+    ):
+        main._execute_compact_conversation_layer_tool(
+            layers=layers,
+            conversation_messages=conversation_messages,
+            layer_name="interaction style",
+            layer_content="summary",
+            recent_message_count=1,
+        )
+
+
+def test_compaction_rejects_current_tool_call_envelope_messages() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "compact-1",
+                    "compact_recent_conversation_into_layer",
+                    {
+                        "layer_name": "too_new",
+                        "layer_content": "attempting to compact current envelope",
+                        "recent_message_count": 2,
+                    },
+                )
+            )
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Compaction can only include messages older than the current tool-call envelope."
+        ),
+    ):
+        main.run_perpetual_agent(
+            user_prompt="single old message",
+            model="demo-model",
+            max_steps=1,
+            client=fake_client,
+            api_key_env="OPENROUTER_API_KEY",
+            base_url="https://openrouter.ai/api/v1",
+        )
+
+
+def test_compaction_after_another_tool_keeps_current_envelope_intact(
+    monkeypatch,
+) -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response_with_calls(
+                [
+                    _tool_call("pulse-1", "pulse", {"seconds": 0}),
+                    _tool_call(
+                        "compact-1",
+                        "compact_recent_conversation_into_layer",
+                        {
+                            "layer_name": "old_prompt_memory",
+                            "layer_content": "compacted from older messages only",
+                            "recent_message_count": 1,
+                        },
+                    ),
+                ]
+            ),
+            _assistant_response("done"),
+        ]
+    )
+    monkeypatch.setattr(main.time, "sleep", lambda _seconds: None)
+
+    main.run_perpetual_agent(
+        user_prompt="seed history",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    second_call_messages = fake_client.seen_messages_per_call[1]
+    first_tool_message_index = next(
+        idx
+        for idx, message in enumerate(second_call_messages)
+        if message.get("role") == "tool"
+    )
+    has_preceding_assistant_tool_calls = any(
+        message.get("role") == "assistant" and "tool_calls" in message
+        for message in second_call_messages[:first_tool_message_index]
+    )
+    assert has_preceding_assistant_tool_calls
+
+
+def test_repeated_compaction_in_same_turn_preserves_all_tool_results() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _assistant_response("prelude"),
+            _tool_response_with_calls(
+                [
+                    _tool_call(
+                        "compact-1",
+                        "compact_recent_conversation_into_layer",
+                        {
+                            "layer_name": "first_memory",
+                            "layer_content": "first compaction",
+                            "recent_message_count": 1,
+                        },
+                    ),
+                    _tool_call(
+                        "compact-2",
+                        "compact_recent_conversation_into_layer",
+                        {
+                            "layer_name": "second_memory",
+                            "layer_content": "second compaction",
+                            "recent_message_count": 1,
+                        },
+                    ),
+                ]
+            ),
+            _assistant_response("done"),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="old message available for compaction",
+        model="demo-model",
+        max_steps=3,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    third_call_messages = fake_client.seen_messages_per_call[2]
+    tool_message_ids = [
+        str(message.get("tool_call_id"))
+        for message in third_call_messages
+        if message.get("role") == "tool"
+    ]
+    assert tool_message_ids.count("compact-1") == 1
+    assert tool_message_ids.count("compact-2") == 1
