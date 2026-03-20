@@ -34,6 +34,7 @@ import { UserAnalyticsReportsPage } from "./pages/UserAnalyticsReportsPage";
 import { UserDailyMessagesPage } from "./pages/UserDailyMessagesPage";
 import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
+import { ReportUserConversationsPage } from "./pages/ReportUserConversationsPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
 import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
 import { LlmMonthlyBillingPage } from "./pages/LlmMonthlyBillingPage";
@@ -65,6 +66,7 @@ type PageKey =
   | "character-themes"
   | "generated-images"
   | "report-feedback"
+  | "report-user-conversations"
   | "festival-memory"
   | "llm-monthly-billing";
 
@@ -82,6 +84,7 @@ const HASH_PAGE_KEYS = new Set<PageKey>([
   "character-themes",
   "generated-images",
   "report-feedback",
+  "report-user-conversations",
   "festival-memory",
   "llm-monthly-billing",
 ]);
@@ -309,6 +312,8 @@ const AppContent: React.FC = () => {
         return "生成图片管理";
       case "report-feedback":
         return "举报与反馈";
+      case "report-user-conversations":
+        return "举报用户聊天记录";
       case "festival-memory":
         return "节日记忆提取";
       case "llm-monthly-billing":
@@ -356,7 +361,39 @@ const AppContent: React.FC = () => {
       case "generated-images":
         return <GeneratedImagesPage />;
       case "report-feedback":
-        return <ReportFeedbackPage />;
+        return (
+          <ReportFeedbackPage
+            onNavigateToReportUserConversations={(reportId) => {
+              setCurrentPage("report-user-conversations");
+              if (typeof window !== "undefined") {
+                const base = `${window.location.origin}${window.location.pathname}`;
+                window.history.replaceState(
+                  null,
+                  "",
+                  `${base}#report-user-conversations?reportId=${encodeURIComponent(reportId)}`,
+                );
+              }
+            }}
+          />
+        );
+      case "report-user-conversations":
+        return (
+          <ReportUserConversationsPage
+            onBack={() => {
+              setCurrentPage("report-feedback");
+              if (typeof window !== "undefined") {
+                const hash = window.location.hash;
+                const params = new URLSearchParams(hash.split("?")[1] || "");
+                const reportId = params.get("reportId");
+                const base = `${window.location.origin}${window.location.pathname}`;
+                const nextHash = reportId
+                  ? `#report-feedback?reportId=${encodeURIComponent(reportId)}`
+                  : "#report-feedback";
+                window.history.replaceState(null, "", `${base}${nextHash}`);
+              }
+            }}
+          />
+        );
       case "festival-memory":
         return <FestivalMemoryPage />;
       case "llm-monthly-billing":

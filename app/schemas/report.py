@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -135,3 +135,46 @@ class ReportsList(PagedResponse[ReportOut]):
     """Specific model for a paginated list of report items."""
 
     pass
+
+
+class ReportConversationGroup(BaseModel):
+    """按 user_id + agent_id 分组的聊天概览。"""
+
+    user_id: str
+    agent_id: str
+    agent_name: Optional[str]
+    chat_count: int
+    total_rounds: int
+    latest_message_at: Optional[datetime]
+
+
+class ReportConversationGroups(BaseModel):
+    """举报关联用户的聊天分组列表。"""
+
+    items: List[ReportConversationGroup]
+    total: int
+
+
+class ReportConversationMessage(BaseModel):
+    """举报聊天分组内的单条消息。"""
+
+    id: int
+    chat_id: str
+    message_type: str
+    content: Optional[str]
+    image_url: Optional[str]
+    created_at: Optional[datetime]
+    audio_url: Optional[str]
+    meta_data: Optional[Dict[str, Any]]
+
+
+class ReportConversationMessages(BaseModel):
+    """举报聊天分组内按轮次分页的消息列表。"""
+
+    user_id: str
+    agent_id: str
+    page: int
+    size: int
+    total_rounds: int
+    has_more: bool
+    messages: List[ReportConversationMessage]

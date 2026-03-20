@@ -46,6 +46,10 @@ import {
   isValidGithubIssueUrl,
   normalizeGithubIssueUrlInput,
 } from "../utils/reportGithubIssue";
+import {
+  buildReportUserConversationsPageUrl,
+  getEvaluationBaseUrl,
+} from "../utils/profileLinks";
 
 const { Option } = Select;
 
@@ -108,7 +112,18 @@ function getReportDetailUrl(reportId: string): string {
   return `${base}#report-feedback?reportId=${encodeURIComponent(reportId)}`;
 }
 
-export const ReportFeedbackPage: React.FC = () => {
+function getReportUserConversationsUrl(reportId: string): string {
+  const base = getEvaluationBaseUrl();
+  return buildReportUserConversationsPageUrl(base, reportId);
+}
+
+interface ReportFeedbackPageProps {
+  onNavigateToReportUserConversations?: (reportId: string) => void;
+}
+
+export const ReportFeedbackPage: React.FC<ReportFeedbackPageProps> = ({
+  onNavigateToReportUserConversations,
+}) => {
   // 筛选状态
   const [reportType, setReportType] = useState<ReportType | undefined>(
     undefined,
@@ -202,6 +217,23 @@ export const ReportFeedbackPage: React.FC = () => {
       message.success("链接已复制到剪贴板");
     } catch {
       message.error("复制失败，请手动复制链接");
+    }
+  };
+
+  const handleOpenUserConversationsPage = () => {
+    if (!selectedItem) {
+      return;
+    }
+    if (onNavigateToReportUserConversations) {
+      onNavigateToReportUserConversations(selectedItem.id);
+      return;
+    }
+    if (typeof window !== "undefined") {
+      window.history.replaceState(
+        null,
+        "",
+        getReportUserConversationsUrl(selectedItem.id),
+      );
     }
   };
 
@@ -563,6 +595,11 @@ export const ReportFeedbackPage: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="举报人ID" span={2}>
               {selectedItem.reporter_id}
+            </Descriptions.Item>
+            <Descriptions.Item label="举报人聊天记录" span={2}>
+              <Button type="link" onClick={handleOpenUserConversationsPage}>
+                查看该用户全部聊天记录
+              </Button>
             </Descriptions.Item>
             <Descriptions.Item label="举报人信息" span={2}>
               <Space direction="vertical" size={2}>

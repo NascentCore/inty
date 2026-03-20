@@ -143,6 +143,8 @@
 | `/api/v1/report/` | POST | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/` | GET | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}` | GET | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}/conversation-groups` | GET | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}/conversation-messages` | GET | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}` | DELETE | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}/github-issue` | PUT | `app/api/v1/endpoints/report.py` |
 

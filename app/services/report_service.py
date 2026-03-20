@@ -1,7 +1,8 @@
 import re
-from typing import List, Optional
+import uuid
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, bindparam, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -17,6 +18,15 @@ from app.schemas.report import ReportCreate, ReportQuery, ReportReason
 
 GITHUB_ISSUE_URL_PATTERN = re.compile(
     r"^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/issues/\d+/?(?:[?#].*)?$"
+)
+MESSAGE_TYPE_FILTER_SQL = (
+    "ch.meta_data->>'messageType' IS NULL OR "
+    "(ch.meta_data->>'messageType' != 'festival_memory_prompt' "
+    "AND ch.meta_data->>'messageType' != 'daily_memory_prompt')"
+)
+OPENING_FILTER_SQL = (
+    "ch.meta_data IS NULL OR ch.meta_data->>'isOpening' IS NULL OR "
+    "ch.meta_data->>'isOpening' != 'true'"
 )
 
 
@@ -48,6 +58,10 @@ def _attach_reporter_user_info(
 ) -> None:
     for report in reports:
         report.reporter_user_info = users_by_id.get(report.reporter_id)
+
+
+def _generate_session_id(chat_id: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
 
 
 async def create_report(
@@ -262,6 +276,276 @@ async def update_report_github_issue(
     report.github_issue = _normalize_github_issue_url(github_issue)
     await db.commit()
     return await get_report(db, report_id)
+
+
+async def get_report_conversation_groups(
+    db: AsyncSession, user_id: str
+) -> List[Dict[str, Any]]:
+    chats_stmt = text("""
+        SELECT
+            c.id AS chat_id,
+            c.user_id,
+            c.agent_id,
+            a.name AS agent_name,
+            c.created_at
+        FROM chats c
+        LEFT JOIN agents a ON c.agent_id = a.id
+        WHERE c.user_id = :user_id
+        ORDER BY c.created_at DESC
+    """)
+    chats_result = await db.execute(chats_stmt, {"user_id": user_id})
+    chat_rows = chats_result.fetchall()
+    if not chat_rows:
+        return []
+
+    chat_ids = [row[0] for row in chat_rows]
+    chat_to_session = {chat_id: _generate_session_id(chat_id) for chat_id in chat_ids}
+    session_ids = list(chat_to_session.values())
+
+    stats_stmt = text(f"""
+        SELECT
+            ch.session_id::text AS session_id,
+            COUNT(*) FILTER (
+                WHERE ch.message->>'type' = 'human' AND ({OPENING_FILTER_SQL})
+            ) AS round_count,
+            MAX(ch.created_at) AS latest_message_at
+        FROM chat_history ch
+        WHERE ch.deleted_at IS NULL
+          AND ({MESSAGE_TYPE_FILTER_SQL})
+          AND ch.session_id::text IN :session_ids
+        GROUP BY ch.session_id
+    """).bindparams(bindparam("session_ids", expanding=True))
+    stats_result = await db.execute(stats_stmt, {"session_ids": session_ids})
+    session_stats = {
+        row[0]: {"round_count": row[1] or 0, "latest_message_at": row[2]}
+        for row in stats_result.fetchall()
+    }
+
+    grouped: Dict[tuple[str, str], Dict[str, Any]] = {}
+    for row in chat_rows:
+        chat_id = row[0]
+        current_user_id = row[1]
+        agent_id = row[2]
+        agent_name = row[3]
+        chat_created_at = row[4]
+        session_id = chat_to_session[chat_id]
+        current_stats = session_stats.get(
+            session_id, {"round_count": 0, "latest_message_at": None}
+        )
+        latest_message_at = current_stats["latest_message_at"] or chat_created_at
+        group_key = (current_user_id, agent_id)
+
+        if group_key not in grouped:
+            grouped[group_key] = {
+                "user_id": current_user_id,
+                "agent_id": agent_id,
+                "agent_name": agent_name,
+                "chat_count": 0,
+                "total_rounds": 0,
+                "latest_message_at": latest_message_at,
+            }
+
+        grouped_item = grouped[group_key]
+        grouped_item["chat_count"] += 1
+        grouped_item["total_rounds"] += current_stats["round_count"]
+        if latest_message_at and (
+            grouped_item["latest_message_at"] is None
+            or latest_message_at > grouped_item["latest_message_at"]
+        ):
+            grouped_item["latest_message_at"] = latest_message_at
+
+    grouped_items = list(grouped.values())
+    grouped_items.sort(
+        key=lambda item: (
+            item["latest_message_at"] is not None,
+            item["latest_message_at"],
+            item["agent_id"],
+        ),
+        reverse=True,
+    )
+    return grouped_items
+
+
+async def get_report_conversation_messages(
+    db: AsyncSession,
+    *,
+    user_id: str,
+    agent_id: str,
+    page: int = 1,
+    size: int = 20,
+) -> Dict[str, Any]:
+    chats_stmt = text("""
+        SELECT c.id
+        FROM chats c
+        WHERE c.user_id = :user_id
+          AND c.agent_id = :agent_id
+        ORDER BY c.created_at DESC
+    """)
+    chats_result = await db.execute(
+        chats_stmt, {"user_id": user_id, "agent_id": agent_id}
+    )
+    chat_ids = [row[0] for row in chats_result.fetchall()]
+    if not chat_ids:
+        return {
+            "user_id": user_id,
+            "agent_id": agent_id,
+            "page": page,
+            "size": size,
+            "total_rounds": 0,
+            "has_more": False,
+            "messages": [],
+        }
+
+    chat_to_session = {chat_id: _generate_session_id(chat_id) for chat_id in chat_ids}
+    session_to_chat = {session_id: chat_id for chat_id, session_id in chat_to_session.items()}
+    session_ids = list(chat_to_session.values())
+
+    total_rounds_stmt = text(f"""
+        SELECT COUNT(*)
+        FROM chat_history ch
+        WHERE ch.deleted_at IS NULL
+          AND ({MESSAGE_TYPE_FILTER_SQL})
+          AND ch.message->>'type' = 'human'
+          AND ({OPENING_FILTER_SQL})
+          AND ch.session_id::text IN :session_ids
+    """).bindparams(bindparam("session_ids", expanding=True))
+    total_rounds_result = await db.execute(
+        total_rounds_stmt, {"session_ids": session_ids}
+    )
+    total_rounds = total_rounds_result.scalar() or 0
+    if total_rounds == 0:
+        return {
+            "user_id": user_id,
+            "agent_id": agent_id,
+            "page": page,
+            "size": size,
+            "total_rounds": 0,
+            "has_more": False,
+            "messages": [],
+        }
+
+    offset_rounds = (page - 1) * size
+    messages_stmt = text(f"""
+        WITH filtered AS (
+            SELECT
+                ch.id,
+                ch.session_id::text AS session_id,
+                ch.message->>'type' AS message_type,
+                COALESCE(
+                    ch.message->'data'->>'content',
+                    ch.message->>'content'
+                ) AS content,
+                ch.message->'data'->>'image_url' AS image_url_from_message,
+                ch.created_at,
+                ch.audio_url,
+                ch.meta_data
+            FROM chat_history ch
+            WHERE ch.deleted_at IS NULL
+              AND ({MESSAGE_TYPE_FILTER_SQL})
+              AND ch.session_id::text IN :session_ids
+        ),
+        annotated AS (
+            SELECT
+                f.*,
+                SUM(
+                    CASE
+                        WHEN f.message_type = 'human'
+                         AND (
+                            f.meta_data IS NULL
+                            OR f.meta_data->>'isOpening' IS NULL
+                            OR f.meta_data->>'isOpening' != 'true'
+                         )
+                        THEN 1
+                        ELSE 0
+                    END
+                ) OVER (ORDER BY f.created_at ASC, f.id ASC) AS round_no
+            FROM filtered f
+        ),
+        with_totals AS (
+            SELECT
+                a.*,
+                MAX(a.round_no) OVER () AS total_rounds
+            FROM annotated a
+        ),
+        windowed AS (
+            SELECT
+                wt.*,
+                CASE
+                    WHEN wt.round_no <= 0 THEN NULL
+                    ELSE wt.total_rounds - wt.round_no + 1
+                END AS reverse_round_no
+            FROM with_totals wt
+        )
+        SELECT
+            id,
+            session_id,
+            message_type,
+            content,
+            image_url_from_message,
+            created_at,
+            audio_url,
+            meta_data
+        FROM windowed
+        WHERE reverse_round_no IS NOT NULL
+          AND reverse_round_no > :offset_rounds
+          AND reverse_round_no <= :offset_rounds_plus_size
+        ORDER BY created_at DESC, id DESC
+    """).bindparams(bindparam("session_ids", expanding=True))
+    rows_result = await db.execute(
+        messages_stmt,
+        {
+            "session_ids": session_ids,
+            "offset_rounds": offset_rounds,
+            "offset_rounds_plus_size": offset_rounds + size,
+        },
+    )
+    rows = rows_result.fetchall()
+
+    from app.services.image_transform_service import image_transform_service
+
+    messages: List[Dict[str, Any]] = []
+    for row in rows:
+        message_type = row[2] or "human"
+        image_url = row[4]
+        if message_type == "image" and image_url:
+            image_url = image_transform_service.transform_desktop(image_url)
+
+        meta_data = row[7]
+        if (
+            isinstance(meta_data, dict)
+            and isinstance(meta_data.get("generated_image"), dict)
+            and meta_data["generated_image"].get("image_url")
+        ):
+            generated_image = dict(meta_data["generated_image"])
+            generated_image["image_url"] = image_transform_service.transform_desktop(
+                generated_image["image_url"]
+            )
+            meta_data = dict(meta_data)
+            meta_data["generated_image"] = generated_image
+
+        session_id = row[1]
+        messages.append(
+            {
+                "id": row[0],
+                "chat_id": session_to_chat.get(session_id, ""),
+                "message_type": message_type,
+                "content": row[3],
+                "image_url": image_url,
+                "created_at": row[5],
+                "audio_url": row[6],
+                "meta_data": meta_data,
+            }
+        )
+
+    return {
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "page": page,
+        "size": size,
+        "total_rounds": total_rounds,
+        "has_more": offset_rounds + size < total_rounds,
+        "messages": messages,
+    }
 
 
 async def delete_report(

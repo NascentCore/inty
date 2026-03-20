@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAgentProfilePageUrl,
+  buildReportUserConversationsPageUrl,
   buildUserProfilePageUrl,
   getDeepLinkedAgentIdFromHash,
+  getDeepLinkedReportIdFromHash,
   getDeepLinkedUserIdFromHash,
   parseEvaluationHashRoute,
 } from "../utils/profileLinks";
@@ -17,6 +19,9 @@ describe("profileLinks utils", () => {
     );
     expect(buildUserProfilePageUrl(baseUrl, "user-1")).toBe(
       "https://ops.inty.cc/evaluation/#user-daily-messages?userId=user-1",
+    );
+    expect(buildReportUserConversationsPageUrl(baseUrl, "report-1")).toBe(
+      "https://ops.inty.cc/evaluation/#report-user-conversations?reportId=report-1",
     );
   });
 
@@ -35,8 +40,16 @@ describe("profileLinks utils", () => {
     expect(
       getDeepLinkedUserIdFromHash("#user-daily-messages?userId=user-100"),
     ).toBe("user-100");
+    expect(
+      getDeepLinkedReportIdFromHash(
+        "#report-user-conversations?reportId=report-100",
+      ),
+    ).toBe("report-100");
 
     expect(getDeepLinkedAgentIdFromHash("#chat?agentId=agent-100")).toBe("");
     expect(getDeepLinkedUserIdFromHash("#agents?userId=user-100")).toBe("");
+    expect(getDeepLinkedReportIdFromHash("#report-feedback?reportId=report-100")).toBe(
+      "",
+    );
   });
 });

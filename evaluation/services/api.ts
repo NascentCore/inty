@@ -1418,6 +1418,27 @@ export const reportApi = {
   get: (reportId: string): Promise<import("../types").ReportItem> =>
     apiClient.get(`/report/${reportId}`),
 
+  // 获取某条举报对应举报人的 user_id:agent_id 聊天分组
+  getConversationGroups: (
+    reportId: string,
+  ): Promise<import("../types").ReportConversationGroupsResponse> =>
+    apiClient.get(`/report/${reportId}/conversation-groups`),
+
+  // 获取某个 user_id:agent_id 分组内按轮次分页的聊天消息
+  getConversationMessages: (params: {
+    report_id: string;
+    user_id: string;
+    agent_id: string;
+    page?: number;
+    size?: number;
+  }): Promise<import("../types").ReportConversationMessagesResponse> =>
+    apiClient.get(`/report/${params.report_id}/conversation-messages`, {
+      user_id: params.user_id,
+      agent_id: params.agent_id,
+      page: params.page,
+      size: params.size,
+    }),
+
   // 创建举报/反馈记录（聊天图片反馈复用该接口）
   create: (payload: {
     target_id: string;
