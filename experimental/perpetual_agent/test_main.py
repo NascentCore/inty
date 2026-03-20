@@ -81,6 +81,22 @@ def _assistant_response(content: str) -> SimpleNamespace:
     )
 
 
+def test_named_layer_compaction_guidance_mentions_contiguous_constraint() -> None:
+    system_prompt = main.SYSTEM_PROMPT_TEMPLATE
+    tool_description = str(
+        main.COMPACT_NAMED_LAYERS_TOOL_DEFINITION["function"]["description"]
+    )
+    source_layer_names_description = str(
+        main.COMPACT_NAMED_LAYERS_TOOL_DEFINITION["function"]["parameters"][
+            "properties"
+        ]["source_layer_names"]["description"]
+    )
+
+    assert "source layers must be contiguous" in system_prompt.lower()
+    assert "contiguous" in tool_description.lower()
+    assert "contiguous" in source_layer_names_description.lower()
+
+
 def _layer_names_for_call(messages: list[dict[str, object]]) -> list[str]:
     layer_names: list[str] = []
     for message in messages:

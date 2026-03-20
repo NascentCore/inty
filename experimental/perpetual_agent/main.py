@@ -44,6 +44,7 @@ Compaction rules:
 - every layer has nesting_level
 - compacting conversation messages creates a new layer with nesting_level=1
 - compacting named layers requires identical source nesting_level and creates target nesting_level+1
+- named-layer compaction source layers must be contiguous in stack order
 
 When pulse is called:
 1) sleep for the given seconds
@@ -145,7 +146,7 @@ COMPACT_NAMED_LAYERS_TOOL_DEFINITION = {
         "name": "compact_named_layers_into_layer",
         "description": (
             "Compact multiple named character layers into a higher-level layer. "
-            "All source layers must share the same nesting level."
+            "All source layers must share the same nesting level and must be contiguous."
         ),
         "parameters": {
             "type": "object",
@@ -165,7 +166,7 @@ COMPACT_NAMED_LAYERS_TOOL_DEFINITION = {
                     "items": {"type": "string"},
                     "description": (
                         "Names of source named layers to compact. "
-                        "All must exist and have identical nesting level."
+                        "All must exist, have identical nesting level, and be contiguous in stack order."
                     ),
                 },
             },
