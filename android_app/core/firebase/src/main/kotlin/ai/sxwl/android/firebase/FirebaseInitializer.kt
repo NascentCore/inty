@@ -5,7 +5,6 @@ import ai.sxwl.android.utils.LogUtils
 import android.content.Context
 import android.os.Build
 import androidx.startup.Initializer
-import com.google.firebase.analytics.FirebaseAnalytics
 import java.lang.reflect.Method
 
 /** Firebase初始化器 在应用启动时自动初始化Firebase服务 */
@@ -13,12 +12,7 @@ class FirebaseInitializer : Initializer<FirebaseManager> {
 
     override fun create(context: Context): FirebaseManager {
         try {
-            FirebaseManager.initialize(context)
-
             if (AppUtils.isAppDebug()) {
-                // 调试模式下启用 Analytics 收集
-                FirebaseAnalytics.getInstance(context).setAnalyticsCollectionEnabled(true)
-
                 // 启用 Firebase DebugView（用于实时查看事件和参数）
                 enableFirebaseDebugView(context)
             }
