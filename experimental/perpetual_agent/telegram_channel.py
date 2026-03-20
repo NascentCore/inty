@@ -61,7 +61,9 @@ class TelegramBotApi:
         return messages, next_offset
 
     def send_message(self, *, chat_id: str, text: str) -> dict[str, Any]:
-        body = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode("utf-8")
+        body = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode(
+            "utf-8"
+        )
         request = urllib.request.Request(
             url=self._method_url("sendMessage"),
             method="POST",

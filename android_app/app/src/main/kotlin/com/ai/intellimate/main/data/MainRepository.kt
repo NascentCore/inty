@@ -26,15 +26,16 @@ class MainRepository(
         IntySetting.isLoginFlow().distinctUntilChanged().collectLatest {
             if (it) {
                 mainRemoteDataSource.connectWebsocket().collect { message ->
-                    val agentIdForError =
-                        message.agentId ?: message.data?.sourceImateId
+                    val agentIdForError = message.agentId ?: message.data?.sourceImateId
                     if (message.code == BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE) {
                         if (!agentIdForError.isNullOrBlank()) {
                             chatLocalDataSource
-                                .markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(agentIdForError)
+                                .markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(
+                                    agentIdForError
+                                )
                         }
                         EventBus.postOnMainThread(
-                            ChatEvent.WebSocketSubscriptionRequired(agentIdForError ?: ""),
+                            ChatEvent.WebSocketSubscriptionRequired(agentIdForError ?: "")
                         )
                         return@collect
                     }

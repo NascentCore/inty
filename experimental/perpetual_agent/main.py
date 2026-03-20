@@ -554,8 +554,7 @@ def main() -> None:
             clock_rate=args.clock_rate,
             proactive_interval_seconds=args.proactive_interval_seconds,
             telegram_bot_token=telegram_bot_token,
-            telegram_chat_id=args.telegram_chat_id
-            or _optional_env("TELEGRAM_CHAT_ID"),
+            telegram_chat_id=args.telegram_chat_id or _optional_env("TELEGRAM_CHAT_ID"),
             telegram_poll_timeout_seconds=args.telegram_poll_timeout_seconds,
             telegram_max_user_turns=args.telegram_max_user_turns,
         )

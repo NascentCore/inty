@@ -214,9 +214,8 @@ export const UserDailyMessagesPage: React.FC = () => {
           activity_start_date: params.start_date,
           activity_end_date: params.end_date,
         };
-        const dailyMessagesData = await userAnalyticsApi.getUserDailyMessages(
-          params,
-        );
+        const dailyMessagesData =
+          await userAnalyticsApi.getUserDailyMessages(params);
         setUserInfo(dailyMessagesData);
         setAllUsersConversationPage(null);
         setAllUsersConversationQuery(conversationQuery);

@@ -347,10 +347,7 @@ object FirebaseManager {
 
                 // 事件已发送（调试模式下输出详细日志）
                 if (AppUtils.isAppDebug()) {
-                    LogUtils.d(
-                        "FirebaseManager",
-                        "✅ 事件已发送: $eventName (${parameters.size} 个参数)",
-                    )
+                    LogUtils.d("FirebaseManager", "✅ 事件已发送: $eventName (${parameters.size} 个参数)")
                 }
             } catch (e: Exception) {
                 logError("logEvent", "Failed to log event '$eventName': ${e.message}")

@@ -397,7 +397,9 @@ async def get_report_conversation_messages(
         }
 
     chat_to_session = {chat_id: _generate_session_id(chat_id) for chat_id in chat_ids}
-    session_to_chat = {session_id: chat_id for chat_id, session_id in chat_to_session.items()}
+    session_to_chat = {
+        session_id: chat_id for chat_id, session_id in chat_to_session.items()
+    }
     session_ids = list(chat_to_session.values())
 
     total_rounds_stmt = text(f"""

@@ -72,7 +72,9 @@ def test_send_message_posts_expected_payload() -> None:
             return False
 
         def read(self):
-            return json.dumps({"ok": True, "result": {"message_id": 99}}).encode("utf-8")
+            return json.dumps({"ok": True, "result": {"message_id": 99}}).encode(
+                "utf-8"
+            )
 
     captured: dict[str, object] = {}
 
