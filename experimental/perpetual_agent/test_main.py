@@ -788,3 +788,87 @@ def test_run_perpetual_agent_dispatches_named_layer_compaction() -> None:
     assert compact_named_payload["raw_source_message_count"] == 2
     assert compact_named_payload["raw_source_messages_omitted"] is True
     assert "raw_source_messages" not in compact_named_payload
+
+
+def test_e2e_hierarchical_compaction_pipeline_in_run_loop() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _assistant_response("Prelude message before compaction."),
+            _tool_response(
+                _tool_call(
+                    "compact-conv-1",
+                    "compact_recent_conversation_into_layer",
+                    {
+                        "layer_name": "memory_a",
+                        "layer_content": "First compacted memory.",
+                        "recent_message_count": 1,
+                    },
+                )
+            ),
+            _tool_response(
+                _tool_call(
+                    "compact-conv-2",
+                    "compact_recent_conversation_into_layer",
+                    {
+                        "layer_name": "memory_b",
+                        "layer_content": "Second compacted memory.",
+                        "recent_message_count": 1,
+                    },
+                )
+            ),
+            _tool_response(
+                _tool_call(
+                    "compact-named-1",
+                    "compact_named_layers_into_layer",
+                    {
+                        "layer_name": "memory_ab",
+                        "layer_content": "Merged memory hierarchy.",
+                        "source_layer_names": ["memory_a", "memory_b"],
+                    },
+                )
+            ),
+            _assistant_response("Hierarchy compaction complete."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="Please keep my context compact and layered.",
+        model="demo-model",
+        max_steps=5,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[0])
+    third_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[2])
+    fourth_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[3])
+    fifth_call_layers = _layer_names_for_call(fake_client.seen_messages_per_call[4])
+
+    assert first_call_layers == [
+        "fundamental_identity",
+        "interaction_style",
+        "conversation",
+    ]
+    assert "memory_a" in third_call_layers
+    assert "memory_a" in fourth_call_layers
+    assert "memory_b" in fourth_call_layers
+    assert "memory_a" not in fifth_call_layers
+    assert "memory_b" not in fifth_call_layers
+    assert "memory_ab" in fifth_call_layers
+
+    fifth_call_layer_levels = _layer_nesting_levels_for_call(
+        fake_client.seen_messages_per_call[4]
+    )
+    assert fifth_call_layer_levels["memory_ab"] == 2
+
+    compact_named_tool_message = next(
+        message
+        for message in _tool_messages_for_call(fake_client.seen_messages_per_call[4])
+        if str(message.get("name")) == "compact_named_layers_into_layer"
+    )
+    compact_named_payload = json.loads(str(compact_named_tool_message["content"]))
+    assert compact_named_payload["created_layer_nesting_level"] == 2
+    assert compact_named_payload["raw_source_message_count"] == 2
+    assert compact_named_payload["raw_source_messages_omitted"] is True
+    assert "raw_source_messages" not in compact_named_payload
