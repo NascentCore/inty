@@ -320,6 +320,7 @@ def test_layer_tool_name_changes_when_layer_renamed() -> None:
 def test_compacting_recent_conversation_inserts_new_layer_before_conversation() -> None:
     fake_client = _FakeClient(
         responses=[
+            _assistant_response("Prelude turn before compaction."),
             _tool_response(
                 _tool_call(
                     "compact-1",
@@ -338,29 +339,29 @@ def test_compacting_recent_conversation_inserts_new_layer_before_conversation() 
     main.run_perpetual_agent(
         user_prompt="I feel lonely and want to process today.",
         model="demo-model",
-        max_steps=2,
+        max_steps=3,
         client=fake_client,
         api_key_env="OPENROUTER_API_KEY",
         base_url="https://openrouter.ai/api/v1",
     )
 
     first_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[0])
-    second_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[1])
+    third_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[2])
     assert first_call_layer_names == [
         "fundamental_identity",
         "interaction_style",
         "conversation",
     ]
-    assert second_call_layer_names == [
+    assert third_call_layer_names == [
         "fundamental_identity",
         "interaction_style",
         "night_reflection",
         "conversation",
     ]
 
-    second_call_tools = fake_client.seen_tool_names_per_call[1]
-    assert "update_layer_night_reflection" in second_call_tools
-    assert "update_layer_conversation" not in second_call_tools
+    third_call_tools = fake_client.seen_tool_names_per_call[2]
+    assert "update_layer_night_reflection" in third_call_tools
+    assert "update_layer_conversation" not in third_call_tools
 
 
 def test_layer_rename_rejects_normalized_name_collision() -> None:
@@ -394,4 +395,37 @@ def test_compaction_rejects_normalized_name_collision() -> None:
             layer_name="interaction style",
             layer_content="summary",
             recent_message_count=1,
+        )
+
+
+def test_compaction_rejects_current_tool_call_envelope_messages() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "compact-1",
+                    "compact_recent_conversation_into_layer",
+                    {
+                        "layer_name": "too_new",
+                        "layer_content": "attempting to compact current envelope",
+                        "recent_message_count": 2,
+                    },
+                )
+            )
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Compaction can only include messages older than the current tool-call envelope."
+        ),
+    ):
+        main.run_perpetual_agent(
+            user_prompt="single old message",
+            model="demo-model",
+            max_steps=1,
+            client=fake_client,
+            api_key_env="OPENROUTER_API_KEY",
+            base_url="https://openrouter.ai/api/v1",
         )

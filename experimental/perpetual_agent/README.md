@@ -51,6 +51,7 @@ Rules:
 - If a layer is renamed via its update tool (`rename_to`), the update tool name changes on the next turn.
 - Layer names must be unique after normalization (e.g. `interaction style` collides with `interaction_style`).
 - Context messages are appended in stack order from deepest to shallowest before conversation turns.
+- Conversation compaction only applies to messages strictly older than the current assistant tool-call envelope.
 
 Conversation can be compacted into a new named layer using:
 

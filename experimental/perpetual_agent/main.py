@@ -322,6 +322,7 @@ def _execute_compact_conversation_layer_tool(
     layer_name: str,
     layer_content: str,
     recent_message_count: int,
+    max_compactable_messages: int | None = None,
 ) -> dict[str, Any]:
     _validate_character_layers(layers)
     if recent_message_count <= 0:
@@ -330,6 +331,17 @@ def _execute_compact_conversation_layer_tool(
         raise ValueError(
             "recent_message_count cannot exceed current conversation message count"
         )
+    if max_compactable_messages is not None:
+        if max_compactable_messages < 0:
+            raise ValueError("max_compactable_messages must be >= 0")
+        if max_compactable_messages > len(conversation_messages):
+            raise ValueError(
+                "max_compactable_messages cannot exceed current conversation message count"
+            )
+        if recent_message_count > max_compactable_messages:
+            raise ValueError(
+                "Compaction can only include messages older than the current tool-call envelope."
+            )
     normalized_name = _normalize_layer_name(layer_name)
     if normalized_name == "conversation":
         raise ValueError("Compacted layer name cannot be conversation.")
@@ -562,6 +574,7 @@ def run_perpetual_agent(
                 "tool_calls": _serialize_tool_calls(tool_calls),
             }
         )
+        current_tool_call_envelope_start_index = len(conversation_messages) - 1
 
         for tool_call in tool_calls:
             tool_args = json.loads(tool_call.function.arguments)
@@ -593,6 +606,7 @@ def run_perpetual_agent(
                     layer_name=layer_name,
                     layer_content=layer_content,
                     recent_message_count=recent_message_count,
+                    max_compactable_messages=current_tool_call_envelope_start_index,
                 )
             elif (
                 _find_layer_by_update_tool_name(
