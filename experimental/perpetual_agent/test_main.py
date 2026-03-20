@@ -31,14 +31,22 @@ class _FakeCompletions:
         responses: list[SimpleNamespace],
         seen_system_messages: list[str],
         seen_tool_choices: list[str | dict[str, object]],
+        seen_messages_per_call: list[list[dict[str, object]]],
+        seen_tool_names_per_call: list[list[str]],
     ):
         self._responses = responses
         self._seen_system_messages = seen_system_messages
         self._seen_tool_choices = seen_tool_choices
+        self._seen_messages_per_call = seen_messages_per_call
+        self._seen_tool_names_per_call = seen_tool_names_per_call
 
     def create(self, *, model, messages, tools, tool_choice):  # noqa: ANN001
         self._seen_system_messages.append(messages[0]["content"])
         self._seen_tool_choices.append(tool_choice)
+        self._seen_messages_per_call.append(json.loads(json.dumps(messages)))
+        self._seen_tool_names_per_call.append(
+            [tool["function"]["name"] for tool in tools]
+        )
         return self._responses.pop(0)
 
 
@@ -46,13 +54,37 @@ class _FakeClient:
     def __init__(self, responses: list[SimpleNamespace]):
         self.seen_system_messages: list[str] = []
         self.seen_tool_choices: list[str | dict[str, object]] = []
+        self.seen_messages_per_call: list[list[dict[str, object]]] = []
+        self.seen_tool_names_per_call: list[list[str]] = []
         self.chat = SimpleNamespace(
             completions=_FakeCompletions(
                 responses=responses,
                 seen_system_messages=self.seen_system_messages,
                 seen_tool_choices=self.seen_tool_choices,
+                seen_messages_per_call=self.seen_messages_per_call,
+                seen_tool_names_per_call=self.seen_tool_names_per_call,
             )
         )
+
+
+def _assistant_response(content: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=content, tool_calls=[]))]
+    )
+
+
+def _layer_names_for_call(messages: list[dict[str, object]]) -> list[str]:
+    layer_names: list[str] = []
+    for message in messages:
+        if message.get("role") != "system":
+            continue
+        content = str(message.get("content", ""))
+        if not content.startswith("[character_layer name="):
+            continue
+        first_line = content.splitlines()[0]
+        name_fragment = first_line.split("name=", maxsplit=1)[1]
+        layer_names.append(name_fragment.split(" ", maxsplit=1)[0].strip("]"))
+    return layer_names
 
 
 class _FakeTelegramBotApi:
@@ -246,3 +278,84 @@ def test_run_living_companion_telegram_loop_handles_inbound_message() -> None:
     assert fake_bot_api.seen_timeouts == [12]
     assert len(fake_bot_api.sent_messages) == 1
     assert fake_bot_api.sent_messages[0][0] == "12345"
+
+
+def test_layer_tool_name_changes_when_layer_renamed() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "layer-rename-1",
+                    "update_layer_fundamental_identity",
+                    {
+                        "content": "Identity now emphasizes grounded clarity.",
+                        "rename_to": "identity_kernel",
+                    },
+                )
+            ),
+            _assistant_response("Layer rename acknowledged."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="Start with your normal loop.",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_tools = fake_client.seen_tool_names_per_call[0]
+    second_call_tools = fake_client.seen_tool_names_per_call[1]
+    assert "update_layer_fundamental_identity" in first_call_tools
+    assert "update_layer_identity_kernel" in second_call_tools
+    assert "update_layer_fundamental_identity" not in second_call_tools
+    assert "update_layer_conversation" not in first_call_tools
+    assert "update_layer_conversation" not in second_call_tools
+
+
+def test_compacting_recent_conversation_inserts_new_layer_before_conversation() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "compact-1",
+                    "compact_recent_conversation_into_layer",
+                    {
+                        "layer_name": "Night Reflection",
+                        "layer_content": "Summarize the night-time emotional thread.",
+                        "recent_message_count": 2,
+                    },
+                )
+            ),
+            _assistant_response("Compaction complete."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="I feel lonely and want to process today.",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[0])
+    second_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[1])
+    assert first_call_layer_names == [
+        "fundamental_identity",
+        "interaction_style",
+        "conversation",
+    ]
+    assert second_call_layer_names == [
+        "fundamental_identity",
+        "interaction_style",
+        "night_reflection",
+        "conversation",
+    ]
+
+    second_call_tools = fake_client.seen_tool_names_per_call[1]
+    assert "update_layer_night_reflection" in second_call_tools
+    assert "update_layer_conversation" not in second_call_tools

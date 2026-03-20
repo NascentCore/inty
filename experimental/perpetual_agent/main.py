@@ -32,9 +32,11 @@ SYSTEM_PROMPT_TEMPLATE = """
 You are a perpetual demo agent.
 Current pulse counter: {pulse_count}
 
-You can call exactly two tools:
+You can call core tools:
 - pulse(seconds: integer)
 - call_user(phone_number: string, reason: string)
+- compact_recent_conversation_into_layer(layer_name, layer_content, recent_message_count)
+- per-layer tools named like update_layer_<layer_name> for non-conversation layers
 
 When pulse is called:
 1) sleep for the given seconds
@@ -91,6 +93,234 @@ CALL_USER_TOOL_DEFINITION = {
         },
     },
 }
+
+
+COMPACT_CONVERSATION_TOOL_DEFINITION = {
+    "type": "function",
+    "function": {
+        "name": "compact_recent_conversation_into_layer",
+        "description": (
+            "Compact recent conversation messages into a new named character layer "
+            "inserted just below the conversation layer."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "layer_name": {
+                    "type": "string",
+                    "description": (
+                        "Name/title for the new layer, e.g. 'midnight_reflection'."
+                    ),
+                },
+                "layer_content": {
+                    "type": "string",
+                    "description": (
+                        "Canonical content/instruction for the new compacted layer."
+                    ),
+                },
+                "recent_message_count": {
+                    "type": "integer",
+                    "description": (
+                        "How many most recent conversation messages should be compacted."
+                    ),
+                },
+            },
+            "required": ["layer_name", "layer_content", "recent_message_count"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+@dataclass
+class CharacterLayer:
+    name: str
+    content: str
+    is_conversation_layer: bool = False
+
+
+def _normalize_layer_name(layer_name: str) -> str:
+    normalized = re.sub(r"[^a-z0-9_]+", "_", layer_name.strip().lower())
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    if not normalized:
+        raise ValueError("Layer name cannot be empty after normalization.")
+    return normalized
+
+
+def _layer_update_tool_name(layer_name: str) -> str:
+    return f"update_layer_{_normalize_layer_name(layer_name)}"
+
+
+def _build_layer_update_tool_definition(layer: CharacterLayer) -> dict[str, Any]:
+    return {
+        "type": "function",
+        "function": {
+            "name": _layer_update_tool_name(layer.name),
+            "description": (
+                f"Update content of character layer '{layer.name}'. "
+                "You may also rename the layer."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "New content for this layer.",
+                    },
+                    "rename_to": {
+                        "type": "string",
+                        "description": (
+                            "Optional new layer name. Tool name will change on next turn."
+                        ),
+                    },
+                },
+                "required": ["content"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
+def _build_default_character_layers() -> list[CharacterLayer]:
+    return [
+        CharacterLayer(
+            name="fundamental_identity",
+            content=(
+                "Fundamental aspect: stable identity, mission, and non-negotiable values "
+                "for the agent."
+            ),
+        ),
+        CharacterLayer(
+            name="interaction_style",
+            content=(
+                "Interactive aspect: preferred dialogue style, empathy strategy, and tone "
+                "for user-facing responses."
+            ),
+        ),
+        CharacterLayer(
+            name="conversation",
+            content=(
+                "Shallowest layer. Represents current live conversation context and should "
+                "remain append-only through normal dialogue."
+            ),
+            is_conversation_layer=True,
+        ),
+    ]
+
+
+def _validate_character_layers(layers: list[CharacterLayer]) -> None:
+    if not layers:
+        raise ValueError("Character layers cannot be empty.")
+    conversation_layers = [layer for layer in layers if layer.is_conversation_layer]
+    if len(conversation_layers) != 1:
+        raise ValueError("Exactly one conversation layer is required.")
+    if not layers[-1].is_conversation_layer:
+        raise ValueError("Conversation layer must be the shallowest (last) layer.")
+
+
+def _render_layer_message(layer: CharacterLayer) -> str:
+    layer_kind = "conversation" if layer.is_conversation_layer else "character"
+    return (
+        f"[character_layer name={layer.name} type={layer_kind}]\n"
+        f"{layer.content}"
+    )
+
+
+def _build_layer_messages(layers: list[CharacterLayer]) -> list[dict[str, str]]:
+    _validate_character_layers(layers)
+    return [{"role": "system", "content": _render_layer_message(layer)} for layer in layers]
+
+
+def _build_layer_tools(layers: list[CharacterLayer]) -> list[dict[str, Any]]:
+    _validate_character_layers(layers)
+    layer_tools: list[dict[str, Any]] = []
+    for layer in layers:
+        if layer.is_conversation_layer:
+            continue
+        layer_tools.append(_build_layer_update_tool_definition(layer))
+    return layer_tools
+
+
+def _find_layer_by_update_tool_name(
+    *, layers: list[CharacterLayer], tool_name: str
+) -> CharacterLayer | None:
+    for layer in layers:
+        if layer.is_conversation_layer:
+            continue
+        if _layer_update_tool_name(layer.name) == tool_name:
+            return layer
+    return None
+
+
+def _execute_layer_update_tool(
+    *,
+    layers: list[CharacterLayer],
+    tool_name: str,
+    content: str,
+    rename_to: str | None,
+) -> dict[str, Any]:
+    layer = _find_layer_by_update_tool_name(layers=layers, tool_name=tool_name)
+    if layer is None:
+        raise ValueError(f"Unsupported layer update tool call: {tool_name}")
+    updated_name = layer.name
+    if rename_to is not None:
+        updated_name = _normalize_layer_name(rename_to)
+        if updated_name == "conversation":
+            raise ValueError("Only the shallow conversation layer may be named conversation.")
+        layer.name = updated_name
+    layer.content = content
+    return {
+        "updated_layer_name": layer.name,
+        "updated_layer_tool_name": _layer_update_tool_name(layer.name),
+        "layer_content": layer.content,
+    }
+
+
+def _extract_message_preview(message: dict[str, Any]) -> str:
+    role = str(message.get("role", "unknown"))
+    content = str(message.get("content", ""))
+    flattened = re.sub(r"\s+", " ", content).strip()
+    if not flattened:
+        flattened = "<empty>"
+    return f"{role}: {flattened}"
+
+
+def _execute_compact_conversation_layer_tool(
+    *,
+    layers: list[CharacterLayer],
+    conversation_messages: list[dict[str, Any]],
+    layer_name: str,
+    layer_content: str,
+    recent_message_count: int,
+) -> dict[str, Any]:
+    _validate_character_layers(layers)
+    if recent_message_count <= 0:
+        raise ValueError("recent_message_count must be > 0")
+    if recent_message_count > len(conversation_messages):
+        raise ValueError(
+            "recent_message_count cannot exceed current conversation message count"
+        )
+    normalized_name = _normalize_layer_name(layer_name)
+    if normalized_name == "conversation":
+        raise ValueError("Compacted layer name cannot be conversation.")
+    compacted_slice = conversation_messages[-recent_message_count:]
+    del conversation_messages[-recent_message_count:]
+
+    compacted_transcript = "\n".join(
+        f"- {_extract_message_preview(message)}" for message in compacted_slice
+    )
+    compacted_layer = CharacterLayer(
+        name=normalized_name,
+        content=f"{layer_content}\n\nCompacted transcript:\n{compacted_transcript}",
+    )
+    conversation_layer_index = len(layers) - 1
+    layers.insert(conversation_layer_index, compacted_layer)
+    return {
+        "created_layer_name": compacted_layer.name,
+        "created_layer_tool_name": _layer_update_tool_name(compacted_layer.name),
+        "compacted_message_count": recent_message_count,
+        "remaining_conversation_messages": len(conversation_messages),
+    }
 
 
 @dataclass(frozen=True)
@@ -259,19 +489,27 @@ def run_perpetual_agent(
         api_key_env=api_key_env, base_url=base_url
     )
     pulse_count = 0
-    messages: list[dict[str, Any]] = [
-        {"role": "system", "content": _render_system_prompt(pulse_count=pulse_count)},
-        {"role": "user", "content": user_prompt},
-    ]
+    character_layers = _build_default_character_layers()
+    conversation_messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
     forced_tool_choice = _tool_choice_for_user_prompt(user_prompt=user_prompt)
 
     for step in range(1, max_steps + 1):
-        messages[0]["content"] = _render_system_prompt(pulse_count=pulse_count)
+        request_messages: list[dict[str, Any]] = [
+            {"role": "system", "content": _render_system_prompt(pulse_count=pulse_count)}
+        ]
+        request_messages.extend(_build_layer_messages(character_layers))
+        request_messages.extend(conversation_messages)
+        request_tools = [
+            PULSE_TOOL_DEFINITION,
+            CALL_USER_TOOL_DEFINITION,
+            COMPACT_CONVERSATION_TOOL_DEFINITION,
+            *_build_layer_tools(character_layers),
+        ]
 
         response = active_client.chat.completions.create(
             model=model,
-            messages=messages,
-            tools=[PULSE_TOOL_DEFINITION, CALL_USER_TOOL_DEFINITION],
+            messages=request_messages,
+            tools=request_tools,
             tool_choice=forced_tool_choice if step == 1 else "auto",
         )
         assistant_message = response.choices[0].message
@@ -279,11 +517,11 @@ def run_perpetual_agent(
         tool_calls = assistant_message.tool_calls or []
 
         if not tool_calls:
-            messages.append({"role": "assistant", "content": assistant_content})
+            conversation_messages.append({"role": "assistant", "content": assistant_content})
             print(f"[step={step}] assistant: {assistant_content}")
             continue
 
-        messages.append(
+        conversation_messages.append(
             {
                 "role": "assistant",
                 "content": assistant_content,
@@ -307,9 +545,40 @@ def run_perpetual_agent(
                     phone_number=phone_number,
                     reason=reason,
                 )
+            elif tool_call.function.name == "compact_recent_conversation_into_layer":
+                layer_name = str(tool_args["layer_name"]).strip()
+                layer_content = str(tool_args["layer_content"]).strip()
+                recent_message_count = int(tool_args["recent_message_count"])
+                print(
+                    f"[step={step}] compact_recent_conversation_into_layer("
+                    f"layer_name={layer_name}, recent_message_count={recent_message_count})"
+                )
+                tool_output = _execute_compact_conversation_layer_tool(
+                    layers=character_layers,
+                    conversation_messages=conversation_messages,
+                    layer_name=layer_name,
+                    layer_content=layer_content,
+                    recent_message_count=recent_message_count,
+                )
+            elif (
+                _find_layer_by_update_tool_name(
+                    layers=character_layers, tool_name=tool_call.function.name
+                )
+                is not None
+            ):
+                tool_output = _execute_layer_update_tool(
+                    layers=character_layers,
+                    tool_name=tool_call.function.name,
+                    content=str(tool_args["content"]).strip(),
+                    rename_to=(
+                        str(tool_args["rename_to"]).strip()
+                        if "rename_to" in tool_args and tool_args["rename_to"] is not None
+                        else None
+                    ),
+                )
             else:
                 raise ValueError(f"Unsupported tool call: {tool_call.function.name}")
-            messages.append(
+            conversation_messages.append(
                 {
                     "role": "tool",
                     "tool_call_id": tool_call.id,

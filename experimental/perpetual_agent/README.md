@@ -34,6 +34,29 @@ This directory now contains **two** perpetual-agent prototypes:
   - `clock_rate=10` means the companion ages 10x faster than world time.
   - `clock_rate=0.1` means aging is slowed to 0.1x.
 
+## Character layer stack (pulse mode context architecture)
+
+`pulse` mode now builds context using a **deep-to-shallow character layer stack**:
+
+1. `fundamental_identity` (deepest, stable role/values)
+2. `interaction_style` (middle, interaction strategy)
+3. `conversation` (shallowest, always present)
+
+Rules:
+
+- Every non-conversation layer gets a dedicated update tool:
+  - `update_layer_fundamental_identity`
+  - `update_layer_interaction_style`
+- The shallow `conversation` layer has **no** update tool.
+- If a layer is renamed via its update tool (`rename_to`), the update tool name changes on the next turn.
+- Context messages are appended in stack order from deepest to shallowest before conversation turns.
+
+Conversation can be compacted into a new named layer using:
+
+- `compact_recent_conversation_into_layer(layer_name, layer_content, recent_message_count)`
+
+Compaction inserts a new layer immediately above `conversation`, making the stack behave like a Turing-style memory tape/stack where recent turns can be condensed into reusable titled memory layers.
+
 ## Run living mode (default)
 
 From repo root:
