@@ -48,8 +48,8 @@ describe("profileLinks utils", () => {
 
     expect(getDeepLinkedAgentIdFromHash("#chat?agentId=agent-100")).toBe("");
     expect(getDeepLinkedUserIdFromHash("#agents?userId=user-100")).toBe("");
-    expect(getDeepLinkedReportIdFromHash("#report-feedback?reportId=report-100")).toBe(
-      "",
-    );
+    expect(
+      getDeepLinkedReportIdFromHash("#report-feedback?reportId=report-100"),
+    ).toBe("");
   });
 });

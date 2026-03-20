@@ -412,17 +412,23 @@ export const ReportUserConversationsPage: React.FC<
                           );
                         })}
                         {groupState?.loading && (
-                          <div style={{ textAlign: "center", padding: "8px 0" }}>
+                          <div
+                            style={{ textAlign: "center", padding: "8px 0" }}
+                          >
                             <Spin size="small" />
                           </div>
                         )}
                         {!groupState?.loading && groupState?.hasMore && (
-                          <div style={{ textAlign: "center", padding: "8px 0" }}>
+                          <div
+                            style={{ textAlign: "center", padding: "8px 0" }}
+                          >
                             <Text type="secondary">继续下滑加载更早记录</Text>
                           </div>
                         )}
                         {!groupState?.loading && !groupState?.hasMore && (
-                          <div style={{ textAlign: "center", padding: "8px 0" }}>
+                          <div
+                            style={{ textAlign: "center", padding: "8px 0" }}
+                          >
                             <Text type="secondary">
                               已加载全部 {groupState?.totalRounds || 0} 轮
                             </Text>

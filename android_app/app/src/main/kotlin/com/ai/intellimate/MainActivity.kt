@@ -75,13 +75,13 @@ import com.ai.intellimate.call.voiceCallModule
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.explore.flattenAgents
 import com.ai.intellimate.explore.isChristmasTheme
+import com.ai.intellimate.ui.GlobalChatLimitDialog
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
 import com.ai.intellimate.ui.components.CarouselBackground
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
-import com.ai.intellimate.ui.GlobalChatLimitDialog
 import com.ai.intellimate.ui.components.PolicyText
 import com.ai.intellimate.ui.components.RankDialog
 import com.ai.intellimate.utils.AgentCacheManager
