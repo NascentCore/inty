@@ -52,10 +52,19 @@ Rules:
 - Layer names must be unique after normalization (e.g. `interaction style` collides with `interaction_style`).
 - Context messages are appended in stack order from deepest to shallowest before conversation turns.
 - Conversation compaction only applies to messages strictly older than the current assistant tool-call envelope.
+- Every layer carries `nesting_level` (initial layers are level `0`).
+- Compaction records raw source messages in tool output for observability.
 
 Conversation can be compacted into a new named layer using:
 
 - `compact_recent_conversation_into_layer(layer_name, layer_content, recent_message_count)`
+- This compacts raw conversation messages (level `0`) into a new layer with level `1`.
+
+Named layers can also be compacted hierarchically:
+
+- `compact_named_layers_into_layer(layer_name, layer_content, source_layer_names)`
+- All source layers must share the same `nesting_level`.
+- The merged layer gets `nesting_level = source_level + 1`.
 
 Compaction inserts a new layer immediately above `conversation`, making the stack behave like a Turing-style memory tape/stack where recent turns can be condensed into reusable titled memory layers.
 
