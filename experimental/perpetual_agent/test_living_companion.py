@@ -81,3 +81,16 @@ def test_email_channel_can_be_requested_explicitly() -> None:
 
     assert len(events) == 1
     assert events[0].channel == ChannelType.EMAIL
+
+
+def test_default_channel_can_be_telegram_for_user_and_heartbeat() -> None:
+    agent = _build_agent(now=1000.0)
+    agent.state.default_channel = ChannelType.TELEGRAM
+
+    user_events = agent.tick(now=1010.0, user_message="Can we continue here?")
+    proactive_events = agent.tick(now=1311.0)
+
+    assert len(user_events) == 1
+    assert user_events[0].channel == ChannelType.TELEGRAM
+    assert len(proactive_events) == 1
+    assert proactive_events[0].channel == ChannelType.TELEGRAM

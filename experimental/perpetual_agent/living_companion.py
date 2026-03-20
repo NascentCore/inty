@@ -9,6 +9,7 @@ class ChannelType(str, Enum):
     EMAIL = "email"
     SMS = "sms"
     VOICE_CALL = "voice_call"
+    TELEGRAM = "telegram"
 
 
 class ModelTier(str, Enum):
@@ -122,6 +123,7 @@ class CompanionState:
     initial_virtual_age_years: float
     clock_rate: float
     now: float
+    default_channel: ChannelType = ChannelType.SMS
     expression: str = "warm"
     emotion: str = "neutral"
     seconds_per_virtual_year: float = 365.2425 * 24 * 3600
@@ -162,19 +164,23 @@ def classify_emotion(user_message: str) -> EmotionClassification:
     return EmotionClassification(emotion="neutral", expression="warm")
 
 
-def select_channel(user_message: str | None) -> ChannelType:
+def select_channel(
+    user_message: str | None, *, default_channel: ChannelType = ChannelType.SMS
+) -> ChannelType:
     if user_message is None:
-        return ChannelType.SMS
+        return default_channel
     normalized = user_message.lower()
     if "email" in normalized or "mail me" in normalized:
         return ChannelType.EMAIL
+    if "telegram" in normalized or "tg" in normalized:
+        return ChannelType.TELEGRAM
     if (
         "call me" in normalized
         or "voice call" in normalized
         or "phone me" in normalized
     ):
         return ChannelType.VOICE_CALL
-    return ChannelType.SMS
+    return default_channel
 
 
 def select_model_tier(*, user_message: str | None, channel: ChannelType) -> ModelTier:
@@ -226,7 +232,10 @@ class PerpetualCompanionAgent:
         self.state.emotion = classification.emotion
         self.state.expression = classification.expression
 
-        channel = select_channel(user_message)
+        channel = select_channel(
+            user_message,
+            default_channel=self.state.default_channel,
+        )
         tier = select_model_tier(user_message=user_message, channel=channel)
         model = pick_model_from_tier(self.model_catalog, tier)
 
@@ -257,7 +266,7 @@ class PerpetualCompanionAgent:
     def _handle_heartbeat(self, *, now: float) -> list[OutboundEvent]:
         if (now - self.state.last_outreach_timestamp) < self.proactive_interval_seconds:
             return []
-        channel = ChannelType.SMS
+        channel = self.state.default_channel
         tier = (
             ModelTier.MULTIMODAL if self.state.emotion == "joyful" else ModelTier.FAST
         )
