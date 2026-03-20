@@ -27,6 +27,9 @@ sealed class ChatEvent : BaseEvent() {
     data class TypingStarted(val userId: String) : ChatEvent()
 
     data class TypingStopped(val userId: String) : ChatEvent()
+
+    /** WebSocket 下行 code=SUBSCRIPTION_REQUIRED 时发布，任意界面可弹订阅引导 */
+    data class WebSocketSubscriptionRequired(val agentId: String) : ChatEvent()
 }
 
 /** 系统相关事件 */

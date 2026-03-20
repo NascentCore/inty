@@ -3,6 +3,7 @@ package com.ai.intellimate
 import CheckInRepository
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
+import ai.sxwl.android.common.event.ChatEvent
 import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.common.event.EventSubscriber
 import ai.sxwl.android.common.event.PushNotificationEvent
@@ -80,6 +81,7 @@ import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
 import com.ai.intellimate.ui.components.HolidayCelebrationDialog
 import com.ai.intellimate.ui.components.LoginWithEmailScreen
+import com.ai.intellimate.ui.GlobalChatLimitDialog
 import com.ai.intellimate.ui.components.PolicyText
 import com.ai.intellimate.ui.components.RankDialog
 import com.ai.intellimate.utils.AgentCacheManager
@@ -126,6 +128,13 @@ class MainActivity : BaseActivity() {
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
             override fun onEvent(event: PushNotificationEvent.MessageReceived) {
                 handleFeedbackRequestMessage(event)
+            }
+        }
+
+    private val webSocketSubscriptionSubscriber =
+        object : EventSubscriber<ChatEvent.WebSocketSubscriptionRequired> {
+            override fun onEvent(event: ChatEvent.WebSocketSubscriptionRequired) {
+                chatViewModel.showChatLimitDialogFromGlobalSource(event.agentId)
             }
         }
 
@@ -184,6 +193,10 @@ class MainActivity : BaseActivity() {
 
         // 订阅反馈请求消息
         EventBus.subscribe(PushNotificationEvent.MessageReceived::class, feedbackRequestSubscriber)
+        EventBus.subscribe(
+            ChatEvent.WebSocketSubscriptionRequired::class,
+            webSocketSubscriptionSubscriber,
+        )
 
         hasInitializedConfig = true
 
@@ -507,6 +520,10 @@ class MainActivity : BaseActivity() {
             navController,
         )
 
+        if (isLoggedIn) {
+            GlobalChatLimitDialog(navController, chatViewModel)
+        }
+
         // 只在用户已登录时显示庆祝弹窗
         if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
             HolidayCelebrationDialog(
@@ -695,6 +712,10 @@ class MainActivity : BaseActivity() {
         EventBus.unsubscribe(
             PushNotificationEvent.MessageReceived::class,
             feedbackRequestSubscriber,
+        )
+        EventBus.unsubscribe(
+            ChatEvent.WebSocketSubscriptionRequired::class,
+            webSocketSubscriptionSubscriber,
         )
         // 清理返回按键处理器
         backPressHandler.cleanup()
