@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import argparse
 import base64
+import copy
 import json
 import os
 import re
 import time
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from xml.sax.saxutils import escape as xml_escape
 from typing import Any
 
@@ -36,7 +37,14 @@ You can call core tools:
 - pulse(seconds: integer)
 - call_user(phone_number: string, reason: string)
 - compact_recent_conversation_into_layer(layer_name, layer_content, recent_message_count)
+- compact_named_layers_into_layer(layer_name, layer_content, source_layer_names)
 - per-layer tools named like update_layer_<layer_name> for non-conversation layers
+
+Compaction rules:
+- every layer has nesting_level
+- compacting conversation messages creates a new layer with nesting_level=1
+- compacting named layers requires identical source nesting_level and creates target nesting_level+1
+- named-layer compaction source layers must be contiguous in stack order
 
 When pulse is called:
 1) sleep for the given seconds
@@ -132,11 +140,50 @@ COMPACT_CONVERSATION_TOOL_DEFINITION = {
 }
 
 
+COMPACT_NAMED_LAYERS_TOOL_DEFINITION = {
+    "type": "function",
+    "function": {
+        "name": "compact_named_layers_into_layer",
+        "description": (
+            "Compact multiple named character layers into a higher-level layer. "
+            "All source layers must share the same nesting level and must be contiguous."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "layer_name": {
+                    "type": "string",
+                    "description": (
+                        "Name/title for the new merged layer, e.g. 'phase_2_memory'."
+                    ),
+                },
+                "layer_content": {
+                    "type": "string",
+                    "description": "Canonical content/instruction for the merged layer.",
+                },
+                "source_layer_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Names of source named layers to compact. "
+                        "All must exist, have identical nesting level, and be contiguous in stack order."
+                    ),
+                },
+            },
+            "required": ["layer_name", "layer_content", "source_layer_names"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
 @dataclass
 class CharacterLayer:
     name: str
     content: str
     is_conversation_layer: bool = False
+    nesting_level: int = 0
+    raw_messages: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _normalize_layer_name(layer_name: str) -> str:
@@ -181,6 +228,21 @@ def _build_layer_update_tool_definition(layer: CharacterLayer) -> dict[str, Any]
     }
 
 
+def _build_seed_layer_raw_messages(
+    *, layer_name: str, layer_content: str, is_conversation_layer: bool
+) -> list[dict[str, str]]:
+    layer_type = "conversation" if is_conversation_layer else "character"
+    return [
+        {
+            "role": "system",
+            "content": (
+                f"[seed_layer name={layer_name} type={layer_type} nesting_level=0]\n"
+                f"{layer_content}"
+            ),
+        }
+    ]
+
+
 def _build_default_character_layers() -> list[CharacterLayer]:
     return [
         CharacterLayer(
@@ -189,12 +251,28 @@ def _build_default_character_layers() -> list[CharacterLayer]:
                 "Fundamental aspect: stable identity, mission, and non-negotiable values "
                 "for the agent."
             ),
+            raw_messages=_build_seed_layer_raw_messages(
+                layer_name="fundamental_identity",
+                layer_content=(
+                    "Fundamental aspect: stable identity, mission, and non-negotiable values "
+                    "for the agent."
+                ),
+                is_conversation_layer=False,
+            ),
         ),
         CharacterLayer(
             name="interaction_style",
             content=(
                 "Interactive aspect: preferred dialogue style, empathy strategy, and tone "
                 "for user-facing responses."
+            ),
+            raw_messages=_build_seed_layer_raw_messages(
+                layer_name="interaction_style",
+                layer_content=(
+                    "Interactive aspect: preferred dialogue style, empathy strategy, and tone "
+                    "for user-facing responses."
+                ),
+                is_conversation_layer=False,
             ),
         ),
         CharacterLayer(
@@ -204,6 +282,14 @@ def _build_default_character_layers() -> list[CharacterLayer]:
                 "remain append-only through normal dialogue."
             ),
             is_conversation_layer=True,
+            raw_messages=_build_seed_layer_raw_messages(
+                layer_name="conversation",
+                layer_content=(
+                    "Shallowest layer. Represents current live conversation context and should "
+                    "remain append-only through normal dialogue."
+                ),
+                is_conversation_layer=True,
+            ),
         ),
     ]
 
@@ -216,6 +302,9 @@ def _validate_character_layers(layers: list[CharacterLayer]) -> None:
         raise ValueError("Exactly one conversation layer is required.")
     if not layers[-1].is_conversation_layer:
         raise ValueError("Conversation layer must be the shallowest (last) layer.")
+    for layer in layers:
+        if layer.nesting_level < 0:
+            raise ValueError("Layer nesting_level must be >= 0.")
     normalized_non_conversation_names = [
         _normalize_layer_name(layer.name)
         for layer in layers
@@ -232,7 +321,7 @@ def _validate_character_layers(layers: list[CharacterLayer]) -> None:
 def _render_layer_message(layer: CharacterLayer) -> str:
     layer_kind = "conversation" if layer.is_conversation_layer else "character"
     return (
-        f"[character_layer name={layer.name} type={layer_kind}]\n"
+        f"[character_layer name={layer.name} type={layer_kind} nesting_level={layer.nesting_level}]\n"
         f"{layer.content}"
     )
 
@@ -315,6 +404,36 @@ def _extract_message_preview(message: dict[str, Any]) -> str:
     return f"{role}: {flattened}"
 
 
+def _clone_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [copy.deepcopy(message) for message in messages]
+
+
+def _extract_layer_preview(layer: CharacterLayer) -> str:
+    flattened = re.sub(r"\s+", " ", layer.content).strip()
+    if not flattened:
+        flattened = "<empty>"
+    return (
+        f"layer={layer.name} nesting_level={layer.nesting_level} content={flattened[:220]}"
+    )
+
+
+def _sanitize_tool_output_for_conversation(
+    *, tool_name: str, tool_output: dict[str, Any]
+) -> dict[str, Any]:
+    sanitized_output = copy.deepcopy(tool_output)
+    if tool_name == "compact_recent_conversation_into_layer":
+        raw_messages = sanitized_output.pop("raw_compacted_messages", None)
+        if isinstance(raw_messages, list):
+            sanitized_output["raw_compacted_message_count"] = len(raw_messages)
+            sanitized_output["raw_compacted_messages_omitted"] = True
+    if tool_name == "compact_named_layers_into_layer":
+        raw_messages = sanitized_output.pop("raw_source_messages", None)
+        if isinstance(raw_messages, list):
+            sanitized_output["raw_source_message_count"] = len(raw_messages)
+            sanitized_output["raw_source_messages_omitted"] = True
+    return sanitized_output
+
+
 def _execute_compact_conversation_layer_tool(
     *,
     layers: list[CharacterLayer],
@@ -362,6 +481,8 @@ def _execute_compact_conversation_layer_tool(
     compacted_layer = CharacterLayer(
         name=normalized_name,
         content=f"{layer_content}\n\nCompacted transcript:\n{compacted_transcript}",
+        nesting_level=1,
+        raw_messages=_clone_messages(compacted_slice),
     )
     conversation_layer_index = len(layers) - 1
     layers.insert(conversation_layer_index, compacted_layer)
@@ -369,8 +490,88 @@ def _execute_compact_conversation_layer_tool(
     return {
         "created_layer_name": compacted_layer.name,
         "created_layer_tool_name": _layer_update_tool_name(compacted_layer.name),
+        "created_layer_nesting_level": compacted_layer.nesting_level,
         "compacted_message_count": recent_message_count,
+        "raw_compacted_messages": _clone_messages(compacted_layer.raw_messages),
         "remaining_conversation_messages": len(conversation_messages),
+    }
+
+
+def _execute_compact_named_layers_tool(
+    *,
+    layers: list[CharacterLayer],
+    layer_name: str,
+    layer_content: str,
+    source_layer_names: list[str],
+) -> dict[str, Any]:
+    _validate_character_layers(layers)
+    if not source_layer_names:
+        raise ValueError("source_layer_names must contain at least one layer name.")
+
+    normalized_source_names = [_normalize_layer_name(name) for name in source_layer_names]
+    if len(normalized_source_names) != len(set(normalized_source_names)):
+        raise ValueError("source_layer_names cannot contain duplicates after normalization.")
+
+    index_by_name: dict[str, int] = {}
+    for idx, layer in enumerate(layers):
+        if layer.is_conversation_layer:
+            continue
+        index_by_name[_normalize_layer_name(layer.name)] = idx
+
+    selected_indices = []
+    for normalized_name in normalized_source_names:
+        if normalized_name not in index_by_name:
+            raise ValueError(f"Unknown source layer for compaction: {normalized_name}")
+        selected_indices.append(index_by_name[normalized_name])
+    selected_indices = sorted(selected_indices)
+    for idx in range(1, len(selected_indices)):
+        if selected_indices[idx] != selected_indices[idx - 1] + 1:
+            raise ValueError(
+                "Named-layer compaction requires source layers to be contiguous in the layer stack."
+            )
+    selected_layers = [layers[idx] for idx in selected_indices]
+
+    source_nesting_levels = {layer.nesting_level for layer in selected_layers}
+    if len(source_nesting_levels) != 1:
+        raise ValueError(
+            "Named-layer compaction requires all source layers to share the same nesting_level."
+        )
+
+    normalized_target_name = _normalize_layer_name(layer_name)
+    if normalized_target_name == "conversation":
+        raise ValueError("Compacted layer name cannot be conversation.")
+    _ensure_unique_compacted_layer_name(
+        layers=layers, normalized_layer_name=normalized_target_name
+    )
+
+    compacted_transcript = "\n".join(
+        f"- {_extract_layer_preview(layer)}" for layer in selected_layers
+    )
+    merged_raw_messages: list[dict[str, Any]] = []
+    for layer in selected_layers:
+        merged_raw_messages.extend(_clone_messages(layer.raw_messages))
+
+    merged_layer = CharacterLayer(
+        name=normalized_target_name,
+        content=f"{layer_content}\n\nCompacted layers:\n{compacted_transcript}",
+        nesting_level=selected_layers[0].nesting_level + 1,
+        raw_messages=merged_raw_messages,
+    )
+
+    insert_at = selected_indices[0]
+    for idx in reversed(selected_indices):
+        del layers[idx]
+    layers.insert(insert_at, merged_layer)
+    _validate_character_layers(layers)
+
+    return {
+        "created_layer_name": merged_layer.name,
+        "created_layer_tool_name": _layer_update_tool_name(merged_layer.name),
+        "created_layer_nesting_level": merged_layer.nesting_level,
+        "compacted_layer_names": [layer.name for layer in selected_layers],
+        "compacted_source_nesting_level": selected_layers[0].nesting_level,
+        "raw_source_message_count": len(merged_raw_messages),
+        "raw_source_messages": _clone_messages(merged_raw_messages),
     }
 
 
@@ -554,6 +755,7 @@ def run_perpetual_agent(
             PULSE_TOOL_DEFINITION,
             CALL_USER_TOOL_DEFINITION,
             COMPACT_CONVERSATION_TOOL_DEFINITION,
+            COMPACT_NAMED_LAYERS_TOOL_DEFINITION,
             *_build_layer_tools(character_layers),
         ]
 
@@ -616,6 +818,22 @@ def run_perpetual_agent(
                 # Compaction removes only messages older than the current envelope,
                 # so the envelope index shifts left by exactly this count.
                 current_tool_call_envelope_start_index -= recent_message_count
+            elif tool_call.function.name == "compact_named_layers_into_layer":
+                layer_name = str(tool_args["layer_name"]).strip()
+                layer_content = str(tool_args["layer_content"]).strip()
+                source_layer_names = [
+                    str(item).strip() for item in tool_args["source_layer_names"]
+                ]
+                print(
+                    f"[step={step}] compact_named_layers_into_layer("
+                    f"layer_name={layer_name}, source_layer_names={source_layer_names})"
+                )
+                tool_output = _execute_compact_named_layers_tool(
+                    layers=character_layers,
+                    layer_name=layer_name,
+                    layer_content=layer_content,
+                    source_layer_names=source_layer_names,
+                )
             elif (
                 _find_layer_by_update_tool_name(
                     layers=character_layers, tool_name=tool_call.function.name
@@ -634,12 +852,15 @@ def run_perpetual_agent(
                 )
             else:
                 raise ValueError(f"Unsupported tool call: {tool_call.function.name}")
+            tool_output_for_conversation = _sanitize_tool_output_for_conversation(
+                tool_name=tool_call.function.name, tool_output=tool_output
+            )
             conversation_messages.append(
                 {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": tool_call.function.name,
-                    "content": json.dumps(tool_output),
+                    "content": json.dumps(tool_output_for_conversation),
                 }
             )
 
