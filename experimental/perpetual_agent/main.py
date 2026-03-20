@@ -613,6 +613,9 @@ def run_perpetual_agent(
                     recent_message_count=recent_message_count,
                     max_compactable_messages=current_tool_call_envelope_start_index,
                 )
+                # Compaction removes only messages older than the current envelope,
+                # so the envelope index shifts left by exactly this count.
+                current_tool_call_envelope_start_index -= recent_message_count
             elif (
                 _find_layer_by_update_tool_name(
                     layers=character_layers, tool_name=tool_call.function.name

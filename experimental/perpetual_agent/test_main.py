@@ -481,3 +481,52 @@ def test_compaction_after_another_tool_keeps_current_envelope_intact(
         for message in second_call_messages[:first_tool_message_index]
     )
     assert has_preceding_assistant_tool_calls
+
+
+def test_repeated_compaction_in_same_turn_preserves_all_tool_results() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _assistant_response("prelude"),
+            _tool_response_with_calls(
+                [
+                    _tool_call(
+                        "compact-1",
+                        "compact_recent_conversation_into_layer",
+                        {
+                            "layer_name": "first_memory",
+                            "layer_content": "first compaction",
+                            "recent_message_count": 1,
+                        },
+                    ),
+                    _tool_call(
+                        "compact-2",
+                        "compact_recent_conversation_into_layer",
+                        {
+                            "layer_name": "second_memory",
+                            "layer_content": "second compaction",
+                            "recent_message_count": 1,
+                        },
+                    ),
+                ]
+            ),
+            _assistant_response("done"),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="old message available for compaction",
+        model="demo-model",
+        max_steps=3,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    third_call_messages = fake_client.seen_messages_per_call[2]
+    tool_message_ids = [
+        str(message.get("tool_call_id"))
+        for message in third_call_messages
+        if message.get("role") == "tool"
+    ]
+    assert tool_message_ids.count("compact-1") == 1
+    assert tool_message_ids.count("compact-2") == 1
