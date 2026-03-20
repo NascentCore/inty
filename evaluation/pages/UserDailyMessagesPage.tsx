@@ -82,6 +82,8 @@ export const UserDailyMessagesPage: React.FC = () => {
   // 数据加载状态
   const [loading, setLoading] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [loadingAllUsersConversations, setLoadingAllUsersConversations] =
+    useState(false);
   const [loadingMessages, setLoadingMessages] = useState<
     Record<string, boolean>
   >({});
@@ -212,21 +214,26 @@ export const UserDailyMessagesPage: React.FC = () => {
           activity_start_date: params.start_date,
           activity_end_date: params.end_date,
         };
-        const [dailyMessagesData, conversationsDetailData] = await Promise.all([
-          userAnalyticsApi.getUserDailyMessages(params),
-          userAnalyticsApi.getUserAgentConversationsDetailPaginated({
-            ...conversationQuery,
-            page: 1,
-            size: 10,
-          }),
-        ]);
+        const dailyMessagesData = await userAnalyticsApi.getUserDailyMessages(
+          params,
+        );
         setUserInfo(dailyMessagesData);
-        setAllUsersConversationPage(conversationsDetailData);
+        setAllUsersConversationPage(null);
         setAllUsersConversationQuery(conversationQuery);
         setTodayStats(null);
         setSessions([]);
         setSessionMessages({});
         setExpandedSessions(new Set());
+
+        setLoadingAllUsersConversations(true);
+        void loadAllUsersConversationPage(1, conversationQuery)
+          .catch((error: unknown) => {
+            console.error("加载分页聊天详情失败:", error);
+            message.error(getErrorMessage(error, "加载分页聊天详情失败"));
+          })
+          .finally(() => {
+            setLoadingAllUsersConversations(false);
+          });
       }
 
       message.success("查询成功");
@@ -240,7 +247,7 @@ export const UserDailyMessagesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchType, searchValue, dateRange]);
+  }, [searchType, searchValue, dateRange, loadAllUsersConversationPage]);
 
   useEffect(() => {
     if (!deepLinkedUserId) {
@@ -337,14 +344,14 @@ export const UserDailyMessagesPage: React.FC = () => {
       if (!allUsersConversationQuery) {
         return;
       }
-      setLoading(true);
+      setLoadingAllUsersConversations(true);
       try {
         await loadAllUsersConversationPage(page, allUsersConversationQuery);
       } catch (error: unknown) {
         console.error("加载分页聊天详情失败:", error);
         message.error(getErrorMessage(error, "加载分页聊天详情失败"));
       } finally {
-        setLoading(false);
+        setLoadingAllUsersConversations(false);
       }
     },
     [allUsersConversationQuery, loadAllUsersConversationPage],
@@ -923,7 +930,7 @@ export const UserDailyMessagesPage: React.FC = () => {
                   columns={allUsersMessagesColumns}
                   dataSource={allUsersConversationPage?.items ?? []}
                   rowKey={(record) => `${record.user_id}:${record.agent_id}`}
-                  loading={loading}
+                  loading={loadingAllUsersConversations}
                   pagination={{
                     current: allUsersConversationPage?.page ?? 1,
                     pageSize: 10,
