@@ -27,6 +27,12 @@ def _tool_response(call: SimpleNamespace) -> SimpleNamespace:
     )
 
 
+def _tool_response_with_calls(calls: list[SimpleNamespace]) -> SimpleNamespace:
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="", tool_calls=calls))]
+    )
+
+
 class _FakeCompletions:
     def __init__(
         self,
@@ -429,3 +435,49 @@ def test_compaction_rejects_current_tool_call_envelope_messages() -> None:
             api_key_env="OPENROUTER_API_KEY",
             base_url="https://openrouter.ai/api/v1",
         )
+
+
+def test_compaction_after_another_tool_keeps_current_envelope_intact(
+    monkeypatch,
+) -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response_with_calls(
+                [
+                    _tool_call("pulse-1", "pulse", {"seconds": 0}),
+                    _tool_call(
+                        "compact-1",
+                        "compact_recent_conversation_into_layer",
+                        {
+                            "layer_name": "old_prompt_memory",
+                            "layer_content": "compacted from older messages only",
+                            "recent_message_count": 1,
+                        },
+                    ),
+                ]
+            ),
+            _assistant_response("done"),
+        ]
+    )
+    monkeypatch.setattr(main.time, "sleep", lambda _seconds: None)
+
+    main.run_perpetual_agent(
+        user_prompt="seed history",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    second_call_messages = fake_client.seen_messages_per_call[1]
+    first_tool_message_index = next(
+        idx
+        for idx, message in enumerate(second_call_messages)
+        if message.get("role") == "tool"
+    )
+    has_preceding_assistant_tool_calls = any(
+        message.get("role") == "assistant" and "tool_calls" in message
+        for message in second_call_messages[:first_tool_message_index]
+    )
+    assert has_preceding_assistant_tool_calls

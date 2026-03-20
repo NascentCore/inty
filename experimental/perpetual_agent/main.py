@@ -348,8 +348,13 @@ def _execute_compact_conversation_layer_tool(
     _ensure_unique_compacted_layer_name(
         layers=layers, normalized_layer_name=normalized_name
     )
-    compacted_slice = conversation_messages[-recent_message_count:]
-    del conversation_messages[-recent_message_count:]
+    if max_compactable_messages is None:
+        compactable_end_index = len(conversation_messages)
+    else:
+        compactable_end_index = max_compactable_messages
+    compacted_start_index = compactable_end_index - recent_message_count
+    compacted_slice = conversation_messages[compacted_start_index:compactable_end_index]
+    del conversation_messages[compacted_start_index:compactable_end_index]
 
     compacted_transcript = "\n".join(
         f"- {_extract_message_preview(message)}" for message in compacted_slice
