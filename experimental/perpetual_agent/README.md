@@ -94,9 +94,34 @@ Useful flags:
 
 This mode lets the perpetual companion receive user text from Telegram and reply in the same chat.
 
+### Verify the bot token (before the demo loop)
+
+Confirm BotFather token and bot identity with a single HTTP call ([`getMe`](https://core.telegram.org/bots/api#getme)):
+
+```bash
+curl -sS "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe"
+```
+
+Expect `"ok":true` and `result.username` matching your bot. This does not start long polling; it only proves the token is valid.
+
+### Start the living companion (Telegram)
+
+From repo root (with [`uv`](https://github.com/astral-sh/uv) or plain `python`):
+
 ```bash
 export TELEGRAM_BOT_TOKEN="<your-bot-token>"
 
+uv run python -m experimental.perpetual_agent.main \
+  --mode living \
+  --telegram \
+  --telegram-max-user-turns 50 \
+  --telegram-poll-timeout-seconds 20 \
+  --proactive-interval-seconds 120
+```
+
+Optional: pin the chat when you already know the numeric chat id (see troubleshooting below):
+
+```bash
 python -m experimental.perpetual_agent.main \
   --mode living \
   --telegram \
@@ -107,9 +132,28 @@ python -m experimental.perpetual_agent.main \
 
 Notes:
 
-- If `--telegram-chat-id` is omitted, the first incoming chat message becomes the bound chat.
+- **Process must stay running** while you chat in Telegram. If the process exits (traceback or Ctrl+C), the bot will stop replying even though Telegram shows delivered checkmarks on your outgoing messages.
+- If `--telegram-chat-id` is omitted **and** `TELEGRAM_CHAT_ID` is unset, the **first incoming text message** sets the bound chat (`getUpdates` → `message.chat.id`). Good for a single-user local smoke test.
 - You can set `TELEGRAM_CHAT_ID` in env instead of passing `--telegram-chat-id`.
 - In Telegram mode, the companion's default outbound channel is `telegram`.
+- Replies in this demo use `ScriptedModelExecutor`: they echo metadata plus `I heard you: <text>` (not a live LLM).
+
+Useful Telegram flags (see `python -m experimental.perpetual_agent.main --help`):
+
+- `--telegram-poll-timeout-seconds`: long-poll wait for `getUpdates`
+- `--telegram-max-user-turns`: exit after this many handled user messages (raise for long demos)
+- `--telegram-bot-token-env`: env var name for the token (default `TELEGRAM_BOT_TOKEN`)
+
+### Troubleshooting
+
+1. **`urllib.error.HTTPError: HTTP Error 400: Bad Request` on `sendMessage`**  
+   Often an **invalid or mismatched `chat_id`**. If `TELEGRAM_CHAT_ID` / `--telegram-chat-id` is **wrong** (typo, placeholder, or another user’s id), the loop **drops your real messages** (`incoming.chat_id != current_chat_id`) and may still run **proactive** sends to the wrong id → 400. **Fix:** `unset TELEGRAM_CHAT_ID` and omit `--telegram-chat-id`, restart, then send one message from the intended Telegram account so the chat binds correctly; or set the env/flag to the exact numeric id from `getUpdates` / `@userinfobot`.
+
+2. **No reply but double checkmarks on your messages**  
+   That only means Telegram accepted the message—not that this Python process received it or called `sendMessage` successfully.
+
+3. **Token security**  
+   Treat `TELEGRAM_BOT_TOKEN` like a password; rotate it in BotFather if it leaks. Do not commit it to git.
 
 ### Known issues / observations (recorded, not fixed yet)
 

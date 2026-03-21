@@ -12,3 +12,4 @@
   from dotenv import load_dotenv
   load_dotenv()
   ```
+- Telegram + `perpetual_agent` 本地联调、token 校验与 `TELEGRAM_CHAT_ID` 排错：见 [perpetual_agent/README.md](perpetual_agent/README.md) 与仓库根目录 [tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md](../tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md)。

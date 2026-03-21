@@ -15,6 +15,14 @@
 2. 将 Bot 链接发给投资人（`https://t.me/<your_bot_username>`）。
 3. 请投资人点击 `Start`，并发送一条测试消息（例如 `Hi`）。
 
+**最小校验 token（可选）：** 在终端执行（勿把 token 贴进聊天记录或提交到 git）：
+
+```bash
+curl -sS "https://api.telegram.org/bot<你的bot_token>/getMe"
+```
+
+期望返回 `"ok":true` 且 `result.username` 为你的 bot 用户名。详见 [Bot API getMe](https://core.telegram.org/bots/api#getme)。
+
 ### B. 本地启动命令（仓库根目录）
 
 ```bash
@@ -94,10 +102,15 @@ python -m experimental.perpetual_agent.main \
 
 1. **强烈建议固定 chat_id**
    - 否则可能收到其他用户消息，影响演示稳定性。
-2. **将 user turns 上限调大**
+2. **`TELEGRAM_CHAT_ID` 必须与投资人账号一致**
+   - 若写错（占位符、他人 id、非数字私聊 id），程序会**忽略**投资人发来的消息，且可能在 **proactive** 时 `sendMessage` 返回 **HTTP 400** 直接崩溃。
+   - 彩排时若不确定 id：可先 `unset TELEGRAM_CHAT_ID`，不传 `--telegram-chat-id`，由**第一条收到的文本消息**自动绑定 chat；确认无误后再在正式路演中改为固定 `TELEGRAM_CHAT_ID`。
+3. **进程必须常驻**
+   - Telegram 上消息显示双勾只表示送达服务器，不代表本机 agent 仍在运行；演示全程保持终端进程不退出。
+4. **将 user turns 上限调大**
    - `--telegram-max-user-turns 200` 可避免中途因默认上限退出。
-3. **提前做一次彩排**
-   - 至少提前 5 分钟发 2 条测试消息，确认网络与 token 正常。
+5. **提前做一次彩排**
+   - 至少提前 5 分钟发 2 条测试消息，确认网络与 token 正常。可对照仓库 [tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md](/tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md)。
 
 ---
 
@@ -106,8 +119,9 @@ python -m experimental.perpetual_agent.main \
 ### 情况 A：投资人发了消息但 Bot 不回
 
 - 检查投资人是否已点击 `Start`。
-- 检查 `TELEGRAM_BOT_TOKEN` 是否正确。
-- 观察终端是否有异常报错并立刻重启命令。
+- 检查 `TELEGRAM_BOT_TOKEN` 是否正确（可用本节 A 的 `curl getMe`）。
+- 若设置了 `TELEGRAM_CHAT_ID` / `--telegram-chat-id`，核对是否为投资人的**数字** chat id；错误时先 `unset TELEGRAM_CHAT_ID` 后重启，让第一条消息自动绑定。
+- 观察终端是否有异常报错（例如 `HTTP Error 400` 多与错误 chat_id 有关）并立刻重启命令。
 
 ### 情况 B：Bot 回错人或消息混乱
 
