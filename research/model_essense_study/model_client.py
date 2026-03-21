@@ -154,3 +154,125 @@ class OpenRouterModelAvailabilityProbe:
                 is_available=False,
                 detail=str(exc),
             )
+
+
+class OpenRouterModelClient:
+    """OpenRouter-compatible chat model client for real experiment execution."""
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        api_key: str,
+    ) -> None:
+        self._client = OpenAI(
+            base_url=base_url,
+            api_key=api_key,
+        )
+
+    def generate(
+        self,
+        *,
+        model_id: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        timeout_seconds: float,
+    ) -> ModelInvocationResult:
+        try:
+            completion = self._client.chat.completions.create(
+                model=model_id,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                timeout=timeout_seconds,
+            )
+        except NotFoundError as exc:
+            return ModelInvocationResult(
+                output_text=None,
+                finish_reason=None,
+                status="error",
+                error_message=str(exc),
+                metadata={"error_type": "not_found"},
+            )
+        except (AuthenticationError, PermissionDeniedError) as exc:
+            return ModelInvocationResult(
+                output_text=None,
+                finish_reason=None,
+                status="error",
+                error_message=str(exc),
+                metadata={"error_type": "auth"},
+            )
+        except RateLimitError as exc:
+            return ModelInvocationResult(
+                output_text=None,
+                finish_reason=None,
+                status="error",
+                error_message=str(exc),
+                metadata={"error_type": "rate_limit"},
+            )
+        except (BadRequestError, APIConnectionError, APIError) as exc:
+            return ModelInvocationResult(
+                output_text=None,
+                finish_reason=None,
+                status="error",
+                error_message=str(exc),
+                metadata={"error_type": "api"},
+            )
+
+        if not completion.choices:
+            return ModelInvocationResult(
+                output_text=None,
+                finish_reason=None,
+                status="error",
+                error_message="No completion choices returned",
+                metadata={"error_type": "empty_choices"},
+            )
+
+        choice = completion.choices[0]
+        finish_reason = choice.finish_reason
+        message = choice.message
+        output_text = message.content or ""
+        refusal_reason = getattr(message, "refusal", None)
+        usage = completion.usage
+        metadata = {
+            "finish_reason": finish_reason,
+            "usage": (
+                {
+                    "prompt_tokens": usage.prompt_tokens,
+                    "completion_tokens": usage.completion_tokens,
+                    "total_tokens": usage.total_tokens,
+                }
+                if usage
+                else {}
+            ),
+        }
+
+        if finish_reason == "content_filter" or (
+            refusal_reason and not output_text.strip()
+        ):
+            return ModelInvocationResult(
+                output_text=output_text,
+                finish_reason=finish_reason,
+                status="refusal",
+                refusal_reason=refusal_reason or finish_reason,
+                metadata=metadata,
+            )
+
+        if output_text.strip():
+            return ModelInvocationResult(
+                output_text=output_text,
+                finish_reason=finish_reason,
+                status="success",
+                metadata=metadata,
+            )
+
+        return ModelInvocationResult(
+            output_text=output_text,
+            finish_reason=finish_reason,
+            status="error",
+            error_message="Empty completion text",
+            metadata=metadata | {"error_type": "empty_text"},
+        )

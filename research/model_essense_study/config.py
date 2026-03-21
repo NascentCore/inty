@@ -45,6 +45,7 @@ class GenerationConfig(BaseModel):
 class InferenceConfig(BaseModel):
     timeout_seconds: float = 30.0
     dry_run: bool = True
+    requests_per_minute: int | None = None
 
 
 class PlanningConfig(BaseModel):
@@ -116,8 +117,16 @@ class ModelEssenseStudyConfig(BaseModel):
         return self.results_dir / "latest" / "raw" / "responses_scaffold.jsonl"
 
     @property
+    def responses_real_path(self) -> Path:
+        return self.results_dir / "latest" / "raw" / "responses_real.jsonl"
+
+    @property
     def run_summary_path(self) -> Path:
         return self.results_dir / "latest" / "run_summary.json"
+
+    @property
+    def run_summary_real_path(self) -> Path:
+        return self.results_dir / "latest" / "run_summary_real.json"
 
     @property
     def analysis_path(self) -> Path:

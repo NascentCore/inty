@@ -26,7 +26,7 @@ def run_analysis_scaffold(*, raw_path: Path) -> dict[str, Any]:
                 "records_success": 0,
                 "records_refusal": 0,
                 "records_error": 0,
-                "phase": "framework_scaffold",
+                "phase": "latest_run",
             },
             by_model={},
             metrics=[
@@ -57,7 +57,7 @@ def run_analysis_scaffold(*, raw_path: Path) -> dict[str, Any]:
         "records_success": sum(1 for item in records if item.status.value == "success"),
         "records_refusal": sum(1 for item in records if item.status.value == "refusal"),
         "records_error": sum(1 for item in records if item.status.value == "error"),
-        "phase": "framework_scaffold",
+        "phase": "latest_run",
     }
     result = AnalysisResult(
         summary=summary,

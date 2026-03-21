@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-Model essence study framework CLI.
-
-Framework-first scope:
-- persona extraction scaffold
-- English stimulus curation scaffold
-- manifest generation
-- inference runner scaffold (no real model invocation yet)
-- analysis/report/figure scaffolds
-"""
+"""Model essence study CLI (framework + real execution)."""
 
 from __future__ import annotations
 
@@ -39,7 +30,7 @@ from research.model_essense_study.persona_builder import (
 )
 from research.model_essense_study.report import build_scaffold_report
 from research.model_essense_study.run_planner import build_run_plan
-from research.model_essense_study.runner import run_inference_scaffold
+from research.model_essense_study.runner import run_inference as run_inference_job
 from research.model_essense_study.schema import (
     AgentPersonaRaw,
     ExperimentManifest,
@@ -72,7 +63,8 @@ def _load_manifest(path: Path) -> ExperimentManifest:
 
 
 def _resolve_openrouter_api_key() -> str | None:
-    return os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+    env_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+    return env_key if env_key else None
 
 
 @app.command()
@@ -225,6 +217,14 @@ def build_manifest_file(
         for line in stimuli_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    if not personas:
+        raise ValueError(
+            "No personas found. Run extract-personas first and ensure selected_count > 0."
+        )
+    if not stimuli:
+        raise ValueError(
+            "No stimuli found. Run build-stimuli-dataset first and ensure selected_count > 0."
+        )
 
     manifest = build_manifest(
         model_ids=cfg.experiment.model_ids,
@@ -244,35 +244,61 @@ def run_inference(
         cyclopts.Parameter(name=["--config", "-c"], help="Path to study config YAML."),
     ] = "research/model_essense_study/config.yaml",
     max_records: Annotated[
-        int,
-        cyclopts.Parameter(name="--max-records", help="Cap number of manifest cells for smoke run."),
-    ] = 30,
+        int | None,
+        cyclopts.Parameter(
+            name="--max-records",
+            help="Cap number of manifest cells (omit for full manifest run).",
+        ),
+    ] = None,
+    real_run: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--real-run",
+            help="Enable real model invocation through OpenRouter endpoint.",
+        ),
+    ] = False,
+    resume_from_existing: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--resume-from-existing",
+            help="Append and skip task_ids already present in output file.",
+        ),
+    ] = False,
+    requests_per_minute: Annotated[
+        int | None,
+        cyclopts.Parameter(
+            name="--requests-per-minute",
+            help="Throttle request throughput for this run.",
+        ),
+    ] = None,
 ) -> None:
     """
-    Run inference scaffold and write JSONL response records.
+    Run inference and write JSONL response records.
     """
     cfg = _load_cfg(config)
-    manifest_path = cfg.data_dir / "manifests" / "manifest_v1.json"
-    responses_path = cfg.results_dir / "latest" / "raw" / "responses_scaffold.jsonl"
-    run_summary_path = cfg.results_dir / "latest" / "run_summary.json"
+    manifest = _load_manifest(cfg.manifest_path)
+    responses_path = cfg.responses_real_path if real_run else cfg.responses_path
+    run_summary_path = cfg.run_summary_real_path if real_run else cfg.run_summary_path
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    result = run_inference_scaffold(
+    result = run_inference_job(
         manifest=manifest,
         config=cfg,
         max_items=max_records,
-    )
-    responses_path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [json.dumps(item, ensure_ascii=False) for item in result["items"]]
-    responses_path.write_text(
-        "\n".join(lines) + ("\n" if lines else ""),
-        encoding="utf-8",
+        responses_path=responses_path,
+        real_run=real_run,
+        requests_per_minute=requests_per_minute,
+        resume_from_existing=resume_from_existing,
+        openrouter_api_key=_resolve_openrouter_api_key(),
     )
     _write_json(
         run_summary_path,
         result["summary"] | {"created_at": datetime.now(UTC).isoformat()},
     )
-    logger.info("Inference scaffold completed")
+    logger.info(
+        "Inference completed: real_run={} executed={}",
+        real_run,
+        result["summary"]["executed_items"],
+    )
 
 
 @app.command()
@@ -283,11 +309,11 @@ def analyze(
     ] = "research/model_essense_study/config.yaml",
 ) -> None:
     """
-    Run placeholder analysis from response JSONL.
+    Run analysis from response JSONL.
     """
     cfg = _load_cfg(config)
-    raw_path = cfg.results_dir / "latest" / "raw" / "responses_scaffold.jsonl"
-    analysis_path = cfg.results_dir / "latest" / "analysis" / "analysis_summary.json"
+    raw_path = cfg.responses_real_path if cfg.responses_real_path.exists() else cfg.responses_path
+    analysis_path = cfg.analysis_path
     analysis_payload = run_analysis_scaffold(raw_path=raw_path)
     _write_json(analysis_path, analysis_payload)
     logger.info("Analysis scaffold completed")
@@ -304,14 +330,14 @@ def report(
     Generate framework report and placeholder figure artifacts.
     """
     cfg = _load_cfg(config)
-    analysis_path = cfg.results_dir / "latest" / "analysis" / "analysis_summary.json"
-    figures = generate_figure_placeholders(cfg.results_dir / "latest" / "figures")
+    analysis_path = cfg.analysis_path
+    figures = generate_figure_placeholders(cfg.figures_dir)
     report_text = build_scaffold_report(
         config=cfg,
         analysis_path=analysis_path,
         figures=figures,
     )
-    report_path = cfg.results_dir / "latest" / "report.md"
+    report_path = cfg.report_path
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report_text, encoding="utf-8")
     logger.info("Report scaffold completed at {}", report_path)

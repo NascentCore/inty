@@ -50,6 +50,22 @@ Framework-only scaffolding.
   - `google/gemini-2.5-flash-lite`: available
   - `anthropic/claude-3.5-sonnet`: available
 
+### 2026-03-21 — Real-run execution entry validated
+- Added real inference execution path:
+  - `run-inference --real-run` now calls OpenRouter-compatible API via `OpenRouterModelClient`.
+  - Supports throughput control (`--requests-per-minute`) and resumable append mode (`--resume-from-existing`).
+- Real-run artifacts now written separately:
+  - `research/model_essense_study/results/latest/raw/responses_real.jsonl`
+  - `research/model_essense_study/results/latest/run_summary_real.json`
+- Executed one live real-run sample (`max-records=1`) and verified:
+  - phase=`real_execution`
+  - status=`success`
+  - response text and token usage metadata persisted.
+- Tried real DB-backed persona/stimulus sampling, but environment DB contains no eligible rows:
+  - `personas_v1.json`: `selected_count=0`
+  - `stimuli_v1_summary.json`: `selected_count=0`
+  - This blocks immediate full-scale matrix execution in current environment.
+
 ### Next planned entries
 - DB-backed dry run statistics:
   - candidate count before/after filters

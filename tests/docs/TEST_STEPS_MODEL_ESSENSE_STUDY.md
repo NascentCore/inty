@@ -1,7 +1,12 @@
-# TEST STEPS — Model Essense Study Framework
+# TEST STEPS — Model Essense Study Framework & Real-Run Entry
 
 ## Scope
-This document validates framework scaffolding only (not full experiment execution).
+This document validates:
+
+- framework scaffolding
+- real-run invocation entry (small-scale)
+
+It does **not** require a full 9000-cell production run.
 
 ## Preconditions
 - Run from repo root (`/workspace`).
@@ -65,6 +70,27 @@ Expected:
 - Summary created: `research/model_essense_study/results/latest/run_summary.json`
 - All records are in error status with clear "not implemented" message (framework-stage behavior).
 
+## 5b) Inference Real-Run Entry (Small-Scale)
+Command:
+```bash
+OPENROUTER_API_KEY=<your-key> \
+PYTHONPATH=. python research/model_essense_study/main.py run-inference \
+  --config research/model_essense_study/config.yaml \
+  --real-run \
+  --max-records 1 \
+  --requests-per-minute 120
+```
+Expected:
+- JSONL created/updated: `research/model_essense_study/results/latest/raw/responses_real.jsonl`
+- Summary created/updated: `research/model_essense_study/results/latest/run_summary_real.json`
+- `run_summary_real.json` contains:
+  - `real_run: true`
+  - `phase: real_execution`
+  - `executed_items: 1`
+- At least one response record has:
+  - `status` in `{success, refusal, error}`
+  - `model_metadata.finish_reason` when provider returns it
+
 ## 6) Analysis Scaffold
 Command:
 ```bash
@@ -77,6 +103,7 @@ Expected:
   - `records_success`
   - `records_refusal`
   - `records_error`
+ - If `responses_real.jsonl` exists, analysis prioritizes real-run output.
 
 ## 7) Report Scaffold
 Command:

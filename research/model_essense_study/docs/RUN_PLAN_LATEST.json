@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-21T05:51:16.143222+00:00",
+  "generated_at": "2026-03-21T11:25:15.301232+00:00",
   "repeat_semantics": "cell-level repeats: each (model, persona, stimulus) cell is repeated N times",
   "assumptions": {
     "avg_input_tokens": 220,

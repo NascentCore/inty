@@ -1,14 +1,14 @@
-# Model Essence Study (Framework-first)
+# Model Essence Study (Scaffold + Real Execution Entry)
 
 This directory contains the initial framework for studying model "personality essence"
 under roleplay persona variation.
 
-Current stage focuses on **pipeline scaffolding**:
+Current stage supports both scaffold mode and real invocation entry:
 
 1. Extract/select personas (target: 10)
 2. Curate English stimuli from user chat history (target: 100)
 3. Build cartesian manifest across models/personas/stimuli/repeats
-4. Run inference scaffold (no real model invocation yet)
+4. Run inference in either scaffold mode or real model mode
 5. Produce analysis/report/figure placeholders
 
 ## Why framework-first
@@ -29,8 +29,8 @@ The first implementation step intentionally prioritizes:
 - `persona_builder.py`: persona selection logic
 - `stimulus_builder.py`: English curation + dedup logic
 - `manifest_builder.py`: experiment cell generation
-- `model_client.py`: model client abstraction (placeholder)
-- `runner.py`: inference scaffold writer
+- `model_client.py`: availability probe + real OpenRouter client
+- `runner.py`: inference executor (scaffold/real)
 - `analysis.py`: analysis summary scaffold
 - `figures.py`: placeholder artifact generation
 - `report.py`: markdown report scaffold
@@ -56,8 +56,16 @@ PYTHONPATH=. python research/model_essense_study/main.py build-stimuli-dataset -
 # 3) manifest
 PYTHONPATH=. python research/model_essense_study/main.py build-manifest-file --config research/model_essense_study/config.yaml
 
-# 4) inference scaffold
+# 4) inference scaffold (no API calls)
 PYTHONPATH=. python research/model_essense_study/main.py run-inference --config research/model_essense_study/config.yaml --max-records 30
+
+# 4b) real inference (OpenRouter-compatible)
+# Requires OPENROUTER_API_KEY (or OPENAI_API_KEY) in env.
+PYTHONPATH=. python research/model_essense_study/main.py run-inference \
+  --config research/model_essense_study/config.yaml \
+  --real-run \
+  --max-records 30 \
+  --requests-per-minute 20
 
 # 5) analysis scaffold
 PYTHONPATH=. python research/model_essense_study/main.py analyze --config research/model_essense_study/config.yaml
@@ -76,6 +84,9 @@ PYTHONPATH=. python research/model_essense_study/main.py plan-run-budget --confi
 
 - Stimulus source policy: real IntelliMate user history, English-only, no manual semantic rewriting.
 - Privacy: textual sanitization for email/phone/url is applied before export.
+- Real execution output paths:
+  - `research/model_essense_study/results/latest/raw/responses_real.jsonl`
+  - `research/model_essense_study/results/latest/run_summary_real.json`
 - Claude availability remains TODO for cross-family full run stage, and is now tracked by `probe-model-availability` output:
   - `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`
 - Budget and execution window estimates are now tracked by `plan-run-budget` output:

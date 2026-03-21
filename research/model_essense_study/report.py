@@ -52,10 +52,10 @@ def build_scaffold_report(
     lines.append("## Notes")
     lines.append("")
     lines.append(
-        "- This report is generated in framework-first mode. Final conclusions require full experiment execution."
+        "- This report summarizes the latest execution artifacts. Final conclusions require full experiment execution."
     )
     lines.append(
-        "- Claude model availability remains a TODO before cross-family full run."
+        "- Model availability should be checked via `probe-model-availability` before large runs."
     )
     lines.append("")
     return "\n".join(lines)
