@@ -30,6 +30,16 @@ Framework-only scaffolding.
 - Probe output writes to:
   - `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`
 
+### 2026-03-21 — Run planning scaffold
+- Added run-planning command to estimate:
+  - total requests/tokens for full run matrix
+  - estimated model-level and total cost (USD)
+  - estimated runtime vs configured execution window
+- Added explicit repeat semantics artifact to reduce ambiguity:
+  - `cell-level repeats: each (model, persona, stimulus) cell is repeated N times`
+- Planning output writes to:
+  - `research/model_essense_study/docs/RUN_PLAN_LATEST.json`
+
 ### Next planned entries
 - DB-backed dry run statistics:
   - candidate count before/after filters

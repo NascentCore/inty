@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -46,6 +47,19 @@ class InferenceConfig(BaseModel):
     dry_run: bool = True
 
 
+class PlanningConfig(BaseModel):
+    repeat_semantics: str = (
+        "cell-level repeats: each (model, persona, stimulus) cell is repeated N times"
+    )
+    avg_input_tokens: int = 220
+    avg_output_tokens: int = 280
+    requests_per_minute: int = 20
+    fallback_input_price_per_1m_usd: float = 1.0
+    fallback_output_price_per_1m_usd: float = 3.0
+    budget_cap_usd: float = 100.0
+    execution_window_hours: float = 12.0
+
+
 class ProbeConfig(BaseModel):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     claude_todo_model_id: str = "anthropic/claude-3.5-sonnet"
@@ -65,7 +79,9 @@ class ModelEssenseStudyConfig(BaseModel):
     experiment: ExperimentConfig = Field(default_factory=ExperimentConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    planning: PlanningConfig = Field(default_factory=PlanningConfig)
     probe: ProbeConfig = Field(default_factory=ProbeConfig)
+    load_time_utc_iso: str = Field(default="")
 
     @property
     def data_dir(self) -> Path:
@@ -123,12 +139,17 @@ class ModelEssenseStudyConfig(BaseModel):
     def model_availability_path(self) -> Path:
         return self.docs_dir / "MODEL_AVAILABILITY_LATEST.json"
 
+    @property
+    def run_plan_path(self) -> Path:
+        return self.docs_dir / "RUN_PLAN_LATEST.json"
+
 
 def load_study_config(path: Path) -> ModelEssenseStudyConfig:
     if not path.exists():
         raise FileNotFoundError(f"study config not found: {path}")
     payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     cfg = ModelEssenseStudyConfig.model_validate(payload)
+    cfg.load_time_utc_iso = datetime.now(UTC).isoformat()
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     cfg.results_dir.mkdir(parents=True, exist_ok=True)
     cfg.docs_dir.mkdir(parents=True, exist_ok=True)

@@ -67,6 +67,9 @@ PYTHONPATH=. python research/model_essense_study/main.py report --config researc
 
 # 7) model availability probe (includes Claude TODO baseline by default)
 PYTHONPATH=. python research/model_essense_study/main.py probe-model-availability --config research/model_essense_study/config.yaml
+
+# 8) run budget and execution-window estimation
+PYTHONPATH=. python research/model_essense_study/main.py plan-run-budget --config research/model_essense_study/config.yaml
 ```
 
 ## Notes
@@ -75,3 +78,5 @@ PYTHONPATH=. python research/model_essense_study/main.py probe-model-availabilit
 - Privacy: textual sanitization for email/phone/url is applied before export.
 - Claude availability remains TODO for cross-family full run stage, and is now tracked by `probe-model-availability` output:
   - `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`
+- Budget and execution window estimates are now tracked by `plan-run-budget` output:
+  - `research/model_essense_study/docs/RUN_PLAN_LATEST.json`

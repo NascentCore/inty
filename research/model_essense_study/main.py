@@ -38,6 +38,7 @@ from research.model_essense_study.persona_builder import (
     select_personas,
 )
 from research.model_essense_study.report import build_scaffold_report
+from research.model_essense_study.run_planner import build_run_plan
 from research.model_essense_study.runner import run_inference_scaffold
 from research.model_essense_study.schema import (
     AgentPersonaRaw,
@@ -378,6 +379,53 @@ def probe_model_availability(
         cfg.model_availability_path,
         summary["available_count"],
         summary["total_models"],
+    )
+
+
+@app.command()
+def plan_run_budget(
+    config: Annotated[
+        str,
+        cyclopts.Parameter(name=["--config", "-c"], help="Path to study config YAML."),
+    ] = "research/model_essense_study/config.yaml",
+    avg_input_tokens: Annotated[
+        int | None,
+        cyclopts.Parameter(
+            name="--avg-input-tokens",
+            help="Override average input tokens per request.",
+        ),
+    ] = None,
+    avg_output_tokens: Annotated[
+        int | None,
+        cyclopts.Parameter(
+            name="--avg-output-tokens",
+            help="Override average output tokens per request.",
+        ),
+    ] = None,
+    requests_per_minute: Annotated[
+        int | None,
+        cyclopts.Parameter(
+            name="--requests-per-minute",
+            help="Override execution throughput estimate.",
+        ),
+    ] = None,
+) -> None:
+    """
+    Compute budget and execution window estimate for full run.
+    """
+    cfg = _load_cfg(config)
+    payload = build_run_plan(
+        config=cfg,
+        avg_input_tokens=avg_input_tokens,
+        avg_output_tokens=avg_output_tokens,
+        requests_per_minute=requests_per_minute,
+    )
+    _write_json(cfg.run_plan_path, payload)
+    logger.info(
+        "Run planning artifact written to {} (cost=${} / within_budget={})",
+        cfg.run_plan_path,
+        payload["cost_estimate"]["total_estimated_cost_usd"],
+        payload["cost_estimate"]["within_budget_cap"],
     )
 
 

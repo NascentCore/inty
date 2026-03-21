@@ -105,3 +105,16 @@ Expected:
 - Includes configured Gemini models and Claude TODO model.
 - In dry-run mode, each model status is `skipped` with `dry_run enabled` detail.
 
+## 10) Budget / Execution Window Planning
+Command:
+```bash
+PYTHONPATH=. python research/model_essense_study/main.py plan-run-budget
+```
+Expected:
+- File created: `research/model_essense_study/docs/RUN_PLAN_LATEST.json`
+- Contains:
+  - repeat semantics text (cell-level repeats)
+  - estimated total requests
+  - estimated total cost vs configured budget cap
+  - estimated total runtime vs configured execution window
+
