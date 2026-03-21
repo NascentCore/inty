@@ -64,10 +64,14 @@ PYTHONPATH=. python research/model_essense_study/main.py analyze --config resear
 
 # 6) report + figure placeholders
 PYTHONPATH=. python research/model_essense_study/main.py report --config research/model_essense_study/config.yaml
+
+# 7) model availability probe (includes Claude TODO baseline by default)
+PYTHONPATH=. python research/model_essense_study/main.py probe-model-availability --config research/model_essense_study/config.yaml
 ```
 
 ## Notes
 
 - Stimulus source policy: real IntelliMate user history, English-only, no manual semantic rewriting.
 - Privacy: textual sanitization for email/phone/url is applied before export.
-- Claude availability remains TODO for cross-family full run stage.
+- Claude availability remains TODO for cross-family full run stage, and is now tracked by `probe-model-availability` output:
+  - `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`

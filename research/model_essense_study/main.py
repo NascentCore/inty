@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -27,6 +29,10 @@ from research.model_essense_study.config import ModelEssenseStudyConfig, load_st
 from research.model_essense_study.db import load_persona_raw_agents, load_stimulus_candidates
 from research.model_essense_study.figures import generate_figure_placeholders
 from research.model_essense_study.manifest_builder import build_manifest, save_manifest
+from research.model_essense_study.model_client import (
+    ModelAvailabilityResult,
+    OpenRouterModelAvailabilityProbe,
+)
 from research.model_essense_study.persona_builder import (
     PersonaSelectionResult,
     select_personas,
@@ -62,6 +68,10 @@ def _load_cfg(config_path: str) -> ModelEssenseStudyConfig:
 
 def _load_manifest(path: Path) -> ExperimentManifest:
     return ExperimentManifest.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def _resolve_openrouter_api_key() -> str | None:
+    return os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
 
 
 @app.command()
@@ -304,6 +314,71 @@ def report(
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report_text, encoding="utf-8")
     logger.info("Report scaffold completed at {}", report_path)
+
+
+@app.command()
+def probe_model_availability(
+    config: Annotated[
+        str,
+        cyclopts.Parameter(name=["--config", "-c"], help="Path to study config YAML."),
+    ] = "research/model_essense_study/config.yaml",
+    include_claude_todo: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--include-claude-todo",
+            help="Include Claude TODO baseline model in probe list.",
+        ),
+    ] = True,
+    dry_run: Annotated[
+        bool,
+        cyclopts.Parameter(
+            name="--dry-run",
+            help="Skip network probing and only record intended checks.",
+        ),
+    ] = False,
+) -> None:
+    """
+    Probe configured model availability, including Claude TODO baseline.
+    """
+    cfg = _load_cfg(config)
+    model_ids = list(cfg.experiment.model_ids)
+    if include_claude_todo and cfg.probe.claude_todo_model_id not in model_ids:
+        model_ids.append(cfg.probe.claude_todo_model_id)
+
+    probe = OpenRouterModelAvailabilityProbe(
+        base_url=cfg.probe.openrouter_base_url,
+        api_key=_resolve_openrouter_api_key(),
+    )
+    results: list[ModelAvailabilityResult] = [
+        probe.probe(
+            model_id=model_id,
+            timeout_seconds=cfg.probe.timeout_seconds,
+            dry_run=dry_run,
+        )
+        for model_id in model_ids
+    ]
+    summary = {
+        "total_models": len(results),
+        "available_count": sum(1 for item in results if item.status == "available"),
+        "skipped_count": sum(1 for item in results if item.status == "skipped"),
+        "auth_error_count": sum(1 for item in results if item.status == "auth_error"),
+        "unavailable_count": sum(1 for item in results if item.status == "unavailable"),
+        "error_count": sum(1 for item in results if item.status == "error"),
+    }
+    payload = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "dry_run": dry_run,
+        "base_url": cfg.probe.openrouter_base_url,
+        "models": [asdict(item) for item in results],
+        "summary": summary,
+    }
+    _write_json(cfg.model_availability_path, payload)
+    logger.info(
+        "Model availability probe written to {} (available={}/{})",
+        cfg.model_availability_path,
+        summary["available_count"],
+        summary["total_models"],
+    )
 
 
 @app.default

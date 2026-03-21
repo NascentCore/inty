@@ -24,6 +24,7 @@ Expected:
   - `run-inference`
   - `analyze`
   - `report`
+  - `probe-model-availability`
 
 ## 2) Persona Scaffold (Mock Mode)
 Command:
@@ -93,4 +94,14 @@ Expected:
   - `stimulus_id`, `text`, `source_chat_id_hash`, `english_ratio`, `topic_bucket`
 - Manifest item includes fields:
   - `task_id`, `model_id`, `persona`, `stimulus`, `repeat_index`
+
+## 9) Model Availability Probe (TODO tracking)
+Command:
+```bash
+PYTHONPATH=. python research/model_essense_study/main.py probe-model-availability --dry-run
+```
+Expected:
+- File created: `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`
+- Includes configured Gemini models and Claude TODO model.
+- In dry-run mode, each model status is `skipped` with `dry_run enabled` detail.
 

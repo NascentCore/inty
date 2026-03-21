@@ -23,6 +23,13 @@ Framework-only scaffolding.
   - general
 - Added mock candidate generator for offline smoke tests.
 
+### 2026-03-21 — Availability probe scaffold
+- Added model availability probe command in framework CLI to track provider readiness.
+- Probe list includes configured experiment models and the Claude TODO baseline
+  (`anthropic/claude-3.5-sonnet`) by default.
+- Probe output writes to:
+  - `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`
+
 ### Next planned entries
 - DB-backed dry run statistics:
   - candidate count before/after filters

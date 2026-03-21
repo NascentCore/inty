@@ -46,6 +46,12 @@ class InferenceConfig(BaseModel):
     dry_run: bool = True
 
 
+class ProbeConfig(BaseModel):
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    claude_todo_model_id: str = "anthropic/claude-3.5-sonnet"
+    timeout_seconds: float = 20.0
+
+
 class PathsConfig(BaseModel):
     data_dir: str = "research/model_essense_study/data"
     results_dir: str = "research/model_essense_study/results"
@@ -59,6 +65,7 @@ class ModelEssenseStudyConfig(BaseModel):
     experiment: ExperimentConfig = Field(default_factory=ExperimentConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     inference: InferenceConfig = Field(default_factory=InferenceConfig)
+    probe: ProbeConfig = Field(default_factory=ProbeConfig)
 
     @property
     def data_dir(self) -> Path:
@@ -111,6 +118,10 @@ class ModelEssenseStudyConfig(BaseModel):
     @property
     def report_path(self) -> Path:
         return self.results_dir / "latest" / "report.md"
+
+    @property
+    def model_availability_path(self) -> Path:
+        return self.docs_dir / "MODEL_AVAILABILITY_LATEST.json"
 
 
 def load_study_config(path: Path) -> ModelEssenseStudyConfig:
