@@ -111,6 +111,11 @@ Notes:
 - You can set `TELEGRAM_CHAT_ID` in env instead of passing `--telegram-chat-id`.
 - In Telegram mode, the companion's default outbound channel is `telegram`.
 
+### Known issues / observations (recorded, not fixed yet)
+
+- Reliability risk (medium): Telegram transient API/network failures currently bubble up as exceptions and can terminate the loop. This is recorded for later hardening; no retry/recovery behavior is implemented yet.
+- Test coverage gap (low): The documented "omit `--telegram-chat-id` and auto-bind to first incoming chat" behavior exists in code, but does not yet have a dedicated automated test case. This is recorded only; coverage may be reworked together with upcoming behavior changes.
+
 ## Run pulse mode
 
 ```bash
