@@ -40,6 +40,16 @@ Framework-only scaffolding.
 - Planning output writes to:
   - `research/model_essense_study/docs/RUN_PLAN_LATEST.json`
 
+### 2026-03-21 — Availability TODO resolved (live probe)
+- Ran a live availability probe (non-dry-run) for configured models plus Claude TODO model.
+- Probe evidence written to:
+  - `research/model_essense_study/docs/MODEL_AVAILABILITY_LATEST.json`
+- Current result snapshot:
+  - `google/gemini-2.5-pro`: available
+  - `google/gemini-2.5-flash`: available
+  - `google/gemini-2.5-flash-lite`: available
+  - `anthropic/claude-3.5-sonnet`: available
+
 ### Next planned entries
 - DB-backed dry run statistics:
   - candidate count before/after filters
