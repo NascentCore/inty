@@ -25,6 +25,7 @@ Expected:
   - `analyze`
   - `report`
   - `probe-model-availability`
+  - `plan-run-budget`
 
 ## 2) Persona Scaffold (Mock Mode)
 Command:
