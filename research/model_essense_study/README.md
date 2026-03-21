@@ -84,6 +84,9 @@ PYTHONPATH=. python research/model_essense_study/main.py plan-run-budget --confi
 
 - Stimulus source policy: real IntelliMate user history, English-only, no manual semantic rewriting.
 - Privacy: textual sanitization for email/phone/url is applied before export.
+- This repository environment currently does not have an accessible populated IntelliMate DB snapshot.
+  If DB extraction yields empty persona/stimulus sets, use `--use-mock-data` to validate pipeline behavior,
+  then rerun against a populated environment for full-scale execution.
 - Real execution output paths:
   - `research/model_essense_study/results/latest/raw/responses_real.jsonl`
   - `research/model_essense_study/results/latest/run_summary_real.json`

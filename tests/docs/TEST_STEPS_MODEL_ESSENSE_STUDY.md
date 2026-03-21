@@ -51,6 +51,18 @@ Expected:
 - Summary created: `research/model_essense_study/data/stimuli/stimuli_v1_summary.json`
 - Summary `selected_count` is close to configured target (default 100).
 
+## 3b) Real-DB Extraction Guardrail
+Command:
+```bash
+PYTHONPATH=. python research/model_essense_study/main.py extract-personas --config research/model_essense_study/config.yaml
+PYTHONPATH=. python research/model_essense_study/main.py build-stimuli-dataset --config research/model_essense_study/config.yaml
+```
+Expected:
+- If database has eligible data, persona/stimulus selected counts are > 0.
+- If selected counts are 0, `build-manifest-file` should fail fast with a clear error:
+  - `No personas found...` or `No stimuli found...`
+- This prevents accidentally running a "full run" over an empty dataset.
+
 ## 4) Manifest Generation
 Command:
 ```bash

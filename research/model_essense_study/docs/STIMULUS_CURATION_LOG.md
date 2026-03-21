@@ -66,6 +66,16 @@ Framework-only scaffolding.
   - `stimuli_v1_summary.json`: `selected_count=0`
   - This blocks immediate full-scale matrix execution in current environment.
 
+### 2026-03-21 — Empty-dataset guardrail added
+- Added explicit manifest-build validation:
+  - raise clear error if personas set is empty
+  - raise clear error if stimuli set is empty
+- Validation evidence:
+  - running `build-manifest-file` after zero-count extraction now fails with:
+    - `No personas found. Run extract-personas first and ensure selected_count > 0.`
+- Goal:
+  - prevent accidental "full run" against an empty extracted dataset.
+
 ### Next planned entries
 - DB-backed dry run statistics:
   - candidate count before/after filters
