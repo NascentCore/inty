@@ -63,6 +63,62 @@ def test_get_text_messages_filters_non_text_and_returns_next_offset() -> None:
     assert next_offset == 14
 
 
+def test_get_text_messages_one_local_received_at_per_payload(monkeypatch) -> None:  # noqa: ANN001
+    """All text messages from one getUpdates JSON share the same receive timestamp."""
+
+    time_calls: list[float] = []
+
+    def _fake_time() -> float:
+        time_calls.append(1000.0 + 0.01 * len(time_calls))
+        return time_calls[-1]
+
+    monkeypatch.setattr(
+        "experimental.perpetual_agent.telegram_channel.time.time", _fake_time
+    )
+
+    class _FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+            return False
+
+        def read(self):
+            return json.dumps(
+                {
+                    "ok": True,
+                    "result": [
+                        {
+                            "update_id": 1,
+                            "message": {
+                                "chat": {"id": 1},
+                                "text": "a",
+                                "date": 1700000000,
+                            },
+                        },
+                        {
+                            "update_id": 2,
+                            "message": {
+                                "chat": {"id": 1},
+                                "text": "b",
+                                "date": 1700000001,
+                            },
+                        },
+                    ],
+                }
+            ).encode("utf-8")
+
+    def _fake_urlopen(request, timeout):  # noqa: ANN001
+        return _FakeResponse()
+
+    api = TelegramBotApi(bot_token="t", urlopen=_fake_urlopen)
+    messages, _next = api.get_text_messages(offset=None, timeout_seconds=1)
+
+    assert len(messages) == 2
+    assert messages[0].local_received_at == messages[1].local_received_at == 1000.0
+    assert len(time_calls) == 1
+
+
 def test_get_text_messages_allows_zero_timeout_for_short_polling() -> None:
     class _FakeResponse:
         def __enter__(self):
