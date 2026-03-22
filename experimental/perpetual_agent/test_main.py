@@ -78,7 +78,9 @@ class _FakeClient:
 
 def _assistant_response(content: str) -> SimpleNamespace:
     return SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=content, tool_calls=[]))]
+        choices=[
+            SimpleNamespace(message=SimpleNamespace(content=content, tool_calls=[]))
+        ]
     )
 
 
@@ -129,7 +131,9 @@ def _layer_nesting_levels_for_call(messages: list[dict[str, object]]) -> dict[st
     return nesting_levels
 
 
-def _tool_messages_for_call(messages: list[dict[str, object]]) -> list[dict[str, object]]:
+def _tool_messages_for_call(
+    messages: list[dict[str, object]],
+) -> list[dict[str, object]]:
     return [message for message in messages if message.get("role") == "tool"]
 
 
@@ -430,8 +434,12 @@ def test_compacting_recent_conversation_inserts_new_layer_before_conversation() 
         base_url="https://openrouter.ai/api/v1",
     )
 
-    first_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[0])
-    third_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[2])
+    first_call_layer_names = _layer_names_for_call(
+        fake_client.seen_messages_per_call[0]
+    )
+    third_call_layer_names = _layer_names_for_call(
+        fake_client.seen_messages_per_call[2]
+    )
     assert first_call_layer_names == [
         "fundamental_identity",
         "interaction_style",
@@ -654,7 +662,9 @@ def test_repeated_compaction_in_same_turn_preserves_all_tool_results() -> None:
     assert tool_message_ids.count("compact-2") == 1
 
 
-def test_named_layer_compaction_increases_nesting_level_and_preserves_raw_messages() -> None:
+def test_named_layer_compaction_increases_nesting_level_and_preserves_raw_messages() -> (
+    None
+):
     layers = main._build_default_character_layers()
     layers.insert(
         len(layers) - 1,
@@ -807,8 +817,12 @@ def test_run_perpetual_agent_dispatches_named_layer_compaction() -> None:
         base_url="https://openrouter.ai/api/v1",
     )
 
-    first_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[0])
-    second_call_layer_names = _layer_names_for_call(fake_client.seen_messages_per_call[1])
+    first_call_layer_names = _layer_names_for_call(
+        fake_client.seen_messages_per_call[0]
+    )
+    second_call_layer_names = _layer_names_for_call(
+        fake_client.seen_messages_per_call[1]
+    )
     assert first_call_layer_names == [
         "fundamental_identity",
         "interaction_style",

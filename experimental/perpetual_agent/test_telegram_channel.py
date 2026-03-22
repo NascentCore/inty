@@ -63,7 +63,9 @@ def test_get_text_messages_filters_non_text_and_returns_next_offset() -> None:
     assert next_offset == 14
 
 
-def test_get_text_messages_one_local_received_at_per_payload(monkeypatch) -> None:  # noqa: ANN001
+def test_get_text_messages_one_local_received_at_per_payload(
+    monkeypatch,
+) -> None:  # noqa: ANN001
     """All text messages from one getUpdates JSON share the same receive timestamp."""
 
     time_calls: list[float] = []

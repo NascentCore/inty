@@ -191,7 +191,9 @@ def run_telegram_agentic_completion_loop(
     """Drain Telegram before **each** `chat.completions.create` call; return final assistant text."""
     chat_id = inbox.bound_chat_id
     if chat_id is None:
-        raise ValueError("TelegramInbox.bound_chat_id must be set (drain user messages first)")
+        raise ValueError(
+            "TelegramInbox.bound_chat_id must be set (drain user messages first)"
+        )
 
     completion_step = 0
     while True:
@@ -241,9 +243,7 @@ def run_telegram_agentic_completion_loop(
         content = assistant_message.content or ""
 
         finish_reason = getattr(response.choices[0], "finish_reason", None)
-        tc_summary = [
-            getattr(tc.function, "name", "?") for tc in tool_calls
-        ]
+        tc_summary = [getattr(tc.function, "name", "?") for tc in tool_calls]
         logger.info(
             "telegram_llm completion_response step=%d finish_reason=%s "
             "assistant_content_chars=%d tool_calls=%s usage=%s assistant_content=%r",

@@ -22,6 +22,7 @@ def format_epoch_for_local_log(ts: float | int | None, *, missing: str = "n/a") 
     dt = datetime.fromtimestamp(float(ts), tz=timezone.utc).astimezone()
     return dt.strftime("%Y-%m-%d %H:%M:%S %z")
 
+
 from .living_companion import ChannelTransport, ChannelType, OutboundEvent
 
 
