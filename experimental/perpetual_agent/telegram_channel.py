@@ -66,6 +66,8 @@ class TelegramBotApi:
         if payload.get("ok") is not True:
             raise ValueError(f"Telegram getUpdates failed: {payload}")
 
+        # One wall clock for the whole parsed payload (not per update row) so batch latency is consistent.
+        local_received_at = time.time()
         messages: list[TelegramIncomingMessage] = []
         next_offset: int | None = offset
         for item in payload.get("result", []):
@@ -80,7 +82,6 @@ class TelegramBotApi:
             chat_id = str(message["chat"]["id"])
             raw_date = message.get("date")
             message_date_unix = int(raw_date) if raw_date is not None else None
-            local_received_at = time.time()
             messages.append(
                 TelegramIncomingMessage(
                     update_id=update_id,
