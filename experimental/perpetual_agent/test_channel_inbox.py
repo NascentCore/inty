@@ -114,10 +114,20 @@ def caplog_channel_inbox(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureF
     return caplog
 
 
-def test_drain_log_includes_local_timestamps(caplog_channel_inbox: pytest.LogCaptureFixture) -> None:
+def test_drain_log_includes_local_timestamps(
+    caplog_channel_inbox: pytest.LogCaptureFixture,
+) -> None:
     api = _FakeBotApi(
         batches=[
-            [_msg(10, "99", "hello", local_received_at=1_700_000_000.0, message_date_unix=1_700_000_001)],
+            [
+                _msg(
+                    10,
+                    "99",
+                    "hello",
+                    local_received_at=1_700_000_000.0,
+                    message_date_unix=1_700_000_001,
+                )
+            ],
         ]
     )
     inbox = TelegramInbox(bot_api=api, poll_timeout_seconds=5)  # type: ignore[arg-type]

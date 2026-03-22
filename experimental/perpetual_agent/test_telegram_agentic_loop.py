@@ -133,9 +133,7 @@ def test_completion_loop_second_round_includes_telegram_during_tool_gap() -> Non
     )
     resp_final = SimpleNamespace(
         choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="done", tool_calls=None)
-            )
+            SimpleNamespace(message=SimpleNamespace(content="done", tool_calls=None))
         ]
     )
     client = _FakeClient([resp_tool, resp_final])
@@ -182,9 +180,7 @@ def test_run_telegram_llm_session_processes_two_inbound_batches() -> None:
     client = _FakeClient([r1, r2])
 
     def factory(api):  # noqa: ANN001
-        return TelegramInbox(
-            bot_api=api, poll_timeout_seconds=1, bound_chat_id="9"
-        )
+        return TelegramInbox(bot_api=api, poll_timeout_seconds=1, bound_chat_id="9")
 
     run_telegram_llm_session(
         model="m",

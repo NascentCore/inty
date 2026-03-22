@@ -332,7 +332,9 @@ def _render_layer_message(layer: CharacterLayer) -> str:
 
 def _build_layer_messages(layers: list[CharacterLayer]) -> list[dict[str, str]]:
     _validate_character_layers(layers)
-    return [{"role": "system", "content": _render_layer_message(layer)} for layer in layers]
+    return [
+        {"role": "system", "content": _render_layer_message(layer)} for layer in layers
+    ]
 
 
 def _build_layer_tools(layers: list[CharacterLayer]) -> list[dict[str, Any]]:
@@ -369,7 +371,9 @@ def _execute_layer_update_tool(
     if rename_to is not None:
         normalized_updated_name = _normalize_layer_name(rename_to)
         if normalized_updated_name == "conversation":
-            raise ValueError("Only the shallow conversation layer may be named conversation.")
+            raise ValueError(
+                "Only the shallow conversation layer may be named conversation."
+            )
         for existing_layer in layers:
             if existing_layer is layer or existing_layer.is_conversation_layer:
                 continue
@@ -416,9 +420,7 @@ def _extract_layer_preview(layer: CharacterLayer) -> str:
     flattened = re.sub(r"\s+", " ", layer.content).strip()
     if not flattened:
         flattened = "<empty>"
-    return (
-        f"layer={layer.name} nesting_level={layer.nesting_level} content={flattened[:220]}"
-    )
+    return f"layer={layer.name} nesting_level={layer.nesting_level} content={flattened[:220]}"
 
 
 def _sanitize_tool_output_for_conversation(
@@ -512,9 +514,13 @@ def _execute_compact_named_layers_tool(
     if not source_layer_names:
         raise ValueError("source_layer_names must contain at least one layer name.")
 
-    normalized_source_names = [_normalize_layer_name(name) for name in source_layer_names]
+    normalized_source_names = [
+        _normalize_layer_name(name) for name in source_layer_names
+    ]
     if len(normalized_source_names) != len(set(normalized_source_names)):
-        raise ValueError("source_layer_names cannot contain duplicates after normalization.")
+        raise ValueError(
+            "source_layer_names cannot contain duplicates after normalization."
+        )
 
     index_by_name: dict[str, int] = {}
     for idx, layer in enumerate(layers):
@@ -746,12 +752,17 @@ def run_perpetual_agent(
     )
     pulse_count = 0
     character_layers = _build_default_character_layers()
-    conversation_messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
+    conversation_messages: list[dict[str, Any]] = [
+        {"role": "user", "content": user_prompt}
+    ]
     forced_tool_choice = _tool_choice_for_user_prompt(user_prompt=user_prompt)
 
     for step in range(1, max_steps + 1):
         request_messages: list[dict[str, Any]] = [
-            {"role": "system", "content": _render_system_prompt(pulse_count=pulse_count)}
+            {
+                "role": "system",
+                "content": _render_system_prompt(pulse_count=pulse_count),
+            }
         ]
         request_messages.extend(_build_layer_messages(character_layers))
         request_messages.extend(conversation_messages)
@@ -774,7 +785,9 @@ def run_perpetual_agent(
         tool_calls = assistant_message.tool_calls or []
 
         if not tool_calls:
-            conversation_messages.append({"role": "assistant", "content": assistant_content})
+            conversation_messages.append(
+                {"role": "assistant", "content": assistant_content}
+            )
             print(f"[step={step}] assistant: {assistant_content}")
             continue
 
@@ -850,7 +863,8 @@ def run_perpetual_agent(
                     content=str(tool_args["content"]).strip(),
                     rename_to=(
                         str(tool_args["rename_to"]).strip()
-                        if "rename_to" in tool_args and tool_args["rename_to"] is not None
+                        if "rename_to" in tool_args
+                        and tool_args["rename_to"] is not None
                         else None
                     ),
                 )
@@ -1003,9 +1017,11 @@ def run_living_companion_telegram_loop(
                 "telegram_message_date_to_local_receive_s=%s chat_id=%s",
                 incoming.update_id,
                 receive_to_reply_s,
-                f"{telegram_to_local_receive_s:.4f}"
-                if telegram_to_local_receive_s is not None
-                else "n/a",
+                (
+                    f"{telegram_to_local_receive_s:.4f}"
+                    if telegram_to_local_receive_s is not None
+                    else "n/a"
+                ),
                 incoming.chat_id,
             )
             processed_user_turn = True
@@ -1145,7 +1161,9 @@ def main() -> None:
     _ensure_root_logging(args.log_level)
 
     if args.telegram and args.telegram_llm:
-        parser.error("Choose only one of --telegram (scripted companion) and --telegram-llm (OpenAI).")
+        parser.error(
+            "Choose only one of --telegram (scripted companion) and --telegram-llm (OpenAI)."
+        )
 
     if args.mode == "pulse":
         assert args.user_prompt, "--user-prompt is required in pulse mode"
