@@ -12,3 +12,5 @@
   from dotenv import load_dotenv
   load_dotenv()
   ```
+- Telegram + `perpetual_agent` 本地联调、token 校验与 `TELEGRAM_CHAT_ID` 排错：见 [perpetual_agent/README.md](perpetual_agent/README.md) 与仓库根目录 [tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md](../tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md)。
+- OpenAI 兼容 API + Telegram 入站通道（`TelegramInbox` / `--telegram-llm`）：见 [perpetual_agent/README.md](perpetual_agent/README.md)「Telegram + OpenAI」节与 [perpetual_agent/channel_inbox.py](perpetual_agent/channel_inbox.py)。

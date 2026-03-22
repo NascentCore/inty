@@ -10,6 +10,7 @@ import argparse
 import base64
 import copy
 import json
+import logging
 import os
 import re
 import time
@@ -27,7 +28,10 @@ from .living_companion import (
     PerpetualCompanionAgent,
     ScriptedModelExecutor,
 )
+from .telegram_agentic_loop import PULSE_TOOL_DEFINITION, run_telegram_llm_session
 from .telegram_channel import TelegramBotApi, TelegramChannelTransport
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT_TEMPLATE = """
 You are a perpetual demo agent.
@@ -987,6 +991,23 @@ def run_living_companion_telegram_loop(
                 continue
 
             events = agent.tick(now=now, user_message=incoming.text)
+            reply_sent_at = time.time()
+            receive_to_reply_s = reply_sent_at - incoming.local_received_at
+            telegram_to_local_receive_s = (
+                incoming.local_received_at - float(incoming.message_date_unix)
+                if incoming.message_date_unix is not None
+                else None
+            )
+            logger.info(
+                "telegram_latency update_id=%s receive_to_reply_s=%.4f "
+                "telegram_message_date_to_local_receive_s=%s chat_id=%s",
+                incoming.update_id,
+                receive_to_reply_s,
+                f"{telegram_to_local_receive_s:.4f}"
+                if telegram_to_local_receive_s is not None
+                else "n/a",
+                incoming.chat_id,
+            )
             processed_user_turn = True
             handled_user_turns += 1
             for event in events:
@@ -1017,6 +1038,16 @@ def run_living_companion_telegram_loop(
                     f"msg={event.content}"
                 ),
             )
+
+
+def _ensure_root_logging(level_name: str) -> None:
+    if logging.root.handlers:
+        return
+    level = getattr(logging, level_name)
+    logging.basicConfig(
+        level=level,
+        format="%(levelname)s %(name)s %(message)s",
+    )
 
 
 def main() -> None:
@@ -1071,12 +1102,50 @@ def main() -> None:
         help="Safety cap for user turns handled in Telegram loop.",
     )
     parser.add_argument(
+        "--telegram-llm",
+        action="store_true",
+        help=(
+            "Telegram long-poll inbox + OpenAI chat (drain before each completion); "
+            "requires --model and API key env."
+        ),
+    )
+    parser.add_argument(
+        "--telegram-llm-max-user-turns",
+        type=int,
+        default=50,
+        help="Max inbound Telegram batches handled (each batch may merge multiple updates).",
+    )
+    parser.add_argument(
+        "--telegram-llm-no-merge-batches",
+        action="store_true",
+        help="Append one chat message per Telegram update instead of merging into one user turn.",
+    )
+    parser.add_argument(
+        "--telegram-llm-pulse-tool",
+        action="store_true",
+        help="Register pulse(seconds) tool for the Telegram LLM session.",
+    )
+    parser.add_argument(
         "--user-message",
         action="append",
         default=[],
         help="Repeat this flag to feed multiple user turns in living mode.",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help=(
+            "Stderr logging level when the root logger has no handlers yet "
+            "(normal CLI runs)."
+        ),
+    )
     args = parser.parse_args()
+
+    _ensure_root_logging(args.log_level)
+
+    if args.telegram and args.telegram_llm:
+        parser.error("Choose only one of --telegram (scripted companion) and --telegram-llm (OpenAI).")
 
     if args.mode == "pulse":
         assert args.user_prompt, "--user-prompt is required in pulse mode"
@@ -1088,6 +1157,23 @@ def main() -> None:
             client=None,
             api_key_env=args.api_key_env,
             base_url=args.base_url,
+        )
+        return
+
+    if args.telegram_llm:
+        assert args.model, "--model is required with --telegram-llm"
+        telegram_bot_token = _required_env(args.telegram_bot_token_env)
+        tools = [PULSE_TOOL_DEFINITION] if args.telegram_llm_pulse_tool else None
+        run_telegram_llm_session(
+            model=args.model,
+            api_key_env=args.api_key_env,
+            base_url=args.base_url,
+            telegram_bot_token=telegram_bot_token,
+            telegram_chat_id=args.telegram_chat_id or _optional_env("TELEGRAM_CHAT_ID"),
+            telegram_poll_timeout_seconds=args.telegram_poll_timeout_seconds,
+            max_user_turns=args.telegram_llm_max_user_turns,
+            merge_telegram_batches=not args.telegram_llm_no_merge_batches,
+            tools=tools,
         )
         return
 

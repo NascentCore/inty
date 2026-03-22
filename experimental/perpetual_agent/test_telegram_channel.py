@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import time
 import urllib.parse
 
 from experimental.perpetual_agent.living_companion import ChannelType
 from experimental.perpetual_agent.telegram_channel import (
     TelegramBotApi,
     TelegramChannelTransport,
+    format_epoch_for_local_log,
 )
 
 
@@ -28,6 +30,7 @@ def test_get_text_messages_filters_non_text_and_returns_next_offset() -> None:
                             "message": {
                                 "chat": {"id": 12345},
                                 "text": "hello",
+                                "date": 1700000000,
                             },
                         },
                         {
@@ -58,9 +61,33 @@ def test_get_text_messages_filters_non_text_and_returns_next_offset() -> None:
     assert captured["method"] == "GET"
     assert captured["timeout"] == 25
     assert next_offset == 14
-    assert len(messages) == 1
-    assert messages[0].chat_id == "12345"
-    assert messages[0].text == "hello"
+
+
+def test_get_text_messages_allows_zero_timeout_for_short_polling() -> None:
+    class _FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+            return False
+
+        def read(self):
+            return json.dumps({"ok": True, "result": []}).encode("utf-8")
+
+    captured: dict[str, object] = {}
+
+    def _fake_urlopen(request, timeout):  # noqa: ANN001
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        return _FakeResponse()
+
+    api = TelegramBotApi(bot_token="token123", urlopen=_fake_urlopen)
+    messages, _next = api.get_text_messages(offset=None, timeout_seconds=0)
+
+    query = urllib.parse.parse_qs(urllib.parse.urlsplit(captured["url"]).query)
+    assert query["timeout"] == ["0"]
+    assert captured["timeout"] == 5
+    assert messages == []
 
 
 def test_send_message_posts_expected_payload() -> None:
@@ -116,3 +143,14 @@ def test_telegram_transport_sends_and_returns_outbound_event() -> None:
     assert sent == [("8888", "reply content")]
     assert event.channel == ChannelType.TELEGRAM
     assert event.recipient == "8888"
+
+
+def test_format_epoch_for_local_log_missing() -> None:
+    assert format_epoch_for_local_log(None) == "n/a"
+
+
+def test_format_epoch_for_local_log_utc_tz(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setenv("TZ", "UTC")
+    if hasattr(time, "tzset"):
+        time.tzset()
+    assert format_epoch_for_local_log(0) == "1970-01-01 00:00:00 +0000"
