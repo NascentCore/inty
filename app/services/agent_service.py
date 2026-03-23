@@ -36,6 +36,7 @@ from app.models.user import Gender
 from app.schemas.agent import AgentSortOption
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
+from app.services.global_services import telegram_bot_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
 from app.services.voice_service import (
@@ -1114,6 +1115,7 @@ async def update_agent(
         if not db_agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 
+        previous_visibility = db_agent.visibility
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
         energy_points_delta = update_data.pop("energy_points", None)
@@ -1146,6 +1148,34 @@ async def update_agent(
             flag_modified(db_agent, "background_images")
         if hasattr(db_agent, "meta_data") and db_agent.meta_data is not None:
             flag_modified(db_agent, "meta_data")
+        if hasattr(db_agent, "extensions") and db_agent.extensions is not None:
+            flag_modified(db_agent, "extensions")
+
+        visibility_promoted_to_public = (
+            previous_visibility == AgentVisibility.PRIVATE
+            and db_agent.visibility == AgentVisibility.PUBLIC
+        )
+        has_telegram_metadata = (
+            isinstance(db_agent.extensions, dict)
+            and isinstance(db_agent.extensions.get("telegram"), dict)
+            and db_agent.extensions["telegram"].get("status") == "provisioned"
+        )
+        if (
+            visibility_promoted_to_public
+            and not has_telegram_metadata
+            and telegram_bot_service is not None
+        ):
+            provision_result = telegram_bot_service.provision_agent_bot(
+                agent_id=db_agent.id
+            )
+            extensions = (
+                dict(db_agent.extensions)
+                if isinstance(db_agent.extensions, dict)
+                else {}
+            )
+            extensions["telegram"] = provision_result.to_extensions_payload()
+            db_agent.extensions = extensions
+            flag_modified(db_agent, "extensions")
 
         await db.commit()
         await db.refresh(db_agent)
