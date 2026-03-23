@@ -27,13 +27,15 @@ curl -sS "https://api.telegram.org/bot<你的bot_token>/getMe"
 
 ```bash
 export TELEGRAM_BOT_TOKEN="<你的bot token>"
+export OPENROUTER_API_KEY="<你的openrouter_api_key>"
 export TELEGRAM_CHAT_ID="<投资人的chat_id>"
 
-python -m experimental.perpetual_agent.main \
+python3 -m experimental.perpetual_agent.main \
   --mode living \
-  --telegram \
-  --telegram-max-user-turns 200 \
-  --proactive-interval-seconds 60
+  --telegram-llm \
+  --model "z-ai/glm-4.5-air:free" \
+  --telegram-llm-max-user-turns 200 \
+  --telegram-poll-timeout-seconds 20
 ```
 
 > 推荐固定 `TELEGRAM_CHAT_ID`，避免其他 Telegram 用户串场消息。
@@ -63,7 +65,7 @@ python -m experimental.perpetual_agent.main \
 1. 让投资人发送该消息。
 2. 同时展示：
    - Telegram 对话窗口中 Bot 的回复；
-   - 终端里对应的 `telegram_user_turn` 日志行。
+   - 终端里对应的 `telegram_llm completion_response` 日志行。
 
 **你补充一句：**
 
@@ -79,22 +81,11 @@ python -m experimental.perpetual_agent.main \
 
 - 展示 Bot 连续回复，强调这是同一会话上下文中的连续多轮。
 
-### 03:30 - 04:30 主动触达演示
+### 03:30 - 05:00 收尾
 
 **你说：**
 
-> “如果用户一段时间没有输入，agent 会主动关怀。”
-
-**你做：**
-
-- 等待约 60 秒（前面命令已设置 `--proactive-interval-seconds 60`）。
-- 展示 Telegram 中 Bot 主动发出的消息。
-
-### 04:30 - 05:00 收尾
-
-**你说：**
-
-> “这就是一个完整闭环：用户在 Telegram 发消息，perpetual agent 持续理解并回复，并且可在沉默期主动触达。”
+> “这就是一个完整闭环：用户在 Telegram 发消息，perpetual agent 持续理解并回复。”
 
 ---
 
@@ -103,12 +94,12 @@ python -m experimental.perpetual_agent.main \
 1. **强烈建议固定 chat_id**
    - 否则可能收到其他用户消息，影响演示稳定性。
 2. **`TELEGRAM_CHAT_ID` 必须与投资人账号一致**
-   - 若写错（占位符、他人 id、非数字私聊 id），程序会**忽略**投资人发来的消息，且可能在 **proactive** 时 `sendMessage` 返回 **HTTP 400** 直接崩溃。
+   - 若写错（占位符、他人 id、非数字私聊 id），程序会**忽略**投资人发来的消息，或向错误 chat 发送回复，导致现场看起来“没回复”。
    - 彩排时若不确定 id：可先 `unset TELEGRAM_CHAT_ID`，不传 `--telegram-chat-id`，由**第一条收到的文本消息**自动绑定 chat；确认无误后再在正式路演中改为固定 `TELEGRAM_CHAT_ID`。
 3. **进程必须常驻**
    - Telegram 上消息显示双勾只表示送达服务器，不代表本机 agent 仍在运行；演示全程保持终端进程不退出。
 4. **将 user turns 上限调大**
-   - `--telegram-max-user-turns 200` 可避免中途因默认上限退出。
+   - `--telegram-llm-max-user-turns 200` 可避免中途因默认上限退出。
 5. **提前做一次彩排**
    - 至少提前 5 分钟发 2 条测试消息，确认网络与 token 正常。可对照仓库 [tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md](/tests/docs/TEST_STEPS_TELEGRAM_PERPETUAL_AGENT.md)。
 
@@ -129,7 +120,7 @@ python -m experimental.perpetual_agent.main \
 
 ### 情况 C：演示中进程自动退出
 
-- 增大 `--telegram-max-user-turns` 后重启。
+- 增大 `--telegram-llm-max-user-turns` 后重启。
 
 ---
 

@@ -2,10 +2,10 @@
 
 ## 目标
 
-验证 `experimental.perpetual_agent` 在 **Telegram 长轮询** 模式下端到端可用：
+验证 `experimental.perpetual_agent` 在 **Telegram + OpenAI 兼容 LLM** 模式下端到端可用：
 
 1. Bot token 有效（`getMe`）
-2. 本地进程持续运行时，用户在 Telegram 发文本 → 终端出现 `telegram_user_turn` → Bot 在同一会话回复
+2. 本地进程持续运行时，用户在 Telegram 发文本 → 终端出现 `telegram_llm` / `telegram_get_updates` 日志 → Bot 在同一会话回复
 
 ## 前置条件
 
@@ -29,19 +29,20 @@ curl -sS "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe"
 unset TELEGRAM_CHAT_ID
 ```
 
-## 步骤 3：启动 living + Telegram 模式
+## 步骤 3：启动 living + Telegram LLM 模式
 
 在仓库根目录：
 
 ```bash
 export TELEGRAM_BOT_TOKEN="<your-bot-token>"
+export OPENROUTER_API_KEY="<your-openai-compatible-key>"
 
 uv run python -m experimental.perpetual_agent.main \
   --mode living \
-  --telegram \
-  --telegram-max-user-turns 5 \
-  --telegram-poll-timeout-seconds 20 \
-  --proactive-interval-seconds 3
+  --telegram-llm \
+  --model "your-model-id" \
+  --telegram-llm-max-user-turns 5 \
+  --telegram-poll-timeout-seconds 20
 ```
 
 保持进程运行，不要退出终端。
@@ -52,12 +53,15 @@ uv run python -m experimental.perpetual_agent.main \
 
 ## 通过标准
 
-- 终端出现一行类似：`[telegram_user_turn step=1] channel=telegram model=fast-text-1 ... msg=[fast-text-1] via telegram | ... | I heard you: Hello`
-- Telegram 对话中出现 bot 回复，正文为 **脚本模板**（含 `I heard you:` 与你的输入），与终端 `msg=` 一致
+- 终端出现一组日志，至少包含：
+  - `telegram_get_updates ...`
+  - `telegram_llm completion_request ...`
+  - `telegram_llm completion_response ...`
+- Telegram 对话中出现 bot 回复，正文与当前 LLM 输出一致
 
 ## 已知说明
 
-- 演示使用 `ScriptedModelExecutor`，非真实大模型对话。
+- 演示使用 OpenAI 兼容 chat completion，回复内容由所选模型生成。
 - 双勾仅表示消息送达 Telegram，不代表本进程仍在运行或已处理；进程崩溃或错误 `chat_id` 时可能无回复。
 
 ## 相关文档
