@@ -7,7 +7,6 @@ import urllib.parse
 from experimental.perpetual_agent.living_companion import ChannelType
 from experimental.perpetual_agent.telegram_channel import (
     TelegramBotApi,
-    TelegramChannelTransport,
     format_epoch_for_local_log,
 )
 
@@ -180,27 +179,6 @@ def test_send_message_posts_expected_payload() -> None:
     assert encoded["chat_id"] == ["4567"]
     assert encoded["text"] == ["hello telegram"]
     assert payload["ok"] is True
-
-
-def test_telegram_transport_sends_and_returns_outbound_event() -> None:
-    sent: list[tuple[str, str]] = []
-
-    class _FakeTelegramBotApi:
-        def send_message(self, *, chat_id: str, text: str):
-            sent.append((chat_id, text))
-            return {"ok": True}
-
-    transport = TelegramChannelTransport(bot_api=_FakeTelegramBotApi())  # type: ignore[arg-type]
-    event = transport.send(
-        channel=ChannelType.TELEGRAM,
-        recipient="8888",
-        content="reply content",
-        metadata={"m": "v"},
-    )
-
-    assert sent == [("8888", "reply content")]
-    assert event.channel == ChannelType.TELEGRAM
-    assert event.recipient == "8888"
 
 
 def test_format_epoch_for_local_log_missing() -> None:

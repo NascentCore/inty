@@ -10,7 +10,6 @@ import argparse
 import base64
 import copy
 import json
-import logging
 import os
 import re
 import time
@@ -21,7 +20,6 @@ from xml.sax.saxutils import escape as xml_escape
 from typing import Any
 
 from .living_companion import (
-    ChannelType,
     CompanionState,
     InMemoryChannelTransport,
     ModelCatalog,
@@ -29,9 +27,6 @@ from .living_companion import (
     ScriptedModelExecutor,
 )
 from .telegram_agentic_loop import PULSE_TOOL_DEFINITION, run_telegram_llm_session
-from .telegram_channel import TelegramBotApi, TelegramChannelTransport
-
-logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT_TEMPLATE = """
 You are a perpetual demo agent.
@@ -952,111 +947,9 @@ def run_living_companion_demo(
         )
 
 
-def run_living_companion_telegram_loop(
-    *,
-    companion_name: str,
-    user_name: str,
-    initial_virtual_age_years: float,
-    clock_rate: float,
-    proactive_interval_seconds: float,
-    telegram_bot_token: str,
-    telegram_chat_id: str | None,
-    telegram_poll_timeout_seconds: int,
-    telegram_max_user_turns: int,
-    now_provider: Any = time.time,
-    bot_api: TelegramBotApi | None = None,
-) -> None:
-    model_catalog = ModelCatalog.default()
-    active_bot_api = bot_api or TelegramBotApi(bot_token=telegram_bot_token)
-    offset: int | None = None
-    current_chat_id = telegram_chat_id
-    state = CompanionState(
-        companion_name=companion_name,
-        user_name=user_name,
-        user_contact=current_chat_id or "pending_telegram_chat_id",
-        initial_virtual_age_years=initial_virtual_age_years,
-        clock_rate=clock_rate,
-        now=0.0,
-        default_channel=ChannelType.TELEGRAM,
-    )
-    agent = PerpetualCompanionAgent(
-        state=state,
-        model_catalog=model_catalog,
-        model_executor=ScriptedModelExecutor(),
-        channel_transport=TelegramChannelTransport(bot_api=active_bot_api),
-        proactive_interval_seconds=proactive_interval_seconds,
-    )
-    started_at = float(now_provider())
-    handled_user_turns = 0
-
-    while handled_user_turns < telegram_max_user_turns:
-        incoming_messages, offset = active_bot_api.get_text_messages(
-            offset=offset,
-            timeout_seconds=telegram_poll_timeout_seconds,
-        )
-        now = float(now_provider()) - started_at
-        processed_user_turn = False
-
-        for incoming in incoming_messages:
-            if current_chat_id is None:
-                current_chat_id = incoming.chat_id
-                agent.state.user_contact = current_chat_id
-            if incoming.chat_id != current_chat_id:
-                continue
-
-            events = agent.tick(now=now, user_message=incoming.text)
-            reply_sent_at = time.time()
-            receive_to_reply_s = reply_sent_at - incoming.local_received_at
-            telegram_to_local_receive_s = (
-                incoming.local_received_at - float(incoming.message_date_unix)
-                if incoming.message_date_unix is not None
-                else None
-            )
-            logger.info(
-                "telegram_latency update_id=%s receive_to_reply_s=%.4f "
-                "telegram_message_date_to_local_receive_s=%s chat_id=%s",
-                incoming.update_id,
-                receive_to_reply_s,
-                (
-                    f"{telegram_to_local_receive_s:.4f}"
-                    if telegram_to_local_receive_s is not None
-                    else "n/a"
-                ),
-                incoming.chat_id,
-            )
-            processed_user_turn = True
-            handled_user_turns += 1
-            for event in events:
-                _print_event(
-                    step=handled_user_turns,
-                    event_type="telegram_user_turn",
-                    content=(
-                        f"channel={event.channel.value} model={event.metadata['model_name']} "
-                        f"emotion={event.metadata['emotion']} expression={event.metadata['expression']} "
-                        f"age={agent.state.virtual_age_years:.4f} msg={event.content}"
-                    ),
-                )
-            if handled_user_turns >= telegram_max_user_turns:
-                break
-
-        if processed_user_turn:
-            continue
-        if current_chat_id is None:
-            continue
-        proactive_events = agent.tick(now=now)
-        for idx, event in enumerate(proactive_events, start=1):
-            _print_event(
-                step=idx,
-                event_type="telegram_heartbeat",
-                content=(
-                    f"channel={event.channel.value} model={event.metadata['model_name']} "
-                    f"proactive={event.metadata['proactive']} age={agent.state.virtual_age_years:.4f} "
-                    f"msg={event.content}"
-                ),
-            )
-
-
 def _ensure_root_logging(level_name: str) -> None:
+    import logging
+
     if logging.root.handlers:
         return
     level = getattr(logging, level_name)
@@ -1089,11 +982,6 @@ def main() -> None:
     parser.add_argument("--proactive-interval-seconds", type=float, default=300.0)
     parser.add_argument("--tick-seconds", type=float, default=90.0)
     parser.add_argument(
-        "--telegram",
-        action="store_true",
-        help="Use Telegram poll/send loop for living mode communication.",
-    )
-    parser.add_argument(
         "--telegram-bot-token-env",
         default="TELEGRAM_BOT_TOKEN",
         help="Environment variable name storing Telegram bot token.",
@@ -1109,13 +997,7 @@ def main() -> None:
         "--telegram-poll-timeout-seconds",
         type=int,
         default=20,
-        help="Long-poll timeout for Telegram getUpdates.",
-    )
-    parser.add_argument(
-        "--telegram-max-user-turns",
-        type=int,
-        default=20,
-        help="Safety cap for user turns handled in Telegram loop.",
+        help="Long-poll timeout for Telegram getUpdates in --telegram-llm mode.",
     )
     parser.add_argument(
         "--telegram-llm",
@@ -1160,11 +1042,6 @@ def main() -> None:
 
     _ensure_root_logging(args.log_level)
 
-    if args.telegram and args.telegram_llm:
-        parser.error(
-            "Choose only one of --telegram (scripted companion) and --telegram-llm (OpenAI)."
-        )
-
     if args.mode == "pulse":
         assert args.user_prompt, "--user-prompt is required in pulse mode"
         assert args.model, "--model is required in pulse mode"
@@ -1192,21 +1069,6 @@ def main() -> None:
             max_user_turns=args.telegram_llm_max_user_turns,
             merge_telegram_batches=not args.telegram_llm_no_merge_batches,
             tools=tools,
-        )
-        return
-
-    if args.telegram:
-        telegram_bot_token = _required_env(args.telegram_bot_token_env)
-        run_living_companion_telegram_loop(
-            companion_name=args.companion_name,
-            user_name=args.user_name,
-            initial_virtual_age_years=args.initial_virtual_age_years,
-            clock_rate=args.clock_rate,
-            proactive_interval_seconds=args.proactive_interval_seconds,
-            telegram_bot_token=telegram_bot_token,
-            telegram_chat_id=args.telegram_chat_id or _optional_env("TELEGRAM_CHAT_ID"),
-            telegram_poll_timeout_seconds=args.telegram_poll_timeout_seconds,
-            telegram_max_user_turns=args.telegram_max_user_turns,
         )
         return
 

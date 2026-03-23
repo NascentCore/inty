@@ -90,9 +90,9 @@ Useful flags:
 - `--tick-seconds`: simulated world-time elapsed between user turns
 - `--user-contact`: destination string used by the channel transport
 
-## Run living mode via Telegram
+## Run living mode via Telegram + OpenAI (inbound channel / LLM chat)
 
-This mode lets the perpetual companion receive user text from Telegram and reply in the same chat.
+The Telegram path now uses `--telegram-llm` only (OpenAI-compatible chat).
 
 ### Verify the bot token (before the demo loop)
 
@@ -103,45 +103,6 @@ curl -sS "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getMe"
 ```
 
 Expect `"ok":true` and `result.username` matching your bot. This does not start long polling; it only proves the token is valid.
-
-### Start the living companion (Telegram)
-
-From repo root (with [`uv`](https://github.com/astral-sh/uv) or plain `python`):
-
-```bash
-export TELEGRAM_BOT_TOKEN="<your-bot-token>"
-
-uv run python -m experimental.perpetual_agent.main \
-  --mode living \
-  --telegram \
-  --telegram-max-user-turns 50 \
-  --telegram-poll-timeout-seconds 20 \
-  --proactive-interval-seconds 120
-```
-
-Optional: pin the chat when you already know the numeric chat id (see troubleshooting below):
-
-```bash
-python -m experimental.perpetual_agent.main \
-  --mode living \
-  --telegram \
-  --telegram-chat-id "<chat-id>" \
-  --telegram-max-user-turns 50 \
-  --proactive-interval-seconds 120
-```
-
-Notes:
-
-- **Process must stay running** while you chat in Telegram. If the process exits (traceback or Ctrl+C), the bot will stop replying even though Telegram shows delivered checkmarks on your outgoing messages.
-- If `--telegram-chat-id` is omitted **and** `TELEGRAM_CHAT_ID` is unset, the **first incoming text message** sets the bound chat (`getUpdates` → `message.chat.id`). Good for a single-user local smoke test.
-- You can set `TELEGRAM_CHAT_ID` in env instead of passing `--telegram-chat-id`.
-- In Telegram mode, the companion's default outbound channel is `telegram`.
-- Replies in this demo use `ScriptedModelExecutor`: they echo metadata plus `I heard you: <text>` (not a live LLM).
-- **Latency logging:** Telegram mode enables `logging.basicConfig(level=INFO)` when the root logger has no handlers. Each handled user text turn logs `telegram_latency` with `receive_to_reply_s` (seconds from finishing `getUpdates` parse for that update until `sendMessage` completes for the reply) and `telegram_message_date_to_local_receive_s` (Telegram `message.date` → same local receive moment; approximates how long the update waited before your process polled it, or `n/a` if `date` was missing).
-
-### Telegram + OpenAI (inbound channel / LLM chat)
-
-Use **`--telegram-llm`** instead of `--telegram` when you want a real chat model (OpenAI-compatible API). Do **not** pass both flags.
 
 Architecture (see [`channel_inbox.py`](channel_inbox.py) and [`telegram_agentic_loop.py`](telegram_agentic_loop.py)):
 
@@ -166,21 +127,20 @@ Optional: `--telegram-llm-pulse-tool` registers a minimal `pulse(seconds)` tool;
 
 **Operational constraints:**
 
-- **Single long-poll consumer:** Only one running process (or webhook endpoint) may consume updates for a bot token. A second `getUpdates` client causes conflicts (often HTTP 409); do not run scripted `--telegram` and `--telegram-llm` at the same time, or two copies of either mode.
+- **Single long-poll consumer:** Only one running process (or webhook endpoint) may consume updates for a bot token. A second `getUpdates` client causes conflicts (often HTTP 409); do not run two copies of `--telegram-llm` at the same time.
 - **Cursor / loss:** `last_applied_update_id` advances only when inbound text is merged into the LLM transcript. Telegram’s `offset` advances on each successful `getUpdates` response so the server does not redeliver the same updates; do not run a second poller that steals updates before this process applies them.
 - **Multi-message policy:** With merge enabled (default), all new text updates in one poll become a single `user` message with labeled lines; the model should treat them as one turn batch.
 
 Useful Telegram flags (see `python -m experimental.perpetual_agent.main --help`):
 
 - `--telegram-poll-timeout-seconds`: long-poll wait for `getUpdates`
-- `--telegram-max-user-turns`: exit after this many handled user messages (raise for long demos)
 - `--telegram-bot-token-env`: env var name for the token (default `TELEGRAM_BOT_TOKEN`)
 - `--telegram-llm` / `--telegram-llm-max-user-turns` / `--telegram-llm-no-merge-batches` / `--telegram-llm-pulse-tool`: OpenAI path (see section above)
 
 ### Troubleshooting
 
 1. **`urllib.error.HTTPError: HTTP Error 400: Bad Request` on `sendMessage`**  
-   Often an **invalid or mismatched `chat_id`**. If `TELEGRAM_CHAT_ID` / `--telegram-chat-id` is **wrong** (typo, placeholder, or another user’s id), the loop **drops your real messages** (`incoming.chat_id != current_chat_id`) and may still run **proactive** sends to the wrong id → 400. **Fix:** `unset TELEGRAM_CHAT_ID` and omit `--telegram-chat-id`, restart, then send one message from the intended Telegram account so the chat binds correctly; or set the env/flag to the exact numeric id from `getUpdates` / `@userinfobot`.
+   Often an **invalid or mismatched `chat_id`**. If `TELEGRAM_CHAT_ID` / `--telegram-chat-id` is wrong (typo, placeholder, or another user’s id), inbound updates from your real chat will be skipped and replies may fail to send. **Fix:** `unset TELEGRAM_CHAT_ID` and omit `--telegram-chat-id`, restart, then send one message from the intended Telegram account so the chat binds correctly; or set the env/flag to the exact numeric id from `getUpdates` / `@userinfobot`.
 
 2. **No reply but double checkmarks on your messages**  
    That only means Telegram accepted the message—not that this Python process received it or called `sendMessage` successfully.
@@ -191,7 +151,6 @@ Useful Telegram flags (see `python -m experimental.perpetual_agent.main --help`)
 ### Known issues / observations (recorded, not fixed yet)
 
 - Reliability risk (medium): Telegram transient API/network failures currently bubble up as exceptions and can terminate the loop. This is recorded for later hardening; no retry/recovery behavior is implemented yet.
-- Test coverage gap (low): The documented "omit `--telegram-chat-id` and auto-bind to first incoming chat" behavior exists in code, but does not yet have a dedicated automated test case. This is recorded only; coverage may be reworked together with upcoming behavior changes.
 
 ## Run pulse mode
 

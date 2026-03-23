@@ -23,9 +23,6 @@ def format_epoch_for_local_log(ts: float | int | None, *, missing: str = "n/a") 
     return dt.strftime("%Y-%m-%d %H:%M:%S %z")
 
 
-from .living_companion import ChannelTransport, ChannelType, OutboundEvent
-
-
 @dataclass(frozen=True)
 class TelegramIncomingMessage:
     update_id: int
@@ -111,23 +108,3 @@ class TelegramBotApi:
         return payload
 
 
-@dataclass
-class TelegramChannelTransport(ChannelTransport):
-    bot_api: TelegramBotApi
-
-    def send(
-        self,
-        *,
-        channel: ChannelType,
-        recipient: str,
-        content: str,
-        metadata: dict[str, str],
-    ) -> OutboundEvent:
-        # In Telegram mode we always deliver to the Telegram chat id recipient.
-        self.bot_api.send_message(chat_id=recipient, text=content)
-        return OutboundEvent(
-            channel=channel,
-            recipient=recipient,
-            content=content,
-            metadata=metadata,
-        )
