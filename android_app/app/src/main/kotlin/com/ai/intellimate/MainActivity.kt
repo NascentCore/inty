@@ -811,7 +811,9 @@ private fun MainSubLimitDialogLayer(
                 title = {
                     Text(text = stringResource(R.string.chat_subscriber_limit_reached_title))
                 },
-                text = { Text(text = stringResource(R.string.chat_subscriber_limit_reached_content)) },
+                text = {
+                    Text(text = stringResource(R.string.chat_subscriber_limit_reached_content))
+                },
             )
         }
     }

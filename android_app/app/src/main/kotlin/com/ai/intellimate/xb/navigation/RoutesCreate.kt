@@ -9,5 +9,6 @@ object RoutesCreate {
 
     fun createRole(draftId: String) = "create_role/${draftId}"
 
-    fun avatarGenerate(initialPrompt: String) = "avatar_generate/${initialPrompt.encodeURLPath(true)}"
+    fun avatarGenerate(initialPrompt: String) =
+        "avatar_generate/${initialPrompt.encodeURLPath(true)}"
 }
