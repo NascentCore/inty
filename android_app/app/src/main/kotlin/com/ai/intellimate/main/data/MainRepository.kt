@@ -42,10 +42,14 @@ class MainRepository(
                         BusinessErrorCodes.SUBSCRIPTION_REQUIRED_CODE -> {
                             if (!errAgentId.isNullOrBlank()) {
                                 chatLocalDataSource
-                                    .markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(errAgentId)
+                                    .markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(
+                                        errAgentId
+                                    )
                             }
                             val dialogType =
-                                ChatViewModel.resolveChatLimitDialogType(VipStatusHelper.isUserVip())
+                                ChatViewModel.resolveChatLimitDialogType(
+                                    VipStatusHelper.isUserVip()
+                                )
                             _subLimitChannel.send(SubLimitSignal(dialogType, errAgentId))
                         }
                         else -> {
@@ -57,7 +61,8 @@ class MainRepository(
                                     .markEarliestSendingUserAsFailedAndRemoveLoadingIfLast(agentId)
                                 return@collect
                             }
-                            val sendingUser = chatLocalDataSource.getEarliestSendingUserMessage(agentId)
+                            val sendingUser =
+                                chatLocalDataSource.getEarliestSendingUserMessage(agentId)
                             chatLocalDataSource.removeEarliestSendingUserAndLoadingIfLast(agentId)
                             if (sendingUser != null) {
                                 chatLocalDataSource.appendMessages(

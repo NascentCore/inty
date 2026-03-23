@@ -106,5 +106,3 @@ class TelegramBotApi:
         if payload.get("ok") is not True:
             raise ValueError(f"Telegram sendMessage failed: {payload}")
         return payload
-
-
