@@ -9,6 +9,10 @@
 - Write 1 sentence summary, this is for filling in Google Play release notes. And then nested with detailed description.
 
 
+## 2026-03-23
+
+- Explore page now shows a **重新加载** button under the network failure message, so users can retry loading iMates directly from the error state.
+
 ## 2026-03-12
 
 - Chat image sending now preprocesses selected photos to a JPEG at ~57,600 total pixels before upload, keeps showing the original thumbnail during compression, switches to the compressed thumbnail when ready, and reuses that compressed local cache after upload to avoid an immediate re-download flicker.

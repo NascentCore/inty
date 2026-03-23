@@ -124,14 +124,16 @@ fun NetworkErrorState(
     title: String = stringResource(R.string.empty_explore_error),
     subtitle: String? = null,
     onRetry: (() -> Unit)? = null,
+    @StringRes actionTextResId: Int = R.string.explore_reload_button,
     modifier: Modifier = Modifier,
 ) {
     EmptyStateComponent(
         type = EmptyStateType.NETWORK_ERROR,
         title = title,
         subtitle = subtitle,
-        showRetryButton = false,
+        showRetryButton = onRetry != null,
         onRetry = onRetry,
+        actionTextResId = actionTextResId,
         modifier = modifier,
     )
 }

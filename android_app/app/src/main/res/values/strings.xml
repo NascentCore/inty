@@ -528,6 +528,7 @@
     <string name="empty_explore_data">No iMates available\nTry refreshing or check your connection</string>
     <string name="empty_explore_error">Failed to load iMates\nCheck your connection and try again</string>
     <string name="retry_button">Retry</string>
+    <string name="explore_reload_button">Reload</string>
 
     <!-- Messages Page -->
     <string name="messages_tab_conversations">Messages</string>
