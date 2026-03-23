@@ -1164,15 +1164,6 @@ class ChatViewModel : BaseVM() {
 
     fun dismissLoginRequest() = viewModelScope.launch { requestLogin.emit(false) }
 
-    /** WebSocket 等全局路径：任意界面弹出与 HTTP 发送一致的订阅/额度引导 */
-    fun showChatLimitDialogFromGlobalSource(agentId: String) {
-        viewModelScope.launch {
-            val id =
-                agentId.ifBlank { _agentInfo.value?.id?.takeIf { it.isNotBlank() } ?: "unknown" }
-            emitChatLimitDialog(id)
-        }
-    }
-
     private suspend fun emitChatLimitDialog(agentId: String) {
         val dialogType = resolveChatLimitDialogType(VipStatusHelper.isUserVip())
         when (dialogType) {

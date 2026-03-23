@@ -3,7 +3,6 @@ package com.ai.intellimate
 import CheckInRepository
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseActivity
-import ai.sxwl.android.common.event.ChatEvent
 import ai.sxwl.android.common.event.EventBus
 import ai.sxwl.android.common.event.EventSubscriber
 import ai.sxwl.android.common.event.PushNotificationEvent
@@ -39,7 +38,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,8 +76,10 @@ import com.ai.intellimate.call.voiceCallModule
 import com.ai.intellimate.chat.viewmodel.ChatViewModel
 import com.ai.intellimate.explore.flattenAgents
 import com.ai.intellimate.explore.isChristmasTheme
-import com.ai.intellimate.ui.GlobalChatLimitDialog
+import com.ai.intellimate.main.data.SubLimitSignal
+import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.HolidayCelebrationPopupRules
+import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.ui.components.CarouselBackground
 import com.ai.intellimate.ui.components.EnterEmailScreen
 import com.ai.intellimate.ui.components.GoogleLoginButton
@@ -128,13 +131,6 @@ class MainActivity : BaseActivity() {
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
             override fun onEvent(event: PushNotificationEvent.MessageReceived) {
                 handleFeedbackRequestMessage(event)
-            }
-        }
-
-    private val webSocketSubscriptionSubscriber =
-        object : EventSubscriber<ChatEvent.WebSocketSubscriptionRequired> {
-            override fun onEvent(event: ChatEvent.WebSocketSubscriptionRequired) {
-                chatViewModel.showChatLimitDialogFromGlobalSource(event.agentId)
             }
         }
 
@@ -193,10 +189,6 @@ class MainActivity : BaseActivity() {
 
         // 订阅反馈请求消息
         EventBus.subscribe(PushNotificationEvent.MessageReceived::class, feedbackRequestSubscriber)
-        EventBus.subscribe(
-            ChatEvent.WebSocketSubscriptionRequired::class,
-            webSocketSubscriptionSubscriber,
-        )
 
         hasInitializedConfig = true
 
@@ -467,6 +459,40 @@ class MainActivity : BaseActivity() {
         // 通过传递 NavController，MainActivity 可以控制导航，而 AppNavHost 仍然可以在
         // 没有外部 NavController 时创建自己的实例（向后兼容）
         val navController = rememberNavController()
+        var mainSubLimitSignal by remember { mutableStateOf<SubLimitSignal?>(null) }
+
+        LaunchedEffect(Unit) {
+            mainViewModel.subLimit.collect { signal ->
+                when (signal.dialogType) {
+                    ChatViewModel.ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.FREE_LIMIT_REACHED,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to (signal.sourceAgentId ?: ""),
+                                "agent_name" to "",
+                                "user_type" to "free",
+                                "timestamp" to System.currentTimeMillis(),
+                                "source" to "main_websocket",
+                            ),
+                        )
+                    }
+                    ChatViewModel.ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED -> {
+                        FirebaseManager.logEvent(
+                            FirebaseManager.Events.SUBSCRIBER_LIMIT_REACHED,
+                            FirebaseManager.safeEventParams(
+                                "agent_id" to (signal.sourceAgentId ?: ""),
+                                "agent_name" to "",
+                                "user_type" to "vip",
+                                "timestamp" to System.currentTimeMillis(),
+                                "source" to "main_websocket",
+                            ),
+                        )
+                    }
+                }
+                mainSubLimitSignal = signal
+            }
+        }
+
         val reviewManager = remember {
             if (AppUtils.isAppDebug()) {
                 FakeReviewManager(context)
@@ -520,9 +546,11 @@ class MainActivity : BaseActivity() {
             navController,
         )
 
-        if (isLoggedIn) {
-            GlobalChatLimitDialog(navController, chatViewModel)
-        }
+        MainSubLimitDialogLayer(
+            signal = mainSubLimitSignal,
+            onDismiss = { mainSubLimitSignal = null },
+            navController = navController,
+        )
 
         // 只在用户已登录时显示庆祝弹窗
         if (showHolidayCelebrationDialog && isLoggedIn && themeAgents.isNotEmpty()) {
@@ -713,10 +741,6 @@ class MainActivity : BaseActivity() {
             PushNotificationEvent.MessageReceived::class,
             feedbackRequestSubscriber,
         )
-        EventBus.unsubscribe(
-            ChatEvent.WebSocketSubscriptionRequired::class,
-            webSocketSubscriptionSubscriber,
-        )
         // 清理返回按键处理器
         backPressHandler.cleanup()
         // 清理 Billing 事件监听
@@ -736,6 +760,59 @@ class MainActivity : BaseActivity() {
             mainViewModel.showFeedbackRequestDialog()
         } else {
             LogUtils.d("MainActivity", "收到 feedback_request 消息，App不在前台，不显示弹窗")
+        }
+    }
+}
+
+/**
+ * 主 WebSocket [SubLimitSignal] 弹窗：逻辑与旧版 GlobalChatLimitDialog / ChatPage ShowLimitDialog 一致，不经过
+ * ChatViewModel.showChatLimitDialog。
+ */
+@Composable
+private fun MainSubLimitDialogLayer(
+    signal: SubLimitSignal?,
+    onDismiss: () -> Unit,
+    navController: NavController,
+) {
+    signal ?: return
+    when (signal.dialogType) {
+        ChatViewModel.ChatLimitDialogType.FREE_USER_SUBSCRIPTION_REQUIRED -> {
+            val data =
+                ChatDialogData(
+                    R.drawable.img_unlimit_dialog_bg,
+                    stringResource(R.string.str_unlimit_dialog_content),
+                    stringResource(R.string.str_unlimit_btn_text),
+                )
+            UnlimitChatDialog(
+                data,
+                onCancel = onDismiss,
+                onSure = {
+                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                        navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
+                    }
+                    onDismiss()
+                },
+                onMoreInfo = {
+                    if (IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()) {
+                        navController.navigate(Routes.Me.vipCenter("chat_unlimit_dialog"))
+                    }
+                    onDismiss()
+                },
+            )
+        }
+        ChatViewModel.ChatLimitDialogType.SUBSCRIBER_LIMIT_REACHED -> {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                confirmButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(text = stringResource(R.string.chat_subscriber_limit_reached_confirm))
+                    }
+                },
+                title = {
+                    Text(text = stringResource(R.string.chat_subscriber_limit_reached_title))
+                },
+                text = { Text(text = stringResource(R.string.chat_subscriber_limit_reached_content)) },
+            )
         }
     }
 }
