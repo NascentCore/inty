@@ -2,6 +2,7 @@ package com.ai.intellimate.explore
 
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.design.noRippleClickable
+import ai.sxwl.android.firebase.FirebaseManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -447,7 +448,17 @@ fun ExploreContent(
     when (loadState) {
         is LoadState.Error if lazyPagingItems.itemCount == 0 -> {
             NetworkErrorState(
-                onRetry = onRetry ?: { lazyPagingItems.retry() },
+                onRetry = {
+                    FirebaseManager.logEvent(
+                        "explore_reload_button_click",
+                        FirebaseManager.safeEventParams(
+                            "page" to "explore",
+                            "action" to "reload",
+                            "source" to "network_error_state",
+                        ),
+                    )
+                    lazyPagingItems.retry()
+                },
                 modifier = modifier.fillMaxSize(),
             )
         }
