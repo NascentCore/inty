@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-03-21T11:25:15.301232+00:00",
+  "repeat_semantics": "cell-level repeats: each (model, persona, stimulus) cell is repeated N times",
+  "assumptions": {
+    "avg_input_tokens": 220,
+    "avg_output_tokens": 280,
+    "requests_per_minute": 20,
+    "budget_cap_usd": 100.0,
+    "execution_window_hours": 12.0
+  },
+  "scale": {
+    "model_count": 3,
+    "persona_count": 10,
+    "stimulus_count": 100,
+    "repeats_per_cell": 3,
+    "requests_per_model": 3000,
+    "total_requests": 9000,
+    "total_input_tokens": 1980000,
+    "total_output_tokens": 2520000
+  },
+  "cost_estimate": {
+    "total_estimated_cost_usd": 5.88,
+    "within_budget_cap": true
+  },
+  "execution_estimate": {
+    "estimated_hours": 7.5,
+    "within_execution_window": true
+  },
+  "models": [
+    {
+      "model_id": "google/gemini-2.5-pro",
+      "request_count": 3000,
+      "estimated_input_tokens": 660000,
+      "estimated_output_tokens": 840000,
+      "input_price_per_1m_usd": 1.0,
+      "output_price_per_1m_usd": 3.0,
+      "price_source": "planning_fallback",
+      "estimated_cost_usd": 3.18
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "request_count": 3000,
+      "estimated_input_tokens": 660000,
+      "estimated_output_tokens": 840000,
+      "input_price_per_1m_usd": 0.3,
+      "output_price_per_1m_usd": 2.5,
+      "price_source": "models_catalog.chat_text_pricing",
+      "estimated_cost_usd": 2.298
+    },
+    {
+      "model_id": "google/gemini-2.5-flash-lite",
+      "request_count": 3000,
+      "estimated_input_tokens": 660000,
+      "estimated_output_tokens": 840000,
+      "input_price_per_1m_usd": 0.1,
+      "output_price_per_1m_usd": 0.4,
+      "price_source": "models_catalog.chat_text_pricing",
+      "estimated_cost_usd": 0.402
+    }
+  ]
+}
