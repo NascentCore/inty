@@ -92,6 +92,7 @@ class MainViewModel : BaseVM() {
     // 反馈请求弹窗显示状态
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog: StateFlow<Boolean> = _showFeedbackRequestDialog.asStateFlow()
+    val subLimit = mainRepository.subLimit
 
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
