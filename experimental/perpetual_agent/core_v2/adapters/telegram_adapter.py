@@ -59,7 +59,9 @@ class TelegramAdapter:
         self._bot_api = bot_api
         self._poll_timeout_seconds = poll_timeout_seconds
 
-    def poll_updates(self, *, offset: int | None) -> tuple[list[TelegramInboundEnvelope], int | None]:
+    def poll_updates(
+        self, *, offset: int | None
+    ) -> tuple[list[TelegramInboundEnvelope], int | None]:
         incoming, next_offset = self._bot_api.get_text_messages(
             offset=offset,
             timeout_seconds=self._poll_timeout_seconds,

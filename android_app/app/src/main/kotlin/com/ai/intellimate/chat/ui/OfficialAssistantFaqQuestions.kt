@@ -2,21 +2,16 @@ package com.ai.intellimate.chat.ui
 
 import ai.sxwl.android.design.theme.IntelliMateTheme
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -116,7 +111,7 @@ internal fun OfficialAssistantFaqQuestions(
                     color = Color.Black.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(12.dp),
                 )
-                .padding(dimensionResource(R.dimen.padding_medium)),
+                .padding(dimensionResource(R.dimen.padding_medium))
     ) {
         Text(
             text = stringResource(R.string.chat_official_faq_intro),
@@ -129,10 +124,9 @@ internal fun OfficialAssistantFaqQuestions(
         items.forEach { item ->
             Button(
                 onClick = { onQuestionClick(item) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(100)
+                colors =
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(100),
             ) {
                 Text(
                     text = stringResource(item.titleResId),

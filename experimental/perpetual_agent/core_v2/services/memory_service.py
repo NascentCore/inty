@@ -17,7 +17,9 @@ def build_preference_memory_from_event(
     if "sms" in normalized and ("prefer" in normalized or "priority" in normalized):
         key = "preferred_channel"
         value = ChannelType.SMS.value
-    elif "telegram" in normalized and ("prefer" in normalized or "priority" in normalized):
+    elif "telegram" in normalized and (
+        "prefer" in normalized or "priority" in normalized
+    ):
         key = "preferred_channel"
         value = ChannelType.TELEGRAM.value
     else:

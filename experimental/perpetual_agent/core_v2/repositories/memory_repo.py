@@ -50,7 +50,9 @@ class MemoryRepository:
                 ),
             )
 
-    def list_memories_by_user(self, *, user_id: str, limit: int = 200) -> list[MemoryItem]:
+    def list_memories_by_user(
+        self, *, user_id: str, limit: int = 200
+    ) -> list[MemoryItem]:
         with self._db.connect() as conn:
             rows = conn.execute(
                 """
@@ -84,7 +86,9 @@ class MemoryRepository:
                 "key": row["key"],
                 "value": row["value"],
                 "confidence": float(row["confidence"]),
-                "evidence_event_ids": json.loads(row["evidence_event_ids_json"] or "[]"),
+                "evidence_event_ids": json.loads(
+                    row["evidence_event_ids_json"] or "[]"
+                ),
                 "status": row["status"],
                 "first_seen_at": from_iso(row["first_seen_at"]),
                 "last_seen_at": from_iso(row["last_seen_at"]),

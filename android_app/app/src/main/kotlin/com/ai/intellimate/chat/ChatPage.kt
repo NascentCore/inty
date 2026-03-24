@@ -22,13 +22,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -36,27 +36,26 @@ import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,12 +89,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -301,10 +299,12 @@ internal fun ChatPage(
         }
     }
 
-    val hasUserSentMessageInOfficialAssistant by chatViewModel.hasUserSentMessageInOfficialAssistant.collectAsState()
-    val shouldShowOfficialAssistantFaqQuestions by remember(isOfficialAssistantChat) {
-        derivedStateOf { isOfficialAssistantChat && !hasUserSentMessageInOfficialAssistant }
-    }
+    val hasUserSentMessageInOfficialAssistant by
+        chatViewModel.hasUserSentMessageInOfficialAssistant.collectAsState()
+    val shouldShowOfficialAssistantFaqQuestions by
+        remember(isOfficialAssistantChat) {
+            derivedStateOf { isOfficialAssistantChat && !hasUserSentMessageInOfficialAssistant }
+        }
     // 获取开关状态用于页面曝光事件和 UI 显示
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState(false)
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
@@ -859,7 +859,9 @@ internal fun ChatPage(
                                 OfficialAssistantFaqQuestions(
                                     items = officialAssistantFaqQuickItems,
                                     onQuestionClick = { item ->
-                                        chatViewModel.setInputMessage(context.getString(item.questionResId))
+                                        chatViewModel.setInputMessage(
+                                            context.getString(item.questionResId)
+                                        )
                                         inputFocusRequester.requestFocus()
                                         onInputFocusChange(true)
                                         FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
@@ -867,7 +869,8 @@ internal fun ChatPage(
                                             "agent_id" to agentInfo?.id,
                                             "agent_name" to agentInfo?.name,
                                             "faq_title" to context.getString(item.titleResId),
-                                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                            "user_type" to
+                                                if (VipStatusHelper.isUserVip()) "vip" else "free",
                                         )
                                     },
                                 )
@@ -1592,7 +1595,7 @@ private fun buildCharacterBackgroundLayout(
 private fun OfficialAssistantQuickActionButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val inputConfig = UiConfigs.ChatPage.ChatInput
     val entryConfig = UiConfigs.ChatPage.OfficialAssistantCreateEntry
@@ -1601,12 +1604,12 @@ private fun OfficialAssistantQuickActionButton(
             modifier
                 .background(
                     shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surface
+                    color = MaterialTheme.colorScheme.surface,
                 )
                 .border(
                     width = .5.dp,
                     color = MaterialTheme.colorScheme.outline,
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.medium,
                 )
                 .noRippleClickable { onClick() }
                 .padding(
@@ -1618,7 +1621,7 @@ private fun OfficialAssistantQuickActionButton(
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -1644,19 +1647,11 @@ private fun PreviewOfficialAssistantQuickActionButtonRow() {
     IntelliMateTheme {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Row(
-                modifier =
-                    Modifier.horizontalScroll(rememberScrollState())
-                        .padding(16.dp),
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(gap),
             ) {
-                OfficialAssistantQuickActionButton(
-                    text = "Test my MBTI type",
-                    onClick = {},
-                )
-                OfficialAssistantQuickActionButton(
-                    text = "Create my own iMate",
-                    onClick = {},
-                )
+                OfficialAssistantQuickActionButton(text = "Test my MBTI type", onClick = {})
+                OfficialAssistantQuickActionButton(text = "Create my own iMate", onClick = {})
             }
         }
     }

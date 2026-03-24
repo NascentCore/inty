@@ -91,7 +91,10 @@ class Orchestrator:
         preferred_channel = planner_service.pick_preferred_channel_from_memories(
             self._memory_repo.list_memories_by_user(user_id=user_id, limit=20)
         )
-        if candidate_memory_item is not None and candidate_memory_item.key == "preferred_channel":
+        if (
+            candidate_memory_item is not None
+            and candidate_memory_item.key == "preferred_channel"
+        ):
             if candidate_memory_item.value == ChannelType.SMS.value:
                 preferred_channel = ChannelType.SMS
             if candidate_memory_item.value == ChannelType.TELEGRAM.value:
@@ -176,7 +179,9 @@ class Orchestrator:
                 metadata={"action_id": action.action_id},
             )
             try:
-                already_dispatched = self._events_repo.event_exists(outbound_event.event_id)
+                already_dispatched = self._events_repo.event_exists(
+                    outbound_event.event_id
+                )
                 if not already_dispatched:
                     self._dispatch_scheduled_message(
                         channel=action.preferred_channel,
@@ -205,7 +210,9 @@ class Orchestrator:
             cursor_value=str(update_id),
         )
 
-    def _dispatch_scheduled_message(self, *, channel: ChannelType, content: str) -> None:
+    def _dispatch_scheduled_message(
+        self, *, channel: ChannelType, content: str
+    ) -> None:
         if channel is ChannelType.TELEGRAM:
             chat_id = self._scheduler_default_telegram_chat_id.strip()
             if not chat_id:

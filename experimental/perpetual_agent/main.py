@@ -277,8 +277,7 @@ def _apply_emotion_classification_from_user_message(
     layer.emotion = classification.emotion
     layer.expression = classification.expression
     layer.update_source = (
-        "user_message_classifier:"
-        f"{_flatten_text(text=user_message, max_chars=80)}"
+        "user_message_classifier:" f"{_flatten_text(text=user_message, max_chars=80)}"
     )
     return {
         "updated_emotion": layer.emotion,
@@ -296,8 +295,8 @@ def _execute_emotions_tool(
 ) -> dict[str, str]:
     normalized_emotion = _normalize_emotion_label(emotion)
     normalized_expression = (
-        (expression or "").strip() or _default_expression_for_emotion(normalized_emotion)
-    )
+        expression or ""
+    ).strip() or _default_expression_for_emotion(normalized_emotion)
     normalized_reason = (reason or "").strip() or "emotions tool update"
     layer.emotion = normalized_emotion
     layer.expression = normalized_expression

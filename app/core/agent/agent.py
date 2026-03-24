@@ -44,7 +44,9 @@ from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
-from app.services.messages_compaction_service import maybe_compact_and_save_overflow_history
+from app.services.messages_compaction_service import (
+    maybe_compact_and_save_overflow_history,
+)
 from app.utils.models_catalog import is_deepseek_on_openrouter, resolve_chat_model_to_id
 from app.utils.openai_client import (
     get_chat_llm_provider,

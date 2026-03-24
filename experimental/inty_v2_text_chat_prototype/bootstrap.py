@@ -54,4 +54,7 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
     write_text(paths.memory_dir / ".gitkeep", "")
     write_text(paths.memory_daily_dir / ".gitkeep", "")
     if write_context:
-        write_text(paths.context_json, json.dumps(_CONTEXT_JSON, indent=2, ensure_ascii=False) + "\n")
+        write_text(
+            paths.context_json,
+            json.dumps(_CONTEXT_JSON, indent=2, ensure_ascii=False) + "\n",
+        )
