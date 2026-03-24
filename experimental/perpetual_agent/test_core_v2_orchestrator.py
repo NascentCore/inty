@@ -9,9 +9,15 @@ from experimental.perpetual_agent.core_v2.adapters.sms_adapter import SmsAdapter
 from experimental.perpetual_agent.core_v2.adapters.telegram_adapter import (
     TelegramInboundEnvelope,
 )
-from experimental.perpetual_agent.core_v2.repositories.cursor_repo import CursorRepository
-from experimental.perpetual_agent.core_v2.repositories.events_repo import EventsRepository
-from experimental.perpetual_agent.core_v2.repositories.memory_repo import MemoryRepository
+from experimental.perpetual_agent.core_v2.repositories.cursor_repo import (
+    CursorRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.events_repo import (
+    EventsRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.memory_repo import (
+    MemoryRepository,
+)
 from experimental.perpetual_agent.core_v2.repositories.plan_repo import PlanRepository
 from experimental.perpetual_agent.core_v2.repositories.sqlite_db import SQLiteDatabase
 from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import init_schema
@@ -53,9 +59,11 @@ def _build_orchestrator(
 
 def test_process_inbound_duplicate_is_idempotent(tmp_path: Path) -> None:
     sent: list[tuple[str, str]] = []
-    orchestrator, events_repo, _cursor_repo, _plan_repo, _memory_repo = _build_orchestrator(
-        tmp_path,
-        lambda *, chat_id, text: sent.append((chat_id, text)),
+    orchestrator, events_repo, _cursor_repo, _plan_repo, _memory_repo = (
+        _build_orchestrator(
+            tmp_path,
+            lambda *, chat_id, text: sent.append((chat_id, text)),
+        )
     )
     envelope = TelegramInboundEnvelope(
         update_id=101,
@@ -75,13 +83,17 @@ def test_process_inbound_duplicate_is_idempotent(tmp_path: Path) -> None:
     assert events_repo.event_exists("telegram_update_101_reply")
 
 
-def test_process_inbound_failure_does_not_require_cursor_advance(tmp_path: Path) -> None:
+def test_process_inbound_failure_does_not_require_cursor_advance(
+    tmp_path: Path,
+) -> None:
     def _raising_send(*, chat_id: str, text: str) -> None:
         raise TimeoutError("network timeout")
 
-    orchestrator, events_repo, _cursor_repo, _plan_repo, _memory_repo = _build_orchestrator(
-        tmp_path,
-        _raising_send,
+    orchestrator, events_repo, _cursor_repo, _plan_repo, _memory_repo = (
+        _build_orchestrator(
+            tmp_path,
+            _raising_send,
+        )
     )
     envelope = TelegramInboundEnvelope(
         update_id=202,
@@ -98,9 +110,11 @@ def test_process_inbound_failure_does_not_require_cursor_advance(tmp_path: Path)
 
 def test_scheduler_executes_action_only_once(tmp_path: Path) -> None:
     sent: list[tuple[str, str]] = []
-    orchestrator, events_repo, _cursor_repo, plan_repo, _memory_repo = _build_orchestrator(
-        tmp_path,
-        lambda *, chat_id, text: sent.append((chat_id, text)),
+    orchestrator, events_repo, _cursor_repo, plan_repo, _memory_repo = (
+        _build_orchestrator(
+            tmp_path,
+            lambda *, chat_id, text: sent.append((chat_id, text)),
+        )
     )
     envelope = TelegramInboundEnvelope(
         update_id=303,
@@ -134,9 +148,11 @@ def test_inbound_failure_rolls_back_event_and_plans(tmp_path: Path) -> None:
     def _raising_send(*, chat_id: str, text: str) -> None:
         raise TimeoutError("network timeout")
 
-    orchestrator, events_repo, _cursor_repo, plan_repo, memory_repo = _build_orchestrator(
-        tmp_path,
-        _raising_send,
+    orchestrator, events_repo, _cursor_repo, plan_repo, memory_repo = (
+        _build_orchestrator(
+            tmp_path,
+            _raising_send,
+        )
     )
     envelope = TelegramInboundEnvelope(
         update_id=404,
@@ -149,8 +165,11 @@ def test_inbound_failure_rolls_back_event_and_plans(tmp_path: Path) -> None:
 
     assert not events_repo.event_exists("telegram_update_404")
     assert not events_repo.event_exists("telegram_update_404_reply")
-    assert plan_repo.list_due_actions(
-        now=datetime.now(timezone.utc),
-        limit=10,
-    ) == []
+    assert (
+        plan_repo.list_due_actions(
+            now=datetime.now(timezone.utc),
+            limit=10,
+        )
+        == []
+    )
     assert memory_repo.list_memories_by_user(user_id="telegram:chat_4", limit=10) == []

@@ -6,10 +6,20 @@ from pathlib import Path
 import pytest
 
 from experimental.perpetual_agent.core_v2.adapters.sms_adapter import SmsAdapter
-from experimental.perpetual_agent.core_v2.contracts import ActionStatus, ChannelType, PlanAction
-from experimental.perpetual_agent.core_v2.repositories.cursor_repo import CursorRepository
-from experimental.perpetual_agent.core_v2.repositories.events_repo import EventsRepository
-from experimental.perpetual_agent.core_v2.repositories.memory_repo import MemoryRepository
+from experimental.perpetual_agent.core_v2.contracts import (
+    ActionStatus,
+    ChannelType,
+    PlanAction,
+)
+from experimental.perpetual_agent.core_v2.repositories.cursor_repo import (
+    CursorRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.events_repo import (
+    EventsRepository,
+)
+from experimental.perpetual_agent.core_v2.repositories.memory_repo import (
+    MemoryRepository,
+)
 from experimental.perpetual_agent.core_v2.repositories.plan_repo import PlanRepository
 from experimental.perpetual_agent.core_v2.repositories.sqlite_db import SQLiteDatabase
 from experimental.perpetual_agent.core_v2.repositories.sqlite_schema import init_schema
@@ -43,7 +53,9 @@ def _build_orchestrator(
     return orchestrator, events_repo, plan_repo, sms_adapter
 
 
-def _build_due_action(*, action_id: str, channel: ChannelType, now: datetime) -> PlanAction:
+def _build_due_action(
+    *, action_id: str, channel: ChannelType, now: datetime
+) -> PlanAction:
     return PlanAction(
         action_id=action_id,
         user_id="telegram:chat_1",
@@ -104,9 +116,10 @@ def test_scheduler_marks_failed_when_telegram_chat_id_missing(tmp_path: Path) ->
     )
     plan_repo.save_action_idempotent(action)
 
-    with pytest.raises(ValueError, match="COMPANION_SCHEDULER_DEFAULT_TELEGRAM_CHAT_ID"):
+    with pytest.raises(
+        ValueError, match="COMPANION_SCHEDULER_DEFAULT_TELEGRAM_CHAT_ID"
+    ):
         orchestrator.run_scheduler_once(now=now)
 
     assert plan_repo.list_due_actions(now=now + timedelta(minutes=5), limit=10) == []
     assert not events_repo.event_exists("action_act_tg_missing_chat_result")
-

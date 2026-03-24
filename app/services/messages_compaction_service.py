@@ -7,7 +7,10 @@ from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.schemas.messages_compaction import CompactedMessageItem, MessagesCompactionPayload
+from app.schemas.messages_compaction import (
+    CompactedMessageItem,
+    MessagesCompactionPayload,
+)
 
 
 def _safe_isoformat(raw_value: Any) -> Optional[str]:
@@ -21,7 +24,9 @@ def _safe_isoformat(raw_value: Any) -> Optional[str]:
     return str(raw_value)
 
 
-def _build_compacted_messages(history_messages: List[BaseMessage]) -> List[CompactedMessageItem]:
+def _build_compacted_messages(
+    history_messages: List[BaseMessage],
+) -> List[CompactedMessageItem]:
     compacted_messages: List[CompactedMessageItem] = []
     for message in history_messages:
         if isinstance(message, HumanMessage):
@@ -84,7 +89,7 @@ def maybe_compact_and_save_overflow_history(
 
 
 def _normalize_payload(
-    payload: Union[MessagesCompactionPayload, Dict[str, Any]]
+    payload: Union[MessagesCompactionPayload, Dict[str, Any]],
 ) -> MessagesCompactionPayload:
     if isinstance(payload, MessagesCompactionPayload):
         return payload
@@ -104,8 +109,7 @@ def upsert_compaction_payload(
     try:
         with sync_engine.begin() as conn:
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO messages_compaction (
                         key, user_id, agent_id, compacted_payload, created_at, updated_at
                     )
@@ -118,8 +122,7 @@ def upsert_compaction_payload(
                         agent_id = EXCLUDED.agent_id,
                         compacted_payload = EXCLUDED.compacted_payload,
                         updated_at = now()
-                    """
-                ),
+                    """),
                 {
                     "key": compaction_key,
                     "user_id": user_id,
@@ -140,8 +143,7 @@ def upsert_compaction_payload(
         return True
     except SQLAlchemyError as error:
         logger.error(
-            "Messages compaction failed: "
-            f"key={compaction_key}, error={error!s}"
+            "Messages compaction failed: " f"key={compaction_key}, error={error!s}"
         )
         return False
 
@@ -156,13 +158,11 @@ def get_compaction_payload(
     try:
         with sync_engine.connect() as conn:
             row = conn.execute(
-                text(
-                    """
+                text("""
                     SELECT compacted_payload
                     FROM messages_compaction
                     WHERE key = :key
-                    """
-                ),
+                    """),
                 {"key": compaction_key},
             ).fetchone()
         if row is None:
@@ -174,5 +174,7 @@ def get_compaction_payload(
             return json.loads(compacted_payload_raw)
         return None
     except SQLAlchemyError as error:
-        logger.error(f"Messages compaction read failed: key={compaction_key}, error={error!s}")
+        logger.error(
+            f"Messages compaction read failed: key={compaction_key}, error={error!s}"
+        )
         return None

@@ -16,7 +16,9 @@ _PKG_DIR = Path(__file__).resolve().parent
 if __package__ is None:
     sys.path.insert(0, str(_PKG_DIR.parent))
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
+from inty_v2_text_chat_prototype.bootstrap import (
+    init_workspace as bootstrap_init_workspace,
+)
 from inty_v2_text_chat_prototype.orchestrator import run_turn
 
 

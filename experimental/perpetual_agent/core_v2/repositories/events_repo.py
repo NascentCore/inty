@@ -59,7 +59,9 @@ class EventsRepository:
             )
             return cursor.rowcount > 0
 
-    def list_events_since(self, since: datetime, limit: int = 100) -> list[InteractionEvent]:
+    def list_events_since(
+        self, since: datetime, limit: int = 100
+    ) -> list[InteractionEvent]:
         with self._db.connect() as conn:
             rows = conn.execute(
                 """
@@ -81,7 +83,9 @@ class EventsRepository:
             ).fetchall()
         return [self._row_to_model(row=row) for row in rows]
 
-    def list_events_by_user(self, user_id: str, limit: int = 100) -> list[InteractionEvent]:
+    def list_events_by_user(
+        self, user_id: str, limit: int = 100
+    ) -> list[InteractionEvent]:
         with self._db.connect() as conn:
             rows = conn.execute(
                 """

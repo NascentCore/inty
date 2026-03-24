@@ -76,6 +76,8 @@ def run_turn(
         {"role": "assistant", "content": assistant_text, "ts": ts_asst},
     )
 
-    schedule_memory_update_after_turn(paths, user_text=user_text, assistant_text=assistant_text)
+    schedule_memory_update_after_turn(
+        paths, user_text=user_text, assistant_text=assistant_text
+    )
 
     return assistant_text

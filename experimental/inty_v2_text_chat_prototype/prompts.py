@@ -52,8 +52,7 @@ def build_system_prompt(bundle: PromptBundle, context: ContextMeta) -> str:
     )
     if bundle.memory_raw_diary_today_md.strip():
         parts.append(
-            "## MEMORY 日记（今日原始）\n\n"
-            + bundle.memory_raw_diary_today_md.strip()
+            "## MEMORY 日记（今日原始）\n\n" + bundle.memory_raw_diary_today_md.strip()
         )
     if bundle.memory_day_summary_today_md.strip():
         parts.append(

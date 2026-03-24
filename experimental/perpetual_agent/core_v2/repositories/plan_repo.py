@@ -150,4 +150,3 @@ class PlanRepository:
                 "result_event_id": row["result_event_id"],
             }
         )
-
