@@ -22,7 +22,12 @@ def get_client() -> OpenAI:
     _ensure_dotenv()
     if _CLIENT is not None:
         return _CLIENT
-    key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+    key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
+    if not key:
+        raise ValueError(
+            "Missing API key: set OPENROUTER_API_KEY or OPENAI_API_KEY in the environment "
+            "(or a .env file loaded by python-dotenv)."
+        )
     if os.getenv("OPENROUTER_API_KEY"):
         _CLIENT = OpenAI(
             base_url="https://openrouter.ai/api/v1",

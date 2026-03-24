@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 
-from .client import complete
+from .client import complete, get_client
 from .file_store import append_jsonl
 from .memory_update import memory_update_after_turn
 from .models import (
@@ -17,10 +16,7 @@ from .models import (
 )
 from .paths import WorkspacePaths
 from .prompts import build_system_prompt
-
-
-def _utc_ts() -> str:
-    return datetime.now(timezone.utc).isoformat()
+from .utc import utc_iso_ts
 
 
 def _require_workspace_files(paths: WorkspacePaths) -> None:
@@ -31,7 +27,8 @@ def _require_workspace_files(paths: WorkspacePaths) -> None:
         paths.memory_md,
         paths.transcript,
     ):
-        assert p.is_file(), f"missing required file: {p}"
+        if not p.is_file():
+            raise ValueError(f"missing required workspace file: {p}")
 
 
 def _truncate_transcript(msgs: list[ChatMessage]) -> list[ChatMessage]:
@@ -49,6 +46,7 @@ def run_turn(
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
     _require_workspace_files(paths)
+    get_client()
 
     bundle = load_prompt_bundle(paths)
     context = load_context_meta(paths.context_json)
@@ -66,12 +64,12 @@ def run_turn(
 
     assistant_text = complete(messages)
 
-    ts_user = _utc_ts()
+    ts_user = utc_iso_ts()
     append_jsonl(
         paths.transcript,
         {"role": "user", "content": user_text, "ts": ts_user},
     )
-    ts_asst = _utc_ts()
+    ts_asst = utc_iso_ts()
     append_jsonl(
         paths.transcript,
         {"role": "assistant", "content": assistant_text, "ts": ts_asst},

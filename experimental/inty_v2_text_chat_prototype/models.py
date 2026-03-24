@@ -61,5 +61,5 @@ def load_transcript(path: Path) -> list[ChatMessage]:
     return out
 
 
-# 近期对话窗口：最多保留的消息条数（user+assistant 合计）
+# 近期对话窗口：最多保留的 transcript.jsonl 行数（每行一条 user 或 assistant）
 TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 50

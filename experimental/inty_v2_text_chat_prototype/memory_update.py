@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from .client import complete, memory_model
-from .file_store import append_line, read_text, write_text
+from .file_store import append_line, read_text, write_text_atomic
 from .paths import WorkspacePaths
+from .utc import utc_date_str, utc_iso_ts
 
 _DIARY_USER_MAX = 240
 _DIARY_ASSISTANT_MAX = 320
@@ -18,14 +17,6 @@ Rules:
 - Stay concise (at most about 2000 characters of substantive content).
 - Output raw markdown only: no preamble, no code fences around the whole document.
 """
-
-
-def _utc_date_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-
-def _utc_ts() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _clip(s: str, n: int) -> str:
@@ -41,10 +32,10 @@ def _append_diary(
     user_text: str,
     assistant_text: str,
 ) -> None:
-    day = _utc_date_str()
+    day = utc_date_str()
     diary_path = paths.memory_dir / f"{day}.md"
     line = (
-        f"[{_utc_ts()}] 用户: {_clip(user_text, _DIARY_USER_MAX)} / "
+        f"[{utc_iso_ts()}] 用户: {_clip(user_text, _DIARY_USER_MAX)} / "
         f"助手: {_clip(assistant_text, _DIARY_ASSISTANT_MAX)}"
     )
     append_line(diary_path, line)
@@ -66,7 +57,7 @@ def _rewrite_memory_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete(messages, model=memory_model())
-    write_text(paths.memory_md, new_body.strip() + "\n")
+    write_text_atomic(paths.memory_md, new_body.strip() + "\n")
 
 
 def memory_update_after_turn(
