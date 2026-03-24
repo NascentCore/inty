@@ -61,7 +61,8 @@ def _raw_for_summary_prompt(raw: str) -> str:
     if len(raw) <= _RAW_FOR_SUMMARY_MAX:
         return raw
     return (
-        "(Earlier lines omitted; tail only.)\n\n" + raw[-(_RAW_FOR_SUMMARY_MAX - 80) :]
+        "(Earlier lines omitted; tail only.)\n\n"
+        + raw[-(_RAW_FOR_SUMMARY_MAX - 80) :]
     )
 
 

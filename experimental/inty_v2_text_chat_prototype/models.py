@@ -69,7 +69,9 @@ def load_prompt_bundle(
     summary_md = ""
     memory_long = read_text(paths.memory_md)
     if intimate:
-        raw_md = _read_optional_text(raw_today, max_chars=_MEMORY_RAW_INJECT_MAX_CHARS)
+        raw_md = _read_optional_text(
+            raw_today, max_chars=_MEMORY_RAW_INJECT_MAX_CHARS
+        )
         summary_md = _read_optional_text(
             summary_today, max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS
         )
@@ -80,7 +82,7 @@ def load_prompt_bundle(
         identity=read_text(paths.identity),
         soul=read_text(paths.soul),
         user_md=read_text(paths.user_md),
-        memory_md=memory_long,
+        memory_md=read_text(paths.memory_md),
         agents_md=_read_optional_text(
             paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
