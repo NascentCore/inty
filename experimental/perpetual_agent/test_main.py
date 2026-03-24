@@ -137,6 +137,16 @@ def _tool_messages_for_call(
     return [message for message in messages if message.get("role") == "tool"]
 
 
+def _emotional_state_layer_message_for_call(messages: list[dict[str, object]]) -> str:
+    for message in messages:
+        if message.get("role") != "system":
+            continue
+        content = str(message.get("content", ""))
+        if content.startswith("[emotional_state_layer]"):
+            return content
+    raise AssertionError("Expected [emotional_state_layer] system message in call.")
+
+
 def test_pulse_sleeps_and_counter_updates_system_message(monkeypatch):
     responses = [
         _tool_response(_tool_call("pulse-call-1", "pulse", {"seconds": 2})),
@@ -833,3 +843,95 @@ def test_e2e_hierarchical_compaction_pipeline_in_run_loop() -> None:
     assert compact_named_payload["raw_source_message_count"] == 2
     assert compact_named_payload["raw_source_messages_omitted"] is True
     assert "raw_source_messages" not in compact_named_payload
+
+
+def test_pulse_mode_registers_emotions_tool() -> None:
+    fake_client = _FakeClient(
+        responses=[_assistant_response("No tool call needed this step.")]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="Start normal loop and keep going.",
+        model="demo-model",
+        max_steps=1,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    first_call_tools = fake_client.seen_tool_names_per_call[0]
+    assert "emotions" in first_call_tools
+
+
+def test_user_message_classifier_updates_emotional_state_layer_in_following_turn() -> (
+    None
+):
+    fake_client = _FakeClient(
+        responses=[
+            _assistant_response("I heard you."),
+            _assistant_response("Continuing with updated emotional context."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="I feel lonely and sad tonight.",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    second_call_emotional_layer = _emotional_state_layer_message_for_call(
+        fake_client.seen_messages_per_call[1]
+    )
+    assert "Current emotion: sad" in second_call_emotional_layer
+    assert "Current expression: gentle" in second_call_emotional_layer
+    assert "Update source: user_message_classifier:" in second_call_emotional_layer
+
+
+def test_emotions_tool_updates_layer_and_persists_to_next_turn() -> None:
+    fake_client = _FakeClient(
+        responses=[
+            _tool_response(
+                _tool_call(
+                    "emotion-1",
+                    "emotions",
+                    {
+                        "emotion": "joyful",
+                        "expression": "playful",
+                        "reason": "User responded positively.",
+                    },
+                )
+            ),
+            _assistant_response("Tone updated."),
+        ]
+    )
+
+    main.run_perpetual_agent(
+        user_prompt="Let's continue talking.",
+        model="demo-model",
+        max_steps=2,
+        client=fake_client,
+        api_key_env="OPENROUTER_API_KEY",
+        base_url="https://openrouter.ai/api/v1",
+    )
+
+    second_call_messages = fake_client.seen_messages_per_call[1]
+    second_call_emotional_layer = _emotional_state_layer_message_for_call(
+        second_call_messages
+    )
+    assert "Current emotion: joyful" in second_call_emotional_layer
+    assert "Current expression: playful" in second_call_emotional_layer
+    assert "Update source: emotions_tool:User responded positively." in (
+        second_call_emotional_layer
+    )
+
+    emotions_tool_message = next(
+        message
+        for message in _tool_messages_for_call(second_call_messages)
+        if str(message.get("name")) == "emotions"
+    )
+    emotions_payload = json.loads(str(emotions_tool_message["content"]))
+    assert emotions_payload["updated_emotion"] == "joyful"
+    assert emotions_payload["updated_expression"] == "playful"

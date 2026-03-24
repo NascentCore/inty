@@ -25,6 +25,7 @@ from .living_companion import (
     ModelCatalog,
     PerpetualCompanionAgent,
     ScriptedModelExecutor,
+    classify_emotion,
 )
 from .telegram_agentic_loop import PULSE_TOOL_DEFINITION, run_telegram_llm_session
 
@@ -35,9 +36,15 @@ Current pulse counter: {pulse_count}
 You can call core tools:
 - pulse(seconds: integer)
 - call_user(phone_number: string, reason: string)
+- emotions(emotion: string, expression?: string, reason?: string)
 - compact_recent_conversation_into_layer(layer_name, layer_content, recent_message_count)
 - compact_named_layers_into_layer(layer_name, layer_content, source_layer_names)
 - per-layer tools named like update_layer_<layer_name> for non-conversation layers
+
+Emotion rules:
+- keep the emotional_state_layer up-to-date as user mood changes
+- use the emotions tool when you need to explicitly shift emotional state
+- emotional_state_layer affects tone/stance in following turns
 
 Compaction rules:
 - every layer has nesting_level
@@ -96,6 +103,38 @@ CALL_USER_TOOL_DEFINITION = {
                 },
             },
             "required": ["phone_number", "reason"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+EMOTIONS_TOOL_DEFINITION = {
+    "type": "function",
+    "function": {
+        "name": "emotions",
+        "description": (
+            "Update the agent emotional_state_layer that influences following turns."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "emotion": {
+                    "type": "string",
+                    "description": "Target emotional state label, e.g. sad, neutral, joyful.",
+                },
+                "expression": {
+                    "type": "string",
+                    "description": (
+                        "Optional expression style. If omitted, defaults are derived from emotion."
+                    ),
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Optional short reason/context for the emotional update.",
+                },
+            },
+            "required": ["emotion"],
             "additionalProperties": False,
         },
     },
@@ -183,6 +222,93 @@ class CharacterLayer:
     is_conversation_layer: bool = False
     nesting_level: int = 0
     raw_messages: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class EmotionalStateLayer:
+    emotion: str = "neutral"
+    expression: str = "warm"
+    update_source: str = "default"
+
+
+def _default_expression_for_emotion(emotion: str) -> str:
+    emotion_to_expression = {
+        "sad": "gentle",
+        "angry": "calm",
+        "joyful": "playful",
+        "neutral": "warm",
+    }
+    return emotion_to_expression.get(emotion, "warm")
+
+
+def _normalize_emotion_label(emotion: str) -> str:
+    normalized = re.sub(r"[^a-z0-9_]+", "_", emotion.strip().lower())
+    normalized = re.sub(r"_+", "_", normalized).strip("_")
+    if not normalized:
+        raise ValueError("emotion cannot be empty after normalization.")
+    return normalized
+
+
+def _flatten_text(*, text: str, max_chars: int = 120) -> str:
+    flattened = re.sub(r"\s+", " ", text).strip()
+    return flattened[:max_chars]
+
+
+def _render_emotional_state_layer(layer: EmotionalStateLayer) -> str:
+    return (
+        "[emotional_state_layer]\n"
+        f"Current emotion: {layer.emotion}\n"
+        f"Current expression: {layer.expression}\n"
+        f"Update source: {layer.update_source}"
+    )
+
+
+def _latest_user_message(conversation_messages: list[dict[str, Any]]) -> str | None:
+    for message in reversed(conversation_messages):
+        if message.get("role") == "user":
+            return str(message.get("content", ""))
+    return None
+
+
+def _apply_emotion_classification_from_user_message(
+    *, layer: EmotionalStateLayer, user_message: str
+) -> dict[str, str]:
+    classification = classify_emotion(user_message)
+    layer.emotion = classification.emotion
+    layer.expression = classification.expression
+    layer.update_source = (
+        "user_message_classifier:"
+        f"{_flatten_text(text=user_message, max_chars=80)}"
+    )
+    return {
+        "updated_emotion": layer.emotion,
+        "updated_expression": layer.expression,
+        "update_source": layer.update_source,
+    }
+
+
+def _execute_emotions_tool(
+    *,
+    layer: EmotionalStateLayer,
+    emotion: str,
+    expression: str | None,
+    reason: str | None,
+) -> dict[str, str]:
+    normalized_emotion = _normalize_emotion_label(emotion)
+    normalized_expression = (
+        (expression or "").strip() or _default_expression_for_emotion(normalized_emotion)
+    )
+    normalized_reason = (reason or "").strip() or "emotions tool update"
+    layer.emotion = normalized_emotion
+    layer.expression = normalized_expression
+    layer.update_source = (
+        f"emotions_tool:{_flatten_text(text=normalized_reason, max_chars=80)}"
+    )
+    return {
+        "updated_emotion": layer.emotion,
+        "updated_expression": layer.expression,
+        "update_source": layer.update_source,
+    }
 
 
 def _normalize_layer_name(layer_name: str) -> str:
@@ -747,12 +873,25 @@ def run_perpetual_agent(
     )
     pulse_count = 0
     character_layers = _build_default_character_layers()
+    emotional_state_layer = EmotionalStateLayer()
+    last_classified_user_message: str | None = None
     conversation_messages: list[dict[str, Any]] = [
         {"role": "user", "content": user_prompt}
     ]
     forced_tool_choice = _tool_choice_for_user_prompt(user_prompt=user_prompt)
 
     for step in range(1, max_steps + 1):
+        latest_user_message = _latest_user_message(conversation_messages)
+        if (
+            latest_user_message is not None
+            and latest_user_message != last_classified_user_message
+        ):
+            _apply_emotion_classification_from_user_message(
+                layer=emotional_state_layer,
+                user_message=latest_user_message,
+            )
+            last_classified_user_message = latest_user_message
+
         request_messages: list[dict[str, Any]] = [
             {
                 "role": "system",
@@ -760,10 +899,17 @@ def run_perpetual_agent(
             }
         ]
         request_messages.extend(_build_layer_messages(character_layers))
+        request_messages.append(
+            {
+                "role": "system",
+                "content": _render_emotional_state_layer(emotional_state_layer),
+            }
+        )
         request_messages.extend(conversation_messages)
         request_tools = [
             PULSE_TOOL_DEFINITION,
             CALL_USER_TOOL_DEFINITION,
+            EMOTIONS_TOOL_DEFINITION,
             COMPACT_CONVERSATION_TOOL_DEFINITION,
             COMPACT_NAMED_LAYERS_TOOL_DEFINITION,
             *_build_layer_tools(character_layers),
@@ -809,6 +955,28 @@ def run_perpetual_agent(
                 print(f"[step={step}] call_user(phone_number={phone_number})")
                 tool_output = _execute_call_user_tool(
                     phone_number=phone_number,
+                    reason=reason,
+                )
+            elif tool_call.function.name == "emotions":
+                emotion = str(tool_args["emotion"]).strip()
+                expression = (
+                    str(tool_args["expression"]).strip()
+                    if "expression" in tool_args and tool_args["expression"] is not None
+                    else None
+                )
+                reason = (
+                    str(tool_args["reason"]).strip()
+                    if "reason" in tool_args and tool_args["reason"] is not None
+                    else None
+                )
+                print(
+                    f"[step={step}] emotions(emotion={emotion}, "
+                    f"expression={expression or '<auto>'})"
+                )
+                tool_output = _execute_emotions_tool(
+                    layer=emotional_state_layer,
+                    emotion=emotion,
+                    expression=expression,
                     reason=reason,
                 )
             elif tool_call.function.name == "compact_recent_conversation_into_layer":
