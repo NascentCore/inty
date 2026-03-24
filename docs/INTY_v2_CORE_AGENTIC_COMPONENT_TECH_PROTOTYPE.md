@@ -16,7 +16,7 @@
   - **人格与约定**：`IDENTITY.md`、`SOUL.md`、`USER.md`（用户称呼、界限、密度等纯文本即可）。
   - **长期记忆定稿**：`MEMORY.md`（短列表或段落，供拼进 system；可随对话**更新**）。
   - **日记层（可选但推荐）**：`memory/YYYY-MM-DD.md` 每文件追加当日轮次摘要一行，与 [产品定位.md](../产品定位.md) 叙事一致；提炼进 `MEMORY.md` 的规则可极简（见 §4.3）。
-  - **会话消息**：`transcript.jsonl` 每行一条 JSON（`role`, `content`, `ts`），重启 REPL 可续聊；或简化为仅内存 + 只持久化日记，二选一在 README 写死。
+  - **会话消息**：**必须**使用 `transcript.jsonl`（每行一条 JSON：`role`, `content`, `ts`），用于持久化轮次；**不得**采用「仅内存、不落 transcript」模式，以满足 §8 续聊验收。
   - **控制面上下文（建议）**：`context.json`（可选小文件）固定本 workspace 对应的 **`context_mode`**、以及原型用的 **`user_id` / `companion_id` / `chat_id` 占位字符串**（与架构 §4、§20.2 字段对齐，便于将来对接 REST；无则代码内默认 `intimate` + 占位 ID）。
 - 用 **Pydantic** 描述内存中的结构体（加载自文件后的对象）；写回时用字符串拼接或模板即可，**不必**上 front matter 解析库。
 - 用 **Cyclopts** + 显式 **`main.py`** 作为入口（与仓库 [AGENTS.md](../../AGENTS.md) 约定一致），例如：`python -m experimental.inty_v2_text_chat_prototype.main repl --workspace ./workspace`。
@@ -108,9 +108,10 @@ experimental/inty_v2_text_chat_prototype/
 ### 4.1 启动 / 加载
 
 1. 解析 `--workspace`（默认相对包目录 `workspace/`）。
-2. 读取 `IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`（缺失则视为空字符串或要求 `init` 已运行）。
-3. 读取 `context.json`（若存在）得到 `context_mode` 与占位 ID；否则默认 `context_mode=intimate`，ID 为原型常量。
-4. 读取 `transcript.jsonl` 载入最近 N 条为 `transcript`（无文件则空列表）。
+2. **必选文件校验**（`repl` / `once` 在加载前执行）：下列路径 **必须存在**（由 `init-workspace` 生成；内容可为空模板或 `transcript.jsonl` 零行），**任一缺失则立即报错退出**，不兜底为空字符串：  
+   `IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`transcript.jsonl`。
+3. 读取上述文件内容；`transcript.jsonl` 无有效行则 `transcript` 为空列表。
+4. 读取 `context.json`（若存在）得到 `context_mode` 与占位 ID；否则默认 `context_mode=intimate`，ID 为原型常量。
 
 ### 4.2 每一轮对话（须经 `run_turn`）
 
@@ -146,7 +147,7 @@ experimental/inty_v2_text_chat_prototype/
 
 ## 6. CLI 行为（Cyclopts）
 
-- `init-workspace --path ...`：写入上述空模板 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `memory/.gitkeep`，以及可选 **`context.json` 模板**（含默认 `context_mode` 与占位 ID）。
+- `init-workspace --path ...`：写入上述空模板 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md`、**空文件 `transcript.jsonl`**（零行即可）、`memory/.gitkeep`，以及可选 **`context.json` 模板**（含默认 `context_mode` 与占位 ID）。
 - `repl --workspace ...`：循环输入直到 `quit` / EOF。
 - `once --workspace ... --message "..."`：单轮。
 - **不做**：参数校验与帮助润色。
@@ -155,7 +156,7 @@ experimental/inty_v2_text_chat_prototype/
 
 ## 7. 实现顺序（建议任务清单）
 
-1. `paths.py` + `file_store.py` + `init-workspace` 模板内容（含 `context.json` 可选）。
+1. `paths.py` + `file_store.py` + `init-workspace` 模板内容（含必选 `transcript.jsonl` 与 `context.json` 可选）。
 2. `models.py`：`ChatMessage`、加载后的 `PromptBundle`（四段 markdown 字符串）、`ContextMeta`。
 3. `prompts.py`：`build_system_prompt(...)`。
 4. `client.py`：`complete(...)`。
@@ -168,7 +169,7 @@ experimental/inty_v2_text_chat_prototype/
 
 ## 8. 完成标准（自测）
 
-- 删除进程后再次启动 `repl`，**transcript.jsonl** 使对话可续（若采用该策略）。
+- 删除进程后再次启动 `repl`，依赖 **`transcript.jsonl`** 持久化的历史使对话可续（必选路径；与 §4.1 必选文件一致）。
 - 编辑 `MEMORY.md` 或通过 **B** 自动生成后，下一轮 **system** 中能体现新记忆（可用 `--debug-print-system` 一类开关看一眼，提交前可选）。
 - **全程无数据库连接**（无 `sqlalchemy`、`psycopg` import）。
 - 代码审查：**无**在 `orchestrator` 外写入「本轮 assistant 回复」到 `transcript.jsonl` 的路径。
