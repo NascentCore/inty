@@ -2,7 +2,7 @@
 
 > 本文档固化「专为人设计的情感伴侣 AI」在 **v1 核心交互体验** 上的功能集合与推导逻辑；可扩展能力单独列出，供后续迭代讨论。  
 > 依据来源：[docs/产品定位.md](产品定位.md)、[experimental/agentic_companion_20260324/DESIGNS.md](../experimental/agentic_companion_20260324/DESIGNS.md)、[experimental/agentic_ai_companion](../experimental/agentic_ai_companion/)，以及 [OpenClaw README](https://github.com/openclaw/openclaw/blob/main/README.md) 的架构隐喻（非功能抄表）。  
-> **技术架构（v1 落地）**：[INTY_v2_TECH_ARCHITECTURE.md](INTY_v2_TECH_ARCHITECTURE.md)
+> **技术架构（v1 落地）**：[INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md](INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md)
 
 ---
 
@@ -112,4 +112,4 @@ OpenClaw 是个人 **通用助手**：多 IM、浏览器、Canvas、Skills、多
 ## 5. 文档维护
 
 - 若 v1 范围裁剪或优先级调整，应同步更新本节与 [docs/产品定位.md](产品定位.md) 中相关表述，避免文档打架。
-- 表结构、API、与代码目录映射变更时，同步更新 [INTY_v2_TECH_ARCHITECTURE.md](INTY_v2_TECH_ARCHITECTURE.md) §4、§9、§11（可观测性字段）。
+- 表结构、API、与代码目录映射变更时，同步更新 [INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md](INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md) §4、§9、§11（可观测性字段）。
