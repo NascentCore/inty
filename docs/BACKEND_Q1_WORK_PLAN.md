@@ -2,7 +2,52 @@
 
 <!-- CREATED_BY_AGENT -->
 
-> 本文档基于 2026 年 1 月团队会议讨论内容整理，作为后端未来 3 个月的工作指引。
+> 本文档基于 2026 年 1 月团队会议讨论内容整理，作为后端未来 3 个月的工作指引；下方「执行进度」随代码库状态滚动更新。
+
+## 执行进度（截至 2026-03-24）
+
+以下对照各阶段计划，依据仓库当前实现梳理；更新本节后请同步修改日期与条目状态。
+
+### 第一阶段：数据分析与可观测性
+
+| 子项 | 状态 | 说明 |
+| ---- | ---- | ---- |
+| 1.1 扩展用户分析能力（单用户画像、漏斗、留存归因等 API） | **部分完成** | [`UserAnalyticsService`](../app/services/user_analytics_service.py) 与 Ops 侧评测/分析接口（[`backend/ops/api/v1/evaluation.py`](../backend/ops/api/v1/evaluation.py)）已承载大量聚合统计；[`user_analytics_report`](../app/models/user_analytics_report.py) 表与 [`user_analytics_report_service`](../app/services/user_analytics_report_service.py) 支持日报/周报预计算与推送调度任务。计划中明确列出的**单用户行为画像 API、功能漏斗、留存归因（如 D7 对比）**等需在服务层与接口上逐项对照补全或文档化。 |
+| 1.1 多数据源统一聚合（MetricsCollector 架构图） | **未落地** | Firebase / Play Console / Cloud Console 等与 PG 的统一采集层尚未按该架构实现。 |
+| 1.2 OpenTelemetry 接入生产 | **未接入主应用** | 仅有实验性示例：[`experimental/fastapi_otel/main.py`](../experimental/fastapi_otel/main.py)。主 FastAPI 进程未挂载 OTel。 |
+
+### 第二阶段：零停机部署与稳定性
+
+| 子项 | 状态 | 说明 |
+| ---- | ---- | ---- |
+| 2.1 零停机 / 滚动或蓝绿部署 | **未完成** | [`.github/workflows/build_and_deploy_backend.yml`](../.github/workflows/build_and_deploy_backend.yml) 仍为 `docker stop` / `docker rm` 后单容器拉起；[`backend/inty/start.sh`](../backend/inty/start.sh) 仍为单进程 `uvicorn`，未采用计划中的 gunicorn 多 worker + 流量切换方案。 |
+| 2.2 事件循环阻塞、同步 DB/GCS 等 | **部分推进** | 多处已使用 `asyncio.to_thread`（如聊天消息分页、记忆投递、GCS、TTS 等）。[`chat_history_service`](../app/services/chat_history_service.py) 仍在 [`chat_service`](../app/services/chat_service.py)、[`agent`](../app/core/agent/agent.py) 等路径上同步调用，需继续按 [`app/TODOS_SCALABILITY.md`](../app/TODOS_SCALABILITY.md) 收敛。 |
+
+### 第三阶段：商业化功能支撑
+
+| 子项 | 状态 | 说明 |
+| ---- | ---- | ---- |
+| 3.1 订阅价值量化、转化漏斗、AB 实验 | **待对齐** | [`subscription_service`](../app/services/subscription_service.py) 等需与产品确认是否已有等价能力；计划中的专项 API/框架未见完整落地描述。 |
+| 3.2 广告系统基础 | **待对齐** | 广告位配置、展示与收益统计类 API 需在 `app/api` 与 schema 层逐项核对是否已存在或仍属规划。 |
+
+### 第四阶段：产品功能
+
+| 子项 | 状态 | 说明 |
+| ---- | ---- | ---- |
+| 4.1 记忆系统 | **部分完成（形态与计划不完全一致）** | 已有 [`Memory`](../app/models/memory.py) 模型、抽取与节日/日常记忆链路、角色详情中的 `festival_memories` / `daily_memories` 等（见 [`memory_service`](../app/services/memory_service.py)、[`app/schemas/agent.py`](../app/schemas/agent.py)）。计划中 **`GET/POST/PUT/DELETE /api/v1/memories` 用户侧 CRUD** 若仍需，应单独排期并与 Android 契约同步。 |
+| 4.2 亲密度系统 | **未实现** | 未见独立 `intimacy` 表与后端服务。 |
+| 4.3 成就系统 | **未实现** | 未见 `achievements` / `user_achievements` 表与触发、发奖服务。 |
+
+### 与 § 优先级排序的对应关系（快照）
+
+- **P0 单用户分析 / 功能归因**：有分析服务与报表基础，**与计划条目的 1:1 完成度需产品/研发共同勾选**。
+- **P0 零停机部署**：**未完成**。
+- **P1 OpenTelemetry**：**未完成（主应用）**。
+- **P1 事件循环与扩展性**：**进行中**。
+- **P1 记忆系统**：**自动记忆与端上展示相关能力已有**；**用户可编辑 CRUD API 按原计划仍缺**。
+- **P2 订阅分析、亲密度、成就**：**基本未动或待确认**。
+
+---
 
 ## 背景分析
 
