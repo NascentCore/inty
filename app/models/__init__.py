@@ -31,6 +31,7 @@ from app.models.feedback_push import FeedbackPushHistory as FeedbackPushHistory
 from app.models.memory import FestivalMemoryConfig as FestivalMemoryConfig
 from app.models.memory import Memory as Memory
 from app.models.memory import MemoryExtractionLog as MemoryExtractionLog
+from app.models.messages_compaction import MessagesCompaction as MessagesCompaction
 from app.models.notification import NotificationTemplate as NotificationTemplate
 from app.models.notification import UserNotification as UserNotification
 from app.models.push_notification import (

@@ -44,6 +44,7 @@ from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
+from app.services.messages_compaction_service import maybe_compact_and_save_overflow_history
 from app.utils.models_catalog import is_deepseek_on_openrouter, resolve_chat_model_to_id
 from app.utils.openai_client import (
     get_chat_llm_provider,
@@ -813,6 +814,24 @@ class Agent:
             max_messages=max_messages,
         )
 
+    def _maybe_compact_history_for_user_tier(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        history_messages: List[BaseMessage],
+        is_subscribed: bool,
+    ) -> bool:
+        max_messages_limit = self._get_chat_messages_limit(is_subscribed=is_subscribed)
+        return maybe_compact_and_save_overflow_history(
+            sync_engine=get_sync_engine(),
+            user_id=user_id,
+            agent_id=self.agent_id,
+            session_id=session_id,
+            history_messages=history_messages,
+            max_messages_limit=max_messages_limit,
+        )
+
     def _get_relevant_history(
         self, history_messages: List[BaseMessage], max_messages: int = MAX_MESSAGES_ALL
     ) -> List[BaseMessage]:
@@ -1369,6 +1388,12 @@ class Agent:
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
                 history_messages = chat_history_service.get_history_messages(session_id)
+                self._maybe_compact_history_for_user_tier(
+                    user_id=user_id,
+                    session_id=session_id,
+                    history_messages=history_messages,
+                    is_subscribed=is_subscribed,
+                )
                 recent_history = self._get_relevant_history_for_user_tier(
                     history_messages=history_messages,
                     is_subscribed=is_subscribed,
