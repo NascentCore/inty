@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+import queue
+import threading
+
 from .client import complete, memory_model
 from .file_store import append_line, read_text, write_text_atomic
 from .paths import WorkspacePaths
 from .utc import utc_date_str, utc_iso_ts
+
+logger = logging.getLogger(__name__)
 
 _DIARY_USER_MAX = 240
 _DIARY_ASSISTANT_MAX = 320
@@ -68,3 +74,40 @@ def memory_update_after_turn(
 ) -> None:
     _append_diary(paths, user_text=user_text, assistant_text=assistant_text)
     _rewrite_memory_md(paths, user_text=user_text, assistant_text=assistant_text)
+
+
+_memory_queue: queue.Queue[tuple[WorkspacePaths, str, str]] | None = None
+_worker_lock = threading.Lock()
+
+
+def _memory_worker_loop() -> None:
+    assert _memory_queue is not None
+    while True:
+        paths, user_text, assistant_text = _memory_queue.get()
+        try:
+            memory_update_after_turn(
+                paths, user_text=user_text, assistant_text=assistant_text
+            )
+        except Exception:
+            logger.exception("memory_update_after_turn failed")
+        finally:
+            _memory_queue.task_done()
+
+
+def schedule_memory_update_after_turn(
+    paths: WorkspacePaths,
+    *,
+    user_text: str,
+    assistant_text: str,
+) -> None:
+    """Enqueue diary + memory curator; runs on a daemon thread so REPL is not blocked."""
+    global _memory_queue
+    with _worker_lock:
+        if _memory_queue is None:
+            _memory_queue = queue.Queue()
+            threading.Thread(
+                target=_memory_worker_loop,
+                name="inty-memory-update",
+                daemon=True,
+            ).start()
+    _memory_queue.put((paths, user_text, assistant_text))

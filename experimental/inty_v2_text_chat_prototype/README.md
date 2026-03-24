@@ -33,9 +33,10 @@ python -m experimental.inty_v2_text_chat_prototype.main once --message "你好" 
 | 路径 | 说明 |
 |------|------|
 | `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` | 人格与长期记忆定稿 |
+| `AGENTS.md` / `TOOLS.md` / `HEARTBEAT.md` | 可选；若存在则注入 system prompt（有单文件长度上限） |
 | `transcript.jsonl` | 每行 JSON：`role`（user \| assistant）、`content`、`ts` |
 | `context.json` | 可选：`context_mode`、`user_id`、`companion_id`、`chat_id` |
-| `memory/YYYY-MM-DD.md` | 日记层（每轮追加一行摘要） |
+| `memory/YYYY-MM-DD.md` | 日记层（每轮追加一行摘要）；**当日**文件若存在还会整段注入（有长度上限） |
 
 ## 自测（对应原型 §8）
 

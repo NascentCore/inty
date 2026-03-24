@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -13,6 +15,17 @@ from .orchestrator import run_turn
 
 def _default_workspace() -> Path:
     return Path(__file__).resolve().parent / "workspace"
+
+
+def _local_ts_str() -> str:
+    dt = datetime.now().astimezone()
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + dt.strftime(" %z")
+
+
+def _print_assistant_reply(out: str, elapsed_s: float) -> None:
+    ms = elapsed_s * 1000
+    print(f"[{_local_ts_str()}] {ms:.0f}ms")
+    print(out)
 
 
 app = App(
@@ -55,8 +68,9 @@ def repl(
             break
         if not line.strip():
             continue
+        t0 = time.perf_counter()
         out = run_turn(ws, line, debug_print_system=debug_print_system)
-        print(out)
+        _print_assistant_reply(out, time.perf_counter() - t0)
 
 
 @app.command
@@ -73,8 +87,9 @@ def once(
 ) -> None:
     """单轮对话。"""
     ws = workspace or _default_workspace()
+    t0 = time.perf_counter()
     out = run_turn(ws, message, debug_print_system=debug_print_system)
-    print(out)
+    _print_assistant_reply(out, time.perf_counter() - t0)
 
 
 if __name__ == "__main__":

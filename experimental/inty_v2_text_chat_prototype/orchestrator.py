@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .client import complete, get_client
 from .file_store import append_jsonl
-from .memory_update import memory_update_after_turn
+from .memory_update import schedule_memory_update_after_turn
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
@@ -62,6 +62,7 @@ def run_turn(
         messages.append({"role": m.role, "content": m.content})
     messages.append({"role": "user", "content": user_text})
 
+    # Must snapshot user time before the LLM call; assistant time is taken after (below).
     ts_user = utc_iso_ts()
     assistant_text = complete(messages)
 
@@ -75,6 +76,6 @@ def run_turn(
         {"role": "assistant", "content": assistant_text, "ts": ts_asst},
     )
 
-    memory_update_after_turn(paths, user_text=user_text, assistant_text=assistant_text)
+    schedule_memory_update_after_turn(paths, user_text=user_text, assistant_text=assistant_text)
 
     return assistant_text
