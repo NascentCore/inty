@@ -112,4 +112,4 @@ OpenClaw 是个人 **通用助手**：多 IM、浏览器、Canvas、Skills、多
 ## 5. 文档维护
 
 - 若 v1 范围裁剪或优先级调整，应同步更新本节与 [docs/产品定位.md](产品定位.md) 中相关表述，避免文档打架。
-- 表结构、API、与代码目录映射变更时，同步更新 [INTY_v2_TECH_ARCHITECTURE.md](INTY_v2_TECH_ARCHITECTURE.md) §4、§9。
+- 表结构、API、与代码目录映射变更时，同步更新 [INTY_v2_TECH_ARCHITECTURE.md](INTY_v2_TECH_ARCHITECTURE.md) §4、§9、§11（可观测性字段）。
