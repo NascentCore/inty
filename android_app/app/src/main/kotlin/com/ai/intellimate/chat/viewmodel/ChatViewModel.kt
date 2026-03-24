@@ -3,6 +3,7 @@ package com.ai.intellimate.chat.viewmodel
 import ai.sxwl.android.common.analytics.PageTrackingHelper
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.NetServiceMgr
+import ai.sxwl.android.data.api.model.AgentConstants
 import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.api.model.ChatMode
 import ai.sxwl.android.data.api.model.ChatSettingsReq
@@ -255,6 +256,8 @@ class ChatViewModel : BaseVM() {
     private var lastSyncedEnergyPoints = 0
     private val _showRankDialog = Channel<Boolean>()
     val showRankDialog = _showRankDialog.receiveAsFlow()
+    private val _hasUserSentMessageInOfficialAssistant = MutableStateFlow(false)
+    val hasUserSentMessageInOfficialAssistant = _hasUserSentMessageInOfficialAssistant.asStateFlow()
 
     // 显示订阅
     private val _vipRequest = Channel<String>()
@@ -529,8 +532,24 @@ class ChatViewModel : BaseVM() {
         _shouldFlowShow.value = true
     }
 
+    private fun markOfficialAssistantUserMessageSentIfNeeded() {
+        if (AgentConstants.isIntelliMateAgent(agentFlow.value?.agentId, agentFlow.value?.name)) {
+            _hasUserSentMessageInOfficialAssistant.value = true
+        }
+    }
+
+    fun markOfficialAssistantUserMessageSent() {
+        markOfficialAssistantUserMessageSentIfNeeded()
+    }
+
+    fun clearOfficialAssistantUserMessageSent() {
+        _hasUserSentMessageInOfficialAssistant.value = false
+    }
+
     /** 发送消息 - 使用新架构 */
     fun sendMsg() {
+        markOfficialAssistantUserMessageSentIfNeeded()
+
         // 防抖检查
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastSendTime < SEND_DEBOUNCE_TIME) {
@@ -649,6 +668,7 @@ class ChatViewModel : BaseVM() {
                         localImageUri = selectedImageUri,
                         preUploadTask = selectedImageUploadTask,
                     )
+                    markOfficialAssistantUserMessageSentIfNeeded()
                     sessionMessageCount++
                     _isWaitingForReply.value = false
                 } else {
@@ -663,6 +683,7 @@ class ChatViewModel : BaseVM() {
                             )
                     ) {
                         is HttpResult.Success -> {
+                            markOfficialAssistantUserMessageSentIfNeeded()
                             val responseTime = System.currentTimeMillis() - aiResponseStartTime
                             val endToEndTime = System.currentTimeMillis() - endToEndStartTime
 

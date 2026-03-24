@@ -1,22 +1,35 @@
 package com.ai.intellimate.chat.ui
 
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.ai.intellimate.R
 import com.ai.intellimate.ui.UiConfigs
+import com.ai.intellimate.ui.UiConfigs.ChatMessagePane.AI_WIDTH_RATIO
 
 internal const val OFFICIAL_ASSISTANT_FAQ_MAX_ITEMS = 7
 
@@ -27,8 +40,8 @@ internal const val OFFICIAL_ASSISTANT_FAQ_MAX_ITEMS = 7
  * - 仅用于 IntelliMate 官方助手聊天页的顶部快捷提问区。
  *
  * 预期视觉效果：
- * - 一组可换行的胶囊描边按钮，外观接近客服 FAQ 快捷入口；
- * - 点击后触发回调，由上层把“长问题”写入聊天输入框（不直接发送）。
+ * - 一组纵向排列的短标题按钮；
+ * - 整体容器背景使用与 AI 文本消息一致的半透明黑色气泡背景，点击后由上层回填长问题到输入框（不直接发送）。
  *
  * 可配置项：
  *
@@ -80,8 +93,8 @@ internal fun officialAssistantFaqItems(): List<OfficialAssistantFaqItem> {
  * - 放置于官方助手聊天页中上部区域，作为“快速提问”入口。
  *
  * 预期视觉效果：
- * - 胶囊描边按钮自动换行排列，按钮文案为短标题；
- * - 整体风格与聊天场景一致（使用 MaterialTheme 的颜色与排版）。
+ * - FAQ 按钮纵向排列，避免横向拥挤；
+ * - 背景与 AI 消息气泡一致（半透明黑底），按钮文案为短标题。
  *
  * 可配置项：
  *
@@ -90,47 +103,36 @@ internal fun officialAssistantFaqItems(): List<OfficialAssistantFaqItem> {
  * @param onQuestionClick 按钮点击回调（由上层决定如何处理回填）
  */
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 internal fun OfficialAssistantFaqQuestions(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     items: List<OfficialAssistantFaqItem>,
     onQuestionClick: (OfficialAssistantFaqItem) -> Unit,
 ) {
-    FlowRow(
-        modifier = modifier,
-        horizontalArrangement =
-            Arrangement.spacedBy(UiConfigs.ChatPage.OfficialAssistantFaq.HorizontalSpacing),
-        verticalArrangement =
-            Arrangement.spacedBy(UiConfigs.ChatPage.OfficialAssistantFaq.VerticalSpacing),
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth(AI_WIDTH_RATIO)
+                .background(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(dimensionResource(R.dimen.padding_medium)),
     ) {
+        Text(
+            text = stringResource(R.string.chat_official_faq_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White,
+        )
+
+        Spacer(Modifier.height(dimensionResource(R.dimen.padding_large)))
+
         items.forEach { item ->
-            OutlinedButton(
+            Button(
                 onClick = { onQuestionClick(item) },
-                shape =
-                    RoundedCornerShape(UiConfigs.ChatPage.OfficialAssistantFaq.ButtonCornerRadius),
-                border =
-                    BorderStroke(
-                        width = UiConfigs.ChatPage.OfficialAssistantFaq.BorderWidth,
-                        color =
-                            MaterialTheme.colorScheme.primary.copy(
-                                alpha = UiConfigs.ChatPage.OfficialAssistantFaq.BorderAlpha
-                            ),
-                    ),
-                colors =
-                    ButtonDefaults.outlinedButtonColors(
-                        containerColor =
-                            MaterialTheme.colorScheme.surface.copy(
-                                alpha =
-                                    UiConfigs.ChatPage.OfficialAssistantFaq.ButtonBackgroundAlpha
-                            ),
-                        contentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                contentPadding =
-                    PaddingValues(
-                        horizontal =
-                            UiConfigs.ChatPage.OfficialAssistantFaq.ButtonHorizontalPadding,
-                        vertical = UiConfigs.ChatPage.OfficialAssistantFaq.ButtonVerticalPadding,
-                    ),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(100)
             ) {
                 Text(
                     text = stringResource(item.titleResId),
@@ -139,6 +141,20 @@ internal fun OfficialAssistantFaqQuestions(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Official Assistant FAQ")
+@Composable
+private fun PreviewOfficialAssistantFaqQuestions() {
+    IntelliMateTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            OfficialAssistantFaqQuestions(
+                modifier = Modifier.padding(16.dp),
+                items = officialAssistantFaqItems(),
+                onQuestionClick = {},
+            )
         }
     }
 }
