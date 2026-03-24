@@ -43,14 +43,15 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
 
     root.mkdir(parents=True, exist_ok=True)
     paths.memory_dir.mkdir(parents=True, exist_ok=True)
+    paths.memory_daily_dir.mkdir(parents=True, exist_ok=True)
 
     write_text(paths.identity, _TEMPLATE_IDENTITY.strip() + "\n")
     write_text(paths.soul, _TEMPLATE_SOUL.strip() + "\n")
     write_text(paths.user_md, _TEMPLATE_USER.strip() + "\n")
     write_text(paths.memory_md, _TEMPLATE_MEMORY.strip() + "\n")
     write_text(paths.transcript, "")
-    # memory/.gitkeep（便于空目录进 git）
-    gitkeep = paths.memory_dir / ".gitkeep"
-    write_text(gitkeep, "")
+    # memory/.gitkeep、memory/daily/.gitkeep（便于空目录进 git）
+    write_text(paths.memory_dir / ".gitkeep", "")
+    write_text(paths.memory_daily_dir / ".gitkeep", "")
     if write_context:
         write_text(paths.context_json, json.dumps(_CONTEXT_JSON, indent=2, ensure_ascii=False) + "\n")

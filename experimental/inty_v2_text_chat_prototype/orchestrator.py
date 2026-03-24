@@ -48,8 +48,8 @@ def run_turn(
     _require_workspace_files(paths)
     get_client()
 
-    bundle = load_prompt_bundle(paths)
     context = load_context_meta(paths.context_json)
+    bundle = load_prompt_bundle(paths, meta=context)
     transcript = _truncate_transcript(load_transcript(paths.transcript))
 
     system = build_system_prompt(bundle, context)

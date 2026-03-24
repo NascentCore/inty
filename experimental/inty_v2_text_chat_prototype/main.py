@@ -41,7 +41,7 @@ def init_workspace(
         Parameter(name="--path", help="要创建的 workspace 目录路径"),
     ],
 ) -> None:
-    """写入 IDENTITY/SOUL/USER/MEMORY、空 transcript、memory/.gitkeep、context.json。"""
+    """写入 IDENTITY/SOUL/USER/MEMORY、空 transcript、memory/ 与 memory/daily/、context.json。"""
     bootstrap_init_workspace(path)
 
 

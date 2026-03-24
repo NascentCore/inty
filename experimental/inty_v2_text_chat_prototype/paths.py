@@ -51,3 +51,16 @@ class WorkspacePaths:
     @property
     def memory_dir(self) -> Path:
         return self.root / "memory"
+
+    @property
+    def memory_daily_dir(self) -> Path:
+        """逐条原始流水：memory/daily/YYYY-MM-DD.md"""
+        return self.memory_dir / "daily"
+
+    def memory_raw_diary(self, day: str) -> Path:
+        """当日原始对话行（追加）。"""
+        return self.memory_daily_dir / f"{day}.md"
+
+    def memory_day_summary(self, day: str) -> Path:
+        """当日总结性记忆（LLM 整文件覆盖）：memory/YYYY-MM-DD.md"""
+        return self.memory_dir / f"{day}.md"
