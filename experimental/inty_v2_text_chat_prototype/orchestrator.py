@@ -62,9 +62,9 @@ def run_turn(
         messages.append({"role": m.role, "content": m.content})
     messages.append({"role": "user", "content": user_text})
 
+    ts_user = utc_iso_ts()
     assistant_text = complete(messages)
 
-    ts_user = utc_iso_ts()
     append_jsonl(
         paths.transcript,
         {"role": "user", "content": user_text, "ts": ts_user},
