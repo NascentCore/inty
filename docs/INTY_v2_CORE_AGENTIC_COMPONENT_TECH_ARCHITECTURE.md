@@ -1,225 +1,309 @@
-# IntelliMate / Inty v2：v1 核心体验 — 技术架构
+# IntelliMate / Inty v2：核心 Agentic 组件 — 技术架构
 
 > 对应产品与设计摘要：[INTY_v2_DESIGN.md](INTY_v2_DESIGN.md)。  
-> 本文描述 **v1 核心体验** 落地的逻辑架构、数据与流水线；与当前代码库的关系为 **演进方向**：现有 Inty 已具备 FastAPI、`app/api/v1`（chat、chats、agents、TTS、live_chat、images 等）、`AgentManager`、聊天历史与推送 worker，v1 架构在其上 **显式化「伴侣控制面 + 记忆双层 + 自治心跳」**，而非另起炉灶。
+> **实现优先级**：文档前部描述 **仅核心 text chat** 的落地架构（用户文本入、流式文本出、会话持久化、提示词编排、与现有 Inty 管线对齐）。多模态、外向自治、完整记忆向量等放在 **后部扩展章节**，避免实现阶段范围膨胀。
 
 ---
 
-## 1. 架构目标（从体验到系统）
+## 1. 代码库技术选型（与仓库一致）
 
-| v1 体验支柱（见设计文档 §2） | 技术系统要点 |
+以下为当前主后端依赖与惯例（见仓库根目录 `requirements.txt`、`app/`、`backend/inty/`）；**核心 text chat 实现应优先使用这些组件**，不引入平行技术栈。
+
+| 层次 | 选型 | 说明 |
+|------|------|------|
+| HTTP API | **FastAPI**（Starlette / Uvicorn） | `backend/inty/main.py` 挂载 `app/api/v1/router.py` |
+| 请求/响应与配置 | **Pydantic**、**pydantic-settings** | `app/schemas` 与跨边界 DTO；配置与 [AGENTS.md](/AGENTS.md) 约定一致 |
+| 关系型数据 | **SQLAlchemy 2.x**、**PostgreSQL** | `app/models`（或等价模块）与现有 `chats` / `chat_history` 等 |
+| 迁移 | **Alembic** | 表结构变更走 alembic revision（见仓库根 `AGENTS.md` Alembic 节） |
+| 向量检索（扩展） | **pgvector**（Python 侧 `pgvector` 包） | 仅在有长期记忆语义检索时启用，非 text chat 最小集必需 |
+| CLI（运维/Worker/脚本） | **Cyclopts** | 仓库约定用 Cyclopts 做显式 `main.py` 入口 CLI；**不等同于** REST 路由层 |
+| 异步与驱动 | **asyncpg** / **psycopg** 等 | 与现有会话、连接池用法保持一致 |
+| 日志 | **loguru** 等（以现有模块为准） | 结构化字段见下文扩展章「可观测性」 |
+
+**说明**：Android 与 HTTP API 共享的 JSON 合同变更时，仍需同步 **Kotlin API model** 与 **`app/schemas`**（仓库总 [AGENTS.md](/AGENTS.md) 约定）。
+
+---
+
+## 2. 核心 text chat：目标与边界
+
+| 项 | 内容 |
+|----|------|
+| **范围** | 单轮/多轮 **纯文本** 对话；服务端 **流式输出** token（或等价 chunk）；消息 **落库** 到现有会话模型 |
+| **会话模型** | 每个 `(user_id, companion_id)` 对应既有 **`chat_id` / thread**；不新增「每请求新建会话」的默认行为 |
+| **编排** | 入站归一 → 鉴权 →（可选）幂等 → 写用户消息 → 拉取历史 → 装配系统提示（含 Agent/用户侧字段）→ 调 LLM → 流式返回并 **落库助手消息** |
+| **显式不包含（属扩展）** | 图片/音频/视频、TTS、Live WebSocket、工具调用链、外向 push、pgvector 检索、独立 Media Pipeline |
+
+---
+
+## 3. 核心 text chat：逻辑分层（最小图）
+
+```
+Android App (text in / stream text out)
+        │ HTTPS
+        ▼
+┌───────────────────────────────────────┐
+│  FastAPI /api/v1/ …                   │
+│  Auth · Rate limits · body → DTO      │
+└───────────────────┬───────────────────┘
+                    ▼
+┌───────────────────────────────────────┐
+│  Companion Control Plane（进程内模块）   │
+│  Normalize → TextTurnInput            │
+│  Resolve chat_id, agent_id, user_id │
+└───────────────────┬───────────────────┘
+                    ▼
+┌───────────────────────────────────────┐
+│  Text Turn Orchestrator               │
+│  Persist user message                 │
+│  Load history · Assemble prompt       │
+│  LLM stream · Persist assistant msg   │
+└───────────────────┬───────────────────┘
+                    ▼
+┌───────────────────────────────────────┐
+│  PostgreSQL（SQLAlchemy）              │
+│  chats · chat_history / messages · …  │
+└───────────────────────────────────────┘
+```
+
+**要点**：助手消息 **唯一** 经 Orchestrator（或与现有 `chat` 端点等价路径）写入，避免重复实现写库逻辑。
+
+---
+
+## 4. 核心 text chat：契约（Pydantic）
+
+### 4.1 入站（概念字段）
+
+与完整版 `CanonicalTurnEvent` 对齐思路，但 **text chat 最小实现** 只需：
+
+- `event_id`：可选；若要做幂等，建议 ULID/UUID（仓库已有 `python-ulid`），与 `user_id` + `chat_id` 联合唯一
+- `user_id`、`chat_id`、`companion_id` / `agent_id`
+- `text`：用户本轮纯文本
+- `context_mode`：若短期未建表，可从 chat 类型或默认 `intimate` 推导
+
+**幂等**：在 `chat_history`（或侧表）对 `(user_id, chat_id, event_id)` 唯一约束；重复 `event_id` **短路** 返回已生成结果，不重复调用 LLM。
+
+### 4.2 提示词装配顺序（text chat）
+
+与全文版一致的前缀（见 **§10.2**），但第 9 步「通道输出契约」在 text chat 下退化为：**仅文本、长度与风格约束**，无多模态 schema、无工具列表。
+
+### 4.3 出站
+
+- **流式**：HTTP 下采用当前 chat 端点已有模式（如 SSE/streaming JSON chunk），与 App 合同对齐
+- **最终**：助手文本持久化；可选返回 `message_id` / 游标供客户端去重
+
+---
+
+## 5. 核心 text chat：数据与 ORM
+
+最小集 **直接复用** 现有表（名称以代码为准）：
+
+| 用途 | 说明 |
+|------|------|
+| `users` | 已有 |
+| `agents` | companion 配置、角色卡字段 → 映射 IDENTITY/SOUL 来源 |
+| `chats` | 会话元数据；未来可加 `context_mode` |
+| `messages` / `chat_history` | 用户/助手文本轮次 |
+
+新增列或表（幂等键、记忆项等）一律 **Alembic** 迁移 + SQLAlchemy model 更新。
+
+---
+
+## 6. 核心 text chat：一轮流水线
+
+1. FastAPI 收请求 → **Pydantic** 校验 → 注入 `user_id`（auth）。
+2. 归一为 **TextTurnInput**（内部 DTO）。
+3. 若带 `event_id`：检查唯一约束 → 已处理则返回缓存结果。
+4. **SQLAlchemy** 事务内写入用户消息。
+5. 读取最近历史窗口（与现有 `PostgresChatMessageHistory` / 裁剪策略一致）。
+6. 装配 prompt（**AgentManager** 或现有 Agent 服务；顺序见 §4.2 / §10.2）。
+7. 调用 LLM **流式**生成；边生成边下发客户端。
+8. 流结束 → 写入助手消息 → 提交事务。
+9. **扩展**：记忆抽取、摘要等异步任务不在此路径阻塞（见 §11）。
+
+**延迟**：首 token 前不做重检索或向量检索（text chat 最小集）。
+
+---
+
+## 7. 核心 text chat：代码落点
+
+| 项 | 仓库锚点 |
+|----|----------|
+| 路由注册 | `app/api/v1/router.py` |
+| 聊天入口 | `app/api/v1/endpoints/chat.py`（及关联 service） |
+| 会话 CRUD | `app/api/v1/endpoints/chats.py` |
+| Agent / 提示词 / LLM | `AgentManager` 与相关 `app` 服务（见 `backend/AGENTS.md`） |
+| Schema | `app/schemas` |
+| Model | `app/models`（或项目中等价目录） |
+
+---
+
+# 扩展章节（在核心 text chat 稳定后迭代）
+
+以下对应 [INTY_v2_DESIGN.md](INTY_v2_DESIGN.md) 全文体验与 [experimental/agentic_companion_20260324/DESIGNS.md](../experimental/agentic_companion_20260324/DESIGNS.md)；**不阻塞** text chat 最小闭环。
+
+---
+
+## 8. 完整体验：架构目标对照
+
+| v1 体验支柱（设计文档 §2） | 技术系统要点 |
 |-----------------------------|-------------|
-| 关系型对话主循环 | **每个 `(user_id, companion_id)` 一条主关系会话**（同一用户可有多个伴侣，各一条主 `chat`/thread）；持久 thread；提示词按层装配（IDENTITY/SOUL/MEMORY/USER 约定） |
-| 双层记忆 | 日记层（消息级/事件级）+ 长期记忆项（可检索、可向量检索）；异步演进任务 |
-| 多模态表达 | 统一 `content_parts`；媒体上传对象存储；TTS / 生图 / Live 语音等经 **同一编排出口** 调度 |
-| 私密 vs 体面上下文 | `context_mode`（或等价）驱动：检索 top-K、注入哪些记忆块、系统安全附加条款 |
-| 关心型主动 | 自治策略表 + 状态机 + 预算/静默；push 或应用内投递；默认外向保守 |
-| 关系向安全 | 提示词 SOUL 层 + 入站净化/结构化槽位 + 危机检测分支（可规则+模型分级） |
-| 关系 onboarding | 用户–伴侣约定持久化；首启/设置 API；进入主循环前合并进 USER 层 |
-| 在场感 | 流式 token / SSE 或等价；可选服务端事件：`typing`、`thinking`、`audio_chunk` 等（与客户端约定） |
+| 关系型对话主循环 | 每个 `(user_id, companion_id)` 一条主关系会话；持久 thread；提示词按层装配 |
+| 双层记忆 | 日记层 + 长期记忆项；向量检索；异步演进 |
+| 多模态表达 | `content_parts`；对象存储；TTS / 生图 / Live 经同一编排出口 |
+| 私密 vs 体面上下文 | `context_mode` 驱动检索与注入策略 |
+| 关心型主动 | 自治策略 + 状态机 + 预算/静默；push / 应用内 |
+| 关系向安全 | SOUL + 不可信入站 + 危机分支 |
+| 关系 onboarding | 用户–伴侣约定持久化；合并进 USER 层 |
+| 在场感 | 流式 + 可选 `typing` / `thinking` / 媒体阶段事件 |
 
 ---
 
-## 2. 逻辑分层（OpenClaw 式「控制面」，伴侣语义）
+## 9. 完整逻辑分层（含多模态与自治）
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Clients (Android App primary for v1)                        │
+│  Clients (Android App primary)                               │
 │  Chat UI · Voice · Media upload · Push receive               │
 └───────────────────────────┬─────────────────────────────────┘
                             │ HTTPS (+ WS if used for live voice)
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  API Gateway Layer (FastAPI /api/v1/...)                     │
-│  Auth · Rate limits · 入站幂等（CanonicalTurnEvent.event_id）    │
+│  Auth · Rate limits · 入站幂等（event_id）                     │
 └───────────────────────────┬─────────────────────────────────┘
-                            │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Companion Control Plane (in-process v1; optional extract)   │
-│  - Normalize inbound → CanonicalTurnEvent                    │
-│  - Resolve context_mode, companion_id, session/thread        │
-│  - Enqueue async jobs · Emit outbound commands               │
+│  Companion Control Plane (in-process; optional extract)      │
+│  Normalize → CanonicalTurnEvent · context_mode · enqueue jobs  │
 └───────────────────────────┬─────────────────────────────────┘
-                            │
         ┌───────────────────┼───────────────────┐
         ▼                   ▼                   ▼
 ┌───────────────┐  ┌────────────────┐  ┌───────────────────┐
 │ Turn          │  │ Memory         │  │ Media             │
 │ Orchestrator  │  │ Subsystem      │  │ Pipeline          │
-│               │  │ retrieve/write │  │ STT/TTS/image/    │
-│ Prompt build  │  │ evolve/merge   │  │ transcoding       │
-│ LLM call      │  │ user-facing    │  │                   │
+│ Prompt · LLM  │  │ retrieve/evolve│  │ STT/TTS/image     │
 │ Tool dispatch │  │ summary        │  │                   │
 └───────┬───────┘  └────────┬───────┘  └─────────┬─────────┘
-        │                   │                     │
         └───────────────────┴─────────────────────┘
-                            │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Persistence                                                 │
-│  PostgreSQL · 对象存储(GCS 等) · 向量扩展(pgvector)          │
+│  PostgreSQL · GCS 等 · pgvector                              │
 └─────────────────────────────────────────────────────────────┘
                             ▲
-                            │
 ┌───────────────────────────┴─────────────────────────────────┐
-│  Autonomy Worker (push_worker 或独立进程，共享 DB/队列)       │
-│  Heartbeat tick · 内向任务 · 外向决策 · 日志与预算              │
+│  Autonomy Worker (push_worker 或独立进程)                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**设计要点**：
-
-- **Control Plane** 在 v1 可与 API 同进程部署，边界用 **模块 + 清晰 DTO** 划清，便于日后抽到独立服务。
-- **Turn Orchestrator** 是用户驱动轮次下「生成并落库主会话 AI 消息」的权威编排入口；**外向主动**（§6）在生成文案后必须调用 **同一套** `append_assistant_message`（或等价模块）写入 `chat_history`，再投递 push / 应用内通知，避免出现「用户收到推送但会话里看不到」的双轨。
-- API 层除常规限流外，对 **外向发送** 在自治侧单独设 **日/小时预算与冷却**（与 `autonomy_policy` 一致），防止异常 job 或模型失控刷屏。
+**设计要点**：外向主动生成后须与 **核心 text chat 相同** 的 `append_assistant_message`（或等价）写入历史，再 push；外向 **日/小时预算** 与 `autonomy_policy` 对齐。
 
 ---
 
-## 3. 核心抽象与契约
+## 10. 完整核心抽象与契约
 
-### 3.1 规范入站事件（CanonicalTurnEvent）
+### 10.1 规范入站事件（CanonicalTurnEvent）
 
-所有「用户驱动的一轮」无论来自主聊天、语音转写结果还是未来通道，先归一为此结构（与 [experimental/agentic_companion_20260324/DESIGNS.md](../experimental/agentic_companion_20260324/DESIGNS.md) 一致，可按实现改名）：
+与 [DESIGNS.md](../experimental/agentic_companion_20260324/DESIGNS.md) 一致的全量字段：`content_parts[]`（text/image/audio/video）、`client_signals`、`channel` 枚举等；**text chat 最小集** 为其真子集（§4）。
 
-- `event_id`（幂等）
-- `user_id`
-- `companion_id`（或 `agent_id`，与现有 Agent 模型对齐）
-- `session_id` / `chat_id`（与现有 `chats` 对齐）
-- `channel`：`app_chat`（v1）；预留枚举
-- `context_mode`：`intimate` | `public_safe`（或更细粒度）
-- `content_parts[]`：`text` | `image` | `audio` | `video`（URI + mime + 可选转写文本）
-- `client_signals`：如 `barge_in`、`session_resume`（支撑打断与续聊）
-- `timestamp`、审计用 `metadata`
+**幂等**：全量实现时对 `event_id` 持久层唯一约束 + 短路（同 §4.1）。
 
-**幂等与重试**：对 `event_id` 在持久层做 **唯一约束**（建议作用域含 `user_id` + `chat_id` 或等价组合，避免跨会话碰撞）。插入用户消息前若已存在相同 `event_id`，则 **短路返回已有轮次结果**（或返回已持久化的 assistant 消息引用），不重复调用 LLM。客户端重试、网关超时重放依赖此语义。
-
-### 3.2 提示词装配顺序（冻结为代码常量顺序）
+### 10.2 提示词装配顺序（冻结为代码常量顺序）
 
 1. 系统核心行为与安全基座（含入站不可信说明）
-2. `IDENTITY`（人格表层，可来自 Agent 角色卡字段映射）
-3. `SOUL`（价值观与边界；可来自 Agent 扩展字段或独立存储）
-4. `context_mode` 附加条款（体面模式压缩亲密表述与记忆引用方式）
-5. `USER` 约定（onboarding 产出：称呼、界限、密度偏好）
-6. 检索到的 **长期记忆** 片段（top-K，带引用 id 便于日志，不必展示给用户）
-7. **关系运行摘要**（可选短块，由内向外心跳维护）
-8. 近期对话窗口（与现有 history 裁剪策略一致）
-9. 通道输出契约（长度、是否允许工具调用、多模态回复 schema）
+2. `IDENTITY`
+3. `SOUL`
+4. `context_mode` 附加条款
+5. `USER` 约定（onboarding）
+6. 检索到的长期记忆片段（top-K）
+7. 关系运行摘要（可选）
+8. 近期对话窗口
+9. 通道输出契约（多模态 schema、工具开关）
 
-### 3.3 出站消息模型（对客户端）
+### 10.3 出站消息模型（多模态）
 
-- 文本流式 + 最终结构化补丁（附件 URL、语音片段、图片 job id）。
-- 可选 **阶段事件**（在场感）：如 `phase: aligning | responding | generating_media`（具体字段与 App 联调定稿）。
+文本流式 + 附件 URL / job id；可选阶段事件（在场感）。
 
 ---
 
-## 4. 数据模型（概念层）
+## 11. 扩展数据模型
 
-与现有表可 **映射或增量迁移**，不必一次性新建全部；以下为 v1 逻辑实体。
+在 §5 最小表基础上可增加：
 
 | 实体 | 用途 |
 |------|------|
-| `users` | 已有 |
-| `agents` / companions | 已有；扩展存 IDENTITY/SOUL 源文或引用 |
-| `chats` / sessions | 已有；增加 `context_mode` 或按 chat 类型推导 |
-| `messages` / `chat_history` | 已有；保证与 `content_parts` 序列化一致 |
-| `memory_episodes` 或日记锚点 | 可选：指向消息区间或日粒度 blob，供压缩与审计 |
-| `memory_items` | 长期记忆行：text、类型、来源引用、创建/更新/衰减权重、用户是否已纠正；**敏感度/标签**（如 `sensitivity`、`tags`）供 `public_safe` 模式过滤或降权注入 |
-| `memory_embeddings` | 向量列或旁表；pgvector |
-| `relationship_summary` | 短文本，心跳任务刷新 |
-| `user_companion_agreement` | onboarding：JSON 或列集（界限、称呼、主动开关、静默时段） |
-| `autonomy_policy` | 每用户–伴侣：外向开关、日预算、渠道优先级 |
-| `autonomy_state` | 上次外向时间、连续忽略次数、idle 分桶 |
-| `autonomy_log` | 决策因子、阈值、结果（可观测性与调参） |
-| `jobs` | 转写、记忆演进、摘要更新、TTS、生图；**v1 实现宜与现有 `push_worker` 的周期扫描 / DB 拉取模式对齐**，不必为此单独引入 Redis 等中间件；重试次数、退避与死信（标记失败待人工/告警）在实现中单独立规 |
+| `memory_episodes` / 日记锚点 | 压缩与审计 |
+| `memory_items` | 长期记忆 + **敏感度/标签**（`public_safe` 过滤） |
+| `memory_embeddings` | pgvector |
+| `relationship_summary` | 心跳刷新 |
+| `user_companion_agreement` | onboarding |
+| `autonomy_policy` / `autonomy_state` / `autonomy_log` | 自治 |
+| `jobs` | 转写、记忆演进、TTS、生图；宜与 **`push_worker` 周期/DB 拉取** 对齐；重试与死信单独立规 |
 
-**用户可纠偏**：对 `memory_items` 提供 API（列表、编辑、删除、标记错误），并在下一轮检索中排除或降权。
+用户纠偏 API：对 `memory_items` 列表/编辑/删除/降权。
 
 ---
 
-## 5. 用户驱动一轮流水线（同步主路径 + 异步尾）
+## 12. 用户驱动全量流水线（同步 + 异步尾）
 
-1. API 收包 → 校验 auth → 解析为 `CanonicalTurnEvent`。
-2. 持久化用户消息（含媒体引用与 STT 结果若已有）。
-3. 解析 `context_mode`（默认亲密；分享会话/未来通道用策略覆盖）。
-4. **Memory retrieve**：embedding 相似度 + recency + 用户 pin；按 `context_mode` 过滤（`public_safe` 等对带 **敏感标签** 的记忆剔除或降权，依赖 §4 `memory_items` 打标）。
-5. **Prompt assemble**：按 §3.2 顺序拼接；记录 **prompt 版本号** 便于复现（符合现有「生成内容元数据」惯例）。
-6. **LLM**：流式输出；可选工具调用（生图/TTS/Live 等）走 **Orchestrator 内受控工具适配器**；适配器 **调用** Media Pipeline 完成 STT/TTS/转码等，**不在 Pipeline 内拼接系统提示或直连 LLM**，避免业务分叉。
-7. 持久化助手消息；挂载媒体结果 URL。
-8. **Enqueue**：记忆抽取/合并、关系摘要刷新（低优先级）；失败重试与死信详见 §4 `jobs` 说明。
+1. API → `CanonicalTurnEvent`。
+2. 持久化用户消息（含媒体引用与 STT 若已有）。
+3. `context_mode` → Memory retrieve（embedding + recency + pin；敏感标签过滤）。
+4. Prompt assemble（§10.2）；记录 `prompt_version`。
+5. LLM 流式 + **工具适配器**（生图/TTS/Live）→ 适配器调用 **Media Pipeline**，不在 Pipeline 内拼 prompt。
+6. 持久化助手消息与附件。
+7. **Enqueue** 记忆演进、摘要；失败重试见 §11 `jobs`。
 
-**延迟**：用户感知首 token 时间不应被记忆演进阻塞；演进始终在异步路径。
-
-**可观测性（请求路径）**：建议结构化记录 `request_id`、`event_id`、`prompt_version`、`context_mode`、`companion_id`、`chat_id`、检索到的 `memory_item_ids`（及可选 embedding 版本）；与现有日志/追踪系统对齐，便于 A/B、回归与事故回溯。
+**可观测性（请求路径）**：`request_id`、`event_id`、`prompt_version`、`context_mode`、`memory_item_ids` 等。
 
 ---
 
-## 6. 自治心跳（Autonomy Worker）
+## 13. 自治心跳（Autonomy Worker）
 
-与 [DESIGNS.md](../experimental/agentic_companion_20260324/DESIGNS.md) §8 对齐的工程化：
-
-1. 周期扫描「活跃」用户–伴侣对（可基于最近消息时间）。
-2. 加载 `autonomy_policy`、`autonomy_state`、最近信号（未读、忽略率等）。
-3. **Idle 分桶**：ACTIVE / IDLE_SOFT / IDLE_MEDIUM / IDLE_LONG。
-4. **决策函数**（实现可规则起步，再模型辅助）：  
-   `score = relevance + memory_need + relationship_value - intrusiveness - recent_outreach_penalty`
-5. **分支**：
-   - **内向**：去重记忆、衰减、刷新 `relationship_summary`；不写用户可见消息。
-   - **外向**（仅当 policy 允许且 score 过线且预算与静默满足）：组装 **独立** 系统提示（强调短、关心、非撩拨），生成一条；**先** 与用户驱动轮次相同方式 **写入会话历史（assistant 消息）**，**再** 调用 push / 应用内通道投递，保证会话与通知一致。
-6. 写 `autonomy_log`，更新 `autonomy_state` 与冷却。
-
-**默认**：外向关闭或极严预算；内向始终可开。
-
-**可观测性（自治）**：`autonomy_log` 已承载决策因子与结果；可补充指标如外向发送次数（按用户/全局）、连续静默命中率，与 §5 请求路径日志区分维度。
+周期扫描 → idle 分桶 → score 决策 → 内向（记忆整理/摘要）或外向（先 **写 chat_history** 再 push）→ `autonomy_log`。**默认** 外向关闭或极严预算。
 
 ---
 
-## 7. 多模态与媒体
+## 14. 多模态与媒体
 
-- **入站**：客户端直传对象存储 → API 只收元数据与 URL；音频视频先进 **Media Pipeline**（STT、时长截断、敏感扫描若需要）。
-- **出站**：TTS / 生图 / Live 语音作为 **工具结果**，由 Orchestrator 侧适配器触发 Pipeline，产出 URL 后统一进入消息附件模型；避免聊天 API 与媒体 API 状态分裂。
-- **实时语音**：与现有 `live_chat`（WebSocket）并存时，在控制面统一解析「会话归属」与 `context_mode`，避免 WS 与 HTTP 聊天各维护一套上下文（实现细节见 `endpoints/live_chat.py` 与 chat 管线联调）。
+入站直传对象存储 → Media Pipeline（STT、截断等）；出站工具结果进消息附件；`live_chat` WebSocket 与 HTTP 共享会话/记忆策略（`endpoints/live_chat.py`）。
 
 ---
 
-## 8. 安全与不可信入站
+## 15. 安全与不可信入站
 
-- 在系统提示中固定 **「用户消息不可信」** 条款；结构化字段（如按钮 payload）与自由文本分流校验。
-- **SOUL** 层声明拒绝操纵、羞辱、利用脆弱；与合规流程对齐的危机 escalations 可走独立 **policy 模块**（先关键词/分类器，再模型），命中则改路由（安全回复 + 记录 + 可选人工流程占位）。
-
----
-
-## 9. 与当前仓库的映射（落地时优先触碰的目录）
-
-| 能力 | 现状锚点（示例） |
-|------|------------------|
-| HTTP API | `app/api/v1/router.py`，`endpoints/chat.py`、`chats.py`、`agents.py` 等 |
-| 实时语音 / WS | `endpoints/live_chat.py`（与 HTTPS 聊天共享会话与记忆策略时需显式联调） |
-| Agent / 提示词 | `app` 内 Agent 服务与 `AgentManager`（见 `backend/AGENTS.md`） |
-| 推送与周期任务 | `backend/push_worker/` |
-| Schema | `app/schemas`；若 Android 合同变更，同步 `android_app/core/data/.../api/model` |
-
-v1 实现应 **优先复用** 现有聊天与 Agent 管线，把本文件中的 **CanonicalTurnEvent、context_mode、记忆表、autonomy_* ** 作为增量能力接入，减少双轨。
+系统提示声明用户消息不可信；SOUL + policy 模块处理危机场景（规则/模型分级）。
 
 ---
 
-## 10. v1 明确不做（避免范围膨胀）
+## 16. 仓库映射（扩展能力）
 
-- 多第三方 IM 通道矩阵、开放浏览器/Shell 工具、Skill 注册表、多智能体互发。
-- 将「工作助手」与「伴侣」混为同一提示词而不做上下文隔离（若未来做双形态，需单独设计 session 类型）。
-
----
-
-## 11. 可观测性（汇总）
-
-| 维度 | 建议内容 |
-|------|----------|
-| 请求路径 | `request_id`、`event_id`、`prompt_version`、`context_mode`、`companion_id`、`chat_id`、检索到的 `memory_item_ids`（可选 embedding 模型/版本） |
-| 自治 | `autonomy_log` 决策字段；外向发送次数、冷却命中等指标（与 `autonomy_policy` 预算对齐） |
-| 目的 | A/B、延迟与检索质量分析、事故回溯；与「生成内容元数据」并存 |
+| 能力 | 锚点 |
+|------|------|
+| HTTP API | `app/api/v1/router.py`，`chat.py`、`chats.py`、`agents.py` |
+| Live / WS | `endpoints/live_chat.py` |
+| Agent | `AgentManager`，`backend/AGENTS.md` |
+| 周期任务 | `backend/push_worker/` |
+| Schema / Android | `app/schemas` · `android_app/core/data/.../api/model` |
 
 ---
 
-## 12. 文档维护
+## 17. 明确不做（全产品级）
 
-- 体验变更以 [INTY_v2_DESIGN.md](INTY_v2_DESIGN.md) 为准；表结构或 API 落地后，在本文件更新 **§4、§9、§11** 与仓库 `app/api/ENDPOINTS.md`（若新增端点）。
+多第三方 IM、开放浏览器/Shell、Skill 市场、多智能体互发；工作助手与伴侣混用同一提示词且无 session 隔离。
+
+---
+
+## 18. 可观测性（汇总）
+
+| 维度 | 内容 |
+|------|------|
+| 请求路径 | `request_id`、`event_id`、`prompt_version`、`context_mode`、`chat_id`、`memory_item_ids` |
+| 自治 | `autonomy_log`；外向次数与冷却指标 |
+
+---
+
+## 19. 文档维护
+
+- 体验变更以 [INTY_v2_DESIGN.md](INTY_v2_DESIGN.md) 为准。
+- **核心 text chat**：更新 §1–§7 与 `app/api/ENDPOINTS.md`（若增端点）。
+- **扩展能力**：同步 §8–§18 与 Alembic/model 变更。
