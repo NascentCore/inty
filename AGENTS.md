@@ -70,6 +70,29 @@
   - All backend services have 2 stages `dev` `prod`
     - IntelliMate `debug` build type talks to `dev` backend, `release` build type talks to `prod` backend
 
+## 重要文件夹内容总结（每个文件夹一句话）
+
+- `android_app/`：IntelliMate Android 客户端代码（Kotlin + Jetpack Compose），包含 app、core 与 library 模块。
+- `app/`：后端共享业务库代码目录，当前以可复用功能模块为主，服务入口逐步迁移到 `backend/`。
+- `backend/`：后端服务集合目录，统一承载主 API、运营 API 与离线任务处理服务。
+- `backend/inty/`：面向 Android App 的主 FastAPI 后端，负责聊天、生图、语音与核心业务 API。
+- `backend/ops/`：运营平台后端，提供 evaluation 相关页面与 `/api/v1` 运营能力。
+- `backend/push_worker/`：离线任务与推送处理服务，用于异步执行定时/后台任务。
+- `evaluation/`：评测与运营 Web 工具前端（React/TypeScript/Vite），构建后由后端静态托管。
+- `web_app/`：面向 Web 的 IntelliMate 应用代码（React + UmiJS），当前处于低活跃维护状态。
+- `devops/`：部署与环境配置目录，包含 dev/prod 配置、Nginx 与运维发布相关材料。
+- `scripts/`：运维与数据处理脚本目录，通常要求参数化、幂等和 dry-run 机制。
+- `tests/`：端到端功能测试目录，约定以本地运行后端 + 真实数据库方式验证功能。
+- `alembic/`：数据库迁移目录，所有 schema 变更都应通过 Alembic 迁移文件管理。
+- `prompt_templates/`：Jinja2 提示词模板目录，使用 `{{ 变量名 }}` 进行运行时替换。
+- `characters/`：角色设定与角色弧光相关内容目录，用于约束角色体验设计方向。
+- `tools/`：日常开发工具目录，包含图像放大与 LiteLLM 代理等实用工具。
+- `experimental/`：实验性与原型代码目录，子目录要求自包含并与生产代码隔离。
+- `llm_api_gateway/`：大模型网关相关代码目录，聚合多家模型能力并提供统一访问接口。
+- `docs/`：项目文档目录，用于沉淀需求、架构与功能设计说明。
+- `research/`：研究与探索资料目录，用于保存模型与业务方向的研究性内容。
+- `bizops/`：业务运营信息目录，沉淀市场推广、分析口径与运营侧资料。
+
 ## Android App Tips
 
 - Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm
