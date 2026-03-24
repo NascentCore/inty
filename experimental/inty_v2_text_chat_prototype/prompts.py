@@ -50,14 +50,16 @@ def build_system_prompt(bundle: PromptBundle, context: ContextMeta) -> str:
             "## USER\n\n" + bundle.user_md.strip(),
         ]
     )
-    if bundle.memory_diary_today_md.strip():
+    if bundle.memory_raw_diary_today_md.strip():
         parts.append(
-            "## MEMORY 日记（今日 raw）\n\n" + bundle.memory_diary_today_md.strip()
+            "## MEMORY 日记（今日原始）\n\n"
+            + bundle.memory_raw_diary_today_md.strip()
         )
-    parts.extend(
-        [
-            "## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip(),
-            _output_contract_text(),
-        ]
-    )
+    if bundle.memory_day_summary_today_md.strip():
+        parts.append(
+            "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
+        )
+    if bundle.memory_md.strip():
+        parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
+    parts.append(_output_contract_text())
     return _SEP.join(parts)

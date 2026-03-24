@@ -157,11 +157,11 @@ experimental/inty_v2_text_chat_prototype/
 ## 7. 实现顺序（建议任务清单）
 
 1. `paths.py` + `file_store.py` + `init-workspace` 模板内容（含必选 `transcript.jsonl` 与 `context.json` 可选）。
-2. `models.py`：`ChatMessage`、加载后的 `PromptBundle`（四段 markdown 字符串）、`ContextMeta`。
+2. `models.py`：`ChatMessage`、加载后的 `PromptBundle`（IDENTITY/SOUL/USER/MEMORY、可选 AGENTS/TOOLS/HEARTBEAT、当日 `memory_raw_diary_today_md` / `memory_day_summary_today_md`）、`ContextMeta`。
 3. `prompts.py`：`build_system_prompt(...)`。
 4. `client.py`：`complete(...)`。
 5. `orchestrator.py`：`run_turn` 含读 transcript、写 jsonl；**保证**助手行只经此函数写入。
-6. `memory_update.py`：策略 A；再策略 B（第二次 LLM）；**仅 orchestrator 调用**。
+6. `memory_update.py`：`memory/daily/` 原始流水追加 → 当日总结（`memory/YYYY-MM-DD.md`）→ `MEMORY.md` 策展；**仅 orchestrator 调用**。
 7. `main.py` 串联。
 8. `README.md`：workspace 结构说明、与架构 §3/§20 的对照一句、如何测「改 MEMORY 后重启是否记住」。
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -9,8 +10,14 @@ from typing import Annotated
 
 from cyclopts import App, Parameter
 
-from .bootstrap import init_workspace as bootstrap_init_workspace
-from .orchestrator import run_turn
+# `python main.py` loads this file as __main__ with no package; ensure parent of this
+# directory is on sys.path so `inty_v2_text_chat_prototype.*` resolves like `python -m`.
+_PKG_DIR = Path(__file__).resolve().parent
+if __package__ is None:
+    sys.path.insert(0, str(_PKG_DIR.parent))
+
+from inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
+from inty_v2_text_chat_prototype.orchestrator import run_turn
 
 
 def _default_workspace() -> Path:
@@ -41,7 +48,7 @@ def init_workspace(
         Parameter(name="--path", help="要创建的 workspace 目录路径"),
     ],
 ) -> None:
-    """写入 IDENTITY/SOUL/USER/MEMORY、空 transcript、memory/.gitkeep、context.json。"""
+    """写入 IDENTITY/SOUL/USER/MEMORY、空 transcript、memory/ 与 memory/daily/、context.json。"""
     bootstrap_init_workspace(path)
 
 

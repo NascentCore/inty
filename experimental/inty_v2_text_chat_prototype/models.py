@@ -20,7 +20,8 @@ class ChatMessage(BaseModel):
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
-_MEMORY_DIARY_INJECT_MAX_CHARS = 16_000
+_MEMORY_RAW_INJECT_MAX_CHARS = 16_000
+_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS = 12_000
 
 
 def _read_optional_text(path: Path, *, max_chars: int | None = None) -> str:
@@ -40,7 +41,8 @@ class PromptBundle(BaseModel):
     agents_md: str = ""
     tools_md: str = ""
     heartbeat_md: str = ""
-    memory_diary_today_md: str = ""
+    memory_raw_diary_today_md: str = ""
+    memory_day_summary_today_md: str = ""
 
 
 class ContextMeta(BaseModel):
@@ -50,20 +52,42 @@ class ContextMeta(BaseModel):
     chat_id: str = "proto-chat-1"
 
 
-def load_prompt_bundle(paths: WorkspacePaths) -> PromptBundle:
+def load_prompt_bundle(
+    paths: WorkspacePaths,
+    *,
+    meta: ContextMeta | None = None,
+) -> PromptBundle:
+    """加载人格与记忆。非 intimate 模式不读取私人记忆文件（与 prompts 层约定一致）。"""
     day = utc_date_str()
-    diary_today = paths.memory_dir / f"{day}.md"
+    m = meta if meta is not None else ContextMeta()
+    intimate = m.context_mode.strip().lower() == "intimate"
+
+    raw_today = paths.memory_raw_diary(day)
+    summary_today = paths.memory_day_summary(day)
+
+    raw_md = ""
+    summary_md = ""
+    memory_long = read_text(paths.memory_md)
+    if intimate:
+        raw_md = _read_optional_text(
+            raw_today, max_chars=_MEMORY_RAW_INJECT_MAX_CHARS
+        )
+        summary_md = _read_optional_text(
+            summary_today, max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS
+        )
+    else:
+        memory_long = ""
+
     return PromptBundle(
         identity=read_text(paths.identity),
         soul=read_text(paths.soul),
         user_md=read_text(paths.user_md),
-        memory_md=read_text(paths.memory_md),
+        memory_md=memory_long,
         agents_md=_read_optional_text(paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         tools_md=_read_optional_text(paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         heartbeat_md=_read_optional_text(paths.heartbeat_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
-        memory_diary_today_md=_read_optional_text(
-            diary_today, max_chars=_MEMORY_DIARY_INJECT_MAX_CHARS
-        ),
+        memory_raw_diary_today_md=raw_md,
+        memory_day_summary_today_md=summary_md,
     )
 
 

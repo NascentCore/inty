@@ -48,6 +48,12 @@ def memory_model() -> str:
     return os.getenv("INTY_V2_PROTO_MEMORY_MODEL") or default_model()
 
 
+def day_summary_model() -> str:
+    """当日总结性记忆（memory/YYYY-MM-DD.md）；可与长期 MEMORY 策展使用不同模型。"""
+    _ensure_dotenv()
+    return os.getenv("INTY_V2_PROTO_DAY_SUMMARY_MODEL") or memory_model()
+
+
 def complete(messages: list[dict[str, Any]], *, model: str | None = None) -> str:
     m = model or default_model()
     client = get_client()
