@@ -62,6 +62,7 @@ def run_turn(
         messages.append({"role": m.role, "content": m.content})
     messages.append({"role": "user", "content": user_text})
 
+    # Must snapshot user time before the LLM call; assistant time is taken after (below).
     ts_user = utc_iso_ts()
     assistant_text = complete(messages)
 

@@ -35,13 +35,29 @@ def _output_contract_text() -> str:
 
 
 def build_system_prompt(bundle: PromptBundle, context: ContextMeta) -> str:
-    parts = [
-        _security_base(),
-        "## IDENTITY\n\n" + bundle.identity.strip(),
-        "## SOUL\n\n" + bundle.soul.strip(),
-        _context_mode_clause(context),
-        "## USER\n\n" + bundle.user_md.strip(),
-        "## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip(),
-        _output_contract_text(),
-    ]
+    parts: list[str] = [_security_base()]
+    if bundle.agents_md.strip():
+        parts.append("## AGENTS（工作空间约定）\n\n" + bundle.agents_md.strip())
+    if bundle.tools_md.strip():
+        parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
+    if bundle.heartbeat_md.strip():
+        parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
+    parts.extend(
+        [
+            "## IDENTITY\n\n" + bundle.identity.strip(),
+            "## SOUL\n\n" + bundle.soul.strip(),
+            _context_mode_clause(context),
+            "## USER\n\n" + bundle.user_md.strip(),
+        ]
+    )
+    if bundle.memory_diary_today_md.strip():
+        parts.append(
+            "## MEMORY 日记（今日 raw）\n\n" + bundle.memory_diary_today_md.strip()
+        )
+    parts.extend(
+        [
+            "## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip(),
+            _output_contract_text(),
+        ]
+    )
     return _SEP.join(parts)
