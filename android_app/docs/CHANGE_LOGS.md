@@ -9,6 +9,15 @@
 - Write 1 sentence summary, this is for filling in Google Play release notes. And then nested with detailed description.
 
 
+## 2026-03-24
+
+- Official Assistant quick actions above the chat input (**Test my MBTI type** and **Create my own iMate**) now sit on one horizontally scrollable row instead of stacking vertically.
+- Those quick-action buttons now use the same translucent purple background and corner style as the chat input bar (replacing the previous gradient CTA look).
+- Official Assistant FAQ suggestion chips now stack vertically and use the same semi-transparent dark bubble background style as AI chat messages.
+- The Official Assistant FAQ intro line now uses the same white assistant-message text style and is localized via a new English string resource.
+- Official Assistant FAQ suggestions now show only before the first user message in Official Assistant chat; after the first send, they stay hidden until the app is restarted.
+- In the chat more-menu, tapping **Call** now also marks Official Assistant as "user has sent", while tapping **Reset** clears that flag back to false.
+
 ## 2026-03-23
 
 - Explore page now shows a **重新加载** button under the network failure message, so users can retry loading iMates directly from the error state.

@@ -12,13 +12,18 @@ import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
 import ai.sxwl.android.design.noRippleClickable
 import ai.sxwl.android.design.theme.AppColors
+import ai.sxwl.android.design.theme.IntelliMateTheme
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.firebase.logEvent
 import ai.sxwl.android.utils.LogUtils
 import ai.sxwl.android.utils.ToastUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -31,11 +36,13 @@ import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,6 +53,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -82,10 +90,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -291,6 +301,10 @@ internal fun ChatPage(
         }
     }
 
+    val hasUserSentMessageInOfficialAssistant by chatViewModel.hasUserSentMessageInOfficialAssistant.collectAsState()
+    val shouldShowOfficialAssistantFaqQuestions by remember(isOfficialAssistantChat) {
+        derivedStateOf { isOfficialAssistantChat && !hasUserSentMessageInOfficialAssistant }
+    }
     // 获取开关状态用于页面曝光事件和 UI 显示
     val showKeepTalking by SettingStateManager.showKeepTalkingFlow.collectAsState(false)
     val autoPlayVoice by SettingStateManager.autoPlayAudioFlow.collectAsState(false)
@@ -789,30 +803,6 @@ internal fun ChatPage(
                     }
                 }
 
-                if (isOfficialAssistantChat) {
-                    OfficialAssistantFaqQuestions(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(
-                                    horizontal =
-                                        UiConfigs.ChatPage.OfficialAssistantFaq.HorizontalPadding
-                                ),
-                        items = officialAssistantFaqQuickItems,
-                        onQuestionClick = { item ->
-                            chatViewModel.setInputMessage(context.getString(item.questionResId))
-                            inputFocusRequester.requestFocus()
-                            onInputFocusChange(true)
-                            FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
-                                "click_type" to "official_faq_question",
-                                "agent_id" to agentInfo?.id,
-                                "agent_name" to agentInfo?.name,
-                                "faq_title" to context.getString(item.titleResId),
-                                "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
-                            )
-                        },
-                    )
-                    Spacer(Modifier.height(UiConfigs.ChatPage.OfficialAssistantFaq.BottomSpacing))
-                }
                 val imagePickMessageId by chatViewModel.imagePickMessageId.collectAsState()
                 // 消息列表：全屏/半屏均占满高度；半屏时在 LazyColumn 顶部叠加渐变，使消息从顶部渐变消失
 
@@ -863,6 +853,26 @@ internal fun ChatPage(
                             PaddingValues(top = UiConfigs.ChatPage.chatPageLazyColumnGapTop),
                     ) {
                         item { Spacer(Modifier.height(16.dp)) }
+
+                        if (shouldShowOfficialAssistantFaqQuestions) {
+                            item {
+                                OfficialAssistantFaqQuestions(
+                                    items = officialAssistantFaqQuickItems,
+                                    onQuestionClick = { item ->
+                                        chatViewModel.setInputMessage(context.getString(item.questionResId))
+                                        inputFocusRequester.requestFocus()
+                                        onInputFocusChange(true)
+                                        FirebaseManager.Events.CHAT_PAGE_CLICK.logEvent(
+                                            "click_type" to "official_faq_question",
+                                            "agent_id" to agentInfo?.id,
+                                            "agent_name" to agentInfo?.name,
+                                            "faq_title" to context.getString(item.titleResId),
+                                            "user_type" to if (VipStatusHelper.isUserVip()) "vip" else "free",
+                                        )
+                                    },
+                                )
+                            }
+                        }
 
                         if (!imagePickMessageId.isNullOrEmpty()) {
                             item("ImagePicker") {
@@ -1000,18 +1010,20 @@ internal fun ChatPage(
                     if (shouldShowOfficialAssistantQuickActions) {
                         val createEntryConfig = UiConfigs.ChatPage.OfficialAssistantCreateEntry
                         // AI 实现小结：
-                        // 1) 官方助手聊天页输入框上方提供两个独立快捷入口：
+                        // 1) 官方助手聊天页输入框上方提供两个独立快捷入口（单行水平可滚动）：
                         //    - Test my MBTI type（测试我的 MBTI 类型）：回填结构化提示词并立即发送；
                         //    - + Create your own iMate（创建我的 iMate）：进入创建角色流程。
                         // 2) 两个入口都遵循同一显隐规则：仅在官方助手页且键盘收起时展示；
                         // 3) 入口位置固定在输入框上方，避免与消息流和输入区交互冲突。
-                        Column(
+                        Row(
                             modifier =
-                                Modifier.padding(
-                                    start = createEntryConfig.HorizontalPadding,
-                                    end = createEntryConfig.HorizontalPadding,
-                                    bottom = createEntryConfig.BottomSpacing,
-                                )
+                                Modifier.horizontalScroll(rememberScrollState())
+                                    .padding(
+                                        start = createEntryConfig.HorizontalPadding,
+                                        end = createEntryConfig.HorizontalPadding,
+                                    ),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(createEntryConfig.BottomSpacing),
                         ) {
                             OfficialAssistantQuickActionButton(
                                 text = stringResource(R.string.chat_official_mbti_test_button),
@@ -1029,7 +1041,6 @@ internal fun ChatPage(
                                     )
                                 },
                             )
-                            Spacer(Modifier.height(createEntryConfig.BottomSpacing))
                             OfficialAssistantQuickActionButton(
                                 text = stringResource(R.string.chat_official_create_imate_button),
                                 onClick = {
@@ -1331,6 +1342,9 @@ internal fun ChatPage(
                 onReset = {
                     scope.launch {
                         showMorePanel = false
+                        if (isOfficialAssistantChat) {
+                            chatViewModel.clearOfficialAssistantUserMessageSent()
+                        }
 
                         try {
                             chatViewModel.reset()
@@ -1354,6 +1368,7 @@ internal fun ChatPage(
                 },
                 onCall = {
                     showMorePanel = false
+                    chatViewModel.markOfficialAssistantUserMessageSent()
                     onCall()
                 },
                 hasUserMessages = hasUserMessages,
@@ -1563,9 +1578,9 @@ private fun buildCharacterBackgroundLayout(
  * - 仅用于官方助手聊天页输入框上方的快捷入口（如“Test my MBTI type / + Create your own iMate”）。
  *
  * 预期视觉效果：
- * - 左对齐胶囊按钮；
- * - 背景使用 IntelliMate 主 CTA 渐变色；
- * - 文案由参数传入，字体与高度与上方 FAQ 按钮保持一致。
+ * - 与聊天输入区域同一视觉语言：圆角、半透明紫底与 [UiConfigs.ChatPage.ChatInput] 一致；
+ * - 在官方助手快捷区中与同类按钮同一行水平排列，必要时可横向滚动；
+ * - 文案由参数传入，正文字号与输入框 [IntySmallTextField] 一致。
  *
  * 可配置项：
  *
@@ -1575,32 +1590,75 @@ private fun buildCharacterBackgroundLayout(
  */
 @Composable
 private fun OfficialAssistantQuickActionButton(
-    modifier: Modifier = Modifier,
     text: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val config = UiConfigs.ChatPage.OfficialAssistantCreateEntry
+    val inputConfig = UiConfigs.ChatPage.ChatInput
+    val entryConfig = UiConfigs.ChatPage.OfficialAssistantCreateEntry
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(config.CornerRadius))
                 .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            colors =
-                                listOf(
-                                    AppColors.IntelliMateCtaGradientStart,
-                                    AppColors.IntelliMateCtaGradientEnd,
-                                )
-                        )
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface
+                )
+                .border(
+                    width = .5.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = MaterialTheme.shapes.medium
                 )
                 .noRippleClickable { onClick() }
                 .padding(
-                    horizontal = config.ContentHorizontalPadding,
-                    vertical = config.ContentVerticalPadding,
-                )
+                    horizontal = entryConfig.ContentHorizontalPadding,
+                    vertical = inputConfig.VerticalPadding,
+                ),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Single")
+@Composable
+private fun PreviewOfficialAssistantQuickActionButtonSingle() {
+    IntelliMateTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            OfficialAssistantQuickActionButton(
+                modifier = Modifier.padding(16.dp),
+                text = "Create my own iMate",
+                onClick = {},
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Row (official assistant strip)")
+@Composable
+private fun PreviewOfficialAssistantQuickActionButtonRow() {
+    val gap = UiConfigs.ChatPage.OfficialAssistantCreateEntry.BottomSpacing
+    IntelliMateTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            Row(
+                modifier =
+                    Modifier.horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+            ) {
+                OfficialAssistantQuickActionButton(
+                    text = "Test my MBTI type",
+                    onClick = {},
+                )
+                OfficialAssistantQuickActionButton(
+                    text = "Create my own iMate",
+                    onClick = {},
+                )
+            }
+        }
     }
 }
 
