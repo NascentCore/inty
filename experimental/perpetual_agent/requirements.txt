@@ -1,2 +1,5 @@
 openai
 python-dotenv
+cyclopts
+pydantic
+pydantic-settings

@@ -182,3 +182,33 @@ python -m experimental.perpetual_agent.main \
   - `TWILIO_PHONE_NUMBER` (Twilio caller ID)
   - `GEMINI_LIVE_BRIDGE_WS_URL` (your websocket service that forwards Twilio Media Stream audio to Gemini Live API)
   - optional `GEMINI_LIVE_CALL_SYSTEM_PROMPT` (sent as a Twilio stream parameter)
+
+## Core v2 (M0/M1 foundation)
+
+`core_v2` is a new execution path aligned with `docs/FR_UNIFIED_COMPANION_ARCHITECTURE.md`:
+
+- Pydantic contracts (`InteractionEvent`, `MemoryItem`, `PlanAction`)
+- SQLite persistence with idempotency keys
+- single-consumer Telegram lease
+- cursor advance only after successful processing
+- scheduler/admin runtime entrypoints
+
+### Commands
+
+```bash
+python -m experimental.perpetual_agent.core_v2.main serve inbound --once
+python -m experimental.perpetual_agent.core_v2.main serve scheduler --once
+python -m experimental.perpetual_agent.core_v2.main admin replay --since-minutes 120 --limit 50
+```
+
+### Environment variables (prefix `COMPANION_`)
+
+- `COMPANION_DATABASE_PATH` (default: `experimental/perpetual_agent/core_v2/companion.sqlite3`)
+- `COMPANION_TELEGRAM_BOT_TOKEN`
+- `COMPANION_TELEGRAM_POLL_TIMEOUT_SECONDS`
+- `COMPANION_LEASE_TTL_SECONDS`
+- `COMPANION_LEASE_KEY_TELEGRAM_INBOUND`
+- `COMPANION_CURSOR_KEY_TELEGRAM_UPDATE`
+- `COMPANION_PLANNER_FOLLOWUP_DELAY_MINUTES`
+- `COMPANION_SCHEDULER_DEFAULT_TELEGRAM_CHAT_ID`
+- `COMPANION_SCHEDULER_DEFAULT_SMS_RECIPIENT`
