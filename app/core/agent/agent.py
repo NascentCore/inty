@@ -2,7 +2,7 @@ import asyncio
 import json
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -44,6 +44,7 @@ from app.models import chat_history
 from app.schemas.user import MBTI_TYPES, UserMetadata
 from app.services import chat_history_service
 from app.services.cache_service import cache_service
+from app.services.messages_compaction_service import maybe_compact_and_save_overflow_history
 from app.utils.models_catalog import is_deepseek_on_openrouter, resolve_chat_model_to_id
 from app.utils.openai_client import (
     get_chat_llm_provider,
@@ -309,6 +310,7 @@ def build_agent_from_data(agent_id: str, agent_data: dict) -> "Agent":
 # 全局连接池
 _connection_pool = None
 _sync_engine = None
+_messages_compaction_executor = None
 
 
 def get_sync_engine():
@@ -351,6 +353,18 @@ def get_connection_pool():
             f"初始化数据库连接池: min_size={global_config.database.pool_size // 4}, max_size={global_config.database.pool_size}"
         )
     return _connection_pool
+
+
+def get_compaction_executor():
+    """获取全局消息压缩线程池，避免阻塞当前聊天回复路径。"""
+    global _messages_compaction_executor
+    if _messages_compaction_executor is None:
+        _messages_compaction_executor = ThreadPoolExecutor(
+            max_workers=4,
+            thread_name_prefix="messages-compaction",
+        )
+        logger.info("初始化消息压缩线程池: max_workers=4")
+    return _messages_compaction_executor
 
 
 # chat_history表现在由Alembic迁移管理，不需要手动初始化
@@ -811,6 +825,76 @@ class Agent:
         return self._get_relevant_history(
             history_messages=history_messages,
             max_messages=max_messages,
+        )
+
+    def _on_messages_compaction_done(
+        self,
+        *,
+        compaction_future: Future,
+        user_id: str,
+        session_id: str,
+    ) -> None:
+        if compaction_future.cancelled():
+            logger.warning(
+                "Messages compaction task cancelled: "
+                f"agent_id={self.agent_id}, user_id={user_id}, session_id={session_id}"
+            )
+            return
+        compaction_error = compaction_future.exception()
+        if compaction_error is not None:
+            logger.error(
+                "Messages compaction task failed: "
+                f"agent_id={self.agent_id}, user_id={user_id}, session_id={session_id}, "
+                f"error={compaction_error!s}"
+            )
+            return
+        if compaction_future.result() is not True:
+            logger.debug(
+                "Messages compaction skipped or not persisted: "
+                f"agent_id={self.agent_id}, user_id={user_id}, session_id={session_id}"
+            )
+
+    def _run_messages_compaction_task(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        history_messages: List[BaseMessage],
+        max_messages_limit: int,
+    ) -> bool:
+        return maybe_compact_and_save_overflow_history(
+            sync_engine=get_sync_engine(),
+            user_id=user_id,
+            agent_id=self.agent_id,
+            session_id=session_id,
+            history_messages=history_messages,
+            max_messages_limit=max_messages_limit,
+        )
+
+    def _maybe_compact_history_for_user_tier(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        history_messages: List[BaseMessage],
+        is_subscribed: bool,
+    ) -> None:
+        max_messages_limit = self._get_chat_messages_limit(is_subscribed=is_subscribed)
+        if max_messages_limit <= 0 or len(history_messages) <= max_messages_limit:
+            return
+        compaction_future = get_compaction_executor().submit(
+            self._run_messages_compaction_task,
+            user_id=user_id,
+            session_id=session_id,
+            history_messages=history_messages,
+            max_messages_limit=max_messages_limit,
+        )
+        compaction_future.add_done_callback(
+            lambda finished_future: self._on_messages_compaction_done(
+                compaction_future=finished_future,
+                user_id=user_id,
+                session_id=session_id,
+            )
         )
 
     def _get_relevant_history(
@@ -1369,6 +1453,12 @@ class Agent:
                 # TODO: 建议取消截取，因为：目前原型产品状态的截取无明确价值；引入额外复杂性无意义。
                 # 待聊天记录过长才需要截取、记忆等复杂机制。
                 history_messages = chat_history_service.get_history_messages(session_id)
+                self._maybe_compact_history_for_user_tier(
+                    user_id=user_id,
+                    session_id=session_id,
+                    history_messages=history_messages,
+                    is_subscribed=is_subscribed,
+                )
                 recent_history = self._get_relevant_history_for_user_tier(
                     history_messages=history_messages,
                     is_subscribed=is_subscribed,
