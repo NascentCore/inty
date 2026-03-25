@@ -11,7 +11,9 @@ from loguru import logger
 _CONFIGURED = False
 
 # 文件 sink 默认 DEBUG；可用 INTY_V2_PROTO_LOG_FILE_LEVEL=INFO 等降低噪声（仍保留 INFO 及以上）。
-_FILE_LEVEL = os.getenv("INTY_V2_PROTO_LOG_FILE_LEVEL", "DEBUG").strip().upper() or "DEBUG"
+_FILE_LEVEL = (
+    os.getenv("INTY_V2_PROTO_LOG_FILE_LEVEL", "DEBUG").strip().upper() or "DEBUG"
+)
 
 
 def configure_proto_log(log_file: Path | None, *, stderr_level: str = "INFO") -> None:

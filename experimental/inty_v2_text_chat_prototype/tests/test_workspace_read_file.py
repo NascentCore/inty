@@ -37,7 +37,9 @@ class TestWorkspaceReadFile(unittest.TestCase):
             out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
-                json.dumps({"relative_path": "b.txt", "max_chars": 4}, ensure_ascii=False),
+                json.dumps(
+                    {"relative_path": "b.txt", "max_chars": 4}, ensure_ascii=False
+                ),
             )
             self.assertTrue(out.startswith("abcd"))
             self.assertIn("truncated", out)
@@ -49,7 +51,9 @@ class TestWorkspaceReadFile(unittest.TestCase):
             out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
-                json.dumps({"relative_path": "c.txt", "max_chars": 10}, ensure_ascii=False),
+                json.dumps(
+                    {"relative_path": "c.txt", "max_chars": 10}, ensure_ascii=False
+                ),
             )
             self.assertEqual(out, "xy")
             self.assertNotIn("truncated", out)
@@ -61,7 +65,9 @@ class TestWorkspaceReadFile(unittest.TestCase):
             out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
-                json.dumps({"relative_path": "d.txt", "max_chars": 0}, ensure_ascii=False),
+                json.dumps(
+                    {"relative_path": "d.txt", "max_chars": 0}, ensure_ascii=False
+                ),
             )
             self.assertIn("ERROR", out)
 
@@ -86,7 +92,10 @@ class TestWorkspaceReadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "f.txt").write_text("abc", encoding="utf-8")
-            self.assertEqual(tool_workspace_read_file(root, "f.txt", max_chars=2), "ab\n…[truncated: prefix only; file is longer than max_chars]")
+            self.assertEqual(
+                tool_workspace_read_file(root, "f.txt", max_chars=2),
+                "ab\n…[truncated: prefix only; file is longer than max_chars]",
+            )
 
 
 if __name__ == "__main__":

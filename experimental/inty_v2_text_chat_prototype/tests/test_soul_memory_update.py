@@ -40,7 +40,9 @@ class TestSoulMemoryUpdate(unittest.TestCase):
                         user_text="用户",
                         assistant_text="助手",
                     )
-            self.assertEqual(paths.memory_md.read_text(encoding="utf-8"), "# MEMORY\n\nx\n")
+            self.assertEqual(
+                paths.memory_md.read_text(encoding="utf-8"), "# MEMORY\n\nx\n"
+            )
             self.assertEqual(paths.user_md.read_text(encoding="utf-8"), "# USER\n\nz\n")
             self.assertEqual(paths.soul.read_text(encoding="utf-8"), "# SOUL\n\ny\n")
 

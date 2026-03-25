@@ -77,9 +77,7 @@ class TestGenerateImageTool(unittest.TestCase):
             out = execute_tool_call_blocking(
                 root,
                 "generate_image",
-                json.dumps(
-                    {"prompt": "x", "num_images": MAX_NUM_IMAGES_PER_CALL + 1}
-                ),
+                json.dumps({"prompt": "x", "num_images": MAX_NUM_IMAGES_PER_CALL + 1}),
             )
             self.assertTrue(out.startswith("ERROR:"))
             self.assertIn(str(MAX_NUM_IMAGES_PER_CALL), out)

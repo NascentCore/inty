@@ -97,8 +97,7 @@ def _day_summary_every_n_turns() -> int:
         ) from e
     if n < 1:
         raise ValueError(
-            "INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS must be >= 1, "
-            f"got {n}"
+            "INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS must be >= 1, " f"got {n}"
         )
     return n
 
@@ -167,8 +166,7 @@ def _raw_for_summary_prompt(raw: str) -> str:
     if len(raw) <= _RAW_FOR_SUMMARY_MAX:
         return raw
     return (
-        "(Earlier lines omitted; tail only.)\n\n"
-        + raw[-(_RAW_FOR_SUMMARY_MAX - 80) :]
+        "(Earlier lines omitted; tail only.)\n\n" + raw[-(_RAW_FOR_SUMMARY_MAX - 80) :]
     )
 
 

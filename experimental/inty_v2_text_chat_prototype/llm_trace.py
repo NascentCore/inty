@@ -114,7 +114,9 @@ def summarize_messages(
             parts.append(f"{i}:{role} <non-str>")
             continue
         if role == "system" and is_system_prompt_bundle(c):
-            parts.append(f"{i}:system {summarize_system_message_content(c, ws_label=ws_label, day=trace_day)}")
+            parts.append(
+                f"{i}:system {summarize_system_message_content(c, ws_label=ws_label, day=trace_day)}"
+            )
             continue
         tid = m.get(TRANSCRIPT_MSG_UUID_KEY)
         if role in ("user", "assistant") and isinstance(tid, str) and tid:
@@ -140,7 +142,9 @@ def summarize_completion_response(resp: Any) -> str:
         ct = getattr(u, "completion_tokens", None)
         tt = getattr(u, "total_tokens", None)
         if pt is not None and ct is not None:
-            bits.append(f"tokens p={pt} c={ct}" + (f" t={tt}" if tt is not None else ""))
+            bits.append(
+                f"tokens p={pt} c={ct}" + (f" t={tt}" if tt is not None else "")
+            )
     if tcs:
         pairs: list[str] = []
         for tc in tcs:
@@ -157,7 +161,9 @@ def summarize_completion_response(resp: Any) -> str:
     return " ".join(bits)
 
 
-def emit_trace(where: str, *, round_idx: int, model: str, messages: str, response: str) -> None:
+def emit_trace(
+    where: str, *, round_idx: int, model: str, messages: str, response: str
+) -> None:
     """带锁追加一行 JSONL 到已配置路径，避免与记忆线程交错时行内撕裂。"""
     line = (
         json.dumps(

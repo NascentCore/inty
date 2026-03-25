@@ -195,8 +195,7 @@ fun ExploreContent(
     val maxGridIndexForInitial =
         exploreLazyGridMaxItemIndex(themeItemCount, lazyPagingItems?.itemCount)
     val initialVisibleIndex = vm.getRestoredGridIndex(maxGridIndexForInitial)
-    val initialVisibleOffset =
-        if (savedGridIndex == initialVisibleIndex) savedOffset else 0
+    val initialVisibleOffset = if (savedGridIndex == initialVisibleIndex) savedOffset else 0
     val gridState =
         rememberLazyGridState(
             initialFirstVisibleItemIndex = initialVisibleIndex,
@@ -206,15 +205,16 @@ fun ExploreContent(
     // 列表变短或主题区条目数变化时，firstVisibleItemIndex 可能仍指向旧索引，LazyGrid 在 onScroll 测量时会 subcompose 越界崩溃。
     LaunchedEffect(gridState, themeItemCount, lazyPagingItems?.itemCount, lazyPagingItems) {
         snapshotFlow {
-            val layoutInfo = gridState.layoutInfo
-            layoutInfo.totalItemsCount to gridState.firstVisibleItemIndex
-        }.collect { (total, firstIdx) ->
-            if (total <= 0) return@collect
-            if (firstIdx < total) return@collect
-            val lastIndex = (total - 1).coerceAtLeast(0)
-            gridState.scrollToItem(index = lastIndex, scrollOffset = 0)
-            vm.saveScrollPosition(gridIndex = lastIndex, offset = 0)
-        }
+                val layoutInfo = gridState.layoutInfo
+                layoutInfo.totalItemsCount to gridState.firstVisibleItemIndex
+            }
+            .collect { (total, firstIdx) ->
+                if (total <= 0) return@collect
+                if (firstIdx < total) return@collect
+                val lastIndex = (total - 1).coerceAtLeast(0)
+                gridState.scrollToItem(index = lastIndex, scrollOffset = 0)
+                vm.saveScrollPosition(gridIndex = lastIndex, offset = 0)
+            }
     }
 
     val scope = rememberCoroutineScope()

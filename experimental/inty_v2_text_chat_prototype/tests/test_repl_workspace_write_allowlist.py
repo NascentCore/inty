@@ -80,7 +80,9 @@ class TestReplWriteAllowlist(unittest.TestCase):
                 write_allowlist=None,
             )
             self.assertTrue(out.startswith("OK"))
-            self.assertEqual((root / "nested" / "x.txt").read_text(encoding="utf-8"), "z")
+            self.assertEqual(
+                (root / "nested" / "x.txt").read_text(encoding="utf-8"), "z"
+            )
 
 
 if __name__ == "__main__":

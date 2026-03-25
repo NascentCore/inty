@@ -175,8 +175,7 @@ def tool_workspace_read_file(
     if len(body) <= max_chars:
         return body
     return (
-        body[:max_chars]
-        + "\n…[truncated: prefix only; file is longer than max_chars]"
+        body[:max_chars] + "\n…[truncated: prefix only; file is longer than max_chars]"
     )
 
 
@@ -549,7 +548,9 @@ def _parse_optional_strength(raw: Any) -> tuple[float | None, str | None]:
     return (None, "strength must be a number")
 
 
-def _repl_write_allowed(root: Path, relative_path: str, write_allowlist: frozenset[str]) -> str | None:
+def _repl_write_allowed(
+    root: Path, relative_path: str, write_allowlist: frozenset[str]
+) -> str | None:
     """若不允许写入则返回错误信息字符串，否则 None。"""
     p = resolve_under_workspace(root, relative_path)
     rel_posix = p.relative_to(root.resolve()).as_posix()

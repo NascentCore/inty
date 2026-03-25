@@ -500,7 +500,9 @@ async def z_image_turbo(
                 upload_result = _upload_image_file_to_gcs_and_return_url(
                     image, gcs_uri_base, enable_compress_png_to_jpeg=True
                 )
-                logger.debug("Uploaded ZImageTurbo data URI to GCS (image index: {})", i)
+                logger.debug(
+                    "Uploaded ZImageTurbo data URI to GCS (image index: {})", i
+                )
                 processed_results.append(
                     GeneratedImageProcessResult(
                         size=upload_result.image_size,
