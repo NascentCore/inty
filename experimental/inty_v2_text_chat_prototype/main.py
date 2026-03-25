@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import queue
+import select
 import sys
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Callable
 
 from cyclopts import App, Parameter
 from loguru import logger
@@ -28,9 +29,13 @@ from experimental.inty_v2_text_chat_prototype.client import load_prototype_doten
 
 load_prototype_dotenv()
 
+from app.core.repl_input.sleep_chunk import clamp_sleep_seconds
+from app.core.repl_input.stdin_queue import spawn_stdin_line_reader
+
 from experimental.inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
 from experimental.inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
 from experimental.inty_v2_text_chat_prototype.proto_log import configure_proto_log, resolve_proto_log_file
+
 from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
     next_heartbeat_wait_seconds,
@@ -81,6 +86,386 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
 
 
+def _use_posix_stdin_pump() -> bool:
+    """TTY + POSIX：主线程 select stdin，避免「仅守护线程读 stdin」在部分集成终端里长耗时 turn 期间无法输入。"""
+    if sys.platform == "win32":
+        return False
+    try:
+        return sys.stdin.isatty()
+    except (OSError, ValueError):
+        return False
+
+
+def _readline_main_sync() -> str | None:
+    try:
+        raw = sys.stdin.readline()
+    except KeyboardInterrupt:
+        return None
+    if raw == "":
+        return None
+    return raw.rstrip("\r\n")
+
+
+def _repl_drain_user_turns(
+    first_line: str,
+    *,
+    run_turn_sync: Callable[[str], str],
+    pending: queue.Queue[tuple[str, bool] | None],
+    first_line_already_echoed: bool = False,
+) -> bool:
+    """
+    跑一轮 user turn，然后连续消费 `pending` 里在本轮之前/期间积压的行（均得到助手回复），
+    再回到「等 stdin / 心跳」。若返回 False，REPL 应退出。
+
+    `tuple[str, bool]` 为 (文本, 是否已在 stdin 泵阶段打印过时间戳与 `> `)；为 True 时不再重复打印，
+    以免长耗时 turn（如生图）期间用户已输入的行看起来「卡住无回显」。
+    """
+    cur = first_line
+    cur_echoed = first_line_already_echoed
+    while True:
+        if cur.strip() in ("quit", "exit", "q"):
+            return False
+        if not cur.strip():
+            print("> ", end="", flush=True)
+        else:
+            if not cur_echoed:
+                print(f"[{_local_ts_str()}] {cur}")
+                logger.debug(
+                    "repl interactive_turn line_chars={} preview={}",
+                    len(cur),
+                    _preview_line(cur),
+                )
+                print("> ", end="", flush=True)
+            t0 = time.perf_counter()
+            out = run_turn_sync(cur)
+            _print_assistant_reply(out, time.perf_counter() - t0)
+            print("> ", end="", flush=True)
+
+        try:
+            item = pending.get_nowait()
+        except queue.Empty:
+            return True
+        if item is None:
+            print()
+            return False
+        cur, cur_echoed = item
+
+
+def _posix_run_user_turn_and_drain_queue(
+    ws: Path,
+    pending: queue.Queue[tuple[str, bool] | None],
+    first_line: str,
+    *,
+    debug_print_system: bool,
+    first_line_already_echoed: bool = False,
+) -> bool:
+    def _sync(cur: str) -> str:
+        return _run_turn_with_stdin_pump(
+            ws,
+            pending,
+            user_text=cur,
+            heartbeat_turn=False,
+            debug_print_system=debug_print_system,
+        )
+
+    return _repl_drain_user_turns(
+        first_line,
+        run_turn_sync=_sync,
+        pending=pending,
+        first_line_already_echoed=first_line_already_echoed,
+    )
+
+
+def _daemon_run_user_turn_and_drain_queue(
+    ws: Path,
+    line_queue: queue.Queue[tuple[str, bool] | None],
+    first_line: str,
+    *,
+    debug_print_system: bool,
+    first_line_already_echoed: bool = False,
+) -> bool:
+    def _sync(cur: str) -> str:
+        return asyncio.run(
+            run_turn(ws, cur, debug_print_system=debug_print_system, llm_trace=True)
+        )
+
+    return _repl_drain_user_turns(
+        first_line,
+        run_turn_sync=_sync,
+        pending=line_queue,
+        first_line_already_echoed=first_line_already_echoed,
+    )
+
+
+def _consume_pending_after_heartbeat(
+    pending: queue.Queue[tuple[str, bool] | None],
+    *,
+    drain_user_lines: Callable[[str, bool], bool],
+) -> bool:
+    """心跳回合结束后：若队列里已有用户行则继续回复。返回 False 表示应结束 REPL。"""
+    try:
+        more = pending.get_nowait()
+    except queue.Empty:
+        return True
+    if more is None:
+        print()
+        return False
+    line, echoed = more
+    if not line.strip():
+        print("> ", end="", flush=True)
+        return True
+    return drain_user_lines(line, echoed)
+
+
+def _run_turn_with_stdin_pump(
+    ws: Path,
+    pending: queue.Queue[tuple[str, bool] | None],
+    *,
+    user_text: str,
+    heartbeat_turn: bool,
+    debug_print_system: bool,
+) -> str:
+    """
+    `run_turn` 在工作线程里跑；主线程用 select+readline 把后续行写入 `pending`，
+    供本轮结束后的循环消费（FIFO）。
+    """
+    done = threading.Event()
+    result: dict[str, str] = {}
+    exc: list[BaseException] = []
+
+    def worker() -> None:
+        try:
+            result["out"] = asyncio.run(
+                run_turn(
+                    ws,
+                    user_text,
+                    heartbeat_turn=heartbeat_turn,
+                    debug_print_system=debug_print_system,
+                    llm_trace=True,
+                )
+            )
+        except BaseException as e:
+            exc.append(e)
+        finally:
+            done.set()
+
+    t = threading.Thread(
+        target=worker,
+        name="inty-v2-run-turn",
+        daemon=True,
+    )
+    t.start()
+    stdin_fd = sys.stdin.fileno()
+    while not done.is_set():
+        r, _, _ = select.select([stdin_fd], [], [], 0.1)
+        if r:
+            raw = sys.stdin.readline()
+            if raw == "":
+                pending.put(None)
+            else:
+                text = raw.rstrip("\r\n")
+                print(f"[{_local_ts_str()}] {text}")
+                logger.debug(
+                    "repl stdin_pump queued line_chars={} preview={}",
+                    len(text),
+                    _preview_line(text),
+                )
+                print("> ", end="", flush=True)
+                pending.put((text, True))
+    t.join(timeout=3600.0)
+    if exc:
+        raise exc[0]
+    return result["out"]
+
+
+def _repl_interactive_loop_posix(
+    ws: Path,
+    *,
+    debug_print_system: bool,
+    heartbeat: bool,
+) -> None:
+    pending: queue.Queue[tuple[str, bool] | None] = queue.Queue()
+    stdin_fd = sys.stdin.fileno()
+    print("> ", end="", flush=True)
+
+    while True:
+        try:
+            item = pending.get_nowait()
+        except queue.Empty:
+            pass
+        else:
+            if item is None:
+                print()
+                break
+            line, echoed = item
+            if not line.strip():
+                print("> ", end="", flush=True)
+                continue
+            if not _posix_run_user_turn_and_drain_queue(
+                ws,
+                pending,
+                line,
+                debug_print_system=debug_print_system,
+                first_line_already_echoed=echoed,
+            ):
+                break
+            continue
+
+        if heartbeat:
+            wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+            if wait <= 0.0:
+                logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
+                t0 = time.perf_counter()
+                out = _run_turn_with_stdin_pump(
+                    ws,
+                    pending,
+                    user_text="",
+                    heartbeat_turn=True,
+                    debug_print_system=debug_print_system,
+                )
+                _print_assistant_reply(out, time.perf_counter() - t0)
+                print("> ", end="", flush=True)
+                if not _consume_pending_after_heartbeat(
+                    pending,
+                    drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
+                        ws,
+                        pending,
+                        m,
+                        debug_print_system=debug_print_system,
+                        first_line_already_echoed=ev,
+                    ),
+                ):
+                    break
+                continue
+
+            sleep_s = clamp_sleep_seconds(
+                wait,
+                min_seconds=0.05,
+                max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+            )
+            r, _, _ = select.select([stdin_fd], [], [], sleep_s)
+            if not r:
+                continue
+            raw = sys.stdin.readline()
+            if raw == "":
+                print()
+                break
+            line = raw.rstrip("\r\n")
+        else:
+            line = _readline_main_sync()
+            if line is None:
+                print()
+                break
+
+        if line.strip() in ("quit", "exit", "q"):
+            break
+        if not line.strip():
+            print("> ", end="", flush=True)
+            continue
+        if not _posix_run_user_turn_and_drain_queue(
+            ws,
+            pending,
+            line,
+            debug_print_system=debug_print_system,
+            first_line_already_echoed=False,
+        ):
+            break
+
+
+def _repl_interactive_loop_daemon(
+    ws: Path,
+    *,
+    debug_print_system: bool,
+    heartbeat: bool,
+) -> None:
+    """Windows / 非 TTY：沿用守护线程读 stdin（无法在主线程 select）。"""
+    line_queue, _ = spawn_stdin_line_reader()
+    print("> ", end="", flush=True)
+
+    while True:
+        try:
+            item = line_queue.get_nowait()
+        except queue.Empty:
+            pass
+        else:
+            if item is None:
+                print()
+                break
+            line, echoed = item
+            if not line.strip():
+                print("> ", end="", flush=True)
+                continue
+            if not _daemon_run_user_turn_and_drain_queue(
+                ws,
+                line_queue,
+                line,
+                debug_print_system=debug_print_system,
+                first_line_already_echoed=echoed,
+            ):
+                break
+            continue
+
+        if heartbeat:
+            wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+            if wait <= 0.0:
+                logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
+                t0 = time.perf_counter()
+                print("> ", end="", flush=True)
+                out = asyncio.run(
+                    run_turn(
+                        ws,
+                        "",
+                        heartbeat_turn=True,
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                    )
+                )
+                _print_assistant_reply(out, time.perf_counter() - t0)
+                print("> ", end="", flush=True)
+                if not _consume_pending_after_heartbeat(
+                    line_queue,
+                    drain_user_lines=lambda m, ev: _daemon_run_user_turn_and_drain_queue(
+                        ws,
+                        line_queue,
+                        m,
+                        debug_print_system=debug_print_system,
+                        first_line_already_echoed=ev,
+                    ),
+                ):
+                    break
+                continue
+
+            sleep_s = clamp_sleep_seconds(
+                wait,
+                min_seconds=0.05,
+                max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+            )
+            try:
+                item = line_queue.get(timeout=sleep_s)
+            except queue.Empty:
+                continue
+        else:
+            item = line_queue.get()
+
+        if item is None:
+            print()
+            break
+        line, echoed = item
+        if line.strip() in ("quit", "exit", "q"):
+            break
+        if not line.strip():
+            print("> ", end="", flush=True)
+            continue
+        if not _daemon_run_user_turn_and_drain_queue(
+            ws,
+            line_queue,
+            line,
+            debug_print_system=debug_print_system,
+            first_line_already_echoed=echoed,
+        ):
+            break
+
+
 def _repl_heartbeat_enabled(
     *,
     cli_enable: bool,
@@ -104,92 +489,18 @@ def _repl_interactive_loop(
     debug_print_system: bool,
     heartbeat: bool,
 ) -> None:
-    """阻塞读用户输入；可选在空闲达到节奏阈值时触发陪伴心跳（额外一轮 run_turn）。"""
-    if not heartbeat:
-        while True:
-            try:
-                line = input("> ")
-            except EOFError:
-                print()
-                break
-            if line.strip() in ("quit", "exit", "q"):
-                break
-            if not line.strip():
-                continue
-            print(f"[{_local_ts_str()}] {line}")
-            logger.debug(
-                "repl interactive_turn line_chars={} preview={}",
-                len(line),
-                _preview_line(line),
-            )
-            t0 = time.perf_counter()
-            out = asyncio.run(
-                run_turn(ws, line, debug_print_system=debug_print_system, llm_trace=True)
-            )
-            _print_assistant_reply(out, time.perf_counter() - t0)
-        return
-
-    line_queue: queue.Queue[str | None] = queue.Queue()
-
-    def _stdin_reader() -> None:
-        while True:
-            try:
-                raw = sys.stdin.readline()
-            except KeyboardInterrupt:
-                line_queue.put(None)
-                return
-            if raw == "":
-                line_queue.put(None)
-                return
-            line_queue.put(raw.rstrip("\r\n"))
-
-    threading.Thread(target=_stdin_reader, daemon=True).start()
-    print("> ", end="", flush=True)
-
-    while True:
-        wait = next_heartbeat_wait_seconds(ws)
-        if wait <= 0.0:
-            logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
-            t0 = time.perf_counter()
-            out = asyncio.run(
-                run_turn(
-                    ws,
-                    "",
-                    heartbeat_turn=True,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
-                )
-            )
-            _print_assistant_reply(out, time.perf_counter() - t0)
-            print("> ", end="", flush=True)
-            continue
-
-        sleep_s = min(max(0.05, wait), HEARTBEAT_MAX_SLEEP_CHUNK_SEC)
-        try:
-            line = line_queue.get(timeout=sleep_s)
-        except queue.Empty:
-            continue
-
-        if line is None:
-            print()
-            break
-        if line.strip() in ("quit", "exit", "q"):
-            break
-        if not line.strip():
-            print("> ", end="", flush=True)
-            continue
-        print(f"[{_local_ts_str()}] {line}")
-        logger.debug(
-            "repl interactive_turn line_chars={} preview={}",
-            len(line),
-            _preview_line(line),
+    """
+    长耗时 turn（如生图）期间仍可读入下一行：在 TTY + POSIX 上由主线程 select+readline 泵入队列，
+    `run_turn` 放在工作线程；否则退回守护线程读 stdin。
+    """
+    if _use_posix_stdin_pump():
+        _repl_interactive_loop_posix(
+            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
         )
-        t0 = time.perf_counter()
-        out = asyncio.run(
-            run_turn(ws, line, debug_print_system=debug_print_system, llm_trace=True)
+    else:
+        _repl_interactive_loop_daemon(
+            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
         )
-        _print_assistant_reply(out, time.perf_counter() - t0)
-        print("> ", end="", flush=True)
 
 
 def _preview_line(s: str, max_len: int = 200) -> str:

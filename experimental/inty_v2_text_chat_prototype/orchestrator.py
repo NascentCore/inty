@@ -346,7 +346,7 @@ async def run_turn(
         context = load_context_meta(paths.context_json)
         bundle = load_prompt_bundle(paths, meta=context)
         loaded = load_transcript(paths.transcript)
-        transcript = transcript_for_llm_turn(loaded, heartbeat_turn=heartbeat_turn)
+        transcript = transcript_for_llm_turn(loaded)
         _debug_log_prompt_bundle(bundle, context=context)
 
         system = build_system_prompt(
@@ -361,10 +361,10 @@ async def run_turn(
             system.count("\n\n---\n\n"),
         )
         logger.info(
-            "run_turn load_context_build_system_ms={:.0f} transcript_msgs={} transcript_window={}",
+            "run_turn load_context_build_system_ms={:.0f} transcript_msgs={} transcript_window=last_{}",
             (time.perf_counter() - t_load) * 1000.0,
             len(transcript),
-            "full" if heartbeat_turn else f"last_{TRANSCRIPT_WINDOW_MAX_MESSAGES}",
+            TRANSCRIPT_WINDOW_MAX_MESSAGES,
         )
         if debug_print_system:
             print(system)

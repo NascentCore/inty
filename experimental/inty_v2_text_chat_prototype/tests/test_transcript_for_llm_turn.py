@@ -1,4 +1,4 @@
-"""transcript_for_llm_turn：普通轮窗口 vs 心跳全量。"""
+"""transcript_for_llm_turn：普通轮与心跳共用尾部窗口。"""
 
 from __future__ import annotations
 
@@ -28,22 +28,16 @@ def _msg(i: int) -> ChatMessage:
 
 
 class TestTranscriptForLlmTurn(unittest.TestCase):
-    def test_heartbeat_keeps_all(self) -> None:
+    def test_long_list_truncates_tail(self) -> None:
         n = TRANSCRIPT_WINDOW_MAX_MESSAGES + 10
         loaded = [_msg(i) for i in range(n)]
-        out = transcript_for_llm_turn(loaded, heartbeat_turn=True)
-        self.assertEqual(len(out), n)
-
-    def test_normal_truncates_tail(self) -> None:
-        n = TRANSCRIPT_WINDOW_MAX_MESSAGES + 10
-        loaded = [_msg(i) for i in range(n)]
-        out = transcript_for_llm_turn(loaded, heartbeat_turn=False)
+        out = transcript_for_llm_turn(loaded)
         self.assertEqual(len(out), TRANSCRIPT_WINDOW_MAX_MESSAGES)
         self.assertEqual(out[0].content, str(n - TRANSCRIPT_WINDOW_MAX_MESSAGES))
 
     def test_short_list_unchanged(self) -> None:
         loaded = [_msg(0), _msg(1)]
-        out = transcript_for_llm_turn(loaded, heartbeat_turn=False)
+        out = transcript_for_llm_turn(loaded)
         self.assertEqual(out, loaded)
 
 

@@ -84,6 +84,43 @@ class TestHeartbeatSchedule(unittest.TestCase):
                 w = next_heartbeat_wait_seconds(root, now=now)
             self.assertLessEqual(w, 0.0)
 
+    def test_explicit_heartbeat_true_without_env_matches_enabled(self) -> None:
+        """REPL `--repl-heartbeat` 不设环境变量时仍应能调度心跳。"""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            t_user = t0.isoformat()
+            t_asst = (t0 + timedelta(seconds=1)).isoformat()
+            _write_transcript(
+                root / "transcript.jsonl",
+                [
+                    {"role": "user", "content": "hi", "ts": t_user, "uuid": "a"},
+                    {
+                        "role": "assistant",
+                        "content": "hello",
+                        "ts": t_asst,
+                        "uuid": "b",
+                    },
+                ],
+            )
+            now = t0 + timedelta(seconds=3600)
+            with patch.dict(os.environ, {}, clear=True):
+                w = next_heartbeat_wait_seconds(
+                    root, now=now, heartbeat_enabled=True
+                )
+            self.assertLessEqual(w, 0.0)
+
+    def test_explicit_heartbeat_false_overrides_env(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            with patch.dict(
+                os.environ, {"INTY_V2_PROTO_HEARTBEAT": "1"}, clear=False
+            ):
+                w = next_heartbeat_wait_seconds(
+                    root, heartbeat_enabled=False
+                )
+            self.assertGreater(w, 86400.0 * 10)
+
     def test_min_gap_after_previous_heartbeat(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

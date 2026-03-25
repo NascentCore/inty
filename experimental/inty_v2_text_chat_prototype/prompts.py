@@ -52,7 +52,7 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "（3）为核对工作区约定、记忆规则或控制面设置，可静默使用 workspace_list_dir / workspace_read_file "
         "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
         "本回合 system 中已完整给出且未变更的同一文件。"
-        "transcript 全量可能很大，优先依赖已在消息里的对话窗口；若必须读磁盘上的 transcript，应用工具参数限制返回长度。"
+        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
         "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
         "必须先静默调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文件内容。"
@@ -85,7 +85,8 @@ def build_system_prompt(
     if heartbeat_turn:
         parts.append(
             "## 本轮（陪伴心跳）\n\n"
-            "用户尚未发送新消息；仅输出自然语言短句，不要调用工具。"
+            "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
+            "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。"
         )
     parts.extend(
         [

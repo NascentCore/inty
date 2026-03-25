@@ -123,17 +123,11 @@ def load_transcript(path: Path) -> list[ChatMessage]:
 TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
 
 
-def transcript_for_llm_turn(
-    loaded: list[ChatMessage],
-    *,
-    heartbeat_turn: bool,
-) -> list[ChatMessage]:
+def transcript_for_llm_turn(loaded: list[ChatMessage]) -> list[ChatMessage]:
     """
     组装送入本轮 chat.completions 的历史消息。
-    普通轮仅保留尾部窗口以控 token；陪伴心跳保留完整 transcript 以延续脉络。
+    普通轮与陪伴心跳使用同一尾部窗口，主动回复与现场气氛一致。
     """
-    if heartbeat_turn:
-        return loaded
     if len(loaded) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
         return loaded
     return loaded[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]

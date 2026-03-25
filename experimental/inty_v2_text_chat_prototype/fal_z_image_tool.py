@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,17 +11,12 @@ import fal_client
 
 from app.core.images.fal import ZImageTurboImageToImageInput, z_image_turbo, z_image_turbo_image_to_image
 
+from .env_util import env_flag_enabled
+
 # 与 app/api/v1/endpoints/agents.py _generate_with_fal_z_image_turbo 对齐的默认推理参数
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
 # 单次调用张数上限（模型应按对话自行决定 1..N，省略则 1）
 MAX_NUM_IMAGES_PER_CALL = 4
-
-
-def _env_flag_enabled(name: str) -> bool:
-    raw = os.environ.get(name)
-    if raw is None or not str(raw).strip():
-        return False
-    return str(raw).strip().lower() in ("1", "true", "yes", "on")
 
 
 async def _reset_fal_async_client_after_short_lived_loop() -> None:
@@ -161,7 +155,7 @@ async def run_generate_image_z_image_turbo(
         num_images=num_images,
     )
     gcs_base = _gcs_uri_base_for_workspace(root)
-    skip_gcs = _env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
+    skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
     results = await z_image_turbo(z_in, gcs_base, skip_gcs_upload=skip_gcs)
 
     if not results:
@@ -238,7 +232,7 @@ async def run_modify_image_z_image_turbo(
     if strength is not None:
         kwargs["strength"] = strength
     z_in = ZImageTurboImageToImageInput(**kwargs)
-    skip_gcs = _env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
+    skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
     result = await z_image_turbo_image_to_image(
         z_in, gcs_base, skip_gcs_upload=skip_gcs
     )

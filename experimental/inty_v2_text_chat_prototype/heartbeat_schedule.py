@@ -7,13 +7,15 @@ import statistics
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .env_util import env_flag_enabled
 from .models import ChatMessage, load_transcript
 from .paths import WorkspacePaths
 
 # 与 orchestrator.run_turn(heartbeat_turn=True) 写入 transcript 的 user 行一致
 HEARTBEAT_SYNTHETIC_USER_TEXT = (
-    "（陪伴心跳：用户尚未在输入框发送新内容。请你根据 HEARTBEAT 约定与当前关系节奏，"
-    "用一两句自然、克制的主动开口；不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
+    "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
+    "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
+    "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
 )
 
 _DEFAULT_BASE_IDLE_SEC = 120.0
@@ -25,15 +27,8 @@ HEARTBEAT_MAX_SLEEP_CHUNK_SEC = 3600.0
 _RHYTHM_CLAMP_SEC = (45.0, 900.0)
 
 
-def _env_flag_enabled(name: str) -> bool:
-    raw = os.environ.get(name)
-    if raw is None or not str(raw).strip():
-        return False
-    return str(raw).strip().lower() in ("1", "true", "yes", "on")
-
-
 def heartbeat_enabled_from_env() -> bool:
-    return _env_flag_enabled("INTY_V2_PROTO_HEARTBEAT")
+    return env_flag_enabled("INTY_V2_PROTO_HEARTBEAT")
 
 
 def _env_float(name: str, default: float) -> float:
@@ -106,12 +101,18 @@ def next_heartbeat_wait_seconds(
     workspace: Path,
     *,
     now: datetime | None = None,
+    heartbeat_enabled: bool | None = None,
 ) -> float:
     """
     返回距离「允许触发心跳」的剩余秒数；已可触发时返回 <= 0。
     不满足前置条件（未启用、transcript 过短等）时返回大值，表示长时间不必再检查。
+
+    `heartbeat_enabled`: 与 REPL 的 `--repl-heartbeat` / `--no-repl-heartbeat` 对齐；为 None 时仅看
+    `INTY_V2_PROTO_HEARTBEAT`（便于单测与脚本直接调用）。
     """
-    if not heartbeat_enabled_from_env():
+    if heartbeat_enabled is False:
+        return 86400.0 * 365.0
+    if heartbeat_enabled is None and not heartbeat_enabled_from_env():
         return 86400.0 * 365.0
 
     root = workspace.resolve()

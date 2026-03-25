@@ -47,7 +47,8 @@ python -m experimental.inty_v2_text_chat_prototype.main once --message "你好" 
 - `--debug-print-system`：打印本轮拼接后的 system prompt（验收「MEMORY 是否进 system」）。
 - **`inty_v2.log`（loguru）**：与 `llm_trace.jsonl` 并列的**运行时日志**（编排、工具结果摘要、记忆线程异常等）。默认只写入 `<workspace>/inty_v2.log`、**不**打到终端，避免干扰 REPL；`--no-log-file` 或 `INTY_V2_PROTO_LOG_FILE=0` 时改为仅 stderr；`--log-file PATH` 指定路径；`INTY_V2_PROTO_LOG_FILE` 也可设为绝对/相对路径覆盖默认。文件 sink 默认级别为 **DEBUG**（含 `run_turn` / 记忆管线 / `complete` 的体量与预览等）；若只要 INFO 及以上，可设 `INTY_V2_PROTO_LOG_FILE_LEVEL=INFO`。
 - **`llm_trace.jsonl`**：`repl` / `once` / `bootstrap-agent` 默认追加写入 `<workspace>/llm_trace.jsonl`，记录每轮 `chat.completions` 的请求/响应**摘要**（与 `inty_v2.log` 互补，非完整 prompt 正文）；可用 `tail -f` 或 `jq` 过滤。
-- **陪伴心跳（REPL）：** 设 `INTY_V2_PROTO_HEARTBEAT=1` 或 `repl --repl-heartbeat`，在**上一轮助手已回复、你尚未输入**且空闲超过节奏阈值时，自动多跑一轮「主动开口」（不写入记忆管线；`transcript` 里用户行带 `heartbeat: true`）。该轮 LLM **注入完整 `transcript.jsonl` 历史**（不按 `TRANSCRIPT_WINDOW_MAX_MESSAGES` 裁剪）。可调：`INTY_V2_PROTO_HEARTBEAT_IDLE_SEC`（默认 120）、`INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC`（两次心跳最小间隔，默认 600）、`INTY_V2_PROTO_HEARTBEAT_MIN_TRANSCRIPT_MSGS`（至少几条消息才启用，默认 2）。`--no-repl-heartbeat` 优先关闭。
+- **REPL 无阻塞输入**：在 **macOS/Linux 交互式 TTY** 上，`run_turn`（含生图等长耗时工具）在**工作线程**跑，**主线程**用 `select`+`readline` 把后续行写入队列，生图时也可先敲好下一行（FIFO）。**Windows / 非 TTY** 仍用 `app.core.repl_input.spawn_stdin_line_reader` 守护线程读 stdin。
+- **陪伴心跳（REPL）：** 设 `INTY_V2_PROTO_HEARTBEAT=1` 或 `repl --repl-heartbeat`，在**上一轮助手已回复、你尚未输入**且空闲超过节奏阈值时，自动多跑一轮「主动开口」（不写入记忆管线；`transcript` 里用户行带 `heartbeat: true`）。该轮送入模型的**近期对话窗口**与普通轮相同（最后 `TRANSCRIPT_WINDOW_MAX_MESSAGES` 条），便于口吻与现场气氛一致。可调：`INTY_V2_PROTO_HEARTBEAT_IDLE_SEC`（默认 120）、`INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC`（两次心跳最小间隔，默认 600）、`INTY_V2_PROTO_HEARTBEAT_MIN_TRANSCRIPT_MSGS`（至少几条消息才启用，默认 2）。`--no-repl-heartbeat` 优先关闭。
 
 ## Workspace 结构
 
