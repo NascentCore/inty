@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,12 @@ from .models import (
 from .paths import WorkspacePaths
 from .prompts import build_system_prompt
 from .utc import local_date_str, utc_iso_ts
-from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
+from .llm_trace import (
+    TRANSCRIPT_MSG_UUID_KEY,
+    emit_trace,
+    summarize_completion_response,
+    summarize_messages,
+)
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
@@ -27,6 +33,11 @@ from .workspace_init_tools import (
 )
 
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
+
+
+def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop underscore-prefixed keys (e.g. transcript uuid) before chat.completions."""
+    return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
 
 
 def _run_turn_with_user_profile_tools(
@@ -45,7 +56,7 @@ def _run_turn_with_user_profile_tools(
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
         resp = client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=_openai_messages_payload(messages),
             tools=tools,
             parallel_tool_calls=False,
         )
@@ -193,8 +204,19 @@ def run_turn(
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in transcript:
-        messages.append({"role": m.role, "content": m.content})
-    messages.append({"role": "user", "content": user_text})
+        row: dict[str, Any] = {"role": m.role, "content": m.content}
+        if m.uuid:
+            row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
+        messages.append(row)
+
+    user_msg_uuid = str(uuid.uuid4())
+    messages.append(
+        {
+            "role": "user",
+            "content": user_text,
+            TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+        }
+    )
 
     # Must snapshot user time before the LLM call; assistant time is taken after (below).
     ts_user = utc_iso_ts()
@@ -202,14 +224,25 @@ def run_turn(
         messages, root, llm_trace=llm_trace
     )
 
+    assistant_msg_uuid = str(uuid.uuid4())
     append_jsonl(
         paths.transcript,
-        {"role": "user", "content": user_text, "ts": ts_user},
+        {
+            "role": "user",
+            "content": user_text,
+            "ts": ts_user,
+            "uuid": user_msg_uuid,
+        },
     )
     ts_asst = utc_iso_ts()
     append_jsonl(
         paths.transcript,
-        {"role": "assistant", "content": assistant_text, "ts": ts_asst},
+        {
+            "role": "assistant",
+            "content": assistant_text,
+            "ts": ts_asst,
+            "uuid": assistant_msg_uuid,
+        },
     )
 
     if defer_memory_update:

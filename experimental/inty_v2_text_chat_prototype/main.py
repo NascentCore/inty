@@ -103,7 +103,7 @@ def bootstrap_agent(
         Path | None,
         Parameter(
             name="--llm-trace-file",
-            help="将每轮 chat.completions 的请求/响应摘要追加写入该文件（便于 tail -f）",
+            help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
         ),
     ] = None,
 ) -> None:
@@ -142,7 +142,7 @@ def repl(
         Path | None,
         Parameter(
             name="--llm-trace-file",
-            help="将每轮 chat.completions 的请求/响应摘要追加写入该文件（便于 tail -f）",
+            help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
         ),
     ] = None,
 ) -> None:
@@ -197,7 +197,7 @@ def once(
         Path | None,
         Parameter(
             name="--llm-trace-file",
-            help="将每轮 chat.completions 的请求/响应摘要追加写入该文件（便于 tail -f）",
+            help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
         ),
     ] = None,
 ) -> None:

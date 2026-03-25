@@ -17,6 +17,7 @@ class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
     ts: str
+    uuid: str | None = None
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000

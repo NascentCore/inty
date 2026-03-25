@@ -14,8 +14,8 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
 2. **`AGENTS.md`** — if non-empty.
 3. **`TOOLS.md`** — if non-empty.
 4. **`HEARTBEAT.md`** — if non-empty.
-5. **`IDENTITY.md`**
-6. **`CAPABILITIES.md`** — if non-empty. System-level **intrinsic limits** (human physiology/reality on the user side; model/channel/product constraints on the assistant side), placed before soul so persona (`SOUL`) is read in light of hard constraints; negotiated social boundaries still live primarily in `SOUL.md` / `USER.md`.
+5. **`CAPABILITIES.md`** — if non-empty. **Intrinsic limits** (human physiology/reality on the user side; model/channel/product constraints on the assistant side), not negotiated social boundaries (those live in `SOUL.md` / `USER.md`). Placed before persona files so hard constraints are seen first.
+6. **`IDENTITY.md`**
 7. **`SOUL.md`**
 8. Context-mode clause (derived from `context.json`, not a file).
 9. **`USER.md`**
@@ -25,7 +25,7 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
    - **`MEMORY.md`** (long-term)
 11. Output / tool contract (REPL adds `user_profile_record` + workspace tool rules).
 
-Optional docs (2–4, 6) omitted entirely when missing or empty — no placeholder sections.
+Optional docs (2–4, 5) omitted entirely when missing or empty — no placeholder sections.
 
 ## Disk read order in `load_prompt_bundle`
 
@@ -34,6 +34,7 @@ Order differs from final prompt section order: implementation reads long-term **
 ## Transcript
 
 - **`transcript.jsonl`** is **not** part of `PromptBundle`. It is loaded separately, truncated to the last `TRANSCRIPT_WINDOW_MAX_MESSAGES` entries, and appended **after** the system message as alternating user/assistant messages.
+- Each line is JSON with `role`, `content`, `ts`, and (for lines written by `orchestrator.run_turn` after this feature) **`uuid`** (stable id for that message; used by `llm_trace` summaries to reference transcript rows without echoing body text). Older lines may omit `uuid`.
 
 ## Required files for a runnable workspace
 
@@ -45,4 +46,4 @@ Initialization checks (`is_workspace_initialized` / `run_turn`) require on disk:
 
 ## Workspace `AGENTS.md` (human-oriented)
 
-The file may describe a **manual** startup habit: read **CAPABILITIES → SOUL → USER → (main session) MEMORY** so hard limits precede persona, matching the spirit of programmatic order (optional workspace `AGENTS` / `TOOLS` / `HEARTBEAT` still come earlier in the actual system prompt when present). That is guidance for agents/operators; it is **not** identical to `build_system_prompt` ordering (e.g. optional docs 2–4 precede `IDENTITY` in the assembled prompt).
+The file may describe a **manual** startup habit: read **CAPABILITIES → SOUL → USER → (main session) MEMORY** when you want hard limits before persona (programmatic order injects optional `CAPABILITIES.md` **before** `IDENTITY.md`, after optional `AGENTS` / `TOOLS` / `HEARTBEAT`). That is guidance for agents/operators; it is **not** identical to `build_system_prompt` ordering (e.g. optional docs 2–4 still precede `CAPABILITIES` in the assembled prompt).

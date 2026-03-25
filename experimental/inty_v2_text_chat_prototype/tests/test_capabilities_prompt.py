@@ -16,7 +16,7 @@ from inty_v2_text_chat_prototype.prompts import build_system_prompt
 
 
 class TestCapabilitiesPrompt(unittest.TestCase):
-    def test_capabilities_after_identity_before_soul_user_memory_when_intimate(self) -> None:
+    def test_capabilities_before_identity_before_memory_when_intimate(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "IDENTITY.md").write_text("i\n", encoding="utf-8")
@@ -30,22 +30,16 @@ class TestCapabilitiesPrompt(unittest.TestCase):
             bundle = load_prompt_bundle(paths, meta=meta)
             system = build_system_prompt(bundle, meta, enable_user_profile_tool=False)
             self.assertIn("CAP_MARK_UNIQUE", system)
-            pos_i = system.find("## IDENTITY")
             pos_c = system.find("## CAPABILITIES（基础能力与限制）")
-            pos_s = system.find("## SOUL")
-            pos_u = system.find("## USER")
+            pos_i = system.find("## IDENTITY")
             pos_m = system.find("## MEMORY（长期记忆定稿）")
-            self.assertGreater(pos_i, -1)
             self.assertGreater(pos_c, -1)
-            self.assertGreater(pos_s, -1)
-            self.assertGreater(pos_u, -1)
+            self.assertGreater(pos_i, -1)
             self.assertGreater(pos_m, -1)
-            self.assertLess(pos_i, pos_c)
-            self.assertLess(pos_c, pos_s)
-            self.assertLess(pos_s, pos_u)
-            self.assertLess(pos_u, pos_m)
+            self.assertLess(pos_c, pos_i)
+            self.assertLess(pos_i, pos_m)
 
-    def test_capabilities_before_soul_user_before_output_contract_with_tools(self) -> None:
+    def test_capabilities_before_identity_before_user_before_output_contract(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "IDENTITY.md").write_text("i\n", encoding="utf-8")
@@ -58,11 +52,11 @@ class TestCapabilitiesPrompt(unittest.TestCase):
             bundle = load_prompt_bundle(paths, meta=meta)
             system = build_system_prompt(bundle, meta, enable_user_profile_tool=True)
             pos_c = system.find("## CAPABILITIES（基础能力与限制）")
-            pos_s = system.find("## SOUL")
+            pos_i = system.find("## IDENTITY")
             pos_u = system.find("## USER")
             pos_out = system.find("输出与工具")
-            self.assertLess(pos_c, pos_s)
-            self.assertLess(pos_s, pos_u)
+            self.assertLess(pos_c, pos_i)
+            self.assertLess(pos_i, pos_u)
             self.assertLess(pos_u, pos_out)
 
     def test_omitted_when_capabilities_missing(self) -> None:

@@ -75,13 +75,13 @@ def build_system_prompt(
         parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
     if bundle.heartbeat_md.strip():
         parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
-    parts.append("## IDENTITY\n\n" + bundle.identity.strip())
     if bundle.capabilities_md.strip():
         parts.append(
             "## CAPABILITIES（基础能力与限制）\n\n" + bundle.capabilities_md.strip()
         )
     parts.extend(
         [
+            "## IDENTITY\n\n" + bundle.identity.strip(),
             "## SOUL\n\n" + bundle.soul.strip(),
             _context_mode_clause(context),
             "## USER\n\n" + bundle.user_md.strip(),

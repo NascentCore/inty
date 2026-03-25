@@ -1,7 +1,8 @@
-"""LLM 调用摘要写入可选 trace 文件（用于调试，非生产遥测）。"""
+"""LLM 调用摘要写入可选 trace 文件（JSONL，每轮一行；用于调试，非生产遥测）。"""
 
 from __future__ import annotations
 
+import json
 import threading
 from pathlib import Path
 from typing import Any
@@ -9,8 +10,11 @@ from typing import Any
 from .prompts import SYSTEM_PROMPT_SEP, system_prompt_security_prefix
 
 _TRACE_LOCK = threading.Lock()
-_TRACE_PREFIX = "[llm-trace]"
 _trace_file_path: Path | None = None
+LLM_TRACE_JSONL_VERSION = 1
+
+# In-memory OpenAI message dicts may carry this key; stripped before API calls.
+TRANSCRIPT_MSG_UUID_KEY = "_transcript_uuid"
 
 
 def configure_llm_trace_file(path: Path | None) -> None:
@@ -38,10 +42,10 @@ def _label_system_segment(seg: str, *, ws_label: str, day: str) -> str:
         return f"{ws_label}/TOOLS.md"
     if s.startswith("## HEARTBEAT（检查清单）"):
         return f"{ws_label}/HEARTBEAT.md"
-    if s.startswith("## IDENTITY"):
-        return f"{ws_label}/IDENTITY.md"
     if s.startswith("## CAPABILITIES（基础能力与限制）"):
         return f"{ws_label}/CAPABILITIES.md"
+    if s.startswith("## IDENTITY"):
+        return f"{ws_label}/IDENTITY.md"
     if s.startswith("## SOUL"):
         return f"{ws_label}/SOUL.md"
     if s.startswith("当前上下文模式："):
@@ -114,6 +118,10 @@ def summarize_messages(
         if role == "system" and is_system_prompt_bundle(c):
             parts.append(f"{i}:system {summarize_system_message_content(c, ws_label=ws_label, day=trace_day)}")
             continue
+        tid = m.get(TRANSCRIPT_MSG_UUID_KEY)
+        if role in ("user", "assistant") and isinstance(tid, str) and tid:
+            parts.append(f"{i}:{role} transcript⟨{tid}⟩")
+            continue
         prev = c.replace("\n", " ").strip()
         if len(prev) > preview_len:
             prev = prev[: preview_len - 1] + "…"
@@ -152,16 +160,26 @@ def summarize_completion_response(resp: Any) -> str:
 
 
 def emit_trace(where: str, *, round_idx: int, model: str, messages: str, response: str) -> None:
-    """带锁追加三行 trace 到已配置路径，避免与记忆线程交错时块内撕裂。"""
-    block = (
-        f"{_TRACE_PREFIX} {where} #{round_idx} model={model}\n"
-        f"{_TRACE_PREFIX}   req:  {messages}\n"
-        f"{_TRACE_PREFIX}   resp: {response}\n"
+    """带锁追加一行 JSONL 到已配置路径，避免与记忆线程交错时行内撕裂。"""
+    line = (
+        json.dumps(
+            {
+                "v": LLM_TRACE_JSONL_VERSION,
+                "kind": "llm_trace",
+                "where": where,
+                "round_idx": round_idx,
+                "model": model,
+                "req": messages,
+                "resp": response,
+            },
+            ensure_ascii=False,
+        )
+        + "\n"
     )
     with _TRACE_LOCK:
         path = _trace_file_path
         if path is None:
             return
         with open(path, "a", encoding="utf-8") as f:
-            f.write(block)
+            f.write(line)
             f.flush()

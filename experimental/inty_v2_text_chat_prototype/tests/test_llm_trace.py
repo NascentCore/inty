@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -9,6 +10,8 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.llm_trace import (
+    LLM_TRACE_JSONL_VERSION,
+    TRANSCRIPT_MSG_UUID_KEY,
     configure_llm_trace_file,
     emit_trace,
     is_system_prompt_bundle,
@@ -47,8 +50,8 @@ def test_summarize_messages_bundle_system_uses_refs_not_angle_quote_preview() ->
     sys_content = sep.join(
         [
             system_prompt_security_prefix(),
-            "## IDENTITY\n\ni",
             "## CAPABILITIES（基础能力与限制）\n\ncap",
+            "## IDENTITY\n\ni",
             "## SOUL\n\ns",
             "当前上下文模式：亲密主会话。可加载完整长期记忆，语气可更放松、贴近私人对话，仍须遵守安全与同意边界。",
             "## USER\n\nu",
@@ -68,6 +71,28 @@ def test_summarize_messages_bundle_system_uses_refs_not_angle_quote_preview() ->
     assert "«" not in s
 
 
+def test_summarize_messages_transcript_uuid_refs_skip_angle_preview() -> None:
+    uid = "11111111-1111-1111-1111-111111111111"
+    aid = "22222222-2222-2222-2222-222222222222"
+    msgs = [
+        {"role": "system", "content": "x"},
+        {
+            "role": "user",
+            "content": "secret user line",
+            TRANSCRIPT_MSG_UUID_KEY: uid,
+        },
+        {
+            "role": "assistant",
+            "content": "secret assistant line",
+            TRANSCRIPT_MSG_UUID_KEY: aid,
+        },
+    ]
+    s = summarize_messages(msgs, "ws", "2026-01-01")
+    assert f"1:user transcript⟨{uid}⟩" in s
+    assert f"2:assistant transcript⟨{aid}⟩" in s
+    assert "secret" not in s
+
+
 def test_summarize_system_message_content_labels_memory_paths_with_day() -> None:
     sep = SYSTEM_PROMPT_SEP
     sys_content = sep.join(
@@ -85,8 +110,8 @@ def test_summarize_system_message_content_labels_memory_paths_with_day() -> None
     assert "w/MEMORY.md" in out
 
 
-def test_emit_trace_writes_three_lines_to_file(tmp_path: Path) -> None:
-    log = tmp_path / "trace.log"
+def test_emit_trace_writes_one_jsonl_line_to_file(tmp_path: Path) -> None:
+    log = tmp_path / "trace.jsonl"
     try:
         configure_llm_trace_file(log)
         emit_trace(
@@ -96,12 +121,16 @@ def test_emit_trace_writes_three_lines_to_file(tmp_path: Path) -> None:
             messages="0:user 1ch «x»",
             response="finish=stop text 0ch «»",
         )
-        text = log.read_text(encoding="utf-8")
-        lines = text.splitlines()
-        assert len(lines) == 3
-        assert lines[0].startswith("[llm-trace] test.where #2 model=m")
-        assert lines[1].startswith("[llm-trace]   req:")
-        assert lines[2].startswith("[llm-trace]   resp:")
+        lines = log.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == 1
+        row = json.loads(lines[0])
+        assert row["v"] == LLM_TRACE_JSONL_VERSION
+        assert row["kind"] == "llm_trace"
+        assert row["where"] == "test.where"
+        assert row["round_idx"] == 2
+        assert row["model"] == "m"
+        assert row["req"] == "0:user 1ch «x»"
+        assert row["resp"] == "finish=stop text 0ch «»"
     finally:
         configure_llm_trace_file(None)
 
