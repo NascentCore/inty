@@ -10,13 +10,14 @@ from pydantic import BaseModel
 
 from .file_store import read_text
 from .paths import WorkspacePaths
-from .utc import utc_date_str
+from .utc import local_date_str
 
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
     ts: str
+    uuid: str | None = None
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
@@ -58,7 +59,7 @@ def load_prompt_bundle(
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
     """加载人格与记忆。非 intimate 模式不读取私人记忆文件（与 prompts 层约定一致）。"""
-    day = utc_date_str()
+    day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     intimate = m.context_mode.strip().lower() == "intimate"
 
@@ -69,7 +70,9 @@ def load_prompt_bundle(
     summary_md = ""
     memory_long = read_text(paths.memory_md)
     if intimate:
-        raw_md = _read_optional_text(raw_today, max_chars=_MEMORY_RAW_INJECT_MAX_CHARS)
+        raw_md = _read_optional_text(
+            raw_today, max_chars=_MEMORY_RAW_INJECT_MAX_CHARS
+        )
         summary_md = _read_optional_text(
             summary_today, max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS
         )
@@ -81,9 +84,7 @@ def load_prompt_bundle(
         soul=read_text(paths.soul),
         user_md=read_text(paths.user_md),
         memory_md=memory_long,
-        agents_md=_read_optional_text(
-            paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
+        agents_md=_read_optional_text(paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         tools_md=_read_optional_text(paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         heartbeat_md=_read_optional_text(
             paths.heartbeat_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
@@ -96,7 +97,11 @@ def load_prompt_bundle(
 def load_context_meta(path: Path) -> ContextMeta:
     if not path.is_file():
         return ContextMeta()
-    raw = json.loads(read_text(path))
+    raw_text = read_text(path)
+    try:
+        raw = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"{path}: invalid JSON in context file") from e
     return ContextMeta.model_validate(raw)
 
 

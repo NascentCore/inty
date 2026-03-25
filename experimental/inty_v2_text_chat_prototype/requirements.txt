@@ -1,4 +1,7 @@
 cyclopts
+langsmith
+loguru
 openai
 pydantic
 python-dotenv
+PyYAML

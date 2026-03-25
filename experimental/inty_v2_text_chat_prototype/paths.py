@@ -64,3 +64,8 @@ class WorkspacePaths:
     def memory_day_summary(self, day: str) -> Path:
         """当日总结性记忆（LLM 整文件覆盖）：memory/YYYY-MM-DD.md"""
         return self.memory_dir / f"{day}.md"
+
+    @property
+    def memory_pipeline_state_json(self) -> Path:
+        """记忆管线累计轮次（用于按间隔跑当日总结 LLM）；与 transcript 同目录，不入版控时可随 workspace 忽略。"""
+        return self.root / ".inty_v2_memory_pipeline.json"
