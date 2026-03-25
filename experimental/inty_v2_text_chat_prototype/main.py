@@ -69,8 +69,6 @@ def _init_proto_logging(
     no_log_file: bool,
 ) -> None:
     """默认仅 <workspace>/inty_v2.log（不写 stderr，免干扰 REPL）；--no-log-file 则仅 stderr。"""
-    from loguru import logger
-
     resolved = resolve_proto_log_file(
         workspace, explicit=log_file, no_log_file=no_log_file
     )

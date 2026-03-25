@@ -20,6 +20,7 @@ _CLIENT: OpenAI | None = None
 # experimental/inty_v2_text_chat_prototype/client.py → parents[2] = inty repo root
 _REPO_ROOT_FOR_DOTENV = Path(__file__).resolve().parent.parent.parent
 
+
 def _flush_langsmith_traces_on_exit() -> None:
     from langsmith import utils as ls_utils
 

@@ -402,6 +402,11 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                     "Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—"
                     "use modify_image (image-to-image) instead, with the source file or URL. "
                     "Call only when the user clearly asks for new picture(s), illustration(s), or visuals from scratch. "
+                    "**Identity / portrait lock:** If the output must depict the companion’s agreed look "
+                    "(e.g. zodiac-year portrait 生肖像, themed or holiday portrait), treat the **appearance** subsection "
+                    "in workspace **IDENTITY.md** (e.g. section titled like 外貌与形象) as the **fixed visual blueprint**: "
+                    "copy hair, eyes, face, and other stated traits into `prompt`; do **not** invent, swap, or weaken "
+                    "those locked traits—zodiac/theme may only add costume, props, setting, or mood on top. "
                     "Set num_images from conversation context: e.g. user asks for three variants or "
                     "multiple angles → pass that count; single scene or unspecified → omit num_images "
                     f"(defaults to 1). Maximum {MAX_NUM_IMAGES_PER_CALL} per call. "
@@ -415,7 +420,9 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "type": "string",
                             "description": (
                                 "Full English or Chinese scene description for the image "
-                                "(style, subject, mood, composition)."
+                                "(style, subject, mood, composition). "
+                                "For companion portraits (incl. zodiac 生肖像): embed traits from IDENTITY.md "
+                                "appearance section; do not contradict locked hair/face/eye details."
                             ),
                         },
                         "image_size": {
@@ -455,6 +462,9 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                     "modify a specific picture—including one previously saved under workspace/generated_images/. "
                     "Provide exactly one source: either source_image_relative_path (file under workspace, e.g. "
                     "generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). "
+                    "**Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** "
+                    "appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, "
+                    "not to replace the agreed face. "
                     "Optional strength (0–1) controls how strongly the output follows the prompt vs. the source. "
                     "Same config/GCS requirements as generate_image."
                 ),
@@ -465,7 +475,8 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "type": "string",
                             "description": (
                                 "What to change or the desired look (style, edits, constraints); "
-                                "the model conditions on the source image."
+                                "the model conditions on the source image. "
+                                "Themed edits (e.g. 生肖): add costume/scene/mood; keep IDENTITY.md appearance-locked traits."
                             ),
                         },
                         "source_image_relative_path": {
