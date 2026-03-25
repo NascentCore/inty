@@ -18,7 +18,10 @@ from inty_v2_text_chat_prototype.llm_trace import (
     summarize_messages,
     summarize_system_message_content,
 )
-from inty_v2_text_chat_prototype.prompts import SYSTEM_PROMPT_SEP, system_prompt_security_prefix
+from inty_v2_text_chat_prototype.prompts import (
+    SYSTEM_PROMPT_SEP,
+    system_prompt_security_prefix,
+)
 
 
 def test_summarize_messages_roles_and_lengths() -> None:

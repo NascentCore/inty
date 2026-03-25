@@ -5,10 +5,7 @@ package com.ai.intellimate.explore
  *
  * @param pagingItemCount 为 null 时表示无 Paging（仅占位 + Spacer，共 2 项，最后一项索引为 1）。
  */
-internal fun exploreLazyGridMaxItemIndex(
-    themeItemCount: Int,
-    pagingItemCount: Int?,
-): Int {
+internal fun exploreLazyGridMaxItemIndex(themeItemCount: Int, pagingItemCount: Int?): Int {
     if (pagingItemCount == null) {
         return 1
     }

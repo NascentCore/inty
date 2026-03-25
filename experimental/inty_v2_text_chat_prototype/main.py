@@ -32,9 +32,14 @@ load_prototype_dotenv()
 from app.core.repl_input.sleep_chunk import clamp_sleep_seconds
 from app.core.repl_input.stdin_queue import spawn_stdin_line_reader
 
-from experimental.inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
+from experimental.inty_v2_text_chat_prototype.bootstrap import (
+    init_workspace as bootstrap_init_workspace,
+)
 from experimental.inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
-from experimental.inty_v2_text_chat_prototype.proto_log import configure_proto_log, resolve_proto_log_file
+from experimental.inty_v2_text_chat_prototype.proto_log import (
+    configure_proto_log,
+    resolve_proto_log_file,
+)
 
 from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
@@ -45,7 +50,9 @@ from experimental.inty_v2_text_chat_prototype.orchestrator import (
     needs_startup_profile_inquiry,
     run_turn,
 )
-from experimental.inty_v2_text_chat_prototype.workspace_init_loop import run_workspace_bootstrap_loop
+from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
+    run_workspace_bootstrap_loop,
+)
 
 
 def _default_workspace() -> Path:
@@ -594,7 +601,11 @@ def bootstrap_agent(
     _init_proto_logging(workspace, log_file, no_log_file)
     _configure_llm_trace_for_workspace(workspace)
     logger.debug("cli bootstrap_agent ws={}", workspace.resolve())
-    user = message if (message is not None and message.strip()) else _DEFAULT_BOOTSTRAP_USER
+    user = (
+        message
+        if (message is not None and message.strip())
+        else _DEFAULT_BOOTSTRAP_USER
+    )
 
     def _on_tool(name: str, args: str) -> None:
         if not verbose_tools:
@@ -654,14 +665,18 @@ def repl(
     _configure_llm_trace_for_workspace(ws)
     logger.debug("cli repl start ws={}", ws.resolve())
     if not is_workspace_initialized(ws):
-        logger.debug("repl startup branch=bootstrap_auto_init (workspace not initialized)")
+        logger.debug(
+            "repl startup branch=bootstrap_auto_init (workspace not initialized)"
+        )
         t0 = time.perf_counter()
         out = run_workspace_bootstrap_loop(
             ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
     elif needs_startup_profile_inquiry(ws):
-        logger.debug("repl startup branch=startup_profile_inquiry (empty transcript, stub profile)")
+        logger.debug(
+            "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
+        )
         t0 = time.perf_counter()
         out = asyncio.run(
             run_turn(

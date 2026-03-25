@@ -216,8 +216,8 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     /**
      * 获取恢复滚动位置时的网格索引（钳制在合法范围内）
      *
-     * @param maxItemIndexInclusive 当前 LazyVerticalGrid 最后一项的索引（含）。列表变短或主题区
-     *   item 数变化时，保存的索引可能超出该值，会在 LazyGrid 滚动测量时触发 subcompose 前置条件崩溃。
+     * @param maxItemIndexInclusive 当前 LazyVerticalGrid 最后一项的索引（含）。列表变短或主题区 item 数变化时，保存的索引可能超出该值，会在
+     *   LazyGrid 滚动测量时触发 subcompose 前置条件崩溃。
      */
     fun getRestoredGridIndex(maxItemIndexInclusive: Int): Int {
         return _savedFirstVisibleGridIndex.value.coerceIn(0, maxOf(0, maxItemIndexInclusive))

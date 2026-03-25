@@ -148,7 +148,11 @@ def complete(
         (time.perf_counter() - t0) * 1000.0,
     )
     if llm_trace:
-        from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
+        from .llm_trace import (
+            emit_trace,
+            summarize_completion_response,
+            summarize_messages,
+        )
 
         emit_trace(
             trace_where,

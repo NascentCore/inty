@@ -64,7 +64,9 @@ class TestUserUpdateInterval(unittest.TestCase):
                     )
                     self.assertEqual(m_complete.call_count, 7)
 
-            self.assertEqual(paths.user_md.read_text(encoding="utf-8"), "# USER\n\nu3\n")
+            self.assertEqual(
+                paths.user_md.read_text(encoding="utf-8"), "# USER\n\nu3\n"
+            )
 
 
 if __name__ == "__main__":

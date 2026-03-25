@@ -25,7 +25,9 @@ class TestCapabilitiesNotInjected(unittest.TestCase):
             (root / "CAPABILITIES.md").write_text(f"# x\n{marker}\n", encoding="utf-8")
             paths = WorkspacePaths(root=root)
             bundle = load_prompt_bundle(paths, meta=ContextMeta())
-            system = build_system_prompt(bundle, ContextMeta(), enable_user_profile_tool=True)
+            system = build_system_prompt(
+                bundle, ContextMeta(), enable_user_profile_tool=True
+            )
             self.assertNotIn(marker, system)
             self.assertNotIn("## CAPABILITIES（基础能力与限制）", system)
 

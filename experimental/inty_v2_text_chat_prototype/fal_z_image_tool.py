@@ -9,7 +9,11 @@ from typing import Any
 
 import fal_client
 
-from app.core.images.fal import ZImageTurboImageToImageInput, z_image_turbo, z_image_turbo_image_to_image
+from app.core.images.fal import (
+    ZImageTurboImageToImageInput,
+    z_image_turbo,
+    z_image_turbo_image_to_image,
+)
 
 from .env_util import env_flag_enabled
 
@@ -103,7 +107,11 @@ def _maybe_write_local_copy(root: Path, item: Any) -> Path | None:
         ext = "bin"
     out_dir = root.resolve() / "generated_images"
     out_dir.mkdir(parents=True, exist_ok=True)
-    suffix = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:10]
+    suffix = (
+        datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        + "_"
+        + uuid.uuid4().hex[:10]
+    )
     path = out_dir / f"z_image_{suffix}.{ext}"
     path.write_bytes(raw)
     return path
@@ -196,9 +204,7 @@ async def run_modify_image_z_image_turbo(
     has_path = source_path is not None
     has_url = source_image_url is not None and source_image_url.strip() != ""
     if has_path and has_url:
-        return (
-            "ERROR: use only one of source_image_relative_path or source_image_url, not both"
-        )
+        return "ERROR: use only one of source_image_relative_path or source_image_url, not both"
     if not has_path and not has_url:
         return (
             "ERROR: modify_image requires source_image_relative_path (workspace image file) "
@@ -208,7 +214,9 @@ async def run_modify_image_z_image_turbo(
     gcs_base = _gcs_uri_base_for_workspace(root)
     if has_path:
         assert source_path is not None
-        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(source_path, gcs_base)
+        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(
+            source_path, gcs_base
+        )
     else:
         u = source_image_url.strip()
         if not (u.startswith("https://") or u.startswith("http://")):

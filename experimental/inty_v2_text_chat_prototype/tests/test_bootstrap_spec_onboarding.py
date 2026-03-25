@@ -9,7 +9,9 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.workspace_init_loop import load_bootstrap_instruction_text
+from inty_v2_text_chat_prototype.workspace_init_loop import (
+    load_bootstrap_instruction_text,
+)
 
 
 class TestBootstrapSpecOnboarding(unittest.TestCase):
