@@ -20,23 +20,6 @@ _CLIENT: OpenAI | None = None
 # experimental/inty_v2_text_chat_prototype/client.py → parents[2] = inty repo root
 _REPO_ROOT_FOR_DOTENV = Path(__file__).resolve().parent.parent.parent
 
-# LangSmith `tracing_is_enabled()` only treats the literal lowercase string "true" as on.
-_LANGSMITH_TRACING_TRUTHY = frozenset({"1", "yes", "on", "true"})
-
-
-def _coerce_langsmith_tracing_env() -> None:
-    for key in (
-        "LANGSMITH_TRACING_V2",
-        "LANGSMITH_TRACING",
-        "LANGCHAIN_TRACING_V2",
-        "LANGCHAIN_TRACING",
-    ):
-        raw = os.environ.get(key)
-        if raw is None or not str(raw).strip():
-            continue
-        if str(raw).strip().lower() in _LANGSMITH_TRACING_TRUTHY:
-            os.environ[key] = "true"
-
 
 def _flush_langsmith_traces_on_exit() -> None:
     from langsmith import utils as ls_utils
@@ -55,7 +38,6 @@ def load_prototype_dotenv() -> None:
     """Load `inty/.env` first, then cwd `.env` (e.g. OPENROUTER_API_KEY); cwd may differ from repo root."""
     load_dotenv(_REPO_ROOT_FOR_DOTENV / ".env")
     load_dotenv()
-    _coerce_langsmith_tracing_env()
 
 
 def _ensure_dotenv() -> None:

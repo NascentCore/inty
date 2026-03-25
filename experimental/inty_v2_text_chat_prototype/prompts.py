@@ -52,14 +52,22 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "（3）为核对工作区约定、记忆规则或控制面设置，可静默使用 workspace_list_dir / workspace_read_file "
         "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
         "本回合 system 中已完整给出且未变更的同一文件。"
-        "transcript 全量可能很大，优先依赖已在消息里的对话窗口；若必须读磁盘上的 transcript，应用工具参数限制返回长度。"
+        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
         "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
         "必须先静默调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文件内容。"
         "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
-        "（5）当用户**明确索要图片、画面、肖像照、插图**等视觉内容时，必须先静默调用 generate_image（Fal z-image-turbo），"
+        "（5）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先静默调用 generate_image（Fal z-image-turbo 文生图），"
         "再根据工具返回作答；张数由对话判定写入工具参数（默认 1）。"
-        "禁止在未调用该工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
+        "当用户要**修改、重画、换风格、在已有图基础上改**时，须调用 modify_image（Fal z-image-turbo **图生图**），"
+        "并传入工作区内源图路径（如 generated_images/…）或公网 source_image_url；**不要**用 generate_image 做改图。"
+        "生图若含**生肖像、年节/主题化肖像、风格化头像**等仍须呈现助手**约定外观**时：须以 **IDENTITY.md 中外貌相关小节**"
+        "（常见标题如「外貌与形象」）为**外形蓝本**，在工具 `prompt` 中显式写入该小节已落盘的**可核对特征**；"
+        "**禁止**擅自改写、弱化或替换已约定的**发型发色、眼型瞳色、五官标志性细节、肤色与体态锚点**等核心特征；"
+        "生肖/主题/节日元素仅作**服饰、道具、场景、氛围或装饰性**叠加，不得与上述蓝本冲突。"
+        "改图（modify_image）时若涉及主题化或换风格，同样须保持与 IDENTITY 外貌小节一致的关键特征，不得仅用提示词「换脸」或推翻既有约定。"
+        "若外貌小节缺失或过于笼统，应先 workspace_read_file IDENTITY.md 再组织 prompt，避免凭对话臆造长相。"
+        "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
         "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
         "无落盘需求、无磁盘事实核验、无自察必要、无生图请求时，不要调用工具。"
         "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
@@ -71,6 +79,7 @@ def build_system_prompt(
     context: ContextMeta,
     *,
     enable_user_profile_tool: bool = False,
+    heartbeat_turn: bool = False,
 ) -> str:
     parts: list[str] = [_security_base()]
     if bundle.agents_md.strip():
@@ -79,6 +88,12 @@ def build_system_prompt(
         parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
     if bundle.heartbeat_md.strip():
         parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
+    if heartbeat_turn:
+        parts.append(
+            "## 本轮（陪伴心跳）\n\n"
+            "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
+            "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。"
+        )
     parts.extend(
         [
             "## IDENTITY\n\n" + bundle.identity.strip(),
@@ -98,9 +113,10 @@ def build_system_prompt(
         )
     if bundle.memory_md.strip():
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
-    parts.append(
-        _output_contract_text_with_user_profile_tool()
-        if enable_user_profile_tool
-        else _output_contract_text()
-    )
+    if enable_user_profile_tool and heartbeat_turn:
+        parts.append(_output_contract_text())
+    elif enable_user_profile_tool:
+        parts.append(_output_contract_text_with_user_profile_tool())
+    else:
+        parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)

@@ -14,10 +14,12 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.fal_z_image_tool import MAX_NUM_IMAGES_PER_CALL
-from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call
+from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
 
 
-async def _fake_z_image_turbo_call(_args: object, _gcs_uri_base: str) -> list[SimpleNamespace]:
+async def _fake_z_image_turbo_call(
+    _args: object, _gcs_uri_base: str, **_kwargs: object
+) -> list[SimpleNamespace]:
     return [
         SimpleNamespace(
             gcs_http_url="https://example.com/fake.jpg",
@@ -28,7 +30,9 @@ async def _fake_z_image_turbo_call(_args: object, _gcs_uri_base: str) -> list[Si
     ]
 
 
-async def _fake_z_image_turbo_call_two(_args: object, _gcs_uri_base: str) -> list[SimpleNamespace]:
+async def _fake_z_image_turbo_call_two(
+    _args: object, _gcs_uri_base: str, **_kwargs: object
+) -> list[SimpleNamespace]:
     return [
         SimpleNamespace(
             gcs_http_url="https://example.com/a.jpg",
@@ -49,7 +53,7 @@ class TestGenerateImageTool(unittest.TestCase):
     def test_empty_prompt_errors(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "generate_image",
                 json.dumps({"prompt": ""}),
@@ -59,7 +63,7 @@ class TestGenerateImageTool(unittest.TestCase):
     def test_num_images_zero_errors(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "generate_image",
                 json.dumps({"prompt": "a cat", "num_images": 0}),
@@ -70,7 +74,7 @@ class TestGenerateImageTool(unittest.TestCase):
     def test_num_images_above_cap_errors(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "generate_image",
                 json.dumps(
@@ -84,10 +88,10 @@ class TestGenerateImageTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             with patch(
-                "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_call",
+                "inty_v2_text_chat_prototype.fal_z_image_tool.z_image_turbo",
                 new=_fake_z_image_turbo_call,
             ):
-                out = execute_tool_call(
+                out = execute_tool_call_blocking(
                     root,
                     "generate_image",
                     json.dumps({"prompt": "test scene"}),
@@ -108,10 +112,10 @@ class TestGenerateImageTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             with patch(
-                "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_call",
+                "inty_v2_text_chat_prototype.fal_z_image_tool.z_image_turbo",
                 new=_fake_z_image_turbo_call_two,
             ):
-                out = execute_tool_call(
+                out = execute_tool_call_blocking(
                     root,
                     "generate_image",
                     json.dumps({"prompt": "two moods", "num_images": 2}),
