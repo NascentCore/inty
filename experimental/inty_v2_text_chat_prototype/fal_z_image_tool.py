@@ -9,19 +9,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.core.images.fal import z_image_turbo
+
 from pydantic import ValidationError
 
 # 与 app/api/v1/endpoints/agents.py _generate_with_fal_z_image_turbo 对齐的默认推理参数
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
 # 单次调用张数上限（模型应按对话自行决定 1..N，省略则 1）
 MAX_NUM_IMAGES_PER_CALL = 4
-
-
-async def _z_image_turbo_call(args: Any, gcs_uri_base: str) -> list[Any]:
-    """可测性钩子：patch 此协程即可避免真实 Fal/GCS。"""
-    from app.core.images.fal import z_image_turbo as _impl
-
-    return await _impl(args, gcs_uri_base)
 
 
 def _gcs_uri_base_for_workspace(root: Path) -> str:
@@ -109,7 +104,7 @@ def run_generate_image_z_image_turbo(
         num_images=num_images,
     )
     gcs_base = _gcs_uri_base_for_workspace(root)
-    results = asyncio.run(_z_image_turbo_call(z_in, gcs_base))
+    results = asyncio.run(z_image_turbo(z_in, gcs_base))
 
     if not results:
         return "ERROR: Fal z-image-turbo returned no images."

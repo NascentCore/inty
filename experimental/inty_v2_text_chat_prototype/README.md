@@ -4,7 +4,7 @@
 
 ## 依赖
 
-本目录 [requirements.txt](requirements.txt)（`cyclopts`、`langsmith`、`openai`、`pydantic`、`python-dotenv`、`loguru`）。建议在 `inty` 仓库根虚拟环境中安装：
+本目录 [requirements.txt](requirements.txt)（`cyclopts`、`langsmith`、`openai`、`pydantic`、`python-dotenv`、`loguru`、`PyYAML`）。`generate_image` 会导入 `app.core.config`（读仓库根 `config.yaml`），因此需要 **PyYAML** 与下文所述的仓库根依赖。建议在 `inty` 仓库根虚拟环境中安装：
 
 ```bash
 cd /path/to/inty
@@ -22,7 +22,7 @@ REPL 的 **`generate_image`**（Fal **z-image-turbo** 文生图）复用 [`app/c
 
 **聊天 API Key（与 `config.yaml` 无关）：** `OPENROUTER_API_KEY` 或 `OPENAI_API_KEY` 建议放在 **`inty` 仓库根** 的 `.env`（与 `config.yaml` 同级）；`main` / `client` 会先加载该 `.env` 再加载当前工作目录下的 `.env`，因此在子目录里执行 `python main.py` 也能读到。勿将 `.env` 提交到 git。
 
-**LangSmith（可选）：** `client` 使用 [`wrap_openai`](https://docs.langchain.com/langsmith/trace-openai)。须设置 `LANGSMITH_API_KEY`（或兼容的 `LANGCHAIN_API_KEY`），并把 **`LANGSMITH_TRACING=true` 或 `LANGSMITH_TRACING_V2=true`** 写成**小写** `true`（仅写 `1` / `True` 时 SDK 视为未开启；加载 `.env` 后本原型会把 `1`/`yes`/`on`/`true` 规范成小写 `true`）。可选 `LANGSMITH_PROJECT`（默认在 LangSmith 里多为 `default` 项目）。进程退出前会 `flush` 缓存 client，避免 `once` 等短进程丢末批 trace。
+**LangSmith（可选）：** `client` 使用 [`wrap_openai`](https://docs.langchain.com/langsmith/trace-openai)。须设置 `LANGSMITH_API_KEY`（或兼容的 `LANGCHAIN_API_KEY`），并把 **`LANGSMITH_TRACING=true` 或 `LANGSMITH_TRACING_V2=true`** 写成字面量 **`true`**（小写）；`1`、`True`、`.env` 里的大写 `True` 等值可能被 SDK 视为未开启。可选 `LANGSMITH_PROJECT`（默认在 LangSmith 里多为 `default` 项目）。进程退出前会 `flush` 缓存 client，避免 `once` 等短进程丢末批 trace。
 
 无上述 Fal/GCS 条件时，模型仍可对话，但调用 `generate_image` 会返回以 `ERROR:` 开头的工具结果。
 
