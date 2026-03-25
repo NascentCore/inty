@@ -1,4 +1,5 @@
 cyclopts
+loguru
 openai
 pydantic
 python-dotenv

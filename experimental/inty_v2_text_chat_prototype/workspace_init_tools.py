@@ -7,6 +7,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
+from .fal_z_image_tool import MAX_NUM_IMAGES_PER_CALL, run_generate_image_z_image_turbo
 from .file_store import read_text, write_text
 
 _USER_MD_REL = "USER.md"
@@ -384,7 +385,72 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             out.append(w)
         else:
             out.append(t)
+    out.append(
+        {
+            "type": "function",
+            "function": {
+                "name": "generate_image",
+                "description": (
+                    "Generate image(s) from a text prompt using Fal z-image-turbo (text-to-image). "
+                    "Call only when the user clearly asks for picture(s), illustration(s), or visuals. "
+                    "Set num_images from conversation context: e.g. user asks for three variants or "
+                    "multiple angles → pass that count; single scene or unspecified → omit num_images "
+                    f"(defaults to 1). Maximum {MAX_NUM_IMAGES_PER_CALL} per call. "
+                    "Requires backend env (FAL_KEY, GCS, config.yaml) when run from repo root. "
+                    "After success, describe in companion language without reading raw URLs aloud unless helpful."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": (
+                                "Full English or Chinese scene description for the image "
+                                "(style, subject, mood, composition)."
+                            ),
+                        },
+                        "image_size": {
+                            "type": "string",
+                            "description": (
+                                "Optional fal preset, e.g. portrait_4_3, square_hd, landscape_16_9. "
+                                "Omit for prototype default (portrait_4_3)."
+                            ),
+                        },
+                        "num_inference_steps": {
+                            "type": "integer",
+                            "description": "Optional inference steps (default 8). Must be >= 1.",
+                        },
+                        "num_images": {
+                            "type": "integer",
+                            "description": (
+                                "How many images to generate this call: infer from the user message "
+                                "(e.g. «三张」「几个版本» → matching count). Omit for a single image (default 1). "
+                                f"Must be 1..{MAX_NUM_IMAGES_PER_CALL}."
+                            ),
+                        },
+                    },
+                    "required": ["prompt"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
     return out
+
+
+def _parse_optional_positive_int(
+    raw: Any, *, field_name: str
+) -> tuple[int | None, str | None]:
+    """返回 (值, 错误信息)；raw 为 None 或缺失视为省略。"""
+    if raw is None:
+        return (None, None)
+    if isinstance(raw, bool):
+        return (None, f"{field_name} must be an integer")
+    if isinstance(raw, int):
+        if raw < 1:
+            return (None, f"{field_name} must be >= 1")
+        return (raw, None)
+    return (None, f"{field_name} must be an integer")
 
 
 def _repl_write_allowed(root: Path, relative_path: str, write_allowlist: frozenset[str]) -> str | None:
@@ -433,6 +499,33 @@ def _dispatch(
         if not isinstance(raw_items, list):
             return "ERROR: items must be a JSON array"
         return tool_user_profile_record(root, raw_items)
+    if name == "generate_image":
+        prompt = arguments.get("prompt")
+        if not isinstance(prompt, str):
+            return "ERROR: prompt must be a string"
+        image_size = arguments.get("image_size")
+        if image_size is not None and not isinstance(image_size, str):
+            return "ERROR: image_size must be a string or omitted"
+        image_size_s = image_size.strip() if isinstance(image_size, str) else None
+        if image_size_s == "":
+            image_size_s = None
+        n_steps, err = _parse_optional_positive_int(
+            arguments.get("num_inference_steps"), field_name="num_inference_steps"
+        )
+        if err:
+            return f"ERROR: {err}"
+        n_img, err2 = _parse_optional_positive_int(
+            arguments.get("num_images"), field_name="num_images"
+        )
+        if err2:
+            return f"ERROR: {err2}"
+        return run_generate_image_z_image_turbo(
+            root,
+            prompt=prompt,
+            image_size=image_size_s,
+            num_inference_steps=n_steps,
+            num_images=n_img,
+        )
     return f"ERROR: unknown tool {name!r}"
 
 
@@ -443,17 +536,30 @@ def execute_tool_call(
     *,
     write_allowlist: frozenset[str] | None = None,
 ) -> str:
+    from loguru import logger
+
     raw = (arguments_json or "").strip()
     try:
         parsed: dict[str, Any] = json.loads(raw) if raw else {}
     except json.JSONDecodeError as exc:
-        return f"ERROR: invalid JSON arguments: {exc}"
+        err = f"ERROR: invalid JSON arguments: {exc}"
+        logger.warning("tool {} json_error: {}", name, err)
+        return err
     if not isinstance(parsed, dict):
-        return "ERROR: tool arguments must be a JSON object"
+        err = "ERROR: tool arguments must be a JSON object"
+        logger.warning("tool {} {}", name, err)
+        return err
     try:
-        return _dispatch(root, name, parsed, write_allowlist=write_allowlist)
+        out = _dispatch(root, name, parsed, write_allowlist=write_allowlist)
     except (OSError, ValueError) as exc:
-        return f"ERROR: {exc}"
+        err = f"ERROR: {exc}"
+        logger.warning("tool {} dispatch: {}", name, err)
+        return err
+    if out.startswith("ERROR:"):
+        logger.warning("tool {} result: {}", name, out)
+    else:
+        logger.debug("tool {} ok ({} chars)", name, len(out))
+    return out
 
 
 def tool_executor_for_root(root: Path) -> Callable[[str, str], str]:

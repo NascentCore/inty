@@ -12,12 +12,21 @@ from cyclopts import App, Parameter
 
 # `python main.py` loads this file as __main__ with no package; ensure parent of this
 # directory is on sys.path so `inty_v2_text_chat_prototype.*` resolves like `python -m`.
+# Repo root enables `import app` (e.g. Fal z-image tool → app.core.images.fal).
 _PKG_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _PKG_DIR.parent.parent
 if __package__ is None:
     sys.path.insert(0, str(_PKG_DIR.parent))
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from inty_v2_text_chat_prototype.client import load_prototype_dotenv
+
+load_prototype_dotenv()
 
 from inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
 from inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
+from inty_v2_text_chat_prototype.proto_log import configure_proto_log, resolve_proto_log_file
 from inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_initialized,
     needs_startup_profile_inquiry,
@@ -41,6 +50,24 @@ def _print_assistant_reply(out: str, elapsed_s: float) -> None:
     print(out)
 
 
+def _init_proto_logging(
+    workspace: Path,
+    log_file: Path | None,
+    no_log_file: bool,
+) -> None:
+    """stderr + 可选 <workspace>/inty_v2.log（与 llm_trace 并列，记 loguru 运行时日志）。"""
+    from loguru import logger
+
+    resolved = resolve_proto_log_file(
+        workspace, explicit=log_file, no_log_file=no_log_file
+    )
+    configure_proto_log(resolved)
+    logger.info(
+        "inty_v2 proto logging file={}",
+        str(resolved) if resolved is not None else "(stderr only)",
+    )
+
+
 app = App(
     name="inty-v2-text-chat-prototype",
     help="INTY v2 本地文本聊天原型（文件持久化，无 HTTP/DB）。",
@@ -53,8 +80,20 @@ def init_workspace(
         Path,
         Parameter(name="--path", help="要创建的 workspace 目录路径"),
     ],
+    log_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--log-file",
+            help="loguru 文件日志路径；默认 <path>/inty_v2.log；见 --no-log-file",
+        ),
+    ] = None,
+    no_log_file: Annotated[
+        bool,
+        Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
+    ] = False,
 ) -> None:
     """写入 IDENTITY/SOUL/USER/MEMORY、空 transcript、memory/ 与 memory/daily/、context.json。"""
+    _init_proto_logging(path, log_file, no_log_file)
     bootstrap_init_workspace(path)
 
 
@@ -106,8 +145,20 @@ def bootstrap_agent(
             help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
         ),
     ] = None,
+    log_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--log-file",
+            help="loguru 文件日志；默认 <workspace>/inty_v2.log",
+        ),
+    ] = None,
+    no_log_file: Annotated[
+        bool,
+        Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
+    ] = False,
 ) -> None:
     """Agentic 工具循环：按 _ws2/BOOSTRAP.md 用 LLM + 文件工具初始化工作区。"""
+    _init_proto_logging(workspace, log_file, no_log_file)
     configure_llm_trace_file(llm_trace_file)
     trace_on = llm_trace_file is not None
     user = message if (message is not None and message.strip()) else _DEFAULT_BOOTSTRAP_USER
@@ -145,11 +196,23 @@ def repl(
             help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
         ),
     ] = None,
+    log_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--log-file",
+            help="loguru 文件日志；默认 <workspace>/inty_v2.log",
+        ),
+    ] = None,
+    no_log_file: Annotated[
+        bool,
+        Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
+    ] = False,
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
+    ws = workspace or _default_workspace()
+    _init_proto_logging(ws, log_file, no_log_file)
     configure_llm_trace_file(llm_trace_file)
     trace_on = llm_trace_file is not None
-    ws = workspace or _default_workspace()
     if not is_workspace_initialized(ws):
         t0 = time.perf_counter()
         out = run_workspace_bootstrap_loop(
@@ -200,11 +263,23 @@ def once(
             help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
         ),
     ] = None,
+    log_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--log-file",
+            help="loguru 文件日志；默认 <workspace>/inty_v2.log",
+        ),
+    ] = None,
+    no_log_file: Annotated[
+        bool,
+        Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
+    ] = False,
 ) -> None:
     """单轮对话。"""
+    ws = workspace or _default_workspace()
+    _init_proto_logging(ws, log_file, no_log_file)
     configure_llm_trace_file(llm_trace_file)
     trace_on = llm_trace_file is not None
-    ws = workspace or _default_workspace()
     t0 = time.perf_counter()
     out = run_turn(
         ws,

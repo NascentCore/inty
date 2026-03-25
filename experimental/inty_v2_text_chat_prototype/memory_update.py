@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import queue
 import threading
+
+from loguru import logger
 
 from .client import complete, day_summary_model, memory_model, soul_model, user_model
 from .file_store import append_line, read_text, write_text_atomic
 from .paths import WorkspacePaths
 from .utc import local_date_str, local_iso_ts
-
-logger = logging.getLogger(__name__)
 
 _DIARY_USER_MAX = 240
 _DIARY_ASSISTANT_MAX = 320

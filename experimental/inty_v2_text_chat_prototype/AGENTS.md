@@ -23,7 +23,7 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
-11. Output / tool contract (REPL adds `user_profile_record` + workspace tool rules).
+11. Output / tool contract (REPL adds `user_profile_record`, workspace file tools, and optional `generate_image` with context-inferred `num_images`, default 1).
 
 Optional docs (2–4, 5) omitted entirely when missing or empty — no placeholder sections.
 

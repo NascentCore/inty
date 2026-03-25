@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from pathlib import Path
 from typing import Any
+
+from loguru import logger
 
 from .client import default_model, get_client
 from .file_store import append_jsonl, read_text
@@ -82,6 +85,12 @@ def _run_turn_with_user_profile_tools(
             fn = tc.function
             name = fn.name
             args = fn.arguments if fn.arguments is not None else ""
+            logger.info(
+                "repl.turn tool_call round={} name={} arg_bytes={}",
+                round_idx,
+                name,
+                len(args.encode("utf-8")),
+            )
             result = execute_tool_call(
                 root,
                 name,
@@ -188,8 +197,16 @@ def run_turn(
     llm_trace: bool = False,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。"""
+    t0 = time.perf_counter()
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
+    logger.info(
+        "run_turn start path={} user_chars={} defer_memory={} llm_trace={}",
+        root,
+        len(user_text),
+        defer_memory_update,
+        llm_trace,
+    )
     _require_workspace_files(paths)
     get_client()
 
@@ -260,4 +277,9 @@ def run_turn(
             llm_trace=llm_trace,
         )
 
+    logger.info(
+        "run_turn done assistant_chars={} ms={:.0f}",
+        len(assistant_text),
+        (time.perf_counter() - t0) * 1000.0,
+    )
     return assistant_text

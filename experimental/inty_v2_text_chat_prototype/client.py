@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -12,9 +13,18 @@ _DEFAULT_MODEL = "deepseek/deepseek-v3.2"
 
 _CLIENT: OpenAI | None = None
 
+# experimental/inty_v2_text_chat_prototype/client.py → parents[2] = inty repo root
+_REPO_ROOT_FOR_DOTENV = Path(__file__).resolve().parent.parent.parent
+
+
+def load_prototype_dotenv() -> None:
+    """Load `inty/.env` first, then cwd `.env`, so keys like `FAL_KEY` work when cwd is not repo root."""
+    load_dotenv(_REPO_ROOT_FOR_DOTENV / ".env")
+    load_dotenv()
+
 
 def _ensure_dotenv() -> None:
-    load_dotenv()
+    load_prototype_dotenv()
 
 
 def get_client() -> OpenAI:
