@@ -5,7 +5,7 @@
   2. llm_trace.jsonl (llm invocations)
   3. transcript.jsonl (messages)
 
-Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of LLM context from a workspace directory (e.g. `_ws/`). Implementation: `orchestrator.run_turn` → `load_context_meta` + `load_prompt_bundle` + `load_transcript` → `build_system_prompt`.
+Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of LLM context from a workspace directory (e.g. `_ws/`). Implementation: `orchestrator.run_turn` → `load_context_meta` + `load_prompt_bundle` + `load_transcript` + `models.transcript_for_llm_turn` → `build_system_prompt`.
 
 ## Control plane
 
@@ -43,8 +43,9 @@ Order differs from final prompt section order: implementation reads long-term **
 
 ## Transcript
 
-- **`transcript.jsonl`** is **not** part of `PromptBundle`. It is loaded separately, truncated to the last `TRANSCRIPT_WINDOW_MAX_MESSAGES` entries, and appended **after** the system message as alternating user/assistant messages.
+- **`transcript.jsonl`** is **not** part of `PromptBundle`. It is loaded separately, then **`models.transcript_for_llm_turn`** selects which lines go into the API messages: **normal user turns** use only the last `TRANSCRIPT_WINDOW_MAX_MESSAGES` entries; **REPL 陪伴心跳** (`heartbeat_turn`) uses the **full** transcript (no truncation) so the model keeps long-range chat context. Appended **after** the system message as alternating user/assistant messages.
 - Each line is JSON with `role`, `content`, `ts`, and (for lines written by `orchestrator.run_turn` after this feature) **`uuid`** (stable id for that message; used by `llm_trace` summaries to reference transcript rows without echoing body text). Older lines may omit `uuid`.
+- REPL **陪伴心跳**（见 `main.repl` / `heartbeat_schedule.py`）：空闲达到节奏阈值时由程序合成一轮 `user` 行（`content` 为固定提示语），可带 **`heartbeat`: true**；该回合不跑记忆管线，且 API 不挂载工具。
 
 ## Required files for a runnable workspace
 

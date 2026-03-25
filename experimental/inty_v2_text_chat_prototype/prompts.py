@@ -73,6 +73,7 @@ def build_system_prompt(
     context: ContextMeta,
     *,
     enable_user_profile_tool: bool = False,
+    heartbeat_turn: bool = False,
 ) -> str:
     parts: list[str] = [_security_base()]
     if bundle.agents_md.strip():
@@ -81,6 +82,11 @@ def build_system_prompt(
         parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
     if bundle.heartbeat_md.strip():
         parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
+    if heartbeat_turn:
+        parts.append(
+            "## 本轮（陪伴心跳）\n\n"
+            "用户尚未发送新消息；仅输出自然语言短句，不要调用工具。"
+        )
     parts.extend(
         [
             "## IDENTITY\n\n" + bundle.identity.strip(),
@@ -100,9 +106,10 @@ def build_system_prompt(
         )
     if bundle.memory_md.strip():
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
-    parts.append(
-        _output_contract_text_with_user_profile_tool()
-        if enable_user_profile_tool
-        else _output_contract_text()
-    )
+    if enable_user_profile_tool and heartbeat_turn:
+        parts.append(_output_contract_text())
+    elif enable_user_profile_tool:
+        parts.append(_output_contract_text_with_user_profile_tool())
+    else:
+        parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import queue
 import sys
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +31,10 @@ load_prototype_dotenv()
 from experimental.inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
 from experimental.inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
 from experimental.inty_v2_text_chat_prototype.proto_log import configure_proto_log, resolve_proto_log_file
+from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
+    HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+    next_heartbeat_wait_seconds,
+)
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_initialized,
     needs_startup_profile_inquiry,
@@ -73,6 +79,117 @@ def _init_proto_logging(
 def _configure_llm_trace_for_workspace(root: Path) -> None:
     """Append-only JSONL：每轮 chat.completions 请求/响应摘要，固定 `<workspace>/llm_trace.jsonl`。"""
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
+
+
+def _repl_heartbeat_enabled(
+    *,
+    cli_enable: bool,
+    cli_disable: bool,
+) -> bool:
+    """`--no-repl-heartbeat` 优先；否则 `--repl-heartbeat`；否则读 INTY_V2_PROTO_HEARTBEAT。"""
+    from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
+        heartbeat_enabled_from_env,
+    )
+
+    if cli_disable:
+        return False
+    if cli_enable:
+        return True
+    return heartbeat_enabled_from_env()
+
+
+def _repl_interactive_loop(
+    ws: Path,
+    *,
+    debug_print_system: bool,
+    heartbeat: bool,
+) -> None:
+    """阻塞读用户输入；可选在空闲达到节奏阈值时触发陪伴心跳（额外一轮 run_turn）。"""
+    if not heartbeat:
+        while True:
+            try:
+                line = input("> ")
+            except EOFError:
+                print()
+                break
+            if line.strip() in ("quit", "exit", "q"):
+                break
+            if not line.strip():
+                continue
+            print(f"[{_local_ts_str()}] {line}")
+            logger.debug(
+                "repl interactive_turn line_chars={} preview={}",
+                len(line),
+                _preview_line(line),
+            )
+            t0 = time.perf_counter()
+            out = asyncio.run(
+                run_turn(ws, line, debug_print_system=debug_print_system, llm_trace=True)
+            )
+            _print_assistant_reply(out, time.perf_counter() - t0)
+        return
+
+    line_queue: queue.Queue[str | None] = queue.Queue()
+
+    def _stdin_reader() -> None:
+        while True:
+            try:
+                raw = sys.stdin.readline()
+            except KeyboardInterrupt:
+                line_queue.put(None)
+                return
+            if raw == "":
+                line_queue.put(None)
+                return
+            line_queue.put(raw.rstrip("\r\n"))
+
+    threading.Thread(target=_stdin_reader, daemon=True).start()
+    print("> ", end="", flush=True)
+
+    while True:
+        wait = next_heartbeat_wait_seconds(ws)
+        if wait <= 0.0:
+            logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
+            t0 = time.perf_counter()
+            out = asyncio.run(
+                run_turn(
+                    ws,
+                    "",
+                    heartbeat_turn=True,
+                    debug_print_system=debug_print_system,
+                    llm_trace=True,
+                )
+            )
+            _print_assistant_reply(out, time.perf_counter() - t0)
+            print("> ", end="", flush=True)
+            continue
+
+        sleep_s = min(max(0.05, wait), HEARTBEAT_MAX_SLEEP_CHUNK_SEC)
+        try:
+            line = line_queue.get(timeout=sleep_s)
+        except queue.Empty:
+            continue
+
+        if line is None:
+            print()
+            break
+        if line.strip() in ("quit", "exit", "q"):
+            break
+        if not line.strip():
+            print("> ", end="", flush=True)
+            continue
+        print(f"[{_local_ts_str()}] {line}")
+        logger.debug(
+            "repl interactive_turn line_chars={} preview={}",
+            len(line),
+            _preview_line(line),
+        )
+        t0 = time.perf_counter()
+        out = asyncio.run(
+            run_turn(ws, line, debug_print_system=debug_print_system, llm_trace=True)
+        )
+        _print_assistant_reply(out, time.perf_counter() - t0)
+        print("> ", end="", flush=True)
 
 
 def _preview_line(s: str, max_len: int = 200) -> str:
@@ -207,6 +324,20 @@ def repl(
         bool,
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
+    repl_heartbeat: Annotated[
+        bool,
+        Parameter(
+            name="--repl-heartbeat",
+            help="启用空闲陪伴心跳（按 transcript 节奏主动一轮；可配合 INTY_V2_PROTO_HEARTBEAT）",
+        ),
+    ] = False,
+    no_repl_heartbeat: Annotated[
+        bool,
+        Parameter(
+            name="--no-repl-heartbeat",
+            help="显式关闭空闲心跳（覆盖环境变量）",
+        ),
+    ] = False,
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
     ws = workspace or _default_workspace()
@@ -234,27 +365,12 @@ def repl(
         _print_assistant_reply(out, time.perf_counter() - t0)
     else:
         logger.debug("repl startup branch=interactive (ready for user input)")
-    while True:
-        try:
-            line = input("> ")
-        except EOFError:
-            print()
-            break
-        if line.strip() in ("quit", "exit", "q"):
-            break
-        if not line.strip():
-            continue
-        print(f"[{_local_ts_str()}] {line}")
-        logger.debug(
-            "repl interactive_turn line_chars={} preview={}",
-            len(line),
-            _preview_line(line),
-        )
-        t0 = time.perf_counter()
-        out = asyncio.run(
-            run_turn(ws, line, debug_print_system=debug_print_system, llm_trace=True)
-        )
-        _print_assistant_reply(out, time.perf_counter() - t0)
+    hb = _repl_heartbeat_enabled(
+        cli_enable=repl_heartbeat,
+        cli_disable=no_repl_heartbeat,
+    )
+    logger.debug("repl interactive heartbeat_enabled={}", hb)
+    _repl_interactive_loop(ws, debug_print_system=debug_print_system, heartbeat=hb)
 
 
 @app.command

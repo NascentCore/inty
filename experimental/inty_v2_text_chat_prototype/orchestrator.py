@@ -20,6 +20,7 @@ from .models import (
     load_context_meta,
     load_prompt_bundle,
     load_transcript,
+    transcript_for_llm_turn,
 )
 from .paths import WorkspacePaths
 from .prompts import build_system_prompt
@@ -31,6 +32,7 @@ from .llm_trace import (
     summarize_messages,
 )
 from .fal_z_image_tool import _reset_fal_async_client_after_short_lived_loop
+from .heartbeat_schedule import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
@@ -99,23 +101,26 @@ async def _run_turn_with_user_profile_tools(
     root: Path,
     *,
     llm_trace: bool = True,
+    heartbeat_turn: bool = False,
 ) -> str:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
     model = default_model()
-    tools = build_openai_repl_tools()
-    if not tools:
+    tools: list[Any] = [] if heartbeat_turn else build_openai_repl_tools()
+    if not heartbeat_turn and not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
         t_api = time.perf_counter()
-        resp = client.chat.completions.create(
-            model=model,
-            messages=_openai_messages_payload(messages),
-            tools=tools,
-            parallel_tool_calls=True,
-        )
+        create_kw: dict[str, Any] = {
+            "model": model,
+            "messages": _openai_messages_payload(messages),
+        }
+        if tools:
+            create_kw["tools"] = tools
+            create_kw["parallel_tool_calls"] = True
+        resp = client.chat.completions.create(**create_kw)
         ch0 = resp.choices[0]
         fr = getattr(ch0, "finish_reason", None) or "?"
         msg = ch0.message
@@ -308,28 +313,28 @@ def _require_workspace_files(paths: WorkspacePaths) -> None:
             raise ValueError(f"missing required workspace file: {p}")
 
 
-def _truncate_transcript(msgs: list[ChatMessage]) -> list[ChatMessage]:
-    if len(msgs) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
-        return msgs
-    return msgs[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
-
-
 async def run_turn(
     workspace: Path,
     user_text: str,
     *,
+    heartbeat_turn: bool = False,
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
     llm_trace: bool = False,
 ) -> str:
-    """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。"""
+    """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
+    heartbeat_turn=True：用户侧为系统合成的陪伴心跳提示，不跑记忆管线。"""
     t0 = time.perf_counter()
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
+    if heartbeat_turn:
+        user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
+
     logger.info(
-        "run_turn start path={} user_chars={} defer_memory={} llm_trace={}",
+        "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={} llm_trace={}",
         root,
         len(user_text),
+        heartbeat_turn,
         defer_memory_update,
         llm_trace,
     )
@@ -340,19 +345,26 @@ async def run_turn(
         t_load = time.perf_counter()
         context = load_context_meta(paths.context_json)
         bundle = load_prompt_bundle(paths, meta=context)
-        transcript = _truncate_transcript(load_transcript(paths.transcript))
+        loaded = load_transcript(paths.transcript)
+        transcript = transcript_for_llm_turn(loaded, heartbeat_turn=heartbeat_turn)
         _debug_log_prompt_bundle(bundle, context=context)
 
-        system = build_system_prompt(bundle, context, enable_user_profile_tool=True)
+        system = build_system_prompt(
+            bundle,
+            context,
+            enable_user_profile_tool=True,
+            heartbeat_turn=heartbeat_turn,
+        )
         logger.debug(
             "run_turn system_prompt_chars={} sep_count={}",
             len(system),
             system.count("\n\n---\n\n"),
         )
         logger.info(
-            "run_turn load_context_build_system_ms={:.0f} transcript_msgs={}",
+            "run_turn load_context_build_system_ms={:.0f} transcript_msgs={} transcript_window={}",
             (time.perf_counter() - t_load) * 1000.0,
             len(transcript),
+            "full" if heartbeat_turn else f"last_{TRANSCRIPT_WINDOW_MAX_MESSAGES}",
         )
         if debug_print_system:
             print(system)
@@ -387,7 +399,10 @@ async def run_turn(
         ts_user = utc_iso_ts()
         t_main = time.perf_counter()
         assistant_text = await _run_turn_with_user_profile_tools(
-            messages, root, llm_trace=llm_trace
+            messages,
+            root,
+            llm_trace=llm_trace,
+            heartbeat_turn=heartbeat_turn,
         )
         logger.info(
             "run_turn main_repl_tool_loop_wall_ms={:.0f}",
@@ -396,15 +411,15 @@ async def run_turn(
 
         assistant_msg_uuid = str(uuid.uuid4())
         t_persist = time.perf_counter()
-        append_jsonl(
-            paths.transcript,
-            {
-                "role": "user",
-                "content": user_text,
-                "ts": ts_user,
-                "uuid": user_msg_uuid,
-            },
-        )
+        user_row: dict[str, Any] = {
+            "role": "user",
+            "content": user_text,
+            "ts": ts_user,
+            "uuid": user_msg_uuid,
+        }
+        if heartbeat_turn:
+            user_row["heartbeat"] = True
+        append_jsonl(paths.transcript, user_row)
         ts_asst = utc_iso_ts()
         append_jsonl(
             paths.transcript,
@@ -421,7 +436,13 @@ async def run_turn(
             (time.perf_counter() - t_persist) * 1000.0,
         )
 
-        if defer_memory_update:
+        if heartbeat_turn:
+            logger.debug(
+                "run_turn memory_pipeline=skipped (heartbeat_turn) user_uuid={} assistant_uuid={}",
+                user_msg_uuid,
+                assistant_msg_uuid,
+            )
+        elif defer_memory_update:
             logger.debug(
                 "run_turn memory_pipeline=async (enqueue) user_uuid={} assistant_uuid={}",
                 user_msg_uuid,

@@ -1,0 +1,129 @@
+"""陪伴心跳调度：transcript 节奏与冷却。"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
+    next_heartbeat_wait_seconds,
+)
+
+
+def _write_transcript(path: Path, rows: list[dict[str, object]]) -> None:
+    path.write_text(
+        "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n",
+        encoding="utf-8",
+    )
+
+
+class TestHeartbeatSchedule(unittest.TestCase):
+    def test_disabled_returns_large_wait(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "transcript.jsonl").write_text("", encoding="utf-8")
+            with patch.dict(os.environ, {}, clear=True):
+                w = next_heartbeat_wait_seconds(root)
+            self.assertGreater(w, 86400.0 * 10)
+
+    def test_short_transcript_no_fire(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _write_transcript(
+                root / "transcript.jsonl",
+                [
+                    {
+                        "role": "user",
+                        "content": "hi",
+                        "ts": "2026-01-01T00:00:00+00:00",
+                        "uuid": "a",
+                    },
+                ],
+            )
+            with patch.dict(os.environ, {"INTY_V2_PROTO_HEARTBEAT": "1"}, clear=False):
+                w = next_heartbeat_wait_seconds(root)
+            self.assertGreater(w, 86400.0)
+
+    def test_ready_when_assistant_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            t_user = t0.isoformat()
+            t_asst = (t0 + timedelta(seconds=1)).isoformat()
+            _write_transcript(
+                root / "transcript.jsonl",
+                [
+                    {"role": "user", "content": "hi", "ts": t_user, "uuid": "a"},
+                    {
+                        "role": "assistant",
+                        "content": "hello",
+                        "ts": t_asst,
+                        "uuid": "b",
+                    },
+                ],
+            )
+            now = t0 + timedelta(seconds=3600)
+            with patch.dict(
+                os.environ,
+                {
+                    "INTY_V2_PROTO_HEARTBEAT": "1",
+                    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC": "10",
+                },
+                clear=False,
+            ):
+                w = next_heartbeat_wait_seconds(root, now=now)
+            self.assertLessEqual(w, 0.0)
+
+    def test_min_gap_after_previous_heartbeat(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            rows = [
+                {"role": "user", "content": "a", "ts": base.isoformat(), "uuid": "1"},
+                {
+                    "role": "assistant",
+                    "content": "b",
+                    "ts": (base + timedelta(seconds=1)).isoformat(),
+                    "uuid": "2",
+                },
+                {
+                    "role": "user",
+                    "content": "hb",
+                    "ts": (base + timedelta(seconds=120)).isoformat(),
+                    "uuid": "3",
+                    "heartbeat": True,
+                },
+                {
+                    "role": "assistant",
+                    "content": "ping",
+                    "ts": (base + timedelta(seconds=121)).isoformat(),
+                    "uuid": "4",
+                },
+            ]
+            _write_transcript(root / "transcript.jsonl", rows)
+            now = base + timedelta(seconds=200)
+            with patch.dict(
+                os.environ,
+                {
+                    "INTY_V2_PROTO_HEARTBEAT": "1",
+                    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC": "5",
+                    "INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC": "600",
+                },
+                clear=False,
+            ):
+                w = next_heartbeat_wait_seconds(root, now=now)
+            self.assertGreater(w, 100.0)
+
+
+if __name__ == "__main__":
+    unittest.main()

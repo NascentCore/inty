@@ -18,6 +18,7 @@ class ChatMessage(BaseModel):
     content: str
     ts: str
     uuid: str | None = None
+    heartbeat: bool | None = None
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
@@ -119,4 +120,20 @@ def load_transcript(path: Path) -> list[ChatMessage]:
 
 
 # 近期对话窗口：最多保留的 transcript.jsonl 行数（每行一条 user 或 assistant）
-TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 50
+TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
+
+
+def transcript_for_llm_turn(
+    loaded: list[ChatMessage],
+    *,
+    heartbeat_turn: bool,
+) -> list[ChatMessage]:
+    """
+    组装送入本轮 chat.completions 的历史消息。
+    普通轮仅保留尾部窗口以控 token；陪伴心跳保留完整 transcript 以延续脉络。
+    """
+    if heartbeat_turn:
+        return loaded
+    if len(loaded) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
+        return loaded
+    return loaded[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
