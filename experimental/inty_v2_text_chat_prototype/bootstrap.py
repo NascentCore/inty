@@ -28,20 +28,6 @@ _TEMPLATE_MEMORY = """# MEMORY
 （长期记忆定稿；对话后可能由记忆更新步骤自动覆盖。）
 """
 
-_TEMPLATE_CAPABILITIES = """# CAPABILITIES
-
-本文件记录**基础性限制**（用户侧生理与现实条件、助手侧技术与产品形态），不是 SOUL/USER 里的人为相处规则。
-可随产品、通道或模型能力变化更新；与「关系偏好」无关。
-
-## 用户侧（生理与现实）
-
-（例如：作息、注意力时长、身体状态对互动的客观影响；此处不写「用户规定不许怎样」。）
-
-## 助手侧（技术与产品形态）
-
-（例如：当前仅为文本通道、无真实躯体、上下文与工具能力上限、无法访问未授权系统等。）
-"""
-
 _CONTEXT_JSON = {
     "context_mode": "intimate",
     "user_id": "proto-user-1",
@@ -63,7 +49,6 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
     write_text(paths.soul, _TEMPLATE_SOUL.strip() + "\n")
     write_text(paths.user_md, _TEMPLATE_USER.strip() + "\n")
     write_text(paths.memory_md, _TEMPLATE_MEMORY.strip() + "\n")
-    write_text(paths.capabilities_md, _TEMPLATE_CAPABILITIES.strip() + "\n")
     write_text(paths.transcript, "")
     # memory/.gitkeep、memory/daily/.gitkeep（便于空目录进 git）
     write_text(paths.memory_dir / ".gitkeep", "")

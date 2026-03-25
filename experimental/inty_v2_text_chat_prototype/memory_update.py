@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import os
 import queue
 import threading
+import time
 
 from loguru import logger
 
@@ -81,6 +83,44 @@ def _day_summary_disabled() -> bool:
     )
 
 
+def _day_summary_every_n_turns() -> int:
+    """当日总结 LLM 每完成 N 次记忆管线调用跑一次；默认 100。设为 1 等价于每轮都跑。"""
+    raw = os.getenv("INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS", "100").strip()
+    if not raw:
+        return 100
+    try:
+        n = int(raw, 10)
+    except ValueError as e:
+        raise ValueError(
+            "INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS must be a positive integer, "
+            f"got {raw!r}"
+        ) from e
+    if n < 1:
+        raise ValueError(
+            "INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS must be >= 1, "
+            f"got {n}"
+        )
+    return n
+
+
+def _bump_memory_pipeline_turn(paths: WorkspacePaths) -> int:
+    """持久化累计「记忆管线已处理轮次」，返回递增后的序号（从 1 起）。"""
+    p = paths.memory_pipeline_state_json
+    data: dict[str, object] = {}
+    if p.is_file():
+        loaded = json.loads(read_text(p))
+        if not isinstance(loaded, dict):
+            raise ValueError(
+                f"{p} must be a JSON object with optional key turns_completed (int)"
+            )
+        data = loaded
+    prev = int(data.get("turns_completed", 0))
+    n = prev + 1
+    data["turns_completed"] = n
+    write_text_atomic(p, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    return n
+
+
 def _soul_update_disabled() -> bool:
     return os.getenv("INTY_V2_PROTO_SOUL_UPDATE_DISABLED", "").strip().lower() in (
         "1",
@@ -95,6 +135,25 @@ def _user_update_disabled() -> bool:
         "true",
         "yes",
     )
+
+
+def _user_update_every_n_turns() -> int:
+    """USER.md 策展 LLM 每完成 N 次记忆管线调用跑一次；默认 100。设为 1 等价于每轮都跑。"""
+    raw = os.getenv("INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS", "100").strip()
+    if not raw:
+        return 100
+    try:
+        n = int(raw, 10)
+    except ValueError as e:
+        raise ValueError(
+            "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS must be a positive integer, "
+            f"got {raw!r}"
+        ) from e
+    if n < 1:
+        raise ValueError(
+            f"INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS must be >= 1, got {n}"
+        )
+    return n
 
 
 def _clip(s: str, n: int) -> str:
@@ -158,7 +217,7 @@ def _rewrite_day_summary_md(
         llm_trace=llm_trace,
         trace_where="memory.day_summary",
         ws_label=paths.root.name,
-        trace_day=local_date_str(),
+        trace_day=day,
     )
     write_text_atomic(summary_path, new_body.strip() + "\n")
 
@@ -195,7 +254,7 @@ def _rewrite_memory_md(
         llm_trace=llm_trace,
         trace_where="memory.curator",
         ws_label=paths.root.name,
-        trace_day=local_date_str(),
+        trace_day=day,
     )
     write_text_atomic(paths.memory_md, new_body.strip() + "\n")
 
@@ -277,30 +336,115 @@ def memory_update_after_turn(
     assistant_text: str,
     llm_trace: bool = False,
 ) -> None:
-    _append_diary(paths, user_text=user_text, assistant_text=assistant_text)
-    _rewrite_day_summary_md(
-        paths,
-        user_text=user_text,
-        assistant_text=assistant_text,
-        llm_trace=llm_trace,
+    t_all = time.perf_counter()
+    ws = paths.root.name
+    turn_n = _bump_memory_pipeline_turn(paths)
+    every_n = _day_summary_every_n_turns()
+    user_every_n = _user_update_every_n_turns()
+    logger.info(
+        "memory_pipeline start ws={} turn={} day_summary_every_n={} "
+        "user_update_every_n={} day_summary_disabled={} user_update_disabled={} "
+        "soul_update_disabled={}",
+        ws,
+        turn_n,
+        every_n,
+        user_every_n,
+        _day_summary_disabled(),
+        _user_update_disabled(),
+        _soul_update_disabled(),
     )
+    logger.debug(
+        "memory_pipeline turn_preview user_chars={} assistant_chars={} user={} assistant={}",
+        len(user_text),
+        len(assistant_text),
+        _clip(user_text, 160),
+        _clip(assistant_text, 160),
+    )
+
+    t = time.perf_counter()
+    _append_diary(paths, user_text=user_text, assistant_text=assistant_text)
+    logger.info(
+        "memory_pipeline step=append_diary ms={:.0f} ws={}",
+        (time.perf_counter() - t) * 1000.0,
+        ws,
+    )
+
+    t = time.perf_counter()
+    run_day_summary_llm = (not _day_summary_disabled()) and (turn_n % every_n == 0)
+    if run_day_summary_llm:
+        _rewrite_day_summary_md(
+            paths,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            llm_trace=llm_trace,
+        )
+    elif not _day_summary_disabled():
+        logger.debug(
+            "memory_pipeline step=day_summary_md skipped turn={} every_n={} ws={}",
+            turn_n,
+            every_n,
+            ws,
+        )
+    logger.info(
+        "memory_pipeline step=day_summary_md ms={:.0f} ws={} ran_llm={}",
+        (time.perf_counter() - t) * 1000.0,
+        ws,
+        run_day_summary_llm,
+    )
+
+    t = time.perf_counter()
     _rewrite_memory_md(
         paths,
         user_text=user_text,
         assistant_text=assistant_text,
         llm_trace=llm_trace,
     )
-    _rewrite_user_md(
-        paths,
-        user_text=user_text,
-        assistant_text=assistant_text,
-        llm_trace=llm_trace,
+    logger.info(
+        "memory_pipeline step=memory_md ms={:.0f} ws={}",
+        (time.perf_counter() - t) * 1000.0,
+        ws,
     )
+
+    t = time.perf_counter()
+    run_user_llm = (not _user_update_disabled()) and (turn_n % user_every_n == 0)
+    if run_user_llm:
+        _rewrite_user_md(
+            paths,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            llm_trace=llm_trace,
+        )
+    elif not _user_update_disabled():
+        logger.debug(
+            "memory_pipeline step=user_md skipped turn={} every_n={} ws={}",
+            turn_n,
+            user_every_n,
+            ws,
+        )
+    logger.info(
+        "memory_pipeline step=user_md ms={:.0f} ws={} ran_llm={}",
+        (time.perf_counter() - t) * 1000.0,
+        ws,
+        run_user_llm,
+    )
+
+    t = time.perf_counter()
     _rewrite_soul_md(
         paths,
         user_text=user_text,
         assistant_text=assistant_text,
         llm_trace=llm_trace,
+    )
+    logger.info(
+        "memory_pipeline step=soul_md ms={:.0f} ws={}",
+        (time.perf_counter() - t) * 1000.0,
+        ws,
+    )
+
+    logger.info(
+        "memory_pipeline done total_ms={:.0f} ws={}",
+        (time.perf_counter() - t_all) * 1000.0,
+        ws,
     )
 
 
@@ -312,6 +456,13 @@ def _memory_worker_loop() -> None:
     assert _memory_queue is not None
     while True:
         paths, user_text, assistant_text, llm_trace = _memory_queue.get()
+        t_job = time.perf_counter()
+        logger.debug(
+            "memory_pipeline worker_job_start ws={} user_chars={} assistant_chars={}",
+            paths.root.name,
+            len(user_text),
+            len(assistant_text),
+        )
         try:
             memory_update_after_turn(
                 paths,
@@ -322,6 +473,11 @@ def _memory_worker_loop() -> None:
         except Exception:
             logger.exception("memory_update_after_turn failed")
         finally:
+            logger.info(
+                "memory_pipeline worker_job wall_ms={:.0f} ws={}",
+                (time.perf_counter() - t_job) * 1000.0,
+                paths.root.name,
+            )
             _memory_queue.task_done()
 
 
@@ -332,7 +488,7 @@ def schedule_memory_update_after_turn(
     assistant_text: str,
     llm_trace: bool = False,
 ) -> None:
-    """Enqueue raw diary + day summary + MEMORY/USER/SOUL curator; daemon thread; REPL 不阻塞。"""
+    """Enqueue记忆管线（日记、按间隔的当日总结/USER 策展、每轮 MEMORY/SOUL）；daemon thread；REPL 不阻塞。"""
     global _memory_queue
     with _worker_lock:
         if _memory_queue is None:
@@ -343,3 +499,14 @@ def schedule_memory_update_after_turn(
                 daemon=True,
             ).start()
     _memory_queue.put((paths, user_text, assistant_text, llm_trace))
+    logger.info(
+        "memory_pipeline enqueued ws={} pending_jobs={}",
+        paths.root.name,
+        _memory_queue.qsize(),
+    )
+    logger.debug(
+        "memory_pipeline enqueue_preview ws={} user={} assistant={}",
+        paths.root.name,
+        _clip(user_text, 120),
+        _clip(assistant_text, 120),
+    )

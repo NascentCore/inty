@@ -46,8 +46,8 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "（1）用户自愿透露、适合长期保存的基本事实，可静默调用 user_profile_record 写入 USER 档案；"
         "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
         "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
-        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时应对照 CAPABILITIES.md，避免与其中生理与技术基础性限制矛盾；"
-        "若因部署或通道能力变化需修订 CAPABILITIES.md，须先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
+        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
+        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
         "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
         "（3）为核对工作区约定、记忆规则或控制面设置，可静默使用 workspace_list_dir / workspace_read_file "
         "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
@@ -57,9 +57,10 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "必须先静默调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文件内容。"
         "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
-        "（5）当用户**明确索要图片、画面、插图**等视觉内容时，可静默调用 generate_image（Fal z-image-turbo）；"
-        "张数由你根据对话判定并在工具参数中给出（用户要几张/几种就填几，默认 1）；"
-        "需已配置 Fal/GCS 与仓库根运行环境，否则工具会失败，此时用文字说明并继续陪伴式回应。"
+        "（5）当用户**明确索要图片、画面、肖像照、插图**等视觉内容时，必须先静默调用 generate_image（Fal z-image-turbo），"
+        "再根据工具返回作答；张数由对话判定写入工具参数（默认 1）。"
+        "禁止在未调用该工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
+        "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
         "无落盘需求、无磁盘事实核验、无自察必要、无生图请求时，不要调用工具。"
         "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
     )
@@ -78,10 +79,6 @@ def build_system_prompt(
         parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
     if bundle.heartbeat_md.strip():
         parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
-    if bundle.capabilities_md.strip():
-        parts.append(
-            "## CAPABILITIES（基础能力与限制）\n\n" + bundle.capabilities_md.strip()
-        )
     parts.extend(
         [
             "## IDENTITY\n\n" + bundle.identity.strip(),

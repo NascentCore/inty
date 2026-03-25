@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import date
 from pathlib import Path
 from typing import Any, Callable
@@ -396,7 +397,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                     "Set num_images from conversation context: e.g. user asks for three variants or "
                     "multiple angles → pass that count; single scene or unspecified → omit num_images "
                     f"(defaults to 1). Maximum {MAX_NUM_IMAGES_PER_CALL} per call. "
-                    "Requires backend env (FAL_KEY, GCS, config.yaml) when run from repo root. "
+                    "Requires repo-root config.yaml (fal.api_key, gcs.*, app.gcp_service_account_key) when importing app. "
                     "After success, describe in companion language without reading raw URLs aloud unless helpful."
                 ),
                 "parameters": {
@@ -519,13 +520,23 @@ def _dispatch(
         )
         if err2:
             return f"ERROR: {err2}"
-        return run_generate_image_z_image_turbo(
+        from loguru import logger
+
+        t_img = time.perf_counter()
+        out = run_generate_image_z_image_turbo(
             root,
             prompt=prompt,
             image_size=image_size_s,
             num_inference_steps=n_steps,
             num_images=n_img,
         )
+        logger.info(
+            "tool generate_image wall_ms={:.0f} ws={} ok={}",
+            (time.perf_counter() - t_img) * 1000.0,
+            root.name,
+            not out.startswith("ERROR:"),
+        )
+        return out
     return f"ERROR: unknown tool {name!r}"
 
 

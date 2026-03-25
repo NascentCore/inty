@@ -50,7 +50,7 @@ def test_summarize_messages_bundle_system_uses_refs_not_angle_quote_preview() ->
     sys_content = sep.join(
         [
             system_prompt_security_prefix(),
-            "## CAPABILITIES（基础能力与限制）\n\ncap",
+            "## AGENTS（工作空间约定）\n\nagents",
             "## IDENTITY\n\ni",
             "## SOUL\n\ns",
             "当前上下文模式：亲密主会话。可加载完整长期记忆，语气可更放松、贴近私人对话，仍须遵守安全与同意边界。",
@@ -64,9 +64,9 @@ def test_summarize_messages_bundle_system_uses_refs_not_angle_quote_preview() ->
     assert "0:system" in s
     assert "@⟨" in s
     assert "myws/security" in s
+    assert "myws/AGENTS.md" in s
     assert "myws/IDENTITY.md" in s
     assert "myws/context.json" in s
-    assert "myws/CAPABILITIES.md" in s
     assert "myws/output_contract" in s
     assert "«" not in s
 

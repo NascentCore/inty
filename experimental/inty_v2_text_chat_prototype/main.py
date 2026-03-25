@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Annotated
 
 from cyclopts import App, Parameter
+from loguru import logger
 
 # `python main.py` loads this file as __main__ with no package; ensure parent of this
 # directory is on sys.path so `inty_v2_text_chat_prototype.*` resolves like `python -m`.
@@ -20,19 +21,19 @@ if __package__ is None:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from inty_v2_text_chat_prototype.client import load_prototype_dotenv
+from experimental.inty_v2_text_chat_prototype.client import load_prototype_dotenv
 
 load_prototype_dotenv()
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
-from inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
-from inty_v2_text_chat_prototype.proto_log import configure_proto_log, resolve_proto_log_file
-from inty_v2_text_chat_prototype.orchestrator import (
+from experimental.inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
+from experimental.inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
+from experimental.inty_v2_text_chat_prototype.proto_log import configure_proto_log, resolve_proto_log_file
+from experimental.inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_initialized,
     needs_startup_profile_inquiry,
     run_turn,
 )
-from inty_v2_text_chat_prototype.workspace_init_loop import run_workspace_bootstrap_loop
+from experimental.inty_v2_text_chat_prototype.workspace_init_loop import run_workspace_bootstrap_loop
 
 
 def _default_workspace() -> Path:
@@ -55,7 +56,7 @@ def _init_proto_logging(
     log_file: Path | None,
     no_log_file: bool,
 ) -> None:
-    """stderr + 可选 <workspace>/inty_v2.log（与 llm_trace 并列，记 loguru 运行时日志）。"""
+    """默认仅 <workspace>/inty_v2.log（不写 stderr，免干扰 REPL）；--no-log-file 则仅 stderr。"""
     from loguru import logger
 
     resolved = resolve_proto_log_file(
@@ -66,6 +67,18 @@ def _init_proto_logging(
         "inty_v2 proto logging file={}",
         str(resolved) if resolved is not None else "(stderr only)",
     )
+
+
+def _configure_llm_trace_for_workspace(root: Path) -> None:
+    """Append-only JSONL：每轮 chat.completions 请求/响应摘要，固定 `<workspace>/llm_trace.jsonl`。"""
+    configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
+
+
+def _preview_line(s: str, max_len: int = 200) -> str:
+    one = s.replace("\n", " ").strip()
+    if len(one) <= max_len:
+        return one
+    return one[: max_len - 1] + "…"
 
 
 app = App(
@@ -138,13 +151,6 @@ def bootstrap_agent(
         bool,
         Parameter(name="--verbose-tools", help="打印每轮调用的工具名与参数摘要"),
     ] = False,
-    llm_trace_file: Annotated[
-        Path | None,
-        Parameter(
-            name="--llm-trace-file",
-            help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
-        ),
-    ] = None,
     log_file: Annotated[
         Path | None,
         Parameter(
@@ -159,8 +165,8 @@ def bootstrap_agent(
 ) -> None:
     """Agentic 工具循环：按 _ws2/BOOSTRAP.md 用 LLM + 文件工具初始化工作区。"""
     _init_proto_logging(workspace, log_file, no_log_file)
-    configure_llm_trace_file(llm_trace_file)
-    trace_on = llm_trace_file is not None
+    _configure_llm_trace_for_workspace(workspace)
+    logger.debug("cli bootstrap_agent ws={}", workspace.resolve())
     user = message if (message is not None and message.strip()) else _DEFAULT_BOOTSTRAP_USER
 
     def _on_tool(name: str, args: str) -> None:
@@ -173,7 +179,7 @@ def bootstrap_agent(
         workspace,
         user,
         on_tool=_on_tool if verbose_tools else None,
-        llm_trace=trace_on,
+        llm_trace=True,
     )
     if out:
         print(out)
@@ -189,13 +195,6 @@ def repl(
         bool,
         Parameter(name="--debug-print-system", help="打印本轮 system prompt"),
     ] = False,
-    llm_trace_file: Annotated[
-        Path | None,
-        Parameter(
-            name="--llm-trace-file",
-            help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
-        ),
-    ] = None,
     log_file: Annotated[
         Path | None,
         Parameter(
@@ -211,23 +210,27 @@ def repl(
     """交互循环，输入 quit 或 EOF 结束。"""
     ws = workspace or _default_workspace()
     _init_proto_logging(ws, log_file, no_log_file)
-    configure_llm_trace_file(llm_trace_file)
-    trace_on = llm_trace_file is not None
+    _configure_llm_trace_for_workspace(ws)
+    logger.debug("cli repl start ws={}", ws.resolve())
     if not is_workspace_initialized(ws):
+        logger.debug("repl startup branch=bootstrap_auto_init (workspace not initialized)")
         t0 = time.perf_counter()
         out = run_workspace_bootstrap_loop(
-            ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=trace_on
+            ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
     elif needs_startup_profile_inquiry(ws):
+        logger.debug("repl startup branch=startup_profile_inquiry (empty transcript, stub profile)")
         t0 = time.perf_counter()
         out = run_turn(
             ws,
             _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
             debug_print_system=debug_print_system,
-            llm_trace=trace_on,
+            llm_trace=True,
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
+    else:
+        logger.debug("repl startup branch=interactive (ready for user input)")
     while True:
         try:
             line = input("> ")
@@ -238,9 +241,15 @@ def repl(
             break
         if not line.strip():
             continue
+        print(f"[{_local_ts_str()}] {line}")
+        logger.debug(
+            "repl interactive_turn line_chars={} preview={}",
+            len(line),
+            _preview_line(line),
+        )
         t0 = time.perf_counter()
         out = run_turn(
-            ws, line, debug_print_system=debug_print_system, llm_trace=trace_on
+            ws, line, debug_print_system=debug_print_system, llm_trace=True
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
 
@@ -256,13 +265,6 @@ def once(
         bool,
         Parameter(name="--debug-print-system", help="打印本轮 system prompt"),
     ] = False,
-    llm_trace_file: Annotated[
-        Path | None,
-        Parameter(
-            name="--llm-trace-file",
-            help="将每轮 chat.completions 的请求/响应摘要以 JSONL（每行一条 JSON）追加写入该文件；可 tail -f，也可用 jq 过滤",
-        ),
-    ] = None,
     log_file: Annotated[
         Path | None,
         Parameter(
@@ -278,15 +280,20 @@ def once(
     """单轮对话。"""
     ws = workspace or _default_workspace()
     _init_proto_logging(ws, log_file, no_log_file)
-    configure_llm_trace_file(llm_trace_file)
-    trace_on = llm_trace_file is not None
+    _configure_llm_trace_for_workspace(ws)
+    logger.debug(
+        "cli once ws={} message_chars={} preview={}",
+        ws.resolve(),
+        len(message),
+        _preview_line(message, max_len=240),
+    )
     t0 = time.perf_counter()
     out = run_turn(
         ws,
         message,
         debug_print_system=debug_print_system,
         defer_memory_update=False,
-        llm_trace=trace_on,
+        llm_trace=True,
     )
     _print_assistant_reply(out, time.perf_counter() - t0)
 

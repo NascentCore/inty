@@ -22,7 +22,10 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             root = Path(td) / "ws"
             init_workspace(root)
             paths = WorkspacePaths(root=root)
-            env = {"INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1"}
+            env = {
+                "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
+            }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
                     "inty_v2_text_chat_prototype.memory_update.complete"
@@ -49,6 +52,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             original_soul = paths.soul.read_text(encoding="utf-8")
             env = {
                 "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
                 "INTY_V2_PROTO_SOUL_UPDATE_DISABLED": "1",
             }
             with patch.dict("os.environ", env, clear=False):

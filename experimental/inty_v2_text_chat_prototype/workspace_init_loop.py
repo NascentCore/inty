@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any, Callable
+
+from loguru import logger
 
 from .client import default_model, get_client
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
@@ -54,6 +57,12 @@ def run_workspace_bootstrap_loop(
     """
     root = workspace.resolve()
     root.mkdir(parents=True, exist_ok=True)
+    logger.debug(
+        "bootstrap loop start ws={} max_rounds={} user_message_chars={}",
+        root,
+        max_rounds,
+        len(user_message),
+    )
 
     spec = load_bootstrap_instruction_text()
     system = (
@@ -84,12 +93,21 @@ def run_workspace_bootstrap_loop(
     ]
 
     last_assistant_text = ""
+    t_boot = time.perf_counter()
     for round_idx in range(1, max_rounds + 1):
+        t_api = time.perf_counter()
         resp = client.chat.completions.create(
             model=m,
             messages=messages,
             tools=tools,
-            parallel_tool_calls=False,
+            # parallel_tool_calls=False,
+            parallel_tool_calls=True,
+        )
+        logger.info(
+            "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",
+            round_idx,
+            (time.perf_counter() - t_api) * 1000.0,
+            m,
         )
         if llm_trace:
             emit_trace(
@@ -109,7 +127,18 @@ def run_workspace_bootstrap_loop(
             last_assistant_text = (msg.content or "").strip()
             messages.append(openai_assistant_message_dict(msg))
             if is_workspace_initialized(root):
+                logger.info(
+                    "bootstrap done rounds={} total_ms={:.0f} ws={}",
+                    round_idx,
+                    (time.perf_counter() - t_boot) * 1000.0,
+                    root.name,
+                )
                 return last_assistant_text
+            logger.debug(
+                "bootstrap no_tool_calls but workspace not initialized round={} "
+                "injecting_internal_continue",
+                round_idx,
+            )
             messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
             continue
 
@@ -120,7 +149,24 @@ def run_workspace_bootstrap_loop(
             args = fn.arguments if fn.arguments is not None else ""
             if on_tool is not None:
                 on_tool(name, args)
+            arg_preview = (args or "").replace("\n", " ")
+            if len(arg_preview) > 240:
+                arg_preview = arg_preview[:239] + "…"
+            logger.debug(
+                "bootstrap tool_call round={} name={} args_preview={}",
+                round_idx,
+                name,
+                arg_preview,
+            )
+            t_tool = time.perf_counter()
             result = run_tool(name, args)
+            logger.info(
+                "bootstrap tool_done round={} name={} execute_ms={:.0f} result_chars={}",
+                round_idx,
+                name,
+                (time.perf_counter() - t_tool) * 1000.0,
+                len(result),
+            )
             messages.append(
                 {
                     "role": "tool",

@@ -39,7 +39,6 @@ class PromptBundle(BaseModel):
     soul: str
     user_md: str
     memory_md: str
-    capabilities_md: str = ""
     agents_md: str = ""
     tools_md: str = ""
     heartbeat_md: str = ""
@@ -85,9 +84,6 @@ def load_prompt_bundle(
         soul=read_text(paths.soul),
         user_md=read_text(paths.user_md),
         memory_md=memory_long,
-        capabilities_md=_read_optional_text(
-            paths.capabilities_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
         agents_md=_read_optional_text(paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         tools_md=_read_optional_text(paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         heartbeat_md=_read_optional_text(
@@ -101,7 +97,11 @@ def load_prompt_bundle(
 def load_context_meta(path: Path) -> ContextMeta:
     if not path.is_file():
         return ContextMeta()
-    raw = json.loads(read_text(path))
+    raw_text = read_text(path)
+    try:
+        raw = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"{path}: invalid JSON in context file") from e
     return ContextMeta.model_validate(raw)
 
 

@@ -25,9 +25,6 @@ async def _z_image_turbo_call(args: Any, gcs_uri_base: str) -> list[Any]:
 
 
 def _gcs_uri_base_for_workspace(root: Path) -> str:
-    raw = os.getenv("INTY_V2_PROTO_Z_IMAGE_GCS_BASE", "").strip()
-    if raw:
-        return raw
     return f"inty_v2_proto_chat_images/{root.resolve().name}"
 
 
@@ -85,13 +82,8 @@ def _append_one_image_summary(
     h = getattr(getattr(item, "size", None), "height", None)
     if w is not None and h is not None:
         parts.append(f"size={w}x{h}")
-    try:
         local = _maybe_write_local_copy(root, item)
-    except OSError as e:
-        parts.append(f"local_path=(write failed: {e!s})")
-    else:
-        if local is not None:
-            parts.append(f"local_path={local.resolve()}")
+        parts.append(f"local_path={local.resolve()}")
 
 
 def run_generate_image_z_image_turbo(
@@ -110,40 +102,17 @@ def run_generate_image_z_image_turbo(
 
     load_prototype_dotenv()
 
-    p = (prompt or "").strip()
-    if not p:
-        return "ERROR: prompt is required and must be non-empty."
-
-    if num_images is not None and num_images < 1:
-        return "ERROR: num_images must be >= 1."
-    if num_images is not None and num_images > MAX_NUM_IMAGES_PER_CALL:
-        return (
-            f"ERROR: num_images must be <= {MAX_NUM_IMAGES_PER_CALL} "
-            "(split into multiple turns if the user needs more)."
-        )
-    if num_inference_steps is not None and num_inference_steps < 1:
-        return "ERROR: num_inference_steps must be >= 1."
-
-    try:
-        z_in = _build_z_input(
-            prompt=p,
-            image_size=image_size,
-            num_inference_steps=num_inference_steps,
-            num_images=num_images,
-        )
-        gcs_base = _gcs_uri_base_for_workspace(root)
-        results = asyncio.run(_z_image_turbo_call(z_in, gcs_base))
-    except ModuleNotFoundError as e:
-        return (
-            "ERROR: cannot import app (backend) modules. Run from repo root with "
-            "`python -m experimental.inty_v2_text_chat_prototype.main` and install root "
-            f"requirements. Detail: {e!s}"
-        )
-    except (ValueError, TypeError, OSError, RuntimeError, ValidationError) as e:
-        return f"ERROR: image generation failed: {e!s}"
+    z_in = _build_z_input(
+        prompt=prompt,
+        image_size=image_size,
+        num_inference_steps=num_inference_steps,
+        num_images=num_images,
+    )
+    gcs_base = _gcs_uri_base_for_workspace(root)
+    results = asyncio.run(_z_image_turbo_call(z_in, gcs_base))
 
     if not results:
-        return "ERROR: provider returned no images."
+        return "ERROR: Fal z-image-turbo returned no images."
 
     n = len(results)
     parts: list[str] = [

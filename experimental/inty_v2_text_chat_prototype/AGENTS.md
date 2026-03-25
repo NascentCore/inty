@@ -1,5 +1,10 @@
 # Workspace context loading — design spec
 
+- _ws/ has:
+  1. inty_v2.log (program logs)
+  2. llm_trace.jsonl (llm invocations)
+  3. transcript.jsonl (messages)
+
 Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of LLM context from a workspace directory (e.g. `_ws/`). Implementation: `orchestrator.run_turn` → `load_context_meta` + `load_prompt_bundle` + `load_transcript` → `build_system_prompt`.
 
 ## Control plane
@@ -14,22 +19,27 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
 2. **`AGENTS.md`** — if non-empty.
 3. **`TOOLS.md`** — if non-empty.
 4. **`HEARTBEAT.md`** — if non-empty.
-5. **`CAPABILITIES.md`** — if non-empty. **Intrinsic limits** (human physiology/reality on the user side; model/channel/product constraints on the assistant side), not negotiated social boundaries (those live in `SOUL.md` / `USER.md`). Placed before persona files so hard constraints are seen first.
-6. **`IDENTITY.md`**
-7. **`SOUL.md`**
-8. Context-mode clause (derived from `context.json`, not a file).
-9. **`USER.md`**
-10. **Only if `context_mode` is `intimate`**, and file has content (after caps):
+5. **`IDENTITY.md`**
+6. **`SOUL.md`**
+7. Context-mode clause (derived from `context.json`, not a file).
+8. **`USER.md`**
+9. **Only if `context_mode` is `intimate`**, and file has content (after caps):
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
-11. Output / tool contract (REPL adds `user_profile_record`, workspace file tools, and optional `generate_image` with context-inferred `num_images`, default 1).
+10. Output / tool contract (REPL adds `user_profile_record`, workspace file tools, and optional `generate_image` with context-inferred `num_images`, default 1).
 
-Optional docs (2–4, 5) omitted entirely when missing or empty — no placeholder sections.
+`generate_image` at runtime uses the **Inty repo-root** `config.yaml` (`fal.api_key`, GCS settings) via `app.core.images.fal`; see [README.md](README.md). Optional env `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` only overrides the GCS object prefix for this prototype.
+
+Optional docs (2–4) omitted entirely when missing or empty — no placeholder sections.
 
 ## Disk read order in `load_prompt_bundle`
 
-Order differs from final prompt section order: implementation reads long-term **`MEMORY.md`** first and clears its body when not intimate; then reads **`IDENTITY` / `SOUL` / `USER`**, then optional **`CAPABILITIES` / `AGENTS` / `TOOLS` / `HEARTBEAT`**, and under intimate mode the two day-scoped memory paths (`memory/daily/…`, `memory/YYYY-MM-DD.md`). This is an implementation detail; **compatibility and semantics are defined by `build_system_prompt`**, not by read order.
+Order differs from final prompt section order: implementation reads long-term **`MEMORY.md`** first and clears its body when not intimate; then reads **`IDENTITY` / `SOUL` / `USER`**, then optional **`AGENTS` / `TOOLS` / `HEARTBEAT`**, and under intimate mode the two day-scoped memory paths (`memory/daily/…`, `memory/YYYY-MM-DD.md`). This is an implementation detail; **compatibility and semantics are defined by `build_system_prompt`**, not by read order.
+
+## Day summary LLM cadence
+
+- `memory/YYYY-MM-DD.md` is rewritten by a dedicated summarizer LLM only when `turns_completed % INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS == 0` (default **100**). **`USER.md`** is rewritten by its curator LLM on the same cadence with `INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS` (default **100**), using the same `turns_completed` counter in **`.inty_v2_memory_pipeline.json`**. Raw diary lines still append every turn (`memory/daily/…`); **MEMORY** and **SOUL** curator LLMs still run every turn unless disabled via env. (`user_profile_record` may still append to `USER.md` any turn.)
 
 ## Transcript
 
@@ -42,8 +52,8 @@ Initialization checks (`is_workspace_initialized` / `run_turn`) require on disk:
 
 `IDENTITY.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, `transcript.jsonl`.
 
-`AGENTS.md`, `TOOLS.md`, `HEARTBEAT.md`, `CAPABILITIES.md`, `context.json` are optional; missing `context.json` falls back to default `ContextMeta`.
+`AGENTS.md`, `TOOLS.md`, `HEARTBEAT.md`, `context.json` are optional; missing `context.json` falls back to default `ContextMeta`. **`CAPABILITIES.md` is not read by the prototype** (REPL allowlist may still permit writing it as a normal root file if you use it manually).
 
 ## Workspace `AGENTS.md` (human-oriented)
 
-The file may describe a **manual** startup habit: read **CAPABILITIES → SOUL → USER → (main session) MEMORY** when you want hard limits before persona (programmatic order injects optional `CAPABILITIES.md` **before** `IDENTITY.md`, after optional `AGENTS` / `TOOLS` / `HEARTBEAT`). That is guidance for agents/operators; it is **not** identical to `build_system_prompt` ordering (e.g. optional docs 2–4 still precede `CAPABILITIES` in the assembled prompt).
+The file may describe operator habits (e.g. which files to read before chatting). That is guidance for humans/agents; it is **not** required to match `build_system_prompt` ordering verbatim.

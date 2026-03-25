@@ -42,8 +42,6 @@ def _label_system_segment(seg: str, *, ws_label: str, day: str) -> str:
         return f"{ws_label}/TOOLS.md"
     if s.startswith("## HEARTBEAT（检查清单）"):
         return f"{ws_label}/HEARTBEAT.md"
-    if s.startswith("## CAPABILITIES（基础能力与限制）"):
-        return f"{ws_label}/CAPABILITIES.md"
     if s.startswith("## IDENTITY"):
         return f"{ws_label}/IDENTITY.md"
     if s.startswith("## SOUL"):
