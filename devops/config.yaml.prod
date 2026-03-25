@@ -75,17 +75,11 @@ agent:
   vertex_ai_location: "global"
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
   enable_chat_image_match_fallback: true
-  # 生产环境进一步缩小追踪数量
-  langsmith_text_chat_sample_rate: 0.05
-  # 邮件列表中对应的用户的文字聊天始终 trace
+  # 生产环境进一步缩小追踪数量，避免月度 LangSmith trace 配额耗尽。
+  langsmith_text_chat_sample_rate: 0.01
+  # 邮件列表中对应的用户的文字聊天始终 trace（仅保留运维排障账户）。
   langsmith_text_chat_always_trace_user_emails:
-    - "anonymoussocialforreal@gmail.com"
-    - "charlesfengyu@gmail.com"
-    - "donggangcj@gmail.com"
     - "it@sxwl.ai"
-    - "justicezyx@gmail.com"  # 赵亚雄个人账户
-    - "kotlinaai@gmail.com"
-    - "xheuyyuki@gmail.com"
 
 google_play:
   package_name: "com.ai.intellimate"
