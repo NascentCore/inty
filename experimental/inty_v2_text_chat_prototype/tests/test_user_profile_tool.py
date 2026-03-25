@@ -13,7 +13,7 @@ sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.workspace_init_tools import (
     append_user_profile_facts_to_user_md,
-    execute_tool_call,
+    execute_tool_call_blocking,
     tool_user_profile_record,
 )
 
@@ -58,7 +58,7 @@ class TestToolUserProfileRecord(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "USER.md").write_text("# u\n", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "user_profile_record",
                 json.dumps({"items": []}, ensure_ascii=False),

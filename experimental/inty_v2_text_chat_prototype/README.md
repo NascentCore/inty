@@ -18,7 +18,7 @@ REPL 的 **`generate_image`**（Fal **z-image-turbo** 文生图）复用 [`app/c
 - **`fal.api_key`** — 与 [Fal 文档](https://fal.ai/docs) 一致，格式同生产 [`devops/config.yaml.prod`](../../devops/config.yaml.prod) 中的 `fal:` 段。
 - **`gcs`** — 例如 `bucket`；真实上传需 **`app.gcp_service_account_key`** 指向可写该 bucket 的服务账号 JSON（路径相对仓库根）。本地可自 `devops/config.yaml.test` 复制为 `config.yaml` 再改：测试模板常开 `gcs.use_fake_gcs`，若仍要联调真实 Fal，通常需关闭 fake 并补齐 `fal.api_key` 与可写 bucket（测试 YAML 里可能未写 `fal:`，需自行追加该段）。
 
-**可选环境变量（仅原型）：** `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` — 覆盖 GCS 对象路径前缀；不设则为 `inty_v2_proto_chat_images/<workspace 目录名>`。
+**可选环境变量（仅原型）：** `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` — 覆盖 GCS 对象路径前缀；不设则为 `inty_v2_proto_chat_images/<workspace 目录名>`。`INTY_V2_PROTO_Z_IMAGE_SKIP_GCS=1`（或 `true`/`yes`/`on`）— **跳过对生成结果的 GCS 上传**，仅保留 Fal 返回的像素数据与 `generated_images/` 本地副本（省掉解析/压缩/上传延迟；工具摘要里 `gcs_http_url` 为空）。**`modify_image` 若使用 workspace 内源图文件**，仍须先把该源图上传到 GCS 以得到 Fal 可用的 `image_url`（与是否跳过**输出**上传无关）；若只用公网 `source_image_url` 则无需上传源图。
 
 **聊天 API Key（与 `config.yaml` 无关）：** `OPENROUTER_API_KEY` 或 `OPENAI_API_KEY` 建议放在 **`inty` 仓库根** 的 `.env`（与 `config.yaml` 同级）；`main` / `client` 会先加载该 `.env` 再加载当前工作目录下的 `.env`，因此在子目录里执行 `python main.py` 也能读到。勿将 `.env` 提交到 git。
 
@@ -57,7 +57,7 @@ python -m experimental.inty_v2_text_chat_prototype.main once --message "你好" 
 | `transcript.jsonl` | 每行 JSON：`role`（user \| assistant）、`content`、`ts` |
 | `context.json` | 可选：`context_mode`、`user_id`、`companion_id`、`chat_id` |
 | `memory/YYYY-MM-DD.md` | 日记层（每轮追加一行摘要）；**当日**文件若存在还会整段注入（有长度上限） |
-| `generated_images/` | REPL 调用 `generate_image` 成功且返回体含像素数据时，工具会在此写入一份本地副本（便于本机打开；主结果仍经 GCS 公开 URL） |
+| `generated_images/` | REPL 调用 `generate_image` 成功且返回体含像素数据时，工具会在此写入一份本地副本（便于本机打开；未设 `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` 时摘要里另有 GCS 公开 URL） |
 | `inty_v2.log` | 默认启用：loguru 文件日志（轮转与保留见 `proto_log.py`）；可用 CLI/`INTY_V2_PROTO_LOG_FILE` 关闭或改路径 |
 | `llm_trace.jsonl` | 默认追加：`repl` / `once` / `bootstrap-agent` 每轮 LLM 调用摘要（JSONL） |
 

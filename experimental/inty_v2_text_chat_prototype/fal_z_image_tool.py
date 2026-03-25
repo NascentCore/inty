@@ -1,17 +1,16 @@
-"""Fal z-image-turbo 文生图：复用 app.core.images.fal，结果摘要回注 LLM；可选落盘 workspace/generated_images/。"""
+"""Fal z-image-turbo：文生图（text-to-image）与图生图（image-to-image）复用 app.core.images.fal。"""
 
 from __future__ import annotations
 
-import asyncio
 import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from app.core.images.fal import z_image_turbo
+import fal_client
 
-from pydantic import ValidationError
+from app.core.images.fal import ZImageTurboImageToImageInput, z_image_turbo, z_image_turbo_image_to_image
 
 # 与 app/api/v1/endpoints/agents.py _generate_with_fal_z_image_turbo 对齐的默认推理参数
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
@@ -19,8 +18,64 @@ _DEFAULT_IMAGE_SIZE = "portrait_4_3"
 MAX_NUM_IMAGES_PER_CALL = 4
 
 
+def _env_flag_enabled(name: str) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        return False
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
+
+async def _reset_fal_async_client_after_short_lived_loop() -> None:
+    """
+    fal 模块级 `async_client` 的 httpx 实例绑定创建它的 event loop。
+    在 `asyncio.run(run_turn(...))` 每轮用户输入都会关闭 loop 时，须在 loop 仍存活时拆掉缓存并 aclose，
+    否则下一次短生命周期 loop 内调用 Fal 会报 Event loop is closed。
+    """
+    inst = fal_client.async_client
+    old = inst.__dict__.pop("_client", None)
+    inst.__dict__.pop("_token_manager", None)
+    if old is not None:
+        await old.aclose()
+
+
 def _gcs_uri_base_for_workspace(root: Path) -> str:
     return f"inty_v2_proto_chat_images/{root.resolve().name}"
+
+
+_SOURCE_IMAGE_EXT_TO_UPLOAD: dict[str, tuple[str, str]] = {
+    ".jpg": ("image/jpeg", "jpeg"),
+    ".jpeg": ("image/jpeg", "jpeg"),
+    ".png": ("image/png", "png"),
+    ".webp": ("image/webp", "webp"),
+    ".gif": ("image/gif", "gif"),
+}
+
+
+def _upload_local_image_file_to_gcs_for_fal(image_path: Path, gcs_uri_base: str) -> str:
+    """
+    将 workspace 内图片上传到 GCS，返回公网 HTTPS URL，供 Fal image-to-image 的 image_url 入参。
+    """
+    from app.core.config import global_config_loaded_from_config_yaml as global_config
+    from app.external_services.gcs import upload_to_gcs
+
+    suffix = image_path.suffix.lower()
+    if suffix not in _SOURCE_IMAGE_EXT_TO_UPLOAD:
+        raise ValueError(
+            "source image extension must be one of: "
+            + ", ".join(sorted(_SOURCE_IMAGE_EXT_TO_UPLOAD.keys()))
+        )
+    content_type, ext_value = _SOURCE_IMAGE_EXT_TO_UPLOAD[suffix]
+    file_data = image_path.read_bytes()
+    if len(file_data) == 0:
+        raise ValueError("source image file is empty")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    gcs_path = f"{gcs_uri_base}/i2i_src_{timestamp}_{uuid.uuid4().hex[:8]}.{ext_value}"
+    return upload_to_gcs(
+        file_data=file_data,
+        content_type=content_type,
+        bucket_name=global_config.gcs.bucket,
+        path=gcs_path,
+    )
 
 
 def _build_z_input(
@@ -78,10 +133,11 @@ def _append_one_image_summary(
     if w is not None and h is not None:
         parts.append(f"size={w}x{h}")
         local = _maybe_write_local_copy(root, item)
-        parts.append(f"local_path={local.resolve()}")
+        if local is not None:
+            parts.append(f"local_path={local.resolve()}")
 
 
-def run_generate_image_z_image_turbo(
+async def run_generate_image_z_image_turbo(
     root: Path,
     *,
     prompt: str,
@@ -90,7 +146,8 @@ def run_generate_image_z_image_turbo(
     num_images: int | None = None,
 ) -> str:
     """
-    调用 Fal z-image-turbo，上传 GCS（经 app.core.images.fal）；返回单行摘要供 tool 消息。
+    调用 Fal z-image-turbo；默认经 app.core.images.fal 上传 GCS。
+    `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` 为真时跳过结果上传（仅本地像素与 generated_images/）。
     失败时以 ERROR: 开头。
     """
     from .client import load_prototype_dotenv
@@ -104,7 +161,8 @@ def run_generate_image_z_image_turbo(
         num_images=num_images,
     )
     gcs_base = _gcs_uri_base_for_workspace(root)
-    results = asyncio.run(z_image_turbo(z_in, gcs_base))
+    skip_gcs = _env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
+    results = await z_image_turbo(z_in, gcs_base, skip_gcs_upload=skip_gcs)
 
     if not results:
         return "ERROR: Fal z-image-turbo returned no images."
@@ -118,4 +176,76 @@ def run_generate_image_z_image_turbo(
     for i, item in enumerate(results):
         _append_one_image_summary(parts, root, item, index=i + 1, total=n)
 
+    return " ".join(parts)
+
+
+async def run_modify_image_z_image_turbo(
+    root: Path,
+    *,
+    prompt: str,
+    source_path: Path | None,
+    source_image_url: str | None,
+    image_size: str | None = None,
+    num_inference_steps: int | None = None,
+    strength: float | None = None,
+) -> str:
+    """
+    Fal z-image-turbo **image-to-image**：基于已有图按提示修改；与文生图 `z_image_turbo` 区分。
+    source 二选一：workspace 内文件（先上传 GCS 得 URL）或已是 https 的参考图 URL。
+    """
+    from app.utils.image import ImageFormat
+
+    from .client import load_prototype_dotenv
+
+    load_prototype_dotenv()
+
+    has_path = source_path is not None
+    has_url = source_image_url is not None and source_image_url.strip() != ""
+    if has_path and has_url:
+        return (
+            "ERROR: use only one of source_image_relative_path or source_image_url, not both"
+        )
+    if not has_path and not has_url:
+        return (
+            "ERROR: modify_image requires source_image_relative_path (workspace image file) "
+            "or source_image_url (https)"
+        )
+
+    gcs_base = _gcs_uri_base_for_workspace(root)
+    if has_path:
+        assert source_path is not None
+        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(source_path, gcs_base)
+    else:
+        u = source_image_url.strip()
+        if not (u.startswith("https://") or u.startswith("http://")):
+            return "ERROR: source_image_url must be an http(s) URL"
+        image_url_for_fal = u
+
+    size_kw: Any = (
+        image_size.strip()
+        if isinstance(image_size, str) and image_size.strip()
+        else _DEFAULT_IMAGE_SIZE
+    )
+    steps = num_inference_steps if num_inference_steps is not None else 8
+    kwargs: dict[str, Any] = {
+        "prompt": prompt,
+        "image_url": image_url_for_fal,
+        "image_size": size_kw,
+        "num_inference_steps": steps,
+        "output_format": ImageFormat.PNG,
+        "num_images": 1,
+    }
+    if strength is not None:
+        kwargs["strength"] = strength
+    z_in = ZImageTurboImageToImageInput(**kwargs)
+    skip_gcs = _env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
+    result = await z_image_turbo_image_to_image(
+        z_in, gcs_base, skip_gcs_upload=skip_gcs
+    )
+
+    parts: list[str] = [
+        "modify_image: OK (fal z-image-turbo image-to-image).",
+        "returned=1",
+    ]
+    _append_one_image_summary(parts, root, result, index=1, total=1)
     return " ".join(parts)

@@ -13,7 +13,7 @@ sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
-    execute_tool_call,
+    execute_tool_call_blocking,
 )
 
 
@@ -22,7 +22,7 @@ class TestReplWriteAllowlist(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "SOUL.md").write_text("a\n", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_write_file",
                 json.dumps(
@@ -38,7 +38,7 @@ class TestReplWriteAllowlist(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "CAPABILITIES.md").write_text("a\n", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_write_file",
                 json.dumps(
@@ -55,7 +55,7 @@ class TestReplWriteAllowlist(unittest.TestCase):
     def test_blocks_transcript(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_write_file",
                 json.dumps(
@@ -70,7 +70,7 @@ class TestReplWriteAllowlist(unittest.TestCase):
     def test_bootstrap_unrestricted_without_allowlist(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_write_file",
                 json.dumps(

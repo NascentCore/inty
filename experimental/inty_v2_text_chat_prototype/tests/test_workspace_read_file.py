@@ -13,7 +13,7 @@ sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.workspace_init_tools import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
-    execute_tool_call,
+    execute_tool_call_blocking,
     tool_workspace_read_file,
 )
 
@@ -23,7 +23,7 @@ class TestWorkspaceReadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "a.txt").write_text("hello", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
                 json.dumps({"relative_path": "a.txt"}, ensure_ascii=False),
@@ -34,7 +34,7 @@ class TestWorkspaceReadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "b.txt").write_text("abcdefghij", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
                 json.dumps({"relative_path": "b.txt", "max_chars": 4}, ensure_ascii=False),
@@ -46,7 +46,7 @@ class TestWorkspaceReadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "c.txt").write_text("xy", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
                 json.dumps({"relative_path": "c.txt", "max_chars": 10}, ensure_ascii=False),
@@ -58,7 +58,7 @@ class TestWorkspaceReadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "d.txt").write_text("z", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
                 json.dumps({"relative_path": "d.txt", "max_chars": 0}, ensure_ascii=False),
@@ -69,7 +69,7 @@ class TestWorkspaceReadFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "e.txt").write_text("z", encoding="utf-8")
-            out = execute_tool_call(
+            out = execute_tool_call_blocking(
                 root,
                 "workspace_read_file",
                 json.dumps(

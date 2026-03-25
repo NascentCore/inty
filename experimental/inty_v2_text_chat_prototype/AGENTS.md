@@ -27,9 +27,9 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
-10. Output / tool contract (REPL adds `user_profile_record`, workspace file tools, and optional `generate_image` with context-inferred `num_images`, default 1).
+10. Output / tool contract (REPL adds `user_profile_record`, workspace file tools, optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
 
-`generate_image` at runtime uses the **Inty repo-root** `config.yaml` (`fal.api_key`, GCS settings) via `app.core.images.fal`; see [README.md](README.md). Optional env `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` only overrides the GCS object prefix for this prototype.
+`generate_image` at runtime uses the **Inty repo-root** `config.yaml` (`fal.api_key`, GCS settings) via `app.core.images.fal`; see [README.md](README.md). Optional env `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` overrides the GCS object prefix; `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` skips GCS upload for faster local-only images.
 
 Optional docs (2–4) omitted entirely when missing or empty — no placeholder sections.
 

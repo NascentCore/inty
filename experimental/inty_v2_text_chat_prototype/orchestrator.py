@@ -30,6 +30,7 @@ from .llm_trace import (
     summarize_completion_response,
     summarize_messages,
 )
+from .fal_z_image_tool import _reset_fal_async_client_after_short_lived_loop
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
@@ -93,7 +94,7 @@ def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, A
     return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
 
 
-def _run_turn_with_user_profile_tools(
+async def _run_turn_with_user_profile_tools(
     messages: list[dict[str, Any]],
     root: Path,
     *,
@@ -192,7 +193,7 @@ def _run_turn_with_user_profile_tools(
                 _preview_for_debug(args),
             )
             t_tool = time.perf_counter()
-            result = execute_tool_call(
+            result = await execute_tool_call(
                 root,
                 name,
                 args,
@@ -313,7 +314,7 @@ def _truncate_transcript(msgs: list[ChatMessage]) -> list[ChatMessage]:
     return msgs[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
 
 
-def run_turn(
+async def run_turn(
     workspace: Path,
     user_text: str,
     *,
@@ -332,125 +333,128 @@ def run_turn(
         defer_memory_update,
         llm_trace,
     )
-    _require_workspace_files(paths)
-    get_client()
+    try:
+        _require_workspace_files(paths)
+        get_client()
 
-    t_load = time.perf_counter()
-    context = load_context_meta(paths.context_json)
-    bundle = load_prompt_bundle(paths, meta=context)
-    transcript = _truncate_transcript(load_transcript(paths.transcript))
-    _debug_log_prompt_bundle(bundle, context=context)
+        t_load = time.perf_counter()
+        context = load_context_meta(paths.context_json)
+        bundle = load_prompt_bundle(paths, meta=context)
+        transcript = _truncate_transcript(load_transcript(paths.transcript))
+        _debug_log_prompt_bundle(bundle, context=context)
 
-    system = build_system_prompt(bundle, context, enable_user_profile_tool=True)
-    logger.debug(
-        "run_turn system_prompt_chars={} sep_count={}",
-        len(system),
-        system.count("\n\n---\n\n"),
-    )
-    logger.info(
-        "run_turn load_context_build_system_ms={:.0f} transcript_msgs={}",
-        (time.perf_counter() - t_load) * 1000.0,
-        len(transcript),
-    )
-    if debug_print_system:
-        print(system)
-        print("=" * 80)
-
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    for m in transcript:
-        row: dict[str, Any] = {"role": m.role, "content": m.content}
-        if m.uuid:
-            row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
-        messages.append(row)
-
-    user_msg_uuid = str(uuid.uuid4())
-    messages.append(
-        {
-            "role": "user",
-            "content": user_text,
-            TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-        }
-    )
-
-    logger.debug(
-        "run_turn llm_input messages_count={} payload_chars={} user_msg_uuid={} "
-        "user_preview={}",
-        len(messages),
-        _payload_chars_for_debug(messages),
-        user_msg_uuid,
-        _preview_for_debug(user_text, max_len=200),
-    )
-
-    # Must snapshot user time before the LLM call; assistant time is taken after (below).
-    ts_user = utc_iso_ts()
-    t_main = time.perf_counter()
-    assistant_text = _run_turn_with_user_profile_tools(
-        messages, root, llm_trace=llm_trace
-    )
-    logger.info(
-        "run_turn main_repl_tool_loop_wall_ms={:.0f}",
-        (time.perf_counter() - t_main) * 1000.0,
-    )
-
-    assistant_msg_uuid = str(uuid.uuid4())
-    t_persist = time.perf_counter()
-    append_jsonl(
-        paths.transcript,
-        {
-            "role": "user",
-            "content": user_text,
-            "ts": ts_user,
-            "uuid": user_msg_uuid,
-        },
-    )
-    ts_asst = utc_iso_ts()
-    append_jsonl(
-        paths.transcript,
-        {
-            "role": "assistant",
-            "content": assistant_text,
-            "ts": ts_asst,
-            "uuid": assistant_msg_uuid,
-        },
-    )
-
-    logger.info(
-        "run_turn persist_transcript_ms={:.0f}",
-        (time.perf_counter() - t_persist) * 1000.0,
-    )
-
-    if defer_memory_update:
+        system = build_system_prompt(bundle, context, enable_user_profile_tool=True)
         logger.debug(
-            "run_turn memory_pipeline=async (enqueue) user_uuid={} assistant_uuid={}",
-            user_msg_uuid,
-            assistant_msg_uuid,
+            "run_turn system_prompt_chars={} sep_count={}",
+            len(system),
+            system.count("\n\n---\n\n"),
         )
-        schedule_memory_update_after_turn(
-            paths,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            llm_trace=llm_trace,
+        logger.info(
+            "run_turn load_context_build_system_ms={:.0f} transcript_msgs={}",
+            (time.perf_counter() - t_load) * 1000.0,
+            len(transcript),
         )
-    else:
-        logger.debug(
-            "run_turn memory_pipeline=sync (blocking) user_uuid={} assistant_uuid={}",
-            user_msg_uuid,
-            assistant_msg_uuid,
-        )
-        memory_update_after_turn(
-            paths,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            llm_trace=llm_trace,
+        if debug_print_system:
+            print(system)
+            print("=" * 80)
+
+        messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        for m in transcript:
+            row: dict[str, Any] = {"role": m.role, "content": m.content}
+            if m.uuid:
+                row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
+            messages.append(row)
+
+        user_msg_uuid = str(uuid.uuid4())
+        messages.append(
+            {
+                "role": "user",
+                "content": user_text,
+                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+            }
         )
 
-    logger.info(
-        "run_turn done assistant_chars={} ms={:.0f}",
-        len(assistant_text),
-        (time.perf_counter() - t0) * 1000.0,
-    )
-    logger.debug(
-        "run_turn assistant_preview={}",
-        _preview_for_debug(assistant_text, max_len=400),
-    )
-    return assistant_text
+        logger.debug(
+            "run_turn llm_input messages_count={} payload_chars={} user_msg_uuid={} "
+            "user_preview={}",
+            len(messages),
+            _payload_chars_for_debug(messages),
+            user_msg_uuid,
+            _preview_for_debug(user_text, max_len=200),
+        )
+
+        # Must snapshot user time before the LLM call; assistant time is taken after (below).
+        ts_user = utc_iso_ts()
+        t_main = time.perf_counter()
+        assistant_text = await _run_turn_with_user_profile_tools(
+            messages, root, llm_trace=llm_trace
+        )
+        logger.info(
+            "run_turn main_repl_tool_loop_wall_ms={:.0f}",
+            (time.perf_counter() - t_main) * 1000.0,
+        )
+
+        assistant_msg_uuid = str(uuid.uuid4())
+        t_persist = time.perf_counter()
+        append_jsonl(
+            paths.transcript,
+            {
+                "role": "user",
+                "content": user_text,
+                "ts": ts_user,
+                "uuid": user_msg_uuid,
+            },
+        )
+        ts_asst = utc_iso_ts()
+        append_jsonl(
+            paths.transcript,
+            {
+                "role": "assistant",
+                "content": assistant_text,
+                "ts": ts_asst,
+                "uuid": assistant_msg_uuid,
+            },
+        )
+
+        logger.info(
+            "run_turn persist_transcript_ms={:.0f}",
+            (time.perf_counter() - t_persist) * 1000.0,
+        )
+
+        if defer_memory_update:
+            logger.debug(
+                "run_turn memory_pipeline=async (enqueue) user_uuid={} assistant_uuid={}",
+                user_msg_uuid,
+                assistant_msg_uuid,
+            )
+            schedule_memory_update_after_turn(
+                paths,
+                user_text=user_text,
+                assistant_text=assistant_text,
+                llm_trace=llm_trace,
+            )
+        else:
+            logger.debug(
+                "run_turn memory_pipeline=sync (blocking) user_uuid={} assistant_uuid={}",
+                user_msg_uuid,
+                assistant_msg_uuid,
+            )
+            memory_update_after_turn(
+                paths,
+                user_text=user_text,
+                assistant_text=assistant_text,
+                llm_trace=llm_trace,
+            )
+
+        logger.info(
+            "run_turn done assistant_chars={} ms={:.0f}",
+            len(assistant_text),
+            (time.perf_counter() - t0) * 1000.0,
+        )
+        logger.debug(
+            "run_turn assistant_preview={}",
+            _preview_for_debug(assistant_text, max_len=400),
+        )
+        return assistant_text
+    finally:
+        await _reset_fal_async_client_after_short_lived_loop()

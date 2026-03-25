@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
-from .fal_z_image_tool import MAX_NUM_IMAGES_PER_CALL, run_generate_image_z_image_turbo
+from .fal_z_image_tool import (
+    MAX_NUM_IMAGES_PER_CALL,
+    _reset_fal_async_client_after_short_lived_loop,
+    run_generate_image_z_image_turbo,
+    run_modify_image_z_image_turbo,
+)
 from .file_store import read_text, write_text
 
 _USER_MD_REL = "USER.md"
@@ -392,8 +398,10 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             "function": {
                 "name": "generate_image",
                 "description": (
-                    "Generate image(s) from a text prompt using Fal z-image-turbo (text-to-image). "
-                    "Call only when the user clearly asks for picture(s), illustration(s), or visuals. "
+                    "Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). "
+                    "Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—"
+                    "use modify_image (image-to-image) instead, with the source file or URL. "
+                    "Call only when the user clearly asks for new picture(s), illustration(s), or visuals from scratch. "
                     "Set num_images from conversation context: e.g. user asks for three variants or "
                     "multiple angles → pass that count; single scene or unspecified → omit num_images "
                     f"(defaults to 1). Maximum {MAX_NUM_IMAGES_PER_CALL} per call. "
@@ -436,6 +444,68 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             },
         }
     )
+    out.append(
+        {
+            "type": "function",
+            "function": {
+                "name": "modify_image",
+                "description": (
+                    "Edit or restyle an **existing** image using Fal z-image-turbo **image-to-image** "
+                    "(not text-to-image). Use when the user asks to change, fix, recolor, restyle, or otherwise "
+                    "modify a specific picture—including one previously saved under workspace/generated_images/. "
+                    "Provide exactly one source: either source_image_relative_path (file under workspace, e.g. "
+                    "generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). "
+                    "Optional strength (0–1) controls how strongly the output follows the prompt vs. the source. "
+                    "Same config/GCS requirements as generate_image."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": (
+                                "What to change or the desired look (style, edits, constraints); "
+                                "the model conditions on the source image."
+                            ),
+                        },
+                        "source_image_relative_path": {
+                            "type": "string",
+                            "description": (
+                                "Workspace-relative path to an image file (jpg/png/webp/gif). "
+                                "Use e.g. generated_images/... from a prior generate_image result. "
+                                "Omit if using source_image_url."
+                            ),
+                        },
+                        "source_image_url": {
+                            "type": "string",
+                            "description": (
+                                "Public http(s) URL of the image to edit. Omit if using source_image_relative_path."
+                            ),
+                        },
+                        "image_size": {
+                            "type": "string",
+                            "description": (
+                                "Optional fal preset (e.g. portrait_4_3, square_hd). "
+                                "Omit for prototype default (portrait_4_3)."
+                            ),
+                        },
+                        "num_inference_steps": {
+                            "type": "integer",
+                            "description": "Optional inference steps (default 8). Must be >= 1.",
+                        },
+                        "strength": {
+                            "type": "number",
+                            "description": (
+                                "Optional 0..1; higher = follow prompt more, lower = stay closer to source (default 0.6)."
+                            ),
+                        },
+                    },
+                    "required": ["prompt"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
     return out
 
 
@@ -454,6 +524,20 @@ def _parse_optional_positive_int(
     return (None, f"{field_name} must be an integer")
 
 
+def _parse_optional_strength(raw: Any) -> tuple[float | None, str | None]:
+    """返回 (值, 错误信息)；raw 为 None 或缺失视为省略。"""
+    if raw is None:
+        return (None, None)
+    if isinstance(raw, bool):
+        return (None, "strength must be a number")
+    if isinstance(raw, (int, float)):
+        f = float(raw)
+        if not (0.0 <= f <= 1.0):
+            return (None, "strength must be between 0 and 1 inclusive")
+        return (f, None)
+    return (None, "strength must be a number")
+
+
 def _repl_write_allowed(root: Path, relative_path: str, write_allowlist: frozenset[str]) -> str | None:
     """若不允许写入则返回错误信息字符串，否则 None。"""
     p = resolve_under_workspace(root, relative_path)
@@ -467,7 +551,7 @@ def _repl_write_allowed(root: Path, relative_path: str, write_allowlist: frozens
     return None
 
 
-def _dispatch(
+async def _dispatch(
     root: Path,
     name: str,
     arguments: dict[str, Any],
@@ -504,6 +588,8 @@ def _dispatch(
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
+        if not prompt.strip():
+            return "ERROR: prompt must be non-empty"
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
@@ -520,10 +606,15 @@ def _dispatch(
         )
         if err2:
             return f"ERROR: {err2}"
+        if n_img is not None and n_img > MAX_NUM_IMAGES_PER_CALL:
+            return (
+                "ERROR: num_images must be at most "
+                f"{MAX_NUM_IMAGES_PER_CALL} per generate_image call"
+            )
         from loguru import logger
 
         t_img = time.perf_counter()
-        out = run_generate_image_z_image_turbo(
+        out = await run_generate_image_z_image_turbo(
             root,
             prompt=prompt,
             image_size=image_size_s,
@@ -537,10 +628,66 @@ def _dispatch(
             not out.startswith("ERROR:"),
         )
         return out
+    if name == "modify_image":
+        prompt = arguments.get("prompt")
+        if not isinstance(prompt, str):
+            return "ERROR: prompt must be a string"
+        if not prompt.strip():
+            return "ERROR: prompt must be non-empty"
+        raw_path = arguments.get("source_image_relative_path")
+        raw_url = arguments.get("source_image_url")
+        if raw_path is not None and not isinstance(raw_path, str):
+            return "ERROR: source_image_relative_path must be a string or omitted"
+        if raw_url is not None and not isinstance(raw_url, str):
+            return "ERROR: source_image_url must be a string or omitted"
+        path_s = raw_path.strip() if isinstance(raw_path, str) else ""
+        url_s = raw_url.strip() if isinstance(raw_url, str) else ""
+        src_path: Path | None = None
+        if path_s:
+            try:
+                src_path = resolve_under_workspace(root, path_s)
+            except ValueError as exc:
+                return f"ERROR: {exc}"
+            if not src_path.is_file():
+                return f"ERROR: source image not found or not a file: {path_s!r}"
+        src_url_out: str | None = url_s if url_s else None
+        image_size = arguments.get("image_size")
+        if image_size is not None and not isinstance(image_size, str):
+            return "ERROR: image_size must be a string or omitted"
+        image_size_s = image_size.strip() if isinstance(image_size, str) else None
+        if image_size_s == "":
+            image_size_s = None
+        n_steps, err = _parse_optional_positive_int(
+            arguments.get("num_inference_steps"), field_name="num_inference_steps"
+        )
+        if err:
+            return f"ERROR: {err}"
+        strength, err_s = _parse_optional_strength(arguments.get("strength"))
+        if err_s:
+            return f"ERROR: {err_s}"
+        from loguru import logger
+
+        t_img = time.perf_counter()
+        out = await run_modify_image_z_image_turbo(
+            root,
+            prompt=prompt,
+            source_path=src_path,
+            source_image_url=src_url_out,
+            image_size=image_size_s,
+            num_inference_steps=n_steps,
+            strength=strength,
+        )
+        logger.info(
+            "tool modify_image wall_ms={:.0f} ws={} ok={}",
+            (time.perf_counter() - t_img) * 1000.0,
+            root.name,
+            not out.startswith("ERROR:"),
+        )
+        return out
     return f"ERROR: unknown tool {name!r}"
 
 
-def execute_tool_call(
+async def execute_tool_call(
     root: Path,
     name: str,
     arguments_json: str,
@@ -561,7 +708,7 @@ def execute_tool_call(
         logger.warning("tool {} {}", name, err)
         return err
     try:
-        out = _dispatch(root, name, parsed, write_allowlist=write_allowlist)
+        out = await _dispatch(root, name, parsed, write_allowlist=write_allowlist)
     except (OSError, ValueError) as exc:
         err = f"ERROR: {exc}"
         logger.warning("tool {} dispatch: {}", name, err)
@@ -573,10 +720,43 @@ def execute_tool_call(
     return out
 
 
+async def _execute_tool_call_blocking_impl(
+    root: Path,
+    name: str,
+    arguments_json: str,
+    *,
+    write_allowlist: frozenset[str] | None = None,
+) -> str:
+    """`asyncio.run` 结束前释放 fal 全局 client，避免连续多次 blocking 调用踩 closed loop。"""
+    try:
+        return await execute_tool_call(
+            root, name, arguments_json, write_allowlist=write_allowlist
+        )
+    finally:
+        await _reset_fal_async_client_after_short_lived_loop()
+
+
+def execute_tool_call_blocking(
+    root: Path,
+    name: str,
+    arguments_json: str,
+    *,
+    write_allowlist: frozenset[str] | None = None,
+) -> str:
+    """在无运行中 event loop 时执行工具（测试、bootstrap 的 sync 包装）。"""
+    return asyncio.run(
+        _execute_tool_call_blocking_impl(
+            root, name, arguments_json, write_allowlist=write_allowlist
+        )
+    )
+
+
 def tool_executor_for_root(root: Path) -> Callable[[str, str], str]:
     """返回 (name, arguments_json) -> result_str，供循环内调用。"""
 
     def run(name: str, arguments_json: str) -> str:
-        return execute_tool_call(root, name, arguments_json, write_allowlist=None)
+        return execute_tool_call_blocking(
+            root, name, arguments_json, write_allowlist=None
+        )
 
     return run

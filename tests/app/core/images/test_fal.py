@@ -235,6 +235,87 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
 
 
 @pytest.mark.asyncio
+async def test_z_image_turbo_skip_gcs_upload_skips_upload_to_gcs():
+    """skip_gcs_upload=True：解析 data URI 但不调用 upload_to_gcs。"""
+    data_uri = _make_minimal_jpeg_data_uri()
+    raw_result = {
+        "images": [
+            {
+                "url": data_uri,
+                "content_type": "image/jpeg",
+                "file_name": "out.jpg",
+                "file_size": 123,
+                "width": 1,
+                "height": 1,
+            }
+        ],
+        "timings": {},
+        "seed": 42,
+        "prompt": "test",
+    }
+    mock_handler = Mock()
+    mock_handler.get = AsyncMock(return_value=raw_result)
+
+    with patch("app.core.images.fal.fal_client") as mock_fal, patch(
+        "app.core.images.fal.upload_to_gcs"
+    ) as mock_upload:
+        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+        args = ZImageTurboInput(prompt="test prompt")
+        results = await z_image_turbo(
+            args, gcs_uri_base="fal_test", skip_gcs_upload=True
+        )
+
+    mock_upload.assert_not_called()
+    assert len(results) == 1
+    r0 = results[0]
+    assert r0.gcs_uri == ""
+    assert r0.gcs_http_url == ""
+    assert isinstance(r0.raw_data, bytes)
+    assert len(r0.raw_data) > 0
+
+
+@pytest.mark.asyncio
+async def test_z_image_turbo_image_to_image_skip_gcs_upload_skips_upload_to_gcs():
+    """skip_gcs_upload=True：解析 data URI 但不调用 upload_to_gcs。"""
+    data_uri = _make_minimal_jpeg_data_uri()
+    raw_result = {
+        "images": [
+            {
+                "url": data_uri,
+                "content_type": "image/jpeg",
+                "file_name": "out.jpg",
+                "file_size": 123,
+                "width": 1,
+                "height": 1,
+            }
+        ],
+        "timings": {},
+        "seed": 42,
+        "prompt": "test",
+    }
+    mock_handler = Mock()
+    mock_handler.get = AsyncMock(return_value=raw_result)
+
+    with patch("app.core.images.fal.fal_client") as mock_fal, patch(
+        "app.core.images.fal.upload_to_gcs"
+    ) as mock_upload:
+        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+        args = ZImageTurboImageToImageInput(
+            prompt="test prompt",
+            image_url="https://example.com/in.jpg",
+        )
+        result = await z_image_turbo_image_to_image(
+            args, gcs_uri_base="fal_test", skip_gcs_upload=True
+        )
+
+    mock_upload.assert_not_called()
+    assert result.gcs_uri == ""
+    assert result.gcs_http_url == ""
+    assert isinstance(result.raw_data, bytes)
+    assert len(result.raw_data) > 0
+
+
+@pytest.mark.asyncio
 async def test_z_image_turbo_image_to_image_accepts_http_url_output_without_data_uri():
     """Fal 返回 HTTPS 图片 URL 时也应返回可用结果（不再要求必须 data URI）。"""
     http_url = "https://v3.fal.media/files/demo/generated_image.jpg"

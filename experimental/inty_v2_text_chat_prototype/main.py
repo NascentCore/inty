@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import time
 from datetime import datetime
@@ -222,11 +223,13 @@ def repl(
     elif needs_startup_profile_inquiry(ws):
         logger.debug("repl startup branch=startup_profile_inquiry (empty transcript, stub profile)")
         t0 = time.perf_counter()
-        out = run_turn(
-            ws,
-            _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
-            debug_print_system=debug_print_system,
-            llm_trace=True,
+        out = asyncio.run(
+            run_turn(
+                ws,
+                _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+            )
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
     else:
@@ -248,8 +251,8 @@ def repl(
             _preview_line(line),
         )
         t0 = time.perf_counter()
-        out = run_turn(
-            ws, line, debug_print_system=debug_print_system, llm_trace=True
+        out = asyncio.run(
+            run_turn(ws, line, debug_print_system=debug_print_system, llm_trace=True)
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
 
@@ -288,12 +291,14 @@ def once(
         _preview_line(message, max_len=240),
     )
     t0 = time.perf_counter()
-    out = run_turn(
-        ws,
-        message,
-        debug_print_system=debug_print_system,
-        defer_memory_update=False,
-        llm_trace=True,
+    out = asyncio.run(
+        run_turn(
+            ws,
+            message,
+            debug_print_system=debug_print_system,
+            defer_memory_update=False,
+            llm_trace=True,
+        )
     )
     _print_assistant_reply(out, time.perf_counter() - t0)
 
