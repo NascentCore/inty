@@ -25,12 +25,12 @@ class TestAppendUserProfileFacts(unittest.TestCase):
             base,
             ["- 年龄：42（记录日期 2099-01-01）"],
         )
-        self.assertIn("## 基本信息记录", out)
+        self.assertIn("## 身份信息", out)
         self.assertIn("年龄：42", out)
         self.assertIn("## 称呼", out)
 
     def test_inserts_before_next_section(self) -> None:
-        base = "# x\n\n## 基本信息记录\n\n- 旧\n\n## 其它\n\ny\n"
+        base = "# x\n\n## 身份信息\n\n- 旧\n\n## 其它\n\ny\n"
         out = append_user_profile_facts_to_user_md(
             base,
             ["- 新：1（记录日期 2099-01-01）"],

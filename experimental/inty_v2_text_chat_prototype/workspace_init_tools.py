@@ -10,7 +10,7 @@ from typing import Any, Callable
 from .file_store import read_text, write_text
 
 _USER_MD_REL = "USER.md"
-_USER_PROFILE_SECTION = "## 基本信息记录"
+_USER_PROFILE_SECTION = "## 身份信息"
 
 # REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
@@ -54,7 +54,7 @@ def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
 
 def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> str:
     """
-    在 USER.md 的「基本信息记录」小节追加条目；若尚无该小节则在文末追加。
+    在 USER.md 的「身份信息」小节追加条目；若尚无该小节则在文末追加。
     new_bullets 每项应为完整一行（含前导 `- `）。
     """
     lines = text.splitlines()
@@ -75,7 +75,7 @@ def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> s
 
 def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
     """
-    将用户自愿透露的基本信息追加写入 USER.md 的「基本信息记录」。
+    将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。
     """
     p = resolve_under_workspace(root, _USER_MD_REL)
@@ -240,7 +240,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
             "function": {
                 "name": "user_profile_record",
                 "description": (
-                    "Append structured facts about the user to USER.md under «基本信息记录». "
+                    "Append structured facts about the user to USER.md under «身份信息». "
                     "Call when the user shares durable basic info (e.g. age, how they wish to be called, "
                     "timezone) that should persist. Do not use for secrets unless the user clearly wants "
                     "them remembered. Speak to the user in companion language only; never mention tools, "

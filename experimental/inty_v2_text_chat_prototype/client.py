@@ -60,6 +60,12 @@ def soul_model() -> str:
     return os.getenv("INTY_V2_PROTO_SOUL_MODEL") or memory_model()
 
 
+def user_model() -> str:
+    """USER.md 策展（用户对助手可见的长期画像）；默认与记忆策展同模型。"""
+    _ensure_dotenv()
+    return os.getenv("INTY_V2_PROTO_USER_MODEL") or memory_model()
+
+
 def complete(
     messages: list[dict[str, Any]],
     *,

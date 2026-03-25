@@ -1,4 +1,4 @@
-"""记忆更新：原始流水追加 + 当日总结 LLM + MEMORY.md 策展 + SOUL.md 策展；仅由 orchestrator 调用。"""
+"""记忆更新：原始流水追加 + 当日总结 LLM + MEMORY.md 策展 + USER.md 策展 + SOUL.md 策展；仅由 orchestrator 调用。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 import queue
 import threading
 
-from .client import complete, day_summary_model, memory_model, soul_model
+from .client import complete, day_summary_model, memory_model, soul_model, user_model
 from .file_store import append_line, read_text, write_text_atomic
 from .paths import WorkspacePaths
 from .utc import local_date_str, local_iso_ts
@@ -59,6 +59,20 @@ Rules:
 - Write in the same language as the conversation (usually Chinese for Chinese user content).
 """
 
+_USER_CURATOR_SYSTEM = """You are a USER.md curator. USER.md records the assistant's durable understanding of the user (how to address them, preferences, collaboration habits). It is injected into the system prompt as ## USER on every turn.
+
+Given the current USER.md, the latest MEMORY.md (already updated this turn for consistency), and the latest user/assistant turn, output ONLY the full updated USER.md body (markdown).
+
+Rules:
+- Preserve the document's intended structure and tone: keep section headings such as `# USER.md - 关于你的用户`, `## 身份信息`, `## 慢慢了解的事`, `## 延续` unless the file uses a simpler template—do not strip guiding prose that sets boundaries (e.g. 知人方能善助).
+- Merge new stable facts into the appropriate sections; deduplicate; resolve contradictions in favor of the clearest, most recent mutually stable information.
+- Use MEMORY.md as supporting context for facts; do not paste raw chat—paraphrase into short durable lines.
+- Stay concise (substantive content at most about 4000 characters unless the existing USER.md is already longer—then preserve length).
+- If the latest turn is purely small talk with no new durable user-facing facts or preferences, return the current USER.md unchanged (verbatim aside from trivial whitespace).
+- Output raw markdown only: no preamble, no code fences around the whole document.
+- Write in the same language as USER.md and the conversation (usually Chinese for Chinese content).
+"""
+
 
 def _day_summary_disabled() -> bool:
     return os.getenv("INTY_V2_PROTO_DAY_SUMMARY_DISABLED", "").strip().lower() in (
@@ -70,6 +84,14 @@ def _day_summary_disabled() -> bool:
 
 def _soul_update_disabled() -> bool:
     return os.getenv("INTY_V2_PROTO_SOUL_UPDATE_DISABLED", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _user_update_disabled() -> bool:
+    return os.getenv("INTY_V2_PROTO_USER_UPDATE_DISABLED", "").strip().lower() in (
         "1",
         "true",
         "yes",
@@ -175,6 +197,39 @@ def _rewrite_memory_md(
     write_text_atomic(paths.memory_md, new_body.strip() + "\n")
 
 
+def _rewrite_user_md(
+    paths: WorkspacePaths,
+    *,
+    user_text: str,
+    assistant_text: str,
+    llm_trace: bool,
+) -> None:
+    if _user_update_disabled():
+        return
+    user_body = read_text(paths.user_md)
+    memory_body = read_text(paths.memory_md)
+    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
+        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
+    else:
+        memory_ctx = memory_body
+    user_block = (
+        f"Current USER.md:\n\n{user_body}\n\n---\n\n"
+        f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
+        f"Latest turn:\nUser:\n{user_text}\n\nAssistant:\n{assistant_text}\n"
+    )
+    messages = [
+        {"role": "system", "content": _USER_CURATOR_SYSTEM},
+        {"role": "user", "content": user_block},
+    ]
+    new_body = complete(
+        messages,
+        model=user_model(),
+        llm_trace=llm_trace,
+        trace_where="memory.user",
+    )
+    write_text_atomic(paths.user_md, new_body.strip() + "\n")
+
+
 def _rewrite_soul_md(
     paths: WorkspacePaths,
     *,
@@ -228,6 +283,12 @@ def memory_update_after_turn(
         assistant_text=assistant_text,
         llm_trace=llm_trace,
     )
+    _rewrite_user_md(
+        paths,
+        user_text=user_text,
+        assistant_text=assistant_text,
+        llm_trace=llm_trace,
+    )
     _rewrite_soul_md(
         paths,
         user_text=user_text,
@@ -264,7 +325,7 @@ def schedule_memory_update_after_turn(
     assistant_text: str,
     llm_trace: bool = False,
 ) -> None:
-    """Enqueue raw diary + day summary + MEMORY/SOUL curator; daemon thread; REPL 不阻塞。"""
+    """Enqueue raw diary + day summary + MEMORY/USER/SOUL curator; daemon thread; REPL 不阻塞。"""
     global _memory_queue
     with _worker_lock:
         if _memory_queue is None:
