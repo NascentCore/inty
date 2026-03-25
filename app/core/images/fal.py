@@ -284,7 +284,10 @@ class ZImageTurboInput(BaseModel):
     prompt: str
     image_size: ImageSize | ImageSizeEnum = IMAGE_SIZE_720_1280
     num_inference_steps: int = 8
-    seed: int | None = None
+    seed: int = Field(
+        default=0,
+        description="Fal: same seed + same prompt + same model version yields the same image.",
+    )
     sync_mode: bool = Field(
         default=True,
         description="""
@@ -562,7 +565,10 @@ class ZImageTurboImageToImageInput(BaseModel):
         ZImageTurboImageToImageImageSizeEnum.PORTRAIT_16_9
     )
     num_inference_steps: int = 8
-    seed: int | None = None
+    seed: int = Field(
+        default=0,
+        description="Fal: same seed + same prompt + same model version yields the same image.",
+    )
     sync_mode: bool = Field(
         default=True,
         description="If True, the media will be returned as a data URI and the output data won't be available in the request history.",
