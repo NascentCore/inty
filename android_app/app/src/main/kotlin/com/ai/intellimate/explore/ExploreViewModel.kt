@@ -214,15 +214,13 @@ class ExploreViewModel : BaseVM(), ExploreFetchCallback {
     }
 
     /**
-     * 获取恢复滚动位置时的网格索引
+     * 获取恢复滚动位置时的网格索引（钳制在合法范围内）
      *
-     * @param currentThemeItemCount 当前主题项数量（用于向后兼容，如果保存的是旧格式的agent索引）
-     * @return 网格索引（用于 LazyVerticalGrid 的 initialFirstVisibleItemIndex）
+     * @param maxItemIndexInclusive 当前 LazyVerticalGrid 最后一项的索引（含）。列表变短或主题区
+     *   item 数变化时，保存的索引可能超出该值，会在 LazyGrid 滚动测量时触发 subcompose 前置条件崩溃。
      */
-    fun getRestoredGridIndex(currentThemeItemCount: Int): Int {
-        // 直接返回保存的网格索引
-        // 如果没有保存位置（默认是0），会显示第一个item（theme或agent）
-        return _savedFirstVisibleGridIndex.value
+    fun getRestoredGridIndex(maxItemIndexInclusive: Int): Int {
+        return _savedFirstVisibleGridIndex.value.coerceIn(0, maxOf(0, maxItemIndexInclusive))
     }
 
     /** 更新当前UI中显示的agents总数 */
