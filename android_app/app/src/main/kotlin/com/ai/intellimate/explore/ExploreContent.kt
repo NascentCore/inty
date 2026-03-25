@@ -192,12 +192,30 @@ fun ExploreContent(
     val savedGridIndex by vm.savedFirstVisibleGridIndex.collectAsState()
     val savedOffset by vm.savedFirstVisibleOffset.collectAsState()
 
+    val maxGridIndexForInitial =
+        exploreLazyGridMaxItemIndex(themeItemCount, lazyPagingItems?.itemCount)
+    val initialVisibleIndex = vm.getRestoredGridIndex(maxGridIndexForInitial)
+    val initialVisibleOffset =
+        if (savedGridIndex == initialVisibleIndex) savedOffset else 0
     val gridState =
         rememberLazyGridState(
-            // 直接使用保存的网格索引，如果没有保存位置（默认是0），会显示第一个item（theme或agent）
-            initialFirstVisibleItemIndex = vm.getRestoredGridIndex(themeItemCount),
-            initialFirstVisibleItemScrollOffset = savedOffset,
+            initialFirstVisibleItemIndex = initialVisibleIndex,
+            initialFirstVisibleItemScrollOffset = initialVisibleOffset,
         )
+
+    // 列表变短或主题区条目数变化时，firstVisibleItemIndex 可能仍指向旧索引，LazyGrid 在 onScroll 测量时会 subcompose 越界崩溃。
+    LaunchedEffect(gridState, themeItemCount, lazyPagingItems?.itemCount, lazyPagingItems) {
+        snapshotFlow {
+            val layoutInfo = gridState.layoutInfo
+            layoutInfo.totalItemsCount to gridState.firstVisibleItemIndex
+        }.collect { (total, firstIdx) ->
+            if (total <= 0) return@collect
+            if (firstIdx < total) return@collect
+            val lastIndex = (total - 1).coerceAtLeast(0)
+            gridState.scrollToItem(index = lastIndex, scrollOffset = 0)
+            vm.saveScrollPosition(gridIndex = lastIndex, offset = 0)
+        }
+    }
 
     val scope = rememberCoroutineScope()
     val isAtExploreStart by remember {
@@ -234,17 +252,21 @@ fun ExploreContent(
         val currentIndex = gridState.firstVisibleItemIndex
         val currentOffset = gridState.firstVisibleItemScrollOffset
 
+        val maxIdx = exploreLazyGridMaxItemIndex(themeItemCount, lazyPagingItems?.itemCount)
+        val clampedSavedIndex = savedGridIndex.coerceIn(0, maxIdx)
+        val clampedSavedOffset = if (clampedSavedIndex == savedGridIndex) savedOffset else 0
+
         // 如果保存的位置与当前显示的位置不一致，需要恢复位置
         // 注意：这里不检查savedGridIndex是否为0，因为0也可能是有效的位置（第一个theme的位置或第一个agent的位置）
-        if (savedGridIndex != currentIndex || savedOffset != currentOffset) {
-            // 在延迟之前捕获保存的位置值，避免在延迟期间响应式状态被更新导致恢复错误的位置
-            val targetGridIndex = savedGridIndex
-            val targetOffset = savedOffset
+        if (clampedSavedIndex != currentIndex || clampedSavedOffset != currentOffset) {
             // 设置恢复标志，防止在恢复期间保存位置
             isRestoringScrollPosition = true
             // 添加小延迟确保LazyVerticalGrid已经布局完成
             delay(50)
-            // scrollToItem 会自动处理超出范围的索引（会滚动到最接近的有效索引）
+            val maxIdxAfterDelay =
+                exploreLazyGridMaxItemIndex(themeItemCount, lazyPagingItems?.itemCount)
+            val targetGridIndex = savedGridIndex.coerceIn(0, maxIdxAfterDelay)
+            val targetOffset = if (targetGridIndex == savedGridIndex) savedOffset else 0
             gridState.scrollToItem(index = targetGridIndex, scrollOffset = targetOffset)
             // 等待滚动完成后再清除恢复标志
             // 轮询检查滚动状态，直到滚动完成（最多等待1秒，防止无限等待）
