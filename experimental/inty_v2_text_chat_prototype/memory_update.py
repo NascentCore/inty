@@ -158,6 +158,8 @@ def _rewrite_day_summary_md(
         model=day_summary_model(),
         llm_trace=llm_trace,
         trace_where="memory.day_summary",
+        ws_label=paths.root.name,
+        trace_day=local_date_str(),
     )
     write_text_atomic(summary_path, new_body.strip() + "\n")
 
@@ -193,6 +195,8 @@ def _rewrite_memory_md(
         model=memory_model(),
         llm_trace=llm_trace,
         trace_where="memory.curator",
+        ws_label=paths.root.name,
+        trace_day=local_date_str(),
     )
     write_text_atomic(paths.memory_md, new_body.strip() + "\n")
 
@@ -226,6 +230,8 @@ def _rewrite_user_md(
         model=user_model(),
         llm_trace=llm_trace,
         trace_where="memory.user",
+        ws_label=paths.root.name,
+        trace_day=local_date_str(),
     )
     write_text_atomic(paths.user_md, new_body.strip() + "\n")
 
@@ -259,6 +265,8 @@ def _rewrite_soul_md(
         model=soul_model(),
         llm_trace=llm_trace,
         trace_where="memory.soul",
+        ws_label=paths.root.name,
+        trace_day=local_date_str(),
     )
     write_text_atomic(paths.soul, new_body.strip() + "\n")
 

@@ -38,6 +38,7 @@ class PromptBundle(BaseModel):
     soul: str
     user_md: str
     memory_md: str
+    capabilities_md: str = ""
     agents_md: str = ""
     tools_md: str = ""
     heartbeat_md: str = ""
@@ -82,10 +83,11 @@ def load_prompt_bundle(
         identity=read_text(paths.identity),
         soul=read_text(paths.soul),
         user_md=read_text(paths.user_md),
-        memory_md=read_text(paths.memory_md),
-        agents_md=_read_optional_text(
-            paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
+        memory_md=memory_long,
+        capabilities_md=_read_optional_text(
+            paths.capabilities_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
+        agents_md=_read_optional_text(paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         tools_md=_read_optional_text(paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
         heartbeat_md=_read_optional_text(
             paths.heartbeat_md, max_chars=_OPTIONAL_DOC_MAX_CHARS

@@ -12,10 +12,14 @@ from .file_store import read_text, write_text
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
 
+# workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
+WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
+
 # REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
         "AGENTS.md",
+        "CAPABILITIES.md",
         "HEARTBEAT.md",
         "IDENTITY.md",
         "MEMORY.md",
@@ -130,11 +134,42 @@ def tool_workspace_list_dir(root: Path, relative_path: str) -> str:
     return "\n".join(lines) if lines else "(empty)"
 
 
-def tool_workspace_read_file(root: Path, relative_path: str) -> str:
+def _parse_optional_max_chars(raw: Any) -> int | None:
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        raise ValueError("max_chars must be a positive integer or omitted")
+    n: int
+    if isinstance(raw, int):
+        n = raw
+    elif isinstance(raw, float) and raw.is_integer():
+        n = int(raw)
+    else:
+        raise ValueError("max_chars must be a positive integer or omitted")
+    if n < 1:
+        raise ValueError("max_chars must be at least 1")
+    if n > WORKSPACE_READ_FILE_MAX_CHARS_CAP:
+        raise ValueError(
+            f"max_chars must be at most {WORKSPACE_READ_FILE_MAX_CHARS_CAP}"
+        )
+    return n
+
+
+def tool_workspace_read_file(
+    root: Path, relative_path: str, max_chars: int | None = None
+) -> str:
     p = resolve_under_workspace(root, relative_path)
     if not p.is_file():
         return f"ERROR: not a file: {relative_path!r}"
-    return read_text(p)
+    body = read_text(p)
+    if max_chars is None:
+        return body
+    if len(body) <= max_chars:
+        return body
+    return (
+        body[:max_chars]
+        + "\n…[truncated: prefix only; file is longer than max_chars]"
+    )
 
 
 def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> str:
@@ -178,13 +213,24 @@ def build_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "workspace_read_file",
-                "description": "Read a UTF-8 text file under the workspace.",
+                "description": (
+                    "Read a UTF-8 text file under the workspace. "
+                    "Optional max_chars returns only the beginning of the file (prefix), "
+                    f"up to {WORKSPACE_READ_FILE_MAX_CHARS_CAP}, to limit tool output size."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "relative_path": {
                             "type": "string",
                             "description": "File path relative to workspace root.",
+                        },
+                        "max_chars": {
+                            "type": "integer",
+                            "description": (
+                                "If set, return at most this many characters from the start of the file "
+                                f"(1..{WORKSPACE_READ_FILE_MAX_CHARS_CAP}). Omit to read the full file."
+                            ),
                         },
                     },
                     "required": ["relative_path"],
@@ -298,7 +344,32 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
         t = by_name.get(n)
         if not t:
             raise KeyError(f"missing tool definition: {n!r}")
-        if n == "workspace_write_file":
+        if n == "workspace_list_dir":
+            w = dict(t)
+            wfn = dict(w["function"])
+            wfn["description"] = (
+                "List immediate children under the workspace root. "
+                "Use empty relative_path for the workspace root. "
+                "Directory names end with /. You may explore subdirectories (e.g. memory/) "
+                "to understand layout and workspace conventions before reading files."
+            )
+            w["function"] = wfn
+            out.append(w)
+        elif n == "workspace_read_file":
+            w = dict(t)
+            wfn = dict(w["function"])
+            wfn["description"] = (
+                "Read a UTF-8 file under the workspace for self-orientation (workspace docs, "
+                "context.json, memory/*) or before editing allowed root markdown files. "
+                "Optional max_chars (1.."
+                + str(WORKSPACE_READ_FILE_MAX_CHARS_CAP)
+                + ") returns only a prefix of the file to avoid huge tool results; omit for full file. "
+                "transcript.jsonl can be very large—prefer the conversation already in the message "
+                "history; if you must read it from disk, always pass max_chars."
+            )
+            w["function"] = wfn
+            out.append(w)
+        elif n == "workspace_write_file":
             w = dict(t)
             wfn = dict(w["function"])
             wfn["description"] = (
@@ -341,7 +412,11 @@ def _dispatch(
         return tool_workspace_list_dir(root, rel)
     if name == "workspace_read_file":
         rel = str(arguments.get("relative_path", ""))
-        return tool_workspace_read_file(root, rel)
+        try:
+            mc = _parse_optional_max_chars(arguments.get("max_chars"))
+        except ValueError as exc:
+            return f"ERROR: {exc}"
+        return tool_workspace_read_file(root, rel, max_chars=mc)
     if name == "workspace_write_file":
         rel = str(arguments.get("relative_path", ""))
         content = str(arguments.get("content", ""))

@@ -72,6 +72,8 @@ def complete(
     model: str | None = None,
     llm_trace: bool = False,
     trace_where: str = "complete",
+    ws_label: str,
+    trace_day: str,
 ) -> str:
     m = model or default_model()
     client = get_client()
@@ -83,7 +85,11 @@ def complete(
             trace_where,
             round_idx=1,
             model=m,
-            messages=summarize_messages(messages),
+            messages=summarize_messages(
+                messages,
+                ws_label=ws_label,
+                trace_day=trace_day,
+            ),
             response=summarize_completion_response(resp),
         )
     content = resp.choices[0].message.content

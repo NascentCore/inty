@@ -1,16 +1,81 @@
-"""终端可读的 LLM 调用摘要（用于 REPL 调试，非生产遥测）。"""
+"""LLM 调用摘要写入可选 trace 文件（用于调试，非生产遥测）。"""
 
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 from typing import Any
+
+from .prompts import SYSTEM_PROMPT_SEP, system_prompt_security_prefix
 
 _TRACE_LOCK = threading.Lock()
 _TRACE_PREFIX = "[llm-trace]"
+_trace_file_path: Path | None = None
 
 
-def summarize_messages(messages: list[dict[str, Any]], *, preview_len: int = 56) -> str:
-    """将 messages 压成单行摘要：角色链、长度、可选内容前缀。"""
+def configure_llm_trace_file(path: Path | None) -> None:
+    """由 main 入口设置；None 表示不写入文件。"""
+    global _trace_file_path
+    _trace_file_path = path.resolve() if path is not None else None
+
+
+def is_system_prompt_bundle(content: str) -> bool:
+    """是否为 build_system_prompt 拼出的主会话 system（按分隔符 + 首段 security）。"""
+    if SYSTEM_PROMPT_SEP not in content:
+        return False
+    head = content.split(SYSTEM_PROMPT_SEP, 1)[0].strip()
+    return head == system_prompt_security_prefix().strip()
+
+
+def _label_system_segment(seg: str, *, ws_label: str, day: str) -> str:
+    """单段 → 人类可读路径标签（与 prompts.build_system_prompt 段首一致）。"""
+    s = seg.lstrip()
+    if s.startswith("你是情感伴侣型助手"):
+        return f"{ws_label}/security"
+    if s.startswith("## AGENTS（工作空间约定）"):
+        return f"{ws_label}/AGENTS.md"
+    if s.startswith("## TOOLS（本地工具配置）"):
+        return f"{ws_label}/TOOLS.md"
+    if s.startswith("## HEARTBEAT（检查清单）"):
+        return f"{ws_label}/HEARTBEAT.md"
+    if s.startswith("## IDENTITY"):
+        return f"{ws_label}/IDENTITY.md"
+    if s.startswith("## CAPABILITIES（基础能力与限制）"):
+        return f"{ws_label}/CAPABILITIES.md"
+    if s.startswith("## SOUL"):
+        return f"{ws_label}/SOUL.md"
+    if s.startswith("当前上下文模式："):
+        return f"{ws_label}/context.json"
+    if s.startswith("## USER"):
+        return f"{ws_label}/USER.md"
+    if s.startswith("## MEMORY 日记（今日原始）"):
+        return f"{ws_label}/memory/daily/{day}.md"
+    if s.startswith("## MEMORY 当日总结"):
+        return f"{ws_label}/memory/{day}.md"
+    if s.startswith("## MEMORY（长期记忆定稿）"):
+        return f"{ws_label}/MEMORY.md"
+    if s.startswith("输出通道：") or s.startswith("输出与工具："):
+        return f"{ws_label}/output_contract"
+    return f"unknown({len(seg)}ch)"
+
+
+def summarize_system_message_content(content: str, *, ws_label: str, day: str) -> str:
+    """将 bundle 形 system 压成「总长 + @⟨段标签⟩」单行。"""
+    labels: list[str] = []
+    for seg in content.split(SYSTEM_PROMPT_SEP):
+        labels.append(_label_system_segment(seg, ws_label=ws_label, day=day))
+    inner = ",".join(labels)
+    return f"{len(content)}ch @⟨{inner}⟩"
+
+
+def summarize_messages(
+    messages: list[dict[str, Any]],
+    ws_label: str,
+    trace_day: str,
+    *,
+    preview_len: int = 56,
+) -> str:
+    """将 messages 压成单行摘要：角色链、长度、可选内容前缀或 bundle 引用。"""
     parts: list[str] = []
     for i, m in enumerate(messages):
         role = m.get("role", "?")
@@ -45,6 +110,9 @@ def summarize_messages(messages: list[dict[str, Any]], *, preview_len: int = 56)
         c = m.get("content")
         if not isinstance(c, str):
             parts.append(f"{i}:{role} <non-str>")
+            continue
+        if role == "system" and is_system_prompt_bundle(c):
+            parts.append(f"{i}:system {summarize_system_message_content(c, ws_label=ws_label, day=trace_day)}")
             continue
         prev = c.replace("\n", " ").strip()
         if len(prev) > preview_len:
@@ -84,11 +152,16 @@ def summarize_completion_response(resp: Any) -> str:
 
 
 def emit_trace(where: str, *, round_idx: int, model: str, messages: str, response: str) -> None:
-    """带锁打印三行 trace，避免与记忆线程交错时行内撕裂。"""
+    """带锁追加三行 trace 到已配置路径，避免与记忆线程交错时块内撕裂。"""
     block = (
         f"{_TRACE_PREFIX} {where} #{round_idx} model={model}\n"
         f"{_TRACE_PREFIX}   req:  {messages}\n"
         f"{_TRACE_PREFIX}   resp: {response}\n"
     )
     with _TRACE_LOCK:
-        print(block, end="", flush=True)
+        path = _trace_file_path
+        if path is None:
+            return
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(block)
+            f.flush()

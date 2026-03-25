@@ -17,7 +17,7 @@ from .models import (
 )
 from .paths import WorkspacePaths
 from .prompts import build_system_prompt
-from .utc import utc_iso_ts
+from .utc import local_date_str, utc_iso_ts
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
@@ -54,7 +54,11 @@ def _run_turn_with_user_profile_tools(
                 "repl.turn",
                 round_idx=round_idx,
                 model=model,
-                messages=summarize_messages(messages),
+                messages=summarize_messages(
+                    messages,
+                    ws_label=root.name,
+                    trace_day=local_date_str(),
+                ),
                 response=summarize_completion_response(resp),
             )
         msg = resp.choices[0].message

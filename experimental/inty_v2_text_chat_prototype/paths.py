@@ -41,6 +41,10 @@ class WorkspacePaths:
         return self.root / "TOOLS.md"
 
     @property
+    def capabilities_md(self) -> Path:
+        return self.root / "CAPABILITIES.md"
+
+    @property
     def transcript(self) -> Path:
         return self.root / "transcript.jsonl"
 

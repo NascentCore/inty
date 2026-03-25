@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 from .client import default_model, get_client
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
+from .utc import local_date_str
 from .orchestrator import is_workspace_initialized
 from .workspace_init_tools import (
     build_openai_tools,
@@ -95,7 +96,11 @@ def run_workspace_bootstrap_loop(
                 "bootstrap",
                 round_idx=round_idx,
                 model=m,
-                messages=summarize_messages(messages),
+                messages=summarize_messages(
+                    messages,
+                    ws_label=root.name,
+                    trace_day=local_date_str(),
+                ),
                 response=summarize_completion_response(resp),
             )
         msg = resp.choices[0].message

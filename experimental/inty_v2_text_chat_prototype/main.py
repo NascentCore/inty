@@ -17,6 +17,7 @@ if __package__ is None:
     sys.path.insert(0, str(_PKG_DIR.parent))
 
 from inty_v2_text_chat_prototype.bootstrap import init_workspace as bootstrap_init_workspace
+from inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
 from inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_initialized,
     needs_startup_profile_inquiry,
@@ -98,12 +99,17 @@ def bootstrap_agent(
         bool,
         Parameter(name="--verbose-tools", help="打印每轮调用的工具名与参数摘要"),
     ] = False,
-    llm_trace: Annotated[
-        bool,
-        Parameter(name="--llm-trace", help="打印每轮 chat.completions 的请求/响应摘要"),
-    ] = False,
+    llm_trace_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--llm-trace-file",
+            help="将每轮 chat.completions 的请求/响应摘要追加写入该文件（便于 tail -f）",
+        ),
+    ] = None,
 ) -> None:
     """Agentic 工具循环：按 _ws2/BOOSTRAP.md 用 LLM + 文件工具初始化工作区。"""
+    configure_llm_trace_file(llm_trace_file)
+    trace_on = llm_trace_file is not None
     user = message if (message is not None and message.strip()) else _DEFAULT_BOOTSTRAP_USER
 
     def _on_tool(name: str, args: str) -> None:
@@ -116,7 +122,7 @@ def bootstrap_agent(
         workspace,
         user,
         on_tool=_on_tool if verbose_tools else None,
-        llm_trace=llm_trace,
+        llm_trace=trace_on,
     )
     if out:
         print(out)
@@ -132,17 +138,22 @@ def repl(
         bool,
         Parameter(name="--debug-print-system", help="打印本轮 system prompt"),
     ] = False,
-    llm_trace: Annotated[
-        bool,
-        Parameter(name="--llm-trace", help="打印每轮 chat.completions 的请求/响应摘要"),
-    ] = False,
+    llm_trace_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--llm-trace-file",
+            help="将每轮 chat.completions 的请求/响应摘要追加写入该文件（便于 tail -f）",
+        ),
+    ] = None,
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
+    configure_llm_trace_file(llm_trace_file)
+    trace_on = llm_trace_file is not None
     ws = workspace or _default_workspace()
     if not is_workspace_initialized(ws):
         t0 = time.perf_counter()
         out = run_workspace_bootstrap_loop(
-            ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=llm_trace
+            ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=trace_on
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
     elif needs_startup_profile_inquiry(ws):
@@ -151,7 +162,7 @@ def repl(
             ws,
             _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
             debug_print_system=debug_print_system,
-            llm_trace=llm_trace,
+            llm_trace=trace_on,
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
     while True:
@@ -166,7 +177,7 @@ def repl(
             continue
         t0 = time.perf_counter()
         out = run_turn(
-            ws, line, debug_print_system=debug_print_system, llm_trace=llm_trace
+            ws, line, debug_print_system=debug_print_system, llm_trace=trace_on
         )
         _print_assistant_reply(out, time.perf_counter() - t0)
 
@@ -182,12 +193,17 @@ def once(
         bool,
         Parameter(name="--debug-print-system", help="打印本轮 system prompt"),
     ] = False,
-    llm_trace: Annotated[
-        bool,
-        Parameter(name="--llm-trace", help="打印每轮 chat.completions 的请求/响应摘要"),
-    ] = False,
+    llm_trace_file: Annotated[
+        Path | None,
+        Parameter(
+            name="--llm-trace-file",
+            help="将每轮 chat.completions 的请求/响应摘要追加写入该文件（便于 tail -f）",
+        ),
+    ] = None,
 ) -> None:
     """单轮对话。"""
+    configure_llm_trace_file(llm_trace_file)
+    trace_on = llm_trace_file is not None
     ws = workspace or _default_workspace()
     t0 = time.perf_counter()
     out = run_turn(
@@ -195,7 +211,7 @@ def once(
         message,
         debug_print_system=debug_print_system,
         defer_memory_update=False,
-        llm_trace=llm_trace,
+        llm_trace=trace_on,
     )
     _print_assistant_reply(out, time.perf_counter() - t0)
 
