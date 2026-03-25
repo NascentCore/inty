@@ -1,4 +1,4 @@
-"""UTC timestamps shared by orchestrator and memory update."""
+"""Timestamps: UTC for transcript JSONL; local TZ for diary lines and calendar-day paths."""
 
 from __future__ import annotations
 
@@ -11,3 +11,11 @@ def utc_iso_ts() -> str:
 
 def utc_date_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def local_iso_ts() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def local_date_str() -> str:
+    return datetime.now().astimezone().date().isoformat()

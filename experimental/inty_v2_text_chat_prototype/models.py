@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from .file_store import read_text
 from .paths import WorkspacePaths
-from .utc import utc_date_str
+from .utc import local_date_str
 
 
 class ChatMessage(BaseModel):
@@ -58,7 +58,7 @@ def load_prompt_bundle(
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
     """加载人格与记忆。非 intimate 模式不读取私人记忆文件（与 prompts 层约定一致）。"""
-    day = utc_date_str()
+    day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     intimate = m.context_mode.strip().lower() == "intimate"
 

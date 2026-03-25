@@ -54,9 +54,31 @@ def day_summary_model() -> str:
     return os.getenv("INTY_V2_PROTO_DAY_SUMMARY_MODEL") or memory_model()
 
 
-def complete(messages: list[dict[str, Any]], *, model: str | None = None) -> str:
+def soul_model() -> str:
+    """SOUL.md 策展（边界与价值观落盘）；默认与记忆策展同模型。"""
+    _ensure_dotenv()
+    return os.getenv("INTY_V2_PROTO_SOUL_MODEL") or memory_model()
+
+
+def complete(
+    messages: list[dict[str, Any]],
+    *,
+    model: str | None = None,
+    llm_trace: bool = False,
+    trace_where: str = "complete",
+) -> str:
     m = model or default_model()
     client = get_client()
     resp = client.chat.completions.create(model=m, messages=messages)
+    if llm_trace:
+        from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
+
+        emit_trace(
+            trace_where,
+            round_idx=1,
+            model=m,
+            messages=summarize_messages(messages),
+            response=summarize_completion_response(resp),
+        )
     content = resp.choices[0].message.content
     return content if content is not None else ""

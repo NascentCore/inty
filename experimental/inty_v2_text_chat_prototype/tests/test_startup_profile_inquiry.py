@@ -1,0 +1,53 @@
+"""needs_startup_profile_inquiry：空 transcript + 占位 IDENTITY/USER 时为 True。"""
+
+from __future__ import annotations
+
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+_EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_EXPERIMENTAL))
+
+from inty_v2_text_chat_prototype.bootstrap import init_workspace
+from inty_v2_text_chat_prototype.orchestrator import needs_startup_profile_inquiry
+from inty_v2_text_chat_prototype.paths import WorkspacePaths
+
+
+class TestStartupProfileInquiry(unittest.TestCase):
+    def test_init_workspace_template_empty_transcript_true(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            init_workspace(root)
+            self.assertTrue(needs_startup_profile_inquiry(root))
+
+    def test_after_one_turn_transcript_false(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            init_workspace(root)
+            paths = WorkspacePaths(root=root)
+            paths.transcript.write_text(
+                '{"role":"user","content":"hi","ts":"t1"}\n',
+                encoding="utf-8",
+            )
+            self.assertFalse(needs_startup_profile_inquiry(root))
+
+    def test_custom_identity_user_no_markers_false(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            init_workspace(root)
+            paths = WorkspacePaths(root=root)
+            paths.identity.write_text(
+                "# IDENTITY\n\n助手名为小岚，与用户为一对一伴侣关系。\n",
+                encoding="utf-8",
+            )
+            paths.user_md.write_text(
+                "# USER\n\n用户希望被称为老林；工作日晚间在线。\n",
+                encoding="utf-8",
+            )
+            self.assertFalse(needs_startup_profile_inquiry(root))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -34,7 +34,24 @@ def _output_contract_text() -> str:
     )
 
 
-def build_system_prompt(bundle: PromptBundle, context: ContextMeta) -> str:
+def _output_contract_text_with_user_profile_tool() -> str:
+    return (
+        "输出与工具："
+        "（1）用户自愿透露、适合长期保存的基本事实，可静默调用 user_profile_record 写入 USER 档案；"
+        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
+        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
+        "使下一轮加载到新约定；REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
+        "若本回合无需落盘则不要调用工具。"
+        "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
+    )
+
+
+def build_system_prompt(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    *,
+    enable_user_profile_tool: bool = False,
+) -> str:
     parts: list[str] = [_security_base()]
     if bundle.agents_md.strip():
         parts.append("## AGENTS（工作空间约定）\n\n" + bundle.agents_md.strip())
@@ -61,5 +78,9 @@ def build_system_prompt(bundle: PromptBundle, context: ContextMeta) -> str:
         )
     if bundle.memory_md.strip():
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
-    parts.append(_output_contract_text())
+    parts.append(
+        _output_contract_text_with_user_profile_tool()
+        if enable_user_profile_tool
+        else _output_contract_text()
+    )
     return _SEP.join(parts)
