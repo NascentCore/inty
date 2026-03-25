@@ -9,7 +9,7 @@
 **LangSmith**
 
 - dev 环境 100% 追踪
-- prod 环境 10% 追踪文本 100% 其他
+- prod 环境文本追踪采样率 1%，并仅对白名单中的运维账户强制追踪
 
 ## IntelliMate & Inty dev 与 prod 环境
 
