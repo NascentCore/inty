@@ -4,6 +4,9 @@
 
 - 产品方向：面向 35+ 男性用户的陪伴 AI，应是一个以聊天为核心、长期稳定且低负担、可实时响应并识别用户状态，
   在不过度打扰的前提下以精准稀疏的主动触达建立长期情感连接，并提供成熟、有文化与智性深度互动的共情型智能体。
+- Do not bother with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
+- Do not do defensive programming, let failure appear early and loud.
+- Python 技术选型：cyclopts pydantic loguru
 
 ## 给 AI Agent 的最小执行清单（先读这个）
 
@@ -88,11 +91,6 @@
   - 后端所有应用都有 2 个环境：dev prod
     - .secrets/alien-paratext-461204-i9-cursor-log-viewer.json 可以用来访问
 
-## 代码库内的一般性约定
-
-- Do not bother with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
-- Do not do defensive programming, let failure appear early and loud.
-
 ## 软件工程规范
 
 - **Dev Mode**:
@@ -175,19 +173,6 @@ alembic -c alembic/alembic.ini revision --autogenerate -m "<revision description
 - 严禁向已有的 `__init__.py` 内添加新逻辑代码（除非该目录规则明确要求）
 - 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
 - 禁止使用 `__main__.py` 这种范式，使用显式的 `main.py` 入口文件
-
-## Android App
-
-- Android 发布新版本后将 version code 写入 [Prod 后端配置文件](devops/config.yaml.prod) `google_play.current_version_code`
-
-## CloudFlare CDN（用于支持媒体文件分发：image audio 等）
-
-- @<https://developers.cloudflare.com/llms.txt>
-- @<https://developers.cloudflare.com/workers/prompt.txt>
-- @<https://developers.cloudflare.com/stream/llms-full.txt>
-- @<https://developers.cloudflare.com/developer-platform/llms-full.txt>
-
-来自官方文档链接 https://developers.cloudflare.com/stream/changelog/
 
 ## Cursor Cloud specific instructions
 
