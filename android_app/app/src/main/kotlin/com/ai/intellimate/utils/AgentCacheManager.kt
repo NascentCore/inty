@@ -7,11 +7,16 @@ import ai.sxwl.android.utils.LogUtils
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Agent缓存管理器 负责缓存推荐agents和关注agents数据 */
 object AgentCacheManager {
+    private val cacheScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private const val KEY_RECOMMENDED_AGENTS = "cached_recommended_agents"
     private const val KEY_CHAT_AGENTS = "cached_chat_agents"
@@ -194,11 +199,13 @@ object AgentCacheManager {
     fun cacheCharacterThemes(themes: List<CharacterThemeItem>) {
         try {
             val themesJson = characterThemeListAdapter.toJson(themes)
-            IntySetting.setUserProfileData(KEY_CHARACTER_THEMES, themesJson)
-            IntySetting.setUserProfileData(
-                KEY_CHARACTER_THEMES_CACHE_TIMESTAMP,
-                System.currentTimeMillis().toString(),
-            )
+            cacheScope.launch {
+                IntySetting.setUserProfileDataSuspend(KEY_CHARACTER_THEMES, themesJson)
+                IntySetting.setUserProfileDataSuspend(
+                    KEY_CHARACTER_THEMES_CACHE_TIMESTAMP,
+                    System.currentTimeMillis().toString(),
+                )
+            }
             _themeAgentCache.value = themes
             LogUtils.d("AgentCacheManager - 缓存主题专区列表成功: ${themes.size}个")
         } catch (e: Exception) {

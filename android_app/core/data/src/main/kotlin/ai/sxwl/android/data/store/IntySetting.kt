@@ -624,6 +624,20 @@ object IntySetting {
         }
     }
 
+    suspend fun setUserProfileDataSuspend(key: String, value: String) {
+        updateIntySetting {
+            it.copy(
+                userCache =
+                    it.userCache.copy(
+                        userProfile =
+                            it.userCache.userProfile.toMutableMap().also { map ->
+                                map[key] = value
+                            }
+                    )
+            )
+        }
+    }
+
     fun getUserProfileData(key: String): String? {
         // return curUserSetting.decodeString("user_profile_$key")
         //        return runBlocking {
