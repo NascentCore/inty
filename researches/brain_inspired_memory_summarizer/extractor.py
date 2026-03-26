@@ -257,9 +257,17 @@ def llm_extract_memory_slots(
     """
     content = llm_call(text)
     data = json.loads(content)
-    raw_items = data.get("candidates", [])
-    if not isinstance(raw_items, list):
-        raise ValueError("LLM extractor response must include list field candidates")
+    raw_items: list[object]
+    if isinstance(data, list):
+        # Accept direct list form for easier testing/tooling integrations.
+        raw_items = data
+    elif isinstance(data, dict):
+        items = data.get("candidates", [])
+        if not isinstance(items, list):
+            raise ValueError("LLM extractor response must include list field candidates")
+        raw_items = items
+    else:
+        raise ValueError("LLM extractor response must be object or list JSON")
 
     out: list[SlotCandidate] = []
     for item in raw_items:
@@ -305,7 +313,10 @@ def extract_candidates_llm(
     """
     if llm_call is None:
         return _extract_candidates_llm_default(text, turn_idx)
-    return llm_extract_memory_slots(text, turn_idx, llm_call)
+    try:
+        return llm_extract_memory_slots(text, turn_idx, llm_call)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return _extract_candidates_regex(text, turn_idx)
 
 
 def _resolve_same_turn_conflicts(candidates: list[SlotCandidate]) -> list[SlotCandidate]:

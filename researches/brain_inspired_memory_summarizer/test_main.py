@@ -8,15 +8,8 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from main import (
-    LayeredMemoryAgent,
-    NaiveWindowAgent,
-    build_dataset,
-    evaluate_agent,
-    extract_candidates,
-    extract_candidates_with_llm,
-    run_experiment,
-)
+from main import LayeredMemoryAgent, NaiveWindowAgent, build_dataset, evaluate_agent, run_experiment
+from extractor import extract_candidates, extract_candidates_llm
 
 
 class MemoryExperimentTests(unittest.TestCase):
@@ -30,7 +23,7 @@ class MemoryExperimentTests(unittest.TestCase):
                     '"evidence":"现在住在上海"}]'
                 )
 
-        candidates = extract_candidates_with_llm(
+        candidates = extract_candidates_llm(
             "以后请叫我阿哲，我现在住在上海。",
             turn_idx=7,
             llm_call=_FakeLLM(),
@@ -45,7 +38,7 @@ class MemoryExperimentTests(unittest.TestCase):
             def __call__(self, _: str) -> str:
                 return "{not-json"
 
-        candidates = extract_candidates_with_llm(
+        candidates = extract_candidates_llm(
             "请不要叫我宝贝。", turn_idx=3, llm_call=_BrokenLLM()
         )
         keys = {c.key for c in candidates}
