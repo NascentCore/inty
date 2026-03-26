@@ -9,6 +9,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
+from app.core.agentic_kernel.tools.registry import ToolRegistry
+
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
     _reset_fal_async_client_after_short_lived_loop,
@@ -35,6 +37,19 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "TOOLS.md",
         "USER.md",
     }
+)
+
+
+_BASE_TOOL_REGISTRY = ToolRegistry(
+    (
+        "workspace_list_dir",
+        "workspace_read_file",
+        "workspace_write_file",
+        "workspace_mkdir",
+        "user_profile_record",
+        "generate_image",
+        "modify_image",
+    )
 )
 
 
