@@ -158,6 +158,7 @@ def _append_background_transcript_assistant(
     *,
     content: str,
     assistant_msg_uuid: str,
+    reply_to: str,
 ) -> None:
     append_jsonl(
         transcript_path,
@@ -167,6 +168,7 @@ def _append_background_transcript_assistant(
             "ts": utc_iso_ts(),
             "uuid": assistant_msg_uuid,
             "source": "tool_bg",
+            "reply_to": reply_to,
         },
     )
 
@@ -245,6 +247,7 @@ async def _run_background_tool_loop(
                 transcript_path,
                 content=assistant_text,
                 assistant_msg_uuid=assistant_msg_uuid,
+                reply_to=user_msg_uuid,
             )
             elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
             _append_background_log(

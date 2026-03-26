@@ -132,8 +132,10 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertEqual([r.role for r in rows], ["user", "assistant", "assistant"])
             self.assertEqual(rows[1].content, "chat-fast-r1")
             self.assertEqual(rows[1].source, "chat")
+            self.assertEqual(rows[1].reply_to, rows[0].uuid)
             self.assertIn("tool-final-r2", rows[2].content)
             self.assertEqual(rows[2].source, "tool_bg")
+            self.assertEqual(rows[2].reply_to, rows[0].uuid)
 
     def test_no_tool_calls_does_not_append_background_transcript(self) -> None:
         fake_client = SimpleNamespace(
@@ -166,6 +168,7 @@ class TestAsyncToolBackground(unittest.TestCase):
             rows = load_transcript((root / "transcript.jsonl"))
             self.assertEqual([r.role for r in rows], ["user", "assistant"])
             self.assertEqual(rows[1].source, "chat")
+            self.assertEqual(rows[1].reply_to, rows[0].uuid)
 
 
 if __name__ == "__main__":

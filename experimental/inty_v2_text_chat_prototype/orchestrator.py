@@ -243,6 +243,7 @@ def _persist_turn_rows(
     assistant_text: str,
     ts_user: str,
     user_msg_uuid: str,
+    assistant_reply_to: str,
     heartbeat_turn: bool,
     assistant_source: str = "chat",
 ) -> str:
@@ -264,6 +265,7 @@ def _persist_turn_rows(
             "content": assistant_text,
             "ts": utc_iso_ts(),
             "uuid": assistant_msg_uuid,
+            "reply_to": assistant_reply_to,
             "source": assistant_source,
         },
     )
@@ -713,6 +715,7 @@ async def run_turn(
             assistant_text=assistant_text,
             ts_user=ts_user,
             user_msg_uuid=user_msg_uuid,
+            assistant_reply_to=user_msg_uuid,
             heartbeat_turn=heartbeat_turn,
             assistant_source="chat",
         )
