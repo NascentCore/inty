@@ -80,6 +80,31 @@
 - `t1 <= score < t2`：候选进入 L3（日级摘要层）。
 - `score >= t2`：直接触发 L4/L5/L6 更新（依类别落层）。
 
+### 可执行默认值（v0）
+
+为避免多实现漂移，先给一套默认可落地参数：
+
+- 归一化公式：  
+  `salience_score = Σ(w_i * f_i)`，其中 `f_i ∈ [0,1]`。
+- 默认权重（总和 1.0）：
+  - `w_emotion_intensity = 0.20`
+  - `w_novelty = 0.20`
+  - `w_commitment_signal = 0.25`
+  - `w_boundary_signal = 0.25`
+  - `w_recurrence = 0.10`
+- 默认阈值：
+  - `t1 = 0.35`
+  - `t2 = 0.65`
+- 强制优先规则（硬编码）：
+  - 若 `boundary_signal >= 0.70`，无论总分如何，必须进入 L6（SOUL）候选。
+  - 若 `commitment_signal >= 0.80` 且 `novelty >= 0.50`，至少进入 L5（USER）候选。
+
+### 校准协议（避免拍脑袋）
+
+- 每周抽样 100 条候选轮次，由人工标注“应/不应入长期层”。
+- 以 F1 为目标调权重；`precision < 0.7` 优先提高 `t2`，`recall < 0.7` 优先降低 `t1`。
+- 每次只改一个参数并记录变更日志（含前后指标），避免多变量混淆。
+
 ## 4.2 机制 B：分层巩固节拍（multi-timescale consolidation）
 
 建议将当前“基本每轮都策展”改成多节拍：
@@ -89,6 +114,18 @@
 - **慢节拍（每 M 轮或每天）**：L6（SOUL）审慎更新，避免人格抖动。
 - **超慢节拍（每周）**：对 L4/L5 去重、冲突修正、陈旧信息降权（可后续引入）。
 
+### 可执行默认值（v0）
+
+- `N = 12`（每 12 轮执行一次 L3/L5 巩固）。
+- `M = 72`（每 72 轮执行一次 L6 审核式巩固）。
+- 周级回顾：每 7 天执行一次（可由定时任务触发）。
+
+### 新鲜度 SLO（防止过期）
+
+- L4（MEMORY）目标最大陈旧度：`<= 30` 轮。
+- L5（USER）目标最大陈旧度：`<= 24h` 或 `<= 100` 轮（先到先触发）。
+- L6（SOUL）目标最大陈旧度：`<= 72h`，但边界事件必须“即刻候选、下个巩固周期必落盘”。
+
 ## 4.3 机制 C：记忆类型分流（type-aware routing）
 
 同一轮信息进入不同层：
@@ -97,6 +134,23 @@
 - “关系大事/共同经历” → L3（day summary）再沉淀到 L4。
 - “边界/价值/不可逾越” → L6（SOUL）优先。
 - “纯闲聊噪声” → L1/L2 即可，不必升层。
+
+## 4.4 跨层冲突不变量（必须满足）
+
+为避免“记忆自相矛盾”导致危险回复，定义以下硬约束：
+
+1. **边界优先于偏好**：L6（SOUL）与 L5/L4 冲突时，L6 永远优先。
+2. **新事实优先于旧事实**：同一 key 多版本冲突时，以最新且证据完整的一条为准。
+3. **禁止同轮自相矛盾落盘**：若同一轮提取出互斥事实，必须先进入冲突队列，不得直接写入长期层。
+
+### 冲突修复流程（写入前）
+
+1. 候选阶段做冲突检测（例如 `preferred_name=宝贝` 与 `boundary=不要叫我宝贝`）。
+2. 触发规则修复：
+   - 将冲突项写入 `conflict_reason`。
+   - 对被否决事实打 `superseded_by` 或 `invalidated_by_boundary=true`。
+3. 仅修复后的候选允许进入 L4/L5/L6。
+4. 审计日志必须可追溯到源 turn（见 §6 schema）。
 
 ---
 
@@ -125,7 +179,20 @@
 在不改数据库前提下，可新增一个轻量候选队列文件：
 
 - `.inty_v2_salience_queue.jsonl`（建议）
-  - 字段：`turn_uuid`、`ts`、`salience_score`、`type_tags`、`candidate_facts[]`、`candidate_boundaries[]`
+  - 必需字段：
+    - `turn_uuid`
+    - `ts`
+    - `salience_score`
+    - `salience_factors`（各分量值，便于解释分数）
+    - `type_tags`
+    - `candidate_facts[]`
+    - `candidate_boundaries[]`
+    - `source_span`（源消息区间，如 transcript msg uuid 范围）
+    - `evidence_snippet`（短证据文本）
+    - `confidence`
+    - `conflict_reason`（无冲突可为空）
+    - `superseded_by`（若被后续事实覆盖）
+    - `invalidated_by_boundary`（布尔）
   - 用途：给 L3/L4/L5/L6 巩固器做“有筛选的输入”，替代直接吃整段 raw 文本
 
 这一步可显著降低 LLM 策展噪声，并让“为什么被记住”可审计。
@@ -167,6 +234,10 @@
   - 断言无边界变更时 SOUL 不更新。
 - `test_prompt_layer_injection_policy.py`
   - 断言不同 `context_mode` 下注入层集合符合策略。
+- `test_memory_conflict_resolution.py`
+  - 断言边界与偏好冲突时，边界优先、冲突项不会直接落盘。
+- `test_memory_freshness_slo.py`
+  - 断言超过 SLO 时会触发对应层刷新任务。
 
 ## 8.2 运行时日志字段（建议补充）
 
