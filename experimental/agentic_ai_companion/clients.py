@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import os
 from typing import Any
-
-from langsmith import wrappers
 from openai import OpenAI
 
 from app.core.agentic_kernel.providers.facade import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
+)
+from app.core.agentic_kernel.providers.gemini import (
+    GeminiClientOptions,
+    get_gemini_client as get_kernel_gemini_client,
 )
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -33,20 +35,15 @@ def create_openai_client() -> OpenAI:
 
 
 def _create_gemini_client():
-    from google import genai
-
-    base = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    wrap_fn = getattr(wrappers, "wrap_gemini", None)
-    if wrap_fn is not None:
-        return wrap_fn(
-            base,
-            tracing_extra={
-                "tags": ["agentic-ai-companion", "gemini"],
-                "metadata": {"source": "experimental"},
-            },
+    return get_kernel_gemini_client(
+        GeminiClientOptions(
+            api_key=os.getenv("GEMINI_API_KEY"),
+            wrap_langsmith=True,
+            tags=("agentic-ai-companion", "gemini"),
+            metadata={"source": "experimental"},
             chat_name="AgenticAICompanion_Gemini",
         )
-    return base
+    )
 
 
 def get_gemini_client():
