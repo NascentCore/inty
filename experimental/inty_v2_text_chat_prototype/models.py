@@ -19,6 +19,7 @@ class ChatMessage(BaseModel):
     ts: str
     uuid: str | None = None
     heartbeat: bool | None = None
+    source: str | None = None
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000

@@ -12,6 +12,7 @@ from typing import Any
 from loguru import logger
 
 from .client import (
+    async_tool_background_enabled,
     chat_model,
     default_model,
     dual_llm_enabled,
@@ -47,6 +48,7 @@ from .workspace_init_tools import (
     execute_tool_call,
     openai_assistant_message_dict,
 )
+from .tool_background import start_tool_background_job
 
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
@@ -200,6 +202,125 @@ def _log_llm_round_result(
             ),
             response=summarize_completion_response(resp),
         )
+
+
+def _build_turn_base_messages(
+    *,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    transcript: list[ChatMessage],
+    user_text: str,
+    heartbeat_turn: bool,
+) -> tuple[list[dict[str, Any]], str]:
+    """Construct system+history+user messages and return (messages, user_msg_uuid)."""
+    system = build_system_prompt(
+        bundle,
+        context,
+        enable_user_profile_tool=True,
+        heartbeat_turn=heartbeat_turn,
+    )
+    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+    for m in transcript:
+        row: dict[str, Any] = {"role": m.role, "content": m.content}
+        if m.uuid:
+            row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
+        messages.append(row)
+    user_msg_uuid = str(uuid.uuid4())
+    messages.append(
+        {
+            "role": "user",
+            "content": user_text,
+            TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+        }
+    )
+    return messages, user_msg_uuid
+
+
+def _persist_turn_rows(
+    paths: WorkspacePaths,
+    *,
+    user_text: str,
+    assistant_text: str,
+    ts_user: str,
+    user_msg_uuid: str,
+    heartbeat_turn: bool,
+    assistant_source: str = "chat",
+) -> str:
+    """Persist user+assistant transcript rows and return assistant uuid."""
+    user_row: dict[str, Any] = {
+        "role": "user",
+        "content": user_text,
+        "ts": ts_user,
+        "uuid": user_msg_uuid,
+    }
+    if heartbeat_turn:
+        user_row["heartbeat"] = True
+    append_jsonl(paths.transcript, user_row)
+    assistant_msg_uuid = str(uuid.uuid4())
+    append_jsonl(
+        paths.transcript,
+        {
+            "role": "assistant",
+            "content": assistant_text,
+            "ts": utc_iso_ts(),
+            "uuid": assistant_msg_uuid,
+            "source": assistant_source,
+        },
+    )
+    return assistant_msg_uuid
+
+
+async def _run_turn_fast_chat_then_tool_background(
+    messages: list[dict[str, Any]],
+    root: Path,
+    *,
+    llm_trace: bool,
+    transcript_path: Path,
+    user_msg_uuid: str,
+) -> str:
+    """
+    Front path: return chat-branch text quickly.
+    Back path: tool branch + tool execution runs in background; completion is emitted to output queue.
+    """
+    client = get_client()
+    chat_route_model = chat_model()
+    tool_route_model = tool_model()
+    tools = build_openai_repl_tools()
+    if not tools:
+        raise RuntimeError("build_openai_repl_tools() returned empty list")
+    request_messages = deepcopy(messages)
+    chat_payload = _openai_messages_payload(messages)
+    # Start tool-side work immediately in background; it will do the full tool loop
+    # and only append to shared transcript after completion.
+    start_tool_background_job(
+        ws_root=root,
+        request_messages=request_messages,
+        tool_model_name=tool_route_model,
+        llm_trace=llm_trace,
+        transcript_path=transcript_path,
+        user_msg_uuid=user_msg_uuid,
+        tools=tools,
+        execute_tool_call_fn=execute_tool_call,
+        client=client,
+    )
+    chat_resp = await asyncio.to_thread(
+        _chat_completion_create,
+        client,
+        model=chat_route_model,
+        messages_payload=chat_payload,
+        tools=[],
+    )
+    _log_llm_round_result(
+        round_idx=1,
+        model=chat_route_model,
+        resp=chat_resp,
+        messages=request_messages,
+        llm_trace=llm_trace,
+        llm_trace_where="repl.turn.bg.chat_front",
+        root=root,
+    )
+    chat_text = _assistant_text_from_completion_response(chat_resp)
+    return chat_text
 
 
 async def _run_turn_with_user_profile_tools(
@@ -544,20 +665,12 @@ async def run_turn(
             print(system)
             print("=" * 80)
 
-        messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-        for m in transcript:
-            row: dict[str, Any] = {"role": m.role, "content": m.content}
-            if m.uuid:
-                row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
-            messages.append(row)
-
-        user_msg_uuid = str(uuid.uuid4())
-        messages.append(
-            {
-                "role": "user",
-                "content": user_text,
-                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-            }
+        messages, user_msg_uuid = _build_turn_base_messages(
+            bundle=bundle,
+            context=context,
+            transcript=transcript,
+            user_text=user_text,
+            heartbeat_turn=heartbeat_turn,
         )
 
         logger.debug(
@@ -572,12 +685,21 @@ async def run_turn(
         # Must snapshot user time before the LLM call; assistant time is taken after (below).
         ts_user = utc_iso_ts()
         t_main = time.perf_counter()
-        assistant_text = await _run_turn_with_user_profile_tools(
-            messages,
-            root,
-            llm_trace=llm_trace,
-            heartbeat_turn=heartbeat_turn,
-        )
+        if async_tool_background_enabled() and not heartbeat_turn:
+            assistant_text = await _run_turn_fast_chat_then_tool_background(
+                messages,
+                root,
+                llm_trace=llm_trace,
+                transcript_path=paths.transcript,
+                user_msg_uuid=user_msg_uuid,
+            )
+        else:
+            assistant_text = await _run_turn_with_user_profile_tools(
+                messages,
+                root,
+                llm_trace=llm_trace,
+                heartbeat_turn=heartbeat_turn,
+            )
         logger.info(
             "run_turn main_repl_tool_loop_wall_ms={:.0f}",
             (time.perf_counter() - t_main) * 1000.0,
@@ -585,24 +707,14 @@ async def run_turn(
 
         assistant_msg_uuid = str(uuid.uuid4())
         t_persist = time.perf_counter()
-        user_row: dict[str, Any] = {
-            "role": "user",
-            "content": user_text,
-            "ts": ts_user,
-            "uuid": user_msg_uuid,
-        }
-        if heartbeat_turn:
-            user_row["heartbeat"] = True
-        append_jsonl(paths.transcript, user_row)
-        ts_asst = utc_iso_ts()
-        append_jsonl(
-            paths.transcript,
-            {
-                "role": "assistant",
-                "content": assistant_text,
-                "ts": ts_asst,
-                "uuid": assistant_msg_uuid,
-            },
+        assistant_msg_uuid = _persist_turn_rows(
+            paths,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            ts_user=ts_user,
+            user_msg_uuid=user_msg_uuid,
+            heartbeat_turn=heartbeat_turn,
+            assistant_source="chat",
         )
 
         logger.info(

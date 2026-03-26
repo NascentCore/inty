@@ -95,6 +95,12 @@ def dual_llm_enabled() -> bool:
     return env_flag_enabled("INTY_V2_PROTO_DUAL_LLM")
 
 
+def async_tool_background_enabled() -> bool:
+    """是否启用“chat 先回 + tool 后台异步补发”模式。"""
+    _ensure_dotenv()
+    return env_flag_enabled("INTY_V2_PROTO_ASYNC_TOOL_BG")
+
+
 def memory_model() -> str:
     _ensure_dotenv()
     return os.getenv("INTY_V2_PROTO_MEMORY_MODEL") or default_model()
