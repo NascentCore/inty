@@ -118,7 +118,7 @@ app/core/agentic_kernel/
 
 ---
 
-## Step 1：提取 Provider Facade（先复用，后替换调用）
+## Step 1：提取 Provider Facade（先收敛 OpenAI-compatible 路径）
 
 ### 会改文件
 
@@ -136,7 +136,30 @@ app/core/agentic_kernel/
 
 ### 验收标准
 
-- 现有调用点不改业务行为，仅客户端初始化入口收敛。
+- `openai-compatible` 路径（`app/utils/openai_client.py` + 两条 experimental client 路径）统一走 facade。
+- 业务行为等价（模型、headers、trace、usage 字段保持一致）。
+- 明确标记：Live/Gemini 会话链路尚未纳入本步范围。
+
+---
+
+## Step 1b：补齐 Live/Gemini Provider 路径收敛
+
+### 会改文件
+
+- `app/core/agentic_kernel/providers/gemini.py`（改：补 Live 场景能力封装）
+- `app/services/live_chat_service.py`（改：Gemini client 初始化与包装转调 facade）
+- `experimental/agentic_ai_companion/clients.py`（改：Gemini client 与 facade 对齐）
+- `experimental/inty_v2_text_chat_prototype/client.py`（如启用 Gemini 分支则改）
+
+### 先不动文件
+
+- `app/core/agent/agent.py` 聊天主链路
+- `experimental/perpetual_agent/core_v2/*`
+
+### 验收标准
+
+- Live/Gemini 路径统一走 facade，不再有独立 client 初始化分叉。
+- 会话行为等价：连接、重连、trace 标签、usage 统计不退化。
 
 ---
 
@@ -201,6 +224,19 @@ app/core/agentic_kernel/
 ### 验收标准
 
 - `clean_prompt_system` 不再是 review-only，生产默认走 clean path。
+- 下列回归门槛全部通过后，才允许切生产默认：
+  - 官方助手工具循环行为：`tests/app/core/agent/test_official_assistant_tool_calling.py`
+  - prompt 组装核心行为：`tests/app/core/agent/test_clean_prompt_system.py`
+  - 日期上下文注入：`tests/app/core/agent/test_agent_date_context.py`
+  - 历史窗口截断：`tests/app/core/agent/test_agent_history_window_limits.py`
+  - 手册/变更日志提示词路径：`tests/app/core/agent/test_agent_manual_prompt.py`
+  - 消息压缩行为：`tests/app/core/agent/test_agent_messages_compaction.py`
+  - trace 元数据与采样：`tests/app/core/agent/test_agent_langsmith_metadata.py`、`tests/app/core/agent/test_agent_trace_sampling.py`
+
+### 切换策略（强制）
+
+- 在默认切换前保留运行时开关（例如 `use_clean_prompt_system` 类配置）。
+- 若任一回归门槛失败，默认路径不切换，回退到旧链路并记录阻塞项。
 
 ---
 
@@ -242,6 +278,16 @@ app/core/agentic_kernel/
 ### 验收标准
 
 - 仅在实验开关开启时走 PydanticAI，关闭时行为与现有 runtime 一致。
+
+### 依赖与环境前置（强制）
+
+- 在进入本步前，先完成依赖与环境前置检查：
+  - `requirements.txt` / 锁文件（如 `uv.lock`）补齐并可复现安装；
+  - 试点运行路径所需模型/provider 可用（API key、base_url、模型名）。
+- 在 RFC 对应 PR 中必须附最小验证命令与结果（至少包含）：
+  - 关闭开关：走旧 runtime 的回归验证命令；
+  - 开启开关：走 PydanticAI runtime 的等价行为验证命令。
+- 若依赖或 provider 不满足，Step 6 不开工，状态标记为 blocked。
 
 ## 6. 文件改动影响矩阵（总览）
 
