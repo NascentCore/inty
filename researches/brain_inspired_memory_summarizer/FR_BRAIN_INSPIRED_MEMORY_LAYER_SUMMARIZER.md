@@ -273,3 +273,87 @@
 
 把 Inty v2 记忆从“单一总结文档”升级为“多时间尺度、按显著性路由、按类型分层注入”的记忆系统：既保留关系连续性，也降低噪声与人格漂移风险，并且可在当前文件化原型中渐进落地。
 
+---
+
+## 12. Implementation Checklist v0（文件级落地清单）
+
+本节用于把本文直接转为工程任务；默认目标目录为 `experimental/inty_v2_text_chat_prototype/`。
+
+### 12.1 `memory_update.py`
+
+- [ ] 新增 `score_turn_salience(user_text: str, assistant_text: str, ...) -> SalienceScore`  
+  - 输出总分 + 分项（`emotion_intensity`、`novelty`、`commitment_signal`、`boundary_signal`、`recurrence`）。
+- [ ] 按 §4.1 默认权重与阈值实现路由（`t1/t2` + 强制优先规则）。
+- [ ] 新增候选构建函数：`build_memory_candidates(...) -> MemoryCandidateEvent`。
+- [ ] 写入 `.inty_v2_salience_queue.jsonl`（append JSONL，不覆盖）。
+- [ ] 在 L4/L5/L6 重写前增加冲突检测与修复（§4.4）：
+  - 冲突项标注 `conflict_reason`。
+  - 被否决事实写 `superseded_by` 或 `invalidated_by_boundary=true`。
+  - 未修复冲突不得进入长期层写入步骤。
+- [ ] 巩固节拍接入默认值：
+  - `N=12`（L3/L5）
+  - `M=72`（L6）
+  - 保持现有 env 变量可覆盖默认值。
+- [ ] 增加新鲜度检查器（SLO）：
+  - L4/L5/L6 超阈值时强制触发对应刷新。
+
+### 12.2 `models.py`（或等价类型定义文件）
+
+- [ ] 定义类型：
+  - `SalienceScore`
+  - `MemoryCandidateEvent`
+  - `ConflictResolutionResult`
+- [ ] 为候选事件 schema 增加可验证字段（§6 必需字段）。
+- [ ] 保证 JSON 序列化字段稳定（便于日志/审计消费）。
+
+### 12.3 `prompts.py`
+
+- [ ] 调整注入策略与顺序，确保与 §5 一致：
+  - `SOUL` > `USER` > `MEMORY` > `day summary` > transcript。
+- [ ] `context_mode != intimate` 时降级注入私密层内容。
+- [ ] 支持“候选优先、原文回退”的记忆输入源选择。
+
+### 12.4 `orchestrator.py`
+
+- [ ] 在 `run_turn` 里补充可观测字段透传：
+  - `memory_route`
+  - `consolidation_cycle`
+  - `memory_items_selected_n`
+- [ ] 保持“assistant 落库唯一路径”不变（不得绕开现有约束）。
+
+### 12.5 新增测试（`experimental/inty_v2_text_chat_prototype/tests/`）
+
+- [ ] `test_memory_salience_routing.py`
+- [ ] `test_memory_conflict_resolution.py`
+- [ ] `test_soul_update_triggered_only_by_boundary.py`
+- [ ] `test_memory_freshness_slo.py`
+- [ ] `test_prompt_layer_injection_policy.py`
+
+每个测试至少包含：
+- 输入轮次（含冲突与覆盖场景）。
+- 期望落层结果。
+- 期望注入结果。
+- 期望日志字段（最小集合）。
+
+### 12.6 运行与灰度开关（env）
+
+- [ ] `INTY_V2_PROTO_MEMORY_LAYERING_ENABLED`（总开关）
+- [ ] `INTY_V2_PROTO_SALIENCE_ENABLED`
+- [ ] `INTY_V2_PROTO_CONFLICT_GUARD_ENABLED`
+- [ ] `INTY_V2_PROTO_FRESHNESS_SLO_ENABLED`
+- [ ] `INTY_V2_PROTO_MEMORY_N` / `INTY_V2_PROTO_SOUL_M`（覆盖默认节拍）
+
+建议灰度顺序：
+1. 仅记录分数与候选（不影响写入）
+2. 打开路由（影响 L3/L4/L5）
+3. 打开冲突守卫（影响 L4/L5/L6）
+4. 打开 SLO 强刷
+
+### 12.7 交付验收（DoD）
+
+- [ ] 在固定回放数据集上，`MEMORY.md` 重复行下降且关键偏好命中率上升。
+- [ ] 冲突场景下不再出现“边界与偏好同时矛盾落盘”。
+- [ ] `SOUL.md` 更新频率低于基线，但边界事件无漏记。
+- [ ] 日志可追溯任一长期记忆项来源 turn（`source_span` + `evidence_snippet`）。
+- [ ] 所有新增测试通过，且不破坏已有 `test_day_summary_interval.py` / `test_user_update_interval.py` / `test_soul_memory_update.py`。
+
