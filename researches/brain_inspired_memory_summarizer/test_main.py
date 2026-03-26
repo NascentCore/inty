@@ -13,7 +13,7 @@ from main import (
     NaiveWindowAgent,
     build_dataset,
     evaluate_agent,
-    _extract_candidates,
+    extract_candidates,
     run_experiment,
 )
 
@@ -34,7 +34,7 @@ class MemoryExperimentTests(unittest.TestCase):
         self.assertEqual(ans, "阿哲")
 
     def test_boundary_negation_blocks_conflicting_name_candidate(self) -> None:
-        candidates = _extract_candidates("请不要叫我宝贝。", turn_idx=1)
+        candidates = extract_candidates("请不要叫我宝贝。", turn_idx=1)
         keys = {c.key for c in candidates}
         self.assertIn("boundary", keys)
         preferred_values = [c.value for c in candidates if c.key == "preferred_name"]
