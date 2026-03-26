@@ -9,6 +9,41 @@ Persist reproducible benchmark evidence for tool trigger probability under two m
 
 Model is fixed to `google/gemini-2.5-flash`.
 
+## Test Setup
+
+### Tool set under evaluation
+
+The benchmark exposes 4 tools through OpenAI-compatible function calling:
+
+- `get_weather`
+- `create_calendar_event`
+- `web_search`
+- `create_support_ticket`
+
+### Query set
+
+Total 8 queries:
+
+- 4 queries where tool call is expected (`should_trigger_tool=true`)
+- 4 queries where tool call is NOT expected (`should_trigger_tool=false`)
+
+### Memory variants under test
+
+- `flat`: unstructured memory blob with mixed profile/tool hints
+- `layered`: structured memory with explicit blocks:
+  - `core_memory`
+  - `profile_memory`
+  - `episodic_memory`
+  - `tool_affinity_memory`
+
+### Fixed runtime parameters (for main comparison)
+
+- model: `google/gemini-2.5-flash`
+- samples-per-case: `4`
+- temperature: `0.4`
+- max-completion-tokens: `200`
+- timeout-seconds: `90`
+
 ## Script Under Test
 
 - `experimental/memory_prompt_benchmark/tool_trigger_benchmark.py`
@@ -69,6 +104,32 @@ Per-case trigger highlights:
 
 - `c02_calendar` (should trigger): `flat 50.00%` vs `layered 75.00%`
 - `c06_general_knowledge` (should NOT trigger): `flat 100.00%` vs `layered 0.00%`
+
+## Expected Outcome (Acceptance Criteria)
+
+For the main comparison setting (`samples-per-case=4`, `temperature=0.4`, same query set/model):
+
+1. **No regression on needed-tool triggering**
+   - `layered.trigger_rate_when_needed >= flat.trigger_rate_when_needed`
+
+2. **Strict improvement on false triggers**
+   - `layered.trigger_rate_when_not_needed < flat.trigger_rate_when_not_needed`
+
+3. **No regression on expected tool match**
+   - `layered.expected_tool_match_rate_when_needed >= flat.expected_tool_match_rate_when_needed`
+
+4. **Primary target for non-tool scenarios**
+   - Prefer `layered.trigger_rate_when_not_needed <= 0.05`
+   - If `> 0.05`, mark as warning and inspect prompts/query distribution.
+
+## Verdict for this record
+
+Using run `20260326_101048`:
+
+- Criteria 1: PASS (`93.75% >= 87.50%`)
+- Criteria 2: PASS (`0.00% < 25.00%`)
+- Criteria 3: PASS (`93.75% >= 87.50%`)
+- Criteria 4: PASS (`0.00% <= 5.00%`)
 
 ## Artifacts (raw benchmark outputs)
 

@@ -1,5 +1,33 @@
 {
   "experiment": "tool_trigger_memory_structure",
+  "test_setup": {
+    "comparison_target": "flat vs layered memory structure for tool trigger behavior",
+    "fixed_model": "google/gemini-2.5-flash",
+    "query_set_size": 8,
+    "query_split": {
+      "tool_needed_cases": 4,
+      "tool_not_needed_cases": 4
+    },
+    "tools": [
+      "get_weather",
+      "create_calendar_event",
+      "web_search",
+      "create_support_ticket"
+    ]
+  },
+  "expected_outcome": {
+    "primary_expectation": "Layered memory should reduce false tool triggers while preserving or improving tool-needed trigger rate.",
+    "acceptance_criteria": {
+      "trigger_rate_when_needed_layered_gte_flat": true,
+      "trigger_rate_when_not_needed_layered_lte_flat": true,
+      "expected_tool_match_rate_when_needed_layered_gte_flat": true
+    },
+    "regression_alert_conditions": [
+      "layered.trigger_rate_when_not_needed > flat.trigger_rate_when_not_needed",
+      "layered.trigger_rate_when_needed + 0.05 < flat.trigger_rate_when_needed",
+      "layered.expected_tool_match_rate_when_needed + 0.05 < flat.expected_tool_match_rate_when_needed"
+    ]
+  },
   "model": "google/gemini-2.5-flash",
   "script": "experimental/memory_prompt_benchmark/tool_trigger_benchmark.py",
   "config_file": "devops/config.yaml.dev",
