@@ -153,3 +153,29 @@ memory_prompt_benchmark/
 - Trigger rate when needed（应触发时触发率）
 - False trigger rate when not needed（不应触发时误触发率）
 - Expected tool match rate（应触发场景下，工具命中率）
+
+## Memory Recall 对比评测（flat vs layered memory）
+
+新增脚本：`memory_recall_benchmark.py`
+
+用途：
+- 固定一组多选 recall 问题（含冲突记忆与缺失记忆）；
+- 比较两种 memory 注入结构下的回忆准确率：
+  - `flat`：非结构化记忆块（旧值/新值混杂）
+  - `layered`：`core/profile/episodic/tool_affinity` 分层记忆
+- 输出 `report.md` 和 `raw_data.json`。
+
+运行示例：
+
+```bash
+/workspace/.venv/bin/python experimental/memory_prompt_benchmark/memory_recall_benchmark.py \
+  --config devops/config.yaml.dev \
+  --model "google/gemini-2.5-flash" \
+  --samples-per-case 8 \
+  --temperature 0.9
+```
+
+关键指标：
+- Overall accuracy（总体 recall 准确率）
+- Known-memory accuracy（已知记忆题准确率）
+- Unknown-case hallucination rate（未知题幻觉率）
