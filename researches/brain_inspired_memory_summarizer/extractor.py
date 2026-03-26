@@ -256,11 +256,36 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
             response_format={"type": "json_object"},
             temperature=0.0,
         )
-    content = resp.choices[0].message.content or '{"candidates":[]}'
+    choices = getattr(resp, "choices", None)
+    if not choices:
+        raise ValueError("LLM extractor returned empty choices")
+    first = choices[0]
+    msg = getattr(first, "message", None)
+    if msg is None:
+        raise ValueError("LLM extractor returned no message in first choice")
+    content = getattr(msg, "content", None) or '{"candidates":[]}'
+    if content.startswith("```"):
+        # Some providers may still wrap structured output with markdown fences.
+        stripped = content.strip()
+        if stripped.startswith("```json"):
+            stripped = stripped[len("```json") :].strip()
+        elif stripped.startswith("```"):
+            stripped = stripped[3:].strip()
+        if stripped.endswith("```"):
+            stripped = stripped[:-3].strip()
+        content = stripped or '{"candidates":[]}'
     data = json.loads(content)
-    raw_items = data.get("candidates", [])
-    if not isinstance(raw_items, list):
-        raise ValueError("LLM extractor response must include list field candidates")
+    raw_items: list[object]
+    if isinstance(data, list):
+        raw_items = data
+    elif isinstance(data, dict):
+        raw_items = data.get("candidates", [])
+        if not isinstance(raw_items, list):
+            raise ValueError("LLM extractor response must include list field candidates")
+    else:
+        raise ValueError(
+            "LLM extractor response must be either list or object with candidates"
+        )
 
     out: list[SlotCandidate] = []
     for item in raw_items:
