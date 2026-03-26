@@ -307,7 +307,7 @@ Android App (text in / stream text out)
 - 体验变更以 [INTY_v2_DESIGN.md](INTY_v2_DESIGN.md) 为准。
 - **核心 text chat**：更新 §1–§7 与 `app/api/ENDPOINTS.md`（若增端点）。
 - **扩展能力**：同步 §8–§20 与 Alembic/model 变更。
-- 若涉及记忆分层、巩固节拍、注入策略或“脑启发式多层总结器”方案，需同步更新 [FR_BRAIN_INSPIRED_MEMORY_LAYER_SUMMARIZER.md](FR_BRAIN_INSPIRED_MEMORY_LAYER_SUMMARIZER.md)。
+- 若涉及记忆分层、巩固节拍、注入策略或“脑启发式多层总结器”方案，需同步更新 [researches/agentic_brain/docs/FR_BRAIN_INSPIRED_MEMORY_LAYER_SUMMARIZER.md](../../../researches/agentic_brain/docs/FR_BRAIN_INSPIRED_MEMORY_LAYER_SUMMARIZER.md)。
 
 ---
 
