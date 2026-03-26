@@ -24,9 +24,12 @@ app = cyclopts.App(
 
 @dataclass(frozen=True)
 class ToyTask:
+    task_id: str
+    description: str
     state_actions: dict[str, dict[str, str]]
     start_state: str
     goal_state: str
+    required_subgoal_sequence: list[str] = field(default_factory=list)
 
     @property
     def state_names(self) -> list[str]:
@@ -137,10 +140,12 @@ def _task_decomposer(
             f"Allowed states: {task.state_names}\n"
             f"Start state: {task.start_state}\n"
             f"Goal state: {task.goal_state}\n"
+            f"Required checkpoints in order: {task.required_subgoal_sequence}\n"
             "Rules:\n"
             "- subgoals must be from allowed states\n"
             "- final subgoal must equal goal state\n"
             "- do not include the start state as first subgoal\n"
+            "- include all required checkpoints in order when provided\n"
         ),
         temperature=0,
         max_tokens=200,
@@ -153,6 +158,16 @@ def _task_decomposer(
             raise ValueError(f"TaskDecomposer used unknown state: {goal}")
     if subgoals[-1] != task.goal_state:
         raise ValueError("TaskDecomposer final subgoal is not goal state.")
+    if task.required_subgoal_sequence:
+        seq_idx = 0
+        for goal in subgoals:
+            if seq_idx < len(task.required_subgoal_sequence) and goal == task.required_subgoal_sequence[seq_idx]:
+                seq_idx += 1
+        if seq_idx != len(task.required_subgoal_sequence):
+            raise ValueError(
+                "TaskDecomposer missing required checkpoint sequence: "
+                f"{task.required_subgoal_sequence}, got={subgoals}"
+            )
     return [str(item) for item in subgoals]
 
 
@@ -266,6 +281,8 @@ def _orchestrator_should_advance_subgoal(
     advance_subgoal = payload.get("advance_subgoal")
     if not isinstance(advance_subgoal, bool):
         raise ValueError(f"Orchestrator returned invalid payload: {payload}")
+    if current_state == goal_state or current_state == active_subgoal:
+        return True
     return advance_subgoal
 
 
@@ -404,8 +421,12 @@ def _run_episode(
     )
 
 
-def _build_toy_task() -> ToyTask:
+def _build_simple_task() -> ToyTask:
     return ToyTask(
+        task_id="simple_bridge",
+        description=(
+            "Simple 4-state navigation with one reliable path and one looping detour."
+        ),
         state_actions={
             "A": {"safe_bridge": "B", "risky_tunnel": "C"},
             "B": {"finish": "D", "retreat": "A"},
@@ -414,6 +435,41 @@ def _build_toy_task() -> ToyTask:
         },
         start_state="A",
         goal_state="D",
+    )
+
+
+def _build_complex_task() -> ToyTask:
+    return ToyTask(
+        task_id="complex_supply_chain",
+        description=(
+            "Multi-stage planning with mandatory checkpoints: gather credentials, "
+            "unlock secure transfer, and complete audited delivery without falling into loops."
+        ),
+        state_actions={
+            "Dock": {"collect_badge": "BadgeRoom", "unsafe_shortcut": "IncidentLoop"},
+            "BadgeRoom": {"get_keycard": "ControlHub", "wander": "Dock"},
+            "ControlHub": {"request_manifest": "ManifestDesk", "wrong_lift": "IncidentLoop"},
+            "ManifestDesk": {"verify_manifest": "SecureGate", "return_hub": "ControlHub"},
+            "SecureGate": {"authorize_transfer": "TransferBay", "panic_reset": "Dock"},
+            "TransferBay": {"handoff": "AuditDesk", "misroute": "IncidentLoop"},
+            "AuditDesk": {"finalize_delivery": "Completed", "missing_form": "ManifestDesk"},
+            "IncidentLoop": {"recover_protocol": "Dock", "loop": "IncidentLoop"},
+            "Completed": {},
+        },
+        start_state="Dock",
+        goal_state="Completed",
+        required_subgoal_sequence=["BadgeRoom", "SecureGate", "TransferBay", "AuditDesk", "Completed"],
+    )
+
+
+def _build_task_by_id(task_id: str) -> ToyTask:
+    normalized = task_id.strip().lower()
+    if normalized == "simple_bridge":
+        return _build_simple_task()
+    if normalized == "complex_supply_chain":
+        return _build_complex_task()
+    raise ValueError(
+        "Unknown task_id. Supported values: simple_bridge, complex_supply_chain."
     )
 
 
@@ -432,11 +488,14 @@ def _write_markdown_report(path: Path, result_payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     episodes = result_payload["episodes"]
     lines = [
-        "# PIANO Agentic Model Minimal Experiment",
+        "# PIANO Agentic Model Experiment",
         "",
         f"- Run time (UTC): {result_payload['run_time_utc']}",
         f"- Model: {result_payload['model_id']}",
         f"- Config source: `{result_payload['config_yaml_path']}`",
+        f"- Task: `{result_payload['task']['task_id']}`",
+        f"- Task description: {result_payload['task']['description']}",
+        f"- Required checkpoints: {result_payload['task']['required_subgoal_sequence']}",
         "",
         "## Summary",
     ]
@@ -466,6 +525,13 @@ def run(
             help="OpenRouter model id.",
         ),
     ] = "google/gemini-2.5-flash-lite",
+    task_id: Annotated[
+        str,
+        cyclopts.Parameter(
+            name="--task-id",
+            help="Task id: simple_bridge or complex_supply_chain.",
+        ),
+    ] = "simple_bridge",
     max_steps: Annotated[
         int,
         cyclopts.Parameter(
@@ -505,7 +571,7 @@ def run(
     config_path = Path(config_yaml_path).resolve()
     api_key = _load_openrouter_api_key(config_path)
     client = _create_openrouter_client(api_key)
-    task = _build_toy_task()
+    task = _build_task_by_id(task_id)
     subgoals = _task_decomposer(client=client, model_id=model_id, task=task)
 
     baseline = _run_episode(
@@ -535,8 +601,11 @@ def run(
         "config_yaml_path": str(config_path),
         "subgoals": subgoals,
         "task": {
+            "task_id": task.task_id,
+            "description": task.description,
             "start_state": task.start_state,
             "goal_state": task.goal_state,
+            "required_subgoal_sequence": task.required_subgoal_sequence,
             "state_actions": task.state_actions,
         },
         "episodes": [_episode_to_dict(baseline), _episode_to_dict(piano)],
@@ -553,6 +622,7 @@ def run(
 
     redacted = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "****"
     print(f"[PIANO] API key loaded from {config_path} ({redacted})")
+    print(f"[PIANO] Task: {task.task_id} ({task.description})")
     print(f"[PIANO] Subgoals: {subgoals}")
     for episode in result_payload["episodes"]:
         print(
