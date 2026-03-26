@@ -128,6 +128,7 @@ def _log_bg_llm_round_result(
     request_messages: list[dict[str, Any]],
     llm_trace: bool,
     ws_root: Path,
+    trace_id: str | None = None,
 ) -> None:
     ch0 = resp.choices[0]
     fr = getattr(ch0, "finish_reason", None) or "?"
@@ -150,6 +151,7 @@ def _log_bg_llm_round_result(
                 trace_day=local_date_str(),
             ),
             response=summarize_completion_response(resp),
+            trace_id=trace_id,
         )
 
 
@@ -159,6 +161,7 @@ def _append_background_transcript_assistant(
     content: str,
     assistant_msg_uuid: str,
     reply_to: str,
+    trace_id: str,
 ) -> None:
     append_jsonl(
         transcript_path,
@@ -169,6 +172,7 @@ def _append_background_transcript_assistant(
             "uuid": assistant_msg_uuid,
             "source": "tool_bg",
             "reply_to": reply_to,
+            "trace_id": trace_id,
         },
     )
 
@@ -205,6 +209,7 @@ async def _run_background_tool_loop(
     llm_trace: bool,
     transcript_path: Path,
     user_msg_uuid: str,
+    trace_id: str,
     tools: list[Any],
     on_event: Callable[[ToolOutputEvent], None],
     execute_tool_call_fn: Callable[..., Any],
@@ -233,6 +238,7 @@ async def _run_background_tool_loop(
             request_messages=request_snapshot,
             llm_trace=llm_trace,
             ws_root=ws_root,
+            trace_id=trace_id,
         )
 
         tool_msg = resp.choices[0].message
@@ -248,6 +254,7 @@ async def _run_background_tool_loop(
                 content=assistant_text,
                 assistant_msg_uuid=assistant_msg_uuid,
                 reply_to=user_msg_uuid,
+                trace_id=trace_id,
             )
             elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
             _append_background_log(
@@ -298,6 +305,7 @@ def start_tool_background_job(
     llm_trace: bool,
     transcript_path: Path,
     user_msg_uuid: str,
+    trace_id: str,
     tools: list[Any],
     on_event: Callable[[ToolOutputEvent], None] = push_output_event,
     execute_tool_call_fn: Callable[..., Any] = execute_tool_call,
@@ -313,6 +321,7 @@ def start_tool_background_job(
                     llm_trace=llm_trace,
                     transcript_path=transcript_path,
                     user_msg_uuid=user_msg_uuid,
+                    trace_id=trace_id,
                     tools=tools,
                     on_event=on_event,
                     execute_tool_call_fn=execute_tool_call_fn,

@@ -18,6 +18,7 @@ class ChatMessage(BaseModel):
     content: str
     ts: str
     uuid: str | None = None
+    trace_id: str | None = None
     reply_to: str | None = None
     heartbeat: bool | None = None
     source: str | None = None

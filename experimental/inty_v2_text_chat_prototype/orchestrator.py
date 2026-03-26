@@ -53,6 +53,11 @@ from .tool_background import start_tool_background_job
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
 
+def _new_turn_trace_id() -> str:
+    """Stable id to link transcript rows with llm_trace rows for one turn."""
+    return str(uuid.uuid4())
+
+
 def _payload_chars_for_debug(messages: list[dict[str, Any]]) -> int:
     """Rough size of what goes to the API (content + tool argument strings)."""
     total = 0
@@ -158,6 +163,7 @@ def _log_llm_round_result(
     llm_trace: bool,
     llm_trace_where: str,
     root: Path,
+    trace_id: str | None = None,
 ) -> None:
     ch0 = resp.choices[0]
     fr = getattr(ch0, "finish_reason", None) or "?"
@@ -201,6 +207,7 @@ def _log_llm_round_result(
                 trace_day=local_date_str(),
             ),
             response=summarize_completion_response(resp),
+            trace_id=trace_id,
         )
 
 
@@ -246,6 +253,7 @@ def _persist_turn_rows(
     assistant_reply_to: str,
     heartbeat_turn: bool,
     assistant_source: str = "chat",
+    trace_id: str | None = None,
 ) -> str:
     """Persist user+assistant transcript rows and return assistant uuid."""
     user_row: dict[str, Any] = {
@@ -256,6 +264,8 @@ def _persist_turn_rows(
     }
     if heartbeat_turn:
         user_row["heartbeat"] = True
+    if trace_id is not None and trace_id.strip():
+        user_row["trace_id"] = trace_id
     append_jsonl(paths.transcript, user_row)
     assistant_msg_uuid = str(uuid.uuid4())
     append_jsonl(
@@ -267,6 +277,7 @@ def _persist_turn_rows(
             "uuid": assistant_msg_uuid,
             "reply_to": assistant_reply_to,
             "source": assistant_source,
+            "trace_id": trace_id,
         },
     )
     return assistant_msg_uuid
@@ -279,6 +290,7 @@ async def _run_turn_fast_chat_then_tool_background(
     llm_trace: bool,
     transcript_path: Path,
     user_msg_uuid: str,
+    trace_id: str,
 ) -> str:
     """
     Front path: return chat-branch text quickly.
@@ -301,6 +313,7 @@ async def _run_turn_fast_chat_then_tool_background(
         llm_trace=llm_trace,
         transcript_path=transcript_path,
         user_msg_uuid=user_msg_uuid,
+        trace_id=trace_id,
         tools=tools,
         execute_tool_call_fn=execute_tool_call,
         client=client,
@@ -320,6 +333,7 @@ async def _run_turn_fast_chat_then_tool_background(
         llm_trace=llm_trace,
         llm_trace_where="repl.turn.bg.chat_front",
         root=root,
+        trace_id=trace_id,
     )
     chat_text = _assistant_text_from_completion_response(chat_resp)
     return chat_text
@@ -331,6 +345,7 @@ async def _run_turn_with_user_profile_tools(
     *,
     llm_trace: bool = True,
     heartbeat_turn: bool = False,
+    trace_id: str | None = None,
 ) -> str:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
@@ -410,6 +425,7 @@ async def _run_turn_with_user_profile_tools(
                 llm_trace=llm_trace,
                 llm_trace_where="repl.turn.dual.chat",
                 root=root,
+                trace_id=trace_id,
             )
             _log_llm_round_result(
                 round_idx=round_idx,
@@ -419,6 +435,7 @@ async def _run_turn_with_user_profile_tools(
                 llm_trace=llm_trace,
                 llm_trace_where="repl.turn.dual.tool",
                 root=root,
+                trace_id=trace_id,
             )
             chat_text = _assistant_text_from_completion_response(chat_resp)
             tool_text = _assistant_text_from_completion_response(tool_resp)
@@ -460,6 +477,7 @@ async def _run_turn_with_user_profile_tools(
                 llm_trace=llm_trace,
                 llm_trace_where="repl.turn",
                 root=root,
+                trace_id=trace_id,
             )
             tool_calls = getattr(msg, "tool_calls", None) or []
             messages.append(openai_assistant_message_dict(msg))
@@ -674,13 +692,15 @@ async def run_turn(
             user_text=user_text,
             heartbeat_turn=heartbeat_turn,
         )
+        turn_trace_id = _new_turn_trace_id()
 
         logger.debug(
-            "run_turn llm_input messages_count={} payload_chars={} user_msg_uuid={} "
+            "run_turn llm_input messages_count={} payload_chars={} user_msg_uuid={} trace_id={} "
             "user_preview={}",
             len(messages),
             _payload_chars_for_debug(messages),
             user_msg_uuid,
+            turn_trace_id,
             _preview_for_debug(user_text, max_len=200),
         )
 
@@ -694,6 +714,7 @@ async def run_turn(
                 llm_trace=llm_trace,
                 transcript_path=paths.transcript,
                 user_msg_uuid=user_msg_uuid,
+                trace_id=turn_trace_id,
             )
         else:
             assistant_text = await _run_turn_with_user_profile_tools(
@@ -701,6 +722,7 @@ async def run_turn(
                 root,
                 llm_trace=llm_trace,
                 heartbeat_turn=heartbeat_turn,
+                trace_id=turn_trace_id,
             )
         logger.info(
             "run_turn main_repl_tool_loop_wall_ms={:.0f}",
@@ -718,6 +740,7 @@ async def run_turn(
             assistant_reply_to=user_msg_uuid,
             heartbeat_turn=heartbeat_turn,
             assistant_source="chat",
+            trace_id=turn_trace_id,
         )
 
         logger.info(
