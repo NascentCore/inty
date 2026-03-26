@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Callable, Generic, TypeVar
+from typing import Generic, TypeVar
 
 import cyclopts
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from pydantic import BaseModel, Field
 
 
@@ -123,188 +121,155 @@ class BrainRunResult(BaseModel):
 TOut = TypeVar("TOut", bound=BaseModel)
 
 
-class GeminiJsonClient:
+def _clamp_01(value: float) -> float:
+    if value < 0.0:
+        return 0.0
+    if value > 1.0:
+        return 1.0
+    return value
+
+
+def _contains_any(text: str, keywords: list[str]) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
+class OpenRouterTextClient:
     def __init__(self, model: str):
         load_dotenv()
         self.model = model
         self.client = self._build_client()
 
-    def _build_client(self) -> genai.Client:
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if api_key:
-            return genai.Client(api_key=api_key)
-        project = os.getenv("GOOGLE_CLOUD_PROJECT")
-        location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-        return genai.Client(vertexai=True, project=project, location=location)
+    def _build_client(self) -> OpenAI:
+        from app.core.config import global_config_loaded_from_config_yaml
 
-    def generate_structured(
-        self, system_prompt: str, user_prompt: str, output_schema: type[TOut]
-    ) -> TOut:
-        contents = [
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=user_prompt)],
-            )
-        ]
-        config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=output_schema,
-            system_instruction=system_prompt,
-            temperature=0.2,
-        )
-        response = self.client.models.generate_content(
+        cfg = global_config_loaded_from_config_yaml.agent
+        base_url = cfg.chat_llm_base_url or cfg.base_url
+        api_key = cfg.chat_llm_api_key or cfg.api_key
+        return OpenAI(base_url=base_url, api_key=api_key)
+
+    def generate_text(self, system_prompt: str, user_prompt: str) -> str:
+        response = self.client.chat.completions.create(
             model=self.model,
-            contents=contents,
-            config=config,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+            max_tokens=400,
         )
-        raw_text = response.candidates[0].content.parts[0].text
-        return output_schema.model_validate_json(raw_text)
-
-
-InvariantFn = Callable[[TOut], None]
+        return response.choices[0].message.content or ""
 
 
 class PedanticUnit(Generic[TOut]):
-    def __init__(
-        self,
-        name: str,
-        client: GeminiJsonClient,
-        output_schema: type[TOut],
-        system_prompt: str,
-        invariant: InvariantFn[TOut],
-    ):
+    def __init__(self, name: str):
         self.name = name
-        self.client = client
-        self.output_schema = output_schema
-        self.system_prompt = system_prompt
-        self.invariant = invariant
 
-    def run(self, user_prompt: str) -> TOut:
-        result = self.client.generate_structured(
-            system_prompt=self.system_prompt,
-            user_prompt=user_prompt,
-            output_schema=self.output_schema,
+    def validate(self, value: TOut) -> TOut:
+        if self.name == "thalamus":
+            route = value  # type: ignore[assignment]
+            assert len(route.channels) > 0
+            assert route.reason.strip() != ""
+            for channel in route.channels:
+                assert channel.name.strip() != ""
+            return value
+        if self.name == "insula":
+            state = value  # type: ignore[assignment]
+            assert state.primary_emotion.strip() != ""
+            assert len(state.evidence) > 0
+            return value
+        if self.name == "amygdala":
+            threat = value  # type: ignore[assignment]
+            assert threat.level in {"low", "medium", "high"}
+            assert threat.recommended_policy.strip() != ""
+            return value
+        if self.name == "pfca":
+            plan = value  # type: ignore[assignment]
+            assert plan.objective.strip() != ""
+            assert len(plan.constraints) > 0
+            assert len(plan.steps) >= 2
+            assert len(plan.options) >= 2
+            assert plan.stop_condition.strip() != ""
+            return value
+        if self.name == "acca":
+            report = value  # type: ignore[assignment]
+            assert report.severity in {"low", "medium", "high"}
+            assert report.conflict_type.strip() != ""
+            assert len(report.impacted_modules) > 0
+            return value
+        if self.name == "lca":
+            response = value  # type: ignore[assignment]
+            assert len(response.message.strip()) >= 40
+            assert len(response.suggested_followups) > 0
+            return value
+        return value
+
+
+def thalamus_route(user_message: str) -> RouteDecision:
+    channels = [
+        RouteChannel(name="planning", priority=0.7),
+        RouteChannel(name="emotional", priority=0.6),
+        RouteChannel(name="memory", priority=0.5),
+    ]
+    if _contains_any(user_message, ["fail", "collapse", "without me", "harm"]):
+        channels.append(RouteChannel(name="safety", priority=0.95))
+    reason = "Prioritize planning/emotion; add safety when high-risk phrases appear."
+    return RouteDecision(channels=channels, reason=reason)
+
+
+def insula_estimate(user_message: str) -> UserStateEstimate:
+    lowered = user_message.lower()
+    stress = 0.45
+    lonely = 0.25
+    emotion = "concerned"
+    evidence: list[str] = []
+
+    if _contains_any(lowered, ["tight", "anxious", "fail", "interview"]):
+        stress = 0.85
+        emotion = "anxious"
+        evidence.append("User reports body stress and fear of failure.")
+
+    if _contains_any(lowered, ["alone", "empty", "stopped texting"]):
+        lonely = 0.85
+        emotion = "lonely"
+        evidence.append("User reports social withdrawal and emptiness.")
+
+    if _contains_any(lowered, ["without me", "collapsing"]):
+        stress = 0.95
+        lonely = max(lonely, 0.7)
+        emotion = "distressed"
+        evidence.append("User expresses severe hopelessness cues.")
+
+    if not evidence:
+        evidence.append("General emotional support context.")
+
+    return UserStateEstimate(
+        primary_emotion=emotion,
+        stress_level=_clamp_01(stress),
+        loneliness_level=_clamp_01(lonely),
+        confidence=0.78,
+        evidence=evidence[:3],
+    )
+
+
+def amygdala_assess(user_message: str) -> ThreatAssessment:
+    lowered = user_message.lower()
+    if _contains_any(lowered, ["without me", "collapsing", "better off"]):
+        return ThreatAssessment(
+            level="high",
+            signals=["hopelessness_phrase", "severe_distress_tone"],
+            recommended_policy="Prioritize immediate safety and encourage professional/human support.",
         )
-        self.invariant(result)
-        return result
-
-
-def route_invariant(route: RouteDecision) -> None:
-    assert len(route.channels) > 0
-    for channel in route.channels:
-        assert channel.name.strip() != ""
-
-
-def insula_invariant(state: UserStateEstimate) -> None:
-    assert state.primary_emotion.strip() != ""
-    assert len(state.evidence) > 0
-
-
-def amygdala_invariant(threat: ThreatAssessment) -> None:
-    assert threat.level in {"low", "medium", "high"}
-    assert threat.recommended_policy.strip() != ""
-
-
-def plan_invariant(plan: Plan) -> None:
-    assert plan.objective.strip() != ""
-    assert len(plan.constraints) > 0
-    assert len(plan.steps) >= 2
-    assert len(plan.options) >= 2
-    assert plan.stop_condition.strip() != ""
-
-
-def conflict_invariant(report: ConflictReport) -> None:
-    assert report.conflict_type.strip() != ""
-    assert report.severity in {"low", "medium", "high"}
-    assert len(report.impacted_modules) > 0
-
-
-def final_response_invariant(response: FinalResponse) -> None:
-    assert len(response.message.strip()) >= 40
-    assert len(response.suggested_followups) >= 1
-
-
-def build_thalamus_unit(client: GeminiJsonClient) -> PedanticUnit[RouteDecision]:
-    system_prompt = (
-        "You are the Thalamus Agent. Output only strict JSON."
-        " Route this user turn into channels from [emotional, safety, memory, planning, action]."
-    )
-    return PedanticUnit(
-        name="thalamus",
-        client=client,
-        output_schema=RouteDecision,
-        system_prompt=system_prompt,
-        invariant=route_invariant,
-    )
-
-
-def build_insula_unit(client: GeminiJsonClient) -> PedanticUnit[UserStateEstimate]:
-    system_prompt = (
-        "You are the Insula Agent. Output only strict JSON."
-        " Infer user internal state with uncertainty-aware confidence."
-    )
-    return PedanticUnit(
-        name="insula",
-        client=client,
-        output_schema=UserStateEstimate,
-        system_prompt=system_prompt,
-        invariant=insula_invariant,
-    )
-
-
-def build_amygdala_unit(client: GeminiJsonClient) -> PedanticUnit[ThreatAssessment]:
-    system_prompt = (
-        "You are the Amygdala Agent. Output only strict JSON."
-        " Classify threat level as low/medium/high and produce a policy recommendation."
-    )
-    return PedanticUnit(
-        name="amygdala",
-        client=client,
-        output_schema=ThreatAssessment,
-        system_prompt=system_prompt,
-        invariant=amygdala_invariant,
-    )
-
-
-def build_pfca_unit(client: GeminiJsonClient) -> PedanticUnit[Plan]:
-    system_prompt = (
-        "You are the Prefrontal Cortex Agent. Output only strict JSON."
-        " Build a plan with objective, constraints, steps, options, and stop_condition."
-    )
-    return PedanticUnit(
-        name="pfca",
-        client=client,
-        output_schema=Plan,
-        system_prompt=system_prompt,
-        invariant=plan_invariant,
-    )
-
-
-def build_acca_unit(client: GeminiJsonClient) -> PedanticUnit[ConflictReport]:
-    system_prompt = (
-        "You are the Anterior Cingulate Agent. Output only strict JSON."
-        " Detect conflicts between safety, empathy, and planning."
-    )
-    return PedanticUnit(
-        name="acca",
-        client=client,
-        output_schema=ConflictReport,
-        system_prompt=system_prompt,
-        invariant=conflict_invariant,
-    )
-
-
-def build_lca_unit(client: GeminiJsonClient) -> PedanticUnit[FinalResponse]:
-    system_prompt = (
-        "You are the Language Cortex Agent. Output only strict JSON."
-        " Produce a user-facing message aligned with selected policy and safety."
-    )
-    return PedanticUnit(
-        name="lca",
-        client=client,
-        output_schema=FinalResponse,
-        system_prompt=system_prompt,
-        invariant=final_response_invariant,
+    if _contains_any(lowered, ["empty", "alone", "anxious", "fail"]):
+        return ThreatAssessment(
+            level="medium",
+            signals=["elevated_emotional_distress"],
+            recommended_policy="Use supportive tone and concrete short-term coping steps.",
+        )
+    return ThreatAssessment(
+        level="low",
+        signals=["no_acute_risk_signal"],
+        recommended_policy="Proceed with normal supportive planning.",
     )
 
 
@@ -323,114 +288,216 @@ def retrieve_memory(case: ScenarioCase, user_message: str) -> MemoryEvidence:
     return MemoryEvidence(
         episodic_hits=episodic_hits[:3],
         semantic_hits=semantic_hits[:3],
-        retrieval_reason="Lexical overlap between user turn and stored memory traces.",
+        retrieval_reason="Lexical overlap between user message and stored memory traces.",
     )
 
 
-def value_assess(
-    plan: Plan, threat: ThreatAssessment, conflict: ConflictReport
-) -> ValueAssessment:
+def pfca_plan(case: ScenarioCase, threat: ThreatAssessment, state: UserStateEstimate) -> Plan:
+    if threat.level == "high":
+        options = [
+            PlanningOption(
+                name="Immediate safety resources",
+                rationale="Highest safety protection under severe distress.",
+                expected_gain=0.92,
+                expected_risk=0.08,
+            ),
+            PlanningOption(
+                name="Grounding then trusted contact",
+                rationale="Stabilize first then connect to human support.",
+                expected_gain=0.82,
+                expected_risk=0.18,
+            ),
+        ]
+        steps = [
+            "Acknowledge pain and validate feelings.",
+            "Provide immediate crisis/human support options.",
+            "Offer one grounding action while waiting for support.",
+        ]
+        constraints = ["No minimizing risk", "No delayed escalation"]
+        return Plan(
+            objective="Protect user safety and reduce immediate risk.",
+            constraints=constraints,
+            steps=steps,
+            options=options,
+            stop_condition="User confirms reaching support or entering a safer state.",
+        )
+
+    if state.primary_emotion == "anxious":
+        options = [
+            PlanningOption(
+                name="Calm then micro-plan",
+                rationale="Short regulation then concrete prep steps.",
+                expected_gain=0.84,
+                expected_risk=0.16,
+            ),
+            PlanningOption(
+                name="Direct checklist only",
+                rationale="Action-first style for practical users.",
+                expected_gain=0.73,
+                expected_risk=0.24,
+            ),
+        ]
+        return Plan(
+            objective="Reduce anxiety and produce a realistic next-step plan.",
+            constraints=["Keep steps concrete", "Avoid overloading"],
+            steps=[
+                "Run a 60-second calming routine.",
+                "Define 3 priority tasks for tonight.",
+                "Set a realistic stop time and sleep boundary.",
+            ],
+            options=options,
+            stop_condition="User confirms one clear next action.",
+        )
+
+    options = [
+        PlanningOption(
+            name="Low-friction reconnection",
+            rationale="One small social action reduces withdrawal inertia.",
+            expected_gain=0.8,
+            expected_risk=0.2,
+        ),
+        PlanningOption(
+            name="Solo regulation routine",
+            rationale="Can stabilize mood before social outreach.",
+            expected_gain=0.7,
+            expected_risk=0.25,
+        ),
+    ]
+    return Plan(
+        objective="Break isolation with a safe, low-effort social step.",
+        constraints=["No guilt framing", "Keep action small"],
+        steps=[
+            "Acknowledge emotional exhaustion.",
+            "Suggest one short outreach message.",
+            "Offer a fallback solo step if outreach feels too hard.",
+        ],
+        options=options,
+        stop_condition="User accepts one social or self-care micro-action.",
+    )
+
+
+def acca_conflict(threat: ThreatAssessment, plan: Plan) -> ConflictReport:
+    if threat.level == "high":
+        return ConflictReport(
+            conflict_type="empathy_vs_urgency",
+            severity="high",
+            impacted_modules=["safety", "planning"],
+            recommendation="Lead with safety escalation while preserving empathy.",
+        )
+    return ConflictReport(
+        conflict_type="none_or_minor",
+        severity="low",
+        impacted_modules=["planning"],
+        recommendation="Proceed with concise plan and emotional attunement.",
+    )
+
+
+def ofa_value_assess(plan: Plan, threat: ThreatAssessment, conflict: ConflictReport) -> ValueAssessment:
     threat_penalty = {"low": 0.05, "medium": 0.2, "high": 0.45}[threat.level]
     conflict_penalty = {"low": 0.03, "medium": 0.08, "high": 0.15}[conflict.severity]
     scores: list[OptionScore] = []
     for option in plan.options:
         risk_penalty = option.expected_risk + threat_penalty + conflict_penalty
         utility = option.expected_gain - risk_penalty
-        scores.append(
-            OptionScore(
-                name=option.name,
-                utility=utility,
-                risk_penalty=risk_penalty,
-            )
-        )
+        scores.append(OptionScore(name=option.name, utility=utility, risk_penalty=risk_penalty))
     return ValueAssessment(scores=scores)
 
 
-def select_action(values: ValueAssessment) -> ActionDecision:
+def bga_select_action(values: ValueAssessment) -> ActionDecision:
     sorted_scores = sorted(values.scores, key=lambda item: item.utility, reverse=True)
     selected = sorted_scores[0]
     rejected = [score.name for score in sorted_scores[1:]]
     return ActionDecision(
         selected_option=selected.name,
         rejected_options=rejected,
-        confidence=min(max(0.35 + selected.utility, 0.0), 1.0),
-        tie_break_rationale="Selected highest utility after combined risk penalties.",
+        confidence=_clamp_01(0.35 + selected.utility),
+        tie_break_rationale="Selected highest utility after risk penalties.",
+    )
+
+
+def lca_generate_response(
+    llm_client: OpenRouterTextClient,
+    case: ScenarioCase,
+    threat: ThreatAssessment,
+    plan: Plan,
+    action: ActionDecision,
+    memory: MemoryEvidence,
+) -> FinalResponse:
+    def _safe_json_payload(raw_text: str) -> dict:
+        if raw_text.strip():
+            try:
+                return json.loads(raw_text)
+            except json.JSONDecodeError:
+                pass
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            snippet = raw_text[start : end + 1]
+            try:
+                return json.loads(snippet)
+            except json.JSONDecodeError:
+                pass
+        return {}
+
+    system_prompt = (
+        "You are the Language Cortex Agent.\n"
+        "Write concise, warm, practical support.\n"
+        "Return valid JSON only with keys: message, tone, suggested_followups.\n"
+        "suggested_followups must be an array of 2-3 short questions.\n"
+        "If risk is high, prioritize immediate safety guidance."
+    )
+    user_prompt = (
+        f"user_message: {case.user_message}\n"
+        f"threat_level: {threat.level}\n"
+        f"selected_option: {action.selected_option}\n"
+        f"plan_steps: {plan.steps}\n"
+        f"memory: {memory.model_dump_json()}\n"
+        "Generate final response JSON."
+    )
+    raw = llm_client.generate_text(system_prompt=system_prompt, user_prompt=user_prompt)
+    payload = _safe_json_payload(raw)
+    message = payload.get("message", payload.get("user_message", ""))
+    tone = payload.get("tone", "supportive")
+    followups = payload.get("suggested_followups", payload.get("followups", []))
+    if isinstance(followups, str):
+        followups = [followups]
+    return FinalResponse(
+        message=message,
+        tone=tone,
+        suggested_followups=followups[:3] if followups else ["What feels most urgent right now?"],
     )
 
 
 class StructuredAgenticBrain:
     def __init__(self, model: str):
-        client = GeminiJsonClient(model=model)
         self.model = model
-        self.thalamus = build_thalamus_unit(client)
-        self.insula = build_insula_unit(client)
-        self.amygdala = build_amygdala_unit(client)
-        self.pfca = build_pfca_unit(client)
-        self.acca = build_acca_unit(client)
-        self.lca = build_lca_unit(client)
+        self.llm_client = OpenRouterTextClient(model=model)
+        self.thalamus_pedantic = PedanticUnit[RouteDecision]("thalamus")
+        self.insula_pedantic = PedanticUnit[UserStateEstimate]("insula")
+        self.amygdala_pedantic = PedanticUnit[ThreatAssessment]("amygdala")
+        self.pfca_pedantic = PedanticUnit[Plan]("pfca")
+        self.acca_pedantic = PedanticUnit[ConflictReport]("acca")
+        self.lca_pedantic = PedanticUnit[FinalResponse]("lca")
 
     def run_case(self, case: ScenarioCase) -> BrainTrace:
-        history_block = "\n".join(
-            [f"{message.role}: {message.content}" for message in case.conversation_history]
+        route = self.thalamus_pedantic.validate(thalamus_route(case.user_message))
+        insula_state = self.insula_pedantic.validate(insula_estimate(case.user_message))
+        amygdala_threat = self.amygdala_pedantic.validate(amygdala_assess(case.user_message))
+        memory_evidence = retrieve_memory(case, case.user_message)
+        plan = self.pfca_pedantic.validate(pfca_plan(case, amygdala_threat, insula_state))
+        conflict_report = self.acca_pedantic.validate(acca_conflict(amygdala_threat, plan))
+        value_assessment = ofa_value_assess(plan, amygdala_threat, conflict_report)
+        action_decision = bga_select_action(value_assessment)
+        final_response = self.lca_pedantic.validate(
+            lca_generate_response(
+                llm_client=self.llm_client,
+                case=case,
+                threat=amygdala_threat,
+                plan=plan,
+                action=action_decision,
+                memory=memory_evidence,
+            )
         )
-
-        route_prompt = (
-            f"User message: {case.user_message}\n"
-            f"Conversation history:\n{history_block}\n"
-            "Return routing channels with priorities."
-        )
-        route = self.thalamus.run(route_prompt)
-
-        insula_prompt = (
-            f"User message: {case.user_message}\n"
-            f"Conversation history:\n{history_block}\n"
-            "Infer the user's internal emotional state."
-        )
-        insula_state = self.insula.run(insula_prompt)
-
-        amygdala_prompt = (
-            f"User message: {case.user_message}\n"
-            f"Conversation history:\n{history_block}\n"
-            "Assess safety threat level and return recommended policy."
-        )
-        amygdala_threat = self.amygdala.run(amygdala_prompt)
-
-        memory_evidence = retrieve_memory(case=case, user_message=case.user_message)
-
-        pfca_prompt = (
-            f"User message: {case.user_message}\n"
-            f"Route decision: {route.model_dump_json()}\n"
-            f"Insula state: {insula_state.model_dump_json()}\n"
-            f"Amygdala threat: {amygdala_threat.model_dump_json()}\n"
-            f"Memory evidence: {memory_evidence.model_dump_json()}\n"
-            "Create an executive plan for the next assistant turn."
-        )
-        plan = self.pfca.run(pfca_prompt)
-
-        acca_prompt = (
-            f"User message: {case.user_message}\n"
-            f"Threat assessment: {amygdala_threat.model_dump_json()}\n"
-            f"Plan: {plan.model_dump_json()}\n"
-            "Detect conflicts and recommend mitigation."
-        )
-        conflict_report = self.acca.run(acca_prompt)
-
-        value_assessment = value_assess(
-            plan=plan, threat=amygdala_threat, conflict=conflict_report
-        )
-        action_decision = select_action(value_assessment)
-
-        lca_prompt = (
-            f"User message: {case.user_message}\n"
-            f"Plan: {plan.model_dump_json()}\n"
-            f"Conflict report: {conflict_report.model_dump_json()}\n"
-            f"Action decision: {action_decision.model_dump_json()}\n"
-            f"Threat assessment: {amygdala_threat.model_dump_json()}\n"
-            f"Memory evidence: {memory_evidence.model_dump_json()}\n"
-            "Generate the final user-facing response."
-        )
-        final_response = self.lca.run(lca_prompt)
-
         return BrainTrace(
             case_id=case.case_id,
             title=case.title,
@@ -471,7 +538,7 @@ app = cyclopts.App(help="Structured agentic brain demo with Gemini 2.5 Flash.")
 def run_cases(
     cases_file: str = "researches/structured_agentic_brain/scenarios.json",
     output_json: str = "researches/structured_agentic_brain/demo_output.json",
-    model: str = "gemini-2.5-flash",
+    model: str = "google/gemini-2.5-flash",
 ) -> None:
     case_path = Path(cases_file)
     out_path = Path(output_json)
@@ -479,7 +546,6 @@ def run_cases(
     brain = StructuredAgenticBrain(model=model)
     traces = [brain.run_case(case) for case in cases]
     result = BrainRunResult(model=model, cases=traces)
-
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
 

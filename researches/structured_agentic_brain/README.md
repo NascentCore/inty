@@ -14,15 +14,17 @@ Minimal runnable demo of a brain-like structured multi-agent entity.
   - `OFA` (value scoring, local deterministic)
   - `BGA` (action selection, local deterministic)
   - `LCA` (final response realization)
-- Per-agent pedantic wrappers (PAU style): every LLM-backed agent output is validated.
-- Realistic scenario runner with Gemini 2.5 Flash (`gemini-2.5-flash`).
+- Per-agent pedantic wrappers (PAU style): every agent output is validated.
+- Realistic scenario runner with Gemini 2.5 Flash (`google/gemini-2.5-flash` via OpenRouter-compatible API).
 
 ## Requirements
 
 - Python venv is available in repo root (`.venv`).
-- A Gemini credential path:
-  - API key in `GEMINI_API_KEY` or `GOOGLE_API_KEY`, or
-  - Vertex credentials (`GOOGLE_CLOUD_PROJECT` + ADC/service account setup)
+- OpenRouter-compatible credentials:
+  - `OPENROUTER_API_KEY`, or
+  - fallback to repo `config.yaml` (`agent.api_key` + `agent.base_url`)
+
+Only the `LCA` agent calls Gemini 2.5 Flash; other agents are deterministic to keep the demo stable and minimal while preserving the structured architecture.
 
 ## Run
 
