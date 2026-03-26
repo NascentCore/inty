@@ -8,17 +8,26 @@ from typing import Any
 from langsmith import wrappers
 from openai import OpenAI
 
+from app.core.agentic_kernel.providers.facade import (
+    OpenAICompatibleClientOptions,
+    get_openai_compatible_sync_client,
+)
+
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 _gemini_client: Any | None = None
 
 
 def create_openai_client() -> OpenAI:
-    base = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=os.getenv("OPENROUTER_API_KEY"))
-    return wrappers.wrap_openai(
-        base,
-        chat_name="AgenticAICompanion_Chat",
-        completions_name="AgenticAICompanion",
+    return get_openai_compatible_sync_client(
+        OpenAICompatibleClientOptions(
+            base_url=OPENROUTER_BASE_URL,
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            wrap_langsmith=True,
+            chat_name="AgenticAICompanion_Chat",
+            completions_name="AgenticAICompanion",
+            use_fake_openai=False,
+        )
     )
 
 

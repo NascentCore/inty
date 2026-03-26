@@ -9,9 +9,13 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from langsmith.wrappers import wrap_openai
 from loguru import logger
 from openai import OpenAI
+
+from app.core.agentic_kernel.providers.facade import (
+    OpenAICompatibleClientOptions,
+    get_openai_compatible_sync_client,
+)
 
 _DEFAULT_MODEL = "deepseek/deepseek-v3.2"
 
@@ -56,16 +60,18 @@ def get_client() -> OpenAI:
             "(or a .env file loaded by python-dotenv)."
         )
     if os.getenv("OPENROUTER_API_KEY"):
-        base = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=key,
-        )
+        base_url = "https://openrouter.ai/api/v1"
     else:
-        base = OpenAI(api_key=key)
-    _CLIENT = wrap_openai(
-        base,
-        chat_name="IntyV2Proto_ChatOpenAI",
-        completions_name="IntyV2Proto_OpenAI",
+        base_url = None
+    _CLIENT = get_openai_compatible_sync_client(
+        OpenAICompatibleClientOptions(
+            base_url=base_url,
+            api_key=key,
+            wrap_langsmith=True,
+            chat_name="IntyV2Proto_ChatOpenAI",
+            completions_name="IntyV2Proto_OpenAI",
+            use_fake_openai=False,
+        )
     )
     return _CLIENT
 

@@ -30,6 +30,11 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from app.api.types.llm_config import LLMConfig
+from app.core.agentic_kernel.providers.facade import (
+    OpenAICompatibleClientOptions,
+    get_openai_compatible_async_client,
+    get_openai_compatible_sync_client,
+)
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.external_services.fakes.openai import FakeOpenAI
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
@@ -86,22 +91,21 @@ _chat_client_lock = threading.Lock()
 
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
-    # 在测试环境使用 FakeOpenAI
-    from app.core.config import Environment
-
-    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-        logger.info("Using FakeOpenAI in test environment")
-        return FakeOpenAI()
-
-    return OpenAI(
-        base_url=global_config_loaded_from_config_yaml.agent.base_url,
-        api_key=global_config_loaded_from_config_yaml.agent.api_key,
-        # Extra headers used for tracking on openrouter.ai.
-        default_headers={
-            # This appears as app name on openrouter.ai's activity page.
-            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
-            "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
-        },
+    use_fake_openai = (
+        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+    )
+    return get_openai_compatible_sync_client(
+        OpenAICompatibleClientOptions(
+            base_url=global_config_loaded_from_config_yaml.agent.base_url,
+            api_key=global_config_loaded_from_config_yaml.agent.api_key,
+            wrap_langsmith=False,
+            default_headers={
+                # This appears as app name on openrouter.ai's activity page.
+                "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",  # Optional. Site URL for rankings on openrouter.ai.
+                "X-Title": global_config_loaded_from_config_yaml.app.name,  # Optional. Site title for rankings on openrouter.ai.
+            },
+            use_fake_openai=use_fake_openai,
+        )
     )
 
 
@@ -123,22 +127,23 @@ def get_base_openai_client() -> OpenAI:
 
 def _create_chat_openai_client() -> OpenAI:
     """创建 Agent 聊天专用 OpenAI 客户端。若配置了 chat_llm_base_url 与 chat_llm_api_key 则使用二者，否则使用 base_url + api_key。"""
-    from app.core.config import Environment
-
-    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-        logger.info("Using FakeOpenAI in test environment (chat client)")
-        return FakeOpenAI()
-
     cfg = global_config_loaded_from_config_yaml.agent
     base_url = cfg.chat_llm_base_url or cfg.base_url
     api_key = cfg.chat_llm_api_key or cfg.api_key
-    return OpenAI(
-        base_url=base_url,
-        api_key=api_key,
-        default_headers={
-            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
-            "X-Title": global_config_loaded_from_config_yaml.app.name,
-        },
+    use_fake_openai = (
+        global_config_loaded_from_config_yaml.app.environment == Environment.TEST
+    )
+    return get_openai_compatible_sync_client(
+        OpenAICompatibleClientOptions(
+            base_url=base_url,
+            api_key=api_key,
+            wrap_langsmith=False,
+            default_headers={
+                "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
+                "X-Title": global_config_loaded_from_config_yaml.app.name,
+            },
+            use_fake_openai=use_fake_openai,
+        )
     )
 
 
@@ -163,15 +168,19 @@ def get_chat_llm_provider() -> str:
 
 def _create_async_openai_client() -> AsyncOpenAI:
     """创建 AsyncOpenAI 客户端，与 sync 客户端相同配置（base_url、api_key、OpenRouter headers）。"""
-    # 测试环境也使用真实 AsyncOpenAI；需 mock 的测试会 patch chat_completion_for_extraction。
-    return AsyncOpenAI(
-        base_url=global_config_loaded_from_config_yaml.agent.base_url,
-        api_key=global_config_loaded_from_config_yaml.agent.api_key,
-        default_headers={
-            "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
-            "X-Title": global_config_loaded_from_config_yaml.app.name,
-        },
-        timeout=120.0,
+    # 与历史行为保持一致：异步抽取路径即使在 TEST 也不走 FakeOpenAI。
+    return get_openai_compatible_async_client(
+        OpenAICompatibleClientOptions(
+            base_url=global_config_loaded_from_config_yaml.agent.base_url,
+            api_key=global_config_loaded_from_config_yaml.agent.api_key,
+            wrap_langsmith=False,
+            default_headers={
+                "HTTP-Referer": f"{global_config_loaded_from_config_yaml.app.name_for_openrouter}",
+                "X-Title": global_config_loaded_from_config_yaml.app.name,
+            },
+            timeout=120.0,
+            use_fake_openai=False,
+        )
     )
 
 
