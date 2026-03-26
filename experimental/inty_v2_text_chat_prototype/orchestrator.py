@@ -271,47 +271,47 @@ async def _run_turn_with_user_profile_tools(
 
             chat_task = asyncio.create_task(_run_chat_branch())
             tool_task = asyncio.create_task(_run_tool_branch())
-            pending_map: dict[asyncio.Task[Any], str] = {
-                chat_task: "chat",
-                tool_task: "tool",
-            }
-            done_results: dict[str, Any] = {}
             try:
-                while pending_map:
-                    done_set, _ = await asyncio.wait(
-                        pending_map.keys(),
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    for finished_task in done_set:
-                        branch = pending_map.pop(finished_task)
-                        resp_any = await finished_task
-                        done_results[branch] = resp_any
-                        _log_llm_round_result(
-                            round_idx=round_idx,
-                            model=chat_route_model
-                            if branch == "chat"
-                            else tool_route_model,
-                            resp=resp_any,
-                            messages=request_messages,
-                            llm_trace=llm_trace,
-                            llm_trace_where="repl.turn.dual.chat"
-                            if branch == "chat"
-                            else "repl.turn.dual.tool",
-                            root=root,
-                        )
-                        msg_branch = resp_any.choices[0].message
-                        messages.append(openai_assistant_message_dict(msg_branch))
+                chat_resp, tool_resp = await asyncio.gather(chat_task, tool_task)
             except BaseException:
-                for still_pending in pending_map:
-                    still_pending.cancel()
+                if not chat_task.done():
+                    chat_task.cancel()
+                if not tool_task.done():
+                    tool_task.cancel()
                 raise
-            chat_resp = done_results["chat"]
-            tool_resp = done_results["tool"]
+            _log_llm_round_result(
+                round_idx=round_idx,
+                model=chat_route_model,
+                resp=chat_resp,
+                messages=request_messages,
+                llm_trace=llm_trace,
+                llm_trace_where="repl.turn.dual.chat",
+                root=root,
+            )
+            _log_llm_round_result(
+                round_idx=round_idx,
+                model=tool_route_model,
+                resp=tool_resp,
+                messages=request_messages,
+                llm_trace=llm_trace,
+                llm_trace_where="repl.turn.dual.tool",
+                root=root,
+            )
             chat_text = _assistant_text_from_completion_response(chat_resp)
             tool_text = _assistant_text_from_completion_response(tool_resp)
             last_text = _merge_visible_assistant_text(chat_text, tool_text)
             tool_msg = tool_resp.choices[0].message
             tool_calls = getattr(tool_msg, "tool_calls", None) or []
+            chat_msg = chat_resp.choices[0].message
+            tool_row = openai_assistant_message_dict(tool_msg)
+            chat_row = openai_assistant_message_dict(chat_msg)
+            # Keep tool protocol rows contiguous and deterministic.
+            # tool assistant -> tool results -> chat assistant
+            if tool_calls:
+                messages.append(tool_row)
+            else:
+                messages.append(chat_row)
+                messages.append(tool_row)
             if not tool_calls:
                 break
         else:
@@ -394,6 +394,8 @@ async def _run_turn_with_user_profile_tools(
                     "content": result,
                 }
             )
+        if dual_enabled and not heartbeat_turn:
+            messages.append(chat_row)
     else:
         raise RuntimeError(
             f"repl user_profile tool loop exceeded max_rounds={_REPL_USER_PROFILE_TOOL_MAX_ROUNDS}"

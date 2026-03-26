@@ -72,6 +72,45 @@ class _FakeCompletions:
         raise AssertionError(f"unexpected model/round: {model=} {idx=}")
 
 
+class _FakeCompletionsToolFirst:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+        self._per_model_count: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def create(self, **kwargs: object) -> SimpleNamespace:
+        model = str(kwargs["model"])
+        messages = deepcopy(kwargs["messages"])
+        tools = deepcopy(kwargs.get("tools"))
+        with self._lock:
+            self.calls.append(
+                {
+                    "model": model,
+                    "messages": messages,
+                    "tools": tools,
+                }
+            )
+            idx = self._per_model_count.get(model, 0) + 1
+            self._per_model_count[model] = idx
+        if model == "chat-fast":
+            time.sleep(0.03)
+            if idx == 1:
+                return _resp_text("chat-r1")
+            if idx == 2:
+                return _resp_text("chat-r2")
+        if model == "tool-smart":
+            time.sleep(0.01)
+            if idx == 1:
+                return _resp_tool(
+                    "tool-r1",
+                    tool_name="user_profile_record",
+                    tool_args='{"items":[{"label":"昵称","value":"阿木"}]}',
+                )
+            if idx == 2:
+                return _resp_text("tool-r2")
+        raise AssertionError(f"unexpected model/round: {model=} {idx=}")
+
+
 class TestDualLlmChatTool(unittest.TestCase):
     def test_dual_llm_uses_same_context_and_merges_history_continuously(self) -> None:
         fake_completions = _FakeCompletions()
@@ -137,6 +176,72 @@ class TestDualLlmChatTool(unittest.TestCase):
         ]
         self.assertIn("OK tool result", tool_bodies)
 
+        fake_execute_tool_call.assert_awaited_once()
+
+    def test_dual_llm_keeps_tool_call_adjacent_when_tool_branch_finishes_first(self) -> None:
+        fake_completions = _FakeCompletionsToolFirst()
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=fake_completions),
+        )
+        fake_execute_tool_call = AsyncMock(return_value="OK tool result")
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            messages: list[dict[str, object]] = [
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "u1"},
+            ]
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(orchestrator, "dual_llm_enabled", return_value=True),
+                patch.object(orchestrator, "chat_model", return_value="chat-fast"),
+                patch.object(orchestrator, "tool_model", return_value="tool-smart"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator,
+                    "execute_tool_call",
+                    fake_execute_tool_call,
+                ),
+            ):
+                out = asyncio.run(
+                    orchestrator._run_turn_with_user_profile_tools(
+                        messages,
+                        root,
+                        llm_trace=False,
+                        heartbeat_turn=False,
+                    )
+                )
+
+        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        self.assertEqual(len(fake_completions.calls), 4)
+        # After round-1 execution, ordering must keep tool protocol contiguous:
+        # tool assistant(tool_calls) -> tool result before any round-2 assistant messages.
+        tool_idx = next(
+            i
+            for i, m in enumerate(messages)
+            if isinstance(m, dict)
+            and m.get("role") == "assistant"
+            and m.get("content") == "tool-r1"
+        )
+        result_idx = next(
+            i
+            for i, m in enumerate(messages)
+            if isinstance(m, dict)
+            and m.get("role") == "tool"
+            and m.get("content") == "OK tool result"
+        )
+        chat2_idx = next(
+            i
+            for i, m in enumerate(messages)
+            if isinstance(m, dict)
+            and m.get("role") == "assistant"
+            and m.get("content") == "chat-r2"
+        )
+        self.assertEqual(result_idx, tool_idx + 1)
+        self.assertLess(result_idx, chat2_idx)
         fake_execute_tool_call.assert_awaited_once()
 
 
