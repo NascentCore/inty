@@ -1,0 +1,361 @@
+{
+  "model": "google/gemini-2.5-flash",
+  "cases": [
+    {
+      "case_id": "case_anxiety_interview",
+      "title": "High-stress career anxiety with concrete need for plan",
+      "route": {
+        "channels": [
+          {
+            "name": "planning",
+            "priority": 0.7
+          },
+          {
+            "name": "emotional",
+            "priority": 0.6
+          },
+          {
+            "name": "memory",
+            "priority": 0.5
+          },
+          {
+            "name": "safety",
+            "priority": 0.95
+          }
+        ],
+        "reason": "Prioritize planning/emotion; add safety when high-risk phrases appear."
+      },
+      "insula_state": {
+        "primary_emotion": "anxious",
+        "stress_level": 0.85,
+        "loneliness_level": 0.25,
+        "confidence": 0.78,
+        "evidence": [
+          "User reports body stress and fear of failure."
+        ]
+      },
+      "amygdala_threat": {
+        "level": "medium",
+        "signals": [
+          "elevated_emotional_distress"
+        ],
+        "recommended_policy": "Use supportive tone and concrete short-term coping steps."
+      },
+      "memory_evidence": {
+        "episodic_hits": [
+          "Last month user handled a presentation better after a breathing routine.",
+          "User previously said mock interviews increase confidence.",
+          "User reported stomach discomfort before stressful meetings."
+        ],
+        "semantic_hits": [
+          "User prefers practical plans over abstract motivation.",
+          "User responds well to warm but direct tone.",
+          "User's interview target is a product management role."
+        ],
+        "retrieval_reason": "Lexical overlap between user message and stored memory traces."
+      },
+      "plan": {
+        "objective": "Reduce anxiety and produce a realistic next-step plan.",
+        "constraints": [
+          "Keep steps concrete",
+          "Avoid overloading"
+        ],
+        "steps": [
+          "Run a 60-second calming routine.",
+          "Define 3 priority tasks for tonight.",
+          "Set a realistic stop time and sleep boundary."
+        ],
+        "options": [
+          {
+            "name": "Calm then micro-plan",
+            "rationale": "Short regulation then concrete prep steps.",
+            "expected_gain": 0.84,
+            "expected_risk": 0.16
+          },
+          {
+            "name": "Direct checklist only",
+            "rationale": "Action-first style for practical users.",
+            "expected_gain": 0.73,
+            "expected_risk": 0.24
+          }
+        ],
+        "stop_condition": "User confirms one clear next action."
+      },
+      "conflict_report": {
+        "conflict_type": "none_or_minor",
+        "severity": "low",
+        "impacted_modules": [
+          "planning"
+        ],
+        "recommendation": "Proceed with concise plan and emotional attunement."
+      },
+      "value_assessment": {
+        "scores": [
+          {
+            "name": "Calm then micro-plan",
+            "utility": 0.44999999999999996,
+            "risk_penalty": 0.39
+          },
+          {
+            "name": "Direct checklist only",
+            "utility": 0.26,
+            "risk_penalty": 0.47
+          }
+        ]
+      },
+      "action_decision": {
+        "selected_option": "Calm then micro-plan",
+        "rejected_options": [
+          "Direct checklist only"
+        ],
+        "confidence": 0.7999999999999999,
+        "tie_break_rationale": "Selected highest utility after risk penalties."
+      },
+      "final_response": {
+        "message": "It's completely normal to feel that tightness before a big interview, especially when you're aiming for a product management role. Remember how you aced that presentation after a quick breathing exercise? Let's start there. Take a slow, deep breath in through your nose for 4 counts, hold for 4, and exhale slowly through your mouth for 6. Repeat this 3-5 times. \n\nNow, for tonight, let's focus on three practical steps: \n1. **Review your top 3 strengths** for this specific role and have a concise example for each. \n2. **Prepare 2-3 thoughtful questions** to ask *them* about the team or company culture. \n3. **Lay out your interview outfit** so there's one less decision tomorrow morning. \n\nAim to be completely done by 9:30 PM. No more interview prep after that. Get some rest; a fresh mind is your best asset. You've got this!",
+        "tone": "warm, practical, supportive",
+        "suggested_followups": [
+          "How do you feel after the breathing exercise?",
+          "What are your top 3 strengths for this role?",
+          "What time are you setting your alarm for?"
+        ]
+      }
+    },
+    {
+      "case_id": "case_loneliness_evening",
+      "title": "Loneliness and social withdrawal after work",
+      "route": {
+        "channels": [
+          {
+            "name": "planning",
+            "priority": 0.7
+          },
+          {
+            "name": "emotional",
+            "priority": 0.6
+          },
+          {
+            "name": "memory",
+            "priority": 0.5
+          }
+        ],
+        "reason": "Prioritize planning/emotion; add safety when high-risk phrases appear."
+      },
+      "insula_state": {
+        "primary_emotion": "lonely",
+        "stress_level": 0.45,
+        "loneliness_level": 0.85,
+        "confidence": 0.78,
+        "evidence": [
+          "User reports social withdrawal and emptiness."
+        ]
+      },
+      "amygdala_threat": {
+        "level": "medium",
+        "signals": [
+          "elevated_emotional_distress"
+        ],
+        "recommended_policy": "Use supportive tone and concrete short-term coping steps."
+      },
+      "memory_evidence": {
+        "episodic_hits": [
+          "User enjoyed a short coffee meetup with one friend two weeks ago.",
+          "User canceled two group events due to fatigue."
+        ],
+        "semantic_hits": [
+          "User prefers one-on-one social interaction over large groups.",
+          "User has strongest support from college friend Alex.",
+          "User values consistent routines."
+        ],
+        "retrieval_reason": "Lexical overlap between user message and stored memory traces."
+      },
+      "plan": {
+        "objective": "Break isolation with a safe, low-effort social step.",
+        "constraints": [
+          "No guilt framing",
+          "Keep action small"
+        ],
+        "steps": [
+          "Acknowledge emotional exhaustion.",
+          "Suggest one short outreach message.",
+          "Offer a fallback solo step if outreach feels too hard."
+        ],
+        "options": [
+          {
+            "name": "Low-friction reconnection",
+            "rationale": "One small social action reduces withdrawal inertia.",
+            "expected_gain": 0.8,
+            "expected_risk": 0.2
+          },
+          {
+            "name": "Solo regulation routine",
+            "rationale": "Can stabilize mood before social outreach.",
+            "expected_gain": 0.7,
+            "expected_risk": 0.25
+          }
+        ],
+        "stop_condition": "User accepts one social or self-care micro-action."
+      },
+      "conflict_report": {
+        "conflict_type": "none_or_minor",
+        "severity": "low",
+        "impacted_modules": [
+          "planning"
+        ],
+        "recommendation": "Proceed with concise plan and emotional attunement."
+      },
+      "value_assessment": {
+        "scores": [
+          {
+            "name": "Low-friction reconnection",
+            "utility": 0.37,
+            "risk_penalty": 0.43000000000000005
+          },
+          {
+            "name": "Solo regulation routine",
+            "utility": 0.21999999999999997,
+            "risk_penalty": 0.48
+          }
+        ]
+      },
+      "action_decision": {
+        "selected_option": "Low-friction reconnection",
+        "rejected_options": [
+          "Solo regulation routine"
+        ],
+        "confidence": 0.72,
+        "tie_break_rationale": "Selected highest utility after risk penalties."
+      },
+      "final_response": {
+        "message": "It sounds like you're going through a really tough time right now, and it's completely understandable to feel exhausted and empty after being alone for so long. Reaching out can feel like a huge effort when you're feeling this way, but even a small step can make a difference. How about sending a quick text to Alex, maybe just something like, 'Hey, thinking of you. How's your week going?' If that feels like too much, sometimes just stepping outside for a few minutes can help shift your mood a little.",
+        "tone": "warm",
+        "suggested_followups": [
+          "How does that sound?",
+          "What's one small thing you're looking forward to this week?",
+          "Would you like to talk more about what's making it hard to reach out?"
+        ]
+      }
+    },
+    {
+      "case_id": "case_boundary_risk",
+      "title": "Potentially unsafe emotional escalation requiring boundary-aware response",
+      "route": {
+        "channels": [
+          {
+            "name": "planning",
+            "priority": 0.7
+          },
+          {
+            "name": "emotional",
+            "priority": 0.6
+          },
+          {
+            "name": "memory",
+            "priority": 0.5
+          },
+          {
+            "name": "safety",
+            "priority": 0.95
+          }
+        ],
+        "reason": "Prioritize planning/emotion; add safety when high-risk phrases appear."
+      },
+      "insula_state": {
+        "primary_emotion": "distressed",
+        "stress_level": 0.95,
+        "loneliness_level": 0.7,
+        "confidence": 0.78,
+        "evidence": [
+          "User expresses severe hopelessness cues."
+        ]
+      },
+      "amygdala_threat": {
+        "level": "high",
+        "signals": [
+          "hopelessness_phrase",
+          "severe_distress_tone"
+        ],
+        "recommended_policy": "Prioritize immediate safety and encourage professional/human support."
+      },
+      "memory_evidence": {
+        "episodic_hits": [
+          "User once said late-night rumination worsens emotional spirals.",
+          "User felt safer after grounding exercises in prior difficult moments.",
+          "User previously accepted suggestion to contact a trusted person."
+        ],
+        "semantic_hits": [
+          "User has one trusted sibling as emergency contact.",
+          "In high-risk cues, prioritize safety and immediate human support."
+        ],
+        "retrieval_reason": "Lexical overlap between user message and stored memory traces."
+      },
+      "plan": {
+        "objective": "Protect user safety and reduce immediate risk.",
+        "constraints": [
+          "No minimizing risk",
+          "No delayed escalation"
+        ],
+        "steps": [
+          "Acknowledge pain and validate feelings.",
+          "Provide immediate crisis/human support options.",
+          "Offer one grounding action while waiting for support."
+        ],
+        "options": [
+          {
+            "name": "Immediate safety resources",
+            "rationale": "Highest safety protection under severe distress.",
+            "expected_gain": 0.92,
+            "expected_risk": 0.08
+          },
+          {
+            "name": "Grounding then trusted contact",
+            "rationale": "Stabilize first then connect to human support.",
+            "expected_gain": 0.82,
+            "expected_risk": 0.18
+          }
+        ],
+        "stop_condition": "User confirms reaching support or entering a safer state."
+      },
+      "conflict_report": {
+        "conflict_type": "empathy_vs_urgency",
+        "severity": "high",
+        "impacted_modules": [
+          "safety",
+          "planning"
+        ],
+        "recommendation": "Lead with safety escalation while preserving empathy."
+      },
+      "value_assessment": {
+        "scores": [
+          {
+            "name": "Immediate safety resources",
+            "utility": 0.24,
+            "risk_penalty": 0.68
+          },
+          {
+            "name": "Grounding then trusted contact",
+            "utility": 0.039999999999999925,
+            "risk_penalty": 0.78
+          }
+        ]
+      },
+      "action_decision": {
+        "selected_option": "Immediate safety resources",
+        "rejected_options": [
+          "Grounding then trusted contact"
+        ],
+        "confidence": 0.59,
+        "tie_break_rationale": "Selected highest utility after risk penalties."
+      },
+      "final_response": {
+        "message": "It sounds like you're going through an incredibly difficult time, and I want you to know that your feelings are valid. Please reach out for immediate support. You can connect with compassionate and trained individuals right now by calling or texting 988 in the US and Canada, or calling 111 in the UK. These services are free, confidential, and available 24/7. While you wait to connect, try focusing on your breath for a few moments – a slow inhale, hold, and exhale. You don't have to go through this alone.",
+        "tone": "warm",
+        "suggested_followups": [
+          "Have you been able to connect with someone?",
+          "Would you like me to help you find local resources?",
+          "Can we try a short grounding exercise together?"
+        ]
+      }
+    }
+  ]
+}
