@@ -178,7 +178,9 @@ class TestDualLlmChatTool(unittest.TestCase):
 
         fake_execute_tool_call.assert_awaited_once()
 
-    def test_dual_llm_keeps_tool_call_adjacent_when_tool_branch_finishes_first(self) -> None:
+    def test_dual_llm_keeps_tool_call_adjacent_when_tool_branch_finishes_first(
+        self,
+    ) -> None:
         fake_completions = _FakeCompletionsToolFirst()
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=fake_completions),

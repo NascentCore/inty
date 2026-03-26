@@ -4,7 +4,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 ToolRole = Literal["system", "user", "assistant", "tool"]
 
 
@@ -65,4 +64,3 @@ class ToolResult(BaseModel):
     content: str
     terminal: bool = False
     artifact_path: str | None = None
-

@@ -623,6 +623,7 @@ def process_response_with_tools(
     处理单轮 API 响应中的 tool_call：执行工具并追加 assistant + tool 消息，按 TERMINAL 返回 content/done。
     调用方必须保证 message 含有且仅含一个 tool_call；无 tool_calls 时由 run_repl 直接处理。
     """
+
     def get_tool_context(
         context_type: ToolContextType, new_messages: list[dict[str, Any]]
     ) -> dict[str, Any]:

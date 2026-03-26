@@ -89,7 +89,9 @@ def _build_openai_compatible_sync_client(options: OpenAICompatibleClientOptions)
     )
 
 
-def _build_openai_compatible_async_client(options: OpenAICompatibleClientOptions) -> Any:
+def _build_openai_compatible_async_client(
+    options: OpenAICompatibleClientOptions,
+) -> Any:
     return create_async_client(
         OpenAICompatibleAsyncOptions(
             base_url=options.base_url,
@@ -125,4 +127,3 @@ def get_openai_compatible_async_client(options: OpenAICompatibleClientOptions) -
         client = _build_openai_compatible_async_client(options=options)
         _CLIENT_CACHE[key] = client
         return client
-

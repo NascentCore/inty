@@ -18,7 +18,10 @@ sys.path.insert(0, str(_EXPERIMENTAL))
 from inty_v2_text_chat_prototype import orchestrator
 from inty_v2_text_chat_prototype.models import load_transcript
 from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.tool_background import clear_output_queue, pop_output_events_nowait
+from inty_v2_text_chat_prototype.tool_background import (
+    clear_output_queue,
+    pop_output_events_nowait,
+)
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -84,7 +87,9 @@ class TestAsyncToolBackground(unittest.TestCase):
         paths.transcript.write_text("", encoding="utf-8")
         return paths
 
-    def test_chat_returns_first_then_background_event_and_transcript_append(self) -> None:
+    def test_chat_returns_first_then_background_event_and_transcript_append(
+        self,
+    ) -> None:
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=_FakeCompletionsAsyncBg()),
         )
@@ -95,13 +100,21 @@ class TestAsyncToolBackground(unittest.TestCase):
                 patch.object(orchestrator, "get_client", return_value=fake_client),
                 patch.object(orchestrator, "chat_model", return_value="chat-fast"),
                 patch.object(orchestrator, "tool_model", return_value="tool-smart"),
-                patch.object(orchestrator, "build_openai_repl_tools", return_value=[{"type": "function"}]),
-                patch.object(orchestrator, "schedule_memory_update_after_turn", return_value=None),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator, "schedule_memory_update_after_turn", return_value=None
+                ),
                 patch(
                     "inty_v2_text_chat_prototype.tool_background.execute_tool_call",
                     side_effect=lambda *a, **k: "OK tool result",
                 ),
-                patch.dict(os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False),
+                patch.dict(
+                    os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False
+                ),
             ):
                 out = asyncio.run(
                     orchestrator.run_turn(
@@ -151,9 +164,17 @@ class TestAsyncToolBackground(unittest.TestCase):
                 patch.object(orchestrator, "get_client", return_value=fake_client),
                 patch.object(orchestrator, "chat_model", return_value="chat-fast"),
                 patch.object(orchestrator, "tool_model", return_value="tool-smart"),
-                patch.object(orchestrator, "build_openai_repl_tools", return_value=[{"type": "function"}]),
-                patch.object(orchestrator, "schedule_memory_update_after_turn", return_value=None),
-                patch.dict(os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator, "schedule_memory_update_after_turn", return_value=None
+                ),
+                patch.dict(
+                    os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False
+                ),
             ):
                 out = asyncio.run(
                     orchestrator.run_turn(

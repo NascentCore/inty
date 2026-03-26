@@ -527,9 +527,7 @@ def generate_markdown_report(
     lines.append(
         "| Variant | Samples | Overall Trigger | Trigger When Needed | Trigger When Not Needed | Expected Tool Match (Needed) |"
     )
-    lines.append(
-        "|---|---:|---:|---:|---:|---:|"
-    )
+    lines.append("|---|---:|---:|---:|---:|---:|")
     for s in summaries:
         lines.append(
             f"| {s.variant} | {s.total_samples} | {s.trigger_rate_overall:.2%} | "
@@ -552,7 +550,9 @@ def generate_markdown_report(
             for r in observations
             if r.status == "ok" and r.variant == "layered" and r.case_id == case.case_id
         ]
-        flat_rate = _safe_rate(sum(1 for r in flat_rows if r.triggered_tool), len(flat_rows))
+        flat_rate = _safe_rate(
+            sum(1 for r in flat_rows if r.triggered_tool), len(flat_rows)
+        )
         layered_rate = _safe_rate(
             sum(1 for r in layered_rows if r.triggered_tool), len(layered_rows)
         )

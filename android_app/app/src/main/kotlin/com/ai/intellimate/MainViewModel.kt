@@ -278,9 +278,7 @@ class MainViewModel : BaseVM() {
         if (_messagesTabHasPush.value) {
             _messagesTabHasPush.value = false
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            IntySetting.setMessagesTabHasPushSuspend(false)
-        }
+        viewModelScope.launch(Dispatchers.IO) { IntySetting.setMessagesTabHasPushSuspend(false) }
     }
 
     fun clearAppUpdateTipsRedDot() {
