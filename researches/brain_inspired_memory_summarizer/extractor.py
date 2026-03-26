@@ -32,6 +32,42 @@ ALLOWED_KEYS = {
     "boundary",
 }
 
+_LLM_MEMORY_SCHEMA: dict[str, object] = {
+    "name": "memory_candidates",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "candidates": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "enum": sorted(ALLOWED_KEYS),
+                        },
+                        "value": {"type": "string"},
+                        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                        "evidence": {"type": "string"},
+                        "is_negative": {"type": "boolean"},
+                    },
+                    "required": [
+                        "key",
+                        "value",
+                        "confidence",
+                        "evidence",
+                        "is_negative",
+                    ],
+                },
+            }
+        },
+        "required": ["candidates"],
+    },
+}
+
 
 @dataclass(frozen=True)
 class SlotCandidate:
@@ -189,25 +225,37 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
 
     system_prompt = (
         "You extract stable user-memory slots from one user utterance.\n"
-        "Return ONLY JSON object with key `candidates`.\n"
         "Each candidate item must contain: key, value, confidence, evidence, is_negative.\n"
         "Allowed keys: preferred_name, city, pet, rest_day, coffee_preference, boundary.\n"
         "Rules:\n"
         "- Keep only durable user facts/preferences/boundaries.\n"
-        "- If no durable memory, return {\"candidates\": []}.\n"
+        "- If no durable memory, return an empty candidate list.\n"
         "- confidence must be in [0,1].\n"
         "- For explicit negation or prohibition, set is_negative=true.\n"
     )
     user_prompt = f"Utterance:\n{text}"
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.0,
-    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={
+                "type": "json_schema",
+                "json_schema": _LLM_MEMORY_SCHEMA,
+            },
+            temperature=0.0,
+        )
+    except Exception:
+        # Compatibility fallback for providers that do not yet support json_schema.
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=0.0,
+        )
     content = resp.choices[0].message.content or '{"candidates":[]}'
     data = json.loads(content)
     raw_items = data.get("candidates", [])
