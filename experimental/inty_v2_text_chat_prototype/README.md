@@ -1,6 +1,6 @@
 # INTY v2 本地文本聊天原型
 
-依据仓库文档 `docs/INTY_v2_CORE_AGENTIC_COMPONENT_TECH_PROTOTYPE.md`：单进程 CLI、Markdown + JSONL 文件持久化、**无 HTTP、无数据库**。与 `docs/INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md` **§3（编排）**、**§20（单一写入路径）** 对齐：助手对用户可见文本仅通过 `orchestrator.run_turn` 追加到 `transcript.jsonl`。
+依据仓库文档 `docs/INTY_v2_CORE_AGENTIC_COMPONENT_TECH_PROTOTYPE.md`：单进程 CLI、Markdown + JSONL 文件持久化、**无 HTTP、无数据库**。与 `docs/INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md` **§3（编排）**、**§20（单一写入路径）** 对齐：助手对用户可见文本仅通过 `orchestrator.run_turn` 追加到 `transcript.jsonl`。脑启发式多层记忆总结器方案见 `../../../researches/brain_inspired_memory_summarizer/FR_BRAIN_INSPIRED_MEMORY_LAYER_SUMMARIZER.md`。
 
 ## 依赖
 
