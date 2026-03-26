@@ -585,6 +585,9 @@ async def _dispatch(
     *,
     write_allowlist: frozenset[str] | None = None,
 ) -> str:
+    if not _BASE_TOOL_REGISTRY.is_allowed(name):
+        return f"ERROR: unknown tool {name!r}"
+
     if name == "workspace_list_dir":
         rel = str(arguments.get("relative_path", ""))
         return tool_workspace_list_dir(root, rel)
