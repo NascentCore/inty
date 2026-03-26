@@ -36,7 +36,6 @@ from app.core.agentic_kernel.providers.facade import (
     get_openai_compatible_sync_client,
 )
 from app.core.config import Environment, global_config_loaded_from_config_yaml
-from app.external_services.fakes.openai import FakeOpenAI
 from app.utils.openrouter_memory import DEFAULT_MEMORY_EXTRACTION_MODEL
 
 

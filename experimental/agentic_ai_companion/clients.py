@@ -19,6 +19,7 @@ _gemini_client: Any | None = None
 
 
 def create_openai_client() -> OpenAI:
+    """返回按配置缓存的 OpenAI-compatible 客户端（共享缓存是有意行为）。"""
     return get_openai_compatible_sync_client(
         OpenAICompatibleClientOptions(
             base_url=OPENROUTER_BASE_URL,

@@ -16,7 +16,11 @@ from app.core.agentic_kernel.providers.openai_compatible import (
 
 @dataclass(frozen=True)
 class OpenAICompatibleClientOptions:
-    """Unified options for constructing OpenAI-compatible clients."""
+    """
+    Unified options for constructing OpenAI-compatible clients.
+
+    Shared cache is intentional: clients with identical options return the same instance.
+    """
 
     base_url: str | None
     api_key: str | None
@@ -98,7 +102,7 @@ def _build_openai_compatible_async_client(options: OpenAICompatibleClientOptions
 
 
 def get_openai_compatible_sync_client(options: OpenAICompatibleClientOptions) -> Any:
-    """Get or create cached OpenAI-compatible sync client."""
+    """Get or create cached OpenAI-compatible sync client (shared instance by option key)."""
     key = _build_cache_key("sync", options)
     if key in _CLIENT_CACHE:
         return _CLIENT_CACHE[key]
@@ -111,7 +115,7 @@ def get_openai_compatible_sync_client(options: OpenAICompatibleClientOptions) ->
 
 
 def get_openai_compatible_async_client(options: OpenAICompatibleClientOptions) -> Any:
-    """Get or create cached OpenAI-compatible async client."""
+    """Get or create cached OpenAI-compatible async client (shared instance by option key)."""
     key = _build_cache_key("async", options)
     if key in _CLIENT_CACHE:
         return _CLIENT_CACHE[key]
