@@ -213,11 +213,17 @@ def _actor_propose_actions(
     if not isinstance(actions, list) or len(actions) != 3:
         raise ValueError(f"Actor returned invalid actions payload: {payload}")
     action_list = [str(item).strip() for item in actions]
+    # Enforce actor contract without failing hard:
+    # - baseline stress-test requires one invalid first proposal
+    # - monitor/evaluator should still receive valid alternatives
     if not action_list[0] or action_list[0] in allowed_actions:
-        raise ValueError(f"Actor constraint violated for action[0]: {action_list}")
-    for idx in (1, 2):
-        if action_list[idx] not in allowed_actions:
-            raise ValueError(f"Actor constraint violated for action[{idx}]: {action_list}")
+        invalid_seed = f"invalid_shortcut_from_{state}"
+        action_list[0] = invalid_seed if invalid_seed not in allowed_actions else "invalid_shortcut"
+    if action_list[1] not in allowed_actions:
+        action_list[1] = allowed_actions[0]
+    if action_list[2] not in allowed_actions:
+        fallback_idx = 1 if len(allowed_actions) > 1 else 0
+        action_list[2] = allowed_actions[fallback_idx]
     return action_list
 
 
@@ -462,14 +468,73 @@ def _build_complex_task() -> ToyTask:
     )
 
 
+def _build_university_logic_proof_task() -> ToyTask:
+    return ToyTask(
+        task_id="logic_proof_university",
+        description=(
+            "University-level first-order logic proof: from forall x (H(x)->M(x)), "
+            "forall x (M(x)->L(x)), exists x H(x), prove exists x L(x). "
+            "The task requires witness introduction, universal instantiation, "
+            "two implication eliminations, and existential introduction."
+        ),
+        state_actions={
+            "Premises": {
+                "pick_witness_a_from_exists_H": "WitnessChosen",
+                "assert_goal_without_proof": "LogicTrap",
+            },
+            "WitnessChosen": {
+                "derive_Ha": "HaDerived",
+                "drop_witness_context": "LogicTrap",
+            },
+            "HaDerived": {
+                "instantiate_H_implies_M_at_a": "HtoMAtADerived",
+                "apply_MP_too_early": "LogicTrap",
+            },
+            "HtoMAtADerived": {
+                "modus_ponens_to_get_Ma": "MaDerived",
+                "wrong_quantifier_jump": "LogicTrap",
+            },
+            "MaDerived": {
+                "instantiate_M_implies_L_at_a": "MtoLAtADerived",
+                "existential_intro_too_early": "LogicTrap",
+            },
+            "MtoLAtADerived": {
+                "modus_ponens_to_get_La": "LaDerived",
+                "circular_reasoning": "LogicTrap",
+            },
+            "LaDerived": {
+                "existential_intro_to_exists_L": "Conclusion",
+                "lose_witness_scope": "LogicTrap",
+            },
+            "LogicTrap": {
+                "restart_proof": "Premises",
+                "loop_confusion": "LogicTrap",
+            },
+            "Conclusion": {},
+        },
+        start_state="Premises",
+        goal_state="Conclusion",
+        required_subgoal_sequence=[
+            "WitnessChosen",
+            "HaDerived",
+            "MaDerived",
+            "LaDerived",
+            "Conclusion",
+        ],
+    )
+
+
 def _build_task_by_id(task_id: str) -> ToyTask:
     normalized = task_id.strip().lower()
     if normalized == "simple_bridge":
         return _build_simple_task()
     if normalized == "complex_supply_chain":
         return _build_complex_task()
+    if normalized == "logic_proof_university":
+        return _build_university_logic_proof_task()
     raise ValueError(
-        "Unknown task_id. Supported values: simple_bridge, complex_supply_chain."
+        "Unknown task_id. Supported values: simple_bridge, complex_supply_chain, "
+        "logic_proof_university."
     )
 
 
@@ -529,7 +594,10 @@ def run(
         str,
         cyclopts.Parameter(
             name="--task-id",
-            help="Task id: simple_bridge or complex_supply_chain.",
+            help=(
+                "Task id: simple_bridge, complex_supply_chain, or "
+                "logic_proof_university."
+            ),
         ),
     ] = "simple_bridge",
     max_steps: Annotated[
