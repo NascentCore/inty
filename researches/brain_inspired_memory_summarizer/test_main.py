@@ -13,6 +13,7 @@ from main import (
     NaiveWindowAgent,
     build_dataset,
     evaluate_agent,
+    _extract_candidates,
     run_experiment,
 )
 
@@ -31,6 +32,23 @@ class MemoryExperimentTests(unittest.TestCase):
         agent.ingest_user_turn("今天天气还行。")
         ans, _, _ = agent.answer("preferred_name")
         self.assertEqual(ans, "阿哲")
+
+    def test_boundary_negation_blocks_conflicting_name_candidate(self) -> None:
+        candidates = _extract_candidates("请不要叫我宝贝。", turn_idx=1)
+        keys = {c.key for c in candidates}
+        self.assertIn("boundary", keys)
+        preferred_values = [c.value for c in candidates if c.key == "preferred_name"]
+        self.assertEqual(preferred_values, [])
+
+    def test_semantic_memory_is_stable_under_boundary_and_followup_noise(self) -> None:
+        agent = LayeredMemoryAgent(window_size=2)
+        agent.ingest_user_turn("以后请叫我阿辰。")
+        agent.ingest_user_turn("请不要叫我宝贝。")
+        agent.ingest_user_turn("我们聊点电影吧。")
+        ans, _, _ = agent.answer("preferred_name")
+        self.assertEqual(ans, "阿辰")
+        b, _, _ = agent.answer("boundary")
+        self.assertEqual(b, "不要叫我宝贝")
 
     def test_layered_improves_accuracy_over_small_window_baseline(self) -> None:
         episodes = build_dataset()
