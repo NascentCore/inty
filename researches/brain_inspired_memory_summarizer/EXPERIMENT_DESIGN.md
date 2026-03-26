@@ -48,6 +48,6 @@ Validate whether a brain-inspired layered-memory agent can:
 ## Execution
 
 - Run experiment:
-  - `python researches/brain_inspired_memory_summarizer/main.py run`
+  - `python3 researches/brain_inspired_memory_summarizer/main.py run`
 - Run tests:
-  - `python -m unittest researches/brain_inspired_memory_summarizer/test_experiment.py -v`
+  - `python3 -m unittest researches/brain_inspired_memory_summarizer/test_main.py -v`

@@ -5,42 +5,18 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
+_UNKNOWN = "不知道"
 
-_PREF_RE = re.compile(r"(?:我|以后我|请)(?:更)?喜欢(?:你)?叫我([A-Za-z\u4e00-\u9fff]{1,16})")
+_PREFERRED_PATTERNS = (
+    re.compile(r"(?:以后)?(?:请)?叫我([A-Za-z\u4e00-\u9fff]{1,16})"),
+    re.compile(r"(?:以后)?(?:请)?称呼我([A-Za-z\u4e00-\u9fff]{1,16})"),
+)
 _CITY_RE = re.compile(r"我(?:现在)?住在([A-Za-z\u4e00-\u9fff]{1,24})")
 _PET_RE = re.compile(r"我养了一只([A-Za-z\u4e00-\u9fff]{1,24})")
 _DAY_RE = re.compile(r"我是周([一二三四五六日天])休息")
-_COFFEE_RE = re.compile(r"(?:我|本人)?(不喝咖啡|喝咖啡)")
-_BOUNDARY_RE = re.compile(r"(不要叫我宝贝|别叫我宝贝|请不要叫我宝贝)")
-
-
-def _extract_memory_facts(text: str) -> dict[str, str]:
-    out: dict[str, str] = {}
-    pref = _PREF_RE.search(text)
-    if pref:
-        out["preferred_name"] = pref.group(1)
-    city = _CITY_RE.search(text)
-    if city:
-        out["city"] = city.group(1)
-    pet = _PET_RE.search(text)
-    if pet:
-        out["pet"] = pet.group(1)
-    day = _DAY_RE.search(text)
-    if day:
-        out["rest_day"] = f"周{day.group(1)}"
-    coffee = _COFFEE_RE.search(text)
-    if coffee:
-        out["coffee_preference"] = coffee.group(1)
-    boundary = _BOUNDARY_RE.search(text)
-    if boundary:
-        out["boundary"] = "不要叫我宝贝"
-    return out
-
-
-def _count_chars(messages: list[dict[str, str]]) -> int:
-    return sum(len(m["text"]) for m in messages)
+_COFFEE_RE = re.compile(r"(不喝咖啡|喝咖啡)")
+_BOUNDARY_RE = re.compile(r"(?:请)?(?:不要|别)叫我宝贝")
 
 
 @dataclass(frozen=True)
@@ -51,195 +27,233 @@ class QAItem:
 
 
 @dataclass(frozen=True)
-class ExperimentCase:
-    case_id: str
-    turns: list[dict[str, str]]
+class Episode:
+    episode_id: str
+    user_turns: list[str]
     qa: list[QAItem]
 
 
-def _load_dataset(path: Path) -> list[ExperimentCase]:
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    out: list[ExperimentCase] = []
-    for item in raw["cases"]:
-        qa = [QAItem(**q) for q in item["qa"]]
-        out.append(
-            ExperimentCase(
-                case_id=item["case_id"],
-                turns=item["turns"],
-                qa=qa,
-            )
+@dataclass(frozen=True)
+class EvaluationMetrics:
+    accuracy: float
+    avg_context_chars: float
+    avg_context_lines: float
+    memory_item_count: int
+
+
+def _extract_memory_facts(text: str) -> dict[str, str]:
+    facts: dict[str, str] = {}
+    for p in _PREFERRED_PATTERNS:
+        m = p.search(text)
+        if m:
+            facts["preferred_name"] = m.group(1)
+            break
+    city = _CITY_RE.search(text)
+    if city:
+        facts["city"] = city.group(1)
+    pet = _PET_RE.search(text)
+    if pet:
+        facts["pet"] = pet.group(1)
+    day = _DAY_RE.search(text)
+    if day:
+        facts["rest_day"] = f"周{day.group(1)}"
+    coffee = _COFFEE_RE.search(text)
+    if coffee:
+        facts["coffee_preference"] = coffee.group(1)
+    boundary = _BOUNDARY_RE.search(text)
+    if boundary:
+        facts["boundary"] = "不要叫我宝贝"
+    return facts
+
+
+def _context_chars(lines: list[str]) -> int:
+    return sum(len(line) for line in lines)
+
+
+def build_dataset() -> list[Episode]:
+    """A deterministic benchmark where early facts are overwritten and later buried."""
+    return [
+        Episode(
+            episode_id="ep-001",
+            user_turns=[
+                "以后请叫我阿辰。",
+                "今天会议很多，先记个待办。",
+                "我现在住在杭州。",
+                "最近工作挺忙，回消息可能慢一点。",
+                "我养了一只边牧。",
+                "今天的午饭一般般。",
+                "我是周三休息。",
+                "晚上可能去散步。",
+                "我不喝咖啡。",
+                "请不要叫我宝贝。",
+                "我搬家了，我现在住在上海。",
+                "顺便说下，今天我只是想闲聊。",
+                "刚刚在看电影，剧情还不错。",
+                "这会儿有点困，准备休息了。",
+            ],
+            qa=[
+                QAItem(question="你该怎么称呼我？", key="preferred_name", expected="阿辰"),
+                QAItem(question="我现在住在哪？", key="city", expected="上海"),
+                QAItem(question="我养了什么宠物？", key="pet", expected="边牧"),
+                QAItem(question="我哪天休息？", key="rest_day", expected="周三"),
+                QAItem(question="我喝不喝咖啡？", key="coffee_preference", expected="不喝咖啡"),
+                QAItem(question="称呼边界是什么？", key="boundary", expected="不要叫我宝贝"),
+            ],
         )
-    return out
+    ]
 
 
-class BaselineAgent:
+class NaiveWindowAgent:
     """
-    Baseline: only keeps last N turns in context.
-    If fact not present in context, returns unknown.
+    Baseline agent: only sees a fixed number of recent user lines.
     """
 
-    def __init__(self, window_turns: int = 6) -> None:
-        self.window_turns = window_turns
-        self.turns: list[dict[str, str]] = []
+    def __init__(self, window_size: int) -> None:
+        self.window_size = window_size
+        self.user_turns: list[str] = []
 
-    def ingest_turn(self, user_text: str, assistant_text: str) -> None:
-        self.turns.append({"role": "user", "text": user_text})
-        self.turns.append({"role": "assistant", "text": assistant_text})
+    def ingest_user_turn(self, text: str) -> None:
+        self.user_turns.append(text)
 
-    def _context_messages(self) -> list[dict[str, str]]:
-        k = self.window_turns * 2
-        if len(self.turns) <= k:
-            return self.turns
-        return self.turns[-k:]
+    def _visible_context(self) -> list[str]:
+        if len(self.user_turns) <= self.window_size:
+            return self.user_turns
+        return self.user_turns[-self.window_size :]
 
-    def answer(self, key: str) -> tuple[str, int]:
-        ctx = self._context_messages()
-        merged = "\n".join(m["text"] for m in ctx if m["role"] == "user")
-        facts = _extract_memory_facts(merged)
-        answer = facts.get(key, "不知道")
-        return answer, _count_chars(ctx)
+    def answer(self, key: str) -> tuple[str, int, int]:
+        ctx = self._visible_context()
+        extracted = _extract_memory_facts("\n".join(ctx))
+        return extracted.get(key, _UNKNOWN), _context_chars(ctx), len(ctx)
+
+    @property
+    def memory_item_count(self) -> int:
+        return 0
 
 
 class LayeredMemoryAgent:
     """
-    Layered prototype:
-    - L1 transcript window for recency
-    - L4 semantic memory facts for durable retrieval
+    Minimal layered-memory agent:
+    - L1: short recent window (same as baseline)
+    - L4: salience-gated durable key-value memory
     """
 
-    def __init__(self, window_turns: int = 2) -> None:
-        self.window_turns = window_turns
-        self.turns: list[dict[str, str]] = []
+    def __init__(self, window_size: int) -> None:
+        self.window_size = window_size
+        self.user_turns: list[str] = []
         self.semantic_memory: dict[str, str] = {}
 
-    def ingest_turn(self, user_text: str, assistant_text: str) -> None:
-        self.turns.append({"role": "user", "text": user_text})
-        self.turns.append({"role": "assistant", "text": assistant_text})
-        facts = _extract_memory_facts(user_text)
-        # Latest stable statement wins in this minimal prototype.
-        for k, v in facts.items():
-            self.semantic_memory[k] = v
+    def ingest_user_turn(self, text: str) -> None:
+        self.user_turns.append(text)
+        extracted = _extract_memory_facts(text)
+        # Salience gate (minimal): only store extracted stable fact types.
+        for key, value in extracted.items():
+            self.semantic_memory[key] = value
 
-    def _context_messages(self) -> list[dict[str, str]]:
-        k = self.window_turns * 2
-        if len(self.turns) <= k:
-            return self.turns
-        return self.turns[-k:]
+    def _visible_context(self) -> list[str]:
+        if len(self.user_turns) <= self.window_size:
+            return self.user_turns
+        return self.user_turns[-self.window_size :]
 
-    def answer(self, key: str) -> tuple[str, int]:
+    def answer(self, key: str) -> tuple[str, int, int]:
+        ctx = self._visible_context()
         if key in self.semantic_memory:
-            # Inject compact memory block + short recency window.
-            ctx = self._context_messages()
-            memory_block = f"{key}:{self.semantic_memory[key]}"
-            chars = _count_chars(ctx) + len(memory_block)
-            return self.semantic_memory[key], chars
+            memory_line = f"{key}:{self.semantic_memory[key]}"
+            chars = _context_chars(ctx) + len(memory_line)
+            lines = len(ctx) + 1
+            return self.semantic_memory[key], chars, lines
 
-        ctx = self._context_messages()
-        merged = "\n".join(m["text"] for m in ctx if m["role"] == "user")
-        facts = _extract_memory_facts(merged)
-        return facts.get(key, "不知道"), _count_chars(ctx)
+        extracted = _extract_memory_facts("\n".join(ctx))
+        return extracted.get(key, _UNKNOWN), _context_chars(ctx), len(ctx)
 
-
-def _assistant_placeholder(_: str) -> str:
-    return "收到，我记住了。"
+    @property
+    def memory_item_count(self) -> int:
+        return len(self.semantic_memory)
 
 
-def run_experiment(dataset_path: Path, baseline_window_turns: int = 6) -> dict[str, Any]:
-    cases = _load_dataset(dataset_path)
-    all_results: list[dict[str, Any]] = []
-
-    baseline_hits = 0
-    layered_hits = 0
+def evaluate_agent(agent: NaiveWindowAgent | LayeredMemoryAgent, episodes: list[Episode]) -> EvaluationMetrics:
     total_questions = 0
-    baseline_chars = 0
-    layered_chars = 0
+    correct = 0
+    total_context_chars = 0
+    total_context_lines = 0
+    max_memory_items = 0
 
-    for case in cases:
-        baseline = BaselineAgent(window_turns=baseline_window_turns)
-        layered = LayeredMemoryAgent(window_turns=2)
+    for ep in episodes:
+        for turn in ep.user_turns:
+            agent.ingest_user_turn(turn)
 
-        for turn in case.turns:
-            user_text = turn["user"]
-            assistant_text = _assistant_placeholder(user_text)
-            baseline.ingest_turn(user_text=user_text, assistant_text=assistant_text)
-            layered.ingest_turn(user_text=user_text, assistant_text=assistant_text)
-
-        qa_rows: list[dict[str, Any]] = []
-        for item in case.qa:
-            b_ans, b_chars = baseline.answer(item.key)
-            l_ans, l_chars = layered.answer(item.key)
-            b_ok = b_ans == item.expected
-            l_ok = l_ans == item.expected
-            baseline_hits += int(b_ok)
-            layered_hits += int(l_ok)
-            baseline_chars += b_chars
-            layered_chars += l_chars
+        for qa in ep.qa:
+            answer, chars, lines = agent.answer(qa.key)
             total_questions += 1
-            qa_rows.append(
-                {
-                    "question": item.question,
-                    "key": item.key,
-                    "expected": item.expected,
-                    "baseline_answer": b_ans,
-                    "layered_answer": l_ans,
-                    "baseline_correct": b_ok,
-                    "layered_correct": l_ok,
-                    "baseline_context_chars": b_chars,
-                    "layered_context_chars": l_chars,
-                }
-            )
+            total_context_chars += chars
+            total_context_lines += lines
+            if answer == qa.expected:
+                correct += 1
 
-        all_results.append({"case_id": case.case_id, "qa": qa_rows})
+        max_memory_items = max(max_memory_items, agent.memory_item_count)
 
-    baseline_accuracy = baseline_hits / total_questions if total_questions else 0.0
-    layered_accuracy = layered_hits / total_questions if total_questions else 0.0
-    baseline_avg_chars = baseline_chars / total_questions if total_questions else 0.0
-    layered_avg_chars = layered_chars / total_questions if total_questions else 0.0
+    if total_questions == 0:
+        return EvaluationMetrics(
+            accuracy=0.0,
+            avg_context_chars=0.0,
+            avg_context_lines=0.0,
+            memory_item_count=max_memory_items,
+        )
 
-    summary = {
-        "questions": total_questions,
-        "baseline_accuracy": baseline_accuracy,
-        "layered_accuracy": layered_accuracy,
-        "accuracy_delta": layered_accuracy - baseline_accuracy,
-        "baseline_avg_context_chars": baseline_avg_chars,
-        "layered_avg_context_chars": layered_avg_chars,
-        "context_reduction_ratio": (
-            (baseline_avg_chars - layered_avg_chars) / baseline_avg_chars
-            if baseline_avg_chars > 0
+    return EvaluationMetrics(
+        accuracy=correct / total_questions,
+        avg_context_chars=total_context_chars / total_questions,
+        avg_context_lines=total_context_lines / total_questions,
+        memory_item_count=max_memory_items,
+    )
+
+
+def run_experiment() -> dict[str, float]:
+    episodes = build_dataset()
+    baseline_small = evaluate_agent(NaiveWindowAgent(window_size=2), episodes)
+    baseline_large = evaluate_agent(NaiveWindowAgent(window_size=99), episodes)
+    layered = evaluate_agent(LayeredMemoryAgent(window_size=2), episodes)
+
+    return {
+        "baseline_small_accuracy": baseline_small.accuracy,
+        "baseline_large_accuracy": baseline_large.accuracy,
+        "layered_accuracy": layered.accuracy,
+        "baseline_small_avg_context_chars": baseline_small.avg_context_chars,
+        "baseline_large_avg_context_chars": baseline_large.avg_context_chars,
+        "layered_avg_context_chars": layered.avg_context_chars,
+        "accuracy_gain_vs_small": layered.accuracy - baseline_small.accuracy,
+        "context_reduction_vs_large": (
+            (baseline_large.avg_context_chars - layered.avg_context_chars)
+            / baseline_large.avg_context_chars
+            if baseline_large.avg_context_chars > 0
             else 0.0
         ),
+        "layered_memory_item_count": float(layered.memory_item_count),
     }
-
-    return {"summary": summary, "cases": all_results}
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run minimal baseline vs layered memory experiment."
+        description="Run brain-inspired memory summarizer experiment."
     )
-    parser.add_argument(
-        "--dataset",
-        type=Path,
-        default=Path(__file__).resolve().parent / "dataset.json",
-    )
-    parser.add_argument(
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    run_cmd = sub.add_parser("run", help="run deterministic experiment benchmark")
+    run_cmd.add_argument(
         "--out",
         type=Path,
-        default=Path(__file__).resolve().parent / "results.json",
+        default=Path(__file__).resolve().parent / "experiment_results.json",
+        help="output json file path",
     )
-    parser.add_argument("--baseline-window-turns", type=int, default=6)
     return parser
 
 
 def main() -> int:
     args = _build_parser().parse_args()
-    result = run_experiment(
-        dataset_path=args.dataset, baseline_window_turns=args.baseline_window_turns
-    )
-    args.out.write_text(
-        json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    print(json.dumps(result["summary"], ensure_ascii=False, indent=2))
+    if args.command != "run":
+        raise ValueError(f"unsupported command: {args.command}")
+    result = run_experiment()
+    args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
