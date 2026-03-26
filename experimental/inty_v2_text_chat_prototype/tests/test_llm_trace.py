@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
@@ -123,6 +124,7 @@ def test_emit_trace_writes_one_jsonl_line_to_file(tmp_path: Path) -> None:
             model="m",
             messages="0:user 1ch «x»",
             response="finish=stop text 0ch «»",
+            trace_id="trace-123",
         )
         lines = log.read_text(encoding="utf-8").splitlines()
         assert len(lines) == 1
@@ -134,6 +136,7 @@ def test_emit_trace_writes_one_jsonl_line_to_file(tmp_path: Path) -> None:
         assert row["model"] == "m"
         assert row["req"] == "0:user 1ch «x»"
         assert row["resp"] == "finish=stop text 0ch «»"
+        assert row["trace_id"] == "trace-123"
     finally:
         configure_llm_trace_file(None)
 
@@ -150,3 +153,24 @@ def test_emit_trace_no_file_configured_does_not_raise() -> None:
         )
     finally:
         configure_llm_trace_file(None)
+
+
+def test_emit_trace_omits_empty_trace_id() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        log = Path(td) / "trace.jsonl"
+        try:
+            configure_llm_trace_file(log)
+            emit_trace(
+                "noop",
+                round_idx=1,
+                model="m",
+                messages="x",
+                response="y",
+                trace_id="   ",
+            )
+            lines = log.read_text(encoding="utf-8").splitlines()
+            assert len(lines) == 1
+            row = json.loads(lines[0])
+            assert "trace_id" not in row
+        finally:
+            configure_llm_trace_file(None)

@@ -13,6 +13,8 @@ from langsmith.wrappers import wrap_openai
 from loguru import logger
 from openai import OpenAI
 
+from .env_util import env_flag_enabled
+
 _DEFAULT_MODEL = "deepseek/deepseek-v3.2"
 
 _CLIENT: OpenAI | None = None
@@ -73,6 +75,30 @@ def get_client() -> OpenAI:
 def default_model() -> str:
     _ensure_dotenv()
     return os.getenv("INTY_V2_PROTO_MODEL", _DEFAULT_MODEL)
+
+
+def chat_model() -> str:
+    """主聊天通道模型（低延迟优先）；缺省回退到 INTY_V2_PROTO_MODEL。"""
+    _ensure_dotenv()
+    return os.getenv("INTY_V2_PROTO_CHAT_MODEL") or default_model()
+
+
+def tool_model() -> str:
+    """工具通道模型（工具调用能力优先）；缺省回退到 INTY_V2_PROTO_MODEL。"""
+    _ensure_dotenv()
+    return os.getenv("INTY_V2_PROTO_TOOL_MODEL") or default_model()
+
+
+def dual_llm_enabled() -> bool:
+    """是否启用双路并行 LLM（聊天路 + 工具路）。"""
+    _ensure_dotenv()
+    return env_flag_enabled("INTY_V2_PROTO_DUAL_LLM")
+
+
+def async_tool_background_enabled() -> bool:
+    """是否启用“chat 先回 + tool 后台异步补发”模式。"""
+    _ensure_dotenv()
+    return env_flag_enabled("INTY_V2_PROTO_ASYNC_TOOL_BG")
 
 
 def memory_model() -> str:

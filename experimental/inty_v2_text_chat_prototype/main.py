@@ -50,6 +50,9 @@ from experimental.inty_v2_text_chat_prototype.orchestrator import (
     needs_startup_profile_inquiry,
     run_turn,
 )
+from experimental.inty_v2_text_chat_prototype.tool_background import (
+    pop_output_events_nowait,
+)
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
@@ -68,6 +71,21 @@ def _print_assistant_reply(out: str, elapsed_s: float) -> None:
     ms = elapsed_s * 1000
     print(f"[{_local_ts_str()}] {ms:.0f}ms")
     print(out)
+
+
+def _drain_async_tool_events(ws: Path) -> None:
+    events = pop_output_events_nowait(workspace=ws)
+    for ev in events:
+        print(
+            f"[{_local_ts_str()}] async-tool {ev.elapsed_ms}ms "
+            f"(user={ev.user_msg_uuid[:8]} asst={ev.assistant_msg_uuid[:8]})"
+        )
+        print(ev.text)
+        print("> ", end="", flush=True)
+
+
+def _drain_async_tool_events_in_waiting_loop(ws: Path) -> None:
+    _drain_async_tool_events(ws)
 
 
 def _init_proto_logging(
@@ -116,6 +134,7 @@ def _repl_drain_user_turns(
     *,
     run_turn_sync: Callable[[str], str],
     pending: queue.Queue[tuple[str, bool] | None],
+    ws: Path,
     first_line_already_echoed: bool = False,
 ) -> bool:
     """
@@ -144,6 +163,7 @@ def _repl_drain_user_turns(
             t0 = time.perf_counter()
             out = run_turn_sync(cur)
             _print_assistant_reply(out, time.perf_counter() - t0)
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
 
         try:
@@ -177,6 +197,7 @@ def _posix_run_user_turn_and_drain_queue(
         first_line,
         run_turn_sync=_sync,
         pending=pending,
+        ws=ws,
         first_line_already_echoed=first_line_already_echoed,
     )
 
@@ -198,6 +219,7 @@ def _daemon_run_user_turn_and_drain_queue(
         first_line,
         run_turn_sync=_sync,
         pending=line_queue,
+        ws=ws,
         first_line_already_echoed=first_line_already_echoed,
     )
 
@@ -262,6 +284,7 @@ def _run_turn_with_stdin_pump(
     t.start()
     stdin_fd = sys.stdin.fileno()
     while not done.is_set():
+        _drain_async_tool_events_in_waiting_loop(ws)
         r, _, _ = select.select([stdin_fd], [], [], 0.1)
         if r:
             raw = sys.stdin.readline()
@@ -294,6 +317,7 @@ def _repl_interactive_loop_posix(
     print("> ", end="", flush=True)
 
     while True:
+        _drain_async_tool_events_in_waiting_loop(ws)
         try:
             item = pending.get_nowait()
         except queue.Empty:
@@ -388,6 +412,7 @@ def _repl_interactive_loop_daemon(
     print("> ", end="", flush=True)
 
     while True:
+        _drain_async_tool_events_in_waiting_loop(ws)
         try:
             item = line_queue.get_nowait()
         except queue.Empty:
