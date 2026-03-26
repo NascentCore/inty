@@ -42,3 +42,34 @@ python researches/structured_agentic_brain/main.py run-cases --output-json /tmp/
 ```
 
 The command prints concise per-case summaries and writes full structured traces to JSON.
+
+## Experiment conclusions
+
+### Scenarios covered
+
+- `case_anxiety_interview`: high interview anxiety with immediate planning need.
+- `case_loneliness_evening`: loneliness plus social withdrawal.
+- `case_boundary_risk`: high-risk hopelessness cues requiring safety-first behavior.
+
+### Observed behavior of the structured multi-agent brain
+
+- In the high-risk case, the system explicitly escalates safety by:
+  - routing `safety` with high priority,
+  - setting threat level to `high`,
+  - selecting the action `Immediate safety resources`,
+  - producing a final response with crisis contact guidance and grounding steps.
+- In medium-risk cases, the system prefers practical micro-actions and lower-friction next steps rather than emergency escalation.
+- Full internal state is persisted (`route`, `insula_state`, `amygdala_threat`, `memory_evidence`, `plan`, `conflict_report`, `value_assessment`, `action_decision`, `final_response`) so decisions are auditable.
+
+### Comparison with simplified single-agent baseline
+
+- A simplified single-turn baseline with the same model (`google/gemini-2.5-flash`) can produce empathetic and sometimes safety-aware text.
+- However, the baseline does not expose intermediate state, conflict reasoning, action utility, or selected-vs-rejected policy options.
+- The structured brain design provides stronger controllability and explainability because safety and planning are explicit internal stages, not hidden inside one final generation step.
+
+### Practical conclusion
+
+- For this prototype, a hybrid approach is effective:
+  - deterministic internal agents for routing/risk/planning/decision,
+  - Gemini 2.5 Flash for final language realization.
+- This keeps the system minimal and stable while preserving core benefits of a brain-like structured architecture.
