@@ -528,12 +528,10 @@ object IntySetting {
         }
     }
 
-    /** 记录消息Tab是否需要显示推送红点 */
-    fun setMessagesTabHasPush(hasPush: Boolean) {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(messagesTabHasPush = hasPush))
-            }
+    /** 记录消息Tab是否需要显示推送红点（须在协程中调用，勿在主线程配合 runBlocking） */
+    suspend fun setMessagesTabHasPushSuspend(hasPush: Boolean) {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(messagesTabHasPush = hasPush))
         }
     }
 
