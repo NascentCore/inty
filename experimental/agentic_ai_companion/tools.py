@@ -14,6 +14,8 @@ from loguru import logger
 from google.genai.errors import ClientError
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.agentic_kernel.tools.runtime import process_single_tool_call
+
 _THIS_DIR = Path(__file__).resolve().parent
 DATA_DIR = _THIS_DIR / "tmp"
 APP_ICON_PATH = _THIS_DIR / "app_icon.png"
@@ -621,90 +623,46 @@ def process_response_with_tools(
     处理单轮 API 响应中的 tool_call：执行工具并追加 assistant + tool 消息，按 TERMINAL 返回 content/done。
     调用方必须保证 message 含有且仅含一个 tool_call；无 tool_calls 时由 run_repl 直接处理。
     """
-    raw_tool_calls = getattr(message, "tool_calls", None) or []
-    assert (
-        len(raw_tool_calls) >= 1
-    ), "process_response_with_tools 仅在有 tool_calls 时调用"
-    assert (
-        len(raw_tool_calls) <= 1
-    ), "工具调用数量必须为 0 或 1，因为禁止 parallel_tool_calls"
-    tool_call = raw_tool_calls[0]
-    assistant_content = (message.content or "").strip()
-    tc_dict: dict[str, Any] = {
-        "id": tool_call.id,
-        "type": getattr(tool_call, "type", "function"),
-        "function": {
-            "name": tool_call.function.name,
-            "arguments": tool_call.function.arguments or "",
-        },
-    }
-    assistant_msg = {
-        "role": "assistant",
-        "content": message.content or "",
-        "tool_calls": [tc_dict],
-    }
-    new_messages = [*messages, assistant_msg]
+    def get_tool_context(
+        context_type: ToolContextType, new_messages: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        return _build_tool_context(
+            context_type,
+            new_messages,
+            get_gemini_client,
+            build_system_messages=build_system_messages,
+            char_name=char_name,
+            user_name=user_name,
+        )
 
-    name = tool_call.function.name
-    raw_args = tool_call.function.arguments or ""
-    try:
-        parsed_args = json.loads(raw_args) if raw_args.strip() else {}
-    except json.JSONDecodeError:
-        parsed_args = {}
-    context_type = tool_context_types.get(name, ToolContextType.NONE)
-    context_kwargs = _build_tool_context(
-        context_type,
-        new_messages,
-        get_gemini_client,
-        build_system_messages=build_system_messages,
-        char_name=char_name,
-        user_name=user_name,
+    def is_terminal_tool(tool_type: Any) -> bool:
+        return tool_type == ToolType.TERMINAL
+
+    runtime_out = process_single_tool_call(
+        messages=messages,
+        message=message,
+        tool_executors=tool_executors,
+        tool_types=tool_types,
+        tool_context_types=tool_context_types,
+        get_tool_context=get_tool_context,
+        is_terminal_tool=is_terminal_tool,
+        unknown_tool_message=lambda name: f"未知工具: {name}",
     )
 
-    executor = tool_executors.get(name)
-    if executor:
-        trace_inputs = {"tool_name": name}
-        if "text" in parsed_args:
-            trace_inputs["text_length"] = len(str(parsed_args.get("text", "")))
-        if "input" in parsed_args:
-            trace_inputs["input_length"] = len(str(parsed_args.get("input", "")))
-        if "messages" in context_kwargs:
-            trace_inputs["messages_count"] = len(context_kwargs.get("messages", []))
-        with trace(
-            name=f"tool_executor_{name}",
-            run_type="tool",
-            inputs=trace_inputs,
-        ) as run:
-            result, path = executor(**parsed_args, **context_kwargs)
-            run.end(
-                outputs={"result_length": len(result), "has_path": path is not None}
-            )
-        image_path_sent = path
-    else:
-        result = f"未知工具: {name}"
-        image_path_sent = None
+    image_path_sent = runtime_out.image_path
+    result = runtime_out.tool_result
+    assistant_content = runtime_out.assistant_text
     if image_path_sent:
         _sent_image_paths.add(image_path_sent)
-    new_messages.append(
-        {"role": "tool", "tool_call_id": tool_call.id, "content": result}
-    )
     if _logger is not None:
-        _logger.info("工具 %s 执行完毕，result 长度=%d", name, len(result))
+        tool_name = getattr(message.tool_calls[0].function, "name", "<unknown>")
+        _logger.info("工具 %s 执行完毕，result 长度=%d", tool_name, len(result))
 
-    if tool_types.get(name, ToolType.UNSPECIFIED) == ToolType.TERMINAL:
-        content = (assistant_content + "\n" + result).strip()
-        return ProcessedResponse(
-            messages=new_messages,
-            content=content,
-            done=True,
-            assistant_text=assistant_content,
-            image_path=image_path_sent,
-            tool_result=result,
-        )
+    content = (assistant_content + "\n" + result).strip() if runtime_out.done else None
     return ProcessedResponse(
-        messages=new_messages,
-        content=None,
-        done=False,
+        messages=runtime_out.messages,
+        content=content,
+        done=runtime_out.done,
         assistant_text=assistant_content,
         image_path=image_path_sent,
         tool_result=result,
