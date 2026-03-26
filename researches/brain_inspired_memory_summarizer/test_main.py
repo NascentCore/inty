@@ -14,11 +14,43 @@ from main import (
     build_dataset,
     evaluate_agent,
     extract_candidates,
+    extract_candidates_with_llm,
     run_experiment,
 )
 
 
 class MemoryExperimentTests(unittest.TestCase):
+    def test_llm_extractor_parses_json_response(self) -> None:
+        class _FakeLLM:
+            def __call__(self, _: str) -> str:
+                return (
+                    '[{"key":"preferred_name","value":"阿哲","confidence":0.93,'
+                    '"evidence":"请叫我阿哲","is_negative":false},'
+                    '{"key":"city","value":"上海","confidence":0.89,'
+                    '"evidence":"现在住在上海"}]'
+                )
+
+        candidates = extract_candidates_with_llm(
+            "以后请叫我阿哲，我现在住在上海。",
+            turn_idx=7,
+            llm_call=_FakeLLM(),
+        )
+        kv = {(c.key, c.value) for c in candidates}
+        self.assertIn(("preferred_name", "阿哲"), kv)
+        self.assertIn(("city", "上海"), kv)
+        self.assertTrue(all(c.turn_idx == 7 for c in candidates))
+
+    def test_llm_extractor_fallbacks_to_rule_when_json_invalid(self) -> None:
+        class _BrokenLLM:
+            def __call__(self, _: str) -> str:
+                return "{not-json"
+
+        candidates = extract_candidates_with_llm(
+            "请不要叫我宝贝。", turn_idx=3, llm_call=_BrokenLLM()
+        )
+        keys = {c.key for c in candidates}
+        self.assertIn("boundary", keys)
+
     def test_baseline_loses_early_memory_when_window_small(self) -> None:
         agent = NaiveWindowAgent(window_size=1)
         agent.ingest_user_turn("我喜欢你叫我阿哲。")

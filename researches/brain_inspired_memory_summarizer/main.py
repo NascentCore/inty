@@ -4,6 +4,7 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 try:
     from .extractor import (
@@ -122,17 +123,22 @@ class LayeredMemoryAgent:
     - L4: salience-gated durable key-value memory
     """
 
-    def __init__(self, window_size: int) -> None:
+    def __init__(
+        self,
+        window_size: int,
+        candidate_extractor: Callable[[str, int], list[SlotCandidate]] = extract_candidates,
+    ) -> None:
         self.window_size = window_size
         self.user_turns: list[str] = []
         self.semantic_memory: dict[str, str] = {}
         self._best_candidates: dict[str, SlotCandidate] = {}
         self._turn_counter = 0
+        self._candidate_extractor = candidate_extractor
 
     def ingest_user_turn(self, text: str) -> None:
         self._turn_counter += 1
         self.user_turns.append(text)
-        candidates = extract_candidates(text, turn_idx=self._turn_counter)
+        candidates = self._candidate_extractor(text, self._turn_counter)
 
         # Salience gate (still lightweight): apply confidence floor to avoid weak noise.
         for c in candidates:
