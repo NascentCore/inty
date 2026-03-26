@@ -530,9 +530,7 @@ object IntySetting {
 
     /** 记录消息Tab是否需要显示推送红点（须在协程中调用，勿在主线程配合 runBlocking） */
     suspend fun setMessagesTabHasPushSuspend(hasPush: Boolean) {
-        updateIntySetting {
-            it.copy(userCache = it.userCache.copy(messagesTabHasPush = hasPush))
-        }
+        updateIntySetting { it.copy(userCache = it.userCache.copy(messagesTabHasPush = hasPush)) }
     }
 
     fun hasMessagesTabPush(): Boolean {
@@ -630,9 +628,7 @@ object IntySetting {
                 userCache =
                     it.userCache.copy(
                         userProfile =
-                            it.userCache.userProfile.toMutableMap().also { map ->
-                                map[key] = value
-                            }
+                            it.userCache.userProfile.toMutableMap().also { map -> map[key] = value }
                     )
             )
         }

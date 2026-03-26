@@ -58,7 +58,9 @@ def _build_cache_key(options: GeminiClientOptions) -> _GeminiClientCacheKey:
         vertexai=options.vertexai,
         project=options.project,
         location=options.location,
-        http_options_items=_to_hashable(options.http_options) if options.http_options else (),
+        http_options_items=(
+            _to_hashable(options.http_options) if options.http_options else ()
+        ),
         wrap_langsmith=options.wrap_langsmith,
         tags=tuple(options.tags),
         metadata_items=_to_hashable(options.metadata) if options.metadata else (),
@@ -106,4 +108,3 @@ def get_gemini_client(options: GeminiClientOptions) -> Any:
         client = _build_gemini_client(options)
         _CLIENT_CACHE[key] = client
         return client
-

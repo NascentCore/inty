@@ -55,10 +55,20 @@ class TestTraceIdLinkage(unittest.TestCase):
             try:
                 with (
                     patch.object(orchestrator, "get_client", return_value=fake_client),
-                    patch.object(orchestrator, "default_model", return_value="single-model"),
+                    patch.object(
+                        orchestrator, "default_model", return_value="single-model"
+                    ),
                     patch.object(orchestrator, "dual_llm_enabled", return_value=False),
-                    patch.object(orchestrator, "schedule_memory_update_after_turn", return_value=None),
-                    patch.object(orchestrator, "build_openai_repl_tools", return_value=[{"type": "function"}]),
+                    patch.object(
+                        orchestrator,
+                        "schedule_memory_update_after_turn",
+                        return_value=None,
+                    ),
+                    patch.object(
+                        orchestrator,
+                        "build_openai_repl_tools",
+                        return_value=[{"type": "function"}],
+                    ),
                 ):
                     out = asyncio.run(
                         orchestrator.run_turn(

@@ -46,7 +46,9 @@ def process_single_tool_call(
     - return done/content based on tool terminality
     """
     raw_tool_calls = getattr(message, "tool_calls", None) or []
-    assert len(raw_tool_calls) >= 1, "process_single_tool_call requires at least one tool_call"
+    assert (
+        len(raw_tool_calls) >= 1
+    ), "process_single_tool_call requires at least one tool_call"
     assert len(raw_tool_calls) <= 1, "parallel_tool_calls are not supported"
 
     tool_call = raw_tool_calls[0]
@@ -159,6 +161,5 @@ def resolve_official_assistant_tool_loop(
         current_response, last_trace_id = continue_chat(messages_with_tool_results)
 
     raise ValueError(
-        "Official assistant tool call rounds exceeded "
-        f"limit={max_tool_call_rounds}"
+        "Official assistant tool call rounds exceeded " f"limit={max_tool_call_rounds}"
     )

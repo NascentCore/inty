@@ -1143,6 +1143,7 @@ class Agent:
         user_email: Optional[str] = None,
     ) -> Tuple[Any, List[Dict[str, Any]], Optional[str]]:
         """返回 (response, messages, trace_id)"""
+
         def execute_tool_call(
             tool_name: str,
             raw_arguments: str,
