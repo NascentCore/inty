@@ -122,9 +122,9 @@ class IntySettingTest {
 
     @Test
     fun setMessagesTabHasPush_then_hasMessagesTabPush_returnsValue() = runBlocking {
-        IntySetting.setMessagesTabHasPush(true)
+        IntySetting.setMessagesTabHasPushSuspend(true)
         assertTrue(IntySetting.hasMessagesTabPush())
-        IntySetting.setMessagesTabHasPush(false)
+        IntySetting.setMessagesTabHasPushSuspend(false)
         assertFalse(IntySetting.hasMessagesTabPush())
     }
 

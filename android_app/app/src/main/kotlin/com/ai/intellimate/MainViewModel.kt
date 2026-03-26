@@ -278,7 +278,9 @@ class MainViewModel : BaseVM() {
         if (_messagesTabHasPush.value) {
             _messagesTabHasPush.value = false
         }
-        IntySetting.setMessagesTabHasPush(false)
+        viewModelScope.launch(Dispatchers.IO) {
+            IntySetting.setMessagesTabHasPushSuspend(false)
+        }
     }
 
     fun clearAppUpdateTipsRedDot() {
@@ -470,7 +472,9 @@ class MainViewModel : BaseVM() {
                 if (!_messagesTabHasPush.value) {
                     _messagesTabHasPush.value = true
                 }
-                IntySetting.setMessagesTabHasPush(true)
+                viewModelScope.launch(Dispatchers.IO) {
+                    IntySetting.setMessagesTabHasPushSuspend(true)
+                }
             }
             FCMConstants.TYPE_FEEDBACK_REQUEST -> {
                 // feedback_request 类型消息由 MainActivity 判断是否在前台后处理
