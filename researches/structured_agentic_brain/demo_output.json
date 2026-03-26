@@ -112,12 +112,12 @@
         "tie_break_rationale": "Selected highest utility after risk penalties."
       },
       "final_response": {
-        "message": "It's completely normal to feel this way before a big interview. Let's get you feeling more grounded. Take a slow, deep breath with me now, in through your nose for 4 counts, hold for 4, and out through your mouth for 6. Repeat this a few times. \n\nFor tonight, let's focus on three key things: \n1. **Review your top 3 product management frameworks** (e.g., STAR, CIRCLES, AARRR) and have a few examples ready. \n2. **Prepare 2-3 thoughtful questions** to ask your interviewers. \n3. **Lay out your interview outfit** so it's one less thing to think about tomorrow. \n\nAim to wrap everything up by **9:30 PM** tonight. After that, switch off screens and focus on winding down for a good night's sleep. You've prepared for this, and you're capable. Just focus on showcasing your best self.",
+        "message": "It's completely normal to feel that tightness before a big interview, especially when you're aiming for a product management role. Remember how you aced that presentation after a quick breathing exercise? Let's start there. Take a slow, deep breath in through your nose for 4 counts, hold for 4, and exhale slowly through your mouth for 6. Repeat this 3-5 times. \n\nNow, for tonight, let's focus on three practical steps: \n1. **Review your top 3 strengths** for this specific role and have a concise example for each. \n2. **Prepare 2-3 thoughtful questions** to ask *them* about the team or company culture. \n3. **Lay out your interview outfit** so there's one less decision tomorrow morning. \n\nAim to be completely done by 9:30 PM. No more interview prep after that. Get some rest; a fresh mind is your best asset. You've got this!",
         "tone": "warm, practical, supportive",
         "suggested_followups": [
-          "How are you feeling after that breath?",
-          "What are your top 3 frameworks?",
-          "What time is your interview tomorrow?"
+          "How do you feel after the breathing exercise?",
+          "What are your top 3 strengths for this role?",
+          "What time are you setting your alarm for?"
         ]
       }
     },
@@ -227,12 +227,12 @@
         "tie_break_rationale": "Selected highest utility after risk penalties."
       },
       "final_response": {
-        "message": "It sounds like you're going through a tough time, and feeling empty at night is a heavy burden. Reaching out can be hard when you're feeling this way, but even a small step can make a difference. How about sending a quick, low-pressure message to Alex, like: 'Hey, thinking of you. Hope you're having a good weekend.' No need for a long conversation, just a connection. If that feels like too much right now, maybe try putting on some comforting music or a favorite podcast tonight.",
+        "message": "It sounds like you're going through a really tough time right now, and it's completely understandable to feel exhausted and empty after being alone for so long. Reaching out can feel like a huge effort when you're feeling this way, but even a small step can make a difference. How about sending a quick text to Alex, maybe just something like, 'Hey, thinking of you. How's your week going?' If that feels like too much, sometimes just stepping outside for a few minutes can help shift your mood a little.",
         "tone": "warm",
         "suggested_followups": [
-          "How does that sound as a first step?",
-          "What's one small thing that usually brings you comfort?",
-          "Would you like to talk more about what's making things feel empty?"
+          "How does that sound?",
+          "What's one small thing you're looking forward to this week?",
+          "Would you like to talk more about what's making it hard to reach out?"
         ]
       }
     },
@@ -348,12 +348,12 @@
         "tie_break_rationale": "Selected highest utility after risk penalties."
       },
       "final_response": {
-        "message": "I hear how much pain you're in right now, and it sounds incredibly overwhelming. Please know that you're not alone in feeling this way, and there are people who want to support you. Your life has value, and there are resources available immediately to help you through this.\n\nPlease connect with someone right away. You can call or text 988 anytime in the US and Canada. In the UK, you can call 111. These services are free, confidential, and available 24/7.\n\nWhile you're waiting to connect, try this: focus on your breath. Take a slow, deep breath in through your nose, hold for a few seconds, and then slowly exhale through your mouth. Repeat this a few times. This can help calm your nervous system in the moment.",
+        "message": "It sounds like you're going through an incredibly difficult time, and I want you to know that your feelings are valid. Please reach out for immediate support. You can connect with compassionate and trained individuals right now by calling or texting 988 in the US and Canada, or calling 111 in the UK. These services are free, confidential, and available 24/7. While you wait to connect, try focusing on your breath for a few moments – a slow inhale, hold, and exhale. You don't have to go through this alone.",
         "tone": "warm",
         "suggested_followups": [
-          "Have you been able to connect with 988 or 111?",
-          "Would you like to talk about what's happening?",
-          "Can I help you find other immediate support?"
+          "Have you been able to connect with someone?",
+          "Would you like me to help you find local resources?",
+          "Can we try a short grounding exercise together?"
         ]
       }
     }
