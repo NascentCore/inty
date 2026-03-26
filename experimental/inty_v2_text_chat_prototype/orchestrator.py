@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 from loguru import logger
 
-from .client import default_model, get_client
+from .client import (
+    chat_model,
+    default_model,
+    dual_llm_enabled,
+    get_client,
+    tool_model,
+)
 from .file_store import append_jsonl, read_text
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
 from .models import (
@@ -96,6 +104,104 @@ def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, A
     return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
 
 
+def _chat_completion_create(
+    client: Any,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+) -> Any:
+    create_kw: dict[str, Any] = {
+        "model": model,
+        "messages": deepcopy(messages_payload),
+    }
+    if tools:
+        create_kw["tools"] = tools
+        create_kw["parallel_tool_calls"] = True
+    return client.chat.completions.create(**create_kw)
+
+
+def _assistant_text_from_completion_response(resp: Any) -> str:
+    msg = resp.choices[0].message
+    content = msg.content
+    if not isinstance(content, str):
+        return ""
+    return content.strip()
+
+
+def _merge_visible_assistant_text(chat_text: str, tool_text: str) -> str:
+    chat_s = chat_text.strip()
+    tool_s = tool_text.strip()
+    if not chat_s and not tool_s:
+        return ""
+    if not chat_s:
+        return tool_s
+    if not tool_s:
+        return chat_s
+    if chat_s == tool_s:
+        return chat_s
+    if chat_s in tool_s:
+        return tool_s
+    if tool_s in chat_s:
+        return chat_s
+    return chat_s + "\n\n" + tool_s
+
+
+def _log_llm_round_result(
+    *,
+    round_idx: int,
+    model: str,
+    resp: Any,
+    messages: list[dict[str, Any]],
+    llm_trace: bool,
+    llm_trace_where: str,
+    root: Path,
+) -> None:
+    ch0 = resp.choices[0]
+    fr = getattr(ch0, "finish_reason", None) or "?"
+    msg = ch0.message
+    tcs_pre = getattr(msg, "tool_calls", None) or []
+    u = getattr(resp, "usage", None)
+    tok = ""
+    if u is not None:
+        pt = getattr(u, "prompt_tokens", None)
+        ct = getattr(u, "completion_tokens", None)
+        tt = getattr(u, "total_tokens", None)
+        if pt is not None and ct is not None:
+            tok = f" prompt={pt} completion={ct}"
+            if tt is not None:
+                tok += f" total={tt}"
+    logger.info(
+        "repl.turn llm_round={} finish_reason={} tool_calls_n={} model={}",
+        round_idx,
+        fr,
+        len(tcs_pre),
+        model,
+    )
+    logger.debug(
+        "repl.turn llm_round={} finish_reason={} tool_calls={} payload_msgs={} "
+        "payload_chars={}{}",
+        round_idx,
+        fr,
+        len(tcs_pre),
+        len(_openai_messages_payload(messages)),
+        _payload_chars_for_debug(messages),
+        tok,
+    )
+    if llm_trace:
+        emit_trace(
+            llm_trace_where,
+            round_idx=round_idx,
+            model=model,
+            messages=summarize_messages(
+                messages,
+                ws_label=root.name,
+                trace_day=local_date_str(),
+            ),
+            response=summarize_completion_response(resp),
+        )
+
+
 async def _run_turn_with_user_profile_tools(
     messages: list[dict[str, Any]],
     root: Path,
@@ -106,71 +212,137 @@ async def _run_turn_with_user_profile_tools(
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
     model = default_model()
+    dual_enabled = dual_llm_enabled()
+    chat_route_model = chat_model()
+    tool_route_model = tool_model()
     tools: list[Any] = [] if heartbeat_turn else build_openai_repl_tools()
     if not heartbeat_turn and not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
+    if heartbeat_turn and dual_enabled:
+        logger.debug("repl.turn dual_llm disabled for heartbeat turn")
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
-        t_api = time.perf_counter()
-        create_kw: dict[str, Any] = {
-            "model": model,
-            "messages": _openai_messages_payload(messages),
-        }
-        if tools:
-            create_kw["tools"] = tools
-            create_kw["parallel_tool_calls"] = True
-        resp = client.chat.completions.create(**create_kw)
-        ch0 = resp.choices[0]
-        fr = getattr(ch0, "finish_reason", None) or "?"
-        msg = ch0.message
-        tcs_pre = getattr(msg, "tool_calls", None) or []
-        u = getattr(resp, "usage", None)
-        tok = ""
-        if u is not None:
-            pt = getattr(u, "prompt_tokens", None)
-            ct = getattr(u, "completion_tokens", None)
-            tt = getattr(u, "total_tokens", None)
-            if pt is not None and ct is not None:
-                tok = f" prompt={pt} completion={ct}"
-                if tt is not None:
-                    tok += f" total={tt}"
-        logger.info(
-            "repl.turn llm_round={} finish_reason={} tool_calls_n={} "
-            "chat_completions_ms={:.0f} model={}",
-            round_idx,
-            fr,
-            len(tcs_pre),
-            (time.perf_counter() - t_api) * 1000.0,
-            model,
-        )
-        logger.debug(
-            "repl.turn llm_round={} finish_reason={} tool_calls={} payload_msgs={} "
-            "payload_chars={}{}",
-            round_idx,
-            fr,
-            len(tcs_pre),
-            len(_openai_messages_payload(messages)),
-            _payload_chars_for_debug(messages),
-            tok,
-        )
-        if llm_trace:
-            emit_trace(
-                "repl.turn",
+        if dual_enabled and not heartbeat_turn:
+            logger.debug(
+                "repl.turn llm_round={} dual_llm=true chat_model={} tool_model={} "
+                "shared_context_msgs={}",
+                round_idx,
+                chat_route_model,
+                tool_route_model,
+                len(messages),
+            )
+            base_payload = _openai_messages_payload(messages)
+            request_messages = deepcopy(messages)
+
+            async def _run_chat_branch() -> Any:
+                t_api_chat = time.perf_counter()
+                resp_chat = await asyncio.to_thread(
+                    _chat_completion_create,
+                    client,
+                    model=chat_route_model,
+                    messages_payload=base_payload,
+                    tools=[],
+                )
+                logger.info(
+                    "repl.turn llm_round={} branch=chat chat_completions_ms={:.0f} model={}",
+                    round_idx,
+                    (time.perf_counter() - t_api_chat) * 1000.0,
+                    chat_route_model,
+                )
+                return resp_chat
+
+            async def _run_tool_branch() -> Any:
+                t_api_tool = time.perf_counter()
+                resp_tool = await asyncio.to_thread(
+                    _chat_completion_create,
+                    client,
+                    model=tool_route_model,
+                    messages_payload=base_payload,
+                    tools=tools,
+                )
+                logger.info(
+                    "repl.turn llm_round={} branch=tool chat_completions_ms={:.0f} model={}",
+                    round_idx,
+                    (time.perf_counter() - t_api_tool) * 1000.0,
+                    tool_route_model,
+                )
+                return resp_tool
+
+            chat_task = asyncio.create_task(_run_chat_branch())
+            tool_task = asyncio.create_task(_run_tool_branch())
+            pending_map: dict[asyncio.Task[Any], str] = {
+                chat_task: "chat",
+                tool_task: "tool",
+            }
+            done_results: dict[str, Any] = {}
+            try:
+                while pending_map:
+                    done_set, _ = await asyncio.wait(
+                        pending_map.keys(),
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for finished_task in done_set:
+                        branch = pending_map.pop(finished_task)
+                        resp_any = await finished_task
+                        done_results[branch] = resp_any
+                        _log_llm_round_result(
+                            round_idx=round_idx,
+                            model=chat_route_model
+                            if branch == "chat"
+                            else tool_route_model,
+                            resp=resp_any,
+                            messages=request_messages,
+                            llm_trace=llm_trace,
+                            llm_trace_where="repl.turn.dual.chat"
+                            if branch == "chat"
+                            else "repl.turn.dual.tool",
+                            root=root,
+                        )
+                        msg_branch = resp_any.choices[0].message
+                        messages.append(openai_assistant_message_dict(msg_branch))
+            except BaseException:
+                for still_pending in pending_map:
+                    still_pending.cancel()
+                raise
+            chat_resp = done_results["chat"]
+            tool_resp = done_results["tool"]
+            chat_text = _assistant_text_from_completion_response(chat_resp)
+            tool_text = _assistant_text_from_completion_response(tool_resp)
+            last_text = _merge_visible_assistant_text(chat_text, tool_text)
+            tool_msg = tool_resp.choices[0].message
+            tool_calls = getattr(tool_msg, "tool_calls", None) or []
+            if not tool_calls:
+                break
+        else:
+            t_api = time.perf_counter()
+            resp = _chat_completion_create(
+                client,
+                model=model,
+                messages_payload=_openai_messages_payload(messages),
+                tools=tools,
+            )
+            logger.info(
+                "repl.turn llm_round={} branch=single chat_completions_ms={:.0f} model={}",
+                round_idx,
+                (time.perf_counter() - t_api) * 1000.0,
+                model,
+            )
+            msg = resp.choices[0].message
+            _log_llm_round_result(
                 round_idx=round_idx,
                 model=model,
-                messages=summarize_messages(
-                    messages,
-                    ws_label=root.name,
-                    trace_day=local_date_str(),
-                ),
-                response=summarize_completion_response(resp),
+                resp=resp,
+                messages=messages,
+                llm_trace=llm_trace,
+                llm_trace_where="repl.turn",
+                root=root,
             )
-        tool_calls = getattr(msg, "tool_calls", None) or []
-        messages.append(openai_assistant_message_dict(msg))
-        if not tool_calls:
-            last_text = (msg.content or "").strip()
-            break
+            tool_calls = getattr(msg, "tool_calls", None) or []
+            messages.append(openai_assistant_message_dict(msg))
+            if not tool_calls:
+                last_text = _assistant_text_from_completion_response(resp)
+                break
         propose = ",".join(
             getattr(getattr(tc, "function", None), "name", "?") for tc in tool_calls
         )
