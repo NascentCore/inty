@@ -34,6 +34,16 @@ REPL 的 **`generate_image`**（Fal **z-image-turbo** 文生图）复用 [`app/c
 cd /path/to/inty
 export OPENROUTER_API_KEY=...   # 或 OPENAI_API_KEY（直连 OpenAI）
 export INTY_V2_PROTO_MODEL=openai/gpt-4o-mini   # 可选；记忆精炼可用 INTY_V2_PROTO_MEMORY_MODEL
+# 可选：双路并行 LLM（聊天低延迟 + 工具强调用）：
+#   INTY_V2_PROTO_DUAL_LLM=1
+#   INTY_V2_PROTO_CHAT_MODEL=openai/gpt-4o-mini      # 聊天路（不挂工具）
+#   INTY_V2_PROTO_TOOL_MODEL=openai/gpt-4.1-mini     # 工具路（挂工具）
+# 两路每轮使用同一份上下文快照并并发调用；两路 assistant 输出会持续并入同一轮历史，再由工具路推进 tool loop。
+# 可选：异步工具后台模式（OpenClaw 风格）：
+#   INTY_V2_PROTO_ASYNC_TOOL_BG=1
+# 启用后：前台先返回 chat 路文本并落 transcript(source=chat)；
+# 工具路在后台执行，若存在 tool_calls，则完成后再把最终文本异步写入 transcript(source=tool_bg)，
+# 同时投递到内存输出队列，由 REPL 事件泵实时打印；若无 tool_calls，则不写公共 messages/transcript。
 # 可选：SOUL.md 策展（默认与 MEMORY 同模型）；关闭自动写 SOUL：INTY_V2_PROTO_SOUL_UPDATE_DISABLED=1
 # 当日总结（memory/YYYY-MM-DD.md）LLM：默认每 100 次记忆管线调用跑一次；改频率：INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS=1（每轮）；关闭：INTY_V2_PROTO_DAY_SUMMARY_DISABLED=1
 # USER.md 策展 LLM：默认同样每 100 次记忆管线调用一次（与当日总结共用 turns_completed）；每轮：INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS=1；关闭：INTY_V2_PROTO_USER_UPDATE_DISABLED=1
@@ -56,7 +66,7 @@ python -m experimental.inty_v2_text_chat_prototype.main once --message "你好" 
 |------|------|
 | `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` | 人格与长期记忆定稿；`MEMORY`/`SOUL` 由 LLM 每轮在记忆管线中策展；`USER.md` 的 LLM 策展默认每 100 轮一次（与 `INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS` 一致；`user_profile_record` 仍可随时追加） |
 | `AGENTS.md` / `TOOLS.md` / `HEARTBEAT.md` | 可选；若存在则注入 system prompt（有单文件长度上限） |
-| `transcript.jsonl` | 每行 JSON：`role`（user \| assistant）、`content`、`ts` |
+| `transcript.jsonl` | 每行 JSON：`role`（user \| assistant）、`content`、`ts`；当前轮写入的 user/assistant 行含同一个 `trace_id`（可关联到 `llm_trace.jsonl` 同轮请求摘要）；assistant 行另含 `source`（`chat` 或 `tool_bg`）与 `reply_to`（被回复的 user 行 `uuid`） |
 | `context.json` | 可选：`context_mode`、`user_id`、`companion_id`、`chat_id` |
 | `memory/YYYY-MM-DD.md` | 日记层（每轮追加一行摘要）；**当日**文件若存在还会整段注入（有长度上限） |
 | `generated_images/` | REPL 调用 `generate_image` 成功且返回体含像素数据时，工具会在此写入一份本地副本（便于本机打开；未设 `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` 时摘要里另有 GCS 公开 URL） |

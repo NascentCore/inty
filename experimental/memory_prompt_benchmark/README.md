@@ -125,3 +125,31 @@ memory_prompt_benchmark/
 2. 确保 OpenRouter API 密钥有效
 3. 处理大量用户时可能需要较长时间（每个用户约 1-2 分钟）
 4. 聊天历史较长的用户可能需要更多的 API 调用
+
+## Tool Trigger 对比评测（flat vs layered memory）
+
+新增脚本：`tool_trigger_benchmark.py`
+
+用途：
+- 固定一组“应触发工具 / 不应触发工具”查询；
+- 比较两种 memory 注入结构下的工具触发率：
+  - `flat`：非结构化记忆块
+  - `layered`：core/profile/episodic/tool_affinity 分层记忆
+- 输出 `report.md` 和 `raw_data.json`。
+
+运行示例（按你的配置要求）：
+
+```bash
+/workspace/.venv/bin/python experimental/memory_prompt_benchmark/tool_trigger_benchmark.py \
+  --config devops/config.yaml.dev \
+  --model "google/gemini-2.5-flash" \
+  --samples-per-case 4 \
+  --temperature 0.4
+```
+
+脚本会优先读取环境变量中的 `OPENROUTER_API_KEY` / `OPENAI_API_KEY`，否则回退到 `devops/config.yaml.dev` 的 `agent.api_key`。
+
+关键指标：
+- Trigger rate when needed（应触发时触发率）
+- False trigger rate when not needed（不应触发时误触发率）
+- Expected tool match rate（应触发场景下，工具命中率）

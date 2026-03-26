@@ -162,24 +162,27 @@ def summarize_completion_response(resp: Any) -> str:
 
 
 def emit_trace(
-    where: str, *, round_idx: int, model: str, messages: str, response: str
+    where: str,
+    *,
+    round_idx: int,
+    model: str,
+    messages: str,
+    response: str,
+    trace_id: str | None = None,
 ) -> None:
     """带锁追加一行 JSONL 到已配置路径，避免与记忆线程交错时行内撕裂。"""
-    line = (
-        json.dumps(
-            {
-                "v": LLM_TRACE_JSONL_VERSION,
-                "kind": "llm_trace",
-                "where": where,
-                "round_idx": round_idx,
-                "model": model,
-                "req": messages,
-                "resp": response,
-            },
-            ensure_ascii=False,
-        )
-        + "\n"
-    )
+    row: dict[str, Any] = {
+        "v": LLM_TRACE_JSONL_VERSION,
+        "kind": "llm_trace",
+        "where": where,
+        "round_idx": round_idx,
+        "model": model,
+        "req": messages,
+        "resp": response,
+    }
+    if trace_id is not None and trace_id.strip():
+        row["trace_id"] = trace_id
+    line = json.dumps(row, ensure_ascii=False) + "\n"
     with _TRACE_LOCK:
         path = _trace_file_path
         if path is None:
