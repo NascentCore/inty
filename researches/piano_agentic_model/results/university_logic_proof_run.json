@@ -1,0 +1,223 @@
+{
+  "run_time_utc": "2026-03-26T12:04:25.503217+00:00",
+  "model_id": "google/gemini-2.5-flash-lite",
+  "config_yaml_path": "/workspace/devops/config.yaml.dev",
+  "subgoals": [
+    "WitnessChosen",
+    "HaDerived",
+    "MaDerived",
+    "LaDerived",
+    "Conclusion"
+  ],
+  "task": {
+    "task_id": "logic_proof_university",
+    "description": "University-level first-order logic proof: from forall x (H(x)->M(x)), forall x (M(x)->L(x)), exists x H(x), prove exists x L(x). The task requires witness introduction, universal instantiation, two implication eliminations, and existential introduction.",
+    "start_state": "Premises",
+    "goal_state": "Conclusion",
+    "required_subgoal_sequence": [
+      "WitnessChosen",
+      "HaDerived",
+      "MaDerived",
+      "LaDerived",
+      "Conclusion"
+    ],
+    "state_actions": {
+      "Premises": {
+        "pick_witness_a_from_exists_H": "WitnessChosen",
+        "assert_goal_without_proof": "LogicTrap"
+      },
+      "WitnessChosen": {
+        "derive_Ha": "HaDerived",
+        "drop_witness_context": "LogicTrap"
+      },
+      "HaDerived": {
+        "instantiate_H_implies_M_at_a": "HtoMAtADerived",
+        "apply_MP_too_early": "LogicTrap"
+      },
+      "HtoMAtADerived": {
+        "modus_ponens_to_get_Ma": "MaDerived",
+        "wrong_quantifier_jump": "LogicTrap"
+      },
+      "MaDerived": {
+        "instantiate_M_implies_L_at_a": "MtoLAtADerived",
+        "existential_intro_too_early": "LogicTrap"
+      },
+      "MtoLAtADerived": {
+        "modus_ponens_to_get_La": "LaDerived",
+        "circular_reasoning": "LogicTrap"
+      },
+      "LaDerived": {
+        "existential_intro_to_exists_L": "Conclusion",
+        "lose_witness_scope": "LogicTrap"
+      },
+      "LogicTrap": {
+        "restart_proof": "Premises",
+        "loop_confusion": "LogicTrap"
+      },
+      "Conclusion": {}
+    }
+  },
+  "episodes": [
+    {
+      "name": "baseline_no_monitor",
+      "success": false,
+      "reached_goal": false,
+      "invalid_action_count": 1,
+      "steps_executed": 1,
+      "traces": [
+        {
+          "step_idx": 1,
+          "state_before": "Premises",
+          "active_subgoal": "WitnessChosen",
+          "actor_proposals": [
+            "pick_witness_a_from_exists_H_and_assert_goal_without_proof",
+            "pick_witness_a_from_exists_H",
+            "assert_goal_without_proof"
+          ],
+          "valid_actions_after_monitor": [
+            "pick_witness_a_from_exists_H_and_assert_goal_without_proof"
+          ],
+          "chosen_action": "pick_witness_a_from_exists_H_and_assert_goal_without_proof",
+          "state_after": null,
+          "invalid_action": true,
+          "note": "Chosen action is invalid in environment."
+        }
+      ]
+    },
+    {
+      "name": "piano_with_monitor_and_evaluator",
+      "success": true,
+      "reached_goal": true,
+      "invalid_action_count": 0,
+      "steps_executed": 7,
+      "traces": [
+        {
+          "step_idx": 1,
+          "state_before": "Premises",
+          "active_subgoal": "WitnessChosen",
+          "actor_proposals": [
+            "pick_witness_a_from_exists_H_and_assert_goal_without_proof",
+            "pick_witness_a_from_exists_H",
+            "assert_goal_without_proof"
+          ],
+          "valid_actions_after_monitor": [
+            "pick_witness_a_from_exists_H",
+            "assert_goal_without_proof"
+          ],
+          "chosen_action": "pick_witness_a_from_exists_H",
+          "state_after": "WitnessChosen",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 2,
+          "state_before": "WitnessChosen",
+          "active_subgoal": "HaDerived",
+          "actor_proposals": [
+            "derive_Ha_shortcut",
+            "derive_Ha",
+            "drop_witness_context"
+          ],
+          "valid_actions_after_monitor": [
+            "derive_Ha",
+            "drop_witness_context"
+          ],
+          "chosen_action": "derive_Ha",
+          "state_after": "HaDerived",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 3,
+          "state_before": "HaDerived",
+          "active_subgoal": "MaDerived",
+          "actor_proposals": [
+            "instantiate_H_implies_M_at_a_shortcut",
+            "instantiate_H_implies_M_at_a",
+            "apply_MP_too_early"
+          ],
+          "valid_actions_after_monitor": [
+            "instantiate_H_implies_M_at_a",
+            "apply_MP_too_early"
+          ],
+          "chosen_action": "instantiate_H_implies_M_at_a",
+          "state_after": "HtoMAtADerived",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 4,
+          "state_before": "HtoMAtADerived",
+          "active_subgoal": "MaDerived",
+          "actor_proposals": [
+            "hypothetical_modus_ponens",
+            "modus_ponens_to_get_Ma",
+            "wrong_quantifier_jump"
+          ],
+          "valid_actions_after_monitor": [
+            "modus_ponens_to_get_Ma",
+            "wrong_quantifier_jump"
+          ],
+          "chosen_action": "modus_ponens_to_get_Ma",
+          "state_after": "MaDerived",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 5,
+          "state_before": "MaDerived",
+          "active_subgoal": "LaDerived",
+          "actor_proposals": [
+            "hypothetical_shortcut_to_L",
+            "instantiate_M_implies_L_at_a",
+            "existential_intro_too_early"
+          ],
+          "valid_actions_after_monitor": [
+            "instantiate_M_implies_L_at_a",
+            "existential_intro_too_early"
+          ],
+          "chosen_action": "instantiate_M_implies_L_at_a",
+          "state_after": "MtoLAtADerived",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 6,
+          "state_before": "MtoLAtADerived",
+          "active_subgoal": "LaDerived",
+          "actor_proposals": [
+            "invalid_shortcut_from_MtoLAtADerived",
+            "modus_ponens_to_get_La",
+            "circular_reasoning"
+          ],
+          "valid_actions_after_monitor": [
+            "modus_ponens_to_get_La",
+            "circular_reasoning"
+          ],
+          "chosen_action": "modus_ponens_to_get_La",
+          "state_after": "LaDerived",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 7,
+          "state_before": "LaDerived",
+          "active_subgoal": "Conclusion",
+          "actor_proposals": [
+            "hypothetical_shortcut_to_conclusion",
+            "existential_intro_to_exists_L",
+            "lose_witness_scope"
+          ],
+          "valid_actions_after_monitor": [
+            "existential_intro_to_exists_L",
+            "lose_witness_scope"
+          ],
+          "chosen_action": "existential_intro_to_exists_L",
+          "state_after": "Conclusion",
+          "invalid_action": false,
+          "note": "Step executed."
+        }
+      ]
+    }
+  ]
+}

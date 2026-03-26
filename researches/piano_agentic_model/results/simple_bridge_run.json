@@ -1,0 +1,105 @@
+{
+  "run_time_utc": "2026-03-26T10:36:36.385673+00:00",
+  "model_id": "google/gemini-2.5-flash-lite",
+  "config_yaml_path": "/workspace/devops/config.yaml.dev",
+  "subgoals": [
+    "B",
+    "C",
+    "D"
+  ],
+  "task": {
+    "task_id": "simple_bridge",
+    "description": "Simple 4-state navigation with one reliable path and one looping detour.",
+    "start_state": "A",
+    "goal_state": "D",
+    "required_subgoal_sequence": [],
+    "state_actions": {
+      "A": {
+        "safe_bridge": "B",
+        "risky_tunnel": "C"
+      },
+      "B": {
+        "finish": "D",
+        "retreat": "A"
+      },
+      "C": {
+        "loop": "C",
+        "recover": "A"
+      },
+      "D": {}
+    }
+  },
+  "episodes": [
+    {
+      "name": "baseline_no_monitor",
+      "success": false,
+      "reached_goal": false,
+      "invalid_action_count": 1,
+      "steps_executed": 1,
+      "traces": [
+        {
+          "step_idx": 1,
+          "state_before": "A",
+          "active_subgoal": "B",
+          "actor_proposals": [
+            "shortcut_to_B",
+            "safe_bridge",
+            "risky_tunnel"
+          ],
+          "valid_actions_after_monitor": [
+            "shortcut_to_B"
+          ],
+          "chosen_action": "shortcut_to_B",
+          "state_after": null,
+          "invalid_action": true,
+          "note": "Chosen action is invalid in environment."
+        }
+      ]
+    },
+    {
+      "name": "piano_with_monitor_and_evaluator",
+      "success": true,
+      "reached_goal": true,
+      "invalid_action_count": 0,
+      "steps_executed": 2,
+      "traces": [
+        {
+          "step_idx": 1,
+          "state_before": "A",
+          "active_subgoal": "B",
+          "actor_proposals": [
+            "shortcut_to_B",
+            "safe_bridge",
+            "risky_tunnel"
+          ],
+          "valid_actions_after_monitor": [
+            "safe_bridge",
+            "risky_tunnel"
+          ],
+          "chosen_action": "safe_bridge",
+          "state_after": "B",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 2,
+          "state_before": "B",
+          "active_subgoal": "C",
+          "actor_proposals": [
+            "go_to_C",
+            "finish",
+            "retreat"
+          ],
+          "valid_actions_after_monitor": [
+            "finish",
+            "retreat"
+          ],
+          "chosen_action": "finish",
+          "state_after": "D",
+          "invalid_action": false,
+          "note": "Step executed."
+        }
+      ]
+    }
+  ]
+}

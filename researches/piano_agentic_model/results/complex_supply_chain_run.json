@@ -1,0 +1,223 @@
+{
+  "run_time_utc": "2026-03-26T10:36:23.074015+00:00",
+  "model_id": "google/gemini-2.5-flash-lite",
+  "config_yaml_path": "/workspace/devops/config.yaml.dev",
+  "subgoals": [
+    "BadgeRoom",
+    "SecureGate",
+    "TransferBay",
+    "AuditDesk",
+    "Completed"
+  ],
+  "task": {
+    "task_id": "complex_supply_chain",
+    "description": "Multi-stage planning with mandatory checkpoints: gather credentials, unlock secure transfer, and complete audited delivery without falling into loops.",
+    "start_state": "Dock",
+    "goal_state": "Completed",
+    "required_subgoal_sequence": [
+      "BadgeRoom",
+      "SecureGate",
+      "TransferBay",
+      "AuditDesk",
+      "Completed"
+    ],
+    "state_actions": {
+      "Dock": {
+        "collect_badge": "BadgeRoom",
+        "unsafe_shortcut": "IncidentLoop"
+      },
+      "BadgeRoom": {
+        "get_keycard": "ControlHub",
+        "wander": "Dock"
+      },
+      "ControlHub": {
+        "request_manifest": "ManifestDesk",
+        "wrong_lift": "IncidentLoop"
+      },
+      "ManifestDesk": {
+        "verify_manifest": "SecureGate",
+        "return_hub": "ControlHub"
+      },
+      "SecureGate": {
+        "authorize_transfer": "TransferBay",
+        "panic_reset": "Dock"
+      },
+      "TransferBay": {
+        "handoff": "AuditDesk",
+        "misroute": "IncidentLoop"
+      },
+      "AuditDesk": {
+        "finalize_delivery": "Completed",
+        "missing_form": "ManifestDesk"
+      },
+      "IncidentLoop": {
+        "recover_protocol": "Dock",
+        "loop": "IncidentLoop"
+      },
+      "Completed": {}
+    }
+  },
+  "episodes": [
+    {
+      "name": "baseline_no_monitor",
+      "success": false,
+      "reached_goal": false,
+      "invalid_action_count": 1,
+      "steps_executed": 1,
+      "traces": [
+        {
+          "step_idx": 1,
+          "state_before": "Dock",
+          "active_subgoal": "BadgeRoom",
+          "actor_proposals": [
+            "go_to_badge_room",
+            "collect_badge",
+            "unsafe_shortcut"
+          ],
+          "valid_actions_after_monitor": [
+            "go_to_badge_room"
+          ],
+          "chosen_action": "go_to_badge_room",
+          "state_after": null,
+          "invalid_action": true,
+          "note": "Chosen action is invalid in environment."
+        }
+      ]
+    },
+    {
+      "name": "piano_with_monitor_and_evaluator",
+      "success": true,
+      "reached_goal": true,
+      "invalid_action_count": 0,
+      "steps_executed": 7,
+      "traces": [
+        {
+          "step_idx": 1,
+          "state_before": "Dock",
+          "active_subgoal": "BadgeRoom",
+          "actor_proposals": [
+            "go_to_badge_room",
+            "collect_badge",
+            "unsafe_shortcut"
+          ],
+          "valid_actions_after_monitor": [
+            "collect_badge",
+            "unsafe_shortcut"
+          ],
+          "chosen_action": "collect_badge",
+          "state_after": "BadgeRoom",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 2,
+          "state_before": "BadgeRoom",
+          "active_subgoal": "SecureGate",
+          "actor_proposals": [
+            "get_badgecard",
+            "get_keycard",
+            "wander"
+          ],
+          "valid_actions_after_monitor": [
+            "get_keycard",
+            "wander"
+          ],
+          "chosen_action": "get_keycard",
+          "state_after": "ControlHub",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 3,
+          "state_before": "ControlHub",
+          "active_subgoal": "SecureGate",
+          "actor_proposals": [
+            "request_manifest_and_pass",
+            "request_manifest",
+            "wrong_lift"
+          ],
+          "valid_actions_after_monitor": [
+            "request_manifest",
+            "wrong_lift"
+          ],
+          "chosen_action": "request_manifest",
+          "state_after": "ManifestDesk",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 4,
+          "state_before": "ManifestDesk",
+          "active_subgoal": "SecureGate",
+          "actor_proposals": [
+            "verify_gate_status",
+            "verify_manifest",
+            "return_hub"
+          ],
+          "valid_actions_after_monitor": [
+            "verify_manifest",
+            "return_hub"
+          ],
+          "chosen_action": "verify_manifest",
+          "state_after": "SecureGate",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 5,
+          "state_before": "SecureGate",
+          "active_subgoal": "TransferBay",
+          "actor_proposals": [
+            "goto TransferBay",
+            "authorize_transfer",
+            "panic_reset"
+          ],
+          "valid_actions_after_monitor": [
+            "authorize_transfer",
+            "panic_reset"
+          ],
+          "chosen_action": "authorize_transfer",
+          "state_after": "TransferBay",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 6,
+          "state_before": "TransferBay",
+          "active_subgoal": "AuditDesk",
+          "actor_proposals": [
+            "audit_desk_shortcut",
+            "handoff",
+            "misroute"
+          ],
+          "valid_actions_after_monitor": [
+            "handoff",
+            "misroute"
+          ],
+          "chosen_action": "handoff",
+          "state_after": "AuditDesk",
+          "invalid_action": false,
+          "note": "Step executed."
+        },
+        {
+          "step_idx": 7,
+          "state_before": "AuditDesk",
+          "active_subgoal": "Completed",
+          "actor_proposals": [
+            "skip_audit",
+            "finalize_delivery",
+            "missing_form"
+          ],
+          "valid_actions_after_monitor": [
+            "finalize_delivery",
+            "missing_form"
+          ],
+          "chosen_action": "finalize_delivery",
+          "state_after": "Completed",
+          "invalid_action": false,
+          "note": "Step executed."
+        }
+      ]
+    }
+  ]
+}
