@@ -44,6 +44,7 @@ class SlotCandidate:
 
 
 LLMExtractFn = Callable[[str, int], list[SlotCandidate]]
+LLMCallFn = Callable[[str], str]
 
 
 def _extract_candidates_regex(text: str, turn_idx: int) -> list[SlotCandidate]:
@@ -242,6 +243,69 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
             )
         )
     return _resolve_same_turn_conflicts(out)
+
+
+def llm_extract_memory_slots(
+    text: str,
+    turn_idx: int,
+    llm_call: LLMCallFn,
+) -> list[SlotCandidate]:
+    """
+    Public LLM extraction helper.
+    `llm_call` must return a JSON string:
+    {"candidates":[{"key","value","confidence","evidence","is_negative"}]}
+    """
+    content = llm_call(text)
+    data = json.loads(content)
+    raw_items = data.get("candidates", [])
+    if not isinstance(raw_items, list):
+        raise ValueError("LLM extractor response must include list field candidates")
+
+    out: list[SlotCandidate] = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key", "")).strip()
+        if key not in ALLOWED_KEYS:
+            continue
+        value = str(item.get("value", "")).strip()
+        evidence = str(item.get("evidence", "")).strip()
+        if not value:
+            continue
+        confidence_raw = item.get("confidence", 0.0)
+        confidence = float(confidence_raw)
+        if confidence < 0.0:
+            confidence = 0.0
+        if confidence > 1.0:
+            confidence = 1.0
+        is_negative = bool(item.get("is_negative", False))
+        out.append(
+            SlotCandidate(
+                key=key,
+                value=value,
+                confidence=confidence,
+                evidence=evidence or value,
+                turn_idx=turn_idx,
+                is_negative=is_negative,
+            )
+        )
+    return _resolve_same_turn_conflicts(out)
+
+
+def extract_candidates_llm(
+    text: str,
+    turn_idx: int,
+    *,
+    llm_call: LLMCallFn | None = None,
+) -> list[SlotCandidate]:
+    """
+    Public LLM candidate extractor.
+    - With `llm_call`: use provided callable (great for tests/mocks).
+    - Without `llm_call`: use default OpenAI/OpenRouter backend.
+    """
+    if llm_call is None:
+        return _extract_candidates_llm_default(text, turn_idx)
+    return llm_extract_memory_slots(text, turn_idx, llm_call)
 
 
 def _resolve_same_turn_conflicts(candidates: list[SlotCandidate]) -> list[SlotCandidate]:
