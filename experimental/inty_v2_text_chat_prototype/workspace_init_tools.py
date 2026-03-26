@@ -9,6 +9,15 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
+from app.core.agentic_kernel.tools.registry import ToolRegistry
+from app.core.agentic_kernel.tools.dispatchers.media import (
+    parse_optional_positive_int,
+    parse_optional_strength,
+)
+from app.core.agentic_kernel.tools.dispatchers.workspace import (
+    dispatch_workspace_tool,
+)
+
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
     _reset_fal_async_client_after_short_lived_loop,
@@ -35,6 +44,19 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "TOOLS.md",
         "USER.md",
     }
+)
+
+
+_BASE_TOOL_REGISTRY = ToolRegistry(
+    (
+        "workspace_list_dir",
+        "workspace_read_file",
+        "workspace_write_file",
+        "workspace_mkdir",
+        "user_profile_record",
+        "generate_image",
+        "modify_image",
+    )
 )
 
 
@@ -519,35 +541,6 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     return out
 
 
-def _parse_optional_positive_int(
-    raw: Any, *, field_name: str
-) -> tuple[int | None, str | None]:
-    """返回 (值, 错误信息)；raw 为 None 或缺失视为省略。"""
-    if raw is None:
-        return (None, None)
-    if isinstance(raw, bool):
-        return (None, f"{field_name} must be an integer")
-    if isinstance(raw, int):
-        if raw < 1:
-            return (None, f"{field_name} must be >= 1")
-        return (raw, None)
-    return (None, f"{field_name} must be an integer")
-
-
-def _parse_optional_strength(raw: Any) -> tuple[float | None, str | None]:
-    """返回 (值, 错误信息)；raw 为 None 或缺失视为省略。"""
-    if raw is None:
-        return (None, None)
-    if isinstance(raw, bool):
-        return (None, "strength must be a number")
-    if isinstance(raw, (int, float)):
-        f = float(raw)
-        if not (0.0 <= f <= 1.0):
-            return (None, "strength must be between 0 and 1 inclusive")
-        return (f, None)
-    return (None, "strength must be a number")
-
-
 def _repl_write_allowed(
     root: Path, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:
@@ -570,32 +563,24 @@ async def _dispatch(
     *,
     write_allowlist: frozenset[str] | None = None,
 ) -> str:
-    if name == "workspace_list_dir":
-        rel = str(arguments.get("relative_path", ""))
-        return tool_workspace_list_dir(root, rel)
-    if name == "workspace_read_file":
-        rel = str(arguments.get("relative_path", ""))
-        try:
-            mc = _parse_optional_max_chars(arguments.get("max_chars"))
-        except ValueError as exc:
-            return f"ERROR: {exc}"
-        return tool_workspace_read_file(root, rel, max_chars=mc)
-    if name == "workspace_write_file":
-        rel = str(arguments.get("relative_path", ""))
-        content = str(arguments.get("content", ""))
-        if write_allowlist is not None:
-            blocked = _repl_write_allowed(root, rel, write_allowlist)
-            if blocked is not None:
-                return blocked
-        return tool_workspace_write_file(root, rel, content)
-    if name == "workspace_mkdir":
-        rel = str(arguments.get("relative_path", ""))
-        return tool_workspace_mkdir(root, rel)
-    if name == "user_profile_record":
-        raw_items = arguments.get("items")
-        if not isinstance(raw_items, list):
-            return "ERROR: items must be a JSON array"
-        return tool_user_profile_record(root, raw_items)
+    if not _BASE_TOOL_REGISTRY.is_allowed(name):
+        return f"ERROR: unknown tool {name!r}"
+
+    workspace_dispatch_result = dispatch_workspace_tool(
+        root=root,
+        name=name,
+        arguments=arguments,
+        write_allowlist=write_allowlist,
+        tool_workspace_list_dir=tool_workspace_list_dir,
+        tool_workspace_read_file=tool_workspace_read_file,
+        tool_workspace_write_file=tool_workspace_write_file,
+        tool_workspace_mkdir=tool_workspace_mkdir,
+        tool_user_profile_record=tool_user_profile_record,
+        parse_optional_max_chars=_parse_optional_max_chars,
+        repl_write_allowed=_repl_write_allowed,
+    )
+    if workspace_dispatch_result is not None:
+        return workspace_dispatch_result
     if name == "generate_image":
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
@@ -608,12 +593,12 @@ async def _dispatch(
         image_size_s = image_size.strip() if isinstance(image_size, str) else None
         if image_size_s == "":
             image_size_s = None
-        n_steps, err = _parse_optional_positive_int(
+        n_steps, err = parse_optional_positive_int(
             arguments.get("num_inference_steps"), field_name="num_inference_steps"
         )
         if err:
             return f"ERROR: {err}"
-        n_img, err2 = _parse_optional_positive_int(
+        n_img, err2 = parse_optional_positive_int(
             arguments.get("num_images"), field_name="num_images"
         )
         if err2:
@@ -669,12 +654,12 @@ async def _dispatch(
         image_size_s = image_size.strip() if isinstance(image_size, str) else None
         if image_size_s == "":
             image_size_s = None
-        n_steps, err = _parse_optional_positive_int(
+        n_steps, err = parse_optional_positive_int(
             arguments.get("num_inference_steps"), field_name="num_inference_steps"
         )
         if err:
             return f"ERROR: {err}"
-        strength, err_s = _parse_optional_strength(arguments.get("strength"))
+        strength, err_s = parse_optional_strength(arguments.get("strength"))
         if err_s:
             return f"ERROR: {err_s}"
         from loguru import logger

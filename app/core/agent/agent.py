@@ -31,6 +31,9 @@ from typing_extensions import deprecated
 
 from app import models
 from app.core.agent import prompt_template, prompts
+from app.core.agentic_kernel.tools.runtime import (
+    resolve_official_assistant_tool_loop,
+)
 from app.core.agent.agent_prompt_configs import (
     INTELLIMATE_AGENT_ID,
     INTELLIMATE_AGENT_NAME,
@@ -1140,47 +1143,29 @@ class Agent:
         user_email: Optional[str] = None,
     ) -> Tuple[Any, List[Dict[str, Any]], Optional[str]]:
         """返回 (response, messages, trace_id)"""
-        messages_with_tool_results = [*openai_messages]
-        current_response = response
-        last_trace_id = initial_trace_id
-        for tool_round in range(OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS):
-            current_message = current_response.choices[0].message
-            tool_calls = getattr(current_message, "tool_calls", None) or []
-            if not tool_calls:
-                return current_response, messages_with_tool_results, last_trace_id
-
-            messages_with_tool_results.append(
-                self._build_assistant_tool_call_message(current_message)
+        def execute_tool_call(
+            tool_name: str,
+            raw_arguments: str,
+        ) -> Tuple[str, Optional[str]]:
+            tool_result, injected_system_message = (
+                self._execute_official_assistant_tool_call(
+                    tool_name=tool_name,
+                    raw_arguments=raw_arguments,
+                    user_id=user_id,
+                )
             )
-            for tool_call in tool_calls:
-                tool_name = tool_call.function.name
-                raw_arguments = tool_call.function.arguments or ""
-                tool_result, injected_system_message = (
-                    self._execute_official_assistant_tool_call(
-                        tool_name=tool_name,
-                        raw_arguments=raw_arguments,
-                        user_id=user_id,
-                    )
-                )
-                logger.info(
-                    f"Official assistant tool executed: tool={tool_name}, user_id={user_id}, round={tool_round + 1}"
-                )
-                messages_with_tool_results.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": tool_result,
-                    }
-                )
-                if injected_system_message:
-                    self._insert_system_message_into_openai_messages(
-                        openai_messages=messages_with_tool_results,
-                        system_message_content=injected_system_message,
-                    )
-            _resp, last_trace_id = self._call_openai_api_with_retry(
+            logger.info(
+                f"Official assistant tool executed: tool={tool_name}, user_id={user_id}"
+            )
+            return tool_result, injected_system_message
+
+        def continue_chat(
+            loop_messages: List[Dict[str, Any]],
+        ) -> Tuple[Any, Optional[str]]:
+            return self._call_openai_api_with_retry(
                 client=client,
                 model=model,
-                openai_messages=messages_with_tool_results,
+                openai_messages=loop_messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 top_p=top_p,
@@ -1194,10 +1179,21 @@ class Agent:
                 tools=OFFICIAL_ASSISTANT_TOOL_DEFINITIONS,
                 tool_choice="auto",
             )
-            current_response = _resp
-        raise ValueError(
-            f"Official assistant tool call rounds exceeded limit={OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS}"
+
+        loop_result = resolve_official_assistant_tool_loop(
+            response=response,
+            openai_messages=openai_messages,
+            max_tool_call_rounds=OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS,
+            execute_tool_call=execute_tool_call,
+            continue_chat=continue_chat,
+            build_assistant_tool_call_message=self._build_assistant_tool_call_message,
+            insert_system_message=lambda messages, content: self._insert_system_message_into_openai_messages(
+                openai_messages=messages,
+                system_message_content=content,
+            ),
+            initial_trace_id=initial_trace_id,
         )
+        return loop_result.response, loop_result.messages, loop_result.trace_id
 
     def _is_retryable_error(self, error: Exception) -> bool:
         """

@@ -24,6 +24,10 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import agent_manager
+from app.core.agentic_kernel.providers.gemini import (
+    GeminiClientOptions,
+    get_gemini_client as get_kernel_gemini_client,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.voice import tts_api as voice_tts_api
 from app.schemas.live_chat import LiveChatConfig, LiveChatStatus
@@ -35,7 +39,6 @@ from app.services.chat_service import (
 )
 from app.services.gcs_service import GCSService
 from app.utils.audio import build_interleaved_pcm_24k
-from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
 
 # 语音通话默认音色映射（按性别选择 Gemini 预置音色）
 GENDER_TO_GEMINI_VOICE_MAPPING = {
@@ -122,25 +125,24 @@ class LiveChatService:
             gcp_key_path = (
                 global_config_loaded_from_config_yaml.app.gcp_service_account_key
             )
+            self._client = get_kernel_gemini_client(
+                GeminiClientOptions(
+                    vertexai=True,
+                    project=self._config.project_id,
+                    location=self._config.location,
+                    wrap_langsmith=True,
+                    tags=("google-genai", "gemini-live", "app-services-live-chat"),
+                    metadata={
+                        "source": "app.services.live_chat_service",
+                        "project_id": self._config.project_id,
+                        "location": self._config.location,
+                    },
+                    chat_name="Inty_GeminiLive",
+                    credentials_path=gcp_key_path,
+                )
+            )
             if gcp_key_path and os.path.exists(gcp_key_path):
-                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = gcp_key_path
                 logger.debug(f"设置 GCP 凭证: {gcp_key_path}")
-
-            base_client = genai.Client(
-                vertexai=True,
-                project=self._config.project_id,
-                location=self._config.location,
-            )
-            self._client = wrap_google_genai_client_with_langsmith(
-                base_client,
-                tags=["google-genai", "gemini-live", "app-services-live-chat"],
-                metadata={
-                    "source": "app.services.live_chat_service",
-                    "project_id": self._config.project_id,
-                    "location": self._config.location,
-                },
-                chat_name="Inty_GeminiLive",
-            )
             logger.info(
                 f"Gemini Live 客户端已初始化 - project: {self._config.project_id}, "
                 f"location: {self._config.location}"
