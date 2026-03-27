@@ -70,6 +70,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -344,6 +345,9 @@ fun CreateRolePage(
     // Track original uploaded image URL (for background) when uploading from gallery
     var originalUploadedImageUrl by remember { mutableStateOf<String?>(null) }
     var isUploadingFromGallery by remember { mutableStateOf(false) }
+    // 编辑模式下默认不读取 AvatarManager，避免历史缓存覆盖当前角色头像
+    // 仅当用户在本次会话主动进入生图流程后再开启同步。
+    var shouldSyncAvatarManager by rememberSaveable(isEditMode) { mutableStateOf(!isEditMode) }
 
     val createEntrySource = remember {
         navController.previousBackStackEntry
@@ -380,9 +384,7 @@ fun CreateRolePage(
         }
     }
 
-    if (!isEditMode) {
-        BackHandler { handleExitRequest() }
-    }
+    BackHandler { handleExitRequest() }
 
     if (!isEditMode) {
         LaunchedEffect(enableDraftSaving) {
@@ -581,40 +583,41 @@ fun CreateRolePage(
     // 检查是否有生成的头像URL - 使用DisposableEffect来监听生命周期
     DisposableEffect(Unit) {
         val checkAvatarStatus = {
+            if (shouldSyncAvatarManager) {
+                // Check if generation is in progress
+                val generatingStatus = AvatarManager.isGenerating()
+                isGeneratingAvatar = generatingStatus
 
-            // Check if generation is in progress
-            val generatingStatus = AvatarManager.isGenerating()
-            isGeneratingAvatar = generatingStatus
-
-            // Check for multiple generated URLs
-            val currentUrls = AvatarManager.getCurrentAvatarUrls()
-            if (currentUrls.isNotEmpty()) {
-                avatarUrls = currentUrls
-                selectedImageIndex = AvatarManager.getSelectedImageIndex()
-                avatarUrl = null // Clear single URL when we have multiple
-            } else {
-                // Check for single generated URL
-                val generatedUrl = AvatarManager.getCurrentAvatarUrl()
-                if (generatedUrl != null && generatedUrl.isNotBlank()) {
-                    avatarUrl = generatedUrl
-                    avatarUrls = emptyList()
+                // Check for multiple generated URLs
+                val currentUrls = AvatarManager.getCurrentAvatarUrls()
+                if (currentUrls.isNotEmpty()) {
+                    avatarUrls = currentUrls
+                    selectedImageIndex = AvatarManager.getSelectedImageIndex()
+                    avatarUrl = null // Clear single URL when we have multiple
+                } else {
+                    // Check for single generated URL
+                    val generatedUrl = AvatarManager.getCurrentAvatarUrl()
+                    if (generatedUrl != null && generatedUrl.isNotBlank()) {
+                        avatarUrl = generatedUrl
+                        avatarUrls = emptyList()
+                    }
                 }
-            }
 
-            // Check for generation errors
-            val error = AvatarManager.getGenerationError()
-            if (error != null) {
-                ToastUtils.showShort(error)
-                isGeneratingAvatar = false
-            }
+                // Check for generation errors
+                val error = AvatarManager.getGenerationError()
+                if (error != null) {
+                    ToastUtils.showShort(error)
+                    isGeneratingAvatar = false
+                }
 
-            // Show current generation prompt if generating
-            val promptDraft = AvatarManager.getGenerationPrompt()
-            if (generatingStatus) {
-                LogUtils.i("Currently generating with prompt: '$promptDraft'")
-            }
-            if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
-                avatarPrompt = promptDraft
+                // Show current generation prompt if generating
+                val promptDraft = AvatarManager.getGenerationPrompt()
+                if (generatingStatus) {
+                    LogUtils.i("Currently generating with prompt: '$promptDraft'")
+                }
+                if (promptDraft.isNotBlank() && promptDraft != avatarPrompt) {
+                    avatarPrompt = promptDraft
+                }
             }
         }
 
@@ -628,6 +631,7 @@ fun CreateRolePage(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                if (!shouldSyncAvatarManager) return@LifecycleEventObserver
 
                 // Check generation status
                 isGeneratingAvatar = AvatarManager.isGenerating()
@@ -670,6 +674,9 @@ fun CreateRolePage(
         // 定期检查生成状态 (作为备用机制)
         while (true) {
             delay(2000) // 每2秒检查一次
+            if (!shouldSyncAvatarManager) {
+                continue
+            }
 
             val currentGenerationStatus = AvatarManager.isGenerating()
             if (currentGenerationStatus != isGeneratingAvatar) {
@@ -771,6 +778,7 @@ fun CreateRolePage(
                 croppedAvatarUrl = croppedAvatarUrls[selectedImageIndex],
                 agentId = editAgent?.id,
                 onGenerateClick = {
+                    shouldSyncAvatarManager = true
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
 
@@ -788,6 +796,7 @@ fun CreateRolePage(
                     AvatarManager.setSelectedImageIndex(index)
                 },
                 onRegenerate = { prompt ->
+                    shouldSyncAvatarManager = true
                     AvatarManager.setGeneratedAvatarUrls(avatarUrls)
                     AvatarManager.setSelectedImageIndex(selectedImageIndex)
 
@@ -1082,23 +1091,35 @@ fun CreateRolePage(
                                         //                                    onCreateSuccess()
                                     }
 
-                                    // 创建成功
+                                    // 创建成功：同时回传给上一页与 HomeTab，确保不同入口都能收到刷新信号
                                     val previousSavedStateHandle =
                                         navController.previousBackStackEntry?.savedStateHandle
-                                    previousSavedStateHandle?.set(
-                                        CreateRoleNavigationState.ResultCodeKey,
-                                        Activity.RESULT_OK,
-                                    )
-                                    previousSavedStateHandle?.set(
-                                        CreateRoleNavigationState.ResultSourceKey,
-                                        createEntrySource,
-                                    )
-                                    if (!isEditMode) {
-                                        previousSavedStateHandle?.set(
-                                            CreateRoleNavigationState.CreatedAgentIdKey,
-                                            savedAgent.id,
+                                    val homeTabSavedStateHandle =
+                                        runCatching {
+                                                navController.getBackStackEntry(Routes.HomeTab)
+                                                    .savedStateHandle
+                                            }
+                                            .getOrNull()
+                                    val targetSavedStateHandles =
+                                        listOfNotNull(previousSavedStateHandle, homeTabSavedStateHandle)
+                                    targetSavedStateHandles.forEach { savedStateHandle ->
+                                        savedStateHandle.set(
+                                            CreateRoleNavigationState.ResultCodeKey,
+                                            Activity.RESULT_OK,
                                         )
+                                        savedStateHandle.set(
+                                            CreateRoleNavigationState.ResultSourceKey,
+                                            createEntrySource,
+                                        )
+                                        if (!isEditMode) {
+                                            savedStateHandle.set(
+                                                CreateRoleNavigationState.CreatedAgentIdKey,
+                                                savedAgent.id,
+                                            )
+                                        }
                                     }
+                                    // 创建/更新成功后离开页面：清空生图流程全局缓存，避免串到下一个角色的编辑页
+                                    AvatarManager.clearAllAvatarData()
                                     navController.popBackStack()
                                 } catch (e: Exception) {
                                     val operation =

@@ -13,10 +13,18 @@ fun NavGraphBuilder.createGraph(navController: NavController) {
     // 定义创建角色路由
     composable(
         route = Routes.Creat.CreateRole,
-        arguments = listOf(navArgument("draftId") { type = NavType.StringType }),
+        arguments =
+            listOf(
+                navArgument("draftId") { type = NavType.StringType },
+                navArgument("agentId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
     ) { backStackEntry ->
         val draftId = backStackEntry.arguments?.getString("draftId")
-        val agentInfo = AgentStore.getDraftAgentInfo()
+        val agentId = backStackEntry.arguments?.getString("agentId").orEmpty()
+        val agentInfo = agentId.takeIf { it.isNotBlank() }?.let(AgentStore::getAgent)
         CreateRoleScreen(navController, agentInfo = agentInfo, draftId = draftId)
     }
 
