@@ -15,7 +15,7 @@ from typing import Any, Callable
 from loguru import logger
 
 from app.core.agentic_kernel.tools.runtime import (
-    resolve_official_assistant_tool_loop,
+    resolve_official_assistant_tool_loop_async,
 )
 
 from .file_store import append_jsonl
@@ -270,7 +270,6 @@ async def _run_background_tool_loop(
     total_tool_calls += len(initial_tool_calls)
 
     async def execute_tool_call(name: str, raw_arguments: str) -> tuple[str, str | None]:
-        nonlocal total_tool_calls
         result = await execute_tool_call_fn(
             ws_root,
             name,
@@ -279,10 +278,7 @@ async def _run_background_tool_loop(
         )
         return result, None
 
-    def execute_tool_call_sync(name: str, raw_arguments: str) -> tuple[str, str | None]:
-        return asyncio.run(execute_tool_call(name, raw_arguments))
-
-    def continue_chat(
+    async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
         nonlocal rounds_used, active_round, total_tool_calls
@@ -293,7 +289,8 @@ async def _run_background_tool_loop(
         rounds_used += 1
         active_round = rounds_used
         request_snapshot_inner = deepcopy(messages_with_tool_results)
-        next_resp = _chat_completion_create(
+        next_resp = await asyncio.to_thread(
+            _chat_completion_create,
             resolved_client,
             model=tool_model_name,
             messages_payload=_openai_messages_payload(messages_with_tool_results),
@@ -313,12 +310,11 @@ async def _run_background_tool_loop(
         return next_resp, None
 
     try:
-        loop_result = await asyncio.to_thread(
-            resolve_official_assistant_tool_loop,
+        loop_result = await resolve_official_assistant_tool_loop_async(
             response=initial_response,
             openai_messages=working_messages,
             max_tool_call_rounds=_BG_TOOL_MAX_ROUNDS,
-            execute_tool_call=execute_tool_call_sync,
+            execute_tool_call=execute_tool_call,
             continue_chat=continue_chat,
             build_assistant_tool_call_message=openai_assistant_message_dict,
             insert_system_message=_insert_system_message,

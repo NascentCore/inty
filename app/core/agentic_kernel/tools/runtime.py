@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 
 @dataclass(frozen=True)
@@ -159,6 +159,67 @@ def resolve_official_assistant_tool_loop(
                     injected_system_message,
                 )
         current_response, last_trace_id = continue_chat(messages_with_tool_results)
+
+    raise ValueError(
+        "Official assistant tool call rounds exceeded " f"limit={max_tool_call_rounds}"
+    )
+
+
+async def resolve_official_assistant_tool_loop_async(
+    *,
+    response: Any,
+    openai_messages: list[dict[str, Any]],
+    max_tool_call_rounds: int,
+    execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
+    continue_chat: Callable[
+        [list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]
+    ],
+    build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
+    insert_system_message: Callable[[list[dict[str, Any]], str], None],
+    initial_trace_id: str | None = None,
+) -> OfficialAssistantToolLoopResult:
+    """
+    Async variant of official assistant tool-call loop.
+
+    Keep semantics aligned with `resolve_official_assistant_tool_loop`, but
+    allow async tool execution and async model continuation in the same event loop.
+    """
+    messages_with_tool_results = [*openai_messages]
+    current_response = response
+    last_trace_id = initial_trace_id
+    for _ in range(max_tool_call_rounds):
+        current_message = current_response.choices[0].message
+        tool_calls = getattr(current_message, "tool_calls", None) or []
+        if not tool_calls:
+            return OfficialAssistantToolLoopResult(
+                response=current_response,
+                messages=messages_with_tool_results,
+                trace_id=last_trace_id,
+            )
+
+        messages_with_tool_results.append(
+            build_assistant_tool_call_message(current_message)
+        )
+        for tool_call in tool_calls:
+            tool_name = tool_call.function.name
+            raw_arguments = tool_call.function.arguments or ""
+            tool_result, injected_system_message = await execute_tool_call(
+                tool_name,
+                raw_arguments,
+            )
+            messages_with_tool_results.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": tool_result,
+                }
+            )
+            if injected_system_message:
+                insert_system_message(
+                    messages_with_tool_results,
+                    injected_system_message,
+                )
+        current_response, last_trace_id = await continue_chat(messages_with_tool_results)
 
     raise ValueError(
         "Official assistant tool call rounds exceeded " f"limit={max_tool_call_rounds}"
