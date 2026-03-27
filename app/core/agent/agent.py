@@ -316,6 +316,7 @@ def build_agent_from_data(agent_id: str, agent_data: dict) -> "Agent":
 _connection_pool = None
 _sync_engine = None
 _messages_compaction_executor = None
+_agent_chat_executor = None
 
 
 def get_sync_engine():
@@ -370,6 +371,28 @@ def get_compaction_executor():
         )
         logger.info("初始化消息压缩线程池: max_workers=4")
     return _messages_compaction_executor
+
+
+def get_agent_chat_executor():
+    """获取全局 Agent 聊天线程池，避免每个 Agent 实例单独创建线程池。"""
+    global _agent_chat_executor
+    if _agent_chat_executor is None:
+        _agent_chat_executor = ThreadPoolExecutor(
+            max_workers=min(
+                64,
+                max(
+                    8,
+                    (global_config.database.pool_size or 20),
+                ),
+            ),
+            thread_name_prefix="agent-chat",
+        )
+        logger.info(
+            "初始化 Agent 聊天全局线程池: max_workers={}".format(
+                min(64, max(8, (global_config.database.pool_size or 20)))
+            )
+        )
+    return _agent_chat_executor
 
 
 # chat_history表现在由Alembic迁移管理，不需要手动初始化
@@ -449,14 +472,8 @@ class Agent:
             "intro": intro,
         }
 
-        # 线程池用于异步执行聊天任务
-        self._executor = ThreadPoolExecutor(
-            max_workers=min(
-                32,
-                (global_config.database.pool_size or 20) // 2,
-            ),
-            thread_name_prefix=f"agent-{agent_id}",
-        )
+        # 使用全局线程池，避免每个 Agent 实例创建独立线程池导致线程数膨胀。
+        self._executor = get_agent_chat_executor()
 
         # 使用配置中的模型设置（model/temperature/max_tokens 等由 self.model_config 在 chat 时读取）
         # Deprecated: model_config 中的 api_key 与 base_url 不参与 chat，chat 使用 get_chat_openai_client（可配置为 LiteLLM）
@@ -2043,8 +2060,8 @@ class Agent:
 
     def cleanup(self):
         """清理资源"""
-        if hasattr(self, "_executor"):
-            self._executor.shutdown(wait=False)
+        # Agent 共享全局线程池，这里不做 shutdown，避免影响其他 Agent。
+        return
 
 
 class AgentManager:
@@ -2381,7 +2398,7 @@ class AgentManager:
             self._agent_locks.clear()
 
         # 关闭连接池
-        global _connection_pool
+        global _connection_pool, _agent_chat_executor
         if _connection_pool:
             try:
                 _connection_pool.close()
@@ -2389,6 +2406,14 @@ class AgentManager:
                 logger.info("数据库连接池已关闭")
             except Exception as e:
                 logger.error(f"关闭连接池失败: {str(e)}")
+
+        if _agent_chat_executor:
+            try:
+                _agent_chat_executor.shutdown(wait=False)
+                _agent_chat_executor = None
+                logger.info("Agent 聊天全局线程池已关闭")
+            except Exception as e:
+                logger.error(f"关闭 Agent 聊天线程池失败: {str(e)}")
 
         logger.info("Agent管理器已停止")
 

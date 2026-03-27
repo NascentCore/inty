@@ -1055,13 +1055,15 @@ class LiveChatService:
                         if user_text:
                             flushed_user = True
                             if session.config.save_history:
-                                user_message_id = chat_history_service.add_user_message(
-                                    session.session_id,
-                                    user_text,
-                                    meta_data={
-                                        "is_voice": True,
-                                        "voice_session_id": session.voice_session_id,
-                                    },
+                                user_message_id = (
+                                    await chat_history_service.add_user_message_async(
+                                        session.session_id,
+                                        user_text,
+                                        meta_data={
+                                            "is_voice": True,
+                                            "voice_session_id": session.voice_session_id,
+                                        },
+                                    )
                                 )
                                 ts = time.time() * 1000
                                 await on_transcript(
@@ -1072,7 +1074,7 @@ class LiveChatService:
                         if ai_text:
                             flushed_ai = True
                             if session.config.save_history:
-                                ai_message_id = chat_history_service.add_ai_message_sync(
+                                ai_message_id = await chat_history_service.add_ai_message_sync_async(
                                     session_id=session.session_id,
                                     message=ai_text,
                                     agent_id=session.agent_id,
@@ -1101,7 +1103,7 @@ class LiveChatService:
                             and session.ai_transcript_buffer
                             and session.config.save_history
                         ):
-                            chat_history_service.add_ai_message_sync(
+                            await chat_history_service.add_ai_message_sync_async(
                                 session_id=session.session_id,
                                 message=session.ai_transcript_buffer.strip(),
                                 agent_id=session.agent_id,
@@ -1163,7 +1165,7 @@ class LiveChatService:
 
         try:
             if session.user_transcript_buffer:
-                user_message_id = chat_history_service.add_user_message(
+                user_message_id = await chat_history_service.add_user_message_async(
                     session.session_id,
                     session.user_transcript_buffer,
                     meta_data={
@@ -1176,7 +1178,7 @@ class LiveChatService:
                 )
 
             if session.ai_transcript_buffer:
-                ai_message_id = chat_history_service.add_ai_message_sync(
+                ai_message_id = await chat_history_service.add_ai_message_sync_async(
                     session_id=session.session_id,
                     message=session.ai_transcript_buffer,
                     agent_id=session.agent_id,

@@ -81,7 +81,7 @@ async def _get_current_user_from_websocket(
     return await deps.get_user_from_token(token, db)
 
 
-def _handle_subscription_limit_error(
+async def _handle_subscription_limit_error(
     session_id: str,
     last_user_message: str | List[dict[str, Any]],
     current_user: schemas.User,
@@ -90,7 +90,7 @@ def _handle_subscription_limit_error(
 ) -> schemas.APIResponse:
     """处理订阅限制错误"""
     try:
-        chat_history_service.add_user_message(session_id, last_user_message)
+        await chat_history_service.add_user_message_async(session_id, last_user_message)
         logger.debug(f"用户消息已保存到历史记录: {session_id}")
     except Exception as e:
         logger.warning(f"保存用户消息失败: {str(e)}")
@@ -474,7 +474,7 @@ async def agent_chat_completions(
             )
 
         if not is_allowed:
-            return _handle_subscription_limit_error(
+            return await _handle_subscription_limit_error(
                 session_id, last_user_message, current_user, used_count, daily_limit
             )
 
