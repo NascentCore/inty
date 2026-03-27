@@ -16,6 +16,7 @@ app:
     subscribed_user_image_gen_24h_limit: 10
     free_user_agent_creation_24h_limit: 1
     subscribed_user_agent_creation_24h_limit: 5
+    free_user_chat_messages_limit: 100
   gcp_service_account_key: "inty-backend-key.json"
 
 sentry:
