@@ -7,11 +7,12 @@
 - Do not bother with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
 - Do not do defensive programming, let failure appear early and loud.
 - Python 技术选型：cyclopts pydantic loguru
+- jq JSON
 
 ## 给 AI Agent 的最小执行清单（先读这个）
 
 1. 先读本文件，再读目标目录下的 `AGENTS.md`（若存在）。
-2. 先写测试成功标准，再实现；改完必须做针对性测试并给出证据。
+2. Test-driven development, 先写测试成功标准，再实现；改完必须做针对性测试并给出证据。
 3. 优先小步修改、单一职责、可组合函数，避免深层嵌套调用。
 4. 不做防御性吞错；失败要尽早、明显地暴露。
 5. Python 仅捕获可处理的具体异常，禁止 `except Exception` 大网捕获。
@@ -20,25 +21,6 @@
    - `app/schemas`
 7. 完成后必须回看 diff，确保无无关改动、无敏感信息泄漏。
 8. 提交时附一句话总结 + 详细描述（便于追溯）。
-
-## 标准执行模板（建议直接复用）
-
-当你开始一个新任务时，优先按下面流程执行并在最终回复中对齐：
-
-1. **定义测试成功标准（先于实现）**
-   - 明确“如何证明改动生效”，包括目标行为与可验证证据。
-2. **形成测试计划**
-   - 选择最小但有效的测试集合（优先针对变更范围）。
-   - 涉及 UI 改动时，补充手工验证步骤与截图/视频证据。
-3. **小步实现**
-   - 每次只做一个逻辑变化，函数保持可组合，避免深层嵌套。
-4. **执行测试并记录证据**
-   - 保留关键命令输出、日志片段、截图/录屏等。
-5. **回看 diff 并清理**
-   - 删除临时调试代码，确认无无关改动、无敏感信息。
-6. **提交与同步**
-   - 使用清晰提交信息（一句话总结 + 详细描述）。
-   - 推送当前工作分支；若有 PR，更新 PR 描述中的测试证据。
 
 ## Cursor Cloud Agent 执行契约（强制）
 
@@ -91,30 +73,6 @@
   - 后端所有应用都有 2 个环境：dev prod
     - .secrets/alien-paratext-461204-i9-cursor-log-viewer.json 可以用来访问
 
-## 软件工程规范
-
-- **Dev Mode**:
-  - 默认为开发阶段，不需要考虑 backward compatibility
-  - 尽量不使用默认参数
-  - 当函数的参数数量在 3 个以上时，可以考虑使用结构体来组合参数
-- **代码结构规范**
-  1. Functions should be composable, prefer `func a(), func b(), func c() { a(); b() }`
-     over `func a(), func b() { a() }, func c() { b() }`.
-     Avoid deep nesting of funcation calls.
-  2. Always define types to name input and output, and cleanly separate the codd reading
-     input and writing output, with the abstract data processing and handling that can
-     work with abstract data types. Example:
-     prefer `def write_to_db(data, db) { ... }; def read_from_db() { ... }; def proc() { }` over `def proc() { code reading from db, processing, code writing to db}`
-- **TDD**：采用测试驱动开发方式，首先编写测试来预演目标行为，然后通过迭代代码来使测试通过
-  - 使用单元测试作为代码的“可执行规范”，通过测试用例来体现设计目标
-  - 使用单元测试作为代码行为的“可执行示例”，通过测试用例来提供具体的代码行为描述
-- **优先可维护性**：避免“为了省事”引入隐式行为（魔法常量、吞异常、无边界重试、隐藏的全局状态）。
-- **改完要自查**：每次修改后都应回看 diff，确保改动与意图一致、无泄漏敏感信息、无无关文件被改动。
-- **AI 工作总结**：
-  - 生成代码中要在其注释中总结你的关键中间步骤，如 app/core/voice/tts_api.py 记录了你如何从官方文档页面收集数据并处理
-- **Git 工作流**：
-  - 每完成一次改动，生成一句话总结、详细描述
-
 ### 工程文档维护
 
 - Use repo-root relative path when referencing files in this repo, for example:
@@ -127,7 +85,6 @@
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
 ### README.md AGENTS.md 内容
-
 
 ```text:https://app.monosketch.io/?id=02-AA-p-YYNmJ9TDuzP6YdRCnaWois
                  Human developers、human product          
@@ -146,16 +103,6 @@ README.md        designer etc
     │            ────────────────────────────────────────
                                                          
 AGENTS.md        AI                                      
-                                                         
-```
-
-## Alembic
-
-Use the following steps to create alembic revision file
-
-```bash
-alembic -c alembic/alembic.ini upgrade head # First ensure the local DB is updated
-alembic -c alembic/alembic.ini revision --autogenerate -m "<revision description>"
 ```
 
 ## Python-Kotlin HTTP APIs 数据类型定义
@@ -164,15 +111,6 @@ alembic -c alembic/alembic.ini revision --autogenerate -m "<revision description
 
 - [Kotlin API 数据类型](android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model)
 - [Python HTTP API 数据类型](app/schemas)
-
-## Python
-
-- 避免使用 `try ... except Exception` 覆盖所有异常；只捕获当前函数**能够处理**的特定异常类型。
-- 测试用例目录不应被声明为包：包含 `test_*.py` 的测试目录不要放置 `__init__.py`；但用于复用的测试辅助库目录应当作为包存在，并包含 `__init__.py`。
-- 所有正式 Python 包必须包含空的 `__init__.py`（仅用于声明包）
-- 严禁向已有的 `__init__.py` 内添加新逻辑代码（除非该目录规则明确要求）
-- 使用 [cyclopts](https://github.com/BrianPugh/cyclopts) 来实现命令行界面
-- 禁止使用 `__main__.py` 这种范式，使用显式的 `main.py` 入口文件
 
 ## Cursor Cloud specific instructions
 

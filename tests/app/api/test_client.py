@@ -130,6 +130,11 @@ class TestClient:
         if agent_id in self._created_agents:
             self._created_agents.remove(agent_id)
 
+    def untrack_agent(self, agent_id: str) -> None:
+        """Remove an agent id from fixture cleanup tracking."""
+        if agent_id in self._created_agents:
+            self._created_agents.remove(agent_id)
+
     def chat_completions(
         self,
         agent_id: str,

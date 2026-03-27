@@ -14,6 +14,10 @@ from typing import Any, Callable
 
 from loguru import logger
 
+from app.core.agentic_kernel.tools.runtime import (
+    resolve_official_assistant_tool_loop_async,
+)
+
 from .file_store import append_jsonl
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str, utc_iso_ts
@@ -28,6 +32,21 @@ _OUTPUT_QUEUE_LOCK = threading.Lock()
 _ACTIVE_THREADS: set[threading.Thread] = set()
 _ACTIVE_THREADS_LOCK = threading.Lock()
 _BG_TOOL_MAX_ROUNDS = 24
+
+
+def _insert_system_message(
+    openai_messages: list[dict[str, Any]],
+    system_message_content: str,
+) -> None:
+    insertion_index = 0
+    while (
+        insertion_index < len(openai_messages)
+        and openai_messages[insertion_index].get("role") == "system"
+    ):
+        insertion_index += 1
+    openai_messages.insert(
+        insertion_index, {"role": "system", "content": system_message_content}
+    )
 
 
 @dataclass(frozen=True)
@@ -221,79 +240,118 @@ async def _run_background_tool_loop(
     t0 = time.perf_counter()
     working_messages = deepcopy(request_messages)
     total_tool_calls = 0
+    rounds_used = 0
+    active_round = 0
 
-    for round_idx in range(1, _BG_TOOL_MAX_ROUNDS + 1):
-        request_snapshot = deepcopy(working_messages)
-        resp = await asyncio.to_thread(
+    request_snapshot = deepcopy(working_messages)
+    initial_response = await asyncio.to_thread(
+        _chat_completion_create,
+        resolved_client,
+        model=tool_model_name,
+        messages_payload=_openai_messages_payload(working_messages),
+        tools=tools,
+    )
+    rounds_used += 1
+    active_round = rounds_used
+    _log_bg_llm_round_result(
+        round_idx=active_round,
+        model=tool_model_name,
+        resp=initial_response,
+        request_messages=request_snapshot,
+        llm_trace=llm_trace,
+        ws_root=ws_root,
+        trace_id=trace_id,
+    )
+
+    initial_tool_calls = getattr(initial_response.choices[0].message, "tool_calls", None) or []
+    if not initial_tool_calls:
+        logger.debug("repl.turn.bg no_tool_calls skip_transcript")
+        return
+    total_tool_calls += len(initial_tool_calls)
+
+    async def execute_tool_call(name: str, raw_arguments: str) -> tuple[str, str | None]:
+        result = await execute_tool_call_fn(
+            ws_root,
+            name,
+            raw_arguments,
+            write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
+        )
+        return result, None
+
+    async def continue_chat(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> tuple[Any, str | None]:
+        nonlocal rounds_used, active_round, total_tool_calls
+        if rounds_used >= _BG_TOOL_MAX_ROUNDS:
+            raise ValueError(
+                f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
+            )
+        rounds_used += 1
+        active_round = rounds_used
+        request_snapshot_inner = deepcopy(messages_with_tool_results)
+        next_resp = await asyncio.to_thread(
             _chat_completion_create,
             resolved_client,
             model=tool_model_name,
-            messages_payload=_openai_messages_payload(working_messages),
+            messages_payload=_openai_messages_payload(messages_with_tool_results),
             tools=tools,
         )
         _log_bg_llm_round_result(
-            round_idx=round_idx,
+            round_idx=active_round,
             model=tool_model_name,
-            resp=resp,
-            request_messages=request_snapshot,
+            resp=next_resp,
+            request_messages=request_snapshot_inner,
             llm_trace=llm_trace,
             ws_root=ws_root,
             trace_id=trace_id,
         )
-
-        tool_msg = resp.choices[0].message
-        tool_calls = getattr(tool_msg, "tool_calls", None) or []
-        if not tool_calls:
-            if round_idx == 1:
-                logger.debug("repl.turn.bg no_tool_calls skip_transcript")
-                return
-            assistant_text = _assistant_text_from_completion_response(resp)
-            assistant_msg_uuid = str(uuid.uuid4())
-            _append_background_transcript_assistant(
-                transcript_path,
-                content=assistant_text,
-                assistant_msg_uuid=assistant_msg_uuid,
-                reply_to=user_msg_uuid,
-                trace_id=trace_id,
-            )
-            elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
-            _append_background_log(
-                ws_root,
-                user_msg_uuid=user_msg_uuid,
-                assistant_msg_uuid=assistant_msg_uuid,
-                elapsed_ms=elapsed_ms,
-                rounds=round_idx,
-                tool_calls_count=total_tool_calls,
-            )
-            on_event(
-                ToolOutputEvent(
-                    workspace=ws_root,
-                    user_msg_uuid=user_msg_uuid,
-                    assistant_msg_uuid=assistant_msg_uuid,
-                    text=assistant_text,
-                    ts=utc_iso_ts(),
-                    elapsed_ms=elapsed_ms,
-                )
-            )
-            return
-
+        tool_calls = getattr(next_resp.choices[0].message, "tool_calls", None) or []
         total_tool_calls += len(tool_calls)
-        working_messages.append(openai_assistant_message_dict(tool_msg))
-        for tc in tool_calls:
-            fn = tc.function
-            args = fn.arguments if fn.arguments is not None else ""
-            result = await execute_tool_call_fn(
-                ws_root,
-                fn.name,
-                args,
-                write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
-            )
-            working_messages.append(
-                {"role": "tool", "tool_call_id": tc.id, "content": result}
-            )
+        return next_resp, None
 
-    raise RuntimeError(
-        f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
+    try:
+        loop_result = await resolve_official_assistant_tool_loop_async(
+            response=initial_response,
+            openai_messages=working_messages,
+            max_tool_call_rounds=_BG_TOOL_MAX_ROUNDS,
+            execute_tool_call=execute_tool_call,
+            continue_chat=continue_chat,
+            build_assistant_tool_call_message=openai_assistant_message_dict,
+            insert_system_message=_insert_system_message,
+            initial_trace_id=None,
+        )
+    except ValueError as exc:
+        raise RuntimeError(
+            f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
+        ) from exc
+
+    assistant_text = _assistant_text_from_completion_response(loop_result.response)
+    assistant_msg_uuid = str(uuid.uuid4())
+    _append_background_transcript_assistant(
+        transcript_path,
+        content=assistant_text,
+        assistant_msg_uuid=assistant_msg_uuid,
+        reply_to=user_msg_uuid,
+        trace_id=trace_id,
+    )
+    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+    _append_background_log(
+        ws_root,
+        user_msg_uuid=user_msg_uuid,
+        assistant_msg_uuid=assistant_msg_uuid,
+        elapsed_ms=elapsed_ms,
+        rounds=rounds_used,
+        tool_calls_count=total_tool_calls,
+    )
+    on_event(
+        ToolOutputEvent(
+            workspace=ws_root,
+            user_msg_uuid=user_msg_uuid,
+            assistant_msg_uuid=assistant_msg_uuid,
+            text=assistant_text,
+            ts=utc_iso_ts(),
+            elapsed_ms=elapsed_ms,
+        )
     )
 
 

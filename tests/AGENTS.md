@@ -5,16 +5,19 @@
 - Access real database, and do not patch sqlalchemy
 - Use [fake external services](/app/external_services/fakes) when writing tests.
 
-## Feature tests
+## Running tests require starting local server
 
 - Use the API Endpoints from the local backend server and postgres,
   started with:
 
   ```bash:launch-backend-for-testing
+  # Start database
   docker run --rm --name pg-inty -p 5432:5432 \
     -e POSTGRES_PASSWORD=sxwl666! \
     -e POSTGRES_DB=inty \
     -d postgres:16
+
+  # Launch server
   cp devops/config.yaml.test config.yaml
   backend/inty/start.sh
   
@@ -22,7 +25,7 @@
   python scripts/init_admin_user.py --token-file ./admin_token.txt
 
   # 运行测试
-  pytest -m "not noci" -v -s tests/features/
+  pytest -m "not noci" -v -s tests/
   ```
 
 ## 新功能 / API+客户端联调时的防遗漏
