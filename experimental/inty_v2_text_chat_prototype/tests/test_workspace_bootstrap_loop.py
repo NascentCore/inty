@@ -57,7 +57,9 @@ class _FakeBootstrapNoTools:
 
 class TestWorkspaceBootstrapLoop(unittest.TestCase):
     def test_bootstrap_completes_after_tools_initialize_workspace(self) -> None:
-        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=_FakeBootstrapCompletions()))
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakeBootstrapCompletions())
+        )
         tool_calls: list[tuple[str, str]] = []
 
         with tempfile.TemporaryDirectory() as td:
@@ -105,8 +107,12 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
         self.assertEqual(out, "ready to know you")
         self.assertGreaterEqual(len(tool_calls), 1)
 
-    def test_bootstrap_raises_when_no_tools_and_workspace_never_initialized(self) -> None:
-        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=_FakeBootstrapNoTools()))
+    def test_bootstrap_raises_when_no_tools_and_workspace_never_initialized(
+        self,
+    ) -> None:
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakeBootstrapNoTools())
+        )
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

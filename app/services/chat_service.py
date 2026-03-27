@@ -135,8 +135,8 @@ async def get_chats(
 
                 # Check if chat has ever had user messages (including deleted ones)
                 # This ensures chats remain visible even after user deletes all messages
-                has_user_messages = await chat_history_service.has_user_messages_ever_async(
-                    session_id
+                has_user_messages = (
+                    await chat_history_service.has_user_messages_ever_async(session_id)
                 )
 
                 # Only include chats that have (or ever had) user messages
@@ -217,8 +217,10 @@ async def create_chat(
             try:
                 session_id = generate_session_id(chat_id)
                 # 检查是否已有消息，避免重复添加开场白
-                existing_messages = await chat_history_service.get_messages_paginated_async(
-                    session_id=session_id, limit=1, offset=0
+                existing_messages = (
+                    await chat_history_service.get_messages_paginated_async(
+                        session_id=session_id, limit=1, offset=0
+                    )
                 )
                 if existing_messages.get("total", 0) == 0:
                     # 获取用户信息用于变量替换
@@ -546,8 +548,10 @@ async def get_or_create_chat_by_agent(
             # 4. 检查现有聊天是否有消息，如果为空则添加Agent开场白
             try:
                 session_id = generate_session_id(existing_chat.id)
-                existing_messages = await chat_history_service.get_messages_paginated_async(
-                    session_id=session_id, limit=1, offset=0
+                existing_messages = (
+                    await chat_history_service.get_messages_paginated_async(
+                        session_id=session_id, limit=1, offset=0
+                    )
                 )
                 if existing_messages.get("total", 0) == 0:
                     # 获取agent开场白和语音URL
@@ -713,8 +717,10 @@ async def get_or_create_chat_by_agent(
             try:
                 session_id = generate_session_id(chat_id)
                 # 检查是否已有消息，避免重复添加开场白
-                existing_messages = await chat_history_service.get_messages_paginated_async(
-                    session_id=session_id, limit=1, offset=0
+                existing_messages = (
+                    await chat_history_service.get_messages_paginated_async(
+                        session_id=session_id, limit=1, offset=0
+                    )
                 )
                 if existing_messages.get("total", 0) == 0:
                     # 获取用户信息用于变量替换
@@ -1060,10 +1066,12 @@ async def delete_chats_by_agent_id(
 
                 # 统计消息数量（在删除前）
                 try:
-                    messages_data = await chat_history_service.get_messages_paginated_async(
-                        session_id=session_id,
-                        limit=1000,  # 获取所有消息进行计数
-                        offset=0,
+                    messages_data = (
+                        await chat_history_service.get_messages_paginated_async(
+                            session_id=session_id,
+                            limit=1000,  # 获取所有消息进行计数
+                            offset=0,
+                        )
                     )
                     message_count = messages_data.get("total", 0)
                     total_messages_deleted += message_count

@@ -70,8 +70,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -1096,12 +1096,16 @@ fun CreateRolePage(
                                         navController.previousBackStackEntry?.savedStateHandle
                                     val homeTabSavedStateHandle =
                                         runCatching {
-                                                navController.getBackStackEntry(Routes.HomeTab)
+                                                navController
+                                                    .getBackStackEntry(Routes.HomeTab)
                                                     .savedStateHandle
                                             }
                                             .getOrNull()
                                     val targetSavedStateHandles =
-                                        listOfNotNull(previousSavedStateHandle, homeTabSavedStateHandle)
+                                        listOfNotNull(
+                                            previousSavedStateHandle,
+                                            homeTabSavedStateHandle,
+                                        )
                                     targetSavedStateHandles.forEach { savedStateHandle ->
                                         savedStateHandle.set(
                                             CreateRoleNavigationState.ResultCodeKey,
