@@ -7,6 +7,7 @@
 - Do not bother with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
 - Do not do defensive programming, let failure appear early and loud.
 - Python 技术选型：cyclopts pydantic loguru
+- jq JSON
 
 ## 给 AI Agent 的最小执行清单（先读这个）
 
