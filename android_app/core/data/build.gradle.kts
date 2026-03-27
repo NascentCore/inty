@@ -49,11 +49,6 @@ android {
 }
 
 dependencies {
-
-    // ===== Inty SDK（由 OpenAPI 生成的 Kotlin 客户端，见 android_app/library/inty_sdk）=====
-    // 注意：版本必须与 app/build.gradle.kts 保持一致，统一在 libs.versions.toml 中管理
-    implementation(libs.inty.kotlin)
-
     implementation(libs.androidx.dataStore.preferences)
     implementation(libs.androidx.dataStore)
     implementation(libs.mmkv)
