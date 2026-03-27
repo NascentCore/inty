@@ -1,6 +1,6 @@
 # InTy - 长期 AI 情感陪伴
 
-- **InTy 是基于 AI 的情感陪伴系统，不是伴侣/聚焦情感因为其没有物理实体（仅手机 App）、长期在于目标是建立长期关系（角色与用户、用户与长期陪伴体验/app）**
+- **InTy 是为用户提供长期亲密陪伴的、基于 AI 的情感陪伴系统，仅手机 App **
 - **本代码库是多语言（Python 后端、Kotlin 安卓 app、Typescript 运营系统）monorepo**
 
 ![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
@@ -17,23 +17,9 @@
 [![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
 [![Release - 构建部署 Inty Push Worker](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml)
 
-## IntelliMate 2026 Q1 目标
+## IntelliMate 2026 Q2 目标
 
-**建立生活节奏（晨午晚仪式）+ 共同记忆（挚爱馆/歌/回顾）+ 角色人生线三位一体的长期陪伴底座，使关系可回溯、可延续、可生长。**
-
-## Cursor
-
-**Cursor 是我们选定的 AI coding 工具，必须使用**
-
-- https://cursor.com/blog/secure-codebase-indexing
-  - 团队账户内的成员共享云端代码索引，可以加速
-- https://cursor.com/docs/context/commands
-  - 定制命令
-- 使用 Cursor 对代码库进行问答；直接打开 Ask 模式（Shift+Tab 切换）
-  <img width="900" height="1766" alt="image" src="https://github.com/user-attachments/assets/9ca85fb0-4fe3-495b-ae37-13534bfd2999" />
-- 本代码库维护了丰富的 AGENTS.md 来增强 Cursor 在本代码库的效能
-  - 并且广泛使用 markdown 文档来增强 Cursor 对整个代码库的高抽象层级上的设计意图、架构、未来路线图（[项目管理](项目管理/)目录）
-  - Cursor 是对接代码库的唯一入口，包括询问和修改代码
+**智能体长期陪伴，模仿 OpenClaw 实现长期、持续进化的智能体陪伴**
 
 ## 快速开始
 
@@ -61,32 +47,28 @@ git submodule update --init --recursive
 
 # 使用下面步骤启动后端服务
 cp devops/config.yaml.local config.yaml
+
 # 创建虚拟环境供后端 python 代码运行
-python -m venv .venv
+uv venv
 source .venv/bin/activate
-pip install -r requirements.txt
+uv pip install -r requirements.txt
+
 # 启动 postgres 数据库
-docker compose up pgvector -d
-# 启动主后端（Android API）
-./backend/inty/start.sh --dev
-# 启动 ops 平台（evaluation Web UI + ops API，默认 8001）
-./backend/ops/start.sh --local
-```
-
-<img width="1028" height="932" alt="image" src="https://github.com/user-attachments/assets/59c52323-9ee3-4042-85ca-39344815b71c" />
-
-### 本地联调：本地后端+ Android Studio App
-
-```bash
-docker run --rm --name pg-inty -p 5432:5432 \                                              
+docker run --rm --name pg-inty -p 5432:5432 \
   -e POSTGRES_PASSWORD=sxwl666! \
   -e POSTGRES_DB=inty \
   -d postgres:16
 
-# 修改相关 py 代码，会自动加载，无需重启
-cp devops/config.yaml.test config.yaml
+# 启动主后端（Android API）
 ./backend/inty/start.sh --dev
 
+# 启动 ops 平台（evaluation Web UI + ops API，默认 8001）
+./backend/ops/start.sh --local
+```
+
+本地联调：本地后端+Android Studio App（USB 连接、wifi 连接不支持）指向本地后端
+
+```bash
 # 打开 Android Studio
 # 选择 debug build type，编译运行
 # 然后在 me->settings->backend 选择 local
