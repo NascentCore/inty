@@ -96,7 +96,9 @@ class FakeAndroidPublisher:
             else:
                 response = {
                     "paymentState": 1,
-                    "expiryTimeMillis": "1735689600000",
+                    # Keep default fake purchases valid for test environments.
+                    # 4102444800000 = 2100-01-01T00:00:00Z.
+                    "expiryTimeMillis": "4102444800000",
                     "startTimeMillis": "1704067200000",
                     "autoRenewing": True,
                 }
