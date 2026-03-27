@@ -67,14 +67,7 @@ internal fun resolveCreateRoleSuccessAction(
     createEntrySource: String?,
     createdAgentId: String?,
 ): CreateRoleSuccessAction {
-    return if (
-        createEntrySource == CreateRoleNavigationState.EntrySourceOfficialAssistantChat &&
-            !createdAgentId.isNullOrBlank()
-    ) {
-        CreateRoleSuccessAction.NavigateToCreatedChat(createdAgentId)
-    } else {
-        CreateRoleSuccessAction.NavigateToProfile
-    }
+    return CreateRoleSuccessAction.NavigateToProfile
 }
 
 /** 主页面，包含五个tab */
@@ -88,6 +81,7 @@ fun HomeScreen(
     val selectedTab = mainViewModel.selectedTab.collectAsState()
     val messagesTabHasPush by mainViewModel.messagesTabHasPush.collectAsState()
     val appUpdateTipsRedDot by mainViewModel.appUpdateTipsRedDot.collectAsState()
+    val profileViewModel: ProfileViewModel = viewModel()
 
     // 页面跟踪，包含当前和默认首页 tab（只在首次加载时上报）
     LaunchedEffect(Unit) {
@@ -141,6 +135,10 @@ fun HomeScreen(
             )
 
         shouldRefreshProfile = true
+        // 无论从哪个入口创建成功，都立即刷新“我的角色”数据与缓存，
+        // 避免官方助手入口创建后返回聊天页时，Me 页面列表仍为旧数据。
+        profileViewModel.refreshCreatedAgents()
+        profileViewModel.refreshAgentDrafts()
         when (action) {
             is CreateRoleSuccessAction.NavigateToCreatedChat -> {
                 navController.navigate(
@@ -661,8 +659,8 @@ private fun ProfileTabContent(
             //            val intent = CreateRoleActivity.getIntent(context, agent)
             //            editAgentLauncher.launch(intent)
 
-            AgentStore.setDraftAgentInfo(agent)
-            navController.navigate(Routes.Creat.CreateRole)
+            AgentStore.addAgent(agent)
+            navController.navigate(Routes.Creat.createRole(draftId = "", agentId = agent.id))
         },
         appUpdateTips = appUpdateTips,
         onDeleteAgent = { agent ->
