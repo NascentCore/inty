@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 from datetime import date, datetime
@@ -1687,6 +1688,69 @@ def clear_session(session_id: str) -> None:
     except Exception as e:
         logger.error(f"清除会话聊天历史失败 {session_id}: {str(e)}")
         raise
+
+
+async def get_last_message_with_timestamp_async(
+    session_id: str,
+) -> Optional[Dict[str, Any]]:
+    """在线程池中执行同步最近消息查询，避免阻塞事件循环。"""
+    return await asyncio.to_thread(get_last_message_with_timestamp, session_id)
+
+
+async def has_user_messages_ever_async(session_id: str) -> bool:
+    """在线程池中执行同步用户消息存在性查询。"""
+    return await asyncio.to_thread(has_user_messages_ever, session_id)
+
+
+async def add_user_message_async(
+    session_id: str,
+    message: str | List[Dict[str, Any]],
+    meta_data: Optional[dict] = None,
+) -> Optional[int]:
+    """在线程池中执行同步用户消息写入。"""
+    return await asyncio.to_thread(add_user_message, session_id, message, meta_data)
+
+
+async def add_ai_message_sync_async(
+    session_id: str,
+    message: str | List[Dict[str, Any]],
+    agent_id: Optional[str] = None,
+    meta_data: Optional[dict] = None,
+) -> Optional[int]:
+    """在线程池中执行同步 AI 消息写入。"""
+    return await asyncio.to_thread(
+        add_ai_message_sync,
+        session_id,
+        message,
+        agent_id,
+        meta_data,
+    )
+
+
+async def get_messages_paginated_async(
+    session_id: str,
+    limit: int = 20,
+    offset: int = 0,
+    user_id: Optional[str] = None,
+    *,
+    is_subscribed: Optional[bool] = None,
+    unlocked_surprise_snap_message_ids: Optional[Set[int]] = None,
+) -> Dict[str, Any]:
+    """在线程池中执行同步分页查询。"""
+    return await asyncio.to_thread(
+        get_messages_paginated,
+        session_id,
+        limit,
+        offset,
+        user_id,
+        is_subscribed=is_subscribed,
+        unlocked_surprise_snap_message_ids=unlocked_surprise_snap_message_ids,
+    )
+
+
+async def clear_session_async(session_id: str) -> None:
+    """在线程池中执行会话清理。"""
+    await asyncio.to_thread(clear_session, session_id)
 
 
 async def get_message_content(

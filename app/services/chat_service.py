@@ -48,7 +48,9 @@ async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
             try:
                 session_id = generate_session_id(chat.id)
                 last_message_data = (
-                    chat_history_service.get_last_message_with_timestamp(session_id)
+                    await chat_history_service.get_last_message_with_timestamp_async(
+                        session_id
+                    )
                 )
 
                 if last_message_data:
@@ -119,7 +121,9 @@ async def get_chats(
                 # Use unified session_id generation rule
                 session_id = generate_session_id(chat.id)
                 last_message_data = (
-                    chat_history_service.get_last_message_with_timestamp(session_id)
+                    await chat_history_service.get_last_message_with_timestamp_async(
+                        session_id
+                    )
                 )
 
                 if last_message_data:
@@ -131,7 +135,7 @@ async def get_chats(
 
                 # Check if chat has ever had user messages (including deleted ones)
                 # This ensures chats remain visible even after user deletes all messages
-                has_user_messages = chat_history_service.has_user_messages_ever(
+                has_user_messages = await chat_history_service.has_user_messages_ever_async(
                     session_id
                 )
 
@@ -213,7 +217,7 @@ async def create_chat(
             try:
                 session_id = generate_session_id(chat_id)
                 # 检查是否已有消息，避免重复添加开场白
-                existing_messages = chat_history_service.get_messages_paginated(
+                existing_messages = await chat_history_service.get_messages_paginated_async(
                     session_id=session_id, limit=1, offset=0
                 )
                 if existing_messages.get("total", 0) == 0:
@@ -254,8 +258,10 @@ async def create_chat(
         # Get recent message and timestamp (should be the opening message just added) and agent name
         try:
             session_id = generate_session_id(chat.id)
-            last_message_data = chat_history_service.get_last_message_with_timestamp(
-                session_id
+            last_message_data = (
+                await chat_history_service.get_last_message_with_timestamp_async(
+                    session_id
+                )
             )
 
             if last_message_data:
@@ -540,7 +546,7 @@ async def get_or_create_chat_by_agent(
             # 4. 检查现有聊天是否有消息，如果为空则添加Agent开场白
             try:
                 session_id = generate_session_id(existing_chat.id)
-                existing_messages = chat_history_service.get_messages_paginated(
+                existing_messages = await chat_history_service.get_messages_paginated_async(
                     session_id=session_id, limit=1, offset=0
                 )
                 if existing_messages.get("total", 0) == 0:
@@ -707,7 +713,7 @@ async def get_or_create_chat_by_agent(
             try:
                 session_id = generate_session_id(chat_id)
                 # 检查是否已有消息，避免重复添加开场白
-                existing_messages = chat_history_service.get_messages_paginated(
+                existing_messages = await chat_history_service.get_messages_paginated_async(
                     session_id=session_id, limit=1, offset=0
                 )
                 if existing_messages.get("total", 0) == 0:
@@ -1054,7 +1060,7 @@ async def delete_chats_by_agent_id(
 
                 # 统计消息数量（在删除前）
                 try:
-                    messages_data = chat_history_service.get_messages_paginated(
+                    messages_data = await chat_history_service.get_messages_paginated_async(
                         session_id=session_id,
                         limit=1000,  # 获取所有消息进行计数
                         offset=0,
@@ -1063,7 +1069,7 @@ async def delete_chats_by_agent_id(
                     total_messages_deleted += message_count
 
                     # 删除聊天历史
-                    chat_history_service.clear_session(session_id)
+                    await chat_history_service.clear_session_async(session_id)
                     logger.debug(
                         f"已删除聊天历史 - Chat ID: {chat.id}, Session ID: {session_id}, 消息数: {message_count}"
                     )
@@ -1625,7 +1631,7 @@ async def generate_chat_image(
     if enable_chat_image_match_fallback:
         try:
             # 获取聊天历史以构建提示词
-            messages_data = chat_history_service.get_messages_paginated(
+            messages_data = await chat_history_service.get_messages_paginated_async(
                 session_id=session_id,
                 limit=history_count
                 or global_config_loaded_from_config_yaml.agent.image_generation_default_history_count,
