@@ -56,13 +56,13 @@
 
 ## 分阶段计划
 
-### 阶段状态总览（截至 2026-02-27）
+### 阶段状态总览（截至 2026-03-27）
 
 - ✅ Phase 0：已执行（本次提交补齐盘点清单、迁移映射、冻结规则）。
 - ✅ Phase 1：已完成（`93f881d8771e5db21fe391eb9baa4ef73ed23957`）。
 - ✅ Phase 2：已完成（`a6a5bfd5604949f850be73584c9060adc4cae35c`）。
 - ✅ Phase 3：已完成（本次提交：聊天域改为 Retrofit + 本地 DTO + HttpResult）。
-- ⏳ Phase 4：未开始（构建依赖与死代码清理）。
+- ⏳ Phase 4：进行中（已完成清单校准，待执行构建/代码/仓库治理清理）。
 
 ## Phase 0 - 盘点与冻结（准备阶段）
 
@@ -199,11 +199,18 @@
    - 删除 `core/data/http/services/*`；
    - 删除 `ModelConverters` 等仅服务 Stainless 的桥接代码；
    - 清理 `NetServiceMgr` 注释中“新功能优先 IntyNetworkManager”等过时描述。
+3. 仓库治理层移除（submodule 与工程配置）：
+   - 移除 `.gitmodules` 中 `android_app/library/inty_sdk` 条目；
+   - 清理 `.prettierignore` 中 `android_app/library/inty_sdk`；
+   - 清理 `.github/workflows/ci_android_app.yaml` 中 `android_app/library/inty_sdk` 影响范围映射；
+   - 清理 `scripts/update_inty_sdk_submodule.sh` 中 Android `inty_sdk` 更新逻辑；
+   - 更新 `android_app/README.md` 中 `git submodule update --init --recursive` 的 Android `inty_sdk` 指引。
 
 ### 验收
 
 - 工程无 `com.inty.api` 依赖；
 - 工程无 `IntyNetworkManager` 与 `core/data/http/services/*` 引用；
+- 工程无 `android_app/library/inty_sdk` 的 submodule/CI/脚本/README 残留引用；
 - 全量编译通过。
 
 ### TODO（Phase 4）
@@ -213,6 +220,8 @@
 - [ ] 删除 `proguard-rules.pro` 中 `com.inty.api.*` keep 规则。
 - [ ] 清理 `NetServiceMgr` 与其他文档中的“双栈并行/新功能优先 IntyNetworkManager”过时描述。
 - [ ] 以 `rg "IntyNetworkManager|com\\.inty\\.api\\." android_app/{app,core}` 作为收尾门禁，确保运行时代码零引用。
+- [ ] 以 `rg "includeBuild\\(\"library/inty_sdk\"\\)|implementation\\(libs\\.inty\\.kotlin\\)|inty-kotlin\\s*=\\s*\\{\\s*group\\s*=\\s*\"com\\.inty\\.api\"" android_app` 作为构建层收尾门禁，确保依赖零残留。
+- [ ] 以 `rg "android_app/library/inty_sdk|library/inty_sdk" .github/workflows/ci_android_app.yaml scripts/update_inty_sdk_submodule.sh android_app/README.md .gitmodules .prettierignore` 作为仓库治理收尾门禁，确保 submodule 零残留。
 
 ---
 
@@ -222,6 +231,12 @@
 
 - `./gradlew :core:data:compileDebugKotlin`
 - `./gradlew :app:compileDebugKotlin`
+
+## 静态门禁（Phase 4 收尾必跑）
+
+- `rg "IntyNetworkManager|com\\.inty\\.api\\." android_app/{app,core}`
+- `rg "includeBuild\\(\"library/inty_sdk\"\\)|implementation\\(libs\\.inty\\.kotlin\\)|inty-kotlin\\s*=\\s*\\{\\s*group\\s*=\\s*\"com\\.inty\\.api\"" android_app`
+- `rg "android_app/library/inty_sdk|library/inty_sdk" .github/workflows/ci_android_app.yaml scripts/update_inty_sdk_submodule.sh android_app/README.md .gitmodules .prettierignore`
 
 ## 重点回归（按阶段选择）
 
@@ -279,13 +294,13 @@
 
 ---
 
-## 附录 A - Phase 0 引用清单（2026-02-27 快照）
+## 附录 A - 引用清单（2026-03-27 快照）
 
 ### A.1 app 模块运行时
 
 - `android_app/app/src/main`：`IntyNetworkManager` / `com.inty.api.*` 引用为 0（符合 Phase 2 验收）。
 
-### A.2 core/data 模块运行时残留（待 Phase 3/4）
+### A.2 core/data 模块运行时残留（待 Phase 4）
 
 - 网络栈与协调：
   - `core/data/src/main/kotlin/ai/sxwl/android/data/http/IntyNetworkManager.kt`
@@ -297,24 +312,26 @@
   - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/AgentService.kt`
   - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/SubscriptionService.kt`
   - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/VersionService.kt`
-  - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/ChatService.kt`
   - `core/data/src/main/kotlin/ai/sxwl/android/data/http/services/ReportService.kt`
 - 类型桥接与注释残留：
   - `core/data/src/main/kotlin/ai/sxwl/android/data/http/models/ModelConverters.kt`
   - `core/data/src/main/kotlin/ai/sxwl/android/data/api/NetServiceMgr.kt`（注释仍描述双栈并行）
-- 聊天域类型耦合（待 Phase 3）：
-  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/data/ChatRemoteDataSource.kt`
-  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/domain/ChatRepository.kt`
-  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/domain/ChatUseCases.kt`
-  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/repository/ChatRepositoryImpl.kt`
-  - `core/data/src/main/kotlin/ai/sxwl/android/data/chat/repository/RoomImpl.kt`
 
 ### A.3 构建层残留（待 Phase 4）
 
 - `android_app/settings.gradle.kts`：`includeBuild("library/inty_sdk")`
 - `android_app/app/build.gradle.kts`：`implementation(libs.inty.kotlin)`
 - `android_app/core/data/build.gradle.kts`：`implementation(libs.inty.kotlin)`
+- `android_app/gradle/libs.versions.toml`：`inty-kotlin = { group = "com.inty.api", ... }`
 - `android_app/app/proguard-rules.pro`：`com.inty.api.*` keep 规则
+
+### A.4 仓库治理层残留（待 Phase 4）
+
+- `.gitmodules`：`[submodule "android_app/library/inty_sdk"]`
+- `.prettierignore`：`android_app/library/inty_sdk`
+- `.github/workflows/ci_android_app.yaml`：`android_app/library/inty_sdk` 变更触发映射
+- `scripts/update_inty_sdk_submodule.sh`：Android `INTY_SDK_KOTLIN_DIR=android_app/library/inty_sdk` 更新逻辑
+- `android_app/README.md`：`android_app/library/inty_sdk git module` 同步说明
 
 ## 附录 B - Phase 0 迁移映射表（调用点 -> Retrofit / 本地模型）
 
@@ -327,10 +344,11 @@
 | `SubscriptionService.*` | `ISubscriptionApi.getSubscriptionPlans / verifySubscription` | `SubscriptionPlansResponse`、`SubscriptionVerifyRequest/Response` | Phase 4 |
 | `VersionService.checkAppUpgrade` | `ICommonApi.checkAppUpgrade`（必要时补齐请求参数） | `AppVersionRsp.AppVersionData`、`VersionReminderAction` | Phase 4 |
 | `ReportService.createReport`（旧签名） | `IReportApi.createReport`（已具备） | `ReportCreateRequest`、`ReportReasonCode`、`ReportTargetType`、`ReportRequestType` | Phase 4（删除旧签名） |
-| `ChatService.messageGenerateImage` | `IChatApi.generateMessageImage` | `ChatImageGenerationRequest/ApiResponse/Payload` | Phase 3 |
-| `ChatRepository/UseCases/RoomImpl` 对 `ChatService.ChatImageGenerationResult` 的类型依赖 | `ChatRemoteDataSource` 直接返回本地 DTO（由 `IChatApi` 结果映射） | 新增/复用 `core/data/api/model` 聊天生图结果 DTO | Phase 3 |
+| `ChatService.messageGenerateImage` | `IChatApi.generateMessageImage` | `ChatImageGenerationRequest/ApiResponse/Payload` | 已完成（Phase 3） |
+| `ChatRepository/UseCases/RoomImpl` 对 `ChatService.ChatImageGenerationResult` 的类型依赖 | `ChatRemoteDataSource` 直接返回本地 DTO（由 `IChatApi` 结果映射） | 新增/复用 `core/data/api/model` 聊天生图结果 DTO | 已完成（Phase 3） |
 | `NetworkStackCoordinator` / `IntySetting` 调 `IntyNetworkManager.clearClientCache` | 仅保留 `NetServiceMgr.clearCache`（及必要的统一协调入口） | 无 | Phase 4 |
 | `ModelConverters` 中 `IntyAgent/IntyUser` 转换 | 删除（迁移完成后不再需要） | 统一使用 `core/data/api/model` | Phase 4 |
+| `.gitmodules` / `.prettierignore` / `ci_android_app.yaml` / `update_inty_sdk_submodule.sh` / `android_app/README.md` 中 `android_app/library/inty_sdk` 残留 | 移除 submodule 配置与工程侧引用 | 无 | Phase 4 |
 
 ---
 
@@ -339,6 +357,6 @@
 1. `[Phase0][Done] 盘点与冻结（引用清单 + 迁移映射 + 评审规则）`
 2. `[Phase1][Done] Retrofit 模型与接口补齐`
 3. `[Phase2][Done] app 层调用迁移（登录/版本/Explore/Report/Boost）`
-4. `[Phase3][Todo] 聊天域迁移（生图/清消息/类型签名）`
-5. `[Phase4][Todo] 移除 Stainless 依赖与死代码`
+4. `[Phase3][Done] 聊天域迁移（生图/清消息/类型签名）`
+5. `[Phase4][Todo] 移除 Stainless 依赖、submodule 与死代码`
 6. `[Docs][Todo] 清理双栈历史文档，统一为 Retrofit 单栈描述`
