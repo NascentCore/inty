@@ -67,6 +67,12 @@ internal fun resolveCreateRoleSuccessAction(
     createEntrySource: String?,
     createdAgentId: String?,
 ): CreateRoleSuccessAction {
+    if (
+        createEntrySource == CreateRoleNavigationState.EntrySourceOfficialAssistantChat &&
+            !createdAgentId.isNullOrBlank()
+    ) {
+        return CreateRoleSuccessAction.NavigateToCreatedChat(createdAgentId)
+    }
     return CreateRoleSuccessAction.NavigateToProfile
 }
 
