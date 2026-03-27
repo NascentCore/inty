@@ -195,3 +195,4 @@ experimental/inty_v2_text_chat_prototype/
 - 若架构文档 **§2–§7** 或 **§20** 变更，同步检查 **§2、§4、§9、§10**。
 - 若 [INTY_v2_DESIGN.md](../INTY_v2_DESIGN.md) 对记忆/人格分层有调整，同步 **§1.1、§3** 文件名与语义。
 - 扩展章节（架构 **§8–§20**）落地时，**优先**保持「Orchestrator 唯一写助手消息」与 **§20.2** 上下文传递，再扩 HTTP/Worker。
+- 若涉及“context rot 治理、陪伴优先上下文边界、Contextual Retrieval / Context-1 harness 技术取舍、分阶段实施与 Go/No-Go 评审门槛”，以 [FR_COMPANION_FIRST_CONTEXT_BOUNDING.md](./FR_COMPANION_FIRST_CONTEXT_BOUNDING.md) 为实施与评审主文档，并同步回写本计划中的相关章节。
