@@ -16,8 +16,7 @@ IntelliMate Android App 全部代码位于本目录下。
 ```bash
 git clone git@github.com:NascentCore/inty.git
 cd inty/android_app
-# 同步 android_app/library/inty_sdk git module
-# 不要进入这个目录修改
+# 同步 SDK submodule（evaluation/inty_sdk）
 git submodule update --init --recursive
 ```
 
