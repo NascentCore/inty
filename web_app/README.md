@@ -35,11 +35,7 @@ IntelliMate 是一款专为年轻人打造的长期 AI 陪伴应用，主打**�
 ### 安装依赖
 
 ```bash
-# 安装 Inty SDK
-cd evaluation/inty_sdk
-yarn install --frozen-lockfile
-yarn build
-
+# 安装依赖
 yarn
 ```
 

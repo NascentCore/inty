@@ -36,7 +36,7 @@
     "antd": "^5.25.4",
     "classnames": "^2.5.1",
     "dayjs": "^1.11.13",
-    "inty": "file:../evaluation/inty_sdk",
+    "inty": "git+https://github.com/NascentCore/inty-typescript.git",
     "localforage": "^1.10.0",
     "lucide-react": "^0.552.0",
     "react": "^19.1.0",

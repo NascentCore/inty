@@ -186,7 +186,7 @@ The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI wo
 
 The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
 
-It also builds the `evaluation/inty_sdk` TypeScript SDK (if not already built) and runs `npm install` in `evaluation/`, so `npm run test` (vitest), `npm run build`, and `npm run type-check` work out-of-the-box.
+It runs `npm install` in `evaluation/`, so `npm run test` (vitest), `npm run build`, and `npm run type-check` work out-of-the-box.
 
 The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via apt, making `gcloud`, `gsutil`, and `bq` available on every boot.
 
@@ -232,7 +232,7 @@ npm run build         # vite build (production bundle)
 npx eslint . --ext .ts,.tsx  # lint
 ```
 
-The update script pre-installs `node_modules` and builds the `inty_sdk` dependency, so these commands work out-of-the-box. See also `evaluation/AGENTS.md`.
+The update script pre-installs `node_modules`, so these commands work out-of-the-box. See also `evaluation/AGENTS.md`.
 
 ### Lint / formatting
 
@@ -244,7 +244,6 @@ The update script pre-installs `node_modules` and builds the `inty_sdk` dependen
 Pre-installed at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` set in `~/.bashrc`. Packages: `platform-tools`, `emulator`, `build-tools;35.0.0`, `build-tools;36.0.0`, `platforms;android-36`, `system-images;android-36;google_apis;x86_64`. Java 21 (OpenJDK) is the system JDK.
 
 - `android_app/local.properties` is gitignored; the update script auto-generates it with `sdk.dir=/opt/android-sdk`.
-- Git submodules must be initialized for the Android build: `git submodule update --init --recursive` (the update script handles this).
 - The SDK directory must be owned by the current user (not root) so Gradle can auto-install additional SDK components.
 
 ### Android emulator (no-KVM)

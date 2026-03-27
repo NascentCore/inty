@@ -1,5 +1,3 @@
-# stainless generated code
-evaluation/inty_sdk
 # Copied gemini workflow files, do not auto format
 .github/workflows/gemini-*
 # GitHub auto generated issue templates
