@@ -22,7 +22,7 @@
 ### 2.1 本 RFC 覆盖
 
 - `app/core/agent`、`app/utils/openai_client.py` 与 `experimental/*` 的运行时公共层抽取。
-- 渐进式整合 `clean_prompt_system` 到生产主链路。
+- 在既有 `clean_prompt_system` 生产落地基础上，继续收敛 prompt 组装边界与 typed data loader。
 - 对第三方框架采取局部试点策略（先不整体替换）。
 
 ### 2.2 本 RFC 不覆盖
@@ -31,6 +31,21 @@
 - 不改 Android / Kotlin 侧 API 合同。
 - 不引入新数据库表或大规模 Alembic 变更。
 - 不在本阶段替换所有聊天入口为单一框架运行时。
+
+### 2.3 当前基线状态（2026-03）
+
+> 说明：以下是执行本 RFC 前的“现状盘点”，后续步骤按“增量收敛”推进，避免重复抽取。
+
+| 能力 | 当前状态 | 现状说明 |
+|---|---|---|
+| OpenAI-compatible Provider Facade | 已落地 | `app/utils/openai_client.py` 与两条 experimental client 路径已转调 facade |
+| Gemini Provider（含 Live） | 已落地（基础） | `app/services/live_chat_service.py` 已通过 `app/core/agentic_kernel/providers/gemini.py` 初始化 |
+| Tool Runtime | 已落地（基础） | `app/core/agentic_kernel/tools/runtime.py` 已被 `app/core/agent/agent.py` 与 experimental 路径复用 |
+| Clean Prompt System 主路径 | 已落地 | `Agent.build_system_messages()` 已走 `clean_prompt_system.build_system_messages()` |
+| Structured Agent Loader | 部分落地 | `app/services/agent_service_clean.py` 已实现但明确未接入主链路 |
+| Turn Orchestrator 通用骨架 | 未落地 | 尚未形成可复用公共骨架模块 |
+| Heartbeat + REPL Mux 公共化 | 未落地 | 仍以各路径独立实现为主 |
+| PydanticAI 试点 | 未落地 | 尚未进入试点执行阶段 |
 
 ## 3. 目标目录结构（提案）
 
@@ -69,6 +84,22 @@ app/core/agentic_kernel/
     app_agent_bridge.py    # 与 app/core/agent 的桥接
     experimental_bridge.py # 与 experimental runtime 的桥接
 ```
+
+### 3.1 Python 包初始化清单（强制）
+
+- 本目录新增的正式 Python 包目录必须补齐空 `__init__.py`（仅声明包，不放逻辑）。
+- 推荐在 Step 0 同步创建下列空文件（按实际新增目录增减）：
+  - `app/core/agentic_kernel/__init__.py`
+  - `app/core/agentic_kernel/contracts/__init__.py`
+  - `app/core/agentic_kernel/providers/__init__.py`
+  - `app/core/agentic_kernel/tools/__init__.py`
+  - `app/core/agentic_kernel/tools/dispatchers/__init__.py`
+  - `app/core/agentic_kernel/runtime/__init__.py`
+  - `app/core/agentic_kernel/prompting/__init__.py`
+  - `app/core/agentic_kernel/heartbeat/__init__.py`
+  - `app/core/agentic_kernel/repl/__init__.py`
+  - `app/core/agentic_kernel/observability/__init__.py`
+  - `app/core/agentic_kernel/bridges/__init__.py`
 
 ## 4. 模块边界（必须遵守）
 
@@ -118,16 +149,15 @@ app/core/agentic_kernel/
 
 ---
 
-## Step 1：提取 Provider Facade（先收敛 OpenAI-compatible 路径）
+## Step 1：Provider Facade 增量收敛（先对齐 OpenAI-compatible）
 
-### 会改文件
+### 会改文件（在现有落地基础上）
 
-- `app/core/agentic_kernel/providers/facade.py`（新）
-- `app/core/agentic_kernel/providers/openai_compatible.py`（新）
-- `app/core/agentic_kernel/providers/gemini.py`（新）
-- `app/utils/openai_client.py`（改：向后兼容转调 facade）
-- `experimental/agentic_ai_companion/clients.py`（改：转调 facade）
-- `experimental/inty_v2_text_chat_prototype/client.py`（改：转调 facade）
+- `app/core/agentic_kernel/providers/facade.py`（改：补齐接口注释、选项归一化、兼容约束）
+- `app/core/agentic_kernel/providers/openai_compatible.py`（改：补齐构造参数一致性）
+- `app/utils/openai_client.py`（改：对齐 facade 选项语义与默认值）
+- `experimental/agentic_ai_companion/clients.py`（改：对齐 facade 参数）
+- `experimental/inty_v2_text_chat_prototype/client.py`（改：对齐 facade 参数）
 
 ### 先不动文件
 
@@ -140,14 +170,19 @@ app/core/agentic_kernel/
 - 业务行为等价（模型、headers、trace、usage 字段保持一致）。
 - 明确标记：Live/Gemini 会话链路尚未纳入本步范围。
 
+### 最小验证命令（必须贴 PR）
+
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_langsmith_metadata.py`
+- `pytest -m "not noci" -v -s tests/app/services/test_festival_memory_service.py`
+
 ---
 
 ## Step 1b：补齐 Live/Gemini Provider 路径收敛
 
-### 会改文件
+### 会改文件（补齐缺口，不重复改造已收敛部分）
 
-- `app/core/agentic_kernel/providers/gemini.py`（改：补 Live 场景能力封装）
-- `app/services/live_chat_service.py`（改：Gemini client 初始化与包装转调 facade）
+- `app/core/agentic_kernel/providers/gemini.py`（改：补 Live 场景参数、重连语义所需能力）
+- `app/services/live_chat_service.py`（改：仅补齐缺口；保持当前 facade 初始化路径）
 - `experimental/agentic_ai_companion/clients.py`（改：Gemini client 与 facade 对齐）
 - `experimental/inty_v2_text_chat_prototype/client.py`（如启用 Gemini 分支则改）
 
@@ -161,14 +196,19 @@ app/core/agentic_kernel/
 - Live/Gemini 路径统一走 facade，不再有独立 client 初始化分叉。
 - 会话行为等价：连接、重连、trace 标签、usage 统计不退化。
 
+### 最小验证命令（必须贴 PR）
+
+- `pytest -m "not noci" -v -s tests/app/services/test_live_chat_service.py`
+- `pytest -m "not noci" -v -s tests/app/features/test_live_chat.py`
+
 ---
 
-## Step 2：提取 Tool Runtime（统一 tool loop）
+## Step 2：Tool Runtime 增量收敛（统一 tool loop）
 
-### 会改文件
+### 会改文件（在现有 runtime 基础上）
 
-- `app/core/agentic_kernel/tools/registry.py`（新）
-- `app/core/agentic_kernel/tools/runtime.py`（新）
+- `app/core/agentic_kernel/tools/registry.py`（改：补齐注册/查询契约）
+- `app/core/agentic_kernel/tools/runtime.py`（改：补齐上下文注入与错误语义）
 - `app/core/agentic_kernel/tools/dispatchers/workspace.py`（新）
 - `app/core/agentic_kernel/tools/dispatchers/media.py`（新，可先最小实现）
 - `experimental/agentic_ai_companion/tools.py`（改：ToolDefinition 保留，loop 转 runtime）
@@ -183,6 +223,11 @@ app/core/agentic_kernel/
 ### 验收标准
 
 - 三处工具循环都能走统一 runtime，工具行为等价。
+
+### 最小验证命令（必须贴 PR）
+
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_official_assistant_tool_calling.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_clean_prompt_system.py`
 
 ---
 
@@ -207,14 +252,14 @@ app/core/agentic_kernel/
 
 ---
 
-## Step 4：整合 Prompt Assembler（清理 review-only 状态）
+## Step 4：整合 Prompt Assembler（收敛已上线 clean prompt 路径）
 
 ### 会改文件
 
 - `app/core/agentic_kernel/prompting/assembler.py`（新）
-- `app/core/agent/clean_prompt_system.py`（改：桥接到 assembler）
-- `app/services/agent_service_clean.py`（改：从实验状态转生产可用）
-- `app/core/agent/agent.py`（改：减少内嵌 prompt 分支）
+- `app/core/agent/clean_prompt_system.py`（改：桥接到 assembler，减少重复拼装代码）
+- `app/services/agent_service_clean.py`（改：从“未接主链路”推进到可控接入）
+- `app/core/agent/agent.py`（改：保持当前 clean 主路径，收敛分支与依赖注入点）
 
 ### 先不动文件
 
@@ -223,7 +268,7 @@ app/core/agentic_kernel/
 
 ### 验收标准
 
-- `clean_prompt_system` 不再是 review-only，生产默认走 clean path。
+- 保持生产默认走 clean path，不引入行为回退。
 - 下列回归门槛全部通过后，才允许切生产默认：
   - 官方助手工具循环行为：`tests/app/core/agent/test_official_assistant_tool_calling.py`
   - prompt 组装核心行为：`tests/app/core/agent/test_clean_prompt_system.py`
@@ -235,8 +280,19 @@ app/core/agentic_kernel/
 
 ### 切换策略（强制）
 
-- 在默认切换前保留运行时开关（例如 `use_clean_prompt_system` 类配置）。
-- 若任一回归门槛失败，默认路径不切换，回退到旧链路并记录阻塞项。
+- 保留显式运行时开关（例如 assembler bridge 开关）用于快速回退。
+- 若任一回归门槛失败，保持当前主路径不继续切换，并记录阻塞项。
+
+### 最小验证命令（必须贴 PR）
+
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_clean_prompt_system.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_date_context.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_history_window_limits.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_manual_prompt.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_messages_compaction.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_langsmith_metadata.py`
+- `pytest -m "not noci" -v -s tests/app/core/agent/test_agent_trace_sampling.py`
+- `pytest -m "not noci" -v -s tests/app/api/v1/endpoints/test_chat.py`
 
 ---
 
@@ -318,7 +374,7 @@ app/core/agentic_kernel/
 ## 8. 开发与评审约束
 
 1. 每一步只做单一职责改动，不混入业务策略重写。
-2. 每一步必须提供最小可执行验证（单元或脚本级）。
+2. 每一步必须提供最小可执行验证（至少包含 1 条 feature/E2E 或 API 端到端验证命令）。
 3. 没有覆盖验证前，不切生产默认路径。
 4. 禁止将「关系语义规则」抽象成通用模板引擎逻辑。
 
