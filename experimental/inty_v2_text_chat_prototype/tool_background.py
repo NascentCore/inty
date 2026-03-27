@@ -263,13 +263,17 @@ async def _run_background_tool_loop(
         trace_id=trace_id,
     )
 
-    initial_tool_calls = getattr(initial_response.choices[0].message, "tool_calls", None) or []
+    initial_tool_calls = (
+        getattr(initial_response.choices[0].message, "tool_calls", None) or []
+    )
     if not initial_tool_calls:
         logger.debug("repl.turn.bg no_tool_calls skip_transcript")
         return
     total_tool_calls += len(initial_tool_calls)
 
-    async def execute_tool_call(name: str, raw_arguments: str) -> tuple[str, str | None]:
+    async def execute_tool_call(
+        name: str, raw_arguments: str
+    ) -> tuple[str, str | None]:
         result = await execute_tool_call_fn(
             ws_root,
             name,

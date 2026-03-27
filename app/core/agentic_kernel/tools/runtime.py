@@ -171,9 +171,7 @@ async def resolve_official_assistant_tool_loop_async(
     openai_messages: list[dict[str, Any]],
     max_tool_call_rounds: int,
     execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
-    continue_chat: Callable[
-        [list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]
-    ],
+    continue_chat: Callable[[list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]],
     build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
     insert_system_message: Callable[[list[dict[str, Any]], str], None],
     initial_trace_id: str | None = None,
@@ -219,7 +217,9 @@ async def resolve_official_assistant_tool_loop_async(
                     messages_with_tool_results,
                     injected_system_message,
                 )
-        current_response, last_trace_id = await continue_chat(messages_with_tool_results)
+        current_response, last_trace_id = await continue_chat(
+            messages_with_tool_results
+        )
 
     raise ValueError(
         "Official assistant tool call rounds exceeded " f"limit={max_tool_call_rounds}"

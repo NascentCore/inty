@@ -1055,15 +1055,13 @@ class LiveChatService:
                         if user_text:
                             flushed_user = True
                             if session.config.save_history:
-                                user_message_id = (
-                                    await chat_history_service.add_user_message_async(
-                                        session.session_id,
-                                        user_text,
-                                        meta_data={
-                                            "is_voice": True,
-                                            "voice_session_id": session.voice_session_id,
-                                        },
-                                    )
+                                user_message_id = await chat_history_service.add_user_message_async(
+                                    session.session_id,
+                                    user_text,
+                                    meta_data={
+                                        "is_voice": True,
+                                        "voice_session_id": session.voice_session_id,
+                                    },
                                 )
                                 ts = time.time() * 1000
                                 await on_transcript(
