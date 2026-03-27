@@ -9,6 +9,10 @@ from typing import Any, Callable
 
 from loguru import logger
 
+from app.core.agentic_kernel.tools.runtime import (
+    resolve_official_assistant_tool_loop,
+)
+
 from .client import default_model, get_client
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str
@@ -33,6 +37,21 @@ _INTERNAL_BOOTSTRAP_CONTINUE = (
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOSTRAP_PATH = _PKG_DIR / "_ws2" / "BOOSTRAP.md"
+
+
+def _insert_system_message(
+    openai_messages: list[dict[str, Any]],
+    system_message_content: str,
+) -> None:
+    insertion_index = 0
+    while (
+        insertion_index < len(openai_messages)
+        and openai_messages[insertion_index].get("role") == "system"
+    ):
+        insertion_index += 1
+    openai_messages.insert(
+        insertion_index, {"role": "system", "content": system_message_content}
+    )
 
 
 def load_bootstrap_instruction_text() -> str:
@@ -94,7 +113,9 @@ def run_workspace_bootstrap_loop(
 
     last_assistant_text = ""
     t_boot = time.perf_counter()
-    for round_idx in range(1, max_rounds + 1):
+    rounds_used = 0
+    while rounds_used < max_rounds:
+        round_idx = rounds_used + 1
         t_api = time.perf_counter()
         resp = client.chat.completions.create(
             model=m,
@@ -109,6 +130,7 @@ def run_workspace_bootstrap_loop(
             (time.perf_counter() - t_api) * 1000.0,
             m,
         )
+        rounds_used += 1
         if llm_trace:
             emit_trace(
                 "bootstrap",
@@ -142,38 +164,104 @@ def run_workspace_bootstrap_loop(
             messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
             continue
 
-        messages.append(openai_assistant_message_dict(msg))
-        for tc in tool_calls:
-            fn = tc.function
-            name = fn.name
-            args = fn.arguments if fn.arguments is not None else ""
+        active_round = round_idx
+
+        def execute_tool_call(name: str, raw_arguments: str) -> tuple[str, str | None]:
             if on_tool is not None:
-                on_tool(name, args)
-            arg_preview = (args or "").replace("\n", " ")
+                on_tool(name, raw_arguments)
+            arg_preview = (raw_arguments or "").replace("\n", " ")
             if len(arg_preview) > 240:
                 arg_preview = arg_preview[:239] + "…"
             logger.debug(
                 "bootstrap tool_call round={} name={} args_preview={}",
-                round_idx,
+                active_round,
                 name,
                 arg_preview,
             )
             t_tool = time.perf_counter()
-            result = run_tool(name, args)
+            result = run_tool(name, raw_arguments)
             logger.info(
                 "bootstrap tool_done round={} name={} execute_ms={:.0f} result_chars={}",
-                round_idx,
+                active_round,
                 name,
                 (time.perf_counter() - t_tool) * 1000.0,
                 len(result),
             )
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": result,
-                }
+            return result, None
+
+        def continue_chat(
+            messages_with_tool_results: list[dict[str, Any]],
+        ) -> tuple[Any, str | None]:
+            nonlocal rounds_used, active_round
+            if rounds_used >= max_rounds:
+                raise ValueError(
+                    f"workspace bootstrap exceeded max_rounds={max_rounds} "
+                    "while resolving tool calls"
+                )
+            rounds_used += 1
+            active_round = rounds_used
+            t_api_inner = time.perf_counter()
+            next_resp = client.chat.completions.create(
+                model=m,
+                messages=messages_with_tool_results,
+                tools=tools,
+                parallel_tool_calls=True,
             )
+            logger.info(
+                "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",
+                active_round,
+                (time.perf_counter() - t_api_inner) * 1000.0,
+                m,
+            )
+            if llm_trace:
+                emit_trace(
+                    "bootstrap",
+                    round_idx=active_round,
+                    model=m,
+                    messages=summarize_messages(
+                        messages_with_tool_results,
+                        ws_label=root.name,
+                        trace_day=local_date_str(),
+                    ),
+                    response=summarize_completion_response(next_resp),
+                )
+            return next_resp, None
+
+        try:
+            loop_result = resolve_official_assistant_tool_loop(
+                response=resp,
+                openai_messages=messages,
+                max_tool_call_rounds=max_rounds,
+                execute_tool_call=execute_tool_call,
+                continue_chat=continue_chat,
+                build_assistant_tool_call_message=openai_assistant_message_dict,
+                insert_system_message=_insert_system_message,
+                initial_trace_id=None,
+            )
+        except ValueError as exc:
+            raise RuntimeError(
+                f"workspace bootstrap exceeded max_rounds={max_rounds}; "
+                "failed during tool loop"
+            ) from exc
+
+        messages = loop_result.messages
+        final_message = loop_result.response.choices[0].message
+        last_assistant_text = (final_message.content or "").strip()
+        messages.append(openai_assistant_message_dict(final_message))
+        if is_workspace_initialized(root):
+            logger.info(
+                "bootstrap done rounds={} total_ms={:.0f} ws={}",
+                rounds_used,
+                (time.perf_counter() - t_boot) * 1000.0,
+                root.name,
+            )
+            return last_assistant_text
+        logger.debug(
+            "bootstrap tool_loop_finished but workspace not initialized rounds_used={} "
+            "injecting_internal_continue",
+            rounds_used,
+        )
+        messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
 
     raise RuntimeError(
         f"workspace bootstrap exceeded max_rounds={max_rounds}; last messages tail: "
