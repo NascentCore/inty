@@ -111,8 +111,7 @@ def test_delete_agent_e2e(integration_client: TestClient):
     assert payload["code"] == 200
     assert payload["data"]["id"] == agent_id
 
-    if agent_id in integration_client._created_agents:
-        integration_client._created_agents.remove(agent_id)
+    integration_client.untrack_agent(agent_id)
 
 
 def test_list_character_themes_e2e(integration_client: TestClient):
