@@ -1,4 +1,65 @@
-# Gemini 2.5 Pro Long Context Performance Test - 长上下文测试
+# Context Window Test Utilities - 长上下文测试
+
+This directory contains long-context benchmark utilities:
+
+- `context_test.py`: Gemini long-context latency/perf check.
+- `openrouter_test.py`: generic OpenRouter long-context perf check.
+- `instruction_position_sweep.py`: instruction-following compliance vs prompt position using OpenRouter models (including `deepseek/deepseek-v3.2`).
+
+## Instruction Position Sweep (DeepSeek v3.2 on OpenRouter)
+
+This benchmark measures how often a model follows a single explicit instruction when the instruction is inserted at different token positions inside a 200k-token placeholder context.
+
+### What it does
+
+- Uses a placeholder body of exactly 200,000 tokens.
+- Inserts one instruction at positions:
+  - `0`, `1k`, `2k`, `4k`, `8k`, `16k`, `32k`, `64k`, `128k`, `end`.
+- Runs repeated trials per position (default `30`).
+- Scores strict instruction adherence:
+  - pass: response equals expected token exactly.
+- Writes machine-readable artifacts:
+  - `trial_results.jsonl`
+  - `position_summary.csv`
+  - `summary.json`
+  - `summary.md`
+
+### Setup
+
+```bash
+cd experimental/context_window_test
+pip install -r requirements.txt
+export OPENROUTER_API_KEY="your-openrouter-key"
+```
+
+### Run (requested configuration)
+
+```bash
+python instruction_position_sweep.py \
+  --model deepseek/deepseek-v3.2 \
+  --placeholder-tokens 200000 \
+  --trials-per-position 30
+```
+
+### Quick local validation (no API call)
+
+```bash
+python instruction_position_sweep.py --dry-run --trials-per-position 2
+```
+
+### Output location
+
+Results are written under:
+
+```text
+./results/instruction_position_sweep/<UTC_RUN_ID>/
+```
+
+And `./results/instruction_position_sweep/latest` points to the newest run directory.
+
+---
+
+## Legacy: Gemini 2.5 Pro Long Context Performance Test
 
 This tool tests Gemini 2.5 Pro performance with long context input (~500k tokens), measuring first token latency and total response time.
 
