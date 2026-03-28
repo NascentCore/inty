@@ -69,7 +69,9 @@ const SeasideRomanticWalkPage: React.FC = () => {
         </article>
 
         <article className="seaside-romantic-walk-page__panel">
-          <h2 className="seaside-romantic-walk-page__panel-title">Suggested conversation moments</h2>
+          <h2 className="seaside-romantic-walk-page__panel-title">
+            Suggested conversation moments
+          </h2>
           <ol className="seaside-romantic-walk-page__ordered-list">
             {suggestedMoments.map((item) => (
               <li key={item} className="seaside-romantic-walk-page__ordered-list-item">

@@ -46,6 +46,7 @@ from app.utils.image import (
     crop_image_to_9_16,
     get_jpg_bytes_from_pil_image,
 )
+
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
 _google_genai_client = None  # Will be initialized when needed
