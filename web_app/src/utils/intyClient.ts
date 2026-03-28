@@ -50,6 +50,14 @@ interface IApiRequestOptions {
 }
 
 interface IIntyLikeClient {
+  v2: {
+    chat: {
+      sendMessage: (
+        agentId: string,
+        params: Record<string, unknown>,
+      ) => Promise<{ data: any }>;
+    };
+  };
   api: {
     v1: {
       auth: {
@@ -234,6 +242,19 @@ export async function createIntyClient(requireAuth = false): Promise<IIntyLikeCl
   const authToken = token || '';
 
   return {
+    v2: {
+      chat: {
+        sendMessage: async (agentId, params) => {
+          const data = await request({
+            method: 'POST',
+            path: `/api/v1/chat/completions/${agentId}`,
+            token: authToken,
+            body: params,
+          });
+          return { data };
+        },
+      },
+    },
     api: {
       v1: {
         auth: {
