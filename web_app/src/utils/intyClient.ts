@@ -52,10 +52,7 @@ interface IApiRequestOptions {
 interface IIntyLikeClient {
   v2: {
     chat: {
-      sendMessage: (
-        agentId: string,
-        params: Record<string, unknown>,
-      ) => Promise<{ data: any }>;
+      sendMessage: (agentId: string, params: Record<string, unknown>) => Promise<{ data: any }>;
     };
   };
   api: {
@@ -197,9 +194,7 @@ async function request<T = any>(options: IApiRequestOptions): Promise<T> {
   try {
     response = await fetch(buildUrl(path, query), init);
   } catch (error) {
-    throw new HttpClientError(
-      error instanceof Error ? error.message : 'Network request failed',
-    );
+    throw new HttpClientError(error instanceof Error ? error.message : 'Network request failed');
   }
 
   const contentType = response.headers.get('content-type') || '';
@@ -211,7 +206,10 @@ async function request<T = any>(options: IApiRequestOptions): Promise<T> {
       (typeof payload === 'object' &&
         payload &&
         ('message' in payload || 'detail' in payload) &&
-        String((payload as { message?: string; detail?: string }).message || (payload as { detail?: string }).detail)) ||
+        String(
+          (payload as { message?: string; detail?: string }).message ||
+            (payload as { detail?: string }).detail,
+        )) ||
       `HTTP ${response.status}`;
     throw mapHttpError(response.status, message, payload);
   }
