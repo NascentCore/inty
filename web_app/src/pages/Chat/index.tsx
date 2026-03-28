@@ -105,17 +105,8 @@ const ChatPage: React.FC = () => {
         {/* 消息列表 */}
         <div className="chat-content">
           {sceneHintVisible ? (
-            <div className="chat-scene-hint" role="status">
-              <div className="chat-scene-hint__text">
-                Seaside mood started. Your first romantic prompt is being delivered.
-              </div>
-              <button
-                type="button"
-                className="chat-scene-hint__close"
-                onClick={() => setSceneHintVisible(false)}
-              >
-                Got it
-              </button>
+            <div className="scene-start-feedback" role="status">
+              Seaside mood started. Your first romantic prompt is being delivered.
             </div>
           ) : null}
           <MessageList
