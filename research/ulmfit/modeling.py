@@ -64,7 +64,7 @@ class LanguageModel(nn.Module):
     def __init__(self, cfg: ModelConfig, vocab_size: int) -> None:
         super().__init__()
         self.encoder = AWDLikeLSTMEncoder(cfg, vocab_size)
-        self.decoder = nn.Linear(cfg.hidden_dim, vocab_size)
+        self.decoder = nn.Linear(self.encoder.output_dim, vocab_size)
         self.decoder.weight = self.encoder.embedding.weight
 
     def forward(
