@@ -1,0 +1,54 @@
+experiment_name: "ulmfit_imdb_wikitext2_full"
+output_dir: "research/ulmfit/output/imdb_wikitext2_full"
+seed: 42
+device: "auto"
+
+vocab:
+  max_size: 60000
+  min_freq: 2
+  pad_token: "<pad>"
+  unk_token: "<unk>"
+  eos_token: "<eos>"
+
+dataset:
+  provider: "hf_imdb"
+  lm_corpus_provider: "wikitext2"
+  imdb_train_limit: null
+  imdb_valid_limit: null
+  imdb_test_limit: null
+  lm_train_limit: null
+  lm_valid_limit: null
+
+model:
+  embedding_dim: 400
+  hidden_dim: 1150
+  num_layers: 3
+  embedding_dropout: 0.1
+  hidden_dropout: 0.3
+  output_dropout: 0.4
+
+lm_train:
+  bptt: 70
+  batch_size: 64
+  pretrain_epochs: 10
+  finetune_epochs: 4
+  lr_max: 0.01
+  weight_decay: 0.00001
+  gradient_clip: 0.25
+  stlr_cut_frac: 0.1
+  stlr_ratio: 32.0
+
+classifier_train:
+  batch_size: 64
+  max_seq_len: 400
+  fc_hidden_dim: 100
+  num_classes: 2
+  head_dropout: 0.5
+  lr_max: 0.01
+  weight_decay: 0.00001
+  gradient_clip: 0.25
+  layer_lr_decay: 2.6
+  unfreeze_blocks: [1, 2, 4]
+  stage_epochs: [1, 1, 1]
+  stlr_cut_frac: 0.1
+  stlr_ratio: 32.0
