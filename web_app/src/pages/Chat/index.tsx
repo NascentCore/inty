@@ -6,6 +6,7 @@
 import { useModel, useParams } from '@umijs/max';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { ErrorAlert } from '@/components';
+import { SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY } from '@/constants';
 import { AgentDetailPanel, MessageInput, MessageList } from './components';
 import './index.less';
 
@@ -73,6 +74,29 @@ const ChatPage: React.FC = () => {
     },
     [agentId, sendChatMessage],
   );
+
+  /**
+   * 首次进入场景对话时自动发送引导消息（一次性消费）
+   */
+  useEffect(() => {
+    if (!agentId || loading || sending) {
+      return;
+    }
+    if (messages.length > 0) {
+      return;
+    }
+
+    const storageKey = `${SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY}:${agentId}`;
+    const bootstrapMessage = window.sessionStorage.getItem(storageKey);
+    if (!bootstrapMessage) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(storageKey);
+    sendChatMessage(agentId, bootstrapMessage).catch((err) => {
+      console.error('自动发送场景开场消息失败:', err);
+    });
+  }, [agentId, loading, messages.length, sending, sendChatMessage]);
 
   return (
     <div className="chat-page">
