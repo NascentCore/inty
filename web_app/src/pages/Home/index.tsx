@@ -8,7 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { useInfiniteScroll } from '@/hooks';
 import type { IAgent } from '@/types';
 import { AdHomeTop } from '@/components';
-import { CharacterList } from './components';
+import { CharacterList, SeasideRomanticWalkEntry } from './components';
 import './index.less';
 
 /**
@@ -49,11 +49,19 @@ const HomePage: React.FC = () => {
     history.push(`/chat/${agent.id}`);
   };
 
+  /**
+   * 进入海边浪漫傍晚漫步场景页
+   */
+  const handleExploreSeasideWalk = (): void => {
+    history.push('/seaside-romantic-walk');
+  };
+
   return (
     <div className="home-page" ref={scrollContainerRef}>
       <div className="page-content">
         {/* 首页上方 横向广告 */}
         {/* <AdHomeTop /> */}
+        <SeasideRomanticWalkEntry onExplore={handleExploreSeasideWalk} />
         <CharacterList
           recommendList={recommendList}
           loading={loading}
