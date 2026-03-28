@@ -94,6 +94,11 @@ const SeasideRomanticWalkPage: React.FC = () => {
               {startError}
             </p>
           ) : null}
+          {starting ? (
+            <p className="seaside-romantic-walk-page__action-feedback seaside-romantic-walk-page__action-feedback--loading">
+              Preparing your sunset conversation...
+            </p>
+          ) : null}
         </div>
       </section>
 
