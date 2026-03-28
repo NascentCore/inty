@@ -32,6 +32,7 @@ From repo root:
    - `source .venv/bin/activate && pip install -r research/ulmfit/requirements.txt`
 2. Run:
    - `source .venv/bin/activate && python3 research/ulmfit/main.py run --config research/ulmfit/configs/smoke.yaml`
+   - or `source .venv/bin/activate && python3 -m research.ulmfit.main run --config research/ulmfit/configs/smoke.yaml`
 
 Outputs are written to the configured `output_dir`, including:
 

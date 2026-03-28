@@ -23,19 +23,22 @@ class AWDLikeLSTMEncoder(nn.Module):
         self.rnns = nn.ModuleList()
         self.rnn_dropouts = nn.ModuleList()
         input_size = cfg.embedding_dim
-        for _ in range(cfg.num_layers):
+        for layer_index in range(cfg.num_layers):
+            layer_hidden_size = (
+                cfg.embedding_dim if layer_index == cfg.num_layers - 1 else cfg.hidden_dim
+            )
             self.rnns.append(
                 nn.LSTM(
                     input_size=input_size,
-                    hidden_size=cfg.hidden_dim,
+                    hidden_size=layer_hidden_size,
                     num_layers=1,
                     batch_first=True,
                 )
             )
             self.rnn_dropouts.append(nn.Dropout(cfg.hidden_dropout))
-            input_size = cfg.hidden_dim
+            input_size = layer_hidden_size
         self.output_dropout = nn.Dropout(cfg.output_dropout)
-        self.output_dim = cfg.hidden_dim
+        self.output_dim = input_size
 
     def forward(
         self,

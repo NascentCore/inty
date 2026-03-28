@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import random
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -10,6 +11,11 @@ import cyclopts
 from loguru import logger
 import numpy as np
 import torch
+
+# Support direct script execution from repo root:
+# python3 research/ulmfit/main.py run --config ...
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from research.ulmfit.config import ExperimentConfig, load_experiment_config
 from research.ulmfit.trainer import run_ulmfit_pipeline
