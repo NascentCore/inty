@@ -17,6 +17,9 @@ const ChatPage: React.FC = () => {
   // 获取路由参数
   const { agentId } = useParams<{ agentId: string }>();
   const [sceneHintVisible, setSceneHintVisible] = useState<boolean>(false);
+  const [pendingSceneBootstrapMessage, setPendingSceneBootstrapMessage] = useState<string | null>(
+    null,
+  );
 
   // 使用 ref 跟踪上一次的 agentId，避免依赖项循环触发
   const prevAgentIdRef = useRef<string | undefined>(undefined);
@@ -77,11 +80,14 @@ const ChatPage: React.FC = () => {
   );
 
   /**
-   * 首次进入场景对话时自动发送引导消息（一次性消费）
-   * 只要存在场景启动 key，就发送一次；不受历史消息数量影响
+   * 检测并消费场景启动消息：
+   * 进入聊天页就立即展示“场景已启动”提示，不依赖消息加载状态
    */
   useEffect(() => {
-    if (!agentId || loading || sending) {
+    setSceneHintVisible(false);
+    setPendingSceneBootstrapMessage(null);
+
+    if (!agentId) {
       return;
     }
 
@@ -91,12 +97,27 @@ const ChatPage: React.FC = () => {
       return;
     }
 
-    setSceneHintVisible(true);
     window.sessionStorage.removeItem(storageKey);
-    sendChatMessage(agentId, bootstrapMessage).catch((err) => {
+    setSceneHintVisible(true);
+    setPendingSceneBootstrapMessage(bootstrapMessage);
+  }, [agentId]);
+
+  /**
+   * 发送场景开场白（一次性）：
+   * 场景提示先展示，再尽力发送首条消息；失败也不影响提示可见性
+   */
+  useEffect(() => {
+    if (!agentId || !pendingSceneBootstrapMessage || sending) {
+      return;
+    }
+
+    const messageToSend = pendingSceneBootstrapMessage;
+    setPendingSceneBootstrapMessage(null);
+
+    sendChatMessage(agentId, messageToSend).catch((err) => {
       console.error('自动发送场景开场消息失败:', err);
     });
-  }, [agentId, loading, sending, sendChatMessage]);
+  }, [agentId, pendingSceneBootstrapMessage, sending, sendChatMessage]);
 
   return (
     <div className="chat-page">
