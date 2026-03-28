@@ -1,6 +1,7 @@
 import {
   BellOutlined,
   CrownOutlined,
+  DisconnectOutlined,
   LockOutlined,
   MessageOutlined,
   MobileOutlined,
@@ -32,8 +33,6 @@ import {
   CreateReport,
   DeleteAccount,
   DeleteAgent,
-  FollowAgent,
-  FollowingList,
   GenerateMessageVoice,
   // 设置模块
   GetSettings,
@@ -55,7 +54,6 @@ import {
   SubscriptionStatus,
   SubscriptionUsage,
   TokenWriter,
-  UnfollowAgent,
   UpdateAgent,
   UpdateChatSettings,
   UpdateProfile,
@@ -114,10 +112,6 @@ const DevTestPage: React.FC = () => {
     'agent-my-list': MyAgentList,
     'agent-search': SearchAgents,
     'agent-recommend': RecommendAgents,
-    'agent-follow': FollowAgent,
-    'agent-unfollow': UnfollowAgent,
-    'agent-following': FollowingList,
-
     // 聊天模块
     'chat-create': ChatCreate,
     'chat-list': ChatList,
@@ -191,9 +185,12 @@ const DevTestPage: React.FC = () => {
         { key: 'agent-my-list', label: '我的 Agent 列表' },
         { key: 'agent-search', label: '搜索 Agent' },
         { key: 'agent-recommend', label: '推荐 Agent' },
-        { key: 'agent-follow', label: '关注 Agent' },
-        { key: 'agent-unfollow', label: '取消关注' },
-        { key: 'agent-following', label: '关注列表' },
+        {
+          key: 'agent-follow-unsupported',
+          icon: <DisconnectOutlined />,
+          label: '关注能力（暂不可用）',
+          disabled: true,
+        },
       ],
     },
     {

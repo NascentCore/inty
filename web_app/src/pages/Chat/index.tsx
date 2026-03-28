@@ -104,10 +104,10 @@ const ChatPage: React.FC = () => {
 
   /**
    * 发送场景开场白（一次性）：
-   * 场景提示先展示，再尽力发送首条消息；失败也不影响提示可见性
+   * 场景提示先展示，等历史消息加载完成后再发送，避免覆盖乐观消息
    */
   useEffect(() => {
-    if (!agentId || !pendingSceneBootstrapMessage || sending) {
+    if (!agentId || !pendingSceneBootstrapMessage || sending || loading) {
       return;
     }
 
@@ -117,7 +117,7 @@ const ChatPage: React.FC = () => {
     sendChatMessage(agentId, messageToSend).catch((err) => {
       console.error('自动发送场景开场消息失败:', err);
     });
-  }, [agentId, pendingSceneBootstrapMessage, sending, sendChatMessage]);
+  }, [agentId, pendingSceneBootstrapMessage, sending, loading, sendChatMessage]);
 
   return (
     <div className="chat-page">
