@@ -14,6 +14,7 @@ import asyncio
 import csv
 import json
 import math
+import os
 import random
 import secrets
 import statistics
@@ -158,31 +159,31 @@ def exponential_positions(max_tokens: int) -> list[tuple[str, int]]:
     return deduped
 
 
-def make_placeholder_text(encoding: tiktoken.Encoding, token_count: int) -> str:
+def make_placeholder_token_ids(encoding: tiktoken.Encoding, token_count: int) -> list[int]:
     # Repeated deterministic chunk to hit exact placeholder token length.
     chunk = "placeholder_token_0001 placeholder_token_0002 placeholder_token_0003 "
     chunk_ids = encoding.encode(chunk)
     repetitions = (token_count // len(chunk_ids)) + 2
-    ids = (chunk_ids * repetitions)[:token_count]
-    return encoding.decode(ids)
+    return (chunk_ids * repetitions)[:token_count]
 
 
 def insert_instruction_by_token_index(
     encoding: tiktoken.Encoding,
-    placeholder_text: str,
+    placeholder_token_ids: list[int],
     instruction: str,
     token_index: int,
 ) -> str:
-    placeholder_ids = encoding.encode(placeholder_text)
     instruction_ids = encoding.encode(instruction)
     if token_index < 0:
         raise ValueError(f"token_index must be >= 0, got {token_index}")
-    if token_index > len(placeholder_ids):
+    if token_index > len(placeholder_token_ids):
         raise ValueError(
-            f"token_index must be <= placeholder length ({len(placeholder_ids)}), got {token_index}"
+            f"token_index must be <= placeholder length ({len(placeholder_token_ids)}), got {token_index}"
         )
     combined_ids = (
-        placeholder_ids[:token_index] + instruction_ids + placeholder_ids[token_index:]
+        placeholder_token_ids[:token_index]
+        + instruction_ids
+        + placeholder_token_ids[token_index:]
     )
     return encoding.decode(combined_ids)
 
@@ -359,16 +360,12 @@ async def main() -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     encoding = tiktoken.get_encoding(ENCODING_NAME)
-    placeholder_text = make_placeholder_text(
-        encoding=encoding, token_count=args.placeholder_tokens
+    placeholder_token_ids = make_placeholder_token_ids(
+        encoding=encoding,
+        token_count=args.placeholder_tokens,
     )
-    actual_placeholder_tokens = len(encoding.encode(placeholder_text))
+    actual_placeholder_tokens = len(placeholder_token_ids)
     print(f"Placeholder token count: {actual_placeholder_tokens:,}")
-    if actual_placeholder_tokens != args.placeholder_tokens:
-        raise ValueError(
-            "Placeholder token count mismatch: "
-            f"expected {args.placeholder_tokens}, got {actual_placeholder_tokens}"
-        )
 
     positions = exponential_positions(args.placeholder_tokens)
     print("Sweep positions:")
@@ -398,7 +395,7 @@ async def main() -> None:
             instruction = build_instruction(expected_token=expected_token)
             injected_body = insert_instruction_by_token_index(
                 encoding=encoding,
-                placeholder_text=placeholder_text,
+                placeholder_token_ids=placeholder_token_ids,
                 instruction=instruction,
                 token_index=position_token_index,
             )
