@@ -4,7 +4,12 @@
  */
 
 import { message } from 'antd';
-import Inty from 'inty';
+import {
+  AuthenticationError,
+  HttpClientError,
+  NotFoundError,
+  PermissionDeniedError,
+} from './intyClient';
 import { logger } from './logger';
 
 /**
@@ -58,17 +63,21 @@ export function getErrorType(error: unknown): ErrorType {
     }
   }
 
-  // 处理 Inty SDK 错误
-  if (error instanceof Inty.AuthenticationError) {
+  // 处理本地 HTTP 客户端错误
+  if (error instanceof AuthenticationError) {
     return ErrorType.AUTH_FAILED;
   }
 
-  if (error instanceof Inty.NotFoundError) {
+  if (error instanceof NotFoundError) {
     return ErrorType.NOT_FOUND;
   }
 
-  if (error instanceof Inty.PermissionDeniedError) {
+  if (error instanceof PermissionDeniedError) {
     return ErrorType.FORBIDDEN;
+  }
+
+  if (error instanceof HttpClientError) {
+    return ErrorType.NETWORK_ERROR;
   }
 
   return ErrorType.UNKNOWN;
