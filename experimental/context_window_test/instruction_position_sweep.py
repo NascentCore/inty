@@ -126,6 +126,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Run without calling API (generates synthetic outcomes)",
     )
+    parser.add_argument(
+        "--use-context-compression",
+        action="store_true",
+        help="Enable OpenRouter context-compression plugin for oversized prompts",
+    )
     return parser.parse_args()
 
 
@@ -233,7 +238,11 @@ async def request_with_retry(
     max_output_tokens: int,
     timeout_seconds: int,
     max_retries: int,
+    use_context_compression: bool,
 ) -> Any:
+    request_kwargs: dict[str, Any] = {}
+    if use_context_compression:
+        request_kwargs["extra_body"] = {"plugins": [{"id": "context-compression"}]}
     for attempt in range(max_retries + 1):
         try:
             return await client.chat.completions.create(
@@ -242,8 +251,17 @@ async def request_with_retry(
                 temperature=temperature,
                 max_tokens=max_output_tokens,
                 timeout=timeout_seconds,
+                **request_kwargs,
             )
         except (RateLimitError, APIError, APIStatusError) as exc:
+            is_client_error = (
+                isinstance(exc, APIStatusError)
+                and getattr(exc, "status_code", None) is not None
+                and 400 <= exc.status_code < 500
+                and exc.status_code != 429
+            )
+            if is_client_error:
+                raise exc
             if attempt == max_retries:
                 raise exc
             backoff_seconds = (2**attempt) + random.uniform(0, 0.5)
@@ -431,6 +449,7 @@ async def main() -> None:
                         max_output_tokens=args.max_output_tokens,
                         timeout_seconds=args.timeout_seconds,
                         max_retries=args.max_retries,
+                        use_context_compression=args.use_context_compression,
                     )
                     response_text = extract_response_text(response).strip()
                     elapsed_ms = (time.perf_counter() - started) * 1000
@@ -489,6 +508,7 @@ async def main() -> None:
             "max_retries": args.max_retries,
             "seed": args.seed,
             "dry_run": args.dry_run,
+            "use_context_compression": args.use_context_compression,
             "encoding": ENCODING_NAME,
         },
         "positions": [{"label": label, "token_index": index} for label, index in positions],
