@@ -24,7 +24,6 @@ const suggestedMoments: string[] = [
 const SeasideRomanticWalkPage: React.FC = () => {
   const [starting, setStarting] = React.useState<boolean>(false);
   const [startError, setStartError] = React.useState<string | null>(null);
-
   const handleBackToHome = (): void => {
     history.push('/');
   };

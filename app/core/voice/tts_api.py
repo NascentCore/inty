@@ -22,14 +22,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Dict, List, Optional, Protocol, Set, Tuple
 
-import google.genai as genai
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
 from google.genai import types
 from langsmith import traceable
 from loguru import logger
 
-from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
+from app.core.agentic_kernel.providers.gemini import (
+    GeminiClientOptions,
+    get_gemini_client as get_kernel_gemini_client,
+)
 from app.utils.models_catalog import ModelBuilder
 
 DEFAULT_STABILITY = 0.5
@@ -713,9 +715,9 @@ class GeminiTTSAPI:
         self._temperature = temperature
         # 延迟初始化：CI/本地可能没有凭据；此时直接回退 ElevenLabs，
         # 不应在 import / app 启动阶段硬失败。
-        self._client: Optional[genai.Client] = None
+        self._client: Optional[Any] = None
 
-    def _get_client(self) -> Optional[genai.Client]:
+    def _get_client(self) -> Optional[Any]:
         if self._client is not None:
             return self._client
 
@@ -732,20 +734,21 @@ class GeminiTTSAPI:
                 logger.debug(f"Gemini TTS 设置 GCP 凭证: {gcp_key_path}")
 
             gemini_live_config = global_config_loaded_from_config_yaml.gemini_live
-            base_client = genai.Client(
-                vertexai=True,
-                project=gemini_live_config.project_id,
-                location=gemini_live_config.location,
-            )
-            self._client = wrap_google_genai_client_with_langsmith(
-                base_client,
-                tags=["google-genai", "gemini-tts", "app-core-voice"],
-                metadata={
-                    "source": "app.core.voice.tts_api",
-                    "project_id": gemini_live_config.project_id,
-                    "location": gemini_live_config.location,
-                },
-                chat_name="Inty_GeminiTTS",
+            self._client = get_kernel_gemini_client(
+                GeminiClientOptions(
+                    vertexai=True,
+                    project=gemini_live_config.project_id,
+                    location=gemini_live_config.location,
+                    wrap_langsmith=True,
+                    tags=("google-genai", "gemini-tts", "app-core-voice"),
+                    metadata={
+                        "source": "app.core.voice.tts_api",
+                        "project_id": gemini_live_config.project_id,
+                        "location": gemini_live_config.location,
+                    },
+                    chat_name="Inty_GeminiTTS",
+                    credentials_path=gcp_key_path,
+                )
             )
             logger.info(
                 f"Gemini TTS 客户端已初始化 - project: {gemini_live_config.project_id}, "

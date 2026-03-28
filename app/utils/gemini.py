@@ -22,13 +22,17 @@ from enum import StrEnum
 import threading
 from typing import List, Optional
 
-import google.genai as genai
+from google import genai
 import PIL
 from google.genai import types
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agentic_kernel.providers.gemini import (
+    GeminiClientOptions,
+    get_gemini_client as get_kernel_gemini_client,
+)
 from app.external_services.fakes.gemini import FakeGeminiClient
 from app.external_services.gcs import (
     delete_from_gcs,
@@ -42,8 +46,6 @@ from app.utils.image import (
     crop_image_to_9_16,
     get_jpg_bytes_from_pil_image,
 )
-from app.utils.google_genai_client import wrap_google_genai_client_with_langsmith
-
 # Initialize Google Gen AI client with Vertex AI
 # The client will use the same credentials as configured for GCS
 _google_genai_client = None  # Will be initialized when needed
@@ -77,15 +79,14 @@ def create_google_genai_client():
     if hasattr(genai, "_client_cache"):
         genai._client_cache.clear()
 
-    tracing_metadata = {
-        "source": "app.utils.gemini",
-        "project_id": project_id,
-        "location": location,
-    }
-    return genai.Client(
-        vertexai=True,
-        project=project_id,
-        location=location,
+    return get_kernel_gemini_client(
+        GeminiClientOptions(
+            vertexai=True,
+            project=project_id,
+            location=location,
+            credentials_path=credentials_path,
+            wrap_langsmith=False,
+        )
     )
 
 
