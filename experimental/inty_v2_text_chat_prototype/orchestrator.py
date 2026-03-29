@@ -60,6 +60,25 @@ from .tool_background import start_tool_background_job
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
 
+def _llm_route_for_turn(
+    *,
+    async_tool_bg: bool,
+    dual_llm: bool,
+    heartbeat_turn: bool,
+) -> str:
+    """
+    Resolved LLM routing label for logs (async background > dual parallel > heartbeat > single).
+    Matches the branching in run_turn._invoke_model / _run_turn_with_user_profile_tools.
+    """
+    if async_tool_bg and not heartbeat_turn:
+        return "async_chat_tool_background"
+    if dual_llm and not heartbeat_turn:
+        return "dual_parallel_chat_tool"
+    if heartbeat_turn:
+        return "heartbeat_single_llm"
+    return "single_llm_unified"
+
+
 def _new_turn_trace_id() -> str:
     """Stable id to link transcript rows with llm_trace rows for one turn."""
     return str(uuid.uuid4())
@@ -309,6 +328,13 @@ async def _run_turn_fast_chat_then_tool_background(
     tools = build_openai_repl_tools()
     if not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
+    logger.info(
+        "repl.turn async_chat_tool_background_start trace_id={} llm_route=async_chat_tool_background "
+        "chat_model={} tool_model={} (foreground=chat_no_tools background=tool_loop)",
+        trace_id,
+        chat_route_model,
+        tool_route_model,
+    )
     request_messages = deepcopy(messages)
     chat_payload = _openai_messages_payload(messages)
     # Start tool-side work immediately in background; it will do the full tool loop
@@ -343,6 +369,14 @@ async def _run_turn_fast_chat_then_tool_background(
         trace_id=trace_id,
     )
     chat_text = _assistant_text_from_completion_response(chat_resp)
+    logger.info(
+        "repl.turn async_chat_tool_background_done trace_id={} llm_route={} "
+        "chat_model={} tool_model={} llm_trace_where_chat=repl.turn.bg.chat_front",
+        trace_id,
+        "async_chat_tool_background",
+        chat_route_model,
+        tool_route_model,
+    )
     return chat_text
 
 
@@ -364,15 +398,35 @@ async def _run_turn_with_user_profile_tools(
     if not heartbeat_turn and not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     if heartbeat_turn and dual_enabled:
-        logger.debug("repl.turn dual_llm disabled for heartbeat turn")
+        logger.info(
+            "repl.turn dual_llm env_on_but_ignored trace_id={} reason=heartbeat_turn",
+            trace_id,
+        )
+    route = _llm_route_for_turn(
+        async_tool_bg=False,
+        dual_llm=dual_enabled,
+        heartbeat_turn=heartbeat_turn,
+    )
+    logger.info(
+        "repl.turn user_profile_tool_loop_enter trace_id={} llm_route={} "
+        "dual_llm={} heartbeat_turn={} chat_model={} tool_model={} default_model={}",
+        trace_id,
+        route,
+        dual_enabled,
+        heartbeat_turn,
+        chat_route_model,
+        tool_route_model,
+        model,
+    )
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
         if dual_enabled and not heartbeat_turn:
-            logger.debug(
-                "repl.turn llm_round={} dual_llm=true chat_model={} tool_model={} "
+            logger.info(
+                "repl.turn llm_round={} dual_llm_parallel trace_id={} chat_model={} tool_model={} "
                 "shared_context_msgs={}",
                 round_idx,
+                trace_id,
                 chat_route_model,
                 tool_route_model,
                 len(messages),
@@ -390,8 +444,10 @@ async def _run_turn_with_user_profile_tools(
                     tools=[],
                 )
                 logger.info(
-                    "repl.turn llm_round={} branch=chat chat_completions_ms={:.0f} model={}",
+                    "repl.turn llm_round={} branch=chat trace_id={} chat_completions_ms={:.0f} "
+                    "model={} llm_trace_where=repl.turn.dual.chat",
                     round_idx,
+                    trace_id,
                     (time.perf_counter() - t_api_chat) * 1000.0,
                     chat_route_model,
                 )
@@ -407,8 +463,10 @@ async def _run_turn_with_user_profile_tools(
                     tools=tools,
                 )
                 logger.info(
-                    "repl.turn llm_round={} branch=tool chat_completions_ms={:.0f} model={}",
+                    "repl.turn llm_round={} branch=tool trace_id={} chat_completions_ms={:.0f} "
+                    "model={} llm_trace_where=repl.turn.dual.tool",
                     round_idx,
+                    trace_id,
                     (time.perf_counter() - t_api_tool) * 1000.0,
                     tool_route_model,
                 )
@@ -449,6 +507,16 @@ async def _run_turn_with_user_profile_tools(
             last_text = _merge_visible_assistant_text(chat_text, tool_text)
             tool_msg = tool_resp.choices[0].message
             tool_calls = getattr(tool_msg, "tool_calls", None) or []
+            logger.info(
+                "repl.turn dual_llm_gather_done trace_id={} round={} "
+                "llm_trace_where_chat=repl.turn.dual.chat llm_trace_where_tool=repl.turn.dual.tool "
+                "chat_model={} tool_model={} tool_branch_has_tool_calls={}",
+                trace_id,
+                round_idx,
+                chat_route_model,
+                tool_route_model,
+                bool(tool_calls),
+            )
             chat_msg = chat_resp.choices[0].message
             tool_row = openai_assistant_message_dict(tool_msg)
             chat_row = openai_assistant_message_dict(chat_msg)
@@ -470,8 +538,10 @@ async def _run_turn_with_user_profile_tools(
                 tools=tools,
             )
             logger.info(
-                "repl.turn llm_round={} branch=single chat_completions_ms={:.0f} model={}",
+                "repl.turn llm_round={} branch=single trace_id={} chat_completions_ms={:.0f} "
+                "model={} llm_trace_where=repl.turn",
                 round_idx,
+                trace_id,
                 (time.perf_counter() - t_api) * 1000.0,
                 model,
             )
@@ -720,7 +790,26 @@ async def run_turn(
 
         async def _invoke_model(turn_input: TurnInput) -> str:
             input_messages = message_snapshots_to_dicts(turn_input.history)
-            if async_tool_background_enabled() and not heartbeat_turn:
+            async_bg = async_tool_background_enabled()
+            dual_on = dual_llm_enabled()
+            route = _llm_route_for_turn(
+                async_tool_bg=async_bg,
+                dual_llm=dual_on,
+                heartbeat_turn=heartbeat_turn,
+            )
+            logger.info(
+                "run_turn llm_route={} trace_id={} async_tool_bg={} dual_llm={} heartbeat_turn={} "
+                "chat_model={} tool_model={} default_model={}",
+                route,
+                turn_trace_id,
+                async_bg,
+                dual_on,
+                heartbeat_turn,
+                chat_model(),
+                tool_model(),
+                default_model(),
+            )
+            if async_bg and not heartbeat_turn:
                 return await _run_turn_fast_chat_then_tool_background(
                     input_messages,
                     root,

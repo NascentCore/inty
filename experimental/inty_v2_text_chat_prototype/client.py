@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import os
 import time
-from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -22,9 +21,6 @@ _DEFAULT_MODEL = "deepseek/deepseek-v3.2"
 
 _CLIENT: OpenAI | None = None
 
-# experimental/inty_v2_text_chat_prototype/client.py → parents[2] = inty repo root
-_REPO_ROOT_FOR_DOTENV = Path(__file__).resolve().parent.parent.parent
-
 
 def _flush_langsmith_traces_on_exit() -> None:
     from langsmith import utils as ls_utils
@@ -40,8 +36,7 @@ atexit.register(_flush_langsmith_traces_on_exit)
 
 
 def load_prototype_dotenv() -> None:
-    """Load `inty/.env` first, then cwd `.env` (e.g. OPENROUTER_API_KEY); cwd may differ from repo root."""
-    load_dotenv(_REPO_ROOT_FOR_DOTENV / ".env")
+    """Load `.env` from the process current working directory (e.g. OPENROUTER_API_KEY)."""
     load_dotenv()
 
 
@@ -54,16 +49,17 @@ def get_client() -> OpenAI:
     _ensure_dotenv()
     if _CLIENT is not None:
         return _CLIENT
-    key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
+    key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
     if not key:
         raise ValueError(
-            "Missing API key: set OPENROUTER_API_KEY or OPENAI_API_KEY in the environment "
+            "Missing API key: set OPENROUTER_API_KEY in the environment "
             "(or a .env file loaded by python-dotenv)."
         )
-    if os.getenv("OPENROUTER_API_KEY"):
-        base_url = "https://openrouter.ai/api/v1"
-    else:
-        base_url = None
+    base_url = "https://openrouter.ai/api/v1"
+    logger.info(
+        "IntyV2Proto LLM client: api_key_env=OPENROUTER_API_KEY base_url={}",
+        base_url,
+    )
     _CLIENT = get_openai_compatible_sync_client(
         OpenAICompatibleClientOptions(
             base_url=base_url,
