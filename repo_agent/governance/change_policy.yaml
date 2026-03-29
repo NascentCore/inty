@@ -1,0 +1,25 @@
+version: 1
+summary: "Change policy for repo_agent self-evolution."
+
+policy:
+  deny_paths:
+    - ".secrets/**"
+    - "**/*.key"
+    - "**/*token*"
+    - "**/*secret*"
+    - "config.yaml"
+  high_risk_paths:
+    - "app/api/**"
+    - "app/core/security/**"
+    - "backend/**"
+    - ".github/workflows/**"
+  allowed_write_scopes:
+    - "docs/**"
+    - "tests/docs/**"
+    - "repo_agent/**"
+
+rules:
+  require_test_evidence: true
+  require_pr_for_apply: true
+  require_human_review_for_high_risk: true
+  fail_loud_on_policy_violation: true

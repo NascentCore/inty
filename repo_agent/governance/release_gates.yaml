@@ -1,0 +1,18 @@
+version: 1
+release_gates:
+  before_apply:
+    - "proposal_doc_exists"
+    - "targeted_test_steps_doc_exists"
+    - "risk_level_evaluated"
+  before_commit:
+    - "no_temporary_debug_code"
+    - "sensitive_paths_not_touched_without_approval"
+    - "diff_reviewed"
+  before_pr_update:
+    - "test_commands_recorded"
+    - "test_outputs_attached_to_pr_body"
+    - "rollback_strategy_written"
+  before_merge:
+    - "human_review_if_risk_high"
+    - "ci_required_checks_passed"
+    - "working_tree_clean"

@@ -1,0 +1,19 @@
+top_risks:
+  - id: "R-001"
+    title: "Unreviewed high-impact changes"
+    level: "high"
+    mitigation:
+      - "Require human review for high-risk paths."
+      - "Require passing test gates before apply."
+  - id: "R-002"
+    title: "Test evidence missing for applied changes"
+    level: "high"
+    mitigation:
+      - "Block apply unless relevant checks are attached."
+      - "Persist verification logs in PR description."
+  - id: "R-003"
+    title: "Scope drift during autonomous execution"
+    level: "medium"
+    mitigation:
+      - "Constrain changes to declared plan files."
+      - "Use small commits with single responsibility."

@@ -1,0 +1,17 @@
+capabilities:
+  - id: explain_identity
+    description: Explain mission, persona, and constitution.
+    mode: explain
+    enabled: true
+  - id: explain_capabilities
+    description: Summarize current repo_agent capabilities and limits.
+    mode: explain
+    enabled: true
+  - id: explain_boundaries
+    description: Explain change policy and release gates.
+    mode: guide
+    enabled: true
+  - id: report_status
+    description: Report phase status and next actions for personified repo rollout.
+    mode: guide
+    enabled: true

@@ -1,0 +1,17 @@
+version: 0.1
+repo_root: /workspace
+domains:
+  - name: android_app
+    role: "IntelliMate Android client"
+  - name: app
+    role: "Main Python backend runtime"
+  - name: backend
+    role: "Service startup wrappers and deployment scripts"
+  - name: evaluation
+    role: "Ops-facing web evaluation UI"
+  - name: tests
+    role: "Feature/e2e tests and test step docs"
+agentic_kernel:
+  tool_registry: app/core/agentic_kernel/tools/registry.py
+  tool_runtime: app/core/agentic_kernel/tools/runtime.py
+  provider_facade: app/core/agentic_kernel/providers/facade.py
