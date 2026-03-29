@@ -268,7 +268,9 @@ async def seedream_v4_5_edit(
                 generated_at=datetime.datetime.now(datetime.timezone.utc),
                 raw_response_from_provider=raw_result,
             )
-        elif first_img.url.startswith("http://") or first_img.url.startswith("https://"):
+        elif first_img.url.startswith("http://") or first_img.url.startswith(
+            "https://"
+        ):
             logger.info(
                 "SeedreamV4_5Edit returned remote URL output; skipping GCS re-upload: {}",
                 first_img.url,
@@ -558,7 +560,9 @@ async def z_image_turbo(
                 )
                 continue
 
-            raise ValueError(f"Unsupported image URL format from ZImageTurbo: {image.url}")
+            raise ValueError(
+                f"Unsupported image URL format from ZImageTurbo: {image.url}"
+            )
         if not processed_results:
             raise ValueError("No valid images returned from ZImageTurbo")
         trace_raw_result = _sanitize_provider_response_for_trace(raw_result)
@@ -697,7 +701,9 @@ async def z_image_turbo_image_to_image(
                     generated_at=datetime.datetime.now(datetime.timezone.utc),
                     raw_response_from_provider=raw_result,
                 )
-        elif first_img.url.startswith("http://") or first_img.url.startswith("https://"):
+        elif first_img.url.startswith("http://") or first_img.url.startswith(
+            "https://"
+        ):
             logger.info(
                 "ZImageTurboImageToImage returned remote URL output; skipping GCS re-upload: {}",
                 first_img.url,

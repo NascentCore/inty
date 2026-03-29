@@ -165,7 +165,9 @@ def build_system_prompt(
         if include_repl_image_generation_contract:
             parts.append(_output_contract_text_with_user_profile_tool())
         else:
-            parts.append(_output_contract_text_with_user_profile_tool_chat_branch_dual_llm())
+            parts.append(
+                _output_contract_text_with_user_profile_tool_chat_branch_dual_llm()
+            )
     else:
         parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)

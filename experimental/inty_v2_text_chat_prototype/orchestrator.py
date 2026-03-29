@@ -911,9 +911,9 @@ async def run_turn(
         assistant_text = orchestrated.output.assistant_text
         persist_metadata = orchestrated.persist_metadata or {}
         assistant_msg_uuid = persist_metadata.get("assistant_msg_uuid")
-        assert isinstance(assistant_msg_uuid, str) and assistant_msg_uuid, (
-            "turn orchestrator persistence must return assistant_msg_uuid"
-        )
+        assert (
+            isinstance(assistant_msg_uuid, str) and assistant_msg_uuid
+        ), "turn orchestrator persistence must return assistant_msg_uuid"
         logger.info(
             "run_turn main_repl_tool_loop_wall_ms={:.0f}",
             (time.perf_counter() - t_main) * 1000.0,
