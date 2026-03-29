@@ -1,0 +1,49 @@
+experiment_name: "ulmfit_smoke"
+output_dir: "research/ulmfit/output/smoke"
+seed: 42
+device: "auto"
+
+vocab:
+  max_size: 20000
+  min_freq: 1
+
+dataset:
+  provider: "toy"
+  lm_corpus_provider: "toy"
+  toy_train_size: 512
+  toy_valid_size: 128
+  toy_test_size: 128
+
+model:
+  embedding_dim: 96
+  hidden_dim: 192
+  num_layers: 3
+  embedding_dropout: 0.1
+  hidden_dropout: 0.2
+  output_dropout: 0.25
+
+lm_train:
+  bptt: 35
+  batch_size: 32
+  pretrain_epochs: 1
+  finetune_epochs: 1
+  lr_max: 0.002
+  weight_decay: 0.00001
+  gradient_clip: 0.25
+  stlr_cut_frac: 0.1
+  stlr_ratio: 16.0
+
+classifier_train:
+  batch_size: 32
+  max_seq_len: 120
+  fc_hidden_dim: 96
+  num_classes: 2
+  head_dropout: 0.4
+  lr_max: 0.002
+  weight_decay: 0.00001
+  gradient_clip: 0.25
+  layer_lr_decay: 2.6
+  unfreeze_blocks: [1, 2, 4]
+  stage_epochs: [1, 1, 1]
+  stlr_cut_frac: 0.1
+  stlr_ratio: 16.0
