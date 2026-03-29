@@ -13,13 +13,9 @@
 * 提交代码
 * 示例：https://github.com/NascentCore/inty/pull/974/files
 
-### 更新 Submodules
+### SDK 更新
 
-```bash
-./scripts/update_inty_sdk_submodule.sh
-```
-
-示例：https://github.com/NascentCore/inty/pull/976/files
+仓库已不再维护 SDK submodule。若需要更新 SDK，请参考对应目录 README 的最新构建流程。
 
 ## 规范
 

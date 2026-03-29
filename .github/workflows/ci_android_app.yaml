@@ -123,8 +123,6 @@ jobs:
                 TASKS="$TASKS :library:utils:testDebugUnitTest :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
               android_app/library/network/*|android_app/library/network/*/*|android_app/library/network/*/*/*)
                 TASKS="$TASKS :library:network:testDebugUnitTest :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
-              android_app/library/inty_sdk|android_app/library/inty_sdk/*|android_app/library/inty_sdk/*/*|android_app/library/inty_sdk/*/*/*)
-                TASKS="$TASKS :core:data:testDebugUnitTest :core:common:testDebugUnitTest :app:testDebugUnitTest" ;;
             esac
 
             # 收集测试类过滤器（仅 src/test 下的 .kt/.java，任意深度）

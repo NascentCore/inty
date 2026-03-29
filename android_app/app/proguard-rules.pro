@@ -194,19 +194,6 @@
 -keep class org.koin.core.** { *; }
 
 # ===========================================
-# inty-sdk 保护
-# ===========================================
-
-# inty-sdk 核心API
--keep class com.inty.api.** { *; }
-
-# inty-sdk 模型类
--keep class com.inty.api.models.** { *; }
-
-# inty-sdk 服务类
--keep class com.inty.api.services.** { *; }
-
-# ===========================================
 # 日志和调试
 # ===========================================
 

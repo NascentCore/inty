@@ -1,4 +1,0 @@
-[submodule "android_app/library/inty_sdk"]
-	path = android_app/library/inty_sdk
-	url = https://github.com/NascentCore/inty-kotlin.git
-	ignore = dirty

@@ -1,7 +1,6 @@
 package ai.sxwl.android.data.store
 
 import ai.sxwl.android.data.api.NetServiceMgr
-import ai.sxwl.android.data.http.IntyNetworkManager
 import ai.sxwl.android.utils.AppUtils
 import android.content.Context
 import android.os.Handler
@@ -264,18 +263,13 @@ object IntySetting {
 
     /** 登录接口后，本地处理登录业务的数据逻辑 */
     suspend fun login(uid: String, token: String) {
-        // 先清除客户端缓存，确保旧客户端不会残留
-        // 这样可以避免token更新和客户端获取之间的竞态条件
-        IntyNetworkManager.clearClientCache()
         NetServiceMgr.clearCache()
 
         // 然后更新token
         changeUser(uid)
         setToken(token)
 
-        // 再次清除缓存，确保使用新token创建客户端
-        // 虽然getClient()会清除旧token的缓存，但这里双重保险
-        IntyNetworkManager.clearClientCache()
+        // 再次清除缓存，确保后续请求使用更新后的认证信息
         NetServiceMgr.clearCache()
     }
 

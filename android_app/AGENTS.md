@@ -33,7 +33,7 @@
 
 - 仅支持竖屏（portrait）；无需考虑 landscape 兼容。
 - Compose/Recycler 需避免无意义重组；图片与音频加载注意内存与缓存策略。
-- 现有并行网络栈：Retrofit/Moshi 与 Inty SDK；避免新增第三套；复用统一鉴权/环境/日志配置，避免重复创建 `OkHttpClient`。
+- 当前统一网络栈：Retrofit/Moshi；避免新增新的并行网络栈；复用统一鉴权/环境/日志配置，避免重复创建 `OkHttpClient`。
 
 ## Stainless 迁移冻结规则（FR_REMOVE_STAINLESS_SDK_MIGRATION_PLAN / Phase 0）
 
