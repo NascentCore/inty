@@ -1,5 +1,6 @@
 """Tests for app.core.images.fal."""
 
+import asyncio
 import base64
 import datetime
 import io
@@ -165,9 +166,10 @@ async def test_seedream_v4_5_edit_uploads_to_fake_gcs_and_content_matches(
     }
     mock_handler = Mock()
     mock_handler.get = AsyncMock(return_value=raw_result)
+    mock_fal = Mock()
+    mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client") as mock_fal:
-        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal):
         args = FalSeedreamV4_5EditInput(
             prompt="test prompt",
             image_urls=_SEEDREAM_EXAMPLE_IMAGE_URLS,
@@ -215,9 +217,10 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
     }
     mock_handler = Mock()
     mock_handler.get = AsyncMock(return_value=raw_result)
+    mock_fal = Mock()
+    mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client") as mock_fal:
-        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal):
         args = ZImageTurboInput(prompt="test prompt", num_images=2)
         results = await z_image_turbo(args, gcs_uri_base="fal_test")
 
@@ -255,11 +258,12 @@ async def test_z_image_turbo_skip_gcs_upload_skips_upload_to_gcs():
     }
     mock_handler = Mock()
     mock_handler.get = AsyncMock(return_value=raw_result)
+    mock_fal = Mock()
+    mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client") as mock_fal, patch(
+    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal), patch(
         "app.core.images.fal.upload_to_gcs"
     ) as mock_upload:
-        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
         args = ZImageTurboInput(prompt="test prompt")
         results = await z_image_turbo(
             args, gcs_uri_base="fal_test", skip_gcs_upload=True
@@ -295,11 +299,12 @@ async def test_z_image_turbo_image_to_image_skip_gcs_upload_skips_upload_to_gcs(
     }
     mock_handler = Mock()
     mock_handler.get = AsyncMock(return_value=raw_result)
+    mock_fal = Mock()
+    mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client") as mock_fal, patch(
+    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal), patch(
         "app.core.images.fal.upload_to_gcs"
     ) as mock_upload:
-        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
         args = ZImageTurboImageToImageInput(
             prompt="test prompt",
             image_url="https://example.com/in.jpg",
@@ -336,9 +341,10 @@ async def test_z_image_turbo_image_to_image_accepts_http_url_output_without_data
     }
     mock_handler = Mock()
     mock_handler.get = AsyncMock(return_value=raw_result)
+    mock_fal = Mock()
+    mock_fal.submit = AsyncMock(return_value=mock_handler)
 
-    with patch("app.core.images.fal.fal_client") as mock_fal:
-        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
+    with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal):
         args = ZImageTurboImageToImageInput(
             prompt="test prompt",
             image_url="https://example.com/reference.jpg",
@@ -400,11 +406,12 @@ async def test_z_image_turbo_attaches_redacted_trace_payload_after_successful_gc
     mock_handler = Mock()
     mock_handler.get = AsyncMock(return_value=raw_result)
 
+    mock_fal = Mock()
+    mock_fal.submit = AsyncMock(return_value=mock_handler)
     with (
-        patch("app.core.images.fal.fal_client") as mock_fal,
+        patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal),
         patch("app.core.images.fal.attach_provider_response_to_langsmith_run") as mock_attach,
     ):
-        mock_fal.submit_async = AsyncMock(return_value=mock_handler)
         args = ZImageTurboInput(prompt="test prompt")
         _ = await z_image_turbo(args, gcs_uri_base="fal_test")
 
@@ -416,3 +423,39 @@ async def test_z_image_turbo_attaches_redacted_trace_payload_after_successful_gc
     assert attached_payload is not None
     assert "omitted data URI after GCS upload" in attached_payload["images"][0]["url"]
     assert raw_result["images"][0]["url"] == data_uri
+
+
+def test_z_image_turbo_successive_asyncio_runs_without_global_reset() -> None:
+    """Regression: per-call Fal AsyncClient survives consecutive asyncio.run() (REPL-style)."""
+    data_uri = _make_minimal_jpeg_data_uri()
+    raw_result = {
+        "images": [
+            {
+                "url": data_uri,
+                "content_type": "image/jpeg",
+                "file_name": "out.jpg",
+                "file_size": 123,
+                "width": 1,
+                "height": 1,
+            }
+        ],
+        "timings": {},
+        "seed": 42,
+        "prompt": "test",
+    }
+    mock_handler = Mock()
+    mock_handler.get = AsyncMock(return_value=raw_result)
+
+    async def run_once() -> None:
+        mock_fal = Mock()
+        mock_fal.submit = AsyncMock(return_value=mock_handler)
+        with patch("app.core.images.fal.fal_client.AsyncClient", return_value=mock_fal):
+            args = ZImageTurboInput(prompt="test prompt")
+            results = await z_image_turbo(
+                args, gcs_uri_base="fal_test", skip_gcs_upload=True
+            )
+        assert len(results) == 1
+        mock_fal.submit.assert_called_once()
+
+    asyncio.run(run_once())
+    asyncio.run(run_once())

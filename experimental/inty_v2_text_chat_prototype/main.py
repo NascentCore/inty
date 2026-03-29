@@ -283,24 +283,30 @@ def _run_turn_with_stdin_pump(
     )
     t.start()
     stdin_fd = sys.stdin.fileno()
+    # Do not print (async tool output, etc.) while the user may be mid-line in the TTY
+    # line discipline: interleaved stdout corrupts the screen vs kernel buffer, so
+    # backspace appears to "not delete" earlier characters. Only flush async events
+    # after a full line is read from stdin, or after the worker finishes.
     while not done.is_set():
-        _drain_async_tool_events_in_waiting_loop(ws)
         r, _, _ = select.select([stdin_fd], [], [], 0.1)
-        if r:
-            raw = sys.stdin.readline()
-            if raw == "":
-                pending.put(None)
-            else:
-                text = raw.rstrip("\r\n")
-                print(f"[{_local_ts_str()}] {text}")
-                logger.debug(
-                    "repl stdin_pump queued line_chars={} preview={}",
-                    len(text),
-                    _preview_line(text),
-                )
-                print("> ", end="", flush=True)
-                pending.put((text, True))
+        if not r:
+            continue
+        raw = sys.stdin.readline()
+        _drain_async_tool_events_in_waiting_loop(ws)
+        if raw == "":
+            pending.put(None)
+        else:
+            text = raw.rstrip("\r\n")
+            print(f"[{_local_ts_str()}] {text}")
+            logger.debug(
+                "repl stdin_pump queued line_chars={} preview={}",
+                len(text),
+                _preview_line(text),
+            )
+            print("> ", end="", flush=True)
+            pending.put((text, True))
     t.join(timeout=3600.0)
+    _drain_async_tool_events_in_waiting_loop(ws)
     if exc:
         raise exc[0]
     return result["out"]

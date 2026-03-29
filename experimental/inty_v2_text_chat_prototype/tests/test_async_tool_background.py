@@ -19,6 +19,10 @@ from inty_v2_text_chat_prototype import orchestrator
 from inty_v2_text_chat_prototype.models import load_transcript
 from inty_v2_text_chat_prototype.paths import WorkspacePaths
 from inty_v2_text_chat_prototype.tool_background import (
+    _append_local_image_paths_for_display,
+    _background_turn_should_force_tools,
+    _last_user_message_text,
+    _local_paths_from_tool_messages,
     clear_output_queue,
     pop_output_events_nowait,
 )
@@ -195,6 +199,43 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertEqual(rows[1].reply_to, rows[0].uuid)
             self.assertTrue(rows[0].trace_id)
             self.assertEqual(rows[1].trace_id, rows[0].trace_id)
+
+
+class TestForceToolsHint(unittest.TestCase):
+    def test_last_user_message_text(self) -> None:
+        msgs = [
+            {"role": "system", "content": "s"},
+            {"role": "user", "content": "first"},
+            {"role": "assistant", "content": "a"},
+            {"role": "user", "content": "生成图片"},
+        ]
+        self.assertEqual(_last_user_message_text(msgs), "生成图片")
+
+    def test_background_turn_should_force_tools(self) -> None:
+        self.assertTrue(_background_turn_should_force_tools("生成图片"))
+        self.assertTrue(_background_turn_should_force_tools(" 改图 "))
+        self.assertFalse(_background_turn_should_force_tools("你好"))
+
+
+class TestLocalPathDisplay(unittest.TestCase):
+    def test_local_paths_from_tool_messages_dedupes(self) -> None:
+        msgs = [
+            {"role": "tool", "content": "x local_path=/a/b.jpeg z"},
+            {"role": "tool", "content": "local_path=/c/d.jpeg"},
+            {"role": "assistant", "content": "nope"},
+        ]
+        self.assertEqual(
+            _local_paths_from_tool_messages(msgs),
+            ["/a/b.jpeg", "/c/d.jpeg"],
+        )
+
+    def test_append_local_image_paths_for_display(self) -> None:
+        t = _append_local_image_paths_for_display(
+            "模型正文", ["/tmp/z_image_1.jpeg"]
+        )
+        self.assertIn("模型正文", t)
+        self.assertIn("（生成图片本地路径）", t)
+        self.assertIn("/tmp/z_image_1.jpeg", t)
 
 
 if __name__ == "__main__":

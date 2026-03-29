@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import queue
+import re
 import threading
 import time
 import uuid
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from loguru import logger
+from openai import APIError, BadRequestError
 
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
@@ -32,6 +34,63 @@ _OUTPUT_QUEUE_LOCK = threading.Lock()
 _ACTIVE_THREADS: set[threading.Thread] = set()
 _ACTIVE_THREADS_LOCK = threading.Lock()
 _BG_TOOL_MAX_ROUNDS = 24
+# Fal `generate_image` / `modify_image` tool summaries include `local_path=/abs/path/...`.
+_LOCAL_PATH_IN_TOOL = re.compile(r"local_path=(\S+)")
+# When the last user message matches, first background completion uses tool_choice=required
+# so the tool-side model cannot skip structured tool calls on image/edit intents.
+_BG_USER_HINTS_FORCE_TOOLS = re.compile(
+    r"(生成图片|生图|文生图|图生图|改图|重画|画一张|来张图|修图|换风格|"
+    r"给我画|画个|画一|肖像照|插图|"
+    r"generate\s*image|text-?to-?image|image\s*to\s*image|modify\s*image)",
+    re.I,
+)
+
+
+def _last_user_message_text(messages: list[dict[str, Any]]) -> str:
+    for m in reversed(messages):
+        if m.get("role") != "user":
+            continue
+        c = m.get("content")
+        if isinstance(c, str):
+            return c.strip()
+    return ""
+
+
+def _background_turn_should_force_tools(user_text: str) -> bool:
+    if not user_text:
+        return False
+    return _BG_USER_HINTS_FORCE_TOOLS.search(user_text) is not None
+
+
+def _local_paths_from_tool_messages(
+    messages: list[dict[str, Any]],
+) -> list[str]:
+    """Collect absolute paths from tool role messages (dedupe, order preserved)."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for m in messages:
+        if m.get("role") != "tool":
+            continue
+        content = m.get("content")
+        if not isinstance(content, str):
+            continue
+        for match in _LOCAL_PATH_IN_TOOL.finditer(content):
+            p = match.group(1)
+            if p and p != "(none)" and p not in seen:
+                seen.add(p)
+                out.append(p)
+    return out
+
+
+def _append_local_image_paths_for_display(assistant_text: str, paths: list[str]) -> str:
+    """Append human-readable lines so REPL can show on-disk image paths after async tools."""
+    if not paths:
+        return assistant_text
+    block = "\n".join(paths)
+    suffix = f"\n\n（生成图片本地路径）\n{block}"
+    if not assistant_text:
+        return suffix.strip()
+    return assistant_text.rstrip() + suffix
 
 
 def _insert_system_message(
@@ -131,11 +190,14 @@ def _chat_completion_create(
     model: str,
     messages_payload: list[dict[str, Any]],
     tools: list[Any],
+    tool_choice: str | None = None,
 ) -> Any:
     create_kw: dict[str, Any] = {"model": model, "messages": deepcopy(messages_payload)}
     if tools:
         create_kw["tools"] = tools
         create_kw["parallel_tool_calls"] = True
+        if tool_choice is not None:
+            create_kw["tool_choice"] = tool_choice
     return client.chat.completions.create(**create_kw)
 
 
@@ -244,13 +306,42 @@ async def _run_background_tool_loop(
     active_round = 0
 
     request_snapshot = deepcopy(working_messages)
-    initial_response = await asyncio.to_thread(
-        _chat_completion_create,
-        resolved_client,
-        model=tool_model_name,
-        messages_payload=_openai_messages_payload(working_messages),
-        tools=tools,
+    payload = _openai_messages_payload(working_messages)
+    force_tools = bool(tools) and _background_turn_should_force_tools(
+        _last_user_message_text(working_messages)
     )
+    if force_tools:
+        try:
+            initial_response = await asyncio.to_thread(
+                _chat_completion_create,
+                resolved_client,
+                model=tool_model_name,
+                messages_payload=payload,
+                tools=tools,
+                tool_choice="required",
+            )
+        except (BadRequestError, APIError) as exc:
+            logger.warning(
+                "repl.turn.bg tool_choice=required rejected, falling back to auto: {}",
+                exc,
+            )
+            initial_response = await asyncio.to_thread(
+                _chat_completion_create,
+                resolved_client,
+                model=tool_model_name,
+                messages_payload=payload,
+                tools=tools,
+                tool_choice=None,
+            )
+    else:
+        initial_response = await asyncio.to_thread(
+            _chat_completion_create,
+            resolved_client,
+            model=tool_model_name,
+            messages_payload=payload,
+            tools=tools,
+            tool_choice=None,
+        )
     rounds_used += 1
     active_round = rounds_used
     _log_bg_llm_round_result(
@@ -330,10 +421,12 @@ async def _run_background_tool_loop(
         ) from exc
 
     assistant_text = _assistant_text_from_completion_response(loop_result.response)
+    image_paths = _local_paths_from_tool_messages(loop_result.messages)
+    display_text = _append_local_image_paths_for_display(assistant_text, image_paths)
     assistant_msg_uuid = str(uuid.uuid4())
     _append_background_transcript_assistant(
         transcript_path,
-        content=assistant_text,
+        content=display_text,
         assistant_msg_uuid=assistant_msg_uuid,
         reply_to=user_msg_uuid,
         trace_id=trace_id,
@@ -352,7 +445,7 @@ async def _run_background_tool_loop(
             workspace=ws_root,
             user_msg_uuid=user_msg_uuid,
             assistant_msg_uuid=assistant_msg_uuid,
-            text=assistant_text,
+            text=display_text,
             ts=utc_iso_ts(),
             elapsed_ms=elapsed_ms,
         )

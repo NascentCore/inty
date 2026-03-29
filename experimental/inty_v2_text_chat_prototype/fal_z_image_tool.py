@@ -25,9 +25,11 @@ MAX_NUM_IMAGES_PER_CALL = 4
 
 async def _reset_fal_async_client_after_short_lived_loop() -> None:
     """
-    fal 模块级 `async_client` 的 httpx 实例绑定创建它的 event loop。
-    在 `asyncio.run(run_turn(...))` 每轮用户输入都会关闭 loop 时，须在 loop 仍存活时拆掉缓存并 aclose，
-    否则下一次短生命周期 loop 内调用 Fal 会报 Event loop is closed。
+    清理 fal_client 包内**模块级** ``async_client`` 单例上已缓存的 httpx 客户端。
+
+    ``app.core.images.fal`` 中文生图/图生图已改为每次调用独立的 ``fal_client.AsyncClient()``，
+    不再依赖该单例；若进程内仍有其它代码触碰 ``fal_client.async_client``，在每轮
+    ``asyncio.run(run_turn(...))`` 结束前调用本函数可避免陈旧 client 泄漏。
     """
     inst = fal_client.async_client
     old = inst.__dict__.pop("_client", None)

@@ -317,6 +317,8 @@ async def _run_turn_fast_chat_then_tool_background(
     transcript_path: Path,
     user_msg_uuid: str,
     trace_id: str,
+    bundle: PromptBundle,
+    context: ContextMeta,
 ) -> str:
     """
     Front path: return chat-branch text quickly.
@@ -336,7 +338,20 @@ async def _run_turn_fast_chat_then_tool_background(
         tool_route_model,
     )
     request_messages = deepcopy(messages)
-    chat_payload = _openai_messages_payload(messages)
+    if dual_llm_enabled():
+        chat_messages = deepcopy(messages)
+        chat_messages[0]["content"] = build_system_prompt(
+            bundle,
+            context,
+            enable_user_profile_tool=True,
+            heartbeat_turn=False,
+            include_repl_image_generation_contract=False,
+        )
+        chat_payload = _openai_messages_payload(chat_messages)
+        chat_log_messages = chat_messages
+    else:
+        chat_payload = _openai_messages_payload(messages)
+        chat_log_messages = request_messages
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
     start_tool_background_job(
@@ -362,7 +377,7 @@ async def _run_turn_fast_chat_then_tool_background(
         round_idx=1,
         model=chat_route_model,
         resp=chat_resp,
-        messages=request_messages,
+        messages=chat_log_messages,
         llm_trace=llm_trace,
         llm_trace_where="repl.turn.bg.chat_front",
         root=root,
@@ -387,6 +402,8 @@ async def _run_turn_with_user_profile_tools(
     llm_trace: bool = True,
     heartbeat_turn: bool = False,
     trace_id: str | None = None,
+    bundle: PromptBundle | None = None,
+    context: ContextMeta | None = None,
 ) -> str:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
@@ -433,6 +450,20 @@ async def _run_turn_with_user_profile_tools(
             )
             base_payload = _openai_messages_payload(messages)
             request_messages = deepcopy(messages)
+            if bundle is not None and context is not None:
+                chat_messages = deepcopy(messages)
+                chat_messages[0]["content"] = build_system_prompt(
+                    bundle,
+                    context,
+                    enable_user_profile_tool=True,
+                    heartbeat_turn=heartbeat_turn,
+                    include_repl_image_generation_contract=False,
+                )
+                chat_branch_payload = _openai_messages_payload(chat_messages)
+                chat_log_messages = chat_messages
+            else:
+                chat_branch_payload = base_payload
+                chat_log_messages = request_messages
 
             async def _run_chat_branch() -> Any:
                 t_api_chat = time.perf_counter()
@@ -440,7 +471,7 @@ async def _run_turn_with_user_profile_tools(
                     _chat_completion_create,
                     client,
                     model=chat_route_model,
-                    messages_payload=base_payload,
+                    messages_payload=chat_branch_payload,
                     tools=[],
                 )
                 logger.info(
@@ -486,7 +517,7 @@ async def _run_turn_with_user_profile_tools(
                 round_idx=round_idx,
                 model=chat_route_model,
                 resp=chat_resp,
-                messages=request_messages,
+                messages=chat_log_messages,
                 llm_trace=llm_trace,
                 llm_trace_where="repl.turn.dual.chat",
                 root=root,
@@ -817,6 +848,8 @@ async def run_turn(
                     transcript_path=paths.transcript,
                     user_msg_uuid=user_msg_uuid,
                     trace_id=turn_trace_id,
+                    bundle=bundle,
+                    context=context,
                 )
             return await _run_turn_with_user_profile_tools(
                 input_messages,
@@ -824,6 +857,8 @@ async def run_turn(
                 llm_trace=llm_trace,
                 heartbeat_turn=heartbeat_turn,
                 trace_id=turn_trace_id,
+                bundle=bundle,
+                context=context,
             )
 
         async def _handle_response(_: TurnInput, assistant_text: str) -> TurnOutput:

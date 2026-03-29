@@ -40,24 +40,10 @@ def _output_contract_text() -> str:
     )
 
 
-def _output_contract_text_with_user_profile_tool() -> str:
+def _repl_tool_contract_image_generation_clause() -> str:
+    """Clause (5): generate_image / modify_image — only for the tool-side LLM in dual-path REPL."""
     return (
-        "输出与工具："
-        "（1）用户自愿透露、适合长期保存的基本事实，可静默调用 user_profile_record 写入 USER 档案；"
-        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
-        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
-        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
-        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
-        "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
-        "（3）为核对工作区约定、记忆规则或控制面设置，可静默使用 workspace_list_dir / workspace_read_file "
-        "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
-        "本回合 system 中已完整给出且未变更的同一文件。"
-        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
-        "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
-        "必须先静默调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
-        "想象或「内部读取」叙事来报具体数字或断言文件内容。"
-        "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
-        "（5）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先静默调用 generate_image（Fal z-image-turbo 文生图），"
+        "（5）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
         "再根据工具返回作答；张数由对话判定写入工具参数（默认 1）。"
         "当用户要**修改、重画、换风格、在已有图基础上改**时，须调用 modify_image（Fal z-image-turbo **图生图**），"
         "并传入工作区内源图路径（如 generated_images/…）或公网 source_image_url；**不要**用 generate_image 做改图。"
@@ -67,10 +53,70 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "生肖/主题/节日元素仅作**服饰、道具、场景、氛围或装饰性**叠加，不得与上述蓝本冲突。"
         "改图（modify_image）时若涉及主题化或换风格，同样须保持与 IDENTITY 外貌小节一致的关键特征，不得仅用提示词「换脸」或推翻既有约定。"
         "若外貌小节缺失或过于笼统，应先 workspace_read_file IDENTITY.md 再组织 prompt，避免凭对话臆造长相。"
+    )
+
+
+def _repl_tool_contract_suffix_after_image_clause() -> str:
+    """Shared closing rules (after optional clause 5)."""
+    return (
         "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
         "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
         "无落盘需求、无磁盘事实核验、无自察必要、无生图请求时，不要调用工具。"
         "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
+    )
+
+
+def _repl_tool_contract_suffix_after_image_clause_chat_branch() -> str:
+    """Same as suffix after clause (5), but no「无生图」— chat branch does not see image tool rules."""
+    return (
+        "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
+        "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
+        "无落盘需求、无磁盘事实核验、无自察必要时，不要调用工具。"
+        "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
+    )
+
+
+def _output_contract_text_with_user_profile_tool() -> str:
+    return (
+        "输出与工具："
+        "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
+        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
+        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
+        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
+        "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
+        "（3）为核对工作区约定、记忆规则或控制面设置，可使用 workspace_list_dir / workspace_read_file "
+        "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
+        "本回合 system 中已完整给出且未变更的同一文件。"
+        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
+        "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
+        "必须先调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
+        "想象或「内部读取」叙事来报具体数字或断言文件内容。"
+        "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
+        + _repl_tool_contract_image_generation_clause()
+        + _repl_tool_contract_suffix_after_image_clause()
+    )
+
+
+def _output_contract_text_with_user_profile_tool_chat_branch_dual_llm() -> str:
+    """Tool contract for the chat-side LLM when dual-path: no generate_image / modify_image instructions."""
+    return (
+        "输出与工具："
+        "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
+        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
+        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
+        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
+        "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
+        "（3）为核对工作区约定、记忆规则或控制面设置，可使用 workspace_list_dir / workspace_read_file "
+        "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
+        "本回合 system 中已完整给出且未变更的同一文件。"
+        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
+        "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
+        "必须先调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
+        "想象或「内部读取」叙事来报具体数字或断言文件内容。"
+        "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
+        + _repl_tool_contract_suffix_after_image_clause_chat_branch()
     )
 
 
@@ -80,6 +126,7 @@ def build_system_prompt(
     *,
     enable_user_profile_tool: bool = False,
     heartbeat_turn: bool = False,
+    include_repl_image_generation_contract: bool = True,
 ) -> str:
     parts: list[str] = [_security_base()]
     if bundle.agents_md.strip():
@@ -115,7 +162,10 @@ def build_system_prompt(
     if enable_user_profile_tool and heartbeat_turn:
         parts.append(_output_contract_text())
     elif enable_user_profile_tool:
-        parts.append(_output_contract_text_with_user_profile_tool())
+        if include_repl_image_generation_contract:
+            parts.append(_output_contract_text_with_user_profile_tool())
+        else:
+            parts.append(_output_contract_text_with_user_profile_tool_chat_branch_dual_llm())
     else:
         parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)
