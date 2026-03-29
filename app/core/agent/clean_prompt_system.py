@@ -10,7 +10,6 @@ Design goals:
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Optional, Sequence, TypeAlias
 
@@ -18,7 +17,7 @@ from langchain_core.messages import SystemMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.api.types.llm_config import LLMConfig
-from app.core.agent import prompt_template, prompts
+from app.core.agent import prompt_template
 from app.core.agent.agent import (
     CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
     CHRISTMAS_TEMPORAL_CONTEXT_PROMPT,
@@ -36,6 +35,13 @@ from app.core.agent.agent import (
     _load_intellimate_user_manual,
 )
 from app.core.agent.agent_prompt_configs import get_agent_prompt_override
+from app.core.agentic_kernel.prompting.assembler import (
+    PromptAssemblerConfig,
+    PromptAssemblerDeps,
+    build_system_messages as build_system_messages_with_assembler,
+    build_system_messages_for_chat as build_system_messages_for_chat_with_assembler,
+    build_system_messages_for_official_assistant as build_system_messages_for_official_assistant_with_assembler,
+)
 from app.core.config import (
     global_config_loaded_from_config_yaml as global_config,
 )
@@ -164,89 +170,23 @@ class PromptAssemblyDeps:
 
 
 DEFAULT_PROMPT_ASSEMBLY_DEPS = PromptAssemblyDeps()
+DEFAULT_PROMPT_ASSEMBLER_CONFIG = PromptAssemblerConfig(
+    official_agent_id=INTELLIMATE_AGENT_ID,
+    force_default_prompts=bool(global_config.agent.force_default_prompts),
+    christmas_seasonal_behavior_prompt=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
+    christmas_temporal_context_prompt=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT,
+    official_rename_system_message=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE,
+    official_tool_usage_system_message=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE,
+)
 
-
-def _extract_user_name_from_profile(user_profile: str) -> Optional[str]:
-    if not user_profile:
-        return None
-    try:
-        name_match = re.search(r"Name:\s*([^\n]+)", user_profile)
-        if name_match:
-            return name_match.group(1).strip()
-        chinese_name_match = re.search(r"[名字|姓名]\s*[:=：]\s*([^\n]+)", user_profile)
-        if chinese_name_match:
-            return chinese_name_match.group(1).strip()
-    except (AttributeError, TypeError):
-        return None
-    return None
-
-
-def _is_official_assistant(context: AgentPromptContext) -> bool:
-    return context.agent_id == INTELLIMATE_AGENT_ID
-
-
-def _get_effective_main_prompt(
-    *, context: AgentPromptContext, deps: PromptAssemblyDeps
-) -> str:
-    override = deps.lookup_prompt_override(context.agent_id, context.name)
-    if override is not None and override.main_prompt is not None:
-        return override.main_prompt
-    if global_config.agent.force_default_prompts:
-        return prompts.PURITY_ROLEPLAY_PROMPT.main_prompt
-    if context.main_prompt:
-        try:
-            return prompts.get_main_prompt_by_id(context.main_prompt)
-        except ValueError:
-            return context.main_prompt
-    return prompts.ROMANTIC_ROLEPLAY_PROMPT.main_prompt
-
-
-def _get_effective_mode_prompt(
-    *, context: AgentPromptContext, deps: PromptAssemblyDeps
-) -> str:
-    override = deps.lookup_prompt_override(context.agent_id, context.name)
-    if override is not None and override.mode_prompt is not None:
-        return override.mode_prompt
-    if global_config.agent.force_default_prompts:
-        return prompts.PURITY_ROLEPLAY_PROMPT.mode_prompt
-    if context.mode_prompt:
-        try:
-            return prompts.get_mode_prompt_by_id(context.mode_prompt)
-        except ValueError:
-            return context.mode_prompt
-    return prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
-
-
-def _get_effective_output_format_prompt(context: AgentPromptContext) -> str:
-    if context.output_format_prompt:
-        return context.output_format_prompt
-    if context.mode_prompt:
-        try:
-            return prompts.get_mode_output_format_prompt_by_id(context.mode_prompt)
-        except ValueError:
-            return ""
-    return prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
-
-
-def _build_character_context(
-    *, context: AgentPromptContext, user_name: Optional[str], deps: PromptAssemblyDeps
-) -> list[SystemMessage]:
-    context_messages: list[SystemMessage] = []
-    if context.personality:
-        rendered = deps.render_prompt(context.personality, context.name, user_name)
-        context_messages.append(SystemMessage(content=rendered))
-    if context.scenario:
-        rendered = deps.render_prompt(context.scenario, context.name, user_name)
-        context_messages.append(SystemMessage(content=rendered))
-    if context.message_example:
-        rendered = deps.render_prompt(context.message_example, context.name, user_name)
-        context_messages.append(SystemMessage(content=rendered))
-    if deps.is_christmas_prompt_enabled():
-        rendered = deps.render_prompt(
-            CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT, context.name, user_name
-        )
-        context_messages.append(SystemMessage(content=rendered))
-    return context_messages
+def _to_assembler_deps(deps: PromptAssemblyDeps) -> PromptAssemblerDeps:
+    return PromptAssemblerDeps(
+        render_prompt=deps.render_prompt,
+        lookup_prompt_override=deps.lookup_prompt_override,
+        is_user_time_context_enabled=deps.is_user_time_context_enabled,
+        is_christmas_prompt_enabled=deps.is_christmas_prompt_enabled,
+        build_user_time_context_prompt=_build_user_time_context_prompt,
+    )
 
 
 def build_system_messages(
@@ -255,84 +195,12 @@ def build_system_messages(
     request: PromptBuildInput,
     deps: PromptAssemblyDeps = DEFAULT_PROMPT_ASSEMBLY_DEPS,
 ) -> list[SystemMessage]:
-    user_name = _extract_user_name_from_profile(request.user_profile)
-    system_messages: list[SystemMessage] = []
-
-    main_prompt = _get_effective_main_prompt(context=context, deps=deps)
-    if main_prompt:
-        rendered_main_prompt = deps.render_prompt(main_prompt, context.name, user_name)
-        system_messages.append(SystemMessage(content=rendered_main_prompt))
-
-    system_messages.extend(
-        _build_character_context(context=context, user_name=user_name, deps=deps)
+    return build_system_messages_with_assembler(
+        context=context,
+        request=request,
+        deps=_to_assembler_deps(deps),
+        config=DEFAULT_PROMPT_ASSEMBLER_CONFIG,
     )
-
-    override = deps.lookup_prompt_override(context.agent_id, context.name)
-    chat_settings = request.chat_settings
-    if override is not None and override.mode_prompt is not None:
-        mode_prompt = override.mode_prompt
-        output_format_prompt = ""
-    elif (
-        chat_settings
-        and chat_settings.chat_mode
-        and chat_settings.chat_mode in prompts.USER_FACING_CHAT_MODE_IDS
-    ):
-        mode_prompt = prompts.get_mode_prompt_by_id(chat_settings.chat_mode)
-        output_format_prompt = prompts.get_mode_output_format_prompt_by_id(
-            chat_settings.chat_mode
-        )
-    elif chat_settings and chat_settings.premium_mode:
-        mode_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.mode_prompt
-        output_format_prompt = prompts.ROMANTIC_ROLEPLAY_PROMPT.output_format_prompt
-    else:
-        mode_prompt = _get_effective_mode_prompt(context=context, deps=deps)
-        output_format_prompt = _get_effective_output_format_prompt(context)
-
-    if mode_prompt:
-        rendered_mode_prompt = deps.render_prompt(mode_prompt, context.name, user_name)
-        system_messages.append(SystemMessage(content=rendered_mode_prompt))
-    if request.include_output_format_prompt and output_format_prompt:
-        rendered_output_prompt = deps.render_prompt(
-            output_format_prompt, context.name, user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_output_prompt))
-
-    if chat_settings and chat_settings.style_prompt:
-        system_messages.append(SystemMessage(content=chat_settings.style_prompt))
-
-    if request.user_profile:
-        system_messages.append(SystemMessage(content=request.user_profile))
-
-    if request.user_time_context and deps.is_user_time_context_enabled():
-        prompt = _build_user_time_context_prompt(
-            request.user_time_context.to_runtime_dict()
-        )
-        if prompt:
-            system_messages.append(SystemMessage(content=prompt))
-
-    if deps.is_christmas_prompt_enabled():
-        rendered_temporal_prompt = deps.render_prompt(
-            CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, context.name, user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_temporal_prompt))
-
-    if context.intro:
-        system_messages.append(
-            SystemMessage(
-                content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
-                + context.intro
-            )
-        )
-
-    if _is_official_assistant(context):
-        system_messages.append(
-            SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
-        )
-        system_messages.append(
-            SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
-        )
-
-    return system_messages
 
 
 def build_system_messages_for_official_assistant(
@@ -341,46 +209,12 @@ def build_system_messages_for_official_assistant(
     request: PromptBuildInput,
     deps: PromptAssemblyDeps = DEFAULT_PROMPT_ASSEMBLY_DEPS,
 ) -> list[SystemMessage]:
-    user_name = _extract_user_name_from_profile(request.user_profile)
-    system_messages: list[SystemMessage] = []
-
-    system_messages.extend(
-        _build_character_context(context=context, user_name=user_name, deps=deps)
+    return build_system_messages_for_official_assistant_with_assembler(
+        context=context,
+        request=request,
+        deps=_to_assembler_deps(deps),
+        config=DEFAULT_PROMPT_ASSEMBLER_CONFIG,
     )
-    if request.chat_settings and request.chat_settings.style_prompt:
-        system_messages.append(
-            SystemMessage(content=request.chat_settings.style_prompt)
-        )
-    if request.user_profile:
-        system_messages.append(SystemMessage(content=request.user_profile))
-
-    if request.user_time_context and deps.is_user_time_context_enabled():
-        prompt = _build_user_time_context_prompt(
-            request.user_time_context.to_runtime_dict()
-        )
-        if prompt:
-            system_messages.append(SystemMessage(content=prompt))
-
-    if deps.is_christmas_prompt_enabled():
-        rendered_temporal_prompt = deps.render_prompt(
-            CHRISTMAS_TEMPORAL_CONTEXT_PROMPT, context.name, user_name
-        )
-        system_messages.append(SystemMessage(content=rendered_temporal_prompt))
-
-    # Keep official assistant behavior identical: introduction is always appended here.
-    system_messages.append(
-        SystemMessage(
-            content="##Introduction The following Introduction is a text for {{user}}, used only to provide background: \n"
-            + context.intro
-        )
-    )
-    system_messages.append(
-        SystemMessage(content=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE)
-    )
-    system_messages.append(
-        SystemMessage(content=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE)
-    )
-    return system_messages
 
 
 def build_system_messages_for_chat(
@@ -389,11 +223,12 @@ def build_system_messages_for_chat(
     request: PromptBuildInput,
     deps: PromptAssemblyDeps = DEFAULT_PROMPT_ASSEMBLY_DEPS,
 ) -> list[SystemMessage]:
-    if _is_official_assistant(context):
-        return build_system_messages_for_official_assistant(
-            context=context, request=request, deps=deps
-        )
-    return build_system_messages(context=context, request=request, deps=deps)
+    return build_system_messages_for_chat_with_assembler(
+        context=context,
+        request=request,
+        deps=_to_assembler_deps(deps),
+        config=DEFAULT_PROMPT_ASSEMBLER_CONFIG,
+    )
 
 
 class AssistantToolCallFunction(BaseModel):
