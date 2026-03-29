@@ -97,9 +97,26 @@ def dual_llm_enabled() -> bool:
 
 
 def async_tool_background_enabled() -> bool:
-    """是否启用“chat 先回 + tool 后台异步补发”模式。"""
+    """
+    “chat 先回 + tool 后台异步补发”模式。
+
+    默认开启：前台一次无 tools 的 chat.completions，立即返回并落 transcript(source=chat)；
+    工具路在同轮快照上后台跑，若有 tool_calls 则结束后再追加 transcript(source=tool_bg) 并投递 REPL 事件。
+
+    显式关闭：INTY_V2_PROTO_ASYNC_TOOL_BG=0|false|no|off（恢复同步 tool loop，与双路 INTY_V2_PROTO_DUAL_LLM 可组合）。
+    """
     _ensure_dotenv()
-    return env_flag_enabled("INTY_V2_PROTO_ASYNC_TOOL_BG")
+    raw = os.environ.get("INTY_V2_PROTO_ASYNC_TOOL_BG")
+    if raw is None or not str(raw).strip():
+        return True
+    s = str(raw).strip().lower()
+    if s in ("0", "false", "no", "off"):
+        return False
+    if s in ("1", "true", "yes", "on"):
+        return True
+    raise ValueError(
+        f"Invalid INTY_V2_PROTO_ASYNC_TOOL_BG={raw!r}; use 1/true or 0/false, or unset for default (on)"
+    )
 
 
 def memory_model() -> str:

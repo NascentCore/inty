@@ -20,7 +20,7 @@ REPL 的 **`generate_image`**（Fal **z-image-turbo** 文生图）复用 [`app/c
 
 **可选环境变量（仅原型）：** `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` — 覆盖 GCS 对象路径前缀；不设则为 `inty_v2_proto_chat_images/<workspace 目录名>`。`INTY_V2_PROTO_Z_IMAGE_SKIP_GCS=1`（或 `true`/`yes`/`on`）— **跳过对生成结果的 GCS 上传**，仅保留 Fal 返回的像素数据与 `generated_images/` 本地副本（省掉解析/压缩/上传延迟；工具摘要里 `gcs_http_url` 为空）。**`modify_image` 若使用 workspace 内源图文件**，仍须先把该源图上传到 GCS 以得到 Fal 可用的 `image_url`（与是否跳过**输出**上传无关）；若只用公网 `source_image_url` 则无需上传源图。
 
-**聊天 API Key（与 `config.yaml` 无关）：** `OPENROUTER_API_KEY` 或 `OPENAI_API_KEY` 建议放在 **`inty` 仓库根** 的 `.env`（与 `config.yaml` 同级）；`main` / `client` 会先加载该 `.env` 再加载当前工作目录下的 `.env`，因此在子目录里执行 `python main.py` 也能读到。勿将 `.env` 提交到 git。
+**聊天 LLM（与 `config.yaml` 无关）：** `client.get_client()` 固定使用 **OpenRouter** 端点 `https://openrouter.ai/api/v1`，**只**读取 `OPENROUTER_API_KEY`（不再使用 `OPENAI_API_KEY` 或直连 OpenAI base URL）。若你过去只配了 `OPENAI_API_KEY`，请改为在 [OpenRouter](https://openrouter.ai/) 创建 key 并写入 `OPENROUTER_API_KEY`；模型名仍用 OpenRouter 前缀（如 `openai/gpt-4o-mini`）。建议把 key 放在 **`inty` 仓库根** 的 `.env`（与 `config.yaml` 同级）；`main` / `client` 会先加载该 `.env` 再加载当前工作目录下的 `.env`，因此在子目录里执行 `python main.py` 也能读到。勿将 `.env` 提交到 git。
 
 **LangSmith（可选）：** `client` 使用 [`wrap_openai`](https://docs.langchain.com/langsmith/trace-openai)。须设置 `LANGSMITH_API_KEY`（或兼容的 `LANGCHAIN_API_KEY`），并把 **`LANGSMITH_TRACING=true` 或 `LANGSMITH_TRACING_V2=true`** 写成字面量 **`true`**（小写）；`1`、`True`、`.env` 里的大写 `True` 等值可能被 SDK 视为未开启。可选 `LANGSMITH_PROJECT`（默认在 LangSmith 里多为 `default` 项目）。进程退出前会 `flush` 缓存 client，避免 `once` 等短进程丢末批 trace。
 
@@ -32,18 +32,17 @@ REPL 的 **`generate_image`**（Fal **z-image-turbo** 文生图）复用 [`app/c
 
 ```bash
 cd /path/to/inty
-export OPENROUTER_API_KEY=...   # 或 OPENAI_API_KEY（直连 OpenAI）
+export OPENROUTER_API_KEY=...   # 须为 OpenRouter 的 key（见上文）
 export INTY_V2_PROTO_MODEL=openai/gpt-4o-mini   # 可选；记忆精炼可用 INTY_V2_PROTO_MEMORY_MODEL
-# 可选：双路并行 LLM（聊天低延迟 + 工具强调用）：
+# 异步工具后台（默认开启；显式关闭：INTY_V2_PROTO_ASYNC_TOOL_BG=0）：
+# 前台先跑无 tools 的 chat，立即返回并落 transcript(source=chat)；工具路在同轮快照上后台执行，
+# 若有 tool_calls，结束后再追加 transcript(source=tool_bg) 并投递 REPL 事件；若无 tool_calls 则不追加。
+# 开启时 run_turn 走该路径，不再使用下面的「双路并行」同步 tool loop。
+# 可选：双路并行 LLM（仅当 INTY_V2_PROTO_ASYNC_TOOL_BG=0 时生效；聊天低延迟 + 工具强调用）：
 #   INTY_V2_PROTO_DUAL_LLM=1
 #   INTY_V2_PROTO_CHAT_MODEL=openai/gpt-4o-mini      # 聊天路（不挂工具）
 #   INTY_V2_PROTO_TOOL_MODEL=openai/gpt-4.1-mini     # 工具路（挂工具）
 # 两路每轮使用同一份上下文快照并并发调用；两路 assistant 输出会持续并入同一轮历史，再由工具路推进 tool loop。
-# 可选：异步工具后台模式（OpenClaw 风格）：
-#   INTY_V2_PROTO_ASYNC_TOOL_BG=1
-# 启用后：前台先返回 chat 路文本并落 transcript(source=chat)；
-# 工具路在后台执行，若存在 tool_calls，则完成后再把最终文本异步写入 transcript(source=tool_bg)，
-# 同时投递到内存输出队列，由 REPL 事件泵实时打印；若无 tool_calls，则不写公共 messages/transcript。
 # 可选：SOUL.md 策展（默认与 MEMORY 同模型）；关闭自动写 SOUL：INTY_V2_PROTO_SOUL_UPDATE_DISABLED=1
 # 当日总结（memory/YYYY-MM-DD.md）LLM：默认每 100 次记忆管线调用跑一次；改频率：INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS=1（每轮）；关闭：INTY_V2_PROTO_DAY_SUMMARY_DISABLED=1
 # USER.md 策展 LLM：默认同样每 100 次记忆管线调用一次（与当日总结共用 turns_completed）；每轮：INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS=1；关闭：INTY_V2_PROTO_USER_UPDATE_DISABLED=1

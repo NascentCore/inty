@@ -61,6 +61,11 @@ class TestTraceIdLinkage(unittest.TestCase):
                     patch.object(orchestrator, "dual_llm_enabled", return_value=False),
                     patch.object(
                         orchestrator,
+                        "async_tool_background_enabled",
+                        return_value=False,
+                    ),
+                    patch.object(
+                        orchestrator,
                         "schedule_memory_update_after_turn",
                         return_value=None,
                     ),

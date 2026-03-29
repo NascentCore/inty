@@ -141,7 +141,7 @@ experimental/inty_v2_text_chat_prototype/
 
 - **Python** + 仓库根 **venv**；**Pydantic**、**openai**、**cyclopts**、**python-dotenv**。
 - 调用方式同 [experimental/agentic_ai_companion](../../experimental/agentic_ai_companion/) 或最小 `openai.OpenAI`。
-- **环境变量**：`OPENROUTER_API_KEY` / `OPENAI_API_KEY`、`INTY_V2_PROTO_MODEL`；记忆更新若用第二模型可共用或单独 env（可选）。
+- **环境变量**：`OPENROUTER_API_KEY`（原型 `client` 固定 OpenRouter base URL，仅认此变量）、`INTY_V2_PROTO_MODEL`；记忆更新若用第二模型可共用或单独 env（可选）。
 
 ---
 
