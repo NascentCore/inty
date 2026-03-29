@@ -146,14 +146,14 @@ def build_system_prompt(
         )
     if not skip_memory_blocks and bundle.memory_md.strip():
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
-    if enable_user_profile_tool and heartbeat_turn:
-        parts.append(_output_contract_text())
-    elif enable_user_profile_tool:
-        if include_repl_image_generation_contract:
-            parts.append(_output_contract_text_with_user_profile_tool())
-        else:
-            # 双路 chat 支路 API 不挂载 tools：勿注入 user_profile / workspace / 生图等工具说明。
-            parts.append(_output_contract_text())
+    # 完整契约：仅当挂载用户档案/工作区工具且非心跳、且本路需生图条款（双路 REPL 的 tool 分支）。
+    # 其余（无工具 API、心跳、双路 chat 支路不注入工具说明）均用简短输出契约。
+    if (
+        enable_user_profile_tool
+        and not heartbeat_turn
+        and include_repl_image_generation_contract
+    ):
+        parts.append(_output_contract_text_with_user_profile_tool())
     else:
         parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)
