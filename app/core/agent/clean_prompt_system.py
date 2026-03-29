@@ -170,14 +170,17 @@ class PromptAssemblyDeps:
 
 
 DEFAULT_PROMPT_ASSEMBLY_DEPS = PromptAssemblyDeps()
-DEFAULT_PROMPT_ASSEMBLER_CONFIG = PromptAssemblerConfig(
-    official_agent_id=INTELLIMATE_AGENT_ID,
-    force_default_prompts=bool(global_config.agent.force_default_prompts),
-    christmas_seasonal_behavior_prompt=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
-    christmas_temporal_context_prompt=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT,
-    official_rename_system_message=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE,
-    official_tool_usage_system_message=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE,
-)
+
+
+def _build_prompt_assembler_config() -> PromptAssemblerConfig:
+    return PromptAssemblerConfig(
+        official_agent_id=INTELLIMATE_AGENT_ID,
+        force_default_prompts=bool(global_config.agent.force_default_prompts),
+        christmas_seasonal_behavior_prompt=CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT,
+        christmas_temporal_context_prompt=CHRISTMAS_TEMPORAL_CONTEXT_PROMPT,
+        official_rename_system_message=INTELLIMATE_OFFICIAL_RENAME_SYSTEM_MESSAGE,
+        official_tool_usage_system_message=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE,
+    )
 
 def _to_assembler_deps(deps: PromptAssemblyDeps) -> PromptAssemblerDeps:
     return PromptAssemblerDeps(
@@ -199,7 +202,7 @@ def build_system_messages(
         context=context,
         request=request,
         deps=_to_assembler_deps(deps),
-        config=DEFAULT_PROMPT_ASSEMBLER_CONFIG,
+        config=_build_prompt_assembler_config(),
     )
 
 
@@ -213,7 +216,7 @@ def build_system_messages_for_official_assistant(
         context=context,
         request=request,
         deps=_to_assembler_deps(deps),
-        config=DEFAULT_PROMPT_ASSEMBLER_CONFIG,
+        config=_build_prompt_assembler_config(),
     )
 
 
@@ -227,7 +230,7 @@ def build_system_messages_for_chat(
         context=context,
         request=request,
         deps=_to_assembler_deps(deps),
-        config=DEFAULT_PROMPT_ASSEMBLER_CONFIG,
+        config=_build_prompt_assembler_config(),
     )
 
 
