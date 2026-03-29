@@ -4,6 +4,9 @@
  */
 import { history } from '@umijs/max';
 import React from 'react';
+import { SCENE_CHAT_BOOTSTRAP, SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY } from '@/constants';
+import { getRecommendAgents } from '@/services/agent';
+import { logger } from '@/utils';
 import './index.less';
 
 const experienceHighlights: string[] = [
@@ -19,12 +22,42 @@ const suggestedMoments: string[] = [
 ];
 
 const SeasideRomanticWalkPage: React.FC = () => {
+  const [starting, setStarting] = React.useState<boolean>(false);
+  const [startError, setStartError] = React.useState<string | null>(null);
   const handleBackToHome = (): void => {
     history.push('/');
   };
 
-  const handleStartChat = (): void => {
-    history.push('/');
+  const handleStartChat = async (): Promise<void> => {
+    if (starting) {
+      return;
+    }
+
+    setStarting(true);
+    setStartError(null);
+
+    try {
+      const result = await getRecommendAgents({
+        page: 1,
+        page_size: 1,
+        sort: 'score_based_random',
+      });
+
+      const targetAgent = result.data?.list?.[0];
+      if (!targetAgent?.id) {
+        throw new Error('No available character for this mood now');
+      }
+
+      const storageKey = `${SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY}:${targetAgent.id}`;
+      sessionStorage.setItem(storageKey, SCENE_CHAT_BOOTSTRAP.SEASIDE_ROMANTIC_WALK);
+
+      history.push(`/chat/${targetAgent.id}`);
+    } catch (error) {
+      logger.error('Start seaside mood failed', error);
+      setStartError('Unable to start this mood right now. Please try again.');
+    } finally {
+      setStarting(false);
+    }
   };
 
   return (
@@ -42,17 +75,29 @@ const SeasideRomanticWalkPage: React.FC = () => {
               type="button"
               className="seaside-romantic-walk-page__primary-action"
               onClick={handleStartChat}
+              disabled={starting}
             >
-              Start this mood
+              {starting ? 'Preparing your mood...' : 'Start this mood'}
             </button>
             <button
               type="button"
               className="seaside-romantic-walk-page__secondary-action"
               onClick={handleBackToHome}
+              disabled={starting}
             >
               Back to home
             </button>
           </div>
+          {startError ? (
+            <p className="seaside-romantic-walk-page__start-error" role="alert">
+              {startError}
+            </p>
+          ) : null}
+          {starting ? (
+            <p className="seaside-romantic-walk-page__action-feedback seaside-romantic-walk-page__action-feedback--loading">
+              Preparing your sunset conversation...
+            </p>
+          ) : null}
         </div>
       </section>
 

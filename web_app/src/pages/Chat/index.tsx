@@ -4,8 +4,9 @@
  */
 
 import { useModel, useParams } from '@umijs/max';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ErrorAlert } from '@/components';
+import { SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY } from '@/constants';
 import { AgentDetailPanel, MessageInput, MessageList } from './components';
 import './index.less';
 
@@ -15,6 +16,10 @@ import './index.less';
 const ChatPage: React.FC = () => {
   // 获取路由参数
   const { agentId } = useParams<{ agentId: string }>();
+  const [sceneHintVisible, setSceneHintVisible] = useState<boolean>(false);
+  const [pendingSceneBootstrapMessage, setPendingSceneBootstrapMessage] = useState<string | null>(
+    null,
+  );
 
   // 使用 ref 跟踪上一次的 agentId，避免依赖项循环触发
   const prevAgentIdRef = useRef<string | undefined>(undefined);
@@ -74,12 +79,57 @@ const ChatPage: React.FC = () => {
     [agentId, sendChatMessage],
   );
 
+  /**
+   * 检测并消费场景启动消息：
+   * 进入聊天页就立即展示“场景已启动”提示，不依赖消息加载状态
+   */
+  useEffect(() => {
+    setSceneHintVisible(false);
+    setPendingSceneBootstrapMessage(null);
+
+    if (!agentId) {
+      return;
+    }
+
+    const storageKey = `${SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY}:${agentId}`;
+    const bootstrapMessage = window.sessionStorage.getItem(storageKey);
+    if (!bootstrapMessage) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(storageKey);
+    setSceneHintVisible(true);
+    setPendingSceneBootstrapMessage(bootstrapMessage);
+  }, [agentId]);
+
+  /**
+   * 发送场景开场白（一次性）：
+   * 场景提示先展示，等历史消息加载完成后再发送，避免覆盖乐观消息
+   */
+  useEffect(() => {
+    if (!agentId || !pendingSceneBootstrapMessage || sending || loading) {
+      return;
+    }
+
+    const messageToSend = pendingSceneBootstrapMessage;
+    setPendingSceneBootstrapMessage(null);
+
+    sendChatMessage(agentId, messageToSend).catch((err) => {
+      console.error('自动发送场景开场消息失败:', err);
+    });
+  }, [agentId, pendingSceneBootstrapMessage, sending, loading, sendChatMessage]);
+
   return (
     <div className="chat-page">
       {/* 左侧：聊天区域 */}
       <div className="chat-main">
         {/* 消息列表 */}
         <div className="chat-content">
+          {sceneHintVisible ? (
+            <div className="scene-start-feedback" role="status">
+              Seaside mood started. Your first romantic prompt is being delivered.
+            </div>
+          ) : null}
           <MessageList
             messages={messages}
             loading={loading}
