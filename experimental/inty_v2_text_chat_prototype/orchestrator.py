@@ -11,6 +11,13 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.agentic_kernel.bridges.experimental_bridge import (
+    default_workspace_payload,
+    message_snapshots_to_dicts,
+    run_experimental_turn,
+)
+from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
+
 from .client import (
     async_tool_background_enabled,
     chat_model,
@@ -707,45 +714,90 @@ async def run_turn(
         # Must snapshot user time before the LLM call; assistant time is taken after (below).
         ts_user = utc_iso_ts()
         t_main = time.perf_counter()
-        if async_tool_background_enabled() and not heartbeat_turn:
-            assistant_text = await _run_turn_fast_chat_then_tool_background(
-                messages,
-                root,
-                llm_trace=llm_trace,
-                transcript_path=paths.transcript,
-                user_msg_uuid=user_msg_uuid,
-                trace_id=turn_trace_id,
-            )
-        else:
-            assistant_text = await _run_turn_with_user_profile_tools(
-                messages,
+
+        async def _prepare_turn(turn_input: TurnInput) -> TurnInput:
+            return turn_input
+
+        async def _invoke_model(turn_input: TurnInput) -> str:
+            input_messages = message_snapshots_to_dicts(turn_input.history)
+            if async_tool_background_enabled() and not heartbeat_turn:
+                return await _run_turn_fast_chat_then_tool_background(
+                    input_messages,
+                    root,
+                    llm_trace=llm_trace,
+                    transcript_path=paths.transcript,
+                    user_msg_uuid=user_msg_uuid,
+                    trace_id=turn_trace_id,
+                )
+            return await _run_turn_with_user_profile_tools(
+                input_messages,
                 root,
                 llm_trace=llm_trace,
                 heartbeat_turn=heartbeat_turn,
                 trace_id=turn_trace_id,
             )
+
+        async def _handle_response(_: TurnInput, assistant_text: str) -> TurnOutput:
+            return TurnOutput(
+                assistant_text=assistant_text,
+                metadata={
+                    "trace_id": turn_trace_id,
+                    "user_msg_uuid": user_msg_uuid,
+                },
+            )
+
+        persist_transcript_ms = 0.0
+
+        async def _persist_turn(
+            turn_input: TurnInput,
+            turn_output: TurnOutput,
+        ) -> dict[str, Any]:
+            nonlocal persist_transcript_ms
+            t_persist_inner = time.perf_counter()
+            assistant_msg_uuid = _persist_turn_rows(
+                paths,
+                user_text=turn_input.user_text,
+                assistant_text=turn_output.assistant_text,
+                ts_user=ts_user,
+                user_msg_uuid=user_msg_uuid,
+                assistant_reply_to=user_msg_uuid,
+                heartbeat_turn=heartbeat_turn,
+                assistant_source="chat",
+                trace_id=turn_trace_id,
+            )
+            persist_transcript_ms = (time.perf_counter() - t_persist_inner) * 1000.0
+            return {"assistant_msg_uuid": assistant_msg_uuid}
+
+        orchestrated = await run_experimental_turn(
+            payload=default_workspace_payload(
+                workspace=root,
+                user_text=user_text,
+                history=messages,
+                metadata={
+                    "llm_trace": llm_trace,
+                    "heartbeat_turn": heartbeat_turn,
+                    "trace_id": turn_trace_id,
+                },
+            ),
+            prepare_turn=_prepare_turn,
+            invoke_model=_invoke_model,
+            handle_response=_handle_response,
+            persist_fn=_persist_turn,
+        )
+        assistant_text = orchestrated.output.assistant_text
+        persist_metadata = orchestrated.persist_metadata or {}
+        assistant_msg_uuid = persist_metadata.get("assistant_msg_uuid")
+        assert isinstance(assistant_msg_uuid, str) and assistant_msg_uuid, (
+            "turn orchestrator persistence must return assistant_msg_uuid"
+        )
         logger.info(
             "run_turn main_repl_tool_loop_wall_ms={:.0f}",
             (time.perf_counter() - t_main) * 1000.0,
         )
 
-        assistant_msg_uuid = str(uuid.uuid4())
-        t_persist = time.perf_counter()
-        assistant_msg_uuid = _persist_turn_rows(
-            paths,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            ts_user=ts_user,
-            user_msg_uuid=user_msg_uuid,
-            assistant_reply_to=user_msg_uuid,
-            heartbeat_turn=heartbeat_turn,
-            assistant_source="chat",
-            trace_id=turn_trace_id,
-        )
-
         logger.info(
             "run_turn persist_transcript_ms={:.0f}",
-            (time.perf_counter() - t_persist) * 1000.0,
+            persist_transcript_ms,
         )
 
         if heartbeat_turn:

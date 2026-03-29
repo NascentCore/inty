@@ -12,6 +12,13 @@ import asyncio
 from aioconsole import ainput
 from langsmith.run_helpers import trace
 
+from app.core.agentic_kernel.bridges.experimental_bridge import (
+    ExperimentalTurnBridgeInput,
+    message_snapshots_to_dicts,
+    run_experimental_turn,
+)
+from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
+
 from .heartbeat import (
     HeartbeatConfig,
     HeartbeatState,
@@ -136,44 +143,107 @@ async def run_async_repl(
     state.record_user_activity()
     turn = 0
 
-    # 闭包：捕获会话作用域参数，避免在循环中重复传递 14 个参数
-    def do_user_turn(msgs: list, line: str, t: int) -> list:
-        return _execute_turn(
-            msgs,
-            line,
-            t,
-            char_name,
-            user_name,
-            model,
-            client,
-            tools,
-            tool_types,
-            tool_context_types,
-            process_response_with_tools,
-            tool_executors,
-            get_gemini_client,
-            logger,
-            build_system_messages=build_system_messages,
+    async def do_user_turn(msgs: list, line: str, t: int) -> list:
+        payload = ExperimentalTurnBridgeInput(
+            user_id=user_name,
+            session_id=f"agentic_ai_companion:{char_name}:{user_name}",
+            agent_id=char_name,
+            user_text=line,
+            history=msgs,
+            metadata={"turn": t, "source": "agentic_ai_companion_async_repl_user"},
         )
 
-    def do_heartbeat_turn(msgs: list, signal: str, t: int) -> tuple[list, bool]:
-        return _execute_heartbeat_turn(
-            msgs,
-            signal,
-            t,
-            char_name,
-            model,
-            client,
-            tools,
-            tool_types,
-            tool_context_types,
-            process_response_with_tools,
-            tool_executors,
-            get_gemini_client,
-            logger,
-            build_system_messages=build_system_messages,
-            user_name=user_name,
+        async def _prepare(turn_input: TurnInput) -> TurnInput:
+            return turn_input
+
+        def _invoke(turn_input: TurnInput) -> list:
+            invocation_messages = message_snapshots_to_dicts(turn_input.history)
+            return _execute_turn(
+                invocation_messages,
+                turn_input.user_text,
+                t,
+                char_name,
+                user_name,
+                model,
+                client,
+                tools,
+                tool_types,
+                tool_context_types,
+                process_response_with_tools,
+                tool_executors,
+                get_gemini_client,
+                logger,
+                build_system_messages=build_system_messages,
+            )
+
+        def _handle(_: TurnInput, updated_messages: list) -> TurnOutput:
+            return TurnOutput(
+                assistant_text="",
+                metadata={"messages": updated_messages},
+            )
+
+        result = await run_experimental_turn(
+            payload=payload,
+            prepare_turn=_prepare,
+            invoke_model=_invoke,
+            handle_response=_handle,
         )
+        return result.output.metadata["messages"]
+
+    async def do_heartbeat_turn(msgs: list, signal: str, t: int) -> tuple[list, bool]:
+        payload = ExperimentalTurnBridgeInput(
+            user_id=user_name,
+            session_id=f"agentic_ai_companion:{char_name}:{user_name}",
+            agent_id=char_name,
+            user_text=signal,
+            history=msgs,
+            metadata={
+                "turn": t,
+                "source": "agentic_ai_companion_async_repl_heartbeat",
+            },
+        )
+
+        async def _prepare(turn_input: TurnInput) -> TurnInput:
+            return turn_input
+
+        def _invoke(turn_input: TurnInput) -> tuple[list, bool]:
+            invocation_messages = message_snapshots_to_dicts(turn_input.history)
+            return _execute_heartbeat_turn(
+                invocation_messages,
+                turn_input.user_text,
+                t,
+                char_name,
+                model,
+                client,
+                tools,
+                tool_types,
+                tool_context_types,
+                process_response_with_tools,
+                tool_executors,
+                get_gemini_client,
+                logger,
+                build_system_messages=build_system_messages,
+                user_name=user_name,
+            )
+
+        def _handle(_: TurnInput, heartbeat_result: tuple[list, bool]) -> TurnOutput:
+            updated_messages, was_silent = heartbeat_result
+            return TurnOutput(
+                assistant_text="",
+                metadata={
+                    "messages": updated_messages,
+                    "was_silent": was_silent,
+                },
+            )
+
+        result = await run_experimental_turn(
+            payload=payload,
+            prepare_turn=_prepare,
+            invoke_model=_invoke,
+            handle_response=_handle,
+        )
+        metadata = result.output.metadata
+        return metadata["messages"], metadata["was_silent"]
 
     print(f"角色: {char_name} | 用户: {user_name} | 模型: {model}")
     print(f"Heartbeat 模式已开启，间隔: {heartbeat_config.interval_seconds:.0f}s")
@@ -224,7 +294,7 @@ async def run_async_repl(
                     len(line),
                     line[:80] + ("..." if len(line) > 80 else ""),
                 )
-                messages = do_user_turn(messages, line, turn)
+                messages = await do_user_turn(messages, line, turn)
             else:
                 # 心跳超时：用户在此间隔内没有输入
                 input_task.cancel()
@@ -241,7 +311,7 @@ async def run_async_repl(
                     interval,
                 )
                 signal = build_heartbeat_signal(state, messages)
-                messages, was_silent = do_heartbeat_turn(messages, signal, turn)
+                messages, was_silent = await do_heartbeat_turn(messages, signal, turn)
                 state.record_heartbeat(was_silent)
 
                 if (
@@ -260,4 +330,4 @@ async def run_async_repl(
                     if line:
                         turn += 1
                         state.record_user_activity()
-                        messages = do_user_turn(messages, line, turn)
+                        messages = await do_user_turn(messages, line, turn)
