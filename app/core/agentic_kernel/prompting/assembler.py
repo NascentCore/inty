@@ -269,9 +269,7 @@ def build_system_messages_for_official_assistant(
             content=config.intro_system_message_prefix + context.intro,
         )
     )
-    system_messages.append(
-        SystemMessage(content=config.official_rename_system_message)
-    )
+    system_messages.append(SystemMessage(content=config.official_rename_system_message))
     system_messages.append(
         SystemMessage(content=config.official_tool_usage_system_message)
     )

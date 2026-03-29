@@ -63,9 +63,7 @@ object NetServiceMgr {
 
     private val globalErrorHandler = GlobalErrorHandler()
 
-    /**
-     * Retrofit 实例缓存，基于 baseUrl 进行缓存 缓存 key 格式: `baseUrl` 或 `"${baseUrl}_no_wrapper"`
-     */
+    /** Retrofit 实例缓存，基于 baseUrl 进行缓存 缓存 key 格式: `baseUrl` 或 `"${baseUrl}_no_wrapper"` */
     private val retrofitCache = ConcurrentHashMap<String, Retrofit>()
 
     /**

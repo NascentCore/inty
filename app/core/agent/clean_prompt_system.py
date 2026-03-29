@@ -182,6 +182,7 @@ def _build_prompt_assembler_config() -> PromptAssemblerConfig:
         official_tool_usage_system_message=INTELLIMATE_USER_MANUAL_TOOL_USAGE_SYSTEM_MESSAGE,
     )
 
+
 def _to_assembler_deps(deps: PromptAssemblyDeps) -> PromptAssemblerDeps:
     return PromptAssemblerDeps(
         render_prompt=deps.render_prompt,

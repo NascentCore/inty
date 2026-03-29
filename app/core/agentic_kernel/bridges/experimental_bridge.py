@@ -105,11 +105,12 @@ async def run_experimental_turn(
     payload: ExperimentalTurnBridgeInput,
     prepare_turn: Callable[[TurnInput], TurnInput | Awaitable[TurnInput]],
     invoke_model: Callable[[TurnInput], Any | Awaitable[Any]],
-    handle_response: Callable[
-        [TurnInput, Any], TurnOutput | Awaitable[TurnOutput]
-    ],
+    handle_response: Callable[[TurnInput, Any], TurnOutput | Awaitable[TurnOutput]],
     persist_fn: (
-        Callable[[TurnInput, TurnOutput], dict[str, Any] | None | Awaitable[dict[str, Any] | None]]
+        Callable[
+            [TurnInput, TurnOutput],
+            dict[str, Any] | None | Awaitable[dict[str, Any] | None],
+        ]
         | None
     ) = None,
 ) -> TurnOrchestratorResult:

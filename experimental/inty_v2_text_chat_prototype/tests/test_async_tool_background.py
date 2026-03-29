@@ -230,9 +230,7 @@ class TestLocalPathDisplay(unittest.TestCase):
         )
 
     def test_append_local_image_paths_for_display(self) -> None:
-        t = _append_local_image_paths_for_display(
-            "模型正文", ["/tmp/z_image_1.jpeg"]
-        )
+        t = _append_local_image_paths_for_display("模型正文", ["/tmp/z_image_1.jpeg"])
         self.assertIn("模型正文", t)
         self.assertIn("（生成图片本地路径）", t)
         self.assertIn("/tmp/z_image_1.jpeg", t)

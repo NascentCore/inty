@@ -20,8 +20,7 @@ class TurnPersistence(Protocol):
 class CallableTurnPersistence:
     persist_fn: Callable[
         [TurnInput, TurnOutput],
-        dict[str, Any] | None
-        | Awaitable[dict[str, Any] | None],
+        dict[str, Any] | None | Awaitable[dict[str, Any] | None],
     ]
 
     async def persist(
