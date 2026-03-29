@@ -49,6 +49,10 @@ export const STORAGE_KEYS = {
   LANGUAGE: 'language',
   /** 主题设置 */
   THEME: 'theme',
+  /** 场景开场白 */
+  SCENE_STARTER_PROMPT: 'scene_starter_prompt',
+  /** 场景目标角色 ID */
+  SCENE_STARTER_AGENT_ID: 'scene_starter_agent_id',
 } as const;
 
 // IndexedDB 配置
@@ -85,4 +89,17 @@ export const INTY_SDK_CONFIG = {
 export const GOOGLE_AUTH_CONFIG = {
   /** Google OAuth Client ID */
   CLIENT_ID: '1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com',
+} as const;
+
+/**
+ * 海边傍晚场景首条消息存储 key 前缀（完整 key 会拼接 agentId）
+ */
+export const SEASIDE_SCENE_BOOTSTRAP_MESSAGE_KEY = 'seaside_scene_bootstrap_message';
+
+/**
+ * 场景开场白常量
+ */
+export const SCENE_CHAT_BOOTSTRAP = {
+  SEASIDE_ROMANTIC_WALK:
+    'The sunset turns the sea gold. Start with a gentle greeting, then guide me into a warm and romantic evening walk conversation.',
 } as const;

@@ -1,0 +1,208 @@
+@import '@/styles/variables.less';
+
+.seaside-romantic-walk-page {
+  width: 100%;
+  min-height: calc(100vh - 70px);
+  background: linear-gradient(180deg, #0f0f0f 0%, #141d33 50%, #1f2d4f 100%);
+  padding: 36px 20px 28px;
+
+  .seaside-romantic-walk-page__hero {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at top right, rgba(255, 193, 133, 0.3), transparent 45%),
+      linear-gradient(145deg, rgba(19, 32, 56, 0.9), rgba(10, 16, 30, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 0;
+    box-shadow: @dark-shadow-md;
+    margin-bottom: 18px;
+  }
+
+  .seaside-romantic-walk-page__hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0) 38%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+    pointer-events: none;
+  }
+
+  .seaside-romantic-walk-page__hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 30px 28px;
+  }
+
+  .seaside-romantic-walk-page__tag {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #ffd29d;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 210, 157, 0.12);
+    border: 1px solid rgba(255, 210, 157, 0.35);
+  }
+
+  .seaside-romantic-walk-page__title {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1.2;
+    color: #fff3e5;
+  }
+
+  .seaside-romantic-walk-page__subtitle {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 16px;
+    line-height: 1.7;
+    max-width: 650px;
+  }
+
+  .seaside-romantic-walk-page__hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+
+  .seaside-romantic-walk-page__start-error {
+    margin: 0;
+    width: 100%;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #ffb0b0;
+  }
+
+  .seaside-romantic-walk-page__action-feedback {
+    margin: 0;
+    width: 100%;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .seaside-romantic-walk-page__action-feedback--loading {
+    color: #ffd9ad;
+  }
+  .seaside-romantic-walk-page__primary-action {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(90deg, #ffbf7a, #ff9462);
+    color: #2c1a0d;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+      transform: none;
+    }
+  }
+
+  .seaside-romantic-walk-page__secondary-action {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: @dark-text-primary;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .seaside-romantic-walk-page__content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .seaside-romantic-walk-page__panel {
+    background: rgba(9, 14, 26, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: @dark-shadow-sm;
+  }
+
+  .seaside-romantic-walk-page__panel-title {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: #ffffff;
+  }
+
+  .seaside-romantic-walk-page__list {
+    margin: 0;
+    padding: 0 0 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: @dark-text-secondary;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .seaside-romantic-walk-page__list-item {
+    color: @dark-text-secondary;
+  }
+
+  .seaside-romantic-walk-page__ordered-list {
+    margin: 0;
+    padding: 0 0 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: @dark-text-secondary;
+  }
+
+  .seaside-romantic-walk-page__ordered-list-item {
+    color: @dark-text-secondary;
+  }
+}
+
+@media (max-width: 900px) {
+  .seaside-romantic-walk-page {
+    padding: 24px 14px;
+
+    .seaside-romantic-walk-page__title {
+      font-size: 28px;
+    }
+
+    .seaside-romantic-walk-page__hero-content {
+      padding: 24px 20px;
+    }
+
+    .seaside-romantic-walk-page__content {
+      grid-template-columns: 1fr;
+    }
+
+    .seaside-romantic-walk-page__hero-actions {
+      width: 100%;
+    }
+
+    .seaside-romantic-walk-page__primary-action,
+    .seaside-romantic-walk-page__secondary-action {
+      width: 100%;
+      text-align: center;
+    }
+  }
+}

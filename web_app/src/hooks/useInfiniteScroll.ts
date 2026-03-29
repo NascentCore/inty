@@ -119,6 +119,9 @@ export const useInfiniteScroll = <T extends HTMLElement = HTMLElement>({
     if (useWindow) {
       window.addEventListener('scroll', handleScroll);
     } else {
+      if (!container) {
+        return;
+      }
       container.addEventListener('scroll', handleScroll);
     }
 

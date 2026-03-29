@@ -30,6 +30,11 @@ export default [
     wrappers: ['@/layouts/SidebarLayout'],
   },
   {
+    path: '/seaside-romantic-walk',
+    component: './SeasideRomanticWalk',
+    wrappers: ['@/layouts/SidebarLayout'],
+  },
+  {
     path: '/dev-test',
     component: './DevTest',
     wrappers: ['@/layouts/DefaultLayout'],
