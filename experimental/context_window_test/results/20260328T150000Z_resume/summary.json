@@ -1,0 +1,203 @@
+{
+  "generated_at_utc": "2026-03-28T15:00:00.705304+00:00",
+  "config": {
+    "model": "deepseek/deepseek-v3.2",
+    "placeholder_tokens": 200000,
+    "trials_per_position": 30,
+    "temperature": 0.0,
+    "max_output_tokens": 32,
+    "timeout_seconds": 120,
+    "max_retries": 4,
+    "seed": 42,
+    "dry_run": false,
+    "use_context_compression": true,
+    "encoding": "cl100k_base",
+    "resumed_from": "/workspace/results/instruction_position_sweep/20260328T094122Z",
+    "resume_retried_trials": 172
+  },
+  "positions": [
+    {
+      "label": "0",
+      "token_index": 0
+    },
+    {
+      "label": "1k",
+      "token_index": 1000
+    },
+    {
+      "label": "2k",
+      "token_index": 2000
+    },
+    {
+      "label": "4k",
+      "token_index": 4000
+    },
+    {
+      "label": "8k",
+      "token_index": 8000
+    },
+    {
+      "label": "16k",
+      "token_index": 16000
+    },
+    {
+      "label": "32k",
+      "token_index": 32000
+    },
+    {
+      "label": "64k",
+      "token_index": 64000
+    },
+    {
+      "label": "128k",
+      "token_index": 128000
+    },
+    {
+      "label": "end",
+      "token_index": 200000
+    }
+  ],
+  "position_summaries": [
+    {
+      "position_label": "0",
+      "position_token_index": 0,
+      "trials": 30,
+      "strict_passes": 30,
+      "contains_passes": 30,
+      "strict_rate": 1.0,
+      "contains_rate": 1.0,
+      "strict_ci_low": 0.8864829086095221,
+      "strict_ci_high": 1.0,
+      "avg_latency_ms": 5836.211600199749,
+      "median_latency_ms": 5409.939474000566,
+      "errors": 0
+    },
+    {
+      "position_label": "1k",
+      "position_token_index": 1000,
+      "trials": 30,
+      "strict_passes": 25,
+      "contains_passes": 25,
+      "strict_rate": 0.8333333333333334,
+      "contains_rate": 0.8333333333333334,
+      "strict_ci_low": 0.6643529481431982,
+      "strict_ci_high": 0.9266356575964831,
+      "avg_latency_ms": 5710.665073067018,
+      "median_latency_ms": 5175.763432001986,
+      "errors": 0
+    },
+    {
+      "position_label": "2k",
+      "position_token_index": 2000,
+      "trials": 30,
+      "strict_passes": 29,
+      "contains_passes": 29,
+      "strict_rate": 0.9666666666666667,
+      "contains_rate": 0.9666666666666667,
+      "strict_ci_low": 0.8332924860304112,
+      "strict_ci_high": 0.9940915620051425,
+      "avg_latency_ms": 5525.151068999548,
+      "median_latency_ms": 4905.343109498062,
+      "errors": 0
+    },
+    {
+      "position_label": "4k",
+      "position_token_index": 4000,
+      "trials": 30,
+      "strict_passes": 21,
+      "contains_passes": 21,
+      "strict_rate": 0.7,
+      "contains_rate": 0.7,
+      "strict_ci_low": 0.5212387898833981,
+      "strict_ci_high": 0.8333543735604105,
+      "avg_latency_ms": 4978.9068432677595,
+      "median_latency_ms": 4874.743125503301,
+      "errors": 0
+    },
+    {
+      "position_label": "8k",
+      "position_token_index": 8000,
+      "trials": 30,
+      "strict_passes": 28,
+      "contains_passes": 28,
+      "strict_rate": 0.9333333333333333,
+      "contains_rate": 0.9333333333333333,
+      "strict_ci_low": 0.7867618227892791,
+      "strict_ci_high": 0.9815233646723066,
+      "avg_latency_ms": 4960.210822531856,
+      "median_latency_ms": 4571.678163996694,
+      "errors": 0
+    },
+    {
+      "position_label": "16k",
+      "position_token_index": 16000,
+      "trials": 30,
+      "strict_passes": 0,
+      "contains_passes": 0,
+      "strict_rate": 0.0,
+      "contains_rate": 0.0,
+      "strict_ci_low": 0.0,
+      "strict_ci_high": 0.113517091390478,
+      "avg_latency_ms": 2695.865748599075,
+      "median_latency_ms": 2207.2300985018956,
+      "errors": 0
+    },
+    {
+      "position_label": "32k",
+      "position_token_index": 32000,
+      "trials": 30,
+      "strict_passes": 0,
+      "contains_passes": 0,
+      "strict_rate": 0.0,
+      "contains_rate": 0.0,
+      "strict_ci_low": 0.0,
+      "strict_ci_high": 0.113517091390478,
+      "avg_latency_ms": 2108.22242336532,
+      "median_latency_ms": 1690.1406869947095,
+      "errors": 0
+    },
+    {
+      "position_label": "64k",
+      "position_token_index": 64000,
+      "trials": 30,
+      "strict_passes": 0,
+      "contains_passes": 0,
+      "strict_rate": 0.0,
+      "contains_rate": 0.0,
+      "strict_ci_low": 0.0,
+      "strict_ci_high": 0.113517091390478,
+      "avg_latency_ms": 2115.642836834013,
+      "median_latency_ms": 1907.107298997289,
+      "errors": 0
+    },
+    {
+      "position_label": "128k",
+      "position_token_index": 128000,
+      "trials": 30,
+      "strict_passes": 0,
+      "contains_passes": 0,
+      "strict_rate": 0.0,
+      "contains_rate": 0.0,
+      "strict_ci_low": 0.0,
+      "strict_ci_high": 0.113517091390478,
+      "avg_latency_ms": 2046.4408064333838,
+      "median_latency_ms": 1799.5483560007415,
+      "errors": 0
+    },
+    {
+      "position_label": "end",
+      "position_token_index": 200000,
+      "trials": 30,
+      "strict_passes": 30,
+      "contains_passes": 30,
+      "strict_rate": 1.0,
+      "contains_rate": 1.0,
+      "strict_ci_low": 0.8864829086095221,
+      "strict_ci_high": 1.0,
+      "avg_latency_ms": 2588.5707387676425,
+      "median_latency_ms": 2132.383325508272,
+      "errors": 0
+    }
+  ],
+  "trial_count_total": 300
+}
