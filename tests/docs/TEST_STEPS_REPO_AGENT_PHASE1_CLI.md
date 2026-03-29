@@ -22,10 +22,11 @@ Run at repository root:
 2. `test -f repo_agent/self_model/capabilities.yaml`
 3. `test -f repo_agent/governance/change_policy.yaml`
 4. `test -f repo_agent/memory/decision_log.md`
-5. `python -m repo_agent whoami`
-6. `python -m repo_agent capabilities`
-7. `python -m repo_agent boundaries`
-8. `python -m repo_agent status`
+5. `/workspace/.venv/bin/python -m repo_agent whoami`
+6. `/workspace/.venv/bin/python -m repo_agent capabilities`
+7. `/workspace/.venv/bin/python -m repo_agent boundaries`
+8. `/workspace/.venv/bin/python -m repo_agent status`
+9. `cmp <(/workspace/.venv/bin/python -m repo_agent status) <(/workspace/.venv/bin/python -m repo_agent status)`
 
 ## 4. Expected Results
 
@@ -34,3 +35,4 @@ Run at repository root:
 3. `capabilities` prints enabled capability IDs from `capabilities.yaml`.
 4. `boundaries` prints deny/high-risk/allowed path policy and release gates.
 5. `status` prints current phase and immediate next actions for rollout.
+6. `cmp` returns exit code 0, proving deterministic `status` output.
