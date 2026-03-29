@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, cast
 
 from app.core.agentic_kernel.contracts.turn import (
     MessageSnapshot,
+    MessageRole,
     TurnInput,
     TurnOutput,
 )
@@ -26,23 +27,42 @@ class ExperimentalTurnBridgeInput:
     metadata: dict[str, Any] | None = None
 
 
+_ALLOWED_MESSAGE_ROLES: set[MessageRole] = {"system", "user", "assistant", "tool"}
+
+
 def _to_message_snapshots(messages: list[dict[str, Any]]) -> list[MessageSnapshot]:
     out: list[MessageSnapshot] = []
-    for row in messages:
-        role = str(row.get("role", "user"))
-        if role not in {"system", "user", "assistant", "tool"}:
-            role = "user"
-        content = row.get("content")
+    for index, row in enumerate(messages):
+        role = row.get("role")
+        if not isinstance(role, str):
+            raise ValueError(
+                f"invalid message role type at index={index}: expected str, got {type(role)!r}"
+            )
+        if role not in _ALLOWED_MESSAGE_ROLES:
+            raise ValueError(f"invalid message role at index={index}: {role!r}")
+
+        content = row.get("content", "")
+        if not isinstance(content, str):
+            raise ValueError(
+                f"invalid message content type at index={index}: expected str, got {type(content)!r}"
+            )
+        name = row.get("name")
+        if name is not None and not isinstance(name, str):
+            raise ValueError(
+                f"invalid message name type at index={index}: expected str | None, got {type(name)!r}"
+            )
+        tool_call_id = row.get("tool_call_id")
+        if tool_call_id is not None and not isinstance(tool_call_id, str):
+            raise ValueError(
+                "invalid message tool_call_id type at index="
+                f"{index}: expected str | None, got {type(tool_call_id)!r}"
+            )
         out.append(
             MessageSnapshot(
-                role=role,  # type: ignore[arg-type]
-                content=content if isinstance(content, str) else "",
-                name=row.get("name") if isinstance(row.get("name"), str) else None,
-                tool_call_id=(
-                    row.get("tool_call_id")
-                    if isinstance(row.get("tool_call_id"), str)
-                    else None
-                ),
+                role=cast(MessageRole, role),
+                content=content,
+                name=name,
+                tool_call_id=tool_call_id,
                 metadata={
                     k: v
                     for k, v in row.items()
@@ -50,6 +70,22 @@ def _to_message_snapshots(messages: list[dict[str, Any]]) -> list[MessageSnapsho
                 },
             )
         )
+    return out
+
+
+def message_snapshots_to_dicts(messages: list[MessageSnapshot]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for message in messages:
+        row: dict[str, Any] = {
+            "role": message.role,
+            "content": message.content,
+        }
+        if message.name is not None:
+            row["name"] = message.name
+        if message.tool_call_id is not None:
+            row["tool_call_id"] = message.tool_call_id
+        row.update(message.metadata)
+        out.append(row)
     return out
 
 

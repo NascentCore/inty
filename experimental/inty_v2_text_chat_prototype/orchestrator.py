@@ -13,6 +13,7 @@ from loguru import logger
 
 from app.core.agentic_kernel.bridges.experimental_bridge import (
     default_workspace_payload,
+    message_snapshots_to_dicts,
     run_experimental_turn,
 )
 from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
@@ -717,10 +718,11 @@ async def run_turn(
         async def _prepare_turn(turn_input: TurnInput) -> TurnInput:
             return turn_input
 
-        async def _invoke_model(_: TurnInput) -> str:
+        async def _invoke_model(turn_input: TurnInput) -> str:
+            input_messages = message_snapshots_to_dicts(turn_input.history)
             if async_tool_background_enabled() and not heartbeat_turn:
                 return await _run_turn_fast_chat_then_tool_background(
-                    messages,
+                    input_messages,
                     root,
                     llm_trace=llm_trace,
                     transcript_path=paths.transcript,
@@ -728,7 +730,7 @@ async def run_turn(
                     trace_id=turn_trace_id,
                 )
             return await _run_turn_with_user_profile_tools(
-                messages,
+                input_messages,
                 root,
                 llm_trace=llm_trace,
                 heartbeat_turn=heartbeat_turn,

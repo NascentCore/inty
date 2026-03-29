@@ -14,6 +14,7 @@ from langsmith.run_helpers import trace
 
 from app.core.agentic_kernel.bridges.experimental_bridge import (
     ExperimentalTurnBridgeInput,
+    message_snapshots_to_dicts,
     run_experimental_turn,
 )
 from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
@@ -155,10 +156,11 @@ async def run_async_repl(
         async def _prepare(turn_input: TurnInput) -> TurnInput:
             return turn_input
 
-        def _invoke(_: TurnInput) -> list:
+        def _invoke(turn_input: TurnInput) -> list:
+            invocation_messages = message_snapshots_to_dicts(turn_input.history)
             return _execute_turn(
-                msgs,
-                line,
+                invocation_messages,
+                turn_input.user_text,
                 t,
                 char_name,
                 user_name,
@@ -204,10 +206,11 @@ async def run_async_repl(
         async def _prepare(turn_input: TurnInput) -> TurnInput:
             return turn_input
 
-        def _invoke(_: TurnInput) -> tuple[list, bool]:
+        def _invoke(turn_input: TurnInput) -> tuple[list, bool]:
+            invocation_messages = message_snapshots_to_dicts(turn_input.history)
             return _execute_heartbeat_turn(
-                msgs,
-                signal,
+                invocation_messages,
+                turn_input.user_text,
                 t,
                 char_name,
                 model,
