@@ -66,16 +66,6 @@ def _repl_tool_contract_suffix_after_image_clause() -> str:
     )
 
 
-def _repl_tool_contract_suffix_after_image_clause_chat_branch() -> str:
-    """Same as suffix after clause (5), but no「无生图」— chat branch does not see image tool rules."""
-    return (
-        "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
-        "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
-        "无落盘需求、无磁盘事实核验、无自察必要时，不要调用工具。"
-        "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
-    )
-
-
 def _output_contract_text_with_user_profile_tool() -> str:
     return (
         "输出与工具："
@@ -98,25 +88,13 @@ def _output_contract_text_with_user_profile_tool() -> str:
     )
 
 
-def _output_contract_text_with_user_profile_tool_chat_branch_dual_llm() -> str:
-    """Tool contract for the chat-side LLM when dual-path: no generate_image / modify_image instructions."""
+def _tool_side_compact_directive() -> str:
+    """Async 工具后台专用：压缩叙事段落、把「先工具」前置，降低只扮演不调工具的概率。"""
     return (
-        "输出与工具："
-        "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
-        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
-        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
-        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
-        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
-        "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
-        "（3）为核对工作区约定、记忆规则或控制面设置，可使用 workspace_list_dir / workspace_read_file "
-        "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
-        "本回合 system 中已完整给出且未变更的同一文件。"
-        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
-        "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
-        "必须先调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
-        "想象或「内部读取」叙事来报具体数字或断言文件内容。"
-        "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
-        + _repl_tool_contract_suffix_after_image_clause_chat_branch()
+        "## 工具侧（后台）\n\n"
+        "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
+        "（生图/改图、档案、工作区读写等）。若需要，必须先调用工具并依据返回作答；"
+        "不要仅用角色扮演替代未执行的工具。"
     )
 
 
@@ -127,11 +105,17 @@ def build_system_prompt(
     enable_user_profile_tool: bool = False,
     heartbeat_turn: bool = False,
     include_repl_image_generation_contract: bool = True,
+    tool_side_compact: bool = False,
 ) -> str:
     parts: list[str] = [_security_base()]
+    chat_branch_no_tool_api = (
+        enable_user_profile_tool
+        and not heartbeat_turn
+        and not include_repl_image_generation_contract
+    )
     if bundle.agents_md.strip():
         parts.append("## AGENTS（工作空间约定）\n\n" + bundle.agents_md.strip())
-    if bundle.tools_md.strip():
+    if bundle.tools_md.strip() and not chat_branch_no_tool_api:
         parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
     if bundle.heartbeat_md.strip():
         parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
@@ -141,6 +125,8 @@ def build_system_prompt(
             "用户尚未发送新消息。承接上文**同一语境**：延续当前场景、话题与表达风格，自然续一句或两句，"
             "勿改换语气或像重新开始一段对话；仅输出自然语言短句，不要调用工具。"
         )
+    if tool_side_compact and not heartbeat_turn:
+        parts.append(_tool_side_compact_directive())
     parts.extend(
         [
             "## IDENTITY\n\n" + bundle.identity.strip(),
@@ -149,15 +135,16 @@ def build_system_prompt(
             "## USER\n\n" + bundle.user_md.strip(),
         ]
     )
-    if bundle.memory_raw_diary_today_md.strip():
+    skip_memory_blocks = tool_side_compact and not heartbeat_turn
+    if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
         parts.append(
             "## MEMORY 日记（今日原始）\n\n" + bundle.memory_raw_diary_today_md.strip()
         )
-    if bundle.memory_day_summary_today_md.strip():
+    if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
         parts.append(
             "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
         )
-    if bundle.memory_md.strip():
+    if not skip_memory_blocks and bundle.memory_md.strip():
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
     if enable_user_profile_tool and heartbeat_turn:
         parts.append(_output_contract_text())
@@ -165,9 +152,8 @@ def build_system_prompt(
         if include_repl_image_generation_contract:
             parts.append(_output_contract_text_with_user_profile_tool())
         else:
-            parts.append(
-                _output_contract_text_with_user_profile_tool_chat_branch_dual_llm()
-            )
+            # 双路 chat 支路 API 不挂载 tools：勿注入 user_profile / workspace / 生图等工具说明。
+            parts.append(_output_contract_text())
     else:
         parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)

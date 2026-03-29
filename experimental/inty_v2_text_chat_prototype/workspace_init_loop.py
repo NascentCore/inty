@@ -13,7 +13,7 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop,
 )
 
-from .client import default_model, get_client
+from .client import default_model, get_client_dual_llm_tool
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str
 from .orchestrator import is_workspace_initialized
@@ -101,7 +101,7 @@ def run_workspace_bootstrap_loop(
         f"{spec}"
     )
 
-    client = get_client()
+    client = get_client_dual_llm_tool()
     m = model or default_model()
     tools = build_openai_tools()
     run_tool = tool_executor_for_root(root)

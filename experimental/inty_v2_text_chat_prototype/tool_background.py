@@ -20,6 +20,7 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
+from .client import get_client_dual_llm_tool
 from .file_store import append_jsonl
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str, utc_iso_ts
@@ -296,9 +297,7 @@ async def _run_background_tool_loop(
     execute_tool_call_fn: Callable[..., Any],
     client: Any | None,
 ) -> None:
-    from .client import get_client
-
-    resolved_client = client if client is not None else get_client()
+    resolved_client = client if client is not None else get_client_dual_llm_tool()
     t0 = time.perf_counter()
     working_messages = deepcopy(request_messages)
     total_tool_calls = 0

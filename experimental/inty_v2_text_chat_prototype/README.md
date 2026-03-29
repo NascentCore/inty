@@ -75,7 +75,7 @@ python -m experimental.inty_v2_text_chat_prototype.main once --message "你好" 
 ## 自测（对应原型 §8）
 
 1. **续聊**：`repl` 中对话若干轮后退出，再次启动同一 `--workspace`，应能依赖 `transcript.jsonl` 接续上下文。
-2. **记忆**：编辑 `MEMORY.md` 或依赖记忆管线（`repl` 默认后台队列；`once` 在进程退出前跑完）：每轮会精炼 `MEMORY.md` 与 `SOUL.md`；`USER.md` 的 LLM 策展默认每 100 轮一次。`--debug-print-system` 可验收进 system 的段落。
+2. **记忆**：编辑 `MEMORY.md` 或依赖记忆管线（`repl` 默认后台队列；`once` 在进程退出前跑完）：`MEMORY.md`、`USER.md`、`SOUL.md` 的 LLM 策展默认均为每 **100** 轮一次（可用 `INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS` 等环境变量调整；设为 **1** 即每轮）。`--debug-print-system` 可验收进 system 的段落。
 3. **无 DB**：代码中不 import `sqlalchemy`、`psycopg` 等。
 4. **单一写入**：助手消息追加到 `transcript.jsonl` 仅出现在 `orchestrator.py`（`memory_update` 不写 assistant 行）。
 5. **生图（可选）**：在仓库根 `config.yaml` 配好 `fal.api_key` 与 GCS 后，在 `repl` 中明确向助手要图；工具成功后检查 `generated_images/` 是否出现新文件，或阅读工具返回的 `gcs_http_url=` 摘要（无需把 URL 写进验收文档）。

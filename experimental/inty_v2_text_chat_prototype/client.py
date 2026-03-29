@@ -20,6 +20,9 @@ from .env_util import env_flag_enabled
 _DEFAULT_MODEL = "deepseek/deepseek-v3.2"
 
 _CLIENT: OpenAI | None = None
+# 双路并行（chat 无 tools + tool 全量）：LangSmith 中需区分 run 名称，故分两个 wrap_openai 实例。
+_CLIENT_DUAL_LLM_CHAT: OpenAI | None = None
+_CLIENT_DUAL_LLM_TOOL: OpenAI | None = None
 
 
 def _flush_langsmith_traces_on_exit() -> None:
@@ -71,6 +74,51 @@ def get_client() -> OpenAI:
         )
     )
     return _CLIENT
+
+
+def _openrouter_langsmith_options(*, chat_name: str) -> OpenAICompatibleClientOptions:
+    """与 `get_client()` 相同 endpoint/key，仅 `chat_name` 用于 LangSmith 区分 run。"""
+    _ensure_dotenv()
+    key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
+    if not key:
+        raise ValueError(
+            "Missing API key: set OPENROUTER_API_KEY in the environment "
+            "(or a .env file loaded by python-dotenv)."
+        )
+    return OpenAICompatibleClientOptions(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=key,
+        wrap_langsmith=True,
+        chat_name=chat_name,
+        completions_name="IntyV2Proto_OpenAI",
+        use_fake_openai=False,
+    )
+
+
+def get_client_dual_llm_chat() -> OpenAI:
+    """
+    不挂载 tools 的「聊天路」completion（双路 chat 支路、async 前台快回等）；
+    LangSmith run 名：IntyV2Proto_DualLlm_Chat。
+    """
+    global _CLIENT_DUAL_LLM_CHAT
+    if _CLIENT_DUAL_LLM_CHAT is None:
+        _CLIENT_DUAL_LLM_CHAT = get_openai_compatible_sync_client(
+            _openrouter_langsmith_options(chat_name="IntyV2Proto_DualLlm_Chat")
+        )
+    return _CLIENT_DUAL_LLM_CHAT
+
+
+def get_client_dual_llm_tool() -> OpenAI:
+    """
+    挂载 tools 的 LLM 调用（双路 tool 支路、async 后台 tool loop、同步单路带 tools、
+    bootstrap 等）；LangSmith run 名：IntyV2Proto_DualLlm_Tool。
+    """
+    global _CLIENT_DUAL_LLM_TOOL
+    if _CLIENT_DUAL_LLM_TOOL is None:
+        _CLIENT_DUAL_LLM_TOOL = get_openai_compatible_sync_client(
+            _openrouter_langsmith_options(chat_name="IntyV2Proto_DualLlm_Tool")
+        )
+    return _CLIENT_DUAL_LLM_TOOL
 
 
 def default_model() -> str:

@@ -41,7 +41,7 @@ Order differs from final prompt section order: implementation reads long-term **
 
 ## Day summary LLM cadence
 
-- `memory/YYYY-MM-DD.md` is rewritten by a dedicated summarizer LLM only when `turns_completed % INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS == 0` (default **100**). **`USER.md`** is rewritten by its curator LLM on the same cadence with `INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS` (default **100**), using the same `turns_completed` counter in **`.inty_v2_memory_pipeline.json`**. Raw diary lines still append every turn (`memory/daily/…`); **MEMORY** and **SOUL** curator LLMs still run every turn unless disabled via env. (`user_profile_record` may still append to `USER.md` any turn.)
+- `memory/YYYY-MM-DD.md` is rewritten by a dedicated summarizer LLM only when `turns_completed % INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS == 0` (default **100**). **`MEMORY.md`**, **`USER.md`**, and **`SOUL.md`** curator LLMs use the same `turns_completed` counter in **`.inty_v2_memory_pipeline.json`**, with defaults **100** turns each: `INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS`, `INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS`, `INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS` (set any to **1** for every turn). **`SOUL`** is also skipped when `INTY_V2_PROTO_SOUL_UPDATE_DISABLED` is set. Raw diary lines still append every turn (`memory/daily/…`). (`user_profile_record` may still append to `USER.md` any turn.)
 
 ## Transcript
 

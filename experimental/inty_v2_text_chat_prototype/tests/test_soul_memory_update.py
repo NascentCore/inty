@@ -15,6 +15,9 @@ from inty_v2_text_chat_prototype.bootstrap import init_workspace
 from inty_v2_text_chat_prototype.memory_update import memory_update_after_turn
 from inty_v2_text_chat_prototype.paths import WorkspacePaths
 
+# SOUL 策展默认需「底线/边界/…」等信号；测试里在助手侧带一词以触发。
+_TURN_SOUL = ("用户", "助手 底线")
+
 
 class TestSoulMemoryUpdate(unittest.TestCase):
     def test_soul_rewritten_after_memory_when_day_summary_off(self) -> None:
@@ -24,7 +27,9 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             paths = WorkspacePaths(root=root)
             env = {
                 "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
                 "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
@@ -37,8 +42,8 @@ class TestSoulMemoryUpdate(unittest.TestCase):
                     ]
                     memory_update_after_turn(
                         paths,
-                        user_text="用户",
-                        assistant_text="助手",
+                        user_text=_TURN_SOUL[0],
+                        assistant_text=_TURN_SOUL[1],
                     )
             self.assertEqual(
                 paths.memory_md.read_text(encoding="utf-8"), "# MEMORY\n\nx\n"
@@ -54,7 +59,9 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             original_soul = paths.soul.read_text(encoding="utf-8")
             env = {
                 "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
                 "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
                 "INTY_V2_PROTO_SOUL_UPDATE_DISABLED": "1",
             }
             with patch.dict("os.environ", env, clear=False):
@@ -65,7 +72,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
                     memory_update_after_turn(
                         paths,
                         user_text="u",
-                        assistant_text="a",
+                        assistant_text="a 底线",
                     )
             self.assertEqual(m_complete.call_count, 2)
             self.assertEqual(paths.user_md.read_text(encoding="utf-8"), "# USER\n\nz\n")
@@ -79,7 +86,9 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             original_user = paths.user_md.read_text(encoding="utf-8")
             env = {
                 "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
                 "INTY_V2_PROTO_USER_UPDATE_DISABLED": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
@@ -89,11 +98,87 @@ class TestSoulMemoryUpdate(unittest.TestCase):
                     memory_update_after_turn(
                         paths,
                         user_text="u",
-                        assistant_text="a",
+                        assistant_text="a 底线",
                     )
             self.assertEqual(m_complete.call_count, 2)
             self.assertEqual(paths.user_md.read_text(encoding="utf-8"), original_user)
             self.assertEqual(paths.soul.read_text(encoding="utf-8"), "# SOUL\n\ny\n")
+
+    def test_soul_skipped_without_fundamental_signal(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            init_workspace(root)
+            paths = WorkspacePaths(root=root)
+            original_soul = paths.soul.read_text(encoding="utf-8")
+            env = {
+                "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
+            }
+            with patch.dict("os.environ", env, clear=False):
+                with patch(
+                    "inty_v2_text_chat_prototype.memory_update.complete"
+                ) as m_complete:
+                    m_complete.side_effect = ["# MEMORY\n\nx\n", "# USER\n\nz\n"]
+                    memory_update_after_turn(
+                        paths,
+                        user_text="你好",
+                        assistant_text="嗯嗯",
+                    )
+            self.assertEqual(m_complete.call_count, 2)
+            self.assertEqual(paths.soul.read_text(encoding="utf-8"), original_soul)
+
+    def test_soul_frozen_appearance_section_restored(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            init_workspace(root)
+            paths = WorkspacePaths(root=root)
+            paths.soul.write_text(
+                "# SOUL\n\n## 形象（测试）\n\nHAIR\n\n## 核心\n\nold\n",
+                encoding="utf-8",
+            )
+            env = {
+                "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
+            }
+            with patch.dict("os.environ", env, clear=False):
+                with patch(
+                    "inty_v2_text_chat_prototype.memory_update.complete"
+                ) as m_complete:
+                    n_calls = 0
+
+                    def _complete_side_effect(
+                        messages: list[dict[str, object]], **kwargs: object
+                    ) -> str:
+                        nonlocal n_calls
+                        n_calls += 1
+                        if n_calls == 1:
+                            return "# MEMORY\n\nx\n"
+                        if n_calls == 2:
+                            return "# USER\n\nz\n"
+                        if n_calls == 3:
+                            u = str(messages[1]["content"])
+                            assert "<<<SOUL_CURATOR_FROZEN_APPEARANCE>>>" in u
+                            assert "HAIR" not in u
+                            return (
+                                "# SOUL\n\n<<<SOUL_CURATOR_FROZEN_APPEARANCE>>>\n"
+                                "## 核心\n\nnew\n"
+                            )
+                        raise AssertionError(f"unexpected complete call {n_calls}")
+
+                    m_complete.side_effect = _complete_side_effect
+                    memory_update_after_turn(
+                        paths,
+                        user_text="u",
+                        assistant_text="底线",
+                    )
+            soul_after = paths.soul.read_text(encoding="utf-8")
+            self.assertIn("HAIR", soul_after)
+            self.assertIn("new", soul_after)
+            self.assertNotIn("<<<SOUL_CURATOR_FROZEN_APPEARANCE>>>", soul_after)
 
 
 if __name__ == "__main__":
