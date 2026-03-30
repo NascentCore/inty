@@ -1,0 +1,136 @@
+# AMCP: Agent Memory Custodian Protocol (minimal design)
+
+AMCP is a minimal protocol for user-controlled and cooperative ownership of agent memory.
+It is inspired by AT Protocol ideas: portable identity (`did:*`), portable data bundles, and
+explicit permission records that are auditable and revocable.
+
+## Problem
+
+Agent runners often reuse user memory for secondary purposes without clear user control.
+AMCP makes access policy explicit:
+
+- If runner and purpose are exactly the original interaction context, access is allowed.
+- For any other purpose, explicit user consent is required.
+- For co-owned memory (multiple users), all owners must explicitly consent.
+
+This supports both:
+
+- **default usability** in the original use case, and
+- **strict user control** for cross-purpose memory usage.
+
+## Scope
+
+This is a minimal reference design for research and prototyping:
+
+- local in-memory policy engine,
+- portable JSON export bundle,
+- no network protocol, signatures, or key management yet.
+
+## Roles
+
+- **Owner**: user who owns memory (`owner_did`).
+- **Runner**: agent runtime identity (`runner_did`).
+- **Custodian**: policy engine that decides whether access is allowed.
+
+## Core data model
+
+### `MemoryRecord`
+
+- `memory_id`
+- `owner_dids: list[str]` (supports cooperative ownership)
+- `runner_did` (runner that created/uses this memory in default flow)
+- `original_purpose` (e.g. `coding_assistant`)
+- `content`, `tags`, `created_at`
+- `cid`: SHA-256 over canonical JSON representation
+
+### `ConsentGrant`
+
+- `grant_id`
+- `owner_did`
+- `grantee_runner_did`
+- `purpose`
+- `scope`: `single_memory` or `all_memories_for_owner`
+- optional `memory_id`
+- `granted_at`, optional `expires_at`, optional `revoked_at`
+
+### `AccessRequest`
+
+- `memory_id`
+- `requester_runner_did`
+- `purpose`
+- `requested_at`
+
+### `AccessDecision`
+
+- `allowed: bool`
+- `reason: str`
+- `missing_owner_consents: list[str]`
+
+## Access decision algorithm (minimal normative rule)
+
+For a request `(memory_id, requester_runner_did, purpose)`:
+
+1. Load `memory`.
+2. If `requester_runner_did == memory.runner_did` and `purpose == memory.original_purpose`:
+   - allow (`original-purpose fast path`).
+3. Else:
+   - collect active, unexpired, matching grants from owners of that memory.
+   - if any owner is missing a matching grant:
+     - deny and return missing owners.
+   - otherwise allow.
+
+In short:
+
+- **Same runner + original purpose** => always available.
+- **Anything else** => explicit consent from **every owner**.
+
+## Cooperative ownership
+
+When memory has multiple owners (e.g., conversation memory involving Alice + Bob):
+
+- Consent is cooperative and non-transferable.
+- One owner consenting is not enough.
+- Revocation by one owner removes eligibility immediately for cross-purpose access.
+
+## ATProto-inspired aspects
+
+- DID-like identities for users/runners.
+- Portable memory+consent bundle (`AMCPRepositoryBundle`) that can be exported/imported.
+- Content-addressable memory record hash (`cid`) for integrity checks.
+
+## Minimal reference implementation
+
+File: `research/amcp/main.py`
+
+CLI commands:
+
+- `demo`: prints access decisions across key scenarios
+- `self-test`: executes assertions for policy behavior
+- `export-demo --output ...`: exports JSON bundle
+
+## Demo scenarios covered
+
+1. Original purpose access by same runner => **allow**
+2. Cross-purpose without consent => **deny**
+3. Cross-purpose with only one co-owner consent => **deny**
+4. Cross-purpose with all co-owner consents => **allow**
+5. Cross-purpose after one owner revokes => **deny**
+
+## Run
+
+From repository root:
+
+```bash
+source .venv/bin/activate
+pip install -r research/amcp/requirements.txt
+python research/amcp/main.py demo
+python research/amcp/main.py self-test
+python research/amcp/main.py export-demo --output research/amcp/demo_bundle.json
+```
+
+## Future extensions
+
+- Signature verification per grant and bundle.
+- Capability delegation with bounded delegation chains.
+- Fine-grained field-level masking and purpose taxonomies.
+- Cross-agent network transport and compatibility profile.
