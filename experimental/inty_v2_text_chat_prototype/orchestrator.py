@@ -577,9 +577,7 @@ async def _run_turn_with_user_profile_tools(
         else:
             t_api = time.perf_counter()
             # 带 tools 的同步单路：LangSmith 用 Tool 路名；陪伴心跳无 tools 仍用默认 ChatOpenAI。
-            single_llm_client = (
-                client if heartbeat_turn else get_client_dual_llm_tool()
-            )
+            single_llm_client = client if heartbeat_turn else get_client_dual_llm_tool()
             resp = _chat_completion_create(
                 single_llm_client,
                 model=model,
