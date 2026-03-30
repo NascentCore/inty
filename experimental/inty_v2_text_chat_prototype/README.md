@@ -1,5 +1,11 @@
 # INTY v2 本地文本聊天原型
 
+首先，在命令行安装 `uv`
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ```bash
 cd experimental/inty_v2_text_chat_prototype
 cp .env.example .env
