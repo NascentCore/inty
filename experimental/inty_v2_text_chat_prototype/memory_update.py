@@ -41,6 +41,8 @@ Rules:
 - Preserve useful prior facts; merge new stable facts; remove clear contradictions.
 - The day summary (if provided) is structured notes for today; use it to extract stable long-term facts when appropriate.
 - Stay concise (at most about 2000 characters of substantive content).
+- **## 事件日志** (if present): Record only **important** events—outcomes, agreements, boundary shifts, failures, durable facts. **Do not** log turn-by-turn play-by-play, micro body language, facial expressions, voice tone, or posture. Merge same-day trivia into one line per theme when possible.
+- **## 稳定事实** (if present): Short durable patterns only; **do not** duplicate the event log with extra scenic detail. One sentence per bullet where possible; avoid enumerating trivial reactions.
 - Output raw markdown only: no preamble, no code fences around the whole document.
 """
 
