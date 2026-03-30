@@ -1,0 +1,479 @@
+{
+  "metrics": {
+    "baseline_small_accuracy": 0.0,
+    "baseline_large_accuracy": 1.0,
+    "layered_accuracy": 1.0,
+    "baseline_small_avg_context_chars": 26.0,
+    "baseline_large_avg_context_chars": 144.0,
+    "layered_avg_context_chars": 39.0,
+    "accuracy_gain_vs_small": 1.0,
+    "context_reduction_vs_large": 0.7291666666666666,
+    "layered_memory_item_count": 6.0
+  },
+  "settings": {
+    "window_size": 2,
+    "extract_mode": "regex"
+  },
+  "extraction_traces_by_episode": {
+    "ep-001": [
+      {
+        "turn_index": 1,
+        "user_text": "以后请叫我阿辰。",
+        "routed_categories": [
+          "semantic"
+        ],
+        "semantic_candidates": [
+          {
+            "key": "preferred_name",
+            "value": "阿辰",
+            "confidence": 0.9,
+            "evidence": "以后请叫我阿辰",
+            "turn_idx": 1,
+            "is_negative": false
+          }
+        ],
+        "self_schema_candidates": [],
+        "episodic_events": [],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰"
+        },
+        "episodic_buffer_length": 0
+      },
+      {
+        "turn_index": 2,
+        "user_text": "今天会议很多，先记个待办。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "今天会议很多，先记个待办。",
+            "salience_hint": 0.55,
+            "evidence": "今天会议很多，先记个待办。",
+            "turn_idx": 2
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰"
+        },
+        "episodic_buffer_length": 1
+      },
+      {
+        "turn_index": 3,
+        "user_text": "我现在住在杭州。",
+        "routed_categories": [
+          "semantic"
+        ],
+        "semantic_candidates": [
+          {
+            "key": "city",
+            "value": "杭州",
+            "confidence": 0.88,
+            "evidence": "现在住在杭州",
+            "turn_idx": 3,
+            "is_negative": false
+          }
+        ],
+        "self_schema_candidates": [],
+        "episodic_events": [],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州"
+        },
+        "episodic_buffer_length": 1
+      },
+      {
+        "turn_index": 4,
+        "user_text": "最近工作挺忙，回消息可能慢一点。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "最近工作挺忙，回消息可能慢一点。",
+            "salience_hint": 0.55,
+            "evidence": "最近工作挺忙，回消息可能慢一点。",
+            "turn_idx": 4
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州"
+        },
+        "episodic_buffer_length": 2
+      },
+      {
+        "turn_index": 5,
+        "user_text": "我养了一只边牧。",
+        "routed_categories": [
+          "semantic"
+        ],
+        "semantic_candidates": [
+          {
+            "key": "pet",
+            "value": "边牧",
+            "confidence": 0.86,
+            "evidence": "我养了一只边牧",
+            "turn_idx": 5,
+            "is_negative": false
+          }
+        ],
+        "self_schema_candidates": [],
+        "episodic_events": [],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州",
+          "pet": "边牧"
+        },
+        "episodic_buffer_length": 2
+      },
+      {
+        "turn_index": 6,
+        "user_text": "今天的午饭一般般。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "今天的午饭一般般。",
+            "salience_hint": 0.55,
+            "evidence": "今天的午饭一般般。",
+            "turn_idx": 6
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州",
+          "pet": "边牧"
+        },
+        "episodic_buffer_length": 3
+      },
+      {
+        "turn_index": 7,
+        "user_text": "我是周三休息。",
+        "routed_categories": [
+          "episodic",
+          "semantic"
+        ],
+        "semantic_candidates": [
+          {
+            "key": "rest_day",
+            "value": "周三",
+            "confidence": 0.9,
+            "evidence": "我是周三休息",
+            "turn_idx": 7,
+            "is_negative": false
+          }
+        ],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "我是周三休息。",
+            "salience_hint": 0.55,
+            "evidence": "我是周三休息。",
+            "turn_idx": 7
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州",
+          "pet": "边牧",
+          "rest_day": "周三"
+        },
+        "episodic_buffer_length": 4
+      },
+      {
+        "turn_index": 8,
+        "user_text": "晚上可能去散步。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "晚上可能去散步。",
+            "salience_hint": 0.55,
+            "evidence": "晚上可能去散步。",
+            "turn_idx": 8
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州",
+          "pet": "边牧",
+          "rest_day": "周三"
+        },
+        "episodic_buffer_length": 5
+      },
+      {
+        "turn_index": 9,
+        "user_text": "我不喝咖啡。",
+        "routed_categories": [
+          "semantic"
+        ],
+        "semantic_candidates": [
+          {
+            "key": "coffee_preference",
+            "value": "不喝咖啡",
+            "confidence": 0.94,
+            "evidence": "不喝咖啡",
+            "turn_idx": 9,
+            "is_negative": true
+          }
+        ],
+        "self_schema_candidates": [],
+        "episodic_events": [],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州",
+          "pet": "边牧",
+          "rest_day": "周三",
+          "coffee_preference": "不喝咖啡"
+        },
+        "episodic_buffer_length": 5
+      },
+      {
+        "turn_index": 10,
+        "user_text": "请不要叫我宝贝。",
+        "routed_categories": [
+          "self_schema",
+          "semantic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [
+          {
+            "key": "boundary",
+            "value": "不要叫我宝贝",
+            "confidence": 0.98,
+            "evidence": "请不要叫我宝贝",
+            "turn_idx": 10,
+            "is_negative": false
+          }
+        ],
+        "episodic_events": [],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "杭州",
+          "pet": "边牧",
+          "rest_day": "周三",
+          "coffee_preference": "不喝咖啡",
+          "boundary": "不要叫我宝贝"
+        },
+        "episodic_buffer_length": 5
+      },
+      {
+        "turn_index": 11,
+        "user_text": "我搬家了，我现在住在上海。",
+        "routed_categories": [
+          "episodic",
+          "semantic"
+        ],
+        "semantic_candidates": [
+          {
+            "key": "city",
+            "value": "上海",
+            "confidence": 0.88,
+            "evidence": "我搬家了，我现在住在上海",
+            "turn_idx": 11,
+            "is_negative": false
+          }
+        ],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "我搬家了，我现在住在上海。",
+            "salience_hint": 0.55,
+            "evidence": "我搬家了，我现在住在上海。",
+            "turn_idx": 11
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "上海",
+          "pet": "边牧",
+          "rest_day": "周三",
+          "coffee_preference": "不喝咖啡",
+          "boundary": "不要叫我宝贝"
+        },
+        "episodic_buffer_length": 6
+      },
+      {
+        "turn_index": 12,
+        "user_text": "顺便说下，今天我只是想闲聊。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "顺便说下，今天我只是想闲聊。",
+            "salience_hint": 0.55,
+            "evidence": "顺便说下，今天我只是想闲聊。",
+            "turn_idx": 12
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "上海",
+          "pet": "边牧",
+          "rest_day": "周三",
+          "coffee_preference": "不喝咖啡",
+          "boundary": "不要叫我宝贝"
+        },
+        "episodic_buffer_length": 7
+      },
+      {
+        "turn_index": 13,
+        "user_text": "刚刚在看电影，剧情还不错。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "刚刚在看电影，剧情还不错。",
+            "salience_hint": 0.55,
+            "evidence": "刚刚在看电影，剧情还不错。",
+            "turn_idx": 13
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "上海",
+          "pet": "边牧",
+          "rest_day": "周三",
+          "coffee_preference": "不喝咖啡",
+          "boundary": "不要叫我宝贝"
+        },
+        "episodic_buffer_length": 8
+      },
+      {
+        "turn_index": 14,
+        "user_text": "这会儿有点困，准备休息了。",
+        "routed_categories": [
+          "episodic"
+        ],
+        "semantic_candidates": [],
+        "self_schema_candidates": [],
+        "episodic_events": [
+          {
+            "gist": "这会儿有点困，准备休息了。",
+            "salience_hint": 0.55,
+            "evidence": "这会儿有点困，准备休息了。",
+            "turn_idx": 14
+          }
+        ],
+        "semantic_long_term_after_turn": {
+          "preferred_name": "阿辰",
+          "city": "上海",
+          "pet": "边牧",
+          "rest_day": "周三",
+          "coffee_preference": "不喝咖啡",
+          "boundary": "不要叫我宝贝"
+        },
+        "episodic_buffer_length": 9
+      }
+    ]
+  },
+  "qa_per_question": [
+    {
+      "episode_id": "ep-001",
+      "question": "你该怎么称呼我？",
+      "slot_key": "preferred_name",
+      "expected": "阿辰",
+      "baseline_small_answer": "不知道",
+      "baseline_small_correct": false,
+      "baseline_small_context_chars": 26,
+      "baseline_large_answer": "阿辰",
+      "baseline_large_correct": true,
+      "baseline_large_context_chars": 144,
+      "layered_answer": "阿辰",
+      "layered_correct": true,
+      "layered_context_chars": 43
+    },
+    {
+      "episode_id": "ep-001",
+      "question": "我现在住在哪？",
+      "slot_key": "city",
+      "expected": "上海",
+      "baseline_small_answer": "不知道",
+      "baseline_small_correct": false,
+      "baseline_small_context_chars": 26,
+      "baseline_large_answer": "上海",
+      "baseline_large_correct": true,
+      "baseline_large_context_chars": 144,
+      "layered_answer": "上海",
+      "layered_correct": true,
+      "layered_context_chars": 33
+    },
+    {
+      "episode_id": "ep-001",
+      "question": "我养了什么宠物？",
+      "slot_key": "pet",
+      "expected": "边牧",
+      "baseline_small_answer": "不知道",
+      "baseline_small_correct": false,
+      "baseline_small_context_chars": 26,
+      "baseline_large_answer": "边牧",
+      "baseline_large_correct": true,
+      "baseline_large_context_chars": 144,
+      "layered_answer": "边牧",
+      "layered_correct": true,
+      "layered_context_chars": 32
+    },
+    {
+      "episode_id": "ep-001",
+      "question": "我哪天休息？",
+      "slot_key": "rest_day",
+      "expected": "周三",
+      "baseline_small_answer": "不知道",
+      "baseline_small_correct": false,
+      "baseline_small_context_chars": 26,
+      "baseline_large_answer": "周三",
+      "baseline_large_correct": true,
+      "baseline_large_context_chars": 144,
+      "layered_answer": "周三",
+      "layered_correct": true,
+      "layered_context_chars": 37
+    },
+    {
+      "episode_id": "ep-001",
+      "question": "我喝不喝咖啡？",
+      "slot_key": "coffee_preference",
+      "expected": "不喝咖啡",
+      "baseline_small_answer": "不知道",
+      "baseline_small_correct": false,
+      "baseline_small_context_chars": 26,
+      "baseline_large_answer": "不喝咖啡",
+      "baseline_large_correct": true,
+      "baseline_large_context_chars": 144,
+      "layered_answer": "不喝咖啡",
+      "layered_correct": true,
+      "layered_context_chars": 48
+    },
+    {
+      "episode_id": "ep-001",
+      "question": "称呼边界是什么？",
+      "slot_key": "boundary",
+      "expected": "不要叫我宝贝",
+      "baseline_small_answer": "不知道",
+      "baseline_small_correct": false,
+      "baseline_small_context_chars": 26,
+      "baseline_large_answer": "不要叫我宝贝",
+      "baseline_large_correct": true,
+      "baseline_large_context_chars": 144,
+      "layered_answer": "不要叫我宝贝",
+      "layered_correct": true,
+      "layered_context_chars": 41
+    }
+  ]
+}

@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 try:
     from .extractor import (
@@ -345,6 +345,138 @@ def run_experiment() -> dict[str, float]:
     }
 
 
+def _slot_rows(candidates: list[SlotCandidate]) -> list[dict[str, Any]]:
+    return [asdict(c) for c in candidates]
+
+
+def _episodic_rows(events: list[EpisodicEvent]) -> list[dict[str, Any]]:
+    return [asdict(e) for e in events]
+
+
+def build_extraction_trace(
+    episode: Episode,
+    *,
+    window_size: int = 2,
+    extract_mode: str = "regex",
+) -> list[dict[str, Any]]:
+    """
+    Per-turn view of rule-based routing and independent per-type extraction,
+    plus layered agent semantic memory after each turn (demo / audit).
+    """
+    agent = LayeredMemoryAgent(
+        window_size=window_size,
+        extract_mode=extract_mode,
+    )
+    trace: list[dict[str, Any]] = []
+    for text in episode.user_turns:
+        agent.ingest_user_turn(text)
+        turn_idx = agent._turn_counter
+        cats = utterance_memory_categories(text)
+        active = sorted(
+            c.value
+            for c in cats
+            if c
+            not in (
+                MemoryCategory.SENSORY_BUFFER,
+                MemoryCategory.WORKING,
+            )
+        )
+        semantic_raw: list[SlotCandidate] = []
+        self_schema_raw: list[SlotCandidate] = []
+        episodic_raw: list[EpisodicEvent] = []
+        if MemoryCategory.SEMANTIC in cats:
+            semantic_raw = extract_by_memory_category(  # type: ignore[assignment]
+                text,
+                turn_idx,
+                MemoryCategory.SEMANTIC,
+                mode=extract_mode,
+            )
+        if MemoryCategory.SELF_SCHEMA in cats:
+            self_schema_raw = extract_by_memory_category(  # type: ignore[assignment]
+                text,
+                turn_idx,
+                MemoryCategory.SELF_SCHEMA,
+                mode=extract_mode,
+            )
+        if MemoryCategory.EPISODIC in cats:
+            episodic_raw = extract_episodic_events_llm(  # type: ignore[assignment]
+                text,
+                turn_idx,
+                episodic_llm_call=None,
+            )
+        trace.append(
+            {
+                "turn_index": turn_idx,
+                "user_text": text,
+                "routed_categories": active,
+                "semantic_candidates": _slot_rows(semantic_raw),
+                "self_schema_candidates": _slot_rows(self_schema_raw),
+                "episodic_events": _episodic_rows(episodic_raw),
+                "semantic_long_term_after_turn": dict(agent.semantic_memory),
+                "episodic_buffer_length": len(agent.episodic_buffer),
+            }
+        )
+    return trace
+
+
+def build_qa_per_question_rows(episodes: list[Episode]) -> list[dict[str, Any]]:
+    small = NaiveWindowAgent(window_size=2)
+    large = NaiveWindowAgent(window_size=99)
+    layered = LayeredMemoryAgent(window_size=2)
+    rows: list[dict[str, Any]] = []
+    for ep in episodes:
+        for turn in ep.user_turns:
+            small.ingest_user_turn(turn)
+            large.ingest_user_turn(turn)
+            layered.ingest_user_turn(turn)
+        for qa in ep.qa:
+            a_s, c_s, l_s = small.answer(qa.key)
+            a_l, c_l, l_l = large.answer(qa.key)
+            a_d, c_d, l_d = layered.answer(qa.key)
+            rows.append(
+                {
+                    "episode_id": ep.episode_id,
+                    "question": qa.question,
+                    "slot_key": qa.key,
+                    "expected": qa.expected,
+                    "baseline_small_answer": a_s,
+                    "baseline_small_correct": a_s == qa.expected,
+                    "baseline_small_context_chars": c_s,
+                    "baseline_large_answer": a_l,
+                    "baseline_large_correct": a_l == qa.expected,
+                    "baseline_large_context_chars": c_l,
+                    "layered_answer": a_d,
+                    "layered_correct": a_d == qa.expected,
+                    "layered_context_chars": c_d,
+                }
+            )
+    return rows
+
+
+def build_full_experiment_artifact(
+    *,
+    window_size: int = 2,
+    extract_mode: str = "regex",
+) -> dict[str, Any]:
+    episodes = build_dataset()
+    metrics = run_experiment()
+    traces = {
+        ep.episode_id: build_extraction_trace(
+            ep, window_size=window_size, extract_mode=extract_mode
+        )
+        for ep in episodes
+    }
+    return {
+        "metrics": metrics,
+        "settings": {
+            "window_size": window_size,
+            "extract_mode": extract_mode,
+        },
+        "extraction_traces_by_episode": traces,
+        "qa_per_question": build_qa_per_question_rows(episodes),
+    }
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run brain-inspired memory summarizer experiment."
@@ -356,7 +488,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--out",
         type=Path,
         default=Path(__file__).resolve().parent / "experiment_results.json",
-        help="output json file path",
+        help="aggregate metrics JSON path",
+    )
+    run_cmd.add_argument(
+        "--full-out",
+        type=Path,
+        default=Path(__file__).resolve().parent / "experiment_full.json",
+        help="full artifact: per-turn extraction trace + per-question QA rows",
     )
     return parser
 
@@ -367,6 +505,10 @@ def main() -> int:
         raise ValueError(f"unsupported command: {args.command}")
     result = run_experiment()
     args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    full = build_full_experiment_artifact()
+    args.full_out.write_text(
+        json.dumps(full, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
