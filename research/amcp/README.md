@@ -37,7 +37,7 @@ This is a minimal reference design for research and prototyping:
 ### `MemoryRecord`
 
 - `memory_id`
-- `owner_dids: list[str]` (supports cooperative ownership)
+- `owner_dids: list[str]` (supports cooperative ownership, must be non-empty)
 - `runner_did` (runner that created/uses this memory in default flow)
 - `original_purpose` (e.g. `coding_assistant`)
 - `content`, `tags`, `created_at`
@@ -58,7 +58,7 @@ This is a minimal reference design for research and prototyping:
 - `memory_id`
 - `requester_runner_did`
 - `purpose`
-- `requested_at`
+- `requested_at` (audit metadata; authorization uses custodian decision time)
 
 ### `AccessDecision`
 
@@ -74,7 +74,9 @@ For a request `(memory_id, requester_runner_did, purpose)`:
 2. If `requester_runner_did == memory.runner_did` and `purpose == memory.original_purpose`:
    - allow (`original-purpose fast path`).
 3. Else:
+   - evaluate grants at custodian decision time (`evaluated_at = now`), not caller-provided timestamps.
    - collect active, unexpired, matching grants from owners of that memory.
+   - grant must satisfy `granted_at <= evaluated_at`.
    - if any owner is missing a matching grant:
      - deny and return missing owners.
    - otherwise allow.

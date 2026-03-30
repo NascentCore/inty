@@ -9,7 +9,7 @@ from typing import Literal
 
 import cyclopts
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
 def utc_now() -> datetime:
@@ -24,7 +24,7 @@ class MemoryRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     memory_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    owner_dids: list[str]
+    owner_dids: list[str] = Field(min_length=1)
     runner_did: str
     original_purpose: str
     content: str
@@ -50,10 +50,12 @@ class ConsentGrant(BaseModel):
     expires_at: datetime | None = None
     revoked_at: datetime | None = None
 
-    def matches(self, request: "AccessRequest") -> bool:
-        if self.revoked_at is not None:
+    def matches(self, request: "AccessRequest", evaluated_at: datetime) -> bool:
+        if self.granted_at > evaluated_at:
             return False
-        if self.expires_at is not None and self.expires_at <= request.requested_at:
+        if self.revoked_at is not None and self.revoked_at <= evaluated_at:
+            return False
+        if self.expires_at is not None and self.expires_at <= evaluated_at:
             return False
         if self.grantee_runner_did != request.requester_runner_did:
             return False
@@ -112,6 +114,7 @@ class MemoryCustodian:
         raise ValueError("Grant not found for owner.")
 
     def evaluate_access(self, request: AccessRequest) -> AccessDecision:
+        evaluated_at = utc_now()
         memory = self.memories[request.memory_id]
         if (
             request.requester_runner_did == memory.runner_did
@@ -124,7 +127,9 @@ class MemoryCustodian:
 
         consented_owners: set[str] = set()
         for consent in self.grants:
-            if consent.owner_did in memory.owner_dids and consent.matches(request):
+            if consent.owner_did in memory.owner_dids and consent.matches(
+                request, evaluated_at=evaluated_at
+            ):
                 consented_owners.add(consent.owner_did)
 
         missing = sorted(set(memory.owner_dids) - consented_owners)
@@ -274,6 +279,47 @@ def self_test() -> None:
     assert decisions["cross-purpose-only-alice-consented"].allowed is False
     assert decisions["cross-purpose-all-owners-consented"].allowed is True
     assert decisions["cross-purpose-after-bob-revocation"].allowed is False
+    try:
+        MemoryRecord(
+            owner_dids=[],
+            runner_did="did:runner:any",
+            original_purpose="coding_assistant",
+            content="x",
+        )
+    except ValidationError:
+        pass
+    else:
+        raise AssertionError("MemoryRecord owner_dids must not be empty.")
+
+    custodian = MemoryCustodian()
+    memory = custodian.add_memory(
+        MemoryRecord(
+            owner_dids=["did:plc:alice"],
+            runner_did="did:runner:coding-agent-v1",
+            original_purpose="coding_assistant",
+            content="single owner memory",
+        )
+    )
+    expired_consent = custodian.grant(
+        ConsentGrant(
+            owner_did="did:plc:alice",
+            grantee_runner_did="did:runner:coding-agent-v1",
+            purpose="marketing_analytics",
+            scope="single_memory",
+            memory_id=memory.memory_id,
+            expires_at=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        )
+    )
+    backdated_request = AccessRequest(
+        memory_id=memory.memory_id,
+        requester_runner_did="did:runner:coding-agent-v1",
+        purpose="marketing_analytics",
+        requested_at=datetime(1999, 1, 1, tzinfo=timezone.utc),
+    )
+    decision = custodian.evaluate_access(backdated_request)
+    assert expired_consent.matches(backdated_request, evaluated_at=utc_now()) is False
+    assert decision.allowed is False
+    assert decision.missing_owner_consents == ["did:plc:alice"]
     print("AMCP self-test passed.")
 
 
