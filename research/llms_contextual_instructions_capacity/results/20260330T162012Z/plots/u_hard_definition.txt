@@ -1,0 +1,2 @@
+U_hard definition: first utilization U where threshold failures appear in 2 consecutive U levels (under both uniform and edges profiles).
+Thresholds: IA_CI_low>=0.95, RSR_CI_low>=0.85, Effectiveness_CI_low>=0.92, FormatErrorRate<=0.02.

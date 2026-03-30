@@ -79,3 +79,40 @@ Then update this file with final `U_rec` and `U_hard` per instruction bucket.
 
 - Run ID: `20260330T110255Z`
 - This baseline is retained in `results/20260330T110255Z` for harness calibration comparison.
+
+## Additional live model comparison (same matrix)
+
+Comparable quick matrix for all models:
+
+- `U={0.10, 0.55, 0.80, 0.93}`
+- `N={1, 8, 16}`
+- `P={uniform, edges}`
+- `trials_per_cell=3`
+
+Live run IDs:
+
+- `google/gemini-2.5-flash-lite`: `20260330T150952Z`
+- `deepseek/deepseek-v3.2`: `20260330T161158Z`
+- `openai/gpt-4o-mini`: `20260330T162012Z`
+
+### U_hard comparison
+
+`<=8` instruction bucket:
+
+- `google/gemini-2.5-flash-lite`: `U_hard=0.55`
+- `deepseek/deepseek-v3.2`: `U_hard=0.55`
+- `openai/gpt-4o-mini`: `U_hard=0.55`
+
+`<=16` instruction bucket:
+
+- `google/gemini-2.5-flash-lite`: `U_hard=0.55`
+- `deepseek/deepseek-v3.2`: `U_hard=0.55`
+- `openai/gpt-4o-mini`: `U_hard=0.55`
+
+Notes:
+
+1. In this quick matrix, all three models produced the same provisional `U_hard` for covered buckets.
+2. `<=32` and `<=64` buckets remain `None` because this matrix did not include instruction counts above `16`.
+3. Failure modes differ:
+   - `deepseek/deepseek-v3.2` had more format-wrapper failures (many markdown-fenced JSON outputs).
+   - `openai/gpt-4o-mini` had zero failures in this quick sweep, but the strict CI rule with low trials still yields the same provisional hard-limit boundary.
