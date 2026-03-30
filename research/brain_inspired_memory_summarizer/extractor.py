@@ -4,6 +4,7 @@ import json
 import os
 import re
 from dataclasses import dataclass
+from enum import Enum
 from typing import Callable
 
 _PREFERRED_PATTERNS = (
@@ -32,41 +33,134 @@ ALLOWED_KEYS = {
     "boundary",
 }
 
-_LLM_MEMORY_SCHEMA: dict[str, object] = {
-    "name": "memory_candidates",
+# Brain-inspired split: durable facts/preferences vs stable boundaries/values (self-schema).
+SEMANTIC_ALLOWED_KEYS = frozenset(
+    {"preferred_name", "city", "pet", "rest_day", "coffee_preference"}
+)
+SELF_SCHEMA_ALLOWED_KEYS = frozenset({"boundary"})
+
+
+class MemoryCategory(str, Enum):
+    """Cognitive-style memory kinds used for routing and independent extraction."""
+
+    SENSORY_BUFFER = "sensory_buffer"
+    WORKING = "working"
+    EPISODIC = "episodic"
+    SEMANTIC = "semantic"
+    SELF_SCHEMA = "self_schema"
+
+
+def _slot_candidate_schema_properties(allowed: frozenset[str]) -> dict[str, object]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "key": {
+                "type": "string",
+                "enum": sorted(allowed),
+            },
+            "value": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "evidence": {"type": "string"},
+            "is_negative": {"type": "boolean"},
+        },
+        "required": [
+            "key",
+            "value",
+            "confidence",
+            "evidence",
+            "is_negative",
+        ],
+    }
+
+
+def _json_schema_memory_candidates(name: str, allowed: frozenset[str]) -> dict[str, object]:
+    return {
+        "name": name,
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "candidates": {
+                    "type": "array",
+                    "items": _slot_candidate_schema_properties(allowed),
+                }
+            },
+            "required": ["candidates"],
+        },
+    }
+
+
+_LLM_SEMANTIC_MEMORY_SCHEMA = _json_schema_memory_candidates(
+    "semantic_memory_candidates", SEMANTIC_ALLOWED_KEYS
+)
+_LLM_SELF_SCHEMA_MEMORY_SCHEMA = _json_schema_memory_candidates(
+    "self_schema_memory_candidates", SELF_SCHEMA_ALLOWED_KEYS
+)
+
+_LLM_EPISODIC_SCHEMA: dict[str, object] = {
+    "name": "episodic_events",
     "strict": True,
     "schema": {
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "candidates": {
+            "events": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
                     "properties": {
-                        "key": {
-                            "type": "string",
-                            "enum": sorted(ALLOWED_KEYS),
+                        "gist": {"type": "string"},
+                        "salience_hint": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
                         },
-                        "value": {"type": "string"},
-                        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
                         "evidence": {"type": "string"},
-                        "is_negative": {"type": "boolean"},
                     },
-                    "required": [
-                        "key",
-                        "value",
-                        "confidence",
-                        "evidence",
-                        "is_negative",
-                    ],
+                    "required": ["gist", "salience_hint", "evidence"],
                 },
             }
         },
-        "required": ["candidates"],
+        "required": ["events"],
     },
 }
+
+# LLM instructions: one system prompt per memory class (no cross-type mixing in a single call).
+SEMANTIC_MEMORY_SYSTEM_PROMPT = (
+    "You extract SEMANTIC memory only from one user utterance.\n"
+    "Semantic memory = stable facts, habits, and preferences (names, location, schedule, food/drink, pets).\n"
+    "Output JSON only. Each candidate: key, value, confidence, evidence, is_negative.\n"
+    f"Allowed keys (semantic only): {', '.join(sorted(SEMANTIC_ALLOWED_KEYS))}.\n"
+    "Rules:\n"
+    "- Do NOT output boundary or prohibition keys here; those belong to self-schema extraction.\n"
+    "- If nothing qualifies as semantic memory, return an empty candidates list.\n"
+    "- confidence in [0,1]. For explicit negation, set is_negative=true.\n"
+)
+
+SELF_SCHEMA_SYSTEM_PROMPT = (
+    "You extract SELF-SCHEMA / boundary memory only from one user utterance.\n"
+    "Self-schema here = explicit boundaries the user states (e.g. how they must not be addressed).\n"
+    "Output JSON only. Each candidate: key, value, confidence, evidence, is_negative.\n"
+    f"Allowed keys (self-schema only): {', '.join(sorted(SELF_SCHEMA_ALLOWED_KEYS))}.\n"
+    "Rules:\n"
+    "- Do NOT output preferred_name, city, pet, rest_day, or coffee_preference here.\n"
+    "- If no boundary-like constraint appears, return an empty candidates list.\n"
+    "- confidence in [0,1].\n"
+)
+
+EPISODIC_MEMORY_SYSTEM_PROMPT = (
+    "You extract EPISODIC memory only from one user utterance.\n"
+    "Episodic memory = what happened in this turn: concrete situation, activity, or event, "
+    "with time-in-conversation flavor (e.g. 'said they were tired', 'mentioned a movie').\n"
+    "Output JSON only. Field events: list of {gist, salience_hint, evidence}.\n"
+    "- gist: short neutral summary (one clause).\n"
+    "- salience_hint: [0,1] how worth retaining for later consolidation vs noise.\n"
+    "- evidence: short verbatim or paraphrase anchored in the utterance.\n"
+    "- If the utterance is only a bare durable fact with no situational color, you may return an empty events list.\n"
+)
 
 
 @dataclass(frozen=True)
@@ -79,8 +173,61 @@ class SlotCandidate:
     is_negative: bool = False
 
 
+@dataclass(frozen=True)
+class EpisodicEvent:
+    """One episodic trace for a single user turn (gist + salience for consolidation)."""
+
+    gist: str
+    salience_hint: float
+    evidence: str
+    turn_idx: int
+
+
+# Dialogue → memory subsystem routing (explicit rules; not LLM role-play).
+_EPISODIC_ROUTE_HINTS = re.compile(
+    r"今天|刚才|刚刚|晚上|最近|电影|困|闲聊|会议|待办|散步|午饭|消息|还行|剧情|休息|搬家|顺便|这会儿"
+)
+
+
+def utterance_memory_categories(text: str) -> frozenset[MemoryCategory]:
+    """
+    Map a user utterance to which memory subsystems should run this turn.
+    Deterministic heuristics only (no LLM classification).
+    """
+    categories: set[MemoryCategory] = {
+        MemoryCategory.SENSORY_BUFFER,
+        MemoryCategory.WORKING,
+    }
+    if _EPISODIC_ROUTE_HINTS.search(text):
+        categories.add(MemoryCategory.EPISODIC)
+
+    boundary_here = bool(_BOUNDARY_RE.search(text)) or bool(
+        re.search(r"(?:不要|别|请勿).{0,8}叫我", text)
+    )
+    if boundary_here:
+        categories.add(MemoryCategory.SELF_SCHEMA)
+
+    semantic_cues = (
+        _PREFERRED_PATTERNS
+        + (
+            _CITY_RE,
+            _PET_RE,
+            _DAY_RE,
+            _COFFEE_RE,
+            _NO_COFFEE_RE,
+            _NO_PET_RE,
+        )
+        + _CITY_MOVE_PATTERNS
+    )
+    if any(p.search(text) for p in semantic_cues):
+        categories.add(MemoryCategory.SEMANTIC)
+
+    return frozenset(categories)
+
+
 LLMExtractFn = Callable[[str, int], list[SlotCandidate]]
 LLMCallFn = Callable[[str], str]
+EpisodicLLMCallFn = Callable[[str], str]
 
 
 def _extract_candidates_regex(text: str, turn_idx: int) -> list[SlotCandidate]:
@@ -198,11 +345,58 @@ def _extract_candidates_regex(text: str, turn_idx: int) -> list[SlotCandidate]:
     return out
 
 
-def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandidate]:
-    """
-    LLM-based extractor.
-    Uses OpenRouter when OPENROUTER_API_KEY is set; otherwise OpenAI direct.
-    """
+def extract_semantic_candidates_regex(text: str, turn_idx: int) -> list[SlotCandidate]:
+    """Semantic slots only (same patterns as full regex path, minus boundary)."""
+    return [
+        c
+        for c in _extract_candidates_regex(text, turn_idx)
+        if c.key in SEMANTIC_ALLOWED_KEYS
+    ]
+
+
+def extract_self_schema_candidates_regex(text: str, turn_idx: int) -> list[SlotCandidate]:
+    """Boundary / self-schema only."""
+    return [
+        c
+        for c in _extract_candidates_regex(text, turn_idx)
+        if c.key in SELF_SCHEMA_ALLOWED_KEYS
+    ]
+
+
+def _extract_episodic_regex(text: str, turn_idx: int) -> list[EpisodicEvent]:
+    """Deterministic episodic trace when LLM is unavailable."""
+    if not _EPISODIC_ROUTE_HINTS.search(text):
+        return []
+    gist = text.strip()
+    if len(gist) > 96:
+        gist = gist[:93] + "..."
+    ev = text.strip()
+    if len(ev) > 160:
+        ev = ev[:157] + "..."
+    return [
+        EpisodicEvent(
+            gist=gist,
+            salience_hint=0.55,
+            evidence=ev,
+            turn_idx=turn_idx,
+        )
+    ]
+
+
+def _strip_markdown_json_fences(content: str) -> str:
+    if not content.startswith("```"):
+        return content
+    stripped = content.strip()
+    if stripped.startswith("```json"):
+        stripped = stripped[len("```json") :].strip()
+    elif stripped.startswith("```"):
+        stripped = stripped[3:].strip()
+    if stripped.endswith("```"):
+        stripped = stripped[:-3].strip()
+    return stripped or "{}"
+
+
+def _get_llm_client_and_model() -> tuple[object, str]:
     try:
         from openai import OpenAI
     except ImportError as e:
@@ -215,42 +409,43 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
     if openrouter_key:
         client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key)
         model = os.getenv("INTY_MEMORY_EXTRACTOR_MODEL", "openai/gpt-4o-mini")
-    elif openai_key:
+        return client, model
+    if openai_key:
         client = OpenAI(api_key=openai_key)
         model = os.getenv("INTY_MEMORY_EXTRACTOR_MODEL", "gpt-4o-mini")
-    else:
-        raise ValueError(
-            "No API key found for LLM extractor; set OPENROUTER_API_KEY or OPENAI_API_KEY"
-        )
-
-    system_prompt = (
-        "You extract stable user-memory slots from one user utterance.\n"
-        "Each candidate item must contain: key, value, confidence, evidence, is_negative.\n"
-        "Allowed keys: preferred_name, city, pet, rest_day, coffee_preference, boundary.\n"
-        "Rules:\n"
-        "- Keep only durable user facts/preferences/boundaries.\n"
-        "- If no durable memory, return an empty candidate list.\n"
-        "- confidence must be in [0,1].\n"
-        "- For explicit negation or prohibition, set is_negative=true.\n"
+        return client, model
+    raise ValueError(
+        "No API key found for LLM extractor; set OPENROUTER_API_KEY or OPENAI_API_KEY"
     )
-    user_prompt = f"Utterance:\n{text}"
+
+
+def _llm_json_completion(
+    client: object,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    json_schema: dict[str, object],
+) -> str:
+    from openai import BadRequestError
+
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
+    create = getattr(client, "chat").completions.create
     try:
-        resp = client.chat.completions.create(
+        resp = create(
             model=model,
             messages=messages,
             response_format={
                 "type": "json_schema",
-                "json_schema": _LLM_MEMORY_SCHEMA,
+                "json_schema": json_schema,
             },
             temperature=0.0,
         )
-    except Exception:
-        # Compatibility fallback for providers that do not yet support json_schema.
-        resp = client.chat.completions.create(
+    except BadRequestError:
+        # Provider rejects json_schema: fall back to json_object once.
+        resp = create(
             model=model,
             messages=messages,
             response_format={"type": "json_object"},
@@ -263,17 +458,15 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
     msg = getattr(first, "message", None)
     if msg is None:
         raise ValueError("LLM extractor returned no message in first choice")
-    content = getattr(msg, "content", None) or '{"candidates":[]}'
-    if content.startswith("```"):
-        # Some providers may still wrap structured output with markdown fences.
-        stripped = content.strip()
-        if stripped.startswith("```json"):
-            stripped = stripped[len("```json") :].strip()
-        elif stripped.startswith("```"):
-            stripped = stripped[3:].strip()
-        if stripped.endswith("```"):
-            stripped = stripped[:-3].strip()
-        content = stripped or '{"candidates":[]}'
+    content = getattr(msg, "content", None) or "{}"
+    return _strip_markdown_json_fences(content)
+
+
+def _parse_slot_candidates_json(
+    content: str,
+    turn_idx: int,
+    allowed: frozenset[str],
+) -> list[SlotCandidate]:
     data = json.loads(content)
     raw_items: list[object]
     if isinstance(data, list):
@@ -292,7 +485,7 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
         if not isinstance(item, dict):
             continue
         key = str(item.get("key", "")).strip()
-        if key not in ALLOWED_KEYS:
+        if key not in allowed:
             continue
         value = str(item.get("value", "")).strip()
         evidence = str(item.get("evidence", "")).strip()
@@ -315,7 +508,125 @@ def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandid
                 is_negative=is_negative,
             )
         )
-    return _resolve_same_turn_conflicts(out)
+    return out
+
+
+def extract_semantic_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandidate]:
+    """Semantic memory only: independent LLM instruction pass."""
+    client, model = _get_llm_client_and_model()
+    content = _llm_json_completion(
+        client,
+        model,
+        SEMANTIC_MEMORY_SYSTEM_PROMPT,
+        f"Utterance:\n{text}",
+        _LLM_SEMANTIC_MEMORY_SCHEMA,
+    )
+    return _parse_slot_candidates_json(content, turn_idx, SEMANTIC_ALLOWED_KEYS)
+
+
+def extract_self_schema_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandidate]:
+    """Self-schema / boundary memory only: independent LLM instruction pass."""
+    client, model = _get_llm_client_and_model()
+    content = _llm_json_completion(
+        client,
+        model,
+        SELF_SCHEMA_SYSTEM_PROMPT,
+        f"Utterance:\n{text}",
+        _LLM_SELF_SCHEMA_MEMORY_SCHEMA,
+    )
+    return _parse_slot_candidates_json(content, turn_idx, SELF_SCHEMA_ALLOWED_KEYS)
+
+
+def extract_episodic_events_llm_default(text: str, turn_idx: int) -> list[EpisodicEvent]:
+    """Episodic traces only: independent LLM instruction pass."""
+    client, model = _get_llm_client_and_model()
+    content = _llm_json_completion(
+        client,
+        model,
+        EPISODIC_MEMORY_SYSTEM_PROMPT,
+        f"Utterance:\n{text}",
+        _LLM_EPISODIC_SCHEMA,
+    )
+    data = json.loads(content)
+    raw: list[object]
+    if isinstance(data, dict):
+        ev = data.get("events", [])
+        if not isinstance(ev, list):
+            raise ValueError("LLM episodic response must include list field events")
+        raw = ev
+    elif isinstance(data, list):
+        raw = data
+    else:
+        raise ValueError("LLM episodic response must be object with events or a list")
+
+    out: list[EpisodicEvent] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        gist = str(item.get("gist", "")).strip()
+        evidence = str(item.get("evidence", "")).strip()
+        if not gist:
+            continue
+        salience_raw = item.get("salience_hint", 0.0)
+        salience = float(salience_raw)
+        if salience < 0.0:
+            salience = 0.0
+        if salience > 1.0:
+            salience = 1.0
+        out.append(
+            EpisodicEvent(
+                gist=gist,
+                salience_hint=salience,
+                evidence=evidence or gist,
+                turn_idx=turn_idx,
+            )
+        )
+    return out
+
+
+def _extract_candidates_llm_default(text: str, turn_idx: int) -> list[SlotCandidate]:
+    """
+    LLM-based slot extraction: two independent instruction passes (semantic + self-schema).
+    Uses OpenRouter when OPENROUTER_API_KEY is set; otherwise OpenAI direct.
+    """
+    semantic = extract_semantic_candidates_llm_default(text, turn_idx)
+    self_schema = extract_self_schema_candidates_llm_default(text, turn_idx)
+    merged = semantic + self_schema
+    return _resolve_same_turn_conflicts(merged)
+
+
+def _slot_candidates_from_parsed_items(
+    raw_items: list[object], turn_idx: int, allowed: frozenset[str]
+) -> list[SlotCandidate]:
+    out: list[SlotCandidate] = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key", "")).strip()
+        if key not in allowed:
+            continue
+        value = str(item.get("value", "")).strip()
+        evidence = str(item.get("evidence", "")).strip()
+        if not value:
+            continue
+        confidence_raw = item.get("confidence", 0.0)
+        confidence = float(confidence_raw)
+        if confidence < 0.0:
+            confidence = 0.0
+        if confidence > 1.0:
+            confidence = 1.0
+        is_negative = bool(item.get("is_negative", False))
+        out.append(
+            SlotCandidate(
+                key=key,
+                value=value,
+                confidence=confidence,
+                evidence=evidence or value,
+                turn_idx=turn_idx,
+                is_negative=is_negative,
+            )
+        )
+    return out
 
 
 def llm_extract_memory_slots(
@@ -324,15 +635,16 @@ def llm_extract_memory_slots(
     llm_call: LLMCallFn,
 ) -> list[SlotCandidate]:
     """
-    Public LLM extraction helper.
-    `llm_call` must return a JSON string:
-    {"candidates":[{"key","value","confidence","evidence","is_negative"}]}
+    Public LLM extraction helper (single JSON payload for tests).
+    Splits parsed candidates by key into semantic vs self-schema paths logically,
+    then merges — same outcome as two independent LLM calls when keys are correct.
+    `llm_call` must return JSON:
+    {"candidates":[{"key","value","confidence","evidence","is_negative"}]} or a list.
     """
     content = llm_call(text)
     data = json.loads(content)
     raw_items: list[object]
     if isinstance(data, list):
-        # Accept direct list form for easier testing/tooling integrations.
         raw_items = data
     elif isinstance(data, dict):
         items = data.get("candidates", [])
@@ -342,35 +654,60 @@ def llm_extract_memory_slots(
     else:
         raise ValueError("LLM extractor response must be object or list JSON")
 
-    out: list[SlotCandidate] = []
-    for item in raw_items:
+    semantic = _slot_candidates_from_parsed_items(
+        raw_items, turn_idx, SEMANTIC_ALLOWED_KEYS
+    )
+    self_schema = _slot_candidates_from_parsed_items(
+        raw_items, turn_idx, SELF_SCHEMA_ALLOWED_KEYS
+    )
+    return _resolve_same_turn_conflicts(semantic + self_schema)
+
+
+def llm_extract_episodic_events(
+    text: str,
+    turn_idx: int,
+    episodic_llm_call: EpisodicLLMCallFn,
+) -> list[EpisodicEvent]:
+    """
+    Parse episodic JSON from `episodic_llm_call` (independent of slot extraction).
+    Expected: {"events":[{"gist","salience_hint","evidence"}]} or a list of objects.
+    """
+    content = episodic_llm_call(text)
+    data = json.loads(content)
+    raw: list[object]
+    if isinstance(data, dict):
+        ev = data.get("events", [])
+        if not isinstance(ev, list):
+            raise ValueError("Episodic LLM response must include list field events")
+        raw = ev
+    elif isinstance(data, list):
+        raw = data
+    else:
+        raise ValueError("Episodic LLM response must be object with events or list")
+
+    out: list[EpisodicEvent] = []
+    for item in raw:
         if not isinstance(item, dict):
             continue
-        key = str(item.get("key", "")).strip()
-        if key not in ALLOWED_KEYS:
-            continue
-        value = str(item.get("value", "")).strip()
+        gist = str(item.get("gist", "")).strip()
         evidence = str(item.get("evidence", "")).strip()
-        if not value:
+        if not gist:
             continue
-        confidence_raw = item.get("confidence", 0.0)
-        confidence = float(confidence_raw)
-        if confidence < 0.0:
-            confidence = 0.0
-        if confidence > 1.0:
-            confidence = 1.0
-        is_negative = bool(item.get("is_negative", False))
+        salience_raw = item.get("salience_hint", 0.0)
+        salience = float(salience_raw)
+        if salience < 0.0:
+            salience = 0.0
+        if salience > 1.0:
+            salience = 1.0
         out.append(
-            SlotCandidate(
-                key=key,
-                value=value,
-                confidence=confidence,
-                evidence=evidence or value,
+            EpisodicEvent(
+                gist=gist,
+                salience_hint=salience,
+                evidence=evidence or gist,
                 turn_idx=turn_idx,
-                is_negative=is_negative,
             )
         )
-    return _resolve_same_turn_conflicts(out)
+    return out
 
 
 def extract_candidates_llm(
@@ -390,6 +727,75 @@ def extract_candidates_llm(
         return llm_extract_memory_slots(text, turn_idx, llm_call)
     except (json.JSONDecodeError, ValueError, TypeError):
         return _extract_candidates_regex(text, turn_idx)
+
+
+def extract_episodic_events_llm(
+    text: str,
+    turn_idx: int,
+    *,
+    episodic_llm_call: EpisodicLLMCallFn | None = None,
+) -> list[EpisodicEvent]:
+    """
+    Episodic extraction: independent LLM instructions, or regex fallback.
+    """
+    if episodic_llm_call is None:
+        try:
+            return extract_episodic_events_llm_default(text, turn_idx)
+        except (ImportError, ValueError, json.JSONDecodeError):
+            return _extract_episodic_regex(text, turn_idx)
+    try:
+        return llm_extract_episodic_events(text, turn_idx, episodic_llm_call)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return _extract_episodic_regex(text, turn_idx)
+
+
+def extract_by_memory_category(
+    text: str,
+    turn_idx: int,
+    category: MemoryCategory,
+    *,
+    mode: str = "auto",
+    llm_extract_fn: LLMExtractFn | None = None,
+    episodic_llm_call: EpisodicLLMCallFn | None = None,
+) -> list[SlotCandidate] | list[EpisodicEvent]:
+    """
+    Run extraction for exactly one memory category (independent backends).
+    Returns SlotCandidate list for slot layers; EpisodicEvent list for episodic.
+    """
+    if mode not in {"llm", "regex", "auto"}:
+        raise ValueError(f"unsupported extractor mode: {mode}")
+
+    if category in (MemoryCategory.SENSORY_BUFFER, MemoryCategory.WORKING):
+        return []
+
+    if category == MemoryCategory.EPISODIC:
+        if mode == "regex":
+            return _extract_episodic_regex(text, turn_idx)
+        return extract_episodic_events_llm(
+            text, turn_idx, episodic_llm_call=episodic_llm_call
+        )
+
+    if category == MemoryCategory.SEMANTIC:
+        if mode == "regex":
+            return extract_semantic_candidates_regex(text, turn_idx)
+        llm_fn = llm_extract_fn or extract_semantic_candidates_llm_default
+        try:
+            slots = llm_fn(text, turn_idx)
+            return [c for c in slots if c.key in SEMANTIC_ALLOWED_KEYS]
+        except (ImportError, ValueError, json.JSONDecodeError):
+            return extract_semantic_candidates_regex(text, turn_idx)
+
+    if category == MemoryCategory.SELF_SCHEMA:
+        if mode == "regex":
+            return extract_self_schema_candidates_regex(text, turn_idx)
+        llm_fn = llm_extract_fn or extract_self_schema_candidates_llm_default
+        try:
+            slots = llm_fn(text, turn_idx)
+            return [c for c in slots if c.key in SELF_SCHEMA_ALLOWED_KEYS]
+        except (ImportError, ValueError, json.JSONDecodeError):
+            return extract_self_schema_candidates_regex(text, turn_idx)
+
+    raise ValueError(f"unsupported memory category: {category}")
 
 
 def _resolve_same_turn_conflicts(candidates: list[SlotCandidate]) -> list[SlotCandidate]:
@@ -412,6 +818,11 @@ def _resolve_same_turn_conflicts(candidates: list[SlotCandidate]) -> list[SlotCa
             continue
         out.append(c)
     return out
+
+
+def merge_slot_candidates(candidates: list[SlotCandidate]) -> list[SlotCandidate]:
+    """Merge lists from independent extractors; apply same-turn boundary/name rules."""
+    return _resolve_same_turn_conflicts(candidates)
 
 
 def extract_candidates(

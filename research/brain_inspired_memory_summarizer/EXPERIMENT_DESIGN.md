@@ -20,7 +20,8 @@ Validate whether a brain-inspired layered-memory agent can:
   - one overwrite event (same key, newer value),
   - long distractor tail so early facts fall out of short window.
 - Deterministic QA set over final stable facts.
-- No external LLM calls; all extraction and answering are rule-based to keep reproducible.
+- Default experiment: no external LLM calls; per-memory-type extraction uses regex backends so runs are reproducible.
+- With API keys, `extractor` can run **independent** LLM instruction passes per type (semantic vs self-schema vs episodic); dialogue→subsystem routing stays **rule-based** (`utterance_memory_categories`), not LLM role-play.
 
 ## Arms
 
@@ -29,7 +30,8 @@ Validate whether a brain-inspired layered-memory agent can:
 2. `baseline_large_window`
    - full dialogue visible at answer time.
 3. `layered_memory`
-   - same short window as arm #1 + salience-gated semantic memory store.
+   - same short window as arm #1 + salience-gated semantic long-term store;
+   - optional episodic buffer + consolidation (repeated salient episodic evidence can promote semantic slots).
 
 ## Metrics
 
@@ -48,6 +50,6 @@ Validate whether a brain-inspired layered-memory agent can:
 ## Execution
 
 - Run experiment:
-  - `python3 researches/brain_inspired_memory_summarizer/main.py run`
+  - `python3 research/brain_inspired_memory_summarizer/main.py run`
 - Run tests:
-  - `python3 -m unittest researches/brain_inspired_memory_summarizer/test_main.py -v`
+  - `python3 -m unittest research/brain_inspired_memory_summarizer/test_main.py -v`

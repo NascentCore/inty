@@ -8,8 +8,15 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import json
+
 from main import LayeredMemoryAgent, NaiveWindowAgent, build_dataset, evaluate_agent, run_experiment
-from extractor import extract_candidates, extract_candidates_llm
+from extractor import (
+    MemoryCategory,
+    extract_candidates,
+    extract_candidates_llm,
+    utterance_memory_categories,
+)
 
 
 class MemoryExperimentTests(unittest.TestCase):
@@ -86,6 +93,48 @@ class MemoryExperimentTests(unittest.TestCase):
         self.assertGreaterEqual(result["accuracy_gain_vs_small"], 0.30)
         self.assertGreaterEqual(result["context_reduction_vs_large"], 0.40)
         self.assertGreaterEqual(result["layered_accuracy"], 0.80)
+
+    def test_utterance_routing_maps_dialogue_to_memory_types_without_llm(self) -> None:
+        """Explicit rule-based routing: chitchat → episodic, not simulated by LLM."""
+        cats_movie = utterance_memory_categories("刚刚在看电影，剧情还不错。")
+        self.assertIn(MemoryCategory.EPISODIC, cats_movie)
+        self.assertNotIn(MemoryCategory.SEMANTIC, cats_movie)
+
+        cats_name = utterance_memory_categories("以后请叫我阿辰。")
+        self.assertIn(MemoryCategory.SEMANTIC, cats_name)
+        self.assertNotIn(MemoryCategory.EPISODIC, cats_name)
+
+        cats_both = utterance_memory_categories("今天搬家了，我现在住在上海。")
+        self.assertIn(MemoryCategory.EPISODIC, cats_both)
+        self.assertIn(MemoryCategory.SEMANTIC, cats_both)
+
+    def test_episodic_consolidation_promotes_semantic_after_repeated_traces(self) -> None:
+        """
+        Systems-consolidation analogue: salient episodic evidence sampled twice
+        promotes regex-extractable semantic slots without direct semantic turn.
+        """
+
+        def _episodic_payload(_: str) -> str:
+            return json.dumps(
+                [
+                    {
+                        "gist": "mentioned residence",
+                        "salience_hint": 0.9,
+                        "evidence": "我现在住在深圳。",
+                    }
+                ],
+                ensure_ascii=False,
+            )
+
+        agent = LayeredMemoryAgent(
+            window_size=1,
+            extract_mode="regex",
+            episodic_llm_call=_episodic_payload,
+        )
+        agent.ingest_user_turn("刚刚在看电影。")
+        self.assertNotIn("city", agent.semantic_memory)
+        agent.ingest_user_turn("剧情还不错。")
+        self.assertEqual(agent.semantic_memory.get("city"), "深圳")
 
 
 if __name__ == "__main__":

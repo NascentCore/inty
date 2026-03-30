@@ -2,25 +2,38 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
 try:
     from .extractor import (
+        EpisodicEvent,
+        MemoryCategory,
         SlotCandidate,
+        extract_by_memory_category,
         extract_candidates,
+        extract_episodic_events_llm,
         extract_memory_facts,
         is_invalid_preferred_name_against_boundary,
         is_more_reliable_name_candidate,
+        merge_slot_candidates,
+        utterance_memory_categories,
     )
 except ImportError:  # script mode (python path/to/main.py)
     from extractor import (  # type: ignore
+        EpisodicEvent,
+        MemoryCategory,
         SlotCandidate,
+        extract_by_memory_category,
         extract_candidates,
+        extract_episodic_events_llm,
         extract_memory_facts,
         is_invalid_preferred_name_against_boundary,
         is_more_reliable_name_candidate,
+        merge_slot_candidates,
+        utterance_memory_categories,
     )
 
 _UNKNOWN = "不知道"
@@ -118,31 +131,62 @@ class NaiveWindowAgent:
 
 class LayeredMemoryAgent:
     """
-    Minimal layered-memory agent:
-    - L1: short recent window (same as baseline)
-    - L4: salience-gated durable key-value memory
+    Brain-inspired layered-memory agent:
+    - Routing: dialogue → memory subsystem via explicit rules (`utterance_memory_categories`),
+      not via LLM pretending to be a classifier.
+    - Encoding: per-category extraction (semantic vs self-schema vs episodic) with separate
+      LLM instructions when mode is LLM; regex fallback per category in auto/regex mode.
+    - Episodic buffer + consolidation: repeated evidence from episodic traces can promote
+      semantic slots (systems-consolidation style), in addition to direct semantic encoding.
+    - Read path: L4 semantic + short window (working-memory analogue).
     """
+
+    _CONFIDENCE_FLOOR = 0.75
+    _EPISODIC_SALIENCE_FOR_CONSOLIDATION = 0.65
+    _EPISODIC_PROMOTION_HITS = 2
 
     def __init__(
         self,
         window_size: int,
-        candidate_extractor: Callable[[str, int], list[SlotCandidate]] = extract_candidates,
+        candidate_extractor: Callable[[str, int], list[SlotCandidate]] | None = None,
+        *,
+        extract_mode: str = "auto",
+        slot_llm_extract_fn: Callable[[str, int], list[SlotCandidate]] | None = None,
+        episodic_llm_call: Callable[[str], str] | None = None,
     ) -> None:
         self.window_size = window_size
         self.user_turns: list[str] = []
         self.semantic_memory: dict[str, str] = {}
         self._best_candidates: dict[str, SlotCandidate] = {}
         self._turn_counter = 0
-        self._candidate_extractor = candidate_extractor
+        self._extract_mode = extract_mode
+        self._slot_llm_extract_fn = slot_llm_extract_fn
+        self._episodic_llm_call = episodic_llm_call
+        self._legacy_extractor = candidate_extractor
+        self.episodic_buffer: list[EpisodicEvent] = []
+        self._episodic_slot_hits: dict[tuple[str, str], int] = defaultdict(int)
 
     def ingest_user_turn(self, text: str) -> None:
         self._turn_counter += 1
         self.user_turns.append(text)
-        candidates = self._candidate_extractor(text, self._turn_counter)
+
+        if self._legacy_extractor is not None:
+            candidates = self._legacy_extractor(text, self._turn_counter)
+        else:
+            categories = utterance_memory_categories(text)
+            candidates = self._extract_routed(text, self._turn_counter, categories)
+            if MemoryCategory.EPISODIC in categories:
+                new_episodic = extract_episodic_events_llm(
+                    text,
+                    self._turn_counter,
+                    episodic_llm_call=self._episodic_llm_call,
+                )
+                self.episodic_buffer.extend(new_episodic)
+                self._consolidate_semantic_from_episodic(new_episodic)
 
         # Salience gate (still lightweight): apply confidence floor to avoid weak noise.
         for c in candidates:
-            if c.confidence < 0.75:
+            if c.confidence < self._CONFIDENCE_FLOOR:
                 continue
             old = self._best_candidates.get(c.key)
             if old is None:
@@ -157,6 +201,59 @@ class LayeredMemoryAgent:
                 self._best_candidates[c.key] = c
                 self.semantic_memory[c.key] = c.value
         self._apply_cross_slot_conflict_resolution()
+
+    def _extract_routed(
+        self,
+        text: str,
+        turn_idx: int,
+        categories: frozenset[MemoryCategory],
+    ) -> list[SlotCandidate]:
+        out: list[SlotCandidate] = []
+        if MemoryCategory.SEMANTIC in categories:
+            sem = extract_by_memory_category(
+                text,
+                turn_idx,
+                MemoryCategory.SEMANTIC,
+                mode=self._extract_mode,
+                llm_extract_fn=self._slot_llm_extract_fn,
+            )
+            out.extend(sem)  # type: ignore[arg-type]
+        if MemoryCategory.SELF_SCHEMA in categories:
+            ss = extract_by_memory_category(
+                text,
+                turn_idx,
+                MemoryCategory.SELF_SCHEMA,
+                mode=self._extract_mode,
+                llm_extract_fn=self._slot_llm_extract_fn,
+            )
+            out.extend(ss)  # type: ignore[arg-type]
+        return merge_slot_candidates(out)
+
+    def _consolidate_semantic_from_episodic(self, new_events: list[EpisodicEvent]) -> None:
+        """
+        Hippocampus→neocortex style: scan salient episodic traces for latent semantic slots;
+        promote to LTM after repeated traces (independent consolidation passes).
+        Each episodic event is processed once when appended.
+        """
+        for ev in new_events:
+            if ev.salience_hint < self._EPISODIC_SALIENCE_FOR_CONSOLIDATION:
+                continue
+            for c in extract_by_memory_category(
+                ev.evidence,
+                ev.turn_idx,
+                MemoryCategory.SEMANTIC,
+                mode="regex",
+            ):
+                slot_key = (c.key, c.value)
+                self._episodic_slot_hits[slot_key] += 1
+                if self._episodic_slot_hits[slot_key] < self._EPISODIC_PROMOTION_HITS:
+                    continue
+                if c.confidence < self._CONFIDENCE_FLOOR:
+                    continue
+                old = self._best_candidates.get(c.key)
+                if old is None or c.turn_idx >= old.turn_idx:
+                    self._best_candidates[c.key] = c
+                    self.semantic_memory[c.key] = c.value
 
     def _apply_cross_slot_conflict_resolution(self) -> None:
         preferred_name = self.semantic_memory.get("preferred_name")
