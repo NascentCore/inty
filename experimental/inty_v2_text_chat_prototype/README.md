@@ -26,6 +26,18 @@ REPL 的 **`generate_image`**（Fal **z-image-turbo** 文生图）复用 [`app/c
 
 无上述 Fal/GCS 条件时，模型仍可对话，但调用 `generate_image` 会返回以 `ERROR:` 开头的工具结果。
 
+**`google_web_search`（Google Custom Search JSON API）：** REPL 工具侧可调用公开网页检索。建议按下面顺序配置（与 GCP 控制台 + Programmable Search Engine 后台一致）：
+
+1. **Google Cloud：** 在目标项目中启用 **Custom Search API**，并创建可调用该 API 的 **API key**（限制为 Custom Search API，勿提交到 git）。
+2. **Programmable Search Engine：** 在 [控制面板](https://programmablesearchengine.google.com/) 创建引擎；在 **Overview** 页复制 **Search engine ID**（即 Custom Search 请求参数 **`cx`**）。若要做**全网**检索而非限定站点，在 **Search features** 中打开 **Search the entire web**（仅列站点时结果会受限于白名单）。
+3. **环境变量**（写入仓库根 `.env`，勿入库）：
+   - **`GOOGLE_CSE_API_KEY`** — 上一步 GCP API key。
+   - **`GOOGLE_CSE_ID`** — 上一步 Overview 中的 Search engine ID（`cx`）。
+
+Google 曾在控制台提示：依赖「Search the entire web」的**全网搜索能力**可能有产品层面的调整（例如曾公告相关能力于 **2027-01-01** 起变更）；若你依赖全网检索，请届时查阅 [Custom Search / PSE 官方文档](https://developers.google.com/custom-search) 并评估迁移。
+
+免费档约 **100 次查询/日**（以 Google 文档为准）。需安装仓库根 [`requirements.txt`](../../requirements.txt) 中的 **`httpx`**（与后端一致）。未配置时工具返回以 `ERROR:` 开头的说明。
+
 ## 运行方式
 
 在 **`inty/` 目录下**执行（保证 `experimental` 包可解析）：

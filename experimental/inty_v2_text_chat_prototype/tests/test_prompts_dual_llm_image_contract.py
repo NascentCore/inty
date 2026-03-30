@@ -37,6 +37,8 @@ class TestDualLlmImageContract(unittest.TestCase):
             )
         self.assertIn("generate_image", full_sys)
         self.assertIn("modify_image", full_sys)
+        self.assertIn("google_web_search", full_sys)
+        self.assertNotIn("google_web_search", chat_sys)
         self.assertNotIn("generate_image", chat_sys)
         self.assertNotIn("modify_image", chat_sys)
         self.assertNotIn("（4）", chat_sys)
@@ -73,6 +75,7 @@ class TestDualLlmImageContract(unittest.TestCase):
         self.assertNotIn("ABC_DIARY", compact_sys)
         self.assertNotIn("DEF_SUMMARY", compact_sys)
         self.assertIn("工具侧（后台）", compact_sys)
+        self.assertIn("联网检索", compact_sys)
         self.assertIn("generate_image", compact_sys)
 
 

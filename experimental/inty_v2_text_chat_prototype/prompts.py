@@ -41,9 +41,9 @@ def _output_contract_text() -> str:
 
 
 def _repl_tool_contract_image_generation_clause() -> str:
-    """Clause (5): generate_image / modify_image — only for the tool-side LLM in dual-path REPL."""
+    """Clause (6): generate_image / modify_image — only for the tool-side LLM in dual-path REPL."""
     return (
-        "（5）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
+        "（6）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
         "再根据工具返回作答；张数由对话判定写入工具参数（默认 1）。"
         "当用户要**修改、重画、换风格、在已有图基础上改**时，须调用 modify_image（Fal z-image-turbo **图生图**），"
         "并传入工作区内源图路径（如 generated_images/…）或公网 source_image_url；**不要**用 generate_image 做改图。"
@@ -83,6 +83,9 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "必须先调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文件内容。"
         "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
+        "（5）当用户需要**实时或可核验的公开信息**（新闻、股价、赛事、政策法规、可引用的公开资料等），"
+        "且工作区文档与当前对话无法提供依据时，须先调用 google_web_search 再作答；"
+        "未读到工具返回前不得编造检索结果、链接或摘要。"
         + _repl_tool_contract_image_generation_clause()
         + _repl_tool_contract_suffix_after_image_clause()
     )
@@ -93,7 +96,7 @@ def _tool_side_compact_directive() -> str:
     return (
         "## 工具侧（后台）\n\n"
         "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
-        "（生图/改图、档案、工作区读写等）。若需要，必须先调用工具并依据返回作答；"
+        "（联网检索、生图/改图、档案、工作区读写等）。若需要，必须先调用工具并依据返回作答；"
         "不要仅用角色扮演替代未执行的工具。"
     )
 

@@ -25,6 +25,7 @@ from .fal_z_image_tool import (
     run_modify_image_z_image_turbo,
 )
 from .file_store import read_text, write_text
+from .google_web_search import run_google_web_search
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
@@ -54,6 +55,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
+        "google_web_search",
         "generate_image",
         "modify_image",
     )
@@ -417,6 +419,36 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "google_web_search",
+                "description": (
+                    "Search the public web via Google Custom Search JSON API. "
+                    "Use when the user needs current events, verifiable facts, or information "
+                    "not present in the workspace or conversation. "
+                    "Requires GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID in the environment. "
+                    "Summarize results in natural language to the user without exposing raw JSON or tool names."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query in the user's language or English.",
+                        },
+                        "num_results": {
+                            "type": "integer",
+                            "description": "How many results to return (1..10). Omit for 10.",
+                        },
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
+    out.append(
+        {
+            "type": "function",
+            "function": {
                 "name": "generate_image",
                 "description": (
                     "Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). "
@@ -581,6 +613,23 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "google_web_search":
+        raw_q = arguments.get("query")
+        if not isinstance(raw_q, str):
+            return "ERROR: query must be a string"
+        n_raw = arguments.get("num_results")
+        n_opt: int | None
+        if n_raw is None:
+            n_opt = None
+        elif isinstance(n_raw, bool):
+            return "ERROR: num_results must be a positive integer or omitted"
+        elif isinstance(n_raw, int):
+            n_opt = n_raw
+        elif isinstance(n_raw, float) and n_raw.is_integer():
+            n_opt = int(n_raw)
+        else:
+            return "ERROR: num_results must be a positive integer or omitted"
+        return await run_google_web_search(query=raw_q, num_results=n_opt)
     if name == "generate_image":
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
