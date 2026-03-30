@@ -80,7 +80,7 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
 
             with (
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client",
+                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client_dual_llm_tool",
                     return_value=fake_client,
                 ),
                 patch(
@@ -118,7 +118,7 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
             root = Path(td)
             with (
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client",
+                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client_dual_llm_tool",
                     return_value=fake_client,
                 ),
                 patch(

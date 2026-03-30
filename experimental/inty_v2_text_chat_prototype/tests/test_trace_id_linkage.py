@@ -56,6 +56,11 @@ class TestTraceIdLinkage(unittest.TestCase):
                 with (
                     patch.object(orchestrator, "get_client", return_value=fake_client),
                     patch.object(
+                        orchestrator,
+                        "get_client_dual_llm_tool",
+                        return_value=fake_client,
+                    ),
+                    patch.object(
                         orchestrator, "default_model", return_value="single-model"
                     ),
                     patch.object(orchestrator, "dual_llm_enabled", return_value=False),
