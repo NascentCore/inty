@@ -1,6 +1,6 @@
 # Brain-inspired memory summarizer — run results
 
-This file summarizes a **local, reproducible** benchmark run (regex extraction, no external LLM). Raw machine-readable output is in the JSON files next to this document.
+This file summarizes a **local, reproducible** benchmark run. Memory extraction is **LLM-shaped JSON only** (no regex slot parsers). The default `main.py run` uses **deterministic JSON stubs** keyed by exact dataset lines, so no API keys are required.
 
 ## How to reproduce
 
@@ -21,7 +21,7 @@ Optional paths: `python3 main.py run --out /tmp/metrics.json --full-out /tmp/ful
 ## Settings (this run)
 
 - **Window size** (baseline small + layered working-memory analogue): 2 user lines
-- **Extraction mode**: `regex` (deterministic slot + episodic fallback)
+- **Extraction**: `llm_only_benchmark_stubs` (see `experiment_full.json` → `settings`)
 - **Dataset**: single episode `ep-001` (synthetic dialogue with early facts, overwrite, long distractor tail)
 
 ## Aggregate metrics
@@ -42,10 +42,10 @@ Derived:
 
 See `experiment_full.json` → `extraction_traces_by_episode` → `ep-001` for each user turn:
 
-1. **`routed_categories`**: which memory subsystems run (rule-based mapping from dialogue text), e.g. `semantic` vs `episodic` vs `self_schema`, including **both** when a line matches multiple cues (e.g. “今天搬家…” → episodic + semantic).
-2. **`semantic_candidates` / `self_schema_candidates`**: independent regex extractions for durable slots vs boundaries.
-3. **`episodic_events`**: gist + salience when the turn is routed to episodic (regex fallback: one trace per qualifying turn).
-4. **`semantic_long_term_after_turn`**: the layered agent’s consolidated semantic store after salience gating (confidence floor 0.75) and cross-slot boundary checks.
+1. **`routed_categories`**: subsystems chosen by the **route** JSON for that line (`semantic` / `episodic` / `self_schema`).
+2. **`semantic_candidates` / `self_schema_candidates`**: slot JSON from independent **semantic** vs **self-schema** passes (stub table in `main.benchmark_slot_json_by_line`, filtered by route).
+3. **`episodic_events`**: episodic JSON when the route includes `episodic` (`main.benchmark_episodic_json_by_line`).
+4. **`semantic_long_term_after_turn`**: layered LTM after confidence gating and boundary/name conflict handling.
 
 ## Per-question QA (memory “recall” under short context)
 
@@ -53,5 +53,5 @@ From `qa_per_question`: with only the last **two** user lines visible, the **sma
 
 ## Caveats
 
-- Results are for this **fixed synthetic script** and **regex** backends; they illustrate routing + layered retention, not production chat quality.
-- With `OPENROUTER_API_KEY` / `OPENAI_API_KEY`, slot extraction can switch to LLM-backed passes; routing remains rule-based (`utterance_memory_categories`).
+- Stubbed run matches the scripted benchmark only; **open-domain** behavior requires real API calls and live models.
+- Set `OPENROUTER_API_KEY` or `OPENAI_API_KEY` to use `extract_semantic_candidates_llm_default`, `route_memory_categories_llm_default`, etc., without stubs (pass custom callables into `LayeredMemoryAgent` / `NaiveWindowAgent` for experiments).

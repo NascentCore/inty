@@ -15,11 +15,11 @@ try:
         extract_by_memory_category,
         extract_candidates,
         extract_episodic_events_llm,
-        extract_memory_facts,
         is_invalid_preferred_name_against_boundary,
         is_more_reliable_name_candidate,
+        llm_extract_memory_slots,
         merge_slot_candidates,
-        utterance_memory_categories,
+        route_memory_categories_llm,
     )
 except ImportError:  # script mode (python path/to/main.py)
     from extractor import (  # type: ignore
@@ -29,11 +29,11 @@ except ImportError:  # script mode (python path/to/main.py)
         extract_by_memory_category,
         extract_candidates,
         extract_episodic_events_llm,
-        extract_memory_facts,
         is_invalid_preferred_name_against_boundary,
         is_more_reliable_name_candidate,
+        llm_extract_memory_slots,
         merge_slot_candidates,
-        utterance_memory_categories,
+        route_memory_categories_llm,
     )
 
 _UNKNOWN = "不知道"
@@ -59,10 +59,6 @@ class EvaluationMetrics:
     avg_context_chars: float
     avg_context_lines: float
     memory_item_count: int
-
-
-def _extract_memory_facts(text: str) -> dict[str, str]:
-    return extract_memory_facts(text)
 
 
 def _context_chars(lines: list[str]) -> int:
@@ -102,14 +98,175 @@ def build_dataset() -> list[Episode]:
     ]
 
 
+def benchmark_slot_json_by_line() -> dict[str, str]:
+    """Deterministic slot LLM payloads keyed by exact `build_dataset()` user lines (not regex parsing)."""
+
+    def _c(
+        key: str,
+        value: str,
+        conf: float,
+        evidence: str,
+        *,
+        neg: bool = False,
+    ) -> dict[str, object]:
+        return {
+            "key": key,
+            "value": value,
+            "confidence": conf,
+            "evidence": evidence,
+            "is_negative": neg,
+        }
+
+    return {
+        "以后请叫我阿辰。": json.dumps([_c("preferred_name", "阿辰", 0.93, "以后请叫我阿辰")], ensure_ascii=False),
+        "今天会议很多，先记个待办。": "[]",
+        "我现在住在杭州。": json.dumps([_c("city", "杭州", 0.89, "现在住在杭州")], ensure_ascii=False),
+        "最近工作挺忙，回消息可能慢一点。": "[]",
+        "我养了一只边牧。": json.dumps([_c("pet", "边牧", 0.88, "养了一只边牧")], ensure_ascii=False),
+        "今天的午饭一般般。": "[]",
+        "我是周三休息。": json.dumps([_c("rest_day", "周三", 0.91, "周三休息")], ensure_ascii=False),
+        "晚上可能去散步。": "[]",
+        "我不喝咖啡。": json.dumps(
+            [_c("coffee_preference", "不喝咖啡", 0.94, "不喝咖啡", neg=True)],
+            ensure_ascii=False,
+        ),
+        "请不要叫我宝贝。": json.dumps(
+            [_c("boundary", "不要叫我宝贝", 0.97, "不要叫我宝贝")],
+            ensure_ascii=False,
+        ),
+        "我搬家了，我现在住在上海。": json.dumps(
+            [_c("city", "上海", 0.92, "现在住在上海")],
+            ensure_ascii=False,
+        ),
+        "顺便说下，今天我只是想闲聊。": "[]",
+        "刚刚在看电影，剧情还不错。": "[]",
+        "这会儿有点困，准备休息了。": "[]",
+    }
+
+
+def benchmark_route_json_by_line() -> dict[str, str]:
+    return {
+        "以后请叫我阿辰。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
+        "今天会议很多，先记个待办。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "我现在住在杭州。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
+        "最近工作挺忙，回消息可能慢一点。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "我养了一只边牧。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
+        "今天的午饭一般般。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "我是周三休息。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
+        "晚上可能去散步。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "我不喝咖啡。": json.dumps({"active_subsystems": ["semantic"]}, ensure_ascii=False),
+        "请不要叫我宝贝。": json.dumps({"active_subsystems": ["self_schema"]}, ensure_ascii=False),
+        "我搬家了，我现在住在上海。": json.dumps(
+            {"active_subsystems": ["semantic", "episodic"]}, ensure_ascii=False
+        ),
+        "顺便说下，今天我只是想闲聊。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "刚刚在看电影，剧情还不错。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+        "这会儿有点困，准备休息了。": json.dumps({"active_subsystems": ["episodic"]}, ensure_ascii=False),
+    }
+
+
+def benchmark_episodic_json_by_line() -> dict[str, str]:
+    def _ev(gist: str, sal: float, evidence: str) -> dict[str, object]:
+        return {"gist": gist, "salience_hint": sal, "evidence": evidence}
+
+    return {
+        "今天会议很多，先记个待办。": json.dumps(
+            {"events": [_ev("busy with meetings", 0.55, "今天会议很多，先记个待办。")]},
+            ensure_ascii=False,
+        ),
+        "最近工作挺忙，回消息可能慢一点。": json.dumps(
+            {"events": [_ev("busy at work", 0.55, "最近工作挺忙，回消息可能慢一点。")]},
+            ensure_ascii=False,
+        ),
+        "今天的午饭一般般。": json.dumps(
+            {"events": [_ev("lunch was mediocre", 0.5, "今天的午饭一般般。")]},
+            ensure_ascii=False,
+        ),
+        "晚上可能去散步。": json.dumps(
+            {"events": [_ev("may take a walk", 0.5, "晚上可能去散步。")]},
+            ensure_ascii=False,
+        ),
+        "我搬家了，我现在住在上海。": json.dumps(
+            {"events": [_ev("moved house", 0.85, "我搬家了，我现在住在上海。")]},
+            ensure_ascii=False,
+        ),
+        "顺便说下，今天我只是想闲聊。": json.dumps(
+            {"events": [_ev("small talk", 0.5, "顺便说下，今天我只是想闲聊。")]},
+            ensure_ascii=False,
+        ),
+        "刚刚在看电影，剧情还不错。": json.dumps(
+            {"events": [_ev("watching a movie", 0.55, "刚刚在看电影，剧情还不错。")]},
+            ensure_ascii=False,
+        ),
+        "这会儿有点困，准备休息了。": json.dumps(
+            {"events": [_ev("tired, going to rest", 0.55, "这会儿有点困，准备休息了。")]},
+            ensure_ascii=False,
+        ),
+    }
+
+
+def build_benchmark_slot_llm_extract_fn(
+    lines_to_json: dict[str, str] | None = None,
+) -> Callable[[str, int], list[SlotCandidate]]:
+    m = lines_to_json or benchmark_slot_json_by_line()
+
+    def fn(text: str, turn_idx: int) -> list[SlotCandidate]:
+        raw = m.get(text)
+        if raw is None:
+            return []
+        return llm_extract_memory_slots(text, turn_idx, lambda _: raw)
+
+    return fn
+
+
+def build_benchmark_route_llm_call(
+    lines_to_json: dict[str, str] | None = None,
+) -> Callable[[str], str]:
+    m = lines_to_json or benchmark_route_json_by_line()
+
+    def route(text: str) -> str:
+        return m.get(text, json.dumps({"active_subsystems": []}, ensure_ascii=False))
+
+    return route
+
+
+def build_benchmark_episodic_llm_call(
+    lines_to_json: dict[str, str] | None = None,
+) -> Callable[[str], str]:
+    m = lines_to_json or benchmark_episodic_json_by_line()
+
+    def episodic(text: str) -> str:
+        return m.get(text, json.dumps({"events": []}, ensure_ascii=False))
+
+    return episodic
+
+
+def _facts_from_visible_lines(
+    lines: list[str],
+    llm_extract_fn: Callable[[str, int], list[SlotCandidate]],
+) -> dict[str, str]:
+    """Merge slot keys from visible lines in order; later lines overwrite."""
+    facts: dict[str, str] = {}
+    for i, line in enumerate(lines):
+        for c in llm_extract_fn(line, i + 1):
+            facts[c.key] = c.value
+    return facts
+
+
 class NaiveWindowAgent:
     """
     Baseline agent: only sees a fixed number of recent user lines.
+    Memory is read by running the slot LLM on each visible line (no regex).
     """
 
-    def __init__(self, window_size: int) -> None:
+    def __init__(
+        self,
+        window_size: int,
+        llm_extract_fn: Callable[[str, int], list[SlotCandidate]],
+    ) -> None:
         self.window_size = window_size
         self.user_turns: list[str] = []
+        self._llm_extract_fn = llm_extract_fn
 
     def ingest_user_turn(self, text: str) -> None:
         self.user_turns.append(text)
@@ -121,7 +278,7 @@ class NaiveWindowAgent:
 
     def answer(self, key: str) -> tuple[str, int, int]:
         ctx = self._visible_context()
-        extracted = _extract_memory_facts("\n".join(ctx))
+        extracted = _facts_from_visible_lines(ctx, self._llm_extract_fn)
         return extracted.get(key, _UNKNOWN), _context_chars(ctx), len(ctx)
 
     @property
@@ -131,14 +288,12 @@ class NaiveWindowAgent:
 
 class LayeredMemoryAgent:
     """
-    Brain-inspired layered-memory agent:
-    - Routing: dialogue → memory subsystem via explicit rules (`utterance_memory_categories`),
-      not via LLM pretending to be a classifier.
-    - Encoding: per-category extraction (semantic vs self-schema vs episodic) with separate
-      LLM instructions when mode is LLM; regex fallback per category in auto/regex mode.
-    - Episodic buffer + consolidation: repeated evidence from episodic traces can promote
-      semantic slots (systems-consolidation style), in addition to direct semantic encoding.
-    - Read path: L4 semantic + short window (working-memory analogue).
+    Brain-inspired layered-memory agent (LLM-only extraction):
+    - Routing: optional `route_llm_call` classifies which subsystems run; default uses API.
+    - Encoding: per-category LLM calls (semantic, self-schema, episodic).
+    - Consolidation: salient episodic evidence is passed through the semantic slot LLM again;
+      repeated (key,value) promotions simulate consolidation.
+    - Read path: L4 semantic + short window; missing keys fall back to slot LLM on visible lines.
     """
 
     _CONFIDENCE_FLOOR = 0.75
@@ -150,8 +305,8 @@ class LayeredMemoryAgent:
         window_size: int,
         candidate_extractor: Callable[[str, int], list[SlotCandidate]] | None = None,
         *,
-        extract_mode: str = "auto",
         slot_llm_extract_fn: Callable[[str, int], list[SlotCandidate]] | None = None,
+        route_llm_call: Callable[[str], str] | None = None,
         episodic_llm_call: Callable[[str], str] | None = None,
     ) -> None:
         self.window_size = window_size
@@ -159,8 +314,8 @@ class LayeredMemoryAgent:
         self.semantic_memory: dict[str, str] = {}
         self._best_candidates: dict[str, SlotCandidate] = {}
         self._turn_counter = 0
-        self._extract_mode = extract_mode
-        self._slot_llm_extract_fn = slot_llm_extract_fn
+        self._slot_llm_extract_fn = slot_llm_extract_fn or extract_candidates
+        self._route_llm_call = route_llm_call
         self._episodic_llm_call = episodic_llm_call
         self._legacy_extractor = candidate_extractor
         self.episodic_buffer: list[EpisodicEvent] = []
@@ -173,7 +328,7 @@ class LayeredMemoryAgent:
         if self._legacy_extractor is not None:
             candidates = self._legacy_extractor(text, self._turn_counter)
         else:
-            categories = utterance_memory_categories(text)
+            categories = route_memory_categories_llm(text, route_llm_call=self._route_llm_call)
             candidates = self._extract_routed(text, self._turn_counter, categories)
             if MemoryCategory.EPISODIC in categories:
                 new_episodic = extract_episodic_events_llm(
@@ -214,7 +369,6 @@ class LayeredMemoryAgent:
                 text,
                 turn_idx,
                 MemoryCategory.SEMANTIC,
-                mode=self._extract_mode,
                 llm_extract_fn=self._slot_llm_extract_fn,
             )
             out.extend(sem)  # type: ignore[arg-type]
@@ -223,7 +377,6 @@ class LayeredMemoryAgent:
                 text,
                 turn_idx,
                 MemoryCategory.SELF_SCHEMA,
-                mode=self._extract_mode,
                 llm_extract_fn=self._slot_llm_extract_fn,
             )
             out.extend(ss)  # type: ignore[arg-type]
@@ -242,7 +395,7 @@ class LayeredMemoryAgent:
                 ev.evidence,
                 ev.turn_idx,
                 MemoryCategory.SEMANTIC,
-                mode="regex",
+                llm_extract_fn=self._slot_llm_extract_fn,
             ):
                 slot_key = (c.key, c.value)
                 self._episodic_slot_hits[slot_key] += 1
@@ -276,7 +429,7 @@ class LayeredMemoryAgent:
             lines = len(ctx) + 1
             return self.semantic_memory[key], chars, lines
 
-        extracted = _extract_memory_facts("\n".join(ctx))
+        extracted = _facts_from_visible_lines(ctx, self._slot_llm_extract_fn)
         return extracted.get(key, _UNKNOWN), _context_chars(ctx), len(ctx)
 
     @property
@@ -323,9 +476,24 @@ def evaluate_agent(agent: NaiveWindowAgent | LayeredMemoryAgent, episodes: list[
 
 def run_experiment() -> dict[str, float]:
     episodes = build_dataset()
-    baseline_small = evaluate_agent(NaiveWindowAgent(window_size=2), episodes)
-    baseline_large = evaluate_agent(NaiveWindowAgent(window_size=99), episodes)
-    layered = evaluate_agent(LayeredMemoryAgent(window_size=2), episodes)
+    slot_fn = build_benchmark_slot_llm_extract_fn()
+    route_call = build_benchmark_route_llm_call()
+    episodic_call = build_benchmark_episodic_llm_call()
+    baseline_small = evaluate_agent(
+        NaiveWindowAgent(window_size=2, llm_extract_fn=slot_fn), episodes
+    )
+    baseline_large = evaluate_agent(
+        NaiveWindowAgent(window_size=99, llm_extract_fn=slot_fn), episodes
+    )
+    layered = evaluate_agent(
+        LayeredMemoryAgent(
+            window_size=2,
+            slot_llm_extract_fn=slot_fn,
+            route_llm_call=route_call,
+            episodic_llm_call=episodic_call,
+        ),
+        episodes,
+    )
 
     return {
         "baseline_small_accuracy": baseline_small.accuracy,
@@ -357,21 +525,28 @@ def build_extraction_trace(
     episode: Episode,
     *,
     window_size: int = 2,
-    extract_mode: str = "regex",
+    slot_llm_extract_fn: Callable[[str, int], list[SlotCandidate]] | None = None,
+    route_llm_call: Callable[[str], str] | None = None,
+    episodic_llm_call: Callable[[str], str] | None = None,
 ) -> list[dict[str, Any]]:
     """
-    Per-turn view of rule-based routing and independent per-type extraction,
+    Per-turn view of LLM routing and independent per-type extraction,
     plus layered agent semantic memory after each turn (demo / audit).
     """
+    slot_fn = slot_llm_extract_fn or build_benchmark_slot_llm_extract_fn()
+    route_call = route_llm_call or build_benchmark_route_llm_call()
+    epi_call = episodic_llm_call or build_benchmark_episodic_llm_call()
     agent = LayeredMemoryAgent(
         window_size=window_size,
-        extract_mode=extract_mode,
+        slot_llm_extract_fn=slot_fn,
+        route_llm_call=route_call,
+        episodic_llm_call=epi_call,
     )
     trace: list[dict[str, Any]] = []
     for text in episode.user_turns:
         agent.ingest_user_turn(text)
         turn_idx = agent._turn_counter
-        cats = utterance_memory_categories(text)
+        cats = route_memory_categories_llm(text, route_llm_call=route_call)
         active = sorted(
             c.value
             for c in cats
@@ -389,20 +564,20 @@ def build_extraction_trace(
                 text,
                 turn_idx,
                 MemoryCategory.SEMANTIC,
-                mode=extract_mode,
+                llm_extract_fn=slot_fn,
             )
         if MemoryCategory.SELF_SCHEMA in cats:
             self_schema_raw = extract_by_memory_category(  # type: ignore[assignment]
                 text,
                 turn_idx,
                 MemoryCategory.SELF_SCHEMA,
-                mode=extract_mode,
+                llm_extract_fn=slot_fn,
             )
         if MemoryCategory.EPISODIC in cats:
             episodic_raw = extract_episodic_events_llm(  # type: ignore[assignment]
                 text,
                 turn_idx,
-                episodic_llm_call=None,
+                episodic_llm_call=epi_call,
             )
         trace.append(
             {
@@ -420,9 +595,17 @@ def build_extraction_trace(
 
 
 def build_qa_per_question_rows(episodes: list[Episode]) -> list[dict[str, Any]]:
-    small = NaiveWindowAgent(window_size=2)
-    large = NaiveWindowAgent(window_size=99)
-    layered = LayeredMemoryAgent(window_size=2)
+    slot_fn = build_benchmark_slot_llm_extract_fn()
+    route_call = build_benchmark_route_llm_call()
+    episodic_call = build_benchmark_episodic_llm_call()
+    small = NaiveWindowAgent(window_size=2, llm_extract_fn=slot_fn)
+    large = NaiveWindowAgent(window_size=99, llm_extract_fn=slot_fn)
+    layered = LayeredMemoryAgent(
+        window_size=2,
+        slot_llm_extract_fn=slot_fn,
+        route_llm_call=route_call,
+        episodic_llm_call=episodic_call,
+    )
     rows: list[dict[str, Any]] = []
     for ep in episodes:
         for turn in ep.user_turns:
@@ -456,21 +639,18 @@ def build_qa_per_question_rows(episodes: list[Episode]) -> list[dict[str, Any]]:
 def build_full_experiment_artifact(
     *,
     window_size: int = 2,
-    extract_mode: str = "regex",
 ) -> dict[str, Any]:
     episodes = build_dataset()
     metrics = run_experiment()
     traces = {
-        ep.episode_id: build_extraction_trace(
-            ep, window_size=window_size, extract_mode=extract_mode
-        )
+        ep.episode_id: build_extraction_trace(ep, window_size=window_size)
         for ep in episodes
     }
     return {
         "metrics": metrics,
         "settings": {
             "window_size": window_size,
-            "extract_mode": extract_mode,
+            "extraction": "llm_only_benchmark_stubs",
         },
         "extraction_traces_by_episode": traces,
         "qa_per_question": build_qa_per_question_rows(episodes),

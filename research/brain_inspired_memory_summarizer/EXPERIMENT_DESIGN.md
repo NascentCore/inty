@@ -20,18 +20,18 @@ Validate whether a brain-inspired layered-memory agent can:
   - one overwrite event (same key, newer value),
   - long distractor tail so early facts fall out of short window.
 - Deterministic QA set over final stable facts.
-- Default experiment: no external LLM calls; per-memory-type extraction uses regex backends so runs are reproducible.
-- With API keys, `extractor` can run **independent** LLM instruction passes per type (semantic vs self-schema vs episodic); dialogue→subsystem routing stays **rule-based** (`utterance_memory_categories`), not LLM role-play.
+- **Extraction is LLM-shaped only**: slot, route, and episodic outputs are JSON parsed like real LLM responses. The bundled benchmark uses **fixed JSON stubs** per dataset line (`main.benchmark_*_by_line`) so `main.py run` needs **no API keys** and stays reproducible.
+- With `OPENROUTER_API_KEY` / `OPENAI_API_KEY`, `extractor` calls the real API: independent instruction passes for **semantic**, **self-schema**, **episodic**, and **routing** (`route_memory_categories_llm_default`).
 
 ## Arms
 
 1. `baseline_small_window`
-   - only last N messages visible at answer time.
+   - only last N messages visible at answer time; each visible line is passed through the **slot** LLM (stub or API).
 2. `baseline_large_window`
-   - full dialogue visible at answer time.
+   - full dialogue visible; same slot LLM per line.
 3. `layered_memory`
    - same short window as arm #1 + salience-gated semantic long-term store;
-   - optional episodic buffer + consolidation (repeated salient episodic evidence can promote semantic slots).
+   - route LLM selects subsystems per turn; episodic buffer + consolidation (salient episodic evidence re-run through semantic slot LLM; repeated `(key,value)` promotes to LTM).
 
 ## Metrics
 
