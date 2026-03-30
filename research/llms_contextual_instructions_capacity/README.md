@@ -1,4 +1,4 @@
-# TEST_PLAN_LLM_INSTRUCTION_CAPACITY_VS_CONTEXT
+# LLMS Contextual Instructions Capacity
 
 ## Purpose
 
