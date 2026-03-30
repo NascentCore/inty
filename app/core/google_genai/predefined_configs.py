@@ -29,3 +29,12 @@ GEN_CONTENT_CONFIG_IMAGE_9_16_1K: Final[types.GenerateContentConfig] = (
         image_config=IMAGE_CONFIG_9_16_1K,
     )
 )
+
+# NewAPI / Gemini Developer API 不接受 Vertex ImageConfig 里的 output_mime_type 等字段
+GEN_CONTENT_CONFIG_IMAGE_9_16_1K_MLDEV: Final[types.GenerateContentConfig] = types.GenerateContentConfig(
+    temperature=1.0,
+    top_p=0.95,
+    max_output_tokens=8192,
+    response_modalities=["IMAGE"],
+    image_config=types.ImageConfig(aspect_ratio=ASPECT_RATIO_9_16, image_size="1K"),
+)

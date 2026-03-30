@@ -19,7 +19,7 @@ from app.services import agent_service, chat_history_service
 from app.services.cache_service import cache_service
 from app.services.subscription_service import SubscriptionService
 from app.services.user_service import build_user_info_prompt_block
-from app.utils.models_catalog import NANO_BANANA_PRO
+from app.utils.models_catalog import NANO_BANANA_PRO, NEWAPI_NANO_BANANA_2
 
 
 def generate_session_id(chat_id: str) -> str:
@@ -1260,7 +1260,10 @@ _SUBSCRIBED_PREMIUM_CHAT_IMAGE_TIMEOUT_SECONDS = 60
 
 
 def _resolve_chat_image_timeout_seconds(*, is_subscribed: bool, model_id: str) -> int:
-    if is_subscribed and model_id == NANO_BANANA_PRO.id_on_provider:
+    if model_id in (
+        NANO_BANANA_PRO.id_on_provider,
+        NEWAPI_NANO_BANANA_2.id_on_provider,
+    ):
         return _SUBSCRIBED_PREMIUM_CHAT_IMAGE_TIMEOUT_SECONDS
     return _DEFAULT_CHAT_IMAGE_TIMEOUT_SECONDS
 

@@ -15,11 +15,13 @@ They differ in:
 This file is for the genai API.
 """
 
+import contextlib
 import io
 import json
 import os
 from enum import StrEnum
 import threading
+from collections.abc import Iterator
 from typing import List, Optional
 
 from google import genai
@@ -110,6 +112,59 @@ def get_genai_client():
                 logger.info("Creating Google Gen AI client")
                 _google_genai_client = create_google_genai_client()
     return _google_genai_client
+
+_GOOGLE_ENV_POP = (
+    "GOOGLE_CLOUD_LOCATION",
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+)
+_newapi_client_cache: tuple[str, str, genai.Client] | None = None
+_newapi_client_lock = threading.Lock()
+
+
+@contextlib.contextmanager
+def _without_google_env_for_newapi() -> Iterator[None]:
+    saved = {k: os.environ[k] for k in _GOOGLE_ENV_POP if k in os.environ}
+    try:
+        for k in _GOOGLE_ENV_POP:
+            os.environ.pop(k, None)
+        yield
+    finally:
+        for k in _GOOGLE_ENV_POP:
+            os.environ.pop(k, None)
+        os.environ.update(saved)
+
+
+def get_newapi_gemini_client() -> genai.Client | None:
+    """若配置了 newapi_gemini_base_url 则返回指向 NewAPI 的 client，否则 None。"""
+    global _newapi_client_cache
+    agent = global_config_loaded_from_config_yaml.agent
+    base = (agent.newapi_gemini_base_url or "").strip().rstrip("/")
+    if not base:
+        return None
+    tok = (agent.newapi_gemini_bearer_token or "").strip() or (
+        os.environ.get("NEWAPI_GEMINI_BEARER_TOKEN") or ""
+    ).strip()
+    key = (base, tok)
+    with _newapi_client_lock:
+        if _newapi_client_cache and _newapi_client_cache[0:2] == key:
+            return _newapi_client_cache[2]
+        hdrs = {"Authorization": f"Bearer {tok}"}
+        with _without_google_env_for_newapi():
+            client = genai.Client(
+                vertexai=False,
+                api_key=tok,
+                http_options=types.HttpOptions(
+                    base_url=base,
+                    headers=hdrs,
+                    api_version="v1beta",
+                ),
+            )
+        _newapi_client_cache = (base, tok, client)
+        return client
+
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:
