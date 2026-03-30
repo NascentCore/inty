@@ -6,6 +6,8 @@
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+然后启动本地的聊天服务的界面：
+
 ```bash
 cd experimental/inty_v2_text_chat_prototype
 cp .env.example .env
