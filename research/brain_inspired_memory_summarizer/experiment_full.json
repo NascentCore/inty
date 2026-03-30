@@ -8,11 +8,13 @@
     "layered_avg_context_chars": 39.0,
     "accuracy_gain_vs_small": 1.0,
     "context_reduction_vs_large": 0.7291666666666666,
-    "layered_memory_item_count": 6.0
+    "layered_memory_item_count": 6.0,
+    "use_live_llm": 0.0
   },
   "settings": {
     "window_size": 2,
-    "extraction": "llm_only_benchmark_stubs"
+    "extraction": "llm_only_benchmark_stubs",
+    "use_live_llm": false
   },
   "extraction_traces_by_episode": {
     "ep-001": [

@@ -9,7 +9,15 @@ cd research/brain_inspired_memory_summarizer
 python3 main.py run
 ```
 
-Outputs:
+**Real API (verify model capability):** set `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, then:
+
+```bash
+python3 main.py run --live-llm
+```
+
+Default outputs for live runs: `experiment_results_live.json`, `experiment_full_live.json`. Expect **dozens of HTTP calls** per benchmark (per visible line × baseline arms + per-turn route + semantic/self/episodic for layered). Results vary by model and temperature (here `temperature=0`).
+
+Outputs (stub run):
 
 | File | Contents |
 |------|----------|
@@ -33,6 +41,8 @@ Optional paths: `python3 main.py run --out /tmp/metrics.json --full-out /tmp/ful
 | Layered memory | 100% (6/6) | 39 |
 
 Derived:
+
+- **`use_live_llm`**: `0` for this file (stub run); live runs set `1` in `experiment_results_live.json`.
 
 - **Accuracy gain vs small**: +100% (layered 1.0 − small 0.0)
 - **Context reduction vs large**: ~72.9% fewer characters than full dialogue per question

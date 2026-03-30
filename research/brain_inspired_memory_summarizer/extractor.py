@@ -273,6 +273,35 @@ def _llm_json_completion(
     return _strip_markdown_json_fences(content)
 
 
+def _llm_json_object_completion(
+    client: object,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+) -> str:
+    """Single completion with response_format=json_object (broad provider support for live runs)."""
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    create = getattr(client, "chat").completions.create
+    resp = create(
+        model=model,
+        messages=messages,
+        response_format={"type": "json_object"},
+        temperature=0.0,
+    )
+    choices = getattr(resp, "choices", None)
+    if not choices:
+        raise ValueError("LLM extractor returned empty choices")
+    first = choices[0]
+    msg = getattr(first, "message", None)
+    if msg is None:
+        raise ValueError("LLM extractor returned no message in first choice")
+    content = getattr(msg, "content", None) or "{}"
+    return _strip_markdown_json_fences(content)
+
+
 def parse_route_memory_json(content: str) -> frozenset[MemoryCategory]:
     data = json.loads(content)
     if not isinstance(data, dict):
@@ -630,6 +659,77 @@ def extract_candidates(
 ) -> list[SlotCandidate]:
     llm_fn = llm_extract_fn or _extract_candidates_llm_default
     return llm_fn(text, turn_idx)
+
+
+def build_live_slot_extract_fn() -> LLMExtractFn:
+    """
+    Real API: two json_object completions per utterance (semantic + self-schema), merged.
+    Requires OPENROUTER_API_KEY or OPENAI_API_KEY and `openai` package.
+    """
+
+    def fn(text: str, turn_idx: int) -> list[SlotCandidate]:
+        client, model = _get_llm_client_and_model()
+        sem_user = (
+            f"Utterance:\n{text}\n\n"
+            "Return JSON only. Either {\"candidates\":[...]} or a JSON array. "
+            "Each item: key, value, confidence, evidence, is_negative. "
+            f"Allowed keys: {', '.join(sorted(SEMANTIC_ALLOWED_KEYS))}. "
+            "Use empty candidates or [] if nothing applies."
+        )
+        sem_raw = _llm_json_object_completion(
+            client, model, SEMANTIC_MEMORY_SYSTEM_PROMPT, sem_user
+        )
+        semantic = _parse_slot_candidates_json(sem_raw, turn_idx, SEMANTIC_ALLOWED_KEYS)
+        ss_user = (
+            f"Utterance:\n{text}\n\n"
+            "Return JSON only. Either {\"candidates\":[...]} or a JSON array. "
+            "Each item: key, value, confidence, evidence, is_negative. "
+            f"Allowed keys: {', '.join(sorted(SELF_SCHEMA_ALLOWED_KEYS))}. "
+            "Use empty candidates or [] if nothing applies."
+        )
+        ss_raw = _llm_json_object_completion(
+            client, model, SELF_SCHEMA_SYSTEM_PROMPT, ss_user
+        )
+        self_schema = _parse_slot_candidates_json(
+            ss_raw, turn_idx, SELF_SCHEMA_ALLOWED_KEYS
+        )
+        return merge_slot_candidates(semantic + self_schema)
+
+    return fn
+
+
+def build_live_route_llm_call() -> LLMCallFn:
+    """Real API: json_object route JSON for one utterance."""
+
+    def route(text: str) -> str:
+        client, model = _get_llm_client_and_model()
+        user = (
+            f"Utterance:\n{text}\n\n"
+            'Return JSON only: {"active_subsystems": ["semantic", "episodic", "self_schema", ...]}. '
+            "Include every subsystem that should encode this turn. Use [] if none (besides implicit working memory)."
+        )
+        return _llm_json_object_completion(
+            client, model, ROUTE_MEMORY_SYSTEM_PROMPT, user
+        )
+
+    return route
+
+
+def build_live_episodic_llm_call() -> EpisodicLLMCallFn:
+    """Real API: json_object episodic events for one utterance."""
+
+    def episodic(text: str) -> str:
+        client, model = _get_llm_client_and_model()
+        user = (
+            f"Utterance:\n{text}\n\n"
+            'Return JSON only: {"events":[{"gist","salience_hint","evidence"}, ...]}. '
+            "Use {\"events\":[]} if no episodic content."
+        )
+        return _llm_json_object_completion(
+            client, model, EPISODIC_MEMORY_SYSTEM_PROMPT, user
+        )
+
+    return episodic
 
 
 def extract_memory_facts(

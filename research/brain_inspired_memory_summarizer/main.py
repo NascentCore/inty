@@ -12,6 +12,9 @@ try:
         EpisodicEvent,
         MemoryCategory,
         SlotCandidate,
+        build_live_episodic_llm_call,
+        build_live_route_llm_call,
+        build_live_slot_extract_fn,
         extract_by_memory_category,
         extract_candidates,
         extract_episodic_events_llm,
@@ -26,6 +29,9 @@ except ImportError:  # script mode (python path/to/main.py)
         EpisodicEvent,
         MemoryCategory,
         SlotCandidate,
+        build_live_episodic_llm_call,
+        build_live_route_llm_call,
+        build_live_slot_extract_fn,
         extract_by_memory_category,
         extract_candidates,
         extract_episodic_events_llm,
@@ -474,11 +480,16 @@ def evaluate_agent(agent: NaiveWindowAgent | LayeredMemoryAgent, episodes: list[
     )
 
 
-def run_experiment() -> dict[str, float]:
+def run_experiment(*, use_live_llm: bool = False) -> dict[str, float]:
     episodes = build_dataset()
-    slot_fn = build_benchmark_slot_llm_extract_fn()
-    route_call = build_benchmark_route_llm_call()
-    episodic_call = build_benchmark_episodic_llm_call()
+    if use_live_llm:
+        slot_fn = build_live_slot_extract_fn()
+        route_call = build_live_route_llm_call()
+        episodic_call = build_live_episodic_llm_call()
+    else:
+        slot_fn = build_benchmark_slot_llm_extract_fn()
+        route_call = build_benchmark_route_llm_call()
+        episodic_call = build_benchmark_episodic_llm_call()
     baseline_small = evaluate_agent(
         NaiveWindowAgent(window_size=2, llm_extract_fn=slot_fn), episodes
     )
@@ -510,6 +521,7 @@ def run_experiment() -> dict[str, float]:
             else 0.0
         ),
         "layered_memory_item_count": float(layered.memory_item_count),
+        "use_live_llm": 1.0 if use_live_llm else 0.0,
     }
 
 
@@ -594,10 +606,19 @@ def build_extraction_trace(
     return trace
 
 
-def build_qa_per_question_rows(episodes: list[Episode]) -> list[dict[str, Any]]:
-    slot_fn = build_benchmark_slot_llm_extract_fn()
-    route_call = build_benchmark_route_llm_call()
-    episodic_call = build_benchmark_episodic_llm_call()
+def build_qa_per_question_rows(
+    episodes: list[Episode],
+    *,
+    use_live_llm: bool = False,
+) -> list[dict[str, Any]]:
+    if use_live_llm:
+        slot_fn = build_live_slot_extract_fn()
+        route_call = build_live_route_llm_call()
+        episodic_call = build_live_episodic_llm_call()
+    else:
+        slot_fn = build_benchmark_slot_llm_extract_fn()
+        route_call = build_benchmark_route_llm_call()
+        episodic_call = build_benchmark_episodic_llm_call()
     small = NaiveWindowAgent(window_size=2, llm_extract_fn=slot_fn)
     large = NaiveWindowAgent(window_size=99, llm_extract_fn=slot_fn)
     layered = LayeredMemoryAgent(
@@ -639,21 +660,41 @@ def build_qa_per_question_rows(episodes: list[Episode]) -> list[dict[str, Any]]:
 def build_full_experiment_artifact(
     *,
     window_size: int = 2,
+    use_live_llm: bool = False,
 ) -> dict[str, Any]:
     episodes = build_dataset()
-    metrics = run_experiment()
+    metrics = run_experiment(use_live_llm=use_live_llm)
+    if use_live_llm:
+        slot_fn = build_live_slot_extract_fn()
+        route_call = build_live_route_llm_call()
+        episodic_call = build_live_episodic_llm_call()
+        extraction_label = "llm_live_api"
+    else:
+        slot_fn = build_benchmark_slot_llm_extract_fn()
+        route_call = build_benchmark_route_llm_call()
+        episodic_call = build_benchmark_episodic_llm_call()
+        extraction_label = "llm_only_benchmark_stubs"
     traces = {
-        ep.episode_id: build_extraction_trace(ep, window_size=window_size)
+        ep.episode_id: build_extraction_trace(
+            ep,
+            window_size=window_size,
+            slot_llm_extract_fn=slot_fn,
+            route_llm_call=route_call,
+            episodic_llm_call=episodic_call,
+        )
         for ep in episodes
     }
     return {
         "metrics": metrics,
         "settings": {
             "window_size": window_size,
-            "extraction": "llm_only_benchmark_stubs",
+            "extraction": extraction_label,
+            "use_live_llm": use_live_llm,
         },
         "extraction_traces_by_episode": traces,
-        "qa_per_question": build_qa_per_question_rows(episodes),
+        "qa_per_question": build_qa_per_question_rows(
+            episodes, use_live_llm=use_live_llm
+        ),
     }
 
 
@@ -673,8 +714,13 @@ def _build_parser() -> argparse.ArgumentParser:
     run_cmd.add_argument(
         "--full-out",
         type=Path,
-        default=Path(__file__).resolve().parent / "experiment_full.json",
-        help="full artifact: per-turn extraction trace + per-question QA rows",
+        default=None,
+        help="full artifact path (default: experiment_full.json or experiment_full_live.json)",
+    )
+    run_cmd.add_argument(
+        "--live-llm",
+        action="store_true",
+        help="call real OpenAI/OpenRouter API (needs OPENROUTER_API_KEY or OPENAI_API_KEY); slow, non-deterministic",
     )
     return parser
 
@@ -683,10 +729,21 @@ def main() -> int:
     args = _build_parser().parse_args()
     if args.command != "run":
         raise ValueError(f"unsupported command: {args.command}")
-    result = run_experiment()
-    args.out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    full = build_full_experiment_artifact()
-    args.full_out.write_text(
+    live = bool(getattr(args, "live_llm", False))
+    result = run_experiment(use_live_llm=live)
+    out_path = args.out
+    if live and args.out == Path(__file__).resolve().parent / "experiment_results.json":
+        out_path = Path(__file__).resolve().parent / "experiment_results_live.json"
+    out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    full_out = args.full_out
+    if full_out is None:
+        full_out = (
+            Path(__file__).resolve().parent / "experiment_full_live.json"
+            if live
+            else Path(__file__).resolve().parent / "experiment_full.json"
+        )
+    full = build_full_experiment_artifact(use_live_llm=live)
+    full_out.write_text(
         json.dumps(full, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
