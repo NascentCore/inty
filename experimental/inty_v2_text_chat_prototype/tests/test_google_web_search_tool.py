@@ -31,7 +31,9 @@ class TestGoogleWebSearchTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             env = {
-                k: v for k, v in os.environ.items() if k not in ("GOOGLE_CSE_API_KEY", "GOOGLE_CSE_ID")
+                k: v
+                for k, v in os.environ.items()
+                if k not in ("GOOGLE_CSE_API_KEY", "GOOGLE_CSE_ID")
             }
             with patch.dict(os.environ, env, clear=True):
                 out = execute_tool_call_blocking(

@@ -111,9 +111,7 @@ def _positive_int_env(env_name: str, *, default: int = 100) -> int:
     try:
         n = int(raw, 10)
     except ValueError as e:
-        raise ValueError(
-            f"{env_name} must be a positive integer, got {raw!r}"
-        ) from e
+        raise ValueError(f"{env_name} must be a positive integer, got {raw!r}") from e
     if n < 1:
         raise ValueError(f"{env_name} must be >= 1, got {n}")
     return n
@@ -175,7 +173,11 @@ def _soul_update_every_n_turns() -> int:
 
 def _soul_fundamental_signal_gate_enabled() -> bool:
     """默认开启：仅当本回合对话出现「基础模式/边界/底线」等信号时才跑 SOUL 策展 LLM。"""
-    val = os.getenv("INTY_V2_PROTO_SOUL_UPDATE_REQUIRE_FUNDAMENTAL_SIGNAL", "1").strip().lower()
+    val = (
+        os.getenv("INTY_V2_PROTO_SOUL_UPDATE_REQUIRE_FUNDAMENTAL_SIGNAL", "1")
+        .strip()
+        .lower()
+    )
     return val not in ("0", "false", "no", "off")
 
 
@@ -512,9 +514,9 @@ def memory_update_after_turn(
 
     t = time.perf_counter()
     soul_interval_hits = (not _soul_update_disabled()) and (turn_n % soul_every_n == 0)
-    soul_signal_ok = (not _soul_fundamental_signal_gate_enabled()) or _soul_turn_has_fundamental_signal(
-        user_text, assistant_text
-    )
+    soul_signal_ok = (
+        not _soul_fundamental_signal_gate_enabled()
+    ) or _soul_turn_has_fundamental_signal(user_text, assistant_text)
     run_soul_llm = soul_interval_hits and soul_signal_ok
     if run_soul_llm:
         _rewrite_soul_md(
