@@ -201,8 +201,8 @@ class MainActivity : BaseActivity() {
     }
 
     /** 检查登录状态是否有效 */
-    private fun isUserLoggedIn(): Boolean {
-        return IntySetting.isLogin() && IntySetting.getCurToken().isNotEmpty()
+    private suspend fun isUserLoggedIn(): Boolean {
+        return IntySetting.isLoginSuspend()
     }
 
     /** 如果用户已登录，加载用户数据（只执行一次） */
@@ -705,14 +705,16 @@ class MainActivity : BaseActivity() {
         isAppInForeground = true
 
         // 检查登录状态变化（用于响应手动logout或401自动logout后的应用重启）
-        val currentLoginState = isUserLoggedIn()
-        if (mainViewModel.isLoggedIn.value != currentLoginState) {
-            mainViewModel.updateLoginState()
-        }
+        lifecycleScope.launch {
+            val currentLoginState = isUserLoggedIn()
+            if (mainViewModel.isLoggedIn.value != currentLoginState) {
+                mainViewModel.updateLoginState()
+            }
 
-        if (mainViewModel.isLoggedIn.value) {
-            BillingRepository.notifyAppResumed()
-            chatViewModel.resumeVoicePlayback()
+            if (mainViewModel.isLoggedIn.value) {
+                BillingRepository.notifyAppResumed()
+                chatViewModel.resumeVoicePlayback()
+            }
         }
     }
 

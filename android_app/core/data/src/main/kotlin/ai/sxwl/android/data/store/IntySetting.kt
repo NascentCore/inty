@@ -9,6 +9,7 @@ import com.tencent.mmkv.MMKV
 import java.lang.ref.WeakReference
 import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -257,6 +258,12 @@ object IntySetting {
 
     fun isLogin(): Boolean {
         return getIntySettingCache()?.let {
+            it.curUID.isNotBlank() && it.userCache.token.isNotBlank()
+        } ?: false
+    }
+
+    suspend fun isLoginSuspend(): Boolean {
+        return contextRef?.get()?.intySettingsCache?.data?.first()?.let {
             it.curUID.isNotBlank() && it.userCache.token.isNotBlank()
         } ?: false
     }
