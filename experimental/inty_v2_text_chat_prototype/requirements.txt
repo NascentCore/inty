@@ -6,3 +6,6 @@ openai
 pydantic
 python-dotenv
 PyYAML
+pillow
+fal-client
+google-cloud-storage
