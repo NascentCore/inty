@@ -1,0 +1,48 @@
+{
+  "run_id": "20260330T150952Z",
+  "generated_at_utc": "2026-03-30T15:11:39.145268+00:00",
+  "config": {
+    "model": "google/gemini-2.5-flash-lite",
+    "dry_run": false,
+    "trials_per_cell": 3,
+    "utilizations": [
+      0.1,
+      0.55,
+      0.8,
+      0.93
+    ],
+    "instruction_counts": [
+      1,
+      8,
+      16
+    ],
+    "profiles": [
+      "uniform",
+      "edges"
+    ],
+    "target_ia": 0.95,
+    "target_rsr": 0.85,
+    "target_effectiveness": 0.92,
+    "target_format_error_rate": 0.02
+  },
+  "trial_count_total": 72,
+  "cell_count_total": 24,
+  "limit_recommendation": {
+    "<=8": {
+      "recommended_utilization": null,
+      "hard_limit_utilization": 0.55
+    },
+    "<=16": {
+      "recommended_utilization": null,
+      "hard_limit_utilization": 0.55
+    },
+    "<=32": {
+      "recommended_utilization": null,
+      "hard_limit_utilization": null
+    },
+    "<=64": {
+      "recommended_utilization": null,
+      "hard_limit_utilization": null
+    }
+  }
+}
