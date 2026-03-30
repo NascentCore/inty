@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from .file_store import read_text
+from .memory_store_registry import get_memory_store
 from .paths import WorkspacePaths
 from .utc import local_date_str
 
@@ -36,6 +37,24 @@ def _read_optional_text(path: Path, *, max_chars: int | None = None) -> str:
     if max_chars is not None and len(text) > max_chars:
         return text[: max_chars - 1] + "…"
     return text
+
+
+def _read_memory_document_optional(
+    paths: WorkspacePaths,
+    relative_path: str,
+    *,
+    max_chars: int | None = None,
+) -> str:
+    text = get_memory_store(paths.root).read_document_if_exists(relative_path)
+    if text is None:
+        return ""
+    if max_chars is not None and len(text) > max_chars:
+        return text[: max_chars - 1] + "…"
+    return text
+
+
+def _read_memory_document_required(paths: WorkspacePaths, relative_path: str) -> str:
+    return get_memory_store(paths.root).read_document(relative_path)
 
 
 class PromptBundle(BaseModel):
@@ -67,31 +86,42 @@ def load_prompt_bundle(
     m = meta if meta is not None else ContextMeta()
     intimate = m.context_mode.strip().lower() == "intimate"
 
-    raw_today = paths.memory_raw_diary(day)
-    summary_today = paths.memory_day_summary(day)
-
     raw_md = ""
     summary_md = ""
-    memory_long = read_text(paths.memory_md)
+    memory_long = _read_memory_document_required(paths, "MEMORY.md")
     if intimate:
-        raw_md = _read_optional_text(raw_today, max_chars=_MEMORY_RAW_INJECT_MAX_CHARS)
-        summary_md = _read_optional_text(
-            summary_today, max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS
+        raw_md = _read_memory_document_optional(
+            paths,
+            f"memory/daily/{day}.md",
+            max_chars=_MEMORY_RAW_INJECT_MAX_CHARS,
+        )
+        summary_md = _read_memory_document_optional(
+            paths,
+            f"memory/{day}.md",
+            max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,
         )
     else:
         memory_long = ""
 
     return PromptBundle(
-        identity=read_text(paths.identity),
-        soul=read_text(paths.soul),
-        user_md=read_text(paths.user_md),
+        identity=_read_memory_document_required(paths, "IDENTITY.md"),
+        soul=_read_memory_document_required(paths, "SOUL.md"),
+        user_md=_read_memory_document_required(paths, "USER.md"),
         memory_md=memory_long,
-        agents_md=_read_optional_text(
-            paths.agents_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
+        agents_md=_read_memory_document_optional(
+            paths,
+            "AGENTS.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
-        tools_md=_read_optional_text(paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS),
-        heartbeat_md=_read_optional_text(
-            paths.heartbeat_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
+        tools_md=_read_memory_document_optional(
+            paths,
+            "TOOLS.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
+        ),
+        heartbeat_md=_read_memory_document_optional(
+            paths,
+            "HEARTBEAT.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
         memory_raw_diary_today_md=raw_md,
         memory_day_summary_today_md=summary_md,

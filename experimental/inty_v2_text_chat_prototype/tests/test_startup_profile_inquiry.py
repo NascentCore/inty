@@ -11,6 +11,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.bootstrap import init_workspace
+from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
 from inty_v2_text_chat_prototype.orchestrator import needs_startup_profile_inquiry
 from inty_v2_text_chat_prototype.paths import WorkspacePaths
 
@@ -21,6 +22,7 @@ class TestStartupProfileInquiry(unittest.TestCase):
             root = Path(td) / "ws"
             init_workspace(root)
             self.assertTrue(needs_startup_profile_inquiry(root))
+            shutdown_memory_store(root, timeout_s=2.0)
 
     def test_after_one_turn_transcript_false(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -32,6 +34,7 @@ class TestStartupProfileInquiry(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertFalse(needs_startup_profile_inquiry(root))
+            shutdown_memory_store(root, timeout_s=2.0)
 
     def test_custom_identity_user_no_markers_false(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -47,6 +50,7 @@ class TestStartupProfileInquiry(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertFalse(needs_startup_profile_inquiry(root))
+            shutdown_memory_store(root, timeout_s=2.0)
 
 
 if __name__ == "__main__":

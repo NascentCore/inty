@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from .file_store import write_text
+from .memory_store_registry import get_memory_store, shutdown_memory_store
 from .paths import WorkspacePaths
 
 _TEMPLATE_IDENTITY = """# IDENTITY
@@ -40,21 +41,25 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
     """创建必选文件、空 transcript、memory 目录与可选 context.json。"""
     root = path.resolve()
     paths = WorkspacePaths(root=root)
+    store = get_memory_store(root)
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        paths.memory_dir.mkdir(parents=True, exist_ok=True)
+        paths.memory_daily_dir.mkdir(parents=True, exist_ok=True)
 
-    root.mkdir(parents=True, exist_ok=True)
-    paths.memory_dir.mkdir(parents=True, exist_ok=True)
-    paths.memory_daily_dir.mkdir(parents=True, exist_ok=True)
-
-    write_text(paths.identity, _TEMPLATE_IDENTITY.strip() + "\n")
-    write_text(paths.soul, _TEMPLATE_SOUL.strip() + "\n")
-    write_text(paths.user_md, _TEMPLATE_USER.strip() + "\n")
-    write_text(paths.memory_md, _TEMPLATE_MEMORY.strip() + "\n")
-    write_text(paths.transcript, "")
-    # memory/.gitkeep、memory/daily/.gitkeep（便于空目录进 git）
-    write_text(paths.memory_dir / ".gitkeep", "")
-    write_text(paths.memory_daily_dir / ".gitkeep", "")
-    if write_context:
-        write_text(
-            paths.context_json,
-            json.dumps(_CONTEXT_JSON, indent=2, ensure_ascii=False) + "\n",
-        )
+        store.write_document("IDENTITY.md", _TEMPLATE_IDENTITY.strip() + "\n")
+        store.write_document("SOUL.md", _TEMPLATE_SOUL.strip() + "\n")
+        store.write_document("USER.md", _TEMPLATE_USER.strip() + "\n")
+        store.write_document("MEMORY.md", _TEMPLATE_MEMORY.strip() + "\n")
+        write_text(paths.transcript, "")
+        # memory/.gitkeep、memory/daily/.gitkeep（便于空目录进 git）
+        write_text(paths.memory_dir / ".gitkeep", "")
+        write_text(paths.memory_daily_dir / ".gitkeep", "")
+        if write_context:
+            write_text(
+                paths.context_json,
+                json.dumps(_CONTEXT_JSON, indent=2, ensure_ascii=False) + "\n",
+            )
+        store.flush_now(timeout_s=5.0)
+    finally:
+        shutdown_memory_store(root, timeout_s=5.0)

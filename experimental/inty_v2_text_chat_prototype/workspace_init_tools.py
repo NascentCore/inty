@@ -25,6 +25,7 @@ from .fal_z_image_tool import (
     run_modify_image_z_image_turbo,
 )
 from .file_store import read_text, write_text
+from .memory_store_registry import get_memory_store
 from .google_web_search import run_google_web_search
 
 _USER_MD_REL = "USER.md"
@@ -46,6 +47,22 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "USER.md",
     }
 )
+
+
+def _is_memory_document(relative_path: str) -> bool:
+    rel = (relative_path or "").strip().replace("\\", "/")
+    if rel in {
+        "AGENTS.md",
+        "CAPABILITIES.md",
+        "HEARTBEAT.md",
+        "IDENTITY.md",
+        "MEMORY.md",
+        "SOUL.md",
+        "TOOLS.md",
+        "USER.md",
+    }:
+        return True
+    return rel.startswith("memory/") and rel.lower().endswith(".md")
 
 
 _BASE_TOOL_REGISTRY = ToolRegistry(
@@ -115,7 +132,10 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
     items：每项含 label、value（均为非空短文本）。
     """
     p = resolve_under_workspace(root, _USER_MD_REL)
-    if not p.is_file():
+    rel = p.relative_to(root.resolve()).as_posix()
+    store = get_memory_store(root)
+    prev = store.read_document_if_exists(rel)
+    if prev is None:
         return f"ERROR: missing {_USER_MD_REL!r}"
     today = date.today().isoformat()
     bullets: list[str] = []
@@ -129,9 +149,8 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
         bullets.append(f"- {label}：{value}（记录日期 {today}）")
     if not bullets:
         return "ERROR: no valid items (need label and value for each entry)"
-    prev = read_text(p)
     merged = append_user_profile_facts_to_user_md(prev, bullets)
-    write_text(p, merged)
+    store.write_document(rel, merged)
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
 
 
@@ -191,9 +210,15 @@ def tool_workspace_read_file(
     root: Path, relative_path: str, max_chars: int | None = None
 ) -> str:
     p = resolve_under_workspace(root, relative_path)
-    if not p.is_file():
-        return f"ERROR: not a file: {relative_path!r}"
-    body = read_text(p)
+    rel = p.relative_to(root.resolve()).as_posix()
+    if _is_memory_document(rel):
+        body = get_memory_store(root).read_document_if_exists(rel)
+        if body is None:
+            return f"ERROR: not a file: {relative_path!r}"
+    else:
+        if not p.is_file():
+            return f"ERROR: not a file: {relative_path!r}"
+        body = read_text(p)
     if max_chars is None:
         return body
     if len(body) <= max_chars:
@@ -205,7 +230,11 @@ def tool_workspace_read_file(
 
 def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> str:
     p = resolve_under_workspace(root, relative_path)
-    write_text(p, content)
+    rel = p.relative_to(root.resolve()).as_posix()
+    if _is_memory_document(rel):
+        get_memory_store(root).write_document(rel, content)
+    else:
+        write_text(p, content)
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 

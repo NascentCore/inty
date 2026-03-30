@@ -16,6 +16,7 @@ from inty_v2_text_chat_prototype.workspace_init_tools import (
     execute_tool_call_blocking,
     tool_user_profile_record,
 )
+from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
 
 
 class TestAppendUserProfileFacts(unittest.TestCase):
@@ -43,27 +44,33 @@ class TestToolUserProfileRecord(unittest.TestCase):
     def test_writes_file(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            user = root / "USER.md"
-            user.write_text("# u\n", encoding="utf-8")
-            msg = tool_user_profile_record(
-                root,
-                [{"label": "年龄", "value": "42"}],
-            )
-            self.assertTrue(msg.startswith("OK"))
-            body = user.read_text(encoding="utf-8")
-            self.assertIn("年龄", body)
-            self.assertIn("42", body)
+            try:
+                user = root / "USER.md"
+                user.write_text("# u\n", encoding="utf-8")
+                msg = tool_user_profile_record(
+                    root,
+                    [{"label": "年龄", "value": "42"}],
+                )
+                self.assertTrue(msg.startswith("OK"))
+                body = user.read_text(encoding="utf-8")
+                self.assertIn("年龄", body)
+                self.assertIn("42", body)
+            finally:
+                shutdown_memory_store(root, timeout_s=5.0)
 
     def test_execute_empty_items_error(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            (root / "USER.md").write_text("# u\n", encoding="utf-8")
-            out = execute_tool_call_blocking(
-                root,
-                "user_profile_record",
-                json.dumps({"items": []}, ensure_ascii=False),
-            )
-            self.assertIn("ERROR", out)
+            try:
+                (root / "USER.md").write_text("# u\n", encoding="utf-8")
+                out = execute_tool_call_blocking(
+                    root,
+                    "user_profile_record",
+                    json.dumps({"items": []}, ensure_ascii=False),
+                )
+                self.assertIn("ERROR", out)
+            finally:
+                shutdown_memory_store(root, timeout_s=5.0)
 
 
 if __name__ == "__main__":

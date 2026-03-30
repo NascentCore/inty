@@ -53,6 +53,10 @@ from experimental.inty_v2_text_chat_prototype.orchestrator import (
 from experimental.inty_v2_text_chat_prototype.tool_background import (
     pop_output_events_nowait,
 )
+from experimental.inty_v2_text_chat_prototype.memory_store_registry import (
+    flush_memory_store,
+    shutdown_memory_store,
+)
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
@@ -107,6 +111,11 @@ def _init_proto_logging(
 def _configure_llm_trace_for_workspace(root: Path) -> None:
     """Append-only JSONL：每轮 chat.completions 请求/响应摘要，固定 `<workspace>/llm_trace.jsonl`。"""
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
+
+
+def _flush_and_shutdown_memory_store(root: Path) -> None:
+    flush_memory_store(root, timeout_s=5.0)
+    shutdown_memory_store(root, timeout_s=5.0)
 
 
 def _use_posix_stdin_pump() -> bool:
@@ -548,7 +557,7 @@ def _preview_line(s: str, max_len: int = 200) -> str:
 
 app = App(
     name="inty-v2-text-chat-prototype",
-    help="INTY v2 本地文本聊天原型（文件持久化，无 HTTP/DB）。",
+    help="INTY v2 本地文本聊天原型（Memory 主读 + Postgres 异步持久化 + 文件镜像）。",
 )
 
 
@@ -572,7 +581,10 @@ def init_workspace(
 ) -> None:
     """写入 IDENTITY/SOUL/USER/MEMORY、空 transcript、memory/ 与 memory/daily/、context.json。"""
     _init_proto_logging(path, log_file, no_log_file)
-    bootstrap_init_workspace(path)
+    try:
+        bootstrap_init_workspace(path)
+    finally:
+        _flush_and_shutdown_memory_store(path.resolve())
 
 
 _DEFAULT_BOOTSTRAP_USER = (
@@ -644,14 +656,17 @@ def bootstrap_agent(
         preview = args if len(args) <= 400 else args[:400] + "..."
         print(f"[tool] {name} {preview}")
 
-    out = run_workspace_bootstrap_loop(
-        workspace,
-        user,
-        on_tool=_on_tool if verbose_tools else None,
-        llm_trace=True,
-    )
-    if out:
-        print(out)
+    try:
+        out = run_workspace_bootstrap_loop(
+            workspace,
+            user,
+            on_tool=_on_tool if verbose_tools else None,
+            llm_trace=True,
+        )
+        if out:
+            print(out)
+    finally:
+        _flush_and_shutdown_memory_store(workspace.resolve())
 
 
 @app.command
@@ -692,40 +707,43 @@ def repl(
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
     ws = workspace or _default_workspace()
-    _init_proto_logging(ws, log_file, no_log_file)
-    _configure_llm_trace_for_workspace(ws)
-    logger.debug("cli repl start ws={}", ws.resolve())
-    if not is_workspace_initialized(ws):
-        logger.debug(
-            "repl startup branch=bootstrap_auto_init (workspace not initialized)"
-        )
-        t0 = time.perf_counter()
-        out = run_workspace_bootstrap_loop(
-            ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
-        )
-        _print_assistant_reply(out, time.perf_counter() - t0)
-    elif needs_startup_profile_inquiry(ws):
-        logger.debug(
-            "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
-        )
-        t0 = time.perf_counter()
-        out = asyncio.run(
-            run_turn(
-                ws,
-                _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
-                debug_print_system=debug_print_system,
-                llm_trace=True,
+    try:
+        _init_proto_logging(ws, log_file, no_log_file)
+        _configure_llm_trace_for_workspace(ws)
+        logger.debug("cli repl start ws={}", ws.resolve())
+        if not is_workspace_initialized(ws):
+            logger.debug(
+                "repl startup branch=bootstrap_auto_init (workspace not initialized)"
             )
+            t0 = time.perf_counter()
+            out = run_workspace_bootstrap_loop(
+                ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
+            )
+            _print_assistant_reply(out, time.perf_counter() - t0)
+        elif needs_startup_profile_inquiry(ws):
+            logger.debug(
+                "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
+            )
+            t0 = time.perf_counter()
+            out = asyncio.run(
+                run_turn(
+                    ws,
+                    _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
+                    debug_print_system=debug_print_system,
+                    llm_trace=True,
+                )
+            )
+            _print_assistant_reply(out, time.perf_counter() - t0)
+        else:
+            logger.debug("repl startup branch=interactive (ready for user input)")
+        hb = _repl_heartbeat_enabled(
+            cli_enable=repl_heartbeat,
+            cli_disable=no_repl_heartbeat,
         )
-        _print_assistant_reply(out, time.perf_counter() - t0)
-    else:
-        logger.debug("repl startup branch=interactive (ready for user input)")
-    hb = _repl_heartbeat_enabled(
-        cli_enable=repl_heartbeat,
-        cli_disable=no_repl_heartbeat,
-    )
-    logger.debug("repl interactive heartbeat_enabled={}", hb)
-    _repl_interactive_loop(ws, debug_print_system=debug_print_system, heartbeat=hb)
+        logger.debug("repl interactive heartbeat_enabled={}", hb)
+        _repl_interactive_loop(ws, debug_print_system=debug_print_system, heartbeat=hb)
+    finally:
+        _flush_and_shutdown_memory_store(ws.resolve())
 
 
 @app.command
@@ -753,25 +771,28 @@ def once(
 ) -> None:
     """单轮对话。"""
     ws = workspace or _default_workspace()
-    _init_proto_logging(ws, log_file, no_log_file)
-    _configure_llm_trace_for_workspace(ws)
-    logger.debug(
-        "cli once ws={} message_chars={} preview={}",
-        ws.resolve(),
-        len(message),
-        _preview_line(message, max_len=240),
-    )
-    t0 = time.perf_counter()
-    out = asyncio.run(
-        run_turn(
-            ws,
-            message,
-            debug_print_system=debug_print_system,
-            defer_memory_update=False,
-            llm_trace=True,
+    try:
+        _init_proto_logging(ws, log_file, no_log_file)
+        _configure_llm_trace_for_workspace(ws)
+        logger.debug(
+            "cli once ws={} message_chars={} preview={}",
+            ws.resolve(),
+            len(message),
+            _preview_line(message, max_len=240),
         )
-    )
-    _print_assistant_reply(out, time.perf_counter() - t0)
+        t0 = time.perf_counter()
+        out = asyncio.run(
+            run_turn(
+                ws,
+                message,
+                debug_print_system=debug_print_system,
+                defer_memory_update=False,
+                llm_trace=True,
+            )
+        )
+        _print_assistant_reply(out, time.perf_counter() - t0)
+    finally:
+        _flush_and_shutdown_memory_store(ws.resolve())
 
 
 if __name__ == "__main__":
