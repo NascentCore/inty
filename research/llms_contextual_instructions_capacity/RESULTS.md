@@ -62,6 +62,11 @@ Observed failure pattern:
 2. In this quick live sample, the model mainly fails on strict output format (code-fenced JSON), not on instruction correctness itself.
 3. Because trials-per-cell is low (`3`) and matrix is reduced, current `U_hard=0.55` should be treated as provisional.
 
+`U_hard` definition used in this experiment:
+
+- `U_hard` is the first utilization level where threshold failure appears in 2 consecutive utilization points for both `uniform` and `edges` placement checks in the same instruction bucket.
+- Practical meaning: once crossing `U_hard`, quality degradation is no longer sporadic noise; it becomes a trend-level risk region.
+
 ## Recommended next step for production-grade guideline
 
 Run live benchmark with at least `30` trials per cell and full matrix:

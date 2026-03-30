@@ -141,6 +141,12 @@ Apply CI-aware rules:
 2. **Hard limit (U_hard, N_hard)**  
    First `(U, N)` where any primary metric lower bound falls below threshold in 2 consecutive utilization levels.
 
+Plain-language definition:
+
+- `U_hard` is the "danger line" of context utilization for a given instruction bucket.
+- Once utilization reaches `U_hard`, quality has shown consecutive unstable behavior under strict thresholds.
+- Production traffic should normally stay below `U_hard` with a safety margin.
+
 If multiple products require different `N`, publish a table:
 
 - For each required instruction count bucket (`<=8`, `<=16`, `<=32`, `<=64`), report `U_rec` and `U_hard`.
