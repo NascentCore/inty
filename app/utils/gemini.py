@@ -113,6 +113,7 @@ def get_genai_client():
                 _google_genai_client = create_google_genai_client()
     return _google_genai_client
 
+
 _GOOGLE_ENV_POP = (
     "GOOGLE_CLOUD_LOCATION",
     "GOOGLE_CLOUD_PROJECT",
@@ -164,7 +165,6 @@ def get_newapi_gemini_client() -> genai.Client | None:
             )
         _newapi_client_cache = (base, tok, client)
         return client
-
 
 
 def enhance_prompt(prompt: str, gender: str) -> str:
