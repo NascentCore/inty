@@ -443,13 +443,14 @@ def write_cell_summary(path: Path, rows: list[CellSummary]) -> None:
 
 
 def write_failure_taxonomy(path: Path, trial_rows: list[TrialRow]) -> None:
-    counts = {
-        "omission_or_partial": 0,
-        "wrong_value": 0,
-        "global_override_or_non_json": 0,
-        "unknown": 0,
+    label_map = {
+        "omission_or_partial": "遗漏或不完整",
+        "wrong_value": "键正确但值错误",
+        "global_override_or_non_json": "全局覆盖或非 JSON",
+        "unknown": "未分类",
     }
-    examples: dict[str, list[str]] = {k: [] for k in counts}
+    counts = {key: 0 for key in label_map}
+    examples: dict[str, list[str]] = {key: [] for key in label_map}
     for row in trial_rows:
         if row.response_success:
             continue
@@ -468,14 +469,14 @@ def write_failure_taxonomy(path: Path, trial_rows: list[TrialRow]) -> None:
                 f"- u={row.utilization_ratio}, n={row.instruction_count}, p={row.placement_profile}, trial={row.trial_index}: {excerpt}"
             )
     with path.open("w", encoding="utf-8") as f:
-        f.write("# Failure Taxonomy\n\n")
+        f.write("# 失败类型归因\n\n")
         for cat, n in counts.items():
-            f.write(f"- {cat}: {n}\n")
-        f.write("\n## Examples\n\n")
+            f.write(f"- {label_map[cat]}: {n}\n")
+        f.write("\n## 示例\n\n")
         for cat, lines in examples.items():
-            f.write(f"### {cat}\n")
+            f.write(f"### {label_map[cat]}\n")
             if not lines:
-                f.write("- (no samples)\n\n")
+                f.write("- （无样本）\n\n")
                 continue
             for line in lines:
                 f.write(f"{line}\n")
@@ -485,18 +486,18 @@ def write_failure_taxonomy(path: Path, trial_rows: list[TrialRow]) -> None:
 def write_summary_md(path: Path, payload: dict[str, Any]) -> None:
     with path.open("w", encoding="utf-8") as f:
         cfg = payload["config"]
-        f.write("# LLM Contextual Instructions Capacity Summary\n\n")
-        f.write(f"- run_id: `{payload['run_id']}`\n")
-        f.write(f"- generated_at_utc: `{payload['generated_at_utc']}`\n")
-        f.write(f"- model: `{cfg['model']}`\n")
+        f.write("# LLM 上下文指令容量摘要\n\n")
+        f.write(f"- 运行 ID: `{payload['run_id']}`\n")
+        f.write(f"- 生成时间(UTC): `{payload['generated_at_utc']}`\n")
+        f.write(f"- 模型: `{cfg['model']}`\n")
         f.write(f"- dry_run: `{cfg['dry_run']}`\n")
-        f.write(f"- trials_per_cell: `{cfg['trials_per_cell']}`\n\n")
-        f.write("## Thresholds\n\n")
+        f.write(f"- 每个单元试验次数: `{cfg['trials_per_cell']}`\n\n")
+        f.write("## 阈值\n\n")
         f.write(f"- IA >= {cfg['target_ia']}\n")
         f.write(f"- RSR >= {cfg['target_rsr']}\n")
-        f.write(f"- Effectiveness >= {cfg['target_effectiveness']}\n")
-        f.write(f"- Format error rate <= {cfg['target_format_error_rate']}\n\n")
-        f.write("## Limit Recommendation\n\n")
+        f.write(f"- 有效性（Effectiveness） >= {cfg['target_effectiveness']}\n")
+        f.write(f"- 格式错误率 <= {cfg['target_format_error_rate']}\n\n")
+        f.write("## 上限建议\n\n")
         for bucket, row in payload["limit_recommendation"].items():
             f.write(
                 f"- {bucket}: U_rec={row['recommended_utilization']}, U_hard={row['hard_limit_utilization']}\n"
@@ -632,7 +633,7 @@ def main() -> None:
         latest.unlink()
     latest.symlink_to(run_dir.name)
 
-    print("\nSaved artifacts:")
+    print("\n已保存产物：")
     print(f"- {run_dir / 'trial_results.jsonl'}")
     print(f"- {run_dir / 'cell_summary.csv'}")
     print(f"- {run_dir / 'failure_taxonomy.md'}")
@@ -641,7 +642,7 @@ def main() -> None:
     print(f"- {run_dir / 'summary.md'}")
     print(f"- {latest} -> {run_dir.name}")
     if dry_run:
-        print("NOTE: Ran in dry-run mode (synthetic responses). Set OPENROUTER_API_KEY for live model execution.")
+        print("提示：本次为 dry-run（合成响应）。如需真实模型执行，请设置 OPENROUTER_API_KEY。")
 
 
 if __name__ == "__main__":

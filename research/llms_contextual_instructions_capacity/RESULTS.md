@@ -1,16 +1,16 @@
-# RESULTS
+# 结果汇总
 
-## Run metadata (live)
+## 运行元数据（实时）
 
-- Run ID: `20260330T150952Z`
-- Generated at: `2026-03-30T15:11:39.145268+00:00`
-- Model ID: `google/gemini-2.5-flash-lite`
-- Mode: `live` (real model API)
-- Trials per cell: `3` (quick live sweep)
-- Matrix size: `4 utilizations * 3 instruction counts * 2 profiles = 24 cells`
-- Total trials: `72`
+- 运行 ID：`20260330T150952Z`
+- 生成时间：`2026-03-30T15:11:39.145268+00:00`
+- 模型 ID：`google/gemini-2.5-flash-lite`
+- 模式：`live`（真实模型 API）
+- 每个单元试验次数：`3`（快速实时扫面）
+- 矩阵规模：`4 个利用率 * 3 个指令数 * 2 个分布 = 24 个单元`
+- 总试验数：`72`
 
-Source artifacts:
+结果产物：
 
 - `research/llms_contextual_instructions_capacity/results/20260330T150952Z/trial_results.jsonl`
 - `research/llms_contextual_instructions_capacity/results/20260330T150952Z/cell_summary.csv`
@@ -19,100 +19,100 @@ Source artifacts:
 - `research/llms_contextual_instructions_capacity/results/20260330T150952Z/summary.json`
 - `research/llms_contextual_instructions_capacity/results/20260330T150952Z/summary.md`
 
-## Thresholds used
+## 使用的阈值
 
 - IA >= `0.95`
 - RSR >= `0.85`
-- Effectiveness >= `0.92`
-- Format error rate <= `0.02`
+- 有效性 >= `0.92`
+- 格式错误率 <= `0.02`
 
-## Quantitative result summary (live)
+## 定量结果摘要（实时）
 
-From live `limit_recommendation.json`:
+来自实时 `limit_recommendation.json`：
 
-- `<=8` instructions: `U_rec = None`, `U_hard = 0.55`
-- `<=16` instructions: `U_rec = None`, `U_hard = 0.55`
-- `<=32` instructions: `U_rec = None`, `U_hard = None`
-- `<=64` instructions: `U_rec = None`, `U_hard = None`
+- `<=8` 指令桶：`U_rec = None`，`U_hard = 0.55`
+- `<=16` 指令桶：`U_rec = None`，`U_hard = 0.55`
+- `<=32` 指令桶：`U_rec = None`，`U_hard = None`
+- `<=64` 指令桶：`U_rec = None`，`U_hard = None`
 
-Interpretation for this live quick sweep:
+本次实时快扫解读：
 
-- Under strict CI-gated thresholds and only 3 trials per cell, no utilization level reached recommended safe zone (`U_rec=None`).
-- For instruction buckets `<=8` and `<=16`, hard-limit detector first triggered at `U=0.55`.
-- `<=32` and `<=64` buckets are not applicable in this quick sweep (instruction counts above 16 were not included), so hard limit stays `None`.
+- 在严格的 CI 门控阈值下，且每个 cell 只有 3 次试验，没有任何利用率点进入推荐安全区（`U_rec=None`）。
+- 对 `<=8` 与 `<=16` 指令桶，硬上限检测首次在 `U=0.55` 触发。
+- `<=32` 与 `<=64` 在本次快扫中不适用（未包含大于 16 的指令数），因此硬上限为 `None`。
 
-## Qualitative failure summary (live)
+## 定性失败摘要（实时）
 
-From live `failure_taxonomy.md`:
+来自实时 `failure_taxonomy.md`：
 
-- `wrong_value`: `0`
-- `omission_or_partial`: `0`
-- `global_override_or_non_json`: `4`
-- `unknown`: `0`
+- 值错误：`0`
+- 遗漏/不完整：`0`
+- 全局覆盖或非 JSON：`4`
+- 未分类：`0`
 
-Observed failure pattern:
+观察到的失败模式：
 
-1. Main failure mode is formatting wrapper (` ```json ... ``` `), not wrong key-value mapping.
-2. Current parser requires pure JSON; markdown code-fence output is counted as format error.
-3. No wrong-value / omission seen in this quick live sweep, suggesting core instruction extraction is strong in sampled cells.
+1. 主要失败模式是格式包装（` ```json ... ``` `），不是 key-value 映射错误。
+2. 当前解析器要求纯 JSON；带 markdown 代码块的输出会被计入格式错误。
+3. 本次实时快扫未出现“值错误/漏项”，说明在采样范围内核心指令抽取能力较强。
 
-## Conclusions
+## 结论
 
-1. Real-model run with `google/gemini-2.5-flash-lite` is successful; benchmark harness works end-to-end in live mode.
-2. In this quick live sample, the model mainly fails on strict output format (code-fenced JSON), not on instruction correctness itself.
-3. Because trials-per-cell is low (`3`) and matrix is reduced, current `U_hard=0.55` should be treated as provisional.
+1. 使用 `google/gemini-2.5-flash-lite` 的真实模型运行已成功，评测链路在实时模式下可端到端运行。
+2. 这轮快扫中，模型主要问题是严格输出格式（代码块包裹 JSON），不是指令语义正确性本身。
+3. 由于每个 cell 试验数较低（`3`）且矩阵为缩减版，当前 `U_hard=0.55` 应视为临时结果。
 
-`U_hard` definition used in this experiment:
+本实验使用的 `U_hard` 定义：
 
-- `U_hard` is the first utilization level where threshold failure appears in 2 consecutive utilization points for both `uniform` and `edges` placement checks in the same instruction bucket.
-- Practical meaning: once crossing `U_hard`, quality degradation is no longer sporadic noise; it becomes a trend-level risk region.
+- `U_hard` 是在同一指令桶中，`uniform` 与 `edges` 两种分布检查下，阈值失败连续出现在 2 个利用率点时对应的第一个利用率。
+- 业务含义：超过 `U_hard` 后，质量下降不再是偶发噪声，而是趋势性风险区间。
 
-## Recommended next step for production-grade guideline
+## 生产级指导的下一步建议
 
-Run live benchmark with at least `30` trials per cell and full matrix:
+建议用完整矩阵并将每个 cell 试验数提升到至少 `30`：
 
 `python3 research/llms_contextual_instructions_capacity/run_benchmark.py --model google/gemini-2.5-flash-lite --trials-per-cell 30 --output-dir research/llms_contextual_instructions_capacity/results`
 
-Then update this file with final `U_rec` and `U_hard` per instruction bucket.
+然后用最终运行结果更新本文件中的各指令桶 `U_rec` 与 `U_hard`。
 
-## Previous baseline (dry-run synthetic)
+## 之前的基线（dry-run 合成）
 
-- Run ID: `20260330T110255Z`
-- This baseline is retained in `results/20260330T110255Z` for harness calibration comparison.
+- 运行 ID：`20260330T110255Z`
+- 该基线保留在 `results/20260330T110255Z`，用于评测框架校准对比。
 
-## Additional live model comparison (same matrix)
+## 额外实时模型对比（同一矩阵）
 
-Comparable quick matrix for all models:
+三模型可比的快扫矩阵：
 
 - `U={0.10, 0.55, 0.80, 0.93}`
 - `N={1, 8, 16}`
 - `P={uniform, edges}`
 - `trials_per_cell=3`
 
-Live run IDs:
+实时运行 ID：
 
 - `google/gemini-2.5-flash-lite`: `20260330T150952Z`
 - `deepseek/deepseek-v3.2`: `20260330T161158Z`
 - `openai/gpt-4o-mini`: `20260330T162012Z`
 
-### U_hard comparison
+### `U_hard` 对比
 
-`<=8` instruction bucket:
-
-- `google/gemini-2.5-flash-lite`: `U_hard=0.55`
-- `deepseek/deepseek-v3.2`: `U_hard=0.55`
-- `openai/gpt-4o-mini`: `U_hard=0.55`
-
-`<=16` instruction bucket:
+`<=8` 指令桶：
 
 - `google/gemini-2.5-flash-lite`: `U_hard=0.55`
 - `deepseek/deepseek-v3.2`: `U_hard=0.55`
 - `openai/gpt-4o-mini`: `U_hard=0.55`
 
-Notes:
+`<=16` 指令桶：
 
-1. In this quick matrix, all three models produced the same provisional `U_hard` for covered buckets.
-2. `<=32` and `<=64` buckets remain `None` because this matrix did not include instruction counts above `16`.
-3. Failure modes differ:
-   - `deepseek/deepseek-v3.2` had more format-wrapper failures (many markdown-fenced JSON outputs).
-   - `openai/gpt-4o-mini` had zero failures in this quick sweep, but the strict CI rule with low trials still yields the same provisional hard-limit boundary.
+- `google/gemini-2.5-flash-lite`: `U_hard=0.55`
+- `deepseek/deepseek-v3.2`: `U_hard=0.55`
+- `openai/gpt-4o-mini`: `U_hard=0.55`
+
+说明：
+
+1. 在这套快扫矩阵里，三模型在已覆盖的桶上都得到了相同的临时 `U_hard`。
+2. `<=32` 与 `<=64` 仍为 `None`，因为本矩阵未覆盖大于 `16` 的指令数。
+3. 失败模式存在差异：
+   - `deepseek/deepseek-v3.2` 的格式包装失败更多（较多 markdown 代码块 JSON 输出）。
+   - `openai/gpt-4o-mini` 在本次快扫中无失败，但由于试验次数低、CI 规则严格，最终临时硬上限边界仍与其他模型一致。

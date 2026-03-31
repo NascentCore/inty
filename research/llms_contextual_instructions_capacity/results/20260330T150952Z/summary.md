@@ -1,19 +1,19 @@
-# LLM Contextual Instructions Capacity Summary
+# LLM 上下文指令容量总结
 
-- run_id: `20260330T150952Z`
-- generated_at_utc: `2026-03-30T15:11:39.145268+00:00`
-- model: `google/gemini-2.5-flash-lite`
-- dry_run: `False`
-- trials_per_cell: `3`
+- 运行 ID：`20260330T150952Z`
+- 生成时间（UTC）：`2026-03-30T15:11:39.145268+00:00`
+- 模型：`google/gemini-2.5-flash-lite`
+- 是否 dry-run：`False`
+- 每个单元试验次数：`3`
 
-## Thresholds
+## 阈值
 
 - IA >= 0.95
 - RSR >= 0.85
-- Effectiveness >= 0.92
-- Format error rate <= 0.02
+- 有效性 >= 0.92
+- 格式错误率 <= 0.02
 
-## Limit Recommendation
+## 上限建议
 
 - <=8: U_rec=None, U_hard=0.55
 - <=16: U_rec=None, U_hard=0.55

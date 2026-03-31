@@ -1,21 +1,21 @@
-# Failure Taxonomy
+# 失败类型统计
 
-- omission_or_partial: 0
-- wrong_value: 0
-- global_override_or_non_json: 0
-- unknown: 0
+- 遗漏或不完整: 0
+- 键正确但值错误: 0
+- 全局覆盖或非 JSON: 0
+- 未分类: 0
 
-## Examples
+## 示例
 
-### omission_or_partial
-- (no samples)
+### 遗漏或不完整
+- （无样本）
 
-### wrong_value
-- (no samples)
+### 键正确但值错误
+- （无样本）
 
-### global_override_or_non_json
-- (no samples)
+### 全局覆盖或非 JSON
+- （无样本）
 
-### unknown
-- (no samples)
+### 未分类
+- （无样本）
 

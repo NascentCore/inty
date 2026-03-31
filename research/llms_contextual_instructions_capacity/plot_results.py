@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Plot benchmark curves from a run directory produced by run_benchmark.py.
+从 run_benchmark.py 产出的运行目录中绘制基准曲线。
 """
 
 from __future__ import annotations
@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot benchmark result curves.")
+    parser = argparse.ArgumentParser(description="绘制基准测试结果曲线。")
     parser.add_argument(
         "--run-dir",
         required=True,
-        help="Path like research/llms_contextual_instructions_capacity/results/<run_id>",
+        help="例如 research/llms_contextual_instructions_capacity/results/<run_id>",
     )
     return parser.parse_args()
 
@@ -53,10 +53,10 @@ def plot_metric_vs_u(
         series = sorted(series, key=lambda x: float_field(x, "utilization_ratio"))
         xs = [float_field(r, "utilization_ratio") for r in series]
         ys = [float_field(r, metric_key) for r in series]
-        plt.plot(xs, ys, marker="o", label=f"profile={profile}")
+        plt.plot(xs, ys, marker="o", label=f"分布={profile}")
 
-    plt.title(f"{metric_label} vs U (N={instruction_count})")
-    plt.xlabel("Context utilization U")
+    plt.title(f"{metric_label} 随 U 变化 (N={instruction_count})")
+    plt.xlabel("上下文利用率 U")
     plt.ylabel(metric_label)
     plt.ylim(0.0, 1.05 if metric_key != "median_latency_ms" else max(ys) * 1.1 if ys else 1)
     plt.grid(True, alpha=0.3)
@@ -83,11 +83,11 @@ def plot_latency_vs_u(
         ys = [float_field(r, "median_latency_ms") for r in series]
         if ys:
             max_y = max(max_y, max(ys))
-        plt.plot(xs, ys, marker="o", label=f"profile={profile}")
+        plt.plot(xs, ys, marker="o", label=f"分布={profile}")
 
-    plt.title(f"Median latency vs U (N={instruction_count})")
-    plt.xlabel("Context utilization U")
-    plt.ylabel("Median latency (ms)")
+    plt.title(f"中位延迟随 U 变化 (N={instruction_count})")
+    plt.xlabel("上下文利用率 U")
+    plt.ylabel("中位延迟 (ms)")
     plt.ylim(0.0, max_y * 1.15)
     plt.grid(True, alpha=0.3)
     plt.legend()
@@ -106,7 +106,7 @@ def plot_u_hard_overview(rows: list[dict[str, str]], run_dir: Path, out_path: Pa
     target_eff = float(payload["config"]["target_effectiveness"])
     target_fer = float(payload["config"]["target_format_error_rate"])
 
-    # Aggregate over profiles by taking the min (more conservative).
+    # 在不同分布间取更保守的结果做汇总。
     by_n: dict[int, list[dict[str, str]]] = {}
     for row in rows:
         n = int_field(row, "instruction_count")
@@ -128,8 +128,8 @@ def plot_u_hard_overview(rows: list[dict[str, str]], run_dir: Path, out_path: Pa
 
     plt.figure(figsize=(8, 5))
     plt.plot(xs_n, ys_u_hard, marker="s", color="tab:red")
-    plt.title("Provisional U_hard by instruction count bucket")
-    plt.xlabel("Instruction count N")
+    plt.title("各指令桶的暂定 U_hard")
+    plt.xlabel("指令数量 N")
     plt.ylabel("U_hard")
     plt.ylim(0.0, 1.05)
     plt.grid(True, alpha=0.3)
@@ -138,10 +138,10 @@ def plot_u_hard_overview(rows: list[dict[str, str]], run_dir: Path, out_path: Pa
     plt.close()
 
     definition = (
-        "U_hard definition: first utilization U where threshold failures appear in 2 "
-        "consecutive U levels (under both uniform and edges profiles).\n"
-        f"Thresholds: IA_CI_low>={target_ia}, RSR_CI_low>={target_rsr}, "
-        f"Effectiveness_CI_low>={target_eff}, FormatErrorRate<={target_fer}."
+        "U_hard 定义：在同一指令桶内，同时检查 uniform 与 edges 两种分布时，"
+        "阈值失败连续出现在两个相邻 U 点的第一个 U。\n"
+        f"阈值条件：IA_CI_low>={target_ia}，RSR_CI_low>={target_rsr}，"
+        f"有效性_CI_low>={target_eff}，格式错误率<={target_fer}。"
     )
     with (run_dir / "plots" / "u_hard_definition.txt").open("w", encoding="utf-8") as f:
         f.write(definition + "\n")
@@ -152,7 +152,7 @@ def main() -> None:
     run_dir = Path(args.run_dir).resolve()
     csv_path = run_dir / "cell_summary.csv"
     if not csv_path.exists():
-        raise FileNotFoundError(f"cell_summary.csv not found in {run_dir}")
+        raise FileNotFoundError(f"在 {run_dir} 中未找到 cell_summary.csv")
 
     rows = load_summary_csv(csv_path)
     out_dir = run_dir / "plots"
@@ -164,28 +164,28 @@ def main() -> None:
             rows=rows,
             instruction_count=n,
             metric_key="ia_mean",
-            metric_label="Instruction Accuracy (IA)",
+            metric_label="指令准确率（IA）",
             out_path=out_dir / f"ia_vs_u_n{n}.png",
         )
         plot_metric_vs_u(
             rows=rows,
             instruction_count=n,
             metric_key="rsr",
-            metric_label="Response Success Rate (RSR)",
+            metric_label="整响应成功率（RSR）",
             out_path=out_dir / f"rsr_vs_u_n{n}.png",
         )
         plot_metric_vs_u(
             rows=rows,
             instruction_count=n,
             metric_key="effectiveness_mean",
-            metric_label="Effectiveness",
+            metric_label="有效性（Effectiveness）",
             out_path=out_dir / f"effectiveness_vs_u_n{n}.png",
         )
         plot_metric_vs_u(
             rows=rows,
             instruction_count=n,
             metric_key="format_error_rate",
-            metric_label="Format Error Rate",
+            metric_label="格式错误率",
             out_path=out_dir / f"format_error_vs_u_n{n}.png",
         )
         plot_latency_vs_u(
@@ -196,7 +196,7 @@ def main() -> None:
 
     plot_u_hard_overview(rows=rows, run_dir=run_dir, out_path=out_dir / "u_hard_by_n.png")
 
-    print(f"Saved plots to: {out_dir}")
+    print(f"图表已保存到: {out_dir}")
 
 
 if __name__ == "__main__":
