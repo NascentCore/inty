@@ -9,7 +9,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.exceptions import ModelRetry
 
-from .core import AccessDecision, AccessRequest, MemoryCustodian
+try:
+    from .core import AccessDecision, AccessRequest, MemoryCustodian
+except ImportError:
+    from core import (  # type: ignore[no-redef]
+        AccessDecision,
+        AccessRequest,
+        MemoryCustodian,
+    )
 
 
 @dataclass
@@ -98,6 +105,7 @@ class LangGraphAMCPState(TypedDict):
     memory_id: str
     purpose: str
     amcp_last_decision: AccessDecision | None
+    route: str
     result: str
 
 
@@ -114,12 +122,15 @@ def build_langgraph_amcp_app(custodian: MemoryCustodian):
 
     def llm_node(state: LangGraphAMCPState) -> dict:
         memory_text = custodian.read_memory_content(state["memory_id"])
-        return {"result": f"allowed:{memory_text}"}
+        return {"route": "llm_node", "result": f"allowed:{memory_text}"}
 
     def consent_request_node(state: LangGraphAMCPState) -> dict:
         decision = state["amcp_last_decision"]
         missing = decision.missing_owner_consents if decision else []
-        return {"result": f"denied:missing={','.join(missing)}"}
+        return {
+            "route": "consent_request_node",
+            "result": f"denied:missing={','.join(missing)}",
+        }
 
     def route_by_policy(state: LangGraphAMCPState) -> str:
         decision = state["amcp_last_decision"]
@@ -142,3 +153,40 @@ def build_langgraph_amcp_app(custodian: MemoryCustodian):
     graph.add_edge("llm_node", END)
     graph.add_edge("consent_request_node", END)
     return graph.compile()
+
+
+class LangGraphAMCPFlowResult(TypedDict):
+    allowed: bool
+    route: str
+    response: str
+    missing_owner_consents: list[str]
+    reason: str
+
+
+def run_langgraph_amcp_flow(
+    custodian: MemoryCustodian,
+    runner_did: str,
+    memory_id: str,
+    purpose: str,
+) -> LangGraphAMCPFlowResult:
+    app = build_langgraph_amcp_app(custodian)
+    final_state = app.invoke(
+        {
+            "runner_did": runner_did,
+            "memory_id": memory_id,
+            "purpose": purpose,
+            "amcp_last_decision": None,
+            "route": "",
+            "result": "",
+        }
+    )
+    decision = final_state["amcp_last_decision"]
+    if decision is None:
+        raise ValueError("LangGraph flow finished without AMCP decision.")
+    return {
+        "allowed": decision.allowed,
+        "route": final_state["route"],
+        "response": final_state["result"],
+        "missing_owner_consents": decision.missing_owner_consents,
+        "reason": decision.reason,
+    }
