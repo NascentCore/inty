@@ -1,0 +1,8 @@
+{
+  "signer_did": "did:plc:fixture-signer",
+  "key_id": "atproto-2026-01",
+  "public_key_b64url": "6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw",
+  "payload_json": "{\"manifest\":{\"bundle_sha256\":\"017287d6223de50e7d9aa3274ab8cd9b1e16eacc8d69cb00beceb1912cf66675\",\"grant_count\":0,\"intent\":\"memory_portability\",\"migration_id\":\"migration-fixed-001\",\"protocol\":\"amcp-migration-manifest\",\"record_count\":1,\"snapshot_at\":\"2026-01-01T00:00:00Z\",\"source_runner_did\":\"did:runner:source\",\"target_runner_did\":\"did:runner:target\",\"version\":\"0.1.0\"},\"protocol\":\"amcp-migration-signature-payload\",\"version\":\"0.1.0\"}",
+  "payload_sha256": "c47e89d6987cfa2778ea4aec904865d63a3e4684ddfbb848bb685b2337d180a5",
+  "signature_b64url": "qGteW4SthYQGtvRRnI-O4rzSa11XRMBgIXtkuJ5e4HHRW3J8VDtAbrb4160f0x44U6NVzMV4qpMEk67ZJl0MDQ"
+}

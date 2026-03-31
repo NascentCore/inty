@@ -3,5 +3,6 @@ loguru
 pydantic
 pydantic-ai
 langgraph
+cryptography
 pytest
 pytest-asyncio

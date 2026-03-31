@@ -24,7 +24,7 @@ This is a minimal reference design for research and prototyping:
 
 - local in-memory policy engine,
 - portable JSON export bundle,
-- no network protocol, signatures, or key management yet.
+- optional ed25519 signing/verification on migration envelope manifest payload.
 
 ## Roles
 
@@ -202,9 +202,13 @@ Core objects:
   - `record_count`, `grant_count`, `bundle_sha256`
 - `AMCPMigrationEnvelopeV1`
   - `manifest` + `bundle` + optional `signatures`
+- `MigrationSigningKeyV1`
+  - exporter-side signing material (`signer_did`, `key_id`, private key b64url)
 - `ConsentPortabilityPolicyV1`
   - `require_target_runner_match` (default `true`)
   - `allow_all_memories_scope` (default `false`)
+  - `require_valid_signatures` (default `false`, strict import mode)
+  - `required_signer_dids` (supports `did` and `did#key_id`)
 - `ImportReceiptV1`
   - accepted/quarantined IDs + status (`staged` / `activated`)
 
@@ -217,6 +221,8 @@ Lifecycle:
 Safety semantics in v0.1:
 
 - manifest count/hash mismatch => import fails
+- strict mode (`require_valid_signatures=true`) => every envelope signature must pass DID+key verification
+- `required_signer_dids` can pin only DID or exact key (`did#key_id`) for key-rotation safety
 - grant bound to other runner => quarantine
 - `all_memories_for_owner` scope => quarantine by default
 - migration preserves strict least-privilege defaults
@@ -231,6 +237,9 @@ Covered cases:
 2. hash mismatch is rejected
 3. mismatched-grantee grant is quarantined
 4. `all_memories_for_owner` grant is quarantined by default
+5. strict signature verification passes for valid ed25519 signatures
+6. wrong public key / missing required signer fails import
+7. key-rotation check supports `required_signer_dids=["did#key_id"]`
 
 Run:
 

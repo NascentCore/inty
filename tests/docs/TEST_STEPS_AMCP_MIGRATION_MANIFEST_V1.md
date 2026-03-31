@@ -11,6 +11,7 @@ Confirm AMCP migration v0.1 behavior:
 3. Import quarantines grants that mismatch target runner.
 4. Activation writes accepted memories/grants to target custodian.
 5. Tampered envelope is rejected.
+6. Strict signature mode verifies `ed25519` signatures and supports required signer IDs as both `did` and `did#key_id`.
 
 ## Commands
 
