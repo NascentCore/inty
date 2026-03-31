@@ -97,7 +97,7 @@ google_play:
   enable_version_check: true
   min_supported_version: 100
   # 设置为 0 时从 Google Play API 动态获取
-  current_version_code: 14111
+  current_version_code: 14225
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
