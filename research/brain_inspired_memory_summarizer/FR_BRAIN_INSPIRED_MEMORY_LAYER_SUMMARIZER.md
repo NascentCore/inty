@@ -1,8 +1,8 @@
-# Inty v2：脑启发式多层记忆总结器（Brain-Inspired Multi-Layer Memory Summarizer）
+# Inty v2：脑启发式多层记忆总结器
 
 > 目标：参考人脑不同记忆层（工作记忆、情景记忆、语义记忆、情绪显著性与离线巩固），为 `experimental/inty_v2_text_chat_prototype` 设计可渐进落地的多层记忆总结架构。  
 > 对齐文档：`INTY_v2_DESIGN.md`、`INTY_v2_CORE_AGENTIC_COMPONENT_TECH_ARCHITECTURE.md`、`INTY_v2_CORE_AGENTIC_COMPONENT_TECH_PROTOTYPE.md`。  
-> 范围：先服务 text chat prototype（文件持久化、无 DB），但接口与分层命名保持可迁移到正式后端。
+> 范围：先服务**文本对话原型**（文件持久化、无数据库），但接口与分层命名保持可迁移到正式后端。
 
 ---
 
@@ -37,15 +37,15 @@
 
 ### 3.1 现有文件层的重新命名（保持兼容）
 
-| Layer | 原型文件/结构 | 建议角色命名 | 更新时间 |
+| 层级 | 原型文件/结构 | 建议角色命名 | 更新时间 |
 |---|---|---|---|
-| L0 | 本轮用户输入 + assistant输出（内存态） | Sensory/Turn Buffer（瞬时轮次缓冲） | 每轮 |
-| L1 | `transcript.jsonl` | Episodic Event Log（原始情景事件流） | 每轮 append |
-| L2 | `memory/daily/YYYY-MM-DD.md` | Daily Episodic Ledger（当日事件账本） | 每轮 append |
-| L3 | `memory/YYYY-MM-DD.md` | Day Consolidation Summary（当日巩固摘要） | 每 N 轮重写 |
-| L4 | `MEMORY.md` | Long-term Semantic Memory（长期语义记忆） | 每轮/每 N 轮重写 |
-| L5 | `USER.md` | User Model Memory（用户画像与偏好层） | 每 N 轮重写 + 工具增量写 |
-| L6 | `SOUL.md` | Core Value/Boundary Memory（价值与边界层） | 低频重写（当前每轮，可下调） |
+| L0 | 本轮用户输入 + 助手输出（内存态） | 感知/轮次缓冲（瞬时） | 每轮 |
+| L1 | `transcript.jsonl` | 原始情景事件流 | 每轮追加 |
+| L2 | `memory/daily/YYYY-MM-DD.md` | 当日事件账本 | 每轮追加 |
+| L3 | `memory/YYYY-MM-DD.md` | 当日巩固摘要 | 每 N 轮重写 |
+| L4 | `MEMORY.md` | 长期语义记忆 | 每轮/每 N 轮重写 |
+| L5 | `USER.md` | 用户画像与偏好 | 每 N 轮重写 + 工具增量写 |
+| L6 | `SOUL.md` | 价值与边界 | 低频重写（当前每轮，可下调） |
 
 > 当前代码已具备 L1-L6 的基础形态；本提案重点是把这些层“系统化”，并补上显著性打分与分层注入策略。
 
@@ -60,7 +60,7 @@
 
 ## 4. 脑启发式“多层总结器”核心机制
 
-## 4.1 机制 A：显著性驱动（salience-gated encoding）
+## 4.1 机制 A：显著性驱动（显著性门控编码）
 
 ### 为什么需要
 人脑不会把所有事件等权存长期记忆；情绪强度、目标相关性、重复性会影响编码概率。
@@ -105,7 +105,7 @@
 - 以 F1 为目标调权重；`precision < 0.7` 优先提高 `t2`，`recall < 0.7` 优先降低 `t1`。
 - 每次只改一个参数并记录变更日志（含前后指标），避免多变量混淆。
 
-## 4.2 机制 B：分层巩固节拍（multi-timescale consolidation）
+## 4.2 机制 B：分层巩固节拍（多时间尺度巩固）
 
 建议将当前“基本每轮都策展”改成多节拍：
 
@@ -126,12 +126,12 @@
 - L5（USER）目标最大陈旧度：`<= 24h` 或 `<= 100` 轮（先到先触发）。
 - L6（SOUL）目标最大陈旧度：`<= 72h`，但边界事件必须“即刻候选、下个巩固周期必落盘”。
 
-## 4.3 机制 C：记忆类型分流（type-aware routing）
+## 4.3 机制 C：记忆类型分流（按类型路由）
 
 同一轮信息进入不同层：
 
 - “事实/偏好/生活规律” → L5（USER）+ L4（MEMORY）。
-- “关系大事/共同经历” → L3（day summary）再沉淀到 L4。
+- “关系大事/共同经历” → L3（日摘要）再沉淀到 L4。
 - “边界/价值/不可逾越” → L6（SOUL）优先。
 - “纯闲聊噪声” → L1/L2 即可，不必升层。
 
@@ -150,31 +150,31 @@
    - 将冲突项写入 `conflict_reason`。
    - 对被否决事实打 `superseded_by` 或 `invalidated_by_boundary=true`。
 3. 仅修复后的候选允许进入 L4/L5/L6。
-4. 审计日志必须可追溯到源 turn（见 §6 schema）。
+4. 审计日志必须可追溯到源轮次（见 §6 字段约定）。
 
 ---
 
-## 5. 提示词注入策略（retrieval by layer）
+## 5. 提示词注入策略（按层检索）
 
 为避免上下文爆炸与记忆污染，注入时按层筛选而非“全塞”。
 
-### 5.1 建议注入优先级（text chat）
+### 5.1 建议注入优先级（文本对话）
 
 1. `SOUL.md`（L6，稳定约束，优先级最高）
 2. `USER.md`（L5，用户偏好与相处协议）
 3. `MEMORY.md`（L4，长期关系事实）
 4. 当日 `memory/YYYY-MM-DD.md`（L3，当日主题）
 5. 最近 `transcript` 窗口（L1，现场语境）
-6. 原始 diary（L2）只在需要“细节对账”时注入片段，不默认整段注入
+6. 原始日记（L2）只在需要“细节对账”时注入片段，不默认整段注入
 
-### 5.2 context_mode 策略
+### 5.2 上下文模式（`context_mode`）策略
 
 - `intimate`: 可注入 L3/L4/L5/L6 全量（仍需长度上限）。
 - 非 `intimate`: 默认降级 L3/L4 的私密细节，仅保留 L5/L6 的必要约束与通用偏好。
 
 ---
 
-## 6. 数据结构建议（prototype 阶段可先文件化）
+## 6. 数据结构建议（原型阶段可先文件化）
 
 在不改数据库前提下，可新增一个轻量候选队列文件：
 
@@ -199,9 +199,9 @@
 
 ---
 
-## 7. 分阶段落地计划（对当前 prototype 的最小侵入）
+## 7. 分阶段落地计划（对当前原型的最小侵入）
 
-## Phase 1：仅加“显著性打分 + 路由”，不改现有文件契约
+## 阶段一：仅加「显著性打分 + 路由」，不改现有文件契约
 
 - 在 `memory_update.py` 中新增 `score_turn_salience(...)`。
 - 生成候选事件并写 `.inty_v2_salience_queue.jsonl`。
@@ -209,14 +209,14 @@
 
 **验收**：同样轮次下，`MEMORY.md` 重复噪声下降，关键偏好命中率上升。
 
-## Phase 2：将 SOUL 更新改为低频+触发式
+## 阶段二：将 SOUL 更新改为低频 + 触发式
 
 - 默认不再每轮重写 SOUL；仅当 `boundary_signal`/`safety_signal` 触发或达到慢节拍。
 - 维持已有禁用开关兼容。
 
 **验收**：`SOUL.md` 日内变更次数明显下降，且边界条目不丢失。
 
-## Phase 3：引入“周级回顾总结器”（可选）
+## 阶段三：引入「周级回顾总结器」（可选）
 
 - 每周对 L4/L5 做冲突合并、降权和归档摘要（仅文档层，不上向量库）。
 
@@ -250,9 +250,9 @@
 
 ## 9. 与神经科学启发的一致性（简要）
 
-- **系统巩固（sleep-like replay）**：对应本方案的中慢节拍总结（L2→L3→L4/L5/L6）。
+- **系统巩固（类睡眠重放）**：对应本方案的中慢节拍总结（L2→L3→L4/L5/L6）。
 - **情绪显著性调制**：对应 `salience_score` 与边界/情绪触发路由。
-- **工作记忆容量受限**：对应 prompt 中只保留 transcript 窗口，不无限扩展。
+- **工作记忆容量受限**：对应提示词中只保留 `transcript` 窗口，不无限扩展。
 
 > 说明：这里采用的是“工程启发”，不是对脑机制的严格生理建模。
 
@@ -260,11 +260,11 @@
 
 ## 10. 外部资料（用于本设计调研）
 
-- Nature Neuroscience: *Mechanisms of systems memory consolidation during sleep* (2019)  
+- 《自然·神经科学》：睡眠中系统记忆巩固的机制（2019）  
   https://www.nature.com/articles/s41593-019-0467-3
-- Neuron: *Sleep—A brain-state serving systems memory consolidation* (2023)  
+- 《神经元》：睡眠——服务于系统记忆巩固的脑状态（2023）  
   https://www.cell.com/neuron/fulltext/S0896-6273(23)00201-5
-- Annual Review of Neuroscience: *The amygdala modulates the consolidation of memories of emotionally arousing experiences*  
+- 《神经科学年鉴》：杏仁核调节情绪唤醒经历记忆的巩固  
   https://annualreviews.org/content/journals/10.1146/annurev.neuro.27.070203.144157
 
 ---
@@ -275,7 +275,7 @@
 
 ---
 
-## 12. Implementation Checklist v0（文件级落地清单）
+## 12. 实现清单 v0（文件级落地）
 
 本节用于把本文直接转为工程任务；默认目标目录为 `experimental/inty_v2_text_chat_prototype/`。
 
@@ -285,7 +285,7 @@
   - 输出总分 + 分项（`emotion_intensity`、`novelty`、`commitment_signal`、`boundary_signal`、`recurrence`）。
 - [ ] 按 §4.1 默认权重与阈值实现路由（`t1/t2` + 强制优先规则）。
 - [ ] 新增候选构建函数：`build_memory_candidates(...) -> MemoryCandidateEvent`。
-- [ ] 写入 `.inty_v2_salience_queue.jsonl`（append JSONL，不覆盖）。
+- [ ] 写入 `.inty_v2_salience_queue.jsonl`（追加 JSONL，不覆盖）。
 - [ ] 在 L4/L5/L6 重写前增加冲突检测与修复（§4.4）：
   - 冲突项标注 `conflict_reason`。
   - 被否决事实写 `superseded_by` 或 `invalidated_by_boundary=true`。
@@ -303,13 +303,13 @@
   - `SalienceScore`
   - `MemoryCandidateEvent`
   - `ConflictResolutionResult`
-- [ ] 为候选事件 schema 增加可验证字段（§6 必需字段）。
+- [ ] 为候选事件数据结构增加可验证字段（§6 必需字段）。
 - [ ] 保证 JSON 序列化字段稳定（便于日志/审计消费）。
 
 ### 12.3 `prompts.py`
 
 - [ ] 调整注入策略与顺序，确保与 §5 一致：
-  - `SOUL` > `USER` > `MEMORY` > `day summary` > transcript。
+  - `SOUL` > `USER` > `MEMORY` > 日摘要 > `transcript`。
 - [ ] `context_mode != intimate` 时降级注入私密层内容。
 - [ ] 支持“候选优先、原文回退”的记忆输入源选择。
 
@@ -319,7 +319,7 @@
   - `memory_route`
   - `consolidation_cycle`
   - `memory_items_selected_n`
-- [ ] 保持“assistant 落库唯一路径”不变（不得绕开现有约束）。
+- [ ] 保持「助手落库唯一路径」不变（不得绕开现有约束）。
 
 ### 12.5 新增测试（`experimental/inty_v2_text_chat_prototype/tests/`）
 
@@ -335,7 +335,7 @@
 - 期望注入结果。
 - 期望日志字段（最小集合）。
 
-### 12.6 运行与灰度开关（env）
+### 12.6 运行与灰度开关（环境变量）
 
 - [ ] `INTY_V2_PROTO_MEMORY_LAYERING_ENABLED`（总开关）
 - [ ] `INTY_V2_PROTO_SALIENCE_ENABLED`
@@ -349,7 +349,7 @@
 3. 打开冲突守卫（影响 L4/L5/L6）
 4. 打开 SLO 强刷
 
-### 12.7 交付验收（DoD）
+### 12.7 交付验收（完成定义）
 
 - [ ] 在固定回放数据集上，`MEMORY.md` 重复行下降且关键偏好命中率上升。
 - [ ] 冲突场景下不再出现“边界与偏好同时矛盾落盘”。
