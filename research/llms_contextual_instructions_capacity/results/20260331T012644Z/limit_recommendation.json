@@ -1,0 +1,18 @@
+{
+  "<=8": {
+    "recommended_utilization": null,
+    "hard_limit_utilization": null
+  },
+  "<=16": {
+    "recommended_utilization": null,
+    "hard_limit_utilization": null
+  },
+  "<=32": {
+    "recommended_utilization": null,
+    "hard_limit_utilization": null
+  },
+  "<=64": {
+    "recommended_utilization": null,
+    "hard_limit_utilization": null
+  }
+}

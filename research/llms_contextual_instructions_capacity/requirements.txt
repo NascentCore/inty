@@ -1,0 +1,4 @@
+tiktoken
+openai
+python-dotenv
+matplotlib
