@@ -31,12 +31,15 @@ Deliverables:
 - Sign migration manifest and bundle hash on export.
 - Verify signatures on import with DID-to-key resolution.
 - Add key rotation compatibility baseline.
+- Define canonicalization contract (deterministic JSON canonical form and exact signed fields).
+- Define cross-language verification profile (Python/TypeScript reference vectors).
 
 Acceptance:
 
 - Import rejects tampered payload even if counts match.
 - Import rejects invalid signature and unknown signer.
 - Tests cover valid signature, tamper, wrong key, rotated key.
+- Cross-language verifiers produce identical signature verification results on shared fixtures.
 
 ### P0.2 AMCP Lexicon / schema registry (v0.2)
 
@@ -46,14 +49,22 @@ Goal:
 
 Deliverables:
 
+- Define NSID-style namespace strategy for AMCP schemas/endpoints.
 - Define canonical purpose taxonomy.
 - Define canonical quarantine reason codes.
 - Define schema versioning and compatibility policy.
+- Define protocol error namespace and standard error payload shape (`error`, `message`, details).
+- Define Lexicon evolution hard rules:
+  - additive optional fields only
+  - no field rename
+  - no type mutation
+  - breaking changes require new NSID/version namespace
 
 Acceptance:
 
 - Unknown purpose/scope are rejected or quarantined deterministically.
 - Cross-framework adapters produce identical reason codes for same scenario.
+- Schema changes violating evolution hard rules are rejected by CI checks.
 
 ### P0.3 Incremental migration protocol (v0.3)
 
@@ -72,6 +83,26 @@ Acceptance:
 - Replaying the same delta is idempotent.
 - Partial failure can resume from checkpoint without privilege expansion.
 
+### P0.4 Validation mode strategy (v0.3)
+
+Goal:
+
+- Make import validation behavior explicit and interoperable across implementations.
+
+Deliverables:
+
+- Define three validation modes:
+  - `strict-import`: hard fail on unknown schema or unresolved critical refs
+  - `optimistic-stage`: allow staging with quarantine where safe
+  - `strict-activate`: require full policy and signature compliance before activation
+- Define default mode matrix per lifecycle step (`export`, `stage`, `activate`).
+- Add deterministic error codes for mode-specific failures.
+
+Acceptance:
+
+- Same input envelope yields the same allow/quarantine/fail result across implementations under same mode.
+- Activation cannot proceed in `strict-activate` mode with unresolved critical validation errors.
+
 ## P1: Identity and governance hardening
 
 ### P1.1 DID document resolution and key lifecycle
@@ -82,14 +113,20 @@ Goal:
 
 Deliverables:
 
+- Define blessed DID method set for AMCP network profile (initially `did:plc`, constrained `did:web`).
 - DID doc resolver abstraction.
 - Active/previous key tracking and key expiry handling.
 - Verification policy for outdated keys.
+- DID document parsing rules for:
+  - signer key selection (id/fragment and controller binding)
+  - service endpoint extraction and URL constraints
+  - failure taxonomy (`invalid_syntax`, `unsupported_method`, `resolution_failed`, `doc_invalid`)
 
 Acceptance:
 
 - Old key cannot sign new envelope after rotation cutoff.
 - Historical envelope remains verifiable if policy allows.
+- Unsupported DID methods fail deterministically with machine-readable error codes.
 
 ### P1.2 Record linkage and provenance graph
 
@@ -134,12 +171,17 @@ Goal:
 
 Deliverables:
 
+- XRPC-compatible method profile (or strict-equivalent) with NSID-mapped operations.
+- Distinguish read-only query vs mutating procedure semantics.
+- Standard error envelope and status-code mapping.
+- Cursor pagination and replay-safe idempotency keys for sync endpoints.
 - Minimal HTTP profile for stage/activate/receipt endpoints.
 - Standard status machine (`staged`, `activated`, `rejected`, `rolled_back`).
 
 Acceptance:
 
 - Two independent implementations can stage/activate the same envelope.
+- Two independent implementations return equivalent error codes/messages for the same invalid request.
 
 ### P2.2 Policy pack and algorithmic choice
 
