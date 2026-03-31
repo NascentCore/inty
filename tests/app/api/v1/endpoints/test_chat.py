@@ -482,13 +482,15 @@ def _stub_chat_completion_with_empty_llm_response(
 
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(
-            voice_enabled=False,
+            voice_enabled=True,
+            voice_id="google/Zephyr",
             style_prompt=None,
             premium_mode=False,
             language="en",
         )
 
     async def fake_record_usage(*args, **kwargs):
+        captured["record_usage_called"] = True
         return None
 
     async def fake_add_ai_message(
@@ -514,6 +516,14 @@ def _stub_chat_completion_with_empty_llm_response(
 
     async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
         return None
+
+    async def fake_generate_voice(*args, **kwargs):
+        captured["generate_voice_called"] = True
+        return VoiceGenerationResult(
+            gcs_url="gs://test-bucket/voice/202603/voice_test.wav",
+            gcs_http_url="https://storage.googleapis.com/test-bucket/voice/202603/voice_test.wav",
+            duration_seconds=1.23,
+        )
 
     monkeypatch.setattr(
         chat_service,
@@ -571,6 +581,7 @@ def _stub_chat_completion_with_empty_llm_response(
         "try_trigger_surprise_snap",
         fake_try_trigger_surprise_snap,
     )
+    monkeypatch.setattr(chat_v1.voice_service, "generate_voice", fake_generate_voice)
     return captured
 
 
@@ -962,6 +973,8 @@ def test_v1_chat_completions_returns_fallback_when_llm_has_no_choices(
     )
     assert captured["fallback_message"] == chat_v1.EMPTY_LLM_RESPONSE_FALLBACK_MESSAGE
     assert captured["fallback_meta_data"]["fallback_reason"] == "empty_llm_response"
+    assert captured.get("record_usage_called") is not True
+    assert captured.get("generate_voice_called") is not True
 
 
 def test_v1_chat_generate_image_wraps_business_error(
