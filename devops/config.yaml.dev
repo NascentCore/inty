@@ -89,7 +89,7 @@ google_play:
   fallback_tracks: [internal]
   # 当前生产环境版本代码（设置为正数时直接使用，不调用 Google Play API，避免配额消耗）
   # 设置为 0 时从 Google Play API 动态获取
-  current_version_code: 14111
+  current_version_code: 14225
 
 elevenlabs:
   api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
