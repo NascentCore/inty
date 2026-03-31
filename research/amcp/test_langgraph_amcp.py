@@ -83,3 +83,18 @@ def test_langgraph_allows_cross_purpose_with_all_owner_consents() -> None:
     assert result["allowed"] is True
     assert result["route"] == "llm_node"
     assert "allowed:" in result["response"].lower()
+
+
+def test_langgraph_denies_when_memory_id_not_found() -> None:
+    custodian, _ = build_demo_custodian()
+    result = _run_flow(
+        custodian=custodian,
+        runner_did="did:runner:coding-agent-v1",
+        memory_id="missing-memory-id",
+        purpose="coding_assistant",
+    )
+
+    assert result["allowed"] is False
+    assert result["route"] == "consent_request_node"
+    assert result["missing_owner_consents"] == []
+    assert "memory_id=missing-memory-id not found" in result["reason"].lower()

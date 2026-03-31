@@ -112,7 +112,13 @@ class MemoryCustodian:
 
     def evaluate_access(self, request: AccessRequest) -> AccessDecision:
         evaluated_at = utc_now()
-        memory = self.memories[request.memory_id]
+        memory = self.memories.get(request.memory_id)
+        if memory is None:
+            return AccessDecision(
+                allowed=False,
+                reason=f"Denied: memory_id={request.memory_id} not found.",
+                missing_owner_consents=[],
+            )
         if (
             request.requester_runner_did == memory.runner_did
             and request.purpose == memory.original_purpose
