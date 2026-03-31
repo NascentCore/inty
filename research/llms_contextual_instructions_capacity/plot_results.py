@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 从 run_benchmark.py 产出的运行目录中绘制基准曲线。
+默认绘制严格判分曲线；如存在语义判分字段，也会额外绘制语义曲线。
 """
 
 from __future__ import annotations
@@ -64,6 +65,25 @@ def plot_metric_vs_u(
     plt.tight_layout()
     plt.savefig(out_path, dpi=160)
     plt.close()
+
+
+def has_semantic_fields(rows: list[dict[str, str]]) -> bool:
+    if not rows:
+        return False
+    row = rows[0]
+    required = {
+        "semantic_ia_mean",
+        "semantic_ia_ci_low",
+        "semantic_ia_ci_high",
+        "semantic_rsr",
+        "semantic_rsr_ci_low",
+        "semantic_rsr_ci_high",
+        "semantic_effectiveness_mean",
+        "semantic_effectiveness_ci_low",
+        "semantic_effectiveness_ci_high",
+        "semantic_format_error_rate",
+    }
+    return required.issubset(set(row.keys()))
 
 
 def plot_latency_vs_u(
@@ -193,6 +213,36 @@ def main() -> None:
             instruction_count=n,
             out_path=out_dir / f"latency_vs_u_n{n}.png",
         )
+
+        if has_semantic_fields(rows):
+            plot_metric_vs_u(
+                rows=rows,
+                instruction_count=n,
+                metric_key="semantic_ia_mean",
+                metric_label="语义指令准确率（语义 IA）",
+                out_path=out_dir / f"semantic_ia_vs_u_n{n}.png",
+            )
+            plot_metric_vs_u(
+                rows=rows,
+                instruction_count=n,
+                metric_key="semantic_rsr",
+                metric_label="语义整响应成功率（语义 RSR）",
+                out_path=out_dir / f"semantic_rsr_vs_u_n{n}.png",
+            )
+            plot_metric_vs_u(
+                rows=rows,
+                instruction_count=n,
+                metric_key="semantic_effectiveness_mean",
+                metric_label="语义有效性",
+                out_path=out_dir / f"semantic_effectiveness_vs_u_n{n}.png",
+            )
+            plot_metric_vs_u(
+                rows=rows,
+                instruction_count=n,
+                metric_key="semantic_format_error_rate",
+                metric_label="语义格式错误率（剥离后）",
+                out_path=out_dir / f"semantic_format_error_vs_u_n{n}.png",
+            )
 
     plot_u_hard_overview(rows=rows, run_dir=run_dir, out_path=out_dir / "u_hard_by_n.png")
 

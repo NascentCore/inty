@@ -2,9 +2,9 @@
 """
 绘制 google/gemini-2.5-flash-lite 在不同上下文占用率下的指令遵循成功率曲线。
 
-成功率定义：
-- 成功率 = 完成的指令数 / 总指令数
-- 在当前基准产物中，对应 cell_summary.csv 的 ia_mean（Instruction Accuracy）
+支持两种口径：
+- strict: 严格 JSON 解析后的 ia_mean
+- semantic: 先剥离 ```json ... ``` 代码块再解析后的 semantic_ia_mean
 """
 
 from __future__ import annotations
@@ -28,6 +28,12 @@ def parse_args() -> argparse.Namespace:
         default="gemini_success_rate_vs_u.png",
         help="输出图片文件名（保存到 run-dir/plots 下）",
     )
+    parser.add_argument(
+        "--mode",
+        default="semantic",
+        choices=["strict", "semantic"],
+        help="成功率口径：strict=严格 JSON，semantic=剥离代码块后的语义口径",
+    )
     return parser.parse_args()
 
 
@@ -41,12 +47,13 @@ def main() -> None:
     xs: list[float] = []
     ys: list[float] = []
 
+    y_key = "ia_mean" if args.mode == "strict" else "semantic_ia_mean"
     with csv_path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         rows = sorted(reader, key=lambda r: float(r["utilization_ratio"]))
         for row in rows:
             xs.append(float(row["utilization_ratio"]))
-            ys.append(float(row["ia_mean"]))
+            ys.append(float(row[y_key]))
 
     out_dir = run_dir / "plots"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -54,7 +61,8 @@ def main() -> None:
 
     plt.figure(figsize=(8, 5))
     plt.plot(xs, ys, marker="o", linewidth=2)
-    plt.title("Gemini instruction-follow success rate vs context utilization")
+    title_mode = "strict JSON" if args.mode == "strict" else "semantic (code-fence stripped)"
+    plt.title(f"Gemini success rate vs context utilization [{title_mode}]")
     plt.xlabel("Context utilization U")
     plt.ylabel("Success rate (completed instructions / total)")
     plt.ylim(0.0, 1.05)

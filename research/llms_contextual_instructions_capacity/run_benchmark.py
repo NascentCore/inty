@@ -54,6 +54,12 @@ class TrialRow:
     completeness: float
     effectiveness: float
     format_error: bool
+    semantic_ia: float
+    semantic_response_success: bool
+    semantic_schema_valid: bool
+    semantic_completeness: float
+    semantic_effectiveness: float
+    code_fence_stripped: bool
     elapsed_ms: float
     error: str | None
     response_excerpt: str
@@ -74,6 +80,16 @@ class CellSummary:
     effectiveness_mean: float
     effectiveness_ci_low: float
     effectiveness_ci_high: float
+    semantic_ia_mean: float
+    semantic_ia_ci_low: float
+    semantic_ia_ci_high: float
+    semantic_rsr: float
+    semantic_rsr_ci_low: float
+    semantic_rsr_ci_high: float
+    semantic_effectiveness_mean: float
+    semantic_effectiveness_ci_low: float
+    semantic_effectiveness_ci_high: float
+    semantic_format_error_rate: float
     format_error_rate: float
     error_rate: float
     median_latency_ms: float
@@ -242,16 +258,17 @@ def build_prompt(
     return prompt, expected_map, prompt_tokens
 
 
-def evaluate_response(response_text: str, expected_map: dict[str, str]) -> tuple[float, bool, bool, float, bool]:
+def strip_markdown_code_fence(response_text: str) -> tuple[str, bool]:
     stripped = response_text.strip()
-    try:
-        parsed = json.loads(stripped)
-        schema_valid = isinstance(parsed, dict)
-    except json.JSONDecodeError:
-        return 0.0, False, False, 0.0, True
-    if not schema_valid:
-        return 0.0, False, False, 0.0, True
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        if len(lines) >= 3 and lines[-1].strip().startswith("```"):
+            body = "\n".join(lines[1:-1]).strip()
+            return body, True
+    return stripped, False
 
+
+def _score_json_response(parsed: dict[str, Any], expected_map: dict[str, str]) -> tuple[float, bool, bool, float]:
     required_keys = set(expected_map.keys())
     present_keys = set(parsed.keys())
     completeness = len(required_keys & present_keys) / len(required_keys) if required_keys else 1.0
@@ -261,8 +278,72 @@ def evaluate_response(response_text: str, expected_map: dict[str, str]) -> tuple
             correct += 1
     ia = correct / len(required_keys) if required_keys else 1.0
     response_success = (correct == len(required_keys)) and (present_keys == required_keys)
-    format_error = False
-    return ia, response_success, True, completeness, format_error
+    return ia, response_success, True, completeness
+
+
+def evaluate_response(
+    response_text: str,
+    expected_map: dict[str, str],
+) -> tuple[
+    float,
+    bool,
+    bool,
+    float,
+    bool,
+    float,
+    bool,
+    bool,
+    float,
+    bool,
+]:
+    strict_text = response_text.strip()
+    stripped_text, was_code_fenced = strip_markdown_code_fence(response_text)
+
+    strict_ia = 0.0
+    strict_response_success = False
+    strict_schema_valid = False
+    strict_completeness = 0.0
+    strict_format_error = True
+    try:
+        strict_parsed = json.loads(strict_text)
+        if isinstance(strict_parsed, dict):
+            strict_ia, strict_response_success, strict_schema_valid, strict_completeness = _score_json_response(
+                strict_parsed,
+                expected_map,
+            )
+            strict_format_error = False
+    except json.JSONDecodeError:
+        pass
+
+    semantic_ia = 0.0
+    semantic_response_success = False
+    semantic_schema_valid = False
+    semantic_completeness = 0.0
+    semantic_format_error = True
+    try:
+        semantic_parsed = json.loads(stripped_text)
+        if isinstance(semantic_parsed, dict):
+            semantic_ia, semantic_response_success, semantic_schema_valid, semantic_completeness = _score_json_response(
+                semantic_parsed,
+                expected_map,
+            )
+            semantic_format_error = False
+    except json.JSONDecodeError:
+        pass
+
+    return (
+        strict_ia,
+        strict_response_success,
+        strict_schema_valid,
+        strict_completeness,
+        strict_format_error,
+        semantic_ia,
+        semantic_response_success,
+        semantic_schema_valid,
+        semantic_completeness,
+        semantic_format_error,
+        was_code_fenced,
+    )
 
 
 def synthetic_response(expected_map: dict[str, str], utilization_ratio: float, instruction_count: int, profile: str) -> str:
@@ -321,6 +402,10 @@ def summarize_cell(rows: list[TrialRow]) -> CellSummary:
     format_errors = sum(1 for r in rows if r.format_error)
     err_count = sum(1 for r in rows if r.error is not None)
     effectiveness_values = [r.effectiveness for r in rows]
+    semantic_ia_values = [r.semantic_ia for r in rows]
+    semantic_rs_successes = sum(1 for r in rows if r.semantic_response_success)
+    semantic_format_errors = sum(1 for r in rows if not r.semantic_schema_valid)
+    semantic_effectiveness_values = [r.semantic_effectiveness for r in rows]
     ia_mean = statistics.mean(ia_values) if ia_values else 0.0
     ia_successes = sum(1 for r in rows if math.isclose(r.correctness_ia, 1.0))
     ia_ci_low, ia_ci_high = wilson_interval(ia_successes, trials)
@@ -328,6 +413,15 @@ def summarize_cell(rows: list[TrialRow]) -> CellSummary:
     rsr_ci_low, rsr_ci_high = wilson_interval(rs_successes, trials)
     eff_mean = statistics.mean(effectiveness_values) if effectiveness_values else 0.0
     eff_low, eff_high = bootstrap_ci(effectiveness_values)
+    semantic_ia_mean = statistics.mean(semantic_ia_values) if semantic_ia_values else 0.0
+    semantic_ia_successes = sum(1 for r in rows if math.isclose(r.semantic_ia, 1.0))
+    semantic_ia_ci_low, semantic_ia_ci_high = wilson_interval(semantic_ia_successes, trials)
+    semantic_rsr = semantic_rs_successes / trials if trials else 0.0
+    semantic_rsr_ci_low, semantic_rsr_ci_high = wilson_interval(semantic_rs_successes, trials)
+    semantic_eff_mean = (
+        statistics.mean(semantic_effectiveness_values) if semantic_effectiveness_values else 0.0
+    )
+    semantic_eff_low, semantic_eff_high = bootstrap_ci(semantic_effectiveness_values)
     latency_values = [r.elapsed_ms for r in rows]
     return CellSummary(
         utilization_ratio=rows[0].utilization_ratio,
@@ -343,6 +437,16 @@ def summarize_cell(rows: list[TrialRow]) -> CellSummary:
         effectiveness_mean=eff_mean,
         effectiveness_ci_low=eff_low,
         effectiveness_ci_high=eff_high,
+        semantic_ia_mean=semantic_ia_mean,
+        semantic_ia_ci_low=semantic_ia_ci_low,
+        semantic_ia_ci_high=semantic_ia_ci_high,
+        semantic_rsr=semantic_rsr,
+        semantic_rsr_ci_low=semantic_rsr_ci_low,
+        semantic_rsr_ci_high=semantic_rsr_ci_high,
+        semantic_effectiveness_mean=semantic_eff_mean,
+        semantic_effectiveness_ci_low=semantic_eff_low,
+        semantic_effectiveness_ci_high=semantic_eff_high,
+        semantic_format_error_rate=(semantic_format_errors / trials) if trials else 0.0,
         format_error_rate=(format_errors / trials) if trials else 0.0,
         error_rate=(err_count / trials) if trials else 0.0,
         median_latency_ms=statistics.median(latency_values) if latency_values else 0.0,
@@ -432,6 +536,16 @@ def write_cell_summary(path: Path, rows: list[CellSummary]) -> None:
                 "effectiveness_mean",
                 "effectiveness_ci_low",
                 "effectiveness_ci_high",
+                "semantic_ia_mean",
+                "semantic_ia_ci_low",
+                "semantic_ia_ci_high",
+                "semantic_rsr",
+                "semantic_rsr_ci_low",
+                "semantic_rsr_ci_high",
+                "semantic_effectiveness_mean",
+                "semantic_effectiveness_ci_low",
+                "semantic_effectiveness_ci_high",
+                "semantic_format_error_rate",
                 "format_error_rate",
                 "error_rate",
                 "median_latency_ms",
@@ -569,11 +683,32 @@ def main() -> None:
                         response_text = ""
                         error = str(exc)
                     elapsed_ms = (time.perf_counter() - started) * 1000
-                    ia, response_success, schema_valid, completeness, format_error = evaluate_response(
+                    (
+                        strict_ia,
+                        strict_response_success,
+                        strict_schema_valid,
+                        strict_completeness,
+                        strict_format_error,
+                        semantic_ia,
+                        semantic_response_success,
+                        semantic_schema_valid,
+                        semantic_completeness,
+                        semantic_format_error,
+                        code_fence_stripped,
+                    ) = evaluate_response(
                         response_text=response_text,
                         expected_map=expected_map,
                     )
-                    effectiveness = 0.3 * (1.0 if schema_valid else 0.0) + 0.3 * completeness + 0.4 * ia
+                    strict_effectiveness = (
+                        0.3 * (1.0 if strict_schema_valid else 0.0)
+                        + 0.3 * strict_completeness
+                        + 0.4 * strict_ia
+                    )
+                    semantic_effectiveness = (
+                        0.3 * (1.0 if semantic_schema_valid else 0.0)
+                        + 0.3 * semantic_completeness
+                        + 0.4 * semantic_ia
+                    )
                     row = TrialRow(
                         run_id=run_id,
                         model=args.model,
@@ -582,12 +717,18 @@ def main() -> None:
                         placement_profile=profile,
                         trial_index=t,
                         prompt_tokens_estimate=prompt_tokens,
-                        correctness_ia=ia,
-                        response_success=response_success,
-                        schema_valid=schema_valid,
-                        completeness=completeness,
-                        effectiveness=effectiveness,
-                        format_error=format_error,
+                        correctness_ia=strict_ia,
+                        response_success=strict_response_success,
+                        schema_valid=strict_schema_valid,
+                        completeness=strict_completeness,
+                        effectiveness=strict_effectiveness,
+                        format_error=strict_format_error,
+                        semantic_ia=semantic_ia,
+                        semantic_response_success=semantic_response_success,
+                        semantic_schema_valid=semantic_schema_valid,
+                        semantic_completeness=semantic_completeness,
+                        semantic_effectiveness=semantic_effectiveness,
+                        code_fence_stripped=code_fence_stripped,
                         elapsed_ms=elapsed_ms,
                         error=error,
                         response_excerpt=response_text[:500],
