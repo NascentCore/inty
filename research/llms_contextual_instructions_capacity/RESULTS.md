@@ -168,3 +168,57 @@
 
 1. 若要将本曲线转为可执行阈值，建议在相同 `U` 网格下新增 `P=edges` 并将 `trials_per_cell` 提升到 `30`。
 2. 若业务强依赖 JSON 严格解析，建议在后处理阶段增加代码块剥离（```json ... ``` -> 纯 JSON）再复算成功率，以区分“格式问题”与“语义问题”。
+
+## Gemini 生产级补齐实验（uniform+edges，30 次/点，含语义判分）
+
+### 执行范围（按要求）
+
+- 模型：`google/gemini-2.5-flash-lite`
+- 指令数：`N=16`
+- 分布：`uniform + edges`（已补齐）
+- 每个利用率点样本数：`30`（满足 `>=30`）
+- 利用率网格：`U={0.10, 0.25, 0.40, 0.55, 0.70, 0.80, 0.87, 0.93, 0.97}`
+- 运行 ID：`20260331T040009Z`
+
+结果目录：
+
+- `research/llms_contextual_instructions_capacity/results/20260331T040009Z/`
+- 关键图：
+  - 严格成功率：`plots/gemini_success_rate_vs_u_strict.png`
+  - 语义成功率：`plots/gemini_success_rate_vs_u_semantic.png`
+  - 格式风险：`plots/format_error_vs_u_n16.png`
+  - 语义格式风险：`plots/semantic_format_error_vs_u_n16.png`
+
+### 严格判分 vs 语义判分（核心结论）
+
+从 `cell_summary.csv` 可见：
+
+1. **严格判分（不做剥离）**在多个利用率点出现下降，例如：
+   - `U=0.55, uniform`：`ia_mean=0.7333`，`format_error_rate=0.2667`
+   - `U=0.93, uniform`：`ia_mean=0.8000`，`format_error_rate=0.2000`
+2. **语义判分（先剥离 ```json 代码块）**显著提升但并非全表满分：
+   - 大多数单元 `semantic_ia_mean=1.0`
+   - 仍有个别单元因“非 JSON 截断”导致 `semantic_ia_mean=0.9667` 与 `semantic_format_error_rate=0.0333`（如 `U=0.25, edges`）
+3. 失败类型统计显示严格失败主要来自格式：
+   - `全局覆盖或非 JSON: 33`
+   - `键正确但值错误: 0`
+   - `遗漏或不完整: 0`
+
+这说明：在该模型与该任务下，主要风险仍是**输出包装/结构格式**；语义层面整体更稳，但并非 100% 无风险（仍有少量非 JSON 截断）。
+
+### 上限结论（strict / semantic 分离）
+
+- 严格口径（不剥离代码块）：
+  - `strict_limit_recommendation` 给出 `<=16` 桶 `U_hard=0.25`
+  - 该值偏保守，主要由格式错误率阈值触发。
+- 语义口径（剥离代码块后）：
+  - `semantic_limit_recommendation` 同样给出 `<=16` 桶 `U_hard=0.25`
+  - 原因是仍存在少量非 JSON 截断样本，导致语义格式错误率在个别单元超过阈值。
+
+### 落地建议
+
+1. **生产阈值应双轨管理**：
+   - 严格阈值：用于“输出必须原样可解析”的场景；
+   - 语义阈值：用于“可做轻量后处理再消费”的场景。
+2. 若系统允许后处理，建议在进入解析前做代码块剥离，并结合“截断/非 JSON 回退策略”再进行 JSON 解析与业务校验。
+3. 若系统不允许后处理，则应按严格口径设置更保守的 `U` 上限（本次实验下 `<=16` 桶需显著保守）。

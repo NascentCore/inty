@@ -462,6 +462,15 @@ def passes_thresholds(summary: CellSummary, args: argparse.Namespace) -> bool:
     )
 
 
+def passes_thresholds_semantic(summary: CellSummary, args: argparse.Namespace) -> bool:
+    return (
+        summary.semantic_ia_ci_low >= args.target_ia
+        and summary.semantic_rsr_ci_low >= args.target_rsr
+        and summary.semantic_effectiveness_ci_low >= args.target_effectiveness
+        and summary.semantic_format_error_rate <= args.target_format_error_rate
+    )
+
+
 def bucket_for_instruction_count(n: int) -> str:
     if n <= 8:
         return "<=8"
@@ -498,6 +507,46 @@ def compute_limits(summaries: list[CellSummary], args: argparse.Namespace) -> di
             if not uniform or not edges:
                 continue
             ok = passes_thresholds(uniform, args) and passes_thresholds(edges, args)
+            if ok:
+                u_rec = u
+                consecutive_fail = 0
+            else:
+                consecutive_fail += 1
+                if consecutive_fail >= 2 and u_hard is None:
+                    u_hard = u
+        result[bucket] = {
+            "recommended_utilization": u_rec,
+            "hard_limit_utilization": u_hard,
+        }
+    return result
+
+
+def compute_limits_semantic(summaries: list[CellSummary], args: argparse.Namespace) -> dict[str, Any]:
+    by_bucket: dict[str, list[CellSummary]] = {"<=8": [], "<=16": [], "<=32": [], "<=64": []}
+    for row in summaries:
+        by_bucket[bucket_for_instruction_count(row.instruction_count)].append(row)
+
+    result: dict[str, Any] = {}
+    for bucket, rows in by_bucket.items():
+        if not rows:
+            result[bucket] = {"recommended_utilization": None, "hard_limit_utilization": None}
+            continue
+        rows = sorted(rows, key=lambda x: x.utilization_ratio)
+        grouped: dict[float, dict[str, CellSummary]] = {}
+        for row in rows:
+            grouped.setdefault(row.utilization_ratio, {})[row.placement_profile] = row
+
+        u_candidates = sorted(grouped.keys())
+        u_rec: float | None = None
+        u_hard: float | None = None
+        consecutive_fail = 0
+        for u in u_candidates:
+            profile_rows = grouped[u]
+            uniform = profile_rows.get("uniform")
+            edges = profile_rows.get("edges")
+            if not uniform or not edges:
+                continue
+            ok = passes_thresholds_semantic(uniform, args) and passes_thresholds_semantic(edges, args)
             if ok:
                 u_rec = u
                 consecutive_fail = 0
@@ -611,8 +660,13 @@ def write_summary_md(path: Path, payload: dict[str, Any]) -> None:
         f.write(f"- RSR >= {cfg['target_rsr']}\n")
         f.write(f"- 有效性（Effectiveness） >= {cfg['target_effectiveness']}\n")
         f.write(f"- 格式错误率 <= {cfg['target_format_error_rate']}\n\n")
-        f.write("## 上限建议\n\n")
-        for bucket, row in payload["limit_recommendation"].items():
+        f.write("## 严格口径上限建议（strict）\n\n")
+        for bucket, row in payload["strict_limit_recommendation"].items():
+            f.write(
+                f"- {bucket}: U_rec={row['recommended_utilization']}, U_hard={row['hard_limit_utilization']}\n"
+            )
+        f.write("\n## 语义口径上限建议（semantic，先剥离代码块）\n\n")
+        for bucket, row in payload["semantic_limit_recommendation"].items():
             f.write(
                 f"- {bucket}: U_rec={row['recommended_utilization']}, U_hard={row['hard_limit_utilization']}\n"
             )
@@ -738,7 +792,8 @@ def main() -> None:
                 summary = summarize_cell(per_cell_rows)
                 cell_summaries.append(summary)
 
-    limits = compute_limits(cell_summaries, args)
+    strict_limits = compute_limits(cell_summaries, args)
+    semantic_limits = compute_limits_semantic(cell_summaries, args)
 
     payload = {
         "run_id": run_id,
@@ -757,14 +812,17 @@ def main() -> None:
         },
         "trial_count_total": len(trial_rows),
         "cell_count_total": len(cell_summaries),
-        "limit_recommendation": limits,
+        "strict_limit_recommendation": strict_limits,
+        "semantic_limit_recommendation": semantic_limits,
     }
 
     write_trial_results(run_dir / "trial_results.jsonl", trial_rows)
     write_cell_summary(run_dir / "cell_summary.csv", cell_summaries)
     write_failure_taxonomy(run_dir / "failure_taxonomy.md", trial_rows)
     with (run_dir / "limit_recommendation.json").open("w", encoding="utf-8") as f:
-        json.dump(limits, f, ensure_ascii=True, indent=2)
+        json.dump(strict_limits, f, ensure_ascii=True, indent=2)
+    with (run_dir / "semantic_limit_recommendation.json").open("w", encoding="utf-8") as f:
+        json.dump(semantic_limits, f, ensure_ascii=True, indent=2)
     with (run_dir / "summary.json").open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=True, indent=2)
     write_summary_md(run_dir / "summary.md", payload)
@@ -779,6 +837,7 @@ def main() -> None:
     print(f"- {run_dir / 'cell_summary.csv'}")
     print(f"- {run_dir / 'failure_taxonomy.md'}")
     print(f"- {run_dir / 'limit_recommendation.json'}")
+    print(f"- {run_dir / 'semantic_limit_recommendation.json'}")
     print(f"- {run_dir / 'summary.json'}")
     print(f"- {run_dir / 'summary.md'}")
     print(f"- {latest} -> {run_dir.name}")

@@ -119,7 +119,10 @@ def plot_latency_vs_u(
 def plot_u_hard_overview(rows: list[dict[str, str]], run_dir: Path, out_path: Path) -> None:
     with (run_dir / "summary.json").open("r", encoding="utf-8") as f:
         payload = json.load(f)
-    limits: dict[str, dict[str, float | None]] = payload["limit_recommendation"]
+    limits: dict[str, dict[str, float | None]] = payload.get(
+        "strict_limit_recommendation",
+        payload.get("limit_recommendation", {}),
+    )
 
     target_ia = float(payload["config"]["target_ia"])
     target_rsr = float(payload["config"]["target_rsr"])
