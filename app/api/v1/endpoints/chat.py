@@ -63,6 +63,14 @@ router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
 # WebSocket 应用层心跳：由客户端发 ping，服务端仅回 pong；服务端空闲超时关闭连接
 CHAT_WS_IDLE_TIMEOUT_SECONDS = 60
+EMPTY_LLM_RESPONSE_ERROR_MARKERS = (
+    "LLM returned no choices",
+    "LLM returned no choices on retry",
+    "Chat returned no content",
+)
+EMPTY_LLM_RESPONSE_FALLBACK_MESSAGE = (
+    "Sorry, I could not generate a reply just now. Please try again."
+)
 
 
 async def _get_current_user_from_websocket(
@@ -237,6 +245,39 @@ def _normalize_chat_response_content(
     if response_content is None:
         return "", None
     return str(response_content), None
+
+
+def _is_empty_llm_response_error(error: Exception) -> bool:
+    if isinstance(error, ValueError):
+        return any(marker in str(error) for marker in EMPTY_LLM_RESPONSE_ERROR_MARKERS)
+    if isinstance(error, HTTPException):
+        detail = error.detail if isinstance(error.detail, str) else str(error.detail)
+        return error.status_code == 500 and any(
+            marker in detail for marker in EMPTY_LLM_RESPONSE_ERROR_MARKERS
+        )
+    return False
+
+
+async def _persist_empty_llm_response_fallback(
+    *,
+    db: AsyncSession,
+    session_id: str,
+    agent_id: str,
+    user_id: str,
+    error: Exception,
+) -> tuple[str, Optional[List[dict[str, Any]]], Optional[int]]:
+    logger.warning(
+        f"Using fallback response for empty LLM output: "
+        f"agent_id={agent_id}, user_id={user_id}, session_id={session_id}, error={str(error)}"
+    )
+    ai_message_id = await chat_history_service.add_ai_message(
+        db=db,
+        session_id=session_id,
+        message=EMPTY_LLM_RESPONSE_FALLBACK_MESSAGE,
+        agent_id=agent_id,
+        meta_data={"fallback_reason": "empty_llm_response"},
+    )
+    return EMPTY_LLM_RESPONSE_FALLBACK_MESSAGE, None, ai_message_id
 
 
 def _build_chat_response(
@@ -480,6 +521,7 @@ async def agent_chat_completions(
 
         # 获取聊天设置和AI回复
         try:
+            used_fallback_response = False
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
                 chat_settings = await chat_service.get_or_create_chat_settings(
                     db, chat.id, current_user.id, agent_id
@@ -496,32 +538,48 @@ async def agent_chat_completions(
                 logger.debug(
                     f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
-                chat_result = await agent.chat(
-                    user_id=current_user.id,
-                    session_id=session_id,
-                    messages=messages,
-                    chat_settings=chat_settings,
-                    user_time_context=user_time_context,
-                    model_override=model_override,
-                    is_subscribed=is_subscribed,
-                )
-                response_content, ai_message_id = (
-                    (chat_result[0], chat_result[1])
-                    if isinstance(chat_result, tuple)
-                    else (chat_result, None)
-                )
+                try:
+                    chat_result = await agent.chat(
+                        user_id=current_user.id,
+                        session_id=session_id,
+                        messages=messages,
+                        chat_settings=chat_settings,
+                        user_time_context=user_time_context,
+                        model_override=model_override,
+                        is_subscribed=is_subscribed,
+                    )
+                    response_content, ai_message_id = (
+                        (chat_result[0], chat_result[1])
+                        if isinstance(chat_result, tuple)
+                        else (chat_result, None)
+                    )
 
-                if response_content is None:
-                    logger.error(
-                        f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
+                    if response_content is None:
+                        logger.error(
+                            f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
+                        )
+                        raise HTTPException(
+                            status_code=500, detail="Chat returned no content"
+                        )
+                    (
+                        response_text_content,
+                        response_content_parts,
+                    ) = _normalize_chat_response_content(response_content)
+                except (ValueError, HTTPException) as error:
+                    if not _is_empty_llm_response_error(error):
+                        raise
+                    (
+                        response_text_content,
+                        response_content_parts,
+                        ai_message_id,
+                    ) = await _persist_empty_llm_response_fallback(
+                        db=db,
+                        session_id=session_id,
+                        agent_id=agent_id,
+                        user_id=current_user.id,
+                        error=error,
                     )
-                    raise HTTPException(
-                        status_code=500, detail="Chat returned no content"
-                    )
-                (
-                    response_text_content,
-                    response_content_parts,
-                ) = _normalize_chat_response_content(response_content)
+                    used_fallback_response = True
 
             response_preview = (
                 response_text_content[:100]
@@ -532,7 +590,7 @@ async def agent_chat_completions(
             subscription_actions = None
             premium_preview_choice = None
             next_chat_count = used_count + 1
-            if _should_trigger_premium_preview(
+            if not used_fallback_response and _should_trigger_premium_preview(
                 is_subscribed=is_subscribed,
                 next_chat_count=next_chat_count,
             ):
@@ -581,7 +639,11 @@ async def agent_chat_completions(
         audio_duration = None
         try:
             # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
-            if chat_settings.voice_enabled and response_text_content.strip():
+            if used_fallback_response:
+                logger.info(
+                    f"跳过语音生成（fallback response）: user_id={current_user.id}, agent_id={agent_id}"
+                )
+            elif chat_settings.voice_enabled and response_text_content.strip():
                 selected_chat_voice_id = chat_settings.voice_id
                 agent_voice_id = agent_data.get("voice_id")
                 # Voice resolution order for MVP:
@@ -623,18 +685,23 @@ async def agent_chat_completions(
 
         # 记录聊天使用情况
         try:
-            with log_time(f"记录使用情况: user_id={current_user.id}"):
-                await subscription_service.record_usage(
-                    db,
-                    current_user.id,
-                    "chat",
-                    1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_length": len(last_user_text),
-                    },
+            if used_fallback_response:
+                logger.info(
+                    f"跳过聊天用量计费（fallback response）: user_id={current_user.id}, agent_id={agent_id}"
                 )
-            logger.debug("聊天使用情况记录成功")
+            else:
+                with log_time(f"记录使用情况: user_id={current_user.id}"):
+                    await subscription_service.record_usage(
+                        db,
+                        current_user.id,
+                        "chat",
+                        1,
+                        extra_data={
+                            "agent_id": agent_id,
+                            "message_length": len(last_user_text),
+                        },
+                    )
+                logger.debug("聊天使用情况记录成功")
         except Exception as e:
             logger.warning(f"记录聊天使用情况失败: {str(e)}")
 

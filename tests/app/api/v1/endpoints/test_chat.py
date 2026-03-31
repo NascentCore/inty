@@ -456,6 +456,124 @@ def _stub_success_chat_completion_with_multimodal_response(
     )
 
 
+def _stub_chat_completion_with_empty_llm_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> dict:
+    captured: dict = {}
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    class DummyAgent:
+        async def chat(self, *args, **kwargs):
+            raise ValueError("LLM returned no choices")
+
+    async def fake_get_agent(agent_data):
+        return DummyAgent()
+
+    async def fake_check_chat_limit(db, user):
+        return True, 0, 100
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
+        return SimpleNamespace(
+            voice_enabled=False,
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_record_usage(*args, **kwargs):
+        return None
+
+    async def fake_add_ai_message(
+        db, session_id, message, agent_id=None, audio_duration=None, meta_data=None
+    ):
+        captured["fallback_message"] = message
+        captured["fallback_meta_data"] = meta_data
+        return 909
+
+    async def fake_get_ai_message_info_by_id(db, message_id):
+        return {
+            "id": message_id,
+            "meta_data": {"source": "fallback-test"},
+            "timestamp": "2026-03-02T00:00:00Z",
+            "audio_url": None,
+        }
+
+    async def fake_get_latest_user_message_id(db, session_id):
+        return 66
+
+    async def fake_mark_user_push_notifications_as_read(db, user_id):
+        return 0
+
+    async def fake_try_trigger_surprise_snap(db, session_id, user_id, agent_id):
+        return None
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_ai_message",
+        fake_add_ai_message,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_ai_message_info_by_id",
+        fake_get_ai_message_info_by_id,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_user_message_id",
+        fake_get_latest_user_message_id,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "try_trigger_surprise_snap",
+        fake_try_trigger_surprise_snap,
+    )
+    return captured
+
+
 def _stub_generate_chat_image(monkeypatch: pytest.MonkeyPatch):
     async def fake_generate_chat_image(*args, **kwargs):
         return UsageLimitExceeded(
@@ -817,6 +935,33 @@ def test_v1_chat_completions_returns_text_and_image_content_parts(
         message["content_parts"][1]["image_url"]["url"]
         == "https://cdn.example.com/ai-result.webp"
     )
+
+
+def test_v1_chat_completions_returns_fallback_when_llm_has_no_choices(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured = _stub_chat_completion_with_empty_llm_response(monkeypatch)
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+    }
+
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["code"] == 200
+    message = body["data"]["choices"][0]["message"]
+    assert (
+        message["content"]
+        == chat_v1.EMPTY_LLM_RESPONSE_FALLBACK_MESSAGE
+    )
+    assert captured["fallback_message"] == chat_v1.EMPTY_LLM_RESPONSE_FALLBACK_MESSAGE
+    assert captured["fallback_meta_data"]["fallback_reason"] == "empty_llm_response"
 
 
 def test_v1_chat_generate_image_wraps_business_error(
