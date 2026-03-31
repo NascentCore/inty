@@ -1,0 +1,5 @@
+# Brain-inspired memory summarizer — minimal deps for this folder only.
+# Stub benchmark (main.py run): stdlib only.
+# Live API (main.py run --live-llm): requires openai + OPENROUTER_API_KEY or OPENAI_API_KEY.
+
+openai>=1.40.0,<2

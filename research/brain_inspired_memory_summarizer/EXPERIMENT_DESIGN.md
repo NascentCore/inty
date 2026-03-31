@@ -49,6 +49,7 @@ Validate whether a brain-inspired layered-memory agent can:
 
 ## Execution
 
+- Install live-LLM dependency (optional): `pip install -r research/brain_inspired_memory_summarizer/requirements.txt`
 - Run experiment (deterministic stubs, no API):
   - `python3 research/brain_inspired_memory_summarizer/main.py run`
 - Run experiment (**real model**, needs `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, optional `INTY_MEMORY_EXTRACTOR_MODEL`):
