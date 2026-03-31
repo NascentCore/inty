@@ -200,10 +200,19 @@ def activate_migration_staging_v1(
     staging: MigrationStagingV1,
     target_custodian: MemoryCustodian,
 ) -> ImportReceiptV1:
+    existing_memory_ids = set(target_custodian.memories.keys())
+    existing_grant_ids = {grant.grant_id for grant in target_custodian.grants}
+
     for memory in staging.accepted_memories:
+        if memory.memory_id in existing_memory_ids:
+            continue
         target_custodian.add_memory(memory)
+        existing_memory_ids.add(memory.memory_id)
     for grant in staging.accepted_grants:
+        if grant.grant_id in existing_grant_ids:
+            continue
         target_custodian.grant(grant)
+        existing_grant_ids.add(grant.grant_id)
 
     activated = staging.receipt.model_copy(
         update={"status": "activated", "imported_at": utc_now()}
