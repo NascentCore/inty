@@ -110,6 +110,63 @@ CLI commands:
 - `self-test`: executes assertions for policy behavior
 - `export-demo --output ...`: exports JSON bundle
 
+## Framework integration architecture (LangGraph + PydanticAI)
+
+To integrate AMCP with popular agent frameworks while keeping policy deterministic and auditable,
+use a **port-adapter architecture**:
+
+### Layer 1 — AMCP Core (framework-agnostic)
+
+File: `research/amcp/core.py`
+
+- owns canonical models: `MemoryRecord`, `ConsentGrant`, `AccessRequest`, `AccessDecision`
+- owns policy engine: `MemoryCustodian.evaluate_access()`
+- no framework imports
+
+### Layer 2 — Adapter Ports
+
+File: `research/amcp/adapters.py`
+
+- defines framework-facing dependency carrier (`PydanticAIDeps`)
+- converts framework tool calls into `AccessRequest`
+- maps policy deny to framework-native control flow (for pydantic-ai, raise `ModelRetry`)
+
+### Layer 3 — Runtime adapters
+
+- **PydanticAI adapter** (implemented): `create_pydantic_ai_amcp_agent()`
+  - exposes `read_memory_with_amcp` tool
+  - always runs policy check before memory read
+  - records access attempts for audit
+- **LangGraph adapter** (design contract): `langgraph_amcp_node_architecture_note()`
+  - node split:
+    - `policy_check_node`
+    - `llm_node` (allowed path)
+    - `consent_request_node` (denied path)
+  - edge rule: denied -> consent node, allowed -> llm node
+
+### Why this works
+
+- AMCP policy remains single source of truth.
+- Framework migration only changes adapter layer, not policy semantics.
+- Audit trace is consistent across frameworks.
+
+## PydanticAI tests
+
+File: `research/amcp/test_pydanticai_amcp.py`
+
+Covered cases:
+
+1. original purpose read is allowed
+2. cross-purpose read without consent is denied
+3. cross-purpose read with all co-owner consents is allowed
+4. expired grant cannot be bypassed with backdated request metadata
+
+Run:
+
+```bash
+research/amcp/.venv/bin/python -m pytest -q research/amcp/test_pydanticai_amcp.py
+```
+
 ## Demo scenarios covered
 
 1. Original purpose access by same runner => **allow**

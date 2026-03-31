@@ -1,3 +1,5 @@
 cyclopts
 loguru
 pydantic
+pydantic-ai
+pytest
