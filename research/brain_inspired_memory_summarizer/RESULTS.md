@@ -9,6 +9,8 @@ cd research/brain_inspired_memory_summarizer
 python3 main.py run
 ```
 
+Logs (progress, per-turn ingest, QA lines, LLM timing when using `--live-llm`) go to **stderr** by default. Use `-v` for more detail, `-q` for almost silent. Pipe JSON only: `python3 main.py run 2>/dev/null` or `2>run.log`.
+
 **Real API (verify model capability):** set `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, then:
 
 ```bash

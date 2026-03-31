@@ -2,10 +2,35 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import sys
+import time
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable
+
+_LOG = logging.getLogger("brain_memory_exp")
+
+
+def configure_logging(*, verbose: bool) -> None:
+    """Progress and LLM traces go to stderr; final JSON metrics stay on stdout."""
+    level = logging.DEBUG if verbose else logging.INFO
+    root = logging.getLogger()
+    for h in root.handlers[:]:
+        root.removeHandler(h)
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    root.addHandler(handler)
+    root.setLevel(level)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("openai").setLevel(logging.WARNING)
 
 try:
     from .extractor import (
@@ -443,7 +468,12 @@ class LayeredMemoryAgent:
         return len(self.semantic_memory)
 
 
-def evaluate_agent(agent: NaiveWindowAgent | LayeredMemoryAgent, episodes: list[Episode]) -> EvaluationMetrics:
+def evaluate_agent(
+    agent: NaiveWindowAgent | LayeredMemoryAgent,
+    episodes: list[Episode],
+    *,
+    arm_name: str = "agent",
+) -> EvaluationMetrics:
     total_questions = 0
     correct = 0
     total_context_chars = 0
@@ -451,16 +481,50 @@ def evaluate_agent(agent: NaiveWindowAgent | LayeredMemoryAgent, episodes: list[
     max_memory_items = 0
 
     for ep in episodes:
-        for turn in ep.user_turns:
+        _LOG.info(
+            "[%s] episode=%s ingest %d user turns",
+            arm_name,
+            ep.episode_id,
+            len(ep.user_turns),
+        )
+        t0 = time.perf_counter()
+        for i, turn in enumerate(ep.user_turns, start=1):
+            preview = turn if len(turn) <= 80 else turn[:77] + "..."
+            _LOG.info(
+                "[%s] episode=%s ingest turn %d/%d preview=%r",
+                arm_name,
+                ep.episode_id,
+                i,
+                len(ep.user_turns),
+                preview,
+            )
             agent.ingest_user_turn(turn)
+        _LOG.info(
+            "[%s] episode=%s ingest done elapsed_s=%.2f ltm_keys=%d",
+            arm_name,
+            ep.episode_id,
+            time.perf_counter() - t0,
+            getattr(agent, "memory_item_count", 0),
+        )
 
         for qa in ep.qa:
             answer, chars, lines = agent.answer(qa.key)
             total_questions += 1
             total_context_chars += chars
             total_context_lines += lines
-            if answer == qa.expected:
+            ok = answer == qa.expected
+            if ok:
                 correct += 1
+            _LOG.info(
+                "[%s] QA key=%s answer=%r expected=%r match=%s context_chars=%d context_lines=%d",
+                arm_name,
+                qa.key,
+                answer,
+                qa.expected,
+                ok,
+                chars,
+                lines,
+            )
 
         max_memory_items = max(max_memory_items, agent.memory_item_count)
 
@@ -482,6 +546,12 @@ def evaluate_agent(agent: NaiveWindowAgent | LayeredMemoryAgent, episodes: list[
 
 def run_experiment(*, use_live_llm: bool = False) -> dict[str, float]:
     episodes = build_dataset()
+    _LOG.info(
+        "run_experiment start episodes=%d use_live_llm=%s",
+        len(episodes),
+        use_live_llm,
+    )
+    t_all = time.perf_counter()
     if use_live_llm:
         slot_fn = build_live_slot_extract_fn()
         route_call = build_live_route_llm_call()
@@ -491,10 +561,14 @@ def run_experiment(*, use_live_llm: bool = False) -> dict[str, float]:
         route_call = build_benchmark_route_llm_call()
         episodic_call = build_benchmark_episodic_llm_call()
     baseline_small = evaluate_agent(
-        NaiveWindowAgent(window_size=2, llm_extract_fn=slot_fn), episodes
+        NaiveWindowAgent(window_size=2, llm_extract_fn=slot_fn),
+        episodes,
+        arm_name="baseline_small_window",
     )
     baseline_large = evaluate_agent(
-        NaiveWindowAgent(window_size=99, llm_extract_fn=slot_fn), episodes
+        NaiveWindowAgent(window_size=99, llm_extract_fn=slot_fn),
+        episodes,
+        arm_name="baseline_large_window",
     )
     layered = evaluate_agent(
         LayeredMemoryAgent(
@@ -504,8 +578,14 @@ def run_experiment(*, use_live_llm: bool = False) -> dict[str, float]:
             episodic_llm_call=episodic_call,
         ),
         episodes,
+        arm_name="layered_memory",
     )
 
+    _LOG.info(
+        "run_experiment done elapsed_s=%.2f layered_accuracy=%.3f",
+        time.perf_counter() - t_all,
+        layered.accuracy,
+    )
     return {
         "baseline_small_accuracy": baseline_small.accuracy,
         "baseline_large_accuracy": baseline_large.accuracy,
@@ -663,6 +743,10 @@ def build_full_experiment_artifact(
     use_live_llm: bool = False,
 ) -> dict[str, Any]:
     episodes = build_dataset()
+    _LOG.info(
+        "build_full_experiment_artifact: re-running metrics (duplicate work) use_live_llm=%s",
+        use_live_llm,
+    )
     metrics = run_experiment(use_live_llm=use_live_llm)
     if use_live_llm:
         slot_fn = build_live_slot_extract_fn()
@@ -674,16 +758,16 @@ def build_full_experiment_artifact(
         route_call = build_benchmark_route_llm_call()
         episodic_call = build_benchmark_episodic_llm_call()
         extraction_label = "llm_only_benchmark_stubs"
-    traces = {
-        ep.episode_id: build_extraction_trace(
+    traces: dict[str, list[dict[str, Any]]] = {}
+    for ep in episodes:
+        _LOG.info("build_extraction_trace episode=%s turns=%d", ep.episode_id, len(ep.user_turns))
+        traces[ep.episode_id] = build_extraction_trace(
             ep,
             window_size=window_size,
             slot_llm_extract_fn=slot_fn,
             route_llm_call=route_call,
             episodic_llm_call=episodic_call,
         )
-        for ep in episodes
-    }
     return {
         "metrics": metrics,
         "settings": {
@@ -692,10 +776,15 @@ def build_full_experiment_artifact(
             "use_live_llm": use_live_llm,
         },
         "extraction_traces_by_episode": traces,
-        "qa_per_question": build_qa_per_question_rows(
-            episodes, use_live_llm=use_live_llm
+        "qa_per_question": _log_qa_build(
+            build_qa_per_question_rows(episodes, use_live_llm=use_live_llm)
         ),
     }
+
+
+def _log_qa_build(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    _LOG.info("build_qa_per_question_rows done rows=%d", len(rows))
+    return rows
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -722,6 +811,18 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="call real OpenAI/OpenRouter API (needs OPENROUTER_API_KEY or OPENAI_API_KEY); slow, non-deterministic",
     )
+    run_cmd.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="DEBUG on stderr (includes LLM user_preview); default is INFO progress on stderr",
+    )
+    run_cmd.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="only WARNING+ on stderr (minimal noise; final JSON still on stdout)",
+    )
     return parser
 
 
@@ -729,12 +830,21 @@ def main() -> int:
     args = _build_parser().parse_args()
     if args.command != "run":
         raise ValueError(f"unsupported command: {args.command}")
+    if getattr(args, "quiet", False) and getattr(args, "verbose", False):
+        raise ValueError("use only one of --quiet and --verbose")
+    if getattr(args, "quiet", False):
+        configure_logging(verbose=False)
+        logging.getLogger().setLevel(logging.WARNING)
+    else:
+        configure_logging(verbose=bool(getattr(args, "verbose", False)))
     live = bool(getattr(args, "live_llm", False))
+    _LOG.info("main run live_llm=%s", live)
     result = run_experiment(use_live_llm=live)
     out_path = args.out
     if live and args.out == Path(__file__).resolve().parent / "experiment_results.json":
         out_path = Path(__file__).resolve().parent / "experiment_results_live.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _LOG.info("wrote metrics -> %s", out_path)
     full_out = args.full_out
     if full_out is None:
         full_out = (
@@ -746,6 +856,7 @@ def main() -> int:
     full_out.write_text(
         json.dumps(full, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    _LOG.info("wrote full artifact -> %s", full_out)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

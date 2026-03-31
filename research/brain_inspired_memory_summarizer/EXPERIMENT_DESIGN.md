@@ -54,6 +54,7 @@ Validate whether a brain-inspired layered-memory agent can:
   - `python3 research/brain_inspired_memory_summarizer/main.py run`
 - Run experiment (**real model**, needs `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, optional `INTY_MEMORY_EXTRACTOR_MODEL`):
   - `python3 research/brain_inspired_memory_summarizer/main.py run --live-llm`
+  - Progress logs go to **stderr** (INFO by default; `-v` / `--verbose` for DEBUG including LLM user preview; `-q` for WARNING only). Final metrics JSON is still printed to **stdout**.
   - Writes `experiment_results_live.json` and `experiment_full_live.json` by default (many API calls; non-deterministic).
 - Run tests:
   - `python3 -m unittest research/brain_inspired_memory_summarizer/test_main.py -v`

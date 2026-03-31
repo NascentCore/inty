@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_KEYS = {
     "preferred_name",
@@ -221,10 +225,12 @@ def _get_llm_client_and_model() -> tuple[object, str]:
     if openrouter_key:
         client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=openrouter_key)
         model = os.getenv("INTY_MEMORY_EXTRACTOR_MODEL", "openai/gpt-4o-mini")
+        logger.info("LLM backend=OpenRouter model=%s", model)
         return client, model
     if openai_key:
         client = OpenAI(api_key=openai_key)
         model = os.getenv("INTY_MEMORY_EXTRACTOR_MODEL", "gpt-4o-mini")
+        logger.info("LLM backend=OpenAI model=%s", model)
         return client, model
     raise ValueError(
         "No API key found for LLM extractor; set OPENROUTER_API_KEY or OPENAI_API_KEY"
@@ -237,14 +243,24 @@ def _llm_json_completion(
     system_prompt: str,
     user_prompt: str,
     json_schema: dict[str, object],
+    *,
+    operation: str = "json_schema_completion",
 ) -> str:
     from openai import BadRequestError
 
+    logger.info("LLM %s start model=%s", operation, model)
+    logger.debug(
+        "LLM %s user_preview=%r",
+        operation,
+        user_prompt if len(user_prompt) <= 200 else user_prompt[:200] + "...",
+    )
+    t0 = time.perf_counter()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
     create = getattr(client, "chat").completions.create
+    used_fallback = False
     try:
         resp = create(
             model=model,
@@ -256,6 +272,7 @@ def _llm_json_completion(
             temperature=0.0,
         )
     except BadRequestError:
+        used_fallback = True
         resp = create(
             model=model,
             messages=messages,
@@ -270,7 +287,17 @@ def _llm_json_completion(
     if msg is None:
         raise ValueError("LLM extractor returned no message in first choice")
     content = getattr(msg, "content", None) or "{}"
-    return _strip_markdown_json_fences(content)
+    out = _strip_markdown_json_fences(content)
+    elapsed = time.perf_counter() - t0
+    logger.info(
+        "LLM %s done model=%s response_chars=%d elapsed_s=%.2f fallback_json_object=%s",
+        operation,
+        model,
+        len(out),
+        elapsed,
+        used_fallback,
+    )
+    return out
 
 
 def _llm_json_object_completion(
@@ -278,8 +305,17 @@ def _llm_json_object_completion(
     model: str,
     system_prompt: str,
     user_prompt: str,
+    *,
+    operation: str = "json_object_completion",
 ) -> str:
     """Single completion with response_format=json_object (broad provider support for live runs)."""
+    logger.info("LLM %s start model=%s", operation, model)
+    logger.debug(
+        "LLM %s user_preview=%r",
+        operation,
+        user_prompt if len(user_prompt) <= 200 else user_prompt[:200] + "...",
+    )
+    t0 = time.perf_counter()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -299,7 +335,16 @@ def _llm_json_object_completion(
     if msg is None:
         raise ValueError("LLM extractor returned no message in first choice")
     content = getattr(msg, "content", None) or "{}"
-    return _strip_markdown_json_fences(content)
+    out = _strip_markdown_json_fences(content)
+    elapsed = time.perf_counter() - t0
+    logger.info(
+        "LLM %s done model=%s response_chars=%d elapsed_s=%.2f",
+        operation,
+        model,
+        len(out),
+        elapsed,
+    )
+    return out
 
 
 def parse_route_memory_json(content: str) -> frozenset[MemoryCategory]:
@@ -331,6 +376,7 @@ def route_memory_categories_llm_default(text: str) -> frozenset[MemoryCategory]:
         ROUTE_MEMORY_SYSTEM_PROMPT,
         f"Utterance:\n{text}",
         _LLM_ROUTE_SCHEMA,
+        operation="route",
     )
     return parse_route_memory_json(content)
 
@@ -402,6 +448,7 @@ def extract_semantic_candidates_llm_default(text: str, turn_idx: int) -> list[Sl
         SEMANTIC_MEMORY_SYSTEM_PROMPT,
         f"Utterance:\n{text}",
         _LLM_SEMANTIC_MEMORY_SCHEMA,
+        operation="semantic_slots",
     )
     return _parse_slot_candidates_json(content, turn_idx, SEMANTIC_ALLOWED_KEYS)
 
@@ -414,6 +461,7 @@ def extract_self_schema_candidates_llm_default(text: str, turn_idx: int) -> list
         SELF_SCHEMA_SYSTEM_PROMPT,
         f"Utterance:\n{text}",
         _LLM_SELF_SCHEMA_MEMORY_SCHEMA,
+        operation="self_schema_slots",
     )
     return _parse_slot_candidates_json(content, turn_idx, SELF_SCHEMA_ALLOWED_KEYS)
 
@@ -426,6 +474,7 @@ def extract_episodic_events_llm_default(text: str, turn_idx: int) -> list[Episod
         EPISODIC_MEMORY_SYSTEM_PROMPT,
         f"Utterance:\n{text}",
         _LLM_EPISODIC_SCHEMA,
+        operation="episodic_events",
     )
     data = json.loads(content)
     raw: list[object]
@@ -677,7 +726,11 @@ def build_live_slot_extract_fn() -> LLMExtractFn:
             "Use empty candidates or [] if nothing applies."
         )
         sem_raw = _llm_json_object_completion(
-            client, model, SEMANTIC_MEMORY_SYSTEM_PROMPT, sem_user
+            client,
+            model,
+            SEMANTIC_MEMORY_SYSTEM_PROMPT,
+            sem_user,
+            operation="live_semantic_slots",
         )
         semantic = _parse_slot_candidates_json(sem_raw, turn_idx, SEMANTIC_ALLOWED_KEYS)
         ss_user = (
@@ -688,7 +741,11 @@ def build_live_slot_extract_fn() -> LLMExtractFn:
             "Use empty candidates or [] if nothing applies."
         )
         ss_raw = _llm_json_object_completion(
-            client, model, SELF_SCHEMA_SYSTEM_PROMPT, ss_user
+            client,
+            model,
+            SELF_SCHEMA_SYSTEM_PROMPT,
+            ss_user,
+            operation="live_self_schema_slots",
         )
         self_schema = _parse_slot_candidates_json(
             ss_raw, turn_idx, SELF_SCHEMA_ALLOWED_KEYS
@@ -709,7 +766,7 @@ def build_live_route_llm_call() -> LLMCallFn:
             "Include every subsystem that should encode this turn. Use [] if none (besides implicit working memory)."
         )
         return _llm_json_object_completion(
-            client, model, ROUTE_MEMORY_SYSTEM_PROMPT, user
+            client, model, ROUTE_MEMORY_SYSTEM_PROMPT, user, operation="live_route"
         )
 
     return route
@@ -726,7 +783,11 @@ def build_live_episodic_llm_call() -> EpisodicLLMCallFn:
             "Use {\"events\":[]} if no episodic content."
         )
         return _llm_json_object_completion(
-            client, model, EPISODIC_MEMORY_SYSTEM_PROMPT, user
+            client,
+            model,
+            EPISODIC_MEMORY_SYSTEM_PROMPT,
+            user,
+            operation="live_episodic",
         )
 
     return episodic
