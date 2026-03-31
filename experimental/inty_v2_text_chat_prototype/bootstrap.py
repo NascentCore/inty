@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from .file_store import write_text
+from .jsonl_db_store import flush_jsonl_db_store, shutdown_jsonl_db_store
 from .memory_store_registry import get_memory_store, shutdown_memory_store
 from .paths import WorkspacePaths
 
@@ -63,3 +64,5 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
         store.flush_now(timeout_s=5.0)
     finally:
         shutdown_memory_store(root, timeout_s=5.0)
+        flush_jsonl_db_store(timeout_s=5.0)
+        shutdown_jsonl_db_store(timeout_s=5.0)

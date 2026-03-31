@@ -21,7 +21,7 @@ from app.core.agentic_kernel.tools.runtime import (
 )
 
 from .client import get_client_dual_llm_tool
-from .file_store import append_jsonl
+from .jsonl_db_store import append_jsonl_with_db
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str, utc_iso_ts
 from .workspace_init_tools import (
@@ -245,7 +245,7 @@ def _append_background_transcript_assistant(
     reply_to: str,
     trace_id: str,
 ) -> None:
-    append_jsonl(
+    append_jsonl_with_db(
         transcript_path,
         {
             "role": "assistant",
@@ -269,7 +269,7 @@ def _append_background_log(
     tool_calls_count: int,
 ) -> None:
     path = workspace_root / "tool_background.jsonl"
-    append_jsonl(
+    append_jsonl_with_db(
         path,
         {
             "kind": "tool_background_done",

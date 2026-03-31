@@ -7,6 +7,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from .jsonl_db_store import append_jsonl_with_db
 from .prompts import SYSTEM_PROMPT_SEP, system_prompt_security_prefix
 
 _TRACE_LOCK = threading.Lock()
@@ -182,11 +183,8 @@ def emit_trace(
     }
     if trace_id is not None and trace_id.strip():
         row["trace_id"] = trace_id
-    line = json.dumps(row, ensure_ascii=False) + "\n"
     with _TRACE_LOCK:
         path = _trace_file_path
         if path is None:
             return
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(line)
-            f.flush()
+        append_jsonl_with_db(path, row)

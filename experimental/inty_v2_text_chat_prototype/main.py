@@ -57,6 +57,10 @@ from experimental.inty_v2_text_chat_prototype.memory_store_registry import (
     flush_memory_store,
     shutdown_memory_store,
 )
+from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
+    flush_jsonl_db_store,
+    shutdown_jsonl_db_store,
+)
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
@@ -115,7 +119,9 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
 
 def _flush_and_shutdown_memory_store(root: Path) -> None:
     flush_memory_store(root, timeout_s=5.0)
+    flush_jsonl_db_store(timeout_s=5.0)
     shutdown_memory_store(root, timeout_s=5.0)
+    shutdown_jsonl_db_store(timeout_s=5.0)
 
 
 def _use_posix_stdin_pump() -> bool:

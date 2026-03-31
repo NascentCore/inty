@@ -28,7 +28,7 @@ from .client import (
     get_client_dual_llm_tool,
     tool_model,
 )
-from .file_store import append_jsonl
+from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
 from .models import (
@@ -295,9 +295,9 @@ def _persist_turn_rows(
         user_row["heartbeat"] = True
     if trace_id is not None and trace_id.strip():
         user_row["trace_id"] = trace_id
-    append_jsonl(paths.transcript, user_row)
+    append_jsonl_with_db(paths.transcript, user_row)
     assistant_msg_uuid = str(uuid.uuid4())
-    append_jsonl(
+    append_jsonl_with_db(
         paths.transcript,
         {
             "role": "assistant",
