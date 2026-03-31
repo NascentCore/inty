@@ -299,7 +299,9 @@ class AgentConfig:
     sub_user_chat_image_gemini_fallback_model: str = "gemini-2.5-flash-image"
     # 消息生图选用 models_catalog「NewAPI Nano Banana 2」时的网关根地址；/v1beta/models/...；仅 origin，勿带 /v1beta
     newapi_gemini_base_url: Optional[str] = None
-    newapi_gemini_bearer_token: Optional[str] = None  # 或使用环境变量 NEWAPI_GEMINI_BEARER_TOKEN
+    newapi_gemini_bearer_token: Optional[str] = (
+        None  # 或使用环境变量 NEWAPI_GEMINI_BEARER_TOKEN
+    )
     # Vertex AI 区域，用于 get_genai_client（消息生图、记忆抽取等）
     # 设为 "global" 可改善 gemini-3-pro-image-preview 等 Preview 模型的可用性
     vertex_ai_location: str = "us-central1"
