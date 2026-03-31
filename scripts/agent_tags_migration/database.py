@@ -12,10 +12,7 @@ from contextlib import asynccontextmanager
 import yaml
 import asyncpg
 
-try:
-    from .models import DatabaseConfig, Agent, AppConfig
-except ImportError:
-    from models import DatabaseConfig, Agent, AppConfig
+from .models import DatabaseConfig, Agent, AppConfig
 
 
 class DatabaseManager:

@@ -58,15 +58,11 @@ def convert_video_to_animated_image(
                 temp_video.write(video_data)
             else:
                 # 对于 HTTP URL，使用 requests 下载
-                try:
-                    import requests
+                import requests
 
-                    response = requests.get(video_url, timeout=60)
-                    response.raise_for_status()
-                    temp_video.write(response.content)
-                except ImportError:
-                    logger.error("requests 库未安装，无法下载 HTTP URL 的视频")
-                    raise RuntimeError("requests library is not installed")
+                response = requests.get(video_url, timeout=60)
+                response.raise_for_status()
+                temp_video.write(response.content)
 
             temp_video.flush()
 

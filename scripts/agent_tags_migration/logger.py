@@ -10,13 +10,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-try:
-    from colorama import init, Fore, Style
+from colorama import Fore, Style, init
 
-    init(autoreset=True)
-    COLORAMA_AVAILABLE = True
-except ImportError:
-    COLORAMA_AVAILABLE = False
+init(autoreset=True)
+COLORAMA_AVAILABLE = True
 
 
 class ColoredFormatter(logging.Formatter):

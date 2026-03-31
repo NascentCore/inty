@@ -13,12 +13,7 @@ import yaml
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-try:
-    from openai import AsyncOpenAI
-except ImportError as e:
-    print(f"❌ 依赖缺失: {e}")
-    print("请安装必要的依赖: pip install openai")
-    sys.exit(1)
+from openai import AsyncOpenAI
 
 
 # 在这里定义要发送的消息列表

@@ -109,9 +109,6 @@ async def generate_preview_for_voice(
                 f"音色 '{voice_id}' WAV 转 MP3 成功，"
                 f"转换后大小: {len(audio_bytes)} bytes"
             )
-        except ImportError:
-            logger.warning("pydub 未安装，将直接上传 WAV 格式（浏览器兼容性可能受限）")
-            content_type = "audio/wav"
         except Exception as e:
             logger.warning(f"WAV 转 MP3 失败: {e}，将直接上传 WAV 格式")
             content_type = "audio/wav"

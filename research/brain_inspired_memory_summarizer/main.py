@@ -32,40 +32,22 @@ def configure_logging(*, verbose: bool) -> None:
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("openai").setLevel(logging.WARNING)
 
-try:
-    from .extractor import (
-        EpisodicEvent,
-        MemoryCategory,
-        SlotCandidate,
-        build_live_episodic_llm_call,
-        build_live_route_llm_call,
-        build_live_slot_extract_fn,
-        extract_by_memory_category,
-        extract_candidates,
-        extract_episodic_events_llm,
-        is_invalid_preferred_name_against_boundary,
-        is_more_reliable_name_candidate,
-        llm_extract_memory_slots,
-        merge_slot_candidates,
-        route_memory_categories_llm,
-    )
-except ImportError:  # script mode (python path/to/main.py)
-    from extractor import (  # type: ignore
-        EpisodicEvent,
-        MemoryCategory,
-        SlotCandidate,
-        build_live_episodic_llm_call,
-        build_live_route_llm_call,
-        build_live_slot_extract_fn,
-        extract_by_memory_category,
-        extract_candidates,
-        extract_episodic_events_llm,
-        is_invalid_preferred_name_against_boundary,
-        is_more_reliable_name_candidate,
-        llm_extract_memory_slots,
-        merge_slot_candidates,
-        route_memory_categories_llm,
-    )
+from .extractor import (
+    EpisodicEvent,
+    MemoryCategory,
+    SlotCandidate,
+    build_live_episodic_llm_call,
+    build_live_route_llm_call,
+    build_live_slot_extract_fn,
+    extract_by_memory_category,
+    extract_candidates,
+    extract_episodic_events_llm,
+    is_invalid_preferred_name_against_boundary,
+    is_more_reliable_name_candidate,
+    llm_extract_memory_slots,
+    merge_slot_candidates,
+    route_memory_categories_llm,
+)
 
 _UNKNOWN = "不知道"
 

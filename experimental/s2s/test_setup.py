@@ -13,29 +13,14 @@ def test_imports():
     """Test if all required packages can be imported."""
     print("🔍 Testing imports...")
 
-    try:
-        import openai  # noqa: F401
+    import openai  # noqa: F401
+    print("✅ openai - OK")
 
-        print("✅ openai - OK")
-    except ImportError:
-        print("❌ openai - NOT FOUND")
-        return False
+    import sounddevice  # noqa: F401
+    print("✅ sounddevice - OK")
 
-    try:
-        import sounddevice  # noqa: F401
-
-        print("✅ sounddevice - OK")
-    except ImportError:
-        print("❌ sounddevice - NOT FOUND")
-        return False
-
-    try:
-        import numpy  # noqa: F401
-
-        print("✅ numpy - OK")
-    except ImportError:
-        print("❌ numpy - NOT FOUND")
-        return False
+    import numpy  # noqa: F401
+    print("✅ numpy - OK")
 
     return True
 

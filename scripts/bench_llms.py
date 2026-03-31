@@ -134,12 +134,7 @@ def _convert_messages_to_google_genai(
     messages: list[dict[str, str]],
 ) -> list[Any]:
     """将 OpenAI 格式的 messages 转换为 Google GenAI 的 types.Content 列表"""
-    try:
-        from google.genai import types
-    except ImportError as e:
-        raise RuntimeError(
-            "未安装 google-genai SDK。请先安装：pip install -r scripts/requirements.txt"
-        ) from e
+    from google.genai import types
 
     contents: list[types.Content] = []
     system_parts: list[str] = []
@@ -210,12 +205,7 @@ async def _measure_google_genai_times(
     timeout_s: float,
 ) -> tuple[float, float]:
     """测量 Google GenAI 的 TTFT 和 TTL"""
-    try:
-        from google.genai import types
-    except ImportError as e:
-        raise RuntimeError(
-            "未安装 google-genai SDK。请先安装：pip install -r scripts/requirements.txt"
-        ) from e
+    from google.genai import types
 
     start = _now_s()
     first: float | None = None
@@ -756,12 +746,7 @@ def main(
 
 def _get_google_genai_client() -> Any:
     """获取或创建 Google GenAI 客户端"""
-    try:
-        from google import genai
-    except ImportError as e:
-        raise RuntimeError(
-            "未安装 google-genai SDK。请先安装：pip install -r scripts/requirements.txt"
-        ) from e
+    from google import genai
 
     import os
 
@@ -851,12 +836,7 @@ async def _run(
             client = google_genai_client
         else:
             if openrouter_client is None:
-                try:
-                    from openai import AsyncOpenAI
-                except ImportError as e:  # pragma: no cover
-                    raise RuntimeError(
-                        "未安装 openai SDK。请先安装：pip install -r scripts/requirements.txt"
-                    ) from e
+                from openai import AsyncOpenAI
 
                 openrouter_client = AsyncOpenAI(
                     base_url=base_url, api_key=api_key, default_headers=extra_headers
