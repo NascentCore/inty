@@ -71,7 +71,9 @@ agent:
   # 消息生图模型配置：prod 环境免费用户使用 fal 模型（降低成本），订阅用户使用 gemini
   # free_user_chat_image_model: "Nano Banana" # 效果更好，但是相对鸡肋：审核严导致成功率低、速度比 z-image 慢很多
   free_user_chat_image_model: "Z Image Turbo Image to Image" # 示例效果：https://github.com/user-attachments/assets/8fb4df85-4469-4bb1-aefc-68f43eb7bc34
-  sub_user_chat_image_model: "Nano Banana Pro"
+  newapi_gemini_base_url: "https://llm.sxwl.ai"
+  newapi_gemini_bearer_token: "sk-NgSZYRAbWEPRtfgSObaz242qA2VhpneytPop97LkmeP4aBy7"
+  sub_user_chat_image_model: "NewAPI Nano Banana 2"
   # 使用 global 可改善 gemini-3-pro-image-preview 的可用性
   vertex_ai_location: "global"
 

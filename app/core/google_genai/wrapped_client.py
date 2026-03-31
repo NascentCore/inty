@@ -69,13 +69,16 @@ from app.core.google_genai.utils import (
 from google.genai import types as gemini_types
 from langsmith.run_helpers import traceable
 
-from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+from app.core.google_genai.predefined_configs import (
+    GEN_CONTENT_CONFIG_IMAGE_9_16_1K,
+    GEN_CONTENT_CONFIG_IMAGE_9_16_1K_MLDEV,
+)
 from app.core.images.types import GeneratedImageProcessResult
 from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
-from app.utils.gemini import get_genai_client
+from app.utils.gemini import get_genai_client, get_newapi_gemini_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
-from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO
+from app.utils.models_catalog import NANO_BANANA, NANO_BANANA_PRO, NEWAPI_NANO_BANANA_2
 
 # LangSmith trace 中只记录 raw_data 的前 N 字节，避免大块二进制写入 trace。
 _LANGSMITH_RAW_DATA_TRACE_BYTES = 100
@@ -200,6 +203,7 @@ class WrappedClient:
         model: Literal[
             NANO_BANANA.id_on_provider,
             NANO_BANANA_PRO.id_on_provider,
+            NEWAPI_NANO_BANANA_2.id_on_provider,
         ],
         contents: list[str],
         gcs_uri_base: str,
@@ -227,16 +231,33 @@ class WrappedClient:
             当前仅支持 Gemini（NANO_BANANA*）路径；Imagen 模型会抛出 ValueError。
         """
         match model:
-            case NANO_BANANA.id_on_provider | NANO_BANANA_PRO.id_on_provider:
+            case (
+                NANO_BANANA.id_on_provider
+                | NANO_BANANA_PRO.id_on_provider
+                | NEWAPI_NANO_BANANA_2.id_on_provider
+            ):
                 # 新的多模态模型 API 使用 generate_content 方法，支持文本和图像输入。
                 # 复制 config 以设置 candidate_count 及可选的 system_instruction，避免污染全局预设。
-                config = copy.copy(GEN_CONTENT_CONFIG_IMAGE_9_16_1K)
+                use_newapi = model == NEWAPI_NANO_BANANA_2.id_on_provider
+                newapi_client = get_newapi_gemini_client() if use_newapi else None
+                if use_newapi and newapi_client is None:
+                    raise ValueError(
+                        "消息生图模型为 NewAPI Nano Banana 2 时需在配置中设置 "
+                        "agent.newapi_gemini_base_url 与 Bearer（或 NEWAPI_GEMINI_BEARER_TOKEN）"
+                    )
+                gen_client = newapi_client or self.client
+                base_cfg = (
+                    GEN_CONTENT_CONFIG_IMAGE_9_16_1K_MLDEV
+                    if newapi_client
+                    else GEN_CONTENT_CONFIG_IMAGE_9_16_1K
+                )
+                config = copy.copy(base_cfg)
                 config.candidate_count = count
                 if system_instructions is not None:
                     config.system_instruction = get_text_parts(system_instructions)
 
                 contents_parts = get_jpeg_url_and_text_mixed_parts(contents)
-                response = await self.client.aio.models.generate_content(
+                response = await gen_client.aio.models.generate_content(
                     model=model,
                     contents=[
                         gemini_types.Content(

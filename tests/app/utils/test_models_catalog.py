@@ -9,6 +9,7 @@ from app.utils.models_catalog import (
     NANO_BANANA,
     NANO_BANANA_2,
     NANO_BANANA_PRO,
+    NEWAPI_NANO_BANANA_2,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
     detect_model_name_family,
@@ -26,6 +27,7 @@ def test_resolve_nickname_valid_nicknames():
     assert resolve_nickname("Nano Banana") is NANO_BANANA
     assert resolve_nickname("Nano Banana 2") is NANO_BANANA_2
     assert resolve_nickname("Nano Banana Pro") is NANO_BANANA_PRO
+    assert resolve_nickname("NewAPI Nano Banana 2") is NEWAPI_NANO_BANANA_2
     assert resolve_nickname("Seedream V4.5 Edit") is SEEDREAM_V4_5_EDIT
     assert resolve_nickname("Z Image Turbo Image to Image") is Z_IMAGE_TURBO_IMAGE_TO_IMAGE
 

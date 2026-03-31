@@ -109,6 +109,8 @@ class ModelAPIProvider(StrEnum):
     FALAI = "falai"
     # Google 还有其他的 API 服务比如 AI Studio，所以明确指出。
     GOOGLE_VERTEX_AI = "google"
+    # NewAPI 等网关上的 Gemini Developer API（/v1beta/models/...），非 Vertex 路径。
+    NEWAPI_GEMINI = "newapi_gemini"
 
     # 本地部署的 litellm 端点；这是用于对接第三方代金券提供者的本地部署大模型网关。
     # 部署于与后端服务器同一台虚机上，可以对接第三方代金券所有者提供的 service account
@@ -348,6 +350,20 @@ NANO_BANANA_2 = GenAIModel(
     ),
     playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal;mode=prompt?model=gemini-3.1-flash-image-preview&project=alien-paratext-461204-i9",
     notes="<= 200k input tokens, <= 14 reference images.",
+)
+
+
+NEWAPI_NANO_BANANA_2 = GenAIModel(
+    nickname="NewAPI Nano Banana 2",
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE], outputs=[DataModality.IMAGE]
+    ),
+    builder=ModelBuilder.GOOGLE,
+    provider=ModelAPIProvider.NEWAPI_GEMINI,
+    id_on_provider="google/gemini-3-pro-image-preview",
+    pricing=NANO_BANANA_PRO.pricing,
+    playground_url="https://console.cloud.google.com/vertex-ai/studio/multimodal?model=gemini-2.5-flash-image&project=alien-paratext-461204-i9",
+    notes="经 NewAPI Gemini 端点；需配置 agent.newapi_gemini_base_url 与 Bearer。",
 )
 
 # Vertex AI–only Gemini text/multimodal models (used by tools/verify_gcp_service_account_json_on_genai.py).
@@ -785,11 +801,17 @@ CHAT_IMAGE_GEN_MODELS = [
     NANO_BANANA,
     NANO_BANANA_2,
     NANO_BANANA_PRO,
+    NEWAPI_NANO_BANANA_2,
     SEEDREAM_V4_5_EDIT,
     Z_IMAGE_TURBO_IMAGE_TO_IMAGE,
 ]
 
-NANO_BANANA_MODELS = [NANO_BANANA, NANO_BANANA_2, NANO_BANANA_PRO]
+NANO_BANANA_MODELS = [
+    NANO_BANANA,
+    NANO_BANANA_2,
+    NANO_BANANA_PRO,
+    NEWAPI_NANO_BANANA_2,
+]
 Z_IMAGE_TURBO_MODELS = [Z_IMAGE_TURBO, Z_IMAGE_TURBO_IMAGE_TO_IMAGE]
 
 # Subset of CHAT_IMAGE_GEN_MODELS that use fal (app/core/images/fal.py). Used by unified chat image routing.
