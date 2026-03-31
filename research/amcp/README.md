@@ -130,6 +130,7 @@ File: `research/amcp/adapters.py`
 - defines framework-facing dependency carrier (`PydanticAIDeps`)
 - converts framework tool calls into `AccessRequest`
 - maps policy deny to framework-native control flow (for pydantic-ai, raise `ModelRetry`)
+- defines LangGraph state and compiled graph builder for AMCP gating
 
 ### Layer 3 — Runtime adapters
 
@@ -137,12 +138,13 @@ File: `research/amcp/adapters.py`
   - exposes `read_memory_with_amcp` tool
   - always runs policy check before memory read
   - records access attempts for audit
-- **LangGraph adapter** (design contract): `langgraph_amcp_node_architecture_note()`
+- **LangGraph adapter** (implemented): `build_langgraph_amcp_app()`
   - node split:
     - `policy_check_node`
     - `llm_node` (allowed path)
     - `consent_request_node` (denied path)
   - edge rule: denied -> consent node, allowed -> llm node
+  - example entrypoint: `research/amcp/langgraph_example.py`
 
 ### Why this works
 
@@ -165,6 +167,23 @@ Run:
 
 ```bash
 research/amcp/.venv/bin/python -m pytest -q research/amcp/test_pydanticai_amcp.py
+```
+
+## LangGraph tests
+
+File: `research/amcp/test_langgraph_amcp.py`
+
+Covered cases:
+
+1. original purpose read is allowed and routes to `llm_node`
+2. cross-purpose read without full consent routes to `consent_request_node`
+3. cross-purpose read with all co-owner consents is allowed and returns memory content
+
+Run:
+
+```bash
+research/amcp/.venv/bin/python -m pytest -q research/amcp/test_langgraph_amcp.py
+research/amcp/.venv/bin/python research/amcp/langgraph_example.py
 ```
 
 ## Demo scenarios covered

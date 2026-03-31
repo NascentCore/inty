@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypedDict
+
+from langgraph.graph import END, START, StateGraph
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.exceptions import ModelRetry
 
-from .core import AccessRequest, MemoryCustodian
+from .core import AccessDecision, AccessRequest, MemoryCustodian
 
 
 @dataclass
@@ -73,7 +75,7 @@ def create_pydantic_ai_amcp_agent(model: Any = "test") -> Agent[PydanticAIDeps, 
 
 
 def langgraph_amcp_node_architecture_note() -> dict:
-    # 中文注释：当前仓库没有安装 langgraph，这里先提供可执行架构约定。
+    # 中文注释：给出与实现保持一致的节点/边契约，便于多框架共用核心策略层。
     return {
         "graph_state": {
             "runner_did": "str",
@@ -89,3 +91,54 @@ def langgraph_amcp_node_architecture_note() -> dict:
         ],
         "edge_rule": "if denied route to consent_request_node; if allowed route to llm_node",
     }
+
+
+class LangGraphAMCPState(TypedDict):
+    runner_did: str
+    memory_id: str
+    purpose: str
+    amcp_last_decision: AccessDecision | None
+    result: str
+
+
+def build_langgraph_amcp_app(custodian: MemoryCustodian):
+    def policy_check_node(state: LangGraphAMCPState) -> dict:
+        decision = custodian.evaluate_access(
+            AccessRequest(
+                memory_id=state["memory_id"],
+                requester_runner_did=state["runner_did"],
+                purpose=state["purpose"],
+            )
+        )
+        return {"amcp_last_decision": decision}
+
+    def llm_node(state: LangGraphAMCPState) -> dict:
+        memory_text = custodian.read_memory_content(state["memory_id"])
+        return {"result": f"allowed:{memory_text}"}
+
+    def consent_request_node(state: LangGraphAMCPState) -> dict:
+        decision = state["amcp_last_decision"]
+        missing = decision.missing_owner_consents if decision else []
+        return {"result": f"denied:missing={','.join(missing)}"}
+
+    def route_by_policy(state: LangGraphAMCPState) -> str:
+        decision = state["amcp_last_decision"]
+        if decision is None:
+            raise ValueError("amcp_last_decision must be set before routing.")
+        if decision.allowed:
+            return "llm_node"
+        return "consent_request_node"
+
+    graph = StateGraph(LangGraphAMCPState)
+    graph.add_node("policy_check_node", policy_check_node)
+    graph.add_node("llm_node", llm_node)
+    graph.add_node("consent_request_node", consent_request_node)
+    graph.add_edge(START, "policy_check_node")
+    graph.add_conditional_edges(
+        "policy_check_node",
+        route_by_policy,
+        {"llm_node": "llm_node", "consent_request_node": "consent_request_node"},
+    )
+    graph.add_edge("llm_node", END)
+    graph.add_edge("consent_request_node", END)
+    return graph.compile()

@@ -2,4 +2,5 @@ cyclopts
 loguru
 pydantic
 pydantic-ai
+langgraph
 pytest
