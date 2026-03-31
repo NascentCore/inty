@@ -1,0 +1,17 @@
+method,utilization_ratio,instruction_count,placement_profile,trials,ia_mean,rsr,schema_valid_rate,format_error_rate,median_latency_ms
+text_json,0.25,8,uniform,3,1.0,1.0,1.0,0.0,3711.336874985136
+text_json,0.25,8,edges,3,1.0,1.0,1.0,0.0,4117.634449969046
+text_json,0.25,16,uniform,3,1.0,1.0,1.0,0.0,6092.988635995425
+text_json,0.25,16,edges,3,1.0,1.0,1.0,0.0,5484.899424016476
+text_json,0.55,8,uniform,3,1.0,1.0,1.0,0.0,5899.224682012573
+text_json,0.55,8,edges,3,1.0,1.0,1.0,0.0,7975.636349001434
+text_json,0.55,16,uniform,3,1.0,1.0,1.0,0.0,9002.127069979906
+text_json,0.55,16,edges,3,1.0,1.0,1.0,0.0,14989.49561896734
+sdk_structured,0.25,8,uniform,3,1.0,1.0,1.0,0.0,3051.3925550039858
+sdk_structured,0.25,8,edges,3,1.0,1.0,1.0,0.0,3468.7241660431027
+sdk_structured,0.25,16,uniform,3,1.0,1.0,1.0,0.0,6640.6761659891345
+sdk_structured,0.25,16,edges,3,1.0,1.0,1.0,0.0,4318.426484009251
+sdk_structured,0.55,8,uniform,3,1.0,1.0,1.0,0.0,6556.5996240475215
+sdk_structured,0.55,8,edges,3,1.0,1.0,1.0,0.0,7933.318194001913
+sdk_structured,0.55,16,uniform,3,1.0,1.0,1.0,0.0,8510.508728970308
+sdk_structured,0.55,16,edges,3,1.0,1.0,1.0,0.0,7630.021109012887

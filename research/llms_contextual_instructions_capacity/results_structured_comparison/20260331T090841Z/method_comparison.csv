@@ -1,0 +1,3 @@
+method,trials,ia_mean,rsr,schema_valid_rate,format_error_rate,median_latency_ms
+sdk_structured,24,1.0,1.0,1.0,0.0,6441.275149525609
+text_json,24,1.0,1.0,1.0,0.0,5692.062053014524
