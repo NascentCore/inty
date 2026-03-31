@@ -110,6 +110,42 @@ def test_activate_staging_restores_memory_and_consent_for_target_runner() -> Non
     assert decision.allowed is True
 
 
+def test_activate_staging_is_idempotent_for_repeated_activation() -> None:
+    source_custodian, memory_id = build_demo_custodian()
+    target_runner = "did:runner:migrated-agent"
+    source_custodian.grant(
+        ConsentGrant(
+            owner_did="did:plc:alice",
+            grantee_runner_did=target_runner,
+            purpose="marketing_analytics",
+            scope="single_memory",
+            memory_id=memory_id,
+        )
+    )
+    source_custodian.grant(
+        ConsentGrant(
+            owner_did="did:plc:bob",
+            grantee_runner_did=target_runner,
+            purpose="marketing_analytics",
+            scope="single_memory",
+            memory_id=memory_id,
+        )
+    )
+    envelope = export_migration_envelope_v1(
+        custodian=source_custodian,
+        source_runner_did="did:runner:coding-agent-v1",
+        target_runner_did=target_runner,
+    )
+    staging = import_migration_envelope_v1(envelope=envelope)
+    target_custodian = MemoryCustodian()
+
+    activate_migration_staging_v1(staging=staging, target_custodian=target_custodian)
+    activate_migration_staging_v1(staging=staging, target_custodian=target_custodian)
+
+    assert len(target_custodian.memories) == 1
+    assert len(target_custodian.grants) == 2
+
+
 def test_import_rejects_tampered_bundle_hash() -> None:
     custodian, _ = build_demo_custodian()
     envelope = export_migration_envelope_v1(
