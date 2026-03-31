@@ -126,6 +126,16 @@ class TestDualLlmChatTool(unittest.TestCase):
             ]
             with (
                 patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
                 patch.object(orchestrator, "dual_llm_enabled", return_value=True),
                 patch.object(orchestrator, "chat_model", return_value="chat-fast"),
                 patch.object(orchestrator, "tool_model", return_value="tool-smart"),
@@ -194,6 +204,16 @@ class TestDualLlmChatTool(unittest.TestCase):
             ]
             with (
                 patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
                 patch.object(orchestrator, "dual_llm_enabled", return_value=True),
                 patch.object(orchestrator, "chat_model", return_value="chat-fast"),
                 patch.object(orchestrator, "tool_model", return_value="tool-smart"),

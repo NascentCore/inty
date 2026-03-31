@@ -28,7 +28,8 @@ from .client import (
     get_client_dual_llm_tool,
     tool_model,
 )
-from .file_store import append_jsonl, read_text
+from .jsonl_db_store import append_jsonl_with_db
+from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -294,9 +295,9 @@ def _persist_turn_rows(
         user_row["heartbeat"] = True
     if trace_id is not None and trace_id.strip():
         user_row["trace_id"] = trace_id
-    append_jsonl(paths.transcript, user_row)
+    append_jsonl_with_db(paths.transcript, user_row)
     assistant_msg_uuid = str(uuid.uuid4())
-    append_jsonl(
+    append_jsonl_with_db(
         paths.transcript,
         {
             "role": "assistant",
@@ -731,8 +732,9 @@ def needs_startup_profile_inquiry(workspace: Path) -> bool:
     paths = WorkspacePaths(root=root)
     if not _transcript_is_empty(paths):
         return False
-    ident = read_text(paths.identity) if paths.identity.is_file() else ""
-    user_md = read_text(paths.user_md) if paths.user_md.is_file() else ""
+    store = get_memory_store(root)
+    ident = store.read_document_if_exists("IDENTITY.md") or ""
+    user_md = store.read_document_if_exists("USER.md") or ""
     id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)
     user_stub = _text_matches_any_marker(user_md, _USER_STUB_MARKERS)
     out = id_stub or user_stub

@@ -12,6 +12,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype.bootstrap import init_workspace
+from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
 from inty_v2_text_chat_prototype.memory_update import memory_update_after_turn
 from inty_v2_text_chat_prototype.paths import WorkspacePaths
 from inty_v2_text_chat_prototype.utc import local_date_str
@@ -25,7 +26,10 @@ class TestDaySummaryInterval(unittest.TestCase):
             paths = WorkspacePaths(root=root)
             env = {
                 "INTY_V2_PROTO_DAY_SUMMARY_EVERY_N_TURNS": "3",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
                 "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_REQUIRE_FUNDAMENTAL_SIGNAL": "0",
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
@@ -72,6 +76,7 @@ class TestDaySummaryInterval(unittest.TestCase):
             day = paths.memory_day_summary(local_date_str())
             self.assertTrue(day.is_file())
             self.assertIn("# day", day.read_text(encoding="utf-8"))
+            shutdown_memory_store(root, timeout_s=2.0)
 
 
 if __name__ == "__main__":

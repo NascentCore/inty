@@ -12,7 +12,8 @@ import time
 from loguru import logger
 
 from .client import complete, day_summary_model, memory_model, soul_model, user_model
-from .file_store import append_line, read_text, write_text_atomic
+from .file_store import read_text, write_text_atomic
+from .memory_store_registry import get_memory_store
 from .paths import WorkspacePaths
 from .utc import local_date_str, local_iso_ts
 
@@ -245,12 +246,12 @@ def _append_diary(
     assistant_text: str,
 ) -> None:
     day = local_date_str()
-    diary_path = paths.memory_raw_diary(day)
+    rel = f"memory/daily/{day}.md"
     line = (
         f"[{local_iso_ts()}] 用户: {_clip(user_text, _DIARY_USER_MAX)} / "
         f"助手: {_clip(assistant_text, _DIARY_ASSISTANT_MAX)}"
     )
-    append_line(diary_path, line)
+    get_memory_store(paths.root).append_line(rel, line)
 
 
 def _rewrite_day_summary_md(
@@ -263,10 +264,9 @@ def _rewrite_day_summary_md(
     if _day_summary_disabled():
         return
     day = local_date_str()
-    summary_path = paths.memory_day_summary(day)
-    raw_path = paths.memory_raw_diary(day)
-    raw_full = read_text(raw_path) if raw_path.is_file() else ""
-    prev_summary = read_text(summary_path) if summary_path.is_file() else ""
+    store = get_memory_store(paths.root)
+    raw_full = store.read_document_if_exists(f"memory/daily/{day}.md") or ""
+    prev_summary = store.read_document_if_exists(f"memory/{day}.md") or ""
     user_block = (
         f"Previous day summary (memory/{day}.md):\n\n{prev_summary}\n\n"
         f"---\n\nToday's raw diary (memory/daily/{day}.md):\n\n"
@@ -285,7 +285,7 @@ def _rewrite_day_summary_md(
         ws_label=paths.root.name,
         trace_day=day,
     )
-    write_text_atomic(summary_path, new_body.strip() + "\n")
+    store.write_document(f"memory/{day}.md", new_body.strip() + "\n")
 
 
 def _rewrite_memory_md(
@@ -296,15 +296,15 @@ def _rewrite_memory_md(
     llm_trace: bool,
 ) -> None:
     day = local_date_str()
-    summary_path = paths.memory_day_summary(day)
+    store = get_memory_store(paths.root)
     day_summary_ctx = ""
-    if summary_path.is_file():
-        ds = read_text(summary_path)
+    ds = store.read_document_if_exists(f"memory/{day}.md")
+    if ds is not None:
         if len(ds) > _MEMORY_DAY_SUMMARY_CTX_MAX:
             day_summary_ctx = ds[: _MEMORY_DAY_SUMMARY_CTX_MAX - 1] + "…"
         else:
             day_summary_ctx = ds
-    memory_body = read_text(paths.memory_md)
+    memory_body = store.read_document("MEMORY.md")
     user_block = (
         f"Current day summary (memory/{day}.md):\n\n{day_summary_ctx}\n\n---\n\n"
         f"Current MEMORY.md:\n\n{memory_body}\n\n---\n\n"
@@ -322,7 +322,7 @@ def _rewrite_memory_md(
         ws_label=paths.root.name,
         trace_day=day,
     )
-    write_text_atomic(paths.memory_md, new_body.strip() + "\n")
+    store.write_document("MEMORY.md", new_body.strip() + "\n")
 
 
 def _rewrite_user_md(
@@ -334,8 +334,9 @@ def _rewrite_user_md(
 ) -> None:
     if _user_update_disabled():
         return
-    user_body = read_text(paths.user_md)
-    memory_body = read_text(paths.memory_md)
+    store = get_memory_store(paths.root)
+    user_body = store.read_document("USER.md")
+    memory_body = store.read_document("MEMORY.md")
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
     else:
@@ -357,7 +358,7 @@ def _rewrite_user_md(
         ws_label=paths.root.name,
         trace_day=local_date_str(),
     )
-    write_text_atomic(paths.user_md, new_body.strip() + "\n")
+    store.write_document("USER.md", new_body.strip() + "\n")
 
 
 def _rewrite_soul_md(
@@ -369,9 +370,10 @@ def _rewrite_soul_md(
 ) -> None:
     if _soul_update_disabled():
         return
-    soul_body = read_text(paths.soul)
+    store = get_memory_store(paths.root)
+    soul_body = store.read_document("SOUL.md")
     curator_doc, frozen_appearance = _split_soul_appearance_section(soul_body)
-    memory_body = read_text(paths.memory_md)
+    memory_body = store.read_document("MEMORY.md")
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
     else:
@@ -396,7 +398,7 @@ def _rewrite_soul_md(
     new_body = new_body.strip()
     if frozen_appearance is not None:
         new_body = _merge_soul_frozen_appearance(new_body, frozen_appearance)
-    write_text_atomic(paths.soul, new_body.strip() + "\n")
+    store.write_document("SOUL.md", new_body.strip() + "\n")
 
 
 def memory_update_after_turn(

@@ -19,6 +19,17 @@ from inty_v2_text_chat_prototype.workspace_init_tools import (
 
 
 class TestWorkspaceReadFile(unittest.TestCase):
+    def test_memory_md_file_read_from_memory_store(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "USER.md").write_text("# USER\n", encoding="utf-8")
+            out = execute_tool_call_blocking(
+                root,
+                "workspace_read_file",
+                json.dumps({"relative_path": "USER.md"}, ensure_ascii=False),
+            )
+            self.assertEqual(out, "# USER\n")
+
     def test_full_file_omit_max_chars(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

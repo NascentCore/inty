@@ -25,6 +25,8 @@ class TestUserUpdateInterval(unittest.TestCase):
             env = {
                 "INTY_V2_PROTO_DAY_SUMMARY_DISABLED": "1",
                 "INTY_V2_PROTO_USER_UPDATE_EVERY_N_TURNS": "3",
+                "INTY_V2_PROTO_MEMORY_UPDATE_EVERY_N_TURNS": "1",
+                "INTY_V2_PROTO_SOUL_UPDATE_EVERY_N_TURNS": "1",
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
@@ -37,7 +39,7 @@ class TestUserUpdateInterval(unittest.TestCase):
                     memory_update_after_turn(
                         paths,
                         user_text="u",
-                        assistant_text="a",
+                        assistant_text="a 底线",
                     )
                     self.assertEqual(m_complete.call_count, 2)
 
@@ -48,7 +50,7 @@ class TestUserUpdateInterval(unittest.TestCase):
                     memory_update_after_turn(
                         paths,
                         user_text="u",
-                        assistant_text="a",
+                        assistant_text="a 底线",
                     )
                     self.assertEqual(m_complete.call_count, 4)
 
@@ -60,7 +62,7 @@ class TestUserUpdateInterval(unittest.TestCase):
                     memory_update_after_turn(
                         paths,
                         user_text="u",
-                        assistant_text="a",
+                        assistant_text="a 底线",
                     )
                     self.assertEqual(m_complete.call_count, 7)
 
