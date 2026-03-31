@@ -68,8 +68,8 @@ agent:
   # 订阅用户使用 pro 具有更好的边界把控能力，降低违禁风险
   sub_user_chat_image_model: "NewAPI Nano Banana 2"
   newapi_gemini_base_url: "https://llm.sxwl.ai"
-  newapi_gemini_bearer_token: "sk-NgSZYRAbWEPRtfgSObaz242qA2VhpneytPop97LkmeP4aBy7"
   vertex_ai_location: "global"
+  newapi_gemini_bearer_token: "sk-NgSZYRAbWEPRtfgSObaz242qA2VhpneytPop97LkmeP4aBy7"
   # 测试环境量小，就全部追踪
   langsmith_text_chat_sample_rate: 1.0
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
