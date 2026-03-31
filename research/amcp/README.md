@@ -186,6 +186,58 @@ research/amcp/.venv/bin/python -m pytest -q research/amcp/test_langgraph_amcp.py
 research/amcp/.venv/bin/python research/amcp/langgraph_example.py
 ```
 
+## AMCP Migration Manifest v0.1
+
+File: `research/amcp/migration.py`
+
+Purpose:
+
+- provide a minimal, verifiable migration envelope for AMCP memory portability
+- preserve policy semantics during migration (no implicit privilege expansion)
+
+Core objects:
+
+- `MigrationManifestV1`
+  - `migration_id`, `source_runner_did`, `target_runner_did`, `snapshot_at`
+  - `record_count`, `grant_count`, `bundle_sha256`
+- `AMCPMigrationEnvelopeV1`
+  - `manifest` + `bundle` + optional `signatures`
+- `ConsentPortabilityPolicyV1`
+  - `require_target_runner_match` (default `true`)
+  - `allow_all_memories_scope` (default `false`)
+- `ImportReceiptV1`
+  - accepted/quarantined IDs + status (`staged` / `activated`)
+
+Lifecycle:
+
+1. `export_migration_envelope_v1(...)`
+2. `import_migration_envelope_v1(...)` -> `MigrationStagingV1`
+3. `activate_migration_staging_v1(...)` -> activated receipt
+
+Safety semantics in v0.1:
+
+- manifest count/hash mismatch => import fails
+- grant bound to other runner => quarantine
+- `all_memories_for_owner` scope => quarantine by default
+- migration preserves strict least-privilege defaults
+
+## Migration tests
+
+File: `research/amcp/test_migration_manifest.py`
+
+Covered cases:
+
+1. happy path: export -> import(staged) -> activate
+2. hash mismatch is rejected
+3. mismatched-grantee grant is quarantined
+4. `all_memories_for_owner` grant is quarantined by default
+
+Run:
+
+```bash
+research/amcp/.venv/bin/python -m pytest -q research/amcp/test_migration_manifest.py
+```
+
 ## Demo scenarios covered
 
 1. Original purpose access by same runner => **allow**

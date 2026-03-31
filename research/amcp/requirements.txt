@@ -4,3 +4,4 @@ pydantic
 pydantic-ai
 langgraph
 pytest
+pytest-asyncio
