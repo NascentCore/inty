@@ -11,6 +11,7 @@ from jose import jwt
 from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from starlette.websockets import WebSocketDisconnect
 
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
@@ -729,6 +730,38 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     assert second_response["code"] == 200
     assert second_response["agent_id"] == "agent-b"
     assert second_response["data"]["source_imate_id"] == "imate-b"
+
+
+def test_chat_websocket_closes_unauthorized_when_auth_raises_http_exception(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_get_user_from_token(token, db):
+        raise chat_v1.HTTPException(status_code=401, detail="Could not validate credentials")
+
+    monkeypatch.setattr(chat_v1.deps, "get_user_from_token", fake_get_user_from_token)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with pytest.raises(WebSocketDisconnect) as exc:
+            with client.websocket_connect("/api/v1/chat/ws?token=bad-token") as websocket:
+                websocket.receive_text()
+
+    assert exc.value.code == 4001
+
+
+def test_chat_websocket_verify_closes_unauthorized_when_auth_raises_http_exception(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_get_user_from_token(token, db):
+        raise chat_v1.HTTPException(status_code=401, detail="Could not validate credentials")
+
+    monkeypatch.setattr(chat_v1.deps, "get_user_from_token", fake_get_user_from_token)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with pytest.raises(WebSocketDisconnect) as exc:
+            with client.websocket_connect("/api/v1/chat/ws/verify?token=bad-token") as websocket:
+                websocket.receive_text()
+
+    assert exc.value.code == 4001
 
 
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(

@@ -78,7 +78,13 @@ async def _get_current_user_from_websocket(
         token = websocket.query_params.get("token")
     if token is None or token == "":
         return None
-    return await deps.get_user_from_token(token, db)
+    try:
+        return await deps.get_user_from_token(token, db)
+    except HTTPException as exc:
+        logger.warning(
+            f"WebSocket auth failed: status={exc.status_code}, detail={exc.detail}"
+        )
+        return None
 
 
 async def _handle_subscription_limit_error(
