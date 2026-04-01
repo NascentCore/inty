@@ -1,22 +1,22 @@
 # Agent Multi Tool Loop Demo
 
-- 目标: 演示一个 agent loop 在同一轮内触发多个 tool call。
+- 目标: 演示 LLM chat completions 真实产出 tool calls, 并由 loop 顺序执行。
 - 场景: "I want to update my profile image"。
 - 工具链路: `z_image_generate` -> `update_profile_picture`。
 
 ## 演示点
 
-- 第 1 轮 assistant 返回 2 个工具调用:
-  - `z_image_generate(prompt, style)`
-  - `update_profile_picture(image_url="$tool:z_image_generate.image_url")`
-- 运行时先执行生图工具, 再把产出的 `image_url` 注入头像更新工具。
-- 第 2 轮 assistant 给出最终文本, loop 结束。
+- 由 `chat.completions.create(...)` 返回 `tool_calls`。
+- loop 对模型返回的 `tool_calls` 逐个执行(顺序执行, 非并行)。
+- 工具结果以 `role=tool` 写回 `messages` 后再进入下一轮推理。
+- 推荐模型: `google/gemini-2.5-flash-lite`。
 
 ## 运行
 
 ```bash
 python -m experimental.agent_multi_tool_loop_demo.main \
-  --user-request "I want to update my profile image"
+  --user-request "I want to update my profile image" \
+  --model "google/gemini-2.5-flash-lite"
 ```
 
 ## 测试
