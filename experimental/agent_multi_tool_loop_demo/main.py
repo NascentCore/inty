@@ -9,8 +9,11 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 SYSTEM_PROMPT = (
-    "你是头像助手。用户要求更新头像时，必须先调用 z_image_generate 生成图片，"
-    "拿到工具返回 image_url 后，再调用 update_profile_picture。"
+    "你是头像助手。用户要求更新头像时，必须调用工具而不是追问。"
+    "若用户未给生图细节，默认使用 prompt='professional male portrait, warm lighting, clean background' "
+    "和 style='photorealistic'。"
+    "先调用 z_image_generate，拿到工具返回 image_url 后，再调用 update_profile_picture。"
+    "更新完成后再输出最终回复。"
 )
 
 TOOL_DEFINITIONS = [

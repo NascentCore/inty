@@ -7,7 +7,9 @@ from experimental.agent_multi_tool_loop_demo.main import run_demo
 class _FakeCompletions:
     def __init__(self) -> None:
         self._calls = 0
-        self._generated_image_url = "https://z-image.local/generated/test.png"
+        self._generated_image_url = (
+            "https://z-image.local/generated/professional-male-portra.png"
+        )
 
     def create(self, **kwargs):
         self._calls += 1
