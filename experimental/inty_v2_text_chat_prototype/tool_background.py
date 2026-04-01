@@ -20,7 +20,7 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
-from .client import get_client_dual_llm_tool
+from .client import get_client_dual_llm_tool, tool_path_chat_completion_kwargs
 from .jsonl_db_store import append_jsonl_with_db
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str, utc_iso_ts
@@ -195,6 +195,7 @@ def _chat_completion_create(
 ) -> Any:
     create_kw: dict[str, Any] = {"model": model, "messages": deepcopy(messages_payload)}
     if tools:
+        create_kw.update(tool_path_chat_completion_kwargs(model))
         create_kw["tools"] = tools
         create_kw["parallel_tool_calls"] = True
         if tool_choice is not None:

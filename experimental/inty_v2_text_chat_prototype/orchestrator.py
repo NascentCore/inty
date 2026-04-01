@@ -27,6 +27,7 @@ from .client import (
     get_client_dual_llm_chat,
     get_client_dual_llm_tool,
     tool_model,
+    tool_path_chat_completion_kwargs,
 )
 from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
@@ -152,6 +153,7 @@ def _chat_completion_create(
         "messages": deepcopy(messages_payload),
     }
     if tools:
+        create_kw.update(tool_path_chat_completion_kwargs(model))
         create_kw["tools"] = tools
         create_kw["parallel_tool_calls"] = True
     return client.chat.completions.create(**create_kw)

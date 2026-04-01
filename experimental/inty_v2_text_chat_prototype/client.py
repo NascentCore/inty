@@ -138,6 +138,36 @@ def tool_model() -> str:
     return os.getenv("INTY_V2_PROTO_TOOL_MODEL") or default_model()
 
 
+def tool_path_chat_completion_kwargs(model: str) -> dict[str, Any]:
+    """
+    OpenRouter ``chat.completions.create`` 的额外参数：仅用于**挂载 tools** 的调用（工具选型、参数构造）。
+
+    - DeepSeek：``extra_body.reasoning.effort=high``，``exclude=True`` 避免推理内容进入对用户可见的 assistant 文本。
+    - Gemini：``reasoning_effort=high``（与 ``experimental/thinking_token_handling`` 一致）。
+
+    关闭：``INTY_V2_PROTO_TOOL_THINKING=0`` / ``false`` / ``off`` / ``none``。
+    其它模型暂不注入，避免不支持的参数导致 400。
+    """
+    _ensure_dotenv()
+    raw = os.environ.get("INTY_V2_PROTO_TOOL_THINKING")
+    if raw is not None and str(raw).strip().lower() in (
+        "0",
+        "false",
+        "no",
+        "off",
+        "none",
+    ):
+        return {}
+
+    from app.utils.models_catalog import is_deepseek_on_openrouter, is_gemini_model
+
+    if is_deepseek_on_openrouter(model):
+        return {"extra_body": {"reasoning": {"effort": "high", "exclude": True}}}
+    if is_gemini_model(model):
+        return {"reasoning_effort": "high"}
+    return {}
+
+
 def dual_llm_enabled() -> bool:
     """是否启用双路并行 LLM（聊天路 + 工具路）。"""
     _ensure_dotenv()
