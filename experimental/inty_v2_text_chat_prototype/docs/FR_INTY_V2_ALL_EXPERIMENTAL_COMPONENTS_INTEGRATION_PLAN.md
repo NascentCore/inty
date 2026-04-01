@@ -1,10 +1,19 @@
-# FR_INTY_V2_ALL_EXPERIMENTAL_COMPONENTS_INTEGRATION_PLAN
+# FR_INTY_V2_PHASED_EXPERIMENTAL_COMPONENTS_INTEGRATION_PLAN
 
 ## 1. 目标
 
-- 将 `experimental/` 下与 agentic companion AI 相关的实验能力，按统一控制面逐步整合到 `experimental/inty_v2_text_chat_prototype`。
+- 将 `experimental/` 下与 agentic companion AI 相关的实验能力，按统一控制面分阶段整合到 `experimental/inty_v2_text_chat_prototype`。
 - 保持 `orchestrator.run_turn` 作为单一编排入口，避免多套会话写入路径。
 - 先统一契约与可观测性，再并入高价值能力，最后处理外围能力与灰度策略。
+
+### 1.1 范围口径（修正 "all" 语义）
+
+- 本文档覆盖 "全部实验组件的盘点与去向"，不是 "一次迭代整合全部组件"。
+- 对全部组件必须给出三类结果之一：
+  - 已并入核心路径（P0/P1）
+  - 延后并入但已绑定强制里程碑（P2 with M5）
+  - 明确永久独立并给出边界（需在文档中显式标注）
+- 未出现在映射表中的目录，视为计划缺失，不允许进入实现阶段。
 
 ## 2. 范围定义
 
@@ -39,6 +48,17 @@
 - 评测与性能：`locust_test`、`fastapi_otel`
 - 内容与素材：`image_model_benchmark`、`fal_ai`、`comfyui`、`civitai`、`aigc`、`generate_opening_audio`
 
+### 2.4 `experimental` 自包含规则冲突处理
+
+- 现有 `experimental/README.md` 要求子目录自包含、不依赖外部目录。
+- 本计划采用双阶段策略，避免直接违反规则：
+  - 阶段 A（过渡期）：各来源目录保留独立可运行入口，仅在 `inty_v2_text_chat_prototype` 增加桥接适配层。
+  - 阶段 B（收敛期）：能力迁移完成后，将来源目录标记为 archive，只保留 README、测试证据、迁移指引。
+- 进入阶段 B 前必须完成：
+  - 新路径功能验收通过
+  - 旧路径 README 加 "迁移到 inty_v2" 指针
+  - `tests/docs` 中对应测试步骤同步到新路径
+
 ## 3. 统一目标架构（落到 inty_v2_text_chat_prototype）
 
 - `main.py` / CLI：统一入口（`repl`/`once`/`bootstrap-agent`/`serve-*`）
@@ -54,6 +74,14 @@
   - lease/retry/scheduler/admin/repository
 - `bridges/`（新增建议）：
   - Telegram bridge、voice bridge、websocket bridge 统一挂接
+
+### 3.1 不可变约束（Phase 0 必须冻结）
+
+- `orchestrator.run_turn` 仍是 assistant transcript 单写入入口。
+- `prompts.build_system_prompt` 顺序不变（含 `AGENTS.md`/`TOOLS.md`/`HEARTBEAT.md` 及 `context_mode` 语义）。
+- runnable workspace 必选文件不变：`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`transcript.jsonl`。
+- heartbeat turn 语义不变：写入合成 user 行，可标 `heartbeat=true`，且不触发记忆管线。
+- 渠道接入只允许通过统一 turn pipeline，不允许旁路写 `transcript.jsonl`。
 
 ## 4. 分阶段实施计划
 
@@ -126,6 +154,16 @@
 | `s2s` | `bridges/voice_terminal/*` | 保留为调试通道 | P1 |
 | 其余外围目录 | `integrations/*` 或保持独立 | 延后 + feature flag | P2 |
 
+## 5.1 兼容策略（旧入口 -> 新入口）
+
+| 兼容项 | 旧路径/旧命令 | 新路径/新命令 | 过渡策略 |
+|---|---|---|---|
+| core_v2 CLI | `python -m experimental.perpetual_agent.core_v2.main ...` | `python -m experimental.inty_v2_text_chat_prototype.core_v2.main ...` | 保留旧 CLI shim，两版本并行 2 个里程碑后移除 |
+| Telegram loop | `experimental/perpetual_agent/telegram_*` | `experimental/inty_v2_text_chat_prototype/bridges/telegram_*` | 旧模块转发到新模块并打印 deprecation 日志 |
+| 语音 websocket | `experimental/gemini_native_audio_websocket_demo/*` | `experimental/inty_v2_text_chat_prototype/bridges/voice_ws/*` | 先镜像接口，再切默认入口 |
+| voice chat server | `experimental/voice_chat/server/*` | `experimental/inty_v2_text_chat_prototype/bridges/voice_webrtc/*` | 先共享协议层，后迁移运行入口 |
+| tool benchmark | `experimental/memory_prompt_benchmark/*` | `experimental/inty_v2_text_chat_prototype/evaluation/*` | 保留旧脚本，结果目录统一到新路径 |
+
 ## 6. 测试与验收矩阵
 
 ### 6.1 每阶段通用验收
@@ -154,6 +192,39 @@
 - Phase 4：
   - memory/tool trigger benchmark 可固定参数重复运行并产出报告
 
+### 6.3 命令级 Gate（进入下一阶段前必须通过）
+
+- Phase 0 Gate
+  - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_transcript_for_llm_turn.py`
+  - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_heartbeat_schedule.py`
+  - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_workspace_bootstrap_loop.py`
+  - 通过标准：全部通过，且 `run_turn` 单写入约束相关测试无回归。
+
+- Phase 1 Gate
+  - `pytest -q experimental/agentic_ai_companion/tests/test_image_gen.py`
+  - `pytest -q experimental/agentic_ai_companion/tests/test_memory_compaction.py`
+  - `python -m experimental.inty_v2_text_chat_prototype.main once --workspace experimental/inty_v2_text_chat_prototype/_ws --message "Generate an intimate role-play image where we hug near a window."`
+  - 通过标准：工具触发成功，返回可用产物路径，compaction 开关行为符合预期。
+
+- Phase 2 Gate
+  - `pytest -q experimental/perpetual_agent/test_core_v2_*.py`
+  - `python -m experimental.perpetual_agent.core_v2.main admin replay --since-minutes 120 --limit 10`
+  - `python -m experimental.perpetual_agent.core_v2.main serve scheduler --once`
+  - 通过标准：core_v2 幂等、租约、调度路径全部稳定。
+
+- Phase 3 Gate
+  - `python -m uvicorn experimental.gemini_native_audio_websocket_demo.server:app --reload --port 8765`
+  - `curl http://127.0.0.1:8765/`
+  - `bash experimental/voice_chat/server/start.sh`
+  - 通过标准：语音 websocket 与 webRTC demo 都可启动，断连后能按策略恢复。
+
+- Phase 4 Gate
+  - `/workspace/.venv/bin/python experimental/memory_prompt_benchmark/tool_trigger_benchmark.py --config devops/config.yaml.dev --model "google/gemini-2.5-flash" --samples-per-case 4 --temperature 0.4 --max-completion-tokens 200 --timeout-seconds 90`
+  - 通过标准：
+    - `layered.trigger_rate_when_needed >= flat.trigger_rate_when_needed`
+    - `layered.trigger_rate_when_not_needed < flat.trigger_rate_when_not_needed`
+    - `layered.expected_tool_match_rate_when_needed >= flat.expected_tool_match_rate_when_needed`
+
 ## 7. 风险与缓解
 
 - 风险 1：多来源工具定义冲突（同名/参数不一致）
@@ -175,8 +246,15 @@
   - 语音实时链路并轨完成，可端到端演示
 - M4（Phase 4 完成）
   - 评测与灰度体系上线，支持持续策略优化
+- M5（P2 收敛完成）
+  - P2 目录完成并入或被标记为永久独立并记录边界
+  - 全部来源目录在映射清单中有闭环去向
 
 退出条件：
 
-- 达成 M4 后，`experimental/` 中 P0/P1 原型目录进入只读归档状态（仅保留文档与历史测试数据），新的 companion 能力只在 `inty_v2_text_chat_prototype` 迭代。
+- 达成 M5 后，`experimental/` 中 P0/P1 原型目录进入只读归档状态（仅保留文档与历史测试数据），新的 companion 能力只在 `inty_v2_text_chat_prototype` 迭代。
+- 归档前必须完成文档同步检查：
+  - `README.md` 迁移指引
+  - `AGENTS.md` 路径与职责更新
+  - `tests/docs` 测试步骤引用路径更新
 
