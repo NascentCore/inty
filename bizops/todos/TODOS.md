@@ -8,7 +8,7 @@ tts：elevenlabs Gemini fal.ai/开源模型
 
 以下列出了当前仓库内所有记录待办/任务信息的 Markdown 文档，方便团队快速定位具体负责范围的 backlog。
 
-- [`app/TODOS.md`](../app/TODOS.md)：后端（FastAPI）架构级任务，包括依赖注入、配置管理、可观测性、数据治理等重构计划。
+- [`docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`](../../docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md)：后端（FastAPI）架构与 API 治理统一改进计划，整合分层、依赖注入、错误模型、可扩展性与 Report 兼容治理。
 - [`android_app/TODOS.md`](../android_app/TODOS.md)：Android 客户端的架构级待办，涵盖网络栈统一、OpenAPI SDK 接入、依赖注入与 UI 基线等工作。
 - [`android_app/TODOS_CLEANUP_WARNINGS.md`](../android_app/TODOS_CLEANUP_WARNINGS.md)：Android 端单元测试阶段产出的编译/弃用 API 警告清单与对应修复计划。
 - [`android_app/TODOS_INTY_SDK.md`](../android_app/TODOS_INTY_SDK.md)：Inty Kotlin SDK 迁移任务，列出尚未由生成 SDK 覆盖的接口以及迁移优先级。

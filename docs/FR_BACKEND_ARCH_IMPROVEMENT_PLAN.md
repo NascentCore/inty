@@ -4,7 +4,7 @@
 
 ## 1. 文档目的
 
-本文件整合以下 4 份现有文档，形成一个统一的后端架构改进计划，供研发执行与跟踪：
+本文件整合以下 4 份历史文档（现已删除并收敛到本文件），形成一个统一的后端架构改进计划，供研发执行与跟踪：
 
 - `app/todos/TODOS.md`
 - `app/todos/TODOS_SCALABILITY.md`
@@ -172,7 +172,7 @@
 
 ## 5. 专项计划 - Report API 兼容债务收敛
 
-来源：`app/api/v1/endpoints/REPORT_API_ANALYSIS.md`
+来源：历史文档 `app/api/v1/endpoints/REPORT_API_ANALYSIS.md`（已整合到本文件）
 
 ### 5.1 当前状态
 
@@ -223,7 +223,7 @@
 | Query and pagination optimization | TBD | TODO | N+1 and cursor migration | Query count + latency |
 | Report compatibility cleanup | TBD | TODO | reason_codes-only write path | Report API tests |
 
-## 9. 来源文档
+## 9. 历史来源文档（已整合并删除）
 
 - `app/todos/TODOS.md`
 - `app/todos/TODOS_SCALABILITY.md`
