@@ -213,12 +213,7 @@ def _strip_markdown_json_fences(content: str) -> str:
 
 
 def _get_llm_client_and_model() -> tuple[object, str]:
-    try:
-        from openai import OpenAI
-    except ImportError as e:
-        raise ImportError(
-            "openai package is required for LLM memory extraction backend"
-        ) from e
+    from openai import OpenAI
 
     openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()

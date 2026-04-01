@@ -73,11 +73,8 @@ def check_dependencies():
     ]
 
     for package in required_packages:
-        try:
-            __import__(package)
-            print(f"  ✅ {package}: Installed")
-        except ImportError:
-            print(f"  ❌ {package}: Not installed")
+        __import__(package)
+        print(f"  ✅ {package}: Installed")
 
 
 def test_configuration():

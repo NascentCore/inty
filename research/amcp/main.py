@@ -7,28 +7,16 @@ import cyclopts
 from loguru import logger
 from pydantic import ValidationError
 
-try:
-    from research.amcp.core import (
-        AccessDecision,
-        AccessRequest,
-        ConsentGrant,
-        MemoryCustodian,
-        MemoryRecord,
-        build_demo_custodian,
-        run_decision_trace,
-        utc_now,
-    )
-except ModuleNotFoundError:
-    from core import (  # type: ignore[no-redef]
-        AccessDecision,
-        AccessRequest,
-        ConsentGrant,
-        MemoryCustodian,
-        MemoryRecord,
-        build_demo_custodian,
-        run_decision_trace,
-        utc_now,
-    )
+from research.amcp.core import (
+    AccessDecision,
+    AccessRequest,
+    ConsentGrant,
+    MemoryCustodian,
+    MemoryRecord,
+    build_demo_custodian,
+    run_decision_trace,
+    utc_now,
+)
 
 
 app = cyclopts.App(help="AMCP minimal reference implementation.")

@@ -13,11 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib import parse
 
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    def load_dotenv(path: str | Path | None = None) -> bool:
-        return False
+from dotenv import load_dotenv
 
 _ENV_PATH = Path(__file__).resolve().parent / ".env"
 load_dotenv(_ENV_PATH)

@@ -9,20 +9,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-try:
-    from .core import (
-        AMCPRepositoryBundle,
-        ConsentGrant,
-        MemoryCustodian,
-        MemoryRecord,
-    )
-except ImportError:
-    from core import (  # type: ignore[no-redef]
-        AMCPRepositoryBundle,
-        ConsentGrant,
-        MemoryCustodian,
-        MemoryRecord,
-    )
+from .core import (
+    AMCPRepositoryBundle,
+    ConsentGrant,
+    MemoryCustodian,
+    MemoryRecord,
+)
 
 
 def utc_now() -> datetime:

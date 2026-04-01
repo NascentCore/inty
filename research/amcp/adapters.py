@@ -9,14 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.exceptions import ModelRetry
 
-try:
-    from .core import AccessDecision, AccessRequest, MemoryCustodian
-except ImportError:
-    from core import (  # type: ignore[no-redef]
-        AccessDecision,
-        AccessRequest,
-        MemoryCustodian,
-    )
+from .core import AccessDecision, AccessRequest, MemoryCustodian
 
 
 @dataclass

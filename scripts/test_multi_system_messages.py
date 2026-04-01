@@ -11,19 +11,12 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 from datetime import datetime
+import yaml
+from openai import AsyncOpenAI
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-try:
-    import yaml
-    from openai import AsyncOpenAI
-except ImportError as e:
-    print(f"依赖缺失: {e}")
-    print("请安装必要的依赖: pip install openai pyyaml")
-    sys.exit(1)
-
 
 class MultiSystemMessageTester:
     """多System Message测试器"""

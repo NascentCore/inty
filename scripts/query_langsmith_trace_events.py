@@ -295,12 +295,7 @@ def main(
          --is-root \\
          --include-events
     """
-    try:
-        from langsmith import Client
-    except ImportError as e:  # pragma: no cover
-        raise RuntimeError(
-            "未安装 langsmith。请先执行：pip install -r scripts/requirements.txt"
-        ) from e
+    from langsmith import Client
 
     project_name_final = project_name or os.getenv("LANGSMITH_PROJECT")
     if not project_name_final:

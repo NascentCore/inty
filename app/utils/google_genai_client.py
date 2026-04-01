@@ -4,11 +4,7 @@ from loguru import logger
 
 from app.core.config import Environment, global_config_loaded_from_config_yaml
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
-
-try:
-    from langsmith import wrappers as langsmith_wrappers
-except ImportError:
-    langsmith_wrappers = None
+from langsmith import wrappers as langsmith_wrappers
 
 
 def wrap_google_genai_client_with_langsmith(
@@ -27,12 +23,6 @@ def wrap_google_genai_client_with_langsmith(
     """
 
     if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-        return client
-
-    if langsmith_wrappers is None:
-        logger.warning(
-            "LangSmith wrappers are unavailable, skip Google GenAI tracing wrapper"
-        )
         return client
 
     wrap_gemini = getattr(langsmith_wrappers, "wrap_gemini", None)

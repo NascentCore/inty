@@ -225,12 +225,7 @@ def _fetch_trace_record(
             "Pass either --run-id or --trace-id when not using --trace-record-path."
         )
 
-    try:
-        from langsmith import Client
-    except ImportError as e:  # pragma: no cover
-        raise RuntimeError(
-            "langsmith is not installed. Run: pip install -r scripts/requirements.txt"
-        ) from e
+    from langsmith import Client
 
     client = Client()
     project_name_final = _get_project_name_explicit_or_env(project_name)

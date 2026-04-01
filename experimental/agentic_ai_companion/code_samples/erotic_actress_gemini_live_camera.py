@@ -26,6 +26,7 @@ import argparse
 from google import genai
 from google.genai import types
 from google.genai.types import Type
+import mss
 
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
@@ -142,12 +143,6 @@ class AudioLoop:
         cap.release()
 
     def _get_screen(self):
-        try:
-            import mss  # pytype: disable=import-error # pylint: disable=g-import-not-at-top
-        except ImportError as e:
-            raise ImportError(
-                "Please install mss package using 'pip install mss'"
-            ) from e
         sct = mss.mss()
         monitor = sct.monitors[0]
 

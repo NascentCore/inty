@@ -31,11 +31,7 @@ from openai import (
     PermissionDeniedError,
     RateLimitError,
 )
-
-try:
-    from dotenv import load_dotenv
-except ImportError:  # pragma: no cover - optional dependency in some envs
-    load_dotenv = None
+from dotenv import load_dotenv
 
 
 MemoryVariant = Literal["flat", "layered"]
@@ -288,8 +284,7 @@ def load_openrouter_config(config_path: Path) -> tuple[str, str]:
         raise ValueError("config yaml must be a mapping")
 
     env_key = ""
-    if load_dotenv is not None:
-        load_dotenv()
+    load_dotenv()
     openrouter_from_env = (
         os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
     )

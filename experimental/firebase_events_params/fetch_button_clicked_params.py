@@ -16,15 +16,22 @@ import sys
 from pathlib import Path
 from typing import List, Sequence, Tuple
 
+from app.core.config import global_config_loaded_from_config_yaml as global_config
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import (
+    DateRange,
+    Dimension,
+    Filter,
+    FilterExpression,
+    Metric,
+    RunReportRequest,
+)
+from google.oauth2 import service_account
+from tabulate import tabulate
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-
-try:
-    from app.core.config import global_config_loaded_from_config_yaml as global_config
-except ImportError as exc:  # pragma: no cover - 配置模块缺失时直接提示
-    raise SystemExit("无法导入 app.core.config，请在仓库根目录下运行脚本。") from exc
-
 
 def resolve_service_account_path() -> Path:
     """根据通用配置解析 Firebase 服务账号 JSON 的绝对路径。"""
@@ -35,13 +42,6 @@ def resolve_service_account_path() -> Path:
 
 
 def build_credentials():
-    try:
-        from google.oauth2 import service_account
-    except ImportError as exc:  # pragma: no cover - 依赖缺失时给出提示
-        raise SystemExit(
-            "缺少 google-auth 依赖，请先执行：pip install -r experimental/firebase_events_params/requirements.txt"
-        ) from exc
-
     key_path = resolve_service_account_path()
     if not key_path.exists():
         raise FileNotFoundError(
@@ -62,21 +62,6 @@ def fetch_event_parameters(
     end_date: str,
     limit: int = 20,
 ) -> List[Tuple[str, str, str, str]]:
-    try:
-        from google.analytics.data_v1beta import BetaAnalyticsDataClient
-        from google.analytics.data_v1beta.types import (
-            DateRange,
-            Dimension,
-            Filter,
-            FilterExpression,
-            Metric,
-            RunReportRequest,
-        )
-    except ImportError as exc:  # pragma: no cover - 依赖缺失时给出提示
-        raise SystemExit(
-            "缺少 google-analytics-data 依赖，请先执行：pip install -r experimental/firebase_events_params/requirements.txt"
-        ) from exc
-
     credentials = build_credentials()
     client = BetaAnalyticsDataClient(credentials=credentials)
 
@@ -115,16 +100,6 @@ def fetch_event_parameters(
 def print_rows(rows: Sequence[Tuple[str, str, str, str]]) -> None:
     if not rows:
         print("没有查询到事件参数记录。")
-        return
-
-    try:
-        from tabulate import tabulate
-    except ImportError:  # pragma: no cover - 依赖缺失时降级输出
-        print("事件参数：")
-        for event_name, param_name, param_value, event_count in rows:
-            print(
-                f"- 事件：{event_name}，参数：{param_name} = {param_value}（计数：{event_count}）"
-            )
         return
 
     headers = ["事件名", "参数名", "参数值", "事件计数"]

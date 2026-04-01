@@ -34,18 +34,8 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import cyclopts
-
-try:
-    import yaml
-    from jose import jwt
-except ImportError as e:
-    missing = "yaml" if "yaml" in str(e) else "jose"
-    print(f"错误: 需要安装 {missing} 库")
-    if missing == "yaml":
-        print("请运行: pip install pyyaml")
-    else:
-        print("请运行: pip install python-jose[cryptography]")
-    sys.exit(1)
+import yaml
+from jose import jwt
 
 
 def load_config(env: str) -> dict:

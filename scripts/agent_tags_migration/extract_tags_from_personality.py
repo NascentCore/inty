@@ -20,18 +20,10 @@ from typing import List, Dict, Any, Optional
 import click
 
 # 导入自定义模块
-try:
-    # 尝试相对导入（当作为包使用时）
-    from .database import create_database_manager, DatabaseManager
-    from .tag_parser import TagParser
-    from .logger import setup_logger, get_default_log_file, MigrationLogger
-    from .models import TagExtractionResult, MigrationStats, MigrationConfig
-except ImportError:
-    # 直接导入（当直接运行脚本时）
-    from database import create_database_manager, DatabaseManager
-    from tag_parser import TagParser
-    from logger import setup_logger, get_default_log_file, MigrationLogger
-    from models import TagExtractionResult, MigrationStats, MigrationConfig
+from .database import create_database_manager, DatabaseManager
+from .tag_parser import TagParser
+from .logger import setup_logger, get_default_log_file, MigrationLogger
+from .models import TagExtractionResult, MigrationStats, MigrationConfig
 
 
 class TagMigrator:

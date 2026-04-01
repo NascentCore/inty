@@ -25,13 +25,7 @@ from typing import Any
 
 import tiktoken
 
-try:
-    from openai import APIError, APIStatusError, OpenAI, RateLimitError
-except ImportError:
-    APIError = Exception
-    APIStatusError = Exception
-    RateLimitError = Exception
-    OpenAI = None
+from openai import APIError, APIStatusError, OpenAI, RateLimitError
 
 ENCODING_NAME = "cl100k_base"
 DEFAULT_MODEL = "deepseek/deepseek-v3.2"
@@ -688,10 +682,6 @@ def main() -> None:
 
     client = None
     if not dry_run:
-        if OpenAI is None:
-            raise RuntimeError(
-                "openai package is missing; install dependencies or use --dry-run."
-            )
         client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
     trial_rows: list[TrialRow] = []

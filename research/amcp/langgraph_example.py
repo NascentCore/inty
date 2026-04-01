@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import cyclopts
 
-try:
-    from research.amcp.adapters import run_langgraph_amcp_flow
-    from research.amcp.core import ConsentGrant, build_demo_custodian
-except ModuleNotFoundError:
-    from adapters import run_langgraph_amcp_flow  # type: ignore[no-redef]
-    from core import ConsentGrant, build_demo_custodian  # type: ignore[no-redef]
+from research.amcp.adapters import run_langgraph_amcp_flow
+from research.amcp.core import ConsentGrant, build_demo_custodian
 
 
 app = cyclopts.App(help="AMCP LangGraph integration example.")

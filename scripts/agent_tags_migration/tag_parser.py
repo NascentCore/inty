@@ -4,15 +4,12 @@
 从personality字段中提取和解析标签信息
 """
 
+import ast
 import json
 import re
-import ast
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-try:
-    from .models import CharacterInfo, TagExtractionResult
-except ImportError:
-    from models import CharacterInfo, TagExtractionResult
+from .models import CharacterInfo, TagExtractionResult
 
 
 class TagParser:
