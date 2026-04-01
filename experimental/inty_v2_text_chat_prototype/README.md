@@ -12,21 +12,28 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 cp devops/config.yaml.dev config.yaml
 ```
 
-然后启动本地的聊天服务的界面：
+依赖与 `.env`（在原型目录执行一次即可）：
 
 ```bash
 cd experimental/inty_v2_text_chat_prototype
 cp .env.example .env
 
-# 编辑 .env 将自己的名字替补掉 LANGSMITH_PROJECT=inty-v2-text-chat-prototype-<USER>
-# 如：LANGSMITH_PROJECT=inty-v2-text-chat-prototype-yaxiongzhao
-# 这样方便区分 langsmith 内容
+# 编辑 .env：LANGSMITH_PROJECT=inty-v2-text-chat-prototype-<USER> 等
 
 uv venv
 source .venv/bin/activate
 uv pip install -r requirements.txt
-python main.py repl --workspace _ws
 ```
+
+**必须从仓库根目录启动 REPL**：`app.core.config` 在导入时要求**当前工作目录**下存在 `config.yaml`（上文 `cp devops/config.yaml.dev config.yaml` 已在根目录提供该文件）。若在 `experimental/inty_v2_text_chat_prototype` 里直接 `python main.py`，会因找不到 `config.yaml` 而失败。
+
+```bash
+cd /path/to/inty-backend
+source experimental/inty_v2_text_chat_prototype/.venv/bin/activate
+python experimental/inty_v2_text_chat_prototype/main.py repl --workspace experimental/inty_v2_text_chat_prototype/_ws
+```
+
+`--workspace` 使用相对**仓库根**的路径。`load_prototype_dotenv()` 会读取 cwd 的 `.env` 以及包目录下的 `.env`，因此在根目录启动时仍能加载 `experimental/inty_v2_text_chat_prototype/.env` 里的 API Key。
 
 ## Memory 语义存储（DB-first 历史版本 + 内存主读 + 文件镜像）
 

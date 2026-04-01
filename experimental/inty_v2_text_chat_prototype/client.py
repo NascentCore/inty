@@ -6,6 +6,7 @@ import atexit
 import os
 import time
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -33,15 +34,19 @@ def _flush_langsmith_traces_on_exit() -> None:
         return
     from langsmith.run_trees import get_cached_client
 
-    get_cached_client().flush()
+    try:
+        get_cached_client().flush()
+    except RuntimeError:
+        pass
 
 
 atexit.register(_flush_langsmith_traces_on_exit)
 
 
 def load_prototype_dotenv() -> None:
-    """Load `.env` from the process current working directory (e.g. OPENROUTER_API_KEY)."""
+    """Load cwd `.env` first, then package `.env` for keys still unset (repo-root cwd)."""
     load_dotenv()
+    load_dotenv(Path(__file__).resolve().parent / ".env")
 
 
 def _ensure_dotenv() -> None:
