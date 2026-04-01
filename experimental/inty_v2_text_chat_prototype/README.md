@@ -6,6 +6,12 @@
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+拷贝默认配置文件到代码仓库的顶层目录（在代码库顶层目录运行）：
+
+```bash
+cp devops/config.yaml.dev config.yaml
+```
+
 然后启动本地的聊天服务的界面：
 
 ```bash
