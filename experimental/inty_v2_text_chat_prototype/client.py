@@ -5,6 +5,7 @@ from __future__ import annotations
 import atexit
 import os
 import time
+from copy import deepcopy
 from typing import Any
 
 from dotenv import load_dotenv
@@ -136,6 +137,57 @@ def tool_model() -> str:
     """工具通道模型（工具调用能力优先）；缺省回退到 INTY_V2_PROTO_MODEL。"""
     _ensure_dotenv()
     return os.getenv("INTY_V2_PROTO_TOOL_MODEL") or default_model()
+
+
+def tool_path_chat_completion_kwargs(model: str) -> dict[str, Any]:
+    """
+    OpenRouter ``chat.completions.create`` 的额外参数：仅用于**挂载 tools** 的调用（工具选型、参数构造）。
+
+    - DeepSeek：``extra_body.reasoning.effort=high``，``exclude=True`` 避免推理内容进入对用户可见的 assistant 文本。
+    - Gemini：``reasoning_effort=high``（与 ``experimental/thinking_token_handling`` 一致）。
+
+    关闭：``INTY_V2_PROTO_TOOL_THINKING=0`` / ``false`` / ``no`` / ``off`` / ``none``。
+    其它模型暂不注入，避免不支持的参数导致 400。
+    """
+    _ensure_dotenv()
+    raw = os.environ.get("INTY_V2_PROTO_TOOL_THINKING")
+    if raw is not None and str(raw).strip().lower() in (
+        "0",
+        "false",
+        "no",
+        "off",
+        "none",
+    ):
+        return {}
+
+    from app.utils.models_catalog import is_deepseek_on_openrouter, is_gemini_model
+
+    if is_deepseek_on_openrouter(model):
+        return {"extra_body": {"reasoning": {"effort": "high", "exclude": True}}}
+    if is_gemini_model(model):
+        return {"reasoning_effort": "high"}
+    return {}
+
+
+def create_chat_completion(
+    client: Any,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+    tool_choice: str | None = None,
+) -> Any:
+    create_kw: dict[str, Any] = {
+        "model": model,
+        "messages": deepcopy(messages_payload),
+    }
+    if tools:
+        create_kw.update(tool_path_chat_completion_kwargs(model))
+        create_kw["tools"] = tools
+        create_kw["parallel_tool_calls"] = True
+        if tool_choice is not None:
+            create_kw["tool_choice"] = tool_choice
+    return client.chat.completions.create(**create_kw)
 
 
 def dual_llm_enabled() -> bool:

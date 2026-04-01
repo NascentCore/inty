@@ -13,7 +13,7 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop,
 )
 
-from .client import default_model, get_client_dual_llm_tool
+from .client import create_chat_completion, default_model, get_client_dual_llm_tool
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str
 from .orchestrator import is_workspace_initialized
@@ -117,12 +117,11 @@ def run_workspace_bootstrap_loop(
     while rounds_used < max_rounds:
         round_idx = rounds_used + 1
         t_api = time.perf_counter()
-        resp = client.chat.completions.create(
+        resp = create_chat_completion(
+            client,
             model=m,
-            messages=messages,
+            messages_payload=messages,
             tools=tools,
-            # parallel_tool_calls=False,
-            parallel_tool_calls=True,
         )
         logger.info(
             "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",
@@ -201,11 +200,11 @@ def run_workspace_bootstrap_loop(
             rounds_used += 1
             active_round = rounds_used
             t_api_inner = time.perf_counter()
-            next_resp = client.chat.completions.create(
+            next_resp = create_chat_completion(
+                client,
                 model=m,
-                messages=messages_with_tool_results,
+                messages_payload=messages_with_tool_results,
                 tools=tools,
-                parallel_tool_calls=True,
             )
             logger.info(
                 "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",

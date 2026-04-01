@@ -21,6 +21,7 @@ from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
 from .client import (
     async_tool_background_enabled,
     chat_model,
+    create_chat_completion,
     default_model,
     dual_llm_enabled,
     get_client,
@@ -138,23 +139,6 @@ def _debug_log_prompt_bundle(bundle: PromptBundle, *, context: ContextMeta) -> N
 def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Drop underscore-prefixed keys (e.g. transcript uuid) before chat.completions."""
     return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
-
-
-def _chat_completion_create(
-    client: Any,
-    *,
-    model: str,
-    messages_payload: list[dict[str, Any]],
-    tools: list[Any],
-) -> Any:
-    create_kw: dict[str, Any] = {
-        "model": model,
-        "messages": deepcopy(messages_payload),
-    }
-    if tools:
-        create_kw["tools"] = tools
-        create_kw["parallel_tool_calls"] = True
-    return client.chat.completions.create(**create_kw)
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:
@@ -379,7 +363,7 @@ async def _run_turn_fast_chat_then_tool_background(
         client=tool_client,
     )
     chat_resp = await asyncio.to_thread(
-        _chat_completion_create,
+        create_chat_completion,
         chat_client,
         model=chat_route_model,
         messages_payload=chat_payload,
@@ -483,7 +467,7 @@ async def _run_turn_with_user_profile_tools(
             async def _run_chat_branch() -> Any:
                 t_api_chat = time.perf_counter()
                 resp_chat = await asyncio.to_thread(
-                    _chat_completion_create,
+                    create_chat_completion,
                     dual_chat_client,
                     model=chat_route_model,
                     messages_payload=chat_branch_payload,
@@ -502,7 +486,7 @@ async def _run_turn_with_user_profile_tools(
             async def _run_tool_branch() -> Any:
                 t_api_tool = time.perf_counter()
                 resp_tool = await asyncio.to_thread(
-                    _chat_completion_create,
+                    create_chat_completion,
                     dual_tool_client,
                     model=tool_route_model,
                     messages_payload=base_payload,
@@ -579,7 +563,7 @@ async def _run_turn_with_user_profile_tools(
             t_api = time.perf_counter()
             # 带 tools 的同步单路：LangSmith 用 Tool 路名；陪伴心跳无 tools 仍用默认 ChatOpenAI。
             single_llm_client = client if heartbeat_turn else get_client_dual_llm_tool()
-            resp = _chat_completion_create(
+            resp = create_chat_completion(
                 single_llm_client,
                 model=model,
                 messages_payload=_openai_messages_payload(messages),

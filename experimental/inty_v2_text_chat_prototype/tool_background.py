@@ -20,7 +20,7 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
-from .client import get_client_dual_llm_tool
+from .client import create_chat_completion, get_client_dual_llm_tool
 from .jsonl_db_store import append_jsonl_with_db
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str, utc_iso_ts
@@ -185,23 +185,6 @@ def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, A
     return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
 
 
-def _chat_completion_create(
-    client: Any,
-    *,
-    model: str,
-    messages_payload: list[dict[str, Any]],
-    tools: list[Any],
-    tool_choice: str | None = None,
-) -> Any:
-    create_kw: dict[str, Any] = {"model": model, "messages": deepcopy(messages_payload)}
-    if tools:
-        create_kw["tools"] = tools
-        create_kw["parallel_tool_calls"] = True
-        if tool_choice is not None:
-            create_kw["tool_choice"] = tool_choice
-    return client.chat.completions.create(**create_kw)
-
-
 def _log_bg_llm_round_result(
     *,
     round_idx: int,
@@ -312,7 +295,7 @@ async def _run_background_tool_loop(
     if force_tools:
         try:
             initial_response = await asyncio.to_thread(
-                _chat_completion_create,
+                create_chat_completion,
                 resolved_client,
                 model=tool_model_name,
                 messages_payload=payload,
@@ -325,7 +308,7 @@ async def _run_background_tool_loop(
                 exc,
             )
             initial_response = await asyncio.to_thread(
-                _chat_completion_create,
+                create_chat_completion,
                 resolved_client,
                 model=tool_model_name,
                 messages_payload=payload,
@@ -334,7 +317,7 @@ async def _run_background_tool_loop(
             )
     else:
         initial_response = await asyncio.to_thread(
-            _chat_completion_create,
+            create_chat_completion,
             resolved_client,
             model=tool_model_name,
             messages_payload=payload,
@@ -384,7 +367,7 @@ async def _run_background_tool_loop(
         active_round = rounds_used
         request_snapshot_inner = deepcopy(messages_with_tool_results)
         next_resp = await asyncio.to_thread(
-            _chat_completion_create,
+            create_chat_completion,
             resolved_client,
             model=tool_model_name,
             messages_payload=_openai_messages_payload(messages_with_tool_results),
