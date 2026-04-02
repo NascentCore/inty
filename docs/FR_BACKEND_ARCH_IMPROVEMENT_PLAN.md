@@ -112,6 +112,7 @@
 - 已交付：`backend/inty/main.py` 注册统一 HTTP 异常与兜底异常处理器
 - 已交付：`backend/docs/API_ERROR_RESPONSE_CONTRACT.md` 错误响应契约与映射表文档
 - 已交付：`tests/app/api/test_error_handler_contract.py` 覆盖 `HTTPException/RequestValidationError/Unhandled Exception` 三类错误响应壳
+- PR 审阅：`#2750` 已完成自审，结论为可合并（本批次仅统一异常路径，不变更业务错误壳 `APIResponse`）
 - 验证：
   - `.venv/bin/pytest tests/app/api/test_error_handler_contract.py -q`（通过）
   - `.venv/bin/pytest tests/app/api/v1/endpoints/test_chats.py -k "test_update_chat_settings_rejects_non_gemini_voice_id" -q`（通过）
