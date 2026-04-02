@@ -46,14 +46,14 @@ from app.services.memory_service import (
     deliver_daily_memories_for_user_agent,
     deliver_festival_memories_for_user_agent,
 )
-from app.services.global_services import subscription_service
+from app.services.subscription_service import SubscriptionService
 from app.services.surprise_snap_service import (
     get_unlocked_surprise_snap_message_ids,
     record_surprise_snap_unlock,
 )
 from app.services.voice_service import (
+    VoiceService,
     get_voice_message_narration_mode_from_agent_settings,
-    voice_service,
 )
 
 # TODO: Prefix should be /chat instead of /chats.
@@ -427,6 +427,8 @@ async def generate_message_voice(
     message_id: str,
     language: str = Query("zh", description="语言代码"),
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
+    voice_svc: VoiceService = Depends(deps.get_voice_service),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ):
     """
     为指定消息生成语音（evaluation 可传 X-Assume-User-Id）
@@ -464,7 +466,7 @@ async def generate_message_voice(
                 agent_data.get("settings")
             )
         )
-        voice_result = await voice_service.generate_voice(
+        voice_result = await voice_svc.generate_voice(
             text=message_content,
             voice_id=resolved_voice_id,
             language=language,
@@ -476,13 +478,11 @@ async def generate_message_voice(
 
         if not voice_result:
             # 检查是否是因为达到限制
-            from app.services.global_services import subscription_service
-
             (
                 is_allowed,
                 used_count,
                 limit,
-            ) = await subscription_service.check_voice_generation_limit(
+            ) = await subscription_svc.check_voice_generation_limit(
                 db, current_user
             )
             if not is_allowed:
@@ -557,12 +557,13 @@ async def generate_message_voice(
 async def get_voice_info(
     voice_id: str,
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
+    voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     """
     获取特定语音的信息
     """
     try:
-        voice_info = await voice_service.get_voice_info(voice_id)
+        voice_info = await voice_svc.get_voice_info(voice_id)
         if not voice_info:
             raise HTTPException(status_code=404, detail="Voice not found")
 
@@ -594,6 +595,7 @@ async def update_agent_chat_settings(
     agent_id: str,
     settings_update: schemas.ChatSettingsUpdate,
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ) -> Any:
     """
     Update chat settings by Agent ID
@@ -629,7 +631,7 @@ async def update_agent_chat_settings(
             db=db, chat_id=chat.id, user_id=current_user_id, agent_id=agent_id
         )
 
-        subscription_status = await subscription_service.get_user_subscription_status(
+        subscription_status = await subscription_svc.get_user_subscription_status(
             db, current_user_id
         )
 

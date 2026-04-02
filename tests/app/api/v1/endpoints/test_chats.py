@@ -14,8 +14,9 @@ from app.core.voice.tts_api import VoiceMessageNarrationMode
 from app.models.user import AuthType
 from app.schemas.response import BusinessErrorCode
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.global_services import subscription_service
+from app.services.global_services import subscription_service as global_subscription_service
 from app.services.voice_service import VoiceGenerationResult
+from app.services.voice_service import voice_service as global_voice_service
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
     _create_mock_db_session,
@@ -51,6 +52,10 @@ def chats_business_error_app() -> FastAPI:
         yield mock_db
 
     app.dependency_overrides[deps.get_async_db] = override_db
+    app.dependency_overrides[deps.get_subscription_service] = (
+        lambda: global_subscription_service
+    )
+    app.dependency_overrides[deps.get_voice_service] = lambda: global_voice_service
 
     yield app
 
@@ -87,13 +92,9 @@ def _stub_voice_generation_dependencies(monkeypatch: pytest.MonkeyPatch):
         "get_message_content",
         fake_get_message_content,
     )
+    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
     monkeypatch.setattr(
-        chats_v1.voice_service,
-        "generate_voice",
-        fake_generate_voice,
-    )
-    monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "check_voice_generation_limit",
         fake_check_voice_limit,
     )
@@ -194,11 +195,7 @@ def test_generate_message_voice_success_includes_gcs_urls(
         "get_message_content",
         fake_get_message_content,
     )
-    monkeypatch.setattr(
-        chats_v1.voice_service,
-        "generate_voice",
-        fake_generate_voice,
-    )
+    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
     monkeypatch.setattr(
         chat_history_service,
         "update_message_audio_url",
@@ -284,11 +281,7 @@ def test_generate_message_voice_prefers_chat_settings_voice_id(
         "get_message_content",
         fake_get_message_content,
     )
-    monkeypatch.setattr(
-        chats_v1.voice_service,
-        "generate_voice",
-        fake_generate_voice,
-    )
+    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
     monkeypatch.setattr(
         chat_history_service,
         "update_message_audio_url",
@@ -342,7 +335,7 @@ def test_update_chat_settings_requires_subscription(
         fake_get_or_create_chat_settings,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "get_user_subscription_status",
         fake_get_subscription_status,
     )
@@ -396,7 +389,7 @@ def test_update_chat_settings_rejects_non_gemini_voice_id(
         fake_get_or_create_chat_settings,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "get_user_subscription_status",
         fake_get_subscription_status,
     )
@@ -463,7 +456,9 @@ def test_update_chat_settings_accepts_default_voice_sentinel_and_clears_voice_id
         chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
     )
     monkeypatch.setattr(
-        subscription_service, "get_user_subscription_status", fake_get_subscription_status
+        global_subscription_service,
+        "get_user_subscription_status",
+        fake_get_subscription_status,
     )
     monkeypatch.setattr(chat_service, "update_chat_settings", fake_update_chat_settings)
 
@@ -820,7 +815,9 @@ def test_update_chat_settings_accepts_valid_chat_mode(
         chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
     )
     monkeypatch.setattr(
-        subscription_service, "get_user_subscription_status", fake_get_subscription_status
+        global_subscription_service,
+        "get_user_subscription_status",
+        fake_get_subscription_status,
     )
     monkeypatch.setattr(chat_service, "update_chat_settings", fake_update_chat_settings)
 
@@ -857,7 +854,9 @@ def test_update_chat_settings_rejects_invalid_chat_mode(
         chat_service, "get_or_create_chat_settings", fake_get_or_create_chat_settings
     )
     monkeypatch.setattr(
-        subscription_service, "get_user_subscription_status", fake_get_subscription_status
+        global_subscription_service,
+        "get_user_subscription_status",
+        fake_get_subscription_status,
     )
 
     user = _make_user(auth_type=AuthType.GOOGLE)

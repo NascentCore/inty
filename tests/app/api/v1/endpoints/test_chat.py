@@ -19,9 +19,12 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
 from app.schemas.response import APIResponse, BizError, BusinessErrorCode, UsageLimitExceeded
-from app.services.voice_service import VoiceGenerationResult
+from app.services.voice_service import (
+    VoiceGenerationResult,
+    voice_service as global_voice_service,
+)
 from app.services import agent_service, chat_history_service, chat_service
-from app.services.global_services import subscription_service
+from app.services.global_services import subscription_service as global_subscription_service
 from tests.app.api.test_client import TestClient
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
@@ -108,7 +111,7 @@ def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
         fake_get_agent,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "check_chat_limit",
         fake_check_chat_limit,
     )
@@ -209,17 +212,17 @@ def _stub_success_chat_completion_with_premium_preview(
         fake_get_agent,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "check_chat_limit",
         fake_check_chat_limit,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "get_user_current_subscription",
         fake_get_user_current_subscription,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "record_usage",
         fake_record_usage,
     )
@@ -315,17 +318,17 @@ def _stub_success_chat_completion_with_multimodal(
         fake_get_agent,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "check_chat_limit",
         fake_check_chat_limit,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "get_user_current_subscription",
         fake_get_user_current_subscription,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "record_usage",
         fake_record_usage,
     )
@@ -420,17 +423,17 @@ def _stub_success_chat_completion_with_multimodal_response(
         fake_get_agent,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "check_chat_limit",
         fake_check_chat_limit,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "get_user_current_subscription",
         fake_get_user_current_subscription,
     )
     monkeypatch.setattr(
-        subscription_service,
+        global_subscription_service,
         "record_usage",
         fake_record_usage,
     )
@@ -763,7 +766,7 @@ def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
         "get_or_create_chat_settings",
         fake_get_or_create_chat_settings,
     )
-    monkeypatch.setattr(chat_v1.voice_service, "generate_voice", fake_generate_voice)
+    monkeypatch.setattr(global_voice_service, "generate_voice", fake_generate_voice)
 
     user = _make_user(auth_type=AuthType.GOOGLE)
     payload = {
