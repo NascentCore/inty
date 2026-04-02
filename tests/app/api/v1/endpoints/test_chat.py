@@ -684,6 +684,8 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         request,
         current_user,
         app_version_code,
+        subscription_svc,
+        voice_svc,
     ):
         return APIResponse.success(
             data={

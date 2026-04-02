@@ -62,6 +62,10 @@ async def app(db_session: AsyncSession):
         app.dependency_overrides.clear()
 
 
+class _StubSubscriptionService:
+    pass
+
+
 @pytest.mark.asyncio
 async def test_chat_image_generation_fallback_returns_matched_image(
     app: FastAPI,
@@ -86,10 +90,13 @@ async def test_chat_image_generation_fallback_returns_matched_image(
         SubscriptionStatusResponse(is_subscribed=False, subscription_status="free")
     )
     mock_sub.record_usage.return_value = None
-    monkeypatch.setattr(
-        "app.api.v1.endpoints.chat.subscription_service",
-        mock_sub,
+    subscription_stub = _StubSubscriptionService()
+    subscription_stub.check_image_gen_limit = mock_sub.check_image_gen_limit
+    subscription_stub.get_user_subscription_status = (
+        mock_sub.get_user_subscription_status
     )
+    subscription_stub.record_usage = mock_sub.record_usage
+    app.dependency_overrides[deps.get_subscription_service] = lambda: subscription_stub
 
     # 3) 主生图强制失败，触发兜底
     monkeypatch.setattr(
