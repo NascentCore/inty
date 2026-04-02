@@ -21,7 +21,7 @@
 | 子项 | 状态 | 说明 |
 | ---- | ---- | ---- |
 | 2.1 零停机 / 滚动或蓝绿部署 | **未完成** | [`.github/workflows/build_and_deploy_backend.yml`](../.github/workflows/build_and_deploy_backend.yml) 仍为 `docker stop` / `docker rm` 后单容器拉起；[`backend/inty/start.sh`](../backend/inty/start.sh) 仍为单进程 `uvicorn`，未采用计划中的 gunicorn 多 worker + 流量切换方案。 |
-| 2.2 事件循环阻塞、同步 DB/GCS 等 | **部分推进** | 多处已使用 `asyncio.to_thread`（如聊天消息分页、记忆投递、GCS、TTS 等）。[`chat_history_service`](../app/services/chat_history_service.py) 仍在 [`chat_service`](../app/services/chat_service.py)、[`agent`](../app/core/agent/agent.py) 等路径上同步调用，需继续按 [`app/TODOS_SCALABILITY.md`](../app/TODOS_SCALABILITY.md) 收敛。 |
+| 2.2 事件循环阻塞、同步 DB/GCS 等 | **部分推进** | 多处已使用 `asyncio.to_thread`（如聊天消息分页、记忆投递、GCS、TTS 等）。[`chat_history_service`](../app/services/chat_history_service.py) 仍在 [`chat_service`](../app/services/chat_service.py)、[`agent`](../app/core/agent/agent.py) 等路径上同步调用，需继续按 [`docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`](./FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md) 收敛。 |
 
 ### 第三阶段：商业化功能支撑
 
@@ -58,7 +58,7 @@
 3. **商业化支撑不足**：付费体系不完整，缺少数据依据
 4. **产品功能缺口**：记忆系统、亲密度、成就系统等功能需要后端支持
 
-结合现有技术债务（[`app/TODOS.md`](../app/TODOS.md)、[`app/TODOS_SCALABILITY.md`](../app/TODOS_SCALABILITY.md)），制定以下分阶段计划。
+结合现有技术债务（[`docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`](./FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md)），制定以下分阶段计划。
 
 ---
 
@@ -95,7 +95,7 @@
 
 **目标**：解决"不知道系统性能瓶颈在哪"的问题
 
-- 接入 OpenTelemetry（已在 [`app/TODOS.md`](../app/TODOS.md) P0 列表）
+- 接入 OpenTelemetry（已在 [`docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`](./FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md) P0 列表）
 - 核心指标埋点：
   - 请求 P50/P95/P99 延迟
   - LLM 调用延迟（已有 `/user-analytics/llm-latency` 基础）
@@ -122,7 +122,7 @@
 
 ### 2.2 性能优化（P0 级阻塞问题）
 
-- 修复事件循环阻塞（[`app/TODOS_SCALABILITY.md`](../app/TODOS_SCALABILITY.md) P0）：
+- 修复事件循环阻塞（[`docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`](./FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md) P0）：
   - `chat_history_service` 同步 DB 调用 → `asyncio.to_thread()`
   - GCS 同步 SDK → 异步包装
 - N+1 查询优化：`get_chats()` 批量查询重构
@@ -234,7 +234,6 @@
 
 ## 相关文档
 
-- [`app/TODOS.md`](../app/TODOS.md) - 后端架构级任务
-- [`app/TODOS_SCALABILITY.md`](../app/TODOS_SCALABILITY.md) - 可扩展性问题修复
+- [`docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`](./FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md) - 后端架构改进统一计划
 - [`devops/RELEASE.md`](../devops/RELEASE.md) - 发布流程
 - [`app/services/user_analytics_service.py`](../app/services/user_analytics_service.py) - 现有用户分析服务

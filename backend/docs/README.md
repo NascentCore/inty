@@ -21,7 +21,7 @@
 
 - [ ] `app/README.md`
 - [ ] `app/AGENTS.md`
-- [ ] `app/TODOS.md`
+- [ ] `docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`
 - [ ] `app/STAINLESS.md`
 - [ ] `app/docs/AGENTS.md`
 - [ ] `app/docs/CHAT_MESSAGE_IMAGE_GENERATION.md`
@@ -35,7 +35,6 @@
 - [ ] `app/middleware/README.md`
 - [ ] `app/utils/README.md`
 - [ ] `app/utils/cascades/README.md`
-- [ ] `app/api/README.md`
 - [ ] `app/api/utils/README.md`
 - [ ] `app/schemas/README.md`
 - [ ] `app/models/README.md`
