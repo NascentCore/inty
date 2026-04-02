@@ -109,6 +109,10 @@ jobs:
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
+      - name: Check architecture layer boundaries
+        run: |
+          python scripts/check_layer_dependencies.py
+
       - name: Ensure single alembic head
         run: |
           export PYTHONPATH=.

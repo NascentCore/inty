@@ -61,6 +61,16 @@
 - 建立跨层依赖禁止清单。
 - 接入 CI 检查，阻断新增架构违规。
 
+完成情况（2026-04-02）：
+
+- 状态：DONE
+- 已交付：`backend/docs/ARCH_LAYER_BOUNDARY_RULES.md`
+- 已交付：`scripts/check_layer_dependencies.py`
+- 已接入：`.github/workflows/ci_backend.yaml` 新增 `Check architecture layer boundaries`
+- 验证：
+  - `python3 scripts/check_layer_dependencies.py`（通过）
+  - 人工注入违规样例后再次运行脚本（失败并输出违规）
+
 交付物：
 
 - 架构边界说明文档
@@ -216,7 +226,7 @@
 
 | Workstream | Owner | Status | Key Deliverable | Test Evidence |
 | --- | --- | --- | --- | --- |
-| Layer boundaries and CI rules | TBD | TODO | Rule doc + CI gate | Contract test + CI run |
+| Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `python3 scripts/check_layer_dependencies.py` + injected violation check |
 | DI unification | TBD | TODO | Depends pattern rollout | Endpoint regression |
 | Error model unification | TBD | TODO | Unified error envelope | API snapshot tests |
 | Async blocking fixes | TBD | TODO | to_thread/async wrappers | Load test metrics |
