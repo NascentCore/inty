@@ -68,7 +68,7 @@
 - 已交付：`scripts/check_layer_dependencies.py`
 - 已接入：`.github/workflows/ci_backend.yaml` 新增 `Check architecture layer boundaries`
 - 验证：
-  - `python3 scripts/check_layer_dependencies.py`（通过）
+  - `.venv/bin/python scripts/check_layer_dependencies.py`（通过）
   - 人工注入违规样例后再次运行脚本（失败并输出违规）
 
 交付物：
@@ -226,7 +226,7 @@
 
 | Workstream | Owner | Status | Key Deliverable | Test Evidence |
 | --- | --- | --- | --- | --- |
-| Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `python3 scripts/check_layer_dependencies.py` + injected violation check |
+| Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `.venv/bin/python scripts/check_layer_dependencies.py` + injected violation check |
 | DI unification | TBD | TODO | Depends pattern rollout | Endpoint regression |
 | Error model unification | TBD | TODO | Unified error envelope | API snapshot tests |
 | Async blocking fixes | TBD | TODO | to_thread/async wrappers | Load test metrics |

@@ -33,8 +33,8 @@
 
 - 检查脚本：`scripts/check_layer_dependencies.py`
 - 本地运行：
-  - `python3 scripts/check_layer_dependencies.py`
-  - 可选输出 JSON：`python3 scripts/check_layer_dependencies.py --json-output /tmp/layer_violations.json`
+  - `source .venv/bin/activate && python scripts/check_layer_dependencies.py`
+  - 可选输出 JSON：`source .venv/bin/activate && python scripts/check_layer_dependencies.py --json-output /tmp/layer_violations.json`
 - CI 集成：
   - `.github/workflows/ci_backend.yaml` 中新增 `Check architecture layer boundaries` 步骤。
   - 任何违规 import 将导致 CI 失败。
