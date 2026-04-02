@@ -94,4 +94,6 @@ def test_llm_driven_tool_calls_update_profile_image_sequentially() -> None:
         result.executed_tools[1].input_arguments["image_url"]
         == result.executed_tools[0].output["image_url"]
     )
-    assert result.final_profile_image_url == result.executed_tools[0].output["image_url"]
+    assert (
+        result.final_profile_image_url == result.executed_tools[0].output["image_url"]
+    )

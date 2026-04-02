@@ -90,7 +90,9 @@ class TestMemoryStore(unittest.TestCase):
             )
             store.write_document("USER.md", "# USER\n\nx\n")
             self.assertEqual(store.read_document("USER.md"), "# USER\n\nx\n")
-            self.assertEqual((root / "USER.md").read_text(encoding="utf-8"), "# USER\n\nx\n")
+            self.assertEqual(
+                (root / "USER.md").read_text(encoding="utf-8"), "# USER\n\nx\n"
+            )
             store.shutdown(timeout_s=2.0)
 
     def test_append_line_formats_newline(self) -> None:
@@ -127,7 +129,9 @@ class TestMemoryStore(unittest.TestCase):
                 mirror_to_files=False,
                 flush_batch_size=8,
             )
-            self.assertEqual(store.read_document("MEMORY.md"), "# MEMORY\n\nfrom-repo\n")
+            self.assertEqual(
+                store.read_document("MEMORY.md"), "# MEMORY\n\nfrom-repo\n"
+            )
             store.shutdown(timeout_s=2.0)
 
     def test_write_appends_history_and_reads_latest(self) -> None:

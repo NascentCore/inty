@@ -482,9 +482,7 @@ async def generate_message_voice(
                 is_allowed,
                 used_count,
                 limit,
-            ) = await subscription_svc.check_voice_generation_limit(
-                db, current_user
-            )
+            ) = await subscription_svc.check_voice_generation_limit(db, current_user)
             if not is_allowed:
                 from app.models.user import AuthType
 

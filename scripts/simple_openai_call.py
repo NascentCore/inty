@@ -15,7 +15,6 @@ sys.path.insert(0, str(project_root))
 
 from openai import AsyncOpenAI
 
-
 # 在这里定义要发送的消息列表
 MESSAGES = [
     {

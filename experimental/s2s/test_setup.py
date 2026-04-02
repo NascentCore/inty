@@ -14,12 +14,15 @@ def test_imports():
     print("🔍 Testing imports...")
 
     import openai  # noqa: F401
+
     print("✅ openai - OK")
 
     import sounddevice  # noqa: F401
+
     print("✅ sounddevice - OK")
 
     import numpy  # noqa: F401
+
     print("✅ numpy - OK")
 
     return True
