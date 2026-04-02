@@ -27,16 +27,31 @@ FORBIDDEN_LAYER_DEPENDENCIES: dict[tuple[str, str], str] = {
     ("services", "middleware"): "Services must not depend on middleware layer.",
     ("models", "services"): "Models must not depend on services layer.",
     ("models", "schemas"): "Models must not depend on schemas layer.",
-    ("models", "external_services"): "Models must not depend on external services layer.",
+    (
+        "models",
+        "external_services",
+    ): "Models must not depend on external services layer.",
     ("models", "middleware"): "Models must not depend on middleware layer.",
-    ("schemas", "external_services"): "Schemas must not depend on external services layer.",
+    (
+        "schemas",
+        "external_services",
+    ): "Schemas must not depend on external services layer.",
     ("schemas", "middleware"): "Schemas must not depend on middleware layer.",
     ("utils", "models"): "Utils must not depend on models layer.",
     ("utils", "middleware"): "Utils must not depend on middleware layer.",
     ("external_services", "api"): "External services must not depend on API layer.",
-    ("external_services", "services"): "External services must not depend on services layer.",
-    ("external_services", "models"): "External services must not depend on models layer.",
-    ("external_services", "middleware"): "External services must not depend on middleware layer.",
+    (
+        "external_services",
+        "services",
+    ): "External services must not depend on services layer.",
+    (
+        "external_services",
+        "models",
+    ): "External services must not depend on models layer.",
+    (
+        "external_services",
+        "middleware",
+    ): "External services must not depend on middleware layer.",
 }
 
 
@@ -72,7 +87,9 @@ def _target_layer(module: str) -> str | None:
     return None
 
 
-def _resolve_from_module(file_path: Path, app_root: Path, node: ast.ImportFrom) -> str | None:
+def _resolve_from_module(
+    file_path: Path, app_root: Path, node: ast.ImportFrom
+) -> str | None:
     if node.level == 0:
         return node.module
 
@@ -165,7 +182,9 @@ def main(
     ] = "app",
     json_output: Annotated[
         str | None,
-        cyclopts.Parameter(name="--json-output", help="Optional JSON report file path."),
+        cyclopts.Parameter(
+            name="--json-output", help="Optional JSON report file path."
+        ),
     ] = None,
 ) -> None:
     root = Path(app_root).resolve()

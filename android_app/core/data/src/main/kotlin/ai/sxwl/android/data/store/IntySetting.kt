@@ -323,9 +323,7 @@ object IntySetting {
 
     /** 标记用户已手动设置过 Auto Play Voice */
     suspend fun markUserSetAutoPlayVoice() {
-        updateIntySetting {
-            it.copy(userCache = it.userCache.copy(userSetAutoPlayVoice = true))
-        }
+        updateIntySetting { it.copy(userCache = it.userCache.copy(userSetAutoPlayVoice = true)) }
     }
 
     /** 自动播放背景动画（全局设置，默认开启） */

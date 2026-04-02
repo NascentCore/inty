@@ -2,8 +2,8 @@ package ai.sxwl.android.data.store
 
 import android.content.Context
 import android.os.Build
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

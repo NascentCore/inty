@@ -33,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+
 def resolve_service_account_path() -> Path:
     """根据通用配置解析 Firebase 服务账号 JSON 的绝对路径。"""
     service_account_path = Path(global_config.firebase.service_account_path)
