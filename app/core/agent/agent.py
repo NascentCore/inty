@@ -1244,6 +1244,23 @@ class Agent:
 
         return False
 
+    def _is_invalid_model_identifier_error(self, error: Exception) -> bool:
+        """判断是否为上游返回的无效模型标识错误。"""
+        error_text = str(error).lower()
+        if "model identifier is invalid" in error_text:
+            return True
+
+        error_body = getattr(error, "body", None)
+        if error_body is None:
+            return False
+
+        if isinstance(error_body, str):
+            body_text = error_body.lower()
+        else:
+            body_text = json.dumps(error_body, ensure_ascii=False).lower()
+
+        return "model identifier is invalid" in body_text
+
     def _call_openai_api_with_retry(
         self,
         client: OpenAI,
@@ -1261,6 +1278,8 @@ class Agent:
         user_email: Optional[str] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         tool_choice: Optional[Any] = None,
+        fallback_model: Optional[str] = None,
+        fallback_extra_body: Optional[Dict[str, Any]] = None,
     ):
         """
         带重试机制的OpenAI API调用，并集成LangSmith追踪
@@ -1286,6 +1305,12 @@ class Agent:
             最后一次尝试的异常
         """
         last_error = None
+        fallback_model_name = (
+            resolve_chat_model_to_id(fallback_model) if fallback_model else None
+        )
+        current_model = model
+        current_extra_body = extra_body
+        fallback_used = False
 
         # 检查是否启用 LangSmith 追踪（测试环境禁用，或 langsmith 不可用时禁用）
         enable_tracing = global_config.app.environment != Environment.TEST
@@ -1303,11 +1328,11 @@ class Agent:
             try:
                 create_kwargs: Dict[str, Any] = {
                     "messages": openai_messages,
-                    "model": model,
+                    "model": current_model,
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                     "top_p": top_p,
-                    "extra_body": extra_body,
+                    "extra_body": current_extra_body,
                 }
                 if tools is not None:
                     create_kwargs["tools"] = tools
@@ -1319,7 +1344,7 @@ class Agent:
                     with ls.trace(
                         name=trace_name,
                         run_type="llm",
-                        inputs={"messages": openai_messages, "model": model},
+                        inputs={"messages": openai_messages, "model": current_model},
                         metadata=normalized_labels,
                     ) as run:
                         response = client.chat.completions.create(
@@ -1372,19 +1397,40 @@ class Agent:
                     logger.info(
                         f"OpenRouter API调用成功（重试后） - "
                         f"Agent: {self.agent_id}, User: {user_id}, "
-                        f"Model: {model}, Attempt: {attempt + 1}/{max_retries}"
+                        f"Model: {current_model}, Attempt: {attempt + 1}/{max_retries}"
                     )
                 return (response, trace_id)
 
             except Exception as e:
                 last_error = e
+                if (
+                    not fallback_used
+                    and fallback_model_name
+                    and fallback_model_name != current_model
+                    and self._is_invalid_model_identifier_error(e)
+                ):
+                    logger.warning(
+                        f"检测到无效模型标识，自动降级到订阅层模型重试 - "
+                        f"Agent: {self.agent_id}, User: {user_id}, "
+                        f"Model: {current_model} -> {fallback_model_name}"
+                    )
+                    fallback_used = True
+                    current_model = fallback_model_name
+                    current_extra_body = (
+                        fallback_extra_body
+                        if fallback_extra_body is not None
+                        else self._chat_extra_body(user_id, current_model)
+                    )
+                    continue
+
                 is_retryable = self._is_retryable_error(e)
 
                 # 记录错误详情
                 error_details = {
                     "agent_id": self.agent_id,
                     "user_id": user_id,
-                    "model": model,
+                    "model": current_model,
+                    "fallback_model": fallback_model_name,
                     "message_count": len(openai_messages),
                     "attempt": attempt + 1,
                     "max_retries": max_retries,
@@ -1404,7 +1450,7 @@ class Agent:
                     logger.warning(
                         f"OpenRouter API调用失败（可重试） - "
                         f"Agent: {self.agent_id}, User: {user_id}, "
-                        f"Model: {model}, Attempt: {attempt + 1}/{max_retries}, "
+                        f"Model: {current_model}, Attempt: {attempt + 1}/{max_retries}, "
                         f"Error: {str(e)}, 将在 {delay:.2f}秒后重试"
                     )
                     logger.debug(f"错误详情: {error_details}")
@@ -1415,13 +1461,13 @@ class Agent:
                         logger.error(
                             f"OpenRouter API调用失败（不可重试） - "
                             f"Agent: {self.agent_id}, User: {user_id}, "
-                            f"Model: {model}, Error: {str(e)}"
+                            f"Model: {current_model}, Error: {str(e)}"
                         )
                     else:
                         logger.error(
                             f"OpenRouter API调用失败（重试次数已用完） - "
                             f"Agent: {self.agent_id}, User: {user_id}, "
-                            f"Model: {model}, Attempt: {attempt + 1}/{max_retries}, "
+                            f"Model: {current_model}, Attempt: {attempt + 1}/{max_retries}, "
                             f"Error: {str(e)}"
                         )
                     logger.error(f"完整错误详情: {error_details}")
@@ -1550,6 +1596,11 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
+                fallback_model_name = (
+                    resolve_chat_model_to_id(model_override)
+                    if agent_model and model_override
+                    else None
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1581,7 +1632,9 @@ class Agent:
                             else None
                         ),
                         tool_choice="auto" if enable_official_assistant_tools else None,
+                        fallback_model=fallback_model_name,
                     )
+                    model_name = getattr(response, "model", None) or model_name
                     openai_messages_for_response = openai_messages
                     if enable_official_assistant_tools:
                         response, openai_messages_for_response, trace_id = (
@@ -1687,7 +1740,9 @@ class Agent:
                         initial_delay=1.0,
                         chat_name=chat_name,
                         labels=labels,
+                        fallback_model=fallback_model_name,
                     )
+                    model_name = getattr(retry_response, "model", None) or model_name
                     if (
                         retry_response is None
                         or not getattr(retry_response, "choices", None)
@@ -1901,6 +1956,11 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
+                fallback_model_name = (
+                    resolve_chat_model_to_id(model_override)
+                    if agent_model and model_override
+                    else None
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1923,7 +1983,9 @@ class Agent:
                     chat_name=chat_name,
                     labels=labels,
                     user_email=user_email,
+                    fallback_model=fallback_model_name,
                 )
+                model_name = getattr(response, "model", None) or model_name
                 api_time = time.time() - api_start
                 logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
 
