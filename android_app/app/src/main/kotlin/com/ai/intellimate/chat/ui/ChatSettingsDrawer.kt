@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -69,6 +70,7 @@ import com.ai.intellimate.ui.MyModalNavigationDrawer
 import com.ai.intellimate.ui.UnlimitChatDialog
 import com.ai.intellimate.xb.navigation.Routes
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private const val USER_MANUAL_NOTION_URL =
     "https://www.notion.so/IntelliMate-Help-Center-2b88c199b74b808a985bcaa64e36c322"
@@ -117,6 +119,7 @@ fun ChatSettingsDrawer(
     showBackButton: Boolean = false, // 是否在独立 ChatScreen 场景下（没有底部导航栏）
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     // 订阅状态检查
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()
     // Keep talking全局设置 - 使用SettingStateManager的Flow来监听设置变化
@@ -203,7 +206,9 @@ fun ChatSettingsDrawer(
                                     showVipDialogPageSource = "chat_settings_keep_talking"
                                     return@SettingsSwitchItem
                                 }
-                                SettingStateManager.updateShowKeepTalking(enabled)
+                                coroutineScope.launch {
+                                    SettingStateManager.updateShowKeepTalking(enabled)
+                                }
                                 onKeepTalkingChange(enabled)
                             },
                         )
@@ -236,7 +241,9 @@ fun ChatSettingsDrawer(
                                     showVipDialogPageSource = "chat_settings_auto_play"
                                     return@SettingsSwitchItem
                                 }
-                                SettingStateManager.updateAutoPlayAudio(enabled)
+                                coroutineScope.launch {
+                                    SettingStateManager.updateAutoPlayAudio(enabled)
+                                }
                             },
                         )
 
@@ -472,7 +479,9 @@ fun ChatSettingsDrawer(
                                         "timestamp" to System.currentTimeMillis(),
                                     ),
                                 )
-                                SettingStateManager.updateShowSceneActionButton(enabled)
+                                coroutineScope.launch {
+                                    SettingStateManager.updateShowSceneActionButton(enabled)
+                                }
                             },
                         )
 
