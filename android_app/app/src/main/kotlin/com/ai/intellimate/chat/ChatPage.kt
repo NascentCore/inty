@@ -455,6 +455,7 @@ internal fun ChatPage(
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val suppressFocusCallback = remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val imeHeight = WindowInsets.ime.getBottom(density)
     KEY_BOARD_HEIGHT_MAX = maxOf(imeHeight, KEY_BOARD_HEIGHT_MAX)
@@ -467,7 +468,7 @@ internal fun ChatPage(
     val bottomPadding = UiConfigs.ChatPage.ChatInput.BottomSpacerHeight
 
     fun onKeepTalkingChange(enabled: Boolean) {
-        SettingStateManager.updateShowKeepTalking(enabled)
+        coroutineScope.launch { SettingStateManager.updateShowKeepTalking(enabled) }
     }
 
     val vipStatus by BillingRepository.vipStatusFlow.collectAsState()

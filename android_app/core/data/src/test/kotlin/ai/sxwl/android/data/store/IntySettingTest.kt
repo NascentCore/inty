@@ -3,6 +3,7 @@ package ai.sxwl.android.data.store
 import android.content.Context
 import android.os.Build
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -58,18 +59,18 @@ class IntySettingTest {
     }
 
     @Test
-    fun setKeyboardHeight_then_getKeyboardHeight_returnsValue() {
+    fun setKeyboardHeight_then_keyboardHeightFlow_returnsValue() = runBlocking {
         IntySetting.setKeyboardHeight(256f)
-        assertEquals(256f, IntySetting.getKeyboardHeight(), 0f)
+        assertEquals(256f, IntySetting.keyboardHeightFlow().first(), 0f)
     }
 
     @Test
     fun hasUserSetKeepTalking_default_returnsFalse() {
-        assertFalse(IntySetting.hasUserSetKeepTalking())
+        assertFalse(runBlocking { IntySetting.hasUserSetKeepTalking() })
     }
 
     @Test
-    fun markUserSetKeepTalking_then_hasUserSetKeepTalking_returnsTrue() {
+    fun markUserSetKeepTalking_then_hasUserSetKeepTalking_returnsTrue() = runBlocking {
         IntySetting.markUserSetKeepTalking()
         assertTrue(IntySetting.hasUserSetKeepTalking())
     }
@@ -88,18 +89,6 @@ class IntySettingTest {
         assertTrue(IntySetting.isTipsDisabled())
         IntySetting.setTipsDisabled(false)
         assertFalse(IntySetting.isTipsDisabled())
-    }
-
-    @Test
-    fun setIntelliMateTipLastShowTimeMillis_then_getReturnsValue() {
-        val ts = 1000L
-        IntySetting.setIntelliMateTipLastShowTimeMillis(ts)
-        assertEquals(ts, IntySetting.getIntelliMateTipLastShowTimeMillis())
-    }
-
-    @Test
-    fun canShowIntelliMateTipNow_whenNeverShown_returnsTrue() {
-        assertTrue(IntySetting.canShowIntelliMateTipNow(System.currentTimeMillis()))
     }
 
     @Test

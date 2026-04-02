@@ -279,12 +279,12 @@ object IntySetting {
         NetServiceMgr.clearCache()
     }
 
-    fun setKeyboardHeight(height: Float) {
-        runBlocking { updateIntySetting { it.copy(keyboardHeight = height) } }
+    suspend fun setKeyboardHeight(height: Float) {
+        updateIntySetting { it.copy(keyboardHeight = height) }
     }
 
-    fun getKeyboardHeight(): Float {
-        return getIntySettingCache()?.keyboardHeight ?: 0f
+    fun keyboardHeightFlow(): Flow<Float> {
+        return contextRef?.get()?.intySettingsCache?.data?.map { it.keyboardHeight } ?: flowOf(0f)
     }
 
     /** 记录是否显示keepTalking按钮（全局设置） */
@@ -297,15 +297,14 @@ object IntySetting {
     }
 
     /** 检查用户是否手动设置过 Keep Talking（用于判断是否使用 Remote Config 默认值） */
-    fun hasUserSetKeepTalking(): Boolean {
-        return getIntySettingCache()?.userCache?.userSetKeepTalking ?: false
+    suspend fun hasUserSetKeepTalking(): Boolean {
+        return contextRef?.get()?.intySettingsCache?.data?.first()?.userCache?.userSetKeepTalking
+            ?: false
     }
 
     /** 标记用户已手动设置过 Keep Talking */
-    fun markUserSetKeepTalking() {
-        runBlocking {
-            updateIntySetting { it.copy(userCache = it.userCache.copy(userSetKeepTalking = true)) }
-        }
+    suspend fun markUserSetKeepTalking() {
+        updateIntySetting { it.copy(userCache = it.userCache.copy(userSetKeepTalking = true)) }
     }
 
     /** 自动播放语音消息（全局设置，默认开启） */
@@ -323,11 +322,9 @@ object IntySetting {
     }
 
     /** 标记用户已手动设置过 Auto Play Voice */
-    fun markUserSetAutoPlayVoice() {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(userSetAutoPlayVoice = true))
-            }
+    suspend fun markUserSetAutoPlayVoice() {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(userSetAutoPlayVoice = true))
         }
     }
 
@@ -372,34 +369,6 @@ object IntySetting {
         return getIntySettingCache()?.userCache?.tipsDisabled ?: false
     }
 
-    /** 获取 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
-    fun getIntelliMateTipLastShowTimeMillis(): Long {
-        return getIntySettingCache()?.userCache?.intellimateTipLastShowTimeMillis ?: -1L
-    }
-
-    /** 设置 IntelliMate tips 弹窗的上次展示时间（毫秒时间戳）。 */
-    fun setIntelliMateTipLastShowTimeMillis(timestampMillis: Long) {
-        runBlocking {
-            updateIntySetting {
-                it.copy(
-                    userCache =
-                        it.userCache.copy(intellimateTipLastShowTimeMillis = timestampMillis)
-                )
-            }
-        }
-    }
-
-    /**
-     * 判断此刻是否允许展示 IntelliMate tips 弹窗。
-     *
-     * 规则：最多每 8 小时展示一次（同一用户维度）。
-     */
-    fun canShowIntelliMateTipNow(nowMillis: Long = System.currentTimeMillis()): Boolean {
-        val lastShownMillis = getIntelliMateTipLastShowTimeMillis()
-        if (lastShownMillis < 0L) return true
-        return nowMillis - lastShownMillis >= INTELLIMATE_TIP_MIN_INTERVAL_MILLIS
-    }
-
     /** 标记用户已手动设置过 Auto Play Animation */
     fun markUserSetAutoPlayAnimation() {
         runBlocking {
@@ -436,17 +405,10 @@ object IntySetting {
         return IntySettingsDataStore.getSendUxUiGestureSignals(getCurUserID())
     }
 
-    /** 检查用户是否手动设置过 Show Scene Action Button（用于判断是否使用 Remote Config 默认值） */
-    fun hasUserSetSceneActionButton(): Boolean {
-        return getIntySettingCache()?.userCache?.userSetSceneActionButton ?: false
-    }
-
     /** 标记用户已手动设置过 Show Scene Action Button */
-    fun markUserSetSceneActionButton() {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(userSetSceneActionButton = true))
-            }
+    suspend fun markUserSetSceneActionButton() {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(userSetSceneActionButton = true))
         }
     }
 
@@ -517,14 +479,12 @@ object IntySetting {
         return getIntySettingCache()?.userCache?.imageFeedbackPromptLastLocalDate.orEmpty()
     }
 
-    fun setImageFeedbackPromptLastLocalDate(localDateKey: String) {
-        runBlocking {
-            updateIntySetting {
-                it.copy(
-                    userCache =
-                        it.userCache.copy(imageFeedbackPromptLastLocalDate = localDateKey.trim())
-                )
-            }
+    suspend fun setImageFeedbackPromptLastLocalDate(localDateKey: String) {
+        updateIntySetting {
+            it.copy(
+                userCache =
+                    it.userCache.copy(imageFeedbackPromptLastLocalDate = localDateKey.trim())
+            )
         }
     }
 

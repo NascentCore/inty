@@ -3,11 +3,17 @@ package ai.sxwl.android.data.store
 import ai.sxwl.android.data.billing.VipStatusHelper
 import ai.sxwl.android.firebase.FirebaseManager
 import ai.sxwl.android.utils.LogUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.runBlocking
 
 /** 全局设置状态管理器 用于在多个Compose屏幕之间同步设置状态 */
 object SettingStateManager {
@@ -46,8 +52,9 @@ object SettingStateManager {
         MutableStateFlow(IntySetting.isSendUxUiGestureSignals())
     val sendUxUiGestureSignalsFlow: StateFlow<Boolean> = _sendUxUiGestureSignalsFlow.asStateFlow()
 
-    private val _keyboardHeight = MutableStateFlow(IntySetting.getKeyboardHeight())
-    val keyboardHeight = _keyboardHeight.asStateFlow()
+    private val settingScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val keyboardHeight: StateFlow<Float> =
+        IntySetting.keyboardHeightFlow().stateIn(settingScope, SharingStarted.Eagerly, 0f)
 
     // 聊天字体大小设置
     private val _chatFontSizeFlow =
@@ -79,7 +86,7 @@ object SettingStateManager {
 
         try {
             // 检查用户是否已经手动设置过 Keep Talking
-            val hasUserSetKeepTalking = IntySetting.hasUserSetKeepTalking()
+            val hasUserSetKeepTalking = runBlocking { IntySetting.hasUserSetKeepTalking() }
             if (!hasUserSetKeepTalking) {
                 // 从 Remote Config 读取默认值
                 val keepTalkingDefault =
@@ -143,20 +150,19 @@ object SettingStateManager {
         }
     }
 
-    fun setKeyboardHeight(height: Float) {
-        _keyboardHeight.value = height
+    suspend fun setKeyboardHeight(height: Float) {
         IntySetting.setKeyboardHeight(height)
     }
 
     /** 更新Keep Talking按钮显示状态 */
-    fun updateShowKeepTalking(enabled: Boolean) {
+    suspend fun updateShowKeepTalking(enabled: Boolean) {
         IntySetting.setShowKeepTalking(enabled)
         IntySetting.markUserSetKeepTalking()
         _showKeepTalkingFlow.value = enabled
     }
 
     /** 更新自动播放语音消息状态 */
-    fun updateAutoPlayAudio(enabled: Boolean) {
+    suspend fun updateAutoPlayAudio(enabled: Boolean) {
         IntySetting.setAutoPlayAudio(enabled)
         IntySetting.markUserSetAutoPlayVoice()
         _autoPlayAudioFlow.value = enabled
@@ -176,7 +182,7 @@ object SettingStateManager {
     }
 
     /** 更新显示场景动作输入按钮状态 */
-    fun updateShowSceneActionButton(enabled: Boolean) {
+    suspend fun updateShowSceneActionButton(enabled: Boolean) {
         IntySetting.setShowSceneActionButton(enabled)
         IntySetting.markUserSetSceneActionButton()
         _showSceneActionButtonFlow.value = enabled
