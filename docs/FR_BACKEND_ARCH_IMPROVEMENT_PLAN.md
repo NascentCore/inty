@@ -81,6 +81,17 @@
 - service/repository 统一通过 `Depends` 暴露和注入。
 - 清理全局单例与隐式依赖入口。
 
+完成情况（2026-04-02）：
+
+- 状态：DONE（第一批）
+- 已交付：`app/api/deps.py` 新增 `get_subscription_service`、`get_voice_service`
+- 已交付：`app/api/v1/endpoints/chat.py` 将聊天主链路与相关接口改为通过 `Depends` 注入 `SubscriptionService`/`VoiceService`
+- 已交付：`app/api/v1/endpoints/chats.py` 将语音与聊天设置相关接口改为通过 `Depends` 注入 `SubscriptionService`/`VoiceService`
+- 已交付：`tests/app/api/v1/endpoints/test_chat.py`、`tests/app/api/v1/endpoints/test_chats.py` 适配依赖注入路径并保持回归覆盖
+- 验证：
+  - `.venv/bin/pytest tests/app/api/v1/endpoints/test_chat.py -k "test_v1_chat_completions_guest_requires_login or test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay or test_v1_chat_generate_image_wraps_business_error or test_v1_chat_generate_music_success" -q`（通过）
+  - `.venv/bin/pytest tests/app/api/v1/endpoints/test_chats.py -k "test_generate_message_voice_guest_login_required or test_generate_message_voice_success_includes_gcs_urls or test_update_chat_settings_requires_subscription" -q`（通过）
+
 交付物：
 
 - DI 使用规范
@@ -227,7 +238,7 @@
 | Workstream | Owner | Status | Key Deliverable | Test Evidence |
 | --- | --- | --- | --- | --- |
 | Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `.venv/bin/python scripts/check_layer_dependencies.py` + injected violation check |
-| DI unification | TBD | TODO | Depends pattern rollout | Endpoint regression |
+| DI unification | Cursor Agent | DONE (batch 1) | `app/api/deps.py` + `app/api/v1/endpoints/chat.py` + `app/api/v1/endpoints/chats.py` Depends 注入落地 | targeted `test_chat.py` + `test_chats.py` regression |
 | Error model unification | TBD | TODO | Unified error envelope | API snapshot tests |
 | Async blocking fixes | TBD | TODO | to_thread/async wrappers | Load test metrics |
 | Query and pagination optimization | TBD | TODO | N+1 and cursor migration | Query count + latency |
