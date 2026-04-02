@@ -2,8 +2,7 @@
 依赖注入：为 FastAPI 接口处理函数注入依赖数据。
 """
 
-from typing import Any, Dict, Generator
-from typing import Generator, Optional
+from typing import Any, Dict, Generator, Optional
 
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -19,6 +18,9 @@ from app.db.base import SessionLocal
 from app.db.session import get_async_db, get_async_replica_db
 from app.models.user import User
 from app.services.cache_service import cache_service
+from app.services.global_services import subscription_service
+from app.services.subscription_service import SubscriptionService
+from app.services.voice_service import VoiceService, voice_service
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 USER_AUTH_SNAPSHOT_TTL_SECONDS = 60
@@ -31,6 +33,14 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
+
+def get_subscription_service() -> SubscriptionService:
+    return subscription_service
+
+
+def get_voice_service() -> VoiceService:
+    return voice_service
 
 
 def _build_user_auth_snapshot(user: User) -> Dict[str, Any]:

@@ -47,15 +47,15 @@ from app.services.memory_service import (
     deliver_festival_memories_for_user_agent,
 )
 from app.services.chat_service import generate_session_id
-from app.services.global_services import subscription_service
+from app.services.subscription_service import SubscriptionService
 from app.services.surprise_snap_service import (
     get_unlocked_surprise_snap_message_ids,
     try_trigger_surprise_snap,
 )
 from app.services.push_notification_service import mark_user_push_notifications_as_read
 from app.services.voice_service import (
+    VoiceService,
     get_voice_message_narration_mode_from_agent_settings,
-    voice_service,
 )
 from app.utils.timing import Timer, log_time
 
@@ -398,6 +398,8 @@ async def agent_chat_completions(
     request: ChatCompletionRequest,
     current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
     app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     """
     基于Agent ID的OpenAI风格聊天接口；evaluation 可传 X-Assume-User-Id 以该用户身份聊天并加载其历史。
@@ -470,7 +472,7 @@ async def agent_chat_completions(
 
         with log_time(f"订阅检查: user_id={current_user.id}"):
             is_allowed, used_count, daily_limit = (
-                await subscription_service.check_chat_limit(db, current_user)
+                await subscription_svc.check_chat_limit(db, current_user)
             )
 
         if not is_allowed:
@@ -486,7 +488,7 @@ async def agent_chat_completions(
                 )
 
             with log_time(f"AI聊天处理: session_id={session_id}"):
-                subscription = await subscription_service.get_user_current_subscription(
+                subscription = await subscription_svc.get_user_current_subscription(
                     db, current_user.id
                 )
                 is_subscribed = bool(subscription)
@@ -596,7 +598,7 @@ async def agent_chat_completions(
                 with log_time(
                     f"语音生成: voice_id={resolved_voice_id}, text_length={len(response_text_content)}, language={request.language}"
                 ):
-                    voice_result = await voice_service.generate_voice(
+                    voice_result = await voice_svc.generate_voice(
                         text=response_text_content,
                         voice_id=resolved_voice_id,
                         language=request.language,
@@ -624,7 +626,7 @@ async def agent_chat_completions(
         # 记录聊天使用情况
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
-                await subscription_service.record_usage(
+                await subscription_svc.record_usage(
                     db,
                     current_user.id,
                     "chat",
@@ -799,6 +801,8 @@ async def agent_chat_completions(
 async def chat_completions_websocket(
     websocket: WebSocket,
     db: AsyncSession = Depends(deps.get_async_db),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     await websocket.accept()
     current_user = await _get_current_user_from_websocket(websocket, db)
@@ -837,6 +841,8 @@ async def chat_completions_websocket(
                 request=websocket_request.request,
                 current_user=current_user,
                 app_version_code=app_version_code,
+                subscription_svc=subscription_svc,
+                voice_svc=voice_svc,
             )
             response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = websocket_request.agent_id
@@ -849,6 +855,7 @@ async def chat_completions_websocket(
 async def chat_completions_websocket_verify(
     websocket: WebSocket,
     db: AsyncSession = Depends(deps.get_async_db),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ):
     """
     WebSocket 校验端点：与 /ws 协议一致，但不写入 chat_history，仅用于验证连接与对话效果。
@@ -928,7 +935,7 @@ async def chat_completions_websocket_verify(
             chat_settings = await chat_service.get_or_create_chat_settings(
                 db, chat.id, current_user.id, agent_id
             )
-            subscription = await subscription_service.get_user_current_subscription(
+            subscription = await subscription_svc.get_user_current_subscription(
                 db, current_user.id
             )
             is_subscribed = bool(subscription)
@@ -1033,6 +1040,7 @@ async def generate_chat_image(
     agent_id: str,
     request: schemas.ChatImageGenerationRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ) -> ChatImageGenerationAPIResponse:
     """
     基于聊天上下文生成图片
@@ -1061,7 +1069,7 @@ async def generate_chat_image(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
-            subscription_service=subscription_service,
+            subscription_service=subscription_svc,
             history_count=request.history_count,
             model=request.model,
         )
@@ -1112,6 +1120,7 @@ async def generate_chat_music(
     agent_id: str,
     request: schemas.ChatMusicGenerationRequest,
     current_user: schemas.User = Depends(deps.get_current_active_user),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ) -> ChatMusicGenerationAPIResponse:
     """基于聊天上下文生成音乐。"""
     try:
@@ -1120,7 +1129,7 @@ async def generate_chat_music(
             agent_id=agent_id,
             user_id=current_user.id,
             message_id=request.message_id,
-            subscription_service=subscription_service,
+            subscription_service=subscription_svc,
             history_count=request.history_count,
             model=request.model,
         )
