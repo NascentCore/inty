@@ -39,6 +39,7 @@ class LoggerRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             request_id = str(uuid.uuid4())[:8]
+            request.state.request_id = request_id
 
             # Use contextualize to add request_id to all logs in this request context
             with logger.contextualize(request_id=request_id):
