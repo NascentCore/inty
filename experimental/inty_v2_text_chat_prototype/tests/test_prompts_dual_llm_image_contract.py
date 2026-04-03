@@ -48,7 +48,8 @@ class TestDualLlmImageContract(unittest.TestCase):
         self.assertNotIn("（4）", chat_sys)
         self.assertNotIn("user_profile_record", chat_sys)
         self.assertNotIn("workspace_read_file", chat_sys)
-        self.assertIn("无工具调用", chat_sys)
+        self.assertIn("本路禁止调用任何工具", chat_sys)
+        self.assertIn("并行工具路", chat_sys)
 
     def test_tool_side_compact_omits_memory_and_inserts_directive(self) -> None:
         bundle = PromptBundle(

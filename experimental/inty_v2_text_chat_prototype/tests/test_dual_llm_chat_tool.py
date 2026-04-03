@@ -49,6 +49,7 @@ class _FakeCompletions:
                     "model": model,
                     "messages": messages,
                     "tools": tools,
+                    "tool_choice": kwargs.get("tool_choice"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -88,6 +89,7 @@ class _FakeCompletionsToolFirst:
                     "model": model,
                     "messages": messages,
                     "tools": tools,
+                    "tool_choice": kwargs.get("tool_choice"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -165,6 +167,8 @@ class TestDualLlmChatTool(unittest.TestCase):
         tool_calls = [c for c in fake_completions.calls if c["model"] == "tool-smart"]
         self.assertEqual(len(chat_calls), 2)
         self.assertEqual(len(tool_calls), 2)
+        self.assertTrue(all(c["tools"] for c in chat_calls))
+        self.assertTrue(all(c["tool_choice"] == "none" for c in chat_calls))
 
         # Round-wise, both routes must receive exactly the same context snapshot.
         self.assertEqual(chat_calls[0]["messages"], tool_calls[0]["messages"])

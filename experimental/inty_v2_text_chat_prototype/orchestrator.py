@@ -320,7 +320,7 @@ async def _run_turn_fast_chat_then_tool_background(
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     logger.info(
         "repl.turn async_chat_tool_background_start trace_id={} llm_route=async_chat_tool_background "
-        "chat_model={} tool_model={} (foreground=chat_no_tools background=tool_loop)",
+        "chat_model={} tool_model={} (foreground=chat_tools_mirrored_no_call background=tool_loop)",
         trace_id,
         chat_route_model,
         tool_route_model,
@@ -367,7 +367,8 @@ async def _run_turn_fast_chat_then_tool_background(
         chat_client,
         model=chat_route_model,
         messages_payload=chat_payload,
-        tools=[],
+        tools=tools,
+        tool_choice="none",
     )
     _log_llm_round_result(
         round_idx=1,
@@ -471,7 +472,8 @@ async def _run_turn_with_user_profile_tools(
                     dual_chat_client,
                     model=chat_route_model,
                     messages_payload=chat_branch_payload,
-                    tools=[],
+                    tools=tools,
+                    tool_choice="none",
                 )
                 logger.info(
                     "repl.turn llm_round={} branch=chat trace_id={} chat_completions_ms={:.0f} "
