@@ -76,19 +76,19 @@ class IntySettingTest {
     }
 
     @Test
-    fun setVibeModeEnabled_then_isVibeModeEnabled_returnsValue() {
-        IntySetting.setVibeModeEnabled(true)
-        assertTrue(IntySetting.isVibeModeEnabled())
-        IntySetting.setVibeModeEnabled(false)
-        assertFalse(IntySetting.isVibeModeEnabled())
+    fun setVibeModeEnabled_then_isVibeModeEnabled_returnsValue() = runBlocking {
+        IntySetting.setVibeModeEnabledSuspend(true)
+        assertTrue(IntySetting.isVibeModeEnabledSuspend())
+        IntySetting.setVibeModeEnabledSuspend(false)
+        assertFalse(IntySetting.isVibeModeEnabledSuspend())
     }
 
     @Test
-    fun setTipsDisabled_then_isTipsDisabled_returnsValue() {
-        IntySetting.setTipsDisabled(true)
-        assertTrue(IntySetting.isTipsDisabled())
-        IntySetting.setTipsDisabled(false)
-        assertFalse(IntySetting.isTipsDisabled())
+    fun setTipsDisabled_then_isTipsDisabled_returnsValue() = runBlocking {
+        IntySetting.setTipsDisabledSuspend(true)
+        assertTrue(IntySetting.isTipsDisabledSuspend())
+        IntySetting.setTipsDisabledSuspend(false)
+        assertFalse(IntySetting.isTipsDisabledSuspend())
     }
 
     @Test
@@ -99,14 +99,14 @@ class IntySettingTest {
 
     @Test
     fun setResubReminderDialogShowCount_then_getReturnsValue() = runBlocking {
-        IntySetting.setResubReminderDialogShowCount(3)
+        IntySetting.setResubReminderDialogShowCountSuspend(3)
         assertEquals(3, IntySetting.getResubReminderDialogShowCount())
     }
 
     @Test
     fun setFeedbackDialogLastShowTime_then_getReturnsValue() = runBlocking {
-        IntySetting.setFeedbackDialogLastShowTime(2000L)
-        assertEquals(2000L, IntySetting.getFeedbackDialogLastShowTime())
+        IntySetting.setFeedbackDialogLastShowTimeSuspend(2000L)
+        assertEquals(2000L, IntySetting.getFeedbackDialogLastShowTimeSuspend())
     }
 
     @Test
@@ -119,18 +119,18 @@ class IntySettingTest {
 
     @Test
     fun setConversationHasPush_then_hasConversationPush_returnsValue() = runBlocking {
-        IntySetting.setConversationHasPush("agent-a", true)
-        assertTrue(IntySetting.hasConversationPush("agent-a"))
-        IntySetting.setConversationHasPush("agent-a", false)
-        assertFalse(IntySetting.hasConversationPush("agent-a"))
+        IntySetting.setConversationHasPushSuspend("agent-a", true)
+        assertTrue(IntySetting.hasConversationPushSuspend("agent-a"))
+        IntySetting.setConversationHasPushSuspend("agent-a", false)
+        assertFalse(IntySetting.hasConversationPushSuspend("agent-a"))
     }
 
     @Test
     fun setAppUpdateTips_then_hasAppUpdateTips_returnsValue() = runBlocking {
-        IntySetting.setAppUpdateTips(true)
-        assertTrue(IntySetting.hasAppUpdateTips())
-        IntySetting.setAppUpdateTips(false)
-        assertFalse(IntySetting.hasAppUpdateTips())
+        IntySetting.setAppUpdateTipsSuspend(true)
+        assertTrue(IntySetting.hasAppUpdateTipsSuspend())
+        IntySetting.setAppUpdateTipsSuspend(false)
+        assertFalse(IntySetting.hasAppUpdateTipsSuspend())
     }
 
     @Test

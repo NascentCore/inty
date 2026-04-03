@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /** 全局设置状态管理器 用于在多个Compose屏幕之间同步设置状态 */
@@ -171,13 +172,13 @@ object SettingStateManager {
     /** 更新自动播放背景动画状态 */
     fun updateAutoPlayAnimation(enabled: Boolean) {
         IntySetting.setAutoPlayAnimation(enabled)
-        IntySetting.markUserSetAutoPlayAnimation()
+        settingScope.launch { IntySetting.markUserSetAutoPlayAnimationSuspend() }
         _autoPlayAnimationFlow.value = enabled
     }
 
     fun updateTextStreaming(enabled: Boolean) {
         IntySetting.setTextStreaming(enabled)
-        IntySetting.markUserTextStreaming()
+        settingScope.launch { IntySetting.markUserTextStreamingSuspend() }
         _textStreamingFlow.value = enabled
     }
 

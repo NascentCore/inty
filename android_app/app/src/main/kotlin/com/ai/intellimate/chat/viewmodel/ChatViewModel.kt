@@ -719,7 +719,8 @@ class ChatViewModel : BaseVM() {
 
                             // 增加会话级别的消息计数（app 打开到进入后台/退出之间的消息数）
                             sessionMessageCount++
-                            val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                            val lastShowTime =
+                                IntySetting.getFeedbackDialogLastShowTimeSuspend()
                             val currentTime = System.currentTimeMillis()
                             val timeSinceLastShow = currentTime - lastShowTime
 
@@ -963,7 +964,8 @@ class ChatViewModel : BaseVM() {
                             )
 
                             sessionMessageCount++
-                            val lastShowTime = IntySetting.getFeedbackDialogLastShowTime()
+                            val lastShowTime =
+                                IntySetting.getFeedbackDialogLastShowTimeSuspend()
                             val elapsedTimeSinceLastShow = System.currentTimeMillis() - lastShowTime
                             if (
                                 sessionMessageCount >=
@@ -1578,7 +1580,7 @@ class ChatViewModel : BaseVM() {
             return
         }
         val todayLocalDateKey = LocalDate.now().toString()
-        if (IntySetting.getImageFeedbackPromptLastLocalDate() == todayLocalDateKey) {
+        if (IntySetting.getImageFeedbackPromptLastLocalDateSuspend() == todayLocalDateKey) {
             return
         }
         IntySetting.setImageFeedbackPromptLastLocalDate(todayLocalDateKey)

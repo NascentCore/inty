@@ -465,7 +465,9 @@ class MainViewModel : BaseVM() {
             FCMConstants.TYPE_AGENT_MESSAGE -> {
                 val agentId = event.data[FCMConstants.DATA_KEY_AGENT_ID]
                 if (!agentId.isNullOrBlank()) {
-                    IntySetting.setConversationHasPush(agentId, true)
+                            viewModelScope.launch(Dispatchers.IO) {
+                                IntySetting.setConversationHasPushSuspend(agentId, true)
+                            }
                 }
                 if (!_messagesTabHasPush.value) {
                     _messagesTabHasPush.value = true

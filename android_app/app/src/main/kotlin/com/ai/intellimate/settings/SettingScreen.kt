@@ -375,12 +375,20 @@ private fun VibeModeBanner(
     isSubscribed: Boolean,
     onRequestSubscribe: () -> Unit,
 ) {
-    var vibeEnabled by remember { mutableStateOf(IntySetting.isVibeModeEnabled()) }
+    var vibeEnabled by remember { mutableStateOf(false) }
     val isActive = isSubscribed && vibeEnabled
+
+    LaunchedEffect(isSubscribed) {
+        if (isSubscribed) {
+            vibeEnabled = IntySetting.isVibeModeEnabledSuspend()
+        } else {
+            vibeEnabled = false
+        }
+    }
 
     LaunchedEffect(vibeEnabled, isSubscribed) {
         if (isSubscribed) {
-            IntySetting.setVibeModeEnabled(vibeEnabled)
+            IntySetting.setVibeModeEnabledSuspend(vibeEnabled)
         } else {
             if (vibeEnabled) vibeEnabled = false
         }

@@ -347,41 +347,69 @@ object IntySetting {
 
     /** Vibe Mode 开关状态（仅限订阅用户） */
     fun setVibeModeEnabled(enabled: Boolean) {
-        runBlocking {
-            updateIntySetting { it.copy(userCache = it.userCache.copy(vibeModeEnabled = enabled)) }
-        }
+        runBlocking { setVibeModeEnabledSuspend(enabled) }
+    }
+
+    suspend fun setVibeModeEnabledSuspend(enabled: Boolean) {
+        updateIntySetting { it.copy(userCache = it.userCache.copy(vibeModeEnabled = enabled)) }
     }
 
     fun isVibeModeEnabled(): Boolean {
         return getIntySettingCache()?.userCache?.vibeModeEnabled ?: false
     }
 
+    suspend fun isVibeModeEnabledSuspend(): Boolean {
+        return contextRef
+            ?.get()
+            ?.intySettingsCache
+            ?.data
+            ?.first()
+            ?.userCache
+            ?.vibeModeEnabled ?: false
+    }
+
     /** 禁用 IntelliMate tips 弹窗（用户偏好设置） */
     fun setTipsDisabled(disabled: Boolean) {
-        runBlocking {
-            updateIntySetting { it.copy(userCache = it.userCache.copy(tipsDisabled = disabled)) }
-        }
+        runBlocking { setTipsDisabledSuspend(disabled) }
+    }
+
+    suspend fun setTipsDisabledSuspend(disabled: Boolean) {
+        updateIntySetting { it.copy(userCache = it.userCache.copy(tipsDisabled = disabled)) }
     }
 
     fun isTipsDisabled(): Boolean {
         return getIntySettingCache()?.userCache?.tipsDisabled ?: false
     }
 
+    suspend fun isTipsDisabledSuspend(): Boolean {
+        return contextRef
+            ?.get()
+            ?.intySettingsCache
+            ?.data
+            ?.first()
+            ?.userCache
+            ?.tipsDisabled ?: false
+    }
+
     /** 标记用户已手动设置过 Auto Play Animation */
     fun markUserSetAutoPlayAnimation() {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(userSetAutoPlayAnimation = true))
-            }
+        runBlocking { markUserSetAutoPlayAnimationSuspend() }
+    }
+
+    suspend fun markUserSetAutoPlayAnimationSuspend() {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(userSetAutoPlayAnimation = true))
         }
     }
 
     /** 标记用户已手动设置过 Text Streaming */
     fun markUserTextStreaming() {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(userSetTextStreaming = true))
-            }
+        runBlocking { markUserTextStreamingSuspend() }
+    }
+
+    suspend fun markUserTextStreamingSuspend() {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(userSetTextStreaming = true))
         }
     }
 
@@ -454,10 +482,12 @@ object IntySetting {
     }
 
     fun setResubReminderDialogShowCount(count: Int) {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(resubReminderShowCount = count))
-            }
+        runBlocking { setResubReminderDialogShowCountSuspend(count) }
+    }
+
+    suspend fun setResubReminderDialogShowCountSuspend(count: Int) {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(resubReminderShowCount = count))
         }
     }
 
@@ -465,16 +495,38 @@ object IntySetting {
         return getIntySettingCache()?.userCache?.feedbackDialogLastShowTime ?: -1L
     }
 
+    suspend fun getFeedbackDialogLastShowTimeSuspend(): Long {
+        return contextRef
+            ?.get()
+            ?.intySettingsCache
+            ?.data
+            ?.first()
+            ?.userCache
+            ?.feedbackDialogLastShowTime ?: -1L
+    }
+
     fun setFeedbackDialogLastShowTime(timestampMillis: Long) {
-        runBlocking {
-            updateIntySetting {
-                it.copy(userCache = it.userCache.copy(feedbackDialogLastShowTime = timestampMillis))
-            }
+        runBlocking { setFeedbackDialogLastShowTimeSuspend(timestampMillis) }
+    }
+
+    suspend fun setFeedbackDialogLastShowTimeSuspend(timestampMillis: Long) {
+        updateIntySetting {
+            it.copy(userCache = it.userCache.copy(feedbackDialogLastShowTime = timestampMillis))
         }
     }
 
     fun getImageFeedbackPromptLastLocalDate(): String {
         return getIntySettingCache()?.userCache?.imageFeedbackPromptLastLocalDate.orEmpty()
+    }
+
+    suspend fun getImageFeedbackPromptLastLocalDateSuspend(): String {
+        return contextRef
+            ?.get()
+            ?.intySettingsCache
+            ?.data
+            ?.first()
+            ?.userCache
+            ?.imageFeedbackPromptLastLocalDate.orEmpty()
     }
 
     suspend fun setImageFeedbackPromptLastLocalDate(localDateKey: String) {
@@ -497,18 +549,20 @@ object IntySetting {
 
     /** 记录特定会话是否有推送未读 */
     fun setConversationHasPush(agentId: String, hasPush: Boolean) {
-        runBlocking {
-            updateIntySetting {
-                it.copy(
-                    userCache =
-                        it.userCache.copy(
-                            conversationHasPush =
-                                it.userCache.conversationHasPush.toMutableMap().also { map ->
-                                    if (hasPush) map[agentId] = true else map.remove(agentId)
-                                }
-                        )
-                )
-            }
+        runBlocking { setConversationHasPushSuspend(agentId, hasPush) }
+    }
+
+    suspend fun setConversationHasPushSuspend(agentId: String, hasPush: Boolean) {
+        updateIntySetting {
+            it.copy(
+                userCache =
+                    it.userCache.copy(
+                        conversationHasPush =
+                            it.userCache.conversationHasPush.toMutableMap().also { map ->
+                                if (hasPush) map[agentId] = true else map.remove(agentId)
+                            }
+                    )
+            )
         }
     }
 
@@ -516,15 +570,38 @@ object IntySetting {
         return getIntySettingCache()?.userCache?.conversationHasPush?.get(agentId) == true
     }
 
+    suspend fun hasConversationPushSuspend(agentId: String): Boolean {
+        return contextRef
+            ?.get()
+            ?.intySettingsCache
+            ?.data
+            ?.first()
+            ?.userCache
+            ?.conversationHasPush
+            ?.get(agentId) == true
+    }
+
     // 标记是否已经有可用的App更新，用于红点标记
     fun hasAppUpdateTips(): Boolean {
         return getIntySettingCache()?.userCache?.hasAppUpdateTips ?: false
     }
 
+    suspend fun hasAppUpdateTipsSuspend(): Boolean {
+        return contextRef
+            ?.get()
+            ?.intySettingsCache
+            ?.data
+            ?.first()
+            ?.userCache
+            ?.hasAppUpdateTips ?: false
+    }
+
     fun setAppUpdateTips(showed: Boolean) {
-        runBlocking {
-            updateIntySetting { it.copy(userCache = it.userCache.copy(hasAppUpdateTips = showed)) }
-        }
+        runBlocking { setAppUpdateTipsSuspend(showed) }
+    }
+
+    suspend fun setAppUpdateTipsSuspend(showed: Boolean) {
+        updateIntySetting { it.copy(userCache = it.userCache.copy(hasAppUpdateTips = showed)) }
     }
 
     private var isLoggingOut = false

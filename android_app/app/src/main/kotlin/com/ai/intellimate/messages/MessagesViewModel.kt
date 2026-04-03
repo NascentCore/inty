@@ -559,14 +559,16 @@ class MessagesViewModel : BaseVM() {
     fun clearConversationPush(agentId: String) {
         if (agentId.isBlank()) return
         viewModelScope.launch(Dispatchers.Main) {
-            IntySetting.setConversationHasPush(agentId, false)
+            IntySetting.setConversationHasPushSuspend(agentId, false)
             _uiState.update { it.copy(pushAgentIds = it.pushAgentIds - agentId) }
         }
     }
 
     private fun markConversationHasPush(agentId: String) {
-        IntySetting.setConversationHasPush(agentId, true)
-        _uiState.update { it.copy(pushAgentIds = it.pushAgentIds + agentId) }
+        viewModelScope.launch(Dispatchers.Main) {
+            IntySetting.setConversationHasPushSuspend(agentId, true)
+            _uiState.update { it.copy(pushAgentIds = it.pushAgentIds + agentId) }
+        }
     }
 
     private fun syncPushAgentIds(conversations: List<ConversationItem>): Set<String> {
