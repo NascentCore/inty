@@ -49,6 +49,46 @@ class TestModifyImageTool(unittest.TestCase):
             )
             self.assertTrue(out.startswith("ERROR:"))
 
+    def test_no_source_uses_latest_generated_image(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            old_rel = "generated_images/old.jpg"
+            new_rel = "generated_images/new.png"
+            old_path = root / old_rel
+            new_path = root / new_rel
+            old_path.parent.mkdir(parents=True, exist_ok=True)
+            old_path.write_bytes(b"\xff\xd8\xff\xd9")
+            new_path.write_bytes(b"\x89PNG\r\n")
+            old_mtime = 1_700_000_000
+            new_mtime = old_mtime + 9
+            old_path.touch()
+            new_path.touch()
+            import os
+
+            os.utime(old_path, (old_mtime, old_mtime))
+            os.utime(new_path, (new_mtime, new_mtime))
+            with patch(
+                "inty_v2_text_chat_prototype.fal_z_image_tool._upload_local_image_file_to_gcs_for_fal",
+                return_value="https://example.com/uploaded-latest.png",
+            ) as upload_mock:
+                with patch(
+                    "inty_v2_text_chat_prototype.fal_z_image_tool.z_image_turbo_image_to_image",
+                    new=_fake_z_image_turbo_image_to_image,
+                ):
+                    out = execute_tool_call_blocking(
+                        root,
+                        "modify_image",
+                        json.dumps(
+                            {
+                                "prompt": "make it cooler",
+                            }
+                        ),
+                    )
+            upload_mock.assert_called_once()
+            called_path = upload_mock.call_args.args[0]
+            self.assertEqual(Path(called_path), new_path)
+            self.assertIn("modify_image: OK", out)
+
     def test_both_sources_errors(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
