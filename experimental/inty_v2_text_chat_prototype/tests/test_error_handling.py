@@ -16,6 +16,9 @@ from inty_v2_text_chat_prototype.client import (
     OpenRouterInvalidJsonError,
     create_chat_completion,
 )
+from inty_v2_text_chat_prototype.main import (
+    OpenRouterInvalidJsonError as ReplOpenRouterInvalidJsonError,
+)
 from inty_v2_text_chat_prototype.main import _repl_drain_user_turns
 
 
@@ -70,7 +73,7 @@ def test_repl_drain_user_turns_recovers_from_openrouter_invalid_json_error() -> 
     def _run_turn_sync(cur: str) -> str:
         called["n"] += 1
         if called["n"] == 1:
-            raise OpenRouterInvalidJsonError("broken upstream body")
+            raise ReplOpenRouterInvalidJsonError("broken upstream body")
         return f"assistant:{cur}"
 
     with (
