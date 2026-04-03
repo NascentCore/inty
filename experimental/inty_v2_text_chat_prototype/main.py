@@ -26,6 +26,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from experimental.inty_v2_text_chat_prototype.client import load_prototype_dotenv
+from experimental.inty_v2_text_chat_prototype.client import OpenRouterInvalidJsonError
 
 load_prototype_dotenv()
 
@@ -176,7 +177,21 @@ def _repl_drain_user_turns(
                 )
                 print("> ", end="", flush=True)
             t0 = time.perf_counter()
-            out = run_turn_sync(cur)
+            try:
+                out = run_turn_sync(cur)
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning("repl turn recovered from invalid OpenRouter JSON: {}", exc)
+                print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+                print("> ", end="", flush=True)
+                try:
+                    item = pending.get_nowait()
+                except queue.Empty:
+                    return True
+                if item is None:
+                    print()
+                    return False
+                cur, cur_echoed = item
+                continue
             _print_assistant_reply(out, time.perf_counter() - t0)
             _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
