@@ -2,6 +2,7 @@
 测试聊天服务功能
 """
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -9,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -2179,3 +2180,69 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_id == agent.id
 
         await self._cleanup_test_data(db_session, user, agent, existing_chat)
+
+    @pytest.mark.asyncio
+    async def test_get_or_create_chat_waits_for_advisory_lock(
+        self, db_session: AsyncSession
+    ):
+        """测试并发锁：同一 user+agent 在锁释放前会等待，释放后成功创建且仅一条会话"""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+        session_key = f"{user.id}:{agent.id}"
+
+        lock_engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=2,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        lock_session_factory = sessionmaker(
+            bind=lock_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        created_chat = None
+        create_task = None
+        try:
+            async with lock_session_factory() as lock_session:
+                await lock_session.execute(
+                    text("SELECT pg_advisory_lock(hashtext(:lock_key))"),
+                    {"lock_key": session_key},
+                )
+
+                create_task = asyncio.create_task(
+                    chat_service.get_or_create_chat_by_agent(
+                        db=db_session, user_id=user.id, agent_id=agent.id
+                    )
+                )
+                await asyncio.sleep(0.2)
+                assert create_task.done() is False
+
+                await lock_session.execute(
+                    text("SELECT pg_advisory_unlock(hashtext(:lock_key))"),
+                    {"lock_key": session_key},
+                )
+
+                created_chat = await asyncio.wait_for(create_task, timeout=5)
+
+            assert created_chat is not None
+            assert created_chat.user_id == user.id
+            assert created_chat.agent_id == agent.id
+
+            result = await db_session.execute(
+                select(models.Chat).where(
+                    models.Chat.user_id == user.id,
+                    models.Chat.agent_id == agent.id,
+                    models.Chat.is_active == True,
+                )
+            )
+            active_chats = result.scalars().all()
+            assert len(active_chats) == 1
+        finally:
+            if create_task is not None and not create_task.done():
+                create_task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await create_task
+            await lock_engine.dispose()
+            await self._cleanup_test_data(
+                db_session, user, agent, created_chat or None
+            )

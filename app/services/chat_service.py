@@ -5,7 +5,7 @@ from typing import List, Optional, Union
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -396,11 +396,12 @@ async def get_or_create_chat_by_agent(
     根据用户ID和Agent ID获取或创建唯一的聊天会话（高性能优化版）
     每个用户和每个Agent只能有一个会话
     """
+    session_key = f"{user_id}:{agent_id}"
+    lock_acquired = False
     try:
         logger.debug(f"获取或创建聊天会话 - 用户ID: {user_id}, Agent ID: {agent_id}")
 
         # 1. 先检查会话缓存
-        session_key = f"{user_id}:{agent_id}"
         cached_session = cache_service.get_session_info(session_key)
         if cached_session:
             logger.debug(f"从缓存获取聊天会话: {cached_session['chat_id']}")
@@ -424,7 +425,14 @@ async def get_or_create_chat_by_agent(
             chat.agent_opening_audio_url = cached_session.get("agent_opening_audio_url")
             return chat
 
-        # 2. 数据库查询（使用简单查询，减少预加载）
+        # 2. 对同一 user_id:agent_id 串行化，避免并发插入触发 uq_chats_user_agent_active
+        await db.execute(
+            text("SELECT pg_advisory_lock(hashtext(:lock_key))"),
+            {"lock_key": session_key},
+        )
+        lock_acquired = True
+
+        # 3. 数据库查询（使用简单查询，减少预加载）
         result = await db.execute(
             select(models.Chat).where(
                 models.Chat.user_id == user_id,
@@ -452,7 +460,7 @@ async def get_or_create_chat_by_agent(
                     ),
                 )
 
-            # 3. 并行获取Agent信息（如果未缓存）
+            # 4. 并行获取Agent信息（如果未缓存）
             cached_agent = None
             if not hasattr(existing_chat, "_agent_loaded"):
                 # 从Agent缓存获取
@@ -545,7 +553,7 @@ async def get_or_create_chat_by_agent(
                     agent_info[0] is not None if agent_info else None
                 )
 
-            # 4. 检查现有聊天是否有消息，如果为空则添加Agent开场白
+            # 5. 检查现有聊天是否有消息，如果为空则添加Agent开场白
             try:
                 session_id = generate_session_id(existing_chat.id)
                 existing_messages = (
@@ -609,7 +617,7 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"检查或添加现有聊天开场白失败: {str(e)}")
                 # 继续执行，不影响chat返回
 
-            # 5. 缓存会话信息
+            # 6. 缓存会话信息
             session_data = {
                 "chat_id": existing_chat.id,
                 "user_id": user_id,
@@ -636,10 +644,10 @@ async def get_or_create_chat_by_agent(
 
             return existing_chat
 
-        # 6. 如果不存在，则创建新的会话
+        # 7. 如果不存在，则创建新的会话
         logger.debug(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
 
-        # 7. 优先从缓存获取Agent信息
+        # 8. 优先从缓存获取Agent信息
         cached_agent = cache_service.get_agent_config(agent_id)
         if cached_agent:
             agent_name = cached_agent.get("name")
@@ -690,7 +698,7 @@ async def get_or_create_chat_by_agent(
             )
             logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
 
-        # 8. 创建新的聊天会话
+        # 9. 创建新的聊天会话
         chat_id = str(uuid.uuid4())
         db_chat = models.Chat(id=chat_id, user_id=user_id, agent_id=agent_id)
 
@@ -712,7 +720,7 @@ async def get_or_create_chat_by_agent(
                 detail="Failed to create chat session: agent ID mismatch",
             )
 
-        # 9. 异步添加Agent开场白（避免阻塞）
+        # 10. 异步添加Agent开场白（避免阻塞）
         if agent_opening:
             try:
                 session_id = generate_session_id(chat_id)
@@ -747,7 +755,7 @@ async def get_or_create_chat_by_agent(
                 logger.error(f"处理开场白失败: {str(e)}")
                 # 继续执行，不影响chat创建
 
-        # 10. 设置Agent信息并缓存会话（优化：避免重复查询）
+        # 11. 设置Agent信息并缓存会话（优化：避免重复查询）
         db_chat.agent_name = agent_name
         db_chat.agent_avatar = agent_avatar
         db_chat.agent_background_animated = (
@@ -775,7 +783,7 @@ async def get_or_create_chat_by_agent(
             # We already have deleted_at from the database query above
             db_chat.agent_is_deleted = agent_deleted_at is not None
 
-        # 11. 缓存新建的会话信息
+        # 12. 缓存新建的会话信息
         session_data = {
             "chat_id": db_chat.id,
             "user_id": user_id,
@@ -802,7 +810,7 @@ async def get_or_create_chat_by_agent(
         }
         cache_service.set_session_info(session_key, session_data)
 
-        # 12. 设置默认值（跳过耗时的消息查询）
+        # 13. 设置默认值（跳过耗时的消息查询）
         db_chat.last_message = None
         db_chat.last_message_time = None
 
@@ -847,6 +855,17 @@ async def get_or_create_chat_by_agent(
         await db.rollback()
         logger.error(f"未知错误 - 获取或创建聊天: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        if lock_acquired:
+            try:
+                await db.execute(
+                    text("SELECT pg_advisory_unlock(hashtext(:lock_key))"),
+                    {"lock_key": session_key},
+                )
+            except Exception as unlock_error:
+                logger.warning(
+                    f"释放聊天会话并发锁失败 - key={session_key}: {str(unlock_error)}"
+                )
 
 
 async def get_or_create_chat_settings(
