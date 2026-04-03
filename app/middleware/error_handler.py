@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
 from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -54,6 +54,7 @@ def _build_error_response(
     code: str,
     message: str,
     details: Optional[Any] = None,
+    headers: Optional[Mapping[str, str]] = None,
 ) -> JSONResponse:
     request_id = _get_request_id(request)
     response_payload = APIErrorResponse(
@@ -65,6 +66,7 @@ def _build_error_response(
     response = JSONResponse(
         status_code=status_code,
         content=response_payload.model_dump(),
+        headers=dict(headers) if headers else None,
     )
     response.headers["x-request-id"] = request_id
     return response
@@ -194,6 +196,7 @@ async def http_exception_handler(
         code=map_http_status_to_error_code(status_code),
         message=message,
         details=details,
+        headers=exc.headers,
     )
 
 

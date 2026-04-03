@@ -15,19 +15,24 @@ def test_http_exception_uses_unified_error_envelope():
 
     @app.get("/boom")
     async def boom():
-        raise HTTPException(status_code=404, detail="missing resource")
+        raise HTTPException(
+            status_code=401,
+            detail="missing resource",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     client = TestClient(app, raise_server_exceptions=False)
     response = client.get("/boom")
 
-    assert response.status_code == 404
+    assert response.status_code == 401
     body = response.json()
-    assert body["code"] == "NOT_FOUND"
+    assert body["code"] == "UNAUTHORIZED"
     assert body["message"] == "missing resource"
     assert body["details"] == {"detail": "missing resource"}
     assert isinstance(body["request_id"], str)
     assert body["request_id"]
     assert response.headers["x-request-id"] == body["request_id"]
+    assert response.headers["www-authenticate"] == "Bearer"
 
 
 def test_validation_exception_uses_unified_error_envelope():
