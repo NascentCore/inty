@@ -158,7 +158,12 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
         return "ERROR: no valid items (need label and value for each entry)"
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
-    register_profile_write(root, rel, changed=(merged != prev))
+    register_profile_write(
+        root,
+        rel,
+        changed=(merged != prev),
+        new_content=merged,
+    )
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
 
 
@@ -249,7 +254,7 @@ def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> s
     else:
         write_text(p, content)
     changed = prev_body != content
-    register_profile_write(root, rel, changed=changed)
+    register_profile_write(root, rel, changed=changed, new_content=content)
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 

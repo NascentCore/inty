@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,10 @@ from inty_v2_text_chat_prototype.image_gate import (
     current_persona_revision_id,
     prepare_image_gate_for_turn,
     register_profile_write,
+)
+from inty_v2_text_chat_prototype.memory_store_registry import (
+    get_memory_store,
+    shutdown_memory_store,
 )
 
 
@@ -38,11 +43,15 @@ class TestImageGateP0(unittest.TestCase):
             assert err is not None
             self.assertIn("persist profile docs", err)
 
-            ident = (root / "IDENTITY.md").read_text(encoding="utf-8")
-            (root / "IDENTITY.md").write_text(
-                ident.replace("女", "男"), encoding="utf-8"
+            ident = get_memory_store(root).read_document("IDENTITY.md")
+            updated = ident.replace("女", "男")
+            get_memory_store(root).write_document("IDENTITY.md", updated)
+            register_profile_write(
+                root,
+                "IDENTITY.md",
+                changed=True,
+                new_content=updated,
             )
-            register_profile_write(root, "IDENTITY.md", changed=True)
 
             # Persist gate is cleared after profile write; then mode confirmation blocks image tool.
             err2 = check_image_tool_allowed(root, tool_name="generate_image")
@@ -57,11 +66,15 @@ class TestImageGateP0(unittest.TestCase):
             before = current_persona_revision_id(root)
 
             prepare_image_gate_for_turn(root, "把性别改成男")
-            ident = (root / "IDENTITY.md").read_text(encoding="utf-8")
-            (root / "IDENTITY.md").write_text(
-                ident.replace("性别：女", "性别：男"), encoding="utf-8"
+            ident = get_memory_store(root).read_document("IDENTITY.md")
+            updated = ident.replace("性别：女", "性别：男")
+            get_memory_store(root).write_document("IDENTITY.md", updated)
+            register_profile_write(
+                root,
+                "IDENTITY.md",
+                changed=True,
+                new_content=updated,
             )
-            register_profile_write(root, "IDENTITY.md", changed=True)
             after = current_persona_revision_id(root)
             self.assertNotEqual(before, after)
 
@@ -100,6 +113,39 @@ class TestImageGateP0(unittest.TestCase):
             self.assertTrue(state_path.is_file())
             raw = json.loads(state_path.read_text(encoding="utf-8"))
             self.assertIsInstance(raw, dict)
+
+    def test_revision_changes_when_memory_mirror_disabled(self) -> None:
+        old_env = os.environ.get("INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES")
+        os.environ["INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES"] = "0"
+        root: Path | None = None
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                self._init_workspace(root)
+                before = current_persona_revision_id(root)
+
+                # Simulate profile update via MemoryStore-only path with mirror disabled.
+                new_content = "# I\n\n性别：男\n"
+                get_memory_store(root).write_document("IDENTITY.md", new_content)
+                register_profile_write(
+                    root,
+                    "IDENTITY.md",
+                    changed=True,
+                    new_content=new_content,
+                )
+                after = current_persona_revision_id(root)
+                self.assertNotEqual(before, after)
+        finally:
+            if old_env is None:
+                os.environ.pop("INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES", None)
+            else:
+                os.environ["INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES"] = old_env
+            # Clear workspace-scoped singleton store to avoid env leakage across tests.
+            if root is not None:
+                try:
+                    shutdown_memory_store(root)
+                except Exception:
+                    pass
 
 
 if __name__ == "__main__":

@@ -75,10 +75,15 @@ def _save_state(root: Path, state: dict[str, Any]) -> None:
 
 
 def _read_profile_doc(root: Path, relative_path: str) -> str:
+    # MemoryStore is the authoritative write path for workspace markdown docs.
+    # Prefer it so persona revision stays correct even when file mirroring is disabled.
+    body = get_memory_store(root).read_document_if_exists(relative_path)
+    if body is not None:
+        return body
     p = root.resolve() / relative_path
     if p.is_file():
         return read_text(p)
-    return get_memory_store(root).read_document_if_exists(relative_path) or ""
+    return ""
 
 
 def _core_profile_payload(root: Path) -> dict[str, str]:
@@ -121,7 +126,13 @@ def prepare_image_gate_for_turn(root: Path, user_text: str) -> None:
     _save_state(root, state)
 
 
-def register_profile_write(root: Path, relative_path: str, *, changed: bool) -> None:
+def register_profile_write(
+    root: Path,
+    relative_path: str,
+    *,
+    changed: bool,
+    new_content: str | None = None,
+) -> None:
     rel = (relative_path or "").strip().replace("\\", "/")
     if rel not in _CORE_PROFILE_DOCS:
         return
@@ -131,7 +142,15 @@ def register_profile_write(root: Path, relative_path: str, *, changed: bool) -> 
     before_revision = str(state.get("persona_revision_id") or "")
     if not before_revision:
         before_revision = compute_persona_revision_id(root)
-    after_revision = compute_persona_revision_id(root)
+    if new_content is not None:
+        payload = _core_profile_payload(root)
+        payload[rel] = new_content
+        canonical = json.dumps(
+            payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        after_revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+    else:
+        after_revision = compute_persona_revision_id(root)
     if before_revision == after_revision:
         return
 
