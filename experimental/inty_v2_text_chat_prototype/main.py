@@ -54,6 +54,15 @@ from experimental.inty_v2_text_chat_prototype.orchestrator import (
 from experimental.inty_v2_text_chat_prototype.tool_background import (
     pop_output_events_nowait,
 )
+from experimental.inty_v2_text_chat_prototype.schedule_queue import (
+    mark_task_fired,
+    next_due_wait_seconds,
+    mark_task_retry,
+    pop_due_task_events_nowait,
+    scheduled_task_synthetic_user_text,
+    start_schedule_scheduler,
+    stop_schedule_scheduler,
+)
 from experimental.inty_v2_text_chat_prototype.memory_store_registry import (
     flush_memory_store,
     shutdown_memory_store,
@@ -95,6 +104,54 @@ def _drain_async_tool_events(ws: Path) -> None:
 
 def _drain_async_tool_events_in_waiting_loop(ws: Path) -> None:
     _drain_async_tool_events(ws)
+
+
+def _process_due_schedule_events(
+    ws: Path,
+    *,
+    run_turn_sync: Callable[[str], str],
+) -> None:
+    events = pop_due_task_events_nowait(workspace=ws)
+    for ev in events:
+        synthetic_user = scheduled_task_synthetic_user_text(
+            task_text=ev.task_text,
+            exec_time_utc=ev.exec_time_utc,
+        )
+        t0 = time.perf_counter()
+        try:
+            out = run_turn_sync(synthetic_user)
+        except Exception as exc:
+            mark_task_retry(ws, ev.task_id, str(exc))
+            logger.exception(
+                "repl schedule task failed ws={} task_id={} error={}",
+                ws.name,
+                ev.task_id,
+                exc,
+            )
+            continue
+        mark_task_fired(ws, ev.task_id)
+        print(
+            f"[{_local_ts_str()}] schedule-task {int((time.perf_counter() - t0) * 1000)}ms "
+            f"(task={ev.task_id[:8]})"
+        )
+        print(out)
+        print("> ", end="", flush=True)
+
+
+def _next_idle_wait_seconds(*, ws: Path, heartbeat: bool) -> float:
+    waits: list[float] = []
+    if heartbeat:
+        waits.append(next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat))
+    due_wait = next_due_wait_seconds(ws)
+    if due_wait is not None:
+        waits.append(due_wait)
+    if not waits:
+        return 1.0
+    return min(waits)
+
+
+def _next_due_wait_seconds_only(ws: Path) -> float | None:
+    return next_due_wait_seconds(ws)
 
 
 def _init_proto_logging(
@@ -358,6 +415,16 @@ def _repl_interactive_loop_posix(
 
     while True:
         _drain_async_tool_events_in_waiting_loop(ws)
+        _process_due_schedule_events(
+            ws,
+            run_turn_sync=lambda text: _run_turn_with_stdin_pump(
+                ws,
+                pending,
+                user_text=text,
+                heartbeat_turn=False,
+                debug_print_system=debug_print_system,
+            ),
+        )
         try:
             item = pending.get_nowait()
         except queue.Empty:
@@ -381,8 +448,12 @@ def _repl_interactive_loop_posix(
             continue
 
         if heartbeat:
-            wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
             if wait <= 0.0:
+                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+                if hb_wait > 0.0:
+                    # Due schedule event should run first; do not force a heartbeat turn.
+                    continue
                 logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
                 t0 = time.perf_counter()
                 out = _run_turn_with_stdin_pump(
@@ -421,10 +492,26 @@ def _repl_interactive_loop_posix(
                 break
             line = raw.rstrip("\r\n")
         else:
-            line = _readline_main_sync()
-            if line is None:
-                print()
-                break
+            due_wait = _next_due_wait_seconds_only(ws)
+            if due_wait is None:
+                line = _readline_main_sync()
+                if line is None:
+                    print()
+                    break
+            else:
+                sleep_s = clamp_sleep_seconds(
+                    due_wait,
+                    min_seconds=0.05,
+                    max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                )
+                r, _, _ = select.select([stdin_fd], [], [], sleep_s)
+                if not r:
+                    continue
+                raw = sys.stdin.readline()
+                if raw == "":
+                    print()
+                    break
+                line = raw.rstrip("\r\n")
 
         if line.strip() in ("quit", "exit", "q"):
             break
@@ -453,6 +540,18 @@ def _repl_interactive_loop_daemon(
 
     while True:
         _drain_async_tool_events_in_waiting_loop(ws)
+        _process_due_schedule_events(
+            ws,
+            run_turn_sync=lambda text: asyncio.run(
+                run_turn(
+                    ws,
+                    text,
+                    heartbeat_turn=False,
+                    debug_print_system=debug_print_system,
+                    llm_trace=True,
+                )
+            ),
+        )
         try:
             item = line_queue.get_nowait()
         except queue.Empty:
@@ -476,8 +575,11 @@ def _repl_interactive_loop_daemon(
             continue
 
         if heartbeat:
-            wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
             if wait <= 0.0:
+                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+                if hb_wait > 0.0:
+                    continue
                 logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
                 t0 = time.perf_counter()
                 print("> ", end="", flush=True)
@@ -515,7 +617,19 @@ def _repl_interactive_loop_daemon(
             except queue.Empty:
                 continue
         else:
-            item = line_queue.get()
+            due_wait = _next_due_wait_seconds_only(ws)
+            if due_wait is None:
+                item = line_queue.get()
+            else:
+                sleep_s = clamp_sleep_seconds(
+                    due_wait,
+                    min_seconds=0.05,
+                    max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                )
+                try:
+                    item = line_queue.get(timeout=sleep_s)
+                except queue.Empty:
+                    continue
 
         if item is None:
             print()
@@ -747,6 +861,7 @@ def repl(
     try:
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
+        start_schedule_scheduler(ws)
         logger.debug("cli repl start ws={}", ws.resolve())
         if not is_workspace_initialized(ws):
             logger.debug(
@@ -798,6 +913,7 @@ def repl(
         logger.debug("repl interactive heartbeat_enabled={}", hb)
         _repl_interactive_loop(ws, debug_print_system=debug_print_system, heartbeat=hb)
     finally:
+        stop_schedule_scheduler(ws)
         _flush_and_shutdown_memory_store(ws.resolve())
 
 

@@ -27,6 +27,7 @@ from .fal_z_image_tool import (
 from .file_store import read_text, write_text
 from .memory_store_registry import get_memory_store
 from .google_web_search import run_google_web_search
+from .schedule_queue import add_schedule_task
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
@@ -95,6 +96,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
+        "schedule_task",
         "google_web_search",
         "generate_image",
         "modify_image",
@@ -267,6 +269,18 @@ def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
     return f"OK mkdir {relative_path}"
 
 
+def tool_schedule_task(root: Path, exec_time_utc: str, task_text: str) -> str:
+    task = add_schedule_task(
+        root,
+        exec_time_utc=exec_time_utc,
+        task_text=task_text,
+    )
+    return (
+        "OK scheduled task "
+        f"id={task.id} exec_time_utc={task.exec_time_utc} text={task.task_text}"
+    )
+
+
 def build_openai_tools() -> list[dict[str, Any]]:
     """OpenAI Chat Completions `tools` 列表。"""
     return [
@@ -403,6 +417,39 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "schedule_task",
+                "description": (
+                    "Persist a timed reminder task into the local schedule queue. "
+                    "Use when the user explicitly asks for a reminder/timer/alarm at a future time. "
+                    "exec_time_utc must be an absolute timestamp with timezone offset (ISO8601); "
+                    "prefer UTC (e.g. 2026-04-03T05:30:00+00:00). "
+                    "task_text should be the concise reminder content shown at trigger time."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "exec_time_utc": {
+                            "type": "string",
+                            "description": (
+                                "Absolute execution timestamp with timezone offset. "
+                                "Example: 2026-04-03T05:30:00+00:00"
+                            ),
+                        },
+                        "task_text": {
+                            "type": "string",
+                            "description": (
+                                "Reminder text to execute at that time."
+                            ),
+                        },
+                    },
+                    "required": ["exec_time_utc", "task_text"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     ]
 
 
@@ -418,6 +465,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     }
     names = (
         "user_profile_record",
+        "schedule_task",
         "workspace_list_dir",
         "workspace_read_file",
         "workspace_write_file",
@@ -462,6 +510,17 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                 + ". When the user explicitly asks to change how you relate, boundaries, or "
                 "persistent preferences, read the current file first (e.g. SOUL.md, USER.md), "
                 "then write the full updated content. Do not use for transcript.jsonl or context.json."
+            )
+            w["function"] = wfn
+            out.append(w)
+        elif n == "schedule_task":
+            w = dict(t)
+            wfn = dict(w["function"])
+            wfn["description"] = (
+                "Persist a timed reminder task into the durable local schedule queue. "
+                "Use only when user explicitly requests a reminder/timer/alarm at a future time. "
+                "You must pass an absolute ISO8601 timestamp with timezone offset in exec_time_utc "
+                "(prefer UTC)."
             )
             w["function"] = wfn
             out.append(w)
@@ -667,6 +726,21 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "schedule_task":
+        raw_exec_time = arguments.get("exec_time_utc")
+        raw_task_text = arguments.get("task_text")
+        if not isinstance(raw_exec_time, str):
+            return "ERROR: exec_time_utc must be a string"
+        if not isinstance(raw_task_text, str):
+            return "ERROR: task_text must be a string"
+        try:
+            return tool_schedule_task(
+                root,
+                exec_time_utc=raw_exec_time,
+                task_text=raw_task_text,
+            )
+        except ValueError as exc:
+            return f"ERROR: {exc}"
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):

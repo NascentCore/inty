@@ -80,6 +80,9 @@ def _output_contract_text_with_user_profile_tool() -> str:
     return (
         "输出与工具："
         "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
+        "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
+        "task_text 写提醒内容；禁止只口头答应而不落盘。"
         "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
         "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
         "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
