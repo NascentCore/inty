@@ -10,7 +10,6 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.remove
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.lifecycle.ViewModel
@@ -134,10 +133,7 @@ class DataStoreSessionStore(context: Context) : SessionStore {
 
     override suspend fun clearSession() {
         dataStore.edit { pref ->
-            pref.remove(tokenKey)
-            pref.remove(userIdKey)
-            pref.remove(emailKey)
-            pref.remove(nicknameKey)
+            pref.clear()
         }
     }
 

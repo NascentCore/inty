@@ -122,13 +122,14 @@ fun IMateApp(
                     onPasswordInputChanged = onPasswordInputChanged,
                     onEmailPasswordLogin = onEmailPasswordLogin,
                     onGoogleLoginClick = {
+                        val defaultError = context.getString(R.string.login_error_invalid)
                         val result = onGoogleLogin()
                         result.onSuccess { token ->
                             onGoogleLoginToken(token)
                         }.onFailure { error ->
                             Toast.makeText(
                                 context,
-                                error.message ?: stringResource(R.string.login_error_invalid),
+                                error.message ?: defaultError,
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }
