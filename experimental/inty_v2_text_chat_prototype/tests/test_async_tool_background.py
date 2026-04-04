@@ -42,7 +42,7 @@ def _resp_tool(content: str, *, tool_name: str, tool_args: str) -> SimpleNamespa
     return SimpleNamespace(choices=[ch], usage=None)
 
 
-class _FakeCompletionsAsyncBg:
+class _FakeCompletionsSideEffectOnly:
     def __init__(self) -> None:
         self._tool_calls = 0
 
@@ -75,6 +75,27 @@ class _FakeCompletionsNoToolCalls:
         raise AssertionError(f"unexpected model: {model}")
 
 
+class _FakeCompletionsImageBg:
+    def __init__(self) -> None:
+        self._tool_calls = 0
+
+    def create(self, **kwargs: object) -> SimpleNamespace:
+        model = str(kwargs["model"])
+        tools = kwargs.get("tools")
+        if model == "chat-fast":
+            return _resp_text("chat-fast-r1")
+        if model == "tool-smart":
+            if tools and self._tool_calls == 0:
+                self._tool_calls += 1
+                return _resp_tool(
+                    "tool-asks-generate-image",
+                    tool_name="generate_image",
+                    tool_args='{"prompt":"sunrise portrait"}',
+                )
+            return _resp_text("tool-final-image-r2")
+        raise AssertionError(f"unexpected model: {model}")
+
+
 class TestAsyncToolBackground(unittest.TestCase):
     def setUp(self) -> None:
         clear_output_queue()
@@ -91,11 +112,11 @@ class TestAsyncToolBackground(unittest.TestCase):
         paths.transcript.write_text("", encoding="utf-8")
         return paths
 
-    def test_chat_returns_first_then_background_event_and_transcript_append(
+    def test_side_effect_only_tool_does_not_emit_background_user_visible_reply(
         self,
     ) -> None:
         fake_client = SimpleNamespace(
-            chat=SimpleNamespace(completions=_FakeCompletionsAsyncBg()),
+            chat=SimpleNamespace(completions=_FakeCompletionsSideEffectOnly()),
         )
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -143,7 +164,78 @@ class TestAsyncToolBackground(unittest.TestCase):
                 early_events = pop_output_events_nowait(workspace=root)
                 self.assertEqual(early_events, [])
 
-                # Wait up to 2s for background result.
+                # Wait up to 2s and ensure side-effect-only tools do not emit user-visible bg text.
+                got_events = []
+                deadline = time.time() + 2.0
+                while time.time() < deadline:
+                    got_events = pop_output_events_nowait(workspace=root)
+                    if got_events:
+                        break
+                    asyncio.run(asyncio.sleep(0.01))
+                    time.sleep(0.02)
+                self.assertEqual(got_events, [])
+
+            rows = load_transcript((root / "transcript.jsonl"))
+            self.assertEqual([r.role for r in rows], ["user", "assistant"])
+            self.assertEqual(rows[1].content, "chat-fast-r1")
+            self.assertEqual(rows[1].source, "chat")
+            self.assertEqual(rows[1].reply_to, rows[0].uuid)
+            self.assertTrue(rows[0].trace_id)
+            self.assertEqual(rows[1].trace_id, rows[0].trace_id)
+
+    def test_non_text_output_tool_still_emits_background_reply(self) -> None:
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakeCompletionsImageBg()),
+        )
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._init_workspace(root)
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
+                patch.object(orchestrator, "chat_model", return_value="chat-fast"),
+                patch.object(orchestrator, "tool_model", return_value="tool-smart"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator, "schedule_memory_update_after_turn", return_value=None
+                ),
+                patch(
+                    "inty_v2_text_chat_prototype.workspace_init_tools.run_generate_image_z_image_turbo",
+                    return_value=(
+                        "OK fal z-image generated: "
+                        "prompt='sunrise portrait' image_size=portrait_4_3 "
+                        "public_url=https://example.com/z1.jpeg "
+                        "gcs_uri=gs://bucket/z1.jpeg "
+                        "local_path=/tmp/z_image_1.jpeg"
+                    ),
+                ),
+                patch.dict(
+                    os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False
+                ),
+            ):
+                out = asyncio.run(
+                    orchestrator.run_turn(
+                        root,
+                        "帮我生成一张图",
+                        heartbeat_turn=False,
+                        llm_trace=False,
+                    )
+                )
+                self.assertEqual(out, "chat-fast-r1")
+
                 got_events = []
                 deadline = time.time() + 2.0
                 while time.time() < deadline:
@@ -153,19 +245,15 @@ class TestAsyncToolBackground(unittest.TestCase):
                     asyncio.run(asyncio.sleep(0.01))
                     time.sleep(0.02)
                 self.assertEqual(len(got_events), 1)
-                self.assertIn("tool-final-r2", got_events[0].text)
+                self.assertIn("tool-final-image-r2", got_events[0].text)
+                self.assertIn("/tmp/z_image_1.jpeg", got_events[0].text)
 
             rows = load_transcript((root / "transcript.jsonl"))
             self.assertEqual([r.role for r in rows], ["user", "assistant", "assistant"])
-            self.assertEqual(rows[1].content, "chat-fast-r1")
             self.assertEqual(rows[1].source, "chat")
-            self.assertEqual(rows[1].reply_to, rows[0].uuid)
-            self.assertTrue(rows[0].trace_id)
-            self.assertEqual(rows[1].trace_id, rows[0].trace_id)
-            self.assertIn("tool-final-r2", rows[2].content)
             self.assertEqual(rows[2].source, "tool_bg")
-            self.assertEqual(rows[2].reply_to, rows[0].uuid)
-            self.assertEqual(rows[2].trace_id, rows[0].trace_id)
+            self.assertIn("tool-final-image-r2", rows[2].content)
+            self.assertIn("/tmp/z_image_1.jpeg", rows[2].content)
 
     def test_no_tool_calls_does_not_append_background_transcript(self) -> None:
         fake_client = SimpleNamespace(

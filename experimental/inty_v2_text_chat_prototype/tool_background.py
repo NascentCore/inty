@@ -405,6 +405,17 @@ async def _run_background_tool_loop(
     assistant_text = _assistant_text_from_completion_response(loop_result.response)
     image_paths = _local_paths_from_tool_messages(loop_result.messages)
     display_text = _append_local_image_paths_for_display(assistant_text, image_paths)
+    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+    # 仅当工具链路产出显式非文本数据（当前为图片本地路径）时，才向用户补发 tool_bg。
+    # 纯副作用工具（如 user_profile_record / workspace_write_file）避免二次近似文本回复。
+    if not image_paths:
+        logger.debug(
+            "repl.turn.bg suppress_user_visible_output no_explicit_non_text_data "
+            "trace_id={} user_msg_uuid={}",
+            trace_id,
+            user_msg_uuid,
+        )
+        return
     assistant_msg_uuid = str(uuid.uuid4())
     _append_background_transcript_assistant(
         transcript_path,
@@ -413,7 +424,6 @@ async def _run_background_tool_loop(
         reply_to=user_msg_uuid,
         trace_id=trace_id,
     )
-    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
     _append_background_log(
         ws_root,
         user_msg_uuid=user_msg_uuid,
