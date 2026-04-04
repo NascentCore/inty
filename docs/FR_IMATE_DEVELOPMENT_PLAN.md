@@ -17,7 +17,7 @@
   - FastAPI + SQLAlchemy + Pydantic 数据契约。
   - endpoint -> service -> repository 分层模式。
   - 依赖通过 `app/api/deps.py` + Depends 注入，避免 endpoint 直接绑定全局单例。
-  - 复用 `app/` 内现有 API 路由与 SQLAlchemy database model，保障现有 Android 功能 API 持续可用。
+  - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用，并继续复用 `app/models` SQLAlchemy database model。
 - Chat 通信复用：
   - app + backend 使用 WebSocket 主链路。
   - chat 路径仅提供 WebSocket，不提供 HTTP fallback。
