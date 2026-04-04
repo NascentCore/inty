@@ -650,7 +650,7 @@ def bootstrap_agent(
         str,
         Parameter(
             name="--companion-type",
-            help="陪伴类型: 伴侣/朋友/爱人/亲人 (也支持 partner/friend/lover/family)",
+            help="陪伴类型: 伴侣/朋友/爱人/亲人 (也支持 partner/friend/lover/family；其他值将按自定义关系类型处理)",
         ),
     ] = _DEFAULT_COMPANION_TYPE,
     verbose_tools: Annotated[
@@ -725,7 +725,7 @@ def repl(
         str,
         Parameter(
             name="--companion-type",
-            help="陪伴类型: 伴侣/朋友/爱人/亲人 (也支持 partner/friend/lover/family)",
+            help="陪伴类型: 伴侣/朋友/爱人/亲人 (也支持 partner/friend/lover/family；其他值将按自定义关系类型处理)",
         ),
     ] = _DEFAULT_COMPANION_TYPE,
     repl_heartbeat: Annotated[

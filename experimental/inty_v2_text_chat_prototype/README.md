@@ -33,7 +33,7 @@ source experimental/inty_v2_text_chat_prototype/.venv/bin/activate
 python experimental/inty_v2_text_chat_prototype/main.py repl --workspace experimental/inty_v2_text_chat_prototype/_ws
 ```
 
-可选：用 `--companion-type` 指定 bootstrap 模版类型（`伴侣` / `朋友` / `爱人` / `亲人`，也支持 `partner` / `friend` / `lover` / `family`）。
+可选：用 `--companion-type` 指定关系类型（内置模版：`伴侣` / `朋友` / `爱人` / `亲人`，也支持 `partner` / `friend` / `lover` / `family`）。输入其他值时会按“自定义关系类型”处理。
 
 ```bash
 python experimental/inty_v2_text_chat_prototype/main.py bootstrap-agent \

@@ -97,10 +97,7 @@ def normalize_companion_type(companion_type: str | None) -> str:
     mapped = _COMPANION_TYPE_ALIASES.get(lowered)
     if mapped is not None:
         return mapped
-    raise ValueError(
-        "unsupported companion_type: "
-        f"{companion_type!r}; supported={list(_SUPPORTED_COMPANION_TYPES)}"
-    )
+    return raw
 
 
 def _internal_bootstrap_continue(companion_type: str) -> str:
@@ -115,7 +112,13 @@ def load_bootstrap_instruction_text(
         raise FileNotFoundError(f"missing bootstrap spec: {_BOOSTRAP_PATH}")
     normalized_type = normalize_companion_type(companion_type)
     base = _BOOSTRAP_PATH.read_text(encoding="utf-8").rstrip()
-    appendix = _COMPANION_TYPE_APPENDIX[normalized_type]
+    appendix = _COMPANION_TYPE_APPENDIX.get(
+        normalized_type,
+        (
+            "你是自定义关系类型陪伴，先按用户给定关系语义建立语气与边界。"
+            "收尾邀请里优先确认彼此称呼、互动边界与陪伴期待。"
+        ),
+    )
     return (
         f"{base}\n\n## 陪伴类型补充规范\n\n"
         f"- 当前陪伴类型: {normalized_type}\n"
