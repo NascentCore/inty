@@ -29,7 +29,7 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
-10. Output / tool contract (REPL adds `user_profile_record`, workspace file tools, optional `google_web_search` (Google Custom Search API; env `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`), optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
+10. Output / tool contract (REPL adds `user_profile_record`, `schedule_task`, workspace file tools, optional `google_web_search` (Google Custom Search API; env `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`), optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
 
 `generate_image` at runtime uses the **Inty repo-root** `config.yaml` (`fal.api_key`, GCS settings) via `app.core.images.fal`; see [README.md](README.md). Optional env `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` overrides the GCS object prefix; `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` skips GCS upload for faster local-only images.
 
@@ -48,6 +48,7 @@ Order differs from final prompt section order: implementation reads long-term **
 - **`transcript.jsonl`** is **not** part of `PromptBundle`. It is loaded separately, then **`models.transcript_for_llm_turn`** keeps only the last `TRANSCRIPT_WINDOW_MAX_MESSAGES` entries for **both** normal user turns and **REPL 陪伴心跳** (`heartbeat_turn`), so proactive replies match the same on-screen conversation as normal turns. Appended **after** the system message as alternating user/assistant messages.
 - Each line is JSON with `role`, `content`, `ts`, and (for lines written by `orchestrator.run_turn` after this feature) **`uuid`** (stable id for that message; used by `llm_trace` summaries to reference transcript rows without echoing body text). Older lines may omit `uuid`.
 - REPL **陪伴心跳**（见 `main.repl` / `heartbeat_schedule.py`）：空闲达到节奏阈值时由程序合成一轮 `user` 行（`content` 为 `HEARTBEAT_SYNTHETIC_USER_TEXT`：要求读本窗口场景与语气**自然续接**，勿改换风格），可带 **`heartbeat`: true**；`build_system_prompt` 的「本轮（陪伴心跳）」段与此一致。该回合不跑记忆管线，且 API 不挂载工具。`heartbeat_schedule.next_heartbeat_wait_seconds(..., heartbeat_enabled=...)` 与 `--repl-heartbeat` / `--no-repl-heartbeat` 对齐；仅传环境变量时参数可省略。
+- REPL 同时运行**非 LLM 驱动**的定时队列调度（见 `schedule_queue.py`）：`schedule_task` 写入 `.inty_v2_schedule_tasks.json` 后，后台线程按 `exec_time_utc <= now` 发出到期事件；主循环优先处理到期事件并注入一轮 synthetic user 给 `run_turn`。成功后任务标记 `fired`，失败按 backoff 重试。
 
 ## Required files for a runnable workspace
 
