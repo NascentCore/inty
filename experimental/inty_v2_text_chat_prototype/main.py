@@ -118,6 +118,10 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
 
 
+def _print_openrouter_invalid_json_retry_hint() -> None:
+    print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+
+
 def _flush_and_shutdown_memory_store(root: Path) -> None:
     flush_memory_store(root, timeout_s=5.0)
     flush_jsonl_db_store(timeout_s=5.0)
@@ -181,7 +185,7 @@ def _repl_drain_user_turns(
                 out = run_turn_sync(cur)
             except OpenRouterInvalidJsonError as exc:
                 logger.warning("repl turn recovered from invalid OpenRouter JSON: {}", exc)
-                print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+                _print_openrouter_invalid_json_retry_hint()
                 print("> ", end="", flush=True)
                 try:
                     item = pending.get_nowait()
@@ -737,23 +741,39 @@ def repl(
                 "repl startup branch=bootstrap_auto_init (workspace not initialized)"
             )
             t0 = time.perf_counter()
-            out = run_workspace_bootstrap_loop(
-                ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
-            )
+            try:
+                out = run_workspace_bootstrap_loop(
+                    ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
+                )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl startup bootstrap recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                return
             _print_assistant_reply(out, time.perf_counter() - t0)
         elif needs_startup_profile_inquiry(ws):
             logger.debug(
                 "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
             )
             t0 = time.perf_counter()
-            out = asyncio.run(
-                run_turn(
-                    ws,
-                    _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
+            try:
+                out = asyncio.run(
+                    run_turn(
+                        ws,
+                        _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                    )
                 )
-            )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl startup profile inquiry recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                return
             _print_assistant_reply(out, time.perf_counter() - t0)
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import queue
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
@@ -19,7 +20,9 @@ from inty_v2_text_chat_prototype.client import (
 from inty_v2_text_chat_prototype.main import (
     OpenRouterInvalidJsonError as ReplOpenRouterInvalidJsonError,
 )
+from inty_v2_text_chat_prototype.main import _print_openrouter_invalid_json_retry_hint
 from inty_v2_text_chat_prototype.main import _repl_drain_user_turns
+from inty_v2_text_chat_prototype.main import repl
 
 
 class _FlakyCompletions:
@@ -89,3 +92,62 @@ def test_repl_drain_user_turns_recovers_from_openrouter_invalid_json_error() -> 
         )
     assert keep_running is True
     assert called["n"] == 2
+
+
+def test_client_exception_identity_shared_between_import_paths() -> None:
+    pkg_mod = importlib.import_module("inty_v2_text_chat_prototype.client")
+    exp_mod = importlib.import_module("experimental.inty_v2_text_chat_prototype.client")
+    assert pkg_mod is exp_mod
+    assert (
+        pkg_mod.OpenRouterInvalidJsonError
+        is exp_mod.OpenRouterInvalidJsonError
+        is OpenRouterInvalidJsonError
+    )
+
+
+def test_repl_startup_bootstrap_branch_handles_openrouter_invalid_json() -> None:
+    with (
+        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=False),
+        patch("inty_v2_text_chat_prototype.main.run_workspace_bootstrap_loop") as mock_boot,
+        patch("inty_v2_text_chat_prototype.main._init_proto_logging"),
+        patch("inty_v2_text_chat_prototype.main._configure_llm_trace_for_workspace"),
+        patch("inty_v2_text_chat_prototype.main._flush_and_shutdown_memory_store"),
+        patch("inty_v2_text_chat_prototype.main._repl_interactive_loop") as mock_loop,
+        patch(
+            "inty_v2_text_chat_prototype.main._print_openrouter_invalid_json_retry_hint"
+        ) as mock_hint,
+    ):
+        mock_boot.side_effect = OpenRouterInvalidJsonError("bad upstream body")
+        repl(workspace=Path("/tmp/ws-a"))
+    mock_hint.assert_called_once_with()
+    mock_loop.assert_not_called()
+
+
+def test_repl_startup_profile_branch_handles_openrouter_invalid_json() -> None:
+    mock_run_turn = AsyncMock(side_effect=OpenRouterInvalidJsonError("bad upstream body"))
+    with (
+        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=True),
+        patch("inty_v2_text_chat_prototype.main.needs_startup_profile_inquiry", return_value=True),
+        patch("inty_v2_text_chat_prototype.main.run_turn", mock_run_turn),
+        patch("inty_v2_text_chat_prototype.main._init_proto_logging"),
+        patch("inty_v2_text_chat_prototype.main._configure_llm_trace_for_workspace"),
+        patch("inty_v2_text_chat_prototype.main._flush_and_shutdown_memory_store"),
+        patch("inty_v2_text_chat_prototype.main._repl_interactive_loop") as mock_loop,
+        patch(
+            "inty_v2_text_chat_prototype.main._print_openrouter_invalid_json_retry_hint"
+        ) as mock_hint,
+    ):
+        repl(workspace=Path("/tmp/ws-b"))
+    mock_hint.assert_called_once_with()
+    mock_loop.assert_not_called()
+
+
+def test_print_openrouter_invalid_json_retry_hint() -> None:
+    with (
+        patch("inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-03"),
+        patch("builtins.print") as mock_print,
+    ):
+        _print_openrouter_invalid_json_retry_hint()
+    mock_print.assert_called_once_with(
+        "[2026-04-03] LLM API 临时异常（上游返回非 JSON），请重试。"
+    )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
+import sys
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -32,6 +33,21 @@ _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
 
 class OpenRouterInvalidJsonError(RuntimeError):
     """OpenRouter returned a response body that was not valid JSON."""
+
+
+def _register_module_aliases() -> None:
+    """
+    Keep one shared module object for both import paths:
+    - experimental.inty_v2_text_chat_prototype.client
+    - inty_v2_text_chat_prototype.client
+    This avoids exception class identity mismatch in mixed import styles.
+    """
+    module = sys.modules[__name__]
+    sys.modules.setdefault("experimental.inty_v2_text_chat_prototype.client", module)
+    sys.modules.setdefault("inty_v2_text_chat_prototype.client", module)
+
+
+_register_module_aliases()
 
 
 def _flush_langsmith_traces_on_exit() -> None:
