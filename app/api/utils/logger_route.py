@@ -38,8 +38,12 @@ class LoggerRoute(APIRoute):
         original_route_handler = super().get_route_handler()
 
         async def custom_route_handler(request: Request) -> Response:
-            request_id = str(uuid.uuid4())[:8]
-            request.state.request_id = request_id
+            state_request_id = getattr(request.state, "request_id", None)
+            if state_request_id:
+                request_id = str(state_request_id)
+            else:
+                request_id = request.headers.get("x-request-id") or str(uuid.uuid4())[:8]
+                request.state.request_id = request_id
 
             # Use contextualize to add request_id to all logs in this request context
             with logger.contextualize(request_id=request_id):
@@ -116,6 +120,7 @@ class LoggerRoute(APIRoute):
                             body=response_body,
                         )
 
+                    response.headers["x-request-id"] = request_id
                     return response
                 except Exception as e:
                     duration = time.time() - start_time
