@@ -17,9 +17,10 @@
   - FastAPI + SQLAlchemy + Pydantic 数据契约。
   - endpoint -> service -> repository 分层模式。
   - 依赖通过 `app/api/deps.py` + Depends 注入，避免 endpoint 直接绑定全局单例。
+  - 复用 `app/` 内现有 API 路由与 SQLAlchemy database model，保障现有 Android 功能 API 持续可用。
 - Chat 通信复用：
   - app + backend 使用 WebSocket 主链路。
-  - 维持 HTTP completion 作为灰度和故障回退链路。
+  - chat 路径仅提供 WebSocket，不提供 HTTP fallback。
 
 ### 2.2 新版 iMate 的核心目标
 
@@ -46,7 +47,7 @@
   - UI/ViewModel 层：状态展示、用户意图采集。
   - Repository 层：统一业务编排，屏蔽网络与本地细节。
   - Local DataSource（Room）：消息、会话状态、角色关联数据。
-  - Remote DataSource（HTTP + WebSocket）：请求发送、响应解析、错误映射。
+  - Remote DataSource（WebSocket + 功能型 HTTP API）：请求发送、响应解析、错误映射。
   - Store（DataStore）：用户设置、聊天配置、实验开关、运行时端点策略。
 - 核心原则：
   - Offline-First：UI 只读本地状态，网络仅刷新本地。
@@ -62,10 +63,11 @@
   - Schema 层：Pydantic 契约定义和跨端数据一致性。
 - 核心原则：
   - endpoint 薄层化，业务逻辑下沉 service。
-  - 依赖注入统一化，支持 WebSocket 与 HTTP 共用 service 对象。
+  - 依赖注入统一化，支持 WebSocket 聊天与功能 API 共用 service 对象。
+  - 在 `app/services` 中产品化复用 `experimental/inty_v2_text_chat_prototype` 的聊天体验编排能力。
   - 错误语义清晰：鉴权错误、业务限制、系统异常明确分级。
 
-### 3.3 Chat 主链路（WebSocket 优先）
+### 3.3 Chat 主链路（WebSocket Only）
 
 - 连接入口：
   - 生产端点：`/api/v1/chat/ws`（落库）。
@@ -74,9 +76,9 @@
   - 文本帧 JSON，结构与现有 chat completion 请求/响应同构。
   - 客户端心跳 `ping`，服务端回 `pong`，服务端空闲超时自动断链。
   - 当前阶段采用"一发一收"顺序模型，防止并发响应错配。
-- 故障回退：
-  - WebSocket 不可用时可切回 HTTP completion。
-  - 回退路径保持同一数据契约，减少 UI 分叉逻辑。
+- 故障处理：
+  - WebSocket 不可用时仅做重连与错误展示，不切 HTTP chat 路径。
+  - 非聊天能力继续使用现有 HTTP API，不受聊天链路策略影响。
 
 ## 4. 关键数据与契约规划
 
@@ -104,7 +106,7 @@
   - `chat_history`：用户消息、AI 回复、多模态元数据。
   - `chat_settings`：会话级行为配置（语言、语音、模式）。
 - 元数据增强方向：
-  - 模型配置、提示词、生成耗时、fallback 原因、业务动作埋点。
+  - 模型配置、提示词、生成耗时、重连原因、业务动作埋点。
   - 陪伴相关状态（关系阶段、记忆触发结果）在不破坏主链路的前提下增量扩展。
 
 ## 5. 分阶段开发路线图
@@ -125,15 +127,16 @@
 - Android：
   - 打通发送-响应-落库-渲染闭环。
   - 建立 WebSocket 会话管理、请求串行队列、断线重连策略。
-  - 保持 HTTP fallback 可切换。
+  - chat 路径仅走 WebSocket，不提供 HTTP fallback。
 - Backend：
   - 稳定 `/chat/ws` 与 `/chat/ws/verify`。
-  - 将聊天流程统一复用 `agent_chat_completions` 主服务逻辑。
+  - 复用 `app/api/v1/endpoints` 现有路由入口与 `app/models` SQLAlchemy 模型。
+  - 将聊天流程统一收敛到 `app/services`，并引入 `inty_v2 prototype` 聊天体验编排逻辑。
   - 落库与不落库路径分离清晰。
 - 验收：
   - 同连接支持不同 `agent_id` 顺序对话。
   - 心跳与空闲断链机制可验证。
-  - WebSocket 与 HTTP 两路径业务语义一致。
+  - WebSocket 单链路语义稳定，无 HTTP chat fallback 依赖。
 
 ## 5.3 Phase 2 - 长期陪伴状态层（记忆与关系状态）
 
@@ -186,13 +189,15 @@
 ### 6.2 Backend 工作流
 
 - API 层：
-  - 统一 WebSocket 与 HTTP 语义。
+  - 聊天路径仅定义 WebSocket 语义，非聊天能力维持现有 HTTP API。
   - 鉴权、错误码、断链原因保持可观测。
 - Service 层：
-  - 聊天主流程编排（会话获取、限额检查、模型选择、响应封装）。
+  - 聊天主流程编排（会话获取、限额检查、模型选择、响应封装、context/prompt 组装）。
+  - 复用 `experimental/inty_v2_text_chat_prototype` 的体验要素（上下文装配、转录窗口、心跳语义）并在生产 service 中实现。
   - 语音/业务动作/记忆投递作为可插拔阶段。
 - Repository/Model 层：
   - 优化 chat 与 settings 查询路径，减少重复查询与竞态。
+  - 继续复用 `app/models` 现有 SQLAlchemy database model，避免分叉数据层。
   - 关键写操作保持事务边界明确。
 - DI 与可测试性：
   - endpoint 通过 Depends 注入 service，测试通过 dependency_overrides 替换。
@@ -208,7 +213,7 @@
   - ping/pong
   - 一发一收顺序
   - 多 agent 复用同连接
-  - fallback 到 HTTP
+  - 无 HTTP fallback 条件下的重连与错误提示
 
 ## 7. 测试与验收计划
 
@@ -216,14 +221,14 @@
 
 - 以 feature/E2E 为主，单元测试为辅。
 - 先验证主链路稳定，再扩展多模态与主动触达。
-- 每阶段都包含"成功路径 + 失败路径 + 回退路径"。
+- 每阶段都包含"成功路径 + 失败路径 + 恢复路径"。
 
 ### 7.2 Android 测试清单
 
 - Room/DataStore：
   - 本地读写一致性、用户隔离、缓存失效后重读正确性。
 - WebSocket：
-  - debug 开关切换 WS/HTTP。
+  - chat 路径强制 WS 的行为验证。
   - 多 agent 同连接会话正确路由。
   - 断线重连后不丢消息。
 - UI：
@@ -233,9 +238,10 @@
 ### 7.3 Backend 测试清单
 
 - API 功能测试：
-  - `/chat/ws`、`/chat/ws/verify`、`/chat/completions/{agent_id}` 对齐。
+  - `/chat/ws`、`/chat/ws/verify` 的协议与稳定性验证。
+  - 非聊天 HTTP API（设置、图片、语音、业务动作）回归可用。
 - service 流程测试：
-  - 限额、鉴权、模型切换、业务动作、错误映射。
+  - 限额、鉴权、模型切换、业务动作、错误映射、prototype 体验编排一致性。
 - 数据一致性测试：
   - chat/chat_history/chat_settings 事务行为。
   - 重试场景下幂等行为。
@@ -248,8 +254,8 @@
   - 常见弱网场景下无明显消息丢失/重复/错序。
 - 可观测：
   - 能定位请求 ID、agent_id、session_id 对应链路日志。
-- 可回退：
-  - WS 故障时可快速切回 HTTP，不影响基础聊天可用性。
+- 可恢复：
+  - WS 故障时可通过重连恢复或明确失败提示，不走 HTTP chat fallback。
 
 ## 8. 发布与运维计划
 
@@ -264,7 +270,7 @@
 ### 8.2 观测指标
 
 - 客户端指标：
-  - WS 连接成功率、重连次数、消息发送失败率、回退触发率。
+  - WS 连接成功率、重连次数、消息发送失败率、重连恢复率。
 - 后端指标：
   - WS 活跃连接数、平均会话时长、请求耗时分位、错误码分布。
 - 体验指标：
@@ -273,9 +279,9 @@
 ### 8.3 回滚预案
 
 - 客户端：
-  - 远程开关关闭 WS，立即回退 HTTP。
+  - 远程开关关闭新版聊天入口，降级到维护提示页。
 - 后端：
-  - 路由级开关关闭 `/ws` 新能力或切换到 verify 模式。
+  - 路由级开关关闭 `/ws` 新能力或切换到受控 verify 模式。
 - 数据：
   - 新增字段保持兼容，不阻断老版本读取。
 
@@ -283,7 +289,7 @@
 
 | 风险 | 描述 | 应对策略 |
 |---|---|---|
-| WebSocket 链路抖动 | 弱网下断链频繁导致体验不稳定 | 心跳 + 退避重连 + HTTP fallback |
+| WebSocket 链路抖动 | 弱网下断链频繁导致体验不稳定 | 心跳 + 退避重连 + 明确错误提示 |
 | 跨端契约漂移 | Kotlin/Pydantic 字段不同步 | 双端同步 checklist + 契约评审 |
 | 本地与远端状态不一致 | UI 与服务端结果短期分叉 | 以 Room 为单一可信源，网络只刷新本地 |
 | 服务层膨胀 | endpoint 逻辑回流导致难维护 | 严格坚持 service 分层与 DI |
@@ -319,8 +325,8 @@
 ## 11. 建议的首批执行顺序（从明天即可开工）
 
 - Step 1：冻结 v1 契约和错误码清单（1 个 PR，仅文档和 schema 对齐）。
-- Step 2：打通 Android WS 主链路并保留 HTTP fallback（1-2 个 PR）。
-- Step 3：完成 backend WS/HTTP 统一 service 编排与关键 feature tests（1-2 个 PR）。
+- Step 2：打通 Android WS 主链路并移除 chat HTTP fallback 假设（1-2 个 PR）。
+- Step 3：完成 backend WS 主链路 service 编排，复用 `app/` 路由与 SQLAlchemy model，接入 prototype 体验逻辑并补齐关键 feature tests（1-2 个 PR）。
 - Step 4：补齐联调 checklist 与自动化回归（1 个 PR）。
 - Step 5：进入陪伴状态层增量开发（后续迭代）。
 
