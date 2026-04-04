@@ -30,6 +30,7 @@ from .client import (
     get_client_dual_llm_tool,
     tool_model,
 )
+from .image_gate import prepare_image_gate_for_turn
 from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
@@ -793,6 +794,8 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     if heartbeat_turn:
         user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
+    else:
+        prepare_image_gate_for_turn(root, user_text)
 
     logger.info(
         "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={} llm_trace={}",

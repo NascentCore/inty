@@ -21,6 +21,7 @@ if str(_EXPERIMENTAL) not in sys.path:
 from app.core.images.types import GeneratedImageProcessResult
 from app.utils.image import ImageFormat, ImageSize
 from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
+from inty_v2_text_chat_prototype.image_gate import list_image_asset_records
 
 
 async def _fake_z_image_turbo_image_to_image(
@@ -129,7 +130,7 @@ class TestModifyImageTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             with patch(
-                "inty_v2_text_chat_prototype.fal_z_image_tool.z_image_turbo_image_to_image",
+                "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_i2i_call",
                 new=_fake_z_image_turbo_image_to_image,
             ):
                 out = execute_tool_call_blocking(
@@ -149,16 +150,34 @@ class TestModifyImageTool(unittest.TestCase):
     def test_success_with_workspace_path(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
+            (root / "IDENTITY.md").write_text("# I\n", encoding="utf-8")
+            (root / "SOUL.md").write_text("# S\n", encoding="utf-8")
+            (root / "USER.md").write_text("# U\n", encoding="utf-8")
             rel = "generated_images/src.jpeg"
             p = root / rel
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_bytes(b"\xff\xd8\xff\xd9")
+            src_asset_id = "src-asset-1"
+            src_revision = "rev-source-1"
+            with (root / "generated_images/index.jsonl").open("a", encoding="utf-8") as f:
+                f.write(
+                    json.dumps(
+                        {
+                            "asset_id": src_asset_id,
+                            "tool_name": "generate_image",
+                            "persona_revision_id": src_revision,
+                            "local_path_relative": rel,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
             with patch(
                 "inty_v2_text_chat_prototype.fal_z_image_tool._upload_local_image_file_to_gcs_for_fal",
                 return_value="https://example.com/uploaded.jpg",
             ):
                 with patch(
-                    "inty_v2_text_chat_prototype.fal_z_image_tool.z_image_turbo_image_to_image",
+                    "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_i2i_call",
                     new=_fake_z_image_turbo_image_to_image,
                 ):
                     out = execute_tool_call_blocking(
@@ -173,6 +192,17 @@ class TestModifyImageTool(unittest.TestCase):
                     )
             self.assertIn("modify_image: OK", out)
             self.assertIn("local_path=", out)
+            self.assertIn("asset_id=", out)
+            self.assertIn("persona_revision_id=", out)
+            self.assertIn(f"source_asset_id={src_asset_id}", out)
+            self.assertIn(f"source_persona_revision_id={src_revision}", out)
+            rows = list_image_asset_records(root)
+            self.assertGreaterEqual(len(rows), 2)
+            last = rows[-1]
+            self.assertEqual(last.get("tool_name"), "modify_image")
+            self.assertEqual(last.get("image_mode"), "modify")
+            self.assertEqual(last.get("source_asset_id"), src_asset_id)
+            self.assertEqual(last.get("source_persona_revision_id"), src_revision)
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ from .utc import local_date_str, utc_iso_ts
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     execute_tool_call,
+    tool_text_response_include_in_chat,
     openai_assistant_message_dict,
 )
 
@@ -92,6 +93,26 @@ def _append_local_image_paths_for_display(assistant_text: str, paths: list[str])
     if not assistant_text:
         return suffix.strip()
     return assistant_text.rstrip() + suffix
+
+
+def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
+    """Collect tool function names from assistant tool_call messages in order."""
+    names: list[str] = []
+    for m in messages:
+        if m.get("role") != "assistant":
+            continue
+        for tc in m.get("tool_calls") or []:
+            if not isinstance(tc, dict):
+                continue
+            fn = tc.get("function")
+            if not isinstance(fn, dict):
+                continue
+            raw = fn.get("name")
+            if isinstance(raw, str):
+                n = raw.strip()
+                if n:
+                    names.append(n)
+    return names
 
 
 def _insert_system_message(
@@ -407,6 +428,36 @@ async def _run_background_tool_loop(
     assistant_text = _assistant_text_from_completion_response(loop_result.response)
     image_paths = _local_paths_from_tool_messages(loop_result.messages)
     display_text = _append_local_image_paths_for_display(assistant_text, image_paths)
+    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+    tool_call_names = _extract_tool_call_names(loop_result.messages)
+    include_text_reply = any(
+        tool_text_response_include_in_chat(name) for name in tool_call_names
+    )
+    # 显式按工具 tag 决定是否补发 tool_bg 文本。
+    #
+    # 语义：
+    # - 任一被调用工具带有 TEXT_RESPONSE_INCLUDE_IN_CHAT：
+    #   该轮背景路径最终 assistant 文本可进入用户可见聊天（source=tool_bg）。
+    # - 全部被调用工具都不带该 tag：
+    #   仅执行工具副作用，不向用户追加第二段近似文本。
+    #
+    # 目的：
+    # - 把“工具结果是否应回显给用户”的决策，从隐式启发式改为工具定义层显式声明。
+    # - 避免 user_profile_record / workspace_write_file 这类副作用工具造成重复回复观感。
+    # - 允许 generate_image / modify_image / web_search 等显式结果工具继续回传文本说明。
+    #
+    # 注意：
+    # - 是否写入 tool_background.jsonl 与 transcript(source=tool_bg) 跟此开关一致。
+    # - display_text 仍可包含非文本产物路径（如图片 local_path），前提是工具声明了该 tag。
+    if not include_text_reply:
+        logger.debug(
+            "repl.turn.bg suppress_user_visible_output missing_text_response_include_tag "
+            "trace_id={} user_msg_uuid={} tool_calls={}",
+            trace_id,
+            user_msg_uuid,
+            ",".join(tool_call_names),
+        )
+        return
     assistant_msg_uuid = str(uuid.uuid4())
     _append_background_transcript_assistant(
         transcript_path,
@@ -415,7 +466,6 @@ async def _run_background_tool_loop(
         reply_to=user_msg_uuid,
         trace_id=trace_id,
     )
-    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
     _append_background_log(
         ws_root,
         user_msg_uuid=user_msg_uuid,
