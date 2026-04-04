@@ -360,6 +360,9 @@
     - 复用现有端点；同一端点支持两种入参模式：
       - Google `id_token` 登录。
       - `email + password` 登录（已在端点内分支处理，满足 reviewer 登录场景）。
+    - 实施前提：
+      - reviewer 使用的账号需预先在数据库中创建为 `AuthType.EMAIL` 且已写入密码哈希。
+      - 该方案用于登录，不包含独立 email 注册流程。
 - User Settings（设置页）：
   - `GET /api/v1/settings/`
   - `PUT /api/v1/settings/`
@@ -393,7 +396,7 @@
 
 - 媒体对象存储：
   - 使用 GCS，`dev`/`prod` 使用独立 bucket（避免环境污染）。
-  - 服务账号通过 `app.gcp_service_account_key` 或 `gcs.service_account_path` 注入。
+  - 服务账号统一通过 `app.gcp_service_account_key` 注入。
 - 访问路径：
   - 后端写入 GCS 原始对象路径。
   - 客户端访问使用 CDN 域名（Cloudflare）进行分发与缓存。
@@ -405,9 +408,12 @@
 
 ### 12.5 Redis 缓存（新增）
 
+- 现状与改造范围：
+  - 当前仓库缓存为进程内 `InMemoryCache`（`app/services/cache_service.py`）。
+  - 本节 Redis 方案为新增改造项，需要新增配置模型与缓存适配层后再落地。
 - 部署方式：
   - `dev`/`prod` 各 1 个独立 Redis 实例（推荐 Redis 7，AOF 打开）。
-  - 后端通过 `REDIS_URL`（或等价配置项）接入；连接池由应用统一管理。
+  - 后端通过新增配置项（例如 `redis.url`）接入；连接池由应用统一管理。
 - 缓存分层与 key 设计：
   - `auth:user_snapshot:{user_id}`（短 TTL，鉴权快照）。
   - `chat:session:{user_id}:{agent_id}`（会话元数据，短 TTL）。
