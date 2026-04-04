@@ -17,6 +17,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype import orchestrator
+from inty_v2_text_chat_prototype.models import ContextMeta, PromptBundle
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -370,6 +371,121 @@ class TestDualLlmChatTool(unittest.TestCase):
         self.assertEqual(chat_calls[0]["tool_choice"], "none")
         self.assertIsNone(chat_calls[1]["tools"])
         self.assertIsNone(chat_calls[1]["tool_choice"])
+
+    def test_tool_update_chat_settings_updates_next_chat_branch_system_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            messages: list[dict[str, object]] = [
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "u1"},
+            ]
+
+            async def _fake_execute_tool_call(
+                root_arg: Path,
+                name: str,
+                arguments_json: str,
+                *,
+                write_allowlist: frozenset[str] | None = None,
+            ) -> str:
+                self.assertEqual(name, "tool_update_chat_settings")
+                self.assertEqual(write_allowlist, orchestrator.REPL_WRITABLE_RELATIVE_PATHS)
+                (root_arg / ".inty_v2_chat_settings.json").write_text(
+                    '{"chat_output_format_prompt":"必须输出 JSON: {\\"reply\\":\\"...\\"}"}\n',
+                    encoding="utf-8",
+                )
+                return "OK updated chat output format prompt"
+
+            def _tool_resp_with_update(content: str) -> SimpleNamespace:
+                fn = SimpleNamespace(
+                    name="tool_update_chat_settings",
+                    arguments='{"output_format_prompt":"必须输出 JSON: {\\"reply\\":\\"...\\"}"}',
+                )
+                tc = SimpleNamespace(id="call_settings_1", type="function", function=fn)
+                msg = SimpleNamespace(content=content, tool_calls=[tc])
+                ch = SimpleNamespace(message=msg, finish_reason="tool_calls")
+                return SimpleNamespace(choices=[ch], usage=None)
+
+            class _FakeCompletionsWithSettings(_FakeCompletions):
+                def create(self, **kwargs: object) -> SimpleNamespace:
+                    model = str(kwargs["model"])
+                    messages_payload = deepcopy(kwargs["messages"])
+                    tools = deepcopy(kwargs.get("tools"))
+                    with self._lock:
+                        self.calls.append(
+                            {
+                                "model": model,
+                                "messages": messages_payload,
+                                "tools": tools,
+                                "tool_choice": kwargs.get("tool_choice"),
+                            }
+                        )
+                        idx = self._per_model_count.get(model, 0) + 1
+                        self._per_model_count[model] = idx
+                    if model == "chat-fast":
+                        if idx == 1:
+                            return _resp_text("chat-r1")
+                        if idx == 2:
+                            return _resp_text("chat-r2")
+                    if model == "tool-smart":
+                        if idx == 1:
+                            return _tool_resp_with_update("tool-r1")
+                        if idx == 2:
+                            return _resp_text("tool-r2")
+                    raise AssertionError(f"unexpected model/round: {model=} {idx=}")
+
+            fake_completions2 = _FakeCompletionsWithSettings()
+            fake_client2 = SimpleNamespace(
+                chat=SimpleNamespace(completions=fake_completions2),
+            )
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client2),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client2,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client2,
+                ),
+                patch.object(orchestrator, "dual_llm_enabled", return_value=True),
+                patch.object(orchestrator, "chat_model", return_value="chat-fast"),
+                patch.object(orchestrator, "tool_model", return_value="tool-smart"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator,
+                    "execute_tool_call",
+                    _fake_execute_tool_call,
+                ),
+                patch.object(orchestrator, "BadRequestError", _ChatBranchNoneRejected),
+            ):
+                out = asyncio.run(
+                    orchestrator._run_turn_with_user_profile_tools(
+                        messages,
+                        root,
+                        llm_trace=False,
+                        heartbeat_turn=False,
+                        bundle=PromptBundle(
+                            identity="id",
+                            soul="soul",
+                            user_md="user",
+                            memory_md="memory",
+                        ),
+                        context=ContextMeta(),
+                    )
+                )
+
+        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        chat_calls = [c for c in fake_completions2.calls if c["model"] == "chat-fast"]
+        self.assertEqual(len(chat_calls), 2)
+        round2_system = str(chat_calls[1]["messages"][0]["content"])
+        self.assertIn("CHAT 输出格式约束", round2_system)
+        self.assertIn('必须输出 JSON: {"reply":"..."}', round2_system)
 
 
 if __name__ == "__main__":
