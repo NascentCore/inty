@@ -51,6 +51,8 @@ import {
   DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS,
   DAILY_USAGE_SECONDARY_AXIS_COLOR,
   DAILY_USAGE_SECONDARY_AXIS_TITLE,
+  DAILY_USAGE_IMAGE_AI_REPLY_RATIO_COLOR,
+  DAILY_USAGE_IMAGE_AI_REPLY_RATIO_LABEL,
   DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR,
   DAILY_USAGE_VOICE_MESSAGE_RATIO_LABEL,
   DAILY_IMAGE_USAGE_SECONDARY_AXIS_COLOR,
@@ -59,6 +61,7 @@ import {
   buildDailyTopAgentsTrendSeries,
   buildDailyImageUsageSeries,
   buildDailyUsageSeries,
+  buildImageRequestsPerAiMessageRatioValues,
   buildVoiceRequestsPerMessageRatioValues,
   buildRollingDailyImageUsageSeries,
   buildRollingDailyUsageSeries,
@@ -1118,6 +1121,12 @@ export const UserAnalyticsReportsPage: React.FC = () => {
   );
   const hasVoiceRequestsPerMessageRatio =
     voiceRequestsPerMessageRatioValues.length > 0;
+  const imageRequestsPerAiMessageRatioValues = useMemo(
+    () => buildImageRequestsPerAiMessageRatioValues(usageSeries),
+    [usageSeries],
+  );
+  const hasImageRequestsPerAiMessageRatio =
+    imageRequestsPerAiMessageRatioValues.length > 0;
   const imageUsageSeries = useMemo(() => {
     if (reportType === "weekly") {
       return buildRollingDailyImageUsageSeries(
@@ -1165,8 +1174,27 @@ export const UserAnalyticsReportsPage: React.FC = () => {
       hovertemplate:
         "日期: %{x}<br>语音播报次数 / 消息数: %{y:.2%}<extra></extra>",
     });
+    traces.push({
+      x: usageSeries.dates,
+      y: imageRequestsPerAiMessageRatioValues,
+      name: DAILY_USAGE_IMAGE_AI_REPLY_RATIO_LABEL,
+      type: "scatter",
+      mode: "lines+markers",
+      marker: {
+        size: USAGE_MARKER_SIZE,
+        color: DAILY_USAGE_IMAGE_AI_REPLY_RATIO_COLOR,
+      },
+      line: { color: DAILY_USAGE_IMAGE_AI_REPLY_RATIO_COLOR },
+      yaxis: "y4",
+      hovertemplate:
+        "日期: %{x}<br>生图请求数 / AI回复消息数: %{y:.2%}<extra></extra>",
+    });
     return traces;
-  }, [usageSeries, voiceRequestsPerMessageRatioValues]);
+  }, [
+    usageSeries,
+    voiceRequestsPerMessageRatioValues,
+    imageRequestsPerAiMessageRatioValues,
+  ]);
   const dailyUsageXAxisTickText = useMemo(() => {
     if (!usageSeries) {
       return [];
@@ -1314,12 +1342,17 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                         rangemode: "tozero",
                         showgrid: false,
                         zeroline: false,
-                        ...(hasVoiceRequestsPerMessageRatio
+                        ...(hasVoiceRequestsPerMessageRatio ||
+                        hasImageRequestsPerAiMessageRatio
                           ? { anchor: "free", position: 0.93 }
                           : {}),
                       },
                       margin: {
-                        r: hasVoiceRequestsPerMessageRatio ? 130 : 80,
+                        r:
+                          hasVoiceRequestsPerMessageRatio ||
+                          hasImageRequestsPerAiMessageRatio
+                            ? 180
+                            : 80,
                       },
                     }
                   : {}),
@@ -1340,6 +1373,29 @@ export const UserAnalyticsReportsPage: React.FC = () => {
                         overlaying: "y",
                         anchor: "free",
                         position: 1,
+                        rangemode: "tozero",
+                        showgrid: false,
+                        zeroline: false,
+                      },
+                    }
+                  : {}),
+                ...(hasImageRequestsPerAiMessageRatio
+                  ? {
+                      yaxis4: {
+                        title: {
+                          text: DAILY_USAGE_IMAGE_AI_REPLY_RATIO_LABEL,
+                          font: {
+                            color: DAILY_USAGE_IMAGE_AI_REPLY_RATIO_COLOR,
+                          },
+                        },
+                        tickfont: {
+                          color: DAILY_USAGE_IMAGE_AI_REPLY_RATIO_COLOR,
+                        },
+                        tickformat: ".0%",
+                        side: "right",
+                        overlaying: "y",
+                        anchor: "free",
+                        position: 0.97,
                         rangemode: "tozero",
                         showgrid: false,
                         zeroline: false,
