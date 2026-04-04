@@ -25,6 +25,13 @@ from .fal_z_image_tool import (
     run_modify_image_z_image_turbo,
 )
 from .file_store import read_text, write_text
+from .image_gate import (
+    check_image_tool_allowed,
+    current_persona_revision_id,
+    find_latest_asset_by_local_relative_path,
+    mark_image_tool_completed,
+    register_profile_write,
+)
 from .memory_store_registry import get_memory_store
 from .google_web_search import run_google_web_search
 from .schedule_queue import add_schedule_task
@@ -218,6 +225,12 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
         return "ERROR: no valid items (need label and value for each entry)"
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
+    register_profile_write(
+        root,
+        rel,
+        changed=(merged != prev),
+        new_content=merged,
+    )
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
 
 
@@ -298,10 +311,17 @@ def tool_workspace_read_file(
 def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
+    prev_body: str | None = None
+    if _is_memory_document(rel):
+        prev_body = get_memory_store(root).read_document_if_exists(rel)
+    elif p.is_file():
+        prev_body = read_text(p)
     if _is_memory_document(rel):
         get_memory_store(root).write_document(rel, content)
     else:
         write_text(p, content)
+    changed = prev_body != content
+    register_profile_write(root, rel, changed=changed, new_content=content)
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 
@@ -806,6 +826,9 @@ async def _dispatch(
             return "ERROR: num_results must be a positive integer or omitted"
         return await run_google_web_search(query=raw_q, num_results=n_opt)
     if name == "generate_image":
+        gate_err = check_image_tool_allowed(root, tool_name="generate_image")
+        if gate_err is not None:
+            return gate_err
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
@@ -841,6 +864,7 @@ async def _dispatch(
             image_size=image_size_s,
             num_inference_steps=n_steps,
             num_images=n_img,
+            persona_revision_id=current_persona_revision_id(root),
         )
         logger.info(
             "tool generate_image wall_ms={:.0f} ws={} ok={}",
@@ -848,8 +872,13 @@ async def _dispatch(
             root.name,
             not out.startswith("ERROR:"),
         )
+        if not out.startswith("ERROR:"):
+            mark_image_tool_completed(root, tool_name="generate_image")
         return out
     if name == "modify_image":
+        gate_err = check_image_tool_allowed(root, tool_name="modify_image")
+        if gate_err is not None:
+            return gate_err
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
@@ -904,6 +933,7 @@ async def _dispatch(
             image_size=image_size_s,
             num_inference_steps=n_steps,
             strength=strength,
+            persona_revision_id=current_persona_revision_id(root),
         )
         logger.info(
             "tool modify_image wall_ms={:.0f} ws={} ok={}",
@@ -911,6 +941,8 @@ async def _dispatch(
             root.name,
             not out.startswith("ERROR:"),
         )
+        if not out.startswith("ERROR:"):
+            mark_image_tool_completed(root, tool_name="modify_image")
         return out
     return f"ERROR: unknown tool {name!r}"
 
