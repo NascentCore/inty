@@ -433,8 +433,22 @@ async def _run_background_tool_loop(
     include_text_reply = any(
         tool_text_response_include_in_chat(name) for name in tool_call_names
     )
-    # 显式按工具 tag 决定是否补发 tool_bg 文本；无 tag 视为不回传到 chat。
-    # 仍允许非文本产物（如图片 local_path）追加到展示文本中。
+    # 显式按工具 tag 决定是否补发 tool_bg 文本。
+    #
+    # 语义：
+    # - 任一被调用工具带有 TEXT_RESPONSE_INCLUDE_IN_CHAT：
+    #   该轮背景路径最终 assistant 文本可进入用户可见聊天（source=tool_bg）。
+    # - 全部被调用工具都不带该 tag：
+    #   仅执行工具副作用，不向用户追加第二段近似文本。
+    #
+    # 目的：
+    # - 把“工具结果是否应回显给用户”的决策，从隐式启发式改为工具定义层显式声明。
+    # - 避免 user_profile_record / workspace_write_file 这类副作用工具造成重复回复观感。
+    # - 允许 generate_image / modify_image / web_search 等显式结果工具继续回传文本说明。
+    #
+    # 注意：
+    # - 是否写入 tool_background.jsonl 与 transcript(source=tool_bg) 跟此开关一致。
+    # - display_text 仍可包含非文本产物路径（如图片 local_path），前提是工具声明了该 tag。
     if not include_text_reply:
         logger.debug(
             "repl.turn.bg suppress_user_visible_output missing_text_response_include_tag "

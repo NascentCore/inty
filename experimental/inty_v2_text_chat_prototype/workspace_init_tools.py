@@ -30,6 +30,13 @@ from .google_web_search import run_google_web_search
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
+# Tool 输出可见性标签:
+# - 语义: 工具执行完成后, 其“最终文本结果”允许并且应该进入用户可见的 chat 回复。
+# - 目的: 用显式声明替代隐式推断, 让每个工具自行决定“文本结果是否对用户展示”。
+# - 适用:
+#   - 有可消费结果的工具（目录/文件读取、联网检索、生图/改图）应加此标签；
+#   - 纯副作用工具（写档案、写文件、建目录）默认不加, 避免与前台 chat 形成重复二次回复。
+# - 作用范围: 当前由 async tool background 路径消费, 决定是否落 `source=tool_bg` 并投递 REPL 事件。
 TEXT_RESPONSE_INCLUDE_IN_CHAT = "TEXT_RESPONSE_INCLUDE_IN_CHAT"
 _TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
     # 纯文本查询类工具：其输出应可直接进入对用户可见的 chat 文本。
@@ -113,16 +120,27 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
 
 
 def tool_has_tag(tool_name: str, tag: str) -> bool:
+    """Return whether a tool declares a given behavior tag."""
     tags = _TOOL_TAGS_BY_NAME.get(tool_name, frozenset())
     return tag in tags
 
 
 def tool_text_response_include_in_chat(tool_name: str) -> bool:
+    """
+    Whether this tool's final textual result should be surfaced to the user chat.
+
+    This is the canonical predicate consumed by async tool background routing.
+    Missing tag means "execute tool side effects, but do not emit extra tool_bg text".
+    """
     return tool_has_tag(tool_name, TEXT_RESPONSE_INCLUDE_IN_CHAT)
 
 
 def tool_text_response_should_include_in_chat(tool_name: str) -> bool:
-    """Compatibility alias with explicit predicate naming."""
+    """
+    Compatibility alias with explicit predicate naming.
+
+    Kept for tests/callers that use the longer function name.
+    """
     return tool_text_response_include_in_chat(tool_name)
 
 
