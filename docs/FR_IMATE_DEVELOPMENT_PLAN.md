@@ -330,6 +330,85 @@
 - Step 4：补齐联调 checklist 与自动化回归（1 个 PR）。
 - Step 5：进入陪伴状态层增量开发（后续迭代）。
 
+## 12. iMate Android v1 对应后端实现框架
+
+### 12.1 范围前提（对应新版 iMate Android）
+
+- Android 产品范围：
+  - iMate（从 IntelliMate 演进的 agentic companion AI）。
+  - 首批功能：Google 登录、Email+Password 登录（Google Play reviewer 场景）、Settings 页面、Basic chat。
+- 后端原则：
+  - 凡新版 Android 功能可直接依赖 `app/` 现有 API 路由与 HTTP path，则直接复用。
+  - 聊天主路径保持 WebSocket-only，不提供 HTTP chat fallback。
+
+### 12.2 需要实现/复用的 HTTP endpoints 与 WS endpoints
+
+- Auth（登录）：
+  - `POST /api/v1/auth/google/login`
+    - 复用现有端点；同一端点支持两种入参模式：
+      - Google `id_token` 登录。
+      - `email + password` 登录（已在端点内分支处理，满足 reviewer 登录场景）。
+- User Settings（设置页）：
+  - `GET /api/v1/settings/`
+  - `PUT /api/v1/settings/`
+  - `GET /api/v1/users/me`（用于设置页展示当前用户资料）。
+  - `PUT /api/v1/users/profile`（若设置页包含资料编辑则复用）。
+- Basic chat（基础聊天）：
+  - `WS /api/v1/chat/ws`（生产聊天主链路，落库）。
+  - `WS /api/v1/chat/ws/verify`（联调与验收链路，不落聊天消息）。
+  - `GET /api/v1/chats/agents/{agent_id}/messages`（拉取历史消息）。
+  - `GET /api/v1/chats/agents/{agent_id}/settings`、`PUT /api/v1/chats/agents/{agent_id}/settings`（聊天设置）。
+- 版本与门控（建议纳入首批）：
+  - `POST /api/v1/version/check`（写入 `users.last_android_app_version_code`，支持后续功能门控）。
+
+### 12.3 数据库部署（PostgreSQL + SQLAlchemy）
+
+- 部署拓扑：
+  - `dev` 与 `prod` 分离数据库实例（最小可行：同 VM 不同库；推荐：独立实例）。
+  - 主库 PostgreSQL 16。
+  - 可选只读副本（`async_replica_url`）承接读多写少查询，主链路写入仍走主库。
+- 访问层：
+  - 统一通过 `app/db/session.py` 的 SQLAlchemy async engine 访问。
+  - 连接池参数由 `config.yaml` 注入（pool_size/max_overflow/pool_timeout 等）。
+- 变更管理：
+  - 所有 schema 变更走 Alembic migration。
+  - 复用 `app/models` 现有模型，不新建并行 ORM 层。
+- 运维基线：
+  - 自动备份（每日全量 + 增量 WAL）。
+  - 监控：连接数、慢查询、锁等待、复制延迟（若启用副本）。
+
+### 12.4 第三方存储系统部署（对象存储）
+
+- 媒体对象存储：
+  - 使用 GCS，`dev`/`prod` 使用独立 bucket（避免环境污染）。
+  - 服务账号通过 `app.gcp_service_account_key` 或 `gcs.service_account_path` 注入。
+- 访问路径：
+  - 后端写入 GCS 原始对象路径。
+  - 客户端访问使用 CDN 域名（Cloudflare）进行分发与缓存。
+- 安全策略：
+  - bucket 最小权限（仅服务账号可写）。
+  - URL 访问策略统一在后端转换，避免客户端拼接存储内部路径。
+- 测试策略：
+  - test 环境可使用 fake GCS（`use_fake_gcs: true`）保证可重复测试。
+
+### 12.5 Redis 缓存（新增）
+
+- 部署方式：
+  - `dev`/`prod` 各 1 个独立 Redis 实例（推荐 Redis 7，AOF 打开）。
+  - 后端通过 `REDIS_URL`（或等价配置项）接入；连接池由应用统一管理。
+- 缓存分层与 key 设计：
+  - `auth:user_snapshot:{user_id}`（短 TTL，鉴权快照）。
+  - `chat:session:{user_id}:{agent_id}`（会话元数据，短 TTL）。
+  - `agent:config:{agent_id}`（角色轻量配置，中 TTL）。
+  - `rate_limit:{user_id}:{feature}:{window}`（计数器，固定窗口 TTL）。
+- 一致性策略：
+  - DB 为 source of truth，Redis 仅做加速。
+  - 写路径先写 DB，再删除/更新对应 cache key。
+  - 关键查询采用 cache-aside，缓存 miss 回源 DB。
+- WebSocket 相关（多实例预留）：
+  - 若后续后端横向扩容，使用 Redis pub/sub 或 stream 同步连接状态与广播事件。
+  - 单实例阶段可先只用于业务缓存与限流计数。
+
 ---
 
 - 结论：该计划以"复用已验证架构 + 分阶段可验收交付"为主轴，优先确保聊天主链路稳定，再逐步叠加长期陪伴智能能力，能最大化降低重构风险并提升上线成功率。
