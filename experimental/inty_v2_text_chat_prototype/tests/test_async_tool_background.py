@@ -255,7 +255,7 @@ class TestLocalPathDisplay(unittest.TestCase):
         self.assertIn("（生成图片本地路径）", t)
         self.assertIn("/tmp/z_image_1.jpeg", t)
 
-    def test_background_log_records_generated_image_paths(self) -> None:
+    def test_background_log_records_generated_image_uris(self) -> None:
         from inty_v2_text_chat_prototype.tool_background import _append_background_log
 
         with tempfile.TemporaryDirectory() as td:
@@ -267,11 +267,17 @@ class TestLocalPathDisplay(unittest.TestCase):
                 elapsed_ms=9,
                 rounds=2,
                 tool_calls_count=1,
-                generated_image_paths=["/tmp/a.png", "/tmp/b.jpg"],
+                generated_image_uris=[
+                    "file:///tmp/a.png",
+                    "https://example.com/b.jpg",
+                ],
             )
             body = (root / "tool_background.jsonl").read_text(encoding="utf-8")
             self.assertIn('"kind": "tool_background_done"', body)
-            self.assertIn('"generated_image_paths": ["/tmp/a.png", "/tmp/b.jpg"]', body)
+            self.assertIn(
+                '"generated_image_uris": ["file:///tmp/a.png", "https://example.com/b.jpg"]',
+                body,
+            )
 
 
 if __name__ == "__main__":
