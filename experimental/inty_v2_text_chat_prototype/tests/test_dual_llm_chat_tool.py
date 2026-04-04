@@ -17,6 +17,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_text_chat_prototype import orchestrator
+from inty_v2_text_chat_prototype.models import ContextMeta, PromptBundle
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -362,6 +363,13 @@ class TestDualLlmChatTool(unittest.TestCase):
                         root,
                         llm_trace=False,
                         heartbeat_turn=False,
+                        bundle=PromptBundle(
+                            identity="id",
+                            soul="soul",
+                            user_md="user",
+                            memory_md="memory",
+                        ),
+                        context=ContextMeta(),
                     )
                 )
 
