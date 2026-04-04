@@ -368,6 +368,8 @@ async def _run_turn_fast_chat_then_tool_background(
         model=chat_route_model,
         messages_payload=chat_payload,
         tools=tools,
+        # Keep tool definitions mirrored in chat branch context, but force no tool calls.
+        # OpenAI tool_choice docs: https://developers.openai.com/api/docs/guides/function-calling#tool-choice
         tool_choice="none",
     )
     _log_llm_round_result(
@@ -473,6 +475,8 @@ async def _run_turn_with_user_profile_tools(
                     model=chat_route_model,
                     messages_payload=chat_branch_payload,
                     tools=tools,
+                    # Keep tool definitions mirrored in chat branch context, but force no tool calls.
+                    # OpenAI tool_choice docs: https://developers.openai.com/api/docs/guides/function-calling#tool-choice
                     tool_choice="none",
                 )
                 logger.info(
