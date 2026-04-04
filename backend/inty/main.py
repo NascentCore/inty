@@ -26,6 +26,7 @@ from app.middleware.error_handler import (
     validation_error_handler,
     validation_exception_handler,
 )
+from app.middleware.observability import ObservabilityMiddleware, metrics_response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.schemas.response import APIResponse
 
@@ -75,6 +76,8 @@ if global_config_loaded_from_config_yaml.app.backend_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+app.add_middleware(ObservabilityMiddleware)
 
 # Register error handlers
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -300,3 +303,8 @@ async def root():
             version=global_config_loaded_from_config_yaml.app.version,
         )
     )
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return metrics_response()
