@@ -321,12 +321,12 @@ export const buildRollingDailyUsageSeries = (
 
 const toVoiceRequestsPerMessageRatio = (
   totalVoiceRequests: number,
-  totalUserMessages: number,
+  totalAiMessages: number,
 ): number => {
-  if (totalUserMessages <= 0) {
+  if (totalAiMessages <= 0) {
     return 0;
   }
-  return totalVoiceRequests / totalUserMessages;
+  return totalVoiceRequests / totalAiMessages;
 };
 
 const toImageRequestsPerAiMessageRatio = (
@@ -347,12 +347,11 @@ export const buildVoiceRequestsPerMessageRatioValues = (
   }
   const totalVoiceRequestsValues =
     usageSeries.valuesByMetric.total_voice_requests;
-  const totalUserMessagesValues =
-    usageSeries.valuesByMetric.total_user_messages;
+  const totalAiMessagesValues = usageSeries.valuesByMetric.total_ai_messages;
   return totalVoiceRequestsValues.map((voiceRequests, index) =>
     toVoiceRequestsPerMessageRatio(
       voiceRequests,
-      totalUserMessagesValues[index] ?? 0,
+      totalAiMessagesValues[index] ?? 0,
     ),
   );
 };

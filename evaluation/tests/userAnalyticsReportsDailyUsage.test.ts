@@ -267,13 +267,13 @@ describe("buildRollingDailyUsageSeries", () => {
 });
 
 describe("buildVoiceRequestsPerMessageRatioValues", () => {
-  it("按日期输出语音播报次数 / 消息数比值，分母为 0 时返回 0", () => {
+  it("按日期输出语音播报次数 / AI回复消息数比值，分母为 0 时返回 0", () => {
     const reports = [
       buildReport({
         id: "r2",
         report_date: "2026-02-02",
         stats: buildStats({
-          total_user_messages: 20,
+          total_ai_messages: 20,
           total_voice_requests: 10,
         }),
       }),
@@ -281,7 +281,7 @@ describe("buildVoiceRequestsPerMessageRatioValues", () => {
         id: "r1",
         report_date: "2026-02-01",
         stats: buildStats({
-          total_user_messages: 0,
+          total_ai_messages: 0,
           total_voice_requests: 5,
         }),
       }),
