@@ -18,13 +18,14 @@ HEARTBEAT_SYNTHETIC_USER_TEXT = (
     "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
 )
 
-_DEFAULT_BASE_IDLE_SEC = 120.0
-_DEFAULT_MIN_GAP_SEC = 600.0
+_DEFAULT_BASE_IDLE_SEC = 300.0
+_DEFAULT_MIN_GAP_SEC = 1800.0
+_DEFAULT_MIN_USER_QUIET_SEC = 240.0
 _DEFAULT_MIN_TRANSCRIPT_LINES = 2
 
 # REPL 单次 queue 等待上限，避免超大值导致长时间不响应环境变化
 HEARTBEAT_MAX_SLEEP_CHUNK_SEC = 3600.0
-_RHYTHM_CLAMP_SEC = (45.0, 900.0)
+_RHYTHM_CLAMP_SEC = (90.0, 900.0)
 
 
 def heartbeat_enabled_from_env() -> bool:
@@ -97,6 +98,28 @@ def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
+def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
+    for m in reversed(msgs):
+        if m.role == "user" and m.heartbeat is not True:
+            return _parse_ts(m.ts)
+    return None
+
+
+def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
+    hb_idx: int | None = None
+    for i in range(len(msgs) - 1, -1, -1):
+        m = msgs[i]
+        if m.role == "user" and m.heartbeat is True:
+            hb_idx = i
+            break
+    if hb_idx is None:
+        return True
+    for m in msgs[hb_idx + 1 :]:
+        if m.role == "user" and m.heartbeat is not True:
+            return True
+    return False
+
+
 def next_heartbeat_wait_seconds(
     workspace: Path,
     *,
@@ -132,9 +155,23 @@ def next_heartbeat_wait_seconds(
     if last_asst is None:
         return 86400.0 * 365.0
 
+    # 用户离线期间，最多只允许一次心跳；必须等到真实用户输入后才允许下一次。
+    if not _has_real_user_after_last_heartbeat(msgs):
+        return 86400.0 * 365.0
+
     t = now if now is not None else datetime.now(timezone.utc)
     rhythm = _rhythm_idle_seconds(msgs)
     earliest = last_asst + timedelta(seconds=rhythm)
+
+    min_user_quiet = _env_float(
+        "INTY_V2_PROTO_HEARTBEAT_MIN_USER_QUIET_SEC",
+        _DEFAULT_MIN_USER_QUIET_SEC,
+    )
+    last_real_user = _last_real_user_ts(msgs)
+    if last_real_user is not None:
+        user_quiet_earliest = last_real_user + timedelta(seconds=min_user_quiet)
+        if user_quiet_earliest > earliest:
+            earliest = user_quiet_earliest
 
     min_gap = _env_float("INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC", _DEFAULT_MIN_GAP_SEC)
     last_hb = _last_heartbeat_user_ts(msgs)
