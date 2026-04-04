@@ -136,10 +136,14 @@
 - 已交付：`tests/app/features/test_observability.py` 新增端到端验证（`x-request-id` 透传与 `/metrics` 输出）
 - 已交付：`tests/docs/TEST_STEPS_BACKEND_OBSERVABILITY_REQUEST_ID_METRICS.md` 测试步骤沉淀
 - PR 审阅：本次改动已完成自审，结论为可合并（后续可在下一批接入分布式 Trace 与仪表盘）
+- 审阅问题修复（2026-04-04）：
+  - 指标高基数风险修复：未命中路由指标标签从原始 URL 改为固定值 `__unmatched__`
+  - `/metrics` 暴露面收敛：仅 `debug=true` 或 `environment=test` 时可访问，其他环境返回 404
 - 验证：
   - `.venv/bin/pytest -q tests/app/features/test_observability.py`（通过）
   - `curl -i -H "x-request-id: e2e-obsv-req-id" http://localhost:8000/`（响应头透传通过）
   - `curl -s http://localhost:8000/metrics`（包含 `http_requests_total` 与 `http_request_duration_seconds`）
+  - `curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8002/metrics`（prod-like 配置下返回 404）
 
 交付物：
 

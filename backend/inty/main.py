@@ -29,6 +29,7 @@ from app.middleware.error_handler import (
 from app.middleware.observability import ObservabilityMiddleware, metrics_response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.schemas.response import APIResponse
+from app.utils.config import Environment
 
 init_logger()
 
@@ -307,4 +308,9 @@ async def root():
 
 @app.get("/metrics", include_in_schema=False)
 async def metrics():
+    if (
+        not global_config_loaded_from_config_yaml.app.debug
+        and global_config_loaded_from_config_yaml.app.environment != Environment.TEST
+    ):
+        raise HTTPException(status_code=404, detail="Not Found")
     return metrics_response()

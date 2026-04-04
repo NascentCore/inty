@@ -19,6 +19,8 @@ http_request_duration_seconds = Histogram(
     ["method", "path"],
 )
 
+UNMATCHED_ROUTE_LABEL = "__unmatched__"
+
 
 class ObservabilityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -72,4 +74,4 @@ def _resolve_request_path(request: Request) -> str:
     route_path = getattr(route, "path", None)
     if route_path:
         return route_path
-    return request.url.path
+    return UNMATCHED_ROUTE_LABEL
