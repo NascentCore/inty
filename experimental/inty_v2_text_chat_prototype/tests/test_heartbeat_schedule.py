@@ -247,6 +247,60 @@ class TestHeartbeatSchedule(unittest.TestCase):
                 w = next_heartbeat_wait_seconds(root, now=now)
             self.assertLessEqual(w, 0.0)
 
+    def test_min_user_quiet_sec_zero_allows_immediate_by_user_quiet_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            rows = [
+                {"role": "user", "content": "hi", "ts": base.isoformat(), "uuid": "u1"},
+                {
+                    "role": "assistant",
+                    "content": "hello",
+                    "ts": (base + timedelta(seconds=1)).isoformat(),
+                    "uuid": "a1",
+                },
+            ]
+            _write_transcript(root / "transcript.jsonl", rows)
+            now = base + timedelta(seconds=20)
+            with patch.dict(
+                os.environ,
+                {
+                    "INTY_V2_PROTO_HEARTBEAT": "1",
+                    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC": "5",
+                    "INTY_V2_PROTO_HEARTBEAT_MIN_USER_QUIET_SEC": "0",
+                },
+                clear=False,
+            ):
+                w = next_heartbeat_wait_seconds(root, now=now)
+            self.assertLessEqual(w, 0.0)
+
+    def test_min_user_quiet_sec_large_blocks_even_when_idle_due(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            rows = [
+                {"role": "user", "content": "hi", "ts": base.isoformat(), "uuid": "u1"},
+                {
+                    "role": "assistant",
+                    "content": "hello",
+                    "ts": (base + timedelta(seconds=1)).isoformat(),
+                    "uuid": "a1",
+                },
+            ]
+            _write_transcript(root / "transcript.jsonl", rows)
+            now = base + timedelta(seconds=300)
+            with patch.dict(
+                os.environ,
+                {
+                    "INTY_V2_PROTO_HEARTBEAT": "1",
+                    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC": "5",
+                    "INTY_V2_PROTO_HEARTBEAT_MIN_USER_QUIET_SEC": "1000",
+                },
+                clear=False,
+            ):
+                w = next_heartbeat_wait_seconds(root, now=now)
+            self.assertGreater(w, 600.0)
+
 
 if __name__ == "__main__":
     unittest.main()
