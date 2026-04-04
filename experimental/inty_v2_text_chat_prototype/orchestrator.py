@@ -58,6 +58,7 @@ from .workspace_init_tools import (
     build_openai_repl_tools,
     execute_tool_call,
     openai_assistant_message_dict,
+    read_chat_output_format_prompt,
 )
 from .tool_background import start_tool_background_job
 
@@ -315,6 +316,7 @@ async def _run_turn_fast_chat_then_tool_background(
     tool_client = get_client_dual_llm_tool()
     chat_route_model = chat_model()
     tool_route_model = tool_model()
+    chat_output_format_prompt = read_chat_output_format_prompt(root)
     tools = build_openai_repl_tools()
     if not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
@@ -342,6 +344,7 @@ async def _run_turn_fast_chat_then_tool_background(
             enable_user_profile_tool=True,
             heartbeat_turn=False,
             include_repl_image_generation_contract=False,
+            chat_output_format_prompt=chat_output_format_prompt,
         )
         chat_payload = _openai_messages_payload(chat_messages)
         chat_log_messages = chat_messages
@@ -408,6 +411,7 @@ async def _run_turn_with_user_profile_tools(
     chat_route_model = chat_model()
     tool_route_model = tool_model()
     tools: list[Any] = [] if heartbeat_turn else build_openai_repl_tools()
+    chat_output_format_prompt = read_chat_output_format_prompt(root)
     if not heartbeat_turn and not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     if heartbeat_turn and dual_enabled:
@@ -454,6 +458,7 @@ async def _run_turn_with_user_profile_tools(
                     enable_user_profile_tool=True,
                     heartbeat_turn=heartbeat_turn,
                     include_repl_image_generation_contract=False,
+                    chat_output_format_prompt=chat_output_format_prompt,
                 )
                 chat_branch_payload = _openai_messages_payload(chat_messages)
                 chat_log_messages = chat_messages
@@ -626,6 +631,8 @@ async def _run_turn_with_user_profile_tools(
                 args,
                 write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
             )
+            if name == "tool_update_chat_settings" and not result.startswith("ERROR:"):
+                chat_output_format_prompt = read_chat_output_format_prompt(root)
             ok = not result.startswith("ERROR:")
             logger.info(
                 "repl.turn tool_done round={} name={} execute_ms={:.0f} "

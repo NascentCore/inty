@@ -40,6 +40,15 @@ def _output_contract_text() -> str:
     )
 
 
+def _chat_output_format_contract_text(output_format_prompt: str) -> str:
+    return (
+        "## CHAT 输出格式约束（chat 路）\n\n"
+        "以下是当前 chat LLM 路径必须遵守的输出格式提示词。"
+        "这是格式契约，不是与用户对话正文。"
+        f"\n\n{output_format_prompt}"
+    )
+
+
 def _repl_tool_contract_image_generation_clause() -> str:
     """Clause (6): generate_image / modify_image — only for the tool-side LLM in dual-path REPL."""
     return (
@@ -109,6 +118,7 @@ def build_system_prompt(
     heartbeat_turn: bool = False,
     include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
+    chat_output_format_prompt: str | None = None,
 ) -> str:
     parts: list[str] = [_security_base()]
     chat_branch_no_tool_api = (
@@ -159,4 +169,7 @@ def build_system_prompt(
         parts.append(_output_contract_text_with_user_profile_tool())
     else:
         parts.append(_output_contract_text())
+    chat_output = (chat_output_format_prompt or "").strip()
+    if chat_output:
+        parts.append(_chat_output_format_contract_text(chat_output))
     return SYSTEM_PROMPT_SEP.join(parts)

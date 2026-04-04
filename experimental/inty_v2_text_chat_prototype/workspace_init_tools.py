@@ -30,6 +30,8 @@ from .google_web_search import run_google_web_search
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
+_CHAT_SETTINGS_REL = ".inty_v2_chat_settings.json"
+_CHAT_OUTPUT_FORMAT_PROMPT_KEY = "chat_output_format_prompt"
 
 # workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
 WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
@@ -72,6 +74,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
+        "tool_update_chat_settings",
         "google_web_search",
         "generate_image",
         "modify_image",
@@ -242,6 +245,40 @@ def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
     p = resolve_under_workspace(root, relative_path)
     p.mkdir(parents=True, exist_ok=True)
     return f"OK mkdir {relative_path}"
+
+
+def read_chat_output_format_prompt(root: Path) -> str | None:
+    p = resolve_under_workspace(root, _CHAT_SETTINGS_REL)
+    if not p.is_file():
+        return None
+    raw = read_text(p).strip()
+    if not raw:
+        return None
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("chat settings must be a JSON object")
+    value = parsed.get(_CHAT_OUTPUT_FORMAT_PROMPT_KEY)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{_CHAT_OUTPUT_FORMAT_PROMPT_KEY} must be a string when present"
+        )
+    out = value.strip()
+    return out if out else None
+
+
+def tool_update_chat_settings(root: Path, output_format_prompt: str) -> str:
+    prompt = output_format_prompt.strip()
+    if not prompt:
+        return "ERROR: output_format_prompt must be a non-empty string"
+    payload = {_CHAT_OUTPUT_FORMAT_PROMPT_KEY: prompt}
+    p = resolve_under_workspace(root, _CHAT_SETTINGS_REL)
+    write_text(
+        p,
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+    )
+    return "OK updated chat output format prompt"
 
 
 def build_openai_tools() -> list[dict[str, Any]]:
@@ -448,6 +485,33 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "tool_update_chat_settings",
+                "description": (
+                    "Update chat-branch output-format instruction used by the chat LLM route. "
+                    "Use when the user explicitly asks to change the reply format/template. "
+                    "This tool affects future chat-branch turns in the current workspace."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "output_format_prompt": {
+                            "type": "string",
+                            "description": (
+                                "The exact output-format instruction to enforce for chat-branch replies. "
+                                "Example: '必须输出 JSON: {\"reply\":\"...\"}'."
+                            ),
+                        }
+                    },
+                    "required": ["output_format_prompt"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
+    out.append(
+        {
+            "type": "function",
+            "function": {
                 "name": "google_web_search",
                 "description": (
                     "Search the public web via Google Custom Search JSON API. "
@@ -642,6 +706,14 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "tool_update_chat_settings":
+        output_format_prompt = arguments.get("output_format_prompt")
+        if not isinstance(output_format_prompt, str):
+            return "ERROR: output_format_prompt must be a string"
+        return tool_update_chat_settings(
+            root=root,
+            output_format_prompt=output_format_prompt,
+        )
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):
