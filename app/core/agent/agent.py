@@ -1244,6 +1244,140 @@ class Agent:
 
         return False
 
+    def _response_has_choices(self, response: Any) -> bool:
+        return bool(response and getattr(response, "choices", None))
+
+    def _append_model_candidate(
+        self,
+        *,
+        candidates: List[str],
+        raw_model: Optional[str],
+    ) -> None:
+        if not raw_model:
+            return
+        resolved_model = resolve_chat_model_to_id(raw_model)
+        if resolved_model not in candidates:
+            candidates.append(resolved_model)
+
+    def _build_chat_model_candidates(
+        self,
+        *,
+        model_override: Optional[str],
+        is_subscribed: bool,
+    ) -> List[str]:
+        candidates: List[str] = []
+        agent_model = self.model_config.get("model")
+
+        if agent_model:
+            self._append_model_candidate(candidates=candidates, raw_model=agent_model)
+        elif model_override:
+            self._append_model_candidate(candidates=candidates, raw_model=model_override)
+        else:
+            raise ValueError(
+                "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
+            )
+
+        # 当角色显式配置模型时，保留订阅层模型作为兜底。
+        if agent_model and model_override:
+            self._append_model_candidate(candidates=candidates, raw_model=model_override)
+
+        # 跨 tier 回退：当前 tier 失败时尝试另一 tier 的默认模型。
+        opposite_tier_model = (
+            global_config.agent.free_user_chat_model
+            if is_subscribed
+            else global_config.agent.sub_user_chat_model
+        )
+        self._append_model_candidate(candidates=candidates, raw_model=opposite_tier_model)
+
+        # 兼容旧配置字段，作为最后兜底。
+        self._append_model_candidate(candidates=candidates, raw_model=global_config.agent.model)
+        return candidates
+
+    def _should_fallback_to_next_model(self, error: Exception) -> bool:
+        if self._is_retryable_error(error):
+            return True
+        if isinstance(error, APIError):
+            status_code = getattr(error, "status_code", None)
+            if status_code in (400, 404):
+                return True
+        message = str(error).lower()
+        fallback_signals = (
+            "no endpoints found that support image input",
+            "the provided model identifier is invalid",
+            "llm returned no choices",
+            "chat returned no content",
+        )
+        return any(signal in message for signal in fallback_signals)
+
+    def _call_chat_completion_with_model_fallback(
+        self,
+        *,
+        client: OpenAI,
+        model_candidates: List[str],
+        openai_messages: List[Dict[str, Any]],
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        user_id: str,
+        chat_name: str,
+        labels: Dict[str, Any],
+        user_email: Optional[str] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[Any] = None,
+    ) -> Tuple[Any, Optional[str], str]:
+        last_error: Optional[Exception] = None
+        for model_index, candidate_model in enumerate(model_candidates):
+            try:
+                response, trace_id = self._call_openai_api_with_retry(
+                    client=client,
+                    model=candidate_model,
+                    openai_messages=openai_messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
+                    extra_body=self._chat_extra_body(user_id, candidate_model),
+                    user_id=user_id,
+                    max_retries=3,
+                    initial_delay=1.0,
+                    chat_name=chat_name,
+                    labels=labels,
+                    user_email=user_email,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                )
+            except Exception as error:
+                last_error = error
+                has_next_candidate = model_index < len(model_candidates) - 1
+                if has_next_candidate and self._should_fallback_to_next_model(error):
+                    logger.warning(
+                        "Chat model candidate failed, falling back to next model - "
+                        f"agent_id={self.agent_id}, user_id={user_id}, "
+                        f"failed_model={candidate_model}, error={error!s}"
+                    )
+                    continue
+                raise
+
+            if self._response_has_choices(response):
+                if model_index > 0:
+                    logger.info(
+                        "Chat model fallback succeeded - "
+                        f"agent_id={self.agent_id}, user_id={user_id}, model={candidate_model}"
+                    )
+                return response, trace_id, candidate_model
+
+            last_error = ValueError("LLM returned no choices")
+            if model_index < len(model_candidates) - 1:
+                logger.warning(
+                    "Chat model returned empty choices, trying next model - "
+                    f"agent_id={self.agent_id}, user_id={user_id}, model={candidate_model}"
+                )
+                continue
+            break
+
+        if last_error is not None:
+            raise last_error
+        raise ValueError("LLM returned no choices")
+
     def _call_openai_api_with_retry(
         self,
         client: OpenAI,
@@ -1541,46 +1675,46 @@ class Agent:
                 client = get_chat_openai_client()
 
                 # API调用（带重试机制）
-                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
                 api_start = time.time()
-                agent_model = self.model_config.get("model")
-                model_name = agent_model or model_override
-                if model_name is None:
-                    raise ValueError(
-                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
-                    )
-                model_name = resolve_chat_model_to_id(model_name)
+                model_candidates = self._build_chat_model_candidates(
+                    model_override=model_override,
+                    is_subscribed=is_subscribed,
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
-                model_source = "agent_config" if agent_model else "override"
                 logger.debug(
-                    f"chat completion LLM config: agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+                    "chat completion LLM config: "
+                    f"agent_id={self.agent_id}, session_id={session_id}, "
+                    f"model_candidates={model_candidates}, "
+                    f"temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, "
+                    f"base_url={self.model_config.get('base_url')}"
                 )
 
                 enable_official_assistant_tools = self._is_intellimate_official()
                 trace_id: Optional[str] = None
                 try:
-                    response, trace_id = self._call_openai_api_with_retry(
-                        client=client,
-                        model=model_name,
-                        openai_messages=openai_messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id, model_name),
-                        user_id=user_id,
-                        max_retries=3,
-                        initial_delay=1.0,
-                        chat_name=chat_name,
-                        labels=labels,
-                        user_email=user_email,
-                        tools=(
-                            OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
-                            if enable_official_assistant_tools
-                            else None
-                        ),
-                        tool_choice="auto" if enable_official_assistant_tools else None,
+                    response, trace_id, model_name = (
+                        self._call_chat_completion_with_model_fallback(
+                            client=client,
+                            model_candidates=model_candidates,
+                            openai_messages=openai_messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            user_id=user_id,
+                            chat_name=chat_name,
+                            labels=labels,
+                            user_email=user_email,
+                            tools=(
+                                OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
+                                if enable_official_assistant_tools
+                                else None
+                            ),
+                            tool_choice=(
+                                "auto" if enable_official_assistant_tools else None
+                            ),
+                        )
                     )
                     openai_messages_for_response = openai_messages
                     if enable_official_assistant_tools:
@@ -1607,7 +1741,7 @@ class Agent:
                         "agent_id": self.agent_id,
                         "user_id": user_id,
                         "session_id": session_id,
-                        "model": model_name,
+                        "model_candidates": model_candidates,
                         "message_count": len(openai_messages),
                         "temperature": temperature,
                         "max_tokens": max_tokens,
@@ -1627,14 +1761,15 @@ class Agent:
                     logger.error(
                         f"OpenRouter API调用最终失败 - "
                         f"Agent: {self.agent_id}, User: {user_id}, "
-                        f"Session: {session_id}, Model: {model_name}, "
+                        f"Session: {session_id}, ModelCandidates: {model_candidates}, "
                         f"Error: {str(api_error)}"
                     )
                     logger.error(f"完整错误上下文: {error_context}")
                     raise
-
                 api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+                logger.debug(
+                    f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}, model={model_name}"
+                )
 
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
@@ -1643,11 +1778,7 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
-                if (
-                    response is None
-                    or not getattr(response, "choices", None)
-                    or len(response.choices) == 0
-                ):
+                if not self._response_has_choices(response):
                     logger.error(
                         f"LLM 返回无 choices - Agent: {self.agent_id}, User: {user_id}, "
                         f"Session: {session_id}, Model: {model_name}"
@@ -1687,12 +1818,9 @@ class Agent:
                         initial_delay=1.0,
                         chat_name=chat_name,
                         labels=labels,
+                        user_email=user_email,
                     )
-                    if (
-                        retry_response is None
-                        or not getattr(retry_response, "choices", None)
-                        or len(retry_response.choices) == 0
-                    ):
+                    if not self._response_has_choices(retry_response):
                         logger.error(
                             f"LLM 重试返回无 choices - Agent: {self.agent_id}, "
                             f"Session: {session_id}, Model: {model_name}"
@@ -1892,40 +2020,40 @@ class Agent:
                 client = get_chat_openai_client()
 
                 # API调用（使用统一的重试和 trace 逻辑）
-                # 模型优先级：角色 model > 订阅层 model_override；无默认值，未配置则及早报错。
                 api_start = time.time()
-                agent_model = self.model_config.get("model")
-                model_name = agent_model or model_override
-                if model_name is None:
-                    raise ValueError(
-                        "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
-                    )
-                model_name = resolve_chat_model_to_id(model_name)
+                model_candidates = self._build_chat_model_candidates(
+                    model_override=model_override,
+                    is_subscribed=is_subscribed,
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
-                model_source = "agent_config" if agent_model else "override"
                 logger.debug(
-                    f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
+                    "chat completion LLM config (push): "
+                    f"agent_id={self.agent_id}, session_id={session_id}, "
+                    f"model_candidates={model_candidates}, "
+                    f"temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, "
+                    f"base_url={self.model_config.get('base_url')}"
                 )
 
-                response, trace_id = self._call_openai_api_with_retry(
-                    client=client,
-                    model=model_name,
-                    openai_messages=openai_messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    top_p=top_p,
-                    extra_body=self._chat_extra_body(user_id, model_name),
-                    user_id=user_id,
-                    max_retries=3,
-                    initial_delay=1.0,
-                    chat_name=chat_name,
-                    labels=labels,
-                    user_email=user_email,
+                response, trace_id, model_name = (
+                    self._call_chat_completion_with_model_fallback(
+                        client=client,
+                        model_candidates=model_candidates,
+                        openai_messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        user_id=user_id,
+                        chat_name=chat_name,
+                        labels=labels,
+                        user_email=user_email,
+                    )
                 )
                 api_time = time.time() - api_start
-                logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
+                logger.debug(
+                    f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}, model={model_name}"
+                )
 
                 agent_invoke_time = time.time() - agent_invoke_start
                 logger.debug(
@@ -1934,14 +2062,10 @@ class Agent:
 
                 # 处理响应
                 response_process_start = time.time()
-                if (
-                    response is None
-                    or not getattr(response, "choices", None)
-                    or len(response.choices) == 0
-                ):
+                if not self._response_has_choices(response):
                     logger.error(
                         f"LLM 返回无 choices（推送消息） - Agent: {self.agent_id}, "
-                        f"Session: {session_id}"
+                        f"Session: {session_id}, Model: {model_name}"
                     )
                     raise ValueError("LLM returned no choices")
                 response_text = response.choices[0].message.content
