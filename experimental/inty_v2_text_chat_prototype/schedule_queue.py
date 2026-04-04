@@ -141,13 +141,13 @@ def _task_ready_at_utc(task: ScheduleTask) -> datetime:
     return max(exec_at, retry_at)
 
 
-def _safe_task_ready_at_utc(task: ScheduleTask) -> datetime | None:
+def _safe_task_ready_at_utc(workspace: Path, task: ScheduleTask) -> datetime | None:
     try:
         ready_at = _task_ready_at_utc(task)
-        _clear_invalid_warned(task.id)
+        _clear_invalid_warned(workspace, task.id)
         return ready_at
     except ValueError as exc:
-        if _mark_invalid_warned(task.id):
+        if _mark_invalid_warned(workspace, task.id):
             logger.warning(
                 "schedule_queue skip_invalid_task task_id={} error={}",
                 task.id,
@@ -157,6 +157,7 @@ def _safe_task_ready_at_utc(task: ScheduleTask) -> datetime | None:
 
 
 def _pick_next_due_task(
+    workspace: Path,
     tasks: list[ScheduleTask],
     *,
     now: datetime,
@@ -168,7 +169,7 @@ def _pick_next_due_task(
             continue
         if t.id in in_flight_ids:
             continue
-        ready_at = _safe_task_ready_at_utc(t)
+        ready_at = _safe_task_ready_at_utc(workspace, t)
         if ready_at is None:
             continue
         if ready_at <= now:
@@ -186,6 +187,7 @@ def _pick_next_due_task(
 
 
 def _seconds_until_next_pending_task(
+    workspace: Path,
     tasks: list[ScheduleTask],
     *,
     now: datetime,
@@ -197,7 +199,7 @@ def _seconds_until_next_pending_task(
             continue
         if t.id in in_flight_ids:
             continue
-        ready_at = _safe_task_ready_at_utc(t)
+        ready_at = _safe_task_ready_at_utc(workspace, t)
         if ready_at is None:
             continue
         waits.append((ready_at - now).total_seconds())
@@ -340,8 +342,8 @@ class _SchedulerRunner:
 
 _RUNNERS: dict[Path, _SchedulerRunner] = {}
 _RUNNERS_LOCK = threading.Lock()
-_INVALID_TASK_WARNED_IDS: set[str] = set()
-_INVALID_TASK_WARNED_IDS_LOCK = threading.Lock()
+_INVALID_TASK_WARNED_KEYS: set[tuple[Path, str]] = set()
+_INVALID_TASK_WARNED_KEYS_LOCK = threading.Lock()
 
 
 def _runner_for(workspace: Path) -> _SchedulerRunner | None:
@@ -357,17 +359,28 @@ def _clear_in_flight(workspace: Path, task_id: str) -> None:
         runner.in_flight_ids.discard(task_id)
 
 
-def _mark_invalid_warned(task_id: str) -> bool:
-    with _INVALID_TASK_WARNED_IDS_LOCK:
-        if task_id in _INVALID_TASK_WARNED_IDS:
+def _mark_invalid_warned(workspace: Path, task_id: str) -> bool:
+    key = (workspace.resolve(), task_id)
+    with _INVALID_TASK_WARNED_KEYS_LOCK:
+        if key in _INVALID_TASK_WARNED_KEYS:
             return False
-        _INVALID_TASK_WARNED_IDS.add(task_id)
+        _INVALID_TASK_WARNED_KEYS.add(key)
         return True
 
 
-def _clear_invalid_warned(task_id: str) -> None:
-    with _INVALID_TASK_WARNED_IDS_LOCK:
-        _INVALID_TASK_WARNED_IDS.discard(task_id)
+def _clear_invalid_warned(workspace: Path, task_id: str) -> None:
+    key = (workspace.resolve(), task_id)
+    with _INVALID_TASK_WARNED_KEYS_LOCK:
+        _INVALID_TASK_WARNED_KEYS.discard(key)
+
+
+def _reconcile_invalid_warned(workspace: Path, tasks: list[ScheduleTask]) -> None:
+    root = workspace.resolve()
+    live_ids = {t.id for t in tasks}
+    with _INVALID_TASK_WARNED_KEYS_LOCK:
+        stale = [k for k in _INVALID_TASK_WARNED_KEYS if k[0] == root and k[1] not in live_ids]
+        for k in stale:
+            _INVALID_TASK_WARNED_KEYS.discard(k)
 
 
 def _scheduler_loop(workspace: Path, stop_flag: threading.Event) -> None:
@@ -387,7 +400,8 @@ def _scheduler_loop(workspace: Path, stop_flag: threading.Event) -> None:
             logger.exception("schedule_queue load failed ws={}", root.name)
             stop_flag.wait(timeout=1.0)
             continue
-        due = _pick_next_due_task(tasks, now=now, in_flight_ids=in_flight)
+        _reconcile_invalid_warned(root, tasks)
+        due = _pick_next_due_task(root, tasks, now=now, in_flight_ids=in_flight)
         if due is not None:
             if runner is not None:
                 with runner.lock:
@@ -408,7 +422,12 @@ def _scheduler_loop(workspace: Path, stop_flag: threading.Event) -> None:
                 due.exec_time_utc,
             )
             continue
-        wait = _seconds_until_next_pending_task(tasks, now=now, in_flight_ids=in_flight)
+        wait = _seconds_until_next_pending_task(
+            root,
+            tasks,
+            now=now,
+            in_flight_ids=in_flight,
+        )
         if wait is None:
             sleep_s = 1.0
         else:
@@ -457,7 +476,9 @@ def stop_schedule_scheduler(workspace: Path) -> None:
     if runner.thread.is_alive():
         logger.warning("schedule_queue scheduler_join_timeout ws={}", root.name)
         with _RUNNERS_LOCK:
-            _RUNNERS[root] = runner
+            current = _RUNNERS.get(root)
+            if current is None:
+                _RUNNERS[root] = runner
         return
     with _RUNNERS_LOCK:
         current = _RUNNERS.get(root)
@@ -474,11 +495,17 @@ def next_due_wait_seconds(workspace: Path, *, now: datetime | None = None) -> fl
     root = workspace.resolve()
     t = now if now is not None else datetime.now(timezone.utc)
     tasks = _load_tasks(root)
+    _reconcile_invalid_warned(root, tasks)
     runner = _runner_for(root)
     if runner is None:
         in_flight: set[str] = set()
     else:
         with runner.lock:
             in_flight = set(runner.in_flight_ids)
-    return _seconds_until_next_pending_task(tasks, now=t, in_flight_ids=in_flight)
+    return _seconds_until_next_pending_task(
+        root,
+        tasks,
+        now=t,
+        in_flight_ids=in_flight,
+    )
 

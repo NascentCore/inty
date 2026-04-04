@@ -164,6 +164,37 @@ class TestScheduleQueueKernel(unittest.TestCase):
                 self.assertIsNone(next_due_wait_seconds(root))
                 self.assertEqual(warn_spy.call_count, 1)
 
+    def test_invalid_warn_state_cleared_when_task_removed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            queue_path = WorkspacePaths(root=root).schedule_queue_json
+            queue_path.write_text(
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "id": "bad-remove",
+                                "exec_time_utc": "not-a-time",
+                                "task_text": "坏任务",
+                                "status": "pending",
+                                "created_at_utc": "2026-01-01T00:00:00+00:00",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(schedule_queue.logger, "warning"):
+                self.assertIsNone(next_due_wait_seconds(root))
+            with schedule_queue._INVALID_TASK_WARNED_KEYS_LOCK:
+                self.assertIn((root.resolve(), "bad-remove"), schedule_queue._INVALID_TASK_WARNED_KEYS)
+
+            queue_path.write_text(json.dumps({"tasks": []}, ensure_ascii=False), encoding="utf-8")
+            self.assertIsNone(next_due_wait_seconds(root))
+            with schedule_queue._INVALID_TASK_WARNED_KEYS_LOCK:
+                self.assertNotIn((root.resolve(), "bad-remove"), schedule_queue._INVALID_TASK_WARNED_KEYS)
+
     def test_stop_timeout_keeps_runner_to_block_duplicate_start(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -187,6 +218,45 @@ class TestScheduleQueueKernel(unittest.TestCase):
                 start_schedule_scheduler(root)
                 kept_after_start = schedule_queue._runner_for(root)
                 self.assertIs(kept_after_start, runner)
+            finally:
+                with schedule_queue._RUNNERS_LOCK:
+                    schedule_queue._RUNNERS.pop(root.resolve(), None)
+
+    def test_stop_timeout_does_not_override_new_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            old_thread = MagicMock()
+            old_thread.is_alive.side_effect = [True, True]
+            old_thread.join = MagicMock()
+            old_runner = schedule_queue._SchedulerRunner(
+                workspace=root.resolve(),
+                stop_flag=threading.Event(),
+                thread=old_thread,
+                in_flight_ids=set(),
+                lock=threading.Lock(),
+            )
+            new_thread = MagicMock()
+            new_thread.is_alive.return_value = True
+            new_runner = schedule_queue._SchedulerRunner(
+                workspace=root.resolve(),
+                stop_flag=threading.Event(),
+                thread=new_thread,
+                in_flight_ids=set(),
+                lock=threading.Lock(),
+            )
+            with schedule_queue._RUNNERS_LOCK:
+                schedule_queue._RUNNERS[root.resolve()] = old_runner
+            try:
+                with patch.object(
+                    old_thread,
+                    "join",
+                    side_effect=lambda timeout=2.0: schedule_queue._RUNNERS.__setitem__(
+                        root.resolve(), new_runner
+                    ),
+                ):
+                    stop_schedule_scheduler(root)
+                kept = schedule_queue._runner_for(root)
+                self.assertIs(kept, new_runner)
             finally:
                 with schedule_queue._RUNNERS_LOCK:
                     schedule_queue._RUNNERS.pop(root.resolve(), None)
