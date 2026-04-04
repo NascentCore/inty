@@ -2,7 +2,7 @@
 
 ## 1. 文档定位
 
-- 本文档定义 iMate 新版从 0 到 1 的完整开发计划，目标是在 IntelliMate Android app 与 inty backend 已验证架构基础上，交付稳定、可扩展、可观测的"智能体陪伴体验"。
+- 本文档定义 iMate(or IntelliMate 2.0) 新版从 0 到 1 的完整开发计划，目标是在 IntelliMate Android app 与 inty backend 已验证架构基础上，交付稳定、可扩展、可观测的"智能体陪伴体验"。
 - 本文档是需求评审、技术设计、实现拆分、测试验收、发布复盘的统一基线。
 
 ## 2. 背景与约束
@@ -22,7 +22,7 @@
   - app + backend 使用 WebSocket 主链路。
   - chat 路径仅提供 WebSocket，不提供 HTTP fallback。
 
-### 2.2 新版 iMate 的核心目标
+### 2.2 新版 iMate(or IntelliMate 2.0) 的核心目标
 
 - 体验目标：
   - 实时对话感知更强：输入到首 token/首句反馈延迟降低。
@@ -52,7 +52,7 @@
 - 核心原则：
   - Offline-First：UI 只读本地状态，网络仅刷新本地。
   - 单一可信源：聊天消息以 Room 为准，避免 UI 直接依赖网络瞬态数据。
-  - 连接复用：WebSocket 连接按 token 维度复用，支持多 iMate 会话复用单连接。
+  - 连接复用：WebSocket 连接按 token 维度复用，支持多 iMate(or IntelliMate 2.0) 会话复用单连接。
 
 ### 3.2 Backend 总体架构
 
@@ -102,7 +102,7 @@
 ### 4.3 Backend 业务数据规划
 
 - 核心表沿用并增强：
-  - `chats`：用户与 iMate 会话关系。
+  - `chats`：用户与 iMate(or IntelliMate 2.0) 会话关系。
   - `chat_history`：用户消息、AI 回复、多模态元数据。
   - `chat_settings`：会话级行为配置（语言、语音、模式）。
 - 元数据增强方向：
@@ -114,7 +114,7 @@
 ## 5.1 Phase 0 - 基线冻结与契约冻结
 
 - 目标：
-  - 明确 iMate V2 的跨端契约 baseline 和变更流程。
+  - 明确 iMate(or IntelliMate 2.0) 的跨端契约 baseline 和变更流程。
   - 冻结 Android/Backend 最小可运行链路。
 - 交付：
   - 契约清单（请求、响应、错误码、心跳、超时语义）。
@@ -257,35 +257,7 @@
 - 可恢复：
   - WS 故障时可通过重连恢复或明确失败提示，不走 HTTP chat fallback。
 
-## 8. 发布与运维计划
-
-### 8.1 灰度策略
-
-- 阶段灰度开关：
-  - `ws_chat_enabled`
-  - `memory_state_enabled`
-  - `proactive_touch_enabled`
-- 先内部测试 -> 小流量 -> 全量发布。
-
-### 8.2 观测指标
-
-- 客户端指标：
-  - WS 连接成功率、重连次数、消息发送失败率、重连恢复率。
-- 后端指标：
-  - WS 活跃连接数、平均会话时长、请求耗时分位、错误码分布。
-- 体验指标：
-  - 首响应耗时、会话完成率、次日留存、有效对话轮次。
-
-### 8.3 回滚预案
-
-- 客户端：
-  - 远程开关关闭新版聊天入口，降级到维护提示页。
-- 后端：
-  - 路由级开关关闭 `/ws` 新能力或切换到受控 verify 模式。
-- 数据：
-  - 新增字段保持兼容，不阻断老版本读取。
-
-## 9. 风险清单与应对
+## 8. 风险清单与应对
 
 | 风险 | 描述 | 应对策略 |
 |---|---|---|
@@ -295,9 +267,9 @@
 | 服务层膨胀 | endpoint 逻辑回流导致难维护 | 严格坚持 service 分层与 DI |
 | 多能力耦合过高 | 语音/图像影响聊天主链路 | 能力插件化，主链路优先，失败隔离 |
 
-## 10. 组织协作与里程碑产出
+## 9. 组织协作与里程碑产出
 
-### 10.1 协作机制
+### 9.1 协作机制
 
 - 每个 Phase 产出三件套：
   - 设计文档（架构与契约）
@@ -307,7 +279,7 @@
   - 技术评审关注分层与契约。
   - 产品评审关注陪伴体验与节奏控制。
 
-### 10.2 里程碑交付物
+### 9.2 里程碑交付物
 
 - Phase 0：
   - `FR_IMATE_DEVELOPMENT_PLAN.md`（本文件）
@@ -322,7 +294,7 @@
   - 多模态增强 PR
   - 生产化压测与运维手册
 
-## 11. 建议的首批执行顺序（从明天即可开工）
+## 10. 建议的首批执行顺序（从明天即可开工）
 
 - Step 1：冻结 v1 契约和错误码清单（1 个 PR，仅文档和 schema 对齐）。
 - Step 2：打通 Android WS 主链路并移除 chat HTTP fallback 假设（1-2 个 PR）。
@@ -330,13 +302,13 @@
 - Step 4：补齐联调 checklist 与自动化回归（1 个 PR）。
 - Step 5：进入陪伴状态层增量开发（后续迭代）。
 
-## 12. iMate Android v1 对应后端实现框架
+## 11. iMate(or IntelliMate 2.0) Android v1 对应后端实现框架
 
-### 12.0 Android 代码目录分层（新增约束）
+### 11.1 Android 代码目录分层（新增约束）
 
 - 新版 Android app 代码放置在 `imate_android/`。
 - `android_app/` 作为 Android 基础能力层，提供可复用基础代码与库函数（data/core/library 等）。
-- `imate_android/` 作为 iMate 应用封装层，在 `android_app/` 之上组装业务与产品体验。
+- `imate_android/` 作为 iMate(or IntelliMate 2.0) 应用封装层，在 `android_app/` 之上组装业务与产品体验。
 - 目录关系目标：
   - `android_app/ : imate_android/` 对应后端 `app/ : backend/inty/` 的分层关系。
   - 基础能力沉淀在底层目录，产品特定实现在上层目录，避免双向耦合与重复造轮子。
@@ -344,16 +316,16 @@
   - 共有能力优先下沉 `android_app/`，`imate_android/` 优先组合调用而非复制实现。
   - `imate_android/` 禁止反向要求 `android_app/` 依赖其业务代码。
 
-### 12.1 范围前提（对应新版 iMate Android）
+### 11.2 范围前提（对应新版 iMate(or IntelliMate 2.0) Android）
 
 - Android 产品范围：
-  - iMate（从 IntelliMate 演进的 agentic companion AI）。
+  - iMate(or IntelliMate 2.0)（从 IntelliMate 演进的 agentic companion AI）。
   - 首批功能：Google 登录、Email+Password 登录（Google Play reviewer 场景）、Settings 页面、Basic chat。
 - 后端原则：
   - 凡新版 Android 功能可直接依赖 `app/` 现有 API 路由与 HTTP path，则直接复用。
   - 聊天主路径保持 WebSocket-only，不提供 HTTP chat fallback。
 
-### 12.2 需要实现/复用的 HTTP endpoints 与 WS endpoints
+### 11.3 需要实现/复用的 HTTP endpoints 与 WS endpoints
 
 - Auth（登录）：
   - `POST /api/v1/auth/google/login`
@@ -376,7 +348,7 @@
 - 版本与门控（建议纳入首批）：
   - `POST /api/v1/version/check`（写入 `users.last_android_app_version_code`，支持后续功能门控）。
 
-### 12.3 数据库部署（PostgreSQL + SQLAlchemy）
+### 11.4 数据库部署（PostgreSQL + SQLAlchemy）
 
 - 部署拓扑：
   - `dev` 与 `prod` 分离数据库实例（最小可行：同 VM 不同库；推荐：独立实例）。
@@ -392,7 +364,7 @@
   - 自动备份（每日全量 + 增量 WAL）。
   - 监控：连接数、慢查询、锁等待、复制延迟（若启用副本）。
 
-### 12.4 第三方存储系统部署（对象存储）
+### 11.5 第三方存储系统部署（对象存储）
 
 - 媒体对象存储：
   - 使用 GCS，`dev`/`prod` 使用独立 bucket（避免环境污染）。
@@ -405,27 +377,6 @@
   - URL 访问策略统一在后端转换，避免客户端拼接存储内部路径。
 - 测试策略：
   - test 环境可使用 fake GCS（`use_fake_gcs: true`）保证可重复测试。
-
-### 12.5 Redis 缓存（新增）
-
-- 现状与改造范围：
-  - 当前仓库缓存为进程内 `InMemoryCache`（`app/services/cache_service.py`）。
-  - 本节 Redis 方案为新增改造项，需要新增配置模型与缓存适配层后再落地。
-- 部署方式：
-  - `dev`/`prod` 各 1 个独立 Redis 实例（推荐 Redis 7，AOF 打开）。
-  - 后端通过新增配置项（例如 `redis.url`）接入；连接池由应用统一管理。
-- 缓存分层与 key 设计：
-  - `auth:user_snapshot:{user_id}`（短 TTL，鉴权快照）。
-  - `chat:session:{user_id}:{agent_id}`（会话元数据，短 TTL）。
-  - `agent:config:{agent_id}`（角色轻量配置，中 TTL）。
-  - `rate_limit:{user_id}:{feature}:{window}`（计数器，固定窗口 TTL）。
-- 一致性策略：
-  - DB 为 source of truth，Redis 仅做加速。
-  - 写路径先写 DB，再删除/更新对应 cache key。
-  - 关键查询采用 cache-aside，缓存 miss 回源 DB。
-- WebSocket 相关（多实例预留）：
-  - 若后续后端横向扩容，使用 Redis pub/sub 或 stream 同步连接状态与广播事件。
-  - 单实例阶段可先只用于业务缓存与限流计数。
 
 ---
 
