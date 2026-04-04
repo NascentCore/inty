@@ -54,6 +54,26 @@ export const DAILY_USAGE_CHART_METRICS = [
   },
 ] as const satisfies ReadonlyArray<UsageMetricConfig>;
 
+const DAILY_USAGE_RATIO_SUPPORT_METRICS = [
+  {
+    key: "total_image_generation_requests",
+    label: "生图请求数(比值计算)",
+    color: "#52c41a",
+    axis: "y",
+  },
+  {
+    key: "total_ai_messages",
+    label: "AI回复消息数(比值计算)",
+    color: "#fa541c",
+    axis: "y",
+  },
+] as const satisfies ReadonlyArray<UsageMetricConfig>;
+
+const DAILY_USAGE_SERIES_METRICS = [
+  ...DAILY_USAGE_CHART_METRICS,
+  ...DAILY_USAGE_RATIO_SUPPORT_METRICS,
+] as const;
+
 export const DAILY_IMAGE_USAGE_CHART_METRICS = [
   {
     key: "total_image_generation_requests",
@@ -90,6 +110,9 @@ export const DAILY_USAGE_SECONDARY_AXIS_COLOR =
   "#ff4d4f";
 export const DAILY_USAGE_VOICE_MESSAGE_RATIO_LABEL = "语音播报次数 / 消息数";
 export const DAILY_USAGE_VOICE_MESSAGE_RATIO_COLOR = "#13c2c2";
+export const DAILY_USAGE_IMAGE_AI_REPLY_RATIO_LABEL =
+  "生图请求数 / AI回复消息数";
+export const DAILY_USAGE_IMAGE_AI_REPLY_RATIO_COLOR = "#52c41a";
 export const DAILY_IMAGE_USAGE_HAS_SECONDARY_AXIS =
   DAILY_IMAGE_USAGE_CHART_METRICS.some((metric) => metric.axis === "y2");
 export const DAILY_IMAGE_USAGE_SECONDARY_AXIS_TITLE =
@@ -148,7 +171,7 @@ const toValidUtcDate = (
 };
 
 export type DailyUsageMetricKey =
-  (typeof DAILY_USAGE_CHART_METRICS)[number]["key"];
+  (typeof DAILY_USAGE_SERIES_METRICS)[number]["key"];
 
 export type DailyImageUsageMetricKey =
   (typeof DAILY_IMAGE_USAGE_CHART_METRICS)[number]["key"];
@@ -281,7 +304,7 @@ export const buildDailyUsageSeries = (
 ): DailyUsageSeries | null => {
   return buildUsageSeries(
     reports,
-    DAILY_USAGE_CHART_METRICS,
+    DAILY_USAGE_SERIES_METRICS,
     (dailyValues) => dailyValues,
   );
 };
@@ -291,7 +314,7 @@ export const buildRollingDailyUsageSeries = (
   windowDays: number = WEEKLY_USAGE_ROLLING_WINDOW_DAYS,
 ): DailyUsageSeries | null => {
   const normalizedWindowDays = Math.max(1, Math.floor(windowDays));
-  return buildUsageSeries(reports, DAILY_USAGE_CHART_METRICS, (values) =>
+  return buildUsageSeries(reports, DAILY_USAGE_SERIES_METRICS, (values) =>
     buildRollingSums(values, normalizedWindowDays),
   );
 };
@@ -304,6 +327,16 @@ const toVoiceRequestsPerMessageRatio = (
     return 0;
   }
   return totalVoiceRequests / totalUserMessages;
+};
+
+const toImageRequestsPerAiMessageRatio = (
+  totalImageGenerationRequests: number,
+  totalAiMessages: number,
+): number => {
+  if (totalAiMessages <= 0) {
+    return 0;
+  }
+  return totalImageGenerationRequests / totalAiMessages;
 };
 
 export const buildVoiceRequestsPerMessageRatioValues = (
@@ -320,6 +353,23 @@ export const buildVoiceRequestsPerMessageRatioValues = (
     toVoiceRequestsPerMessageRatio(
       voiceRequests,
       totalUserMessagesValues[index] ?? 0,
+    ),
+  );
+};
+
+export const buildImageRequestsPerAiMessageRatioValues = (
+  usageSeries: DailyUsageSeries | null,
+): number[] => {
+  if (!usageSeries) {
+    return [];
+  }
+  const totalImageGenerationRequestsValues =
+    usageSeries.valuesByMetric.total_image_generation_requests;
+  const totalAiMessagesValues = usageSeries.valuesByMetric.total_ai_messages;
+  return totalImageGenerationRequestsValues.map((imageRequests, index) =>
+    toImageRequestsPerAiMessageRatio(
+      imageRequests,
+      totalAiMessagesValues[index] ?? 0,
     ),
   );
 };

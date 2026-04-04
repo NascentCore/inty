@@ -36,6 +36,7 @@ def sample_stats():
         "total_new_users": 100,
         "total_chat_initiators": 10,
         "total_user_messages": 50,
+        "total_ai_messages": 90,
         "total_active_sessions": 20,
         "total_voice_requests": 5,
         "avg_messages_per_user": 5.0,

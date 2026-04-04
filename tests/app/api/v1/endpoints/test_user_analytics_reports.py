@@ -29,6 +29,7 @@ def _build_stats() -> dict:
         "total_new_users": 1,
         "total_chat_initiators": 1,
         "total_user_messages": 1,
+        "total_ai_messages": 1,
         "total_active_sessions": 1,
         "total_voice_requests": 0,
         "avg_messages_per_user": 1.0,

@@ -8,6 +8,7 @@ import {
   buildDailyTopAgentsTrendSeries,
   buildRollingDailyUsageSeries,
   buildRollingDailyImageUsageSeries,
+  buildImageRequestsPerAiMessageRatioValues,
   buildVoiceRequestsPerMessageRatioValues,
   buildDailyUsageTickText,
   removeOpeningVoiceMessageAudios,
@@ -27,6 +28,7 @@ const buildStats = (
   total_new_users: 0,
   total_chat_initiators: 0,
   total_user_messages: 0,
+  total_ai_messages: 0,
   total_active_sessions: 0,
   total_voice_requests: 0,
   avg_messages_per_user: 0,
@@ -295,6 +297,40 @@ describe("buildVoiceRequestsPerMessageRatioValues", () => {
 
   it("无用量序列时返回空数组", () => {
     expect(buildVoiceRequestsPerMessageRatioValues(null)).toEqual([]);
+  });
+});
+
+describe("buildImageRequestsPerAiMessageRatioValues", () => {
+  it("按日期输出生图请求数 / AI回复消息数比值，分母为 0 时返回 0", () => {
+    const reports = [
+      buildReport({
+        id: "r2",
+        report_date: "2026-02-02",
+        stats: buildStats({
+          total_image_generation_requests: 8,
+          total_ai_messages: 20,
+        }),
+      }),
+      buildReport({
+        id: "r1",
+        report_date: "2026-02-01",
+        stats: buildStats({
+          total_image_generation_requests: 5,
+          total_ai_messages: 0,
+        }),
+      }),
+    ];
+
+    const usageSeries = buildDailyUsageSeries(reports);
+    const ratioValues = buildImageRequestsPerAiMessageRatioValues(usageSeries);
+
+    expect(ratioValues).toHaveLength(2);
+    expect(ratioValues[0]).toBe(0);
+    expect(ratioValues[1] ?? 0).toBeCloseTo(0.4, 6);
+  });
+
+  it("无用量序列时返回空数组", () => {
+    expect(buildImageRequestsPerAiMessageRatioValues(null)).toEqual([]);
   });
 });
 
