@@ -332,6 +332,18 @@
 
 ## 12. iMate Android v1 对应后端实现框架
 
+### 12.0 Android 代码目录分层（新增约束）
+
+- 新版 Android app 代码放置在 `imate_android/`。
+- `android_app/` 作为 Android 基础能力层，提供可复用基础代码与库函数（data/core/library 等）。
+- `imate_android/` 作为 iMate 应用封装层，在 `android_app/` 之上组装业务与产品体验。
+- 目录关系目标：
+  - `android_app/ : imate_android/` 对应后端 `app/ : backend/inty/` 的分层关系。
+  - 基础能力沉淀在底层目录，产品特定实现在上层目录，避免双向耦合与重复造轮子。
+- 工程约束：
+  - 共有能力优先下沉 `android_app/`，`imate_android/` 优先组合调用而非复制实现。
+  - `imate_android/` 禁止反向要求 `android_app/` 依赖其业务代码。
+
 ### 12.1 范围前提（对应新版 iMate Android）
 
 - Android 产品范围：
