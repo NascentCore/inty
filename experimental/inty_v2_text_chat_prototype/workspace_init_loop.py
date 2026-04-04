@@ -25,14 +25,14 @@ from .workspace_init_tools import (
 
 # Synthetic user turn: not shown to the human; tells the model the REPL is blocked until
 # required files exist (see is_workspace_initialized).
-_INTERNAL_BOOTSTRAP_CONTINUE = (
+_INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE = (
     "[INTERNAL — not shown to the end user] The REPL cannot accept the next user line until "
     "the workspace passes initialization (required files exist on disk). That is not true yet. "
-    "Keep companion tone when you speak to the user, but you MUST call tools now and in "
+    "Keep a companionship tone when you speak to the user, but you MUST call tools now and in "
     "following turns until initialization succeeds. Do not end with assistant text only "
     "until the workspace is complete. When you do speak to the user, never hint at internal "
     "processing, frameworks, backends, setup, sync, or initialization metaphors—only human "
-    "relationship language."
+    "relationship language. If companionship type is still unclear, ask the user to define it."
 )
 
 _PKG_DIR = Path(__file__).resolve().parent
@@ -54,11 +54,23 @@ def _insert_system_message(
     )
 
 
+def _internal_bootstrap_continue() -> str:
+    return _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE
+
+
 def load_bootstrap_instruction_text() -> str:
     """加载 _ws2/BOOSTRAP.md（与 README 中「Agentic 初始化」流程一致）。"""
     if not _BOOSTRAP_PATH.is_file():
         raise FileNotFoundError(f"missing bootstrap spec: {_BOOSTRAP_PATH}")
-    return _BOOSTRAP_PATH.read_text(encoding="utf-8")
+    base = _BOOSTRAP_PATH.read_text(encoding="utf-8").rstrip()
+    appendix = (
+        "你必须在 bootstrap 对话早期自然询问用户希望定义为何种 companionship。"
+        "优先给出可选示例（如 朋友/爱人/亲人/其他自定义），并允许用户自定义。"
+        "在用户明确后，后续语气、边界、称呼和收尾邀请都按该类型保持一致。"
+    )
+    return (
+        f"{base}\n\n## companionship 类型确认规范\n\n- {appendix}\n"
+    )
 
 
 def run_workspace_bootstrap_loop(
@@ -160,7 +172,7 @@ def run_workspace_bootstrap_loop(
                 "injecting_internal_continue",
                 round_idx,
             )
-            messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
+            messages.append({"role": "user", "content": _internal_bootstrap_continue()})
             continue
 
         active_round = round_idx
@@ -260,7 +272,7 @@ def run_workspace_bootstrap_loop(
             "injecting_internal_continue",
             rounds_used,
         )
-        messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
+        messages.append({"role": "user", "content": _internal_bootstrap_continue()})
 
     raise RuntimeError(
         f"workspace bootstrap exceeded max_rounds={max_rounds}; last messages tail: "

@@ -26,6 +26,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from experimental.inty_v2_text_chat_prototype.client import load_prototype_dotenv
+from experimental.inty_v2_text_chat_prototype.client import OpenRouterInvalidJsonError
 
 load_prototype_dotenv()
 
@@ -117,6 +118,10 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
 
 
+def _print_openrouter_invalid_json_retry_hint() -> None:
+    print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+
+
 def _flush_and_shutdown_memory_store(root: Path) -> None:
     flush_memory_store(root, timeout_s=5.0)
     flush_jsonl_db_store(timeout_s=5.0)
@@ -176,7 +181,21 @@ def _repl_drain_user_turns(
                 )
                 print("> ", end="", flush=True)
             t0 = time.perf_counter()
-            out = run_turn_sync(cur)
+            try:
+                out = run_turn_sync(cur)
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning("repl turn recovered from invalid OpenRouter JSON: {}", exc)
+                _print_openrouter_invalid_json_retry_hint()
+                print("> ", end="", flush=True)
+                try:
+                    item = pending.get_nowait()
+                except queue.Empty:
+                    return True
+                if item is None:
+                    print()
+                    return False
+                cur, cur_echoed = item
+                continue
             _print_assistant_reply(out, time.perf_counter() - t0)
             _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
@@ -593,28 +612,40 @@ def init_workspace(
         _flush_and_shutdown_memory_store(path.resolve())
 
 
-_DEFAULT_BOOTSTRAP_USER = (
-    "我们刚选定彼此，我还不是完全体：请你用伴侣的方式，按你的理解把自己安顿好，"
-    "跟我自然聊出称呼、你怎么称呼自己、相处上的底线；节奏随我，不必像填设置表。"
+_DEFAULT_BOOTSTRAP_USER_TEMPLATE = (
+    "我们刚选定彼此，我还不是完全体：请你先自然问清楚我希望你以哪种 companionship 陪伴我（例如朋友、爱人、亲人或我自定义），"
+    "确认后再按该关系类型把自己安顿好；跟我自然聊出称呼、你怎么称呼自己、相处上的底线；节奏随我，不必像填设置表。"
     "在你能静默完成的那部分就绪之后，请邀请我一起定义你，并自然地问我愿分享的基本信息（怎么称呼我、希望怎样被称呼等），不要像问卷。"
     "别跟我讲文件夹或配置文件名字；需要默认身份编号时用人话问一句就行。"
     "请你自己完成该完成的事，不要推给我去终端替你初始化。"
 )
 
 # repl 自动初始化时传给 agentic 循环的用户消息（不当作 REPL 输入回显）
-_REPL_SILENT_INIT_USER_MESSAGE = (
-    "用户刚打开对话。你是刚被选中、还没被完全记清的伴侣 AI：先自然打个招呼，"
+_REPL_SILENT_INIT_USER_MESSAGE_TEMPLATE = (
+    "用户刚打开对话。你是刚被选中、还没被完全记清的陪伴 AI：先自然打个招呼，并先确认用户希望的 companionship 类型（可给朋友、爱人、亲人、其他自定义作为示例）。"
     "按用户节奏聊，需要时用工具静默记下；不要对用户提工作区、文件名或清单式提问。"
     "当你内部该落盘的部分就绪后，在本轮结束前邀请用户一起定义你（称呼、你怎么称呼自己、相处底线），"
     "并自然地询问关于对方的基本信息（怎么称呼对方、希望怎样被称呼等），像聊天而不是填表。"
 )
 
 # 已初始化但 transcript 仍为空、且 IDENTITY/USER 仍像占位：启动时由助手先开口（写入 transcript）
-_REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE = (
-    "（用户刚打开对话，尚未输入。）请你先开口：用伴侣语气自然发问，"
+_REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE_TEMPLATE = (
+    "（用户刚打开对话，尚未输入。）请你先开口：用陪伴语气自然发问，先确认用户希望的 companionship 类型，再继续，"
     "了解你希望自己的称呼、你怎么称呼自己、以及关于对方的基本信息（怎么称呼对方等）；"
     "不要提工作区或文件名，不要像问卷。"
 )
+
+
+def _default_bootstrap_user_message() -> str:
+    return _DEFAULT_BOOTSTRAP_USER_TEMPLATE
+
+
+def _repl_silent_init_user_message() -> str:
+    return _REPL_SILENT_INIT_USER_MESSAGE_TEMPLATE
+
+
+def _repl_startup_profile_inquiry_user_message() -> str:
+    return _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE_TEMPLATE
 
 
 @app.command
@@ -653,7 +684,7 @@ def bootstrap_agent(
     user = (
         message
         if (message is not None and message.strip())
-        else _DEFAULT_BOOTSTRAP_USER
+        else _default_bootstrap_user_message()
     )
 
     def _on_tool(name: str, args: str) -> None:
@@ -722,23 +753,41 @@ def repl(
                 "repl startup branch=bootstrap_auto_init (workspace not initialized)"
             )
             t0 = time.perf_counter()
-            out = run_workspace_bootstrap_loop(
-                ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
-            )
+            try:
+                out = run_workspace_bootstrap_loop(
+                    ws,
+                    _repl_silent_init_user_message(),
+                    llm_trace=True,
+                )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl startup bootstrap recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                return
             _print_assistant_reply(out, time.perf_counter() - t0)
         elif needs_startup_profile_inquiry(ws):
             logger.debug(
                 "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
             )
             t0 = time.perf_counter()
-            out = asyncio.run(
-                run_turn(
-                    ws,
-                    _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
+            try:
+                out = asyncio.run(
+                    run_turn(
+                        ws,
+                        _repl_startup_profile_inquiry_user_message(),
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                    )
                 )
-            )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl startup profile inquiry recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                return
             _print_assistant_reply(out, time.perf_counter() - t0)
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")

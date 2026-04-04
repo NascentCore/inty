@@ -271,6 +271,7 @@ def _append_background_log(
     elapsed_ms: int,
     rounds: int,
     tool_calls_count: int,
+    generated_image_uris: list[str],
 ) -> None:
     path = workspace_root / "tool_background.jsonl"
     append_jsonl_with_db(
@@ -283,6 +284,7 @@ def _append_background_log(
             "elapsed_ms": elapsed_ms,
             "rounds": rounds,
             "tool_calls_count": tool_calls_count,
+            "generated_image_uris": list(generated_image_uris),
         },
     )
 
@@ -457,6 +459,7 @@ async def _run_background_tool_loop(
         elapsed_ms=elapsed_ms,
         rounds=rounds_used,
         tool_calls_count=total_tool_calls,
+        generated_image_uris=image_paths,
     )
     on_event(
         ToolOutputEvent(

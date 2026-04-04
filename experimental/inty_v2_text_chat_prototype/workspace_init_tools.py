@@ -58,6 +58,29 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     }
 )
 
+_MODIFY_IMAGE_SOURCE_EXTS: frozenset[str] = frozenset(
+    {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+)
+
+
+def _latest_generated_image_under_workspace(root: Path) -> Path | None:
+    generated_dir = root.resolve() / "generated_images"
+    if not generated_dir.is_dir():
+        return None
+    best: tuple[int, Path] | None = None
+    for p in generated_dir.iterdir():
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in _MODIFY_IMAGE_SOURCE_EXTS:
+            continue
+        try:
+            mtime_ns = p.stat().st_mtime_ns
+        except OSError:
+            continue
+        if best is None or mtime_ns > best[0]:
+            best = (mtime_ns, p)
+    return best[1] if best is not None else None
+
 
 def _is_memory_document(relative_path: str) -> bool:
     rel = (relative_path or "").strip().replace("\\", "/")
@@ -573,6 +596,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                     "modify a specific picture—including one previously saved under workspace/generated_images/. "
                     "Provide exactly one source: either source_image_relative_path (file under workspace, e.g. "
                     "generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). "
+                    "If both are omitted, it will auto-use the most recent image file under generated_images/. "
                     "**Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** "
                     "appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, "
                     "not to replace the agreed face. "
@@ -595,7 +619,8 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "description": (
                                 "Workspace-relative path to an image file (jpg/png/webp/gif). "
                                 "Use e.g. generated_images/... from a prior generate_image result. "
-                                "Omit if using source_image_url."
+                                "Omit if using source_image_url; if both source fields are omitted, "
+                                "the latest image under generated_images/ is used."
                             ),
                         },
                         "source_image_url": {
@@ -755,6 +780,13 @@ async def _dispatch(
             if not src_path.is_file():
                 return f"ERROR: source image not found or not a file: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
+        if src_path is None and src_url_out is None:
+            src_path = _latest_generated_image_under_workspace(root)
+            if src_path is None:
+                return (
+                    "ERROR: modify_image requires source_image_relative_path or source_image_url; "
+                    "also found no fallback image under generated_images/"
+                )
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"

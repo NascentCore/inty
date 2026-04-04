@@ -103,6 +103,20 @@
 - 建立 HTTP status 与业务错误码映射规范。
 - 日志中补齐请求关联标识，便于追踪。
 
+完成情况（2026-04-02）：
+
+- 状态：DONE（第一批）
+- 已交付：`app/schemas/response.py` 新增 `APIErrorResponse` 统一错误响应模型（`code/message/details/request_id`）
+- 已交付：`app/middleware/error_handler.py` 新增统一错误响应封装、`HTTP_STATUS_ERROR_CODE_MAP` 状态码映射、`http_exception_handler`、`unhandled_exception_handler`
+- 已交付：`app/api/utils/logger_route.py` 将 `request_id` 写入 `request.state`，错误响应可复用同一请求标识
+- 已交付：`backend/inty/main.py` 注册统一 HTTP 异常与兜底异常处理器
+- 已交付：`backend/docs/API_ERROR_RESPONSE_CONTRACT.md` 错误响应契约与映射表文档
+- 已交付：`tests/app/api/test_error_handler_contract.py` 覆盖 `HTTPException/RequestValidationError/Unhandled Exception` 三类错误响应壳
+- PR 审阅：`#2750` 已完成自审，结论为可合并（本批次仅统一异常路径，不变更业务错误壳 `APIResponse`）
+- 验证：
+  - `.venv/bin/pytest tests/app/api/test_error_handler_contract.py -q`（通过）
+  - `.venv/bin/pytest tests/app/api/v1/endpoints/test_chats.py -k "test_update_chat_settings_rejects_non_gemini_voice_id" -q`（通过）
+
 交付物：
 
 - 统一错误处理中间件或公共封装
@@ -112,6 +126,24 @@
 
 - 接入 Trace/Metrics/Logs 方案。
 - 打通 `x-request-id` 全链路传递。
+
+完成情况（2026-04-04）：
+
+- 状态：DONE（第一批）
+- 已交付：`app/middleware/observability.py` 新增可观测性中间件，统一注入/透传 `x-request-id`，并暴露 Prometheus 指标（`http_requests_total`、`http_request_duration_seconds`）
+- 已交付：`backend/inty/main.py` 接入 `ObservabilityMiddleware`，新增 `GET /metrics` 端点
+- 已交付：`app/api/utils/logger_route.py` 优先复用请求头/中间件中的 `request_id`，并在成功响应回写 `x-request-id`
+- 已交付：`tests/app/features/test_observability.py` 新增端到端验证（`x-request-id` 透传与 `/metrics` 输出）
+- 已交付：`tests/docs/TEST_STEPS_BACKEND_OBSERVABILITY_REQUEST_ID_METRICS.md` 测试步骤沉淀
+- PR 审阅：本次改动已完成自审，结论为可合并（后续可在下一批接入分布式 Trace 与仪表盘）
+- 审阅问题修复（2026-04-04）：
+  - 指标高基数风险修复：未命中路由指标标签从原始 URL 改为固定值 `__unmatched__`
+  - `/metrics` 暴露面收敛：仅 `debug=true` 或 `environment=test` 时可访问，其他环境返回 404
+- 验证：
+  - `.venv/bin/pytest -q tests/app/features/test_observability.py`（通过）
+  - `curl -i -H "x-request-id: e2e-obsv-req-id" http://localhost:8000/`（响应头透传通过）
+  - `curl -s http://localhost:8000/metrics`（包含 `http_requests_total` 与 `http_request_duration_seconds`）
+  - `curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8002/metrics`（prod-like 配置下返回 404）
 
 交付物：
 
@@ -239,7 +271,8 @@
 | --- | --- | --- | --- | --- |
 | Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `.venv/bin/python scripts/check_layer_dependencies.py` + injected violation check |
 | DI unification | Cursor Agent | DONE (batch 1) | `app/api/deps.py` + `app/api/v1/endpoints/chat.py` + `app/api/v1/endpoints/chats.py` Depends 注入落地 | targeted `test_chat.py` + `test_chats.py` regression |
-| Error model unification | TBD | TODO | Unified error envelope | API snapshot tests |
+| Error model unification | Cursor Agent | DONE (batch 1) | `APIErrorResponse` + global exception handlers + `HTTP_STATUS_ERROR_CODE_MAP` + error response contract doc | `test_error_handler_contract.py` + targeted chats regression |
+| Observability baseline | Cursor Agent | DONE (batch 1) | `app/middleware/observability.py` + `backend/inty/main.py` `/metrics` + request-id propagation | `test_observability.py` + curl `x-request-id` + `/metrics` |
 | Async blocking fixes | TBD | TODO | to_thread/async wrappers | Load test metrics |
 | Query and pagination optimization | TBD | TODO | N+1 and cursor migration | Query count + latency |
 | Report compatibility cleanup | TBD | TODO | reason_codes-only write path | Report API tests |

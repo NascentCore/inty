@@ -70,8 +70,18 @@ class _FakeCompletionsSideEffectOnly:
 
 
 class _FakeCompletionsNoToolCalls:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
     def create(self, **kwargs: object) -> SimpleNamespace:
         model = str(kwargs["model"])
+        self.calls.append(
+            {
+                "model": model,
+                "tools": kwargs.get("tools"),
+                "tool_choice": kwargs.get("tool_choice"),
+            }
+        )
         if model == "chat-fast":
             return _resp_text("chat-fast-r1")
         if model == "tool-smart":
@@ -97,6 +107,34 @@ class _FakeCompletionsImageBg:
                     tool_args='{"prompt":"sunrise portrait"}',
                 )
             return _resp_text("tool-final-image-r2")
+        raise AssertionError(f"unexpected model: {model}")
+
+
+class _ChatBranchNoneRejected(Exception):
+    pass
+
+
+class _FakeCompletionsChatNoneRejected:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def create(self, **kwargs: object) -> SimpleNamespace:
+        model = str(kwargs["model"])
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
+        self.calls.append(
+            {
+                "model": model,
+                "tools": tools,
+                "tool_choice": tool_choice,
+            }
+        )
+        if model == "chat-fast":
+            if tool_choice == "none":
+                raise _ChatBranchNoneRejected("tool_choice none rejected")
+            return _resp_text("chat-fast-fallback-r1")
+        if model == "tool-smart":
+            return _resp_text("tool-no-calls-r1")
         raise AssertionError(f"unexpected model: {model}")
 
 
@@ -260,9 +298,8 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertIn("/tmp/z_image_1.jpeg", rows[2].content)
 
     def test_no_tool_calls_does_not_append_background_transcript(self) -> None:
-        fake_client = SimpleNamespace(
-            chat=SimpleNamespace(completions=_FakeCompletionsNoToolCalls()),
-        )
+        fake_completions = _FakeCompletionsNoToolCalls()
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=fake_completions))
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._init_workspace(root)
@@ -304,6 +341,10 @@ class TestAsyncToolBackground(unittest.TestCase):
                 time.sleep(0.1)
                 events = pop_output_events_nowait(workspace=root)
                 self.assertEqual(events, [])
+                chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
+                self.assertGreaterEqual(len(chat_calls), 1)
+                self.assertIsNotNone(chat_calls[0]["tools"])
+                self.assertEqual(chat_calls[0]["tool_choice"], "none")
 
             rows = load_transcript((root / "transcript.jsonl"))
             self.assertEqual([r.role for r in rows], ["user", "assistant"])
@@ -311,6 +352,60 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertEqual(rows[1].reply_to, rows[0].uuid)
             self.assertTrue(rows[0].trace_id)
             self.assertEqual(rows[1].trace_id, rows[0].trace_id)
+
+    def test_chat_branch_tool_choice_none_rejected_falls_back_to_no_tools(self) -> None:
+        fake_completions = _FakeCompletionsChatNoneRejected()
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=fake_completions))
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._init_workspace(root)
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
+                patch.object(orchestrator, "chat_model", return_value="chat-fast"),
+                patch.object(orchestrator, "tool_model", return_value="tool-smart"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator, "schedule_memory_update_after_turn", return_value=None
+                ),
+                patch.object(orchestrator, "BadRequestError", _ChatBranchNoneRejected),
+                patch.dict(
+                    os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False
+                ),
+            ):
+                out = asyncio.run(
+                    orchestrator.run_turn(
+                        root,
+                        "你好",
+                        heartbeat_turn=False,
+                        llm_trace=False,
+                    )
+                )
+                self.assertEqual(out, "chat-fast-fallback-r1")
+
+            chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
+            self.assertGreaterEqual(len(chat_calls), 2)
+            self.assertEqual(chat_calls[0]["tool_choice"], "none")
+            self.assertEqual(chat_calls[1]["tool_choice"], None)
+            self.assertIsNotNone(chat_calls[0]["tools"])
+            self.assertEqual(chat_calls[1]["tools"], None)
+
+            rows = load_transcript((root / "transcript.jsonl"))
+            self.assertEqual([r.role for r in rows], ["user", "assistant"])
+            self.assertEqual(rows[1].content, "chat-fast-fallback-r1")
 
 
 class TestForceToolsHint(unittest.TestCase):
@@ -346,6 +441,30 @@ class TestLocalPathDisplay(unittest.TestCase):
         self.assertIn("模型正文", t)
         self.assertIn("（生成图片本地路径）", t)
         self.assertIn("/tmp/z_image_1.jpeg", t)
+
+    def test_background_log_records_generated_image_uris(self) -> None:
+        from inty_v2_text_chat_prototype.tool_background import _append_background_log
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _append_background_log(
+                root,
+                user_msg_uuid="u1",
+                assistant_msg_uuid="a1",
+                elapsed_ms=9,
+                rounds=2,
+                tool_calls_count=1,
+                generated_image_uris=[
+                    "file:///tmp/a.png",
+                    "https://example.com/b.jpg",
+                ],
+            )
+            body = (root / "tool_background.jsonl").read_text(encoding="utf-8")
+            self.assertIn('"kind": "tool_background_done"', body)
+            self.assertIn(
+                '"generated_image_uris": ["file:///tmp/a.png", "https://example.com/b.jpg"]',
+                body,
+            )
 
 
 class TestToolTextResponseTags(unittest.TestCase):
