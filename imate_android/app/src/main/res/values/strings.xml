@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iMate</string>
+    <string name="login_title">iMate - Agentic Companion</string>
+    <string name="login_google">Google Login</string>
+    <string name="login_google_cn">Google 登录</string>
+    <string name="login_email_password">Email + Password (Reviewer)</string>
+    <string name="login_email_password_cn">邮箱+密码登录(审核员)</string>
+    <string name="email_label">Email</string>
+    <string name="email_label_cn">邮箱</string>
+    <string name="password_label">Password</string>
+    <string name="password_label_cn">密码</string>
+    <string name="login_button">Login</string>
+    <string name="login_button_cn">登录</string>
+    <string name="logout_button">Logout</string>
+    <string name="logout_button_cn">退出登录</string>
+    <string name="chat_title">Official Assistant</string>
+    <string name="chat_title_cn">官方助手</string>
+    <string name="chat_input_hint">Type a message</string>
+    <string name="chat_input_hint_cn">输入消息</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_send_cn">发送</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_title_cn">设置</string>
+    <string name="settings_clear_chat">Clear chat history</string>
+    <string name="settings_clear_chat_cn">清空聊天记录</string>
+    <string name="settings_official_assistant">Official assistant mode</string>
+    <string name="settings_official_assistant_cn">官方助手模式</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_chat_cn">聊天</string>
+    <string name="nav_settings_cn">设置</string>
+    <string name="login_error_invalid">Invalid email/password combination</string>
+    <string name="login_error_invalid_cn">邮箱或密码错误</string>
+    <string name="login_error_empty">Email and password are required</string>
+    <string name="login_error_empty_cn">邮箱和密码不能为空</string>
+    <string name="official_assistant_enabled">Official assistant enabled</string>
+    <string name="official_assistant_enabled_cn">官方助手已启用</string>
+    <string name="official_assistant_disabled">Official assistant disabled</string>
+    <string name="official_assistant_disabled_cn">官方助手已关闭</string>
+    <string name="role_user">User</string>
+    <string name="role_user_cn">用户</string>
+    <string name="role_official_assistant">Official Assistant</string>
+    <string name="role_official_assistant_cn">官方助手</string>
+    <string name="settings_user_label">User</string>
+    <string name="settings_user_label_cn">用户</string>
+</resources>

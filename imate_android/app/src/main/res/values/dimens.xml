@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="space_xs">8dp</dimen>
+    <dimen name="space_sm">12dp</dimen>
+    <dimen name="space_md">16dp</dimen>
+    <dimen name="space_lg">24dp</dimen>
+    <dimen name="field_height">56dp</dimen>
+    <dimen name="button_height">52dp</dimen>
+    <dimen name="card_radius">14dp</dimen>
+</resources>
