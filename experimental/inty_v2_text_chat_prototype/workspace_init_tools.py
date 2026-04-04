@@ -541,9 +541,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                         },
                         "task_text": {
                             "type": "string",
-                            "description": (
-                                "Reminder text to execute at that time."
-                            ),
+                            "description": ("Reminder text to execute at that time."),
                         },
                     },
                     "required": ["exec_time_utc", "task_text"],
@@ -644,7 +642,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "type": "string",
                             "description": (
                                 "The exact output-format instruction to enforce for chat-branch replies. "
-                                "Example: '必须输出 JSON: {\"reply\":\"...\"}'."
+                                'Example: \'必须输出 JSON: {"reply":"..."}\'.'
                             ),
                         }
                     },

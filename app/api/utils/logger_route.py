@@ -42,7 +42,9 @@ class LoggerRoute(APIRoute):
             if state_request_id:
                 request_id = str(state_request_id)
             else:
-                request_id = request.headers.get("x-request-id") or str(uuid.uuid4())[:8]
+                request_id = (
+                    request.headers.get("x-request-id") or str(uuid.uuid4())[:8]
+                )
                 request.state.request_id = request_id
 
             # Use contextualize to add request_id to all logs in this request context

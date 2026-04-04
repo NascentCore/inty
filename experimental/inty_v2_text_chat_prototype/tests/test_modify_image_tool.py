@@ -159,7 +159,9 @@ class TestModifyImageTool(unittest.TestCase):
             p.write_bytes(b"\xff\xd8\xff\xd9")
             src_asset_id = "src-asset-1"
             src_revision = "rev-source-1"
-            with (root / "generated_images/index.jsonl").open("a", encoding="utf-8") as f:
+            with (root / "generated_images/index.jsonl").open(
+                "a", encoding="utf-8"
+            ) as f:
                 f.write(
                     json.dumps(
                         {

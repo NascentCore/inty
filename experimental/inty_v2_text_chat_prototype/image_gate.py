@@ -71,7 +71,9 @@ def _load_state(root: Path) -> dict[str, Any]:
 
 
 def _save_state(root: Path, state: dict[str, Any]) -> None:
-    write_text_atomic(_state_path(root), json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    write_text_atomic(
+        _state_path(root), json.dumps(state, ensure_ascii=False, indent=2) + "\n"
+    )
 
 
 def _read_profile_doc(root: Path, relative_path: str) -> str:
@@ -96,7 +98,9 @@ def _core_profile_payload(root: Path) -> dict[str, str]:
 
 def compute_persona_revision_id(root: Path) -> str:
     payload = _core_profile_payload(root)
-    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
@@ -117,7 +121,9 @@ def prepare_image_gate_for_turn(root: Path, user_text: str) -> None:
         pending["confirmed_at"] = utc_iso_ts()
         state["pending_confirmation"] = pending
 
-    requires_persist = bool(_PROFILE_CHANGE_HINT_RE.search(txt) and _IMAGE_REQUEST_HINT_RE.search(txt))
+    requires_persist = bool(
+        _PROFILE_CHANGE_HINT_RE.search(txt) and _IMAGE_REQUEST_HINT_RE.search(txt)
+    )
     state["turn_guard"] = {
         "turn_id": str(uuid.uuid4()),
         "requires_profile_persist_before_image": requires_persist,
@@ -263,12 +269,19 @@ def _normalize_relative_path_for_index(path: str) -> str:
     return (path or "").strip().replace("\\", "/")
 
 
-def find_latest_asset_by_local_relative_path(root: Path, relative_path: str) -> dict[str, Any] | None:
+def find_latest_asset_by_local_relative_path(
+    root: Path, relative_path: str
+) -> dict[str, Any] | None:
     target = _normalize_relative_path_for_index(relative_path)
     if not target:
         return None
     for row in reversed(list_image_asset_records(root)):
-        if _normalize_relative_path_for_index(str(row.get("local_path_relative") or "")) == target:
+        if (
+            _normalize_relative_path_for_index(
+                str(row.get("local_path_relative") or "")
+            )
+            == target
+        ):
             return row
     return None
 

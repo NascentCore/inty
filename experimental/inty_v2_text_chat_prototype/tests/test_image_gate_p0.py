@@ -33,7 +33,9 @@ class TestImageGateP0(unittest.TestCase):
         (root / "MEMORY.md").write_text("# M\n", encoding="utf-8")
         (root / "transcript.jsonl").write_text("", encoding="utf-8")
 
-    def test_requires_profile_persist_before_image_when_same_turn_mentions_both(self) -> None:
+    def test_requires_profile_persist_before_image_when_same_turn_mentions_both(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._init_workspace(root)
@@ -94,7 +96,9 @@ class TestImageGateP0(unittest.TestCase):
 
             # choose regenerate
             prepare_image_gate_for_turn(root, "按新设定重生图")
-            self.assertIsNone(check_image_tool_allowed(root, tool_name="generate_image"))
+            self.assertIsNone(
+                check_image_tool_allowed(root, tool_name="generate_image")
+            )
             err3 = check_image_tool_allowed(root, tool_name="modify_image")
             self.assertIsNotNone(err3)
             assert err3 is not None
@@ -106,7 +110,9 @@ class TestImageGateP0(unittest.TestCase):
             self._init_workspace(root)
             prepare_image_gate_for_turn(root, "修改设定")
             register_profile_write(root, "IDENTITY.md", changed=False)
-            self.assertIsNone(check_image_tool_allowed(root, tool_name="generate_image"))
+            self.assertIsNone(
+                check_image_tool_allowed(root, tool_name="generate_image")
+            )
 
             # Ensure state file remains valid JSON
             state_path = root / ".inty_v2_image_gate.json"
