@@ -692,6 +692,7 @@ export interface UserAnalyticsStatsResponse {
   total_new_users: number;
   total_chat_initiators: number;
   total_user_messages: number;
+  total_ai_messages?: number;
   total_active_sessions: number;
   total_voice_requests: number;
   // 用户维度（仅统计发送聊天的用户）

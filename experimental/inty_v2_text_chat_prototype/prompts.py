@@ -40,6 +40,16 @@ def _output_contract_text() -> str:
     )
 
 
+def _output_contract_text_chat_branch_mirrored_tools() -> str:
+    return (
+        "输出通道：仅自然语言文本快速回复。你会看到与并行工具路相同的工具定义，"
+        "这些工具仅用于让你感知另一路会处理哪些任务；本路禁止调用任何工具。"
+        "当用户请求生图、改图、联网检索、文件核对等工具型任务时，不要拒绝，"
+        "不要宣称已完成或编造结果；请用一句简短自然的话承接并说明正在处理，"
+        "等待并行工具路产出结果后补充。保持简洁有温度，避免机械列表堆砌。"
+    )
+
+
 def _repl_tool_contract_image_generation_clause() -> str:
     """Clause (6): generate_image / modify_image — only for the tool-side LLM in dual-path REPL."""
     return (
@@ -70,6 +80,9 @@ def _output_contract_text_with_user_profile_tool() -> str:
     return (
         "输出与工具："
         "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
+        "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
+        "task_text 写提醒内容；禁止只口头答应而不落盘。"
         "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
         "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
         "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
@@ -151,12 +164,11 @@ def build_system_prompt(
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
     # 完整契约：仅当挂载用户档案/工作区工具且非心跳、且本路需生图条款（双路 REPL 的 tool 分支）。
     # 其余（无工具 API、心跳、双路 chat 支路不注入工具说明）均用简短输出契约。
-    if (
-        enable_user_profile_tool
-        and not heartbeat_turn
-        and include_repl_image_generation_contract
-    ):
-        parts.append(_output_contract_text_with_user_profile_tool())
+    if enable_user_profile_tool and not heartbeat_turn:
+        if include_repl_image_generation_contract:
+            parts.append(_output_contract_text_with_user_profile_tool())
+        else:
+            parts.append(_output_contract_text_chat_branch_mirrored_tools())
     else:
         parts.append(_output_contract_text())
     return SYSTEM_PROMPT_SEP.join(parts)

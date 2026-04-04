@@ -27,6 +27,7 @@ from .fal_z_image_tool import (
 from .file_store import read_text, write_text
 from .memory_store_registry import get_memory_store
 from .google_web_search import run_google_web_search
+from .schedule_queue import add_schedule_task
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
@@ -47,6 +48,29 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "USER.md",
     }
 )
+
+_MODIFY_IMAGE_SOURCE_EXTS: frozenset[str] = frozenset(
+    {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+)
+
+
+def _latest_generated_image_under_workspace(root: Path) -> Path | None:
+    generated_dir = root.resolve() / "generated_images"
+    if not generated_dir.is_dir():
+        return None
+    best: tuple[int, Path] | None = None
+    for p in generated_dir.iterdir():
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in _MODIFY_IMAGE_SOURCE_EXTS:
+            continue
+        try:
+            mtime_ns = p.stat().st_mtime_ns
+        except OSError:
+            continue
+        if best is None or mtime_ns > best[0]:
+            best = (mtime_ns, p)
+    return best[1] if best is not None else None
 
 
 def _is_memory_document(relative_path: str) -> bool:
@@ -72,6 +96,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
+        "schedule_task",
         "google_web_search",
         "generate_image",
         "modify_image",
@@ -244,6 +269,18 @@ def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
     return f"OK mkdir {relative_path}"
 
 
+def tool_schedule_task(root: Path, exec_time_utc: str, task_text: str) -> str:
+    task = add_schedule_task(
+        root,
+        exec_time_utc=exec_time_utc,
+        task_text=task_text,
+    )
+    return (
+        "OK scheduled task "
+        f"id={task.id} exec_time_utc={task.exec_time_utc} text={task.task_text}"
+    )
+
+
 def build_openai_tools() -> list[dict[str, Any]]:
     """OpenAI Chat Completions `tools` 列表。"""
     return [
@@ -380,6 +417,39 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "schedule_task",
+                "description": (
+                    "Persist a timed reminder task into the local schedule queue. "
+                    "Use when the user explicitly asks for a reminder/timer/alarm at a future time. "
+                    "exec_time_utc must be an absolute timestamp with timezone offset (ISO8601); "
+                    "prefer UTC (e.g. 2026-04-03T05:30:00+00:00). "
+                    "task_text should be the concise reminder content shown at trigger time."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "exec_time_utc": {
+                            "type": "string",
+                            "description": (
+                                "Absolute execution timestamp with timezone offset. "
+                                "Example: 2026-04-03T05:30:00+00:00"
+                            ),
+                        },
+                        "task_text": {
+                            "type": "string",
+                            "description": (
+                                "Reminder text to execute at that time."
+                            ),
+                        },
+                    },
+                    "required": ["exec_time_utc", "task_text"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     ]
 
 
@@ -395,6 +465,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     }
     names = (
         "user_profile_record",
+        "schedule_task",
         "workspace_list_dir",
         "workspace_read_file",
         "workspace_write_file",
@@ -439,6 +510,17 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                 + ". When the user explicitly asks to change how you relate, boundaries, or "
                 "persistent preferences, read the current file first (e.g. SOUL.md, USER.md), "
                 "then write the full updated content. Do not use for transcript.jsonl or context.json."
+            )
+            w["function"] = wfn
+            out.append(w)
+        elif n == "schedule_task":
+            w = dict(t)
+            wfn = dict(w["function"])
+            wfn["description"] = (
+                "Persist a timed reminder task into the durable local schedule queue. "
+                "Use only when user explicitly requests a reminder/timer/alarm at a future time. "
+                "You must pass an absolute ISO8601 timestamp with timezone offset in exec_time_utc "
+                "(prefer UTC)."
             )
             w["function"] = wfn
             out.append(w)
@@ -544,6 +626,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                     "modify a specific picture—including one previously saved under workspace/generated_images/. "
                     "Provide exactly one source: either source_image_relative_path (file under workspace, e.g. "
                     "generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). "
+                    "If both are omitted, it will auto-use the most recent image file under generated_images/. "
                     "**Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** "
                     "appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, "
                     "not to replace the agreed face. "
@@ -566,7 +649,8 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "description": (
                                 "Workspace-relative path to an image file (jpg/png/webp/gif). "
                                 "Use e.g. generated_images/... from a prior generate_image result. "
-                                "Omit if using source_image_url."
+                                "Omit if using source_image_url; if both source fields are omitted, "
+                                "the latest image under generated_images/ is used."
                             ),
                         },
                         "source_image_url": {
@@ -642,6 +726,21 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "schedule_task":
+        raw_exec_time = arguments.get("exec_time_utc")
+        raw_task_text = arguments.get("task_text")
+        if not isinstance(raw_exec_time, str):
+            return "ERROR: exec_time_utc must be a string"
+        if not isinstance(raw_task_text, str):
+            return "ERROR: task_text must be a string"
+        try:
+            return tool_schedule_task(
+                root,
+                exec_time_utc=raw_exec_time,
+                task_text=raw_task_text,
+            )
+        except ValueError as exc:
+            return f"ERROR: {exc}"
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):
@@ -726,6 +825,13 @@ async def _dispatch(
             if not src_path.is_file():
                 return f"ERROR: source image not found or not a file: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
+        if src_path is None and src_url_out is None:
+            src_path = _latest_generated_image_under_workspace(root)
+            if src_path is None:
+                return (
+                    "ERROR: modify_image requires source_image_relative_path or source_image_url; "
+                    "also found no fallback image under generated_images/"
+                )
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
