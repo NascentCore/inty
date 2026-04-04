@@ -99,7 +99,6 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                 out = run_workspace_bootstrap_loop(
                     root,
                     "hello",
-                    companion_type="朋友",
                     max_rounds=4,
                     on_tool=lambda n, a: tool_calls.append((n, a)),
                     llm_trace=False,
@@ -138,36 +137,6 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                         max_rounds=2,
                         llm_trace=False,
                     )
-
-    def test_bootstrap_accepts_custom_companion_type(self) -> None:
-        fake_client = SimpleNamespace(
-            chat=SimpleNamespace(completions=_FakeBootstrapNoTools())
-        )
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            with (
-                patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client_dual_llm_tool",
-                    return_value=fake_client,
-                ),
-                patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.default_model",
-                    return_value="fake-model",
-                ),
-                patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.build_openai_tools",
-                    return_value=[{"type": "function"}],
-                ),
-            ):
-                with self.assertRaises(RuntimeError):
-                    run_workspace_bootstrap_loop(
-                        root,
-                        "hello",
-                        companion_type="同事",
-                        max_rounds=1,
-                        llm_trace=False,
-                    )
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -33,13 +33,7 @@ source experimental/inty_v2_text_chat_prototype/.venv/bin/activate
 python experimental/inty_v2_text_chat_prototype/main.py repl --workspace experimental/inty_v2_text_chat_prototype/_ws
 ```
 
-可选：用 `--companion-type` 指定关系类型（内置模版：`伴侣` / `朋友` / `爱人` / `亲人`，也支持 `partner` / `friend` / `lover` / `family`）。输入其他值时会按“自定义关系类型”处理。
-
-```bash
-python experimental/inty_v2_text_chat_prototype/main.py bootstrap-agent \
-  --workspace experimental/inty_v2_text_chat_prototype/_ws_friend \
-  --companion-type 朋友
-```
+bootstrap 阶段会由 AI 自然询问并确认用户期望的 companionship 类型（如朋友/爱人/亲人/自定义），无需命令行强制指定。
 
 `--workspace` 使用相对**仓库根**的路径。`load_prototype_dotenv()` 会读取 cwd 的 `.env` 以及包目录下的 `.env`，因此在根目录启动时仍能加载 `experimental/inty_v2_text_chat_prototype/.env` 里的 API Key。
 
