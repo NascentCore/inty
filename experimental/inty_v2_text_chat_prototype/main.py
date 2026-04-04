@@ -26,6 +26,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from experimental.inty_v2_text_chat_prototype.client import load_prototype_dotenv
+from experimental.inty_v2_text_chat_prototype.client import OpenRouterInvalidJsonError
 
 load_prototype_dotenv()
 
@@ -117,6 +118,10 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
 
 
+def _print_openrouter_invalid_json_retry_hint() -> None:
+    print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+
+
 def _flush_and_shutdown_memory_store(root: Path) -> None:
     flush_memory_store(root, timeout_s=5.0)
     flush_jsonl_db_store(timeout_s=5.0)
@@ -176,7 +181,21 @@ def _repl_drain_user_turns(
                 )
                 print("> ", end="", flush=True)
             t0 = time.perf_counter()
-            out = run_turn_sync(cur)
+            try:
+                out = run_turn_sync(cur)
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning("repl turn recovered from invalid OpenRouter JSON: {}", exc)
+                _print_openrouter_invalid_json_retry_hint()
+                print("> ", end="", flush=True)
+                try:
+                    item = pending.get_nowait()
+                except queue.Empty:
+                    return True
+                if item is None:
+                    print()
+                    return False
+                cur, cur_echoed = item
+                continue
             _print_assistant_reply(out, time.perf_counter() - t0)
             _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
@@ -734,25 +753,41 @@ def repl(
                 "repl startup branch=bootstrap_auto_init (workspace not initialized)"
             )
             t0 = time.perf_counter()
-            out = run_workspace_bootstrap_loop(
-                ws,
-                _repl_silent_init_user_message(),
-                llm_trace=True,
-            )
+            try:
+                out = run_workspace_bootstrap_loop(
+                    ws,
+                    _repl_silent_init_user_message(),
+                    llm_trace=True,
+                )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl startup bootstrap recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                return
             _print_assistant_reply(out, time.perf_counter() - t0)
         elif needs_startup_profile_inquiry(ws):
             logger.debug(
                 "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
             )
             t0 = time.perf_counter()
-            out = asyncio.run(
-                run_turn(
-                    ws,
-                    _repl_startup_profile_inquiry_user_message(),
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
+            try:
+                out = asyncio.run(
+                    run_turn(
+                        ws,
+                        _repl_startup_profile_inquiry_user_message(),
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                    )
                 )
-            )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl startup profile inquiry recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                return
             _print_assistant_reply(out, time.perf_counter() - t0)
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")

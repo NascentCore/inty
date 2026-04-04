@@ -49,6 +49,16 @@ def _chat_output_format_contract_text(output_format_prompt: str) -> str:
     )
 
 
+def _output_contract_text_chat_branch_mirrored_tools() -> str:
+    return (
+        "输出通道：仅自然语言文本快速回复。你会看到与并行工具路相同的工具定义，"
+        "这些工具仅用于让你感知另一路会处理哪些任务；本路禁止调用任何工具。"
+        "当用户请求生图、改图、联网检索、文件核对等工具型任务时，不要拒绝，"
+        "不要宣称已完成或编造结果；请用一句简短自然的话承接并说明正在处理，"
+        "等待并行工具路产出结果后补充。保持简洁有温度，避免机械列表堆砌。"
+    )
+
+
 def _repl_tool_contract_image_generation_clause() -> str:
     """Clause (6): generate_image / modify_image — only for the tool-side LLM in dual-path REPL."""
     return (
@@ -161,12 +171,11 @@ def build_system_prompt(
         parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
     # 完整契约：仅当挂载用户档案/工作区工具且非心跳、且本路需生图条款（双路 REPL 的 tool 分支）。
     # 其余（无工具 API、心跳、双路 chat 支路不注入工具说明）均用简短输出契约。
-    if (
-        enable_user_profile_tool
-        and not heartbeat_turn
-        and include_repl_image_generation_contract
-    ):
-        parts.append(_output_contract_text_with_user_profile_tool())
+    if enable_user_profile_tool and not heartbeat_turn:
+        if include_repl_image_generation_contract:
+            parts.append(_output_contract_text_with_user_profile_tool())
+        else:
+            parts.append(_output_contract_text_chat_branch_mirrored_tools())
     else:
         parts.append(_output_contract_text())
     chat_output = (chat_output_format_prompt or "").strip()
