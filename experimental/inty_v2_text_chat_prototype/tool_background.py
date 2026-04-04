@@ -27,6 +27,7 @@ from .utc import local_date_str, utc_iso_ts
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     execute_tool_call,
+    tool_text_response_include_in_chat,
     openai_assistant_message_dict,
 )
 
@@ -92,6 +93,26 @@ def _append_local_image_paths_for_display(assistant_text: str, paths: list[str])
     if not assistant_text:
         return suffix.strip()
     return assistant_text.rstrip() + suffix
+
+
+def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
+    """Collect tool function names from assistant tool_call messages in order."""
+    names: list[str] = []
+    for m in messages:
+        if m.get("role") != "assistant":
+            continue
+        for tc in m.get("tool_calls") or []:
+            if not isinstance(tc, dict):
+                continue
+            fn = tc.get("function")
+            if not isinstance(fn, dict):
+                continue
+            raw = fn.get("name")
+            if isinstance(raw, str):
+                n = raw.strip()
+                if n:
+                    names.append(n)
+    return names
 
 
 def _insert_system_message(
@@ -406,14 +427,19 @@ async def _run_background_tool_loop(
     image_paths = _local_paths_from_tool_messages(loop_result.messages)
     display_text = _append_local_image_paths_for_display(assistant_text, image_paths)
     elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
-    # 仅当工具链路产出显式非文本数据（当前为图片本地路径）时，才向用户补发 tool_bg。
-    # 纯副作用工具（如 user_profile_record / workspace_write_file）避免二次近似文本回复。
-    if not image_paths:
+    tool_call_names = _extract_tool_call_names(loop_result.messages)
+    include_text_reply = any(
+        tool_text_response_include_in_chat(name) for name in tool_call_names
+    )
+    # 显式按工具 tag 决定是否补发 tool_bg 文本；无 tag 视为不回传到 chat。
+    # 仍允许非文本产物（如图片 local_path）追加到展示文本中。
+    if not include_text_reply:
         logger.debug(
-            "repl.turn.bg suppress_user_visible_output no_explicit_non_text_data "
-            "trace_id={} user_msg_uuid={}",
+            "repl.turn.bg suppress_user_visible_output missing_text_response_include_tag "
+            "trace_id={} user_msg_uuid={} tool_calls={}",
             trace_id,
             user_msg_uuid,
+            ",".join(tool_call_names),
         )
         return
     assistant_msg_uuid = str(uuid.uuid4())

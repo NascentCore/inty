@@ -26,6 +26,10 @@ from inty_v2_text_chat_prototype.tool_background import (
     clear_output_queue,
     pop_output_events_nowait,
 )
+from inty_v2_text_chat_prototype.workspace_init_tools import (
+    TEXT_RESPONSE_INCLUDE_IN_CHAT,
+    tool_text_response_should_include_in_chat,
+)
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -342,6 +346,32 @@ class TestLocalPathDisplay(unittest.TestCase):
         self.assertIn("模型正文", t)
         self.assertIn("（生成图片本地路径）", t)
         self.assertIn("/tmp/z_image_1.jpeg", t)
+
+
+class TestToolTextResponseTags(unittest.TestCase):
+    def test_tools_with_text_response_include_tag(self) -> None:
+        tagged = (
+            "workspace_list_dir",
+            "workspace_read_file",
+            "google_web_search",
+            "generate_image",
+            "modify_image",
+        )
+        for name in tagged:
+            self.assertTrue(tool_text_response_should_include_in_chat(name), name)
+
+    def test_tools_without_tag(self) -> None:
+        untagged = (
+            "user_profile_record",
+            "workspace_write_file",
+            "workspace_mkdir",
+            "unknown_tool_name",
+        )
+        for name in untagged:
+            self.assertFalse(tool_text_response_should_include_in_chat(name), name)
+
+    def test_constant_name(self) -> None:
+        self.assertEqual(TEXT_RESPONSE_INCLUDE_IN_CHAT, "TEXT_RESPONSE_INCLUDE_IN_CHAT")
 
 
 if __name__ == "__main__":

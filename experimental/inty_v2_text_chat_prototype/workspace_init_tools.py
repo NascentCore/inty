@@ -30,6 +30,16 @@ from .google_web_search import run_google_web_search
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
+TEXT_RESPONSE_INCLUDE_IN_CHAT = "TEXT_RESPONSE_INCLUDE_IN_CHAT"
+_TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
+    # 纯文本查询类工具：其输出应可直接进入对用户可见的 chat 文本。
+    "workspace_list_dir": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "workspace_read_file": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "google_web_search": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    # 多模态工具：完成后通常要在 chat 中给到文字总结与产物路径。
+    "generate_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "modify_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+}
 
 # workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
 WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
@@ -77,6 +87,20 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "modify_image",
     )
 )
+
+
+def tool_has_tag(tool_name: str, tag: str) -> bool:
+    tags = _TOOL_TAGS_BY_NAME.get(tool_name, frozenset())
+    return tag in tags
+
+
+def tool_text_response_include_in_chat(tool_name: str) -> bool:
+    return tool_has_tag(tool_name, TEXT_RESPONSE_INCLUDE_IN_CHAT)
+
+
+def tool_text_response_should_include_in_chat(tool_name: str) -> bool:
+    """Compatibility alias with explicit predicate naming."""
+    return tool_text_response_include_in_chat(tool_name)
 
 
 def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
@@ -251,6 +275,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "workspace_list_dir",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "List immediate children of a directory under the workspace root. "
                     "Use empty relative_path for the workspace root. "
@@ -273,6 +298,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "workspace_read_file",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Read a UTF-8 text file under the workspace. "
                     "Optional max_chars returns only the beginning of the file (prefix), "
@@ -449,6 +475,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "google_web_search",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Search the public web via Google Custom Search JSON API. "
                     "Use when the user needs current events, verifiable facts, or information "
@@ -479,6 +506,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "generate_image",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). "
                     "Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—"
@@ -538,6 +566,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "modify_image",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Edit or restyle an **existing** image using Fal z-image-turbo **image-to-image** "
                     "(not text-to-image). Use when the user asks to change, fix, recolor, restyle, or otherwise "
