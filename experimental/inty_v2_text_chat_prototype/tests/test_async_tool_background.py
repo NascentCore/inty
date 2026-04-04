@@ -75,6 +75,30 @@ class _FakeCompletionsNoToolCalls:
         raise AssertionError(f"unexpected model: {model}")
 
 
+class _FakeCompletionsChatSettingsTool:
+    def __init__(self) -> None:
+        self._chat_calls = 0
+        self._tool_calls = 0
+
+    def create(self, **kwargs: object) -> SimpleNamespace:
+        model = str(kwargs["model"])
+        if model == "chat-fast":
+            self._chat_calls += 1
+            if self._chat_calls == 1:
+                return _resp_tool(
+                    "",
+                    tool_name="tool_update_chat_settings",
+                    tool_args='{"settings_text":"不用括号，短句，少分段。"}',
+                )
+            if self._chat_calls == 2:
+                return _resp_text("收到，后续不用括号。")
+        if model == "tool-smart":
+            self._tool_calls += 1
+            if self._tool_calls == 1:
+                return _resp_text("tool-no-calls-r1")
+        raise AssertionError(f"unexpected model/call: {model}")
+
+
 class TestAsyncToolBackground(unittest.TestCase):
     def setUp(self) -> None:
         clear_output_queue()
@@ -219,6 +243,52 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertEqual(rows[1].reply_to, rows[0].uuid)
             self.assertTrue(rows[0].trace_id)
             self.assertEqual(rows[1].trace_id, rows[0].trace_id)
+
+    def test_chat_front_tool_update_chat_settings_updates_tools_md(self) -> None:
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakeCompletionsChatSettingsTool()),
+        )
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._init_workspace(root)
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
+                patch.object(orchestrator, "chat_model", return_value="chat-fast"),
+                patch.object(orchestrator, "tool_model", return_value="tool-smart"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator, "schedule_memory_update_after_turn", return_value=None
+                ),
+                patch.dict(
+                    os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False
+                ),
+            ):
+                out = asyncio.run(
+                    orchestrator.run_turn(
+                        root,
+                        "以后不要括号",
+                        heartbeat_turn=False,
+                        llm_trace=False,
+                    )
+                )
+                self.assertEqual(out, "收到，后续不用括号。")
+            tools_md = (root / "TOOLS.md").read_text(encoding="utf-8")
+            self.assertIn("## CHAT_SETTINGS（聊天格式元语义）", tools_md)
+            self.assertIn("不用括号，短句，少分段。", tools_md)
 
 
 class TestForceToolsHint(unittest.TestCase):

@@ -30,6 +30,9 @@ from .google_web_search import run_google_web_search
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
+_TOOLS_MD_REL = "TOOLS.md"
+_CHAT_SETTINGS_SECTION_PREFIX = "## CHAT_SETTINGS"
+_CHAT_SETTINGS_SECTION_TITLE = "## CHAT_SETTINGS（聊天格式元语义）"
 
 # workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
 WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
@@ -72,6 +75,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
+        "tool_update_chat_settings",
         "google_web_search",
         "generate_image",
         "modify_image",
@@ -152,6 +156,43 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
+
+
+def _replace_or_append_chat_settings_section(existing: str, settings_text: str) -> str:
+    lines = existing.splitlines()
+    start: int | None = None
+    for i, line in enumerate(lines):
+        if line.startswith(_CHAT_SETTINGS_SECTION_PREFIX):
+            start = i
+            break
+    if start is None:
+        base = existing.rstrip()
+        block = f"{_CHAT_SETTINGS_SECTION_TITLE}\n\n{settings_text.strip()}\n"
+        if not base:
+            return block
+        return base + "\n\n" + block
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if lines[j].startswith("## "):
+            end = j
+            break
+    replacement = [_CHAT_SETTINGS_SECTION_TITLE, "", settings_text.strip()]
+    merged = lines[:start] + replacement + lines[end:]
+    return "\n".join(merged).rstrip() + "\n"
+
+
+def tool_update_chat_settings(root: Path, settings_text: str) -> str:
+    """
+    更新 TOOLS.md 里的 CHAT_SETTINGS 小节，用于持久化聊天格式元语义。
+    """
+    settings = settings_text.strip()
+    if not settings:
+        return "ERROR: settings_text must be non-empty"
+    store = get_memory_store(root)
+    prev = store.read_document_if_exists(_TOOLS_MD_REL) or ""
+    merged = _replace_or_append_chat_settings_section(prev, settings)
+    store.write_document(_TOOLS_MD_REL, merged)
+    return f"OK updated {_TOOLS_MD_REL} CHAT_SETTINGS ({len(settings)} chars)"
 
 
 def resolve_under_workspace(root: Path, relative_path: str) -> Path:
@@ -380,6 +421,31 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_update_chat_settings",
+                "description": (
+                    "Modify chat format meta-semantics for future replies, such as punctuation style, "
+                    "parentheses preference, line-break rhythm, and response structure tone. "
+                    "This writes the durable setting into TOOLS.md."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "settings_text": {
+                            "type": "string",
+                            "description": (
+                                "Natural-language settings for chat format meta-semantics. "
+                                "Keep it concise and durable, e.g. '不用括号，短句，少分段。'"
+                            ),
+                        }
+                    },
+                    "required": ["settings_text"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     ]
 
 
@@ -395,6 +461,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     }
     names = (
         "user_profile_record",
+        "tool_update_chat_settings",
         "workspace_list_dir",
         "workspace_read_file",
         "workspace_write_file",
@@ -602,6 +669,39 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     return out
 
 
+def build_openai_chat_reply_tools() -> list[dict[str, Any]]:
+    """
+    chat 前台回复分支可用工具: 仅允许更新聊天格式元语义。
+    """
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_update_chat_settings",
+                "description": (
+                    "Modify chat format meta-semantics for future replies, such as punctuation style, "
+                    "parentheses preference, line-break rhythm, and response structure tone. "
+                    "This writes the durable setting into TOOLS.md."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "settings_text": {
+                            "type": "string",
+                            "description": (
+                                "Natural-language settings for chat format meta-semantics. "
+                                "Keep it concise and durable, e.g. '不用括号，短句，少分段。'"
+                            ),
+                        }
+                    },
+                    "required": ["settings_text"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    ]
+
+
 def _repl_write_allowed(
     root: Path, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:
@@ -642,6 +742,15 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "tool_update_chat_settings":
+        if write_allowlist is not None:
+            err = _repl_write_allowed(root, _TOOLS_MD_REL, write_allowlist)
+            if err is not None:
+                return err
+        raw = arguments.get("settings_text")
+        if not isinstance(raw, str):
+            return "ERROR: settings_text must be a string"
+        return tool_update_chat_settings(root, raw)
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):

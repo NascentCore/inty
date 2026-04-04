@@ -55,6 +55,7 @@ from .fal_z_image_tool import _reset_fal_async_client_after_short_lived_loop
 from .heartbeat_schedule import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
+    build_openai_chat_reply_tools,
     build_openai_repl_tools,
     execute_tool_call,
     openai_assistant_message_dict,
@@ -316,8 +317,11 @@ async def _run_turn_fast_chat_then_tool_background(
     chat_route_model = chat_model()
     tool_route_model = tool_model()
     tools = build_openai_repl_tools()
+    chat_tools = build_openai_chat_reply_tools()
     if not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
+    if not chat_tools:
+        raise RuntimeError("build_openai_chat_reply_tools() returned empty list")
     logger.info(
         "repl.turn async_chat_tool_background_start trace_id={} llm_route=async_chat_tool_background "
         "chat_model={} tool_model={} (foreground=chat_no_tools background=tool_loop)",
@@ -367,7 +371,7 @@ async def _run_turn_fast_chat_then_tool_background(
         chat_client,
         model=chat_route_model,
         messages_payload=chat_payload,
-        tools=[],
+        tools=chat_tools,
     )
     _log_llm_round_result(
         round_idx=1,
@@ -379,7 +383,47 @@ async def _run_turn_fast_chat_then_tool_background(
         root=root,
         trace_id=trace_id,
     )
+    chat_msg = chat_resp.choices[0].message
+    chat_tool_calls = getattr(chat_msg, "tool_calls", None) or []
     chat_text = _assistant_text_from_completion_response(chat_resp)
+    if chat_tool_calls:
+        chat_messages_for_tools = deepcopy(chat_log_messages)
+        chat_messages_for_tools.append(openai_assistant_message_dict(chat_msg))
+        for tc in chat_tool_calls:
+            fn = tc.function
+            name = fn.name
+            args = fn.arguments if fn.arguments is not None else ""
+            result = await execute_tool_call(
+                root,
+                name,
+                args,
+                write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
+            )
+            chat_messages_for_tools.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result,
+                }
+            )
+        chat_followup_resp = await asyncio.to_thread(
+            create_chat_completion,
+            chat_client,
+            model=chat_route_model,
+            messages_payload=_openai_messages_payload(chat_messages_for_tools),
+            tools=chat_tools,
+        )
+        _log_llm_round_result(
+            round_idx=2,
+            model=chat_route_model,
+            resp=chat_followup_resp,
+            messages=chat_messages_for_tools,
+            llm_trace=llm_trace,
+            llm_trace_where="repl.turn.bg.chat_front",
+            root=root,
+            trace_id=trace_id,
+        )
+        chat_text = _assistant_text_from_completion_response(chat_followup_resp)
     logger.info(
         "repl.turn async_chat_tool_background_done trace_id={} llm_route={} "
         "chat_model={} tool_model={} llm_trace_where_chat=repl.turn.bg.chat_front",
