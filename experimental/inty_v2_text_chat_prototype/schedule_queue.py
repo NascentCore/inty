@@ -143,13 +143,16 @@ def _task_ready_at_utc(task: ScheduleTask) -> datetime:
 
 def _safe_task_ready_at_utc(task: ScheduleTask) -> datetime | None:
     try:
-        return _task_ready_at_utc(task)
+        ready_at = _task_ready_at_utc(task)
+        _clear_invalid_warned(task.id)
+        return ready_at
     except ValueError as exc:
-        logger.warning(
-            "schedule_queue skip_invalid_task task_id={} error={}",
-            task.id,
-            str(exc),
-        )
+        if _mark_invalid_warned(task.id):
+            logger.warning(
+                "schedule_queue skip_invalid_task task_id={} error={}",
+                task.id,
+                str(exc),
+            )
         return None
 
 
@@ -337,6 +340,8 @@ class _SchedulerRunner:
 
 _RUNNERS: dict[Path, _SchedulerRunner] = {}
 _RUNNERS_LOCK = threading.Lock()
+_INVALID_TASK_WARNED_IDS: set[str] = set()
+_INVALID_TASK_WARNED_IDS_LOCK = threading.Lock()
 
 
 def _runner_for(workspace: Path) -> _SchedulerRunner | None:
@@ -350,6 +355,19 @@ def _clear_in_flight(workspace: Path, task_id: str) -> None:
         return
     with runner.lock:
         runner.in_flight_ids.discard(task_id)
+
+
+def _mark_invalid_warned(task_id: str) -> bool:
+    with _INVALID_TASK_WARNED_IDS_LOCK:
+        if task_id in _INVALID_TASK_WARNED_IDS:
+            return False
+        _INVALID_TASK_WARNED_IDS.add(task_id)
+        return True
+
+
+def _clear_invalid_warned(task_id: str) -> None:
+    with _INVALID_TASK_WARNED_IDS_LOCK:
+        _INVALID_TASK_WARNED_IDS.discard(task_id)
 
 
 def _scheduler_loop(workspace: Path, stop_flag: threading.Event) -> None:
@@ -425,13 +443,26 @@ def start_schedule_scheduler(workspace: Path) -> None:
 def stop_schedule_scheduler(workspace: Path) -> None:
     root = workspace.resolve()
     with _RUNNERS_LOCK:
-        runner = _RUNNERS.pop(root, None)
+        runner = _RUNNERS.get(root)
     if runner is None:
+        return
+    if not runner.thread.is_alive():
+        with _RUNNERS_LOCK:
+            current = _RUNNERS.get(root)
+            if current is runner:
+                _RUNNERS.pop(root, None)
         return
     runner.stop_flag.set()
     runner.thread.join(timeout=2.0)
     if runner.thread.is_alive():
         logger.warning("schedule_queue scheduler_join_timeout ws={}", root.name)
+        with _RUNNERS_LOCK:
+            _RUNNERS[root] = runner
+        return
+    with _RUNNERS_LOCK:
+        current = _RUNNERS.get(root)
+        if current is runner:
+            _RUNNERS.pop(root, None)
 
 
 def pending_task_count(workspace: Path) -> int:

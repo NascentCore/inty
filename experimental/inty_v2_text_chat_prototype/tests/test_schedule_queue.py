@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+import threading
 import tempfile
 import time
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 import sys
@@ -136,6 +137,59 @@ class TestScheduleQueueKernel(unittest.TestCase):
             with patch.object(runner.thread, "join", wraps=runner.thread.join) as join_spy:
                 stop_schedule_scheduler(root)
                 self.assertTrue(join_spy.called)
+
+    def test_invalid_timestamp_warns_once_per_task(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            queue_path = WorkspacePaths(root=root).schedule_queue_json
+            queue_path.write_text(
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "id": "bad-once",
+                                "exec_time_utc": "not-a-time",
+                                "task_text": "坏任务",
+                                "status": "pending",
+                                "created_at_utc": "2026-01-01T00:00:00+00:00",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(schedule_queue.logger, "warning") as warn_spy:
+                self.assertIsNone(next_due_wait_seconds(root))
+                self.assertIsNone(next_due_wait_seconds(root))
+                self.assertEqual(warn_spy.call_count, 1)
+
+    def test_stop_timeout_keeps_runner_to_block_duplicate_start(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            fake_thread = MagicMock()
+            fake_thread.is_alive.side_effect = [True, True, True, True]
+            fake_thread.join = MagicMock()
+            runner = schedule_queue._SchedulerRunner(
+                workspace=root.resolve(),
+                stop_flag=threading.Event(),
+                thread=fake_thread,
+                in_flight_ids=set(),
+                lock=threading.Lock(),
+            )
+            with schedule_queue._RUNNERS_LOCK:
+                schedule_queue._RUNNERS[root.resolve()] = runner
+            try:
+                stop_schedule_scheduler(root)
+                kept = schedule_queue._runner_for(root)
+                self.assertIs(kept, runner)
+
+                start_schedule_scheduler(root)
+                kept_after_start = schedule_queue._runner_for(root)
+                self.assertIs(kept_after_start, runner)
+            finally:
+                with schedule_queue._RUNNERS_LOCK:
+                    schedule_queue._RUNNERS.pop(root.resolve(), None)
 
 
 if __name__ == "__main__":
