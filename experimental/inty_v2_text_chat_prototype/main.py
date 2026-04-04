@@ -58,6 +58,7 @@ from experimental.inty_v2_text_chat_prototype.schedule_queue import (
     next_due_wait_seconds,
     mark_task_retry,
     pop_due_task_events_nowait,
+    scheduled_task_synthetic_user_text,
     start_schedule_scheduler,
     stop_schedule_scheduler,
 )
@@ -111,10 +112,9 @@ def _process_due_schedule_events(
 ) -> None:
     events = pop_due_task_events_nowait(workspace=ws)
     for ev in events:
-        synthetic_user = (
-            "（定时提醒触发）"
-            f"计划时间: {ev.exec_time_utc}。"
-            f"提醒内容: {ev.task_text}"
+        synthetic_user = scheduled_task_synthetic_user_text(
+            task_text=ev.task_text,
+            exec_time_utc=ev.exec_time_utc,
         )
         t0 = time.perf_counter()
         try:

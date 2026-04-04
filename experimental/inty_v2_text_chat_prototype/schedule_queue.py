@@ -141,30 +141,45 @@ def _task_ready_at_utc(task: ScheduleTask) -> datetime:
     return max(exec_at, retry_at)
 
 
+def _safe_task_ready_at_utc(task: ScheduleTask) -> datetime | None:
+    try:
+        return _task_ready_at_utc(task)
+    except ValueError as exc:
+        logger.warning(
+            "schedule_queue skip_invalid_task task_id={} error={}",
+            task.id,
+            str(exc),
+        )
+        return None
+
+
 def _pick_next_due_task(
     tasks: list[ScheduleTask],
     *,
     now: datetime,
     in_flight_ids: set[str],
 ) -> ScheduleTask | None:
-    due: list[ScheduleTask] = []
+    due: list[tuple[ScheduleTask, datetime]] = []
     for t in tasks:
         if t.status != "pending":
             continue
         if t.id in in_flight_ids:
             continue
-        if _task_ready_at_utc(t) <= now:
-            due.append(t)
+        ready_at = _safe_task_ready_at_utc(t)
+        if ready_at is None:
+            continue
+        if ready_at <= now:
+            due.append((t, ready_at))
     if not due:
         return None
     return sorted(
         due,
         key=lambda x: (
-            _task_ready_at_utc(x),
-            x.created_at_utc,
-            x.id,
+            x[1],
+            x[0].created_at_utc,
+            x[0].id,
         ),
-    )[0]
+    )[0][0]
 
 
 def _seconds_until_next_pending_task(
@@ -179,7 +194,10 @@ def _seconds_until_next_pending_task(
             continue
         if t.id in in_flight_ids:
             continue
-        waits.append((_task_ready_at_utc(t) - now).total_seconds())
+        ready_at = _safe_task_ready_at_utc(t)
+        if ready_at is None:
+            continue
+        waits.append((ready_at - now).total_seconds())
     if not waits:
         return None
     return min(waits)
@@ -411,6 +429,9 @@ def stop_schedule_scheduler(workspace: Path) -> None:
     if runner is None:
         return
     runner.stop_flag.set()
+    runner.thread.join(timeout=2.0)
+    if runner.thread.is_alive():
+        logger.warning("schedule_queue scheduler_join_timeout ws={}", root.name)
 
 
 def pending_task_count(workspace: Path) -> int:
