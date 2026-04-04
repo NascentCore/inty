@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -19,11 +19,14 @@ from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase
 from app.middleware.error_handler import (
+    http_exception_handler,
     jwt_exception_handler,
     sqlalchemy_exception_handler,
+    unhandled_exception_handler,
     validation_error_handler,
     validation_exception_handler,
 )
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.schemas.response import APIResponse
 
 init_logger()
@@ -78,6 +81,9 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(JWTError, jwt_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(ValidationError, validation_error_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.include_router(api_router)
 

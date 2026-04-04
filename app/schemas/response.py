@@ -65,6 +65,13 @@ class APIResponse(BaseModel, Generic[T]):
         return cls(code=code, message=message, data=data)
 
 
+class APIErrorResponse(BaseModel):
+    code: str
+    message: str
+    details: Optional[Any] = None
+    request_id: str
+
+
 class PaginationResponse(APIResponse[PaginationData]):
     """分页响应"""
 

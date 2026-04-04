@@ -21,6 +21,12 @@ class TestBootstrapSpecOnboarding(unittest.TestCase):
         self.assertIn("定义你", text)
         self.assertIn("基本信息", text)
 
+    def test_spec_requires_ai_to_confirm_companionship_type(self) -> None:
+        text = load_bootstrap_instruction_text()
+        self.assertIn("companionship", text)
+        self.assertIn("自然询问", text)
+        self.assertIn("允许用户自定义", text)
+
 
 if __name__ == "__main__":
     unittest.main()

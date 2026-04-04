@@ -103,6 +103,20 @@
 - 建立 HTTP status 与业务错误码映射规范。
 - 日志中补齐请求关联标识，便于追踪。
 
+完成情况（2026-04-02）：
+
+- 状态：DONE（第一批）
+- 已交付：`app/schemas/response.py` 新增 `APIErrorResponse` 统一错误响应模型（`code/message/details/request_id`）
+- 已交付：`app/middleware/error_handler.py` 新增统一错误响应封装、`HTTP_STATUS_ERROR_CODE_MAP` 状态码映射、`http_exception_handler`、`unhandled_exception_handler`
+- 已交付：`app/api/utils/logger_route.py` 将 `request_id` 写入 `request.state`，错误响应可复用同一请求标识
+- 已交付：`backend/inty/main.py` 注册统一 HTTP 异常与兜底异常处理器
+- 已交付：`backend/docs/API_ERROR_RESPONSE_CONTRACT.md` 错误响应契约与映射表文档
+- 已交付：`tests/app/api/test_error_handler_contract.py` 覆盖 `HTTPException/RequestValidationError/Unhandled Exception` 三类错误响应壳
+- PR 审阅：`#2750` 已完成自审，结论为可合并（本批次仅统一异常路径，不变更业务错误壳 `APIResponse`）
+- 验证：
+  - `.venv/bin/pytest tests/app/api/test_error_handler_contract.py -q`（通过）
+  - `.venv/bin/pytest tests/app/api/v1/endpoints/test_chats.py -k "test_update_chat_settings_rejects_non_gemini_voice_id" -q`（通过）
+
 交付物：
 
 - 统一错误处理中间件或公共封装
@@ -239,7 +253,7 @@
 | --- | --- | --- | --- | --- |
 | Layer boundaries and CI rules | Cursor Agent | DONE | `backend/docs/ARCH_LAYER_BOUNDARY_RULES.md` + `scripts/check_layer_dependencies.py` + CI gate | `.venv/bin/python scripts/check_layer_dependencies.py` + injected violation check |
 | DI unification | Cursor Agent | DONE (batch 1) | `app/api/deps.py` + `app/api/v1/endpoints/chat.py` + `app/api/v1/endpoints/chats.py` Depends 注入落地 | targeted `test_chat.py` + `test_chats.py` regression |
-| Error model unification | TBD | TODO | Unified error envelope | API snapshot tests |
+| Error model unification | Cursor Agent | DONE (batch 1) | `APIErrorResponse` + global exception handlers + `HTTP_STATUS_ERROR_CODE_MAP` + error response contract doc | `test_error_handler_contract.py` + targeted chats regression |
 | Async blocking fixes | TBD | TODO | to_thread/async wrappers | Load test metrics |
 | Query and pagination optimization | TBD | TODO | N+1 and cursor migration | Query count + latency |
 | Report compatibility cleanup | TBD | TODO | reason_codes-only write path | Report API tests |
