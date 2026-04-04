@@ -33,6 +33,14 @@ source experimental/inty_v2_text_chat_prototype/.venv/bin/activate
 python experimental/inty_v2_text_chat_prototype/main.py repl --workspace experimental/inty_v2_text_chat_prototype/_ws
 ```
 
+可选：用 `--companion-type` 指定 bootstrap 模版类型（`伴侣` / `朋友` / `爱人` / `亲人`，也支持 `partner` / `friend` / `lover` / `family`）。
+
+```bash
+python experimental/inty_v2_text_chat_prototype/main.py bootstrap-agent \
+  --workspace experimental/inty_v2_text_chat_prototype/_ws_friend \
+  --companion-type 朋友
+```
+
 `--workspace` 使用相对**仓库根**的路径。`load_prototype_dotenv()` 会读取 cwd 的 `.env` 以及包目录下的 `.env`，因此在根目录启动时仍能加载 `experimental/inty_v2_text_chat_prototype/.env` 里的 API Key。
 
 ## Memory 语义存储（DB-first 历史版本 + 内存主读 + 文件镜像）

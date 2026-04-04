@@ -99,6 +99,7 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                 out = run_workspace_bootstrap_loop(
                     root,
                     "hello",
+                    companion_type="朋友",
                     max_rounds=4,
                     on_tool=lambda n, a: tool_calls.append((n, a)),
                     llm_trace=False,
@@ -137,6 +138,18 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                         max_rounds=2,
                         llm_trace=False,
                     )
+
+    def test_bootstrap_raises_on_unknown_companion_type(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            with self.assertRaises(ValueError):
+                run_workspace_bootstrap_loop(
+                    root,
+                    "hello",
+                    companion_type="同事",
+                    max_rounds=1,
+                    llm_trace=False,
+                )
 
 
 if __name__ == "__main__":

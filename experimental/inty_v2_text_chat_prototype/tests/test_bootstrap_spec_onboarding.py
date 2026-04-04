@@ -21,6 +21,16 @@ class TestBootstrapSpecOnboarding(unittest.TestCase):
         self.assertIn("定义你", text)
         self.assertIn("基本信息", text)
 
+    def test_supports_companion_type_specific_templates(self) -> None:
+        self.assertIn("伴侣", load_bootstrap_instruction_text("伴侣"))
+        self.assertIn("朋友", load_bootstrap_instruction_text("朋友"))
+        self.assertIn("爱人", load_bootstrap_instruction_text("爱人"))
+        self.assertIn("亲人", load_bootstrap_instruction_text("亲人"))
+
+    def test_unknown_companion_type_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            load_bootstrap_instruction_text("同事")
+
 
 if __name__ == "__main__":
     unittest.main()

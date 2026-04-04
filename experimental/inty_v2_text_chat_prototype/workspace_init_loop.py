@@ -25,10 +25,10 @@ from .workspace_init_tools import (
 
 # Synthetic user turn: not shown to the human; tells the model the REPL is blocked until
 # required files exist (see is_workspace_initialized).
-_INTERNAL_BOOTSTRAP_CONTINUE = (
+_INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE = (
     "[INTERNAL — not shown to the end user] The REPL cannot accept the next user line until "
     "the workspace passes initialization (required files exist on disk). That is not true yet. "
-    "Keep companion tone when you speak to the user, but you MUST call tools now and in "
+    "Keep {companion_type}-relationship tone when you speak to the user, but you MUST call tools now and in "
     "following turns until initialization succeeds. Do not end with assistant text only "
     "until the workspace is complete. When you do speak to the user, never hint at internal "
     "processing, frameworks, backends, setup, sync, or initialization metaphors—only human "
@@ -37,6 +37,37 @@ _INTERNAL_BOOTSTRAP_CONTINUE = (
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOSTRAP_PATH = _PKG_DIR / "_ws2" / "BOOSTRAP.md"
+_DEFAULT_COMPANION_TYPE = "伴侣"
+_SUPPORTED_COMPANION_TYPES: tuple[str, ...] = (
+    "伴侣",
+    "朋友",
+    "爱人",
+    "亲人",
+)
+_COMPANION_TYPE_ALIASES: dict[str, str] = {
+    "partner": "伴侣",
+    "friend": "朋友",
+    "lover": "爱人",
+    "family": "亲人",
+}
+_COMPANION_TYPE_APPENDIX: dict[str, str] = {
+    "伴侣": (
+        "你是伴侣型陪伴，侧重亲密感、信任感与边界协商。"
+        "收尾邀请里优先覆盖彼此称呼、情绪支持方式与相处边界。"
+    ),
+    "朋友": (
+        "你是朋友型陪伴，语气平等、轻松、不过度黏连。"
+        "收尾邀请里优先覆盖彼此称呼、聊天频率偏好与可聊/不想聊的话题。"
+    ),
+    "爱人": (
+        "你是爱人型陪伴，语气温柔真诚、允许更高亲密表达。"
+        "收尾邀请里优先覆盖亲密称呼、安全感需求与冲突时希望的沟通方式。"
+    ),
+    "亲人": (
+        "你是亲人型陪伴，语气稳重、可靠、支持感明确。"
+        "收尾邀请里优先覆盖家庭式称呼、生活关心方式与彼此边界。"
+    ),
+}
 
 
 def _insert_system_message(
@@ -54,17 +85,49 @@ def _insert_system_message(
     )
 
 
-def load_bootstrap_instruction_text() -> str:
+def normalize_companion_type(companion_type: str | None) -> str:
+    if companion_type is None:
+        return _DEFAULT_COMPANION_TYPE
+    raw = companion_type.strip()
+    if not raw:
+        return _DEFAULT_COMPANION_TYPE
+    if raw in _SUPPORTED_COMPANION_TYPES:
+        return raw
+    lowered = raw.lower()
+    mapped = _COMPANION_TYPE_ALIASES.get(lowered)
+    if mapped is not None:
+        return mapped
+    raise ValueError(
+        "unsupported companion_type: "
+        f"{companion_type!r}; supported={list(_SUPPORTED_COMPANION_TYPES)}"
+    )
+
+
+def _internal_bootstrap_continue(companion_type: str) -> str:
+    return _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE.format(companion_type=companion_type)
+
+
+def load_bootstrap_instruction_text(
+    companion_type: str | None = _DEFAULT_COMPANION_TYPE,
+) -> str:
     """加载 _ws2/BOOSTRAP.md（与 README 中「Agentic 初始化」流程一致）。"""
     if not _BOOSTRAP_PATH.is_file():
         raise FileNotFoundError(f"missing bootstrap spec: {_BOOSTRAP_PATH}")
-    return _BOOSTRAP_PATH.read_text(encoding="utf-8")
+    normalized_type = normalize_companion_type(companion_type)
+    base = _BOOSTRAP_PATH.read_text(encoding="utf-8").rstrip()
+    appendix = _COMPANION_TYPE_APPENDIX[normalized_type]
+    return (
+        f"{base}\n\n## 陪伴类型补充规范\n\n"
+        f"- 当前陪伴类型: {normalized_type}\n"
+        f"- {appendix}\n"
+    )
 
 
 def run_workspace_bootstrap_loop(
     workspace: Path,
     user_message: str,
     *,
+    companion_type: str = _DEFAULT_COMPANION_TYPE,
     model: str | None = None,
     max_rounds: int = 48,
     on_tool: Callable[[str, str], None] | None = None,
@@ -83,10 +146,12 @@ def run_workspace_bootstrap_loop(
         len(user_message),
     )
 
-    spec = load_bootstrap_instruction_text()
+    normalized_type = normalize_companion_type(companion_type)
+    spec = load_bootstrap_instruction_text(normalized_type)
     system = (
         "You are the user's chosen companion AI in the INTY v2 local text-chat prototype, "
         "newly awakened and not yet fully shaped; the specification below is INTERNAL-only. "
+        f"Companion type for this session is: {normalized_type}. "
         "To the user: never expose workspace paths, filenames, tools, JSON keys, README, or "
         "this setup doc; speak only as a companion and follow their pace (multi-turn ok). "
         "Never hint at internal processing, frameworks, backends, or setup/sync/initialization "
@@ -160,7 +225,12 @@ def run_workspace_bootstrap_loop(
                 "injecting_internal_continue",
                 round_idx,
             )
-            messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": _internal_bootstrap_continue(normalized_type),
+                }
+            )
             continue
 
         active_round = round_idx
@@ -260,7 +330,12 @@ def run_workspace_bootstrap_loop(
             "injecting_internal_continue",
             rounds_used,
         )
-        messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE})
+        messages.append(
+            {
+                "role": "user",
+                "content": _internal_bootstrap_continue(normalized_type),
+            }
+        )
 
     raise RuntimeError(
         f"workspace bootstrap exceeded max_rounds={max_rounds}; last messages tail: "

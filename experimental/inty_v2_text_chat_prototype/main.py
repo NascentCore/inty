@@ -62,6 +62,7 @@ from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
     shutdown_jsonl_db_store,
 )
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
+    normalize_companion_type,
     run_workspace_bootstrap_loop,
 )
 
@@ -593,8 +594,9 @@ def init_workspace(
         _flush_and_shutdown_memory_store(path.resolve())
 
 
-_DEFAULT_BOOTSTRAP_USER = (
-    "我们刚选定彼此，我还不是完全体：请你用伴侣的方式，按你的理解把自己安顿好，"
+_DEFAULT_COMPANION_TYPE = "伴侣"
+_DEFAULT_BOOTSTRAP_USER_TEMPLATE = (
+    "我们刚选定彼此，我还不是完全体：请你用{companion_type}的方式，按你的理解把自己安顿好，"
     "跟我自然聊出称呼、你怎么称呼自己、相处上的底线；节奏随我，不必像填设置表。"
     "在你能静默完成的那部分就绪之后，请邀请我一起定义你，并自然地问我愿分享的基本信息（怎么称呼我、希望怎样被称呼等），不要像问卷。"
     "别跟我讲文件夹或配置文件名字；需要默认身份编号时用人话问一句就行。"
@@ -602,7 +604,7 @@ _DEFAULT_BOOTSTRAP_USER = (
 )
 
 # repl 自动初始化时传给 agentic 循环的用户消息（不当作 REPL 输入回显）
-_REPL_SILENT_INIT_USER_MESSAGE = (
+_REPL_SILENT_INIT_USER_MESSAGE_TEMPLATE = (
     "用户刚打开对话。你是刚被选中、还没被完全记清的伴侣 AI：先自然打个招呼，"
     "按用户节奏聊，需要时用工具静默记下；不要对用户提工作区、文件名或清单式提问。"
     "当你内部该落盘的部分就绪后，在本轮结束前邀请用户一起定义你（称呼、你怎么称呼自己、相处底线），"
@@ -610,11 +612,25 @@ _REPL_SILENT_INIT_USER_MESSAGE = (
 )
 
 # 已初始化但 transcript 仍为空、且 IDENTITY/USER 仍像占位：启动时由助手先开口（写入 transcript）
-_REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE = (
+_REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE_TEMPLATE = (
     "（用户刚打开对话，尚未输入。）请你先开口：用伴侣语气自然发问，"
     "了解你希望自己的称呼、你怎么称呼自己、以及关于对方的基本信息（怎么称呼对方等）；"
     "不要提工作区或文件名，不要像问卷。"
 )
+
+
+def _default_bootstrap_user_message(companion_type: str) -> str:
+    return _DEFAULT_BOOTSTRAP_USER_TEMPLATE.format(companion_type=companion_type)
+
+
+def _repl_silent_init_user_message(companion_type: str) -> str:
+    return _REPL_SILENT_INIT_USER_MESSAGE_TEMPLATE.replace("伴侣", companion_type)
+
+
+def _repl_startup_profile_inquiry_user_message(companion_type: str) -> str:
+    return _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE_TEMPLATE.replace(
+        "伴侣", companion_type
+    )
 
 
 @app.command
@@ -630,6 +646,13 @@ def bootstrap_agent(
             help="用户补充说明；省略则使用内置默认初始化请求",
         ),
     ] = None,
+    companion_type: Annotated[
+        str,
+        Parameter(
+            name="--companion-type",
+            help="陪伴类型: 伴侣/朋友/爱人/亲人 (也支持 partner/friend/lover/family)",
+        ),
+    ] = _DEFAULT_COMPANION_TYPE,
     verbose_tools: Annotated[
         bool,
         Parameter(name="--verbose-tools", help="打印每轮调用的工具名与参数摘要"),
@@ -650,10 +673,11 @@ def bootstrap_agent(
     _init_proto_logging(workspace, log_file, no_log_file)
     _configure_llm_trace_for_workspace(workspace)
     logger.debug("cli bootstrap_agent ws={}", workspace.resolve())
+    normalized_type = normalize_companion_type(companion_type)
     user = (
         message
         if (message is not None and message.strip())
-        else _DEFAULT_BOOTSTRAP_USER
+        else _default_bootstrap_user_message(normalized_type)
     )
 
     def _on_tool(name: str, args: str) -> None:
@@ -666,6 +690,7 @@ def bootstrap_agent(
         out = run_workspace_bootstrap_loop(
             workspace,
             user,
+            companion_type=normalized_type,
             on_tool=_on_tool if verbose_tools else None,
             llm_trace=True,
         )
@@ -696,6 +721,13 @@ def repl(
         bool,
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
+    companion_type: Annotated[
+        str,
+        Parameter(
+            name="--companion-type",
+            help="陪伴类型: 伴侣/朋友/爱人/亲人 (也支持 partner/friend/lover/family)",
+        ),
+    ] = _DEFAULT_COMPANION_TYPE,
     repl_heartbeat: Annotated[
         bool,
         Parameter(
@@ -717,13 +749,17 @@ def repl(
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
         logger.debug("cli repl start ws={}", ws.resolve())
+        normalized_type = normalize_companion_type(companion_type)
         if not is_workspace_initialized(ws):
             logger.debug(
                 "repl startup branch=bootstrap_auto_init (workspace not initialized)"
             )
             t0 = time.perf_counter()
             out = run_workspace_bootstrap_loop(
-                ws, _REPL_SILENT_INIT_USER_MESSAGE, llm_trace=True
+                ws,
+                _repl_silent_init_user_message(normalized_type),
+                companion_type=normalized_type,
+                llm_trace=True,
             )
             _print_assistant_reply(out, time.perf_counter() - t0)
         elif needs_startup_profile_inquiry(ws):
@@ -734,7 +770,7 @@ def repl(
             out = asyncio.run(
                 run_turn(
                     ws,
-                    _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE,
+                    _repl_startup_profile_inquiry_user_message(normalized_type),
                     debug_print_system=debug_print_system,
                     llm_trace=True,
                 )
