@@ -49,6 +49,7 @@ class _FakeCompletions:
                     "model": model,
                     "messages": messages,
                     "tools": tools,
+                    "tool_choice": kwargs.get("tool_choice"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -88,6 +89,7 @@ class _FakeCompletionsToolFirst:
                     "model": model,
                     "messages": messages,
                     "tools": tools,
+                    "tool_choice": kwargs.get("tool_choice"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -109,6 +111,51 @@ class _FakeCompletionsToolFirst:
             if idx == 2:
                 return _resp_text("tool-r2")
         raise AssertionError(f"unexpected model/round: {model=} {idx=}")
+
+
+class _FakeCompletionsChatToolChoiceReject:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+        self._per_model_count: dict[str, int] = {}
+        self._lock = threading.Lock()
+
+    def create(self, **kwargs: object) -> SimpleNamespace:
+        model = str(kwargs["model"])
+        messages = deepcopy(kwargs["messages"])
+        tools = deepcopy(kwargs.get("tools"))
+        tool_choice = kwargs.get("tool_choice")
+        with self._lock:
+            self.calls.append(
+                {
+                    "model": model,
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": tool_choice,
+                }
+            )
+            idx = self._per_model_count.get(model, 0) + 1
+            self._per_model_count[model] = idx
+        if model == "chat-fast":
+            if tool_choice == "none":
+                raise _ChatBranchNoneRejected("tool_choice none not supported")
+            if idx == 2:
+                return _resp_text("chat-r1")
+            if idx == 4:
+                return _resp_text("chat-r2")
+        if model == "tool-smart":
+            if idx == 1:
+                return _resp_tool(
+                    "tool-r1",
+                    tool_name="user_profile_record",
+                    tool_args='{"items":[{"label":"昵称","value":"阿木"}]}',
+                )
+            if idx == 2:
+                return _resp_text("tool-r2")
+        raise AssertionError(f"unexpected model/round: {model=} {idx=}")
+
+
+class _ChatBranchNoneRejected(Exception):
+    pass
 
 
 class TestDualLlmChatTool(unittest.TestCase):
@@ -149,6 +196,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                     "execute_tool_call",
                     fake_execute_tool_call,
                 ),
+                patch.object(orchestrator, "BadRequestError", _ChatBranchNoneRejected),
             ):
                 out = asyncio.run(
                     orchestrator._run_turn_with_user_profile_tools(
@@ -165,6 +213,8 @@ class TestDualLlmChatTool(unittest.TestCase):
         tool_calls = [c for c in fake_completions.calls if c["model"] == "tool-smart"]
         self.assertEqual(len(chat_calls), 2)
         self.assertEqual(len(tool_calls), 2)
+        self.assertTrue(all(c["tools"] for c in chat_calls))
+        self.assertTrue(all(c["tool_choice"] == "none" for c in chat_calls))
 
         # Round-wise, both routes must receive exactly the same context snapshot.
         self.assertEqual(chat_calls[0]["messages"], tool_calls[0]["messages"])
@@ -227,6 +277,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                     "execute_tool_call",
                     fake_execute_tool_call,
                 ),
+                patch.object(orchestrator, "BadRequestError", _ChatBranchNoneRejected),
             ):
                 out = asyncio.run(
                     orchestrator._run_turn_with_user_profile_tools(
@@ -265,6 +316,60 @@ class TestDualLlmChatTool(unittest.TestCase):
         self.assertEqual(result_idx, tool_idx + 1)
         self.assertLess(result_idx, chat2_idx)
         fake_execute_tool_call.assert_awaited_once()
+
+    def test_dual_llm_chat_branch_fallbacks_when_tool_choice_none_rejected(self) -> None:
+        fake_completions = _FakeCompletionsChatToolChoiceReject()
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=fake_completions),
+        )
+        fake_execute_tool_call = AsyncMock(return_value="OK tool result")
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            messages: list[dict[str, object]] = [
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "u1"},
+            ]
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    return_value=fake_client,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
+                patch.object(orchestrator, "dual_llm_enabled", return_value=True),
+                patch.object(orchestrator, "chat_model", return_value="chat-fast"),
+                patch.object(orchestrator, "tool_model", return_value="tool-smart"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator,
+                    "execute_tool_call",
+                    fake_execute_tool_call,
+                ),
+                patch.object(orchestrator, "BadRequestError", _ChatBranchNoneRejected),
+            ):
+                out = asyncio.run(
+                    orchestrator._run_turn_with_user_profile_tools(
+                        messages,
+                        root,
+                        llm_trace=False,
+                        heartbeat_turn=False,
+                    )
+                )
+
+        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
+        self.assertEqual(chat_calls[0]["tool_choice"], "none")
+        self.assertIsNone(chat_calls[1]["tools"])
+        self.assertIsNone(chat_calls[1]["tool_choice"])
 
 
 if __name__ == "__main__":

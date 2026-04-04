@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from openai import APIError, BadRequestError
 
 from app.core.agentic_kernel.bridges.experimental_bridge import (
     default_workspace_payload,
@@ -147,6 +148,41 @@ def _assistant_text_from_completion_response(resp: Any) -> str:
     if not isinstance(content, str):
         return ""
     return content.strip()
+
+
+def _create_chat_completion_mirrored_tools_no_call(
+    client: Any,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+) -> Any:
+    """
+    Keep mirrored tool definitions in chat-branch context while forcing no tool calls.
+    If provider rejects tool_choice="none", degrade to tools=[] fast-text call.
+    """
+    try:
+        return create_chat_completion(
+            client,
+            model=model,
+            messages_payload=messages_payload,
+            tools=tools,
+            # Keep tool definitions mirrored in chat branch context, but force no tool calls.
+            # OpenAI tool_choice docs: https://developers.openai.com/api/docs/guides/function-calling#tool-choice
+            tool_choice="none",
+        )
+    except (BadRequestError, APIError) as exc:
+        logger.warning(
+            "repl.turn chat_branch tool_choice=none rejected, fallback to no-tools fast-text: {}",
+            exc,
+        )
+        return create_chat_completion(
+            client,
+            model=model,
+            messages_payload=messages_payload,
+            tools=[],
+            tool_choice=None,
+        )
 
 
 def _merge_visible_assistant_text(chat_text: str, tool_text: str) -> str:
@@ -320,7 +356,7 @@ async def _run_turn_fast_chat_then_tool_background(
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     logger.info(
         "repl.turn async_chat_tool_background_start trace_id={} llm_route=async_chat_tool_background "
-        "chat_model={} tool_model={} (foreground=chat_no_tools background=tool_loop)",
+        "chat_model={} tool_model={} (foreground=chat_tools_mirrored_no_call background=tool_loop)",
         trace_id,
         chat_route_model,
         tool_route_model,
@@ -334,20 +370,16 @@ async def _run_turn_fast_chat_then_tool_background(
         include_repl_image_generation_contract=True,
         tool_side_compact=True,
     )
-    if dual_llm_enabled():
-        chat_messages = deepcopy(messages)
-        chat_messages[0]["content"] = build_system_prompt(
-            bundle,
-            context,
-            enable_user_profile_tool=True,
-            heartbeat_turn=False,
-            include_repl_image_generation_contract=False,
-        )
-        chat_payload = _openai_messages_payload(chat_messages)
-        chat_log_messages = chat_messages
-    else:
-        chat_payload = _openai_messages_payload(messages)
-        chat_log_messages = request_messages
+    chat_messages = deepcopy(messages)
+    chat_messages[0]["content"] = build_system_prompt(
+        bundle,
+        context,
+        enable_user_profile_tool=True,
+        heartbeat_turn=False,
+        include_repl_image_generation_contract=False,
+    )
+    chat_payload = _openai_messages_payload(chat_messages)
+    chat_log_messages = chat_messages
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
     start_tool_background_job(
@@ -363,11 +395,11 @@ async def _run_turn_fast_chat_then_tool_background(
         client=tool_client,
     )
     chat_resp = await asyncio.to_thread(
-        create_chat_completion,
+        _create_chat_completion_mirrored_tools_no_call,
         chat_client,
         model=chat_route_model,
         messages_payload=chat_payload,
-        tools=[],
+        tools=tools,
     )
     _log_llm_round_result(
         round_idx=1,
@@ -467,11 +499,11 @@ async def _run_turn_with_user_profile_tools(
             async def _run_chat_branch() -> Any:
                 t_api_chat = time.perf_counter()
                 resp_chat = await asyncio.to_thread(
-                    create_chat_completion,
+                    _create_chat_completion_mirrored_tools_no_call,
                     dual_chat_client,
                     model=chat_route_model,
                     messages_payload=chat_branch_payload,
-                    tools=[],
+                    tools=tools,
                 )
                 logger.info(
                     "repl.turn llm_round={} branch=chat trace_id={} chat_completions_ms={:.0f} "
