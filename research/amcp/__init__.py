@@ -1,1 +1,0 @@
-"""AMCP research package."""
