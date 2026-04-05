@@ -18,7 +18,8 @@ cp devops/config.yaml.dev config.yaml
 cd experimental/inty_v2_text_chat_prototype
 cp .env.example .env
 
-# 编辑 .env：LANGSMITH_PROJECT=inty-v2-text-chat-prototype-<USER> 等
+# 编辑 .env 中这一行：LANGSMITH_PROJECT=inty-v2-text-chat-prototype-<USER>
+# 将 <USER> 替换为你自己的名字
 
 uv venv
 source .venv/bin/activate
