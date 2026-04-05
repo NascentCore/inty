@@ -318,7 +318,9 @@ class TestDualLlmChatTool(unittest.TestCase):
         self.assertLess(result_idx, chat2_idx)
         fake_execute_tool_call.assert_awaited_once()
 
-    def test_dual_llm_chat_branch_fallbacks_when_tool_choice_none_rejected(self) -> None:
+    def test_dual_llm_chat_branch_fallbacks_when_tool_choice_none_rejected(
+        self,
+    ) -> None:
         fake_completions = _FakeCompletionsChatToolChoiceReject()
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=fake_completions),
@@ -372,7 +374,9 @@ class TestDualLlmChatTool(unittest.TestCase):
         self.assertIsNone(chat_calls[1]["tools"])
         self.assertIsNone(chat_calls[1]["tool_choice"])
 
-    def test_tool_update_chat_settings_updates_next_chat_branch_system_prompt(self) -> None:
+    def test_tool_update_chat_settings_updates_next_chat_branch_system_prompt(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             messages: list[dict[str, object]] = [
@@ -388,7 +392,9 @@ class TestDualLlmChatTool(unittest.TestCase):
                 write_allowlist: frozenset[str] | None = None,
             ) -> str:
                 self.assertEqual(name, "tool_update_chat_settings")
-                self.assertEqual(write_allowlist, orchestrator.REPL_WRITABLE_RELATIVE_PATHS)
+                self.assertEqual(
+                    write_allowlist, orchestrator.REPL_WRITABLE_RELATIVE_PATHS
+                )
                 (root_arg / ".inty_v2_chat_settings.json").write_text(
                     '{"chat_output_format_prompt":"必须输出 JSON: {\\"reply\\":\\"...\\"}"}\n',
                     encoding="utf-8",

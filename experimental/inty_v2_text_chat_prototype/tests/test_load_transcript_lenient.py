@@ -42,9 +42,7 @@ class TestLoadTranscriptLenient(unittest.TestCase):
     def test_bootstrap_write_rejects_transcript_without_role(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            bad = (
-                '{"timestamp":"2025-04-03T00:00:00Z","content":"初始化开始"}\n'
-            )
+            bad = '{"timestamp":"2025-04-03T00:00:00Z","content":"初始化开始"}\n'
             out = tool_workspace_write_file(root, "transcript.jsonl", bad)
             self.assertTrue(out.startswith("ERROR:"))
             self.assertFalse((root / "transcript.jsonl").is_file())

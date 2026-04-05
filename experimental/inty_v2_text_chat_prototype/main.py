@@ -241,7 +241,9 @@ def _repl_drain_user_turns(
             try:
                 out = run_turn_sync(cur)
             except OpenRouterInvalidJsonError as exc:
-                logger.warning("repl turn recovered from invalid OpenRouter JSON: {}", exc)
+                logger.warning(
+                    "repl turn recovered from invalid OpenRouter JSON: {}", exc
+                )
                 _print_openrouter_invalid_json_retry_hint()
                 print("> ", end="", flush=True)
                 try:

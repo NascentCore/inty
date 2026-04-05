@@ -13,7 +13,6 @@ from loguru import logger
 
 from app.schemas.response import APIErrorResponse
 
-
 HTTP_STATUS_ERROR_CODE_MAP = {
     status.HTTP_400_BAD_REQUEST: "BAD_REQUEST",
     status.HTTP_401_UNAUTHORIZED: "UNAUTHORIZED",

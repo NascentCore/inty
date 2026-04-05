@@ -160,7 +160,12 @@ class TestHeartbeatSchedule(unittest.TestCase):
             root = Path(td)
             base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
             rows = [
-                {"role": "user", "content": "你好", "ts": base.isoformat(), "uuid": "u1"},
+                {
+                    "role": "user",
+                    "content": "你好",
+                    "ts": base.isoformat(),
+                    "uuid": "u1",
+                },
                 {
                     "role": "assistant",
                     "content": "在呢",
@@ -200,7 +205,12 @@ class TestHeartbeatSchedule(unittest.TestCase):
             root = Path(td)
             base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
             rows = [
-                {"role": "user", "content": "你好", "ts": base.isoformat(), "uuid": "u1"},
+                {
+                    "role": "user",
+                    "content": "你好",
+                    "ts": base.isoformat(),
+                    "uuid": "u1",
+                },
                 {
                     "role": "assistant",
                     "content": "在呢",

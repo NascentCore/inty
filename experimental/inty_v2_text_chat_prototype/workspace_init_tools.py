@@ -331,7 +331,7 @@ def _transcript_jsonl_validate_for_tool_write(content: str) -> str | None:
             return (
                 f"ERROR: transcript.jsonl line {i} must be JSON with "
                 f'role ("user"|"assistant"|"system"), content (string), '
-                f'ts (ISO8601 UTC, e.g. ...Z). Example: '
+                f"ts (ISO8601 UTC, e.g. ...Z). Example: "
                 f'{{"role":"system","content":"marker","ts":"2026-01-01T00:00:00Z"}}. '
                 f"Details: {e}"
             )
@@ -572,9 +572,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                         },
                         "task_text": {
                             "type": "string",
-                            "description": (
-                                "Reminder text to execute at that time."
-                            ),
+                            "description": ("Reminder text to execute at that time."),
                         },
                     },
                     "required": ["exec_time_utc", "task_text"],
@@ -675,7 +673,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "type": "string",
                             "description": (
                                 "The exact output-format instruction to enforce for chat-branch replies. "
-                                "Example: '必须输出 JSON: {\"reply\":\"...\"}'."
+                                'Example: \'必须输出 JSON: {"reply":"..."}\'.'
                             ),
                         }
                     },

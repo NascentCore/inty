@@ -129,7 +129,7 @@ def _save_tasks(root: Path, tasks: list[ScheduleTask]) -> None:
 
 def _retry_backoff_seconds(attempts: int) -> float:
     # 2,4,8,16... capped at 5 min.
-    return float(min(300, 2**max(1, attempts)))
+    return float(min(300, 2 ** max(1, attempts)))
 
 
 def _task_ready_at_utc(task: ScheduleTask) -> datetime:
@@ -183,7 +183,9 @@ def _pick_next_due_task(
             x[0].created_at_utc,
             x[0].id,
         ),
-    )[0][0]
+    )[
+        0
+    ][0]
 
 
 def _seconds_until_next_pending_task(
@@ -378,7 +380,11 @@ def _reconcile_invalid_warned(workspace: Path, tasks: list[ScheduleTask]) -> Non
     root = workspace.resolve()
     live_ids = {t.id for t in tasks}
     with _INVALID_TASK_WARNED_KEYS_LOCK:
-        stale = [k for k in _INVALID_TASK_WARNED_KEYS if k[0] == root and k[1] not in live_ids]
+        stale = [
+            k
+            for k in _INVALID_TASK_WARNED_KEYS
+            if k[0] == root and k[1] not in live_ids
+        ]
         for k in stale:
             _INVALID_TASK_WARNED_KEYS.discard(k)
 
@@ -491,7 +497,9 @@ def pending_task_count(workspace: Path) -> int:
     return len([t for t in tasks if t.status == "pending"])
 
 
-def next_due_wait_seconds(workspace: Path, *, now: datetime | None = None) -> float | None:
+def next_due_wait_seconds(
+    workspace: Path, *, now: datetime | None = None
+) -> float | None:
     root = workspace.resolve()
     t = now if now is not None else datetime.now(timezone.utc)
     tasks = _load_tasks(root)
@@ -508,4 +516,3 @@ def next_due_wait_seconds(workspace: Path, *, now: datetime | None = None) -> fl
         now=t,
         in_flight_ids=in_flight,
     )
-

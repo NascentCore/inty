@@ -68,9 +68,7 @@ def load_bootstrap_instruction_text() -> str:
         "优先给出可选示例（如 朋友/爱人/亲人/其他自定义），并允许用户自定义。"
         "在用户明确后，后续语气、边界、称呼和收尾邀请都按该类型保持一致。"
     )
-    return (
-        f"{base}\n\n## companionship 类型确认规范\n\n- {appendix}\n"
-    )
+    return f"{base}\n\n## companionship 类型确认规范\n\n- {appendix}\n"
 
 
 def run_workspace_bootstrap_loop(

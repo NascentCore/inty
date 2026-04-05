@@ -299,7 +299,9 @@ class TestAsyncToolBackground(unittest.TestCase):
 
     def test_no_tool_calls_does_not_append_background_transcript(self) -> None:
         fake_completions = _FakeCompletionsNoToolCalls()
-        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=fake_completions))
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=fake_completions)
+        )
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._init_workspace(root)
@@ -341,7 +343,9 @@ class TestAsyncToolBackground(unittest.TestCase):
                 time.sleep(0.1)
                 events = pop_output_events_nowait(workspace=root)
                 self.assertEqual(events, [])
-                chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
+                chat_calls = [
+                    c for c in fake_completions.calls if c["model"] == "chat-fast"
+                ]
                 self.assertGreaterEqual(len(chat_calls), 1)
                 self.assertIsNotNone(chat_calls[0]["tools"])
                 self.assertEqual(chat_calls[0]["tool_choice"], "none")
@@ -355,7 +359,9 @@ class TestAsyncToolBackground(unittest.TestCase):
 
     def test_chat_branch_tool_choice_none_rejected_falls_back_to_no_tools(self) -> None:
         fake_completions = _FakeCompletionsChatNoneRejected()
-        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=fake_completions))
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=fake_completions)
+        )
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._init_workspace(root)
@@ -396,7 +402,9 @@ class TestAsyncToolBackground(unittest.TestCase):
                 )
                 self.assertEqual(out, "chat-fast-fallback-r1")
 
-            chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
+            chat_calls = [
+                c for c in fake_completions.calls if c["model"] == "chat-fast"
+            ]
             self.assertGreaterEqual(len(chat_calls), 2)
             self.assertEqual(chat_calls[0]["tool_choice"], "none")
             self.assertEqual(chat_calls[1]["tool_choice"], None)
