@@ -145,6 +145,7 @@ def _print_assistant_reply(
 
 
 def _drain_async_tool_events(ws: Path) -> None:
+    """Flush tool_bg 队列到 stdout。勿在「用户可能正在未按回车的行内编辑」期间调用，否则会打乱 TTY 与 CJK 回显。"""
     events = pop_output_events_nowait(workspace=ws)
     for ev in events:
         print(
@@ -152,7 +153,6 @@ def _drain_async_tool_events(ws: Path) -> None:
             f"(user={ev.user_msg_uuid[:8]} asst={ev.assistant_msg_uuid[:8]})"
         )
         print(ev.text)
-        print("> ", end="", flush=True)
 
 
 def _process_due_schedule_events(
@@ -185,6 +185,7 @@ def _process_due_schedule_events(
             f"(schedule-task task={ev.task_id[:8]}){id_suffix}"
         )
         print(out)
+        _drain_async_tool_events(ws)
         print("> ", end="", flush=True)
 
 
@@ -337,6 +338,7 @@ def _repl_drain_user_turns(
         if cur.strip() in ("quit", "exit", "q"):
             return False
         if not cur.strip():
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
         else:
             if not cur_echoed:
@@ -355,6 +357,7 @@ def _repl_drain_user_turns(
                     "repl turn recovered from invalid OpenRouter JSON: {}", exc
                 )
                 _print_openrouter_invalid_json_retry_hint()
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 try:
                     item = pending.get_nowait()
@@ -526,12 +529,9 @@ def _run_turn_with_stdin_pump(
         while not done.is_set():
             r, _, _ = select.select([stdin_fd], [], [], 0.1)
             if not r:
-                if not cur_inner:
-                    _drain_async_tool_events(ws)
                 continue
             raw = sys.stdin.readline()
-            if not cur_inner:
-                _drain_async_tool_events(ws)
+            _drain_async_tool_events(ws)
             if raw == "":
                 pending.put(None)
             else:
@@ -552,6 +552,7 @@ def _run_turn_with_stdin_pump(
         t.join(timeout=3600.0)
         if exc:
             raise exc[0]
+        _drain_async_tool_events(ws)
         if result.get("superseded"):
             latest = replace_slot[0]
             if latest is not None and latest.strip():
@@ -559,8 +560,6 @@ def _run_turn_with_stdin_pump(
                 cur_inner = False
                 cur_ack = False
             continue
-        if not cur_inner:
-            _drain_async_tool_events(ws)
         return str(result["out"]), dict(ids_out)
 
 
@@ -575,10 +574,10 @@ def _repl_interactive_loop_posix(
     last_inner_fire_mono: float | None = (
         time.monotonic() if inner_tick else None
     )
+    _drain_async_tool_events(ws)
     print("> ", end="", flush=True)
 
     while True:
-        _drain_async_tool_events(ws)
         _process_due_schedule_events(
             ws,
             run_turn_sync=lambda text: _run_turn_with_stdin_pump(
@@ -600,6 +599,7 @@ def _repl_interactive_loop_posix(
                 break
             line, echoed = item
             if not line.strip():
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 continue
             if not _posix_run_user_turn_and_drain_queue(
@@ -656,6 +656,7 @@ def _repl_interactive_loop_posix(
                         time.perf_counter() - t0,
                         transcript_ids=ids or None,
                     )
+                    _drain_async_tool_events(ws)
                     print("> ", end="", flush=True)
                     if not _consume_pending_after_inner_tick(
                         pending,
@@ -731,6 +732,7 @@ def _repl_interactive_loop_posix(
         if line.strip() in ("quit", "exit", "q"):
             break
         if not line.strip():
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
             continue
         if not _posix_run_user_turn_and_drain_queue(
@@ -770,10 +772,10 @@ def _repl_interactive_loop_daemon(
         )
         return out, ids_out
 
+    _drain_async_tool_events(ws)
     print("> ", end="", flush=True)
 
     while True:
-        _drain_async_tool_events(ws)
         _process_due_schedule_events(ws, run_turn_sync=_schedule_run_turn)
         try:
             item = line_queue.get_nowait()
@@ -785,6 +787,7 @@ def _repl_interactive_loop_daemon(
                 break
             line, echoed = item
             if not line.strip():
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 continue
             if not _daemon_run_user_turn_and_drain_queue(
@@ -830,6 +833,7 @@ def _repl_interactive_loop_daemon(
                     time.perf_counter() - t0,
                     transcript_ids=ids_tick or None,
                 )
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 if not _consume_pending_after_inner_tick(
                     line_queue,
@@ -878,6 +882,7 @@ def _repl_interactive_loop_daemon(
         if line.strip() in ("quit", "exit", "q"):
             break
         if not line.strip():
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
             continue
         if not _daemon_run_user_turn_and_drain_queue(
