@@ -495,8 +495,8 @@
 #### 11.12.2 第一层 - HTTP/WebSocket 接口层（对接 iMate backend）
 
 - 复用现有网络基座（不新建并行网络栈）：
-  - `NetServiceMgr` 统一 Retrofit API 入口。
-  - `IUserApi`、`IChatApi`、`ICommonApi` 作为 HTTP 契约接口。
+  - `NetServiceMgr` 统一 Retrofit API 入口（`getUserApi/getChatApi/getCommonApi`）。
+  - `IUserApi`、`IChatApi`、`ICommonApi` 作为当前已存在的 HTTP 契约接口。
   - `NetworkStackCoordinator` 负责环境与网络状态初始化。
 - 聊天 WebSocket 采用独立会话管理器模式：
   - 复用 `ChatWebSocketSessionManager` 的关键语义：
@@ -504,14 +504,15 @@
     - 请求级互斥（`requestMutex`）保证一发一收。
     - token 变化自动重建连接。
   - iMate chat 仅使用 `WS /api/v1/chat/ws`，`/verify` 仅用于验收联调。
+  - `ChatViewModel -> ChatMessageRepository.sendMessage()` 的 HTTP chat 旧路径只保留给 IntelliMate 回归，不允许在 `imate_android/` 新流程中使用。
 - API 端点矩阵（Android 侧调用视角）：
 
 | 能力 | 协议 | Endpoint | Android 入口 |
 |---|---|---|---|
-| Google/Email+Password 登录 | HTTP | `POST /api/v1/auth/google/login` | `IUserApi.loginByGoogle` |
+| Google/Email+Password 登录 | HTTP | `POST /api/v1/auth/google/login` | `IUserApi.loginByGoogle(GoogleLoginRequest)` |
 | 用户资料读取 | HTTP | `GET /api/v1/users/me` | `IUserApi.getMe` |
 | 用户资料更新 | HTTP | `PUT /api/v1/users/profile` | `IUserApi.updateProfile` |
-| 通用设置读写 | HTTP | `GET/PUT /api/v1/settings/` | 复用现有 settings API 封装 |
+| 用户设置读写（通用） | HTTP | `GET/PUT /api/v1/settings/` | `Phase 1` 在 `core/data/api` 新增 `ISettingsApi`（仍由 `NetServiceMgr` 托管） |
 | 历史消息拉取 | HTTP | `GET /api/v1/chats/agents/{agent_id}/messages` | `IChatApi.getMsgs` |
 | chat settings 读写 | HTTP | `GET/PUT /api/v1/chats/agents/{agent_id}/settings` | `IChatApi.getChatSettings/updateChatSettings` |
 | 实时聊天 | WS | `WS /api/v1/chat/ws` | `ChatWebSocketSessionManager.sendMessage` |
@@ -520,17 +521,18 @@
 - 协议治理要求：
   - DTO 统一放在 `core/data/api/model`，iMate 不复制第二套模型。
   - 后端字段新增时客户端忽略未知字段，保持向后兼容。
-  - 分流字段 `X-App-Id: imate_android` 由统一网络层注入，避免业务层散落设置。
+  - 分流字段 `X-App-Id: imate_android` 由统一网络层拦截器注入，避免业务层散落设置。
+  - `GoogleLoginRequest` 按现有契约同时支持 `id_token` 与 `email/password`，不新增并行登录 endpoint。
 
 #### 11.12.3 第二层 - 数据封装层（Room + DataStore + Repository）
 
-- Repository 设计（iMate 侧新增壳层，底层尽量复用）：
-  - `ImateChatRepository`：聊天收发、历史同步、消息状态机、重连恢复。
-  - `ImateProfileRepository`：用户资料与设置聚合。
-  - `ImateCompanionStateRepository`：关系状态、互动计数、最近摘要。
+- Repository 设计（先复用现状，再增量收敛）：
+  - 直接复用现有 `ChatMessageRepository`：聊天收发、历史同步、消息状态机、重连恢复。
+  - 直接复用现有 `ChatRemoteDataSource` + `ChatLocalDataSource` + `RoomDataSource`：保持 `Remote + Room` 组合方式不变。
+  - `imate_android/` 仅新增轻量 façade（例如 `ImateChatFacade`），禁止复制 `ChatMessageRepository` 核心逻辑。
 - 复用现有实现模式：
   - 远端：沿用 `ChatRemoteDataSource` 的 request 构造、错误映射、业务码处理。
-  - 本地：沿用 `RoomDataSource`/`MessageEntity` 的落库与 Flow 读取能力。
+  - 本地：沿用 `ChatLocalDataSource` + `RoomDataSource` + `MessageEntity` 的落库和读取能力。
   - 依赖装配：沿用 `DataModule` 手动 DI 风格，在 `imate_android` 组合注入。
 - 本地模型规划：
   - Room：
@@ -542,10 +544,11 @@
     - 网络策略：WS 开关、调试端点、user_time_context 上报。
     - 陪伴策略：触达节奏开关、实验分组标记。
 - 数据流规则（强制）：
-  - UI 只订阅 Room/DataStore 的 `Flow`。
-  - 网络返回先写 Room，再由 UI 被动刷新。
+  - UI 消息流只订阅 Room（Paging/Flow），设置态只订阅 DataStore。
+  - 网络返回先写 Room，再由 UI 被动刷新，不允许 ViewModel 直接拼接网络瞬态消息列表。
   - 消息状态固定 `SENDING -> SUCCESS | SENDING_FAILED`，允许失败重试。
   - 去重主键使用 `id/indexId/localMsgId` 组合策略，避免重复插入。
+  - 主 WebSocket 模式下沿用 `MainRepository + MainRemoteDataSource` 的 fire-and-forget + 回包落库路径，保持与现有实现一致。
 
 #### 11.12.4 第三层 - 核心陪伴 UX/UI（Compose）
 
@@ -557,6 +560,9 @@
   - `Idle -> Sending -> WaitingReply -> Replied`
   - 异常分支：`SendingFailed`、`WSDisconnected`、`RateLimited`、`Unauthorized`
   - 所有状态必须可映射到用户可见 UI，不允许静默失败。
+- WS-only 体验约束（iMate 强制）：
+  - `imate_android` 聊天发送入口只保留 `sendMessageViaMainWebSocket` 路径。
+  - HTTP chat 发送分支仅保留在 IntelliMate 存量流程，作为回归兼容路径，不进入 iMate 新功能开发。
 - 陪伴体验组件（v1 必须项）：
   - 顶部关系条：展示关系阶段、最近互动时间、能量变化。
   - 会话列表：本地历史秒开，网络恢复后增量同步。
@@ -574,6 +580,8 @@
 
 - 对齐 Phase 1：
   - 先完成接口层 + 数据层最小闭环（WS 聊天 + Room 渲染 + 失败重试）。
+  - 新增 `ISettingsApi` 并接入 `NetServiceMgr`，补齐 `GET/PUT /api/v1/settings/` 的 Android 端复用。
+  - iMate 聊天入口强制切到 WS-only，关闭 iMate 路径的 HTTP chat 发送。
 - 对齐 Phase 2：
   - 增加陪伴状态本地读模型与后端状态同步。
 - 对齐 Phase 3：
