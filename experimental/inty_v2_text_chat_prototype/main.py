@@ -54,10 +54,6 @@ from experimental.inty_v2_text_chat_prototype.inner_tick_schedule import (
     inner_tick_enabled_from_env,
     next_inner_tick_wait_seconds,
 )
-
-# Idle wait for stdin when no inner tick / no schedule due: short poll so the REPL loop
-# can drain async tool_bg output without blocking on readline indefinitely.
-_REPL_IDLE_POLL_SEC = 0.1
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_initialized,
     needs_startup_profile_inquiry,
@@ -96,6 +92,10 @@ from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
 
+# No inner tick / no schedule due: short poll so the loop can print async tool_bg output
+# without blocking on readline indefinitely.
+_REPL_IDLE_POLL_SEC = 0.1
+
 
 def _default_workspace() -> Path:
     return Path(__file__).resolve().parent / "workspace"
@@ -121,10 +121,6 @@ def _drain_async_tool_events(ws: Path) -> None:
         )
         print(ev.text)
         print("> ", end="", flush=True)
-
-
-def _drain_async_tool_events_in_waiting_loop(ws: Path) -> None:
-    _drain_async_tool_events(ws)
 
 
 def _process_due_schedule_events(
@@ -337,7 +333,7 @@ def _repl_drain_user_turns(
 ) -> bool:
     """
     跑一轮 user turn，然后连续消费 `pending` 里在本轮之前/期间积压的行（均得到助手回复），
-    再回到「等 stdin / 心跳」。若返回 False，REPL 应退出。
+    再回到「等 stdin / 空闲（含内在节拍）」。若返回 False，REPL 应退出。
 
     `tuple[str, bool]` 为 (文本, 是否已在 stdin 泵阶段打印过时间戳与 `> `)；为 True 时不再重复打印，
     以免长耗时 turn（如生图）期间用户已输入的行看起来「卡住无回显」。
@@ -506,7 +502,7 @@ def _run_turn_with_stdin_pump(
         if not r:
             continue
         raw = sys.stdin.readline()
-        _drain_async_tool_events_in_waiting_loop(ws)
+        _drain_async_tool_events(ws)
         if raw == "":
             pending.put(None)
         else:
@@ -520,7 +516,7 @@ def _run_turn_with_stdin_pump(
             print("> ", end="", flush=True)
             pending.put((text, True))
     t.join(timeout=3600.0)
-    _drain_async_tool_events_in_waiting_loop(ws)
+    _drain_async_tool_events(ws)
     if exc:
         raise exc[0]
     return result["out"]
@@ -542,7 +538,7 @@ def _repl_interactive_loop_posix(
     print("> ", end="", flush=True)
 
     while True:
-        _drain_async_tool_events_in_waiting_loop(ws)
+        _drain_async_tool_events(ws)
         _process_due_schedule_events(
             ws,
             run_turn_sync=lambda text: _run_turn_with_stdin_pump(
@@ -730,7 +726,7 @@ def _repl_interactive_loop_daemon(
     print("> ", end="", flush=True)
 
     while True:
-        _drain_async_tool_events_in_waiting_loop(ws)
+        _drain_async_tool_events(ws)
         _process_due_schedule_events(
             ws,
             run_turn_sync=lambda text: asyncio.run(
