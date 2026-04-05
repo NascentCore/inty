@@ -482,7 +482,11 @@ def _repl_interactive_loop_posix(
             r, _, _ = select.select([stdin_fd], [], [], sleep_s)
             if not r:
                 continue
-            raw = sys.stdin.readline()
+            try:
+                raw = sys.stdin.readline()
+            except KeyboardInterrupt:
+                print()
+                break
             if raw == "":
                 print()
                 break
