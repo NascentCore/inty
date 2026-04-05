@@ -15,7 +15,7 @@ from .utc import local_date_str
 
 
 class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
+    role: Literal["user", "assistant", "system"]
     content: str
     ts: str
     uuid: str | None = None
@@ -152,7 +152,7 @@ def load_transcript(path: Path) -> list[ChatMessage]:
     return out
 
 
-# 近期对话窗口：最多保留的 transcript.jsonl 行数（每行一条 user 或 assistant）
+# 近期对话窗口：最多保留的 transcript.jsonl 行数（每行一条 user / assistant / 可选 system）
 TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
 
 

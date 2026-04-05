@@ -120,7 +120,7 @@ def summarize_messages(
             )
             continue
         tid = m.get(TRANSCRIPT_MSG_UUID_KEY)
-        if role in ("user", "assistant") and isinstance(tid, str) and tid:
+        if role in ("user", "assistant", "system") and isinstance(tid, str) and tid:
             parts.append(f"{i}:{role} transcript⟨{tid}⟩")
             continue
         prev = c.replace("\n", " ").strip()
