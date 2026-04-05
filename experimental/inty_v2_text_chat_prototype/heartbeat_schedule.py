@@ -10,7 +10,12 @@ from pathlib import Path
 from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT  # noqa: F401
 
 from .env_util import env_flag_enabled
-from .models import ChatMessage, load_transcript
+from .models import (
+    ChatMessage,
+    is_transcript_real_user_message,
+    load_transcript,
+    transcript_without_trailing_presence_signals,
+)
 from .paths import WorkspacePaths
 
 _DEFAULT_BASE_IDLE_SEC = 300.0
@@ -54,7 +59,7 @@ def _parse_ts(ts: str) -> datetime:
 def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
     user_ts: list[datetime] = []
     for m in msgs:
-        if m.role != "user":
+        if not is_transcript_real_user_message(m):
             continue
         user_ts.append(_parse_ts(m.ts))
     if len(user_ts) < 2:
@@ -95,7 +100,7 @@ def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
 
 def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     for m in reversed(msgs):
-        if m.role == "user" and m.heartbeat is not True:
+        if is_transcript_real_user_message(m):
             return _parse_ts(m.ts)
     return None
 
@@ -110,7 +115,7 @@ def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
     if hb_idx is None:
         return True
     for m in msgs[hb_idx + 1 :]:
-        if m.role == "user" and m.heartbeat is not True:
+        if is_transcript_real_user_message(m):
             return True
     return False
 
@@ -136,17 +141,18 @@ def next_heartbeat_wait_seconds(
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
     msgs = load_transcript(paths.transcript)
+    msgs_eff = transcript_without_trailing_presence_signals(msgs)
     min_lines = _env_int(
         "INTY_V2_PROTO_HEARTBEAT_MIN_TRANSCRIPT_MSGS",
         _DEFAULT_MIN_TRANSCRIPT_LINES,
     )
-    if len(msgs) < min_lines:
+    if len(msgs_eff) < min_lines:
         return 86400.0 * 365.0
 
-    if not msgs or msgs[-1].role != "assistant":
+    if not msgs_eff or msgs_eff[-1].role != "assistant":
         return 86400.0 * 365.0
 
-    last_asst = _last_assistant_ts(msgs)
+    last_asst = _last_assistant_ts(msgs_eff)
     if last_asst is None:
         return 86400.0 * 365.0
 
@@ -155,7 +161,7 @@ def next_heartbeat_wait_seconds(
         return 86400.0 * 365.0
 
     t = now if now is not None else datetime.now(timezone.utc)
-    rhythm = _rhythm_idle_seconds(msgs)
+    rhythm = _rhythm_idle_seconds(msgs_eff)
     earliest = last_asst + timedelta(seconds=rhythm)
 
     min_user_quiet = _env_float(

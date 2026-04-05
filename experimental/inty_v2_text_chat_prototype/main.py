@@ -8,6 +8,7 @@ import select
 import sys
 import threading
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Callable
@@ -72,9 +73,17 @@ from experimental.inty_v2_text_chat_prototype.memory_store_registry import (
     shutdown_memory_store,
 )
 from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
+    append_jsonl_with_db,
     flush_jsonl_db_store,
     shutdown_jsonl_db_store,
 )
+from experimental.inty_v2_text_chat_prototype.models import (
+    PresenceSignal,
+    REPL_PRESENCE_USER_TEXT_OFFLINE,
+    REPL_PRESENCE_USER_TEXT_ONLINE,
+)
+from experimental.inty_v2_text_chat_prototype.paths import WorkspacePaths
+from experimental.inty_v2_text_chat_prototype.utc import utc_iso_ts
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
@@ -156,6 +165,25 @@ def _next_idle_wait_seconds(*, ws: Path, heartbeat: bool) -> float:
 
 def _next_due_wait_seconds_only(ws: Path) -> float | None:
     return next_due_wait_seconds(ws)
+
+
+def _append_repl_presence_transcript(ws: Path, kind: PresenceSignal) -> None:
+    paths = WorkspacePaths(root=ws.resolve())
+    content = (
+        REPL_PRESENCE_USER_TEXT_ONLINE
+        if kind == "repl_online"
+        else REPL_PRESENCE_USER_TEXT_OFFLINE
+    )
+    append_jsonl_with_db(
+        paths.transcript,
+        {
+            "role": "user",
+            "content": content,
+            "ts": utc_iso_ts(),
+            "uuid": str(uuid.uuid4()),
+            "presence": kind,
+        },
+    )
 
 
 def _init_proto_logging(
@@ -928,7 +956,17 @@ def repl(
             cli_disable=no_repl_heartbeat,
         )
         logger.debug("repl interactive heartbeat_enabled={}", hb)
-        _repl_interactive_loop(ws, debug_print_system=debug_print_system, heartbeat=hb)
+        repl_presence_tracked = False
+        if is_workspace_initialized(ws):
+            _append_repl_presence_transcript(ws, "repl_online")
+            repl_presence_tracked = True
+        try:
+            _repl_interactive_loop(
+                ws, debug_print_system=debug_print_system, heartbeat=hb
+            )
+        finally:
+            if repl_presence_tracked:
+                _append_repl_presence_transcript(ws, "repl_offline")
     finally:
         stop_schedule_scheduler(ws)
         _flush_and_shutdown_memory_store(ws.resolve())

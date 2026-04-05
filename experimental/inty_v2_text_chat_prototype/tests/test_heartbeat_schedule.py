@@ -18,6 +18,7 @@ if str(_REPO_ROOT) not in sys.path:
 from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     next_heartbeat_wait_seconds,
 )
+from experimental.inty_v2_text_chat_prototype.models import REPL_PRESENCE_USER_TEXT_ONLINE
 
 
 def _write_transcript(path: Path, rows: list[dict[str, object]]) -> None:
@@ -69,6 +70,45 @@ class TestHeartbeatSchedule(unittest.TestCase):
                         "content": "hello",
                         "ts": t_asst,
                         "uuid": "b",
+                    },
+                ],
+            )
+            now = t0 + timedelta(seconds=3600)
+            with patch.dict(
+                os.environ,
+                {
+                    "INTY_V2_PROTO_HEARTBEAT": "1",
+                    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC": "10",
+                },
+                clear=False,
+            ):
+                w = next_heartbeat_wait_seconds(root, now=now)
+            self.assertLessEqual(w, 0.0)
+
+    def test_trailing_repl_online_does_not_block_heartbeat_when_assistant_last(self) -> None:
+        """末尾 repl_online 行不应视为「最后一轮停在 user」而禁用心跳。"""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            t_user = t0.isoformat()
+            t_asst = (t0 + timedelta(seconds=1)).isoformat()
+            t_pres = (t0 + timedelta(seconds=2)).isoformat()
+            _write_transcript(
+                root / "transcript.jsonl",
+                [
+                    {"role": "user", "content": "hi", "ts": t_user, "uuid": "a"},
+                    {
+                        "role": "assistant",
+                        "content": "hello",
+                        "ts": t_asst,
+                        "uuid": "b",
+                    },
+                    {
+                        "role": "user",
+                        "content": REPL_PRESENCE_USER_TEXT_ONLINE,
+                        "ts": t_pres,
+                        "uuid": "c",
+                        "presence": "repl_online",
                     },
                 ],
             )
