@@ -46,6 +46,10 @@ from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
     next_heartbeat_wait_seconds,
 )
+
+# Idle wait for stdin when no heartbeat / no schedule due: short poll so the REPL loop
+# can drain async tool_bg output without blocking on readline indefinitely.
+_REPL_IDLE_POLL_SEC = 0.1
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_initialized,
     needs_startup_profile_inquiry,
@@ -194,16 +198,6 @@ def _use_posix_stdin_pump() -> bool:
         return sys.stdin.isatty()
     except (OSError, ValueError):
         return False
-
-
-def _readline_main_sync() -> str | None:
-    try:
-        raw = sys.stdin.readline()
-    except KeyboardInterrupt:
-        return None
-    if raw == "":
-        return None
-    return raw.rstrip("\r\n")
 
 
 def _repl_drain_user_turns(
@@ -496,10 +490,20 @@ def _repl_interactive_loop_posix(
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
-                line = _readline_main_sync()
-                if line is None:
+                r, _, _ = select.select(
+                    [stdin_fd], [], [], _REPL_IDLE_POLL_SEC
+                )
+                if not r:
+                    continue
+                try:
+                    raw = sys.stdin.readline()
+                except KeyboardInterrupt:
                     print()
                     break
+                if raw == "":
+                    print()
+                    break
+                line = raw.rstrip("\r\n")
             else:
                 sleep_s = clamp_sleep_seconds(
                     due_wait,
@@ -509,7 +513,11 @@ def _repl_interactive_loop_posix(
                 r, _, _ = select.select([stdin_fd], [], [], sleep_s)
                 if not r:
                     continue
-                raw = sys.stdin.readline()
+                try:
+                    raw = sys.stdin.readline()
+                except KeyboardInterrupt:
+                    print()
+                    break
                 if raw == "":
                     print()
                     break
@@ -621,7 +629,10 @@ def _repl_interactive_loop_daemon(
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
-                item = line_queue.get()
+                try:
+                    item = line_queue.get(timeout=_REPL_IDLE_POLL_SEC)
+                except queue.Empty:
+                    continue
             else:
                 sleep_s = clamp_sleep_seconds(
                     due_wait,

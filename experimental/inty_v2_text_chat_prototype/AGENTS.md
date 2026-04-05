@@ -34,7 +34,7 @@ Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of 
 
 - **`INTY_V2_PROTO_ASYNC_TOOL_BG`** — default **on** (unset): chat-first reply in `run_turn`, tool loop in background; set to `0`/`false`/`no`/`off` for synchronous tool loop (then `INTY_V2_PROTO_DUAL_LLM` can apply).
 - **`context.json`** is read first (`load_context_meta`). It drives **`context_mode`** (e.g. `intimate` vs other): when not intimate, long-term and day-scoped private memory files are **not** injected into the bundle (see `models.load_prompt_bundle`).
-- **REPL stdin** (`main._repl_interactive_loop`): on **POSIX + TTY**, **`run_turn` runs in a worker thread** while the **main thread** uses **`select` + `readline`** to queue further lines (so long tool calls e.g. image gen do not block typing in integrated terminals). On **Windows / non-TTY**, falls back to **`app.core.repl_input.spawn_stdin_line_reader`** (daemon thread).
+- **REPL stdin** (`main._repl_interactive_loop`): on **POSIX + TTY**, **`run_turn` runs in a worker thread** while the **main thread** uses **`select` + `readline`** to queue further lines (so long tool calls e.g. image gen do not block typing in integrated terminals). On **Windows / non-TTY**, falls back to **`app.core.repl_input.spawn_stdin_line_reader`** (daemon thread). When **idle** (no heartbeat / no schedule due), the loop **polls stdin on a short timeout** instead of blocking `readline` forever so **`source=tool_bg` async replies** can print as they arrive.
 
 ## System prompt order (what the model sees)
 
