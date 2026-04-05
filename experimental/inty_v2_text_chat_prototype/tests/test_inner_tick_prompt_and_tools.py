@@ -62,6 +62,8 @@ class TestInnerTickPromptAndTools(unittest.TestCase):
             )
             self.assertIn("## 本轮（内在节拍）", system)
             self.assertIn("模拟一次拟人的、向内的思考节拍", system)
+            self.assertIn("**场景演化（与内向整理并列）**", system)
+            self.assertIn("软转场", system)
             self.assertIn("## 内在节拍输出与工具契约", system)
             self.assertIn("本回合 API 侧**可以**携带工具列表", system)
             self.assertNotIn(
