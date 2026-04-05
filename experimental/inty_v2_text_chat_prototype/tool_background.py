@@ -363,7 +363,29 @@ async def _run_background_tool_loop(
         getattr(initial_response.choices[0].message, "tool_calls", None) or []
     )
     if not initial_tool_calls:
-        logger.debug("repl.turn.bg no_tool_calls skip_transcript")
+        early_text = _assistant_text_from_completion_response(initial_response)
+        if early_text.strip():
+            elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+            assistant_msg_uuid = str(uuid.uuid4())
+            logger.info(
+                "repl.turn.bg no_tool_calls emit_preview_event trace_id={} "
+                "user_msg_uuid={} chars={}",
+                trace_id,
+                user_msg_uuid,
+                len(early_text),
+            )
+            on_event(
+                ToolOutputEvent(
+                    workspace=ws_root,
+                    user_msg_uuid=user_msg_uuid,
+                    assistant_msg_uuid=assistant_msg_uuid,
+                    text=early_text,
+                    ts=utc_iso_ts(),
+                    elapsed_ms=elapsed_ms,
+                )
+            )
+        else:
+            logger.debug("repl.turn.bg no_tool_calls skip_transcript")
         return
     total_tool_calls += len(initial_tool_calls)
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from copy import deepcopy
@@ -333,6 +334,13 @@ def _persist_turn_rows(
     return assistant_msg_uuid
 
 
+def _async_chat_front_timeout_sec() -> float:
+    raw = os.environ.get("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC")
+    if raw is None or not str(raw).strip():
+        return 600.0
+    return float(str(raw).strip())
+
+
 async def _run_turn_fast_chat_then_tool_background(
     messages: list[dict[str, Any]],
     root: Path,
@@ -398,13 +406,29 @@ async def _run_turn_fast_chat_then_tool_background(
         execute_tool_call_fn=execute_tool_call,
         client=tool_client,
     )
-    chat_resp = await asyncio.to_thread(
-        _create_chat_completion_mirrored_tools_no_call,
-        chat_client,
-        model=chat_route_model,
-        messages_payload=chat_payload,
-        tools=tools,
-    )
+    timeout_s = _async_chat_front_timeout_sec()
+    try:
+        chat_resp = await asyncio.wait_for(
+            asyncio.to_thread(
+                _create_chat_completion_mirrored_tools_no_call,
+                chat_client,
+                model=chat_route_model,
+                messages_payload=chat_payload,
+                tools=tools,
+            ),
+            timeout=timeout_s,
+        )
+    except asyncio.TimeoutError as exc:
+        logger.error(
+            "repl.turn async_chat_tool_background chat_front timeout trace_id={} "
+            "timeout_sec={}",
+            trace_id,
+            timeout_s,
+        )
+        raise RuntimeError(
+            f"async chat front timed out after {timeout_s:.0f}s (trace_id={trace_id}); "
+            "increase INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC or retry"
+        ) from exc
     _log_llm_round_result(
         round_idx=1,
         model=chat_route_model,

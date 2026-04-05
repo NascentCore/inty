@@ -494,16 +494,20 @@ def _run_turn_with_stdin_pump(
     )
     t.start()
     stdin_fd = sys.stdin.fileno()
-    # Do not print (async tool output, etc.) while the user may be mid-line in the TTY
-    # line discipline: interleaved stdout corrupts the screen vs kernel buffer, so
-    # backspace appears to "not delete" earlier characters. Only flush async events
-    # after a full line is read from stdin, or after the worker finishes.
+    # Do not print async output while the user may be mid-line in the TTY line discipline
+    # (interleaved stdout corrupts backspace). We still drain the tool_bg queue on each
+    # select timeout so long chat waits can show async-tool lines without a newline.
+    # Inner tick runs a sync tool loop: suppress async-tool stdout during this turn so the
+    # user sees no interleaved replies until the turn finishes (outer loop then drains).
     while not done.is_set():
         r, _, _ = select.select([stdin_fd], [], [], 0.1)
         if not r:
+            if not inner_tick_turn:
+                _drain_async_tool_events(ws)
             continue
         raw = sys.stdin.readline()
-        _drain_async_tool_events(ws)
+        if not inner_tick_turn:
+            _drain_async_tool_events(ws)
         if raw == "":
             pending.put(None)
         else:
@@ -517,7 +521,8 @@ def _run_turn_with_stdin_pump(
             print("> ", end="", flush=True)
             pending.put((text, True))
     t.join(timeout=3600.0)
-    _drain_async_tool_events(ws)
+    if not inner_tick_turn:
+        _drain_async_tool_events(ws)
     if exc:
         raise exc[0]
     return result["out"]

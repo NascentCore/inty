@@ -1,4 +1,4 @@
-"""BOOSTRAP.md：收尾须包含邀请共同定义与询问对方基本信息（可执行规范）。"""
+"""templates/BOOSTRAP.md：收尾须包含邀请共同定义与询问对方基本信息（可执行规范）。"""
 
 from __future__ import annotations
 

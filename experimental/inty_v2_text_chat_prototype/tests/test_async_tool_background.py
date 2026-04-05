@@ -295,7 +295,7 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertIn("tool-final-image-r2", rows[2].content)
             self.assertIn("/tmp/z_image_1.jpeg", rows[2].content)
 
-    def test_no_tool_calls_does_not_append_background_transcript(self) -> None:
+    def test_no_tool_calls_emits_preview_event_but_no_tool_bg_transcript_row(self) -> None:
         fake_completions = _FakeCompletionsNoToolCalls()
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=fake_completions)
@@ -339,7 +339,8 @@ class TestAsyncToolBackground(unittest.TestCase):
                 self.assertEqual(out, "chat-fast-r1")
                 time.sleep(0.1)
                 events = pop_output_events_nowait(workspace=root)
-                self.assertEqual(events, [])
+                self.assertEqual(len(events), 1)
+                self.assertEqual(events[0].text, "tool-no-calls-r1")
                 chat_calls = [
                     c for c in fake_completions.calls if c["model"] == "chat-fast"
                 ]
