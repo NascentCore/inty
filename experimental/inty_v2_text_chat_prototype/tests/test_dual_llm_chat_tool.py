@@ -204,7 +204,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
-                        heartbeat_turn=False,
                     )
                 )
 
@@ -285,7 +284,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
-                        heartbeat_turn=False,
                     )
                 )
 
@@ -364,7 +362,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
-                        heartbeat_turn=False,
                     )
                 )
 
@@ -475,7 +472,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
-                        heartbeat_turn=False,
                         bundle=PromptBundle(
                             identity="id",
                             soul="soul",

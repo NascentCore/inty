@@ -53,6 +53,7 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
         store.write_document("USER.md", _TEMPLATE_USER.strip() + "\n")
         store.write_document("MEMORY.md", _TEMPLATE_MEMORY.strip() + "\n")
         write_text(paths.transcript, "")
+        write_text(paths.ai_private_md, "")
         # memory/.gitkeep、memory/daily/.gitkeep（便于空目录进 git）
         write_text(paths.memory_dir / ".gitkeep", "")
         write_text(paths.memory_daily_dir / ".gitkeep", "")

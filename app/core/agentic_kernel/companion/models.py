@@ -29,6 +29,7 @@ class ChatMessage(BaseModel):
     heartbeat: bool | None = None
     presence: PresenceSignal | None = None
     repl_online_ack: bool | None = None
+    inner_tick: bool | None = None
     source: str | None = None
 
 

@@ -24,6 +24,12 @@ REPL_PRESENCE_USER_TEXT_OFFLINE = "（系统：用户已退出 REPL 会话。）
 REPL_ONLINE_ACK_USER_TEXT = (
     "（会话已恢复：请根据上文续接；若无承接点则简短问候即可。）"
 )
+INNER_TICK_SYNTHETIC_USER_TEXT = (
+    "（内在节拍：用户尚未输入新内容。请结合**内在活动（ai_private）**与本窗口**正在进行的场景、话题与语气**，"
+    "用一两句自然接话，延续当下氛围；不要突然换风格或像新开一局；不要提系统、节拍或等待；不要调用工具。）"
+)
+
+AI_PRIVATE_INJECT_MAX_CHARS = 12_000
 
 
 def is_transcript_real_user_message(m: ChatMessage) -> bool:
@@ -31,31 +37,13 @@ def is_transcript_real_user_message(m: ChatMessage) -> bool:
         return False
     if m.heartbeat is True:
         return False
+    if m.inner_tick is True:
+        return False
     if m.presence is not None:
         return False
     if m.repl_online_ack is True:
         return False
     return True
-
-
-def is_transcript_user_reengagement_after_heartbeat(m: ChatMessage) -> bool:
-    """
-    上一次陪伴心跳 user 行之后：若仅有「REPL 上线 / 会话恢复」而无键入，仍应允许下一次空闲心跳。
-    `repl_offline` 不算重新参与。
-    """
-    if m.role != "user":
-        return False
-    if m.heartbeat is True:
-        return False
-    if m.presence == "repl_offline":
-        return False
-    if is_transcript_real_user_message(m):
-        return True
-    if m.repl_online_ack is True:
-        return True
-    if m.presence == "repl_online":
-        return True
-    return False
 
 
 def transcript_without_trailing_presence_signals(

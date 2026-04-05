@@ -53,6 +53,14 @@ class WorkspacePaths:
         return self.root / "transcript.jsonl"
 
     @property
+    def ai_private_md(self) -> Path:
+        return self.root / "ai_private.md"
+
+    @property
+    def ai_private_jsonl(self) -> Path:
+        return self.root / "ai_private.jsonl"
+
+    @property
     def context_json(self) -> Path:
         return self.root / "context.json"
 

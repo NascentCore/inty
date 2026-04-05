@@ -84,7 +84,6 @@ class TestTraceIdLinkage(unittest.TestCase):
                         orchestrator.run_turn(
                             root,
                             "你好",
-                            heartbeat_turn=False,
                             llm_trace=True,
                         )
                     )

@@ -17,6 +17,11 @@ from typing import Annotated, Callable
 from cyclopts import App, Parameter
 from loguru import logger
 
+try:
+    import fcntl
+except ImportError:
+    fcntl = None  # type: ignore[misc, assignment]
+
 # `python main.py` loads this file as __main__ with no package; ensure parent of this
 # directory is on sys.path so `inty_v2_text_chat_prototype.*` resolves like `python -m`.
 # Repo root enables `import app` (e.g. Fal z-image tool → app.core.images.fal).
@@ -44,13 +49,13 @@ from experimental.inty_v2_text_chat_prototype.proto_log import (
     resolve_proto_log_file,
 )
 
-from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
-    HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
-    heartbeat_enabled_from_env,
-    next_heartbeat_wait_seconds,
+from experimental.inty_v2_text_chat_prototype.inner_tick_schedule import (
+    REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
+    inner_tick_enabled_from_env,
+    next_inner_tick_wait_seconds,
 )
 
-# Idle wait for stdin when no heartbeat / no schedule due: short poll so the REPL loop
+# Idle wait for stdin when no inner tick / no schedule due: short poll so the REPL loop
 # can drain async tool_bg output without blocking on readline indefinitely.
 _REPL_IDLE_POLL_SEC = 0.1
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
@@ -154,10 +159,19 @@ def _process_due_schedule_events(
         print("> ", end="", flush=True)
 
 
-def _next_idle_wait_seconds(*, ws: Path, heartbeat: bool) -> float:
+def _next_idle_wait_seconds(
+    *,
+    ws: Path,
+    inner_tick: bool,
+    last_inner_fire_mono: float | None,
+) -> float:
     waits: list[float] = []
-    if heartbeat:
-        waits.append(next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat))
+    if inner_tick:
+        waits.append(
+            next_inner_tick_wait_seconds(
+                ws, last_inner_fire_monotonic=last_inner_fire_mono
+            )
+        )
     due_wait = next_due_wait_seconds(ws)
     if due_wait is not None:
         waits.append(due_wait)
@@ -168,6 +182,58 @@ def _next_idle_wait_seconds(*, ws: Path, heartbeat: bool) -> float:
 
 def _next_due_wait_seconds_only(ws: Path) -> float | None:
     return next_due_wait_seconds(ws)
+
+
+def _posix_stdin_drain_nonblock(fd: int) -> bytes:
+    if fcntl is None:
+        raise RuntimeError("fcntl is required for POSIX REPL stdin pump")
+    acc = bytearray()
+    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    try:
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        while True:
+            try:
+                chunk = os.read(fd, 65536)
+            except BlockingIOError:
+                break
+            except InterruptedError:
+                continue
+            if not chunk:
+                break
+            acc.extend(chunk)
+    finally:
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+    return bytes(acc)
+
+
+# Partial stdin without a line end can otherwise block inner tick forever (IME / escape bytes).
+_STDIN_PARTIAL_STALE_SEC = 2.5
+
+
+def _stdin_buffer_has_complete_line(buf: bytearray) -> bool:
+    return b"\n" in buf or b"\r" in buf
+
+
+def _pop_line_from_stdin_buffer(buf: bytearray) -> str | None:
+    if not buf:
+        return None
+    try:
+        nl_at = buf.index(b"\n")
+        raw = bytes(buf[:nl_at])
+        del buf[: nl_at + 1]
+        return raw.decode("utf-8", errors="replace").rstrip("\r")
+    except ValueError:
+        pass
+    try:
+        cr_at = buf.index(b"\r")
+        raw = bytes(buf[:cr_at])
+        end = cr_at + 1
+        if end < len(buf) and buf[end] == 0x0A:
+            end += 1
+        del buf[:end]
+        return raw.decode("utf-8", errors="replace")
+    except ValueError:
+        return None
 
 
 def _append_repl_presence_transcript(ws: Path, kind: PresenceSignal) -> None:
@@ -205,30 +271,32 @@ def _init_proto_logging(
     )
 
 
-_REPL_HEARTBEAT_ENV_KEYS = (
-    "INTY_V2_PROTO_HEARTBEAT",
-    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC",
-    "INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC",
-    "INTY_V2_PROTO_HEARTBEAT_MIN_USER_QUIET_SEC",
-    "INTY_V2_PROTO_HEARTBEAT_MIN_TRANSCRIPT_MSGS",
+_REPL_INNER_TICK_ENV_KEYS = (
+    "INTY_V2_PROTO_INNER_TICK_ENABLED",
+    "INTY_V2_PROTO_INNER_TICK_SEC",
+    "INTY_V2_PROTO_INNER_TICK_MIN_GAP_SEC",
+    "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
+    "INTY_V2_PROTO_AI_PRIVATE_MAX_CHARS",
 )
 
 
-def _log_repl_heartbeat_env(ws: Path) -> None:
+def _log_repl_inner_tick_env(ws: Path) -> None:
     """REPL 启动后写入日志，便于对照 `.env` 与进程内 `os.environ`（dotenv 在 main 导入时已加载）。"""
-    pairs = " ".join(f"{k}={os.environ.get(k)!r}" for k in _REPL_HEARTBEAT_ENV_KEYS)
+    pairs = " ".join(f"{k}={os.environ.get(k)!r}" for k in _REPL_INNER_TICK_ENV_KEYS)
     logger.info(
-        "repl startup heartbeat env cwd={} workspace={} {}",
+        "repl startup inner_tick env cwd={} workspace={} {}",
         os.getcwd(),
         ws.resolve(),
         pairs,
     )
-    hb_on = heartbeat_enabled_from_env()
-    wait_s = next_heartbeat_wait_seconds(ws, heartbeat_enabled=hb_on)
+    tick_on = inner_tick_enabled_from_env()
+    wait_s = next_inner_tick_wait_seconds(
+        ws, last_inner_fire_monotonic=time.monotonic()
+    )
     logger.info(
-        "repl startup heartbeat effective enabled={} next_heartbeat_wait_sec={:.1f} "
+        "repl startup inner_tick effective enabled={} next_inner_tick_wait_sec={:.1f} "
         "(transcript before this session repl_online/online_ack)",
-        hb_on,
+        tick_on,
         wait_s,
     )
 
@@ -335,7 +403,7 @@ def _posix_run_user_turn_and_drain_queue(
             ws,
             pending,
             user_text=cur,
-            heartbeat_turn=False,
+            inner_tick_turn=False,
             debug_print_system=debug_print_system,
         )
 
@@ -370,12 +438,12 @@ def _daemon_run_user_turn_and_drain_queue(
     )
 
 
-def _consume_pending_after_heartbeat(
+def _consume_pending_after_inner_tick(
     pending: queue.Queue[tuple[str, bool] | None],
     *,
     drain_user_lines: Callable[[str, bool], bool],
 ) -> bool:
-    """心跳回合结束后：若队列里已有用户行则继续回复。返回 False 表示应结束 REPL。"""
+    """内在节拍回合结束后：若队列里已有用户行则继续回复。返回 False 表示应结束 REPL。"""
     try:
         more = pending.get_nowait()
     except queue.Empty:
@@ -395,7 +463,7 @@ def _run_turn_with_stdin_pump(
     pending: queue.Queue[tuple[str, bool] | None],
     *,
     user_text: str,
-    heartbeat_turn: bool,
+    inner_tick_turn: bool,
     debug_print_system: bool,
 ) -> str:
     """
@@ -412,7 +480,7 @@ def _run_turn_with_stdin_pump(
                 run_turn(
                     ws,
                     user_text,
-                    heartbeat_turn=heartbeat_turn,
+                    inner_tick_turn=inner_tick_turn,
                     debug_print_system=debug_print_system,
                     llm_trace=True,
                 )
@@ -462,10 +530,15 @@ def _repl_interactive_loop_posix(
     ws: Path,
     *,
     debug_print_system: bool,
-    heartbeat: bool,
+    inner_tick: bool,
 ) -> None:
     pending: queue.Queue[tuple[str, bool] | None] = queue.Queue()
     stdin_fd = sys.stdin.fileno()
+    stdin_byte_buf = bytearray()
+    stdin_partial_since: float | None = None
+    last_inner_fire_mono: float | None = (
+        time.monotonic() if inner_tick else None
+    )
     print("> ", end="", flush=True)
 
     while True:
@@ -476,7 +549,7 @@ def _repl_interactive_loop_posix(
                 ws,
                 pending,
                 user_text=text,
-                heartbeat_turn=False,
+                inner_tick_turn=False,
                 debug_print_system=debug_print_system,
             ),
         )
@@ -502,25 +575,57 @@ def _repl_interactive_loop_posix(
                 break
             continue
 
-        if heartbeat:
-            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
+        if inner_tick:
+            wait = _next_idle_wait_seconds(
+                ws=ws,
+                inner_tick=True,
+                last_inner_fire_mono=last_inner_fire_mono,
+            )
             if wait <= 0.0:
-                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
-                if hb_wait > 0.0:
-                    # Due schedule event should run first; do not force a heartbeat turn.
+                if stdin_byte_buf and not _stdin_buffer_has_complete_line(
+                    stdin_byte_buf
+                ):
+                    now_m = time.monotonic()
+                    if stdin_partial_since is None:
+                        stdin_partial_since = now_m
+                    if now_m - stdin_partial_since >= _STDIN_PARTIAL_STALE_SEC:
+                        logger.debug(
+                            "repl stdin drop stale partial stdin_bytes={}",
+                            len(stdin_byte_buf),
+                        )
+                        stdin_byte_buf.clear()
+                        stdin_partial_since = None
+                    else:
+                        r_p, _, _ = select.select([stdin_fd], [], [], 0.1)
+                        if r_p:
+                            try:
+                                stdin_byte_buf.extend(
+                                    _posix_stdin_drain_nonblock(stdin_fd)
+                                )
+                            except KeyboardInterrupt:
+                                print()
+                                break
+                            if _stdin_buffer_has_complete_line(stdin_byte_buf):
+                                stdin_partial_since = None
+                        continue
+                tick_remain = next_inner_tick_wait_seconds(
+                    ws, last_inner_fire_monotonic=last_inner_fire_mono
+                )
+                if tick_remain > 0.0:
                     continue
-                logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
+                logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
                 t0 = time.perf_counter()
                 out = _run_turn_with_stdin_pump(
                     ws,
                     pending,
                     user_text="",
-                    heartbeat_turn=True,
+                    inner_tick_turn=True,
                     debug_print_system=debug_print_system,
                 )
+                last_inner_fire_mono = time.monotonic()
                 _print_assistant_reply(out, time.perf_counter() - t0)
                 print("> ", end="", flush=True)
-                if not _consume_pending_after_heartbeat(
+                if not _consume_pending_after_inner_tick(
                     pending,
                     drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
                         ws,
@@ -536,20 +641,30 @@ def _repl_interactive_loop_posix(
             sleep_s = clamp_sleep_seconds(
                 wait,
                 min_seconds=0.05,
-                max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
             )
+            if stdin_byte_buf:
+                sleep_s = min(sleep_s, 0.15)
             r, _, _ = select.select([stdin_fd], [], [], sleep_s)
             if not r:
                 continue
             try:
-                raw = sys.stdin.readline()
+                new_b = _posix_stdin_drain_nonblock(stdin_fd)
             except KeyboardInterrupt:
                 print()
                 break
-            if raw == "":
+            if new_b == b"":
                 print()
                 break
-            line = raw.rstrip("\r\n")
+            stdin_byte_buf.extend(new_b)
+            if not _stdin_buffer_has_complete_line(stdin_byte_buf):
+                if stdin_partial_since is None:
+                    stdin_partial_since = time.monotonic()
+                continue
+            stdin_partial_since = None
+            line = _pop_line_from_stdin_buffer(stdin_byte_buf)
+            if line is None:
+                continue
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
@@ -571,7 +686,7 @@ def _repl_interactive_loop_posix(
                 sleep_s = clamp_sleep_seconds(
                     due_wait,
                     min_seconds=0.05,
-                    max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                    max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
                 )
                 r, _, _ = select.select([stdin_fd], [], [], sleep_s)
                 if not r:
@@ -605,10 +720,13 @@ def _repl_interactive_loop_daemon(
     ws: Path,
     *,
     debug_print_system: bool,
-    heartbeat: bool,
+    inner_tick: bool,
 ) -> None:
     """Windows / 非 TTY：沿用守护线程读 stdin（无法在主线程 select）。"""
     line_queue, _ = spawn_stdin_line_reader()
+    last_inner_fire_mono: float | None = (
+        time.monotonic() if inner_tick else None
+    )
     print("> ", end="", flush=True)
 
     while True:
@@ -619,7 +737,6 @@ def _repl_interactive_loop_daemon(
                 run_turn(
                     ws,
                     text,
-                    heartbeat_turn=False,
                     debug_print_system=debug_print_system,
                     llm_trace=True,
                 )
@@ -647,27 +764,34 @@ def _repl_interactive_loop_daemon(
                 break
             continue
 
-        if heartbeat:
-            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
+        if inner_tick:
+            wait = _next_idle_wait_seconds(
+                ws=ws,
+                inner_tick=True,
+                last_inner_fire_mono=last_inner_fire_mono,
+            )
             if wait <= 0.0:
-                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
-                if hb_wait > 0.0:
+                tick_remain = next_inner_tick_wait_seconds(
+                    ws, last_inner_fire_monotonic=last_inner_fire_mono
+                )
+                if tick_remain > 0.0:
                     continue
-                logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
+                logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
                 t0 = time.perf_counter()
                 print("> ", end="", flush=True)
                 out = asyncio.run(
                     run_turn(
                         ws,
                         "",
-                        heartbeat_turn=True,
+                        inner_tick_turn=True,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
                     )
                 )
+                last_inner_fire_mono = time.monotonic()
                 _print_assistant_reply(out, time.perf_counter() - t0)
                 print("> ", end="", flush=True)
-                if not _consume_pending_after_heartbeat(
+                if not _consume_pending_after_inner_tick(
                     line_queue,
                     drain_user_lines=lambda m, ev: _daemon_run_user_turn_and_drain_queue(
                         ws,
@@ -683,7 +807,7 @@ def _repl_interactive_loop_daemon(
             sleep_s = clamp_sleep_seconds(
                 wait,
                 min_seconds=0.05,
-                max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
             )
             try:
                 item = line_queue.get(timeout=sleep_s)
@@ -700,7 +824,7 @@ def _repl_interactive_loop_daemon(
                 sleep_s = clamp_sleep_seconds(
                     due_wait,
                     min_seconds=0.05,
-                    max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                    max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
                 )
                 try:
                     item = line_queue.get(timeout=sleep_s)
@@ -730,7 +854,7 @@ def _repl_interactive_loop(
     ws: Path,
     *,
     debug_print_system: bool,
-    heartbeat: bool,
+    inner_tick: bool,
 ) -> None:
     """
     长耗时 turn（如生图）期间仍可读入下一行：在 TTY + POSIX 上由主线程 select+readline 泵入队列，
@@ -738,11 +862,11 @@ def _repl_interactive_loop(
     """
     if _use_posix_stdin_pump():
         _repl_interactive_loop_posix(
-            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
+            ws, debug_print_system=debug_print_system, inner_tick=inner_tick
         )
     else:
         _repl_interactive_loop_daemon(
-            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
+            ws, debug_print_system=debug_print_system, inner_tick=inner_tick
         )
 
 
@@ -906,7 +1030,7 @@ def repl(
     try:
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
-        _log_repl_heartbeat_env(ws)
+        _log_repl_inner_tick_env(ws)
         start_schedule_scheduler(ws)
         logger.debug("cli repl start ws={}", ws.resolve())
         if not is_workspace_initialized(ws):
@@ -952,8 +1076,8 @@ def repl(
             _print_assistant_reply(out, time.perf_counter() - t0)
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
-        hb = heartbeat_enabled_from_env()
-        logger.debug("repl interactive heartbeat_enabled={}", hb)
+        tick_on = inner_tick_enabled_from_env()
+        logger.debug("repl interactive inner_tick_enabled={}", tick_on)
         repl_presence_tracked = False
         if is_workspace_initialized(ws):
             _append_repl_presence_transcript(ws, "repl_online")
@@ -981,7 +1105,7 @@ def repl(
                 return
         try:
             _repl_interactive_loop(
-                ws, debug_print_system=debug_print_system, heartbeat=hb
+                ws, debug_print_system=debug_print_system, inner_tick=tick_on
             )
         finally:
             if repl_presence_tracked:

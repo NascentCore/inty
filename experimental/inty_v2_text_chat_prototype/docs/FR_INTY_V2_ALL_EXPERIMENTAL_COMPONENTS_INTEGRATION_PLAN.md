@@ -80,7 +80,7 @@
 - `orchestrator.run_turn` 仍是 assistant transcript 单写入入口。
 - `prompts.build_system_prompt` 顺序不变（含 `AGENTS.md`/`TOOLS.md`/`HEARTBEAT.md` 及 `context_mode` 语义）。
 - runnable workspace 必选文件不变：`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`transcript.jsonl`。
-- heartbeat turn 语义不变：写入合成 user 行，可标 `heartbeat=true`，且不触发记忆管线。
+- REPL 空闲主动回合在原型中为 **inner_tick**：写入合成 user 行（`inner_tick=true`），且不触发记忆管线（与 `repl_online_ack` 等合成行规则一致）。
 - 渠道接入只允许通过统一 turn pipeline，不允许旁路写 `transcript.jsonl`。
 
 ## 4. 分阶段实施计划
@@ -91,7 +91,7 @@
   - turn input/output
   - transcript 行结构（含 `uuid`/`trace_id`）
   - tool call envelope
-  - heartbeat synthetic turn 规范
+  - inner_tick / repl_online_ack 等 synthetic turn 规范
 - 建立统一目录约束：
   - 新增 `docs/FR_INTY_V2_INTEGRATION_CONTRACTS.md`
   - 新增 `tests/docs/TEST_STEPS_INTY_V2_INTEGRATION_SMOKE.md`
@@ -170,7 +170,7 @@
 
 - 功能验收：
   - reactive turn 正常
-  - heartbeat turn 正常
+  - inner_tick（空闲主动）回合正常
   - tool turn 正常
 - 一致性验收：
   - 所有渠道都走统一 turn pipeline
@@ -196,7 +196,7 @@
 
 - Phase 0 Gate
   - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_transcript_for_llm_turn.py`
-  - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_heartbeat_schedule.py`
+  - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_inner_tick_schedule.py`
   - `pytest -q experimental/inty_v2_text_chat_prototype/tests/test_workspace_bootstrap_loop.py`
   - 通过标准：全部通过，且 `run_turn` 单写入约束相关测试无回归。
 

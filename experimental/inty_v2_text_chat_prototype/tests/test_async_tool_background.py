@@ -197,7 +197,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )
@@ -272,7 +271,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "帮我生成一张图",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )
@@ -335,7 +333,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )
@@ -396,7 +393,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )

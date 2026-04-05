@@ -130,6 +130,19 @@ def _repl_online_ack_clause() -> str:
     )
 
 
+def _inner_tick_clause(ai_private_text: str) -> str:
+    ap = (ai_private_text or "").strip()
+    if not ap:
+        ap = "（尚未记录内在活动；仅依据对话窗口续接即可。）"
+    return (
+        "## 内在活动（ai_private）\n\n"
+        + ap
+        + "\n\n## 本轮（内在节拍）\n\n"
+        "结合上文与内在活动侧写，用一两句自然接话延续同一场景与语气；"
+        "勿改换风格或像新开一局；仅输出自然语言短句，不要调用工具。"
+    )
+
+
 def _tool_side_compact_directive() -> str:
     return (
         "## 工具侧（后台）\n\n"
@@ -146,7 +159,9 @@ def build_system_prompt(
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
     heartbeat_turn: bool = False,
+    inner_tick_turn: bool = False,
     repl_online_ack_turn: bool = False,
+    ai_private_text: str = "",
     include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
     chat_output_format_prompt: str | None = None,
@@ -159,6 +174,7 @@ def build_system_prompt(
     chat_branch_no_tool_api = (
         tools_on
         and not heartbeat_turn
+        and not inner_tick_turn
         and not include_repl_image_generation_contract
     )
 
@@ -174,10 +190,13 @@ def build_system_prompt(
     if heartbeat_turn:
         parts.append(_heartbeat_clause())
 
+    if inner_tick_turn:
+        parts.append(_inner_tick_clause(ai_private_text))
+
     if repl_online_ack_turn:
         parts.append(_repl_online_ack_clause())
 
-    if tool_side_compact and not heartbeat_turn:
+    if tool_side_compact and not heartbeat_turn and not inner_tick_turn:
         parts.append(_tool_side_compact_directive())
 
     parts.extend(
@@ -189,7 +208,7 @@ def build_system_prompt(
         ]
     )
 
-    skip_memory_blocks = tool_side_compact and not heartbeat_turn
+    skip_memory_blocks = tool_side_compact and not heartbeat_turn and not inner_tick_turn
     intimate = context.context_mode.strip().lower() == "intimate"
     if intimate:
         if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
@@ -204,7 +223,7 @@ def build_system_prompt(
         if not skip_memory_blocks and bundle.memory_md.strip():
             parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
 
-    if tools_on and not heartbeat_turn:
+    if tools_on and not heartbeat_turn and not inner_tick_turn:
         if include_repl_image_generation_contract:
             parts.append(
                 _output_contract_text_with_tools(
