@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import queue
 import select
 import sys
@@ -201,6 +202,34 @@ def _init_proto_logging(
     logger.info(
         "inty_v2 proto logging file={}",
         str(resolved) if resolved is not None else "(stderr only)",
+    )
+
+
+_REPL_HEARTBEAT_ENV_KEYS = (
+    "INTY_V2_PROTO_HEARTBEAT",
+    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC",
+    "INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC",
+    "INTY_V2_PROTO_HEARTBEAT_MIN_USER_QUIET_SEC",
+    "INTY_V2_PROTO_HEARTBEAT_MIN_TRANSCRIPT_MSGS",
+)
+
+
+def _log_repl_heartbeat_env(ws: Path) -> None:
+    """REPL 启动后写入日志，便于对照 `.env` 与进程内 `os.environ`（dotenv 在 main 导入时已加载）。"""
+    pairs = " ".join(f"{k}={os.environ.get(k)!r}" for k in _REPL_HEARTBEAT_ENV_KEYS)
+    logger.info(
+        "repl startup heartbeat env cwd={} workspace={} {}",
+        os.getcwd(),
+        ws.resolve(),
+        pairs,
+    )
+    hb_on = heartbeat_enabled_from_env()
+    wait_s = next_heartbeat_wait_seconds(ws, heartbeat_enabled=hb_on)
+    logger.info(
+        "repl startup heartbeat effective enabled={} next_heartbeat_wait_sec={:.1f} "
+        "(transcript before this session repl_online/online_ack)",
+        hb_on,
+        wait_s,
     )
 
 
@@ -877,6 +906,7 @@ def repl(
     try:
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
+        _log_repl_heartbeat_env(ws)
         start_schedule_scheduler(ws)
         logger.debug("cli repl start ws={}", ws.resolve())
         if not is_workspace_initialized(ws):
