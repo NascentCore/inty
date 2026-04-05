@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from .file_store import read_text
 from .memory_store_registry import get_memory_store
@@ -17,7 +17,7 @@ from .utc import local_date_str
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
-    ts: str
+    ts: str = Field(validation_alias=AliasChoices("ts", "timestamp"))
     uuid: str | None = None
     trace_id: str | None = None
     reply_to: str | None = None
