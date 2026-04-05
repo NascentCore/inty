@@ -100,16 +100,19 @@ def build_system_prompt(
         ]
     )
 
-    if bundle.memory_raw_diary_today_md.strip():
-        parts.append(
-            "## MEMORY 日记（今日原始）\n\n" + bundle.memory_raw_diary_today_md.strip()
-        )
-    if bundle.memory_day_summary_today_md.strip():
-        parts.append(
-            "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
-        )
-    if bundle.memory_md.strip():
-        parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
+    intimate = context.context_mode.strip().lower() == "intimate"
+    if intimate:
+        if bundle.memory_raw_diary_today_md.strip():
+            parts.append(
+                "## MEMORY 日记（今日原始）\n\n"
+                + bundle.memory_raw_diary_today_md.strip()
+            )
+        if bundle.memory_day_summary_today_md.strip():
+            parts.append(
+                "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
+            )
+        if bundle.memory_md.strip():
+            parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
 
     if enable_tools and not heartbeat_turn:
         parts.append(_output_contract_text_with_tools())
