@@ -835,7 +835,6 @@ def init_workspace(
 
 
 _SYNTH_USER_BOOTSTRAP_AGENT_DEFAULT = "SYNTH_USER_BOOTSTRAP_AGENT_DEFAULT.md"
-_SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING = "SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING.md"
 _SYNTH_USER_REPL_STARTUP_PROFILE_INQUIRY = "SYNTH_USER_REPL_STARTUP_PROFILE_INQUIRY.md"
 
 
@@ -843,8 +842,9 @@ def _default_bootstrap_user_message() -> str:
     return read_package_template_text(_SYNTH_USER_BOOTSTRAP_AGENT_DEFAULT)
 
 
-def _repl_template_bootstrap_opening_user_message() -> str:
-    return read_package_template_text(_SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING)
+def _repl_bootstrap_opening_user_stub() -> str:
+    """首轮 template bootstrap：opening 指令在 system，本行仅占位 user 角色并写入 transcript。"""
+    return "（用户尚未输入。请依 system 中首轮场景与问句规则先开口。）"
 
 
 def _repl_startup_profile_inquiry_user_message() -> str:
@@ -857,6 +857,7 @@ def _repl_run_startup_opening_turn(
     user_text: str,
     debug_print_system: bool,
     recovery_label: str,
+    inject_repl_bootstrap_opening_system: bool = False,
 ) -> bool:
     print(f"[{_local_ts_str()}] {_preview_line(user_text)}")
     print("> ", end="", flush=True)
@@ -868,6 +869,7 @@ def _repl_run_startup_opening_turn(
                 user_text,
                 debug_print_system=debug_print_system,
                 llm_trace=True,
+                inject_repl_bootstrap_opening_system=inject_repl_bootstrap_opening_system,
             )
         )
     except OpenRouterInvalidJsonError as exc:
@@ -1006,9 +1008,10 @@ def repl(
             )
             if not _repl_run_startup_opening_turn(
                 ws,
-                user_text=_repl_template_bootstrap_opening_user_message(),
+                user_text=_repl_bootstrap_opening_user_stub(),
                 debug_print_system=debug_print_system,
                 recovery_label="repl startup template_bootstrap",
+                inject_repl_bootstrap_opening_system=True,
             ):
                 return
         elif needs_startup_profile_inquiry(ws):
@@ -1040,9 +1043,10 @@ def repl(
             if is_workspace_transcript_empty(ws):
                 ok = _repl_run_startup_opening_turn(
                     ws,
-                    user_text=_repl_template_bootstrap_opening_user_message(),
+                    user_text=_repl_bootstrap_opening_user_stub(),
                     debug_print_system=debug_print_system,
                     recovery_label="repl bootstrap_gate opening",
+                    inject_repl_bootstrap_opening_system=True,
                 )
                 if not ok:
                     return

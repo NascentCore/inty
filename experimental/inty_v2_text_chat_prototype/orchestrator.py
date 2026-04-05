@@ -34,6 +34,7 @@ from .image_gate import prepare_image_gate_for_turn
 from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
+from .bootstrap import read_package_template_text
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
@@ -69,6 +70,7 @@ from .workspace_init_tools import (
 )
 from .tool_background import start_tool_background_job
 
+_REPL_TEMPLATE_BOOTSTRAP_OPENING_MD = "SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING.md"
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
 
@@ -284,6 +286,20 @@ def template_bootstrap_turn_system_prompt(workspace: Path) -> str:
         + build_bootstrap_system_prompt(workspace)
         + SYSTEM_PROMPT_SEP
         + tail
+    )
+
+
+def repl_template_bootstrap_opening_system_section() -> str:
+    """REPL 首轮 template bootstrap：原 synthetic user 文案，现并入 system。"""
+    return read_package_template_text(_REPL_TEMPLATE_BOOTSTRAP_OPENING_MD)
+
+
+def template_bootstrap_turn_system_prompt_with_repl_opening(workspace: Path) -> str:
+    """在 `template_bootstrap_turn_system_prompt` 末尾追加首轮 opening 场景段（仅首 call LLM 使用）。"""
+    return (
+        template_bootstrap_turn_system_prompt(workspace)
+        + SYSTEM_PROMPT_SEP
+        + repl_template_bootstrap_opening_system_section()
     )
 
 
@@ -886,6 +902,7 @@ async def run_turn(
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
     llm_trace: bool = False,
+    inject_repl_bootstrap_opening_system: bool = False,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
     heartbeat_turn=True：用户侧为系统合成的陪伴心跳提示，不跑记忆管线。"""
@@ -920,7 +937,10 @@ async def run_turn(
             not is_workspace_bootstrap_complete(root)
         )
         if template_bootstrap_active:
-            system = template_bootstrap_turn_system_prompt(root)
+            if inject_repl_bootstrap_opening_system:
+                system = template_bootstrap_turn_system_prompt_with_repl_opening(root)
+            else:
+                system = template_bootstrap_turn_system_prompt(root)
             system_prompt_override: str | None = system
         else:
             system = build_system_prompt(
