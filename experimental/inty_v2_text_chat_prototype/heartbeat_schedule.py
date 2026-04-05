@@ -139,8 +139,8 @@ def next_heartbeat_wait_seconds(
     返回距离「允许触发心跳」的剩余秒数；已可触发时返回 <= 0。
     不满足前置条件（未启用、transcript 过短等）时返回大值，表示长时间不必再检查。
 
-    `heartbeat_enabled`: 与 REPL 的 `--repl-heartbeat` / `--no-repl-heartbeat` 对齐；为 None 时仅看
-    `INTY_V2_PROTO_HEARTBEAT`（便于单测与脚本直接调用）。
+    `heartbeat_enabled`: 为 None 时与 REPL 一致，读 `INTY_V2_PROTO_HEARTBEAT`（`heartbeat_enabled_from_env`）；
+    单测与脚本可显式传入 True/False 覆盖。
     """
     if heartbeat_enabled is False:
         return 86400.0 * 365.0

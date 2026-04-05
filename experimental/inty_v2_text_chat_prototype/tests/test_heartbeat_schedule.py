@@ -145,7 +145,7 @@ class TestHeartbeatSchedule(unittest.TestCase):
             self.assertLessEqual(w, 0.0)
 
     def test_explicit_heartbeat_true_without_env_matches_enabled(self) -> None:
-        """REPL `--repl-heartbeat` 不设环境变量时仍应能调度心跳。"""
+        """显式 `heartbeat_enabled=True` 时不依赖环境变量即可调度心跳。"""
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)

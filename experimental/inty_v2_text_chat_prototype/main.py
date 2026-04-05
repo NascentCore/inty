@@ -45,6 +45,7 @@ from experimental.inty_v2_text_chat_prototype.proto_log import (
 
 from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+    heartbeat_enabled_from_env,
     next_heartbeat_wait_seconds,
 )
 
@@ -696,23 +697,6 @@ def _repl_interactive_loop_daemon(
             break
 
 
-def _repl_heartbeat_enabled(
-    *,
-    cli_enable: bool,
-    cli_disable: bool,
-) -> bool:
-    """`--no-repl-heartbeat` 优先；否则 `--repl-heartbeat`；否则读 INTY_V2_PROTO_HEARTBEAT。"""
-    from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
-        heartbeat_enabled_from_env,
-    )
-
-    if cli_disable:
-        return False
-    if cli_enable:
-        return True
-    return heartbeat_enabled_from_env()
-
-
 def _repl_interactive_loop(
     ws: Path,
     *,
@@ -887,20 +871,6 @@ def repl(
         bool,
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
-    repl_heartbeat: Annotated[
-        bool,
-        Parameter(
-            name="--repl-heartbeat",
-            help="启用空闲陪伴心跳（按 transcript 节奏主动一轮；可配合 INTY_V2_PROTO_HEARTBEAT）",
-        ),
-    ] = False,
-    no_repl_heartbeat: Annotated[
-        bool,
-        Parameter(
-            name="--no-repl-heartbeat",
-            help="显式关闭空闲心跳（覆盖环境变量）",
-        ),
-    ] = False,
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
     ws = workspace or _default_workspace()
@@ -952,10 +922,7 @@ def repl(
             _print_assistant_reply(out, time.perf_counter() - t0)
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
-        hb = _repl_heartbeat_enabled(
-            cli_enable=repl_heartbeat,
-            cli_disable=no_repl_heartbeat,
-        )
+        hb = heartbeat_enabled_from_env()
         logger.debug("repl interactive heartbeat_enabled={}", hb)
         repl_presence_tracked = False
         if is_workspace_initialized(ws):
