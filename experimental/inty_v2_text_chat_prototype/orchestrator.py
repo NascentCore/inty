@@ -8,7 +8,7 @@ import time
 import uuid
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 from openai import APIError, BadRequestError
@@ -65,9 +65,13 @@ from .workspace_init_tools import (
     openai_assistant_message_dict,
     read_chat_output_format_prompt,
 )
-from .tool_background import start_tool_background_job
+from .tool_background import mark_tool_background_aborted, start_tool_background_job
 
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
+
+
+class ReplTurnSuperseded(Exception):
+    """REPL 用户在新输入下取消当前回合；不应落盘本条 user/assistant。"""
 
 
 def _llm_route_for_turn(*, async_tool_bg: bool, dual_llm: bool) -> str:
@@ -352,6 +356,8 @@ async def _run_turn_fast_chat_then_tool_background(
     bundle: PromptBundle,
     context: ContextMeta,
     repl_online_ack_turn: bool = False,
+    supersede_check: Callable[[bool], None],
+    tool_bg_started_cell: list[bool],
 ) -> str:
     """
     Front path: return chat-branch text quickly.
@@ -392,6 +398,7 @@ async def _run_turn_fast_chat_then_tool_background(
     )
     chat_payload = _openai_messages_payload(chat_messages)
     chat_log_messages = chat_messages
+    supersede_check(False)
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
     start_tool_background_job(
@@ -406,6 +413,7 @@ async def _run_turn_fast_chat_then_tool_background(
         execute_tool_call_fn=execute_tool_call,
         client=tool_client,
     )
+    tool_bg_started_cell[0] = True
     timeout_s = _async_chat_front_timeout_sec()
     try:
         chat_resp = await asyncio.wait_for(
@@ -429,6 +437,7 @@ async def _run_turn_fast_chat_then_tool_background(
             f"async chat front timed out after {timeout_s:.0f}s (trace_id={trace_id}); "
             "increase INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC or retry"
         ) from exc
+    supersede_check(True)
     _log_llm_round_result(
         round_idx=1,
         model=chat_route_model,
@@ -448,6 +457,7 @@ async def _run_turn_fast_chat_then_tool_background(
         chat_route_model,
         tool_route_model,
     )
+    supersede_check(True)
     return chat_text
 
 
@@ -462,6 +472,7 @@ async def _run_turn_with_user_profile_tools(
     trace_id: str | None = None,
     bundle: PromptBundle | None = None,
     context: ContextMeta | None = None,
+    supersede_check: Callable[[bool], None],
 ) -> str:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
@@ -494,6 +505,7 @@ async def _run_turn_with_user_profile_tools(
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
+        supersede_check(False)
         if dual_enabled and not inner_tick_turn:
             logger.info(
                 "repl.turn llm_round={} dual_llm_parallel trace_id={} chat_model={} tool_model={} "
@@ -575,6 +587,7 @@ async def _run_turn_with_user_profile_tools(
                 if not tool_task.done():
                     tool_task.cancel()
                 raise
+            supersede_check(False)
             _log_llm_round_result(
                 round_idx=round_idx,
                 model=chat_route_model,
@@ -650,6 +663,7 @@ async def _run_turn_with_user_profile_tools(
                 root=root,
                 trace_id=trace_id,
             )
+            supersede_check(False)
             tool_calls = getattr(msg, "tool_calls", None) or []
             messages.append(openai_assistant_message_dict(msg))
             if not tool_calls:
@@ -664,6 +678,7 @@ async def _run_turn_with_user_profile_tools(
             propose,
             ",".join((getattr(tc, "id", "") or "")[:12] for tc in tool_calls),
         )
+        supersede_check(False)
         for tc in tool_calls:
             fn = tc.function
             name = fn.name
@@ -719,6 +734,7 @@ async def _run_turn_with_user_profile_tools(
         round_idx,
         (time.perf_counter() - t_loop) * 1000.0,
     )
+    supersede_check(False)
     return last_text
 
 
@@ -745,11 +761,15 @@ async def run_turn(
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
     llm_trace: bool = False,
+    repl_cancel_check: Callable[[], bool] | None = None,
+    repl_transcript_ids_out: dict[str, str] | None = None,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
     inner_tick_turn=True：内在节拍合成回合（transcript 标 inner_tick），不跑记忆管线；
     API 挂载精简工具集（`workspace_init_tools.build_openai_repl_tools_inner_tick`：USER 档案与工作区读写），不走 async_chat_tool_background。
     repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。
+    repl_transcript_ids_out：若传入非空 dict，成功落盘助手行后写入 user_msg_uuid / assistant_msg_uuid / trace_id（供 REPL 打印调试）。
+    repl_cancel_check：可选；返回 True 时协作式取消本回合（抛 ReplTurnSuperseded，不落盘），供 REPL stdin 泵「最新消息优先」。
     以上合成回合均不调用 prepare_image_gate_for_turn（避免合成 user 文本误改图像门控状态）。"""
     t0 = time.perf_counter()
     root = workspace.resolve()
@@ -833,6 +853,15 @@ async def run_turn(
         ts_user = utc_iso_ts()
         t_main = time.perf_counter()
 
+        tool_bg_started_cell = [False]
+
+        def supersede_check(mark_bg: bool) -> None:
+            if repl_cancel_check is None or not repl_cancel_check():
+                return
+            if mark_bg and tool_bg_started_cell[0]:
+                mark_tool_background_aborted(user_msg_uuid)
+            raise ReplTurnSuperseded()
+
         async def _prepare_turn(turn_input: TurnInput) -> TurnInput:
             return turn_input
 
@@ -868,6 +897,8 @@ async def run_turn(
                     bundle=bundle,
                     context=context,
                     repl_online_ack_turn=repl_online_ack_turn,
+                    supersede_check=supersede_check,
+                    tool_bg_started_cell=tool_bg_started_cell,
                 )
             return await _run_turn_with_user_profile_tools(
                 input_messages,
@@ -879,9 +910,11 @@ async def run_turn(
                 trace_id=turn_trace_id,
                 bundle=bundle,
                 context=context,
+                supersede_check=supersede_check,
             )
 
         async def _handle_response(_: TurnInput, assistant_text: str) -> TurnOutput:
+            supersede_check(True)
             return TurnOutput(
                 assistant_text=assistant_text,
                 metadata={
@@ -896,6 +929,7 @@ async def run_turn(
             turn_input: TurnInput,
             turn_output: TurnOutput,
         ) -> dict[str, Any]:
+            supersede_check(True)
             nonlocal persist_transcript_ms
             t_persist_inner = time.perf_counter()
             assistant_src = "inner_tick" if inner_tick_turn else "chat"
@@ -992,6 +1026,11 @@ async def run_turn(
             "run_turn assistant_preview={}",
             _preview_for_debug(assistant_text, max_len=400),
         )
+        if repl_transcript_ids_out is not None:
+            repl_transcript_ids_out.clear()
+            repl_transcript_ids_out["user_msg_uuid"] = user_msg_uuid
+            repl_transcript_ids_out["assistant_msg_uuid"] = assistant_msg_uuid
+            repl_transcript_ids_out["trace_id"] = turn_trace_id
         return assistant_text
     finally:
         await _reset_fal_async_client_after_short_lived_loop()

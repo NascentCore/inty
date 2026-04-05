@@ -12,7 +12,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Callable
+from typing import Annotated, Callable, Mapping
 
 from cyclopts import App, Parameter
 from loguru import logger
@@ -55,6 +55,7 @@ from experimental.inty_v2_text_chat_prototype.inner_tick_schedule import (
     next_inner_tick_wait_seconds,
 )
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
+    ReplTurnSuperseded,
     is_workspace_initialized,
     needs_startup_profile_inquiry,
     run_turn,
@@ -107,9 +108,28 @@ def _local_ts_str() -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + dt.strftime(" %z")
 
 
-def _print_assistant_reply(out: str, elapsed_s: float) -> None:
+def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
+    u = ids.get("user_msg_uuid", "")
+    a = ids.get("assistant_msg_uuid", "")
+    tr = ids.get("trace_id", "")
+    if not u and not a and not tr:
+        return ""
+    return f" user={u} asst={a} trace={tr}"
+
+
+def _print_assistant_reply(
+    out: str,
+    elapsed_s: float,
+    *,
+    transcript_ids: Mapping[str, str] | None = None,
+) -> None:
     ms = elapsed_s * 1000
-    print(f"[{_local_ts_str()}] {ms:.0f}ms")
+    suffix = (
+        _repl_transcript_id_suffix(transcript_ids)
+        if transcript_ids
+        else ""
+    )
+    print(f"[{_local_ts_str()}] {ms:.0f}ms{suffix}")
     print(out)
 
 
@@ -127,7 +147,7 @@ def _drain_async_tool_events(ws: Path) -> None:
 def _process_due_schedule_events(
     ws: Path,
     *,
-    run_turn_sync: Callable[[str], str],
+    run_turn_sync: Callable[[str], tuple[str, dict[str, str]]],
 ) -> None:
     events = pop_due_task_events_nowait(workspace=ws)
     for ev in events:
@@ -137,7 +157,7 @@ def _process_due_schedule_events(
         )
         t0 = time.perf_counter()
         try:
-            out = run_turn_sync(synthetic_user)
+            out, ids = run_turn_sync(synthetic_user)
         except Exception as exc:
             mark_task_retry(ws, ev.task_id, str(exc))
             logger.exception(
@@ -148,9 +168,10 @@ def _process_due_schedule_events(
             )
             continue
         mark_task_fired(ws, ev.task_id)
+        id_suffix = _repl_transcript_id_suffix(ids)
         print(
             f"[{_local_ts_str()}] schedule-task {int((time.perf_counter() - t0) * 1000)}ms "
-            f"(task={ev.task_id[:8]})"
+            f"(task={ev.task_id[:8]}){id_suffix}"
         )
         print(out)
         print("> ", end="", flush=True)
@@ -339,7 +360,7 @@ def _use_posix_stdin_pump() -> bool:
 def _repl_drain_user_turns(
     first_line: str,
     *,
-    run_turn_sync: Callable[[str], str],
+    run_turn_sync: Callable[[str], tuple[str, dict[str, str]]],
     pending: queue.Queue[tuple[str, bool] | None],
     ws: Path,
     first_line_already_echoed: bool = False,
@@ -369,7 +390,7 @@ def _repl_drain_user_turns(
                 print("> ", end="", flush=True)
             t0 = time.perf_counter()
             try:
-                out = run_turn_sync(cur)
+                out, ids = run_turn_sync(cur)
             except OpenRouterInvalidJsonError as exc:
                 logger.warning(
                     "repl turn recovered from invalid OpenRouter JSON: {}", exc
@@ -385,7 +406,11 @@ def _repl_drain_user_turns(
                     return False
                 cur, cur_echoed = item
                 continue
-            _print_assistant_reply(out, time.perf_counter() - t0)
+            _print_assistant_reply(
+                out,
+                time.perf_counter() - t0,
+                transcript_ids=ids or None,
+            )
             _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
 
@@ -407,7 +432,7 @@ def _posix_run_user_turn_and_drain_queue(
     debug_print_system: bool,
     first_line_already_echoed: bool = False,
 ) -> bool:
-    def _sync(cur: str) -> str:
+    def _sync(cur: str) -> tuple[str, dict[str, str]]:
         return _run_turn_with_stdin_pump(
             ws,
             pending,
@@ -434,8 +459,9 @@ def _daemon_run_user_turn_and_drain_queue(
     debug_print_system: bool,
     first_line_already_echoed: bool = False,
 ) -> bool:
-    def _sync(cur: str) -> str:
-        return asyncio.run(
+    def _sync(cur: str) -> tuple[str, dict[str, str]]:
+        ids_out: dict[str, str] = {}
+        out = asyncio.run(
             run_turn(
                 ws,
                 cur,
@@ -443,8 +469,10 @@ def _daemon_run_user_turn_and_drain_queue(
                 repl_online_ack_turn=False,
                 debug_print_system=debug_print_system,
                 llm_trace=True,
+                repl_transcript_ids_out=ids_out,
             )
         )
+        return out, ids_out
 
     return _repl_drain_user_turns(
         first_line,
@@ -483,71 +511,98 @@ def _run_turn_with_stdin_pump(
     inner_tick_turn: bool,
     repl_online_ack_turn: bool = False,
     debug_print_system: bool,
-) -> str:
+) -> tuple[str, dict[str, str]]:
     """
-    `run_turn` 在工作线程里跑；主线程用 select+readline 把后续行写入 `pending`，
-    供本轮结束后的循环消费（FIFO）。
+    `run_turn` 在工作线程里跑；主线程 select+readline。进行中时若用户又输入**非空行**，
+    则协作式取消当前回合（不落盘），仅以**最后一条**非空输入重跑；空行仍入 `pending` FIFO。
     """
-    done = threading.Event()
-    result: dict[str, str] = {}
-    exc: list[BaseException] = []
+    cur_user = user_text
+    cur_inner = inner_tick_turn
+    cur_ack = repl_online_ack_turn
 
-    def worker() -> None:
-        try:
-            result["out"] = asyncio.run(
-                run_turn(
-                    ws,
-                    user_text,
-                    inner_tick_turn=inner_tick_turn,
-                    repl_online_ack_turn=repl_online_ack_turn,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
+    while True:
+        if cur_user.strip() in ("quit", "exit", "q"):
+            pending.put((cur_user.strip(), True))
+            return "", {}
+
+        supersede_event = threading.Event()
+        replace_slot: list[str | None] = [None]
+        done = threading.Event()
+        result: dict[str, object] = {}
+        exc: list[BaseException] = []
+        ids_out: dict[str, str] = {}
+
+        def repl_cancel_check() -> bool:
+            return supersede_event.is_set()
+
+        def worker() -> None:
+            try:
+                result["out"] = asyncio.run(
+                    run_turn(
+                        ws,
+                        cur_user,
+                        inner_tick_turn=cur_inner,
+                        repl_online_ack_turn=cur_ack,
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                        repl_cancel_check=repl_cancel_check,
+                        repl_transcript_ids_out=ids_out,
+                    )
                 )
-            )
-        except BaseException as e:
-            exc.append(e)
-        finally:
-            done.set()
+                result["superseded"] = False
+            except ReplTurnSuperseded:
+                result["superseded"] = True
+            except BaseException as e:
+                exc.append(e)
+            finally:
+                done.set()
 
-    t = threading.Thread(
-        target=worker,
-        name="inty-v2-run-turn",
-        daemon=True,
-    )
-    t.start()
-    stdin_fd = sys.stdin.fileno()
-    # Do not print async output while the user may be mid-line in the TTY line discipline
-    # (interleaved stdout corrupts backspace). We still drain the tool_bg queue on each
-    # select timeout so long chat waits can show async-tool lines without a newline.
-    # Inner tick runs a sync tool loop: suppress async-tool stdout during this turn so the
-    # user sees no interleaved replies until the turn finishes (outer loop then drains).
-    while not done.is_set():
-        r, _, _ = select.select([stdin_fd], [], [], 0.1)
-        if not r:
-            if not inner_tick_turn:
+        t = threading.Thread(
+            target=worker,
+            name="inty-v2-run-turn",
+            daemon=True,
+        )
+        t.start()
+        stdin_fd = sys.stdin.fileno()
+        while not done.is_set():
+            r, _, _ = select.select([stdin_fd], [], [], 0.1)
+            if not r:
+                if not cur_inner:
+                    _drain_async_tool_events(ws)
+                continue
+            raw = sys.stdin.readline()
+            if not cur_inner:
                 _drain_async_tool_events(ws)
+            if raw == "":
+                pending.put(None)
+            else:
+                text = raw.rstrip("\r\n")
+                if text.strip():
+                    print(f"[{_local_ts_str()}] {text}")
+                    logger.debug(
+                        "repl stdin_pump supersede line_chars={} preview={}",
+                        len(text),
+                        _preview_line(text),
+                    )
+                    print("> ", end="", flush=True)
+                    replace_slot[0] = text
+                    supersede_event.set()
+                else:
+                    print("> ", end="", flush=True)
+                    pending.put((text, True))
+        t.join(timeout=3600.0)
+        if exc:
+            raise exc[0]
+        if result.get("superseded"):
+            latest = replace_slot[0]
+            if latest is not None and latest.strip():
+                cur_user = latest
+                cur_inner = False
+                cur_ack = False
             continue
-        raw = sys.stdin.readline()
-        if not inner_tick_turn:
+        if not cur_inner:
             _drain_async_tool_events(ws)
-        if raw == "":
-            pending.put(None)
-        else:
-            text = raw.rstrip("\r\n")
-            print(f"[{_local_ts_str()}] {text}")
-            logger.debug(
-                "repl stdin_pump queued line_chars={} preview={}",
-                len(text),
-                _preview_line(text),
-            )
-            print("> ", end="", flush=True)
-            pending.put((text, True))
-    t.join(timeout=3600.0)
-    if not inner_tick_turn:
-        _drain_async_tool_events(ws)
-    if exc:
-        raise exc[0]
-    return result["out"]
+        return str(result["out"]), dict(ids_out)
 
 
 def _repl_interactive_loop_posix(
@@ -650,7 +705,7 @@ def _repl_interactive_loop_posix(
                         continue
                     logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
                     t0 = time.perf_counter()
-                    out = _run_turn_with_stdin_pump(
+                    out, ids = _run_turn_with_stdin_pump(
                         ws,
                         pending,
                         user_text="",
@@ -659,7 +714,11 @@ def _repl_interactive_loop_posix(
                         debug_print_system=debug_print_system,
                     )
                     last_inner_fire_mono = time.monotonic()
-                    _print_assistant_reply(out, time.perf_counter() - t0)
+                    _print_assistant_reply(
+                        out,
+                        time.perf_counter() - t0,
+                        transcript_ids=ids or None,
+                    )
                     print("> ", end="", flush=True)
                     if not _consume_pending_after_inner_tick(
                         pending,
@@ -764,23 +823,27 @@ def _repl_interactive_loop_daemon(
     last_inner_fire_mono: float | None = (
         time.monotonic() if inner_tick else None
     )
+
+    def _schedule_run_turn(text: str) -> tuple[str, dict[str, str]]:
+        ids_out: dict[str, str] = {}
+        out = asyncio.run(
+            run_turn(
+                ws,
+                text,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+                repl_transcript_ids_out=ids_out,
+            )
+        )
+        return out, ids_out
+
     print("> ", end="", flush=True)
 
     while True:
         _drain_async_tool_events(ws)
-        _process_due_schedule_events(
-            ws,
-            run_turn_sync=lambda text: asyncio.run(
-                run_turn(
-                    ws,
-                    text,
-                    inner_tick_turn=False,
-                    repl_online_ack_turn=False,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
-                )
-            ),
-        )
+        _process_due_schedule_events(ws, run_turn_sync=_schedule_run_turn)
         try:
             item = line_queue.get_nowait()
         except queue.Empty:
@@ -818,6 +881,7 @@ def _repl_interactive_loop_daemon(
                 logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
                 t0 = time.perf_counter()
                 print("> ", end="", flush=True)
+                ids_tick: dict[str, str] = {}
                 out = asyncio.run(
                     run_turn(
                         ws,
@@ -826,10 +890,15 @@ def _repl_interactive_loop_daemon(
                         repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
+                        repl_transcript_ids_out=ids_tick,
                     )
                 )
                 last_inner_fire_mono = time.monotonic()
-                _print_assistant_reply(out, time.perf_counter() - t0)
+                _print_assistant_reply(
+                    out,
+                    time.perf_counter() - t0,
+                    transcript_ids=ids_tick or None,
+                )
                 print("> ", end="", flush=True)
                 if not _consume_pending_after_inner_tick(
                     line_queue,
@@ -1098,6 +1167,7 @@ def repl(
             )
             t0 = time.perf_counter()
             try:
+                _ids_prof: dict[str, str] = {}
                 out = asyncio.run(
                     run_turn(
                         ws,
@@ -1106,6 +1176,7 @@ def repl(
                         repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
+                        repl_transcript_ids_out=_ids_prof,
                     )
                 )
             except OpenRouterInvalidJsonError as exc:
@@ -1115,7 +1186,11 @@ def repl(
                 )
                 _print_openrouter_invalid_json_retry_hint()
                 return
-            _print_assistant_reply(out, time.perf_counter() - t0)
+            _print_assistant_reply(
+                out,
+                time.perf_counter() - t0,
+                transcript_ids=_ids_prof or None,
+            )
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
         tick_on = inner_tick_enabled_from_env()
@@ -1126,6 +1201,7 @@ def repl(
             repl_presence_tracked = True
             try:
                 t0_ack = time.perf_counter()
+                _ids_ack: dict[str, str] = {}
                 out_ack = asyncio.run(
                     run_turn(
                         ws,
@@ -1134,9 +1210,14 @@ def repl(
                         repl_online_ack_turn=True,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
+                        repl_transcript_ids_out=_ids_ack,
                     )
                 )
-                _print_assistant_reply(out_ack, time.perf_counter() - t0_ack)
+                _print_assistant_reply(
+                    out_ack,
+                    time.perf_counter() - t0_ack,
+                    transcript_ids=_ids_ack or None,
+                )
             except OpenRouterInvalidJsonError as exc:
                 logger.warning(
                     "repl online-ack turn recovered from invalid OpenRouter JSON: {}",
@@ -1199,6 +1280,7 @@ def once(
             _preview_line(message, max_len=240),
         )
         t0 = time.perf_counter()
+        _ids_once: dict[str, str] = {}
         out = asyncio.run(
             run_turn(
                 ws,
@@ -1208,9 +1290,14 @@ def once(
                 debug_print_system=debug_print_system,
                 defer_memory_update=False,
                 llm_trace=True,
+                repl_transcript_ids_out=_ids_once,
             )
         )
-        _print_assistant_reply(out, time.perf_counter() - t0)
+        _print_assistant_reply(
+            out,
+            time.perf_counter() - t0,
+            transcript_ids=_ids_once or None,
+        )
     finally:
         _flush_and_shutdown_memory_store(ws.resolve())
 

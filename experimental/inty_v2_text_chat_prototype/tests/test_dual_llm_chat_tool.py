@@ -204,6 +204,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
+                        supersede_check=lambda _m: None,
                     )
                 )
 
@@ -284,6 +285,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
+                        supersede_check=lambda _m: None,
                     )
                 )
 
@@ -362,6 +364,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
+                        supersede_check=lambda _m: None,
                     )
                 )
 
@@ -479,6 +482,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                             memory_md="memory",
                         ),
                         context=ContextMeta(),
+                        supersede_check=lambda _m: None,
                     )
                 )
 
@@ -542,6 +546,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                         root,
                         llm_trace=False,
                         inner_tick_turn=True,
+                        supersede_check=lambda _m: None,
                     )
                 )
 
