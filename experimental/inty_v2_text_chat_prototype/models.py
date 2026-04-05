@@ -38,6 +38,26 @@ def is_transcript_real_user_message(m: ChatMessage) -> bool:
     return True
 
 
+def is_transcript_user_reengagement_after_heartbeat(m: ChatMessage) -> bool:
+    """
+    上一次陪伴心跳 user 行之后：若仅有「REPL 上线 / 会话恢复」而无键入，仍应允许下一次空闲心跳。
+    `repl_offline` 不算重新参与。
+    """
+    if m.role != "user":
+        return False
+    if m.heartbeat is True:
+        return False
+    if m.presence == "repl_offline":
+        return False
+    if is_transcript_real_user_message(m):
+        return True
+    if m.repl_online_ack is True:
+        return True
+    if m.presence == "repl_online":
+        return True
+    return False
+
+
 def transcript_without_trailing_presence_signals(
     msgs: list[ChatMessage],
 ) -> list[ChatMessage]:

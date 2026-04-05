@@ -12,6 +12,7 @@ from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER
 from .models import (
     ChatMessage,
     is_transcript_real_user_message,
+    is_transcript_user_reengagement_after_heartbeat,
     load_transcript,
     transcript_without_trailing_presence_signals,
 )
@@ -24,7 +25,7 @@ _DEFAULT_MIN_TRANSCRIPT_LINES = 2
 
 # REPL 单次 queue 等待上限，避免超大值导致长时间不响应环境变化
 HEARTBEAT_MAX_SLEEP_CHUNK_SEC = 3600.0
-_RHYTHM_CLAMP_SEC = (90.0, 900.0)
+_RHYTHM_CLAMP_SEC = (30.0, 900.0)
 
 
 def heartbeat_enabled_from_env() -> bool:
@@ -114,7 +115,7 @@ def _last_real_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
-def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
+def _has_reengagement_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
     hb_idx: int | None = None
     for i in range(len(msgs) - 1, -1, -1):
         m = msgs[i]
@@ -124,7 +125,7 @@ def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
     if hb_idx is None:
         return True
     for m in msgs[hb_idx + 1 :]:
-        if is_transcript_real_user_message(m):
+        if is_transcript_user_reengagement_after_heartbeat(m):
             return True
     return False
 
@@ -165,8 +166,8 @@ def next_heartbeat_wait_seconds(
     if last_asst is None:
         return 86400.0 * 365.0
 
-    # 用户离线期间，最多只允许一次心跳；必须等到真实用户输入后才允许下一次。
-    if not _has_real_user_after_last_heartbeat(msgs):
+    # 用户离线期间，最多只允许一次心跳；须有一次「重新参与」（键入或 REPL 上线/会话恢复）后才允许下一次。
+    if not _has_reengagement_after_last_heartbeat(msgs):
         return 86400.0 * 365.0
 
     t = now if now is not None else datetime.now(timezone.utc)

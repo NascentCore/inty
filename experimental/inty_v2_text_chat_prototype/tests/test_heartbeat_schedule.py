@@ -20,6 +20,7 @@ from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     next_heartbeat_wait_seconds,
 )
 from experimental.inty_v2_text_chat_prototype.models import (
+    REPL_ONLINE_ACK_USER_TEXT,
     REPL_PRESENCE_USER_TEXT_ONLINE,
     ChatMessage,
     is_transcript_real_user_message,
@@ -300,6 +301,67 @@ class TestHeartbeatSchedule(unittest.TestCase):
                     "role": "assistant",
                     "content": "欢迎回来",
                     "ts": (base + timedelta(minutes=50, seconds=1)).isoformat(),
+                    "uuid": "a3",
+                },
+            ]
+            _write_transcript(root / "transcript.jsonl", rows)
+            now = base + timedelta(hours=2)
+            with patch.dict(
+                os.environ,
+                {
+                    "INTY_V2_PROTO_HEARTBEAT": "1",
+                    "INTY_V2_PROTO_HEARTBEAT_IDLE_SEC": "10",
+                    "INTY_V2_PROTO_HEARTBEAT_MIN_GAP_SEC": "10",
+                },
+                clear=False,
+            ):
+                w = next_heartbeat_wait_seconds(root, now=now)
+            self.assertLessEqual(w, 0.0)
+
+    def test_allows_heartbeat_again_after_repl_online_ack_only(self) -> None:
+        """上次陪伴心跳后仅有上线/会话恢复（无键入）也应视为重新参与。"""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+            rows = [
+                {"role": "user", "content": "你好", "ts": base.isoformat(), "uuid": "u1"},
+                {
+                    "role": "assistant",
+                    "content": "在呢",
+                    "ts": (base + timedelta(seconds=1)).isoformat(),
+                    "uuid": "a1",
+                },
+                {
+                    "role": "user",
+                    "content": "hb1",
+                    "ts": (base + timedelta(minutes=5)).isoformat(),
+                    "uuid": "u2",
+                    "heartbeat": True,
+                },
+                {
+                    "role": "assistant",
+                    "content": "我在这",
+                    "ts": (base + timedelta(minutes=5, seconds=1)).isoformat(),
+                    "uuid": "a2",
+                },
+                {
+                    "role": "user",
+                    "content": REPL_PRESENCE_USER_TEXT_ONLINE,
+                    "ts": (base + timedelta(minutes=6)).isoformat(),
+                    "uuid": "p1",
+                    "presence": "repl_online",
+                },
+                {
+                    "role": "user",
+                    "content": REPL_ONLINE_ACK_USER_TEXT,
+                    "ts": (base + timedelta(minutes=6, seconds=1)).isoformat(),
+                    "uuid": "ack1",
+                    "repl_online_ack": True,
+                },
+                {
+                    "role": "assistant",
+                    "content": "欢迎回来",
+                    "ts": (base + timedelta(minutes=6, seconds=2)).isoformat(),
                     "uuid": "a3",
                 },
             ]
