@@ -16,7 +16,10 @@ from app.core.agentic_kernel.tools.runtime import (
 from .client import create_chat_completion, default_model, get_client_dual_llm_tool
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str
-from .orchestrator import is_workspace_bootstrap_complete
+from .orchestrator import (
+    default_bootstrap_completion_celebration_text,
+    is_workspace_bootstrap_complete,
+)
 from .workspace_init_tools import (
     build_openai_tools,
     openai_assistant_message_dict,
@@ -218,6 +221,10 @@ def run_workspace_bootstrap_loop(
                     (time.perf_counter() - t_boot) * 1000.0,
                     root.name,
                 )
+                if not last_assistant_text.strip():
+                    last_assistant_text = (
+                        default_bootstrap_completion_celebration_text()
+                    )
                 return last_assistant_text
             logger.debug(
                 "bootstrap no_tool_calls but BOOSTRAPED missing round={} "
@@ -311,6 +318,8 @@ def run_workspace_bootstrap_loop(
                 (time.perf_counter() - t_boot) * 1000.0,
                 root.name,
             )
+            if not last_assistant_text.strip():
+                last_assistant_text = default_bootstrap_completion_celebration_text()
             return last_assistant_text
         logger.debug(
             "bootstrap tool_loop_finished but BOOSTRAPED missing rounds_used={} "

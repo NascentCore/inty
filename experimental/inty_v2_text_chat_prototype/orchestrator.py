@@ -751,6 +751,16 @@ async def _run_turn_with_user_profile_tools(
         round_idx,
         (time.perf_counter() - t_loop) * 1000.0,
     )
+    if (
+        template_bootstrap_active
+        and is_workspace_bootstrap_complete(root)
+        and not (last_text or "").strip()
+    ):
+        last_text = default_bootstrap_completion_celebration_text()
+        logger.info(
+            "repl.turn bootstrap_done_empty_assistant_injected trace_id={}",
+            trace_id,
+        )
     return last_text
 
 
@@ -776,6 +786,11 @@ def is_workspace_initialized(workspace: Path) -> bool:
 def is_workspace_bootstrap_complete(workspace: Path) -> bool:
     """模板填充 bootstrap 已结束（workspace 根目录存在空标记文件 BOOSTRAPED）。"""
     return (workspace.resolve() / "BOOSTRAPED").is_file()
+
+
+def default_bootstrap_completion_celebration_text() -> str:
+    """BOOSTRAP.md 收尾：模型若仅工具落盘无正文，用此句满足「最后一条可见回复含庆祝」。"""
+    return "好啦，我们这边的约定都落定了。为纪念我们陪伴的开始，真心为你高兴！🎉"
 
 
 def repl_heartbeat_suppressed_for_workspace_bootstrap(workspace: Path) -> bool:
