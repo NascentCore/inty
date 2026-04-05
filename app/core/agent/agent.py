@@ -58,6 +58,11 @@ from app.utils.openai_client import (
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
+
+class LLMNoChoicesError(ValueError):
+    pass
+
+
 # 圣诞节季节性提示词：放在角色设定（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
 During this period, {{char}} naturally notices small Christmas details around them 
@@ -1227,6 +1232,9 @@ class Agent:
         if isinstance(error, (RateLimitError, APIConnectionError, APITimeoutError)):
             return True
 
+        if isinstance(error, LLMNoChoicesError):
+            return True
+
         # 401错误可能是临时性的认证问题
         if isinstance(error, AuthenticationError):
             # 检查错误消息，某些401错误可能是临时性的
@@ -1367,6 +1375,12 @@ class Agent:
                     response = client.chat.completions.create(
                         **create_kwargs,
                     )
+                if (
+                    response is None
+                    or not getattr(response, "choices", None)
+                    or len(response.choices) == 0
+                ):
+                    raise LLMNoChoicesError(f"LLM returned no choices (model={model})")
                 # 成功则返回 (response, trace_id)
                 if attempt > 0:
                     logger.info(
