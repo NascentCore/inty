@@ -36,7 +36,7 @@ _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE = (
 )
 
 _PKG_DIR = Path(__file__).resolve().parent
-_BOOSTRAP_PATH = _PKG_DIR / "_ws2" / "BOOSTRAP.md"
+_BOOSTRAP_PATH = _PKG_DIR / "templates" / "BOOSTRAP.md"
 
 
 def _insert_system_message(
@@ -59,7 +59,7 @@ def _internal_bootstrap_continue() -> str:
 
 
 def load_bootstrap_instruction_text() -> str:
-    """加载 _ws2/BOOSTRAP.md（与 README 中「Agentic 初始化」流程一致）。"""
+    """加载 templates/BOOSTRAP.md（与 README 中「Agentic 初始化」流程一致）。"""
     if not _BOOSTRAP_PATH.is_file():
         raise FileNotFoundError(f"missing bootstrap spec: {_BOOSTRAP_PATH}")
     base = _BOOSTRAP_PATH.read_text(encoding="utf-8").rstrip()

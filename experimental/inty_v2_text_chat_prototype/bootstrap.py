@@ -10,25 +10,22 @@ from .jsonl_db_store import flush_jsonl_db_store, shutdown_jsonl_db_store
 from .memory_store_registry import get_memory_store, shutdown_memory_store
 from .paths import WorkspacePaths
 
-_TEMPLATE_IDENTITY = """# IDENTITY
+_PKG_DIR = Path(__file__).resolve().parent
+_TEMPLATES_DIR = _PKG_DIR / "templates"
+_TEMPLATE_DOCS: tuple[str, ...] = (
+    "IDENTITY.md",
+    "SOUL.md",
+    "USER.md",
+    "MEMORY.md",
+)
 
-（在此填写助手身份表层：称呼、角色、与用户的关系等。）
-"""
 
-_TEMPLATE_SOUL = """# SOUL
+def _read_workspace_template(name: str) -> str:
+    path = _TEMPLATES_DIR / name
+    if not path.is_file():
+        raise FileNotFoundError(f"missing workspace template: {path}")
+    return path.read_text(encoding="utf-8")
 
-（在此填写价值观、边界、危机与安全相关原则。）
-"""
-
-_TEMPLATE_USER = """# USER
-
-（用户称呼、界限、互动密度等约定。）
-"""
-
-_TEMPLATE_MEMORY = """# MEMORY
-
-（长期记忆定稿；对话后可能由记忆更新步骤自动覆盖。）
-"""
 
 _CONTEXT_JSON = {
     "context_mode": "intimate",
@@ -39,7 +36,7 @@ _CONTEXT_JSON = {
 
 
 def init_workspace(path: Path, *, write_context: bool = True) -> None:
-    """创建必选文件、空 transcript、memory 目录与可选 context.json。"""
+    """从 templates/ 拷贝四份 md 模板，创建空 transcript、memory 目录与可选 context.json。"""
     root = path.resolve()
     paths = WorkspacePaths(root=root)
     store = get_memory_store(root)
@@ -48,10 +45,10 @@ def init_workspace(path: Path, *, write_context: bool = True) -> None:
         paths.memory_dir.mkdir(parents=True, exist_ok=True)
         paths.memory_daily_dir.mkdir(parents=True, exist_ok=True)
 
-        store.write_document("IDENTITY.md", _TEMPLATE_IDENTITY.strip() + "\n")
-        store.write_document("SOUL.md", _TEMPLATE_SOUL.strip() + "\n")
-        store.write_document("USER.md", _TEMPLATE_USER.strip() + "\n")
-        store.write_document("MEMORY.md", _TEMPLATE_MEMORY.strip() + "\n")
+        for name in _TEMPLATE_DOCS:
+            raw = _read_workspace_template(name)
+            body = raw if raw.endswith("\n") else raw + "\n"
+            store.write_document(name, body)
         write_text(paths.transcript, "")
         # memory/.gitkeep、memory/daily/.gitkeep（便于空目录进 git）
         write_text(paths.memory_dir / ".gitkeep", "")
