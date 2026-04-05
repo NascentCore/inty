@@ -67,13 +67,42 @@ def _insert_system_message(
     )
 
 
-def _internal_bootstrap_continue() -> str:
-    return _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE
+def _log_bootstrap_llm_round(round_idx: int, t_api_start: float, model: str) -> None:
+    logger.info(
+        "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",
+        round_idx,
+        (time.perf_counter() - t_api_start) * 1000.0,
+        model,
+    )
+
+
+def _maybe_emit_bootstrap_trace(
+    llm_trace: bool,
+    *,
+    round_idx: int,
+    model: str,
+    messages: list[dict[str, Any]],
+    response: Any,
+    ws_label: str,
+) -> None:
+    if not llm_trace:
+        return
+    emit_trace(
+        "bootstrap",
+        round_idx=round_idx,
+        model=model,
+        messages=summarize_messages(
+            messages,
+            ws_label=ws_label,
+            trace_day=local_date_str(),
+        ),
+        response=summarize_completion_response(response),
+    )
 
 
 def repl_bootstrap_continue_user_message() -> str:
     """REPL 在缺 BOOSTRAPED 时注入的 synthetic user，与 bootstrap_agent 内部续跑文案一致。"""
-    return _internal_bootstrap_continue()
+    return _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE
 
 
 def _bootstrap_spec_base_text(workspace: Path | None) -> str:
@@ -167,25 +196,16 @@ def run_workspace_bootstrap_loop(
             messages_payload=messages,
             tools=tools,
         )
-        logger.info(
-            "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",
-            round_idx,
-            (time.perf_counter() - t_api) * 1000.0,
-            m,
-        )
+        _log_bootstrap_llm_round(round_idx, t_api, m)
         rounds_used += 1
-        if llm_trace:
-            emit_trace(
-                "bootstrap",
-                round_idx=round_idx,
-                model=m,
-                messages=summarize_messages(
-                    messages,
-                    ws_label=root.name,
-                    trace_day=local_date_str(),
-                ),
-                response=summarize_completion_response(resp),
-            )
+        _maybe_emit_bootstrap_trace(
+            llm_trace,
+            round_idx=round_idx,
+            model=m,
+            messages=messages,
+            response=resp,
+            ws_label=root.name,
+        )
         msg = resp.choices[0].message
         tool_calls = getattr(msg, "tool_calls", None) or []
         if not tool_calls:
@@ -204,7 +224,9 @@ def run_workspace_bootstrap_loop(
                 "injecting_internal_continue",
                 round_idx,
             )
-            messages.append({"role": "user", "content": _internal_bootstrap_continue()})
+            messages.append(
+                {"role": "user", "content": repl_bootstrap_continue_user_message()}
+            )
             continue
 
         active_round = round_idx
@@ -250,24 +272,15 @@ def run_workspace_bootstrap_loop(
                 messages_payload=messages_with_tool_results,
                 tools=tools,
             )
-            logger.info(
-                "bootstrap llm_round={} chat_completions_ms={:.0f} model={}",
-                active_round,
-                (time.perf_counter() - t_api_inner) * 1000.0,
-                m,
+            _log_bootstrap_llm_round(active_round, t_api_inner, m)
+            _maybe_emit_bootstrap_trace(
+                llm_trace,
+                round_idx=active_round,
+                model=m,
+                messages=messages_with_tool_results,
+                response=next_resp,
+                ws_label=root.name,
             )
-            if llm_trace:
-                emit_trace(
-                    "bootstrap",
-                    round_idx=active_round,
-                    model=m,
-                    messages=summarize_messages(
-                        messages_with_tool_results,
-                        ws_label=root.name,
-                        trace_day=local_date_str(),
-                    ),
-                    response=summarize_completion_response(next_resp),
-                )
             return next_resp, None
 
         try:
@@ -304,7 +317,9 @@ def run_workspace_bootstrap_loop(
             "injecting_internal_continue",
             rounds_used,
         )
-        messages.append({"role": "user", "content": _internal_bootstrap_continue()})
+        messages.append(
+            {"role": "user", "content": repl_bootstrap_continue_user_message()}
+        )
 
     raise RuntimeError(
         f"workspace bootstrap exceeded max_rounds={max_rounds}; last messages tail: "

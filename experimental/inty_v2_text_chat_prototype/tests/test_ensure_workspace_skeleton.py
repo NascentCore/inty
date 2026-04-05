@@ -27,7 +27,7 @@ class TestEnsureWorkspaceSkeleton(unittest.TestCase):
             self.assertTrue((root / "USER.md").is_file())
             self.assertTrue((root / "MEMORY.md").is_file())
             self.assertFalse((root / "MODES.md").exists())
-            self.assertTrue((root / "AGENTS.md").is_file())
+            self.assertFalse((root / "AGENTS.md").exists())
             self.assertTrue((root / "BOOSTRAP.md").is_file())
             self.assertTrue((root / "transcript.jsonl").is_file())
             shutdown_memory_store(root, timeout_s=2.0)

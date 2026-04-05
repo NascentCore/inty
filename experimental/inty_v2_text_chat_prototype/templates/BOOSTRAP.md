@@ -1,6 +1,6 @@
 # Agentic 初始化执行规范（内部）
 
-程序启动 REPL 时已从包内 `templates/` **拷贝**到 workspace：`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`AGENTS.md`、`BOOSTRAP.md`（本规范副本），以及空的 `transcript.jsonl` 等骨架。
+程序启动 REPL 时已从包内 `templates/` **拷贝**到 workspace：`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`BOOSTRAP.md`（本规范副本），以及空的 `transcript.jsonl` 等骨架。根目录 `AGENTS.md` 为可选，需自行新建；包内不再提供同名模板副本。
 
 你的任务**不是**从零创建这些文件，邀请用户一起**定义你及你的陪伴模式**，通过与用户多轮对话中达成共识后，用工具更新`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`，并按下方标准收尾（需要核对当前落盘内容时再读文件即可）。若需要单独记录「陪伴模式」类约定，可自行新增并维护根目录 `MODES.md`（包内不再提供同名模板副本）。
 

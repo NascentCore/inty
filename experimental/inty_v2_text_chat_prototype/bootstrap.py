@@ -17,7 +17,6 @@ _TEMPLATE_DOCS: tuple[str, ...] = (
     "SOUL.md",
     "USER.md",
     "MEMORY.md",
-    "AGENTS.md",
     "BOOSTRAP.md",
 )
 
@@ -85,7 +84,7 @@ def ensure_workspace_skeleton(path: Path, *, write_context: bool = True) -> None
 
 
 def init_workspace(path: Path, *, write_context: bool = True) -> None:
-    """从 templates/ 拷贝六份 md 模板（含 AGENTS、BOOSTRAP），创建空 transcript、memory 目录与可选 context.json。"""
+    """从 templates/ 拷贝五份 md 模板（IDENTITY/SOUL/USER/MEMORY/BOOSTRAP），创建空 transcript、memory 目录与可选 context.json。"""
     root = path.resolve()
     paths = WorkspacePaths(root=root)
     store = get_memory_store(root)

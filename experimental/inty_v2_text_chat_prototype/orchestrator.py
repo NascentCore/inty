@@ -802,6 +802,11 @@ def _transcript_is_empty(paths: WorkspacePaths) -> bool:
     return len(transcript_chat_rows(load_transcript(paths.transcript))) == 0
 
 
+def is_workspace_transcript_empty(workspace: Path) -> bool:
+    paths = WorkspacePaths(root=workspace.resolve())
+    return _transcript_is_empty(paths)
+
+
 def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
     s = text.strip()
     if not s:

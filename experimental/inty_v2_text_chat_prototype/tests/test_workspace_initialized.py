@@ -13,6 +13,7 @@ sys.path.insert(0, str(_EXPERIMENTAL))
 from inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_bootstrap_complete,
     is_workspace_initialized,
+    is_workspace_transcript_empty,
     repl_heartbeat_suppressed_for_workspace_bootstrap,
 )
 
@@ -47,6 +48,18 @@ class TestIsWorkspaceInitialized(unittest.TestCase):
             self.assertFalse(is_workspace_bootstrap_complete(root))
             _touch(root / "BOOSTRAPED")
             self.assertTrue(is_workspace_bootstrap_complete(root))
+
+    def test_transcript_empty_for_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            root.mkdir()
+            _touch(root / "transcript.jsonl")
+            self.assertTrue(is_workspace_transcript_empty(root))
+            (root / "transcript.jsonl").write_text(
+                '{"role":"user","content":"hi","ts":"t","uuid":"u"}\n',
+                encoding="utf-8",
+            )
+            self.assertFalse(is_workspace_transcript_empty(root))
 
     def test_repl_heartbeat_suppressed_during_template_stub_bootstrap(self) -> None:
         with tempfile.TemporaryDirectory() as td:

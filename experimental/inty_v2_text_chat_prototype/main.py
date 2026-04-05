@@ -50,6 +50,7 @@ from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
 )
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
     is_workspace_bootstrap_complete,
+    is_workspace_transcript_empty,
     needs_startup_profile_inquiry,
     needs_workspace_template_bootstrap,
     repl_heartbeat_suppressed_for_workspace_bootstrap,
@@ -84,6 +85,10 @@ from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
 
 def _default_workspace() -> Path:
     return Path(__file__).resolve().parent / "workspace"
+
+
+class _ReplBootstrapPhaseComplete(Exception):
+    pass
 
 
 def _local_ts_str() -> str:
@@ -254,6 +259,7 @@ def _repl_drain_user_turns(
     pending: queue.Queue[tuple[str, bool] | None],
     ws: Path,
     first_line_already_echoed: bool = False,
+    exit_when_bootstrap_complete: bool = False,
 ) -> bool:
     """
     跑一轮 user turn，然后连续消费 `pending` 里在本轮之前/期间积压的行（均得到助手回复），
@@ -297,6 +303,8 @@ def _repl_drain_user_turns(
             _print_assistant_reply(out, time.perf_counter() - t0)
             _drain_async_tool_events(ws)
             _repl_drain_bootstrap_continuations_if_needed(ws, run_turn_sync)
+            if exit_when_bootstrap_complete and is_workspace_bootstrap_complete(ws):
+                raise _ReplBootstrapPhaseComplete
             print("> ", end="", flush=True)
 
         try:
@@ -316,6 +324,7 @@ def _posix_run_user_turn_and_drain_queue(
     *,
     debug_print_system: bool,
     first_line_already_echoed: bool = False,
+    exit_when_bootstrap_complete: bool = False,
 ) -> bool:
     def _sync(cur: str) -> str:
         return _run_turn_with_stdin_pump(
@@ -332,6 +341,7 @@ def _posix_run_user_turn_and_drain_queue(
         pending=pending,
         ws=ws,
         first_line_already_echoed=first_line_already_echoed,
+        exit_when_bootstrap_complete=exit_when_bootstrap_complete,
     )
 
 
@@ -342,6 +352,7 @@ def _daemon_run_user_turn_and_drain_queue(
     *,
     debug_print_system: bool,
     first_line_already_echoed: bool = False,
+    exit_when_bootstrap_complete: bool = False,
 ) -> bool:
     def _sync(cur: str) -> str:
         return asyncio.run(
@@ -354,6 +365,7 @@ def _daemon_run_user_turn_and_drain_queue(
         pending=line_queue,
         ws=ws,
         first_line_already_echoed=first_line_already_echoed,
+        exit_when_bootstrap_complete=exit_when_bootstrap_complete,
     )
 
 
@@ -445,11 +457,31 @@ def _run_turn_with_stdin_pump(
     return result["out"]
 
 
+def _posix_drain_after_heartbeat(
+    ws: Path,
+    pending: queue.Queue[tuple[str, bool] | None],
+    m: str,
+    ev: bool,
+    *,
+    debug_print_system: bool,
+    exit_when_bootstrap_complete: bool,
+) -> bool:
+    return _posix_run_user_turn_and_drain_queue(
+        ws,
+        pending,
+        m,
+        debug_print_system=debug_print_system,
+        first_line_already_echoed=ev,
+        exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+    )
+
+
 def _repl_interactive_loop_posix(
     ws: Path,
     *,
     debug_print_system: bool,
     heartbeat: bool,
+    exit_when_bootstrap_complete: bool = False,
 ) -> None:
     pending: queue.Queue[tuple[str, bool] | None] = queue.Queue()
     stdin_fd = sys.stdin.fileno()
@@ -479,14 +511,18 @@ def _repl_interactive_loop_posix(
             if not line.strip():
                 print("> ", end="", flush=True)
                 continue
-            if not _posix_run_user_turn_and_drain_queue(
-                ws,
-                pending,
-                line,
-                debug_print_system=debug_print_system,
-                first_line_already_echoed=echoed,
-            ):
-                break
+            try:
+                if not _posix_run_user_turn_and_drain_queue(
+                    ws,
+                    pending,
+                    line,
+                    debug_print_system=debug_print_system,
+                    first_line_already_echoed=echoed,
+                    exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+                ):
+                    break
+            except _ReplBootstrapPhaseComplete:
+                return
             continue
 
         hb_on = heartbeat and not repl_heartbeat_suppressed_for_workspace_bootstrap(ws)
@@ -508,17 +544,21 @@ def _repl_interactive_loop_posix(
                 )
                 _print_assistant_reply(out, time.perf_counter() - t0)
                 print("> ", end="", flush=True)
-                if not _consume_pending_after_heartbeat(
-                    pending,
-                    drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
-                        ws,
+                try:
+                    if not _consume_pending_after_heartbeat(
                         pending,
-                        m,
-                        debug_print_system=debug_print_system,
-                        first_line_already_echoed=ev,
-                    ),
-                ):
-                    break
+                        drain_user_lines=lambda m, ev: _posix_drain_after_heartbeat(
+                            ws,
+                            pending,
+                            m,
+                            ev,
+                            debug_print_system=debug_print_system,
+                            exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+                        ),
+                    ):
+                        break
+                except _ReplBootstrapPhaseComplete:
+                    return
                 continue
 
             sleep_s = clamp_sleep_seconds(
@@ -561,14 +601,18 @@ def _repl_interactive_loop_posix(
         if not line.strip():
             print("> ", end="", flush=True)
             continue
-        if not _posix_run_user_turn_and_drain_queue(
-            ws,
-            pending,
-            line,
-            debug_print_system=debug_print_system,
-            first_line_already_echoed=False,
-        ):
-            break
+        try:
+            if not _posix_run_user_turn_and_drain_queue(
+                ws,
+                pending,
+                line,
+                debug_print_system=debug_print_system,
+                first_line_already_echoed=False,
+                exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+            ):
+                break
+        except _ReplBootstrapPhaseComplete:
+            return
 
 
 def _repl_interactive_loop_daemon(
@@ -576,6 +620,7 @@ def _repl_interactive_loop_daemon(
     *,
     debug_print_system: bool,
     heartbeat: bool,
+    exit_when_bootstrap_complete: bool = False,
 ) -> None:
     """Windows / 非 TTY：沿用守护线程读 stdin（无法在主线程 select）。"""
     line_queue, _ = spawn_stdin_line_reader()
@@ -607,14 +652,18 @@ def _repl_interactive_loop_daemon(
             if not line.strip():
                 print("> ", end="", flush=True)
                 continue
-            if not _daemon_run_user_turn_and_drain_queue(
-                ws,
-                line_queue,
-                line,
-                debug_print_system=debug_print_system,
-                first_line_already_echoed=echoed,
-            ):
-                break
+            try:
+                if not _daemon_run_user_turn_and_drain_queue(
+                    ws,
+                    line_queue,
+                    line,
+                    debug_print_system=debug_print_system,
+                    first_line_already_echoed=echoed,
+                    exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+                ):
+                    break
+            except _ReplBootstrapPhaseComplete:
+                return
             continue
 
         hb_on = heartbeat and not repl_heartbeat_suppressed_for_workspace_bootstrap(ws)
@@ -638,17 +687,21 @@ def _repl_interactive_loop_daemon(
                 )
                 _print_assistant_reply(out, time.perf_counter() - t0)
                 print("> ", end="", flush=True)
-                if not _consume_pending_after_heartbeat(
-                    line_queue,
-                    drain_user_lines=lambda m, ev: _daemon_run_user_turn_and_drain_queue(
-                        ws,
+                try:
+                    if not _consume_pending_after_heartbeat(
                         line_queue,
-                        m,
-                        debug_print_system=debug_print_system,
-                        first_line_already_echoed=ev,
-                    ),
-                ):
-                    break
+                        drain_user_lines=lambda m, ev: _daemon_run_user_turn_and_drain_queue(
+                            ws,
+                            line_queue,
+                            m,
+                            debug_print_system=debug_print_system,
+                            first_line_already_echoed=ev,
+                            exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+                        ),
+                    ):
+                        break
+                except _ReplBootstrapPhaseComplete:
+                    return
                 continue
 
             sleep_s = clamp_sleep_seconds(
@@ -684,14 +737,18 @@ def _repl_interactive_loop_daemon(
         if not line.strip():
             print("> ", end="", flush=True)
             continue
-        if not _daemon_run_user_turn_and_drain_queue(
-            ws,
-            line_queue,
-            line,
-            debug_print_system=debug_print_system,
-            first_line_already_echoed=echoed,
-        ):
-            break
+        try:
+            if not _daemon_run_user_turn_and_drain_queue(
+                ws,
+                line_queue,
+                line,
+                debug_print_system=debug_print_system,
+                first_line_already_echoed=echoed,
+                exit_when_bootstrap_complete=exit_when_bootstrap_complete,
+            ):
+                break
+        except _ReplBootstrapPhaseComplete:
+            return
 
 
 def _repl_heartbeat_enabled(
@@ -716,6 +773,7 @@ def _repl_interactive_loop(
     *,
     debug_print_system: bool,
     heartbeat: bool,
+    exit_when_bootstrap_complete: bool = False,
 ) -> None:
     """
     长耗时 turn（如生图）期间仍可读入下一行：在 TTY + POSIX 上由主线程 select+readline 泵入队列，
@@ -723,11 +781,17 @@ def _repl_interactive_loop(
     """
     if _use_posix_stdin_pump():
         _repl_interactive_loop_posix(
-            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
+            ws,
+            debug_print_system=debug_print_system,
+            heartbeat=heartbeat,
+            exit_when_bootstrap_complete=exit_when_bootstrap_complete,
         )
     else:
         _repl_interactive_loop_daemon(
-            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
+            ws,
+            debug_print_system=debug_print_system,
+            heartbeat=heartbeat,
+            exit_when_bootstrap_complete=exit_when_bootstrap_complete,
         )
 
 
@@ -762,7 +826,7 @@ def init_workspace(
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
 ) -> None:
-    """从包内 templates/ 拷贝 IDENTITY/SOUL/USER/MEMORY/AGENTS/BOOSTRAP，并创建空 transcript、memory/ 与 memory/daily/、context.json。"""
+    """从包内 templates/ 拷贝 IDENTITY/SOUL/USER/MEMORY/BOOSTRAP，并创建空 transcript、memory/ 与 memory/daily/、context.json。"""
     _init_proto_logging(path, log_file, no_log_file)
     try:
         bootstrap_init_workspace(path)
@@ -956,6 +1020,46 @@ def repl(
                 return
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
+
+        def _sync_bootstrap_continue(m: str) -> str:
+            return asyncio.run(
+                run_turn(
+                    ws,
+                    m,
+                    debug_print_system=debug_print_system,
+                    llm_trace=True,
+                )
+            )
+
+        while not is_workspace_bootstrap_complete(ws):
+            logger.debug("repl bootstrap_gate before full_interactive")
+            if is_workspace_transcript_empty(ws):
+                ok = _repl_run_startup_opening_turn(
+                    ws,
+                    user_text=_repl_template_bootstrap_opening_user_message(),
+                    debug_print_system=debug_print_system,
+                    recovery_label="repl bootstrap_gate opening",
+                )
+                if not ok:
+                    return
+            else:
+                _repl_drain_bootstrap_continuations_if_needed(ws, _sync_bootstrap_continue)
+            if is_workspace_bootstrap_complete(ws):
+                break
+            print(
+                "[初始化] 须在工作区根目录创建空文件 BOOSTRAPED 后才能进入日常对话。"
+                " 可继续在此完成初始化，或运行 bootstrap_agent；输入 quit 退出。",
+                flush=True,
+            )
+            _repl_interactive_loop(
+                ws,
+                debug_print_system=debug_print_system,
+                heartbeat=False,
+                exit_when_bootstrap_complete=True,
+            )
+            if not is_workspace_bootstrap_complete(ws):
+                return
+
         hb = _repl_heartbeat_enabled(
             cli_enable=repl_heartbeat,
             cli_disable=no_repl_heartbeat,
