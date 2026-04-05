@@ -63,16 +63,16 @@ def apply_new_content(root: Path, text: str) -> None:
         )
     key = _state_key(root)
     paths = WorkspacePaths(root=Path(key))
-    write_text_atomic(paths.ai_private_md, text)
-    append_jsonl_with_db(
-        paths.ai_private_jsonl,
-        {
-            "ts": utc_iso_ts(),
-            "byte_len": len(text.encode("utf-8")),
-            "content": text,
-        },
-    )
     with _LOCK:
+        write_text_atomic(paths.ai_private_md, text)
+        append_jsonl_with_db(
+            paths.ai_private_jsonl,
+            {
+                "ts": utc_iso_ts(),
+                "byte_len": len(text.encode("utf-8")),
+                "content": text,
+            },
+        )
         st = _STATE.setdefault(key, {"text": "", "loaded": False})
         st["text"] = text
         st["loaded"] = True

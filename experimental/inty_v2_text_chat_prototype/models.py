@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,8 @@ from app.core.agentic_kernel.companion.models import (  # noqa: F401
 from app.core.agentic_kernel.companion.models import (
     load_prompt_bundle as _kernel_load_prompt_bundle,
 )
+
+from .file_store import read_text, write_text_atomic
 
 REPL_PRESENCE_USER_TEXT_ONLINE = "（系统：用户已在 REPL 上线。）"
 REPL_PRESENCE_USER_TEXT_OFFLINE = "（系统：用户已退出 REPL 会话。）"
@@ -57,6 +60,25 @@ def transcript_without_trailing_presence_signals(
     while i > 0 and msgs[i - 1].role == "user" and msgs[i - 1].presence is not None:
         i -= 1
     return msgs[:i]
+
+
+def undo_trailing_repl_online_presence_line(transcript_path: Path) -> bool:
+    if not transcript_path.is_file():
+        return False
+    text = read_text(transcript_path)
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return False
+    try:
+        obj = json.loads(lines[-1])
+    except json.JSONDecodeError:
+        return False
+    if obj.get("role") != "user" or obj.get("presence") != "repl_online":
+        return False
+    kept = lines[:-1]
+    new_body = "\n".join(kept) + ("\n" if kept else "")
+    write_text_atomic(transcript_path, new_body)
+    return True
 
 
 if TYPE_CHECKING:

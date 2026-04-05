@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -43,3 +44,28 @@ class TestAiPrivateStore(unittest.TestCase):
             with patch.dict(os.environ, {"INTY_V2_PROTO_AI_PRIVATE_MAX_CHARS": "10"}):
                 with self.assertRaises(ValueError):
                     ai_private_store.apply_new_content(root, "x" * 20)
+
+    def test_concurrent_apply_leaves_consistent_md(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            paths = WorkspacePaths(root=root)
+            paths.root.mkdir(parents=True, exist_ok=True)
+            barrier = threading.Barrier(2)
+            errors: list[BaseException] = []
+
+            def worker(text: str) -> None:
+                try:
+                    barrier.wait()
+                    ai_private_store.apply_new_content(root, text)
+                except BaseException as e:
+                    errors.append(e)
+
+            t1 = threading.Thread(target=worker, args=("aaa",))
+            t2 = threading.Thread(target=worker, args=("bbb",))
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+            self.assertEqual(errors, [])
+            got = paths.ai_private_md.read_text(encoding="utf-8")
+            self.assertIn(got, ("aaa", "bbb"))

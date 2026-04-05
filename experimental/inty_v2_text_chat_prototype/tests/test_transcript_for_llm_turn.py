@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,7 +15,9 @@ if str(_REPO_ROOT) not in sys.path:
 from experimental.inty_v2_text_chat_prototype.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
+    load_transcript,
     transcript_for_llm_turn,
+    undo_trailing_repl_online_presence_line,
 )
 
 
@@ -39,6 +43,28 @@ class TestTranscriptForLlmTurn(unittest.TestCase):
         loaded = [_msg(0), _msg(1)]
         out = transcript_for_llm_turn(loaded)
         self.assertEqual(out, loaded)
+
+    def test_undo_trailing_repl_online_removes_last_line(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "transcript.jsonl"
+            row0 = {"role": "user", "content": "hi", "ts": "2026-01-01T00:00:00Z"}
+            row1 = {
+                "role": "user",
+                "content": "x",
+                "ts": "2026-01-01T00:00:01Z",
+                "presence": "repl_online",
+            }
+            p.write_text(
+                json.dumps(row0, ensure_ascii=False)
+                + "\n"
+                + json.dumps(row1, ensure_ascii=False)
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(undo_trailing_repl_online_presence_line(p))
+            loaded = load_transcript(p)
+            self.assertEqual(len(loaded), 1)
+            self.assertEqual(loaded[0].content, "hi")
 
 
 if __name__ == "__main__":

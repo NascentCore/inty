@@ -85,6 +85,7 @@ from experimental.inty_v2_text_chat_prototype.models import (
     REPL_ONLINE_ACK_USER_TEXT,
     REPL_PRESENCE_USER_TEXT_OFFLINE,
     REPL_PRESENCE_USER_TEXT_ONLINE,
+    undo_trailing_repl_online_presence_line,
 )
 from experimental.inty_v2_text_chat_prototype.paths import WorkspacePaths
 from experimental.inty_v2_text_chat_prototype.utc import utc_iso_ts
@@ -1096,7 +1097,11 @@ def repl(
                     exc,
                 )
                 _print_openrouter_invalid_json_retry_hint()
-                _append_repl_presence_transcript(ws, "repl_offline")
+                paths = WorkspacePaths(root=ws.resolve())
+                if undo_trailing_repl_online_presence_line(paths.transcript):
+                    logger.debug(
+                        "repl online-ack failed: removed trailing repl_online presence line"
+                    )
                 repl_presence_tracked = False
                 return
         try:
