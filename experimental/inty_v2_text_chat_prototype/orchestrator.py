@@ -735,7 +735,10 @@ _USER_STUB_MARKERS: tuple[str, ...] = (
 def _transcript_is_empty(paths: WorkspacePaths) -> bool:
     if not paths.transcript.is_file():
         return True
-    return len(load_transcript(paths.transcript)) == 0
+    for m in load_transcript(paths.transcript):
+        if m.role in ("user", "assistant"):
+            return False
+    return True
 
 
 def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
