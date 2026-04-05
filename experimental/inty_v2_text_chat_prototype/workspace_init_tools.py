@@ -65,10 +65,12 @@ WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
         "AGENTS.md",
+        "BOOSTRAPED",
         "CAPABILITIES.md",
         "HEARTBEAT.md",
         "IDENTITY.md",
         "MEMORY.md",
+        "MODES.md",
         "SOUL.md",
         "TOOLS.md",
         "USER.md",
@@ -107,6 +109,7 @@ def _is_memory_document(relative_path: str) -> bool:
         "HEARTBEAT.md",
         "IDENTITY.md",
         "MEMORY.md",
+        "MODES.md",
         "SOUL.md",
         "TOOLS.md",
         "USER.md",

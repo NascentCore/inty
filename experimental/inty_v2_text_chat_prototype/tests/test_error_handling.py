@@ -106,18 +106,24 @@ def test_client_exception_identity_shared_between_import_paths() -> None:
 
 
 def test_repl_startup_bootstrap_branch_handles_openrouter_invalid_json() -> None:
+    mock_run_turn = AsyncMock(side_effect=OpenRouterInvalidJsonError("bad upstream body"))
     with (
-        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=False),
-        patch("inty_v2_text_chat_prototype.main.run_workspace_bootstrap_loop") as mock_boot,
+        patch("inty_v2_text_chat_prototype.main.ensure_workspace_skeleton"),
+        patch(
+            "inty_v2_text_chat_prototype.main.needs_workspace_template_bootstrap",
+            return_value=True,
+        ),
+        patch("inty_v2_text_chat_prototype.main.run_turn", mock_run_turn),
         patch("inty_v2_text_chat_prototype.main._init_proto_logging"),
         patch("inty_v2_text_chat_prototype.main._configure_llm_trace_for_workspace"),
+        patch("inty_v2_text_chat_prototype.main.start_schedule_scheduler"),
+        patch("inty_v2_text_chat_prototype.main.stop_schedule_scheduler"),
         patch("inty_v2_text_chat_prototype.main._flush_and_shutdown_memory_store"),
         patch("inty_v2_text_chat_prototype.main._repl_interactive_loop") as mock_loop,
         patch(
             "inty_v2_text_chat_prototype.main._print_openrouter_invalid_json_retry_hint"
         ) as mock_hint,
     ):
-        mock_boot.side_effect = OpenRouterInvalidJsonError("bad upstream body")
         repl(workspace=Path("/tmp/ws-a"))
     mock_hint.assert_called_once_with()
     mock_loop.assert_not_called()
@@ -126,11 +132,17 @@ def test_repl_startup_bootstrap_branch_handles_openrouter_invalid_json() -> None
 def test_repl_startup_profile_branch_handles_openrouter_invalid_json() -> None:
     mock_run_turn = AsyncMock(side_effect=OpenRouterInvalidJsonError("bad upstream body"))
     with (
-        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=True),
+        patch("inty_v2_text_chat_prototype.main.ensure_workspace_skeleton"),
+        patch(
+            "inty_v2_text_chat_prototype.main.needs_workspace_template_bootstrap",
+            return_value=False,
+        ),
         patch("inty_v2_text_chat_prototype.main.needs_startup_profile_inquiry", return_value=True),
         patch("inty_v2_text_chat_prototype.main.run_turn", mock_run_turn),
         patch("inty_v2_text_chat_prototype.main._init_proto_logging"),
         patch("inty_v2_text_chat_prototype.main._configure_llm_trace_for_workspace"),
+        patch("inty_v2_text_chat_prototype.main.start_schedule_scheduler"),
+        patch("inty_v2_text_chat_prototype.main.stop_schedule_scheduler"),
         patch("inty_v2_text_chat_prototype.main._flush_and_shutdown_memory_store"),
         patch("inty_v2_text_chat_prototype.main._repl_interactive_loop") as mock_loop,
         patch(

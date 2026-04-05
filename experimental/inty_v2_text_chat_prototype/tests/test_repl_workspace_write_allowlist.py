@@ -34,6 +34,22 @@ class TestReplWriteAllowlist(unittest.TestCase):
             self.assertTrue(out.startswith("OK"))
             self.assertEqual((root / "SOUL.md").read_text(encoding="utf-8"), "b\n")
 
+    def test_allows_boostraped_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = execute_tool_call_blocking(
+                root,
+                "workspace_write_file",
+                json.dumps(
+                    {"relative_path": "BOOSTRAPED", "content": ""},
+                    ensure_ascii=False,
+                ),
+                write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
+            )
+            self.assertTrue(out.startswith("OK"))
+            self.assertTrue((root / "BOOSTRAPED").is_file())
+            self.assertEqual((root / "BOOSTRAPED").read_text(encoding="utf-8"), "")
+
     def test_allows_capabilities_md(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

@@ -83,6 +83,26 @@ class TestDualLlmImageContract(unittest.TestCase):
         self.assertIn("联网检索", compact_sys)
         self.assertIn("generate_image", compact_sys)
 
+    def test_modes_section_after_user_when_non_empty(self) -> None:
+        bundle = PromptBundle(
+            identity="i",
+            soul="s",
+            user_md="u",
+            memory_md="",
+            modes_md="# 陪伴模式\n\nstub\n",
+        )
+        sys_prompt = build_system_prompt(
+            bundle,
+            ContextMeta(),
+            enable_user_profile_tool=False,
+            heartbeat_turn=False,
+        )
+        self.assertIn("## MODES（陪伴模式）", sys_prompt)
+        self.assertIn("stub", sys_prompt)
+        u_idx = sys_prompt.index("## USER")
+        m_idx = sys_prompt.index("## MODES（陪伴模式）")
+        self.assertLess(u_idx, m_idx)
+
 
 if __name__ == "__main__":
     unittest.main()

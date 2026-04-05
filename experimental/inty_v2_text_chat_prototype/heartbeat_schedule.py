@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .env_util import env_flag_enabled
-from .models import ChatMessage, load_transcript
+from .models import ChatMessage, load_transcript, transcript_chat_rows
 from .paths import WorkspacePaths
 
 # 与 orchestrator.run_turn(heartbeat_turn=True) 写入 transcript 的 user 行一致
@@ -141,14 +141,15 @@ def next_heartbeat_wait_seconds(
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
     msgs = load_transcript(paths.transcript)
+    chat = transcript_chat_rows(msgs)
     min_lines = _env_int(
         "INTY_V2_PROTO_HEARTBEAT_MIN_TRANSCRIPT_MSGS",
         _DEFAULT_MIN_TRANSCRIPT_LINES,
     )
-    if len(msgs) < min_lines:
+    if len(chat) < min_lines:
         return 86400.0 * 365.0
 
-    if not msgs or msgs[-1].role != "assistant":
+    if not chat or chat[-1].role != "assistant":
         return 86400.0 * 365.0
 
     last_asst = _last_assistant_ts(msgs)

@@ -42,10 +42,15 @@ from .models import (
     load_context_meta,
     load_prompt_bundle,
     load_transcript,
+    transcript_chat_rows,
     transcript_for_llm_turn,
 )
 from .paths import WorkspacePaths
-from .prompts import build_system_prompt
+from .prompts import (
+    SYSTEM_PROMPT_SEP,
+    build_system_prompt,
+    system_prompt_security_prefix,
+)
 from .utc import local_date_str, utc_iso_ts
 from .llm_trace import (
     TRANSCRIPT_MSG_UUID_KEY,
@@ -126,7 +131,7 @@ def _debug_log_prompt_bundle(bundle: PromptBundle, *, context: ContextMeta) -> N
     )
     logger.debug(
         "run_turn.bundle_chars identity={} soul={} user={} memory={} "
-        "agents={} tools={} heartbeat={} diary_today={} day_summary={}",
+        "agents={} tools={} heartbeat={} modes={} diary_today={} day_summary={}",
         len(bundle.identity),
         len(bundle.soul),
         len(bundle.user_md),
@@ -134,6 +139,7 @@ def _debug_log_prompt_bundle(bundle: PromptBundle, *, context: ContextMeta) -> N
         len(bundle.agents_md),
         len(bundle.tools_md),
         len(bundle.heartbeat_md),
+        len(bundle.modes_md),
         len(bundle.memory_raw_diary_today_md),
         len(bundle.memory_day_summary_today_md),
     )
@@ -262,6 +268,25 @@ def _log_llm_round_result(
         )
 
 
+def template_bootstrap_turn_system_prompt(workspace: Path) -> str:
+    """REPL 在尚无 BOOSTRAPED 时的完整 system 文本（供 run_turn 与单测）。"""
+    from .workspace_init_loop import build_bootstrap_system_prompt
+
+    tail = (
+        "在完成 workspace 根目录空文件 BOOSTRAPED 之前，不要调用 generate_image、"
+        "modify_image、google_web_search；专注关系建立与人格与记忆等约定模板的共识与落盘。"
+        "面向用户的每条回复里，至多包含 1 个需要对方明确回答的结尾问句；可用少量铺垫拉高参与意愿，"
+        "但不要用列表一次抛出多个问号，也不要在铺垫里再夹第二个待答问句。"
+    )
+    return (
+        system_prompt_security_prefix()
+        + SYSTEM_PROMPT_SEP
+        + build_bootstrap_system_prompt(workspace)
+        + SYSTEM_PROMPT_SEP
+        + tail
+    )
+
+
 def _build_turn_base_messages(
     *,
     bundle: PromptBundle,
@@ -269,14 +294,18 @@ def _build_turn_base_messages(
     transcript: list[ChatMessage],
     user_text: str,
     heartbeat_turn: bool,
+    system_prompt_override: str | None = None,
 ) -> tuple[list[dict[str, Any]], str]:
     """Construct system+history+user messages and return (messages, user_msg_uuid)."""
-    system = build_system_prompt(
-        bundle,
-        context,
-        enable_user_profile_tool=True,
-        heartbeat_turn=heartbeat_turn,
-    )
+    if system_prompt_override is not None:
+        system = system_prompt_override
+    else:
+        system = build_system_prompt(
+            bundle,
+            context,
+            enable_user_profile_tool=True,
+            heartbeat_turn=heartbeat_turn,
+        )
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in transcript:
         row: dict[str, Any] = {"role": m.role, "content": m.content}
@@ -436,20 +465,29 @@ async def _run_turn_with_user_profile_tools(
     trace_id: str | None = None,
     bundle: PromptBundle | None = None,
     context: ContextMeta | None = None,
+    template_bootstrap_active: bool = False,
 ) -> str:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
     model = default_model()
-    dual_enabled = dual_llm_enabled()
+    dual_env = dual_llm_enabled()
+    dual_enabled = (
+        dual_env and not heartbeat_turn and not template_bootstrap_active
+    )
     chat_route_model = chat_model()
     tool_route_model = tool_model()
     tools: list[Any] = [] if heartbeat_turn else build_openai_repl_tools()
     chat_output_format_prompt = read_chat_output_format_prompt(root)
     if not heartbeat_turn and not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
-    if heartbeat_turn and dual_enabled:
+    if heartbeat_turn and dual_env:
         logger.info(
             "repl.turn dual_llm env_on_but_ignored trace_id={} reason=heartbeat_turn",
+            trace_id,
+        )
+    if template_bootstrap_active and dual_env and not heartbeat_turn:
+        logger.info(
+            "repl.turn dual_llm env_on_but_ignored trace_id={} reason=template_bootstrap",
             trace_id,
         )
     route = _llm_route_for_turn(
@@ -459,11 +497,13 @@ async def _run_turn_with_user_profile_tools(
     )
     logger.info(
         "repl.turn user_profile_tool_loop_enter trace_id={} llm_route={} "
-        "dual_llm={} heartbeat_turn={} chat_model={} tool_model={} default_model={}",
+        "dual_llm={} heartbeat_turn={} template_bootstrap_active={} chat_model={} tool_model={} "
+        "default_model={}",
         trace_id,
         route,
         dual_enabled,
         heartbeat_turn,
+        template_bootstrap_active,
         chat_route_model,
         tool_route_model,
         model,
@@ -717,6 +757,23 @@ def is_workspace_initialized(workspace: Path) -> bool:
     return True
 
 
+def is_workspace_bootstrap_complete(workspace: Path) -> bool:
+    """模板填充 bootstrap 已结束（workspace 根目录存在空标记文件 BOOSTRAPED）。"""
+    return (workspace.resolve() / "BOOSTRAPED").is_file()
+
+
+def repl_heartbeat_suppressed_for_workspace_bootstrap(workspace: Path) -> bool:
+    """
+    尚无 BOOSTRAPED 且 IDENTITY/USER 仍像包内模板桩时，REPL 不应触发陪伴心跳。
+    （首启 opening 写入 transcript 后 needs_workspace_template_bootstrap 已为假，须单独门控心跳。）
+    """
+    root = workspace.resolve()
+    if is_workspace_bootstrap_complete(root):
+        return False
+    id_stub, user_stub = _identity_user_stub_flags(root)
+    return id_stub or user_stub
+
+
 # IDENTITY/USER 仍像模板或未约定时的子串（与 bootstrap 桩、示例工作区一致；用于启动时是否先开口）
 _IDENTITY_STUB_MARKERS: tuple[str, ...] = (
     "（在此填写",
@@ -742,7 +799,7 @@ _USER_STUB_MARKERS: tuple[str, ...] = (
 def _transcript_is_empty(paths: WorkspacePaths) -> bool:
     if not paths.transcript.is_file():
         return True
-    return len(load_transcript(paths.transcript)) == 0
+    return len(transcript_chat_rows(load_transcript(paths.transcript))) == 0
 
 
 def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
@@ -750,6 +807,15 @@ def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
     if not s:
         return True
     return any(m in s for m in markers)
+
+
+def _identity_user_stub_flags(root: Path) -> tuple[bool, bool]:
+    store = get_memory_store(root)
+    ident = store.read_document_if_exists("IDENTITY.md") or ""
+    user_md = store.read_document_if_exists("USER.md") or ""
+    id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)
+    user_stub = _text_matches_any_marker(user_md, _USER_STUB_MARKERS)
+    return id_stub, user_stub
 
 
 def needs_startup_profile_inquiry(workspace: Path) -> bool:
@@ -763,14 +829,36 @@ def needs_startup_profile_inquiry(workspace: Path) -> bool:
     paths = WorkspacePaths(root=root)
     if not _transcript_is_empty(paths):
         return False
-    store = get_memory_store(root)
-    ident = store.read_document_if_exists("IDENTITY.md") or ""
-    user_md = store.read_document_if_exists("USER.md") or ""
-    id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)
-    user_stub = _text_matches_any_marker(user_md, _USER_STUB_MARKERS)
+    id_stub, user_stub = _identity_user_stub_flags(root)
     out = id_stub or user_stub
     logger.debug(
         "needs_startup_profile_inquiry ws={} id_stub={} user_stub={} -> {}",
+        root.name,
+        id_stub,
+        user_stub,
+        out,
+    )
+    return out
+
+
+def needs_workspace_template_bootstrap(workspace: Path) -> bool:
+    """
+    REPL 在 ensure_workspace_skeleton 之后：尚无 BOOSTRAPED、五件套已齐、
+    transcript 无 user/assistant、且 IDENTITY/USER 仍像模板桩时，首启与后续轮次走
+    `run_turn` 的模板 bootstrap system（非 `run_workspace_bootstrap_loop`）。
+    """
+    root = workspace.resolve()
+    if is_workspace_bootstrap_complete(root):
+        return False
+    if not is_workspace_initialized(root):
+        return False
+    paths = WorkspacePaths(root=root)
+    if not _transcript_is_empty(paths):
+        return False
+    id_stub, user_stub = _identity_user_stub_flags(root)
+    out = id_stub or user_stub
+    logger.debug(
+        "needs_workspace_template_bootstrap ws={} id_stub={} user_stub={} -> {}",
         root.name,
         id_stub,
         user_stub,
@@ -823,16 +911,25 @@ async def run_turn(
         transcript = transcript_for_llm_turn(loaded)
         _debug_log_prompt_bundle(bundle, context=context)
 
-        system = build_system_prompt(
-            bundle,
-            context,
-            enable_user_profile_tool=True,
-            heartbeat_turn=heartbeat_turn,
+        template_bootstrap_active = (not heartbeat_turn) and (
+            not is_workspace_bootstrap_complete(root)
         )
+        if template_bootstrap_active:
+            system = template_bootstrap_turn_system_prompt(root)
+            system_prompt_override: str | None = system
+        else:
+            system = build_system_prompt(
+                bundle,
+                context,
+                enable_user_profile_tool=True,
+                heartbeat_turn=heartbeat_turn,
+            )
+            system_prompt_override = None
         logger.debug(
-            "run_turn system_prompt_chars={} sep_count={}",
+            "run_turn system_prompt_chars={} sep_count={} template_bootstrap_active={}",
             len(system),
             system.count("\n\n---\n\n"),
+            template_bootstrap_active,
         )
         logger.info(
             "run_turn load_context_build_system_ms={:.0f} transcript_msgs={} transcript_window=last_{}",
@@ -850,6 +947,7 @@ async def run_turn(
             transcript=transcript,
             user_text=user_text,
             heartbeat_turn=heartbeat_turn,
+            system_prompt_override=system_prompt_override,
         )
         turn_trace_id = _new_turn_trace_id()
 
@@ -872,8 +970,16 @@ async def run_turn(
 
         async def _invoke_model(turn_input: TurnInput) -> str:
             input_messages = message_snapshots_to_dicts(turn_input.history)
-            async_bg = async_tool_background_enabled()
-            dual_on = dual_llm_enabled()
+            async_bg = (
+                async_tool_background_enabled()
+                and not heartbeat_turn
+                and not template_bootstrap_active
+            )
+            dual_on = (
+                dual_llm_enabled()
+                and not heartbeat_turn
+                and not template_bootstrap_active
+            )
             route = _llm_route_for_turn(
                 async_tool_bg=async_bg,
                 dual_llm=dual_on,
@@ -881,12 +987,13 @@ async def run_turn(
             )
             logger.info(
                 "run_turn llm_route={} trace_id={} async_tool_bg={} dual_llm={} heartbeat_turn={} "
-                "chat_model={} tool_model={} default_model={}",
+                "template_bootstrap_active={} chat_model={} tool_model={} default_model={}",
                 route,
                 turn_trace_id,
                 async_bg,
                 dual_on,
                 heartbeat_turn,
+                template_bootstrap_active,
                 chat_model(),
                 tool_model(),
                 default_model(),
@@ -910,6 +1017,7 @@ async def run_turn(
                 trace_id=turn_trace_id,
                 bundle=bundle,
                 context=context,
+                template_bootstrap_active=template_bootstrap_active,
             )
 
         async def _handle_response(_: TurnInput, assistant_text: str) -> TurnOutput:
@@ -978,6 +1086,13 @@ async def run_turn(
         if heartbeat_turn:
             logger.debug(
                 "run_turn memory_pipeline=skipped (heartbeat_turn) user_uuid={} assistant_uuid={}",
+                user_msg_uuid,
+                assistant_msg_uuid,
+            )
+        elif template_bootstrap_active:
+            logger.debug(
+                "run_turn memory_pipeline=skipped (template_bootstrap_active) user_uuid={} "
+                "assistant_uuid={}",
                 user_msg_uuid,
                 assistant_msg_uuid,
             )

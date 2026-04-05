@@ -1,4 +1,4 @@
-"""run_workspace_bootstrap_loop：工具循环与初始化门控回归。"""
+"""run_workspace_bootstrap_loop：工具循环与 BOOSTRAPED 门控回归。"""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def _resp_tool(content: str, *, tool_name: str, tool_args: str) -> SimpleNamespa
 
 
 class _FakeBootstrapCompletions:
-    """round1 触发工具，round2 返回文本收尾。"""
+    """round1 写 BOOSTRAPED，round2 返回文本收尾。"""
 
     def __init__(self) -> None:
         self.calls = 0
@@ -39,9 +39,9 @@ class _FakeBootstrapCompletions:
         self.calls += 1
         if self.calls == 1:
             return _resp_tool(
-                "need init",
+                "write marker",
                 tool_name="workspace_write_file",
-                tool_args='{"relative_path":"IDENTITY.md","content":"# I\\n"}',
+                tool_args='{"relative_path":"BOOSTRAPED","content":""}',
             )
         if self.calls == 2:
             return _resp_text("ready to know you")
@@ -55,8 +55,17 @@ class _FakeBootstrapNoTools:
         return _resp_text("just chatting")
 
 
+def _seed_initialized_workspace(root: Path) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "IDENTITY.md").write_text("# I\n", encoding="utf-8")
+    (root / "SOUL.md").write_text("# S\n", encoding="utf-8")
+    (root / "USER.md").write_text("# U\n", encoding="utf-8")
+    (root / "MEMORY.md").write_text("# M\n", encoding="utf-8")
+    (root / "transcript.jsonl").write_text("", encoding="utf-8")
+
+
 class TestWorkspaceBootstrapLoop(unittest.TestCase):
-    def test_bootstrap_completes_after_tools_initialize_workspace(self) -> None:
+    def test_bootstrap_completes_after_tool_writes_boostraped_marker(self) -> None:
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=_FakeBootstrapCompletions())
         )
@@ -64,19 +73,12 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
+            _seed_initialized_workspace(root)
 
             def fake_run_tool(name: str, arguments_json: str) -> str:
                 tool_calls.append((name, arguments_json))
-                files = {
-                    "IDENTITY.md": "# I\n",
-                    "SOUL.md": "# S\n",
-                    "USER.md": "# U\n",
-                    "MEMORY.md": "# M\n",
-                    "transcript.jsonl": "",
-                }
-                for rel, body in files.items():
-                    (root / rel).write_text(body, encoding="utf-8")
-                return "OK initialized"
+                (root / "BOOSTRAPED").write_text("", encoding="utf-8")
+                return "OK"
 
             with (
                 patch(
@@ -103,19 +105,18 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                     on_tool=lambda n, a: tool_calls.append((n, a)),
                     llm_trace=False,
                 )
+            self.assertEqual(out, "ready to know you")
+            self.assertGreaterEqual(len(tool_calls), 1)
+            self.assertTrue((root / "BOOSTRAPED").is_file())
 
-        self.assertEqual(out, "ready to know you")
-        self.assertGreaterEqual(len(tool_calls), 1)
-
-    def test_bootstrap_raises_when_no_tools_and_workspace_never_initialized(
-        self,
-    ) -> None:
+    def test_bootstrap_raises_when_no_tools_and_marker_missing(self) -> None:
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=_FakeBootstrapNoTools())
         )
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
+            _seed_initialized_workspace(root)
             with (
                 patch(
                     "inty_v2_text_chat_prototype.workspace_init_loop.get_client_dual_llm_tool",
@@ -137,6 +138,7 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                         max_rounds=2,
                         llm_trace=False,
                     )
+
 
 if __name__ == "__main__":
     unittest.main()

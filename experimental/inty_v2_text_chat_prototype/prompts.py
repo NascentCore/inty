@@ -93,7 +93,7 @@ def _output_contract_text_with_user_profile_tool() -> str:
         "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
         "task_text 写提醒内容；禁止只口头答应而不落盘。"
         "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
-        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
+        "读当前 SOUL.md / USER.md / IDENTITY.md / MODES.md 等，再用 workspace_write_file 写入更新后的全文，"
         "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
         "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
         "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
@@ -161,6 +161,8 @@ def build_system_prompt(
             "## USER\n\n" + bundle.user_md.strip(),
         ]
     )
+    if bundle.modes_md.strip():
+        parts.append("## MODES（陪伴模式）\n\n" + bundle.modes_md.strip())
     skip_memory_blocks = tool_side_compact and not heartbeat_turn
     if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
         parts.append(

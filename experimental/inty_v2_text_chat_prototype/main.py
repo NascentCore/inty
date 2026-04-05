@@ -34,7 +34,9 @@ from app.core.repl_input.sleep_chunk import clamp_sleep_seconds
 from app.core.repl_input.stdin_queue import spawn_stdin_line_reader
 
 from experimental.inty_v2_text_chat_prototype.bootstrap import (
+    ensure_workspace_skeleton,
     init_workspace as bootstrap_init_workspace,
+    read_package_template_text,
 )
 from experimental.inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
 from experimental.inty_v2_text_chat_prototype.proto_log import (
@@ -47,8 +49,9 @@ from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     next_heartbeat_wait_seconds,
 )
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
-    is_workspace_initialized,
     needs_startup_profile_inquiry,
+    needs_workspace_template_bootstrap,
+    repl_heartbeat_suppressed_for_workspace_bootstrap,
     run_turn,
 )
 from experimental.inty_v2_text_chat_prototype.tool_background import (
@@ -111,6 +114,8 @@ def _process_due_schedule_events(
     *,
     run_turn_sync: Callable[[str], str],
 ) -> None:
+    if repl_heartbeat_suppressed_for_workspace_bootstrap(ws):
+        return
     events = pop_due_task_events_nowait(workspace=ws)
     for ev in events:
         synthetic_user = scheduled_task_synthetic_user_text(
@@ -447,10 +452,11 @@ def _repl_interactive_loop_posix(
                 break
             continue
 
-        if heartbeat:
-            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
+        hb_on = heartbeat and not repl_heartbeat_suppressed_for_workspace_bootstrap(ws)
+        if hb_on:
+            wait = _next_idle_wait_seconds(ws=ws, heartbeat=True)
             if wait <= 0.0:
-                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=True)
                 if hb_wait > 0.0:
                     # Due schedule event should run first; do not force a heartbeat turn.
                     continue
@@ -574,10 +580,11 @@ def _repl_interactive_loop_daemon(
                 break
             continue
 
-        if heartbeat:
-            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
+        hb_on = heartbeat and not repl_heartbeat_suppressed_for_workspace_bootstrap(ws)
+        if hb_on:
+            wait = _next_idle_wait_seconds(ws=ws, heartbeat=True)
             if wait <= 0.0:
-                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
+                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=True)
                 if hb_wait > 0.0:
                     continue
                 logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
@@ -718,7 +725,7 @@ def init_workspace(
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
 ) -> None:
-    """从包内 templates/ 拷贝 IDENTITY/SOUL/USER/MEMORY，并创建空 transcript、memory/ 与 memory/daily/、context.json。"""
+    """从包内 templates/ 拷贝 IDENTITY/SOUL/USER/MEMORY/AGENTS/BOOSTRAP，并创建空 transcript、memory/ 与 memory/daily/、context.json。"""
     _init_proto_logging(path, log_file, no_log_file)
     try:
         bootstrap_init_workspace(path)
@@ -726,40 +733,50 @@ def init_workspace(
         _flush_and_shutdown_memory_store(path.resolve())
 
 
-_DEFAULT_BOOTSTRAP_USER_TEMPLATE = (
-    "我们刚选定彼此，我还不是完全体：请你先自然问清楚我希望你以哪种 companionship 陪伴我（例如朋友、爱人、亲人或我自定义），"
-    "确认后再按该关系类型把自己安顿好；跟我自然聊出称呼、你怎么称呼自己、相处上的底线；节奏随我，不必像填设置表。"
-    "在你能静默完成的那部分就绪之后，请邀请我一起定义你，并自然地问我愿分享的基本信息（怎么称呼我、希望怎样被称呼等），不要像问卷。"
-    "别跟我讲文件夹或配置文件名字；需要默认身份编号时用人话问一句就行。"
-    "请你自己完成该完成的事，不要推给我去终端替你初始化。"
-)
-
-# repl 自动初始化时传给 agentic 循环的用户消息（不当作 REPL 输入回显）
-_REPL_SILENT_INIT_USER_MESSAGE_TEMPLATE = (
-    "用户刚打开对话。你是刚被选中、还没被完全记清的陪伴 AI：先自然打个招呼，并先确认用户希望的 companionship 类型（可给朋友、爱人、亲人、其他自定义作为示例）。"
-    "按用户节奏聊，需要时用工具静默记下；不要对用户提工作区、文件名或清单式提问。"
-    "当你内部该落盘的部分就绪后，在本轮结束前邀请用户一起定义你（称呼、你怎么称呼自己、相处底线），"
-    "并自然地询问关于对方的基本信息（怎么称呼对方、希望怎样被称呼等），像聊天而不是填表。"
-)
-
-# 已初始化但 transcript 仍为空、且 IDENTITY/USER 仍像占位：启动时由助手先开口（写入 transcript）
-_REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE_TEMPLATE = (
-    "（用户刚打开对话，尚未输入。）请你先开口：用陪伴语气自然发问，先确认用户希望的 companionship 类型，再继续，"
-    "了解你希望自己的称呼、你怎么称呼自己、以及关于对方的基本信息（怎么称呼对方等）；"
-    "不要提工作区或文件名，不要像问卷。"
-)
+_SYNTH_USER_BOOTSTRAP_AGENT_DEFAULT = "SYNTH_USER_BOOTSTRAP_AGENT_DEFAULT.md"
+_SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING = "SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING.md"
+_SYNTH_USER_REPL_STARTUP_PROFILE_INQUIRY = "SYNTH_USER_REPL_STARTUP_PROFILE_INQUIRY.md"
 
 
 def _default_bootstrap_user_message() -> str:
-    return _DEFAULT_BOOTSTRAP_USER_TEMPLATE
+    return read_package_template_text(_SYNTH_USER_BOOTSTRAP_AGENT_DEFAULT)
 
 
-def _repl_silent_init_user_message() -> str:
-    return _REPL_SILENT_INIT_USER_MESSAGE_TEMPLATE
+def _repl_template_bootstrap_opening_user_message() -> str:
+    return read_package_template_text(_SYNTH_USER_REPL_TEMPLATE_BOOTSTRAP_OPENING)
 
 
 def _repl_startup_profile_inquiry_user_message() -> str:
-    return _REPL_STARTUP_PROFILE_INQUIRY_USER_MESSAGE_TEMPLATE
+    return read_package_template_text(_SYNTH_USER_REPL_STARTUP_PROFILE_INQUIRY)
+
+
+def _repl_run_startup_opening_turn(
+    ws: Path,
+    *,
+    user_text: str,
+    debug_print_system: bool,
+    recovery_label: str,
+) -> bool:
+    t0 = time.perf_counter()
+    try:
+        out = asyncio.run(
+            run_turn(
+                ws,
+                user_text,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+            )
+        )
+    except OpenRouterInvalidJsonError as exc:
+        logger.warning(
+            "{} recovered from invalid OpenRouter JSON: {}",
+            recovery_label,
+            exc,
+        )
+        _print_openrouter_invalid_json_retry_hint()
+        return False
+    _print_assistant_reply(out, time.perf_counter() - t0)
+    return True
 
 
 @app.command
@@ -808,6 +825,7 @@ def bootstrap_agent(
         print(f"[tool] {name} {preview}")
 
     try:
+        ensure_workspace_skeleton(workspace)
         out = run_workspace_bootstrap_loop(
             workspace,
             user,
@@ -863,47 +881,29 @@ def repl(
         _configure_llm_trace_for_workspace(ws)
         start_schedule_scheduler(ws)
         logger.debug("cli repl start ws={}", ws.resolve())
-        if not is_workspace_initialized(ws):
+        ensure_workspace_skeleton(ws)
+        if needs_workspace_template_bootstrap(ws):
             logger.debug(
-                "repl startup branch=bootstrap_auto_init (workspace not initialized)"
+                "repl startup branch=template_bootstrap_fill (BOOSTRAPED missing, stubs)"
             )
-            t0 = time.perf_counter()
-            try:
-                out = run_workspace_bootstrap_loop(
-                    ws,
-                    _repl_silent_init_user_message(),
-                    llm_trace=True,
-                )
-            except OpenRouterInvalidJsonError as exc:
-                logger.warning(
-                    "repl startup bootstrap recovered from invalid OpenRouter JSON: {}",
-                    exc,
-                )
-                _print_openrouter_invalid_json_retry_hint()
+            if not _repl_run_startup_opening_turn(
+                ws,
+                user_text=_repl_template_bootstrap_opening_user_message(),
+                debug_print_system=debug_print_system,
+                recovery_label="repl startup template_bootstrap",
+            ):
                 return
-            _print_assistant_reply(out, time.perf_counter() - t0)
         elif needs_startup_profile_inquiry(ws):
             logger.debug(
                 "repl startup branch=startup_profile_inquiry (empty transcript, stub profile)"
             )
-            t0 = time.perf_counter()
-            try:
-                out = asyncio.run(
-                    run_turn(
-                        ws,
-                        _repl_startup_profile_inquiry_user_message(),
-                        debug_print_system=debug_print_system,
-                        llm_trace=True,
-                    )
-                )
-            except OpenRouterInvalidJsonError as exc:
-                logger.warning(
-                    "repl startup profile inquiry recovered from invalid OpenRouter JSON: {}",
-                    exc,
-                )
-                _print_openrouter_invalid_json_retry_hint()
+            if not _repl_run_startup_opening_turn(
+                ws,
+                user_text=_repl_startup_profile_inquiry_user_message(),
+                debug_print_system=debug_print_system,
+                recovery_label="repl startup profile inquiry",
+            ):
                 return
-            _print_assistant_reply(out, time.perf_counter() - t0)
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
         hb = _repl_heartbeat_enabled(

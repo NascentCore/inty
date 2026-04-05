@@ -15,7 +15,7 @@ from .utc import local_date_str
 
 
 class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
+    role: Literal["user", "assistant", "system"]
     content: str
     ts: str = Field(validation_alias=AliasChoices("ts", "timestamp"))
     uuid: str | None = None
@@ -65,6 +65,7 @@ class PromptBundle(BaseModel):
     agents_md: str = ""
     tools_md: str = ""
     heartbeat_md: str = ""
+    modes_md: str = ""
     memory_raw_diary_today_md: str = ""
     memory_day_summary_today_md: str = ""
 
@@ -123,6 +124,11 @@ def load_prompt_bundle(
             "HEARTBEAT.md",
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
+        modes_md=_read_memory_document_optional(
+            paths,
+            "MODES.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
+        ),
         memory_raw_diary_today_md=raw_md,
         memory_day_summary_today_md=summary_md,
     )
@@ -139,6 +145,27 @@ def load_context_meta(path: Path) -> ContextMeta:
     return ContextMeta.model_validate(raw)
 
 
+def _dicts_from_transcript_line(path: Path, line: str) -> list[dict]:
+    dec = json.JSONDecoder()
+    idx = 0
+    n = len(line)
+    rows: list[dict] = []
+    while idx < n:
+        while idx < n and line[idx].isspace():
+            idx += 1
+        if idx >= n:
+            break
+        try:
+            raw, end = dec.raw_decode(line, idx)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"{path}: invalid transcript JSON at char {idx}") from e
+        if not isinstance(raw, dict):
+            raise ValueError(f"{path}: transcript value is not a JSON object")
+        rows.append(raw)
+        idx = end
+    return rows
+
+
 def load_transcript(path: Path) -> list[ChatMessage]:
     if not path.is_file():
         return []
@@ -148,19 +175,29 @@ def load_transcript(path: Path) -> list[ChatMessage]:
         line = line.strip()
         if not line:
             continue
-        out.append(ChatMessage.model_validate_json(line))
+        for raw in _dicts_from_transcript_line(path, line):
+            role = raw.get("role")
+            if role not in ("user", "assistant", "system"):
+                continue
+            out.append(ChatMessage.model_validate(raw))
     return out
 
 
-# 近期对话窗口：最多保留的 transcript.jsonl 行数（每行一条 user 或 assistant）
+def transcript_chat_rows(msgs: list[ChatMessage]) -> list[ChatMessage]:
+    """仅 user/assistant，供 LLM 历史窗口与心跳前置条件。"""
+    return [m for m in msgs if m.role in ("user", "assistant")]
+
+
+# 近期对话窗口：最多保留多少条 user/assistant（transcript 中的 system 行不计入）
 TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
 
 
 def transcript_for_llm_turn(loaded: list[ChatMessage]) -> list[ChatMessage]:
     """
     组装送入本轮 chat.completions 的历史消息。
-    普通轮与陪伴心跳使用同一尾部窗口，主动回复与现场气氛一致。
+    普通轮与陪伴心跳使用同一尾部窗口；忽略 disk transcript 中的 system 行（与首条 API system 分离）。
     """
-    if len(loaded) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
-        return loaded
-    return loaded[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
+    chat = transcript_chat_rows(loaded)
+    if len(chat) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
+        return chat
+    return chat[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]

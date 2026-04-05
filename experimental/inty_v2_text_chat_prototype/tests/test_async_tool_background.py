@@ -152,6 +152,7 @@ class TestAsyncToolBackground(unittest.TestCase):
         paths.user_md.write_text("# U\n", encoding="utf-8")
         paths.memory_md.write_text("# M\n", encoding="utf-8")
         paths.transcript.write_text("", encoding="utf-8")
+        (root / "BOOSTRAPED").write_text("", encoding="utf-8")
         return paths
 
     def test_side_effect_only_tool_does_not_emit_background_user_visible_reply(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +27,15 @@ def write_text_atomic(path: Path, content: str) -> None:
 
 def append_line(path: Path, line: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    need_leading_nl = False
+    if path.is_file() and path.stat().st_size > 0:
+        with path.open("rb") as rf:
+            rf.seek(-1, os.SEEK_END)
+            if rf.read(1) != b"\n":
+                need_leading_nl = True
     with path.open("a", encoding="utf-8") as f:
+        if need_leading_nl:
+            f.write("\n")
         f.write(line)
         if not line.endswith("\n"):
             f.write("\n")

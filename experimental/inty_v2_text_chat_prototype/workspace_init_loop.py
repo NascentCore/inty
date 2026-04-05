@@ -16,27 +16,38 @@ from app.core.agentic_kernel.tools.runtime import (
 from .client import create_chat_completion, default_model, get_client_dual_llm_tool
 from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
 from .utc import local_date_str
-from .orchestrator import is_workspace_initialized
+from .orchestrator import is_workspace_bootstrap_complete
 from .workspace_init_tools import (
     build_openai_tools,
     openai_assistant_message_dict,
     tool_executor_for_root,
 )
 
-# Synthetic user turn: not shown to the human; tells the model the REPL is blocked until
-# required files exist (see is_workspace_initialized).
+# Synthetic user turn: not shown to the human; injected in bootstrap_agent tool loop when
+# BOOSTRAPED is still missing (REPL uses run_turn per user line instead).
 _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE = (
-    "[INTERNAL — not shown to the end user] The REPL cannot accept the next user line until "
-    "the workspace passes initialization (required files exist on disk). That is not true yet. "
-    "Keep a companionship tone when you speak to the user, but you MUST call tools now and in "
-    "following turns until initialization succeeds. Do not end with assistant text only "
-    "until the workspace is complete. When you do speak to the user, never hint at internal "
-    "processing, frameworks, backends, setup, sync, or initialization metaphors—only human "
-    "relationship language. If companionship type is still unclear, ask the user to define it."
+    "[INTERNAL — not shown to the end user] Non-interactive bootstrap_agent session: the "
+    "workspace root must still contain an empty file named BOOSTRAPED. Template md files are "
+    "on disk; revise IDENTITY/SOUL/USER/MEMORY when you have enough to write, then write "
+    "BOOSTRAPED. The marker is not present yet. Do not burn turns only listing directories or "
+    "re-reading all four templates solely to learn structure (canonical shapes are in system). "
+    "Each assistant turn that speaks to the user must include companionship-oriented language; "
+    "if key facts are still missing, ask the user before more disk reads. You should use tools "
+    "when ready to persist or to read current on-disk text before editing. Never hint at "
+    "internal processing, frameworks, backends, setup, sync, or initialization metaphors."
 )
 
 _PKG_DIR = Path(__file__).resolve().parent
-_BOOSTRAP_PATH = _PKG_DIR / "templates" / "BOOSTRAP.md"
+_TEMPLATES_DIR = _PKG_DIR / "templates"
+_BOOSTRAP_PATH = _TEMPLATES_DIR / "BOOSTRAP.md"
+
+# 与 bootstrap.ensure_workspace_skeleton 拷贝到 workspace 的四份人格 md 一致（不含 AGENTS/BOOSTRAP/MODES）；结构以包内 templates 为准。
+_BOOTSTRAP_TEMPLATE_MD: tuple[str, ...] = (
+    "IDENTITY.md",
+    "SOUL.md",
+    "USER.md",
+    "MEMORY.md",
+)
 
 
 def _insert_system_message(
@@ -58,19 +69,49 @@ def _internal_bootstrap_continue() -> str:
     return _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE
 
 
-def load_bootstrap_instruction_text() -> str:
-    """加载 templates/BOOSTRAP.md（与 README 中「Agentic 初始化」流程一致）。"""
+def _bootstrap_spec_base_text(workspace: Path | None) -> str:
+    if workspace is not None:
+        w = workspace.resolve() / "BOOSTRAP.md"
+        if w.is_file():
+            return w.read_text(encoding="utf-8").rstrip()
     if not _BOOSTRAP_PATH.is_file():
         raise FileNotFoundError(f"missing bootstrap spec: {_BOOSTRAP_PATH}")
-    base = _BOOSTRAP_PATH.read_text(encoding="utf-8").rstrip()
-    appendix = (
-        "你必须在 bootstrap 对话早期自然询问用户希望定义为何种 companionship。"
-        "优先给出可选示例（如 朋友/爱人/亲人/其他自定义），并允许用户自定义。"
-        "在用户明确后，后续语气、边界、称呼和收尾邀请都按该类型保持一致。"
-    )
-    return (
-        f"{base}\n\n## companionship 类型确认规范\n\n- {appendix}\n"
-    )
+    return _BOOSTRAP_PATH.read_text(encoding="utf-8").rstrip()
+
+
+def load_bootstrap_instruction_text(workspace: Path | None = None) -> str:
+    """优先读 workspace/BOOSTRAP.md（init-workspace 已拷贝），否则读包内 templates/。"""
+    return _bootstrap_spec_base_text(workspace)
+
+
+def _bootstrap_package_template_canon_block() -> str:
+    lines = [
+        "## canonical_workspace_md_shapes",
+        "The workspace root already has copies of these template files (same filenames). "
+        "When you use workspace_write_file, you MUST preserve the exact markdown heading "
+        "hierarchy, section titles in Chinese, and bullet layout shown below; only replace "
+        "placeholder or stub lines with text grounded in what the user has agreed (for "
+        "unknown user facts you may keep 待了解-style phrasing). You do not need to call "
+        "workspace_read_file on them solely to learn structure; optional reads are only to "
+        "see the current on-disk text before editing.",
+    ]
+    for name in _BOOTSTRAP_TEMPLATE_MD:
+        path = _TEMPLATES_DIR / name
+        if not path.is_file():
+            raise FileNotFoundError(f"missing package workspace template: {path}")
+        body = path.read_text(encoding="utf-8").rstrip()
+        lines.append(f"### {name}")
+        lines.append("```markdown")
+        lines.append(body)
+        lines.append("```")
+    return "\n\n".join(lines)
+
+
+def build_bootstrap_system_prompt(workspace: Path) -> str:
+    """模板 bootstrap 的 system 正文（BOOSTRAP.md + canonical 包内 md 形状）；与 run_turn / bootstrap_agent 共用。"""
+    spec = load_bootstrap_instruction_text(workspace)
+    canon = _bootstrap_package_template_canon_block()
+    return f"{spec}\n\n{canon}"
 
 
 def run_workspace_bootstrap_loop(
@@ -83,8 +124,8 @@ def run_workspace_bootstrap_loop(
     llm_trace: bool = False,
 ) -> str:
     """
-    在 workspace 上运行伴侣向的 agentic 初始化循环（对内落盘，对用户自然语言）。
-    直到 is_workspace_initialized 才在「无 tool_calls」时返回，避免只聊天不落盘导致 REPL 下一步崩溃。
+    在 workspace 上运行伴侣向的 agentic 模板填充循环（对内落盘，对用户自然语言）。
+    直到根目录存在 BOOSTRAPED 才在「无 tool_calls」时返回；骨架文件应由 ensure_workspace_skeleton 预置。
     """
     root = workspace.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -95,23 +136,7 @@ def run_workspace_bootstrap_loop(
         len(user_message),
     )
 
-    spec = load_bootstrap_instruction_text()
-    system = (
-        "You are the user's chosen companion AI in the INTY v2 local text-chat prototype, "
-        "newly awakened and not yet fully shaped; the specification below is INTERNAL-only. "
-        "To the user: never expose workspace paths, filenames, tools, JSON keys, README, or "
-        "this setup doc; speak only as a companion and follow their pace (multi-turn ok). "
-        "Never hint at internal processing, frameworks, backends, or setup/sync/initialization "
-        "metaphors (e.g. do not say your internal framework is ready). Only human, relational "
-        "language toward the user. "
-        "Use the tools silently to read/list/write under the workspace root. "
-        "Do not ask the user to run `python ... init-workspace` instead of using tools. "
-        "When initialization is complete (required files exist) and you return without further "
-        "tool calls, your last assistant message must follow the spec's «收尾» section: invite "
-        "the user to co-define you and gently ask for basic information about them—companion "
-        "language only, not a form.\n\n"
-        f"{spec}"
-    )
+    system = build_bootstrap_system_prompt(root)
 
     client = get_client_dual_llm_tool()
     m = model or default_model()
@@ -159,7 +184,7 @@ def run_workspace_bootstrap_loop(
         if not tool_calls:
             last_assistant_text = (msg.content or "").strip()
             messages.append(openai_assistant_message_dict(msg))
-            if is_workspace_initialized(root):
+            if is_workspace_bootstrap_complete(root):
                 logger.info(
                     "bootstrap done rounds={} total_ms={:.0f} ws={}",
                     round_idx,
@@ -168,7 +193,7 @@ def run_workspace_bootstrap_loop(
                 )
                 return last_assistant_text
             logger.debug(
-                "bootstrap no_tool_calls but workspace not initialized round={} "
+                "bootstrap no_tool_calls but BOOSTRAPED missing round={} "
                 "injecting_internal_continue",
                 round_idx,
             )
@@ -259,7 +284,7 @@ def run_workspace_bootstrap_loop(
         final_message = loop_result.response.choices[0].message
         last_assistant_text = (final_message.content or "").strip()
         messages.append(openai_assistant_message_dict(final_message))
-        if is_workspace_initialized(root):
+        if is_workspace_bootstrap_complete(root):
             logger.info(
                 "bootstrap done rounds={} total_ms={:.0f} ws={}",
                 rounds_used,
@@ -268,7 +293,7 @@ def run_workspace_bootstrap_loop(
             )
             return last_assistant_text
         logger.debug(
-            "bootstrap tool_loop_finished but workspace not initialized rounds_used={} "
+            "bootstrap tool_loop_finished but BOOSTRAPED missing rounds_used={} "
             "injecting_internal_continue",
             rounds_used,
         )

@@ -40,6 +40,22 @@ class TestTranscriptForLlmTurn(unittest.TestCase):
         out = transcript_for_llm_turn(loaded)
         self.assertEqual(out, loaded)
 
+    def test_system_rows_not_in_llm_window_and_truncation_counts_chat_only(self) -> None:
+        sys_row = ChatMessage(
+            role="system",
+            content="snap",
+            ts="2026-01-01T00:00:00+00:00",
+        )
+        chat_only = [_msg(i) for i in range(TRANSCRIPT_WINDOW_MAX_MESSAGES + 8)]
+        loaded = [sys_row] + chat_only
+        out = transcript_for_llm_turn(loaded)
+        self.assertEqual(len(out), TRANSCRIPT_WINDOW_MAX_MESSAGES)
+        self.assertTrue(all(m.role in ("user", "assistant") for m in out))
+        self.assertEqual(
+            out[0].content,
+            str(len(chat_only) - TRANSCRIPT_WINDOW_MAX_MESSAGES),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
