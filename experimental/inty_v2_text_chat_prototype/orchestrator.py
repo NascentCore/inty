@@ -269,6 +269,7 @@ def _build_turn_base_messages(
     transcript: list[ChatMessage],
     user_text: str,
     heartbeat_turn: bool,
+    repl_online_ack_turn: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
     """Construct system+history+user messages and return (messages, user_msg_uuid)."""
     system = build_system_prompt(
@@ -276,6 +277,7 @@ def _build_turn_base_messages(
         context,
         enable_user_profile_tool=True,
         heartbeat_turn=heartbeat_turn,
+        repl_online_ack_turn=repl_online_ack_turn,
     )
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in transcript:
@@ -303,6 +305,7 @@ def _persist_turn_rows(
     user_msg_uuid: str,
     assistant_reply_to: str,
     heartbeat_turn: bool,
+    repl_online_ack: bool = False,
     assistant_source: str = "chat",
     trace_id: str | None = None,
 ) -> str:
@@ -315,6 +318,8 @@ def _persist_turn_rows(
     }
     if heartbeat_turn:
         user_row["heartbeat"] = True
+    if repl_online_ack:
+        user_row["repl_online_ack"] = True
     if trace_id is not None and trace_id.strip():
         user_row["trace_id"] = trace_id
     append_jsonl_with_db(paths.transcript, user_row)
@@ -344,6 +349,7 @@ async def _run_turn_fast_chat_then_tool_background(
     trace_id: str,
     bundle: PromptBundle,
     context: ContextMeta,
+    repl_online_ack_turn: bool = False,
 ) -> str:
     """
     Front path: return chat-branch text quickly.
@@ -370,6 +376,7 @@ async def _run_turn_fast_chat_then_tool_background(
         context,
         enable_user_profile_tool=True,
         heartbeat_turn=False,
+        repl_online_ack_turn=repl_online_ack_turn,
         include_repl_image_generation_contract=True,
         tool_side_compact=True,
     )
@@ -379,6 +386,7 @@ async def _run_turn_fast_chat_then_tool_background(
         context,
         enable_user_profile_tool=True,
         heartbeat_turn=False,
+        repl_online_ack_turn=repl_online_ack_turn,
         include_repl_image_generation_contract=False,
         chat_output_format_prompt=chat_output_format_prompt,
     )
@@ -433,6 +441,7 @@ async def _run_turn_with_user_profile_tools(
     *,
     llm_trace: bool = True,
     heartbeat_turn: bool = False,
+    repl_online_ack_turn: bool = False,
     trace_id: str | None = None,
     bundle: PromptBundle | None = None,
     context: ContextMeta | None = None,
@@ -490,6 +499,7 @@ async def _run_turn_with_user_profile_tools(
                     context,
                     enable_user_profile_tool=True,
                     heartbeat_turn=heartbeat_turn,
+                    repl_online_ack_turn=repl_online_ack_turn,
                     include_repl_image_generation_contract=False,
                     chat_output_format_prompt=chat_output_format_prompt,
                 )
@@ -717,25 +727,31 @@ async def run_turn(
     user_text: str,
     *,
     heartbeat_turn: bool = False,
+    repl_online_ack_turn: bool = False,
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
     llm_trace: bool = False,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
-    heartbeat_turn=True：用户侧为系统合成的陪伴心跳提示，不跑记忆管线。"""
+    heartbeat_turn=True：用户侧为系统合成的陪伴心跳提示，不跑记忆管线。
+    repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。"""
     t0 = time.perf_counter()
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
+    if heartbeat_turn and repl_online_ack_turn:
+        raise ValueError("heartbeat_turn and repl_online_ack_turn cannot both be true")
     if heartbeat_turn:
         user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
     else:
         prepare_image_gate_for_turn(root, user_text)
 
     logger.info(
-        "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={} llm_trace={}",
+        "run_turn start path={} user_chars={} heartbeat_turn={} repl_online_ack_turn={} "
+        "defer_memory={} llm_trace={}",
         root,
         len(user_text),
         heartbeat_turn,
+        repl_online_ack_turn,
         defer_memory_update,
         llm_trace,
     )
@@ -756,6 +772,7 @@ async def run_turn(
             context,
             enable_user_profile_tool=True,
             heartbeat_turn=heartbeat_turn,
+            repl_online_ack_turn=repl_online_ack_turn,
         )
         logger.debug(
             "run_turn system_prompt_chars={} sep_count={}",
@@ -778,6 +795,7 @@ async def run_turn(
             transcript=transcript,
             user_text=user_text,
             heartbeat_turn=heartbeat_turn,
+            repl_online_ack_turn=repl_online_ack_turn,
         )
         turn_trace_id = _new_turn_trace_id()
 
@@ -829,12 +847,14 @@ async def run_turn(
                     trace_id=turn_trace_id,
                     bundle=bundle,
                     context=context,
+                    repl_online_ack_turn=repl_online_ack_turn,
                 )
             return await _run_turn_with_user_profile_tools(
                 input_messages,
                 root,
                 llm_trace=llm_trace,
                 heartbeat_turn=heartbeat_turn,
+                repl_online_ack_turn=repl_online_ack_turn,
                 trace_id=turn_trace_id,
                 bundle=bundle,
                 context=context,
@@ -865,6 +885,7 @@ async def run_turn(
                 user_msg_uuid=user_msg_uuid,
                 assistant_reply_to=user_msg_uuid,
                 heartbeat_turn=heartbeat_turn,
+                repl_online_ack=repl_online_ack_turn,
                 assistant_source="chat",
                 trace_id=turn_trace_id,
             )
@@ -906,6 +927,12 @@ async def run_turn(
         if heartbeat_turn:
             logger.debug(
                 "run_turn memory_pipeline=skipped (heartbeat_turn) user_uuid={} assistant_uuid={}",
+                user_msg_uuid,
+                assistant_msg_uuid,
+            )
+        elif repl_online_ack_turn:
+            logger.debug(
+                "run_turn memory_pipeline=skipped (repl_online_ack_turn) user_uuid={} assistant_uuid={}",
                 user_msg_uuid,
                 assistant_msg_uuid,
             )

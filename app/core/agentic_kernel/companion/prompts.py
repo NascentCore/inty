@@ -122,6 +122,14 @@ def _heartbeat_clause() -> str:
     )
 
 
+def _repl_online_ack_clause() -> str:
+    return (
+        "## 本轮（REPL 会话恢复）\n\n"
+        "用户刚回到本对话窗口。请结合上文**承接**同一语境；若尚无比拼的上下文则简短自然问候；"
+        "可正常调用工具。勿提系统、上线或心跳。"
+    )
+
+
 def _tool_side_compact_directive() -> str:
     return (
         "## 工具侧（后台）\n\n"
@@ -138,6 +146,7 @@ def build_system_prompt(
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
     heartbeat_turn: bool = False,
+    repl_online_ack_turn: bool = False,
     include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
     chat_output_format_prompt: str | None = None,
@@ -164,6 +173,9 @@ def build_system_prompt(
 
     if heartbeat_turn:
         parts.append(_heartbeat_clause())
+
+    if repl_online_ack_turn:
+        parts.append(_repl_online_ack_clause())
 
     if tool_side_compact and not heartbeat_turn:
         parts.append(_tool_side_compact_directive())

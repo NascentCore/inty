@@ -21,6 +21,9 @@ from app.core.agentic_kernel.companion.models import (
 
 REPL_PRESENCE_USER_TEXT_ONLINE = "（系统：用户已在 REPL 上线。）"
 REPL_PRESENCE_USER_TEXT_OFFLINE = "（系统：用户已退出 REPL 会话。）"
+REPL_ONLINE_ACK_USER_TEXT = (
+    "（会话已恢复：请根据上文续接；若无承接点则简短问候即可。）"
+)
 
 
 def is_transcript_real_user_message(m: ChatMessage) -> bool:
@@ -29,6 +32,8 @@ def is_transcript_real_user_message(m: ChatMessage) -> bool:
     if m.heartbeat is True:
         return False
     if m.presence is not None:
+        return False
+    if m.repl_online_ack is True:
         return False
     return True
 

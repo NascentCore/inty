@@ -18,7 +18,11 @@ if str(_REPO_ROOT) not in sys.path:
 from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     next_heartbeat_wait_seconds,
 )
-from experimental.inty_v2_text_chat_prototype.models import REPL_PRESENCE_USER_TEXT_ONLINE
+from experimental.inty_v2_text_chat_prototype.models import (
+    REPL_PRESENCE_USER_TEXT_ONLINE,
+    ChatMessage,
+    is_transcript_real_user_message,
+)
 
 
 def _write_transcript(path: Path, rows: list[dict[str, object]]) -> None:
@@ -29,6 +33,15 @@ def _write_transcript(path: Path, rows: list[dict[str, object]]) -> None:
 
 
 class TestHeartbeatSchedule(unittest.TestCase):
+    def test_repl_online_ack_not_counted_as_real_user(self) -> None:
+        m = ChatMessage(
+            role="user",
+            content="（会话已恢复…）",
+            ts="2026-01-01T00:00:00+00:00",
+            repl_online_ack=True,
+        )
+        self.assertFalse(is_transcript_real_user_message(m))
+
     def test_disabled_returns_large_wait(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

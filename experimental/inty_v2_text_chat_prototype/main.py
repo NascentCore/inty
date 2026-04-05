@@ -79,6 +79,7 @@ from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
 )
 from experimental.inty_v2_text_chat_prototype.models import (
     PresenceSignal,
+    REPL_ONLINE_ACK_USER_TEXT,
     REPL_PRESENCE_USER_TEXT_OFFLINE,
     REPL_PRESENCE_USER_TEXT_ONLINE,
 )
@@ -960,6 +961,27 @@ def repl(
         if is_workspace_initialized(ws):
             _append_repl_presence_transcript(ws, "repl_online")
             repl_presence_tracked = True
+            try:
+                t0_ack = time.perf_counter()
+                out_ack = asyncio.run(
+                    run_turn(
+                        ws,
+                        REPL_ONLINE_ACK_USER_TEXT,
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                        repl_online_ack_turn=True,
+                    )
+                )
+                _print_assistant_reply(out_ack, time.perf_counter() - t0_ack)
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl online-ack turn recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                _append_repl_presence_transcript(ws, "repl_offline")
+                repl_presence_tracked = False
+                return
         try:
             _repl_interactive_loop(
                 ws, debug_print_system=debug_print_system, heartbeat=hb
