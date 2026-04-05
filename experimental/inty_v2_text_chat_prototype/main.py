@@ -17,11 +17,6 @@ from typing import Annotated, Callable, Mapping
 from cyclopts import App, Parameter
 from loguru import logger
 
-try:
-    import fcntl
-except ImportError:
-    fcntl = None  # type: ignore[misc, assignment]
-
 # `python main.py` loads this file as __main__ with no package; ensure parent of this
 # directory is on sys.path so `inty_v2_text_chat_prototype.*` resolves like `python -m`.
 # Repo root enables `import app` (e.g. Fal z-image tool → app.core.images.fal).
@@ -117,11 +112,26 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     return f" user={u} asst={a} trace={tr}"
 
 
+def _repl_assistant_banner_label(ids: Mapping[str, str] | None) -> str:
+    if not ids:
+        return "AI-chat"
+    raw = ids.get("assistant_source", "chat")
+    if raw == "inner_tick":
+        return "inner-tick"
+    return "AI-chat"
+
+
+def _print_repl_user_input(text: str) -> None:
+    print(f"[{_local_ts_str()}] user-input")
+    print(text)
+
+
 def _print_assistant_reply(
     out: str,
     elapsed_s: float,
     *,
     transcript_ids: Mapping[str, str] | None = None,
+    repl_source_label: str | None = None,
 ) -> None:
     ms = elapsed_s * 1000
     suffix = (
@@ -129,7 +139,8 @@ def _print_assistant_reply(
         if transcript_ids
         else ""
     )
-    print(f"[{_local_ts_str()}] {ms:.0f}ms{suffix}")
+    label = repl_source_label or _repl_assistant_banner_label(transcript_ids)
+    print(f"[{_local_ts_str()}] {label} {ms:.0f}ms{suffix}")
     print(out)
 
 
@@ -137,7 +148,7 @@ def _drain_async_tool_events(ws: Path) -> None:
     events = pop_output_events_nowait(workspace=ws)
     for ev in events:
         print(
-            f"[{_local_ts_str()}] async-tool {ev.elapsed_ms}ms "
+            f"[{_local_ts_str()}] AI-toolcall {ev.elapsed_ms}ms "
             f"(user={ev.user_msg_uuid[:8]} asst={ev.assistant_msg_uuid[:8]})"
         )
         print(ev.text)
@@ -170,8 +181,8 @@ def _process_due_schedule_events(
         mark_task_fired(ws, ev.task_id)
         id_suffix = _repl_transcript_id_suffix(ids)
         print(
-            f"[{_local_ts_str()}] schedule-task {int((time.perf_counter() - t0) * 1000)}ms "
-            f"(task={ev.task_id[:8]}){id_suffix}"
+            f"[{_local_ts_str()}] AI-chat {int((time.perf_counter() - t0) * 1000)}ms "
+            f"(schedule-task task={ev.task_id[:8]}){id_suffix}"
         )
         print(out)
         print("> ", end="", flush=True)
@@ -200,58 +211,6 @@ def _next_idle_wait_seconds(
 
 def _next_due_wait_seconds_only(ws: Path) -> float | None:
     return next_due_wait_seconds(ws)
-
-
-def _posix_stdin_drain_nonblock(fd: int) -> bytes:
-    if fcntl is None:
-        raise RuntimeError("fcntl is required for POSIX REPL stdin pump")
-    acc = bytearray()
-    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-    try:
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-        while True:
-            try:
-                chunk = os.read(fd, 65536)
-            except BlockingIOError:
-                break
-            except InterruptedError:
-                continue
-            if not chunk:
-                break
-            acc.extend(chunk)
-    finally:
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags)
-    return bytes(acc)
-
-
-# Partial stdin without a line end can otherwise block inner tick forever (IME / escape bytes).
-_STDIN_PARTIAL_STALE_SEC = 2.5
-
-
-def _stdin_buffer_has_complete_line(buf: bytearray) -> bool:
-    return b"\n" in buf or b"\r" in buf
-
-
-def _pop_line_from_stdin_buffer(buf: bytearray) -> str | None:
-    if not buf:
-        return None
-    try:
-        nl_at = buf.index(b"\n")
-        raw = bytes(buf[:nl_at])
-        del buf[: nl_at + 1]
-        return raw.decode("utf-8", errors="replace").rstrip("\r")
-    except ValueError:
-        pass
-    try:
-        cr_at = buf.index(b"\r")
-        raw = bytes(buf[:cr_at])
-        end = cr_at + 1
-        if end < len(buf) and buf[end] == 0x0A:
-            end += 1
-        del buf[:end]
-        return raw.decode("utf-8", errors="replace")
-    except ValueError:
-        return None
 
 
 def _append_repl_presence_transcript(ws: Path, kind: PresenceSignal) -> None:
@@ -381,7 +340,7 @@ def _repl_drain_user_turns(
             print("> ", end="", flush=True)
         else:
             if not cur_echoed:
-                print(f"[{_local_ts_str()}] {cur}")
+                _print_repl_user_input(cur)
                 logger.debug(
                     "repl interactive_turn line_chars={} preview={}",
                     len(cur),
@@ -578,7 +537,7 @@ def _run_turn_with_stdin_pump(
             else:
                 text = raw.rstrip("\r\n")
                 if text.strip():
-                    print(f"[{_local_ts_str()}] {text}")
+                    _print_repl_user_input(text)
                     logger.debug(
                         "repl stdin_pump supersede line_chars={} preview={}",
                         len(text),
@@ -613,8 +572,6 @@ def _repl_interactive_loop_posix(
 ) -> None:
     pending: queue.Queue[tuple[str, bool] | None] = queue.Queue()
     stdin_fd = sys.stdin.fileno()
-    stdin_byte_buf = bytearray()
-    stdin_partial_since: float | None = None
     last_inner_fire_mono: float | None = (
         time.monotonic() if inner_tick else None
     )
@@ -655,49 +612,29 @@ def _repl_interactive_loop_posix(
                 break
             continue
 
+        line: str
+        got_line = False
+
         if inner_tick:
             wait = _next_idle_wait_seconds(
                 ws=ws,
                 inner_tick=True,
                 last_inner_fire_mono=last_inner_fire_mono,
             )
-            skip_stdin_sleep = False
             if wait <= 0.0:
-                flushed_buffered_user_line = False
-                if stdin_byte_buf and _stdin_buffer_has_complete_line(stdin_byte_buf):
-                    stdin_partial_since = None
-                    popped = _pop_line_from_stdin_buffer(stdin_byte_buf)
-                    if popped is not None:
-                        line = popped
-                        flushed_buffered_user_line = True
-                        skip_stdin_sleep = True
-                if not flushed_buffered_user_line:
-                    if stdin_byte_buf and not _stdin_buffer_has_complete_line(
-                        stdin_byte_buf
-                    ):
-                        now_m = time.monotonic()
-                        if stdin_partial_since is None:
-                            stdin_partial_since = now_m
-                        if now_m - stdin_partial_since >= _STDIN_PARTIAL_STALE_SEC:
-                            logger.debug(
-                                "repl stdin drop stale partial stdin_bytes={}",
-                                len(stdin_byte_buf),
-                            )
-                            stdin_byte_buf.clear()
-                            stdin_partial_since = None
-                        else:
-                            r_p, _, _ = select.select([stdin_fd], [], [], 0.1)
-                            if r_p:
-                                try:
-                                    stdin_byte_buf.extend(
-                                        _posix_stdin_drain_nonblock(stdin_fd)
-                                    )
-                                except KeyboardInterrupt:
-                                    print()
-                                    break
-                                if _stdin_buffer_has_complete_line(stdin_byte_buf):
-                                    stdin_partial_since = None
-                            continue
+                r0, _, _ = select.select([stdin_fd], [], [], 0.0)
+                if r0:
+                    try:
+                        raw = sys.stdin.readline()
+                    except KeyboardInterrupt:
+                        print()
+                        break
+                    if raw == "":
+                        print()
+                        break
+                    line = raw.rstrip("\r\n")
+                    got_line = True
+                else:
                     tick_remain = next_inner_tick_wait_seconds(
                         ws, last_inner_fire_monotonic=last_inner_fire_mono
                     )
@@ -732,35 +669,25 @@ def _repl_interactive_loop_posix(
                     ):
                         break
                     continue
-
-            if not skip_stdin_sleep:
+            else:
                 sleep_s = clamp_sleep_seconds(
                     wait,
                     min_seconds=0.05,
                     max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
                 )
-                if stdin_byte_buf:
-                    sleep_s = min(sleep_s, 0.15)
                 r, _, _ = select.select([stdin_fd], [], [], sleep_s)
                 if not r:
                     continue
                 try:
-                    new_b = _posix_stdin_drain_nonblock(stdin_fd)
+                    raw = sys.stdin.readline()
                 except KeyboardInterrupt:
                     print()
                     break
-                if new_b == b"":
+                if raw == "":
                     print()
                     break
-                stdin_byte_buf.extend(new_b)
-                if not _stdin_buffer_has_complete_line(stdin_byte_buf):
-                    if stdin_partial_since is None:
-                        stdin_partial_since = time.monotonic()
-                    continue
-                stdin_partial_since = None
-                line = _pop_line_from_stdin_buffer(stdin_byte_buf)
-                if line is None:
-                    continue
+                line = raw.rstrip("\r\n")
+                got_line = True
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
@@ -796,6 +723,10 @@ def _repl_interactive_loop_posix(
                     print()
                     break
                 line = raw.rstrip("\r\n")
+            got_line = True
+
+        if not got_line:
+            continue
 
         if line.strip() in ("quit", "exit", "q"):
             break
