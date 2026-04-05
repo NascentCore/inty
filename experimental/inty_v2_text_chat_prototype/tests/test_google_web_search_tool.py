@@ -17,6 +17,43 @@ from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_b
 
 
 class TestGoogleWebSearchTool(unittest.TestCase):
+    def test_schedule_task_success(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = execute_tool_call_blocking(
+                root,
+                "schedule_task",
+                json.dumps(
+                    {
+                        "exec_time_utc": "2026-04-03T05:30:00+00:00",
+                        "task_text": "提醒我出门",
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            self.assertTrue(out.startswith("OK scheduled task"))
+            queue_file = root / ".inty_v2_schedule_tasks.json"
+            self.assertTrue(queue_file.is_file())
+            body = json.loads(queue_file.read_text(encoding="utf-8"))
+            self.assertEqual(len(body["tasks"]), 1)
+            self.assertEqual(body["tasks"][0]["task_text"], "提醒我出门")
+
+    def test_schedule_task_invalid_time_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = execute_tool_call_blocking(
+                root,
+                "schedule_task",
+                json.dumps(
+                    {
+                        "exec_time_utc": "2026-04-03 05:30:00",
+                        "task_text": "提醒我出门",
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+            self.assertTrue(out.startswith("ERROR:"))
+
     def test_empty_query_errors(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

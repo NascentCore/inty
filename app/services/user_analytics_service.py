@@ -931,6 +931,7 @@ class UserAnalyticsService:
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
                 "total_user_messages": 0,
+                "total_ai_messages": 0,
                 "total_active_sessions": 0,
                 "total_voice_requests": 0,
                 "avg_messages_per_user": 0.0,
@@ -958,6 +959,7 @@ class UserAnalyticsService:
                 "total_new_users": total_new_users,
                 "total_chat_initiators": 0,
                 "total_user_messages": 0,
+                "total_ai_messages": 0,
                 "total_active_sessions": 0,
                 "total_voice_requests": 0,
                 "avg_messages_per_user": 0.0,
@@ -973,6 +975,7 @@ class UserAnalyticsService:
         total_active_sessions = len(active_sessions)
         total_active_users = len(set(item["user_id"] for item in active_sessions))
         total_user_messages = sum(item["message_count"] for item in active_sessions)
+        total_ai_messages = sum(item["ai_message_count"] for item in active_sessions)
         total_voice_requests = sum(
             item["voice_message_count"] for item in active_sessions
         )
@@ -1010,6 +1013,7 @@ class UserAnalyticsService:
             "total_new_users": total_new_users,
             "total_chat_initiators": total_active_users,
             "total_user_messages": total_user_messages,
+            "total_ai_messages": total_ai_messages,
             "total_active_sessions": total_active_sessions,
             "total_voice_requests": total_voice_requests,
             "avg_messages_per_user": round(avg_messages_per_user, 2),
@@ -1584,7 +1588,7 @@ class UserAnalyticsService:
         if not session_ids:
             return []
 
-        session_to_msg_count, session_to_voice_count = (
+        session_to_msg_count, session_to_voice_count, session_to_ai_msg_count = (
             await self._query_session_detail_counts(
                 session_ids, activity_start_date, activity_end_date
             )
@@ -1596,6 +1600,7 @@ class UserAnalyticsService:
             session_id = chat_to_session[chat_id]
             message_count = session_to_msg_count.get(session_id, 0)
             voice_count = session_to_voice_count.get(session_id, 0)
+            ai_message_count = session_to_ai_msg_count.get(session_id, 0)
 
             data.append(
                 {
@@ -1609,6 +1614,7 @@ class UserAnalyticsService:
                     "agent_name": row[7],
                     "message_count": message_count,
                     "voice_message_count": voice_count,
+                    "ai_message_count": ai_message_count,
                 }
             )
 
@@ -1619,16 +1625,17 @@ class UserAnalyticsService:
         session_ids: List[str],
         activity_start_date: Optional[datetime] = None,
         activity_end_date: Optional[datetime] = None,
-    ) -> tuple[Dict[str, int], Dict[str, int]]:
-        """分批查询 session 的用户消息数和语音消息数
+    ) -> tuple[Dict[str, int], Dict[str, int], Dict[str, int]]:
+        """分批查询 session 的用户消息数、语音消息数、AI 回复消息数
 
-        返回: (session_to_msg_count, session_to_voice_count)
+        返回: (session_to_msg_count, session_to_voice_count, session_to_ai_msg_count)
         """
         if not session_ids:
-            return {}, {}
+            return {}, {}, {}
 
         session_to_msg_count: Dict[str, int] = {}
         session_to_voice_count: Dict[str, int] = {}
+        session_to_ai_msg_count: Dict[str, int] = {}
 
         for batch in _batch_list(session_ids, self._batch_size):
             uuid_batch = [uuid.UUID(sid) for sid in batch]
@@ -1653,7 +1660,15 @@ class UserAnalyticsService:
                                 OR ch.meta_data->>'isOpening' IS NULL
                                 OR ch.meta_data->>'isOpening' != 'true'
                             )
-                        ) as voice_message_count
+                        ) as voice_message_count,
+                        COUNT(*) FILTER (
+                            WHERE ch.message->>'type' = 'ai'
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as ai_message_count
                     FROM chat_history ch
                     WHERE ch.session_id IN ({placeholders})
                       AND ch.created_at >= :activity_start_date
@@ -1682,7 +1697,15 @@ class UserAnalyticsService:
                                 OR ch.meta_data->>'isOpening' IS NULL
                                 OR ch.meta_data->>'isOpening' != 'true'
                             )
-                        ) as voice_message_count
+                        ) as voice_message_count,
+                        COUNT(*) FILTER (
+                            WHERE ch.message->>'type' = 'ai'
+                            AND (
+                                ch.meta_data IS NULL
+                                OR ch.meta_data->>'isOpening' IS NULL
+                                OR ch.meta_data->>'isOpening' != 'true'
+                            )
+                        ) as ai_message_count
                     FROM chat_history ch
                     WHERE ch.session_id IN ({placeholders})
                     GROUP BY ch.session_id
@@ -1694,8 +1717,9 @@ class UserAnalyticsService:
                 session_key = str(row[0])
                 session_to_msg_count[session_key] = row[1]
                 session_to_voice_count[session_key] = row[2]
+                session_to_ai_msg_count[session_key] = row[3]
 
-        return session_to_msg_count, session_to_voice_count
+        return session_to_msg_count, session_to_voice_count, session_to_ai_msg_count
 
     async def find_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """通过邮箱查找用户"""

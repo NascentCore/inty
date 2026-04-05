@@ -14,7 +14,9 @@ sys.path.insert(0, str(_EXPERIMENTAL))
 from inty_v2_text_chat_prototype.workspace_init_tools import (
     append_user_profile_facts_to_user_md,
     execute_tool_call_blocking,
+    read_chat_output_format_prompt,
     tool_user_profile_record,
+    tool_update_chat_settings,
 )
 from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
 
@@ -71,6 +73,29 @@ class TestToolUserProfileRecord(unittest.TestCase):
                 self.assertIn("ERROR", out)
             finally:
                 shutdown_memory_store(root, timeout_s=5.0)
+
+
+class TestToolUpdateChatSettings(unittest.TestCase):
+    def test_update_and_read_chat_output_format_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            msg = tool_update_chat_settings(
+                root,
+                "必须输出 JSON: {\"reply\":\"...\"}",
+            )
+            self.assertTrue(msg.startswith("OK"))
+            got = read_chat_output_format_prompt(root)
+            self.assertEqual(got, "必须输出 JSON: {\"reply\":\"...\"}")
+
+    def test_execute_rejects_empty_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = execute_tool_call_blocking(
+                root,
+                "tool_update_chat_settings",
+                json.dumps({"output_format_prompt": "  "}, ensure_ascii=False),
+            )
+            self.assertIn("ERROR", out)
 
 
 if __name__ == "__main__":

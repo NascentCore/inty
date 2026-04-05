@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from openai import APIError, BadRequestError
 
 from app.core.agentic_kernel.bridges.experimental_bridge import (
     default_workspace_payload,
@@ -29,6 +30,7 @@ from .client import (
     get_client_dual_llm_tool,
     tool_model,
 )
+from .image_gate import prepare_image_gate_for_turn
 from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
@@ -58,6 +60,7 @@ from .workspace_init_tools import (
     build_openai_repl_tools,
     execute_tool_call,
     openai_assistant_message_dict,
+    read_chat_output_format_prompt,
 )
 from .tool_background import start_tool_background_job
 
@@ -147,6 +150,41 @@ def _assistant_text_from_completion_response(resp: Any) -> str:
     if not isinstance(content, str):
         return ""
     return content.strip()
+
+
+def _create_chat_completion_mirrored_tools_no_call(
+    client: Any,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+) -> Any:
+    """
+    Keep mirrored tool definitions in chat-branch context while forcing no tool calls.
+    If provider rejects tool_choice="none", degrade to tools=[] fast-text call.
+    """
+    try:
+        return create_chat_completion(
+            client,
+            model=model,
+            messages_payload=messages_payload,
+            tools=tools,
+            # Keep tool definitions mirrored in chat branch context, but force no tool calls.
+            # OpenAI tool_choice docs: https://developers.openai.com/api/docs/guides/function-calling#tool-choice
+            tool_choice="none",
+        )
+    except (BadRequestError, APIError) as exc:
+        logger.warning(
+            "repl.turn chat_branch tool_choice=none rejected, fallback to no-tools fast-text: {}",
+            exc,
+        )
+        return create_chat_completion(
+            client,
+            model=model,
+            messages_payload=messages_payload,
+            tools=[],
+            tool_choice=None,
+        )
 
 
 def _merge_visible_assistant_text(chat_text: str, tool_text: str) -> str:
@@ -315,12 +353,13 @@ async def _run_turn_fast_chat_then_tool_background(
     tool_client = get_client_dual_llm_tool()
     chat_route_model = chat_model()
     tool_route_model = tool_model()
+    chat_output_format_prompt = read_chat_output_format_prompt(root)
     tools = build_openai_repl_tools()
     if not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     logger.info(
         "repl.turn async_chat_tool_background_start trace_id={} llm_route=async_chat_tool_background "
-        "chat_model={} tool_model={} (foreground=chat_no_tools background=tool_loop)",
+        "chat_model={} tool_model={} (foreground=chat_tools_mirrored_no_call background=tool_loop)",
         trace_id,
         chat_route_model,
         tool_route_model,
@@ -334,20 +373,17 @@ async def _run_turn_fast_chat_then_tool_background(
         include_repl_image_generation_contract=True,
         tool_side_compact=True,
     )
-    if dual_llm_enabled():
-        chat_messages = deepcopy(messages)
-        chat_messages[0]["content"] = build_system_prompt(
-            bundle,
-            context,
-            enable_user_profile_tool=True,
-            heartbeat_turn=False,
-            include_repl_image_generation_contract=False,
-        )
-        chat_payload = _openai_messages_payload(chat_messages)
-        chat_log_messages = chat_messages
-    else:
-        chat_payload = _openai_messages_payload(messages)
-        chat_log_messages = request_messages
+    chat_messages = deepcopy(messages)
+    chat_messages[0]["content"] = build_system_prompt(
+        bundle,
+        context,
+        enable_user_profile_tool=True,
+        heartbeat_turn=False,
+        include_repl_image_generation_contract=False,
+        chat_output_format_prompt=chat_output_format_prompt,
+    )
+    chat_payload = _openai_messages_payload(chat_messages)
+    chat_log_messages = chat_messages
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
     start_tool_background_job(
@@ -363,11 +399,11 @@ async def _run_turn_fast_chat_then_tool_background(
         client=tool_client,
     )
     chat_resp = await asyncio.to_thread(
-        create_chat_completion,
+        _create_chat_completion_mirrored_tools_no_call,
         chat_client,
         model=chat_route_model,
         messages_payload=chat_payload,
-        tools=[],
+        tools=tools,
     )
     _log_llm_round_result(
         round_idx=1,
@@ -408,6 +444,7 @@ async def _run_turn_with_user_profile_tools(
     chat_route_model = chat_model()
     tool_route_model = tool_model()
     tools: list[Any] = [] if heartbeat_turn else build_openai_repl_tools()
+    chat_output_format_prompt = read_chat_output_format_prompt(root)
     if not heartbeat_turn and not tools:
         raise RuntimeError("build_openai_repl_tools() returned empty list")
     if heartbeat_turn and dual_enabled:
@@ -454,6 +491,7 @@ async def _run_turn_with_user_profile_tools(
                     enable_user_profile_tool=True,
                     heartbeat_turn=heartbeat_turn,
                     include_repl_image_generation_contract=False,
+                    chat_output_format_prompt=chat_output_format_prompt,
                 )
                 chat_branch_payload = _openai_messages_payload(chat_messages)
                 chat_log_messages = chat_messages
@@ -467,11 +505,11 @@ async def _run_turn_with_user_profile_tools(
             async def _run_chat_branch() -> Any:
                 t_api_chat = time.perf_counter()
                 resp_chat = await asyncio.to_thread(
-                    create_chat_completion,
+                    _create_chat_completion_mirrored_tools_no_call,
                     dual_chat_client,
                     model=chat_route_model,
                     messages_payload=chat_branch_payload,
-                    tools=[],
+                    tools=tools,
                 )
                 logger.info(
                     "repl.turn llm_round={} branch=chat trace_id={} chat_completions_ms={:.0f} "
@@ -626,6 +664,8 @@ async def _run_turn_with_user_profile_tools(
                 args,
                 write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
             )
+            if name == "tool_update_chat_settings" and not result.startswith("ERROR:"):
+                chat_output_format_prompt = read_chat_output_format_prompt(root)
             ok = not result.startswith("ERROR:")
             logger.info(
                 "repl.turn tool_done round={} name={} execute_ms={:.0f} "
@@ -754,6 +794,8 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     if heartbeat_turn:
         user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
+    else:
+        prepare_image_gate_for_turn(root, user_text)
 
     logger.info(
         "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={} llm_trace={}",

@@ -25,11 +25,38 @@ from .fal_z_image_tool import (
     run_modify_image_z_image_turbo,
 )
 from .file_store import read_text, write_text
+from .image_gate import (
+    check_image_tool_allowed,
+    current_persona_revision_id,
+    find_latest_asset_by_local_relative_path,
+    mark_image_tool_completed,
+    register_profile_write,
+)
 from .memory_store_registry import get_memory_store
 from .google_web_search import run_google_web_search
+from .schedule_queue import add_schedule_task
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
+_CHAT_SETTINGS_REL = ".inty_v2_chat_settings.json"
+_CHAT_OUTPUT_FORMAT_PROMPT_KEY = "chat_output_format_prompt"
+# Tool 输出可见性标签:
+# - 语义: 工具执行完成后, 其“最终文本结果”允许并且应该进入用户可见的 chat 回复。
+# - 目的: 用显式声明替代隐式推断, 让每个工具自行决定“文本结果是否对用户展示”。
+# - 适用:
+#   - 有可消费结果的工具（目录/文件读取、联网检索、生图/改图）应加此标签；
+#   - 纯副作用工具（写档案、写文件、建目录）默认不加, 避免与前台 chat 形成重复二次回复。
+# - 作用范围: 当前由 async tool background 路径消费, 决定是否落 `source=tool_bg` 并投递 REPL 事件。
+TEXT_RESPONSE_INCLUDE_IN_CHAT = "TEXT_RESPONSE_INCLUDE_IN_CHAT"
+_TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
+    # 纯文本查询类工具：其输出应可直接进入对用户可见的 chat 文本。
+    "workspace_list_dir": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "workspace_read_file": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "google_web_search": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    # 多模态工具：完成后通常要在 chat 中给到文字总结与产物路径。
+    "generate_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "modify_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+}
 
 # workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
 WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
@@ -47,6 +74,29 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "USER.md",
     }
 )
+
+_MODIFY_IMAGE_SOURCE_EXTS: frozenset[str] = frozenset(
+    {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+)
+
+
+def _latest_generated_image_under_workspace(root: Path) -> Path | None:
+    generated_dir = root.resolve() / "generated_images"
+    if not generated_dir.is_dir():
+        return None
+    best: tuple[int, Path] | None = None
+    for p in generated_dir.iterdir():
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in _MODIFY_IMAGE_SOURCE_EXTS:
+            continue
+        try:
+            mtime_ns = p.stat().st_mtime_ns
+        except OSError:
+            continue
+        if best is None or mtime_ns > best[0]:
+            best = (mtime_ns, p)
+    return best[1] if best is not None else None
 
 
 def _is_memory_document(relative_path: str) -> bool:
@@ -72,11 +122,38 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
+        "tool_update_chat_settings",
+        "schedule_task",
         "google_web_search",
         "generate_image",
         "modify_image",
     )
 )
+
+
+def tool_has_tag(tool_name: str, tag: str) -> bool:
+    """Return whether a tool declares a given behavior tag."""
+    tags = _TOOL_TAGS_BY_NAME.get(tool_name, frozenset())
+    return tag in tags
+
+
+def tool_text_response_include_in_chat(tool_name: str) -> bool:
+    """
+    Whether this tool's final textual result should be surfaced to the user chat.
+
+    This is the canonical predicate consumed by async tool background routing.
+    Missing tag means "execute tool side effects, but do not emit extra tool_bg text".
+    """
+    return tool_has_tag(tool_name, TEXT_RESPONSE_INCLUDE_IN_CHAT)
+
+
+def tool_text_response_should_include_in_chat(tool_name: str) -> bool:
+    """
+    Compatibility alias with explicit predicate naming.
+
+    Kept for tests/callers that use the longer function name.
+    """
+    return tool_text_response_include_in_chat(tool_name)
 
 
 def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
@@ -151,6 +228,12 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
         return "ERROR: no valid items (need label and value for each entry)"
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
+    register_profile_write(
+        root,
+        rel,
+        changed=(merged != prev),
+        new_content=merged,
+    )
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
 
 
@@ -231,10 +314,17 @@ def tool_workspace_read_file(
 def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
+    prev_body: str | None = None
+    if _is_memory_document(rel):
+        prev_body = get_memory_store(root).read_document_if_exists(rel)
+    elif p.is_file():
+        prev_body = read_text(p)
     if _is_memory_document(rel):
         get_memory_store(root).write_document(rel, content)
     else:
         write_text(p, content)
+    changed = prev_body != content
+    register_profile_write(root, rel, changed=changed, new_content=content)
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 
@@ -244,6 +334,52 @@ def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
     return f"OK mkdir {relative_path}"
 
 
+def read_chat_output_format_prompt(root: Path) -> str | None:
+    p = resolve_under_workspace(root, _CHAT_SETTINGS_REL)
+    if not p.is_file():
+        return None
+    raw = read_text(p).strip()
+    if not raw:
+        return None
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("chat settings must be a JSON object")
+    value = parsed.get(_CHAT_OUTPUT_FORMAT_PROMPT_KEY)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{_CHAT_OUTPUT_FORMAT_PROMPT_KEY} must be a string when present"
+        )
+    out = value.strip()
+    return out if out else None
+
+
+def tool_update_chat_settings(root: Path, output_format_prompt: str) -> str:
+    prompt = output_format_prompt.strip()
+    if not prompt:
+        return "ERROR: output_format_prompt must be a non-empty string"
+    payload = {_CHAT_OUTPUT_FORMAT_PROMPT_KEY: prompt}
+    p = resolve_under_workspace(root, _CHAT_SETTINGS_REL)
+    write_text(
+        p,
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+    )
+    return "OK updated chat output format prompt"
+
+
+def tool_schedule_task(root: Path, exec_time_utc: str, task_text: str) -> str:
+    task = add_schedule_task(
+        root,
+        exec_time_utc=exec_time_utc,
+        task_text=task_text,
+    )
+    return (
+        "OK scheduled task "
+        f"id={task.id} exec_time_utc={task.exec_time_utc} text={task.task_text}"
+    )
+
+
 def build_openai_tools() -> list[dict[str, Any]]:
     """OpenAI Chat Completions `tools` 列表。"""
     return [
@@ -251,6 +387,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "workspace_list_dir",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "List immediate children of a directory under the workspace root. "
                     "Use empty relative_path for the workspace root. "
@@ -273,6 +410,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "workspace_read_file",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Read a UTF-8 text file under the workspace. "
                     "Optional max_chars returns only the beginning of the file (prefix), "
@@ -380,6 +518,39 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "schedule_task",
+                "description": (
+                    "Persist a timed reminder task into the local schedule queue. "
+                    "Use when the user explicitly asks for a reminder/timer/alarm at a future time. "
+                    "exec_time_utc must be an absolute timestamp with timezone offset (ISO8601); "
+                    "prefer UTC (e.g. 2026-04-03T05:30:00+00:00). "
+                    "task_text should be the concise reminder content shown at trigger time."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "exec_time_utc": {
+                            "type": "string",
+                            "description": (
+                                "Absolute execution timestamp with timezone offset. "
+                                "Example: 2026-04-03T05:30:00+00:00"
+                            ),
+                        },
+                        "task_text": {
+                            "type": "string",
+                            "description": (
+                                "Reminder text to execute at that time."
+                            ),
+                        },
+                    },
+                    "required": ["exec_time_utc", "task_text"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     ]
 
 
@@ -395,6 +566,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     }
     names = (
         "user_profile_record",
+        "schedule_task",
         "workspace_list_dir",
         "workspace_read_file",
         "workspace_write_file",
@@ -442,13 +614,52 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             )
             w["function"] = wfn
             out.append(w)
+        elif n == "schedule_task":
+            w = dict(t)
+            wfn = dict(w["function"])
+            wfn["description"] = (
+                "Persist a timed reminder task into the durable local schedule queue. "
+                "Use only when user explicitly requests a reminder/timer/alarm at a future time. "
+                "You must pass an absolute ISO8601 timestamp with timezone offset in exec_time_utc "
+                "(prefer UTC)."
+            )
+            w["function"] = wfn
+            out.append(w)
         else:
             out.append(t)
     out.append(
         {
             "type": "function",
             "function": {
+                "name": "tool_update_chat_settings",
+                "description": (
+                    "Update chat-branch output-format instruction used by the chat LLM route. "
+                    "Use when the user explicitly asks to change the reply format/template. "
+                    "This tool affects future chat-branch turns in the current workspace."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "output_format_prompt": {
+                            "type": "string",
+                            "description": (
+                                "The exact output-format instruction to enforce for chat-branch replies. "
+                                "Example: '必须输出 JSON: {\"reply\":\"...\"}'."
+                            ),
+                        }
+                    },
+                    "required": ["output_format_prompt"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
+    out.append(
+        {
+            "type": "function",
+            "function": {
                 "name": "google_web_search",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Search the public web via Google Custom Search JSON API. "
                     "Use when the user needs current events, verifiable facts, or information "
@@ -479,6 +690,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "generate_image",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Generate **new** image(s) from text only using Fal z-image-turbo (text-to-image). "
                     "Do **not** use this tool when the user wants to edit, restyle, or inpaint an **existing** image—"
@@ -538,12 +750,14 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "modify_image",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
                     "Edit or restyle an **existing** image using Fal z-image-turbo **image-to-image** "
                     "(not text-to-image). Use when the user asks to change, fix, recolor, restyle, or otherwise "
                     "modify a specific picture—including one previously saved under workspace/generated_images/. "
                     "Provide exactly one source: either source_image_relative_path (file under workspace, e.g. "
                     "generated_images/z_image_....jpeg) or source_image_url (public http(s) URL). "
+                    "If both are omitted, it will auto-use the most recent image file under generated_images/. "
                     "**Identity lock:** For themed restyles (e.g. zodiac 生肖), align `prompt` with **IDENTITY.md** "
                     "appearance traits; preserve locked facial/hair features—use prompt for additive theme/costume/scene, "
                     "not to replace the agreed face. "
@@ -566,7 +780,8 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
                             "description": (
                                 "Workspace-relative path to an image file (jpg/png/webp/gif). "
                                 "Use e.g. generated_images/... from a prior generate_image result. "
-                                "Omit if using source_image_url."
+                                "Omit if using source_image_url; if both source fields are omitted, "
+                                "the latest image under generated_images/ is used."
                             ),
                         },
                         "source_image_url": {
@@ -642,6 +857,29 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "tool_update_chat_settings":
+        output_format_prompt = arguments.get("output_format_prompt")
+        if not isinstance(output_format_prompt, str):
+            return "ERROR: output_format_prompt must be a string"
+        return tool_update_chat_settings(
+            root=root,
+            output_format_prompt=output_format_prompt,
+        )
+    if name == "schedule_task":
+        raw_exec_time = arguments.get("exec_time_utc")
+        raw_task_text = arguments.get("task_text")
+        if not isinstance(raw_exec_time, str):
+            return "ERROR: exec_time_utc must be a string"
+        if not isinstance(raw_task_text, str):
+            return "ERROR: task_text must be a string"
+        try:
+            return tool_schedule_task(
+                root,
+                exec_time_utc=raw_exec_time,
+                task_text=raw_task_text,
+            )
+        except ValueError as exc:
+            return f"ERROR: {exc}"
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):
@@ -660,6 +898,9 @@ async def _dispatch(
             return "ERROR: num_results must be a positive integer or omitted"
         return await run_google_web_search(query=raw_q, num_results=n_opt)
     if name == "generate_image":
+        gate_err = check_image_tool_allowed(root, tool_name="generate_image")
+        if gate_err is not None:
+            return gate_err
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
@@ -695,6 +936,7 @@ async def _dispatch(
             image_size=image_size_s,
             num_inference_steps=n_steps,
             num_images=n_img,
+            persona_revision_id=current_persona_revision_id(root),
         )
         logger.info(
             "tool generate_image wall_ms={:.0f} ws={} ok={}",
@@ -702,8 +944,13 @@ async def _dispatch(
             root.name,
             not out.startswith("ERROR:"),
         )
+        if not out.startswith("ERROR:"):
+            mark_image_tool_completed(root, tool_name="generate_image")
         return out
     if name == "modify_image":
+        gate_err = check_image_tool_allowed(root, tool_name="modify_image")
+        if gate_err is not None:
+            return gate_err
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
@@ -726,6 +973,13 @@ async def _dispatch(
             if not src_path.is_file():
                 return f"ERROR: source image not found or not a file: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
+        if src_path is None and src_url_out is None:
+            src_path = _latest_generated_image_under_workspace(root)
+            if src_path is None:
+                return (
+                    "ERROR: modify_image requires source_image_relative_path or source_image_url; "
+                    "also found no fallback image under generated_images/"
+                )
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"
@@ -751,6 +1005,7 @@ async def _dispatch(
             image_size=image_size_s,
             num_inference_steps=n_steps,
             strength=strength,
+            persona_revision_id=current_persona_revision_id(root),
         )
         logger.info(
             "tool modify_image wall_ms={:.0f} ws={} ok={}",
@@ -758,6 +1013,8 @@ async def _dispatch(
             root.name,
             not out.startswith("ERROR:"),
         )
+        if not out.startswith("ERROR:"):
+            mark_image_tool_completed(root, tool_name="modify_image")
         return out
     return f"ERROR: unknown tool {name!r}"
 

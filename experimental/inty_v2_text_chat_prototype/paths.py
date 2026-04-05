@@ -69,3 +69,8 @@ class WorkspacePaths:
     def memory_pipeline_state_json(self) -> Path:
         """记忆管线累计轮次（用于按间隔跑当日总结 LLM）；与 transcript 同目录，不入版控时可随 workspace 忽略。"""
         return self.root / ".inty_v2_memory_pipeline.json"
+
+    @property
+    def schedule_queue_json(self) -> Path:
+        """定时任务持久化队列。"""
+        return self.root / ".inty_v2_schedule_tasks.json"

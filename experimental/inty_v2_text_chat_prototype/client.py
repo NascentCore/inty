@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import atexit
+import json
 import os
+import sys
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -25,6 +27,27 @@ _CLIENT: OpenAI | None = None
 # 双路并行（chat 无 tools + tool 全量）：LangSmith 中需区分 run 名称，故分两个 wrap_openai 实例。
 _CLIENT_DUAL_LLM_CHAT: OpenAI | None = None
 _CLIENT_DUAL_LLM_TOOL: OpenAI | None = None
+_OPENROUTER_JSON_MAX_ATTEMPTS = 3
+_OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
+
+
+class OpenRouterInvalidJsonError(RuntimeError):
+    """OpenRouter returned a response body that was not valid JSON."""
+
+
+def _register_module_aliases() -> None:
+    """
+    Keep one shared module object for both import paths:
+    - experimental.inty_v2_text_chat_prototype.client
+    - inty_v2_text_chat_prototype.client
+    This avoids exception class identity mismatch in mixed import styles.
+    """
+    module = sys.modules[__name__]
+    sys.modules.setdefault("experimental.inty_v2_text_chat_prototype.client", module)
+    sys.modules.setdefault("inty_v2_text_chat_prototype.client", module)
+
+
+_register_module_aliases()
 
 
 def _flush_langsmith_traces_on_exit() -> None:
@@ -192,7 +215,27 @@ def create_chat_completion(
         create_kw["parallel_tool_calls"] = True
         if tool_choice is not None:
             create_kw["tool_choice"] = tool_choice
-    return client.chat.completions.create(**create_kw)
+    for attempt in range(1, _OPENROUTER_JSON_MAX_ATTEMPTS + 1):
+        try:
+            return client.chat.completions.create(**create_kw)
+        except json.JSONDecodeError as exc:
+            retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
+            logger.warning(
+                "llm.chat_completions invalid_json_response model={} attempt={}/{} retryable={} err={}",
+                model,
+                attempt,
+                _OPENROUTER_JSON_MAX_ATTEMPTS,
+                retryable,
+                exc,
+            )
+            if retryable:
+                delay = _OPENROUTER_JSON_BACKOFF_SECONDS[min(attempt - 1, 1)]
+                time.sleep(delay)
+                continue
+            raise OpenRouterInvalidJsonError(
+                "OpenRouter returned a non-JSON response body "
+                f"for model={model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
+            ) from exc
 
 
 def dual_llm_enabled() -> bool:
@@ -273,7 +316,12 @@ def complete(
         msg_chars,
     )
     t0 = time.perf_counter()
-    resp = client.chat.completions.create(model=m, messages=messages)
+    resp = create_chat_completion(
+        client,
+        model=m,
+        messages_payload=messages,
+        tools=[],
+    )
     ch0 = resp.choices[0]
     fr = getattr(ch0, "finish_reason", None) or "?"
     u = getattr(resp, "usage", None)
