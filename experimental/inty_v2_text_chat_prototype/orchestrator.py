@@ -768,7 +768,8 @@ async def run_turn(
     inner_tick_turn=True：内在节拍合成回合（transcript 标 inner_tick），不跑记忆管线；
     API 挂载精简工具集（`workspace_init_tools.build_openai_repl_tools_inner_tick`：USER 档案与工作区读写），不走 async_chat_tool_background。
     repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。
-    repl_transcript_ids_out：若传入非空 dict，成功落盘助手行后写入 user_msg_uuid / assistant_msg_uuid / trace_id（供 REPL 打印调试）。
+    repl_transcript_ids_out：若传入非空 dict，成功落盘助手行后写入 user_msg_uuid / assistant_msg_uuid /
+    trace_id / assistant_source（`chat` 或 `inner_tick`，供 REPL 标注来源）。
     repl_cancel_check：可选；返回 True 时协作式取消本回合（抛 ReplTurnSuperseded，不落盘），供 REPL stdin 泵「最新消息优先」。
     以上合成回合均不调用 prepare_image_gate_for_turn（避免合成 user 文本误改图像门控状态）。"""
     t0 = time.perf_counter()
@@ -1031,6 +1032,9 @@ async def run_turn(
             repl_transcript_ids_out["user_msg_uuid"] = user_msg_uuid
             repl_transcript_ids_out["assistant_msg_uuid"] = assistant_msg_uuid
             repl_transcript_ids_out["trace_id"] = turn_trace_id
+            repl_transcript_ids_out["assistant_source"] = (
+                "inner_tick" if inner_tick_turn else "chat"
+            )
         return assistant_text
     finally:
         await _reset_fal_async_client_after_short_lived_loop()

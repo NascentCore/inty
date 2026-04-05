@@ -73,11 +73,11 @@ def test_repl_drain_user_turns_recovers_from_openrouter_invalid_json_error() -> 
     pending.put(("第二条消息", False))
     called = {"n": 0}
 
-    def _run_turn_sync(cur: str) -> str:
+    def _run_turn_sync(cur: str) -> tuple[str, dict[str, str]]:
         called["n"] += 1
         if called["n"] == 1:
             raise ReplOpenRouterInvalidJsonError("broken upstream body")
-        return f"assistant:{cur}"
+        return f"assistant:{cur}", {}
 
     with (
         patch(
