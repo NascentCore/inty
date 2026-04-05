@@ -69,22 +69,12 @@ from .tool_background import start_tool_background_job
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
 
-def _llm_route_for_turn(
-    *,
-    async_tool_bg: bool,
-    dual_llm: bool,
-    no_tools_idle_turn: bool,
-) -> str:
-    """
-    Resolved LLM routing label for logs (async background > dual parallel > synthetic idle > single).
-    `no_tools_idle_turn`: legacy; when True, synthetic idle single LLM (unused for inner_tick with tools).
-    """
-    if async_tool_bg and not no_tools_idle_turn:
+def _llm_route_for_turn(*, async_tool_bg: bool, dual_llm: bool) -> str:
+    """Resolved LLM routing label for logs: async background, dual parallel, or single unified."""
+    if async_tool_bg:
         return "async_chat_tool_background"
-    if dual_llm and not no_tools_idle_turn:
+    if dual_llm:
         return "dual_parallel_chat_tool"
-    if no_tools_idle_turn:
-        return "synthetic_idle_single_llm"
     return "single_llm_unified"
 
 
@@ -463,11 +453,7 @@ async def _run_turn_with_user_profile_tools(
     chat_output_format_prompt = read_chat_output_format_prompt(root)
     if not tools:
         raise RuntimeError("REPL tools list is empty")
-    route = _llm_route_for_turn(
-        async_tool_bg=False,
-        dual_llm=dual_enabled,
-        no_tools_idle_turn=False,
-    )
+    route = _llm_route_for_turn(async_tool_bg=False, dual_llm=dual_enabled)
     logger.info(
         "repl.turn user_profile_tool_loop_enter trace_id={} llm_route={} "
         "dual_llm={} inner_tick_turn={} chat_model={} tool_model={} default_model={}",
@@ -832,7 +818,6 @@ async def run_turn(
             route = _llm_route_for_turn(
                 async_tool_bg=use_async_fast,
                 dual_llm=dual_on,
-                no_tools_idle_turn=False,
             )
             logger.info(
                 "run_turn llm_route={} trace_id={} async_tool_bg={} dual_llm={} "
