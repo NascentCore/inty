@@ -20,7 +20,8 @@
   - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用；数据层采用 iMate 独立模型与表，统一使用 `imate_` 前缀与 IntelliMate 区分。
 - Chat 通信复用：
   - app + backend 使用 WebSocket 主链路。
-  - chat 路径仅提供 WebSocket，不提供 HTTP fallback。
+  - iMate 新链路的 chat 路径仅提供 WebSocket，不提供 HTTP fallback。
+  - IntelliMate 存量 HTTP chat 路径保留用于兼容与回归，不作为 iMate 新能力入口。
 
 ### 2.2 新版 iMate(or IntelliMate 2.0) 的核心目标
 
@@ -78,7 +79,7 @@
   - 客户端心跳 `ping`，服务端回 `pong`，服务端空闲超时自动断链。
   - 当前阶段采用"一发一收"顺序模型，防止并发响应错配。
 - 故障处理：
-  - WebSocket 不可用时仅做重连与错误展示，不切 HTTP chat 路径。
+  - iMate 路径在 WebSocket 不可用时仅做重连与错误展示，不切 HTTP chat 路径。
   - 非聊天能力继续使用现有 HTTP API，不受聊天链路策略影响。
 
 ## 4. 关键数据与契约规划
@@ -131,7 +132,7 @@
   - 建立 WebSocket 会话管理、请求串行队列、断线重连策略。
   - chat 路径仅走 WebSocket，不提供 HTTP fallback。
 - Backend：
-  - 稳定 `/chat/ws` 与 `/chat/ws/verify`。
+  - 稳定 `/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify`。
   - 复用 `app/api/v1/endpoints` 现有路由入口与 SQLAlchemy/Alembic 工程模式；iMate 数据表使用 `imate_` 前缀独立管理。
   - 将聊天流程统一收敛到 `app/services`，并引入 `inty_v2 prototype` 聊天体验编排逻辑。
   - 落库与不落库路径分离清晰。
@@ -240,7 +241,7 @@
 ### 7.3 Backend 测试清单
 
 - API 功能测试：
-  - `/chat/ws`、`/chat/ws/verify` 的协议与稳定性验证。
+  - `/api/v1/chat/ws`、`/api/v1/chat/ws/verify` 的协议与稳定性验证。
   - 非聊天 HTTP API（设置、图片、语音、业务动作）回归可用。
 - service 流程测试：
   - 限额、鉴权、模型切换、业务动作、错误映射、prototype 体验编排一致性。
@@ -257,9 +258,9 @@
 - 可观测：
   - 能定位请求 ID、agent_id、session_id 对应链路日志。
 - 可恢复：
-  - WS 故障时可通过重连恢复或明确失败提示，不走 HTTP chat fallback。
+  - iMate WS 故障时可通过重连恢复或明确失败提示，不走 HTTP chat fallback。
 - 不回归：
-  - IntelliMate 既有主流程（登录、设置、历史消息、现有 chat 路径）行为与稳定性不受 iMate 变更影响。
+  - IntelliMate 既有主流程（登录、设置、历史消息、现有 HTTP/WS chat 路径）行为与稳定性不受 iMate 变更影响。
 
 ## 8. 风险清单与应对
 
@@ -299,7 +300,7 @@
   - 多模态增强 PR
   - 生产化压测与运维手册
 
-## 10. 建议的首批执行顺序（从明天即可开工）
+## 10. 建议的首批执行顺序（可立即执行）
 
 - Step 1：冻结 v1 契约和错误码清单（1 个 PR，仅文档和 schema 对齐）。
 - Step 2：打通 Android WS 主链路并移除 chat HTTP fallback 假设（1-2 个 PR）。
@@ -309,17 +310,14 @@
 
 ## 11. iMate(or IntelliMate 2.0) Android v1 对应后端实现框架
 
-### 11.1 Android 代码目录分层（新增约束）
+### 11.1 Android 代码目录分层（修订约束）
 
-- 新版 Android app 代码放置在 `imate_android/`。
-- `android_app/` 作为 Android 基础能力层，提供可复用基础代码与库函数（data/core/library 等）。
-- `imate_android/` 作为 iMate(or IntelliMate 2.0) 应用封装层，在 `android_app/` 之上组装业务与产品体验。
-- 目录关系目标：
-  - `android_app/ : imate_android/` 对应后端 `app/ : backend/inty/` 的分层关系。
-  - 基础能力沉淀在底层目录，产品特定实现在上层目录，避免双向耦合与重复造轮子。
-- 工程约束：
-  - 共有能力优先下沉 `android_app/`，`imate_android/` 优先组合调用而非复制实现。
-  - `imate_android/` 禁止反向要求 `android_app/` 依赖其业务代码。
+- Phase 1-2 不新增顶层 `imate_android/` 目录，先在现有 `android_app/` 内完成 iMate v1 落地。
+- `android_app/` 继续作为唯一 Android 工程入口，按现有 `app/` 与 `core/` 分层复用网络、DTO、Room、DataStore 能力。
+- iMate 业务代码以包级隔离和 feature 入口隔离为主，避免复制 `core/data` 既有实现。
+- 目录演进规则：
+  - 若后续确有独立发布与独立构建需求，再评估是否拆分 `imate_android/`（放入 Phase 4 决策）。
+  - 未完成拆分决策前，禁止在规划文档中把 `imate_android/` 作为既定事实依赖。
 
 ### 11.2 范围前提（对应新版 iMate(or IntelliMate 2.0) Android）
 
@@ -352,7 +350,8 @@
   - `GET /api/v1/chats/agents/{agent_id}/settings`、`PUT /api/v1/chats/agents/{agent_id}/settings`（聊天设置）。
 - 路由归属与分流策略（强制）：
   - 复用现有路径不等于复用 IntelliMate 存量数据表；iMate 请求必须分流到 `imate_` 前缀表。
-  - 分流判定字段固定为 `X-App-Id`（header）或 `client_app_id`（token claim）；取值为 `imate_android` 时走 iMate 数据链路。
+  - Phase 1 分流判定字段固定为 `X-App-Id`（header），取值 `imate_android` 时走 iMate 数据链路。
+  - `client_app_id`（token claim）仅作为后续增强项，未落地前不作为分流前置条件。
   - 未携带分流字段时默认按 IntelliMate 链路处理，禁止写入 iMate 表，避免污染存量逻辑。
   - `verify` 端点始终不落库，仅用于协议与体验联调验证。
 - 版本与门控（建议纳入首批）：
@@ -393,7 +392,7 @@
 | 层级 | 目标 | 复用现有能力 | 新增实现（iMate v1） | 边界约束 |
 |---|---|---|---|---|
 | Interface 层（HTTP + WebSocket） | 对 Android 暴露稳定契约与实时链路 | `app/api/v1/endpoints/auth.py`、`settings.py`、`chats.py`、`chat.py` | `chat.py` 内补全 iMate 专用 WS 会话语义（会话上下文、断链原因、观测字段） | chat 仅 WS，不提供 HTTP fallback |
-| Application 层（Service 编排） | 聚合业务流程与策略，不承载协议细节 | `app/services/chat_service.py`、`subscription_service.py`、`voice_service.py`、`user_service.py` | 新增 `app/services/imate/` 子域服务（会话编排、记忆编排、关系状态编排） | endpoint 仅做校验与转发，禁止回流复杂业务 |
+| Application 层（Service 编排） | 聚合业务流程与策略，不承载协议细节 | `app/services/chat_service.py`、`subscription_service.py`、`voice_service.py`、`user_service.py` | 优先在现有 service 中引入 iMate 编排分支；复杂度上升后再下沉 `app/services/imate/` 子域服务 | endpoint 仅做校验与转发，禁止回流复杂业务 |
 | Domain/Data 层（Repository + Model） | 保证会话、消息、设置、陪伴状态的一致性 | `app/services/*_service.py` 中现有 CRUD 模式、`app/db/session.py` | 新增 iMate 独立 ORM 与 repository，表统一 `imate_` 前缀（关系阶段、记忆命中、触达节奏） | 所有 schema 变更必须走 Alembic |
 | Infra 层（模型/存储/观测） | 对接 LLM、GCS、日志与指标 | `app/core/*`、`app/services/gcs_service.py`、现有日志体系 | 统一 `trace_id/request_id/session_id/agent_id/user_id` 观测字段 | 不在本期引入新消息总线 |
 
@@ -404,7 +403,8 @@
   - Settings：复用 `GET/PUT /api/v1/settings/`、`GET /api/v1/users/me`、`PUT /api/v1/users/profile`。
   - Chat：复用 `WS /api/v1/chat/ws` 与 `WS /api/v1/chat/ws/verify`，历史消息和 chat settings 继续走 `chats.py` HTTP 查询/更新。
 - 路由分流规则（避免影响 IntelliMate）：
-  - endpoint 层仅负责识别 `X-App-Id`/`client_app_id` 并选择 service 分支，不在 endpoint 内混写业务逻辑。
+  - endpoint 层仅负责识别 `X-App-Id` 并选择 service 分支，不在 endpoint 内混写业务逻辑。
+  - `client_app_id` claim 分流仅在后续 token 契约稳定后补充，不前置阻塞 v1。
   - iMate 分支只读写 `imate_` 前缀表；IntelliMate 分支继续使用既有表与既有事务路径。
   - 任一请求若分流上下文缺失或非法，按 IntelliMate 默认链路处理并记录 warning 级日志，不做隐式 iMate 落库。
 - WS 协议规范（iMate v1）：
@@ -420,10 +420,10 @@
 
 - Repository 组织：
   - 沿用 `endpoint -> service -> repository/model`，避免 endpoint 直接写 SQL。
-  - 在 `app/services/imate/` 下引入 iMate 子域 repository façade，封装跨表事务（`imate_chats` + `imate_chat_history` + `imate_companion_state`）。
+  - iMate 子域 repository façade 可先在现有 service 内聚，复杂度上升后再下沉到 `app/services/imate/`，封装跨表事务（`imate_chats` + `imate_chat_history` + `imate_companion_state`）。
 - 事务边界：
-  - 聊天主流程最小事务：`用户消息入库 -> AI 回复入库 -> 使用量记录`。
-  - 非关键旁路（如投递提醒、语音附加）失败不回滚主回复，按独立事务提交。
+  - 聊天主流程最小事务：`用户消息入库 -> AI 回复入库`。
+  - 使用量记录与非关键旁路（投递提醒、语音附加）采用独立事务，失败不回滚主回复。
 - Alembic 迁移策略：
   - 新增字段默认 nullable + 默认值，先兼容旧客户端，再分阶段收紧约束。
   - migration 脚本必须包含回滚路径与数据回填说明。
@@ -470,7 +470,7 @@
 - Iteration 1 - Interface 稳定化：
   - 固化 WS 协议与错误码；补齐 `/ws`、`/ws/verify` 联调清单与自动化测试。
 - Iteration 2 - Service 分层收敛：
-  - 将 iMate chat 编排逻辑收敛到 `app/services/imate/`，endpoint 保持薄层。
+  - 将 iMate chat 编排逻辑从 endpoint 完整下沉到 service；若复杂度达到拆分阈值，再落到 `app/services/imate/`，endpoint 保持薄层。
 - Iteration 3 - 数据层扩展：
   - 新增陪伴状态相关表与 migration，完成 repository façade 与事务边界落地。
 - Iteration 4 - 非 AI 能力对齐：
@@ -482,9 +482,9 @@
 
 #### 11.12.1 总体边界与分层关系
 
-- 代码分层保持 `android_app/ -> imate_android/`：
-  - `android_app/`：基础能力层，沉淀网络、DTO、Room、DataStore、通用 Repository 模式。
-  - `imate_android/`：iMate 业务封装层，组装登录、聊天、设置、陪伴状态 UI/UX。
+- 代码分层保持 `android_app` 单工程内分层：
+  - `android_app/core`：基础能力层，沉淀网络、DTO、Room、DataStore、通用 Repository 模式。
+  - `android_app/app`：产品层，组装登录、聊天、设置、陪伴状态 UI/UX。
 - 运行链路遵循：
   - `Compose UI -> ViewModel -> Repository -> (Room + DataStore + HTTP/WS)`。
   - 聊天链路 `WS only`，HTTP 仅用于登录、设置、历史、非聊天能力。
@@ -504,7 +504,7 @@
     - 请求级互斥（`requestMutex`）保证一发一收。
     - token 变化自动重建连接。
   - iMate chat 仅使用 `WS /api/v1/chat/ws`，`/verify` 仅用于验收联调。
-  - `ChatViewModel -> ChatMessageRepository.sendMessage()` 的 HTTP chat 旧路径只保留给 IntelliMate 回归，不允许在 `imate_android/` 新流程中使用。
+  - `ChatViewModel -> ChatMessageRepository.sendMessage()` 的 HTTP chat 旧路径只保留给 IntelliMate 回归，不允许在 iMate 新流程中使用。
 - API 端点矩阵（Android 侧调用视角）：
 
 | 能力 | 协议 | Endpoint | Android 入口 |
@@ -529,11 +529,11 @@
 - Repository 设计（先复用现状，再增量收敛）：
   - 直接复用现有 `ChatMessageRepository`：聊天收发、历史同步、消息状态机、重连恢复。
   - 直接复用现有 `ChatRemoteDataSource` + `ChatLocalDataSource` + `RoomDataSource`：保持 `Remote + Room` 组合方式不变。
-  - `imate_android/` 仅新增轻量 façade（例如 `ImateChatFacade`），禁止复制 `ChatMessageRepository` 核心逻辑。
+  - iMate 新流程仅新增轻量 façade（例如 `ImateChatFacade`），禁止复制 `ChatMessageRepository` 核心逻辑。
 - 复用现有实现模式：
   - 远端：沿用 `ChatRemoteDataSource` 的 request 构造、错误映射、业务码处理。
   - 本地：沿用 `ChatLocalDataSource` + `RoomDataSource` + `MessageEntity` 的落库和读取能力。
-  - 依赖装配：沿用 `DataModule` 手动 DI 风格，在 `imate_android` 组合注入。
+  - 依赖装配：沿用 `DataModule` 手动 DI 风格，在 `android_app/app` 的 iMate feature 内组合注入。
 - 本地模型规划：
   - Room：
     - 消息域：message/status/indexId/timestamp/meta。
@@ -561,7 +561,7 @@
   - 异常分支：`SendingFailed`、`WSDisconnected`、`RateLimited`、`Unauthorized`
   - 所有状态必须可映射到用户可见 UI，不允许静默失败。
 - WS-only 体验约束（iMate 强制）：
-  - `imate_android` 聊天发送入口只保留 `sendMessageViaMainWebSocket` 路径。
+  - iMate 聊天发送入口只保留 `sendMessageViaMainWebSocket` 路径。
   - HTTP chat 发送分支仅保留在 IntelliMate 存量流程，作为回归兼容路径，不进入 iMate 新功能开发。
 - 陪伴体验组件（v1 必须项）：
   - 顶部关系条：展示关系阶段、最近互动时间、能量变化。
