@@ -77,8 +77,6 @@ from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
     shutdown_jsonl_db_store,
 )
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
-    WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS,
-    repl_bootstrap_continue_user_message,
     run_workspace_bootstrap_loop,
 )
 
@@ -219,39 +217,6 @@ def _readline_main_sync() -> str | None:
     return raw.rstrip("\r\n")
 
 
-def _repl_drain_bootstrap_continuations_if_needed(
-    ws: Path,
-    run_turn_sync: Callable[[str], str],
-) -> None:
-    root = ws.resolve()
-    if is_workspace_bootstrap_complete(root):
-        return
-    msg = repl_bootstrap_continue_user_message()
-    for _ in range(WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS):
-        t0 = time.perf_counter()
-        try:
-            out = run_turn_sync(msg)
-        except OpenRouterInvalidJsonError as exc:
-            logger.warning("repl bootstrap continuation invalid OpenRouter JSON: {}", exc)
-            _print_openrouter_invalid_json_retry_hint()
-            return
-        _print_assistant_reply(out, time.perf_counter() - t0)
-        _drain_async_tool_events(ws)
-        if is_workspace_bootstrap_complete(root):
-            return
-    if not is_workspace_bootstrap_complete(root):
-        logger.error(
-            "repl workspace bootstrap continuation exhausted max_rounds={} ws={}",
-            WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS,
-            root,
-        )
-        print(
-            "Bootstrap unfinished (BOOSTRAPED still missing after max continuation rounds). "
-            "Send another message or run bootstrap_agent.",
-            flush=True,
-        )
-
-
 def _repl_drain_user_turns(
     first_line: str,
     *,
@@ -302,7 +267,6 @@ def _repl_drain_user_turns(
                 continue
             _print_assistant_reply(out, time.perf_counter() - t0)
             _drain_async_tool_events(ws)
-            _repl_drain_bootstrap_continuations_if_needed(ws, run_turn_sync)
             if exit_when_bootstrap_complete and is_workspace_bootstrap_complete(ws):
                 raise _ReplBootstrapPhaseComplete
             print("> ", end="", flush=True)
@@ -860,7 +824,6 @@ def _repl_run_startup_opening_turn(
     inject_repl_bootstrap_opening_system: bool = False,
 ) -> bool:
     print(f"[{_local_ts_str()}] {_preview_line(user_text)}")
-    print("> ", end="", flush=True)
     t0 = time.perf_counter()
     try:
         out = asyncio.run(
@@ -883,18 +846,6 @@ def _repl_run_startup_opening_turn(
         return False
     _print_assistant_reply(out, time.perf_counter() - t0)
     _drain_async_tool_events(ws)
-
-    def _sync_continue(m: str) -> str:
-        return asyncio.run(
-            run_turn(
-                ws,
-                m,
-                debug_print_system=debug_print_system,
-                llm_trace=True,
-            )
-        )
-
-    _repl_drain_bootstrap_continuations_if_needed(ws, _sync_continue)
     print("> ", end="", flush=True)
     return True
 
@@ -1028,16 +979,6 @@ def repl(
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
 
-        def _sync_bootstrap_continue(m: str) -> str:
-            return asyncio.run(
-                run_turn(
-                    ws,
-                    m,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
-                )
-            )
-
         while not is_workspace_bootstrap_complete(ws):
             logger.debug("repl bootstrap_gate before full_interactive")
             if is_workspace_transcript_empty(ws):
@@ -1050,9 +991,6 @@ def repl(
                 )
                 if not ok:
                     return
-            else:
-                _repl_drain_bootstrap_continuations_if_needed(ws, _sync_bootstrap_continue)
-                print("> ", end="", flush=True)
             if is_workspace_bootstrap_complete(ws):
                 break
             print(
