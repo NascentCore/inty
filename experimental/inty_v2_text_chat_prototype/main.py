@@ -423,7 +423,14 @@ def _daemon_run_user_turn_and_drain_queue(
 ) -> bool:
     def _sync(cur: str) -> str:
         return asyncio.run(
-            run_turn(ws, cur, debug_print_system=debug_print_system, llm_trace=True)
+            run_turn(
+                ws,
+                cur,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+            )
         )
 
     return _repl_drain_user_turns(
@@ -478,6 +485,7 @@ def _run_turn_with_stdin_pump(
                     ws,
                     user_text,
                     inner_tick_turn=inner_tick_turn,
+                    repl_online_ack_turn=False,
                     debug_print_system=debug_print_system,
                     llm_trace=True,
                 )
@@ -747,6 +755,8 @@ def _repl_interactive_loop_daemon(
                 run_turn(
                     ws,
                     text,
+                    inner_tick_turn=False,
+                    repl_online_ack_turn=False,
                     debug_print_system=debug_print_system,
                     llm_trace=True,
                 )
@@ -794,6 +804,7 @@ def _repl_interactive_loop_daemon(
                         ws,
                         "",
                         inner_tick_turn=True,
+                        repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
                     )
@@ -1072,6 +1083,8 @@ def repl(
                     run_turn(
                         ws,
                         _repl_startup_profile_inquiry_user_message(),
+                        inner_tick_turn=False,
+                        repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
                     )
@@ -1098,9 +1111,10 @@ def repl(
                     run_turn(
                         ws,
                         REPL_ONLINE_ACK_USER_TEXT,
+                        inner_tick_turn=False,
+                        repl_online_ack_turn=True,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
-                        repl_online_ack_turn=True,
                     )
                 )
                 _print_assistant_reply(out_ack, time.perf_counter() - t0_ack)
@@ -1168,6 +1182,8 @@ def once(
             run_turn(
                 ws,
                 message,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
                 debug_print_system=debug_print_system,
                 defer_memory_update=False,
                 llm_trace=True,
