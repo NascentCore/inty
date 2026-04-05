@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from loguru import logger
+from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
 from .file_store import read_text
 from .memory_store_registry import get_memory_store
@@ -17,7 +18,7 @@ from .utc import local_date_str
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
-    ts: str
+    ts: str = Field(validation_alias=AliasChoices("ts", "timestamp"))
     uuid: str | None = None
     trace_id: str | None = None
     reply_to: str | None = None
@@ -148,7 +149,23 @@ def load_transcript(path: Path) -> list[ChatMessage]:
         line = line.strip()
         if not line:
             continue
-        out.append(ChatMessage.model_validate_json(line))
+        try:
+            raw = json.loads(line)
+        except json.JSONDecodeError:
+            logger.warning("{}: transcript skipped non-json line", path)
+            continue
+        if not isinstance(raw, dict):
+            logger.warning("{}: transcript skipped non-object json line", path)
+            continue
+        try:
+            out.append(ChatMessage.model_validate(raw))
+        except ValidationError:
+            logger.warning(
+                "{}: transcript skipped invalid ChatMessage row (first 240 chars): {!r}",
+                path,
+                line[:240],
+            )
+            continue
     return out
 
 

@@ -9,6 +9,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
+from pydantic import ValidationError
+
 from app.core.agentic_kernel.tools.registry import ToolRegistry
 from app.core.agentic_kernel.tools.dispatchers.media import (
     parse_optional_positive_int,
@@ -33,6 +35,7 @@ from .image_gate import (
     register_profile_write,
 )
 from .memory_store_registry import get_memory_store
+from .models import ChatMessage
 from .google_web_search import run_google_web_search
 from .schedule_queue import add_schedule_task
 
@@ -311,6 +314,30 @@ def tool_workspace_read_file(
     )
 
 
+def _transcript_jsonl_validate_for_tool_write(content: str) -> str | None:
+    if not content.strip():
+        return None
+    for i, raw_line in enumerate(content.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            raw = json.loads(line)
+        except json.JSONDecodeError as e:
+            return f"ERROR: transcript.jsonl line {i} is not valid JSON: {e}"
+        try:
+            ChatMessage.model_validate(raw)
+        except ValidationError as e:
+            return (
+                f"ERROR: transcript.jsonl line {i} must be JSON with "
+                f'role ("user"|"assistant"|"system"), content (string), '
+                f'ts (ISO8601 UTC, e.g. ...Z). Example: '
+                f'{{"role":"system","content":"marker","ts":"2026-01-01T00:00:00Z"}}. '
+                f"Details: {e}"
+            )
+    return None
+
+
 def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
@@ -319,6 +346,10 @@ def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> s
         prev_body = get_memory_store(root).read_document_if_exists(rel)
     elif p.is_file():
         prev_body = read_text(p)
+    if rel == "transcript.jsonl":
+        v_err = _transcript_jsonl_validate_for_tool_write(content)
+        if v_err is not None:
+            return v_err
     if _is_memory_document(rel):
         get_memory_store(root).write_document(rel, content)
     else:
