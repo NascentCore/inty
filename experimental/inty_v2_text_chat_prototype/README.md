@@ -28,9 +28,10 @@ uv pip install -r requirements.txt
 **必须从仓库根目录启动 REPL**：`app.core.config` 在导入时要求**当前工作目录**下存在 `config.yaml`（上文 `cp devops/config.yaml.dev config.yaml` 已在根目录提供该文件）。若在 `experimental/inty_v2_text_chat_prototype` 里直接 `python main.py`，会因找不到 `config.yaml` 而失败。
 
 ```bash
+# 回到代码库的根目录
 cd /path/to/inty-backend
-source experimental/inty_v2_text_chat_prototype/.venv/bin/activate
-python experimental/inty_v2_text_chat_prototype/main.py repl --workspace experimental/inty_v2_text_chat_prototype/_ws
+python experimental/inty_v2_text_chat_prototype/main.py repl \
+  --workspace experimental/inty_v2_text_chat_prototype/_ws
 ```
 
 bootstrap 阶段会由 AI 自然询问并确认用户期望的 companionship 类型（如朋友/爱人/亲人/自定义），无需命令行强制指定。
