@@ -217,6 +217,8 @@
   - 一发一收顺序
   - 多 agent 复用同连接
   - 无 HTTP fallback 条件下的重连与错误提示
+  - `X-App-Id` 缺失/非法时回落 IntelliMate 链路，且不写入任何 `imate_` 表
+  - `X-App-Id=imate_android` 时仅写入 `imate_` 链路，不写入 IntelliMate 存量表
 
 ## 7. 测试与验收计划
 
@@ -243,6 +245,8 @@
 - API 功能测试：
   - `/api/v1/chat/ws`、`/api/v1/chat/ws/verify` 的协议与稳定性验证。
   - 非聊天 HTTP API（设置、图片、语音、业务动作）回归可用。
+  - 分流回退验证：`X-App-Id` 缺失/非法时走 IntelliMate 链路，`imate_*` 表无新增写入。
+  - 分流命中验证：`X-App-Id=imate_android` 时仅写入 `imate_*` 表，不污染 IntelliMate 存量表。
 - service 流程测试：
   - 限额、鉴权、模型切换、业务动作、错误映射、prototype 体验编排一致性。
 - 数据一致性测试：
@@ -259,6 +263,9 @@
   - 能定位请求 ID、agent_id、session_id 对应链路日志。
 - 可恢复：
   - iMate WS 故障时可通过重连恢复或明确失败提示，不走 HTTP chat fallback。
+- 分流安全：
+  - `X-App-Id` 缺失/非法时不写入 `imate_*` 表。
+  - `X-App-Id=imate_android` 时仅写入 `imate_*` 表。
 - 不回归：
   - IntelliMate 既有主流程（登录、设置、历史消息、现有 HTTP/WS chat 路径）行为与稳定性不受 iMate 变更影响。
 
@@ -343,6 +350,7 @@
   - `PUT /api/v1/settings/`
   - `GET /api/v1/users/me`（用于设置页展示当前用户资料）。
   - `PUT /api/v1/users/profile`（若设置页包含资料编辑则复用）。
+  - 契约约束：`/settings/` 现状为 `Settings` 裸响应（非 `APIResponse`），Phase 1 需在 Android `ISettingsApi` 使用独立 DTO 解析，不与 `users/me` 的 `APIResponse` 解析器混用。
 - Basic chat（基础聊天）：
   - `WS /api/v1/chat/ws`（生产聊天主链路，落库）。
   - `WS /api/v1/chat/ws/verify`（联调与验收链路，不落聊天消息）。
@@ -468,7 +476,7 @@
 ### 11.11 实施顺序（按本期最小可交付）
 
 - Iteration 1 - Interface 稳定化：
-  - 固化 WS 协议与错误码；补齐 `/ws`、`/ws/verify` 联调清单与自动化测试。
+  - 固化 WS 协议与错误码；补齐 `/api/v1/chat/ws`、`/api/v1/chat/ws/verify` 联调清单与自动化测试。
 - Iteration 2 - Service 分层收敛：
   - 将 iMate chat 编排逻辑从 endpoint 完整下沉到 service；若复杂度达到拆分阈值，再落到 `app/services/imate/`，endpoint 保持薄层。
 - Iteration 3 - 数据层扩展：
@@ -512,7 +520,7 @@
 | Google/Email+Password 登录 | HTTP | `POST /api/v1/auth/google/login` | `IUserApi.loginByGoogle(GoogleLoginRequest)` |
 | 用户资料读取 | HTTP | `GET /api/v1/users/me` | `IUserApi.getMe` |
 | 用户资料更新 | HTTP | `PUT /api/v1/users/profile` | `IUserApi.updateProfile` |
-| 用户设置读写（通用） | HTTP | `GET/PUT /api/v1/settings/` | `Phase 1` 在 `core/data/api` 新增 `ISettingsApi`（仍由 `NetServiceMgr` 托管） |
+| 用户设置读写（通用） | HTTP | `GET/PUT /api/v1/settings/` | `Phase 1` 在 `core/data/api` 新增 `ISettingsApi`（仍由 `NetServiceMgr` 托管，按 `Settings` 裸响应独立解析） |
 | 历史消息拉取 | HTTP | `GET /api/v1/chats/agents/{agent_id}/messages` | `IChatApi.getMsgs` |
 | chat settings 读写 | HTTP | `GET/PUT /api/v1/chats/agents/{agent_id}/settings` | `IChatApi.getChatSettings/updateChatSettings` |
 | 实时聊天 | WS | `WS /api/v1/chat/ws` | `ChatWebSocketSessionManager.sendMessage` |
@@ -523,6 +531,7 @@
   - 后端字段新增时客户端忽略未知字段，保持向后兼容。
   - 分流字段 `X-App-Id: imate_android` 由统一网络层拦截器注入，避免业务层散落设置。
   - `GoogleLoginRequest` 按现有契约同时支持 `id_token` 与 `email/password`，不新增并行登录 endpoint。
+  - `ISettingsApi` 与 `IUserApi.getMe` 的响应包装不同（裸对象 vs `APIResponse`），必须分开 DTO 与解析逻辑，禁止复用同一响应解包器。
 
 #### 11.12.3 第二层 - 数据封装层（Room + DataStore + Repository）
 
