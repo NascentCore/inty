@@ -791,7 +791,7 @@ def bootstrap_agent(
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
 ) -> None:
-    """Agentic 工具循环：按 _ws2/BOOSTRAP.md 用 LLM + 文件工具初始化工作区。"""
+    """Agentic 工具循环：按 templates/BOOSTRAP.md 用 LLM + 文件工具初始化工作区。"""
     _init_proto_logging(workspace, log_file, no_log_file)
     _configure_llm_trace_for_workspace(workspace)
     logger.debug("cli bootstrap_agent ws={}", workspace.resolve())
