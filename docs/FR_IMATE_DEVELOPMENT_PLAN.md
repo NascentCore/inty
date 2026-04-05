@@ -378,6 +378,90 @@
 - 测试策略：
   - test 环境可使用 fake GCS（`use_fake_gcs: true`）保证可重复测试。
 
+### 11.6 iMate 后端分层架构设计（本期落地版）
+
+| 层级 | 目标 | 复用现有能力 | 新增实现（iMate v1） | 边界约束 |
+|---|---|---|---|---|
+| Interface 层（HTTP + WebSocket） | 对 Android 暴露稳定契约与实时链路 | `app/api/v1/endpoints/auth.py`、`settings.py`、`chats.py`、`chat.py` | `chat.py` 内补全 iMate 专用 WS 会话语义（会话上下文、断链原因、观测字段） | chat 仅 WS，不提供 HTTP fallback |
+| Application 层（Service 编排） | 聚合业务流程与策略，不承载协议细节 | `app/services/chat_service.py`、`subscription_service.py`、`voice_service.py`、`user_service.py` | 新增 `app/services/imate/` 子域服务（会话编排、记忆编排、关系状态编排） | endpoint 仅做校验与转发，禁止回流复杂业务 |
+| Domain/Data 层（Repository + Model） | 保证会话、消息、设置、陪伴状态的一致性 | `app/models`、`app/services/*_service.py` 中现有 CRUD、`app/db/session.py` | 增量新增 iMate 状态表与 repository（关系阶段、记忆命中、触达节奏） | 所有 schema 变更必须走 Alembic |
+| Infra 层（模型/存储/观测） | 对接 LLM、GCS、日志与指标 | `app/core/*`、`app/services/gcs_service.py`、现有日志体系 | 统一 `trace_id/request_id/session_id/agent_id/user_id` 观测字段 | 不在本期引入新消息总线 |
+
+### 11.7 Interface 层设计（HTTP/WS 与 iMate app 对接）
+
+- 路由复用与职责划分：
+  - Auth：复用 `POST /api/v1/auth/google/login`，同端点支持 `id_token` 与 `email+password`。
+  - Settings：复用 `GET/PUT /api/v1/settings/`、`GET /api/v1/users/me`、`PUT /api/v1/users/profile`。
+  - Chat：复用 `WS /api/v1/chat/ws` 与 `WS /api/v1/chat/ws/verify`，历史消息和 chat settings 继续走 `chats.py` HTTP 查询/更新。
+- WS 协议规范（iMate v1）：
+  - 入站统一 `ChatWebSocketRequest`，出站统一 `APIResponse + agent_id`。
+  - 心跳机制固定为 `ping/pong`，服务端空闲超时关闭连接。
+  - 同连接允许多 `agent_id` 顺序复用，但同一时刻仅处理一个请求（严格一发一收）。
+- 接口错误分层：
+  - 认证错误：401/4001（WS close reason unauthorized）。
+  - 业务错误：subscription limit、guest login required 等稳定业务码。
+  - 系统错误：500，返回统一英文 message，并打结构化日志。
+
+### 11.8 数据库封装与迁移设计（SQLAlchemy + Alembic）
+
+- Repository 组织：
+  - 沿用 `endpoint -> service -> repository/model`，避免 endpoint 直接写 SQL。
+  - 在 `app/services/imate/` 下引入 iMate 子域 repository façade，封装跨表事务（chat + chat_history + companion_state）。
+- 事务边界：
+  - 聊天主流程最小事务：`用户消息入库 -> AI 回复入库 -> 使用量记录`。
+  - 非关键旁路（如投递提醒、语音附加）失败不回滚主回复，按独立事务提交。
+- Alembic 迁移策略：
+  - 新增字段默认 nullable + 默认值，先兼容旧客户端，再分阶段收紧约束。
+  - migration 脚本必须包含回滚路径与数据回填说明。
+- 读写策略：
+  - 主链路写入只走主库。
+  - 历史分页/设置读取可逐步切到只读副本（若启用 `async_replica_url`）。
+
+### 11.9 AI 核心能力设计（聊天 WS 体验编排）
+
+- 聊天编排管线（Service）：
+  - Step 1: 鉴权与用户态加载（用户、订阅、agent、chat settings）。
+  - Step 2: 会话定位（`get_or_create_chat_by_agent` -> `session_id`）。
+  - Step 3: 上下文组装（最近窗口 + 必要记忆 + user_time_context）。
+  - Step 4: 模型选择（订阅态 + feature gate + agent 配置）。
+  - Step 5: 模型调用（复用现有 agent manager），并标准化 content/content_parts。
+  - Step 6: 回包封装（choices、usage、business_actions、source_imate_id）。
+  - Step 7: 后处理（可选语音、记忆提醒、业务动作投递）。
+- 体验设计难点与解法：
+  - 难点 A - 首 token 反馈慢：优先优化上下文窗口裁剪与模型路由，减少阻塞式附加逻辑。
+  - 难点 B - 断线重连后的一致性：客户端重连后以消息历史为准，服务端保持消息写入幂等。
+  - 难点 C - 多能力耦合导致主链路抖动：语音/图片/记忆投递全部插件化，失败不影响文本主回复。
+  - 难点 D - 多 agent 同连接路由：响应体强制回传 `agent_id`，客户端按 `agent_id` 分发落库。
+- 可观测性基线：
+  - 每次请求都记录 `request_id/session_id/agent_id/user_id/model/latency_ms`。
+  - 关键阶段打点：鉴权、上下文组装、模型调用、落库、后处理。
+
+### 11.10 非 AI 辅助能力设计（登录/鉴权/设置等）
+
+- 登录与鉴权：
+  - 复用 `auth.py` 既有登录链路，不新增并行 auth endpoint。
+  - Token 发行、用户恢复、订阅恢复保持现有逻辑，iMate 仅补充 reviewer 账号运维流程。
+- 用户资料与设置：
+  - 复用 `users`、`settings` 既有 endpoint 与 schema，iMate 不拆分第二套 profile/settings 模型。
+  - 设置变更事件仅更新当前用户作用域，不跨用户广播。
+- 版本门控与灰度：
+  - 继续用 `users.last_android_app_version_code` + `feature_gating.py` 控制能力开关。
+  - 新能力默认关闭，按版本与白名单逐步打开。
+- 安全与审计：
+  - 管理后台相关 endpoint 仍要求 superuser。
+  - 鉴权失败、敏感设置变更、订阅限制触发需保留审计日志。
+
+### 11.11 实施顺序（按本期最小可交付）
+
+- Iteration 1 - Interface 稳定化：
+  - 固化 WS 协议与错误码；补齐 `/ws`、`/ws/verify` 联调清单与自动化测试。
+- Iteration 2 - Service 分层收敛：
+  - 将 iMate chat 编排逻辑收敛到 `app/services/imate/`，endpoint 保持薄层。
+- Iteration 3 - 数据层扩展：
+  - 新增陪伴状态相关表与 migration，完成 repository façade 与事务边界落地。
+- Iteration 4 - 非 AI 能力对齐：
+  - 联调登录、鉴权、设置、历史消息拉取，形成 Android v1 完整闭环验收。
+
 ---
 
 - 结论：该计划以"复用已验证架构 + 分阶段可验收交付"为主轴，优先确保聊天主链路稳定，再逐步叠加长期陪伴智能能力，能最大化降低重构风险并提升上线成功率。
