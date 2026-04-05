@@ -301,7 +301,9 @@ async def run_modify_image_z_image_turbo(
     if has_path:
         assert source_path is not None
         source_rel_for_index = relative_path_under_workspace(root, source_path)
-        source_asset = find_latest_asset_by_local_relative_path(root, source_rel_for_index)
+        source_asset = find_latest_asset_by_local_relative_path(
+            root, source_rel_for_index
+        )
         if source_asset is not None:
             source_asset_id = str(source_asset.get("asset_id") or "") or None
             source_persona_revision_id = (
@@ -336,9 +338,7 @@ async def run_modify_image_z_image_turbo(
 
     z_in = _build_image_to_image_input(kwargs)
     skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
-    maybe_result = _z_image_turbo_i2i_call(
-        z_in, gcs_base, skip_gcs_upload=skip_gcs
-    )
+    maybe_result = _z_image_turbo_i2i_call(z_in, gcs_base, skip_gcs_upload=skip_gcs)
     if asyncio.iscoroutine(maybe_result):
         result = await maybe_result
     else:

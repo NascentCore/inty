@@ -80,7 +80,9 @@ def test_repl_drain_user_turns_recovers_from_openrouter_invalid_json_error() -> 
         return f"assistant:{cur}"
 
     with (
-        patch("inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-03"),
+        patch(
+            "inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-03"
+        ),
         patch("builtins.print"),
     ):
         keep_running = _repl_drain_user_turns(
@@ -107,8 +109,13 @@ def test_client_exception_identity_shared_between_import_paths() -> None:
 
 def test_repl_startup_bootstrap_branch_handles_openrouter_invalid_json() -> None:
     with (
-        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=False),
-        patch("inty_v2_text_chat_prototype.main.run_workspace_bootstrap_loop") as mock_boot,
+        patch(
+            "inty_v2_text_chat_prototype.main.is_workspace_initialized",
+            return_value=False,
+        ),
+        patch(
+            "inty_v2_text_chat_prototype.main.run_workspace_bootstrap_loop"
+        ) as mock_boot,
         patch("inty_v2_text_chat_prototype.main._init_proto_logging"),
         patch("inty_v2_text_chat_prototype.main._configure_llm_trace_for_workspace"),
         patch("inty_v2_text_chat_prototype.main._flush_and_shutdown_memory_store"),
@@ -124,10 +131,18 @@ def test_repl_startup_bootstrap_branch_handles_openrouter_invalid_json() -> None
 
 
 def test_repl_startup_profile_branch_handles_openrouter_invalid_json() -> None:
-    mock_run_turn = AsyncMock(side_effect=OpenRouterInvalidJsonError("bad upstream body"))
+    mock_run_turn = AsyncMock(
+        side_effect=OpenRouterInvalidJsonError("bad upstream body")
+    )
     with (
-        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=True),
-        patch("inty_v2_text_chat_prototype.main.needs_startup_profile_inquiry", return_value=True),
+        patch(
+            "inty_v2_text_chat_prototype.main.is_workspace_initialized",
+            return_value=True,
+        ),
+        patch(
+            "inty_v2_text_chat_prototype.main.needs_startup_profile_inquiry",
+            return_value=True,
+        ),
         patch("inty_v2_text_chat_prototype.main.run_turn", mock_run_turn),
         patch("inty_v2_text_chat_prototype.main._init_proto_logging"),
         patch("inty_v2_text_chat_prototype.main._configure_llm_trace_for_workspace"),
@@ -144,7 +159,9 @@ def test_repl_startup_profile_branch_handles_openrouter_invalid_json() -> None:
 
 def test_print_openrouter_invalid_json_retry_hint() -> None:
     with (
-        patch("inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-03"),
+        patch(
+            "inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-03"
+        ),
         patch("builtins.print") as mock_print,
     ):
         _print_openrouter_invalid_json_retry_hint()

@@ -134,7 +134,9 @@ class TestScheduleQueueKernel(unittest.TestCase):
             runner = schedule_queue._runner_for(root)
             self.assertIsNotNone(runner)
             assert runner is not None
-            with patch.object(runner.thread, "join", wraps=runner.thread.join) as join_spy:
+            with patch.object(
+                runner.thread, "join", wraps=runner.thread.join
+            ) as join_spy:
                 stop_schedule_scheduler(root)
                 self.assertTrue(join_spy.called)
 
@@ -188,12 +190,20 @@ class TestScheduleQueueKernel(unittest.TestCase):
             with patch.object(schedule_queue.logger, "warning"):
                 self.assertIsNone(next_due_wait_seconds(root))
             with schedule_queue._INVALID_TASK_WARNED_KEYS_LOCK:
-                self.assertIn((root.resolve(), "bad-remove"), schedule_queue._INVALID_TASK_WARNED_KEYS)
+                self.assertIn(
+                    (root.resolve(), "bad-remove"),
+                    schedule_queue._INVALID_TASK_WARNED_KEYS,
+                )
 
-            queue_path.write_text(json.dumps({"tasks": []}, ensure_ascii=False), encoding="utf-8")
+            queue_path.write_text(
+                json.dumps({"tasks": []}, ensure_ascii=False), encoding="utf-8"
+            )
             self.assertIsNone(next_due_wait_seconds(root))
             with schedule_queue._INVALID_TASK_WARNED_KEYS_LOCK:
-                self.assertNotIn((root.resolve(), "bad-remove"), schedule_queue._INVALID_TASK_WARNED_KEYS)
+                self.assertNotIn(
+                    (root.resolve(), "bad-remove"),
+                    schedule_queue._INVALID_TASK_WARNED_KEYS,
+                )
 
     def test_stop_timeout_keeps_runner_to_block_duplicate_start(self) -> None:
         with tempfile.TemporaryDirectory() as td:

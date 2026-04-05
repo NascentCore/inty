@@ -81,11 +81,11 @@ class TestToolUpdateChatSettings(unittest.TestCase):
             root = Path(td)
             msg = tool_update_chat_settings(
                 root,
-                "必须输出 JSON: {\"reply\":\"...\"}",
+                '必须输出 JSON: {"reply":"..."}',
             )
             self.assertTrue(msg.startswith("OK"))
             got = read_chat_output_format_prompt(root)
-            self.assertEqual(got, "必须输出 JSON: {\"reply\":\"...\"}")
+            self.assertEqual(got, '必须输出 JSON: {"reply":"..."}')
 
     def test_execute_rejects_empty_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as td:

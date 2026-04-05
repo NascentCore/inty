@@ -359,13 +359,8 @@ object IntySetting {
     }
 
     suspend fun isVibeModeEnabledSuspend(): Boolean {
-        return contextRef
-            ?.get()
-            ?.intySettingsCache
-            ?.data
-            ?.first()
-            ?.userCache
-            ?.vibeModeEnabled ?: false
+        return contextRef?.get()?.intySettingsCache?.data?.first()?.userCache?.vibeModeEnabled
+            ?: false
     }
 
     /** 禁用 IntelliMate tips 弹窗（用户偏好设置） */
@@ -382,13 +377,7 @@ object IntySetting {
     }
 
     suspend fun isTipsDisabledSuspend(): Boolean {
-        return contextRef
-            ?.get()
-            ?.intySettingsCache
-            ?.data
-            ?.first()
-            ?.userCache
-            ?.tipsDisabled ?: false
+        return contextRef?.get()?.intySettingsCache?.data?.first()?.userCache?.tipsDisabled ?: false
     }
 
     /** 标记用户已手动设置过 Auto Play Animation */
@@ -408,9 +397,7 @@ object IntySetting {
     }
 
     suspend fun markUserTextStreamingSuspend() {
-        updateIntySetting {
-            it.copy(userCache = it.userCache.copy(userSetTextStreaming = true))
-        }
+        updateIntySetting { it.copy(userCache = it.userCache.copy(userSetTextStreaming = true)) }
     }
 
     /** 显示场景动作输入按钮（全局设置，默认关闭） */
@@ -486,9 +473,7 @@ object IntySetting {
     }
 
     suspend fun setResubReminderDialogShowCountSuspend(count: Int) {
-        updateIntySetting {
-            it.copy(userCache = it.userCache.copy(resubReminderShowCount = count))
-        }
+        updateIntySetting { it.copy(userCache = it.userCache.copy(resubReminderShowCount = count)) }
     }
 
     fun getFeedbackDialogLastShowTime(): Long {
@@ -526,7 +511,8 @@ object IntySetting {
             ?.data
             ?.first()
             ?.userCache
-            ?.imageFeedbackPromptLastLocalDate.orEmpty()
+            ?.imageFeedbackPromptLastLocalDate
+            .orEmpty()
     }
 
     suspend fun setImageFeedbackPromptLastLocalDate(localDateKey: String) {
@@ -587,13 +573,8 @@ object IntySetting {
     }
 
     suspend fun hasAppUpdateTipsSuspend(): Boolean {
-        return contextRef
-            ?.get()
-            ?.intySettingsCache
-            ?.data
-            ?.first()
-            ?.userCache
-            ?.hasAppUpdateTips ?: false
+        return contextRef?.get()?.intySettingsCache?.data?.first()?.userCache?.hasAppUpdateTips
+            ?: false
     }
 
     fun setAppUpdateTips(showed: Boolean) {
