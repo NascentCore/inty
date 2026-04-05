@@ -29,7 +29,7 @@ uv pip install -r requirements.txt
 
 ```bash
 # 回到代码库的根目录
-cd /path/to/inty-backend
+cd ../../
 python experimental/inty_v2_text_chat_prototype/main.py repl \
   --workspace experimental/inty_v2_text_chat_prototype/_ws
 ```
