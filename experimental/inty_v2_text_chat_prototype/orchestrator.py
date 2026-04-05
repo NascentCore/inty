@@ -59,6 +59,7 @@ from .fal_z_image_tool import _reset_fal_async_client_after_short_lived_loop
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
+    build_openai_repl_tools_inner_tick,
     execute_tool_call,
     openai_assistant_message_dict,
     read_chat_output_format_prompt,
@@ -76,7 +77,7 @@ def _llm_route_for_turn(
 ) -> str:
     """
     Resolved LLM routing label for logs (async background > dual parallel > synthetic idle > single).
-    `no_tools_idle_turn`: inner_tick_turn (no tools, no async dual fast path).
+    `no_tools_idle_turn`: legacy; when True, synthetic idle single LLM (unused for inner_tick with tools).
     """
     if async_tool_bg and not no_tools_idle_turn:
         return "async_chat_tool_background"
@@ -454,20 +455,18 @@ async def _run_turn_with_user_profile_tools(
     dual_enabled = dual_llm_enabled()
     chat_route_model = chat_model()
     tool_route_model = tool_model()
-    no_tools_idle = inner_tick_turn
-    tools: list[Any] = [] if no_tools_idle else build_openai_repl_tools()
+    tools: list[Any] = (
+        build_openai_repl_tools_inner_tick()
+        if inner_tick_turn
+        else build_openai_repl_tools()
+    )
     chat_output_format_prompt = read_chat_output_format_prompt(root)
-    if not no_tools_idle and not tools:
-        raise RuntimeError("build_openai_repl_tools() returned empty list")
-    if no_tools_idle and dual_enabled:
-        logger.info(
-            "repl.turn dual_llm env_on_but_ignored trace_id={} reason=inner_tick_turn",
-            trace_id,
-        )
+    if not tools:
+        raise RuntimeError("REPL tools list is empty")
     route = _llm_route_for_turn(
         async_tool_bg=False,
         dual_llm=dual_enabled,
-        no_tools_idle_turn=no_tools_idle,
+        no_tools_idle_turn=False,
     )
     logger.info(
         "repl.turn user_profile_tool_loop_enter trace_id={} llm_route={} "
@@ -483,7 +482,7 @@ async def _run_turn_with_user_profile_tools(
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
-        if dual_enabled and not no_tools_idle:
+        if dual_enabled:
             logger.info(
                 "repl.turn llm_round={} dual_llm_parallel trace_id={} chat_model={} tool_model={} "
                 "shared_context_msgs={}",
@@ -613,8 +612,7 @@ async def _run_turn_with_user_profile_tools(
                 break
         else:
             t_api = time.perf_counter()
-            # 带 tools 的同步单路：LangSmith 用 Tool 路名；内在节拍无 tools 仍用默认 ChatOpenAI。
-            single_llm_client = client if no_tools_idle else get_client_dual_llm_tool()
+            single_llm_client = get_client_dual_llm_tool() if tools else client
             resp = create_chat_completion(
                 single_llm_client,
                 model=model,
@@ -698,7 +696,7 @@ async def _run_turn_with_user_profile_tools(
                     "content": result,
                 }
             )
-        if dual_enabled and not no_tools_idle:
+        if dual_enabled:
             messages.append(chat_row)
     else:
         raise RuntimeError(
@@ -737,7 +735,8 @@ async def run_turn(
     llm_trace: bool = False,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
-    inner_tick_turn=True：内在节拍合成回合（transcript 标 inner_tick），不跑记忆管线。
+    inner_tick_turn=True：内在节拍合成回合（transcript 标 inner_tick），不跑记忆管线；
+    API 挂载精简工具集（`workspace_init_tools.build_openai_repl_tools_inner_tick`：USER 档案与工作区读写），不走 async_chat_tool_background。
     repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。
     以上合成回合均不调用 prepare_image_gate_for_turn（避免合成 user 文本误改图像门控状态）。"""
     t0 = time.perf_counter()
@@ -749,8 +748,6 @@ async def run_turn(
         user_text = INNER_TICK_SYNTHETIC_USER_TEXT
     elif not repl_online_ack_turn:
         prepare_image_gate_for_turn(root, user_text)
-
-    no_tools_idle = inner_tick_turn
 
     logger.info(
         "run_turn start path={} user_chars={} inner_tick_turn={} "
@@ -831,24 +828,25 @@ async def run_turn(
             input_messages = message_snapshots_to_dicts(turn_input.history)
             async_bg = async_tool_background_enabled()
             dual_on = dual_llm_enabled()
+            use_async_fast = async_bg and not inner_tick_turn
             route = _llm_route_for_turn(
-                async_tool_bg=async_bg,
+                async_tool_bg=use_async_fast,
                 dual_llm=dual_on,
-                no_tools_idle_turn=no_tools_idle,
+                no_tools_idle_turn=False,
             )
             logger.info(
                 "run_turn llm_route={} trace_id={} async_tool_bg={} dual_llm={} "
-                "no_tools_idle_turn={} chat_model={} tool_model={} default_model={}",
+                "inner_tick_turn={} chat_model={} tool_model={} default_model={}",
                 route,
                 turn_trace_id,
                 async_bg,
                 dual_on,
-                no_tools_idle,
+                inner_tick_turn,
                 chat_model(),
                 tool_model(),
                 default_model(),
             )
-            if async_bg and not no_tools_idle:
+            if use_async_fast:
                 return await _run_turn_fast_chat_then_tool_background(
                     input_messages,
                     root,
