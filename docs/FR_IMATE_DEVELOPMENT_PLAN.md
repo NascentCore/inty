@@ -17,7 +17,7 @@
   - FastAPI + SQLAlchemy + Pydantic 数据契约。
   - endpoint -> service -> repository 分层模式。
   - 依赖通过 `app/api/deps.py` + Depends 注入，避免 endpoint 直接绑定全局单例。
-  - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用，并继续复用 `app/models` SQLAlchemy database model。
+  - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用；数据层采用 iMate 独立模型与表，统一使用 `imate_` 前缀与 IntelliMate 区分。
 - Chat 通信复用：
   - app + backend 使用 WebSocket 主链路。
   - chat 路径仅提供 WebSocket，不提供 HTTP fallback。
@@ -101,10 +101,10 @@
 
 ### 4.3 Backend 业务数据规划
 
-- 核心表沿用并增强：
-  - `chats`：用户与 iMate(or IntelliMate 2.0) 会话关系。
-  - `chat_history`：用户消息、AI 回复、多模态元数据。
-  - `chat_settings`：会话级行为配置（语言、语音、模式）。
+- iMate 核心表（统一 `imate_` 前缀）：
+  - `imate_chats`：用户与 iMate(or IntelliMate 2.0) 会话关系。
+  - `imate_chat_history`：用户消息、AI 回复、多模态元数据。
+  - `imate_chat_settings`：会话级行为配置（语言、语音、模式）。
 - 元数据增强方向：
   - 模型配置、提示词、生成耗时、重连原因、业务动作埋点。
   - 陪伴相关状态（关系阶段、记忆触发结果）在不破坏主链路的前提下增量扩展。
@@ -130,7 +130,7 @@
   - chat 路径仅走 WebSocket，不提供 HTTP fallback。
 - Backend：
   - 稳定 `/chat/ws` 与 `/chat/ws/verify`。
-  - 复用 `app/api/v1/endpoints` 现有路由入口与 `app/models` SQLAlchemy 模型。
+  - 复用 `app/api/v1/endpoints` 现有路由入口与 SQLAlchemy/Alembic 工程模式；iMate 数据表使用 `imate_` 前缀独立管理。
   - 将聊天流程统一收敛到 `app/services`，并引入 `inty_v2 prototype` 聊天体验编排逻辑。
   - 落库与不落库路径分离清晰。
 - 验收：
@@ -197,7 +197,7 @@
   - 语音/业务动作/记忆投递作为可插拔阶段。
 - Repository/Model 层：
   - 优化 chat 与 settings 查询路径，减少重复查询与竞态。
-  - 继续复用 `app/models` 现有 SQLAlchemy database model，避免分叉数据层。
+  - iMate 使用独立 SQLAlchemy model（表名统一 `imate_` 前缀），并通过可复用 repository 模式避免分叉实现风格。
   - 关键写操作保持事务边界明确。
 - DI 与可测试性：
   - endpoint 通过 Depends 注入 service，测试通过 dependency_overrides 替换。
@@ -298,7 +298,7 @@
 
 - Step 1：冻结 v1 契约和错误码清单（1 个 PR，仅文档和 schema 对齐）。
 - Step 2：打通 Android WS 主链路并移除 chat HTTP fallback 假设（1-2 个 PR）。
-- Step 3：完成 backend WS 主链路 service 编排，复用 `app/` 路由与 SQLAlchemy model，接入 prototype 体验逻辑并补齐关键 feature tests（1-2 个 PR）。
+- Step 3：完成 backend WS 主链路 service 编排，复用 `app/` 路由与 SQLAlchemy/Alembic 工程模式，按 `imate_` 前缀建设 iMate 独立模型，接入 prototype 体验逻辑并补齐关键 feature tests（1-2 个 PR）。
 - Step 4：补齐联调 checklist 与自动化回归（1 个 PR）。
 - Step 5：进入陪伴状态层增量开发（后续迭代）。
 
@@ -359,7 +359,7 @@
   - 连接池参数由 `config.yaml` 注入（pool_size/max_overflow/pool_timeout 等）。
 - 变更管理：
   - 所有 schema 变更走 Alembic migration。
-  - 复用 `app/models` 现有模型，不新建并行 ORM 层。
+  - iMate 新增独立 ORM 模型与 migration，表名统一 `imate_` 前缀。
 - 运维基线：
   - 自动备份（每日全量 + 增量 WAL）。
   - 监控：连接数、慢查询、锁等待、复制延迟（若启用副本）。
@@ -384,7 +384,7 @@
 |---|---|---|---|---|
 | Interface 层（HTTP + WebSocket） | 对 Android 暴露稳定契约与实时链路 | `app/api/v1/endpoints/auth.py`、`settings.py`、`chats.py`、`chat.py` | `chat.py` 内补全 iMate 专用 WS 会话语义（会话上下文、断链原因、观测字段） | chat 仅 WS，不提供 HTTP fallback |
 | Application 层（Service 编排） | 聚合业务流程与策略，不承载协议细节 | `app/services/chat_service.py`、`subscription_service.py`、`voice_service.py`、`user_service.py` | 新增 `app/services/imate/` 子域服务（会话编排、记忆编排、关系状态编排） | endpoint 仅做校验与转发，禁止回流复杂业务 |
-| Domain/Data 层（Repository + Model） | 保证会话、消息、设置、陪伴状态的一致性 | `app/models`、`app/services/*_service.py` 中现有 CRUD、`app/db/session.py` | 增量新增 iMate 状态表与 repository（关系阶段、记忆命中、触达节奏） | 所有 schema 变更必须走 Alembic |
+| Domain/Data 层（Repository + Model） | 保证会话、消息、设置、陪伴状态的一致性 | `app/services/*_service.py` 中现有 CRUD 模式、`app/db/session.py` | 新增 iMate 独立 ORM 与 repository，表统一 `imate_` 前缀（关系阶段、记忆命中、触达节奏） | 所有 schema 变更必须走 Alembic |
 | Infra 层（模型/存储/观测） | 对接 LLM、GCS、日志与指标 | `app/core/*`、`app/services/gcs_service.py`、现有日志体系 | 统一 `trace_id/request_id/session_id/agent_id/user_id` 观测字段 | 不在本期引入新消息总线 |
 
 ### 11.7 Interface 层设计（HTTP/WS 与 iMate app 对接）
@@ -406,7 +406,7 @@
 
 - Repository 组织：
   - 沿用 `endpoint -> service -> repository/model`，避免 endpoint 直接写 SQL。
-  - 在 `app/services/imate/` 下引入 iMate 子域 repository façade，封装跨表事务（chat + chat_history + companion_state）。
+  - 在 `app/services/imate/` 下引入 iMate 子域 repository façade，封装跨表事务（`imate_chats` + `imate_chat_history` + `imate_companion_state`）。
 - 事务边界：
   - 聊天主流程最小事务：`用户消息入库 -> AI 回复入库 -> 使用量记录`。
   - 非关键旁路（如投递提醒、语音附加）失败不回滚主回复，按独立事务提交。
