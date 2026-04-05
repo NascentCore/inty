@@ -1,4 +1,4 @@
-"""内在节拍调度、transcript 标志与真实用户判定（原心跳节奏测试已迁至 inner_tick_schedule）。"""
+"""inner_tick_schedule 与 transcript 合成行标志（`is_transcript_real_user_message` 等）。"""
 
 from __future__ import annotations
 
@@ -75,6 +75,32 @@ class TestInnerTickSchedule(unittest.TestCase):
                 w = next_inner_tick_wait_seconds(root, last_inner_fire_monotonic=None)
             self.assertGreater(w, 0.0)
             self.assertLess(w, 86400.0)
+
+    def test_none_last_fire_when_ready_returns_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _write_transcript(
+                root / "transcript.jsonl",
+                [
+                    {
+                        "role": "user",
+                        "content": "hi",
+                        "ts": "2026-01-01T00:00:00+00:00",
+                        "uuid": "a",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "hello",
+                        "ts": "2026-01-01T00:00:01+00:00",
+                        "uuid": "b",
+                    },
+                ],
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                w = next_inner_tick_wait_seconds(
+                    root, last_inner_fire_monotonic=None
+                )
+            self.assertLessEqual(w, 0.0)
 
     def test_ready_when_assistant_last_and_min_gap_elapsed(self) -> None:
         with tempfile.TemporaryDirectory() as td:
