@@ -453,7 +453,9 @@ async def _run_turn_with_user_profile_tools(
     chat_output_format_prompt = read_chat_output_format_prompt(root)
     if not tools:
         raise RuntimeError("REPL tools list is empty")
-    route = _llm_route_for_turn(async_tool_bg=False, dual_llm=dual_enabled)
+    route = _llm_route_for_turn(
+        async_tool_bg=False, dual_llm=dual_enabled and not inner_tick_turn
+    )
     logger.info(
         "repl.turn user_profile_tool_loop_enter trace_id={} llm_route={} "
         "dual_llm={} inner_tick_turn={} chat_model={} tool_model={} default_model={}",
@@ -468,7 +470,7 @@ async def _run_turn_with_user_profile_tools(
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
-        if dual_enabled:
+        if dual_enabled and not inner_tick_turn:
             logger.info(
                 "repl.turn llm_round={} dual_llm_parallel trace_id={} chat_model={} tool_model={} "
                 "shared_context_msgs={}",
@@ -682,7 +684,7 @@ async def _run_turn_with_user_profile_tools(
                     "content": result,
                 }
             )
-        if dual_enabled:
+        if dual_enabled and not inner_tick_turn:
             messages.append(chat_row)
     else:
         raise RuntimeError(

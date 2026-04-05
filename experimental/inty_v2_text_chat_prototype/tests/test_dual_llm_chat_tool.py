@@ -489,6 +489,65 @@ class TestDualLlmChatTool(unittest.TestCase):
         self.assertIn("CHAT 输出格式约束", round2_system)
         self.assertIn('必须输出 JSON: {"reply":"..."}', round2_system)
 
+    def test_inner_tick_skips_dual_llm_when_dual_env_enabled(self) -> None:
+        """内在节拍仅单路 sync completion，不调用 get_client_dual_llm_chat 并行分支。"""
+        models_seen: list[str] = []
+
+        class _FakeSoloCompletions:
+            def create(self, **kwargs: object) -> SimpleNamespace:
+                models_seen.append(str(kwargs["model"]))
+                return _resp_text("solo-reply")
+
+        fake_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_FakeSoloCompletions()),
+        )
+
+        def _no_dual_chat() -> None:
+            raise AssertionError("get_client_dual_llm_chat must not run for inner_tick")
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            messages: list[dict[str, object]] = [
+                {"role": "system", "content": "sys"},
+                {"role": "user", "content": "u1"},
+            ]
+            with (
+                patch.object(orchestrator, "get_client", return_value=fake_client),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_chat",
+                    side_effect=_no_dual_chat,
+                ),
+                patch.object(
+                    orchestrator,
+                    "get_client_dual_llm_tool",
+                    return_value=fake_client,
+                ),
+                patch.object(orchestrator, "dual_llm_enabled", return_value=True),
+                patch.object(orchestrator, "default_model", return_value="default-m"),
+                patch.object(
+                    orchestrator,
+                    "build_openai_repl_tools_inner_tick",
+                    return_value=[{"type": "function"}],
+                ),
+                patch.object(
+                    orchestrator,
+                    "read_chat_output_format_prompt",
+                    return_value="",
+                ),
+            ):
+                out = asyncio.run(
+                    orchestrator._run_turn_with_user_profile_tools(
+                        messages,
+                        root,
+                        llm_trace=False,
+                        inner_tick_turn=True,
+                    )
+                )
+
+        self.assertEqual(out, "solo-reply")
+        self.assertEqual(models_seen, ["default-m"])
+
 
 if __name__ == "__main__":
     unittest.main()
