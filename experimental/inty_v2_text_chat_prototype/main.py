@@ -49,6 +49,7 @@ from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
     next_heartbeat_wait_seconds,
 )
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
+    is_workspace_bootstrap_complete,
     needs_startup_profile_inquiry,
     needs_workspace_template_bootstrap,
     repl_heartbeat_suppressed_for_workspace_bootstrap,
@@ -75,6 +76,8 @@ from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
     shutdown_jsonl_db_store,
 )
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
+    WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS,
+    repl_bootstrap_continue_user_message,
     run_workspace_bootstrap_loop,
 )
 
@@ -211,6 +214,39 @@ def _readline_main_sync() -> str | None:
     return raw.rstrip("\r\n")
 
 
+def _repl_drain_bootstrap_continuations_if_needed(
+    ws: Path,
+    run_turn_sync: Callable[[str], str],
+) -> None:
+    root = ws.resolve()
+    if is_workspace_bootstrap_complete(root):
+        return
+    msg = repl_bootstrap_continue_user_message()
+    for _ in range(WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS):
+        t0 = time.perf_counter()
+        try:
+            out = run_turn_sync(msg)
+        except OpenRouterInvalidJsonError as exc:
+            logger.warning("repl bootstrap continuation invalid OpenRouter JSON: {}", exc)
+            _print_openrouter_invalid_json_retry_hint()
+            return
+        _print_assistant_reply(out, time.perf_counter() - t0)
+        _drain_async_tool_events(ws)
+        if is_workspace_bootstrap_complete(root):
+            return
+    if not is_workspace_bootstrap_complete(root):
+        logger.error(
+            "repl workspace bootstrap continuation exhausted max_rounds={} ws={}",
+            WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS,
+            root,
+        )
+        print(
+            "Bootstrap unfinished (BOOSTRAPED still missing after max continuation rounds). "
+            "Send another message or run bootstrap_agent.",
+            flush=True,
+        )
+
+
 def _repl_drain_user_turns(
     first_line: str,
     *,
@@ -260,6 +296,7 @@ def _repl_drain_user_turns(
                 continue
             _print_assistant_reply(out, time.perf_counter() - t0)
             _drain_async_tool_events(ws)
+            _repl_drain_bootstrap_continuations_if_needed(ws, run_turn_sync)
             print("> ", end="", flush=True)
 
         try:
@@ -776,6 +813,19 @@ def _repl_run_startup_opening_turn(
         _print_openrouter_invalid_json_retry_hint()
         return False
     _print_assistant_reply(out, time.perf_counter() - t0)
+    _drain_async_tool_events(ws)
+
+    def _sync_continue(m: str) -> str:
+        return asyncio.run(
+            run_turn(
+                ws,
+                m,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+            )
+        )
+
+    _repl_drain_bootstrap_continuations_if_needed(ws, _sync_continue)
     return True
 
 

@@ -6,6 +6,7 @@ import importlib
 import json
 import queue
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -79,17 +80,23 @@ def test_repl_drain_user_turns_recovers_from_openrouter_invalid_json_error() -> 
             raise ReplOpenRouterInvalidJsonError("broken upstream body")
         return f"assistant:{cur}"
 
-    with (
-        patch("inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-03"),
-        patch("builtins.print"),
-    ):
-        keep_running = _repl_drain_user_turns(
-            "第一条消息",
-            run_turn_sync=_run_turn_sync,
-            pending=pending,
-            ws=Path("/tmp/unused"),
-            first_line_already_echoed=False,
-        )
+    with tempfile.TemporaryDirectory() as td:
+        ws = Path(td)
+        (ws / "BOOSTRAPED").write_text("", encoding="utf-8")
+        with (
+            patch(
+                "inty_v2_text_chat_prototype.main._local_ts_str",
+                return_value="2026-04-03",
+            ),
+            patch("builtins.print"),
+        ):
+            keep_running = _repl_drain_user_turns(
+                "第一条消息",
+                run_turn_sync=_run_turn_sync,
+                pending=pending,
+                ws=ws,
+                first_line_already_echoed=False,
+            )
     assert keep_running is True
     assert called["n"] == 2
 

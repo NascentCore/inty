@@ -23,6 +23,8 @@ from .workspace_init_tools import (
     tool_executor_for_root,
 )
 
+WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS = 48
+
 # Synthetic user turn: not shown to the human; injected in bootstrap_agent tool loop when
 # BOOSTRAPED is still missing (REPL uses run_turn per user line instead).
 _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE = (
@@ -67,6 +69,11 @@ def _insert_system_message(
 
 def _internal_bootstrap_continue() -> str:
     return _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE
+
+
+def repl_bootstrap_continue_user_message() -> str:
+    """REPL 在缺 BOOSTRAPED 时注入的 synthetic user，与 bootstrap_agent 内部续跑文案一致。"""
+    return _internal_bootstrap_continue()
 
 
 def _bootstrap_spec_base_text(workspace: Path | None) -> str:
@@ -119,7 +126,7 @@ def run_workspace_bootstrap_loop(
     user_message: str,
     *,
     model: str | None = None,
-    max_rounds: int = 48,
+    max_rounds: int = WORKSPACE_BOOTSTRAP_MAX_LLM_ROUNDS,
     on_tool: Callable[[str, str], None] | None = None,
     llm_trace: bool = False,
 ) -> str:
