@@ -16,6 +16,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
+    heartbeat_enabled_from_env,
     next_heartbeat_wait_seconds,
 )
 from experimental.inty_v2_text_chat_prototype.models import (
@@ -42,11 +43,17 @@ class TestHeartbeatSchedule(unittest.TestCase):
         )
         self.assertFalse(is_transcript_real_user_message(m))
 
+    def test_env_unset_defaults_heartbeat_enabled(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertTrue(heartbeat_enabled_from_env())
+
     def test_disabled_returns_large_wait(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "transcript.jsonl").write_text("", encoding="utf-8")
-            with patch.dict(os.environ, {}, clear=True):
+            with patch.dict(
+                os.environ, {"INTY_V2_PROTO_HEARTBEAT": "0"}, clear=True
+            ):
                 w = next_heartbeat_wait_seconds(root)
             self.assertGreater(w, 86400.0 * 10)
 

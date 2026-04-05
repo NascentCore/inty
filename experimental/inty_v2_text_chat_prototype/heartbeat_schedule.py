@@ -9,7 +9,6 @@ from pathlib import Path
 
 from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT  # noqa: F401
 
-from .env_util import env_flag_enabled
 from .models import (
     ChatMessage,
     is_transcript_real_user_message,
@@ -29,7 +28,17 @@ _RHYTHM_CLAMP_SEC = (90.0, 900.0)
 
 
 def heartbeat_enabled_from_env() -> bool:
-    return env_flag_enabled("INTY_V2_PROTO_HEARTBEAT")
+    """
+    未设置 `INTY_V2_PROTO_HEARTBEAT` 时默认 **开启**（本地 REPL 预期有空闲陪伴心跳）。
+    显式关闭：`0` / `false` / `no` / `off`（与 `env_util.env_flag_enabled` 的 truthy 一致）。
+    """
+    raw = os.environ.get("INTY_V2_PROTO_HEARTBEAT")
+    if raw is None or not str(raw).strip():
+        return True
+    s = str(raw).strip().lower()
+    if s in ("0", "false", "no", "off"):
+        return False
+    return s in ("1", "true", "yes", "on")
 
 
 def _env_float(name: str, default: float) -> float:
