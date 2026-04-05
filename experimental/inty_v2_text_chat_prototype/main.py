@@ -584,61 +584,69 @@ def _repl_interactive_loop_posix(
                 last_inner_fire_mono=last_inner_fire_mono,
             )
             if wait <= 0.0:
-                if stdin_byte_buf and not _stdin_buffer_has_complete_line(
-                    stdin_byte_buf
-                ):
-                    now_m = time.monotonic()
-                    if stdin_partial_since is None:
-                        stdin_partial_since = now_m
-                    if now_m - stdin_partial_since >= _STDIN_PARTIAL_STALE_SEC:
-                        logger.debug(
-                            "repl stdin drop stale partial stdin_bytes={}",
-                            len(stdin_byte_buf),
-                        )
-                        stdin_byte_buf.clear()
-                        stdin_partial_since = None
-                    else:
-                        r_p, _, _ = select.select([stdin_fd], [], [], 0.1)
-                        if r_p:
-                            try:
-                                stdin_byte_buf.extend(
-                                    _posix_stdin_drain_nonblock(stdin_fd)
-                                )
-                            except KeyboardInterrupt:
-                                print()
-                                break
-                            if _stdin_buffer_has_complete_line(stdin_byte_buf):
-                                stdin_partial_since = None
+                flushed_buffered_user_line = False
+                if stdin_byte_buf and _stdin_buffer_has_complete_line(stdin_byte_buf):
+                    stdin_partial_since = None
+                    popped = _pop_line_from_stdin_buffer(stdin_byte_buf)
+                    if popped is not None:
+                        line = popped
+                        flushed_buffered_user_line = True
+                if not flushed_buffered_user_line:
+                    if stdin_byte_buf and not _stdin_buffer_has_complete_line(
+                        stdin_byte_buf
+                    ):
+                        now_m = time.monotonic()
+                        if stdin_partial_since is None:
+                            stdin_partial_since = now_m
+                        if now_m - stdin_partial_since >= _STDIN_PARTIAL_STALE_SEC:
+                            logger.debug(
+                                "repl stdin drop stale partial stdin_bytes={}",
+                                len(stdin_byte_buf),
+                            )
+                            stdin_byte_buf.clear()
+                            stdin_partial_since = None
+                        else:
+                            r_p, _, _ = select.select([stdin_fd], [], [], 0.1)
+                            if r_p:
+                                try:
+                                    stdin_byte_buf.extend(
+                                        _posix_stdin_drain_nonblock(stdin_fd)
+                                    )
+                                except KeyboardInterrupt:
+                                    print()
+                                    break
+                                if _stdin_buffer_has_complete_line(stdin_byte_buf):
+                                    stdin_partial_since = None
+                            continue
+                    tick_remain = next_inner_tick_wait_seconds(
+                        ws, last_inner_fire_monotonic=last_inner_fire_mono
+                    )
+                    if tick_remain > 0.0:
                         continue
-                tick_remain = next_inner_tick_wait_seconds(
-                    ws, last_inner_fire_monotonic=last_inner_fire_mono
-                )
-                if tick_remain > 0.0:
-                    continue
-                logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
-                t0 = time.perf_counter()
-                out = _run_turn_with_stdin_pump(
-                    ws,
-                    pending,
-                    user_text="",
-                    inner_tick_turn=True,
-                    debug_print_system=debug_print_system,
-                )
-                last_inner_fire_mono = time.monotonic()
-                _print_assistant_reply(out, time.perf_counter() - t0)
-                print("> ", end="", flush=True)
-                if not _consume_pending_after_inner_tick(
-                    pending,
-                    drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
+                    logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
+                    t0 = time.perf_counter()
+                    out = _run_turn_with_stdin_pump(
                         ws,
                         pending,
-                        m,
+                        user_text="",
+                        inner_tick_turn=True,
                         debug_print_system=debug_print_system,
-                        first_line_already_echoed=ev,
-                    ),
-                ):
-                    break
-                continue
+                    )
+                    last_inner_fire_mono = time.monotonic()
+                    _print_assistant_reply(out, time.perf_counter() - t0)
+                    print("> ", end="", flush=True)
+                    if not _consume_pending_after_inner_tick(
+                        pending,
+                        drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
+                            ws,
+                            pending,
+                            m,
+                            debug_print_system=debug_print_system,
+                            first_line_already_echoed=ev,
+                        ),
+                    ):
+                        break
+                    continue
 
             sleep_s = clamp_sleep_seconds(
                 wait,
