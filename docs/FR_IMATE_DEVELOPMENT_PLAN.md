@@ -245,7 +245,7 @@
 - service 流程测试：
   - 限额、鉴权、模型切换、业务动作、错误映射、prototype 体验编排一致性。
 - 数据一致性测试：
-  - chat/chat_history/chat_settings 事务行为。
+  - `imate_chats`/`imate_chat_history`/`imate_chat_settings` 事务行为。
   - 重试场景下幂等行为。
 
 ### 7.4 联合验收标准（DoD）
@@ -350,6 +350,11 @@
   - `WS /api/v1/chat/ws/verify`（联调与验收链路，不落聊天消息）。
   - `GET /api/v1/chats/agents/{agent_id}/messages`（拉取历史消息）。
   - `GET /api/v1/chats/agents/{agent_id}/settings`、`PUT /api/v1/chats/agents/{agent_id}/settings`（聊天设置）。
+- 路由归属与分流策略（强制）：
+  - 复用现有路径不等于复用 IntelliMate 存量数据表；iMate 请求必须分流到 `imate_` 前缀表。
+  - 分流判定字段固定为 `X-App-Id`（header）或 `client_app_id`（token claim）；取值为 `imate_android` 时走 iMate 数据链路。
+  - 未携带分流字段时默认按 IntelliMate 链路处理，禁止写入 iMate 表，避免污染存量逻辑。
+  - `verify` 端点始终不落库，仅用于协议与体验联调验证。
 - 版本与门控（建议纳入首批）：
   - `POST /api/v1/version/check`（写入 `users.last_android_app_version_code`，支持后续功能门控）。
 
@@ -398,6 +403,10 @@
   - Auth：复用 `POST /api/v1/auth/google/login`，同端点支持 `id_token` 与 `email+password`。
   - Settings：复用 `GET/PUT /api/v1/settings/`、`GET /api/v1/users/me`、`PUT /api/v1/users/profile`。
   - Chat：复用 `WS /api/v1/chat/ws` 与 `WS /api/v1/chat/ws/verify`，历史消息和 chat settings 继续走 `chats.py` HTTP 查询/更新。
+- 路由分流规则（避免影响 IntelliMate）：
+  - endpoint 层仅负责识别 `X-App-Id`/`client_app_id` 并选择 service 分支，不在 endpoint 内混写业务逻辑。
+  - iMate 分支只读写 `imate_` 前缀表；IntelliMate 分支继续使用既有表与既有事务路径。
+  - 任一请求若分流上下文缺失或非法，按 IntelliMate 默认链路处理并记录 warning 级日志，不做隐式 iMate 落库。
 - WS 协议规范（iMate v1）：
   - 入站统一 `ChatWebSocketRequest`，出站统一 `APIResponse + agent_id`。
   - 心跳机制固定为 `ping/pong`，服务端空闲超时关闭连接。
