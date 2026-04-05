@@ -858,6 +858,8 @@ def _repl_run_startup_opening_turn(
     debug_print_system: bool,
     recovery_label: str,
 ) -> bool:
+    print(f"[{_local_ts_str()}] {_preview_line(user_text)}")
+    print("> ", end="", flush=True)
     t0 = time.perf_counter()
     try:
         out = asyncio.run(
@@ -875,6 +877,7 @@ def _repl_run_startup_opening_turn(
             exc,
         )
         _print_openrouter_invalid_json_retry_hint()
+        print("> ", end="", flush=True)
         return False
     _print_assistant_reply(out, time.perf_counter() - t0)
     _drain_async_tool_events(ws)
@@ -890,6 +893,7 @@ def _repl_run_startup_opening_turn(
         )
 
     _repl_drain_bootstrap_continuations_if_needed(ws, _sync_continue)
+    print("> ", end="", flush=True)
     return True
 
 
@@ -1044,6 +1048,7 @@ def repl(
                     return
             else:
                 _repl_drain_bootstrap_continuations_if_needed(ws, _sync_bootstrap_continue)
+                print("> ", end="", flush=True)
             if is_workspace_bootstrap_complete(ws):
                 break
             print(
