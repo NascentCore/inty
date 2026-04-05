@@ -9,12 +9,24 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
+import inty_v2_text_chat_prototype.workspace_init_loop as workspace_init_loop
 from inty_v2_text_chat_prototype.workspace_init_loop import (
     load_bootstrap_instruction_text,
 )
 
 
 class TestBootstrapSpecOnboarding(unittest.TestCase):
+    def test_templates_boostrap_md_committed_beside_package(self) -> None:
+        spec = (
+            Path(workspace_init_loop.__file__).resolve().parent
+            / "templates"
+            / "BOOSTRAP.md"
+        )
+        self.assertTrue(
+            spec.is_file(),
+            f"missing bootstrap spec (must be committed with workspace_init_loop): {spec}",
+        )
+
     def test_closure_invites_co_definition_and_user_info(self) -> None:
         text = load_bootstrap_instruction_text()
         self.assertIn("收尾", text)
