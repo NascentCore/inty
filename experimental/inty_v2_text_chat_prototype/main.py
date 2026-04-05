@@ -401,6 +401,7 @@ def _posix_run_user_turn_and_drain_queue(
             pending,
             user_text=cur,
             inner_tick_turn=False,
+            repl_online_ack_turn=False,
             debug_print_system=debug_print_system,
         )
 
@@ -468,6 +469,7 @@ def _run_turn_with_stdin_pump(
     *,
     user_text: str,
     inner_tick_turn: bool,
+    repl_online_ack_turn: bool = False,
     debug_print_system: bool,
 ) -> str:
     """
@@ -485,7 +487,7 @@ def _run_turn_with_stdin_pump(
                     ws,
                     user_text,
                     inner_tick_turn=inner_tick_turn,
-                    repl_online_ack_turn=False,
+                    repl_online_ack_turn=repl_online_ack_turn,
                     debug_print_system=debug_print_system,
                     llm_trace=True,
                 )
@@ -560,6 +562,7 @@ def _repl_interactive_loop_posix(
                 pending,
                 user_text=text,
                 inner_tick_turn=False,
+                repl_online_ack_turn=False,
                 debug_print_system=debug_print_system,
             ),
         )
@@ -591,6 +594,7 @@ def _repl_interactive_loop_posix(
                 inner_tick=True,
                 last_inner_fire_mono=last_inner_fire_mono,
             )
+            skip_stdin_sleep = False
             if wait <= 0.0:
                 flushed_buffered_user_line = False
                 if stdin_byte_buf and _stdin_buffer_has_complete_line(stdin_byte_buf):
@@ -599,6 +603,7 @@ def _repl_interactive_loop_posix(
                     if popped is not None:
                         line = popped
                         flushed_buffered_user_line = True
+                        skip_stdin_sleep = True
                 if not flushed_buffered_user_line:
                     if stdin_byte_buf and not _stdin_buffer_has_complete_line(
                         stdin_byte_buf
@@ -638,6 +643,7 @@ def _repl_interactive_loop_posix(
                         pending,
                         user_text="",
                         inner_tick_turn=True,
+                        repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                     )
                     last_inner_fire_mono = time.monotonic()
@@ -656,33 +662,34 @@ def _repl_interactive_loop_posix(
                         break
                     continue
 
-            sleep_s = clamp_sleep_seconds(
-                wait,
-                min_seconds=0.05,
-                max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
-            )
-            if stdin_byte_buf:
-                sleep_s = min(sleep_s, 0.15)
-            r, _, _ = select.select([stdin_fd], [], [], sleep_s)
-            if not r:
-                continue
-            try:
-                new_b = _posix_stdin_drain_nonblock(stdin_fd)
-            except KeyboardInterrupt:
-                print()
-                break
-            if new_b == b"":
-                print()
-                break
-            stdin_byte_buf.extend(new_b)
-            if not _stdin_buffer_has_complete_line(stdin_byte_buf):
-                if stdin_partial_since is None:
-                    stdin_partial_since = time.monotonic()
-                continue
-            stdin_partial_since = None
-            line = _pop_line_from_stdin_buffer(stdin_byte_buf)
-            if line is None:
-                continue
+            if not skip_stdin_sleep:
+                sleep_s = clamp_sleep_seconds(
+                    wait,
+                    min_seconds=0.05,
+                    max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
+                )
+                if stdin_byte_buf:
+                    sleep_s = min(sleep_s, 0.15)
+                r, _, _ = select.select([stdin_fd], [], [], sleep_s)
+                if not r:
+                    continue
+                try:
+                    new_b = _posix_stdin_drain_nonblock(stdin_fd)
+                except KeyboardInterrupt:
+                    print()
+                    break
+                if new_b == b"":
+                    print()
+                    break
+                stdin_byte_buf.extend(new_b)
+                if not _stdin_buffer_has_complete_line(stdin_byte_buf):
+                    if stdin_partial_since is None:
+                        stdin_partial_since = time.monotonic()
+                    continue
+                stdin_partial_since = None
+                line = _pop_line_from_stdin_buffer(stdin_byte_buf)
+                if line is None:
+                    continue
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
