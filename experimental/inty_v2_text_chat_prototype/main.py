@@ -307,6 +307,18 @@ def _print_openrouter_invalid_json_retry_hint() -> None:
     print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
 
 
+def _undo_repl_online_presence_after_failed_ack(ws: Path) -> None:
+    paths = WorkspacePaths(root=ws.resolve())
+    if undo_trailing_repl_online_presence_line(paths.transcript):
+        logger.debug(
+            "repl online-ack failed: removed trailing repl_online presence line"
+        )
+
+
+def _print_repl_online_ack_failure_hint(exc: BaseException) -> None:
+    print(f"[{_local_ts_str()}] REPL 上线问候失败: {exc}")
+
+
 def _flush_and_shutdown_memory_store(root: Path) -> None:
     flush_memory_store(root, timeout_s=5.0)
     flush_jsonl_db_store(timeout_s=5.0)
@@ -1131,11 +1143,13 @@ def repl(
                     exc,
                 )
                 _print_openrouter_invalid_json_retry_hint()
-                paths = WorkspacePaths(root=ws.resolve())
-                if undo_trailing_repl_online_presence_line(paths.transcript):
-                    logger.debug(
-                        "repl online-ack failed: removed trailing repl_online presence line"
-                    )
+                _undo_repl_online_presence_after_failed_ack(ws)
+                repl_presence_tracked = False
+                return
+            except Exception as exc:
+                logger.error("repl online-ack turn failed: {}", exc)
+                _print_repl_online_ack_failure_hint(exc)
+                _undo_repl_online_presence_after_failed_ack(ws)
                 repl_presence_tracked = False
                 return
         try:
