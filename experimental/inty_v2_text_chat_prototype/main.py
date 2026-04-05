@@ -317,6 +317,36 @@ def _use_posix_stdin_pump() -> bool:
         return False
 
 
+def _repl_stdin_read_line_after_select() -> str | None:
+    """
+    在 `select` 报告 stdin 可读之后读一行。
+
+    - TTY：优先 `import readline` 后用 `input()`，由 libedit/GNU readline 做行编辑，避免仅靠内核
+      规范模式时在 Cursor 等终端里 CJK 退格与屏幕不同步。
+    - 返回 `None` 表示 EOF；`""` 表示用户提交了空行（仅换行）。
+    """
+    try:
+        is_tty = sys.stdin.isatty()
+    except (OSError, ValueError):
+        is_tty = False
+    if is_tty:
+        try:
+            import readline  # noqa: F401
+        except ImportError:
+            raw = sys.stdin.readline()
+            if raw == "":
+                return None
+            return raw.rstrip("\r\n")
+        try:
+            return input()
+        except EOFError:
+            return None
+    raw = sys.stdin.readline()
+    if raw == "":
+        return None
+    return raw.rstrip("\r\n")
+
+
 def _repl_drain_user_turns(
     first_line: str,
     *,
@@ -530,12 +560,12 @@ def _run_turn_with_stdin_pump(
             r, _, _ = select.select([stdin_fd], [], [], 0.1)
             if not r:
                 continue
-            raw = sys.stdin.readline()
+            line_in = _repl_stdin_read_line_after_select()
             _drain_async_tool_events(ws)
-            if raw == "":
+            if line_in is None:
                 pending.put(None)
             else:
-                text = raw.rstrip("\r\n")
+                text = line_in
                 if text.strip():
                     _print_repl_user_input(text)
                     logger.debug(
@@ -625,14 +655,13 @@ def _repl_interactive_loop_posix(
                 r0, _, _ = select.select([stdin_fd], [], [], 0.0)
                 if r0:
                     try:
-                        raw = sys.stdin.readline()
+                        line = _repl_stdin_read_line_after_select()
                     except KeyboardInterrupt:
                         print()
                         break
-                    if raw == "":
+                    if line is None:
                         print()
                         break
-                    line = raw.rstrip("\r\n")
                     got_line = True
                 else:
                     tick_remain = next_inner_tick_wait_seconds(
@@ -680,14 +709,13 @@ def _repl_interactive_loop_posix(
                 if not r:
                     continue
                 try:
-                    raw = sys.stdin.readline()
+                    line = _repl_stdin_read_line_after_select()
                 except KeyboardInterrupt:
                     print()
                     break
-                if raw == "":
+                if line is None:
                     print()
                     break
-                line = raw.rstrip("\r\n")
                 got_line = True
         else:
             due_wait = _next_due_wait_seconds_only(ws)
@@ -698,14 +726,13 @@ def _repl_interactive_loop_posix(
                 if not r:
                     continue
                 try:
-                    raw = sys.stdin.readline()
+                    line = _repl_stdin_read_line_after_select()
                 except KeyboardInterrupt:
                     print()
                     break
-                if raw == "":
+                if line is None:
                     print()
                     break
-                line = raw.rstrip("\r\n")
             else:
                 sleep_s = clamp_sleep_seconds(
                     due_wait,
@@ -716,14 +743,13 @@ def _repl_interactive_loop_posix(
                 if not r:
                     continue
                 try:
-                    raw = sys.stdin.readline()
+                    line = _repl_stdin_read_line_after_select()
                 except KeyboardInterrupt:
                     print()
                     break
-                if raw == "":
+                if line is None:
                     print()
                     break
-                line = raw.rstrip("\r\n")
             got_line = True
 
         if not got_line:
