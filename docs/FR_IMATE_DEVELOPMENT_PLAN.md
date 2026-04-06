@@ -1,4 +1,4 @@
-# FR_IMATE_DEVELOPMENT_PLAN
+# iMate（IntelliMate 2.0）v0.1 开发计划
 
 ## 1. 文档定位
 
