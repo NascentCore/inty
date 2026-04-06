@@ -142,6 +142,8 @@ OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME = "save_user_mbti_type"
 OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME = "read_user_manual"
 OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME = "read_change_logs"
 OFFICIAL_ASSISTANT_MAX_TOOL_CALL_ROUNDS = 3
+OPENROUTER_IMAGE_INPUT_UNSUPPORTED_HINT = "No endpoints found that support image input"
+MULTIMODAL_CHAT_FALLBACK_MODEL = "google/gemini-2.5-flash"
 OFFICIAL_ASSISTANT_TOOL_DEFINITIONS: List[Dict[str, Any]] = [
     {
         "type": "function",
@@ -1244,6 +1246,120 @@ class Agent:
 
         return False
 
+    def _openai_messages_has_image_input(
+        self, openai_messages: List[Dict[str, Any]]
+    ) -> bool:
+        for message in openai_messages:
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+            for part in content:
+                if not isinstance(part, dict):
+                    continue
+                if part.get("type") != "image_url":
+                    continue
+                image_url = part.get("image_url")
+                if isinstance(image_url, dict) and isinstance(
+                    image_url.get("url"), str
+                ):
+                    return True
+        return False
+
+    def _is_image_input_not_supported_error(self, error: Exception) -> bool:
+        if not isinstance(error, APIError):
+            return False
+        if getattr(error, "status_code", None) != 404:
+            return False
+        hint_lower = OPENROUTER_IMAGE_INPUT_UNSUPPORTED_HINT.lower()
+        if hint_lower in str(error).lower():
+            return True
+        error_body = getattr(error, "body", None)
+        if not isinstance(error_body, dict):
+            return False
+        body_error = error_body.get("error")
+        if not isinstance(body_error, dict):
+            return False
+        body_message = body_error.get("message")
+        if not isinstance(body_message, str):
+            return False
+        return hint_lower in body_message.lower()
+
+    def _resolve_multimodal_fallback_model(self, model_name: str) -> Optional[str]:
+        fallback_model = resolve_chat_model_to_id(MULTIMODAL_CHAT_FALLBACK_MODEL)
+        if model_name == fallback_model:
+            return None
+        return fallback_model
+
+    def _call_chat_completion_with_multimodal_fallback(
+        self,
+        *,
+        client: OpenAI,
+        model: str,
+        openai_messages: List[Dict[str, Any]],
+        temperature: float,
+        max_tokens: int,
+        top_p: float,
+        extra_body: Dict[str, Any],
+        user_id: str,
+        chat_name: str,
+        labels: Dict[str, Any],
+        user_email: Optional[str],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        tool_choice: Optional[Any] = None,
+    ) -> Tuple[Any, Optional[str], str, bool]:
+        try:
+            response, trace_id = self._call_openai_api_with_retry(
+                client=client,
+                model=model,
+                openai_messages=openai_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                extra_body=extra_body,
+                user_id=user_id,
+                max_retries=3,
+                initial_delay=1.0,
+                chat_name=chat_name,
+                labels=labels,
+                user_email=user_email,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+            return response, trace_id, model, False
+        except Exception as api_error:
+            has_image_input = self._openai_messages_has_image_input(openai_messages)
+            is_image_input_not_supported = self._is_image_input_not_supported_error(
+                api_error
+            )
+            if not has_image_input or not is_image_input_not_supported:
+                raise
+            fallback_model = self._resolve_multimodal_fallback_model(model)
+            if fallback_model is None:
+                raise
+            logger.warning(
+                "检测到模型不支持图片输入，切换到多模态回退模型继续请求 - "
+                f"agent_id={self.agent_id}, user_id={user_id}, "
+                f"original_model={model}, fallback_model={fallback_model}"
+            )
+            response, trace_id = self._call_openai_api_with_retry(
+                client=client,
+                model=fallback_model,
+                openai_messages=openai_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                extra_body=extra_body,
+                user_id=user_id,
+                max_retries=3,
+                initial_delay=1.0,
+                chat_name=chat_name,
+                labels=labels,
+                user_email=user_email,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+            return response, trace_id, fallback_model, True
+
     def _call_openai_api_with_retry(
         self,
         client: OpenAI,
@@ -1560,28 +1676,37 @@ class Agent:
 
                 enable_official_assistant_tools = self._is_intellimate_official()
                 trace_id: Optional[str] = None
+                model_fallback_used = False
                 try:
-                    response, trace_id = self._call_openai_api_with_retry(
-                        client=client,
-                        model=model_name,
-                        openai_messages=openai_messages,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        top_p=top_p,
-                        extra_body=self._chat_extra_body(user_id, model_name),
-                        user_id=user_id,
-                        max_retries=3,
-                        initial_delay=1.0,
-                        chat_name=chat_name,
-                        labels=labels,
-                        user_email=user_email,
-                        tools=(
-                            OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
-                            if enable_official_assistant_tools
-                            else None
-                        ),
-                        tool_choice="auto" if enable_official_assistant_tools else None,
+                    response, trace_id, model_name, model_fallback_used = (
+                        self._call_chat_completion_with_multimodal_fallback(
+                            client=client,
+                            model=model_name,
+                            openai_messages=openai_messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            top_p=top_p,
+                            extra_body=self._chat_extra_body(user_id, model_name),
+                            user_id=user_id,
+                            chat_name=chat_name,
+                            labels=labels,
+                            user_email=user_email,
+                            tools=(
+                                OFFICIAL_ASSISTANT_TOOL_DEFINITIONS
+                                if enable_official_assistant_tools
+                                else None
+                            ),
+                            tool_choice=(
+                                "auto" if enable_official_assistant_tools else None
+                            ),
+                        )
                     )
+                    if model_fallback_used:
+                        logger.info(
+                            f"聊天模型已回退到多模态模型 - "
+                            f"agent_id={self.agent_id}, session_id={session_id}, "
+                            f"user_id={user_id}, effective_model={model_name}"
+                        )
                     openai_messages_for_response = openai_messages
                     if enable_official_assistant_tools:
                         response, openai_messages_for_response, trace_id = (
@@ -1909,21 +2034,27 @@ class Agent:
                     f"chat completion LLM config (push): agent_id={self.agent_id}, session_id={session_id}, model={model_name}, model_source={model_source}, temperature={temperature}, max_tokens={max_tokens}, top_p={top_p}, base_url={self.model_config.get('base_url')}"
                 )
 
-                response, trace_id = self._call_openai_api_with_retry(
-                    client=client,
-                    model=model_name,
-                    openai_messages=openai_messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    top_p=top_p,
-                    extra_body=self._chat_extra_body(user_id, model_name),
-                    user_id=user_id,
-                    max_retries=3,
-                    initial_delay=1.0,
-                    chat_name=chat_name,
-                    labels=labels,
-                    user_email=user_email,
+                response, trace_id, model_name, model_fallback_used = (
+                    self._call_chat_completion_with_multimodal_fallback(
+                        client=client,
+                        model=model_name,
+                        openai_messages=openai_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                        extra_body=self._chat_extra_body(user_id, model_name),
+                        user_id=user_id,
+                        chat_name=chat_name,
+                        labels=labels,
+                        user_email=user_email,
+                    )
                 )
+                if model_fallback_used:
+                    logger.info(
+                        f"推送聊天模型已回退到多模态模型 - "
+                        f"agent_id={self.agent_id}, session_id={session_id}, "
+                        f"user_id={user_id}, effective_model={model_name}"
+                    )
                 api_time = time.time() - api_start
                 logger.debug(f"API调用耗时: {api_time:.3f}秒 - Agent: {self.agent_id}")
 
