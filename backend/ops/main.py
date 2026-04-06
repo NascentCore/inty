@@ -12,6 +12,7 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app.api.evaluation_web import configure_evaluation_web_routes
@@ -91,6 +92,14 @@ async def startup_event():
     """应用启动事件。预加载逻辑与 backend/inty 保持一致，以满足 shared 与 evaluation 对 DB/Agent 的依赖。"""
     try:
         logger.info("正在初始化 Ops 应用...")
+        logger.info(
+            "Build identity: release_version={} environment={} vcs_revision={} vcs_dirty={} build_time_utc={}",
+            global_config_loaded_from_config_yaml.app.version,
+            global_config_loaded_from_config_yaml.app.environment.value,
+            vcs_revision() or "(unknown)",
+            vcs_dirty(),
+            build_time_utc() or "(unknown)",
+        )
         await _preload_database_connections()
         async for db_session in get_async_db():
             await _preload_database_tables(db_session)
@@ -200,6 +209,10 @@ class HealthCheckData(BaseModel):
 
     app_name: str
     version: str
+    environment: str
+    vcs_revision: str
+    vcs_dirty: bool
+    build_time_utc: str
 
 
 @app.get("/health", response_model=APIResponse[HealthCheckData], include_in_schema=False)
@@ -208,5 +221,9 @@ async def health():
         data=HealthCheckData(
             app_name=f"{global_config_loaded_from_config_yaml.app.name} Ops",
             version=global_config_loaded_from_config_yaml.app.version,
+            environment=global_config_loaded_from_config_yaml.app.environment.value,
+            vcs_revision=vcs_revision(),
+            vcs_dirty=vcs_dirty(),
+            build_time_utc=build_time_utc(),
         )
     )

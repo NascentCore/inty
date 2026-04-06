@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # ！！！ 这个 import 必须在所有导入其他应用代码之前。
 # 因为这里设置了 LangSmith 环境变量
 # 如果不在最前面，有可能导致环境变量未注入导致 LangSmith tracing 获得空的环境变量，从而失效
+from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
@@ -101,6 +102,14 @@ async def startup_event():
     """应用启动事件"""
     try:
         logger.info("正在初始化应用...")
+        logger.info(
+            "Build identity: release_version={} environment={} vcs_revision={} vcs_dirty={} build_time_utc={}",
+            global_config_loaded_from_config_yaml.app.version,
+            global_config_loaded_from_config_yaml.app.environment.value,
+            vcs_revision() or "(unknown)",
+            vcs_dirty(),
+            build_time_utc() or "(unknown)",
+        )
         logger.debug(
             f"数据库 URL: {global_config_loaded_from_config_yaml.database.url}"
         )
@@ -293,6 +302,10 @@ class HealthCheckData(BaseModel):
 
     app_name: str
     version: str
+    environment: str
+    vcs_revision: str
+    vcs_dirty: bool
+    build_time_utc: str
 
 
 @app.get("/", response_model=APIResponse[HealthCheckData], include_in_schema=False)
@@ -302,6 +315,10 @@ async def root():
         data=HealthCheckData(
             app_name=global_config_loaded_from_config_yaml.app.name,
             version=global_config_loaded_from_config_yaml.app.version,
+            environment=global_config_loaded_from_config_yaml.app.environment.value,
+            vcs_revision=vcs_revision(),
+            vcs_dirty=vcs_dirty(),
+            build_time_utc=build_time_utc(),
         )
     )
 

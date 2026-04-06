@@ -55,6 +55,7 @@ jobs:
         run: |
           echo "environment=${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
           echo "image_tag=${{ github.ref_name }}-${{ inputs.environment || (github.event_name == 'schedule' && 'prod') || 'dev' }}" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
 
       - name: Check prep output
         run: |
@@ -86,6 +87,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             CONFIG_FILE=devops/config.yaml.${{ steps.prep.outputs.environment }}
+            INTY_VCS_REVISION=${{ github.sha }}
+            INTY_BUILD_TIME=${{ steps.prep.outputs.build_time }}
 
       - name: Pull deployment image
         uses: appleboy/ssh-action@master

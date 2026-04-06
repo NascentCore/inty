@@ -13,6 +13,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent.agent import agent_manager
+from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.logging import init_logger
 from app.db.session import AsyncSessionLocal
@@ -35,6 +36,14 @@ class PushWorker:
 
             # 初始化日志
             init_logger()
+            logger.info(
+                "Build identity: release_version={} environment={} vcs_revision={} vcs_dirty={} build_time_utc={}",
+                global_config_loaded_from_config_yaml.app.version,
+                global_config_loaded_from_config_yaml.app.environment.value,
+                vcs_revision() or "(unknown)",
+                vcs_dirty(),
+                build_time_utc() or "(unknown)",
+            )
 
             # 初始化 Firebase
             try:

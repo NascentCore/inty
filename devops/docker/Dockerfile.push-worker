@@ -27,6 +27,13 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 FROM base
 
 ARG CONFIG_FILE
+ARG INTY_VCS_REVISION=
+ARG INTY_BUILD_TIME=
+ARG INTY_VCS_DIRTY=false
+ENV INTY_VCS_REVISION=${INTY_VCS_REVISION}
+ENV INTY_BUILD_TIME=${INTY_BUILD_TIME}
+ENV INTY_VCS_DIRTY=${INTY_VCS_DIRTY}
+LABEL org.opencontainers.image.revision="${INTY_VCS_REVISION}"
 
 RUN if [ -z "$CONFIG_FILE" ]; then \
     echo "ERROR: CONFIG_FILE build argument is required but not provided" && \
