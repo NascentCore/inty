@@ -1,5 +1,23 @@
 # Workspace context loading — design spec
 
+## Kernel re-export 架构
+
+本 prototype 的核心数据类型和逻辑从 `app/core/agentic_kernel/companion/` (companion kernel) 导入:
+
+| prototype 文件 | 来源 |
+|---|---|
+| `utc.py` | re-export `companion.utc` |
+| `file_store.py` | re-export `companion.file_store` |
+| `paths.py` | 继承 `companion.workspace.WorkspacePaths`(默认 `.inty_v2` 前缀) |
+| `memory_store.py` | re-export `companion.memory_store` |
+| `memory_store_registry.py` | adapter: 读 env vars, 委托 `companion.memory_registry` |
+| `models.py` | re-export `companion.models` + prototype 兼容 `load_prompt_bundle` |
+| `prompts.py` | re-export `companion.prompts` |
+
+REPL 特有模块(orchestrator / client / tool_background / fal_z_image_tool / google_web_search / llm_trace / image_gate / schedule_queue / heartbeat_schedule / workspace_init_tools 等)保留在本目录.
+
+改动核心逻辑时应修改 kernel(`app/core/agentic_kernel/companion/`), 本目录 shim 自动生效.
+
 - _ws/ has:
   1. inty_v2.log (program logs)
   2. llm_trace.jsonl (llm invocations)

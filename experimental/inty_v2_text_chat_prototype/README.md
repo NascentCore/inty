@@ -1,5 +1,20 @@
 # INTY v2 本地文本聊天原型
 
+## 架构
+
+本 prototype 是 `app/core/agentic_kernel/companion/` (companion kernel) 的 **REPL 外壳**,
+用于产品经理持续迭代核心智能体陪伴体验.
+
+- **核心组件** (models / prompts / workspace / file_store / utc / memory_store) 来自 companion kernel
+- **本目录保留** REPL 壳 (main.py)、LLM 客户端 (client.py)、双路编排 (orchestrator.py)、
+  异步工具后台 (tool_background.py)、生图/改图 (fal_z_image_tool.py)、联网检索 (google_web_search.py)、
+  LLM trace (llm_trace.py) 等实验/REPL 特有模块
+- 已有 `_ws/` workspace 目录完全兼容
+
+详见 [companion kernel](/app/core/agentic_kernel/companion/) 和本目录 AGENTS.md.
+
+## 安装
+
 首先，在命令行安装 `uv`
 
 ```bash
