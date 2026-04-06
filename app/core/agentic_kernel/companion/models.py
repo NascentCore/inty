@@ -1,0 +1,174 @@
+"""Pydantic 模型：消息、人格包、控制面元数据。"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
+
+from loguru import logger
+from pydantic import AliasChoices, BaseModel, Field, ValidationError
+
+from .file_store import read_text
+from .utc import local_date_str
+
+if TYPE_CHECKING:
+    from .memory_store import MemoryStore
+    from .workspace import WorkspacePaths
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant", "system"]
+    content: str
+    ts: str = Field(validation_alias=AliasChoices("ts", "timestamp"))
+    uuid: str | None = None
+    trace_id: str | None = None
+    reply_to: str | None = None
+    heartbeat: bool | None = None
+    source: str | None = None
+
+
+_OPTIONAL_DOC_MAX_CHARS = 64_000
+_MEMORY_RAW_INJECT_MAX_CHARS = 16_000
+_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS = 12_000
+
+
+def _read_memory_document_optional(
+    store: MemoryStore,
+    relative_path: str,
+    *,
+    max_chars: int | None = None,
+) -> str:
+    text = store.read_document_if_exists(relative_path)
+    if text is None:
+        return ""
+    if max_chars is not None and len(text) > max_chars:
+        return text[: max_chars - 1] + "..."
+    return text
+
+
+def _read_memory_document_required(store: MemoryStore, relative_path: str) -> str:
+    return store.read_document(relative_path)
+
+
+class PromptBundle(BaseModel):
+    identity: str
+    soul: str
+    user_md: str
+    memory_md: str
+    agents_md: str = ""
+    tools_md: str = ""
+    heartbeat_md: str = ""
+    memory_raw_diary_today_md: str = ""
+    memory_day_summary_today_md: str = ""
+
+
+class ContextMeta(BaseModel):
+    context_mode: str = "intimate"
+    user_id: str = ""
+    companion_id: str = ""
+    chat_id: str = ""
+
+
+def load_prompt_bundle(
+    paths: WorkspacePaths,
+    store: MemoryStore,
+    *,
+    meta: ContextMeta | None = None,
+) -> PromptBundle:
+    """加载人格与记忆。非 intimate 模式不读取私人记忆文件。"""
+    day = local_date_str()
+    m = meta if meta is not None else ContextMeta()
+    intimate = m.context_mode.strip().lower() == "intimate"
+
+    raw_md = ""
+    summary_md = ""
+    memory_long = _read_memory_document_required(store, "MEMORY.md")
+    if intimate:
+        raw_md = _read_memory_document_optional(
+            store,
+            f"memory/daily/{day}.md",
+            max_chars=_MEMORY_RAW_INJECT_MAX_CHARS,
+        )
+        summary_md = _read_memory_document_optional(
+            store,
+            f"memory/{day}.md",
+            max_chars=_MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,
+        )
+    else:
+        memory_long = ""
+
+    return PromptBundle(
+        identity=_read_memory_document_required(store, "IDENTITY.md"),
+        soul=_read_memory_document_required(store, "SOUL.md"),
+        user_md=_read_memory_document_required(store, "USER.md"),
+        memory_md=memory_long,
+        agents_md=_read_memory_document_optional(
+            store,
+            "AGENTS.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
+        ),
+        tools_md=_read_memory_document_optional(
+            store,
+            "TOOLS.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
+        ),
+        heartbeat_md=_read_memory_document_optional(
+            store,
+            "HEARTBEAT.md",
+            max_chars=_OPTIONAL_DOC_MAX_CHARS,
+        ),
+        memory_raw_diary_today_md=raw_md,
+        memory_day_summary_today_md=summary_md,
+    )
+
+
+def load_context_meta(path: Path) -> ContextMeta:
+    if not path.is_file():
+        return ContextMeta()
+    raw_text = read_text(path)
+    try:
+        raw = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"{path}: invalid JSON in context file") from e
+    return ContextMeta.model_validate(raw)
+
+
+def load_transcript(path: Path) -> list[ChatMessage]:
+    if not path.is_file():
+        return []
+    text = read_text(path)
+    out: list[ChatMessage] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            raw = json.loads(line)
+        except json.JSONDecodeError:
+            logger.warning("{}: transcript skipped non-json line", path)
+            continue
+        if not isinstance(raw, dict):
+            logger.warning("{}: transcript skipped non-object json line", path)
+            continue
+        try:
+            out.append(ChatMessage.model_validate(raw))
+        except ValidationError:
+            logger.warning(
+                "{}: transcript skipped invalid ChatMessage row (first 240 chars): {!r}",
+                path,
+                line[:240],
+            )
+            continue
+    return out
+
+
+# 近期对话窗口
+TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
+
+
+def transcript_for_llm_turn(loaded: list[ChatMessage]) -> list[ChatMessage]:
+    """组装送入本轮 chat.completions 的历史消息尾部窗口。"""
+    if len(loaded) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
+        return loaded
+    return loaded[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
