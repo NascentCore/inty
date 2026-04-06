@@ -1,15 +1,16 @@
-"""Workspace-scoped MemoryStore registry."""
+"""Prototype adapter: reads env vars, delegates to kernel memory_registry."""
 
 from __future__ import annotations
 
 import os
-import threading
 from pathlib import Path
 
-from .memory_store import MemoryStore, PostgresMemoryRepository
-
-_REGISTRY_LOCK = threading.Lock()
-_MEMORY_STORES: dict[str, MemoryStore] = {}
+from app.core.agentic_kernel.companion.memory_registry import (
+    get_memory_store as _kernel_get,
+    shutdown_all_memory_stores,  # noqa: F401
+    shutdown_memory_store,  # noqa: F401
+)
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 
 
 def _env_bool(name: str, *, default: bool) -> bool:
@@ -24,78 +25,33 @@ def _env_bool(name: str, *, default: bool) -> bool:
     raise ValueError(f"{name} must be a boolean-like value, got {raw!r}")
 
 
-def _env_positive_int(name: str, *, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return default
-    try:
-        n = int(raw.strip(), 10)
-    except ValueError as exc:
-        raise ValueError(f"{name} must be a positive integer, got {raw!r}") from exc
-    if n < 1:
-        raise ValueError(f"{name} must be >= 1, got {n}")
-    return n
-
-
 def get_memory_store(workspace_root: Path) -> MemoryStore:
-    root = workspace_root.resolve()
-    key = str(root)
-    with _REGISTRY_LOCK:
-        cur = _MEMORY_STORES.get(key)
-        if cur is not None:
-            return cur
-
-        dsn = (os.getenv("INTY_V2_PROTO_MEMORY_PG_DSN") or "").strip()
-        table_name = (
-            os.getenv(
-                "INTY_V2_PROTO_MEMORY_PG_TABLE",
-                "proto_memory_doc_versions",
-            ).strip()
-            or "proto_memory_doc_versions"
-        )
-        repository = None
-        if dsn:
-            repo = PostgresMemoryRepository(dsn=dsn, table_name=table_name)
-            repo.ensure_schema()
-            repository = repo
-
-        store = MemoryStore(
-            workspace_root=root,
-            repository=repository,
-            mirror_to_files=_env_bool(
-                "INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES",
-                default=True,
-            ),
-            flush_batch_size=_env_positive_int(
-                "INTY_V2_PROTO_MEMORY_FLUSH_BATCH_SIZE",
-                default=64,
-            ),
-        )
-        _MEMORY_STORES[key] = store
-        return store
+    dsn = (os.getenv("INTY_V2_PROTO_MEMORY_PG_DSN") or "").strip()
+    table_name = (
+        os.getenv(
+            "INTY_V2_PROTO_MEMORY_PG_TABLE",
+            "proto_memory_doc_versions",
+        ).strip()
+        or "proto_memory_doc_versions"
+    )
+    mirror = _env_bool("INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES", default=True)
+    return _kernel_get(
+        workspace_root,
+        dsn=dsn,
+        table_name=table_name,
+        mirror_to_files=mirror,
+    )
 
 
 def flush_memory_store(workspace_root: Path, *, timeout_s: float = 5.0) -> None:
     root = workspace_root.resolve()
+    from app.core.agentic_kernel.companion.memory_registry import (
+        _REGISTRY_LOCK,
+        _MEMORY_STORES,
+    )
+
     with _REGISTRY_LOCK:
         store = _MEMORY_STORES.get(str(root))
     if store is None:
         return
     store.flush_now(timeout_s=timeout_s)
-
-
-def shutdown_memory_store(workspace_root: Path, *, timeout_s: float = 5.0) -> None:
-    root = workspace_root.resolve()
-    with _REGISTRY_LOCK:
-        store = _MEMORY_STORES.pop(str(root), None)
-    if store is None:
-        return
-    store.shutdown(timeout_s=timeout_s)
-
-
-def shutdown_all_memory_stores(*, timeout_s: float = 5.0) -> None:
-    with _REGISTRY_LOCK:
-        items = list(_MEMORY_STORES.items())
-        _MEMORY_STORES.clear()
-    for _, store in items:
-        store.shutdown(timeout_s=timeout_s)
