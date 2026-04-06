@@ -149,10 +149,29 @@ async def recommend_agents(
     page_size: int = Query(10, ge=1, le=100, description="Items per page, maximum 100"),
     sort: schemas.AgentSortOption = Query(
         schemas.AgentSortOption.CREATED_DESC,
-        description="Sort order: created_asc, created_desc, created_desc_with_gender, random, score_based_random, energy_points",
+        description=(
+            "Sort order: created_asc, created_desc, created_desc_with_gender, random, "
+            "score_based_random, energy_points, text_match_image_description"
+        ),
     ),
     sort_seed: str = Query(
         "", description="Sort seed for deterministic random ordering"
+    ),
+    match_description: Optional[str] = Query(
+        None,
+        description=(
+            "Required when sort=text_match_image_description: user text D to match "
+            "against stored image descriptions (resource generation_prompt, exclusive caption)"
+        ),
+    ),
+    match_top_n: int = Query(
+        50,
+        ge=1,
+        le=500,
+        description=(
+            "When sort=text_match_image_description: max number of best-matching images "
+            "to rank (N); response pages slice this ranked list"
+        ),
     ),
     current_user: schemas.User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -166,6 +185,9 @@ async def recommend_agents(
     - random: Random order (uses sort_seed for deterministic results)
     - score_based_random: Score-based recommendation (6 high-score agents + 4 random agents)
     - energy_points: Sort by energy points in descending order (highest first)
+    - text_match_image_description: Rank images by fuzzy text similarity to match_description;
+      pass match_top_n (N) for how many top images to consider; data.matched_image_items lists
+      ranked hits for the current page; data.list is agents in first-appearance order
 
     For score_based_random algorithm:
     - Returns 6 agents with highest scores (5-star first, then 4-star, etc.)
@@ -179,6 +201,8 @@ async def recommend_agents(
         page_size=page_size,
         sort_by=sort,
         sort_seed=sort_seed,
+        match_description=match_description,
+        match_top_n=match_top_n,
     )
     return schemas.APIResponse.success(data=pagination_data)
 

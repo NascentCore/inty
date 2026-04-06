@@ -361,6 +361,81 @@ def test_recommend_agents_energy_points_sorting(
             integration_client.delete_agent(agent_id)
 
 
+def test_recommend_agents_text_match_requires_match_description(
+    integration_client: TestClient,
+):
+    """sort=text_match_image_description without match_description returns 400."""
+    response = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+        params={
+            "page": 1,
+            "page_size": 10,
+            "sort": "text_match_image_description",
+        },
+    )
+    assert response.status_code == 400, response.text
+
+
+def test_recommend_agents_text_match_ranks_exclusive_caption(
+    integration_client: TestClient, db_session
+):
+    """Exclusive photo caption is matched; matched_image_items ordered by similarity."""
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    was_super = db_user.is_superuser
+    db_user.is_superuser = True
+    db_session.commit()
+
+    unique_caption = f"e2e_match_caption_{uuid.uuid4().hex[:12]}"
+    agent_id = integration_client.create_agent(
+        name=f"Text Match Agent {uuid.uuid4().hex[:6]}",
+        visibility="PUBLIC",
+    )
+    try:
+        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+        assert agent is not None
+        agent.exclusive_photos = [
+            {
+                "image_url": "https://example.com/exclusive-placeholder.jpg",
+                "caption": unique_caption,
+                "credits_required": 0,
+            }
+        ]
+        db_session.commit()
+
+        response = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={
+                "page": 1,
+                "page_size": 10,
+                "sort": "text_match_image_description",
+                "match_description": unique_caption,
+                "match_top_n": 20,
+            },
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload.get("code") == 200, payload
+        data = payload["data"]
+        items = data.get("matched_image_items") or []
+        assert items, "expected matched_image_items"
+        first = items[0]
+        assert first["agent_id"] == agent_id
+        assert first["image_description"] == unique_caption
+        assert first["similarity_score"] >= 99.0
+        agent_list = data.get("list") or []
+        assert any(a["id"] == agent_id for a in agent_list)
+    finally:
+        integration_client.delete_agent(agent_id)
+        db_user.is_superuser = was_super
+        db_session.commit()
+
+
 def test_recommend_agents_never_returns_private_even_for_superuser(
     integration_client: TestClient, db_session
 ):
