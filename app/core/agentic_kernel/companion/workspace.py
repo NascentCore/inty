@@ -17,6 +17,8 @@ class WorkspacePaths:
     """指向同一 workspace 根目录下的标准文件。"""
 
     root: Path
+    # 状态文件前缀, prototype 传 ".inty_v2" 以兼容已有 workspace
+    state_file_prefix: str = ".companion"
 
     @property
     def identity(self) -> Path:
@@ -70,11 +72,11 @@ class WorkspacePaths:
 
     @property
     def memory_pipeline_state_json(self) -> Path:
-        return self.root / ".companion_memory_pipeline.json"
+        return self.root / f"{self.state_file_prefix}_memory_pipeline.json"
 
     @property
     def schedule_queue_json(self) -> Path:
-        return self.root / ".companion_schedule_tasks.json"
+        return self.root / f"{self.state_file_prefix}_schedule_tasks.json"
 
 
 _REQUIRED_FILES_ATTR = ("identity", "soul", "user_md", "memory_md", "transcript")
