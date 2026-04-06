@@ -633,30 +633,126 @@ def _json_str_list(val: Any) -> List[str]:
     return []
 
 
+def _image_url_resource_lookup_keys(url: str) -> List[str]:
+    """GCS and CDN forms of the same image may both appear on agents vs resources.url."""
+    s = (url or "").strip()
+    if not s:
+        return []
+    norm = image_transform_service.normalize_image_url_for_storage(s)
+    keys: List[str] = []
+    if norm:
+        keys.append(norm)
+    if s not in keys:
+        keys.append(s)
+    return keys
+
+
+def _register_prompt_keys(out: dict[str, str], keys: List[str], prompt: str) -> None:
+    p = prompt.strip()
+    if not p:
+        return
+    for k in keys:
+        s = (k or "").strip()
+        if not s:
+            continue
+        out.setdefault(s, p)
+
+
+def _prompt_keys_from_resource_row(url: str, meta: dict) -> List[str]:
+    keys: List[str] = []
+    u = (url or "").strip()
+    if u:
+        keys.append(u)
+    gcs = meta.get("gcs_url")
+    if isinstance(gcs, str) and gcs.strip():
+        g = gcs.strip()
+        keys.append(g)
+        norm = image_transform_service.normalize_image_url_for_storage(g)
+        if norm and norm != g:
+            keys.append(norm)
+    return keys
+
+
 async def _resource_url_to_generation_prompt(
     db: AsyncSession, urls: List[str]
 ) -> dict[str, str]:
     if not urls:
         return {}
-    unique = list(dict.fromkeys(urls))
-    stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
-        models.Resource.url.in_(unique),
-        models.Resource.type == ResourceType.IMAGE,
-    )
-    result = await db.execute(stmt)
+    unique_keys: List[str] = []
+    seen: set[str] = set()
+    for u in urls:
+        for k in _image_url_resource_lookup_keys(u):
+            if k not in seen:
+                seen.add(k)
+                unique_keys.append(k)
+    gcs_for_metadata_match: List[str] = []
+    seen_gcs: set[str] = set()
+    for k in unique_keys:
+        if image_transform_service.is_gcs_url(k) and k not in seen_gcs:
+            seen_gcs.add(k)
+            gcs_for_metadata_match.append(k)
+        else:
+            norm = image_transform_service.normalize_image_url_for_storage(k)
+            if (
+                norm
+                and image_transform_service.is_gcs_url(norm)
+                and norm not in seen_gcs
+            ):
+                seen_gcs.add(norm)
+                gcs_for_metadata_match.append(norm)
+
     out: dict[str, str] = {}
-    for url, meta in result.all():
-        if not meta or not isinstance(meta, dict):
-            continue
-        gp = meta.get("generation_prompt")
-        if isinstance(gp, str) and gp.strip():
-            out[url] = gp.strip()
+    chunk_size = 400
+    for i in range(0, len(unique_keys), chunk_size):
+        chunk = unique_keys[i : i + chunk_size]
+        stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
+            models.Resource.url.in_(chunk),
+            models.Resource.type == ResourceType.IMAGE,
+        )
+        result = await db.execute(stmt)
+        for url, meta in result.all():
+            if not meta or not isinstance(meta, dict):
+                continue
+            gp = meta.get("generation_prompt")
+            if not isinstance(gp, str) or not gp.strip():
+                continue
+            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+
+    for i in range(0, len(gcs_for_metadata_match), chunk_size):
+        chunk = gcs_for_metadata_match[i : i + chunk_size]
+        stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
+            models.Resource.type == ResourceType.IMAGE,
+            models.Resource.resource_metadata.op("->>")("gcs_url").in_(chunk),
+        )
+        result = await db.execute(stmt)
+        for url, meta in result.all():
+            if not meta or not isinstance(meta, dict):
+                continue
+            gp = meta.get("generation_prompt")
+            if not isinstance(gp, str) or not gp.strip():
+                continue
+            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+
     return out
+
+
+def _generation_prompt_for_url(url: str, prompt_by_resource_url: dict[str, str]) -> str:
+    for k in _image_url_resource_lookup_keys(url):
+        p = prompt_by_resource_url.get(k)
+        if p:
+            return p
+    return ""
+
+
+def _canonical_agent_image_url(url: str) -> str:
+    s = (url or "").strip()
+    if not s:
+        return ""
+    return image_transform_service.normalize_image_url_for_storage(s) or s
 
 
 async def _paginate_agents_by_text_image_match(
     db: AsyncSession,
-    current_user: schemas.User,
     page: int,
     page_size: int,
     description_text: str,
@@ -685,6 +781,7 @@ async def _paginate_agents_by_text_image_match(
     )
     pending: List[Tuple[str, str, Optional[str]]] = []
     resource_urls: List[str] = []
+    pair_seen: set[tuple[str, str]] = set()
     for (
         agent_id,
         background,
@@ -703,25 +800,49 @@ async def _paginate_agents_by_text_image_match(
                 if not u:
                     continue
                 cap = item.get("caption")
-                desc = cap.strip() if isinstance(cap, str) else ""
-                pending.append((agent_id, u, desc))
+                explicit = (
+                    cap.strip()
+                    if isinstance(cap, str) and cap.strip()
+                    else None
+                )
+                resource_urls.append(u)
+                canon = _canonical_agent_image_url(u)
+                if not canon:
+                    continue
+                dedupe_key = (agent_id, canon)
+                if dedupe_key in pair_seen:
+                    continue
+                pair_seen.add(dedupe_key)
+                pending.append((agent_id, u, explicit))
         for u in [background] if background else []:
             u = str(u).strip()
             if u:
-                pending.append((agent_id, u, None))
+                canon = _canonical_agent_image_url(u)
+                if canon and (agent_id, canon) not in pair_seen:
+                    pair_seen.add((agent_id, canon))
+                    pending.append((agent_id, u, None))
                 resource_urls.append(u)
         for u in _json_str_list(photos):
-            pending.append((agent_id, u, None))
+            canon = _canonical_agent_image_url(u)
+            if canon and (agent_id, canon) not in pair_seen:
+                pair_seen.add((agent_id, canon))
+                pending.append((agent_id, u, None))
             resource_urls.append(u)
         for u in _json_str_list(background_images):
-            pending.append((agent_id, u, None))
+            canon = _canonical_agent_image_url(u)
+            if canon and (agent_id, canon) not in pair_seen:
+                pair_seen.add((agent_id, canon))
+                pending.append((agent_id, u, None))
             resource_urls.append(u)
 
     prompt_by_url = await _resource_url_to_generation_prompt(db, resource_urls)
 
     scored: List[Tuple[float, str, str, str]] = []
-    for agent_id, url, fixed_desc in pending:
-        text = fixed_desc if fixed_desc is not None else prompt_by_url.get(url, "")
+    for agent_id, url, explicit_caption in pending:
+        if explicit_caption is not None:
+            text = explicit_caption
+        else:
+            text = _generation_prompt_for_url(url, prompt_by_url)
         if not text:
             continue
         score = float(fuzz.token_set_ratio(query_norm, text))
@@ -862,7 +983,6 @@ async def get_recommended_agents_paginated(
             agents_list, matched_items, total, total_pages = (
                 await _paginate_agents_by_text_image_match(
                     db,
-                    current_user,
                     page,
                     page_size,
                     str(match_description),

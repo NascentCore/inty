@@ -31,7 +31,10 @@ class MatchedAgentImageItem(BaseModel):
     """One ranked image from text_match_image_description recommend sort."""
 
     agent_id: str = Field(..., description="Agent that owns this image")
-    image_url: str = Field(..., description="Image URL (storage URL before CDN transform)")
+    image_url: str = Field(
+        ...,
+        description="Image URL for clients (CDN proxy when Cloudflare is enabled, else original)",
+    )
     similarity_score: float = Field(
         ...,
         ge=0.0,

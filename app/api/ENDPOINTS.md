@@ -62,7 +62,7 @@
 >
 > - 该端点只返回**超级用户**（`is_superuser=True`）创建的**公开**（`visibility=PUBLIC`）角色
 > - 不返回私有角色，也不返回普通用户创建的角色；调用者身份不影响结果
-> - `sort=text_match_image_description`：按客户端文本与图片侧文案的模糊相似度对**图片**排序；必填 `match_description`（文本 D），`match_top_n`（N，默认 50，上限 500）表示参与排序的前 N 张图；分页在 N 条结果上切片；`data.matched_image_items` 为当前页的匹配条目（含 `similarity_score`），`data.list` 为对应 agent（按首次出现顺序）
+> - `sort=text_match_image_description`：按客户端文本与图片侧文案的模糊相似度对**图片**排序；必填 `match_description`（文本 D），`match_top_n`（N，默认 50，上限 500）表示参与排序的前 N 张图；分页在 N 条结果上切片；`data.matched_image_items` 为当前页的匹配条目（含 `similarity_score`、CDN `image_url`），`data.list` 为对应 agent（按首次出现顺序，去重；**前 N 张图请看 `matched_image_items` 而非 `list` 长度**）；同一 agent 下按规范化 URL 去重；`exclusive_photos` 无 caption 时回退 `resources` 的 `generation_prompt`；匹配 `resources` 时同时尝试 `url` 与 `resource_metadata.gcs_url`（应对 CDN/GCS 主键不一致）
 
 ### 聊天 (Chat)
 

@@ -187,7 +187,8 @@ async def recommend_agents(
     - energy_points: Sort by energy points in descending order (highest first)
     - text_match_image_description: Rank images by fuzzy text similarity to match_description;
       pass match_top_n (N) for how many top images to consider; data.matched_image_items lists
-      ranked hits for the current page; data.list is agents in first-appearance order
+      ranked hits for the current page; data.list is distinct agents (first-appearance order),
+      not the N images - use matched_image_items for the image list
 
     For score_based_random algorithm:
     - Returns 6 agents with highest scores (5-star first, then 4-star, etc.)

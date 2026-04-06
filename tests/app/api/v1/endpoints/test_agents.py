@@ -11,6 +11,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
 from app.core.uuid import get_new_user_id
 from app.models.agent import Agent
+from app.models.resource import Resource, ResourceType
 from app.models.subscription import SubscriptionUsage
 from app.models.user import AuthType, Gender, User
 from app.schemas.response import BusinessErrorCode
@@ -431,6 +432,157 @@ def test_recommend_agents_text_match_ranks_exclusive_caption(
         agent_list = data.get("list") or []
         assert any(a["id"] == agent_id for a in agent_list)
     finally:
+        integration_client.delete_agent(agent_id)
+        db_user.is_superuser = was_super
+        db_session.commit()
+
+
+def test_recommend_agents_text_match_finds_prompt_when_agent_url_differs_from_resource_pk(
+    integration_client: TestClient, db_session
+):
+    """Resource row keyed by CDN url but metadata.gcs_url matches agent.background."""
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    was_super = db_user.is_superuser
+    db_user.is_superuser = True
+    db_session.commit()
+
+    suffix = uuid.uuid4().hex[:12]
+    gcs_url = f"https://storage.googleapis.com/test-bucket/text-match-{suffix}/bg.jpg"
+    cdn_url = f"https://cdn.example.invalid/test-bucket/text-match-{suffix}/bg.jpg"
+    unique_prompt = f"e2e_gcs_align_prompt_{suffix}"
+
+    agent_id = integration_client.create_agent(
+        name=f"GCS Align Agent {suffix}",
+        visibility="PUBLIC",
+    )
+    try:
+        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+        assert agent is not None
+        agent.background = gcs_url
+        db_session.add(
+            Resource(
+                url=cdn_url,
+                type=ResourceType.IMAGE,
+                user_id=user_id,
+                agent_id=agent_id,
+                resource_metadata={
+                    "gcs_url": gcs_url,
+                    "generation_prompt": unique_prompt,
+                    "creator": user_id,
+                    "size": {"width": 1, "height": 1},
+                    "content_type": "image/jpeg",
+                    "byte_size": 1,
+                    "compressed": False,
+                    "cropped": False,
+                },
+            )
+        )
+        db_session.commit()
+
+        response = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={
+                "page": 1,
+                "page_size": 10,
+                "sort": "text_match_image_description",
+                "match_description": unique_prompt,
+                "match_top_n": 50,
+            },
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload.get("code") == 200, payload
+        items = payload["data"].get("matched_image_items") or []
+        assert items, payload
+        hit = next((x for x in items if x["agent_id"] == agent_id), None)
+        assert hit is not None, items
+        assert hit["image_description"] == unique_prompt
+    finally:
+        db_session.query(Resource).filter(Resource.url == cdn_url).delete()
+        db_session.commit()
+        integration_client.delete_agent(agent_id)
+        db_user.is_superuser = was_super
+        db_session.commit()
+
+
+def test_recommend_agents_text_match_exclusive_empty_caption_falls_back_to_resource_prompt(
+    integration_client: TestClient, db_session
+):
+    """exclusive_photos without caption still matches via resources.generation_prompt."""
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    was_super = db_user.is_superuser
+    db_user.is_superuser = True
+    db_session.commit()
+
+    suffix = uuid.uuid4().hex[:12]
+    img_url = f"https://storage.googleapis.com/test-bucket/excl-{suffix}/p.jpg"
+    unique_prompt = f"e2e_excl_fallback_{suffix}"
+
+    agent_id = integration_client.create_agent(
+        name=f"Excl Fallback {suffix}",
+        visibility="PUBLIC",
+    )
+    try:
+        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
+        assert agent is not None
+        agent.exclusive_photos = [
+            {
+                "image_url": img_url,
+                "caption": "",
+                "credits_required": 0,
+            }
+        ]
+        db_session.add(
+            Resource(
+                url=img_url,
+                type=ResourceType.IMAGE,
+                user_id=user_id,
+                agent_id=agent_id,
+                resource_metadata={
+                    "generation_prompt": unique_prompt,
+                    "creator": user_id,
+                    "size": {"width": 1, "height": 1},
+                    "content_type": "image/jpeg",
+                    "byte_size": 1,
+                    "compressed": False,
+                    "cropped": False,
+                },
+            )
+        )
+        db_session.commit()
+
+        response = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/ai/agents/recommend",
+            params={
+                "page": 1,
+                "page_size": 10,
+                "sort": "text_match_image_description",
+                "match_description": unique_prompt,
+                "match_top_n": 50,
+            },
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload.get("code") == 200, payload
+        items = payload["data"].get("matched_image_items") or []
+        hit = next((x for x in items if x["agent_id"] == agent_id), None)
+        assert hit is not None, items
+        assert hit["image_description"] == unique_prompt
+    finally:
+        db_session.query(Resource).filter(Resource.url == img_url).delete()
+        db_session.commit()
         integration_client.delete_agent(agent_id)
         db_user.is_superuser = was_super
         db_session.commit()
