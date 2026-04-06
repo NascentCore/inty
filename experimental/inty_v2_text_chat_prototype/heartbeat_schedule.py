@@ -7,16 +7,11 @@ import statistics
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT  # noqa: F401
+
 from .env_util import env_flag_enabled
 from .models import ChatMessage, load_transcript
 from .paths import WorkspacePaths
-
-# 与 orchestrator.run_turn(heartbeat_turn=True) 写入 transcript 的 user 行一致
-HEARTBEAT_SYNTHETIC_USER_TEXT = (
-    "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
-    "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
-    "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
-)
 
 _DEFAULT_BASE_IDLE_SEC = 300.0
 _DEFAULT_MIN_GAP_SEC = 1800.0
