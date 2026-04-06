@@ -698,87 +698,18 @@ async def _run_turn_with_user_profile_tools(
     return last_text
 
 
-def _required_workspace_file_paths(paths: WorkspacePaths) -> tuple[Path, ...]:
-    return (
-        paths.identity,
-        paths.soul,
-        paths.user_md,
-        paths.memory_md,
-        paths.transcript,
-    )
-
-
 def is_workspace_initialized(workspace: Path) -> bool:
-    """与 run_turn 相同：五件套存在则认为已初始化。"""
-    paths = WorkspacePaths(root=workspace.resolve())
-    for p in _required_workspace_file_paths(paths):
-        if not p.is_file():
-            return False
-    return True
-
-
-# IDENTITY/USER 仍像模板或未约定时的子串（与 bootstrap 桩、示例工作区一致；用于启动时是否先开口）
-_IDENTITY_STUB_MARKERS: tuple[str, ...] = (
-    "（在此填写",
-    "还没定",
-    "等你来",
-    "待对话填充",
-)
-_USER_STUB_MARKERS: tuple[str, ...] = (
-    "（在此填写",
-    "等待你告诉",
-    "等待观察",
-    "待对话填充",
-)
-
-
-def _transcript_is_empty(paths: WorkspacePaths) -> bool:
-    if not paths.transcript.is_file():
-        return True
-    for m in load_transcript(paths.transcript):
-        if m.role in ("user", "assistant"):
-            return False
-    return True
-
-
-def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
-    s = text.strip()
-    if not s:
-        return True
-    return any(m in s for m in markers)
+    """Delegate to kernel via paths.py re-export."""
+    from app.core.agentic_kernel.companion.workspace import is_workspace_initialized as _kernel_check
+    return _kernel_check(workspace)
 
 
 def needs_startup_profile_inquiry(workspace: Path) -> bool:
-    """
-    已初始化、且 transcript 仍为空时：若 IDENTITY 或 USER 仍像占位/未约定，
-    则 REPL 启动时应由助手先开口发问（见 main.repl）。
-    """
+    """Adapter: prototype passes 1 arg; kernel needs (workspace, store)."""
+    from app.core.agentic_kernel.companion.workspace import needs_startup_profile_inquiry as _kernel_fn
     root = workspace.resolve()
-    if not is_workspace_initialized(root):
-        return False
-    paths = WorkspacePaths(root=root)
-    if not _transcript_is_empty(paths):
-        return False
     store = get_memory_store(root)
-    ident = store.read_document_if_exists("IDENTITY.md") or ""
-    user_md = store.read_document_if_exists("USER.md") or ""
-    id_stub = _text_matches_any_marker(ident, _IDENTITY_STUB_MARKERS)
-    user_stub = _text_matches_any_marker(user_md, _USER_STUB_MARKERS)
-    out = id_stub or user_stub
-    logger.debug(
-        "needs_startup_profile_inquiry ws={} id_stub={} user_stub={} -> {}",
-        root.name,
-        id_stub,
-        user_stub,
-        out,
-    )
-    return out
-
-
-def _require_workspace_files(paths: WorkspacePaths) -> None:
-    for p in _required_workspace_file_paths(paths):
-        if not p.is_file():
-            raise ValueError(f"missing required workspace file: {p}")
+    return _kernel_fn(root, store)
 
 
 async def run_turn(
@@ -809,7 +740,8 @@ async def run_turn(
         llm_trace,
     )
     try:
-        _require_workspace_files(paths)
+        if not is_workspace_initialized(root):
+            raise ValueError(f"workspace not initialized: {root}")
         get_client()
 
         t_load = time.perf_counter()
