@@ -15,6 +15,10 @@
 **构建要求**：
 - 平台：AMD64 (x86_64) - 由于 animeface 依赖限制
 - 必需构建参数：`CONFIG_FILE` - 配置文件路径
+- 可选构建参数（推荐 CI 传入，便于运行中 `GET /` 与日志暴露 VCS 修订）：
+  - `INTY_VCS_REVISION`：git commit SHA（或 `GITHUB_SHA` 在运行时也可被应用读取）
+  - `INTY_BUILD_TIME`：UTC ISO8601，例如 `2026-04-06T12:00:00Z`
+  - `INTY_VCS_DIRTY`：`true` / `false`（本地脏构建时）
 
 **构建示例**：
 
@@ -22,6 +26,8 @@
 # 从项目根目录构建
 docker build \
   --build-arg CONFIG_FILE=devops/config.yaml.prod \
+  --build-arg INTY_VCS_REVISION=$(git rev-parse HEAD) \
+  --build-arg INTY_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   -f devops/docker/Dockerfile \
   -t inty-backend:latest \
   .
@@ -45,6 +51,7 @@ docker run -d \
 **构建要求**：
 - 平台：AMD64 (x86_64) - 由于 animeface 依赖限制
 - 必需构建参数：`CONFIG_FILE` - 配置文件路径
+- 可选：`INTY_VCS_REVISION`、`INTY_BUILD_TIME`、`INTY_VCS_DIRTY`（与主服务 `Dockerfile` 相同，见上文）
 
 **构建示例**：
 
@@ -75,6 +82,7 @@ docker run -d \
 
 - 平台：AMD64 (x86_64)
 - 必需构建参数：`CONFIG_FILE` - 配置文件路径
+- 可选：`INTY_VCS_REVISION`、`INTY_BUILD_TIME`、`INTY_VCS_DIRTY`（与主服务 `Dockerfile` 相同）
 
 **构建示例**：
 

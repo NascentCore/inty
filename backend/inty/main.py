@@ -4,16 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from jose.exceptions import JWTError
 from loguru import logger
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # ！！！ 这个 import 必须在所有导入其他应用代码之前。
 # 因为这里设置了 LangSmith 环境变量
 # 如果不在最前面，有可能导致环境变量未注入导致 LangSmith tracing 获得空的环境变量，从而失效
+from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 
 from app.api.deps import get_async_db
+from app.api.utils.health_check_payload import build_health_check_data
 from app.api.v1.router import api_router
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -28,6 +30,7 @@ from app.middleware.error_handler import (
 )
 from app.middleware.observability import ObservabilityMiddleware, metrics_response
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.schemas.health import HealthCheckData
 from app.schemas.response import APIResponse
 from app.utils.config import Environment
 
@@ -101,6 +104,14 @@ async def startup_event():
     """应用启动事件"""
     try:
         logger.info("正在初始化应用...")
+        logger.info(
+            "Build identity: release_version={} environment={} vcs_revision={} vcs_dirty={} build_time_utc={}",
+            global_config_loaded_from_config_yaml.app.version,
+            global_config_loaded_from_config_yaml.app.environment.value,
+            vcs_revision() or "(unknown)",
+            vcs_dirty(),
+            build_time_utc() or "(unknown)",
+        )
         logger.debug(
             f"数据库 URL: {global_config_loaded_from_config_yaml.database.url}"
         )
@@ -288,22 +299,10 @@ if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi
 
 
-class HealthCheckData(BaseModel):
-    """健康检查数据结构"""
-
-    app_name: str
-    version: str
-
-
 @app.get("/", response_model=APIResponse[HealthCheckData], include_in_schema=False)
 async def root():
     """健康检查接口"""
-    return APIResponse.success(
-        data=HealthCheckData(
-            app_name=global_config_loaded_from_config_yaml.app.name,
-            version=global_config_loaded_from_config_yaml.app.version,
-        )
-    )
+    return APIResponse.success(data=build_health_check_data(ops=False))
 
 
 @app.get("/metrics", include_in_schema=False)
