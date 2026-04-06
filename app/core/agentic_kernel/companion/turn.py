@@ -26,26 +26,21 @@ from .models import (
 from .prompts import build_system_prompt
 from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools, execute_tool_call
 from .utc import utc_iso_ts
+from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace import WorkspacePaths, is_workspace_initialized
 
 _MAX_TOOL_ROUNDS = 24
 
-# 与 heartbeat 合成的 user text 一致
-HEARTBEAT_SYNTHETIC_USER_TEXT = (
-    "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
-    "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
-    "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
-)
 
-
-def _openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
+def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
+    """Convert an OpenAI ChatCompletionMessage to a dict for message history."""
     row: dict[str, Any] = {"role": "assistant", "content": msg.content or ""}
     tool_calls = getattr(msg, "tool_calls", None) or []
     if tool_calls:
         row["tool_calls"] = [
             {
                 "id": tc.id,
-                "type": "function",
+                "type": getattr(tc, "type", "function"),
                 "function": {
                     "name": tc.function.name,
                     "arguments": tc.function.arguments or "",
@@ -144,7 +139,7 @@ async def run_turn(
 
         msg = resp.choices[0].message
         tool_calls = getattr(msg, "tool_calls", None) or []
-        messages.append(_openai_assistant_message_dict(msg))
+        messages.append(openai_assistant_message_dict(msg))
 
         if not tool_calls:
             last_text = (msg.content or "").strip()
@@ -161,8 +156,7 @@ async def run_turn(
                 name,
                 trace_id,
             )
-            import asyncio
-            result = await execute_tool_call(
+            result = execute_tool_call(
                 root, store, name, args,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
             )

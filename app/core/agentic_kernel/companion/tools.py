@@ -148,7 +148,7 @@ def build_companion_tools() -> list[dict[str, Any]]:
     ]
 
 
-async def execute_tool_call(
+def execute_tool_call(
     root: Path,
     store: MemoryStore,
     name: str,

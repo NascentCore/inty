@@ -14,6 +14,7 @@ from app.core.agentic_kernel.tools.runtime import (
 )
 
 from .tools import build_companion_tools, execute_tool_call, WRITABLE_RELATIVE_PATHS
+from .turn import openai_assistant_message_dict
 from .workspace import is_workspace_initialized
 from .memory_store import MemoryStore
 
@@ -60,22 +61,8 @@ def load_bootstrap_instruction_text() -> str:
 
 
 def _openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
-    """Convert an OpenAI ChatCompletionMessage to a dict for message history."""
-    row: dict[str, Any] = {"role": "assistant", "content": msg.content or ""}
-    tool_calls = getattr(msg, "tool_calls", None) or []
-    if tool_calls:
-        row["tool_calls"] = [
-            {
-                "id": tc.id,
-                "type": "function",
-                "function": {
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments or "",
-                },
-            }
-            for tc in tool_calls
-        ]
-    return row
+    """Alias for backward compatibility with resolve_official_assistant_tool_loop callback."""
+    return openai_assistant_message_dict(msg)
 
 
 async def run_workspace_bootstrap_loop(
@@ -172,10 +159,7 @@ async def run_workspace_bootstrap_loop(
                 name,
             )
             t_tool = time.perf_counter()
-            import asyncio
-            result = asyncio.get_event_loop().run_until_complete(
-                execute_tool_call(root, store, name, raw_arguments)
-            )
+            result = execute_tool_call(root, store, name, raw_arguments)
             logger.info(
                 "bootstrap tool_done round={} name={} execute_ms={:.0f} result_chars={}",
                 active_round,
