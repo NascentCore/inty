@@ -49,6 +49,17 @@ def test_is_workspace_initialized_complete(tmp_path: Path) -> None:
     assert is_workspace_initialized(d) is True
 
 
+def test_workspace_paths_custom_state_file_prefix(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    p = WorkspacePaths(root=root, state_file_prefix=".inty_v2")
+    assert p.memory_pipeline_state_json == root / ".inty_v2_memory_pipeline.json"
+    assert p.schedule_queue_json == root / ".inty_v2_schedule_tasks.json"
+    # other paths unchanged
+    assert p.identity == root / "IDENTITY.md"
+    assert p.transcript == root / "transcript.jsonl"
+
+
 def test_is_workspace_initialized_partial(tmp_path: Path) -> None:
     d = tmp_path / "partial"
     d.mkdir()
