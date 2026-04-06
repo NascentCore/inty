@@ -156,8 +156,7 @@ async def run_turn(
                 name,
                 trace_id,
             )
-            import asyncio
-            result = await execute_tool_call(
+            result = execute_tool_call(
                 root, store, name, args,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
             )

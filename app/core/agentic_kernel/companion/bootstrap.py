@@ -159,10 +159,7 @@ async def run_workspace_bootstrap_loop(
                 name,
             )
             t_tool = time.perf_counter()
-            import asyncio
-            result = asyncio.get_event_loop().run_until_complete(
-                execute_tool_call(root, store, name, raw_arguments)
-            )
+            result = execute_tool_call(root, store, name, raw_arguments)
             logger.info(
                 "bootstrap tool_done round={} name={} execute_ms={:.0f} result_chars={}",
                 active_round,
