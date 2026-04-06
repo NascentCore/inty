@@ -49,12 +49,26 @@ Push Worker：若 iMate 首期不需要离线定时任务，可不部署 `inty-p
    - `/opt/inty-imate-dev/inty-backend-key.json`
    - `/opt/inty-imate-dev/inty-firebase-key.json`
    - prod 同理使用 `imate-prod` 目录。
-3. **Alembic**：对 iMate 库执行与主工程一致的 migration；**禁止**对 IntelliMate 库执行含 `imate_*` 的变更来“凑合”共用。
+3. **Alembic**：对 iMate 库执行 migration 时**必须**使用 iMate 专用配置文件中的数据库 URL（见下节）；**禁止**在未显式指定 iMate 配置时执行命令，以免误连 IntelliMate 库。版本文件仍来自仓库 `alembic/versions/`（与 IntelliMate 共用同一套 revision 链），变更通过同一仓库 PR 管理。
 4. **可观测性**：`LANGCHAIN_PROJECT` 或日志 label 使用独立值（例如 `inty-backend-imate-dev`），便于与 IntelliMate 日志区分。
 
-## 6. 镜像构建与容器运行
+## 6. Alembic 与 `alembic/versions`（绑定 iMate `config.yaml`）
 
-### 6.1 本地或一次性验证
+- **事实来源**：`alembic/env.py` 通过 `runtime_config.database.url` 连接数据库；若使用 `-x config=<path>`，则从该路径加载配置（见 [alembic/env.py](/alembic/env.py) 中 `_load_runtime_config`）。因此**指向哪套库完全由所选配置文件决定**，与 `alembic/versions` 目录下的 revision 文件无独立「iMate 专用版本目录」；**同一代码库、同一 `versions/` 树**分别对 IntelliMate 库与 iMate 库执行 `upgrade` 时，各自写入对应库中的 `alembic_version` 表。
+- **iMate 库操作（推荐命令形态）**：在仓库根目录执行，**显式**传入 iMate 的 `devops/config.yaml.imate_dev`（或 prod 等价文件），**不得**依赖默认 `config.yaml`（避免与本地或 IntelliMate 配置混淆）：
+
+```bash
+export PYTHONPATH=.
+export ALEMBIC_CONFIG=alembic/alembic.ini
+alembic -c alembic/alembic.ini upgrade head -x config=devops/config.yaml.imate_dev
+```
+
+- **生成新 revision**：若需 `revision --autogenerate`，同样**必须**加 `-x config=...` 指向 iMate 配置，且仅在已确认 URL 指向 iMate 库后执行；生成出的文件仍落在 `alembic/versions/`，合并后 IntelliMate 与 iMate 部署在各自发布流程中对**各自**库执行 `upgrade head`（先 dev 验证，再 prod）。详见 [alembic/AGENTS.md](/alembic/AGENTS.md)。
+- **隔离门禁**：对 IntelliMate 库执行 Alembic 时使用 IntelliMate 的 `config.yaml.dev` / `config.yaml.prod`（或团队约定路径）；**禁止**用 IntelliMate 配置对 iMate 库升级或反向操作，除非刻意做同一库（与本计划矛盾）。
+
+## 7. 镜像构建与容器运行
+
+### 7.1 本地或一次性验证
 
 与 [backend/README.md](/backend/README.md) 一致：准备 iMate 专用 `config.yaml`，然后使用仓库根目录为 context、`CONFIG_FILE` 指向 iMate 配置构建镜像。
 
@@ -77,7 +91,7 @@ sudo docker run --detach --log-driver=gcplogs \
   inty-server:imate-dev
 ```
 
-### 6.2 与现有 GitHub Actions 对齐
+### 7.2 与现有 GitHub Actions 对齐
 
 当前 [build_and_deploy_backend.yml](/.github/workflows/build_and_deploy_backend.yml) 仅内置 `dev` / `prod` 两环境，容器名与 `CONFIG_FILE=devops/config.yaml.${environment}` 绑定；该工作流继续**只**服务 IntelliMate，**默认行为不因 iMate 而改动**。
 
@@ -88,30 +102,31 @@ sudo docker run --detach --log-driver=gcplogs \
 3. **新增** workflow 或 **新增** job：仅当选择 `imate-*` 环境时执行；脚本内 `docker stop`/`rm` **仅**针对 `inty-backend-imate-*`，**禁止**出现对 `inty-backend-dev`、`inty-backend-prod` 的 stop/rm。
 4. 部署步骤其余与 IntelliMate 类似：`docker pull` digest、挂载密钥、`grep Application startup complete`、对 iMate 的 `SERVICE_PUBLIC_URL` 做 sanity `curl`。
 
-在 workflow 未合并前，**手动**在目标 VM 上按 6.1 拉取已构建镜像 digest 或本地 build 部署即可。
+在 workflow 未合并前，**手动**在目标 VM 上按 7.1 拉取已构建镜像 digest 或本地 build 部署即可。
 
-## 7. Nginx 与公网入口
+## 8. Nginx 与公网入口
 
 - **新增** `server`（或独立 conf 文件）将 **iMate 域名** `proxy_pass` 到 **iMate 容器映射端口**；**不要**修改现有 IntelliMate `server` 块中指向 IntelliMate 后端的 `proxy_pass` 目标，除非正在进行 IntelliMate 自己的变更。
 - TLS 证书、HSTS、WebSocket 升级头（`Upgrade`、`Connection`）与现有 IntelliMate 反代保持一致。
 - 对 `/api/v1/chat/ws` 等 WS path 使用与现网相同的 proxy 超时与 buffer 策略，避免长连接被中间层提前切断。
 
-## 8. 发布与回滚安排
+## 9. 发布与回滚安排
 
 | 动作 | 步骤 |
 |------|------|
-| 常规发布 | 合并代码 → 构建镜像（同一 Dockerfile + iMate `CONFIG_FILE`）→ **仅**替换 `inty-backend-imate-*` 容器 → 仅当 iMate 域名/nginx 有变更时 reload 对应 `server` → 对 iMate 公网 URL `curl` 健康检查。**禁止**在本流程中重启或替换 IntelliMate 容器。 |
+| 常规发布 | 合并代码 → **对 iMate 库**执行 `alembic upgrade head -x config=devops/config.yaml.imate_*`（在部署容器前或按团队约定顺序）→ 构建镜像（同一 Dockerfile + iMate `CONFIG_FILE`）→ **仅**替换 `inty-backend-imate-*` 容器 → 仅当 iMate 域名/nginx 有变更时 reload 对应 `server` → 对 iMate 公网 URL `curl` 健康检查。**禁止**在本流程中重启或替换 IntelliMate 容器。 |
 | 回滚 | 回退 iMate 实例到上一已知良好 digest；IntelliMate 实例不参与回滚。 |
 | 冻结 | 停止 iMate 专用 workflow 触发；IntelliMate 定时/手动发布保持独立。 |
 
-## 9. 验收检查（DoD）
+## 10. 验收检查（DoD）
 
-- iMate：健康检查 URL 可用；带 `X-App-Id: imate_android`（若采用）时聊天数据仅写入 `imate_*` 表；缺失或非法 `X-App-Id` 时**不得**写入 `imate_*`（见 FR 7.4）。
+- iMate：健康检查 URL 可用；`alembic_version` 与已部署代码 revision 一致且该次 migration 使用的 `-x config` 为 iMate 专用文件；带 `X-App-Id: imate_android`（若采用）时聊天数据仅写入 `imate_*` 表；缺失或非法 `X-App-Id` 时**不得**写入 `imate_*`（见 FR 7.4）。
 - **IntelliMate 不受影响（强制）**：部署 iMate 前后，IntelliMate 容器仍在运行且名称未变；`config` 内 DSN/bucket 仍指向 IntelliMate 资源；IntelliMate 公网入口行为与部署前一致（可用 spot check：`curl` 或版本检查接口）。
 - 结构化日志中 `application`/`environment` 标签可过滤出 iMate 实例，且不与 IntelliMate 日志混为一谈。
 
-## 10. 关联文档
+## 11. 关联文档
 
 - [FR_IMATE_DEVELOPMENT_PLAN.md](/docs/FR_IMATE_DEVELOPMENT_PLAN.md)
 - [devops/README.md](/devops/README.md)
 - [devops/RELEASE.md](/devops/RELEASE.md)
+- [alembic/AGENTS.md](/alembic/AGENTS.md)
