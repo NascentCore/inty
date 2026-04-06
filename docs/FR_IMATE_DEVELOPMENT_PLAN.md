@@ -2,7 +2,7 @@
 
 ## 1. 文档定位
 
-- 本文档定义 iMate(or IntelliMate 2.0) 新版从 0 到 1 的完整开发计划，目标是在 IntelliMate Android app 与 **同一套 inty backend**（不另起后端服务或仓库）已验证架构基础上，交付稳定、可扩展、可观测的"智能体陪伴体验"。
+- 本文档定义 iMate(or IntelliMate 2.0) 新版从 0 到 1 的完整开发计划，目标是在 IntelliMate Android app 与 **同一套 inty 后端代码与 API 契约**（不另起后端仓库或第二套路由实现）已验证架构基础上，交付稳定、可扩展、可观测的"智能体陪伴体验"。**运行时**上推荐 IntelliMate 与 iMate **分实例部署**（见 2.1、3.2、11.4），避免负载、发布与故障域互相牵连。
 - 本文档是需求评审、技术设计、实现拆分、测试验收、发布复盘的统一基线。
 
 ## 2. 背景与约束
@@ -14,11 +14,12 @@
   - DataStore 作为用户偏好与配置持久化核心。
   - 统一网络栈与统一鉴权、环境切换、日志链路。
 - Backend 端复用：
-  - **部署与代码库**：iMate Android 与 IntelliMate 共用 **同一 inty 后端进程与同一 `app/` 代码树**，不新建并行后端工程。agentic 实时聊天走既有 WebSocket：`WS /api/v1/chat/ws`（落库）、`WS /api/v1/chat/ws/verify`（联调不落库），与 HTTP 功能 API 同属一个 FastAPI 应用。
+  - **代码库与协议**：iMate 与 IntelliMate 共用 **同一 `app/` 代码树与同一路由实现**，不新建并行后端工程。agentic 实时聊天走既有 WebSocket：`WS /api/v1/chat/ws`（落库）、`WS /api/v1/chat/ws/verify`（联调不落库），与 HTTP 功能 API 同属一个 FastAPI **应用代码**。
+  - **运行时部署（推荐）**：生产与预发环境 **各自独立 inty 进程与对外 base URL**（例如 IntelliMate 一条 API host，iMate 另一条），同一制品多次部署；避免 CPU/连接池/发布与实验性改动直接影响另一条产品线。开发/联调可在单机上跑一个实例，用 `X-App-Id` + 独立库做逻辑验证。
   - FastAPI + SQLAlchemy + Pydantic 数据契约。
   - endpoint -> service -> repository 分层模式。
   - 依赖通过 `app/api/deps.py` + Depends 注入，避免 endpoint 直接绑定全局单例。
-  - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用；数据层采用 iMate 独立模型与表，统一使用 `imate_` 前缀与 IntelliMate 区分（逻辑隔离，非物理拆服务）。
+  - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用；数据层采用 iMate 独立模型与表，统一使用 `imate_` 前缀与 IntelliMate 区分；**独立部署实例时** iMate 侧 DB 与 GCS bucket 与 IntelliMate **物理隔离**（推荐），与代码复用不矛盾。
 - Chat 通信复用：
   - app + backend 使用 WebSocket 主链路。
   - iMate 新链路的 chat 路径仅提供 WebSocket，不提供 HTTP fallback。
@@ -59,7 +60,7 @@
 
 ### 3.2 Backend 总体架构
 
-- **单一后端**：IntelliMate 与 iMate 共用 inty 后端的同一套 endpoint、service、DB 连接与配置；差异仅体现在请求分流（如 `X-App-Id`）与 `imate_*` 表读写，不引入第二套对外 base URL 或独立网关。
+- **同一套 inty 实现，多套部署实例（推荐）**：endpoint、service、schema 在 **同一 `app/`** 内维护；**每个产品线对应独立部署单元**（独立 VM/容器进程、独立 `config.yaml`、独立对外 API host）。实例内仍用请求分流（如 `X-App-Id`）与 `imate_*` 表读写区分 iMate 数据路径；**不要求**两 App 共用同一个运行中进程或同一数据库连接串。
 - 分层：
   - API endpoint 层：协议解析、鉴权、参数校验、响应封装。
   - Service 层：聊天主流程编排、会话管理、策略执行、用量统计。
@@ -76,7 +77,7 @@
 - 连接入口（**既有 inty chat 路由，iMate 直接复用**）：
   - 生产端点：`WS /api/v1/chat/ws`（落库；router 上路径为 `/ws`，完整 URL 含 `/api/v1/chat` 前缀）。
   - 校验端点：`WS /api/v1/chat/ws/verify`（不落消息，仅联调验证）。
-- agentic 多步/工具化等能力若落在服务端，仍在 **同一 WS 会话与同一 `chat` endpoint 实现内** 演进，不要求为 iMate 单独新增并行 WS 服务。
+- agentic 多步/工具化等能力若落在服务端，仍在 **`app/` 内同一 `chat` WS 实现** 演进，不要求为 iMate 另建第二套代码里的 WS 服务；多产品线通过 **多实例部署** 各连各自的 host 即可隔离运行时。
 - 协议约束：
   - 文本帧 JSON，结构与现有 chat completion 请求/响应同构。
   - 客户端心跳 `ping`，服务端回 `pong`，服务端空闲超时自动断链。
@@ -135,7 +136,7 @@
   - 建立 WebSocket 会话管理、请求串行队列、断线重连策略。
   - chat 路径仅走 WebSocket，不提供 HTTP fallback。
 - Backend：
-  - 在 **现有 inty 部署** 上稳定 `/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify`（同一 `app/api/v1/endpoints/chat.py`，非新服务）。
+  - 在 **inty 代码** 中稳定 `/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify`（`app/api/v1/endpoints/chat.py`）；**iMate 专用部署实例**上验收该链路，避免与 IntelliMate 线上实例抢资源或共发布。
   - 复用 `app/api/v1/endpoints` 现有路由入口与 SQLAlchemy/Alembic 工程模式；iMate 数据表使用 `imate_` 前缀独立管理。
   - 将聊天流程统一收敛到 `app/services`，并引入 `inty_v2 prototype` 聊天体验编排逻辑。
   - 落库与不落库路径分离清晰。
@@ -314,7 +315,7 @@
 
 - Step 1：冻结 v1 契约和错误码清单（1 个 PR，仅文档和 schema 对齐）。
 - Step 2：打通 Android WS 主链路并移除 chat HTTP fallback 假设（1-2 个 PR）。
-- Step 3：在同一 inty 后端内完成 WS 主链路 service 编排，复用 `app/` 既有 `chat` WS 路由与 SQLAlchemy/Alembic 工程模式，按 `imate_` 前缀建设 iMate 独立模型，接入 prototype 体验逻辑并补齐关键 feature tests（1-2 个 PR）。
+- Step 3：在 `app/` 内完成 WS 主链路 service 编排，复用既有 `chat` WS 路由与 SQLAlchemy/Alembic 工程模式，按 `imate_` 前缀建设 iMate 独立模型，接入 prototype 体验逻辑并补齐关键 feature tests；**联调/预发使用 iMate 专用 inty 实例**（1-2 个 PR）。
 - Step 4：补齐联调 checklist 与自动化回归（1 个 PR）。
 - Step 5：进入陪伴状态层增量开发（后续迭代）。
 
@@ -371,6 +372,7 @@
 ### 11.4 数据库部署（PostgreSQL + SQLAlchemy）
 
 - 部署拓扑：
+  - **IntelliMate 与 iMate**：各自 inty **部署实例绑定各自数据库**（推荐独立 DB 实例或至少独立 database），与「共用代码库」并行不悖，避免迁移、锁与备份策略互相影响。
   - `dev` 与 `prod` 分离数据库实例（最小可行：同 VM 不同库；推荐：独立实例）。
   - 主库 PostgreSQL 16。
   - 可选只读副本（`async_replica_url`）承接读多写少查询，主链路写入仍走主库。
@@ -400,7 +402,7 @@
 
 ### 11.6 iMate 在 inty 后端内的分层设计（本期落地版）
 
-- **说明**：下表描述的是 **同一 inty 后端** 内的模块划分；iMate 无独立后端仓库或独立部署单元。
+- **说明**：下表描述 **同一 `app/` 代码库** 内的模块划分。iMate **无独立后端仓库**；**部署上**推荐 iMate 专用 inty 实例（独立进程与配置），与 IntelliMate 实例分离。
 
 | 层级 | 目标 | 复用现有能力 | 新增实现（iMate v1） | 边界约束 |
 |---|---|---|---|---|
@@ -411,7 +413,7 @@
 
 ### 11.7 Interface 层设计（HTTP/WS 与 iMate app 对接 inty）
 
-- **共用后端**：iMate app 与 IntelliMate app 指向 **同一 inty API host**；仅通过 header（如 `X-App-Id`）与数据表前缀区分产品线。
+- **共用实现、分 host 部署（推荐）**：两 App 的 **base URL 各自指向所属产品线的 inty 实例**；仍携带 `X-App-Id`（如 `imate_android`）以便日志、网关与后续多租户策略一致。单机联调时也可共用一个 host，生产不推荐与 IntelliMate 混用同一对外入口以免干扰。
 - 路由复用与职责划分：
   - Auth：复用 `POST /api/v1/auth/google/login`，同端点支持 `id_token` 与 `email+password`。
   - Settings：复用 `GET/PUT /api/v1/settings/`、`GET /api/v1/users/me`、`PUT /api/v1/users/profile`。
@@ -506,7 +508,7 @@
   - 保持与 IntelliMate 兼容，不改坏既有链路。
   - iMate 业务侧在上层组装，不复制底层实现。
 
-#### 11.12.2 第一层 - HTTP/WebSocket 接口层（对接 inty 后端，与 IntelliMate 共用）
+#### 11.12.2 第一层 - HTTP/WebSocket 接口层（对接 inty；base URL 对应该 App 的部署实例）
 
 - 复用现有网络基座（不新建并行网络栈）：
   - `NetServiceMgr` 统一 Retrofit API 入口（`getUserApi/getChatApi/getCommonApi`）。
@@ -608,7 +610,7 @@
 
 ---
 
-- 结论：该计划以"**同一 inty 后端 + 复用已验证架构** + 分阶段可验收交付"为主轴；iMate 实时聊天与 agentic 能力走既有 `WS /api/v1/chat/ws*`，通过 `imate_*` 表与 `X-App-Id` 等与 IntelliMate 数据隔离，**无需并行后端服务**。优先确保聊天主链路稳定，再逐步叠加长期陪伴智能能力，降低重构与运维面并提升上线成功率。
+- 结论：该计划以"**同一 inty 代码库 + 分实例部署（推荐）+ 复用已验证架构**"为主轴；iMate 实时聊天与 agentic 能力走既有 `WS /api/v1/chat/ws*`，数据层用 `imate_*` 与请求头分流；**不另建第二套后端仓库**，**生产上**用 **独立 inty 实例与独立 DB/GCS** 与 IntelliMate 隔离运行时，减少相互干扰。优先确保聊天主链路稳定，再逐步叠加长期陪伴智能能力。
 
 ## 未来工作
 
