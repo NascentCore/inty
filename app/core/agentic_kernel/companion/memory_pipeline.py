@@ -358,9 +358,7 @@ def memory_update_after_turn(
     )
 
     t = time.perf_counter()
-    run_day_summary_llm = (not config.day_summary_disabled) and (
-        turn_n % every_n == 0
-    )
+    run_day_summary_llm = (not config.day_summary_disabled) and (turn_n % every_n == 0)
     if run_day_summary_llm:
         _rewrite_day_summary_md(
             store,
@@ -407,9 +405,7 @@ def memory_update_after_turn(
     )
 
     t = time.perf_counter()
-    run_user_llm = (not config.user_update_disabled) and (
-        turn_n % user_every_n == 0
-    )
+    run_user_llm = (not config.user_update_disabled) and (turn_n % user_every_n == 0)
     if run_user_llm:
         _rewrite_user_md(
             store,

@@ -145,7 +145,9 @@ async def run_workspace_bootstrap_loop(
                 "injecting_internal_continue",
                 round_idx,
             )
-            messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE})
+            messages.append(
+                {"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE}
+            )
             continue
 
         active_round = round_idx
@@ -222,7 +224,9 @@ async def run_workspace_bootstrap_loop(
             "injecting_internal_continue",
             rounds_used,
         )
-        messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE})
+        messages.append(
+            {"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE}
+        )
 
     raise RuntimeError(
         f"workspace bootstrap exceeded max_rounds={max_rounds}; last messages tail: "

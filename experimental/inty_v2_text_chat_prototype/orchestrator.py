@@ -740,13 +740,19 @@ async def _run_turn_with_user_profile_tools(
 
 def is_workspace_initialized(workspace: Path) -> bool:
     """Delegate to kernel via paths.py re-export."""
-    from app.core.agentic_kernel.companion.workspace import is_workspace_initialized as _kernel_check
+    from app.core.agentic_kernel.companion.workspace import (
+        is_workspace_initialized as _kernel_check,
+    )
+
     return _kernel_check(workspace)
 
 
 def needs_startup_profile_inquiry(workspace: Path) -> bool:
     """Adapter: prototype passes 1 arg; kernel needs (workspace, store)."""
-    from app.core.agentic_kernel.companion.workspace import needs_startup_profile_inquiry as _kernel_fn
+    from app.core.agentic_kernel.companion.workspace import (
+        needs_startup_profile_inquiry as _kernel_fn,
+    )
+
     root = workspace.resolve()
     store = get_memory_store(root)
     return _kernel_fn(root, store)

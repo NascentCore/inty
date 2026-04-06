@@ -54,7 +54,10 @@ interface IAgentApi {
         @Query("sort") sort: String = "energy_points",
     ): HttpResult<AgentInfoResponse>
 
-    /** Text-to-image description match: sort by fuzzy similarity; optional match_description + match_top_n. */
+    /**
+     * Text-to-image description match: sort by fuzzy similarity; optional match_description +
+     * match_top_n.
+     */
     @GET("api/v1/ai/agents/recommend")
     suspend fun recommendAgentsByImageDescription(
         @Query("page") page: Int,

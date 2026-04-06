@@ -66,9 +66,7 @@ class TestInnerTickPromptAndTools(unittest.TestCase):
             self.assertIn("软转场", system)
             self.assertIn("## 内在节拍输出与工具契约", system)
             self.assertIn("本回合 API 侧**可以**携带工具列表", system)
-            self.assertNotIn(
-                "输出通道：仅自然语言文本回复；本回合无工具调用", system
-            )
+            self.assertNotIn("输出通道：仅自然语言文本回复；本回合无工具调用", system)
 
 
 if __name__ == "__main__":

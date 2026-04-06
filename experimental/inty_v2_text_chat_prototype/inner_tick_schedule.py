@@ -84,7 +84,9 @@ def next_inner_tick_wait_seconds(
     now = now_monotonic if now_monotonic is not None else time.monotonic()
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
-    msgs = transcript_without_trailing_presence_signals(load_transcript(paths.transcript))
+    msgs = transcript_without_trailing_presence_signals(
+        load_transcript(paths.transcript)
+    )
     min_lines = _env_int(
         "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
         _DEFAULT_MIN_TRANSCRIPT_MSGS,

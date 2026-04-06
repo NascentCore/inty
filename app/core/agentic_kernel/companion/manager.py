@@ -17,7 +17,11 @@ from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
 from .file_store import write_text
 from .turn import run_turn
-from .workspace import WorkspacePaths, is_workspace_initialized, needs_startup_profile_inquiry
+from .workspace import (
+    WorkspacePaths,
+    is_workspace_initialized,
+    needs_startup_profile_inquiry,
+)
 
 
 class CompanionConfig(BaseModel):

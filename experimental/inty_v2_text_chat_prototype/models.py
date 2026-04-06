@@ -24,9 +24,7 @@ from .file_store import read_text, write_text_atomic
 
 REPL_PRESENCE_USER_TEXT_ONLINE = "（系统：用户已在 REPL 上线。）"
 REPL_PRESENCE_USER_TEXT_OFFLINE = "（系统：用户已退出 REPL 会话。）"
-REPL_ONLINE_ACK_USER_TEXT = (
-    "（会话已恢复：请根据上文续接；若无承接点则简短问候即可。）"
-)
+REPL_ONLINE_ACK_USER_TEXT = "（会话已恢复：请根据上文续接；若无承接点则简短问候即可。）"
 INNER_TICK_SYNTHETIC_USER_TEXT = (
     "（内在节拍：用户此刻没有键入新内容。这不是请你「对用户接话」的聊天轮，而是一次短时的内在处理——"
     "像在活人头脑里持续活动的那一小团注意：整理刚才的对话与场景印象，掂量哪些值得写入长期材料，"
