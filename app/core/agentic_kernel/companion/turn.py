@@ -32,14 +32,15 @@ from .workspace import WorkspacePaths, is_workspace_initialized
 _MAX_TOOL_ROUNDS = 24
 
 
-def _openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
+def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
+    """Convert an OpenAI ChatCompletionMessage to a dict for message history."""
     row: dict[str, Any] = {"role": "assistant", "content": msg.content or ""}
     tool_calls = getattr(msg, "tool_calls", None) or []
     if tool_calls:
         row["tool_calls"] = [
             {
                 "id": tc.id,
-                "type": "function",
+                "type": getattr(tc, "type", "function"),
                 "function": {
                     "name": tc.function.name,
                     "arguments": tc.function.arguments or "",
@@ -138,7 +139,7 @@ async def run_turn(
 
         msg = resp.choices[0].message
         tool_calls = getattr(msg, "tool_calls", None) or []
-        messages.append(_openai_assistant_message_dict(msg))
+        messages.append(openai_assistant_message_dict(msg))
 
         if not tool_calls:
             last_text = (msg.content or "").strip()
