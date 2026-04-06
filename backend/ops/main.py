@@ -8,13 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from jose.exceptions import JWTError
 from loguru import logger
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
+from app.api.utils.health_check_payload import build_health_check_data
 from app.api.evaluation_web import configure_evaluation_web_routes
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
@@ -25,6 +26,7 @@ from app.middleware.error_handler import (
     validation_error_handler,
     validation_exception_handler,
 )
+from app.schemas.health import HealthCheckData
 from app.schemas.response import APIResponse
 
 from backend.ops.api.v1.router import api_router
@@ -204,26 +206,6 @@ if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi
 
 
-class HealthCheckData(BaseModel):
-    """健康检查数据结构"""
-
-    app_name: str
-    version: str
-    environment: str
-    vcs_revision: str
-    vcs_dirty: bool
-    build_time_utc: str
-
-
 @app.get("/health", response_model=APIResponse[HealthCheckData], include_in_schema=False)
 async def health():
-    return APIResponse.success(
-        data=HealthCheckData(
-            app_name=f"{global_config_loaded_from_config_yaml.app.name} Ops",
-            version=global_config_loaded_from_config_yaml.app.version,
-            environment=global_config_loaded_from_config_yaml.app.environment.value,
-            vcs_revision=vcs_revision(),
-            vcs_dirty=vcs_dirty(),
-            build_time_utc=build_time_utc(),
-        )
-    )
+    return APIResponse.success(data=build_health_check_data(ops=True))
