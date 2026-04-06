@@ -6,10 +6,11 @@ import asyncio
 import math
 import uuid
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 from fastapi import HTTPException
 from loguru import logger
+from rapidfuzz import fuzz
 from sqlalchemy import Integer, and_, case, desc, func, or_, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,8 +33,10 @@ from app.external_services.gcs import (
     upload_to_gcs,
 )
 from app.models.agent import AgentVisibility
+from app.models.resource import ResourceType
 from app.models.user import Gender
 from app.schemas.agent import AgentSortOption
+from app.schemas.response import MatchedAgentImageItem
 from app.schemas.exclude_fields import EXCLUDE_FIELDS
 from app.services.cache_service import cache_service
 from app.services.global_services import telegram_bot_service
@@ -622,6 +625,269 @@ def _fill_agent_image_sizes(
     return agent
 
 
+def _json_str_list(val: Any) -> List[str]:
+    if val is None:
+        return []
+    if isinstance(val, list):
+        return [str(x).strip() for x in val if x is not None and str(x).strip()]
+    return []
+
+
+def _image_url_resource_lookup_keys(url: str) -> List[str]:
+    """GCS and CDN forms of the same image may both appear on agents vs resources.url."""
+    s = (url or "").strip()
+    if not s:
+        return []
+    norm = image_transform_service.normalize_image_url_for_storage(s)
+    keys: List[str] = []
+    if norm:
+        keys.append(norm)
+    if s not in keys:
+        keys.append(s)
+    return keys
+
+
+def _register_prompt_keys(out: dict[str, str], keys: List[str], prompt: str) -> None:
+    p = prompt.strip()
+    if not p:
+        return
+    for k in keys:
+        s = (k or "").strip()
+        if not s:
+            continue
+        out.setdefault(s, p)
+
+
+def _prompt_keys_from_resource_row(url: str, meta: dict) -> List[str]:
+    keys: List[str] = []
+    u = (url or "").strip()
+    if u:
+        keys.append(u)
+    gcs = meta.get("gcs_url")
+    if isinstance(gcs, str) and gcs.strip():
+        g = gcs.strip()
+        keys.append(g)
+        norm = image_transform_service.normalize_image_url_for_storage(g)
+        if norm and norm != g:
+            keys.append(norm)
+    return keys
+
+
+async def _resource_url_to_generation_prompt(
+    db: AsyncSession, urls: List[str]
+) -> dict[str, str]:
+    if not urls:
+        return {}
+    unique_keys: List[str] = []
+    seen: set[str] = set()
+    for u in urls:
+        for k in _image_url_resource_lookup_keys(u):
+            if k not in seen:
+                seen.add(k)
+                unique_keys.append(k)
+    gcs_for_metadata_match: List[str] = []
+    seen_gcs: set[str] = set()
+    for k in unique_keys:
+        if image_transform_service.is_gcs_url(k) and k not in seen_gcs:
+            seen_gcs.add(k)
+            gcs_for_metadata_match.append(k)
+        else:
+            norm = image_transform_service.normalize_image_url_for_storage(k)
+            if (
+                norm
+                and image_transform_service.is_gcs_url(norm)
+                and norm not in seen_gcs
+            ):
+                seen_gcs.add(norm)
+                gcs_for_metadata_match.append(norm)
+
+    out: dict[str, str] = {}
+    chunk_size = 400
+    for i in range(0, len(unique_keys), chunk_size):
+        chunk = unique_keys[i : i + chunk_size]
+        stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
+            models.Resource.url.in_(chunk),
+            models.Resource.type == ResourceType.IMAGE,
+        )
+        result = await db.execute(stmt)
+        for url, meta in result.all():
+            if not meta or not isinstance(meta, dict):
+                continue
+            gp = meta.get("generation_prompt")
+            if not isinstance(gp, str) or not gp.strip():
+                continue
+            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+
+    for i in range(0, len(gcs_for_metadata_match), chunk_size):
+        chunk = gcs_for_metadata_match[i : i + chunk_size]
+        stmt = select(models.Resource.url, models.Resource.resource_metadata).where(
+            models.Resource.type == ResourceType.IMAGE,
+            models.Resource.resource_metadata.op("->>")("gcs_url").in_(chunk),
+        )
+        result = await db.execute(stmt)
+        for url, meta in result.all():
+            if not meta or not isinstance(meta, dict):
+                continue
+            gp = meta.get("generation_prompt")
+            if not isinstance(gp, str) or not gp.strip():
+                continue
+            _register_prompt_keys(out, _prompt_keys_from_resource_row(url, meta), gp)
+
+    return out
+
+
+def _generation_prompt_for_url(url: str, prompt_by_resource_url: dict[str, str]) -> str:
+    for k in _image_url_resource_lookup_keys(url):
+        p = prompt_by_resource_url.get(k)
+        if p:
+            return p
+    return ""
+
+
+def _canonical_agent_image_url(url: str) -> str:
+    s = (url or "").strip()
+    if not s:
+        return ""
+    return image_transform_service.normalize_image_url_for_storage(s) or s
+
+
+async def _paginate_agents_by_text_image_match(
+    db: AsyncSession,
+    page: int,
+    page_size: int,
+    description_text: str,
+    top_n: int,
+) -> tuple[
+    List[models.Agent],
+    List[MatchedAgentImageItem],
+    int,
+    int,
+]:
+    query_norm = description_text.strip()
+    rows = await db.execute(
+        select(
+            models.Agent.id,
+            models.Agent.background,
+            models.Agent.photos,
+            models.Agent.background_images,
+            models.Agent.exclusive_photos,
+        )
+        .join(models.User, models.Agent.creator_id == models.User.id)
+        .where(
+            models.Agent.deleted_at.is_(None),
+            models.User.is_superuser == True,
+            models.Agent.visibility == AgentVisibility.PUBLIC,
+        )
+    )
+    pending: List[Tuple[str, str, Optional[str]]] = []
+    resource_urls: List[str] = []
+    pair_seen: set[tuple[str, str]] = set()
+    for (
+        agent_id,
+        background,
+        photos,
+        background_images,
+        exclusive_photos,
+    ) in rows.all():
+        if exclusive_photos and isinstance(exclusive_photos, list):
+            for item in exclusive_photos:
+                if not isinstance(item, dict):
+                    continue
+                raw_url = item.get("image_url")
+                if not raw_url or not isinstance(raw_url, str):
+                    continue
+                u = raw_url.strip()
+                if not u:
+                    continue
+                cap = item.get("caption")
+                explicit = (
+                    cap.strip()
+                    if isinstance(cap, str) and cap.strip()
+                    else None
+                )
+                resource_urls.append(u)
+                canon = _canonical_agent_image_url(u)
+                if not canon:
+                    continue
+                dedupe_key = (agent_id, canon)
+                if dedupe_key in pair_seen:
+                    continue
+                pair_seen.add(dedupe_key)
+                pending.append((agent_id, u, explicit))
+        for u in [background] if background else []:
+            u = str(u).strip()
+            if u:
+                canon = _canonical_agent_image_url(u)
+                if canon and (agent_id, canon) not in pair_seen:
+                    pair_seen.add((agent_id, canon))
+                    pending.append((agent_id, u, None))
+                resource_urls.append(u)
+        for u in _json_str_list(photos):
+            canon = _canonical_agent_image_url(u)
+            if canon and (agent_id, canon) not in pair_seen:
+                pair_seen.add((agent_id, canon))
+                pending.append((agent_id, u, None))
+            resource_urls.append(u)
+        for u in _json_str_list(background_images):
+            canon = _canonical_agent_image_url(u)
+            if canon and (agent_id, canon) not in pair_seen:
+                pair_seen.add((agent_id, canon))
+                pending.append((agent_id, u, None))
+            resource_urls.append(u)
+
+    prompt_by_url = await _resource_url_to_generation_prompt(db, resource_urls)
+
+    scored: List[Tuple[float, str, str, str]] = []
+    for agent_id, url, explicit_caption in pending:
+        if explicit_caption is not None:
+            text = explicit_caption
+        else:
+            text = _generation_prompt_for_url(url, prompt_by_url)
+        if not text:
+            continue
+        score = float(fuzz.token_set_ratio(query_norm, text))
+        scored.append((score, agent_id, url, text))
+
+    scored.sort(key=lambda t: (-t[0], t[2], t[1]))
+    capped = scored[:top_n]
+    total = len(capped)
+    skip = (page - 1) * page_size
+    page_slice = capped[skip : skip + page_size]
+
+    matched_items = [
+        MatchedAgentImageItem(
+            agent_id=agent_id,
+            image_url=image_transform_service.transform_mobile(url),
+            similarity_score=score,
+            image_description=text,
+        )
+        for score, agent_id, url, text in page_slice
+    ]
+
+    agent_ids_ordered: List[str] = []
+    seen_ids: set[str] = set()
+    for score, agent_id, url, text in page_slice:
+        if agent_id not in seen_ids:
+            seen_ids.add(agent_id)
+            agent_ids_ordered.append(agent_id)
+
+    if not agent_ids_ordered:
+        return [], matched_items, total, math.ceil(total / page_size) if total else 1
+
+    data_result = await db.execute(
+        _select_agents_with_sizes().where(models.Agent.id.in_(agent_ids_ordered))
+    )
+    row_by_id = {row[0].id: row for row in data_result.all()}
+    agents_list = []
+    for aid in agent_ids_ordered:
+        row = row_by_id.get(aid)
+        if row:
+            agents_list.append(_fill_agent_image_sizes(row[0], row[1], row[2]))
+
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    return agents_list, matched_items, total, total_pages
+
+
 async def get_balanced_score_based_agents(
     db: AsyncSession,
     page: int,
@@ -683,6 +949,8 @@ async def get_recommended_agents_paginated(
     page_size: int = 10,
     sort_by: Optional[AgentSortOption] = None,
     sort_seed: str = "",
+    match_description: Optional[str] = None,
+    match_top_n: int = 50,
 ) -> schemas.PaginationData[schemas.Agent]:
     """
     获取推荐的AI角色列表（分页版本）
@@ -699,6 +967,39 @@ async def get_recommended_agents_paginated(
         if page_size <= 0 or page_size > 100:
             raise HTTPException(
                 status_code=400, detail="Page size parameter must be between 1-100"
+            )
+
+        if sort_by == AgentSortOption.TEXT_MATCH_IMAGE_DESCRIPTION:
+            if not match_description or not str(match_description).strip():
+                raise HTTPException(
+                    status_code=400,
+                    detail="match_description is required when sort is text_match_image_description",
+                )
+            if match_top_n < 1 or match_top_n > 500:
+                raise HTTPException(
+                    status_code=400,
+                    detail="match_top_n must be between 1 and 500",
+                )
+            agents_list, matched_items, total, total_pages = (
+                await _paginate_agents_by_text_image_match(
+                    db,
+                    page,
+                    page_size,
+                    str(match_description),
+                    match_top_n,
+                )
+            )
+            for agent in agents_list:
+                agent.follower_count = 0
+                agent.is_followed = False
+                agent.user = current_user.nickname if current_user.nickname else "you"
+            return schemas.PaginationData[schemas.Agent](
+                list=agents_list,
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=total_pages,
+                matched_image_items=matched_items,
             )
 
         # 构建基础查询条件：只返回超级用户创建的公开角色，不返回私有角色

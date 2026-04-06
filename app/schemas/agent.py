@@ -55,6 +55,9 @@ class AgentSortOption(str, Enum):
     # 目的是增强用户与角色的情感链接，提升用户对角色的喜爱程度。因为他们的互动行为会获得能量点数，所以可以提升角色在排行榜中的排名。
     ENERGY_POINTS = "energy_points"
 
+    # Rank character images by fuzzy text similarity between client text and stored image descriptions
+    TEXT_MATCH_IMAGE_DESCRIPTION = "text_match_image_description"
+
 
 class AgentSortConfig(BaseModel):
     """Agent sorting config"""

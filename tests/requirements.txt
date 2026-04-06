@@ -1,5 +1,6 @@
 pytest
 pytest-asyncio
+rapidfuzz==3.11.0
 requests
 Pillow
 prometheus-client

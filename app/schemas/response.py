@@ -22,9 +22,29 @@ android_app/core/data/.../BusinessErrorCodes.kt 及 NetServiceMgr 保持一致�
 from enum import StrEnum
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 T = TypeVar("T")
+
+
+class MatchedAgentImageItem(BaseModel):
+    """One ranked image from text_match_image_description recommend sort."""
+
+    agent_id: str = Field(..., description="Agent that owns this image")
+    image_url: str = Field(
+        ...,
+        description="Image URL for clients (CDN proxy when Cloudflare is enabled, else original)",
+    )
+    similarity_score: float = Field(
+        ...,
+        ge=0.0,
+        le=100.0,
+        description="Fuzzy similarity score vs query text, higher is closer match",
+    )
+    image_description: Optional[str] = Field(
+        None,
+        description="Stored description: resource generation_prompt or exclusive caption",
+    )
 
 
 class PaginationData(BaseModel, Generic[T]):
@@ -35,6 +55,13 @@ class PaginationData(BaseModel, Generic[T]):
     page: int = 1  # 当前页码
     page_size: int = 10  # 每页数量
     total_pages: int = 0  # 总页数
+    matched_image_items: Optional[List[MatchedAgentImageItem]] = Field(
+        None,
+        description=(
+            "When sort=text_match_image_description: ranked image hits for this page; "
+            "`list` holds distinct agents referenced by these items in order of first appearance."
+        ),
+    )
 
 
 class PagedResponse(BaseModel, Generic[T]):

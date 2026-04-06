@@ -54,6 +54,16 @@ interface IAgentApi {
         @Query("sort") sort: String = "energy_points",
     ): HttpResult<AgentInfoResponse>
 
+    /** Text-to-image description match: sort by fuzzy similarity; optional match_description + match_top_n. */
+    @GET("api/v1/ai/agents/recommend")
+    suspend fun recommendAgentsByImageDescription(
+        @Query("page") page: Int,
+        @Query("page_size") pageSize: Int,
+        @Query("sort") sort: String = "text_match_image_description",
+        @Query("match_description") matchDescription: String,
+        @Query("match_top_n") matchTopN: Int,
+    ): HttpResult<AgentInfoResponse>
+
     @POST("/api/v1/ai/agents")
     suspend fun createAgent(@Body request: CreateAgentRequest): HttpResult<AgentInfo>
 

@@ -142,12 +142,21 @@ data class CreatorInfo(
 ) : Parcelable
 
 @JsonClass(generateAdapter = true)
+data class MatchedAgentImageItem(
+    @Json(name = "agent_id") val agentId: String = "",
+    @Json(name = "image_url") val imageUrl: String = "",
+    @Json(name = "similarity_score") val similarityScore: Double = 0.0,
+    @Json(name = "image_description") val imageDescription: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
 data class AgentInfoResponse(
     val list: List<AgentInfo>? = null,
     val total: Int = 0,
     val page: Int = 1,
     @Json(name = "page_size") val pageSize: Int = 10,
     @Json(name = "total_pages") val totalPages: Int = 1,
+    @Json(name = "matched_image_items") val matchedImageItems: List<MatchedAgentImageItem>? = null,
 )
 
 @JsonClass(generateAdapter = true)
