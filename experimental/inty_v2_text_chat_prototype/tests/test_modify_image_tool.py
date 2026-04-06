@@ -73,7 +73,7 @@ class TestModifyImageTool(unittest.TestCase):
                 return_value="https://example.com/uploaded-latest.png",
             ) as upload_mock:
                 with patch(
-                    "inty_v2_text_chat_prototype.fal_z_image_tool.z_image_turbo_image_to_image",
+                    "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_i2i_call",
                     new=_fake_z_image_turbo_image_to_image,
                 ):
                     out = execute_tool_call_blocking(
@@ -87,7 +87,7 @@ class TestModifyImageTool(unittest.TestCase):
                     )
             upload_mock.assert_called_once()
             called_path = upload_mock.call_args.args[0]
-            self.assertEqual(Path(called_path), new_path)
+            self.assertEqual(Path(called_path).resolve(), new_path.resolve())
             self.assertIn("modify_image: OK", out)
 
     def test_both_sources_errors(self) -> None:

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 from openai import APIError, BadRequestError
@@ -34,7 +35,9 @@ from .image_gate import prepare_image_gate_for_turn
 from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
+from .ai_private_store import get_text_for_prompt
 from .models import (
+    INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,
@@ -54,35 +57,29 @@ from .llm_trace import (
     summarize_messages,
 )
 from .fal_z_image_tool import _reset_fal_async_client_after_short_lived_loop
-from .heartbeat_schedule import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
+    build_openai_repl_tools_inner_tick,
     execute_tool_call,
     openai_assistant_message_dict,
     read_chat_output_format_prompt,
 )
-from .tool_background import start_tool_background_job
+from .tool_background import mark_tool_background_aborted, start_tool_background_job
 
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
 
-def _llm_route_for_turn(
-    *,
-    async_tool_bg: bool,
-    dual_llm: bool,
-    heartbeat_turn: bool,
-) -> str:
-    """
-    Resolved LLM routing label for logs (async background > dual parallel > heartbeat > single).
-    Matches the branching in run_turn._invoke_model / _run_turn_with_user_profile_tools.
-    """
-    if async_tool_bg and not heartbeat_turn:
+class ReplTurnSuperseded(Exception):
+    """REPL 用户在新输入下取消当前回合；不应落盘本条 user/assistant。"""
+
+
+def _llm_route_for_turn(*, async_tool_bg: bool, dual_llm: bool) -> str:
+    """Resolved LLM routing label for logs: async background, dual parallel, or single unified."""
+    if async_tool_bg:
         return "async_chat_tool_background"
-    if dual_llm and not heartbeat_turn:
+    if dual_llm:
         return "dual_parallel_chat_tool"
-    if heartbeat_turn:
-        return "heartbeat_single_llm"
     return "single_llm_unified"
 
 
@@ -268,14 +265,18 @@ def _build_turn_base_messages(
     context: ContextMeta,
     transcript: list[ChatMessage],
     user_text: str,
-    heartbeat_turn: bool,
+    repl_online_ack_turn: bool = False,
+    inner_tick_turn: bool = False,
+    ai_private_text: str = "",
 ) -> tuple[list[dict[str, Any]], str]:
     """Construct system+history+user messages and return (messages, user_msg_uuid)."""
     system = build_system_prompt(
         bundle,
         context,
         enable_user_profile_tool=True,
-        heartbeat_turn=heartbeat_turn,
+        inner_tick_turn=inner_tick_turn,
+        repl_online_ack_turn=repl_online_ack_turn,
+        ai_private_text=ai_private_text,
     )
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in transcript:
@@ -302,7 +303,8 @@ def _persist_turn_rows(
     ts_user: str,
     user_msg_uuid: str,
     assistant_reply_to: str,
-    heartbeat_turn: bool,
+    repl_online_ack: bool = False,
+    inner_tick_turn: bool = False,
     assistant_source: str = "chat",
     trace_id: str | None = None,
 ) -> str:
@@ -313,8 +315,10 @@ def _persist_turn_rows(
         "ts": ts_user,
         "uuid": user_msg_uuid,
     }
-    if heartbeat_turn:
-        user_row["heartbeat"] = True
+    if inner_tick_turn:
+        user_row["inner_tick"] = True
+    if repl_online_ack:
+        user_row["repl_online_ack"] = True
     if trace_id is not None and trace_id.strip():
         user_row["trace_id"] = trace_id
     append_jsonl_with_db(paths.transcript, user_row)
@@ -334,6 +338,13 @@ def _persist_turn_rows(
     return assistant_msg_uuid
 
 
+def _async_chat_front_timeout_sec() -> float:
+    raw = os.environ.get("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC")
+    if raw is None or not str(raw).strip():
+        return 600.0
+    return float(str(raw).strip())
+
+
 async def _run_turn_fast_chat_then_tool_background(
     messages: list[dict[str, Any]],
     root: Path,
@@ -344,6 +355,9 @@ async def _run_turn_fast_chat_then_tool_background(
     trace_id: str,
     bundle: PromptBundle,
     context: ContextMeta,
+    repl_online_ack_turn: bool = False,
+    supersede_check: Callable[[bool], None],
+    tool_bg_started_cell: list[bool],
 ) -> str:
     """
     Front path: return chat-branch text quickly.
@@ -369,7 +383,7 @@ async def _run_turn_fast_chat_then_tool_background(
         bundle,
         context,
         enable_user_profile_tool=True,
-        heartbeat_turn=False,
+        repl_online_ack_turn=repl_online_ack_turn,
         include_repl_image_generation_contract=True,
         tool_side_compact=True,
     )
@@ -378,12 +392,13 @@ async def _run_turn_fast_chat_then_tool_background(
         bundle,
         context,
         enable_user_profile_tool=True,
-        heartbeat_turn=False,
+        repl_online_ack_turn=repl_online_ack_turn,
         include_repl_image_generation_contract=False,
         chat_output_format_prompt=chat_output_format_prompt,
     )
     chat_payload = _openai_messages_payload(chat_messages)
     chat_log_messages = chat_messages
+    supersede_check(False)
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
     start_tool_background_job(
@@ -398,13 +413,31 @@ async def _run_turn_fast_chat_then_tool_background(
         execute_tool_call_fn=execute_tool_call,
         client=tool_client,
     )
-    chat_resp = await asyncio.to_thread(
-        _create_chat_completion_mirrored_tools_no_call,
-        chat_client,
-        model=chat_route_model,
-        messages_payload=chat_payload,
-        tools=tools,
-    )
+    tool_bg_started_cell[0] = True
+    timeout_s = _async_chat_front_timeout_sec()
+    try:
+        chat_resp = await asyncio.wait_for(
+            asyncio.to_thread(
+                _create_chat_completion_mirrored_tools_no_call,
+                chat_client,
+                model=chat_route_model,
+                messages_payload=chat_payload,
+                tools=tools,
+            ),
+            timeout=timeout_s,
+        )
+    except asyncio.TimeoutError as exc:
+        logger.error(
+            "repl.turn async_chat_tool_background chat_front timeout trace_id={} "
+            "timeout_sec={}",
+            trace_id,
+            timeout_s,
+        )
+        raise RuntimeError(
+            f"async chat front timed out after {timeout_s:.0f}s (trace_id={trace_id}); "
+            "increase INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC or retry"
+        ) from exc
+    supersede_check(True)
     _log_llm_round_result(
         round_idx=1,
         model=chat_route_model,
@@ -424,6 +457,7 @@ async def _run_turn_fast_chat_then_tool_background(
         chat_route_model,
         tool_route_model,
     )
+    supersede_check(True)
     return chat_text
 
 
@@ -432,10 +466,13 @@ async def _run_turn_with_user_profile_tools(
     root: Path,
     *,
     llm_trace: bool = True,
-    heartbeat_turn: bool = False,
+    inner_tick_turn: bool = False,
+    repl_online_ack_turn: bool = False,
+    ai_private_text: str = "",
     trace_id: str | None = None,
     bundle: PromptBundle | None = None,
     context: ContextMeta | None = None,
+    supersede_check: Callable[[bool], None],
 ) -> str:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
@@ -443,27 +480,24 @@ async def _run_turn_with_user_profile_tools(
     dual_enabled = dual_llm_enabled()
     chat_route_model = chat_model()
     tool_route_model = tool_model()
-    tools: list[Any] = [] if heartbeat_turn else build_openai_repl_tools()
+    tools: list[Any] = (
+        build_openai_repl_tools_inner_tick()
+        if inner_tick_turn
+        else build_openai_repl_tools()
+    )
     chat_output_format_prompt = read_chat_output_format_prompt(root)
-    if not heartbeat_turn and not tools:
-        raise RuntimeError("build_openai_repl_tools() returned empty list")
-    if heartbeat_turn and dual_enabled:
-        logger.info(
-            "repl.turn dual_llm env_on_but_ignored trace_id={} reason=heartbeat_turn",
-            trace_id,
-        )
+    if not tools:
+        raise RuntimeError("REPL tools list is empty")
     route = _llm_route_for_turn(
-        async_tool_bg=False,
-        dual_llm=dual_enabled,
-        heartbeat_turn=heartbeat_turn,
+        async_tool_bg=False, dual_llm=dual_enabled and not inner_tick_turn
     )
     logger.info(
         "repl.turn user_profile_tool_loop_enter trace_id={} llm_route={} "
-        "dual_llm={} heartbeat_turn={} chat_model={} tool_model={} default_model={}",
+        "dual_llm={} inner_tick_turn={} chat_model={} tool_model={} default_model={}",
         trace_id,
         route,
         dual_enabled,
-        heartbeat_turn,
+        inner_tick_turn,
         chat_route_model,
         tool_route_model,
         model,
@@ -471,7 +505,8 @@ async def _run_turn_with_user_profile_tools(
     last_text = ""
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
-        if dual_enabled and not heartbeat_turn:
+        supersede_check(False)
+        if dual_enabled and not inner_tick_turn:
             logger.info(
                 "repl.turn llm_round={} dual_llm_parallel trace_id={} chat_model={} tool_model={} "
                 "shared_context_msgs={}",
@@ -489,7 +524,9 @@ async def _run_turn_with_user_profile_tools(
                     bundle,
                     context,
                     enable_user_profile_tool=True,
-                    heartbeat_turn=heartbeat_turn,
+                    inner_tick_turn=inner_tick_turn,
+                    repl_online_ack_turn=repl_online_ack_turn,
+                    ai_private_text=ai_private_text,
                     include_repl_image_generation_contract=False,
                     chat_output_format_prompt=chat_output_format_prompt,
                 )
@@ -550,6 +587,7 @@ async def _run_turn_with_user_profile_tools(
                 if not tool_task.done():
                     tool_task.cancel()
                 raise
+            supersede_check(False)
             _log_llm_round_result(
                 round_idx=round_idx,
                 model=chat_route_model,
@@ -599,8 +637,7 @@ async def _run_turn_with_user_profile_tools(
                 break
         else:
             t_api = time.perf_counter()
-            # 带 tools 的同步单路：LangSmith 用 Tool 路名；陪伴心跳无 tools 仍用默认 ChatOpenAI。
-            single_llm_client = client if heartbeat_turn else get_client_dual_llm_tool()
+            single_llm_client = get_client_dual_llm_tool() if tools else client
             resp = create_chat_completion(
                 single_llm_client,
                 model=model,
@@ -626,6 +663,7 @@ async def _run_turn_with_user_profile_tools(
                 root=root,
                 trace_id=trace_id,
             )
+            supersede_check(False)
             tool_calls = getattr(msg, "tool_calls", None) or []
             messages.append(openai_assistant_message_dict(msg))
             if not tool_calls:
@@ -640,6 +678,7 @@ async def _run_turn_with_user_profile_tools(
             propose,
             ",".join((getattr(tc, "id", "") or "")[:12] for tc in tool_calls),
         )
+        supersede_check(False)
         for tc in tool_calls:
             fn = tc.function
             name = fn.name
@@ -684,7 +723,7 @@ async def _run_turn_with_user_profile_tools(
                     "content": result,
                 }
             )
-        if dual_enabled and not heartbeat_turn:
+        if dual_enabled and not inner_tick_turn:
             messages.append(chat_row)
     else:
         raise RuntimeError(
@@ -695,6 +734,7 @@ async def _run_turn_with_user_profile_tools(
         round_idx,
         (time.perf_counter() - t_loop) * 1000.0,
     )
+    supersede_check(False)
     return last_text
 
 
@@ -716,26 +756,39 @@ async def run_turn(
     workspace: Path,
     user_text: str,
     *,
-    heartbeat_turn: bool = False,
+    inner_tick_turn: bool = False,
+    repl_online_ack_turn: bool = False,
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
     llm_trace: bool = False,
+    repl_cancel_check: Callable[[], bool] | None = None,
+    repl_transcript_ids_out: dict[str, str] | None = None,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
-    heartbeat_turn=True：用户侧为系统合成的陪伴心跳提示，不跑记忆管线。"""
+    inner_tick_turn=True：内在节拍合成回合（transcript 标 inner_tick），不跑记忆管线；
+    API 挂载精简工具集（`workspace_init_tools.build_openai_repl_tools_inner_tick`：USER 档案与工作区读写），不走 async_chat_tool_background。
+    repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。
+    repl_transcript_ids_out：若传入非空 dict，成功落盘助手行后写入 user_msg_uuid / assistant_msg_uuid /
+    trace_id / assistant_source（`chat` 或 `inner_tick`，供 REPL 标注来源）。
+    repl_cancel_check：可选；返回 True 时协作式取消本回合（抛 ReplTurnSuperseded，不落盘），供 REPL stdin 泵「最新消息优先」。
+    以上合成回合均不调用 prepare_image_gate_for_turn（避免合成 user 文本误改图像门控状态）。"""
     t0 = time.perf_counter()
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
-    if heartbeat_turn:
-        user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
-    else:
+    if repl_online_ack_turn and inner_tick_turn:
+        raise ValueError("repl_online_ack_turn and inner_tick_turn cannot both be true")
+    if inner_tick_turn:
+        user_text = INNER_TICK_SYNTHETIC_USER_TEXT
+    elif not repl_online_ack_turn:
         prepare_image_gate_for_turn(root, user_text)
 
     logger.info(
-        "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={} llm_trace={}",
+        "run_turn start path={} user_chars={} inner_tick_turn={} "
+        "repl_online_ack_turn={} defer_memory={} llm_trace={}",
         root,
         len(user_text),
-        heartbeat_turn,
+        inner_tick_turn,
+        repl_online_ack_turn,
         defer_memory_update,
         llm_trace,
     )
@@ -751,11 +804,15 @@ async def run_turn(
         transcript = transcript_for_llm_turn(loaded)
         _debug_log_prompt_bundle(bundle, context=context)
 
+        ai_private_text = get_text_for_prompt(root) if inner_tick_turn else ""
+
         system = build_system_prompt(
             bundle,
             context,
             enable_user_profile_tool=True,
-            heartbeat_turn=heartbeat_turn,
+            inner_tick_turn=inner_tick_turn,
+            repl_online_ack_turn=repl_online_ack_turn,
+            ai_private_text=ai_private_text,
         )
         logger.debug(
             "run_turn system_prompt_chars={} sep_count={}",
@@ -777,7 +834,9 @@ async def run_turn(
             context=context,
             transcript=transcript,
             user_text=user_text,
-            heartbeat_turn=heartbeat_turn,
+            repl_online_ack_turn=repl_online_ack_turn,
+            inner_tick_turn=inner_tick_turn,
+            ai_private_text=ai_private_text,
         )
         turn_trace_id = _new_turn_trace_id()
 
@@ -795,6 +854,15 @@ async def run_turn(
         ts_user = utc_iso_ts()
         t_main = time.perf_counter()
 
+        tool_bg_started_cell = [False]
+
+        def supersede_check(mark_bg: bool) -> None:
+            if repl_cancel_check is None or not repl_cancel_check():
+                return
+            if mark_bg and tool_bg_started_cell[0]:
+                mark_tool_background_aborted(user_msg_uuid)
+            raise ReplTurnSuperseded()
+
         async def _prepare_turn(turn_input: TurnInput) -> TurnInput:
             return turn_input
 
@@ -802,24 +870,24 @@ async def run_turn(
             input_messages = message_snapshots_to_dicts(turn_input.history)
             async_bg = async_tool_background_enabled()
             dual_on = dual_llm_enabled()
+            use_async_fast = async_bg and not inner_tick_turn
             route = _llm_route_for_turn(
-                async_tool_bg=async_bg,
+                async_tool_bg=use_async_fast,
                 dual_llm=dual_on,
-                heartbeat_turn=heartbeat_turn,
             )
             logger.info(
-                "run_turn llm_route={} trace_id={} async_tool_bg={} dual_llm={} heartbeat_turn={} "
-                "chat_model={} tool_model={} default_model={}",
+                "run_turn llm_route={} trace_id={} async_tool_bg={} dual_llm={} "
+                "inner_tick_turn={} chat_model={} tool_model={} default_model={}",
                 route,
                 turn_trace_id,
                 async_bg,
                 dual_on,
-                heartbeat_turn,
+                inner_tick_turn,
                 chat_model(),
                 tool_model(),
                 default_model(),
             )
-            if async_bg and not heartbeat_turn:
+            if use_async_fast:
                 return await _run_turn_fast_chat_then_tool_background(
                     input_messages,
                     root,
@@ -829,18 +897,25 @@ async def run_turn(
                     trace_id=turn_trace_id,
                     bundle=bundle,
                     context=context,
+                    repl_online_ack_turn=repl_online_ack_turn,
+                    supersede_check=supersede_check,
+                    tool_bg_started_cell=tool_bg_started_cell,
                 )
             return await _run_turn_with_user_profile_tools(
                 input_messages,
                 root,
                 llm_trace=llm_trace,
-                heartbeat_turn=heartbeat_turn,
+                inner_tick_turn=inner_tick_turn,
+                repl_online_ack_turn=repl_online_ack_turn,
+                ai_private_text=ai_private_text,
                 trace_id=turn_trace_id,
                 bundle=bundle,
                 context=context,
+                supersede_check=supersede_check,
             )
 
         async def _handle_response(_: TurnInput, assistant_text: str) -> TurnOutput:
+            supersede_check(True)
             return TurnOutput(
                 assistant_text=assistant_text,
                 metadata={
@@ -855,8 +930,10 @@ async def run_turn(
             turn_input: TurnInput,
             turn_output: TurnOutput,
         ) -> dict[str, Any]:
+            supersede_check(True)
             nonlocal persist_transcript_ms
             t_persist_inner = time.perf_counter()
+            assistant_src = "inner_tick" if inner_tick_turn else "chat"
             assistant_msg_uuid = _persist_turn_rows(
                 paths,
                 user_text=turn_input.user_text,
@@ -864,8 +941,9 @@ async def run_turn(
                 ts_user=ts_user,
                 user_msg_uuid=user_msg_uuid,
                 assistant_reply_to=user_msg_uuid,
-                heartbeat_turn=heartbeat_turn,
-                assistant_source="chat",
+                repl_online_ack=repl_online_ack_turn,
+                inner_tick_turn=inner_tick_turn,
+                assistant_source=assistant_src,
                 trace_id=turn_trace_id,
             )
             persist_transcript_ms = (time.perf_counter() - t_persist_inner) * 1000.0
@@ -878,7 +956,7 @@ async def run_turn(
                 history=messages,
                 metadata={
                     "llm_trace": llm_trace,
-                    "heartbeat_turn": heartbeat_turn,
+                    "inner_tick_turn": inner_tick_turn,
                     "trace_id": turn_trace_id,
                 },
             ),
@@ -903,9 +981,15 @@ async def run_turn(
             persist_transcript_ms,
         )
 
-        if heartbeat_turn:
+        if inner_tick_turn:
             logger.debug(
-                "run_turn memory_pipeline=skipped (heartbeat_turn) user_uuid={} assistant_uuid={}",
+                "run_turn memory_pipeline=skipped (inner_tick_turn) user_uuid={} assistant_uuid={}",
+                user_msg_uuid,
+                assistant_msg_uuid,
+            )
+        elif repl_online_ack_turn:
+            logger.debug(
+                "run_turn memory_pipeline=skipped (repl_online_ack_turn) user_uuid={} assistant_uuid={}",
                 user_msg_uuid,
                 assistant_msg_uuid,
             )
@@ -943,6 +1027,14 @@ async def run_turn(
             "run_turn assistant_preview={}",
             _preview_for_debug(assistant_text, max_len=400),
         )
+        if repl_transcript_ids_out is not None:
+            repl_transcript_ids_out.clear()
+            repl_transcript_ids_out["user_msg_uuid"] = user_msg_uuid
+            repl_transcript_ids_out["assistant_msg_uuid"] = assistant_msg_uuid
+            repl_transcript_ids_out["trace_id"] = turn_trace_id
+            repl_transcript_ids_out["assistant_source"] = (
+                "inner_tick" if inner_tick_turn else "chat"
+            )
         return assistant_text
     finally:
         await _reset_fal_async_client_after_short_lived_loop()

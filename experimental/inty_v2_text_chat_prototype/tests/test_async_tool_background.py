@@ -197,7 +197,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )
@@ -272,7 +271,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "帮我生成一张图",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )
@@ -297,7 +295,7 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertIn("tool-final-image-r2", rows[2].content)
             self.assertIn("/tmp/z_image_1.jpeg", rows[2].content)
 
-    def test_no_tool_calls_does_not_append_background_transcript(self) -> None:
+    def test_no_tool_calls_skips_queue_no_tool_bg_transcript_row(self) -> None:
         fake_completions = _FakeCompletionsNoToolCalls()
         fake_client = SimpleNamespace(
             chat=SimpleNamespace(completions=fake_completions)
@@ -335,14 +333,13 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )
                 self.assertEqual(out, "chat-fast-r1")
                 time.sleep(0.1)
                 events = pop_output_events_nowait(workspace=root)
-                self.assertEqual(events, [])
+                self.assertEqual(len(events), 0)
                 chat_calls = [
                     c for c in fake_completions.calls if c["model"] == "chat-fast"
                 ]
@@ -396,7 +393,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        heartbeat_turn=False,
                         llm_trace=False,
                     )
                 )

@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from .memory_store import MemoryStore
     from .workspace import WorkspacePaths
 
+PresenceSignal = Literal["repl_online", "repl_offline"]
+
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system"]
@@ -25,6 +27,9 @@ class ChatMessage(BaseModel):
     trace_id: str | None = None
     reply_to: str | None = None
     heartbeat: bool | None = None
+    presence: PresenceSignal | None = None
+    repl_online_ack: bool | None = None
+    inner_tick: bool | None = None
     source: str | None = None
 
 

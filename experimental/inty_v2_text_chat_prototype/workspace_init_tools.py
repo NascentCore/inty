@@ -846,6 +846,34 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
     return out
 
 
+_INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
+    "user_profile_record",
+    "workspace_list_dir",
+    "workspace_read_file",
+    "workspace_write_file",
+)
+
+
+def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
+    """
+    内在节拍：仅 USER 档案与工作区读写，不含定时、联网、生图/改图、chat 输出格式工具。
+    """
+    full = build_openai_repl_tools()
+    want = set(_INNER_TICK_REPL_TOOL_NAMES)
+    picked = [
+        t
+        for t in full
+        if t.get("type") == "function" and t.get("function", {}).get("name") in want
+    ]
+    by_name = {t["function"]["name"]: t for t in picked}
+    missing = want - set(by_name)
+    if missing:
+        raise RuntimeError(
+            f"build_openai_repl_tools_inner_tick: missing tool defs {sorted(missing)}"
+        )
+    return [by_name[n] for n in _INNER_TICK_REPL_TOOL_NAMES]
+
+
 def _repl_write_allowed(
     root: Path, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:

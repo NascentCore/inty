@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import queue
 import select
 import sys
 import threading
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Callable
+from typing import Annotated, Callable, Mapping
 
 from cyclopts import App, Parameter
 from loguru import logger
@@ -42,11 +44,13 @@ from experimental.inty_v2_text_chat_prototype.proto_log import (
     resolve_proto_log_file,
 )
 
-from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
-    HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
-    next_heartbeat_wait_seconds,
+from experimental.inty_v2_text_chat_prototype.inner_tick_schedule import (
+    REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
+    inner_tick_enabled_from_env,
+    next_inner_tick_wait_seconds,
 )
 from experimental.inty_v2_text_chat_prototype.orchestrator import (
+    ReplTurnSuperseded,
     is_workspace_initialized,
     needs_startup_profile_inquiry,
     run_turn,
@@ -68,12 +72,26 @@ from experimental.inty_v2_text_chat_prototype.memory_store_registry import (
     shutdown_memory_store,
 )
 from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
+    append_jsonl_with_db,
     flush_jsonl_db_store,
     shutdown_jsonl_db_store,
 )
+from experimental.inty_v2_text_chat_prototype.models import (
+    PresenceSignal,
+    REPL_ONLINE_ACK_USER_TEXT,
+    REPL_PRESENCE_USER_TEXT_OFFLINE,
+    REPL_PRESENCE_USER_TEXT_ONLINE,
+    undo_trailing_repl_online_presence_line,
+)
+from experimental.inty_v2_text_chat_prototype.paths import WorkspacePaths
+from experimental.inty_v2_text_chat_prototype.utc import utc_iso_ts
 from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
+
+# No inner tick / no schedule due: short poll so the loop can print async tool_bg output
+# without blocking on readline indefinitely.
+_REPL_IDLE_POLL_SEC = 0.1
 
 
 def _default_workspace() -> Path:
@@ -85,31 +103,62 @@ def _local_ts_str() -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + dt.strftime(" %z")
 
 
-def _print_assistant_reply(out: str, elapsed_s: float) -> None:
+def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
+    u = ids.get("user_msg_uuid", "")
+    a = ids.get("assistant_msg_uuid", "")
+    tr = ids.get("trace_id", "")
+    if not u and not a and not tr:
+        return ""
+    return f" user={u} asst={a} trace={tr}"
+
+
+def _repl_assistant_banner_label(ids: Mapping[str, str] | None) -> str:
+    if not ids:
+        return "AI-chat"
+    raw = ids.get("assistant_source", "chat")
+    if raw == "inner_tick":
+        return "inner-tick"
+    return "AI-chat"
+
+
+def _print_repl_user_input(text: str) -> None:
+    print(f"[{_local_ts_str()}] user-input")
+    print(text)
+
+
+def _print_assistant_reply(
+    out: str,
+    elapsed_s: float,
+    *,
+    transcript_ids: Mapping[str, str] | None = None,
+    repl_source_label: str | None = None,
+) -> None:
     ms = elapsed_s * 1000
-    print(f"[{_local_ts_str()}] {ms:.0f}ms")
+    suffix = (
+        _repl_transcript_id_suffix(transcript_ids)
+        if transcript_ids
+        else ""
+    )
+    label = repl_source_label or _repl_assistant_banner_label(transcript_ids)
+    print(f"[{_local_ts_str()}] {label} {ms:.0f}ms{suffix}")
     print(out)
 
 
 def _drain_async_tool_events(ws: Path) -> None:
+    """Flush tool_bg 队列到 stdout。勿在「用户可能正在未按回车的行内编辑」期间调用，否则会打乱 TTY 与 CJK 回显。"""
     events = pop_output_events_nowait(workspace=ws)
     for ev in events:
         print(
-            f"[{_local_ts_str()}] async-tool {ev.elapsed_ms}ms "
+            f"[{_local_ts_str()}] AI-toolcall {ev.elapsed_ms}ms "
             f"(user={ev.user_msg_uuid[:8]} asst={ev.assistant_msg_uuid[:8]})"
         )
         print(ev.text)
-        print("> ", end="", flush=True)
-
-
-def _drain_async_tool_events_in_waiting_loop(ws: Path) -> None:
-    _drain_async_tool_events(ws)
 
 
 def _process_due_schedule_events(
     ws: Path,
     *,
-    run_turn_sync: Callable[[str], str],
+    run_turn_sync: Callable[[str], tuple[str, dict[str, str]]],
 ) -> None:
     events = pop_due_task_events_nowait(workspace=ws)
     for ev in events:
@@ -119,7 +168,7 @@ def _process_due_schedule_events(
         )
         t0 = time.perf_counter()
         try:
-            out = run_turn_sync(synthetic_user)
+            out, ids = run_turn_sync(synthetic_user)
         except Exception as exc:
             mark_task_retry(ws, ev.task_id, str(exc))
             logger.exception(
@@ -130,18 +179,29 @@ def _process_due_schedule_events(
             )
             continue
         mark_task_fired(ws, ev.task_id)
+        id_suffix = _repl_transcript_id_suffix(ids)
         print(
-            f"[{_local_ts_str()}] schedule-task {int((time.perf_counter() - t0) * 1000)}ms "
-            f"(task={ev.task_id[:8]})"
+            f"[{_local_ts_str()}] AI-chat {int((time.perf_counter() - t0) * 1000)}ms "
+            f"(schedule-task task={ev.task_id[:8]}){id_suffix}"
         )
         print(out)
+        _drain_async_tool_events(ws)
         print("> ", end="", flush=True)
 
 
-def _next_idle_wait_seconds(*, ws: Path, heartbeat: bool) -> float:
+def _next_idle_wait_seconds(
+    *,
+    ws: Path,
+    inner_tick: bool,
+    last_inner_fire_mono: float | None,
+) -> float:
     waits: list[float] = []
-    if heartbeat:
-        waits.append(next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat))
+    if inner_tick:
+        waits.append(
+            next_inner_tick_wait_seconds(
+                ws, last_inner_fire_monotonic=last_inner_fire_mono
+            )
+        )
     due_wait = next_due_wait_seconds(ws)
     if due_wait is not None:
         waits.append(due_wait)
@@ -152,6 +212,25 @@ def _next_idle_wait_seconds(*, ws: Path, heartbeat: bool) -> float:
 
 def _next_due_wait_seconds_only(ws: Path) -> float | None:
     return next_due_wait_seconds(ws)
+
+
+def _append_repl_presence_transcript(ws: Path, kind: PresenceSignal) -> None:
+    paths = WorkspacePaths(root=ws.resolve())
+    content = (
+        REPL_PRESENCE_USER_TEXT_ONLINE
+        if kind == "repl_online"
+        else REPL_PRESENCE_USER_TEXT_OFFLINE
+    )
+    append_jsonl_with_db(
+        paths.transcript,
+        {
+            "role": "user",
+            "content": content,
+            "ts": utc_iso_ts(),
+            "uuid": str(uuid.uuid4()),
+            "presence": kind,
+        },
+    )
 
 
 def _init_proto_logging(
@@ -170,6 +249,36 @@ def _init_proto_logging(
     )
 
 
+_REPL_INNER_TICK_ENV_KEYS = (
+    "INTY_V2_PROTO_INNER_TICK_ENABLED",
+    "INTY_V2_PROTO_INNER_TICK_SEC",
+    "INTY_V2_PROTO_INNER_TICK_MIN_GAP_SEC",
+    "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
+    "INTY_V2_PROTO_AI_PRIVATE_MAX_CHARS",
+)
+
+
+def _log_repl_inner_tick_env(ws: Path) -> None:
+    """REPL 启动后写入日志，便于对照 `.env` 与进程内 `os.environ`（dotenv 在 main 导入时已加载）。"""
+    pairs = " ".join(f"{k}={os.environ.get(k)!r}" for k in _REPL_INNER_TICK_ENV_KEYS)
+    logger.info(
+        "repl startup inner_tick env cwd={} workspace={} {}",
+        os.getcwd(),
+        ws.resolve(),
+        pairs,
+    )
+    tick_on = inner_tick_enabled_from_env()
+    wait_s = next_inner_tick_wait_seconds(
+        ws, last_inner_fire_monotonic=time.monotonic()
+    )
+    logger.info(
+        "repl startup inner_tick effective enabled={} next_inner_tick_wait_sec={:.1f} "
+        "(transcript before this session repl_online/online_ack)",
+        tick_on,
+        wait_s,
+    )
+
+
 def _configure_llm_trace_for_workspace(root: Path) -> None:
     """Append-only JSONL：每轮 chat.completions 请求/响应摘要，固定 `<workspace>/llm_trace.jsonl`。"""
     configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
@@ -177,6 +286,18 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
 
 def _print_openrouter_invalid_json_retry_hint() -> None:
     print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+
+
+def _undo_repl_online_presence_after_failed_ack(ws: Path) -> None:
+    paths = WorkspacePaths(root=ws.resolve())
+    if undo_trailing_repl_online_presence_line(paths.transcript):
+        logger.debug(
+            "repl online-ack failed: removed trailing repl_online presence line"
+        )
+
+
+def _print_repl_online_ack_failure_hint(exc: BaseException) -> None:
+    print(f"[{_local_ts_str()}] REPL 上线问候失败: {exc}")
 
 
 def _flush_and_shutdown_memory_store(root: Path) -> None:
@@ -196,11 +317,31 @@ def _use_posix_stdin_pump() -> bool:
         return False
 
 
-def _readline_main_sync() -> str | None:
+def _repl_stdin_read_line_after_select() -> str | None:
+    """
+    在 `select` 报告 stdin 可读之后读一行。
+
+    - TTY：优先 `import readline` 后用 `input()`，由 libedit/GNU readline 做行编辑，避免仅靠内核
+      规范模式时在 Cursor 等终端里 CJK 退格与屏幕不同步。
+    - 返回 `None` 表示 EOF；`""` 表示用户提交了空行（仅换行）。
+    """
     try:
-        raw = sys.stdin.readline()
-    except KeyboardInterrupt:
-        return None
+        is_tty = sys.stdin.isatty()
+    except (OSError, ValueError):
+        is_tty = False
+    if is_tty:
+        try:
+            import readline  # noqa: F401
+        except ImportError:
+            raw = sys.stdin.readline()
+            if raw == "":
+                return None
+            return raw.rstrip("\r\n")
+        try:
+            return input()
+        except EOFError:
+            return None
+    raw = sys.stdin.readline()
     if raw == "":
         return None
     return raw.rstrip("\r\n")
@@ -209,14 +350,14 @@ def _readline_main_sync() -> str | None:
 def _repl_drain_user_turns(
     first_line: str,
     *,
-    run_turn_sync: Callable[[str], str],
+    run_turn_sync: Callable[[str], tuple[str, dict[str, str]]],
     pending: queue.Queue[tuple[str, bool] | None],
     ws: Path,
     first_line_already_echoed: bool = False,
 ) -> bool:
     """
     跑一轮 user turn，然后连续消费 `pending` 里在本轮之前/期间积压的行（均得到助手回复），
-    再回到「等 stdin / 心跳」。若返回 False，REPL 应退出。
+    再回到「等 stdin / 空闲（含内在节拍）」。若返回 False，REPL 应退出。
 
     `tuple[str, bool]` 为 (文本, 是否已在 stdin 泵阶段打印过时间戳与 `> `)；为 True 时不再重复打印，
     以免长耗时 turn（如生图）期间用户已输入的行看起来「卡住无回显」。
@@ -227,10 +368,11 @@ def _repl_drain_user_turns(
         if cur.strip() in ("quit", "exit", "q"):
             return False
         if not cur.strip():
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
         else:
             if not cur_echoed:
-                print(f"[{_local_ts_str()}] {cur}")
+                _print_repl_user_input(cur)
                 logger.debug(
                     "repl interactive_turn line_chars={} preview={}",
                     len(cur),
@@ -239,12 +381,13 @@ def _repl_drain_user_turns(
                 print("> ", end="", flush=True)
             t0 = time.perf_counter()
             try:
-                out = run_turn_sync(cur)
+                out, ids = run_turn_sync(cur)
             except OpenRouterInvalidJsonError as exc:
                 logger.warning(
                     "repl turn recovered from invalid OpenRouter JSON: {}", exc
                 )
                 _print_openrouter_invalid_json_retry_hint()
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 try:
                     item = pending.get_nowait()
@@ -255,7 +398,11 @@ def _repl_drain_user_turns(
                     return False
                 cur, cur_echoed = item
                 continue
-            _print_assistant_reply(out, time.perf_counter() - t0)
+            _print_assistant_reply(
+                out,
+                time.perf_counter() - t0,
+                transcript_ids=ids or None,
+            )
             _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
 
@@ -277,12 +424,13 @@ def _posix_run_user_turn_and_drain_queue(
     debug_print_system: bool,
     first_line_already_echoed: bool = False,
 ) -> bool:
-    def _sync(cur: str) -> str:
+    def _sync(cur: str) -> tuple[str, dict[str, str]]:
         return _run_turn_with_stdin_pump(
             ws,
             pending,
             user_text=cur,
-            heartbeat_turn=False,
+            inner_tick_turn=False,
+            repl_online_ack_turn=False,
             debug_print_system=debug_print_system,
         )
 
@@ -303,10 +451,20 @@ def _daemon_run_user_turn_and_drain_queue(
     debug_print_system: bool,
     first_line_already_echoed: bool = False,
 ) -> bool:
-    def _sync(cur: str) -> str:
-        return asyncio.run(
-            run_turn(ws, cur, debug_print_system=debug_print_system, llm_trace=True)
+    def _sync(cur: str) -> tuple[str, dict[str, str]]:
+        ids_out: dict[str, str] = {}
+        out = asyncio.run(
+            run_turn(
+                ws,
+                cur,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+                repl_transcript_ids_out=ids_out,
+            )
         )
+        return out, ids_out
 
     return _repl_drain_user_turns(
         first_line,
@@ -317,12 +475,12 @@ def _daemon_run_user_turn_and_drain_queue(
     )
 
 
-def _consume_pending_after_heartbeat(
+def _consume_pending_after_inner_tick(
     pending: queue.Queue[tuple[str, bool] | None],
     *,
     drain_user_lines: Callable[[str, bool], bool],
 ) -> bool:
-    """心跳回合结束后：若队列里已有用户行则继续回复。返回 False 表示应结束 REPL。"""
+    """内在节拍回合结束后：若队列里已有用户行则继续回复。返回 False 表示应结束 REPL。"""
     try:
         more = pending.get_nowait()
     except queue.Empty:
@@ -342,88 +500,122 @@ def _run_turn_with_stdin_pump(
     pending: queue.Queue[tuple[str, bool] | None],
     *,
     user_text: str,
-    heartbeat_turn: bool,
+    inner_tick_turn: bool,
+    repl_online_ack_turn: bool = False,
     debug_print_system: bool,
-) -> str:
+) -> tuple[str, dict[str, str]]:
     """
-    `run_turn` 在工作线程里跑；主线程用 select+readline 把后续行写入 `pending`，
-    供本轮结束后的循环消费（FIFO）。
+    `run_turn` 在工作线程里跑；主线程 select+readline。进行中时若用户又输入**非空行**，
+    则协作式取消当前回合（不落盘），仅以**最后一条**非空输入重跑；空行仍入 `pending` FIFO。
     """
-    done = threading.Event()
-    result: dict[str, str] = {}
-    exc: list[BaseException] = []
+    cur_user = user_text
+    cur_inner = inner_tick_turn
+    cur_ack = repl_online_ack_turn
 
-    def worker() -> None:
-        try:
-            result["out"] = asyncio.run(
-                run_turn(
-                    ws,
-                    user_text,
-                    heartbeat_turn=heartbeat_turn,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
+    while True:
+        if cur_user.strip() in ("quit", "exit", "q"):
+            pending.put((cur_user.strip(), True))
+            return "", {}
+
+        supersede_event = threading.Event()
+        replace_slot: list[str | None] = [None]
+        done = threading.Event()
+        result: dict[str, object] = {}
+        exc: list[BaseException] = []
+        ids_out: dict[str, str] = {}
+
+        def repl_cancel_check() -> bool:
+            return supersede_event.is_set()
+
+        def worker() -> None:
+            try:
+                result["out"] = asyncio.run(
+                    run_turn(
+                        ws,
+                        cur_user,
+                        inner_tick_turn=cur_inner,
+                        repl_online_ack_turn=cur_ack,
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                        repl_cancel_check=repl_cancel_check,
+                        repl_transcript_ids_out=ids_out,
+                    )
                 )
-            )
-        except BaseException as e:
-            exc.append(e)
-        finally:
-            done.set()
+                result["superseded"] = False
+            except ReplTurnSuperseded:
+                result["superseded"] = True
+            except BaseException as e:
+                exc.append(e)
+            finally:
+                done.set()
 
-    t = threading.Thread(
-        target=worker,
-        name="inty-v2-run-turn",
-        daemon=True,
-    )
-    t.start()
-    stdin_fd = sys.stdin.fileno()
-    # Do not print (async tool output, etc.) while the user may be mid-line in the TTY
-    # line discipline: interleaved stdout corrupts the screen vs kernel buffer, so
-    # backspace appears to "not delete" earlier characters. Only flush async events
-    # after a full line is read from stdin, or after the worker finishes.
-    while not done.is_set():
-        r, _, _ = select.select([stdin_fd], [], [], 0.1)
-        if not r:
+        t = threading.Thread(
+            target=worker,
+            name="inty-v2-run-turn",
+            daemon=True,
+        )
+        t.start()
+        stdin_fd = sys.stdin.fileno()
+        while not done.is_set():
+            r, _, _ = select.select([stdin_fd], [], [], 0.1)
+            if not r:
+                continue
+            line_in = _repl_stdin_read_line_after_select()
+            _drain_async_tool_events(ws)
+            if line_in is None:
+                pending.put(None)
+            else:
+                text = line_in
+                if text.strip():
+                    _print_repl_user_input(text)
+                    logger.debug(
+                        "repl stdin_pump supersede line_chars={} preview={}",
+                        len(text),
+                        _preview_line(text),
+                    )
+                    print("> ", end="", flush=True)
+                    replace_slot[0] = text
+                    supersede_event.set()
+                else:
+                    print("> ", end="", flush=True)
+                    pending.put((text, True))
+        t.join(timeout=3600.0)
+        if exc:
+            raise exc[0]
+        _drain_async_tool_events(ws)
+        if result.get("superseded"):
+            latest = replace_slot[0]
+            if latest is not None and latest.strip():
+                cur_user = latest
+                cur_inner = False
+                cur_ack = False
             continue
-        raw = sys.stdin.readline()
-        _drain_async_tool_events_in_waiting_loop(ws)
-        if raw == "":
-            pending.put(None)
-        else:
-            text = raw.rstrip("\r\n")
-            print(f"[{_local_ts_str()}] {text}")
-            logger.debug(
-                "repl stdin_pump queued line_chars={} preview={}",
-                len(text),
-                _preview_line(text),
-            )
-            print("> ", end="", flush=True)
-            pending.put((text, True))
-    t.join(timeout=3600.0)
-    _drain_async_tool_events_in_waiting_loop(ws)
-    if exc:
-        raise exc[0]
-    return result["out"]
+        return str(result["out"]), dict(ids_out)
 
 
 def _repl_interactive_loop_posix(
     ws: Path,
     *,
     debug_print_system: bool,
-    heartbeat: bool,
+    inner_tick: bool,
 ) -> None:
     pending: queue.Queue[tuple[str, bool] | None] = queue.Queue()
     stdin_fd = sys.stdin.fileno()
+    last_inner_fire_mono: float | None = (
+        time.monotonic() if inner_tick else None
+    )
+    _drain_async_tool_events(ws)
     print("> ", end="", flush=True)
 
     while True:
-        _drain_async_tool_events_in_waiting_loop(ws)
         _process_due_schedule_events(
             ws,
             run_turn_sync=lambda text: _run_turn_with_stdin_pump(
                 ws,
                 pending,
                 user_text=text,
-                heartbeat_turn=False,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
                 debug_print_system=debug_print_system,
             ),
         )
@@ -437,6 +629,7 @@ def _repl_interactive_loop_posix(
                 break
             line, echoed = item
             if not line.strip():
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 continue
             if not _posix_run_user_turn_and_drain_queue(
@@ -449,54 +642,94 @@ def _repl_interactive_loop_posix(
                 break
             continue
 
-        if heartbeat:
-            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
+        line: str
+        got_line = False
+
+        if inner_tick:
+            wait = _next_idle_wait_seconds(
+                ws=ws,
+                inner_tick=True,
+                last_inner_fire_mono=last_inner_fire_mono,
+            )
             if wait <= 0.0:
-                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
-                if hb_wait > 0.0:
-                    # Due schedule event should run first; do not force a heartbeat turn.
-                    continue
-                logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
-                t0 = time.perf_counter()
-                out = _run_turn_with_stdin_pump(
-                    ws,
-                    pending,
-                    user_text="",
-                    heartbeat_turn=True,
-                    debug_print_system=debug_print_system,
-                )
-                _print_assistant_reply(out, time.perf_counter() - t0)
-                print("> ", end="", flush=True)
-                if not _consume_pending_after_heartbeat(
-                    pending,
-                    drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
+                r0, _, _ = select.select([stdin_fd], [], [], 0.0)
+                if r0:
+                    try:
+                        line = _repl_stdin_read_line_after_select()
+                    except KeyboardInterrupt:
+                        print()
+                        break
+                    if line is None:
+                        print()
+                        break
+                    got_line = True
+                else:
+                    tick_remain = next_inner_tick_wait_seconds(
+                        ws, last_inner_fire_monotonic=last_inner_fire_mono
+                    )
+                    if tick_remain > 0.0:
+                        continue
+                    logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
+                    t0 = time.perf_counter()
+                    out, ids = _run_turn_with_stdin_pump(
                         ws,
                         pending,
-                        m,
+                        user_text="",
+                        inner_tick_turn=True,
+                        repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
-                        first_line_already_echoed=ev,
-                    ),
-                ):
+                    )
+                    last_inner_fire_mono = time.monotonic()
+                    _print_assistant_reply(
+                        out,
+                        time.perf_counter() - t0,
+                        transcript_ids=ids or None,
+                    )
+                    _drain_async_tool_events(ws)
+                    print("> ", end="", flush=True)
+                    if not _consume_pending_after_inner_tick(
+                        pending,
+                        drain_user_lines=lambda m, ev: _posix_run_user_turn_and_drain_queue(
+                            ws,
+                            pending,
+                            m,
+                            debug_print_system=debug_print_system,
+                            first_line_already_echoed=ev,
+                        ),
+                    ):
+                        break
+                    continue
+            else:
+                sleep_s = clamp_sleep_seconds(
+                    wait,
+                    min_seconds=0.05,
+                    max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
+                )
+                r, _, _ = select.select([stdin_fd], [], [], sleep_s)
+                if not r:
+                    continue
+                try:
+                    line = _repl_stdin_read_line_after_select()
+                except KeyboardInterrupt:
+                    print()
                     break
-                continue
-
-            sleep_s = clamp_sleep_seconds(
-                wait,
-                min_seconds=0.05,
-                max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
-            )
-            r, _, _ = select.select([stdin_fd], [], [], sleep_s)
-            if not r:
-                continue
-            raw = sys.stdin.readline()
-            if raw == "":
-                print()
-                break
-            line = raw.rstrip("\r\n")
+                if line is None:
+                    print()
+                    break
+                got_line = True
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
-                line = _readline_main_sync()
+                r, _, _ = select.select(
+                    [stdin_fd], [], [], _REPL_IDLE_POLL_SEC
+                )
+                if not r:
+                    continue
+                try:
+                    line = _repl_stdin_read_line_after_select()
+                except KeyboardInterrupt:
+                    print()
+                    break
                 if line is None:
                     print()
                     break
@@ -504,20 +737,28 @@ def _repl_interactive_loop_posix(
                 sleep_s = clamp_sleep_seconds(
                     due_wait,
                     min_seconds=0.05,
-                    max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                    max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
                 )
                 r, _, _ = select.select([stdin_fd], [], [], sleep_s)
                 if not r:
                     continue
-                raw = sys.stdin.readline()
-                if raw == "":
+                try:
+                    line = _repl_stdin_read_line_after_select()
+                except KeyboardInterrupt:
                     print()
                     break
-                line = raw.rstrip("\r\n")
+                if line is None:
+                    print()
+                    break
+            got_line = True
+
+        if not got_line:
+            continue
 
         if line.strip() in ("quit", "exit", "q"):
             break
         if not line.strip():
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
             continue
         if not _posix_run_user_turn_and_drain_queue(
@@ -534,26 +775,34 @@ def _repl_interactive_loop_daemon(
     ws: Path,
     *,
     debug_print_system: bool,
-    heartbeat: bool,
+    inner_tick: bool,
 ) -> None:
     """Windows / 非 TTY：沿用守护线程读 stdin（无法在主线程 select）。"""
     line_queue, _ = spawn_stdin_line_reader()
+    last_inner_fire_mono: float | None = (
+        time.monotonic() if inner_tick else None
+    )
+
+    def _schedule_run_turn(text: str) -> tuple[str, dict[str, str]]:
+        ids_out: dict[str, str] = {}
+        out = asyncio.run(
+            run_turn(
+                ws,
+                text,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
+                debug_print_system=debug_print_system,
+                llm_trace=True,
+                repl_transcript_ids_out=ids_out,
+            )
+        )
+        return out, ids_out
+
+    _drain_async_tool_events(ws)
     print("> ", end="", flush=True)
 
     while True:
-        _drain_async_tool_events_in_waiting_loop(ws)
-        _process_due_schedule_events(
-            ws,
-            run_turn_sync=lambda text: asyncio.run(
-                run_turn(
-                    ws,
-                    text,
-                    heartbeat_turn=False,
-                    debug_print_system=debug_print_system,
-                    llm_trace=True,
-                )
-            ),
-        )
+        _process_due_schedule_events(ws, run_turn_sync=_schedule_run_turn)
         try:
             item = line_queue.get_nowait()
         except queue.Empty:
@@ -564,6 +813,7 @@ def _repl_interactive_loop_daemon(
                 break
             line, echoed = item
             if not line.strip():
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
                 continue
             if not _daemon_run_user_turn_and_drain_queue(
@@ -576,27 +826,42 @@ def _repl_interactive_loop_daemon(
                 break
             continue
 
-        if heartbeat:
-            wait = _next_idle_wait_seconds(ws=ws, heartbeat=heartbeat)
+        if inner_tick:
+            wait = _next_idle_wait_seconds(
+                ws=ws,
+                inner_tick=True,
+                last_inner_fire_mono=last_inner_fire_mono,
+            )
             if wait <= 0.0:
-                hb_wait = next_heartbeat_wait_seconds(ws, heartbeat_enabled=heartbeat)
-                if hb_wait > 0.0:
+                tick_remain = next_inner_tick_wait_seconds(
+                    ws, last_inner_fire_monotonic=last_inner_fire_mono
+                )
+                if tick_remain > 0.0:
                     continue
-                logger.debug("repl heartbeat branch=fire wait_s={:.1f}", wait)
+                logger.debug("repl inner_tick branch=fire wait_s={:.1f}", wait)
                 t0 = time.perf_counter()
                 print("> ", end="", flush=True)
+                ids_tick: dict[str, str] = {}
                 out = asyncio.run(
                     run_turn(
                         ws,
                         "",
-                        heartbeat_turn=True,
+                        inner_tick_turn=True,
+                        repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
+                        repl_transcript_ids_out=ids_tick,
                     )
                 )
-                _print_assistant_reply(out, time.perf_counter() - t0)
+                last_inner_fire_mono = time.monotonic()
+                _print_assistant_reply(
+                    out,
+                    time.perf_counter() - t0,
+                    transcript_ids=ids_tick or None,
+                )
+                _drain_async_tool_events(ws)
                 print("> ", end="", flush=True)
-                if not _consume_pending_after_heartbeat(
+                if not _consume_pending_after_inner_tick(
                     line_queue,
                     drain_user_lines=lambda m, ev: _daemon_run_user_turn_and_drain_queue(
                         ws,
@@ -612,7 +877,7 @@ def _repl_interactive_loop_daemon(
             sleep_s = clamp_sleep_seconds(
                 wait,
                 min_seconds=0.05,
-                max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
             )
             try:
                 item = line_queue.get(timeout=sleep_s)
@@ -621,12 +886,15 @@ def _repl_interactive_loop_daemon(
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
-                item = line_queue.get()
+                try:
+                    item = line_queue.get(timeout=_REPL_IDLE_POLL_SEC)
+                except queue.Empty:
+                    continue
             else:
                 sleep_s = clamp_sleep_seconds(
                     due_wait,
                     min_seconds=0.05,
-                    max_seconds=HEARTBEAT_MAX_SLEEP_CHUNK_SEC,
+                    max_seconds=REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
                 )
                 try:
                     item = line_queue.get(timeout=sleep_s)
@@ -640,6 +908,7 @@ def _repl_interactive_loop_daemon(
         if line.strip() in ("quit", "exit", "q"):
             break
         if not line.strip():
+            _drain_async_tool_events(ws)
             print("> ", end="", flush=True)
             continue
         if not _daemon_run_user_turn_and_drain_queue(
@@ -652,28 +921,11 @@ def _repl_interactive_loop_daemon(
             break
 
 
-def _repl_heartbeat_enabled(
-    *,
-    cli_enable: bool,
-    cli_disable: bool,
-) -> bool:
-    """`--no-repl-heartbeat` 优先；否则 `--repl-heartbeat`；否则读 INTY_V2_PROTO_HEARTBEAT。"""
-    from experimental.inty_v2_text_chat_prototype.heartbeat_schedule import (
-        heartbeat_enabled_from_env,
-    )
-
-    if cli_disable:
-        return False
-    if cli_enable:
-        return True
-    return heartbeat_enabled_from_env()
-
-
 def _repl_interactive_loop(
     ws: Path,
     *,
     debug_print_system: bool,
-    heartbeat: bool,
+    inner_tick: bool,
 ) -> None:
     """
     长耗时 turn（如生图）期间仍可读入下一行：在 TTY + POSIX 上由主线程 select+readline 泵入队列，
@@ -681,11 +933,11 @@ def _repl_interactive_loop(
     """
     if _use_posix_stdin_pump():
         _repl_interactive_loop_posix(
-            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
+            ws, debug_print_system=debug_print_system, inner_tick=inner_tick
         )
     else:
         _repl_interactive_loop_daemon(
-            ws, debug_print_system=debug_print_system, heartbeat=heartbeat
+            ws, debug_print_system=debug_print_system, inner_tick=inner_tick
         )
 
 
@@ -843,26 +1095,13 @@ def repl(
         bool,
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
-    repl_heartbeat: Annotated[
-        bool,
-        Parameter(
-            name="--repl-heartbeat",
-            help="启用空闲陪伴心跳（按 transcript 节奏主动一轮；可配合 INTY_V2_PROTO_HEARTBEAT）",
-        ),
-    ] = False,
-    no_repl_heartbeat: Annotated[
-        bool,
-        Parameter(
-            name="--no-repl-heartbeat",
-            help="显式关闭空闲心跳（覆盖环境变量）",
-        ),
-    ] = False,
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
     ws = workspace or _default_workspace()
     try:
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
+        _log_repl_inner_tick_env(ws)
         start_schedule_scheduler(ws)
         logger.debug("cli repl start ws={}", ws.resolve())
         if not is_workspace_initialized(ws):
@@ -890,12 +1129,16 @@ def repl(
             )
             t0 = time.perf_counter()
             try:
+                _ids_prof: dict[str, str] = {}
                 out = asyncio.run(
                     run_turn(
                         ws,
                         _repl_startup_profile_inquiry_user_message(),
+                        inner_tick_turn=False,
+                        repl_online_ack_turn=False,
                         debug_print_system=debug_print_system,
                         llm_trace=True,
+                        repl_transcript_ids_out=_ids_prof,
                     )
                 )
             except OpenRouterInvalidJsonError as exc:
@@ -905,15 +1148,60 @@ def repl(
                 )
                 _print_openrouter_invalid_json_retry_hint()
                 return
-            _print_assistant_reply(out, time.perf_counter() - t0)
+            _print_assistant_reply(
+                out,
+                time.perf_counter() - t0,
+                transcript_ids=_ids_prof or None,
+            )
         else:
             logger.debug("repl startup branch=interactive (ready for user input)")
-        hb = _repl_heartbeat_enabled(
-            cli_enable=repl_heartbeat,
-            cli_disable=no_repl_heartbeat,
-        )
-        logger.debug("repl interactive heartbeat_enabled={}", hb)
-        _repl_interactive_loop(ws, debug_print_system=debug_print_system, heartbeat=hb)
+        tick_on = inner_tick_enabled_from_env()
+        logger.debug("repl interactive inner_tick_enabled={}", tick_on)
+        repl_presence_tracked = False
+        if is_workspace_initialized(ws):
+            _append_repl_presence_transcript(ws, "repl_online")
+            repl_presence_tracked = True
+            try:
+                t0_ack = time.perf_counter()
+                _ids_ack: dict[str, str] = {}
+                out_ack = asyncio.run(
+                    run_turn(
+                        ws,
+                        REPL_ONLINE_ACK_USER_TEXT,
+                        inner_tick_turn=False,
+                        repl_online_ack_turn=True,
+                        debug_print_system=debug_print_system,
+                        llm_trace=True,
+                        repl_transcript_ids_out=_ids_ack,
+                    )
+                )
+                _print_assistant_reply(
+                    out_ack,
+                    time.perf_counter() - t0_ack,
+                    transcript_ids=_ids_ack or None,
+                )
+            except OpenRouterInvalidJsonError as exc:
+                logger.warning(
+                    "repl online-ack turn recovered from invalid OpenRouter JSON: {}",
+                    exc,
+                )
+                _print_openrouter_invalid_json_retry_hint()
+                _undo_repl_online_presence_after_failed_ack(ws)
+                repl_presence_tracked = False
+                return
+            except Exception as exc:
+                logger.error("repl online-ack turn failed: {}", exc)
+                _print_repl_online_ack_failure_hint(exc)
+                _undo_repl_online_presence_after_failed_ack(ws)
+                repl_presence_tracked = False
+                return
+        try:
+            _repl_interactive_loop(
+                ws, debug_print_system=debug_print_system, inner_tick=tick_on
+            )
+        finally:
+            if repl_presence_tracked:
+                _append_repl_presence_transcript(ws, "repl_offline")
     finally:
         stop_schedule_scheduler(ws)
         _flush_and_shutdown_memory_store(ws.resolve())
@@ -954,16 +1242,24 @@ def once(
             _preview_line(message, max_len=240),
         )
         t0 = time.perf_counter()
+        _ids_once: dict[str, str] = {}
         out = asyncio.run(
             run_turn(
                 ws,
                 message,
+                inner_tick_turn=False,
+                repl_online_ack_turn=False,
                 debug_print_system=debug_print_system,
                 defer_memory_update=False,
                 llm_trace=True,
+                repl_transcript_ids_out=_ids_once,
             )
         )
-        _print_assistant_reply(out, time.perf_counter() - t0)
+        _print_assistant_reply(
+            out,
+            time.perf_counter() - t0,
+            transcript_ids=_ids_once or None,
+        )
     finally:
         _flush_and_shutdown_memory_store(ws.resolve())
 
