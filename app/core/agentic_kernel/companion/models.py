@@ -139,10 +139,7 @@ def load_context_meta(path: Path) -> ContextMeta:
     return ContextMeta.model_validate(raw)
 
 
-def load_transcript(path: Path) -> list[ChatMessage]:
-    if not path.is_file():
-        return []
-    text = read_text(path)
+def load_transcript_text(text: str) -> list[ChatMessage]:
     out: list[ChatMessage] = []
     for line in text.splitlines():
         line = line.strip()
@@ -166,6 +163,19 @@ def load_transcript(path: Path) -> list[ChatMessage]:
             )
             continue
     return out
+
+
+def load_transcript(path: Path) -> list[ChatMessage]:
+    if not path.is_file():
+        return []
+    return load_transcript_text(read_text(path))
+
+
+def load_transcript_from_store(store: MemoryStore, relative_path: str) -> list[ChatMessage]:
+    body = store.read_document_if_exists(relative_path)
+    if body is None:
+        return []
+    return load_transcript_text(body)
 
 
 # 近期对话窗口

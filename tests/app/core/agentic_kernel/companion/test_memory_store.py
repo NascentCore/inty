@@ -37,6 +37,34 @@ def test_memory_store_read_if_exists_none(tmp_path: Path) -> None:
     assert store.read_document_if_exists("nope.md") is None
 
 
+def test_memory_store_append_jsonl_record(tmp_path: Path) -> None:
+    store = MemoryStore(
+        workspace_root=tmp_path,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    store.append_jsonl_record("transcript.jsonl", {"role": "user", "content": "a"})
+    store.append_jsonl_record("transcript.jsonl", {"role": "assistant", "content": "b"})
+    body = store.read_document("transcript.jsonl")
+    lines = [ln for ln in body.splitlines() if ln.strip()]
+    assert len(lines) == 2
+
+
+def test_memory_store_production_no_mirror_no_fallback_no_disk_files(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        workspace_root=tmp_path,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    store.write_document("SOUL.md", "# soul\n")
+    assert not (tmp_path / "SOUL.md").is_file()
+    assert store.read_document("SOUL.md") == "# soul\n"
+
+
 def test_memory_store_append_line(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,

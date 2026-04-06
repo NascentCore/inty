@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from loguru import logger
 
-if TYPE_CHECKING:
-    from .memory_store import MemoryStore
+from .memory_store import MemoryStore
 
 
 @dataclass(frozen=True)
@@ -95,10 +93,22 @@ def _required_workspace_file_paths(paths: WorkspacePaths) -> tuple[Path, ...]:
 
 
 def is_workspace_initialized(workspace: Path) -> bool:
-    """五件套存在则认为已初始化。"""
+    """五件套存在则认为已初始化（磁盘；原型 REPL）。"""
     paths = WorkspacePaths(root=workspace.resolve())
     for p in _required_workspace_file_paths(paths):
         if not p.is_file():
+            return False
+    return True
+
+
+def is_workspace_initialized_from_store(workspace: Path, store: MemoryStore) -> bool:
+    """五件套在 MemoryStore 中有内容则认为已初始化（生产：DB + 进程内，不依赖磁盘）。"""
+    root = workspace.resolve()
+    paths = WorkspacePaths(root=root)
+    for attr in _REQUIRED_FILES_ATTR:
+        rel = getattr(paths, attr).relative_to(root).as_posix()
+        body = store.read_document_if_exists(rel)
+        if body is None or not body.strip():
             return False
     return True
 
@@ -133,14 +143,14 @@ def needs_startup_profile_inquiry(
     已初始化、且 transcript 仍为空时：若 IDENTITY 或 USER 仍像占位/未约定，
     则启动时应由助手先开口发问。
     """
-    from .models import load_transcript
+    from .models import load_transcript_from_store
 
     root = workspace.resolve()
-    if not is_workspace_initialized(root):
+    if not is_workspace_initialized_from_store(root, store):
         return False
     paths = WorkspacePaths(root=root)
-    # transcript 非空则不需要
-    for m in load_transcript(paths.transcript):
+    rel_tr = paths.transcript.relative_to(root).as_posix()
+    for m in load_transcript_from_store(store, rel_tr):
         if m.role in ("user", "assistant"):
             return False
     ident = store.read_document_if_exists("IDENTITY.md") or ""

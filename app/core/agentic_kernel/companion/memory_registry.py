@@ -17,6 +17,7 @@ def get_memory_store(
     dsn: str = "",
     table_name: str = "companion_memory_doc_versions",
     mirror_to_files: bool = True,
+    allow_workspace_disk_fallback: bool = True,
 ) -> MemoryStore:
     root = workspace_root.resolve()
     key = str(root)
@@ -35,6 +36,7 @@ def get_memory_store(
             workspace_root=root,
             repository=repository,
             mirror_to_files=mirror_to_files,
+            allow_workspace_disk_fallback=allow_workspace_disk_fallback,
         )
         _MEMORY_STORES[key] = store
         return store
