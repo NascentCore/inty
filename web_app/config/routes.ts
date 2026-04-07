@@ -40,11 +40,6 @@ export default [
     wrappers: ['@/layouts/DefaultLayout'],
   },
   {
-    path: '/vertex-gemini-pricing',
-    component: './VertexGeminiPricing',
-    wrappers: ['@/layouts/DefaultLayout'],
-  },
-  {
     path: '/*',
     component: './NotFound',
   },

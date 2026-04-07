@@ -1,0 +1,13 @@
+{
+  "name": "vertex-gemini-pricing",
+  "private": true,
+  "description": "Static Vertex AI Gemini token pricing estimator (USD)",
+  "scripts": {
+    "build": "esbuild src/app.ts --bundle --outfile=dist/app.js --target=es2020",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2",
+    "typescript": "~5.6.3"
+  }
+}
