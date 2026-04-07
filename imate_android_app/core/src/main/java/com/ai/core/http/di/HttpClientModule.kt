@@ -13,7 +13,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object KtorHttpClientSingleton {
-    private const val BASE_URL = "https://app.inty.cc"
+    private const val BASE_URL = "https://dev.ops.inty.cc/"
 
     @Volatile
     private var bearerTokenProvider: () -> String? = { null }

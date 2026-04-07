@@ -14,4 +14,16 @@
 
     <string name="login_terms_url" translatable="false">https://policies.google.com/terms</string>
     <string name="login_privacy_url" translatable="false">https://policies.google.com/privacy</string>
+    <string name="continue_with_email">Continue with Email</string>
+
+    <string name="enter_email">Email</string>
+    <string name="enter_email_placeholder">Enter your Email</string>
+    <string name="enter_password_placeholder">Enter password</string>
+    <string name="login_with_email_password">Login with Email + Password</string>
+    <string name="continue_button">Continue</string>
+    <string name="login_button">Login</string>
+    <string name="invalid_email_format">Invalid Email</string>
+    <string name="content_desc_back">Back</string>
+    <string name="content_desc_show_password">Show password</string>
+    <string name="content_desc_hide_password">Hide password</string>
 </resources>
