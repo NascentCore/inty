@@ -1,3 +1,17 @@
 <resources>
-    <string name="app_name">imate</string>
+    <string name="app_name">iMate</string>
+
+    <string name="login_logo_content_description">iMate logo</string>
+    <string name="login_app_name">iMate</string>
+    <string name="login_tagline">Your AI, your way</string>
+    <string name="login_info_prefix">Meet your personalized AI companion — built around </string>
+    <string name="login_info_highlight">you</string>
+    <string name="login_info_suffix">, growing with every conversation. \u2728</string>
+    <string name="login_continue_google">Continue with Google</string>
+    <string name="login_terms">Terms of Use</string>
+    <string name="login_privacy">Privacy Policy</string>
+    <string name="login_disclaimer">By continuing, you agree to our terms</string>
+
+    <string name="login_terms_url" translatable="false">https://policies.google.com/terms</string>
+    <string name="login_privacy_url" translatable="false">https://policies.google.com/privacy</string>
 </resources>
