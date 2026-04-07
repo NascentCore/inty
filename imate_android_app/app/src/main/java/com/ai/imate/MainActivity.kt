@@ -3,18 +3,18 @@ package com.ai.imate
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import com.ai.core.data.exceptions.GlobalErrorHandler
 import com.ai.core.ui.theme.IMateTheme
-import com.ai.imate.auth.GoogleSignInHelper
-import com.ai.imate.ui.login.LoginScreen
-import kotlinx.coroutines.launch
+import com.ai.core.utils.ToastUtils
+import kotlinx.coroutines.flow.filterNotNull
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,27 +22,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             IMateTheme {
-                val scope = rememberCoroutineScope()
-                var isSigningIn by remember { mutableStateOf(false) }
-                LoginScreen(
-                    isSigningIn = isSigningIn,
-                    onContinueWithGoogle = {
-                        scope.launch {
-                            isSigningIn = true
-                            try {
-                                GoogleSignInHelper.signInWithGoogle(this@MainActivity)
-                            } finally {
-                                isSigningIn = false
-                            }
+            }
+
+            LaunchedEffect(Unit) {
+                GlobalErrorHandler.error
+                    .filterNotNull()
+                    .collect {
+                        val message = it.message
+                        if (!message.isNullOrEmpty()) {
+                            ToastUtils.showShort(message)
                         }
-                    },
-                    onTermsClick = {
-                        openUrl(getString(R.string.login_terms_url))
-                    },
-                    onPrivacyClick = {
-                        openUrl(getString(R.string.login_privacy_url))
-                    },
-                )
+                    }
             }
         }
     }

@@ -2,6 +2,8 @@ package com.ai.intellimate.login
 
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.GENDER
+import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.IntyUserProfileSDK
@@ -27,6 +29,7 @@ class RegInfoViewModel : BaseVM() {
     }
 
     fun onSave(gender: GENDER, age: String) {
+        ToastUtils
         launchBackground {
             val info = UserProfileManager.profile.first()
             // 调用接口，需要让服务端存储游客的性别和年龄数据

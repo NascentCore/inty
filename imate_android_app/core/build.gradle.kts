@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -35,6 +37,16 @@ dependencies {
     implementation(libs.material)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+
+    implementation(platform(libs.ktor.bom))
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.androidx.startup.runtime)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
