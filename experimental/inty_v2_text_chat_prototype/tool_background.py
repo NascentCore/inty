@@ -58,6 +58,8 @@ def clear_tool_background_abort_flag(user_msg_uuid: str) -> None:
 
 class BackgroundToolLoopAborted(Exception):
     """User superseded REPL turn; exit background tool loop without transcript side effects."""
+
+
 # Fal `generate_image` / `modify_image` tool summaries include `local_path=/abs/path/...`.
 _LOCAL_PATH_IN_TOOL = re.compile(r"local_path=(\S+)")
 # When the last user message matches, first background completion uses tool_choice=required
@@ -494,7 +496,9 @@ async def _run_background_tool_loop(
 
         assistant_text = _assistant_text_from_completion_response(loop_result.response)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
-        display_text = _append_local_image_paths_for_display(assistant_text, image_paths)
+        display_text = _append_local_image_paths_for_display(
+            assistant_text, image_paths
+        )
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
         tool_call_names = _extract_tool_call_names(loop_result.messages)
         include_text_reply = any(

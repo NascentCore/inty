@@ -67,7 +67,9 @@ router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
 
 def _chat_ws_idle_timeout_seconds() -> float:
-    return float(global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds)
+    return float(
+        global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
+    )
 
 
 async def _get_current_user_from_websocket(
@@ -96,9 +98,7 @@ async def _handle_subscription_limit_error(
 ) -> schemas.APIResponse:
     """处理订阅限制错误"""
     try:
-        meta = (
-            {"localId": client_local_id} if client_local_id else None
-        )
+        meta = {"localId": client_local_id} if client_local_id else None
         await chat_history_service.add_user_message_async(
             session_id, last_user_message, meta_data=meta
         )
@@ -467,8 +467,8 @@ async def agent_chat_completions(
             user_time_context = None
 
         effective_local_id = (
-            (request.local_id or request.message_id or "").strip() or None
-        )
+            request.local_id or request.message_id or ""
+        ).strip() or None
 
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
