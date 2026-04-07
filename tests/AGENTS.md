@@ -29,6 +29,8 @@
   pytest -m "not noci" -v -s tests/
   ```
 
+- Chat WebSocket against **real dev LLM** (optional): set `INTY_CHAT_WS_REAL_TEST=1`, server must use `devops/config.yaml.dev` (`app.environment: dev`). See [tests/docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md](docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md).
+
 ## 新功能 / API+客户端联调时的防遗漏
 
 以下适用于「后端 API 与客户端（如 Android）共同参与」的新功能，用于减少契约不一致、漏测、静默失败等问题。
