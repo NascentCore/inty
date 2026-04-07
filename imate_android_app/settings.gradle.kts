@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "imate"
 include(":app")
- 
+include(":core")
