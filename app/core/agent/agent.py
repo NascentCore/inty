@@ -1440,6 +1440,7 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
+        client_local_message_id: Optional[str] = None,
     ) -> Tuple[str | List[Dict[str, Any]], Optional[int]]:
         """
         优化版同步聊天方法，接受预计算的参数
@@ -1492,7 +1493,15 @@ class Agent:
 
                 # 保存原始用户消息到历史记录
                 save_msg_start = time.time()
-                history.add_messages(messages)
+                if client_local_message_id:
+                    user_payload = messages[-1].content
+                    chat_history_service.add_user_message(
+                        session_id,
+                        user_payload,
+                        meta_data={"localId": client_local_message_id},
+                    )
+                else:
+                    history.add_messages(messages)
                 save_msg_time = time.time() - save_msg_start
                 logger.debug(
                     f"用户消息保存耗时: {save_msg_time:.3f}秒 - Agent: {self.agent_id}"
@@ -2024,6 +2033,7 @@ class Agent:
         user_time_context: Optional[UserTimeContext] = None,
         model_override: Optional[str] = None,
         is_subscribed: bool = False,
+        client_local_message_id: Optional[str] = None,
     ) -> Tuple[str | List[Dict[str, Any]], Optional[int]]:
         """封装了一个 sync 版本的聊天函数，通过将其运行在 event loop executor 里。
         成功时返回 (响应内容, 插入的 AI 消息 ID)；响应内容可能是文本或 OpenAI content parts。
@@ -2052,6 +2062,7 @@ class Agent:
                 user_time_context,
                 model_override,
                 is_subscribed,
+                client_local_message_id,
             )
             return result
         except Exception as e:

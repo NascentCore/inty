@@ -87,10 +87,16 @@ async def _handle_subscription_limit_error(
     current_user: schemas.User,
     used_count: int,
     daily_limit: int,
+    client_local_id: Optional[str] = None,
 ) -> schemas.APIResponse:
     """处理订阅限制错误"""
     try:
-        await chat_history_service.add_user_message_async(session_id, last_user_message)
+        meta = (
+            {"localId": client_local_id} if client_local_id else None
+        )
+        await chat_history_service.add_user_message_async(
+            session_id, last_user_message, meta_data=meta
+        )
         logger.debug(f"用户消息已保存到历史记录: {session_id}")
     except Exception as e:
         logger.warning(f"保存用户消息失败: {str(e)}")
@@ -455,6 +461,10 @@ async def agent_chat_completions(
         if user_time_context == {}:
             user_time_context = None
 
+        effective_local_id = (
+            (request.local_id or request.message_id or "").strip() or None
+        )
+
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
             agent_data = await agent_service.get_agent_for_chat(
@@ -477,7 +487,12 @@ async def agent_chat_completions(
 
         if not is_allowed:
             return await _handle_subscription_limit_error(
-                session_id, last_user_message, current_user, used_count, daily_limit
+                session_id,
+                last_user_message,
+                current_user,
+                used_count,
+                daily_limit,
+                client_local_id=effective_local_id,
             )
 
         # 获取聊天设置和AI回复
@@ -506,6 +521,7 @@ async def agent_chat_completions(
                     user_time_context=user_time_context,
                     model_override=model_override,
                     is_subscribed=is_subscribed,
+                    client_local_message_id=effective_local_id,
                 )
                 response_content, ai_message_id = (
                     (chat_result[0], chat_result[1])

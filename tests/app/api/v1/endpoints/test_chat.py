@@ -1,6 +1,7 @@
 """Integration tests for chat endpoints using the custom TestClient."""
 
 import json
+import uuid
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
@@ -120,6 +121,58 @@ def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):
         "add_user_message",
         fake_add_user_message,
     )
+
+
+def _stub_chat_completion_dependencies_capture_user_save(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list:
+    """Same as _stub_chat_completion_dependencies but records add_user_message calls."""
+    calls: list = []
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id="chat-1", agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    class DummyAgent:
+        async def chat(self, *args, **kwargs):  # pragma: no cover - not reached
+            return "ok"
+
+    async def fake_get_agent(agent_data):
+        return DummyAgent()
+
+    async def fake_check_chat_limit(db, user):
+        return False, 5, 5
+
+    def fake_add_user_message(session_id, message, meta_data=None):
+        calls.append(
+            {"session_id": session_id, "message": message, "meta_data": meta_data}
+        )
+        return None
+
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_user_message",
+        fake_add_user_message,
+    )
+    return calls
 
 
 def _stub_success_chat_completion_with_premium_preview(
@@ -262,6 +315,9 @@ def _stub_success_chat_completion_with_multimodal(
     class DummyAgent:
         async def chat(self, *args, **kwargs):
             captured["messages"] = kwargs.get("messages")
+            captured["client_local_message_id"] = kwargs.get(
+                "client_local_message_id"
+            )
             return ("multimodal response", 301)
 
     async def fake_get_agent(agent_data):
@@ -510,6 +566,25 @@ def _stub_generate_chat_music_success(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(chat_service, "generate_chat_music", fake_generate_chat_music)
 
 
+def test_v1_chat_completions_guest_saves_local_id_meta_on_limit(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    calls = _stub_chat_completion_dependencies_capture_user_save(monkeypatch)
+    user = _make_user(auth_type=AuthType.GUEST)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "zh",
+        "localId": "guest-limit-local-1",
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert calls[0]["meta_data"] == {"localId": "guest-limit-local-1"}
+
+
 def test_v1_chat_completions_guest_requires_login(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -646,6 +721,62 @@ def test_v1_chat_completions_accepts_multimodal_user_content(
     assert sent_content[0]["text"] == "Please describe this picture."
     assert sent_content[1]["type"] == "image_url"
     assert sent_content[1]["image_url"]["url"] == "https://cdn.example.com/test.jpg"
+
+
+def test_v1_chat_completions_forwards_local_id_to_agent(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured = _stub_success_chat_completion_with_multimodal(monkeypatch)
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+        "localId": "temp-client-1",
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+    assert response.status_code == 200
+    assert response.json()["code"] == 200
+    assert captured.get("client_local_message_id") == "temp-client-1"
+
+
+def test_v1_chat_completions_message_id_fallback_when_local_id_absent(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured = _stub_success_chat_completion_with_multimodal(monkeypatch)
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+        "message_id": "legacy-msg-id-9",
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+    assert response.status_code == 200
+    assert captured.get("client_local_message_id") == "legacy-msg-id-9"
+
+
+def test_v1_chat_completions_local_id_preferred_over_message_id(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured = _stub_success_chat_completion_with_multimodal(monkeypatch)
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": "hello"}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "en",
+        "localId": "preferred",
+        "message_id": "ignored",
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+    assert response.status_code == 200
+    assert captured.get("client_local_message_id") == "preferred"
 
 
 def test_v1_chat_completions_returns_source_imate_id_when_target_imate_id_sent(
@@ -968,6 +1099,36 @@ def test_agent_chat_completions_with_sdk(
         assert "action_type" in action and "message" in action, (
             f"Each business_actions item must have action_type and message: {action}"
         )
+
+
+@pytest.mark.noci
+def test_chat_completions_local_id_surfaces_in_messages_list(
+    integration_client: TestClient, agent_ids_to_cleanup
+):
+    lid = f"e2e-local-{uuid.uuid4().hex[:12]}"
+    agent_id = integration_client.create_agent(
+        name="LocalId E2E Agent",
+        gender="MALE",
+        visibility="PUBLIC",
+    )
+    agent_ids_to_cleanup.append(agent_id)
+    integration_client.chat_completions(
+        agent_id,
+        [{"role": "user", "content": "local id e2e ping"}],
+        local_id=lid,
+    )
+    data = integration_client.get_agent_chat_messages(
+        agent_id, limit=20, offset=0, include_festival_memory=False
+    )
+    msgs = data.get("messages") or []
+    matches = [
+        m
+        for m in msgs
+        if m.get("role") == "user"
+        and m.get("local_id") == lid
+        and (m.get("meta_data") or {}).get("localId") == lid
+    ]
+    assert len(matches) >= 1
 
 
 def test_festival_memory_delivered_via_chat_completions(

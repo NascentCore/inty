@@ -407,6 +407,11 @@ class ChatCompletionRequest(BaseModel):
     message_id: Optional[str] = (
         None  # Android 端生成的消息唯一标识；前后端用该 ID 确认该信息，ID 由生成方产生。
     )
+    local_id: Optional[str] = Field(
+        default=None,
+        alias="localId",
+        description="Client-generated id for optimistic UI; stored in chat_history.meta_data",
+    )
     target_imate_id: Optional[str] = None
 
     @model_validator(mode="after")

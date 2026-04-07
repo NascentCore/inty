@@ -82,6 +82,7 @@
 > - 示例：
 >   - 文本：`{"role":"user","content":"hello"}`
 >   - 图文：`{"role":"user","content":[{"type":"text","text":"describe this"},{"type":"image_url","image_url":{"url":"https://..."}}]}`
+> - **客户端本地消息 ID（乐观 UI 对齐）**：请求体可选 `localId`（camelCase，与 Pydantic `local_id` 对应）；若未传则回退使用已有可选字段 `message_id`。服务端将值写入该条用户消息的 `chat_history.meta_data.localId`。**GET** `/api/v1/chats/agents/{agent_id}/messages` 返回的用户消息中，除 `meta_data.localId` 外，另提供顶层 `local_id`（snake_case）便于解析。
 
 > **`/api/v1/chat/ws/verify`**：仅用于验证 WebSocket 对话效果；协议与 `/api/v1/chat/ws` 一致，但**不写入 chat_history**（不落库）。
 

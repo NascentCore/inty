@@ -1387,6 +1387,13 @@ def get_messages_paginated(
                         "timestamp": timestamp_str,
                         "created_at": timestamp_str,  # 添加 created_at 以保持向后兼容
                     }
+                    if (
+                        role == "user"
+                        and meta_data
+                        and isinstance(meta_data.get("localId"), str)
+                        and meta_data["localId"].strip()
+                    ):
+                        message_obj["local_id"] = meta_data["localId"]
                     if isinstance(raw_content, list):
                         message_obj["content_parts"] = raw_content
 
