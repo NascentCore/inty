@@ -41,6 +41,7 @@ fun EmailAuthNavHost(
 ) {
     val backStack = rememberNavBackStack(EmailAuthRoute.Login)
     val uiState by viewModel.uiState.collectAsState()
+    val isLogin by viewModel.isLogin.collectAsState(false)
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
