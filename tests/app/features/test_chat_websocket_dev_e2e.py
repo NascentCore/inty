@@ -1,9 +1,9 @@
 """
-Chat WebSocket E2E against a running backend using real LLM (dev config).
+Chat WebSocket E2E against a running backend using real LLM.
 
-Enable with INTY_CHAT_WS_REAL_TEST=1. The test loads devops/config.yaml.dev and
-requires app.environment == dev so the operator is reminded to start the server
-with that file as config.yaml.
+Enable with INTY_CHAT_WS_REAL_TEST=1. Set INTY_DEV_CONFIG_PATH to the YAML the
+server uses (e.g. devops/config.yaml.dev or devops/config.yaml.local); tests
+require app.environment in {"dev", "local"}.
 
 Does not run in default CI (noci + env gate).
 """
@@ -30,17 +30,20 @@ def _require_real_ws_test() -> None:
         pytest.skip("Set INTY_CHAT_WS_REAL_TEST=1 to run chat WebSocket real LLM tests")
 
 
-def _load_dev_config_assert_dev() -> dict:
+_ALLOWED_REAL_WS_ENVIRONMENTS = frozenset({"dev", "local"})
+
+
+def _load_operator_config_assert_real_backend() -> dict:
     path = os.getenv("INTY_DEV_CONFIG_PATH", str(DEFAULT_DEV_CONFIG))
     cfg_path = Path(path)
     if not cfg_path.is_file():
-        pytest.skip(f"Dev config not found: {cfg_path}")
+        pytest.skip(f"Operator config not found: {cfg_path}")
     with open(cfg_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     env = (data.get("app") or {}).get("environment")
-    if env != "dev":
+    if env not in _ALLOWED_REAL_WS_ENVIRONMENTS:
         pytest.skip(
-            f"INTY_DEV_CONFIG_PATH must be a dev config (app.environment=dev), got {env!r}"
+            f"INTY_DEV_CONFIG_PATH must have app.environment in {_ALLOWED_REAL_WS_ENVIRONMENTS!r}, got {env!r}"
         )
     return data
 
@@ -54,7 +57,7 @@ def _http_to_ws_base(http_base: str) -> str:
 @pytest.fixture
 def integration_client():
     _require_real_ws_test()
-    _load_dev_config_assert_dev()
+    _load_operator_config_assert_real_backend()
     client = TestClient(API_BASE_URL)
     client.create_user()
     try:
@@ -148,7 +151,7 @@ async def test_chat_websocket_dev_unauthorized_close_code():
     from websockets.exceptions import ConnectionClosedError
 
     _require_real_ws_test()
-    _load_dev_config_assert_dev()
+    _load_operator_config_assert_real_backend()
     ws_base = _http_to_ws_base(API_BASE_URL)
     url = f"{ws_base}/api/v1/chat/ws"
     with pytest.raises(ConnectionClosedError) as excinfo:
