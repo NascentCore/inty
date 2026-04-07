@@ -1,5 +1,6 @@
 """Integration tests for chat endpoints using the custom TestClient."""
 
+import asyncio
 import json
 import uuid
 from datetime import date, datetime, timezone
@@ -865,6 +866,45 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     assert second_response["code"] == 200
     assert second_response["agent_id"] == "agent-b"
     assert second_response["data"]["source_imate_id"] == "imate-b"
+
+
+def test_chat_websocket_idle_timeout_reads_config(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Regression: idle wait uses app.features.chat_ws_idle_timeout_seconds (not a hard-coded constant)."""
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    captured = {"timeouts": []}
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(**kwargs):
+        return APIResponse.success(data={"choices": []})
+
+    async def fake_wait_for(aw, timeout):
+        captured["timeouts"].append(timeout)
+        if len(captured["timeouts"]) == 1:
+            return await aw
+        raise asyncio.TimeoutError()
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+    monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-a",
+                    "request": {"messages": [{"role": "user", "content": "hi"}]},
+                }
+            )
+            websocket.receive_json()
+
+    expected = float(
+        global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
+    )
+    assert captured["timeouts"] and all(t == expected for t in captured["timeouts"])
 
 
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(

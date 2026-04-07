@@ -84,7 +84,9 @@
 >   - 图文：`{"role":"user","content":[{"type":"text","text":"describe this"},{"type":"image_url","image_url":{"url":"https://..."}}]}`
 > - **客户端本地消息 ID（乐观 UI 对齐）**：请求体可选 `localId`（camelCase，与 Pydantic `local_id` 对应）；若未传则回退使用已有可选字段 `message_id`。服务端将值写入该条用户消息的 `chat_history.meta_data.localId`。**GET** `/api/v1/chats/agents/{agent_id}/messages` 返回的用户消息中，除 `meta_data.localId` 外，另提供顶层 `local_id`（snake_case）便于解析。
 
-> **`/api/v1/chat/ws/verify`**：仅用于验证 WebSocket 对话效果；协议与 `/api/v1/chat/ws` 一致，但**不写入 chat_history**（不落库）。
+> **`/api/v1/chat/ws/verify`**：仅用于验证 WebSocket 对话效果；协议与 `/api/v1/chat/ws` 一致，但**不写入 chat_history**（不落库）。实现上 verify 使用 `generate_message_without_user_save`，生产 `/ws` 使用 `agent_chat_completions`；接入 agentic v2 时需统一调度或显式记录差异（见 `docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md`）。
+>
+> **Chat WebSocket idle**：`app.features.chat_ws_idle_timeout_seconds`（默认 60）秒内无上行文本帧则关闭连接；`ping`/`pong` 计入上行。
 
 ### 聊天会话 (Chats)
 

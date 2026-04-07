@@ -2,6 +2,7 @@
 
 - Do not write unit tests
 - Write feature tests: call backend service running locally to test a feature end-to-end
+- WebSocket chat handler tests in `tests/app/api/v1/endpoints/test_chat.py` may monkeypatch auth and `agent_chat_completions` for isolation; prefer real server plus token for new contract-critical paths when feasible (aligns with `app/AGENTS.md` "Avoid using monkepatch" as a documented narrow exception).
 - Access real database, and do not patch sqlalchemy
 - Use [fake external services](/app/external_services/fakes) when writing tests.
 
@@ -27,6 +28,8 @@
   # 运行测试
   pytest -m "not noci" -v -s tests/
   ```
+
+- Chat WebSocket against **real LLM** (optional): set `INTY_CHAT_WS_REAL_TEST=1`, set `INTY_DEV_CONFIG_PATH` to the server YAML (e.g. `devops/config.yaml.local` or `devops/config.yaml.dev`; `app.environment` must be `dev` or `local`). See [tests/docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md](docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md).
 
 ## 新功能 / API+客户端联调时的防遗漏
 

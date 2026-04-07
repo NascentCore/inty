@@ -149,6 +149,9 @@ class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = True
     # 开关：是否启用自拍画像结论（后台推断 + 聊天提示词注入）
     enable_selfie_persona_summary: bool = True
+    # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
+    # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
+    chat_ws_idle_timeout_seconds: int = 60
 
 
 @dataclass
@@ -597,6 +600,8 @@ def load_config(path: str) -> Config:
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
         app_data["features"] = FeaturesConfig(**app_data["features"])
+    if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
+        app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])
 
     # Convert environment string to Environment enum if present
     if "environment" in app_data and isinstance(app_data["environment"], str):
@@ -705,4 +710,10 @@ def _validate_config(config: Config):
     ):
         raise ValueError(
             "test_only_guest_user_image_gen_24h_limit is only allowed in test environment"
+        )
+
+    ws_idle = config.app.features.chat_ws_idle_timeout_seconds
+    if ws_idle < 10 or ws_idle > 3600:
+        raise ValueError(
+            "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
         )

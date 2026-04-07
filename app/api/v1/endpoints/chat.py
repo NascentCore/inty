@@ -61,8 +61,13 @@ from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
-# WebSocket 应用层心跳：由客户端发 ping，服务端仅回 pong；服务端空闲超时关闭连接
-CHAT_WS_IDLE_TIMEOUT_SECONDS = 60
+# WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
+# Handlers must not pass that session into asyncio.to_thread or other threads; open a new
+# session inside the worker if agentic work runs off the event loop.
+
+
+def _chat_ws_idle_timeout_seconds() -> float:
+    return float(global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds)
 
 
 async def _get_current_user_from_websocket(
@@ -838,7 +843,7 @@ async def chat_completions_websocket(
             try:
                 raw = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=CHAT_WS_IDLE_TIMEOUT_SECONDS,
+                    timeout=_chat_ws_idle_timeout_seconds(),
                 )
             except asyncio.TimeoutError:
                 await websocket.close()
@@ -875,6 +880,11 @@ async def chat_completions_websocket_verify(
 ):
     """
     WebSocket 校验端点：与 /ws 协议一致，但不写入 chat_history，仅用于验证连接与对话效果。
+
+    Implementation note: this path uses generate_message_without_user_save, not agent_chat_completions.
+    When adding agentic v2 routing to /ws, either refactor a shared dispatcher with a persist flag so
+    verify stays behaviorally aligned, or document that verify remains legacy-only for engine selection.
+    See docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md.
     """
     await websocket.accept()
     current_user = await _get_current_user_from_websocket(websocket, db)
@@ -887,7 +897,7 @@ async def chat_completions_websocket_verify(
             try:
                 raw = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=CHAT_WS_IDLE_TIMEOUT_SECONDS,
+                    timeout=_chat_ws_idle_timeout_seconds(),
                 )
             except asyncio.TimeoutError:
                 await websocket.close()
