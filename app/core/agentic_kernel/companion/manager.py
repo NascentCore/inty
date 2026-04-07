@@ -17,7 +17,11 @@ from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
 from .file_store import write_text
 from .turn import run_turn
-from .workspace import WorkspacePaths, is_workspace_initialized, needs_startup_profile_inquiry
+from .workspace import (
+    WorkspacePaths,
+    is_workspace_initialized_from_store,
+    needs_startup_profile_inquiry,
+)
 
 
 class CompanionConfig(BaseModel):
@@ -32,16 +36,23 @@ class CompanionConfig(BaseModel):
     # 记忆管线配置
     memory: MemoryPipelineConfig = Field(default_factory=MemoryPipelineConfig)
 
-    # PostgreSQL DSN for memory store (空串 = 纯文件模式)
+    # PostgreSQL DSN for memory store (空串 = 纯内存 + 可选磁盘回退，见 memory_allow_workspace_disk_fallback)
     memory_pg_dsn: str = ""
     memory_pg_table: str = "companion_memory_doc_versions"
-    memory_mirror_to_files: bool = True
+    memory_mirror_to_files: bool = False
+    memory_allow_workspace_disk_fallback: bool = False
 
     # Bootstrap
     bootstrap_max_rounds: int = 48
 
     # Context
     default_context_mode: str = "intimate"
+
+
+def _store_allow_disk_fallback(cfg: CompanionConfig) -> bool:
+    if not cfg.memory_pg_dsn.strip():
+        return True
+    return cfg.memory_allow_workspace_disk_fallback
 
 
 class CompanionSession:
@@ -69,7 +80,7 @@ class CompanionSession:
 
     @property
     def is_initialized(self) -> bool:
-        return is_workspace_initialized(self.workspace_path)
+        return is_workspace_initialized_from_store(self.workspace_path, self.store)
 
     @property
     def needs_profile_inquiry(self) -> bool:
@@ -113,6 +124,7 @@ class CompanionManager:
                 dsn=self._config.memory_pg_dsn,
                 table_name=self._config.memory_pg_table,
                 mirror_to_files=self._config.memory_mirror_to_files,
+                allow_workspace_disk_fallback=_store_allow_disk_fallback(self._config),
             )
 
             # 写入 context.json (如果不存在)
