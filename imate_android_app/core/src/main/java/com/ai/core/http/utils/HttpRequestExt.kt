@@ -19,16 +19,15 @@ internal fun Throwable.toIntyException(operation: String, code: Int = -1): IntyE
 
 @PublishedApi
 internal fun <T : Any> unwrapHttpResultOrThrow(result: HttpResult<T>): T {
-    if (result.code != 200) {
-        throw IntyException(result.code, result.message)
+    return when (result) {
+        is HttpResult.Success -> result.data
+        is HttpResult.Failure -> throw IntyException(result.code, result.message)
     }
-    return result.data ?: throw IntyException(HttpResult.ErrorCode.EmptyResponse.value, "Empty response")
 }
 
 @PublishedApi
-internal suspend inline fun <reified T : Any> parseHttpResult(
-    response: HttpResponse
-): HttpResult<T> = HttpErrorHandler.parseHttpResultOrFailure(response)
+internal suspend fun <T : Any> parseHttpResult(response: HttpResponse): HttpResult<T> =
+    HttpErrorHandler.parseHttpResultOrFailure(response)
 
 suspend inline fun <reified T : Any> post(
     url: String,

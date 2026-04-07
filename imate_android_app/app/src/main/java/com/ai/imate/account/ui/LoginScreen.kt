@@ -1,5 +1,6 @@
 package com.ai.imate.account.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,67 +22,44 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.ai.core.data.exceptions.GlobalErrorHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.core.ui.theme.IMateTheme
 import com.ai.imate.R
-import com.ai.imate.utils.GoogleSignInHelper
-import kotlinx.coroutines.launch
+import com.ai.imate.account.ui.viewmodel.LoginViewModel
 
 @Composable
 fun LoginScreen(
-    onContinueWithEmail: () -> Unit,
-    onContinueWithGoogle: (String) -> Unit,
+    onLoginSuccess: () -> Unit,
+    onTermsClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onTermsClick: () -> Unit = {},
-    onPrivacyClick: () -> Unit = {},
+    viewModel: LoginViewModel = viewModel()
 ) {
 
-    var isSignIngIn by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
 
     LoginContent(
-        isSigningIn = isSignIngIn,
+        isSigningIn = uiState.isLoading,
         onContinueWithGoogle = {
-            scope.launch {
-                isSignIngIn = true
-                try {
-                    val tokenResult = GoogleSignInHelper.signInWithGoogle(context)
-                    tokenResult
-                        .onSuccess { onContinueWithGoogle(it) }
-                        .onFailure { e ->
-                            val ex = e as? Exception ?: Exception(e.message)
-                            GlobalErrorHandler.sendError(ex)
-                        }
-                } finally {
-                    isSignIngIn = false
-                }
-            }
+            // TODO: 实现google登录
         },
-        onContinueWithEmail = onContinueWithEmail,
         onTermsClick = onTermsClick,
         onPrivacyClick = onPrivacyClick,
         modifier = modifier,
@@ -89,13 +67,13 @@ fun LoginScreen(
 }
 
 @Composable
-private fun LoginContent(
+fun LoginContent(
     isSigningIn: Boolean,
     onContinueWithGoogle: () -> Unit,
-    onContinueWithEmail: () -> Unit,
     onTermsClick: () -> Unit,
     onPrivacyClick: () -> Unit,
     modifier: Modifier = Modifier,
+    @DrawableRes logoResId: Int = R.drawable.imate_logo,
 ) {
     Box(
         modifier =
@@ -120,7 +98,7 @@ private fun LoginContent(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
-                    painter = painterResource(R.drawable.imate_logo),
+                    painter = painterResource(logoResId),
                     contentDescription = stringResource(R.string.login_logo_content_description),
                     modifier = Modifier.size(106.dp),
                 )
@@ -166,71 +144,54 @@ private fun LoginContent(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box {
-                        Button(
-                            onClick = onContinueWithGoogle,
-                            enabled = !isSigningIn,
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF2C7BB6),
-                                    contentColor = Color.White,
-                                    disabledContainerColor = Color(0xFF2C7BB6).copy(alpha = 0.6f),
-                                    disabledContentColor = Color.White.copy(alpha = 0.7f),
-                                ),
-                            shape = RoundedCornerShape(999.dp),
-                            modifier =
-                                Modifier
-                                    .width(329.dp)
-                                    .height(56.dp),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(22.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.White.copy(alpha = 0.08f)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(text = "G", fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = stringResource(R.string.login_continue_google),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                        }
-
-                        if (isSigningIn) {
-                            CircularProgressIndicator(
+                Box {
+                    Button(
+                        onClick = onContinueWithGoogle,
+                        enabled = !isSigningIn,
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2C7BB6),
+                                contentColor = Color.White,
+                                disabledContainerColor = Color(0xFF2C7BB6).copy(alpha = 0.6f),
+                                disabledContentColor = Color.White.copy(alpha = 0.7f),
+                            ),
+                        shape = RoundedCornerShape(999.dp),
+                        modifier =
+                            Modifier
+                                .width(329.dp)
+                                .height(56.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
                                 modifier =
                                     Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .padding(end = 20.dp)
-                                        .size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = Color.White.copy(alpha = 0.9f),
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(text = "G", fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.login_continue_google),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                     }
 
-                    TextButton(
-                        onClick = onContinueWithEmail,
-                        enabled = !isSigningIn,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.continue_with_email),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.35f),
-                            textDecoration = TextDecoration.Underline,
+                    if (isSigningIn) {
+                        CircularProgressIndicator(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 20.dp)
+                                    .size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White.copy(alpha = 0.9f),
                         )
                     }
-
                 }
             }
 
@@ -277,10 +238,8 @@ private fun LoginContent(
 @Composable
 private fun LoginScreenPreview() {
     IMateTheme {
-        LoginContent(
-            isSigningIn = false,
-            onContinueWithGoogle = {},
-            onContinueWithEmail = {},
+        LoginScreen(
+            onLoginSuccess = {},
             onTermsClick = {},
             onPrivacyClick = {},
         )

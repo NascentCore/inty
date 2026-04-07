@@ -14,9 +14,6 @@ object GlobalErrorHandler {
     }
 }
 
-/**
- * 全部捕获异常，参考runCatch
- */
 inline fun globalCatch(block: () -> Unit) {
     try {
         block()
