@@ -18,6 +18,8 @@
 
 Dev & prod sharing the same VM on GCP.
 
+**iMate 第二 Inty 实例**：手动运行 [build_and_deploy_backend_imate.yml](build_and_deploy_backend_imate.yml)；需 GitHub Environments `imate-dev` / `imate-prod` 及对应 `vars`（见 `devops/README.md`）。
+
 ## Dify 定时聊天调用
 
 运行 [dify_chat_cron.yaml](https://github.com/NascentCore/inty-app/actions/workflows/dify_chat_cron.yaml) 定时调用 Dify API。

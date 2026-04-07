@@ -1,0 +1,135 @@
+name: Release - Inty 后端 (iMate)
+
+# 仅部署 iMate 第二实例；禁止操作 inty-backend-dev / inty-backend-prod。
+# 需在 GitHub Environments 中创建 imate-dev、imate-prod，并配置 vars：SERVICE_PORT_ON_HOST、SERVICE_PUBLIC_URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: iMate target (must match GitHub Environment name)
+        required: true
+        options:
+          - imate-dev
+          - imate-prod
+
+concurrency:
+  group: inty-deploy-backend-imate-${{ inputs.environment }}
+  cancel-in-progress: true
+
+env:
+  INTY_SERVER_IMAGE: ghcr.io/nascentcore/inty-backend/inty-server
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - id: map
+        run: |
+          case "${{ inputs.environment }}" in
+            imate-dev)
+              echo "env_suffix=dev" >> $GITHUB_OUTPUT
+              echo "config_file=devops/config.yaml.imate_dev" >> $GITHUB_OUTPUT
+              ;;
+            imate-prod)
+              echo "env_suffix=prod" >> $GITHUB_OUTPUT
+              echo "config_file=devops/config.yaml.imate_prod" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "unknown environment"
+              exit 1
+              ;;
+          esac
+
+      - id: prep
+        run: |
+          echo "image_tag=${{ github.ref_name }}-${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+        with:
+          cache-binary: true
+
+      - id: build-docker-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./devops/docker/Dockerfile
+          push: true
+          tags: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            CONFIG_FILE=${{ steps.map.outputs.config_file }}
+            INTY_VCS_REVISION=${{ github.sha }}
+            INTY_BUILD_TIME=${{ steps.prep.outputs.build_time }}
+
+      - name: Pull deployment images
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 5
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            sudo docker pull ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+
+      - name: Deploy iMate backend (${{ inputs.environment }})
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 5
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo docker stop inty-backend-imate-${{ steps.map.outputs.env_suffix }} || true
+            sudo docker rm inty-backend-imate-${{ steps.map.outputs.env_suffix }} || true
+            sudo docker run --detach --log-driver=gcplogs \
+              --name inty-backend-imate-${{ steps.map.outputs.env_suffix }} \
+              --restart unless-stopped \
+              --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
+              --env LANGCHAIN_TRACING_V2=true \
+              --env LANGCHAIN_PROJECT=inty-backend-imate-${{ steps.map.outputs.env_suffix }} \
+              --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
+              --label application=inty-backend-imate \
+              --label environment=${{ inputs.environment }} \
+              --log-opt labels=application,environment \
+              --volume /opt/inty-imate-${{ steps.map.outputs.env_suffix }}/inty-backend-key.json:/inty-backend-key.json \
+              --volume /opt/inty-imate-${{ steps.map.outputs.env_suffix }}/inty-firebase-key.json:/inty-firebase-key.json \
+              ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
+            echo "Waiting for application startup..."
+            while ! sudo docker logs inty-backend-imate-${{ steps.map.outputs.env_suffix }} 2>&1 | grep -q "Application startup complete"
+            do
+              sleep 1
+            done
+            echo "Application startup complete detected!"
+
+      - name: Sanity check
+        run: |
+          curl --verbose --fail --retry 5 --retry-delay 5 ${{ vars.SERVICE_PUBLIC_URL }}
+
+      - name: Write summary
+        run: |
+          echo "## Build and deploy (iMate)" >> $GITHUB_STEP_SUMMARY
+          echo "Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "Container: inty-backend-imate-${{ steps.map.outputs.env_suffix }}" >> $GITHUB_STEP_SUMMARY
+          echo "URL: ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Image: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY

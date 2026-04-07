@@ -60,7 +60,7 @@ Push Worker：若 iMate 首期不需要离线定时任务，可不部署 `inty-p
 ```bash
 export PYTHONPATH=.
 export ALEMBIC_CONFIG=alembic/alembic.ini
-alembic -c alembic/alembic.ini upgrade head -x config=devops/config.yaml.imate_dev
+alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
 ```
 
 - **生成新 revision**：若需 `revision --autogenerate`，同样**必须**加 `-x config=...` 指向 iMate 配置，且仅在已确认 URL 指向 iMate 库后执行；生成出的文件仍落在 `alembic/versions/`，合并后 IntelliMate 与 iMate 部署在各自发布流程中对**各自**库执行 `upgrade head`（先 dev 验证，再 prod）。详见 [alembic/AGENTS.md](/alembic/AGENTS.md)。
