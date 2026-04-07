@@ -27,6 +27,8 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 
 ### iMate（第二 Inty 后端实例）Cloud SQL 逻辑库
 
+**完整步骤（含 gcloud、GCS、VM、DNS）**：[docs/OPS_IMATE_INTY_DEPLOY_GCLOUD.md](../docs/OPS_IMATE_INTY_DEPLOY_GCLOUD.md)。
+
 与 IntelliMate 共用 Cloud SQL 实例 `inty-prod`（私网 IP 与现网 `database.host` 一致），**新增独立逻辑库**（方案 A，见 [docs/DEVOPS_IMATE_BACKEND_PLAN.md](../docs/DEVOPS_IMATE_BACKEND_PLAN.md)）。在可连该实例的客户端执行（示例库名与 [config.yaml.imate_dev](config.yaml.imate_dev) / [config.yaml.imate_prod](config.yaml.imate_prod) 一致）：
 
 ```sql
