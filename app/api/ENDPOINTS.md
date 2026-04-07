@@ -86,6 +86,8 @@
 
 > **`/api/v1/chat/ws/verify`**：仅用于验证 WebSocket 对话效果；协议与 `/api/v1/chat/ws` 一致，但**不写入 chat_history**（不落库）。实现上 verify 使用 `generate_message_without_user_save`，生产 `/ws` 使用 `agent_chat_completions`；接入 agentic v2 时需统一调度或显式记录差异（见 `docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md`）。
 >
+> **`/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify` 上行扩展**：除 `{"type":"ping"}` 与既有 `ChatWebSocketRequest` JSON 外，可发送 `{"type":"client_context","time_context":{...}}`，字段与 HTTP `time_context`（`UserTimeContext`：`local_time`、`timezone`、`utc_offset_minutes`）一致。服务端回 `{"type":"client_context_ack","ok":true|false}`；该连接上若后续 chat 帧未带 `time_context`，则沿用最近一次成功写入的 `client_context`。
+>
 > **Chat WebSocket idle**：`app.features.chat_ws_idle_timeout_seconds`（默认 60）秒内无上行文本帧则关闭连接；`ping`/`pong` 计入上行。
 
 ### 聊天会话 (Chats)

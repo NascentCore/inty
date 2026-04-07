@@ -907,6 +907,71 @@ def test_chat_websocket_idle_timeout_reads_config(
     assert captured["timeouts"] and all(t == expected for t in captured["timeouts"])
 
 
+def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    captured: dict = {}
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(
+        *,
+        db,
+        agent_id,
+        request,
+        current_user,
+        app_version_code,
+        subscription_svc,
+        voice_svc,
+    ):
+        captured["user_time_context"] = request.user_time_context
+        return APIResponse.success(
+            data={
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "ok"},
+                        "finish_reason": "stop",
+                    }
+                ],
+            }
+        )
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "client_context",
+                    "time_context": {
+                        "local_time": "2026-04-07T08:00:00+08:00",
+                        "timezone": "Asia/Shanghai",
+                        "utc_offset_minutes": 480,
+                    },
+                }
+            )
+            assert websocket.receive_json() == {"type": "client_context_ack", "ok": True}
+            websocket.send_json(
+                {
+                    "agent_id": "agent-a",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hello"}],
+                    },
+                }
+            )
+            chat_response = websocket.receive_json()
+
+    assert chat_response["code"] == 200
+    utc = captured.get("user_time_context")
+    assert utc is not None
+    assert utc.timezone == "Asia/Shanghai"
+    assert utc.utc_offset_minutes == 480
+
+
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

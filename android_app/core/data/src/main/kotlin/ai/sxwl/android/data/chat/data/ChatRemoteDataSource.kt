@@ -27,6 +27,27 @@ import java.time.format.DateTimeFormatter
 /** 聊天远程数据源 负责处理与服务器的聊天相关API调用 遵循Clean Architecture的数据层模式 */
 class ChatRemoteDataSource {
 
+    companion object {
+        /** Release 默认上报；Debug 可在调试设置中关闭。供主 WebSocket 连接后发送 client_context。 */
+        fun buildUserTimeContextOrNull(): UserTimeContext? {
+            if (!shouldReportUserTimeContext()) return null
+            val now = ZonedDateTime.now()
+            val utcOffsetMinutes = now.offset.totalSeconds / 60
+            return UserTimeContext(
+                localTime = now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                timezone = now.zone.id,
+                utcOffsetMinutes = utcOffsetMinutes,
+            )
+        }
+
+        private fun shouldReportUserTimeContext(): Boolean {
+            if (!DebugBackendEndpointStore.isRuntimeOverrideSupported()) {
+                return true
+            }
+            return DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
+        }
+    }
+
     suspend fun getChatModes(): HttpResult<List<ChatMode>> {
 
         return NetServiceMgr.getChatApi().fetchChatModes()
@@ -113,7 +134,7 @@ class ChatRemoteDataSource {
             }
         return SendMsgReq(
             messages = listOf(requestMessage),
-            timeContext = buildUserTimeContext(),
+            timeContext = buildUserTimeContextOrNull(),
             targetImateId = agentId,
         )
     }
@@ -132,25 +153,6 @@ class ChatRemoteDataSource {
         } catch (e: Exception) {
             LogUtils.e("ChatRemoteDataSource.sendMessage exception: ${e.message}")
             HttpResult.Failure(e.message ?: "Network error", -1)
-        }
-    }
-
-    private fun buildUserTimeContext(): UserTimeContext? {
-        if (!shouldReportUserTimeContext()) return null
-        val now = ZonedDateTime.now()
-        val utcOffsetMinutes = now.offset.totalSeconds / 60
-        return UserTimeContext(
-            localTime = now.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-            timezone = now.zone.id,
-            utcOffsetMinutes = utcOffsetMinutes,
-        )
-    }
-
-    private fun shouldReportUserTimeContext(): Boolean {
-        return if (DebugBackendEndpointStore.isRuntimeOverrideSupported()) {
-            DebugBackendEndpointStore.getUserTimeContextReportingEnabled()
-        } else {
-            false
         }
     }
 

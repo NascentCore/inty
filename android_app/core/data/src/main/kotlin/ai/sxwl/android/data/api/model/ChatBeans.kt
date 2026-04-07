@@ -74,6 +74,20 @@ data class SendMsgReq(
 @JsonClass(generateAdapter = true)
 data class ChatWebSocketReq(@Json(name = "agent_id") val agentId: String, val request: SendMsgReq)
 
+/** 主 WebSocket 连接建立后上报本地时区与时间，与后端 `client_context` 帧对齐。 */
+@JsonClass(generateAdapter = true)
+data class ChatClientContextWsMessage(
+    val type: String = "client_context",
+    @Json(name = "time_context") val timeContext: UserTimeContext,
+)
+
+/** Chat WebSocket downstream frames that only carry `type` (e.g. pong, client_context_ack). */
+@JsonClass(generateAdapter = true)
+data class ChatWsControlFrame(@Json(name = "type") val type: String?)
+
+fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
+    this?.type == "pong" || this?.type == "client_context_ack"
+
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(
     @Json(name = "local_time") val localTime: String,

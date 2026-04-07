@@ -1,8 +1,11 @@
 package ai.sxwl.android.data.chat.data
 
+import ai.sxwl.android.data.api.model.ChatClientContextWsMessage
 import ai.sxwl.android.data.api.model.ChatWebSocketReq
+import ai.sxwl.android.data.api.model.ChatWsControlFrame
 import ai.sxwl.android.data.api.model.SendMsgReq
 import ai.sxwl.android.data.api.model.SendMsgResponse
+import ai.sxwl.android.data.api.model.shouldDeferChatResponseParsing
 import ai.sxwl.android.data.http.UnifiedOkHttpClient
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
@@ -40,6 +43,8 @@ object ChatWebSocketSessionManager {
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
     private val requestAdapter = moshi.adapter(ChatWebSocketReq::class.java)
     private val responseAdapter = moshi.adapter(SendMsgResponse::class.java)
+    private val controlFrameAdapter = moshi.adapter(ChatWsControlFrame::class.java)
+    private val clientContextAdapter = moshi.adapter(ChatClientContextWsMessage::class.java)
 
     suspend fun sendMessage(agentId: String, request: SendMsgReq): HttpResult<SendMsgResponse> {
         return try {
@@ -51,17 +56,25 @@ object ChatWebSocketSessionManager {
                 val websocketPayload = ChatWebSocketReq(agentId = agentId, request = request)
                 activeSession.send(Frame.Text(requestAdapter.toJson(websocketPayload)))
 
-                val frame = activeSession.incoming.receive()
-                val result: HttpResult<SendMsgResponse> =
+                var chatFrame: Frame.Text? = null
+                while (chatFrame == null) {
+                    val frame = activeSession.incoming.receive()
                     if (frame !is Frame.Text) {
-                        HttpResult.Failure("Unexpected websocket frame type", -1)
+                        return@withLock HttpResult.Failure("Unexpected websocket frame type", -1)
+                    }
+                    val text = frame.data.decodeToString()
+                    val control = kotlin.runCatching { controlFrameAdapter.fromJson(text) }.getOrNull()
+                    if (control.shouldDeferChatResponseParsing()) {
+                        continue
+                    }
+                    chatFrame = frame
+                }
+                val payload = responseAdapter.fromJson(chatFrame.data.decodeToString())
+                val result: HttpResult<SendMsgResponse> =
+                    if (payload == null) {
+                        HttpResult.Failure("Invalid websocket response body", -1)
                     } else {
-                        val payload = responseAdapter.fromJson(frame.data.decodeToString())
-                        if (payload == null) {
-                            HttpResult.Failure("Invalid websocket response body", -1)
-                        } else {
-                            HttpResult.Success(payload)
-                        }
+                        HttpResult.Success(payload)
                     }
                 result
             }
@@ -92,6 +105,15 @@ object ChatWebSocketSessionManager {
                 }
             session = newSession
             sessionToken = token
+            ChatRemoteDataSource.buildUserTimeContextOrNull()?.let { utc ->
+                newSession.send(
+                    Frame.Text(
+                        clientContextAdapter.toJson(
+                            ChatClientContextWsMessage(timeContext = utc),
+                        ),
+                    ),
+                )
+            }
             newSession
         }
     }
