@@ -800,11 +800,7 @@ async def _paginate_agents_by_text_image_match(
                 if not u:
                     continue
                 cap = item.get("caption")
-                explicit = (
-                    cap.strip()
-                    if isinstance(cap, str) and cap.strip()
-                    else None
-                )
+                explicit = cap.strip() if isinstance(cap, str) and cap.strip() else None
                 resource_urls.append(u)
                 canon = _canonical_agent_image_url(u)
                 if not canon:

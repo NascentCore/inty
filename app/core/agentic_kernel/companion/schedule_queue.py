@@ -44,13 +44,15 @@ def add_schedule_task(
     queue_path = paths.schedule_queue_json
     tasks = _load_tasks(queue_path)
     task_id = str(uuid.uuid4())
-    tasks.append({
-        "id": task_id,
-        "exec_time_utc": exec_time_utc,
-        "task_text": task_text,
-        "status": "pending",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
+    tasks.append(
+        {
+            "id": task_id,
+            "exec_time_utc": exec_time_utc,
+            "task_text": task_text,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
     _save_tasks(queue_path, tasks)
     logger.info("schedule_queue task_added id={} exec={}", task_id, exec_time_utc)
     return task_id

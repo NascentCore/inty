@@ -134,11 +134,7 @@ def _print_assistant_reply(
     repl_source_label: str | None = None,
 ) -> None:
     ms = elapsed_s * 1000
-    suffix = (
-        _repl_transcript_id_suffix(transcript_ids)
-        if transcript_ids
-        else ""
-    )
+    suffix = _repl_transcript_id_suffix(transcript_ids) if transcript_ids else ""
     label = repl_source_label or _repl_assistant_banner_label(transcript_ids)
     print(f"[{_local_ts_str()}] {label} {ms:.0f}ms{suffix}")
     print(out)
@@ -601,9 +597,7 @@ def _repl_interactive_loop_posix(
 ) -> None:
     pending: queue.Queue[tuple[str, bool] | None] = queue.Queue()
     stdin_fd = sys.stdin.fileno()
-    last_inner_fire_mono: float | None = (
-        time.monotonic() if inner_tick else None
-    )
+    last_inner_fire_mono: float | None = time.monotonic() if inner_tick else None
     _drain_async_tool_events(ws)
     print("> ", end="", flush=True)
 
@@ -720,9 +714,7 @@ def _repl_interactive_loop_posix(
         else:
             due_wait = _next_due_wait_seconds_only(ws)
             if due_wait is None:
-                r, _, _ = select.select(
-                    [stdin_fd], [], [], _REPL_IDLE_POLL_SEC
-                )
+                r, _, _ = select.select([stdin_fd], [], [], _REPL_IDLE_POLL_SEC)
                 if not r:
                     continue
                 try:
@@ -779,9 +771,7 @@ def _repl_interactive_loop_daemon(
 ) -> None:
     """Windows / 非 TTY：沿用守护线程读 stdin（无法在主线程 select）。"""
     line_queue, _ = spawn_stdin_line_reader()
-    last_inner_fire_mono: float | None = (
-        time.monotonic() if inner_tick else None
-    )
+    last_inner_fire_mono: float | None = time.monotonic() if inner_tick else None
 
     def _schedule_run_turn(text: str) -> tuple[str, dict[str, str]]:
         ids_out: dict[str, str] = {}

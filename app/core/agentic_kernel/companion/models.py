@@ -171,7 +171,9 @@ def load_transcript(path: Path) -> list[ChatMessage]:
     return load_transcript_text(read_text(path))
 
 
-def load_transcript_from_store(store: MemoryStore, relative_path: str) -> list[ChatMessage]:
+def load_transcript_from_store(
+    store: MemoryStore, relative_path: str
+) -> list[ChatMessage]:
     body = store.read_document_if_exists(relative_path)
     if body is None:
         return []

@@ -10,7 +10,11 @@ from typing import Any
 from loguru import logger
 
 from .llm_client import CompanionLLMClient
-from .memory_pipeline import MemoryPipelineConfig, memory_update_after_turn, schedule_memory_update_after_turn
+from .memory_pipeline import (
+    MemoryPipelineConfig,
+    memory_update_after_turn,
+    schedule_memory_update_after_turn,
+)
 from .memory_store import MemoryStore
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -157,7 +161,10 @@ async def run_turn(
                 trace_id,
             )
             result = execute_tool_call(
-                root, store, name, args,
+                root,
+                store,
+                name,
+                args,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
             )
             logger.info(
@@ -167,11 +174,13 @@ async def run_turn(
                 len(result),
                 not result.startswith("ERROR:"),
             )
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": result,
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result,
+                }
+            )
     else:
         raise RuntimeError(f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}")
 
@@ -210,8 +219,10 @@ async def run_turn(
     if heartbeat_turn:
         logger.debug("run_turn memory_pipeline=skipped (heartbeat_turn)")
     elif defer_memory_update:
+
         def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
             return llm_client.complete_text(msgs, model_role=model_role)
+
         schedule_memory_update_after_turn(
             paths,
             store=store,
@@ -221,8 +232,10 @@ async def run_turn(
             config=mem_cfg,
         )
     else:
+
         def _complete_fn_sync(msgs: list[dict[str, Any]], model_role: str) -> str:
             return llm_client.complete_text(msgs, model_role=model_role)
+
         memory_update_after_turn(
             paths,
             store=store,

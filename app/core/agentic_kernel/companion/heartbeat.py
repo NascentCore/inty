@@ -95,7 +95,7 @@ def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
             break
     if hb_idx is None:
         return True
-    for m in msgs[hb_idx + 1:]:
+    for m in msgs[hb_idx + 1 :]:
         if m.role == "user" and m.heartbeat is not True:
             return True
     return False
@@ -136,7 +136,9 @@ def next_heartbeat_wait_seconds(
 
     last_real_user = _last_real_user_ts(msgs)
     if last_real_user is not None:
-        user_quiet_earliest = last_real_user + timedelta(seconds=config.min_user_quiet_sec)
+        user_quiet_earliest = last_real_user + timedelta(
+            seconds=config.min_user_quiet_sec
+        )
         if user_quiet_earliest > earliest:
             earliest = user_quiet_earliest
 
