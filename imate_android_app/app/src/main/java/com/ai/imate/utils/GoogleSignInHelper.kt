@@ -1,4 +1,4 @@
-package com.ai.imate.auth
+package com.ai.imate.utils
 
 import android.content.Context
 import androidx.credentials.CredentialManager

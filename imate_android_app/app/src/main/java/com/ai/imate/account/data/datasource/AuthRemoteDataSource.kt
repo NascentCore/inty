@@ -17,4 +17,10 @@ class AuthRemoteDataSource @Inject constructor() {
             setBody(LoginRequest(idToken))
         }
     }
+
+    suspend fun emailLogin(email: String, password: String): LoginResponse {
+        return post<LoginResponse>("/api/v1/auth/google/login") {
+            setBody(LoginRequest(email = email, password = password))
+        }
+    }
 }

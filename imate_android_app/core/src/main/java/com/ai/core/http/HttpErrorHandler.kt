@@ -15,6 +15,7 @@ object HttpErrorHandler {
             is IOException -> "Network connection failed, please check your connection"
             is JsonConvertException, is SerializationException -> "Data format error, please try again later"
             else -> {
+                t.printStackTrace()
                 val errorMessage = t.message ?: "Unknown error"
                 if (errorMessage.contains(operation, ignoreCase = true)) errorMessage
                 else "${operation} failed: $errorMessage"
@@ -22,11 +23,13 @@ object HttpErrorHandler {
         }
     }
 
-    suspend fun <T : Any> parseHttpResultOrFailure(response: HttpResponse): HttpResult<T> {
+    suspend inline fun <reified T : Any> parseHttpResultOrFailure(
+        response: HttpResponse
+    ): HttpResult<T> {
         return try {
-            response.body()
+            response.body<HttpResult<T>>()
         } catch (t: Throwable) {
-            HttpResult.Failure(toUserMessage(t, "parse response"), response.status.value)
+            HttpResult(code = response.status.value, message = toUserMessage(t, "parse response"))
         }
     }
 }
