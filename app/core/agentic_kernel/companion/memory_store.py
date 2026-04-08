@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import uuid as uuid_mod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from .file_store import read_text, write_text_atomic
 from .utc import utc_iso_ts
@@ -193,6 +194,7 @@ class MemoryStore:
         workspace_root: Path,
         repository: MemoryRepository | None,
         mirror_to_files: bool,
+        allow_workspace_disk_fallback: bool = True,
         flush_batch_size: int = 64,
     ) -> None:
         self._workspace_root = workspace_root.resolve()
@@ -203,6 +205,7 @@ class MemoryStore:
             enabled=mirror_to_files,
         )
         self._repository = repository
+        self.allow_workspace_disk_fallback = allow_workspace_disk_fallback
 
     def _normalize_relative_path(self, relative_path: str) -> str:
         rel = (relative_path or "").strip().replace("\\", "/")
@@ -236,17 +239,32 @@ class MemoryStore:
                 return loaded.content
 
         mirrored = self._mirror.read_if_exists(relative_path=rel)
-        if mirrored is None:
+        if mirrored is not None:
+            local_record = MemoryRecord(
+                record_uuid=str(uuid_mod.uuid4()),
+                sequence_id=0,
+                relative_path=rel,
+                content=mirrored,
+                created_at=utc_iso_ts(),
+            )
+            self._cache.put_committed(local_record)
+            return mirrored
+        if not self.allow_workspace_disk_fallback:
             return None
+        p = (self._workspace_root / rel).resolve()
+        p.relative_to(self._workspace_root)
+        if not p.is_file():
+            return None
+        body = read_text(p)
         local_record = MemoryRecord(
             record_uuid=str(uuid_mod.uuid4()),
             sequence_id=0,
             relative_path=rel,
-            content=mirrored,
+            content=body,
             created_at=utc_iso_ts(),
         )
         self._cache.put_committed(local_record)
-        return mirrored
+        return body
 
     def read_document(self, relative_path: str) -> str:
         body = self.read_document_if_exists(relative_path)
@@ -288,6 +306,18 @@ class MemoryStore:
         merged += line
         if not line.endswith("\n"):
             merged += "\n"
+        self.write_document(rel, merged)
+
+    def append_jsonl_record(self, relative_path: str, record: dict[str, Any]) -> None:
+        rel = self._normalize_relative_path(relative_path)
+        line = json.dumps(record, ensure_ascii=False)
+        cur = self.read_document_if_exists(rel)
+        if cur is None:
+            cur = ""
+        merged = cur
+        if merged and not merged.endswith("\n"):
+            merged += "\n"
+        merged += line + "\n"
         self.write_document(rel, merged)
 
     def flush_now(self, *, timeout_s: float = 5.0) -> None:

@@ -173,16 +173,27 @@ def test_print_openrouter_invalid_json_retry_hint() -> None:
 def test_repl_online_ack_runtime_error_undoes_presence_and_skips_loop() -> None:
     """Online-ack 非 OpenRouter JSON 类失败时撤销 repl_online，不进入交互循环，不写 repl_offline。"""
     mock_run_turn = AsyncMock(
-        side_effect=RuntimeError("async chat front timed out after 1s (trace_id=x); retry")
+        side_effect=RuntimeError(
+            "async chat front timed out after 1s (trace_id=x); retry"
+        )
     )
     mock_append = MagicMock()
     mock_undo = MagicMock(return_value=True)
     ws = Path("/tmp/ws-repl-online-ack-fail")
     with (
-        patch("inty_v2_text_chat_prototype.main.is_workspace_initialized", return_value=True),
-        patch("inty_v2_text_chat_prototype.main.needs_startup_profile_inquiry", return_value=False),
+        patch(
+            "inty_v2_text_chat_prototype.main.is_workspace_initialized",
+            return_value=True,
+        ),
+        patch(
+            "inty_v2_text_chat_prototype.main.needs_startup_profile_inquiry",
+            return_value=False,
+        ),
         patch("inty_v2_text_chat_prototype.main.run_turn", mock_run_turn),
-        patch("inty_v2_text_chat_prototype.main._append_repl_presence_transcript", mock_append),
+        patch(
+            "inty_v2_text_chat_prototype.main._append_repl_presence_transcript",
+            mock_append,
+        ),
         patch(
             "inty_v2_text_chat_prototype.main.undo_trailing_repl_online_presence_line",
             mock_undo,
@@ -194,7 +205,9 @@ def test_repl_online_ack_runtime_error_undoes_presence_and_skips_loop() -> None:
         patch("inty_v2_text_chat_prototype.main._repl_interactive_loop") as mock_loop,
         patch("inty_v2_text_chat_prototype.main._flush_and_shutdown_memory_store"),
         patch("inty_v2_text_chat_prototype.main.stop_schedule_scheduler"),
-        patch("inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-05"),
+        patch(
+            "inty_v2_text_chat_prototype.main._local_ts_str", return_value="2026-04-05"
+        ),
         patch("builtins.print") as mock_print,
     ):
         repl(workspace=ws)

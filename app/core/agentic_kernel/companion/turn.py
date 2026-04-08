@@ -9,9 +9,12 @@ from typing import Any
 
 from loguru import logger
 
-from .file_store import append_jsonl
 from .llm_client import CompanionLLMClient
-from .memory_pipeline import MemoryPipelineConfig, memory_update_after_turn, schedule_memory_update_after_turn
+from .memory_pipeline import (
+    MemoryPipelineConfig,
+    memory_update_after_turn,
+    schedule_memory_update_after_turn,
+)
 from .memory_store import MemoryStore
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -20,14 +23,14 @@ from .models import (
     PromptBundle,
     load_context_meta,
     load_prompt_bundle,
-    load_transcript,
+    load_transcript_from_store,
     transcript_for_llm_turn,
 )
 from .prompts import build_system_prompt
 from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools, execute_tool_call
 from .utc import utc_iso_ts
 from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
-from .workspace import WorkspacePaths, is_workspace_initialized
+from .workspace import WorkspacePaths
 
 _MAX_TOOL_ROUNDS = 24
 
@@ -98,7 +101,8 @@ async def run_turn(
     # 加载 context 与 prompt bundle
     context = load_context_meta(paths.context_json)
     bundle = load_prompt_bundle(paths, store, meta=context)
-    loaded = load_transcript(paths.transcript)
+    rel_tr = paths.transcript.relative_to(root).as_posix()
+    loaded = load_transcript_from_store(store, rel_tr)
     transcript = transcript_for_llm_turn(loaded)
 
     system = build_system_prompt(
@@ -157,7 +161,10 @@ async def run_turn(
                 trace_id,
             )
             result = execute_tool_call(
-                root, store, name, args,
+                root,
+                store,
+                name,
+                args,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
             )
             logger.info(
@@ -167,11 +174,13 @@ async def run_turn(
                 len(result),
                 not result.startswith("ERROR:"),
             )
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": result,
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result,
+                }
+            )
     else:
         raise RuntimeError(f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}")
 
@@ -192,23 +201,28 @@ async def run_turn(
     if heartbeat_turn:
         user_row["heartbeat"] = True
     user_row["trace_id"] = trace_id
-    append_jsonl(paths.transcript, user_row)
-    append_jsonl(paths.transcript, {
-        "role": "assistant",
-        "content": last_text,
-        "ts": utc_iso_ts(),
-        "uuid": assistant_msg_uuid,
-        "reply_to": user_msg_uuid,
-        "source": "chat",
-        "trace_id": trace_id,
-    })
+    store.append_jsonl_record(rel_tr, user_row)
+    store.append_jsonl_record(
+        rel_tr,
+        {
+            "role": "assistant",
+            "content": last_text,
+            "ts": utc_iso_ts(),
+            "uuid": assistant_msg_uuid,
+            "reply_to": user_msg_uuid,
+            "source": "chat",
+            "trace_id": trace_id,
+        },
+    )
 
     # 记忆管线
     if heartbeat_turn:
         logger.debug("run_turn memory_pipeline=skipped (heartbeat_turn)")
     elif defer_memory_update:
+
         def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:
             return llm_client.complete_text(msgs, model_role=model_role)
+
         schedule_memory_update_after_turn(
             paths,
             store=store,
@@ -218,8 +232,10 @@ async def run_turn(
             config=mem_cfg,
         )
     else:
+
         def _complete_fn_sync(msgs: list[dict[str, Any]], model_role: str) -> str:
             return llm_client.complete_text(msgs, model_role=model_role)
+
         memory_update_after_turn(
             paths,
             store=store,

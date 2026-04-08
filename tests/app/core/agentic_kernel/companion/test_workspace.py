@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.workspace import (
     WorkspacePaths,
     is_workspace_initialized,
+    is_workspace_initialized_from_store,
 )
 
 
@@ -58,6 +60,27 @@ def test_workspace_paths_custom_state_file_prefix(tmp_path: Path) -> None:
     # other paths unchanged
     assert p.identity == root / "IDENTITY.md"
     assert p.transcript == root / "transcript.jsonl"
+
+
+def test_is_workspace_initialized_from_store_complete(tmp_path: Path) -> None:
+    root = tmp_path / "virt"
+    root.mkdir()
+    store = MemoryStore(
+        workspace_root=root,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    for name in (
+        "IDENTITY.md",
+        "SOUL.md",
+        "USER.md",
+        "MEMORY.md",
+        "transcript.jsonl",
+    ):
+        store.write_document(name, "ok\n")
+    assert is_workspace_initialized_from_store(root, store) is True
+    assert is_workspace_initialized(root) is False
 
 
 def test_is_workspace_initialized_partial(tmp_path: Path) -> None:

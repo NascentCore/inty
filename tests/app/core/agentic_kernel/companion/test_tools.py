@@ -61,6 +61,24 @@ def test_tool_workspace_read_write(tmp_path: Path) -> None:
     assert r == "full text"
 
 
+def test_workspace_read_file_no_disk_fallback(tmp_path: Path) -> None:
+    root = tmp_path
+    (root / "orphan.md").write_text("disk only", encoding="utf-8")
+    store = MemoryStore(
+        workspace_root=root,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    out = execute_tool_call(
+        root,
+        store,
+        "workspace_read_file",
+        json.dumps({"path": "orphan.md"}),
+    )
+    assert out.startswith("ERROR:")
+
+
 def test_tool_workspace_write_not_in_allowlist(tmp_path: Path) -> None:
     root = tmp_path
     store = MemoryStore(workspace_root=root, repository=None, mirror_to_files=True)

@@ -25,6 +25,32 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 - **Inty-dev**：https://dev.inty.sxwl.ai
   - 运营评测工具：https://dev.inty.sxwl.ai/evaluation
 
+### iMate（第二 Inty 后端实例）Cloud SQL 逻辑库
+
+**完整步骤（含 gcloud、GCS、VM、DNS）**：[docs/OPS_IMATE_INTY_DEPLOY_GCLOUD.md](../docs/OPS_IMATE_INTY_DEPLOY_GCLOUD.md)。
+
+与 IntelliMate 共用 Cloud SQL 实例 `inty-prod`（私网 IP 与现网 `database.host` 一致），**新增独立逻辑库**（方案 A，见 [docs/DEVOPS_IMATE_BACKEND_PLAN.md](../docs/DEVOPS_IMATE_BACKEND_PLAN.md)）。在可连该实例的客户端执行（示例库名与 [config.yaml.imate_dev](config.yaml.imate_dev) / [config.yaml.imate_prod](config.yaml.imate_prod) 一致）：
+
+```sql
+CREATE DATABASE "inty-imate-dev";
+CREATE DATABASE "inty-imate";
+```
+
+`postgres` 超级用户默认可连接新库；若使用独立角色，需 `GRANT ALL PRIVILEGES ON DATABASE ...`。
+
+逻辑库创建后，在**指向 iMate 库**的配置上执行 Alembic（勿用 IntelliMate 的 `config.yaml.dev`/`prod` 误连）：
+
+```bash
+export PYTHONPATH=.
+alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_dev upgrade head
+# prod
+alembic -c alembic/alembic.ini -x config=devops/config.yaml.imate_prod upgrade head
+```
+
+**GCS**：在 GCP 控制台创建与配置中一致的 bucket（`imate-static-dev`、`imate-static-prod`），为 iMate 后端服务账号配置对象读写权限；勿与 IntelliMate `inty-static` 混用。
+
+**GCE / nginx**：宿主机端口与域名见 `devops/README.md` 中 iMate 小节；TLS 需为新域名跑 Certbot 后再 `nginx -t` / reload。
+
 ### 日志
 
 - Cloud logging：prod container streaming logs https://cloudlogging.app.goo.gl/o8QRPguGe78soGUY9

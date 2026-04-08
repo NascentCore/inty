@@ -22,6 +22,10 @@
 - **Not done (blocked by DNS)**
   - `www.sxwl.ai` was not added to the certificate because there is no A/AAAA record for it; once DNS is set, cert can be expanded with `certbot certonly ... --expand -d sxwl.ai -d www.sxwl.ai`.
 
+## iMate 域名 TLS
+
+为 `dev.imate.inty.cc`、`imate.inty.cc` 配置 DNS 指向本机后，按现有 Certbot webroot 流程签发证书（证书路径需与 `conf.d/sxwl.ai.conf` 中 `ssl_certificate` 一致），再 `nginx -t` / reload。未签发前不要同步含 HTTPS `server` 块的配置，否则 `nginx -t` 会失败。
+
 ## 更新 Nginx 配置
 
 可通过 GitHub Actions 部署（手动触发，选择 dev/prod 环境）：[Deploy nginx config (sxwl.ai)](https://github.com/NascentCore/inty/actions/workflows/deploy_nginx_conf.yaml)。

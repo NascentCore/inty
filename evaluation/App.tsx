@@ -219,7 +219,7 @@ const AppContent: React.FC = () => {
       key: "chat-ws-verify",
       icon: <MessageOutlined />,
       label: "WebSocket 对话验证",
-      description: "验证 WS 连接与对话效果（不落库）",
+      description: "走生产 /api/v1/chat/ws，与线上一致（Assume user 走 query）",
     },
     {
       key: "voice-chat",

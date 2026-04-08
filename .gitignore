@@ -86,6 +86,7 @@ yarn.lock
 htmlcov/
 .pytest_cache/
 config.yaml*
+!devops/config.yaml.*
 
 # google key
 inty-backend-key.json

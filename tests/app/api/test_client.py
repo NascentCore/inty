@@ -142,6 +142,8 @@ class TestClient:
         *,
         language: str = "en",
         headers: Optional[dict] = None,
+        local_id: Optional[str] = None,
+        message_id: Optional[str] = None,
     ) -> dict:
         if not self.token:
             raise RuntimeError(
@@ -158,6 +160,10 @@ class TestClient:
             "model": "chatbot",
             "language": language,
         }
+        if local_id is not None:
+            payload["localId"] = local_id
+        if message_id is not None:
+            payload["message_id"] = message_id
 
         request_headers = {**self.client.headers, **(headers or {})}
         response = self.client.post(

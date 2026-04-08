@@ -15,12 +15,12 @@ from app.core.agentic_kernel.tools.runtime import (
 
 from .tools import build_companion_tools, execute_tool_call, WRITABLE_RELATIVE_PATHS
 from .turn import openai_assistant_message_dict
-from .workspace import is_workspace_initialized
+from .workspace import is_workspace_initialized_from_store
 from .memory_store import MemoryStore
 
 _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE = (
     "[INTERNAL - not shown to the end user] The REPL cannot accept the next user line until "
-    "the workspace passes initialization (required files exist on disk). That is not true yet. "
+    "the workspace passes initialization (required documents exist in the memory store). That is not true yet. "
     "Keep a companionship tone when you speak to the user, but you MUST call tools now and in "
     "following turns until initialization succeeds. Do not end with assistant text only "
     "until the workspace is complete. When you do speak to the user, never hint at internal "
@@ -97,7 +97,7 @@ async def run_workspace_bootstrap_loop(
         "Never hint at internal processing, frameworks, backends, or setup/sync/initialization "
         "metaphors. Only human, relational language toward the user. "
         "Use the tools silently to read/list/write under the workspace root. "
-        "When initialization is complete (required files exist) and you return without further "
+        "When initialization is complete (required documents exist in the memory store) and you return without further "
         "tool calls, your last assistant message must follow the spec's 收尾 section: invite "
         "the user to co-define you and gently ask for basic information about them.\n\n"
         f"{spec}"
@@ -132,7 +132,7 @@ async def run_workspace_bootstrap_loop(
         if not tool_calls:
             last_assistant_text = (msg.content or "").strip()
             messages.append(_openai_assistant_message_dict(msg))
-            if is_workspace_initialized(root):
+            if is_workspace_initialized_from_store(root, store):
                 logger.info(
                     "bootstrap done rounds={} total_ms={:.0f} ws={}",
                     round_idx,
@@ -145,7 +145,9 @@ async def run_workspace_bootstrap_loop(
                 "injecting_internal_continue",
                 round_idx,
             )
-            messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE})
+            messages.append(
+                {"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE}
+            )
             continue
 
         active_round = round_idx
@@ -208,7 +210,7 @@ async def run_workspace_bootstrap_loop(
         last_assistant_text = (final_message.content or "").strip()
         messages.append(_openai_assistant_message_dict(final_message))
 
-        if is_workspace_initialized(root):
+        if is_workspace_initialized_from_store(root, store):
             logger.info(
                 "bootstrap done rounds={} total_ms={:.0f} ws={}",
                 rounds_used,
@@ -222,7 +224,9 @@ async def run_workspace_bootstrap_loop(
             "injecting_internal_continue",
             rounds_used,
         )
-        messages.append({"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE})
+        messages.append(
+            {"role": "user", "content": _INTERNAL_BOOTSTRAP_CONTINUE_TEMPLATE}
+        )
 
     raise RuntimeError(
         f"workspace bootstrap exceeded max_rounds={max_rounds}; last messages tail: "

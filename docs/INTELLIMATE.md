@@ -71,7 +71,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 | --- | --- | --- |
 | Try the app or switch backend | Settings → Debug Backend Endpoint (debug builds only) | Swap between local/dev/prod servers without reinstalling; see `android_app/APP_DYNAMIC_TEST.md`. |
 | Find or follow iMates | Bottom nav → Explore | Double-tap the top bar to jump back to page 1 and refresh recommendations. Images are preloaded for smooth scrolling. |
-| Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation + send one selected image together with text in the same message. |
+| Chat with an iMate | Tap any iMate card → Chat | Text + voice playback (openers are preloaded) + instant image generation + send one selected image together with text in the same message. The app may send your **local time and time zone** with chat traffic so replies can match the time of day; debug builds can disable this under Settings → Debug Backend Endpoint → **User time context reporting**. |
 | Hype an iMate | iMate profile → **Hype this iMate** or Explore → **Top Hyped iMates** | Spend Credits to hype an iMate and raise their Hype Score on the leaderboard. |
 | Upscale an AI image in fullscreen view | Open any generated/gallery image → Fullscreen viewer → **Upscale** (next to Share) | VIP users can use it directly. Non-VIP users can unlock once by spending **10 credits**, then choose **1x / 2x / 4x**. |
 | Start an MBTI test chat | Official Assistant Chat → **Test my MBTI type** | Sends a structured MBTI interview starter prompt immediately, then continue by answering each follow-up question. |
@@ -125,6 +125,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 
 ### 5. Settings
 - **Debug Backend Endpoint** (debug builds only): Change the API base URL at runtime; cache clears automatically so the next request uses the new server.
+- **User time context reporting** (debug builds only, under Debug Backend Endpoint): When enabled, the app includes device local time and IANA time zone in chat API/WebSocket payloads so the assistant can use time-of-day context; release builds include this by default without a toggle.
 - **Help & Feedback**: Add your FAQ or form link here so end users can submit issues without leaving the app.
 - **Remote Config**: Features such as auto-enabling Keep Talking are controlled centrally. Sudden UI changes may come from new Remote Config values.
 

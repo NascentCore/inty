@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,
     PromptBundle,
     load_transcript,
+    load_transcript_from_store,
+    load_transcript_text,
     transcript_for_llm_turn,
 )
 
@@ -66,6 +69,29 @@ def test_transcript_for_llm_turn_truncate() -> None:
 def test_load_transcript_empty_file(tmp_path: Path) -> None:
     missing = tmp_path / "missing.jsonl"
     assert load_transcript(missing) == []
+
+
+def test_load_transcript_text() -> None:
+    text = (
+        '{"role": "user", "content": "a", "ts": "2026-01-01T00:00:00Z"}\n'
+        '{"role": "assistant", "content": "b", "timestamp": "2026-01-01T00:01:00Z"}\n'
+    )
+    msgs = load_transcript_text(text)
+    assert len(msgs) == 2
+
+
+def test_load_transcript_from_store(tmp_path: Path) -> None:
+    store = MemoryStore(
+        workspace_root=tmp_path,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    row = {"role": "user", "content": "x", "ts": "2026-01-01T00:00:00Z"}
+    store.write_document("transcript.jsonl", json.dumps(row) + "\n")
+    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    assert len(msgs) == 1
+    assert msgs[0].content == "x"
 
 
 def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:

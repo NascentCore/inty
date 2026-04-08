@@ -97,9 +97,7 @@ class TestInnerTickSchedule(unittest.TestCase):
                 ],
             )
             with patch.dict(os.environ, {}, clear=True):
-                w = next_inner_tick_wait_seconds(
-                    root, last_inner_fire_monotonic=None
-                )
+                w = next_inner_tick_wait_seconds(root, last_inner_fire_monotonic=None)
             self.assertLessEqual(w, 0.0)
 
     def test_ready_when_assistant_last_and_min_gap_elapsed(self) -> None:
@@ -182,14 +180,21 @@ class TestTranscriptFlags(unittest.TestCase):
         )
         self.assertFalse(is_transcript_real_user_message(m))
 
-    def test_trailing_repl_online_still_allows_inner_tick_when_assistant_last(self) -> None:
+    def test_trailing_repl_online_still_allows_inner_tick_when_assistant_last(
+        self,
+    ) -> None:
         """presence 行截断后末条仍为 assistant 时应可触发 inner tick。"""
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             _write_transcript(
                 root / "transcript.jsonl",
                 [
-                    {"role": "user", "content": "hi", "ts": "2026-01-01T12:00:00+00:00", "uuid": "a"},
+                    {
+                        "role": "user",
+                        "content": "hi",
+                        "ts": "2026-01-01T12:00:00+00:00",
+                        "uuid": "a",
+                    },
                     {
                         "role": "assistant",
                         "content": "hello",

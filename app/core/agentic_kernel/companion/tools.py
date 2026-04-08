@@ -249,6 +249,8 @@ def _tool_workspace_read_file(root: Path, store: MemoryStore, args: dict) -> str
         return result
     content = store.read_document_if_exists(rel)
     if content is None:
+        if not store.allow_workspace_disk_fallback:
+            return f"ERROR: file not found: {rel}"
         if not result.is_file():
             return f"ERROR: file not found: {rel}"
         content = read_text(result)

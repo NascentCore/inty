@@ -1,0 +1,119 @@
+app:
+  environment: prod
+  min_app_version_code_for_festival_memory: 3585
+
+  limits:
+    guest_user_chat_24h_limit: 10
+    free_user_chat_24h_limit: 100
+    guest_user_voice_24h_limit: 1
+    free_user_voice_24h_limit: 5
+    subscribed_user_voice_24h_limit: 100
+    free_user_image_gen_24h_limit: 5
+    subscribed_user_image_gen_24h_limit: 10
+    free_user_agent_creation_24h_limit: 1
+    subscribed_user_agent_creation_24h_limit: 5
+    free_user_chat_messages_limit: 100
+  gcp_service_account_key: "inty-backend-key.json"
+
+sentry:
+  dsn: "https://35871471ace10dd7da9a7e26fe516fa4@o4510350447411200.ingest.us.sentry.io/4510350448459776"
+  enabled: false
+  traces_sample_rate: 0.1
+
+security:
+  secret_key: "893-ac77-4b6d-b644"
+  algorithm: "HS256"
+  access_token_expire_minutes: 10080
+
+database:
+  host: "10.41.177.3"
+  user: "postgres"
+  password: "sxwl666A!"
+  db: "inty-imate"
+  pool_size: 50
+  max_overflow: 20
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+  replica_host: "10.41.177.17"
+
+google_oauth:
+  client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
+  client_secret: "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"
+  redirect_uri: "https://imate.inty.cc/api/v1/auth/google/callback"
+
+gcs:
+  bucket: "imate-static-prod"
+
+verification:
+  code_expire_minutes: 5
+
+firebase:
+  service_account_path: "inty-firebase-key.json"
+
+agent:
+  api_key: "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"
+  base_url: "https://openrouter.ai/api/v1"
+  langchain_api_key: "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"
+  force_default_prompts: false
+  free_user_chat_image_model: "Z Image Turbo Image to Image"
+  newapi_gemini_base_url: "https://llm.sxwl.ai"
+  newapi_gemini_bearer_token: "sk-NgSZYRAbWEPRtfgSObaz242qA2VhpneytPop97LkmeP4aBy7"
+  sub_user_chat_image_model: "NewAPI Nano Banana 2"
+  vertex_ai_location: "global"
+  enable_chat_image_match_fallback: true
+  langsmith_text_chat_sample_rate: 0.01
+  langsmith_text_chat_always_trace_user_emails:
+    - "anonymoussocialforreal@gmail.com"
+    - "charlesfengyu@gmail.com"
+    - "donggangcj@gmail.com"
+    - "it@sxwl.ai"
+    - "justicezyx@gmail.com"
+    - "kotlinaai@gmail.com"
+    - "xheuyyuki@gmail.com"
+
+google_play:
+  package_name: "com.ai.imate"
+  webhook_secret: ""
+  enable_version_check: false
+  min_supported_version: 1
+  current_version_code: 0
+
+elevenlabs:
+  api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
+  model: "eleven_flash_v2_5"
+  voice_id: "EXAVITQu4vr4xnSDxMaL"
+  output_format: "mp3_22050_32"
+  enabled: true
+  max_text_length: 5000
+
+cloudflare:
+  domain: "images.sxwl.dev"
+  enabled: true
+  fallback_to_original: true
+
+logging:
+  level: "INFO"
+
+gemini_live:
+  enabled: true
+  project_id: "alien-paratext-461204-i9"
+  location: "us-central1"
+  model: "gemini-live-2.5-flash-preview-native-audio-09-2025"
+  send_sample_rate: 16000
+  receive_sample_rate: 24000
+  default_voice: "Zephyr"
+  session_resumption: true
+  input_transcription: true
+  output_transcription: true
+  save_voice_history: true
+  free_user_max_session_duration: 60
+  sub_user_max_session_duration: 120
+
+fal:
+  api_key: 0b135fdb-8e5c-46ee-971a-3694410d98d2:3881993c5f3268bf109fbbfd505f1991
+
+memory_extraction:
+  workflow_mode: "daily_incremental_summarization"

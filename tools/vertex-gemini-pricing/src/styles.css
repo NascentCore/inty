@@ -1,0 +1,168 @@
+/* Standalone tool; colors mirror web_app dark theme tokens */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0f0f0f;
+  color: rgba(255, 255, 255, 0.95);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+.vertex-gemini-pricing-page {
+  min-height: 100vh;
+  padding: 32px 20px 48px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.vertex-gemini-pricing-page__header {
+  margin-bottom: 28px;
+}
+
+.vertex-gemini-pricing-page__title {
+  margin: 0 0 12px;
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.vertex-gemini-pricing-page__subtitle {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.vertex-gemini-pricing-page__doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1890ff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.vertex-gemini-pricing-page__doc-link:hover {
+  text-decoration: underline;
+}
+
+.vertex-gemini-pricing-page__card {
+  background: #242424;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 22px 20px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vertex-gemini-pricing-page__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.vertex-gemini-pricing-page__row .vertex-gemini-pricing-page__field {
+  flex: 1 1 200px;
+}
+
+.vertex-gemini-pricing-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vertex-gemini-pricing-page__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vertex-gemini-pricing-page__select,
+.vertex-gemini-pricing-page__input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #1a1a1a;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1rem;
+  outline: none;
+}
+
+.vertex-gemini-pricing-page__select:focus,
+.vertex-gemini-pricing-page__input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.25);
+}
+
+.vertex-gemini-pricing-page__input--narrow {
+  max-width: 160px;
+}
+
+.vertex-gemini-pricing-page__note {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.vertex-gemini-pricing-page__warn {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #faad14;
+}
+
+.vertex-gemini-pricing-page__results {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vertex-gemini-pricing-page__result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vertex-gemini-pricing-page__result-row--total {
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.vertex-gemini-pricing-page__result-label {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.vertex-gemini-pricing-page__result-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.vertex-gemini-pricing-page__result-row--total .vertex-gemini-pricing-page__result-value {
+  font-size: 1.45rem;
+  color: #52c41a;
+}

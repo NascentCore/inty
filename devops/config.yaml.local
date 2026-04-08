@@ -4,6 +4,7 @@
 app:
   debug: true
   environment: local
+  gcp_service_account_key: ".secrets/inty-backend-key.json"
   limits:
     free_user_chat_24h_limit: 1
     guest_user_chat_24h_limit: 1

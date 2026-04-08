@@ -249,7 +249,9 @@ def build_system_prompt(
         ]
     )
 
-    skip_memory_blocks = tool_side_compact and not heartbeat_turn and not inner_tick_turn
+    skip_memory_blocks = (
+        tool_side_compact and not heartbeat_turn and not inner_tick_turn
+    )
     intimate = context.context_mode.strip().lower() == "intimate"
     if intimate:
         if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():

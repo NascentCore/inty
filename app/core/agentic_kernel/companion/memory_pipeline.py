@@ -14,7 +14,6 @@ from loguru import logger
 from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, Field
 
-from .file_store import read_text, write_text_atomic
 from .memory_store import MemoryStore
 from .utc import local_date_str, local_iso_ts
 from .workspace import WorkspacePaths
@@ -108,20 +107,21 @@ class MemoryPipelineConfig(BaseModel):
     soul_require_fundamental_signal: bool = True
 
 
-def _bump_memory_pipeline_turn(paths: WorkspacePaths) -> int:
-    p = paths.memory_pipeline_state_json
+def _bump_memory_pipeline_turn(paths: WorkspacePaths, store: MemoryStore) -> int:
+    rel = paths.memory_pipeline_state_json.relative_to(paths.root).as_posix()
     data: dict[str, object] = {}
-    if p.is_file():
-        loaded = json.loads(read_text(p))
+    raw = store.read_document_if_exists(rel)
+    if raw is not None and raw.strip():
+        loaded = json.loads(raw)
         if not isinstance(loaded, dict):
             raise ValueError(
-                f"{p} must be a JSON object with optional key turns_completed (int)"
+                f"{rel} must be a JSON object with optional key turns_completed (int)"
             )
         data = loaded
     prev = int(data.get("turns_completed", 0))
     n = prev + 1
     data["turns_completed"] = n
-    write_text_atomic(p, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    store.write_document(rel, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
     return n
 
 
@@ -322,7 +322,7 @@ def memory_update_after_turn(
 ) -> None:
     t_all = time.perf_counter()
     ws = paths.root.name
-    turn_n = _bump_memory_pipeline_turn(paths)
+    turn_n = _bump_memory_pipeline_turn(paths, store)
     every_n = config.day_summary_every_n_turns
     user_every_n = config.user_update_every_n_turns
     memory_every_n = config.memory_update_every_n_turns
@@ -358,9 +358,7 @@ def memory_update_after_turn(
     )
 
     t = time.perf_counter()
-    run_day_summary_llm = (not config.day_summary_disabled) and (
-        turn_n % every_n == 0
-    )
+    run_day_summary_llm = (not config.day_summary_disabled) and (turn_n % every_n == 0)
     if run_day_summary_llm:
         _rewrite_day_summary_md(
             store,
@@ -407,9 +405,7 @@ def memory_update_after_turn(
     )
 
     t = time.perf_counter()
-    run_user_llm = (not config.user_update_disabled) and (
-        turn_n % user_every_n == 0
-    )
+    run_user_llm = (not config.user_update_disabled) and (turn_n % user_every_n == 0)
     if run_user_llm:
         _rewrite_user_md(
             store,

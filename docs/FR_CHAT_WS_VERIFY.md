@@ -11,6 +11,7 @@
 | `WebSocket /api/v1/chat/ws` | 生产：一发一收，与 POST completions 行为一致 | 是 |
 | `WebSocket /api/v1/chat/ws/verify` | 校验：协议相同，仅用于验证连接与对话效果 | 否 |
 
+- **引擎对齐**：生产 `/ws` 走 `agent_chat_completions`（落库）；`/ws/verify` 当前实现走 `generate_message_without_user_save`，与生产推理路径不完全相同。接入 Inty v2 时须按 [FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md](/docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md) 第 7 节统一或显式标注差异，避免联调结论与线上一致性落空。
 - **Base URL**：与现有 HTTP API 一致，如 `wss://<host>/api/v1/chat/ws` 或 `wss://<host>/api/v1/chat/ws/verify`（HTTPS 环境用 `wss`，HTTP 用 `ws`）。
 - **兼容性**：老版本 App 可继续使用 `POST /api/v1/chat/completions/{agent_id}` 或现有 `/api/v1/chat/ws`，无需改动。
 
@@ -26,6 +27,10 @@
   `?token=<token>`
 
 未鉴权或 token 无效时，服务端会关闭连接，关闭码 `4001`，reason 为 `Unauthorized`。
+
+### 2.1 评测：Assume user（WebSocket）
+
+与实时语音 WebSocket 一致：握手 URL 可追加 `assume_user_id=<user id>`。仅当当前 token 用户为 **superuser** 时才会切换身份；否则参数被忽略。语义对齐 HTTP 的 `X-Assume-User-Id`（`get_effective_user_for_eval`）。适用于 `/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify`。
 
 ---
 
@@ -155,7 +160,7 @@
 
 - 客户端 → 服务端：`{"type":"ping"}`（建议每 20–30 秒发送一次，用于保活与探测）。
 - 服务端 → 客户端：`{"type":"pong"}`（对客户端 ping 的回复）。
-- 服务端**不主动发 ping**；若在约 60 秒内未收到任何上行（ping 或聊天），服务端将关闭连接。
+- 服务端**不主动发 ping**；若在 `app.features.chat_ws_idle_timeout_seconds`（默认 60）秒内未收到任何上行（ping 或聊天），服务端将关闭连接。
 
 ---
 
@@ -178,7 +183,7 @@
 ## 五、客户端实现要点
 
 1. **建连**：使用与现有 API 相同的 Base URL 和 token，将 path 设为 `/api/v1/chat/ws` 或 `/api/v1/chat/ws/verify`；若无法带 Header，则使用 `?token=<token>`。
-2. **心跳**：由**客户端**定期（建议每 20–30 秒）发送 `{"type":"ping"}`，服务端回复 `{"type":"pong"}`。服务端不主动发 ping；若 60 秒内未收到任何消息（ping 或聊天），将关闭连接。客户端应在连接建立后启动心跳定时器，收到 pong 可视为连接存活；断线后通过 onclose 重连。
+2. **心跳**：由**客户端**定期（建议每 20–30 秒，且间隔小于 `app.features.chat_ws_idle_timeout_seconds`）发送 `{"type":"ping"}`，服务端回复 `{"type":"pong"}`。服务端不主动发 ping；超过该配置秒数未收到任何消息（ping 或聊天），将关闭连接。客户端应在连接建立后启动心跳定时器，收到 pong 可视为连接存活；断线后通过 onclose 重连。
 3. **重连**：断线后建议指数退避重连，避免频繁重连。
 4. **请求与响应对应**：当前为顺序一发一收，可通过本地队列保证「发送顺序与接收顺序一致」；若后续支持异步多请求，下行会带 `request_id` 等字段以便对应。
 5. **错误处理**：根据下行 `code` 判断成功/失败，`code !== 200` 时解析 `message` 做提示或重试策略。

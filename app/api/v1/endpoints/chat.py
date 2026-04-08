@@ -15,6 +15,8 @@ from fastapi import (
 )
 from langchain_core.messages import HumanMessage
 from loguru import logger
+from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -33,8 +35,12 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
-from app.models.user import AuthType
-from app.schemas.chat import ChatCompletionRequest, ChatWebSocketRequest
+from app.models.user import AuthType, User
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    ChatWebSocketRequest,
+    UserTimeContext,
+)
 from app.schemas.response import (
     BizError,
     BusinessErrorCode,
@@ -61,13 +67,70 @@ from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
-# WebSocket 应用层心跳：由客户端发 ping，服务端仅回 pong；服务端空闲超时关闭连接
-CHAT_WS_IDLE_TIMEOUT_SECONDS = 60
+# WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
+# Handlers must not pass that session into asyncio.to_thread or other threads; open a new
+# session inside the worker if agentic work runs off the event loop.
+
+
+def _chat_ws_idle_timeout_seconds() -> float:
+    return float(
+        global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
+    )
+
+
+def _chat_request_with_merged_ws_time_context(
+    request: ChatCompletionRequest,
+    ws_session_time_context: Optional[dict],
+) -> ChatCompletionRequest:
+    """
+    单连接上先发送 client_context 时，后续 chat 帧可省略 time_context；
+    若请求体已带 user_time_context，以请求为准。
+    """
+    if not ws_session_time_context:
+        return request
+    if request.user_time_context is not None:
+        return request
+    try:
+        utc = UserTimeContext.model_validate(ws_session_time_context)
+    except ValidationError:
+        return request
+    return request.model_copy(update={"user_time_context": utc})
+
+
+async def _handle_chat_websocket_control_json(
+    websocket: WebSocket,
+    data: Any,
+    tc_box: list[Optional[dict]],
+) -> bool:
+    """
+    Handle ping / client_context on chat WebSockets. tc_box is a length-1 list holding the
+    session's last validated time_context dict (or None). Returns True if the frame was consumed.
+    """
+    if not isinstance(data, dict):
+        return False
+    msg_type = data.get("type")
+    if msg_type == "ping":
+        await websocket.send_json({"type": "pong"})
+        return True
+    if msg_type != "client_context":
+        return False
+    tc_raw = data.get("time_context")
+    if not isinstance(tc_raw, dict):
+        await websocket.send_json({"type": "client_context_ack", "ok": False})
+        return True
+    try:
+        validated = UserTimeContext.model_validate(tc_raw)
+        dumped = validated.model_dump(exclude_none=True)
+        tc_box[0] = dumped if dumped else None
+        await websocket.send_json({"type": "client_context_ack", "ok": True})
+    except ValidationError:
+        await websocket.send_json({"type": "client_context_ack", "ok": False})
+    return True
 
 
 async def _get_current_user_from_websocket(
     websocket: WebSocket, db: AsyncSession
-) -> Optional[schemas.User]:
+) -> Optional[User]:
     auth = websocket.headers.get("authorization")
     token = None
     if auth:
@@ -81,16 +144,53 @@ async def _get_current_user_from_websocket(
     return await deps.get_user_from_token(token, db)
 
 
+async def _resolve_assumed_chat_websocket_user(
+    *,
+    operator: User,
+    assume_user_id: Optional[str],
+    db: AsyncSession,
+) -> schemas.User:
+    """
+    Evaluation: superuser may pass assume_user_id query (same semantics as live_chat WS).
+    Matches HTTP X-Assume-User-Id for chat so eval WebSocket hits the same code path as production /ws.
+    """
+    operator_schema = schemas.User.model_validate(operator, from_attributes=True)
+    if not assume_user_id or not str(assume_user_id).strip():
+        return operator_schema
+    if not operator.is_superuser:
+        logger.warning(
+            "chat WebSocket assume_user_id ignored: operator is not superuser "
+            f"operator_id={operator.id}"
+        )
+        return operator_schema
+    user_id = str(assume_user_id).strip()
+    row = await db.execute(select(User).where(User.id == user_id))
+    assumed = row.scalar_one_or_none()
+    if assumed is not None and not assumed.deleted_at:
+        logger.info(
+            "chat WebSocket assuming user: operator={} assumed={}",
+            operator.id,
+            assumed.id,
+        )
+        return schemas.User.model_validate(assumed, from_attributes=True)
+    logger.warning("chat WebSocket assume_user_id not found or deleted: {}", assume_user_id)
+    return operator_schema
+
+
 async def _handle_subscription_limit_error(
     session_id: str,
     last_user_message: str | List[dict[str, Any]],
     current_user: schemas.User,
     used_count: int,
     daily_limit: int,
+    client_local_id: Optional[str] = None,
 ) -> schemas.APIResponse:
     """处理订阅限制错误"""
     try:
-        await chat_history_service.add_user_message_async(session_id, last_user_message)
+        meta = {"localId": client_local_id} if client_local_id else None
+        await chat_history_service.add_user_message_async(
+            session_id, last_user_message, meta_data=meta
+        )
         logger.debug(f"用户消息已保存到历史记录: {session_id}")
     except Exception as e:
         logger.warning(f"保存用户消息失败: {str(e)}")
@@ -455,6 +555,10 @@ async def agent_chat_completions(
         if user_time_context == {}:
             user_time_context = None
 
+        effective_local_id = (
+            request.local_id or request.message_id or ""
+        ).strip() or None
+
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
             agent_data = await agent_service.get_agent_for_chat(
@@ -477,7 +581,12 @@ async def agent_chat_completions(
 
         if not is_allowed:
             return await _handle_subscription_limit_error(
-                session_id, last_user_message, current_user, used_count, daily_limit
+                session_id,
+                last_user_message,
+                current_user,
+                used_count,
+                daily_limit,
+                client_local_id=effective_local_id,
             )
 
         # 获取聊天设置和AI回复
@@ -506,6 +615,7 @@ async def agent_chat_completions(
                     user_time_context=user_time_context,
                     model_override=model_override,
                     is_subscribed=is_subscribed,
+                    client_local_message_id=effective_local_id,
                 )
                 response_content, ai_message_id = (
                     (chat_result[0], chat_result[1])
@@ -810,6 +920,12 @@ async def chat_completions_websocket(
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
+    current_user = await _resolve_assumed_chat_websocket_user(
+        operator=current_user,
+        assume_user_id=websocket.query_params.get("assume_user_id"),
+        db=db,
+    )
+
     app_version_code_header = websocket.headers.get("appVersionCode")
     app_version_code = (
         int(app_version_code_header)
@@ -817,12 +933,13 @@ async def chat_completions_websocket(
         else None
     )
 
+    tc_box: list[Optional[dict]] = [None]
     try:
         while True:
             try:
                 raw = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=CHAT_WS_IDLE_TIMEOUT_SECONDS,
+                    timeout=_chat_ws_idle_timeout_seconds(),
                 )
             except asyncio.TimeoutError:
                 await websocket.close()
@@ -831,14 +948,17 @@ async def chat_completions_websocket(
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 data = None
-            if isinstance(data, dict) and data.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
+            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             websocket_request = ChatWebSocketRequest.model_validate_json(raw)
+            merged_request = _chat_request_with_merged_ws_time_context(
+                websocket_request.request,
+                tc_box[0],
+            )
             response = await agent_chat_completions(
                 db=db,
                 agent_id=websocket_request.agent_id,
-                request=websocket_request.request,
+                request=merged_request,
                 current_user=current_user,
                 app_version_code=app_version_code,
                 subscription_svc=subscription_svc,
@@ -859,6 +979,11 @@ async def chat_completions_websocket_verify(
 ):
     """
     WebSocket 校验端点：与 /ws 协议一致，但不写入 chat_history，仅用于验证连接与对话效果。
+
+    Implementation note: this path uses generate_message_without_user_save, not agent_chat_completions.
+    When adding agentic v2 routing to /ws, either refactor a shared dispatcher with a persist flag so
+    verify stays behaviorally aligned, or document that verify remains legacy-only for engine selection.
+    See docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md.
     """
     await websocket.accept()
     current_user = await _get_current_user_from_websocket(websocket, db)
@@ -866,12 +991,19 @@ async def chat_completions_websocket_verify(
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
+    current_user = await _resolve_assumed_chat_websocket_user(
+        operator=current_user,
+        assume_user_id=websocket.query_params.get("assume_user_id"),
+        db=db,
+    )
+
+    tc_box: list[Optional[dict]] = [None]
     try:
         while True:
             try:
                 raw = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=CHAT_WS_IDLE_TIMEOUT_SECONDS,
+                    timeout=_chat_ws_idle_timeout_seconds(),
                 )
             except asyncio.TimeoutError:
                 await websocket.close()
@@ -880,12 +1012,14 @@ async def chat_completions_websocket_verify(
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 data = None
-            if isinstance(data, dict) and data.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
+            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             websocket_request = ChatWebSocketRequest.model_validate_json(raw)
             agent_id = websocket_request.agent_id
-            request = websocket_request.request
+            request = _chat_request_with_merged_ws_time_context(
+                websocket_request.request,
+                tc_box[0],
+            )
 
             user_messages = [msg for msg in request.messages if msg.role == "user"]
             if not user_messages:
