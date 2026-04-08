@@ -15,6 +15,7 @@ from fastapi import (
 )
 from langchain_core.messages import HumanMessage
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
@@ -33,7 +34,7 @@ from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
-from app.models.user import AuthType
+from app.models.user import AuthType, User
 from app.schemas.chat import ChatCompletionRequest, ChatWebSocketRequest
 from app.schemas.response import (
     BizError,
@@ -74,7 +75,7 @@ def _chat_ws_idle_timeout_seconds() -> float:
 
 async def _get_current_user_from_websocket(
     websocket: WebSocket, db: AsyncSession
-) -> Optional[schemas.User]:
+) -> Optional[User]:
     auth = websocket.headers.get("authorization")
     token = None
     if auth:
@@ -86,6 +87,39 @@ async def _get_current_user_from_websocket(
     if token is None or token == "":
         return None
     return await deps.get_user_from_token(token, db)
+
+
+async def _resolve_assumed_chat_websocket_user(
+    *,
+    operator: User,
+    assume_user_id: Optional[str],
+    db: AsyncSession,
+) -> schemas.User:
+    """
+    Evaluation: superuser may pass assume_user_id query (same semantics as live_chat WS).
+    Matches HTTP X-Assume-User-Id for chat so eval WebSocket hits the same code path as production /ws.
+    """
+    operator_schema = schemas.User.model_validate(operator, from_attributes=True)
+    if not assume_user_id or not str(assume_user_id).strip():
+        return operator_schema
+    if not operator.is_superuser:
+        logger.warning(
+            "chat WebSocket assume_user_id ignored: operator is not superuser "
+            f"operator_id={operator.id}"
+        )
+        return operator_schema
+    user_id = str(assume_user_id).strip()
+    row = await db.execute(select(User).where(User.id == user_id))
+    assumed = row.scalar_one_or_none()
+    if assumed is not None and not assumed.deleted_at:
+        logger.info(
+            "chat WebSocket assuming user: operator={} assumed={}",
+            operator.id,
+            assumed.id,
+        )
+        return schemas.User.model_validate(assumed, from_attributes=True)
+    logger.warning("chat WebSocket assume_user_id not found or deleted: {}", assume_user_id)
+    return operator_schema
 
 
 async def _handle_subscription_limit_error(
@@ -831,6 +865,12 @@ async def chat_completions_websocket(
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
+    current_user = await _resolve_assumed_chat_websocket_user(
+        operator=current_user,
+        assume_user_id=websocket.query_params.get("assume_user_id"),
+        db=db,
+    )
+
     app_version_code_header = websocket.headers.get("appVersionCode")
     app_version_code = (
         int(app_version_code_header)
@@ -891,6 +931,12 @@ async def chat_completions_websocket_verify(
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
         return
+
+    current_user = await _resolve_assumed_chat_websocket_user(
+        operator=current_user,
+        assume_user_id=websocket.query_params.get("assume_user_id"),
+        db=db,
+    )
 
     try:
         while True:

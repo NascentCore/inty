@@ -28,6 +28,10 @@
 
 未鉴权或 token 无效时，服务端会关闭连接，关闭码 `4001`，reason 为 `Unauthorized`。
 
+### 2.1 评测：Assume user（WebSocket）
+
+与实时语音 WebSocket 一致：握手 URL 可追加 `assume_user_id=<user id>`。仅当当前 token 用户为 **superuser** 时才会切换身份；否则参数被忽略。语义对齐 HTTP 的 `X-Assume-User-Id`（`get_effective_user_for_eval`）。适用于 `/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify`。
+
 ---
 
 ## 三、协议约定

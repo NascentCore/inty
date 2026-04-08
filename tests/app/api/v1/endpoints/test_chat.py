@@ -907,6 +907,56 @@ def test_chat_websocket_idle_timeout_reads_config(
     assert captured["timeouts"] and all(t == expected for t in captured["timeouts"])
 
 
+def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(user_id="user-1", auth_type=AuthType.GOOGLE, is_superuser=False)
+    captured: dict = {}
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(
+        *,
+        db,
+        agent_id,
+        request,
+        current_user,
+        app_version_code,
+        subscription_svc,
+        voice_svc,
+    ):
+        captured["effective_user_id"] = current_user.id
+        return APIResponse.success(
+            data={
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "ok"},
+                        "finish_reason": "stop",
+                    }
+                ],
+            }
+        )
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect(
+            "/api/v1/chat/ws?assume_user_id=user-other"
+        ) as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-a",
+                    "request": {"messages": [{"role": "user", "content": "hi"}]},
+                }
+            )
+            websocket.receive_json()
+
+    assert captured.get("effective_user_id") == "user-1"
+
+
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
