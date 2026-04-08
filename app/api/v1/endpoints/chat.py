@@ -173,7 +173,9 @@ async def _resolve_assumed_chat_websocket_user(
             assumed.id,
         )
         return schemas.User.model_validate(assumed, from_attributes=True)
-    logger.warning("chat WebSocket assume_user_id not found or deleted: {}", assume_user_id)
+    logger.warning(
+        "chat WebSocket assume_user_id not found or deleted: {}", assume_user_id
+    )
     return operator_schema
 
 

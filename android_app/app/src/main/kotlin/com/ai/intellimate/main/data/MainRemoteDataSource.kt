@@ -69,8 +69,7 @@ object MainRemoteDataSource {
                     try {
                         LogUtils.d("Main WebSocket已连接")
                         ChatRemoteDataSource.buildUserTimeContextOrNull()?.let { utc ->
-                            val payload =
-                                ChatClientContextWsMessage(timeContext = utc)
+                            val payload = ChatClientContextWsMessage(timeContext = utc)
                             session.send(Frame.Text(clientContextAdapter.toJson(payload)))
                         }
                         coroutineScope {
