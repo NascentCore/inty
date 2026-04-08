@@ -30,3 +30,7 @@ Then open `http://127.0.0.1:8765/index.html`.
 yarn typecheck
 yarn build   # esbuild bundle to dist/app.js
 ```
+
+## Deploy (Volcengine TOS)
+
+See [tools/volcengine_static_website_deploy/README.md](../volcengine_static_website_deploy/README.md) for uploading this directory to TOS and enabling static website hosting.
