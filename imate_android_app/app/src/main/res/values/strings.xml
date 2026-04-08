@@ -4,6 +4,7 @@
     <string name="login_logo_content_description">iMate logo</string>
     <string name="login_app_name">iMate</string>
     <string name="login_tagline">Your AI, your way</string>
+    <string name="auth_loading_tagline">awakening your companion...</string>
     <string name="login_info_prefix">Meet your personalized AI companion — built around </string>
     <string name="login_info_highlight">you</string>
     <string name="login_info_suffix">, growing with every conversation. \u2728</string>
