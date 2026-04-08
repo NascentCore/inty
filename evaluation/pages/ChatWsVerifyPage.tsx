@@ -1,6 +1,6 @@
 /**
- * WebSocket 对话验证页：连接 /api/v1/chat/ws/verify，与角色对话，验证收发效果。
- * 验证模式：所有聊天内容不落库（不写入 chat_history）。
+ * WebSocket 对话验证页：连接 /api/v1/chat/ws（与生产一致）。
+ * 超级用户在页头选择 Assume user 时，URL 会带 assume_user_id，与 HTTP X-Assume-User-Id 对齐。
  */
 
 import React, { useState, useRef, useCallback } from "react";
@@ -24,7 +24,7 @@ import {
 import type { Agent } from "../types";
 import { SingleAgentSelectorPanel } from "../components/common/SingleAgentSelectorPanel";
 import { AvatarDisplay } from "../components/common/AvatarDisplay";
-import { getChatWsVerifyUrl, getGlobalApiKey } from "../services/api";
+import { getChatWebSocketUrl, getGlobalApiKey } from "../services/api";
 
 const { Content } = Layout;
 const { Text } = Typography;
@@ -53,7 +53,7 @@ export const ChatWsVerifyPage: React.FC = () => {
       antMessage.warning("请先设置 API Key");
       return;
     }
-    const url = getChatWsVerifyUrl();
+    const url = getChatWebSocketUrl();
     const ws = new WebSocket(url);
     ws.onopen = () => setConnected(true);
     ws.onclose = () => {
@@ -152,7 +152,7 @@ export const ChatWsVerifyPage: React.FC = () => {
             <Space>
               <ApiOutlined />
               <span>WebSocket 对话验证</span>
-              <Tag color="orange">验证模式，不落库</Tag>
+              <Tag color="red">生产 WS，会落库</Tag>
             </Space>
           }
         >
