@@ -88,6 +88,8 @@
 >
 > **Evaluation assume user（与 live_chat WS 一致）**：`/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify` 握手 URL 可带 `assume_user_id=<user id>`；仅当 token 对应用户为 **superuser** 时生效，否则忽略。对齐 HTTP `X-Assume-User-Id`（`get_effective_user_for_eval`）。
 >
+> **`/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify` 上行扩展**：除 `{"type":"ping"}` 与既有 `ChatWebSocketRequest` JSON 外，可发送 `{"type":"client_context","time_context":{...}}`，字段与 HTTP `time_context`（`UserTimeContext`：`local_time`、`timezone`、`utc_offset_minutes`）一致。服务端回 `{"type":"client_context_ack","ok":true|false}`；该连接上若后续 chat 帧未带 `time_context`，则沿用最近一次成功写入的 `client_context`。
+>
 > **Chat WebSocket idle**：`app.features.chat_ws_idle_timeout_seconds`（默认 60）秒内无上行文本帧则关闭连接；`ping`/`pong` 计入上行。
 
 ### 聊天会话 (Chats)

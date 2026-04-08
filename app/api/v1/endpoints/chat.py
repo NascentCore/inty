@@ -15,6 +15,7 @@ from fastapi import (
 )
 from langchain_core.messages import HumanMessage
 from loguru import logger
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,7 +36,11 @@ from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
-from app.schemas.chat import ChatCompletionRequest, ChatWebSocketRequest
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    ChatWebSocketRequest,
+    UserTimeContext,
+)
 from app.schemas.response import (
     BizError,
     BusinessErrorCode,
@@ -71,6 +76,56 @@ def _chat_ws_idle_timeout_seconds() -> float:
     return float(
         global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
     )
+
+
+def _chat_request_with_merged_ws_time_context(
+    request: ChatCompletionRequest,
+    ws_session_time_context: Optional[dict],
+) -> ChatCompletionRequest:
+    """
+    单连接上先发送 client_context 时，后续 chat 帧可省略 time_context；
+    若请求体已带 user_time_context，以请求为准。
+    """
+    if not ws_session_time_context:
+        return request
+    if request.user_time_context is not None:
+        return request
+    try:
+        utc = UserTimeContext.model_validate(ws_session_time_context)
+    except ValidationError:
+        return request
+    return request.model_copy(update={"user_time_context": utc})
+
+
+async def _handle_chat_websocket_control_json(
+    websocket: WebSocket,
+    data: Any,
+    tc_box: list[Optional[dict]],
+) -> bool:
+    """
+    Handle ping / client_context on chat WebSockets. tc_box is a length-1 list holding the
+    session's last validated time_context dict (or None). Returns True if the frame was consumed.
+    """
+    if not isinstance(data, dict):
+        return False
+    msg_type = data.get("type")
+    if msg_type == "ping":
+        await websocket.send_json({"type": "pong"})
+        return True
+    if msg_type != "client_context":
+        return False
+    tc_raw = data.get("time_context")
+    if not isinstance(tc_raw, dict):
+        await websocket.send_json({"type": "client_context_ack", "ok": False})
+        return True
+    try:
+        validated = UserTimeContext.model_validate(tc_raw)
+        dumped = validated.model_dump(exclude_none=True)
+        tc_box[0] = dumped if dumped else None
+        await websocket.send_json({"type": "client_context_ack", "ok": True})
+    except ValidationError:
+        await websocket.send_json({"type": "client_context_ack", "ok": False})
+    return True
 
 
 async def _get_current_user_from_websocket(
@@ -878,6 +933,7 @@ async def chat_completions_websocket(
         else None
     )
 
+    tc_box: list[Optional[dict]] = [None]
     try:
         while True:
             try:
@@ -892,14 +948,17 @@ async def chat_completions_websocket(
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 data = None
-            if isinstance(data, dict) and data.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
+            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             websocket_request = ChatWebSocketRequest.model_validate_json(raw)
+            merged_request = _chat_request_with_merged_ws_time_context(
+                websocket_request.request,
+                tc_box[0],
+            )
             response = await agent_chat_completions(
                 db=db,
                 agent_id=websocket_request.agent_id,
-                request=websocket_request.request,
+                request=merged_request,
                 current_user=current_user,
                 app_version_code=app_version_code,
                 subscription_svc=subscription_svc,
@@ -938,6 +997,7 @@ async def chat_completions_websocket_verify(
         db=db,
     )
 
+    tc_box: list[Optional[dict]] = [None]
     try:
         while True:
             try:
@@ -952,12 +1012,14 @@ async def chat_completions_websocket_verify(
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 data = None
-            if isinstance(data, dict) and data.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
+            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             websocket_request = ChatWebSocketRequest.model_validate_json(raw)
             agent_id = websocket_request.agent_id
-            request = websocket_request.request
+            request = _chat_request_with_merged_ws_time_context(
+                websocket_request.request,
+                tc_box[0],
+            )
 
             user_messages = [msg for msg in request.messages if msg.role == "user"]
             if not user_messages:

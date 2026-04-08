@@ -76,6 +76,10 @@ USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##User Time Context"
 USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
     "- This time reflects the user's local time, not the assistant's.",
     "- Use it only as context for the user's situation and daily rhythm.",
+    "- You may softly infer typical human activities from the local hour (for example "
+    "morning routines or breakfast, midday work or lunch, evening wind-down or dinner, "
+    "late night rest) as loose priors, not facts about this user.",
+    "- Treat these as gentle scene context; avoid lecturing or assuming their schedule.",
     "- Do not claim to need sleep or be offline.",
 ]
 CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"

@@ -9,6 +9,11 @@
 - Write 1 sentence summary, this is for filling in Google Play release notes. And then nested with detailed description.
 
 
+## 2026-04-07
+
+- Chat sends your **device local time and time zone** by default so AI replies can match the time of day.
+- Debug builds only: turn this off under Settings → Debug Backend Endpoint → **User time context reporting** if you prefer not to send it.
+
 ## 2026-03-24
 
 - Official Assistant quick actions above the chat input (**Test my MBTI type** and **Create my own iMate**) now sit on one horizontally scrollable row instead of stacking vertically.
