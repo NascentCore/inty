@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vertex AI Gemini pricing estimator</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <div class="vertex-gemini-pricing-page" id="vgp-root">
+      <header class="vertex-gemini-pricing-page__header">
+        <h1 class="vertex-gemini-pricing-page__title">
+          Vertex AI Gemini pricing estimator
+        </h1>
+        <p class="vertex-gemini-pricing-page__subtitle">
+          Estimate USD cost from token counts using the public Vertex AI
+          Generative AI pricing tables. This is not an invoice; actual billing
+          may differ (currency, discounts, free tiers, grounding, modality
+          splits, failed requests, and rounding).
+        </p>
+        <a
+          class="vertex-gemini-pricing-page__doc-link"
+          href="https://cloud.google.com/vertex-ai/generative-ai/pricing"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open official pricing page
+        </a>
+      </header>
+
+      <section class="vertex-gemini-pricing-page__card" aria-label="Calculator">
+        <div class="vertex-gemini-pricing-page__field">
+          <label class="vertex-gemini-pricing-page__label" for="vgp-model"
+            >Model and price tier</label
+          >
+          <select
+            id="vgp-model"
+            class="vertex-gemini-pricing-page__select"
+          ></select>
+        </div>
+
+        <div class="vertex-gemini-pricing-page__row">
+          <div class="vertex-gemini-pricing-page__field">
+            <label class="vertex-gemini-pricing-page__label" for="vgp-in"
+              >Input tokens (per call)</label
+            >
+            <input
+              id="vgp-in"
+              class="vertex-gemini-pricing-page__input"
+              type="text"
+              inputmode="numeric"
+              value="1000"
+              autocomplete="off"
+            />
+          </div>
+          <div class="vertex-gemini-pricing-page__field">
+            <label class="vertex-gemini-pricing-page__label" for="vgp-out"
+              >Output tokens (per call)</label
+            >
+            <input
+              id="vgp-out"
+              class="vertex-gemini-pricing-page__input"
+              type="text"
+              inputmode="numeric"
+              value="500"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="vertex-gemini-pricing-page__field">
+          <label class="vertex-gemini-pricing-page__label" for="vgp-n"
+            >Number of calls (N)</label
+          >
+          <input
+            id="vgp-n"
+            class="vertex-gemini-pricing-page__input vertex-gemini-pricing-page__input--narrow"
+            type="text"
+            inputmode="numeric"
+            value="1"
+            autocomplete="off"
+          />
+        </div>
+
+        <p
+          class="vertex-gemini-pricing-page__warn"
+          id="vgp-warn"
+          role="alert"
+          hidden
+        >
+          Unknown model selection.
+        </p>
+        <p class="vertex-gemini-pricing-page__note" id="vgp-long" hidden></p>
+        <p class="vertex-gemini-pricing-page__note" id="vgp-footnote" hidden></p>
+
+        <div class="vertex-gemini-pricing-page__results" aria-live="polite">
+          <div class="vertex-gemini-pricing-page__result-row">
+            <span class="vertex-gemini-pricing-page__result-label"
+              >Estimated cost per call</span
+            >
+            <span
+              class="vertex-gemini-pricing-page__result-value"
+              id="vgp-per-call"
+              >$0.00</span
+            >
+          </div>
+          <div
+            class="vertex-gemini-pricing-page__result-row vertex-gemini-pricing-page__result-row--total"
+          >
+            <span
+              class="vertex-gemini-pricing-page__result-label"
+              id="vgp-total-label"
+              >Total for 1 call</span
+            >
+            <span
+              class="vertex-gemini-pricing-page__result-value"
+              id="vgp-total"
+              >$0.00</span
+            >
+          </div>
+        </div>
+      </section>
+    </div>
+    <script src="dist/app.js" defer></script>
+  </body>
+</html>
