@@ -63,7 +63,8 @@ object ChatWebSocketSessionManager {
                         return@withLock HttpResult.Failure("Unexpected websocket frame type", -1)
                     }
                     val text = frame.data.decodeToString()
-                    val control = kotlin.runCatching { controlFrameAdapter.fromJson(text) }.getOrNull()
+                    val control =
+                        kotlin.runCatching { controlFrameAdapter.fromJson(text) }.getOrNull()
                     if (control.shouldDeferChatResponseParsing()) {
                         continue
                     }
@@ -108,10 +109,8 @@ object ChatWebSocketSessionManager {
             ChatRemoteDataSource.buildUserTimeContextOrNull()?.let { utc ->
                 newSession.send(
                     Frame.Text(
-                        clientContextAdapter.toJson(
-                            ChatClientContextWsMessage(timeContext = utc),
-                        ),
-                    ),
+                        clientContextAdapter.toJson(ChatClientContextWsMessage(timeContext = utc))
+                    )
                 )
             }
             newSession
