@@ -47,6 +47,10 @@ def test_configure_evaluation_web_routes_enabled(tmp_path):
         assert legacy_response.status_code == 200
         assert "evaluation-home" in legacy_response.text
 
+        legacy_slash = client.get("/evaluation/")
+        assert legacy_slash.status_code == 200
+        assert "evaluation-home" in legacy_slash.text
+
         static_file = client.get("/evaluation/asset.txt")
         assert static_file.status_code == 200
         assert static_file.text == "asset-content"

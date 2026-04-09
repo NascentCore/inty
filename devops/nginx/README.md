@@ -24,7 +24,7 @@
 
 ## iMate 域名 TLS
 
-为 `dev.imate.inty.cc`、`imate.inty.cc` 配置 DNS 指向本机后，按现有 Certbot webroot 流程签发证书（证书路径需与 `conf.d/sxwl.ai.conf` 中 `ssl_certificate` 一致），再 `nginx -t` / reload。未签发前不要同步含 HTTPS `server` 块的配置，否则 `nginx -t` 会失败。
+iMate dev API 公网入口为 **`dev.imate.sxwl.ai`**（`conf.d/sxwl.ai.conf` 反代 8200；可并列 `dev.imate.inty.cc`）。iMate dev Ops 为 **`dev.ops.imate.inty.cc`**（反代 8201）。DNS 指向本机后按 Certbot webroot（`-w /var/www/inty.cc`）分别签发证书，路径与 `ssl_certificate` 一致，再 `nginx -t` / reload。
 
 ## 更新 Nginx 配置
 
