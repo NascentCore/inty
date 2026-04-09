@@ -20,7 +20,7 @@
 
 REPL 特有模块: `orchestrator.py`, `client.py`, `llm_trace`, `workspace_init_tools`（薄封装/历史路径）, `main` 等。媒体与检索工具实现已在 `companion`（`fal_z_image_tool`, `google_web_search`, `image_gate`, `schedule_queue`）；prototype 文件可能仍为 re-export 或 shim。
 
-`openai_assistant_message_dict` 单一真源: `companion.message_format`（`turn` / `repl_workspace_tools` 引用）。prototype `workspace_init_tools` 若仍导出该符号，应与 kernel 保持一致。
+`openai_assistant_message_dict` 与 `TRANSCRIPT_MSG_UUID_KEY` 单一真源: `companion.message_format`（`turn_engine` / `turn` / `repl_workspace_tools` / REPL `llm_trace` 引用）。prototype `workspace_init_tools` 若仍导出同名字段，应与 kernel 保持一致。
 
 改动核心逻辑时应修改 kernel(`app/core/agentic_kernel/companion/`), 本目录 shim 自动生效.
 

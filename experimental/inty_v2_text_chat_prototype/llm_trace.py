@@ -8,14 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from .jsonl_db_store import append_jsonl_with_db
+from app.core.agentic_kernel.companion.message_format import TRANSCRIPT_MSG_UUID_KEY
+
 from .prompts import SYSTEM_PROMPT_SEP, system_prompt_security_prefix
 
 _TRACE_LOCK = threading.Lock()
 _trace_file_path: Path | None = None
 LLM_TRACE_JSONL_VERSION = 1
-
-# In-memory OpenAI message dicts may carry this key; stripped before API calls.
-TRANSCRIPT_MSG_UUID_KEY = "_transcript_uuid"
 
 
 def configure_llm_trace_file(path: Path | None) -> None:

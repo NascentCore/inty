@@ -24,4 +24,4 @@ def get_ai_private_text_for_prompt(
     s = body or ""
     if len(s) <= cap:
         return s
-    return s[: cap - 1] + "…"
+    return s[: cap - 1] + "..."

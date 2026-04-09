@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from .memory_registry import get_memory_store
+from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import ChatMessage, ContextMeta, PromptBundle
 from .prompts import build_system_prompt
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
-
-TRANSCRIPT_MSG_UUID_KEY = "_transcript_uuid"
 
 
 def build_repl_turn_base_messages(
