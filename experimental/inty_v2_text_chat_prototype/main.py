@@ -141,11 +141,13 @@ def _print_assistant_reply(
 
 
 def _drain_async_tool_events(ws: Path) -> None:
-    """Flush tool_bg 队列到 stdout。勿在「用户可能正在未按回车的行内编辑」期间调用，否则会打乱 TTY 与 CJK 回显。"""
+    """Flush tool_bg 队列到 stdout。横幅 trace= 与 transcript、llm_trace(where~repl.turn.bg.*)、tool_background.jsonl 的 trace_id 对齐。勿在用户行内编辑（含 CJK 回显）期间调用。"""
     events = pop_output_events_nowait(workspace=ws)
     for ev in events:
+        tr = (ev.trace_id or "").strip()
+        trace_part = f" trace={tr}" if tr else ""
         print(
-            f"[{_local_ts_str()}] AI-toolcall {ev.elapsed_ms}ms "
+            f"[{_local_ts_str()}] AI-tool-bg {ev.elapsed_ms}ms{trace_part} "
             f"(user={ev.user_msg_uuid[:8]} asst={ev.assistant_msg_uuid[:8]})"
         )
         print(ev.text)

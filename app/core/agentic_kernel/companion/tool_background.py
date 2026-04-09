@@ -177,6 +177,7 @@ class ToolOutputEvent:
     text: str
     ts: str
     elapsed_ms: int
+    trace_id: str = ""  # run_turn turn id; join llm_trace + tool_background_done
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -310,19 +311,23 @@ def _append_background_log(
     rounds: int,
     tool_calls_count: int,
     generated_image_uris: list[str],
+    trace_id: str = "",
 ) -> None:
+    row: dict[str, Any] = {
+        "kind": "tool_background_done",
+        "ts": utc_iso_ts(),
+        "user_msg_uuid": user_msg_uuid,
+        "assistant_msg_uuid": assistant_msg_uuid,
+        "elapsed_ms": elapsed_ms,
+        "rounds": rounds,
+        "tool_calls_count": tool_calls_count,
+        "generated_image_uris": list(generated_image_uris),
+    }
+    if trace_id.strip():
+        row["trace_id"] = trace_id
     get_memory_store(workspace_root).append_jsonl_record(
         "tool_background.jsonl",
-        {
-            "kind": "tool_background_done",
-            "ts": utc_iso_ts(),
-            "user_msg_uuid": user_msg_uuid,
-            "assistant_msg_uuid": assistant_msg_uuid,
-            "elapsed_ms": elapsed_ms,
-            "rounds": rounds,
-            "tool_calls_count": tool_calls_count,
-            "generated_image_uris": list(generated_image_uris),
-        },
+        row,
     )
 
 
@@ -548,6 +553,7 @@ async def _run_background_tool_loop(
             rounds=rounds_used,
             tool_calls_count=total_tool_calls,
             generated_image_uris=image_paths,
+            trace_id=trace_id,
         )
         on_event(
             ToolOutputEvent(
@@ -557,6 +563,7 @@ async def _run_background_tool_loop(
                 text=display_text,
                 ts=utc_iso_ts(),
                 elapsed_ms=elapsed_ms,
+                trace_id=trace_id,
             )
         )
     finally:

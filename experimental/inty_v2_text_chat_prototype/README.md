@@ -35,6 +35,7 @@ cp .env.example .env
 
 # 编辑 .env 中这一行：LANGSMITH_PROJECT=inty-v2-text-chat-prototype-<USER>
 # 将 <USER> 替换为你自己的名字
+# 若不需 LangSmith 或 key 无效导致终端刷屏：在 .env 中设 LANGSMITH_TRACING_V2=false
 
 uv venv
 source .venv/bin/activate
