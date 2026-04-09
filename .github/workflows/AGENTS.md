@@ -18,7 +18,7 @@
 
 Dev & prod sharing the same VM on GCP.
 
-**iMate 第二 Inty 实例**：手动运行 [build_and_deploy_backend_imate.yml](build_and_deploy_backend_imate.yml)；需 GitHub Environments `imate-dev` / `imate-prod` 及对应 `vars`（见 `devops/README.md`）。
+**iMate 第二 Inty 实例**：在 [build_and_deploy_backend.yml](build_and_deploy_backend.yml) / [build_and_deploy_ops.yml](build_and_deploy_ops.yml) 的 **Run workflow** 中选择 Environment `imate-dev` 或 `imate-prod`；需对应 GitHub Environment `vars`（含 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL` 等，见 `devops/README.md`）。
 
 ## Dify 定时聊天调用
 

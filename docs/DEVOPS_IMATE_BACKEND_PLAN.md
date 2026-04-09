@@ -16,7 +16,7 @@
   - 所用 `devops/config.yaml.dev` / `config.yaml.prod`、PostgreSQL 库、GCS bucket、密钥挂载路径（`/opt/inty-dev/`、`/opt/inty-prod/` 等现有约定）。
 - **禁止操作**：在 iMate 发布、回滚、调试、workflow 实验过程中，**不得**对上述 IntelliMate 容器执行 `docker stop` / `docker rm` / 替换镜像 / 改绑端口 / 改写指向 IntelliMate 的 nginx 上游，除非走**独立的 IntelliMate 发布流程**（例如 [build_and_deploy_backend.yml](/.github/workflows/build_and_deploy_backend.yml) 在明确选择 `dev`/`prod` 且仅操作 `inty-backend-dev`/`prod` 时）。
 - **新增而非替换**：iMate 仅通过**额外**容器（如 `inty-backend-imate-dev`）、**额外**端口、**额外**域名（如 `imate.inty.cc`）、**额外**配置文件与 GitHub Environment 变量接入；与 IntelliMate 并存在同一 VM 时，属于**旁路扩容**，不是升级或切换唯一实例。
-- **工作流隔离**：若扩展 CI/CD 以部署 iMate，须使用**独立 job、独立 `inputs.environment` 或独立 workflow 文件**，且 SSH 脚本内容器名**硬编码或来自仅含 imate 前缀的变量**，避免复用 `inty-backend-${{ env }}` 一类在拼写错误时误伤 `dev`/`prod` 的逻辑。
+- **工作流隔离**：iMate 与 IntelliMate 共用 [build_and_deploy_backend.yml](/.github/workflows/build_and_deploy_backend.yml)，通过 GitHub Environment 区分；部署脚本**不得**再使用单一的 `inty-backend-${{ env }}` 命名，须使用 workflow 内 **`map`** 输出的容器名与密钥目录（`inty-backend-imate-*` 与 `/opt/inty-imate-*`），避免误伤 `inty-backend-dev` / `inty-backend-prod`。
 - **验收门禁**：每次 iMate 部署完成后，在变更单或流水线 summary 中勾选：IntelliMate 容器仍在运行、`docker inspect` 镜像 digest 与部署前一致（除非同日另有 IntelliMate 发布）。
 
 ## 3. 为何单独部署
@@ -93,16 +93,14 @@ sudo docker run --detach --log-driver=gcplogs \
 
 ### 7.2 与现有 GitHub Actions 对齐
 
-当前 [build_and_deploy_backend.yml](/.github/workflows/build_and_deploy_backend.yml) 仅内置 `dev` / `prod` 两环境，容器名与 `CONFIG_FILE=devops/config.yaml.${environment}` 绑定；该工作流继续**只**服务 IntelliMate，**默认行为不因 iMate 而改动**。
+[iMate 后端与 IntelliMate 共用](/.github/workflows/build_and_deploy_backend.yml)同一 workflow：在 **Run workflow** 中选择 GitHub Environment `dev` / `prod`（IntelliMate）或 `imate-dev` / `imate-prod`（iMate）。workflow 内 **`map`** 步骤将环境名映射到 `CONFIG_FILE`、容器名（`inty-backend-imate-*` vs `inty-backend-dev`/`prod`）、密钥目录与 Docker `application` label；**schedule** 仍仅部署 IntelliMate **`prod`**，不会自动部署 iMate。
 
-**iMate 推荐演进（实施时开独立 PR）**：
+[iMate Ops](/.github/workflows/build_and_deploy_ops.yml) 与 IntelliMate Ops 共用同一 workflow；选择 `imate-dev` / `imate-prod` 时使用 `devops/config.yaml.imate_*`，容器 `inty-ops-imate-*`（与 `inty-ops-dev` 等并行）。`imate` 专用配置文件**未**列入 Ops 的 `on.push.paths`，避免误触发 IntelliMate Ops 重部署；iMate Ops 以 **手动** workflow 为主。
 
-1. 在 GitHub Environments 中增加 `imate-dev`、`imate-prod`（或单阶段先 `imate-dev`）。
-2. 为每个 environment 配置 `vars`：`SERVICE_PORT_ON_HOST`、`SERVICE_PUBLIC_URL`（iMate 专用，**不得**与 IntelliMate 的 `SERVICE_PUBLIC_URL` 混用同一值除非刻意共用域名，通常应分开）。
-3. **新增** workflow 或 **新增** job：仅当选择 `imate-*` 环境时执行；脚本内 `docker stop`/`rm` **仅**针对 `inty-backend-imate-*`，**禁止**出现对 `inty-backend-dev`、`inty-backend-prod` 的 stop/rm。
-4. 部署步骤其余与 IntelliMate 类似：`docker pull` digest、挂载密钥、`grep Application startup complete`、对 iMate 的 `SERVICE_PUBLIC_URL` 做 sanity `curl`。
+1. 在 GitHub Environments 中配置 `imate-dev`、`imate-prod` 的 `vars`：`SERVICE_PORT_ON_HOST`、`SERVICE_PUBLIC_URL`；部署 Ops 时另加 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL`。
+2. **禁止**在误选 `dev`/`prod` 时期望部署 iMate；也禁止在脚本中混用环境名导致对 `inty-backend-dev` / `inty-backend-prod` 的 stop/rm（iMate 路径仅操作 `inty-backend-imate-*`，由 `map` 输出保证）。
 
-在 workflow 未合并前，**手动**在目标 VM 上按 7.1 拉取已构建镜像 digest 或本地 build 部署即可。
+若 CI 不可用，**手动**在目标 VM 上按 7.1 拉取已构建镜像 digest 或本地 build 部署即可。
 
 ## 8. Nginx 与公网入口
 
@@ -116,7 +114,7 @@ sudo docker run --detach --log-driver=gcplogs \
 |------|------|
 | 常规发布 | 合并代码 → **对 iMate 库**执行 `alembic upgrade head -x config=devops/config.yaml.imate_*`（在部署容器前或按团队约定顺序）→ 构建镜像（同一 Dockerfile + iMate `CONFIG_FILE`）→ **仅**替换 `inty-backend-imate-*` 容器 → 仅当 iMate 域名/nginx 有变更时 reload 对应 `server` → 对 iMate 公网 URL `curl` 健康检查。**禁止**在本流程中重启或替换 IntelliMate 容器。 |
 | 回滚 | 回退 iMate 实例到上一已知良好 digest；IntelliMate 实例不参与回滚。 |
-| 冻结 | 停止 iMate 专用 workflow 触发；IntelliMate 定时/手动发布保持独立。 |
+| 冻结 | 暂停对 GitHub Environment `imate-*` 的手动部署；IntelliMate 的 `dev`/`prod` 定时与手动发布保持独立。 |
 
 ## 10. 验收检查（DoD）
 

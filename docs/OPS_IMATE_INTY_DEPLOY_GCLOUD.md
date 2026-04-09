@@ -18,7 +18,7 @@ export IMATE_DB_PROD="inty-imate"
 export GCS_BUCKET_DEV="imate-static-dev"
 export GCS_BUCKET_PROD="imate-static-prod"
 
-export IMATE_HOST_PORT_DEV="8020"
+export IMATE_HOST_PORT_DEV="8200"
 export IMATE_HOST_PORT_PROD="8120"
 export IMATE_PUBLIC_DEV="https://dev.imate.inty.cc/"
 export IMATE_PUBLIC_PROD="https://imate.inty.cc/"
@@ -235,14 +235,14 @@ prod 同理：`CONFIG_FILE=devops/config.yaml.imate_prod`，端口 `8120`，目�
 
 1. 在 GitHub 仓库 Settings → Environments 新建 **`imate-dev`**、**`imate-prod`**。
 2. 每个 Environment 配置 **Variables**：
-   - `imate-dev`：`SERVICE_PORT_ON_HOST` = `8020`，`SERVICE_PUBLIC_URL` = `https://dev.imate.inty.cc/`（或团队健康检查 URL）。
-   - `imate-prod`：`SERVICE_PORT_ON_HOST` = `8120`，`SERVICE_PUBLIC_URL` = `https://imate.inty.cc/`。
+   - `imate-dev`：`SERVICE_PORT_ON_HOST` = `8200`，`SERVICE_PUBLIC_URL` = `https://dev.imate.inty.cc/`（或团队健康检查 URL）；**Ops**：`OPS_SERVICE_PORT_ON_HOST` = `8201`，`OPS_SERVICE_PUBLIC_URL` = `https://dev.ops.imate.inty.cc/health`（或等价健康检查 URL；域名需先 certbot）。
+   - `imate-prod`：`SERVICE_PORT_ON_HOST` = `8120`，`SERVICE_PUBLIC_URL` = `https://imate.inty.cc/`；若部署 iMate prod Ops，另配 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL`（端口勿与 IntelliMate 冲突）。
 3. Secrets 与 IntelliMate 后端部署共用（如 `DEV_SERVER_HOST`、`DEV_SERVER_USER`、`DEV_SERVER_SSH_KEY`、`LANGCHAIN_API_KEY`、`GITHUB_TOKEN` 用于 registry）。
-4. 运行 workflow：[build_and_deploy_backend_imate.yml](../.github/workflows/build_and_deploy_backend_imate.yml)。
+4. 运行 workflow：[build_and_deploy_backend.yml](../.github/workflows/build_and_deploy_backend.yml) 与 [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，在 **Run workflow** 中选择 Environment **`imate-dev`** 或 **`imate-prod`**。
 
 ## 8. DNS 与 TLS（域名不在 GCP 时）
 
-若域名在 Cloudflare 等，在 DNS 控制台为 `dev.imate.inty.cc`、`imate.inty.cc` 添加 **A** 记录，值为第 5 节查到的 VM 外网 IP。
+若域名在 Cloudflare 等，在 DNS 控制台为 `dev.imate.inty.cc`、`dev.ops.imate.inty.cc`（iMate Ops）、`imate.inty.cc` 添加 **A** 记录，值为第 5 节查到的 VM 外网 IP。
 
 若使用 **Cloud DNS**，示例（需已存在托管区 `ZONE_NAME`）：
 

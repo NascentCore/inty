@@ -15,13 +15,13 @@
 
 - 共享同一台 gcp VM
 - 差别在配置文件：[dev](config.yaml.dev) [prod](config.yaml.prod)
-- **Ops 平台**：evaluation Web UI 与完整 `/api/v1`，独立镜像与工作流部署；workflow [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，dev 与 prod 同 VM、不同 host 端口（8001 / 8011），nginx 将 ops.inty.cc → 8011、dev.ops.inty.cc → 8001。
+- **Ops 平台**：evaluation Web UI 与完整 `/api/v1`，独立镜像与工作流部署；workflow [build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，dev 与 prod 同 VM、不同 host 端口（8001 / 8011），nginx 将 ops.inty.cc → 8011、dev.ops.inty.cc → 8001。手动选择 GitHub Environment `imate-dev` / `imate-prod` 可部署 iMate 专用 Ops（容器 `inty-ops-imate-*`，与 IntelliMate 的 `inty-ops-dev` 等并行）。
 - **iMate（第二 Inty 后端实例）**：与 IntelliMate **并行**，独立库、独立 GCS bucket、独立容器与域名；不得 stop/rm `inty-backend-dev` / `inty-backend-prod`。
   - 配置：[config.yaml.imate_dev](config.yaml.imate_dev)、[config.yaml.imate_prod](config.yaml.imate_prod)（构建期注入镜像，与 IntelliMate 同一 [Dockerfile](docker/Dockerfile)）。
   - 宿主机密钥目录：`/opt/inty-imate-dev/`、`/opt/inty-imate-prod/`（`inty-backend-key.json`、`inty-firebase-key.json`）。
-  - 容器名：`inty-backend-imate-dev`、`inty-backend-imate-prod`；nginx 上游端口：`8020`（dev）、`8120`（prod）；公网域名：`https://dev.imate.inty.cc`、`https://imate.inty.cc`（见 [nginx/conf.d/sxwl.ai.conf](nginx/conf.d/sxwl.ai.conf)）。
+  - 容器名：`inty-backend-imate-dev`、`inty-backend-imate-prod`；推荐宿主机端口：**8200**（dev 后端）、**8201**（dev Ops）；nginx 上游与域名：`dev.imate.inty.cc` → 8200、`dev.ops.imate.inty.cc` → 8201；prod API 仍为 `imate.inty.cc` → 8120（见 [nginx/conf.d/sxwl.ai.conf](nginx/conf.d/sxwl.ai.conf)）。**上线 `dev.ops.imate.inty.cc` 前需在 VM 上为该域名执行 certbot。**
   - Cloud SQL 逻辑库与 Alembic、GCS bucket 名见 [GCP.md](GCP.md)。
-  - CI：[build_and_deploy_backend_imate.yml](../.github/workflows/build_and_deploy_backend_imate.yml)（需在 GitHub 创建 Environments `imate-dev` / `imate-prod`，配置 `vars.SERVICE_PORT_ON_HOST`、`vars.SERVICE_PUBLIC_URL`，与 IntelliMate 共用 `DEV_SERVER_*`、`LANGCHAIN_API_KEY` 等 secrets）。
+  - CI：与 IntelliMate 共用 [build_and_deploy_backend.yml](../.github/workflows/build_and_deploy_backend.yml)、[build_and_deploy_ops.yml](../.github/workflows/build_and_deploy_ops.yml)，在 **Run workflow** 中选择 Environment **`imate-dev`** 或 **`imate-prod`**（勿选 `dev`/`prod` 部署 iMate）。GitHub Environment `imate-dev` / `imate-prod` 需配置 `vars.SERVICE_PORT_ON_HOST`、`vars.SERVICE_PUBLIC_URL`；**另**为 iMate Ops 配置 `vars.OPS_SERVICE_PORT_ON_HOST`（dev 建议 **8201**）、`vars.OPS_SERVICE_PUBLIC_URL`（如 `https://dev.ops.imate.inty.cc/health`）。与 IntelliMate 共用 `DEV_SERVER_*`、`LANGCHAIN_API_KEY` 等 secrets。`devops/config.yaml.imate_*` 未列入 Ops workflow 的 `on.push.paths`，避免仅改 iMate 配置却自动重部署 IntelliMate Ops；部署 iMate Ops 请用手动 workflow。
 - 操作这两个环境必须先写 python 脚本，严禁直接操作数据库、或者直接调用管理员权限的 API Endpoint，步骤如下（以 dev 为例）：
   ```bash
   ssh <gcp-vm>
