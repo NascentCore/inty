@@ -11,5 +11,5 @@ data object Chat: NavKey
 
 @Composable
 fun ChatScreen(modifier: Modifier = Modifier) {
-    Text("聊天界面")
+    Text("聊天界面", modifier = modifier)
 }
