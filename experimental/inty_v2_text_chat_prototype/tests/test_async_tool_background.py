@@ -10,7 +10,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
@@ -185,9 +185,10 @@ class TestAsyncToolBackground(unittest.TestCase):
                 patch.object(
                     orchestrator, "schedule_memory_update_after_turn", return_value=None
                 ),
-                patch(
-                    "inty_v2_text_chat_prototype.tool_background.execute_tool_call",
-                    side_effect=lambda *a, **k: "OK tool result",
+                patch.object(
+                    orchestrator,
+                    "execute_tool_call",
+                    new=AsyncMock(return_value="OK tool result"),
                 ),
                 patch.dict(
                     os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False

@@ -32,10 +32,11 @@ from .client import (
     tool_model,
 )
 from .image_gate import prepare_image_gate_for_turn
-from .jsonl_db_store import append_jsonl_with_db
 from .memory_store_registry import get_memory_store
 from .memory_update import memory_update_after_turn, schedule_memory_update_after_turn
-from .ai_private_store import get_text_for_prompt
+from app.core.agentic_kernel.companion.ai_private_prompt import (
+    get_ai_private_text_for_prompt,
+)
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -51,7 +52,6 @@ from .paths import WorkspacePaths
 from .prompts import build_system_prompt
 from .utc import local_date_str, utc_iso_ts
 from .llm_trace import (
-    TRANSCRIPT_MSG_UUID_KEY,
     emit_trace,
     summarize_completion_response,
     summarize_messages,
@@ -65,7 +65,14 @@ from .workspace_init_tools import (
     openai_assistant_message_dict,
     read_chat_output_format_prompt,
 )
-from .tool_background import mark_tool_background_aborted, start_tool_background_job
+from app.core.agentic_kernel.companion.tool_background import (
+    mark_tool_background_aborted,
+    start_tool_background_job,
+)
+from app.core.agentic_kernel.companion.turn_engine import (
+    build_repl_turn_base_messages,
+    persist_repl_turn_transcript_rows,
+)
 
 _REPL_USER_PROFILE_TOOL_MAX_ROUNDS = 24
 
@@ -259,85 +266,6 @@ def _log_llm_round_result(
         )
 
 
-def _build_turn_base_messages(
-    *,
-    bundle: PromptBundle,
-    context: ContextMeta,
-    transcript: list[ChatMessage],
-    user_text: str,
-    repl_online_ack_turn: bool = False,
-    inner_tick_turn: bool = False,
-    ai_private_text: str = "",
-) -> tuple[list[dict[str, Any]], str]:
-    """Construct system+history+user messages and return (messages, user_msg_uuid)."""
-    system = build_system_prompt(
-        bundle,
-        context,
-        enable_user_profile_tool=True,
-        inner_tick_turn=inner_tick_turn,
-        repl_online_ack_turn=repl_online_ack_turn,
-        ai_private_text=ai_private_text,
-    )
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    for m in transcript:
-        row: dict[str, Any] = {"role": m.role, "content": m.content}
-        if m.uuid:
-            row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
-        messages.append(row)
-    user_msg_uuid = str(uuid.uuid4())
-    messages.append(
-        {
-            "role": "user",
-            "content": user_text,
-            TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-        }
-    )
-    return messages, user_msg_uuid
-
-
-def _persist_turn_rows(
-    paths: WorkspacePaths,
-    *,
-    user_text: str,
-    assistant_text: str,
-    ts_user: str,
-    user_msg_uuid: str,
-    assistant_reply_to: str,
-    repl_online_ack: bool = False,
-    inner_tick_turn: bool = False,
-    assistant_source: str = "chat",
-    trace_id: str | None = None,
-) -> str:
-    """Persist user+assistant transcript rows and return assistant uuid."""
-    user_row: dict[str, Any] = {
-        "role": "user",
-        "content": user_text,
-        "ts": ts_user,
-        "uuid": user_msg_uuid,
-    }
-    if inner_tick_turn:
-        user_row["inner_tick"] = True
-    if repl_online_ack:
-        user_row["repl_online_ack"] = True
-    if trace_id is not None and trace_id.strip():
-        user_row["trace_id"] = trace_id
-    append_jsonl_with_db(paths.transcript, user_row)
-    assistant_msg_uuid = str(uuid.uuid4())
-    append_jsonl_with_db(
-        paths.transcript,
-        {
-            "role": "assistant",
-            "content": assistant_text,
-            "ts": utc_iso_ts(),
-            "uuid": assistant_msg_uuid,
-            "reply_to": assistant_reply_to,
-            "source": assistant_source,
-            "trace_id": trace_id,
-        },
-    )
-    return assistant_msg_uuid
-
-
 def _async_chat_front_timeout_sec() -> float:
     raw = os.environ.get("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC")
     if raw is None or not str(raw).strip():
@@ -345,12 +273,41 @@ def _async_chat_front_timeout_sec() -> float:
     return float(str(raw).strip())
 
 
+class _ReplToolBgTraceHooks:
+    """Wire experimental llm_trace into companion tool_background without kernel import."""
+
+    def __init__(self, trace_id: str) -> None:
+        self._trace_id = trace_id
+
+    def on_tool_path_llm_round(
+        self,
+        *,
+        round_idx: int,
+        model: str,
+        request_messages: list[dict[str, Any]],
+        response: Any,
+        ws_root: Path,
+        trace_id: str | None,
+    ) -> None:
+        emit_trace(
+            "repl.turn.bg.tool",
+            round_idx=round_idx,
+            model=model,
+            messages=summarize_messages(
+                request_messages,
+                ws_label=ws_root.name,
+                trace_day=local_date_str(),
+            ),
+            response=summarize_completion_response(response),
+            trace_id=trace_id or self._trace_id,
+        )
+
+
 async def _run_turn_fast_chat_then_tool_background(
     messages: list[dict[str, Any]],
     root: Path,
     *,
     llm_trace: bool,
-    transcript_path: Path,
     user_msg_uuid: str,
     trace_id: str,
     bundle: PromptBundle,
@@ -401,17 +358,17 @@ async def _run_turn_fast_chat_then_tool_background(
     supersede_check(False)
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
+    trace_hooks = _ReplToolBgTraceHooks(trace_id) if llm_trace else None
     start_tool_background_job(
         ws_root=root,
         request_messages=request_messages,
         tool_model_name=tool_route_model,
-        llm_trace=llm_trace,
-        transcript_path=transcript_path,
         user_msg_uuid=user_msg_uuid,
         trace_id=trace_id,
         tools=tools,
         execute_tool_call_fn=execute_tool_call,
         client=tool_client,
+        trace_hooks=trace_hooks,
     )
     tool_bg_started_cell[0] = True
     timeout_s = _async_chat_front_timeout_sec()
@@ -810,7 +767,9 @@ async def run_turn(
         transcript = transcript_for_llm_turn(loaded)
         _debug_log_prompt_bundle(bundle, context=context)
 
-        ai_private_text = get_text_for_prompt(root) if inner_tick_turn else ""
+        ai_private_text = (
+            get_ai_private_text_for_prompt(root) if inner_tick_turn else ""
+        )
 
         system = build_system_prompt(
             bundle,
@@ -835,7 +794,7 @@ async def run_turn(
             print(system)
             print("=" * 80)
 
-        messages, user_msg_uuid = _build_turn_base_messages(
+        messages, user_msg_uuid = build_repl_turn_base_messages(
             bundle=bundle,
             context=context,
             transcript=transcript,
@@ -898,7 +857,6 @@ async def run_turn(
                     input_messages,
                     root,
                     llm_trace=llm_trace,
-                    transcript_path=paths.transcript,
                     user_msg_uuid=user_msg_uuid,
                     trace_id=turn_trace_id,
                     bundle=bundle,
@@ -940,8 +898,8 @@ async def run_turn(
             nonlocal persist_transcript_ms
             t_persist_inner = time.perf_counter()
             assistant_src = "inner_tick" if inner_tick_turn else "chat"
-            assistant_msg_uuid = _persist_turn_rows(
-                paths,
+            assistant_msg_uuid = persist_repl_turn_transcript_rows(
+                root,
                 user_text=turn_input.user_text,
                 assistant_text=turn_output.assistant_text,
                 ts_user=ts_user,

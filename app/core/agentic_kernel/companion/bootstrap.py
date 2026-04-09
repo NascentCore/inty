@@ -13,7 +13,8 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop,
 )
 
-from .tools import build_companion_tools, execute_tool_call, WRITABLE_RELATIVE_PATHS
+from .repl_workspace_tools import execute_tool_call_blocking
+from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools
 from .turn import openai_assistant_message_dict
 from .workspace import is_workspace_initialized_from_store
 from .memory_store import MemoryStore
@@ -161,7 +162,12 @@ async def run_workspace_bootstrap_loop(
                 name,
             )
             t_tool = time.perf_counter()
-            result = execute_tool_call(root, store, name, raw_arguments)
+            result = execute_tool_call_blocking(
+                root,
+                name,
+                raw_arguments,
+                write_allowlist=WRITABLE_RELATIVE_PATHS,
+            )
             logger.info(
                 "bootstrap tool_done round={} name={} execute_ms={:.0f} result_chars={}",
                 active_round,

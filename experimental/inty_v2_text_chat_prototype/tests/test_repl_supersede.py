@@ -100,19 +100,23 @@ class TestReplSupersede(unittest.TestCase):
             root = Path(td)
             paths = self._init_workspace(root)
 
+            class _C:
+                def create(self, **kwargs: object) -> SimpleNamespace:
+                    return _resp_text("unused")
+
+            fake_client = SimpleNamespace(chat=SimpleNamespace(completions=_C()))
+
             async def _run() -> None:
                 await _run_background_tool_loop(
                     ws_root=root,
                     request_messages=[{"role": "user", "content": "hi"}],
                     tool_model_name="tool-smart",
-                    llm_trace=False,
-                    transcript_path=paths.transcript,
                     user_msg_uuid=uid,
                     trace_id="trace-1",
                     tools=[{"type": "function"}],
                     on_event=lambda _ev: None,
                     execute_tool_call_fn=execute_tool_call,
-                    client=None,
+                    client=fake_client,
                 )
 
             asyncio.run(_run())

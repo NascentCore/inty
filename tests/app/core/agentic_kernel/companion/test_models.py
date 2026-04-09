@@ -13,6 +13,7 @@ from app.core.agentic_kernel.companion.models import (
     load_transcript_from_store,
     load_transcript_text,
     transcript_for_llm_turn,
+    transcript_without_trailing_presence_signals,
 )
 
 
@@ -102,6 +103,29 @@ def test_load_transcript_from_store(tmp_path: Path) -> None:
     msgs = load_transcript_from_store(store, "transcript.jsonl")
     assert len(msgs) == 1
     assert msgs[0].content == "x"
+
+
+def test_transcript_without_trailing_presence_signals_strips_trailing_presence_user() -> (
+    None
+):
+    msgs = [
+        ChatMessage(
+            role="user",
+            content="a",
+            ts="2026-01-01T00:00:00Z",
+            presence="repl_online",
+        ),
+        ChatMessage(role="assistant", content="b", ts="2026-01-01T00:01:00Z"),
+        ChatMessage(
+            role="user",
+            content="presence only",
+            ts="2026-01-01T00:02:00Z",
+            presence="repl_online",
+        ),
+    ]
+    out = transcript_without_trailing_presence_signals(msgs)
+    assert len(out) == 2
+    assert out[-1].role == "assistant"
 
 
 def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:

@@ -14,12 +14,13 @@
 | `memory_update.py` | adapter: 读 `INTY_V2_PROTO_*` env vars 构建 `MemoryPipelineConfig`, 委托 `companion.memory_pipeline` |
 | `models.py` | re-export `companion.models` + prototype 兼容 `load_prompt_bundle` |
 | `prompts.py` | re-export `companion.prompts` |
-| `inner_tick_schedule.py` | REPL 内在节拍调度（`next_inner_tick_wait_seconds` 等）；与 kernel `companion.heartbeat` 文案常量无绑定 |
-| `orchestrator.py` | `is_workspace_initialized` / `needs_startup_profile_inquiry` 委托 kernel |
+| `inner_tick_schedule.py` | shim: 实现见 `companion.inner_tick_schedule` |
+| `orchestrator.py` | REPL `run_turn`；transcript 组装/落盘用 `companion.turn_engine`；`is_workspace_initialized` 等仍委托 kernel |
+| `tool_background.py` | shim: 实现见 `companion.tool_background`（输出队列与后台工具环） |
 
-REPL 特有模块(orchestrator / client / tool_background / fal_z_image_tool / google_web_search / llm_trace / image_gate / schedule_queue / workspace_init_tools 等)保留在本目录.
+REPL 特有模块: `orchestrator.py`, `client.py`, `llm_trace`, `workspace_init_tools`（薄封装/历史路径）, `main` 等。媒体与检索工具实现已在 `companion`（`fal_z_image_tool`, `google_web_search`, `image_gate`, `schedule_queue`）；prototype 文件可能仍为 re-export 或 shim。
 
-`workspace_init_tools.py` 中的 `openai_assistant_message_dict` 与 kernel `companion.turn.openai_assistant_message_dict` 逻辑相同; 如有变更需双改.
+`openai_assistant_message_dict` 单一真源: `companion.message_format`（`turn` / `repl_workspace_tools` 引用）。prototype `workspace_init_tools` 若仍导出该符号，应与 kernel 保持一致。
 
 改动核心逻辑时应修改 kernel(`app/core/agentic_kernel/companion/`), 本目录 shim 自动生效.
 
