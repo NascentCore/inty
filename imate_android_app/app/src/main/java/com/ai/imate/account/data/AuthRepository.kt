@@ -11,6 +11,7 @@ class AuthRepository @Inject constructor(
     private val authLocalDataSource: AuthLocalDataSource
 ) {
 
+    val token = authLocalDataSource.token
     val isLogin = authLocalDataSource.isLogin
 
     suspend fun googleLogin(idToken: String) {

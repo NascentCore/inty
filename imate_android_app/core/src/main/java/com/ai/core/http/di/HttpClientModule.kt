@@ -1,6 +1,5 @@
 package com.ai.core.http.di
 
-import com.ai.core.http.ktor.AuthHeaderPlugin
 import com.ai.core.http.ktor.ChatImageTimeoutPlugin
 import com.ai.core.http.okhttp.UnifiedOkHttpClientFactory
 import io.ktor.client.HttpClient
@@ -37,7 +36,6 @@ object KtorHttpClientSingleton {
                 preconfigured = UnifiedOkHttpClientFactory.create(dynamicBearerTokenProvider)
             }
             install(ContentNegotiation) { json(json) }
-            install(AuthHeaderPlugin) { bearerTokenProvider = dynamicBearerTokenProvider }
             install(ChatImageTimeoutPlugin)
             install(DefaultRequest) {
                 contentType(ContentType.Application.Json)

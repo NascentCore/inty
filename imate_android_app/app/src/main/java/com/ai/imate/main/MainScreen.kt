@@ -1,16 +1,20 @@
 package com.ai.imate.main
 
 import android.app.Activity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -19,16 +23,31 @@ import com.ai.imate.account.navigation.EmailAuthNavHost
 import com.ai.imate.account.navigation.Login
 import com.ai.imate.chat.Chat
 import com.ai.imate.chat.ChatScreen
+import com.ai.imate.chat.InitChat
+import com.ai.imate.chat.InitChatRoute
 import com.ai.imate.main.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val viewModel = viewModel<MainViewModel>()
-    val isLogin by viewModel.isLogin.collectAsState(null)
+    val destination by viewModel.navigationDestination.collectAsState()
 
-    if (isLogin != null) {
-        val backStack = rememberNavBackStack( if (isLogin == true) Chat else Login)
+    val dest: NavKey? = destination
+    if (dest == null) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+        )
+        return
+    }
+
+    key(dest) {
+        val backStack = rememberNavBackStack(dest)
 
         NavDisplay(
             backStack = backStack,
@@ -41,17 +60,14 @@ fun MainScreen() {
                 }
             },
             entryDecorators = listOf(
-                // Add the default decorators for managing scenes and saving state
                 rememberSaveableStateHolderNavEntryDecorator(),
-                // Then add the view model store decorator
-                rememberViewModelStoreNavEntryDecorator()
+                rememberViewModelStoreNavEntryDecorator(),
             ),
             entryProvider = entryProvider {
                 entry<Login> {
                     EmailAuthNavHost(
                         onLoginSuccess = {
-                            backStack.clear()
-                            backStack.add(Chat)
+                            // 路由由 MainViewModel.navigationDestination（登录态 + 引导态）统一驱动
                         },
                         onOpenTerms = {
                         },
@@ -59,10 +75,19 @@ fun MainScreen() {
                         },
                     )
                 }
+                entry<InitChat> {
+                    InitChatRoute(
+                        onBeginJourney = {
+                            scope.launch {
+                                viewModel.setInitChatOnboardingCompleted(true)
+                            }
+                        },
+                    )
+                }
                 entry<Chat> {
                     ChatScreen()
                 }
-            }
+            },
         )
     }
 }
