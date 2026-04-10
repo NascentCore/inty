@@ -42,7 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.core.ui.theme.IMateTheme
-import com.ai.imate.R
+import com.ai.intellimate.R
 import java.util.regex.Pattern
 
 @Composable

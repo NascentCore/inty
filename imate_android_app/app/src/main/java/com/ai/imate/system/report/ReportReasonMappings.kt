@@ -1,6 +1,6 @@
 package com.ai.imate.system.report
 
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.system.report.data.ReportReasonCode
 
 object ReportReasonMappings {

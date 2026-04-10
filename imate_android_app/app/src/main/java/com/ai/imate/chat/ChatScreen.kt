@@ -69,7 +69,7 @@ import coil3.compose.AsyncImage
 import com.ai.core.ui.theme.InitChatColors
 import com.ai.core.utils.getCdnImageUrl
 import com.ai.core.utils.ToastUtils
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.chat.local.db.MessageEntity
 import com.ai.imate.system.SystemReportEntry
 import com.ai.imate.system.report.SystemReportPage

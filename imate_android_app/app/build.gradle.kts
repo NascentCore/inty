@@ -1,3 +1,8 @@
+import groovy.json.JsonSlurper
+import java.io.File
+import org.gradle.api.JavaVersion
+import org.gradle.api.Project
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,22 +11,68 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+private fun Project.intyAndroidSignDir(): File =
+    rootProject.projectDir.parentFile.resolve("android_app/build-logic/sign")
+
+private fun loadSigningCredentials(signDir: File, jsonKey: String): Triple<String, String, String> {
+    val jsonFile = signDir.resolve("signing-config.json")
+    check(jsonFile.exists()) { "Missing signing config: ${jsonFile.absolutePath}" }
+    val parsed = JsonSlurper().parse(jsonFile) as Map<*, *>
+    val m = parsed[jsonKey] as Map<*, *>
+    val storePassword = m["storePassword"] as String
+    val keyAlias = m["keyAlias"] as String
+    val keyPassword = m["keyPassword"] as String
+    return Triple(storePassword, keyAlias, keyPassword)
+}
+
+private fun Project.gitShortSha(): String = "debug"
+//    providers
+//        .exec {
+//            commandLine("git", "rev-parse", "--short", "HEAD")
+//            workingDir(rootProject.projectDir)
+//        }
+//        .standardOutput
+//        .asText
+//        .get()
+//        .trim()
+
+private fun Project.gitCommitCount(): Int = 1
+//    providers
+//        .exec {
+//            commandLine("git", "rev-list", "--count", "HEAD")
+//            workingDir(rootProject.projectDir)
+//        }
+//        .standardOutput
+//        .asText
+//        .get()
+//        .trim()
+//        .toInt()
+
 android {
-    namespace = "com.ai.imate"
+    // TEMP: align with android_app for install/OAuth; revert to com.ai.imate when splitting apps again
+    namespace = "com.ai.intellimate"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
         }
     }
 
+    val signDir = intyAndroidSignDir()
+    val releaseKeystoreFile = signDir.resolve("intellimate-release-key.jks")
+    check(releaseKeystoreFile.exists()) { "Missing keystore: ${releaseKeystoreFile.absolutePath}" }
+    val debugCred = loadSigningCredentials(signDir, "debug")
+    val releaseCred = loadSigningCredentials(signDir, "release")
+
     defaultConfig {
-        applicationId = "com.ai.imate"
+        applicationId = "com.ai.intellimate"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
+        versionCode = gitCommitCount()
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+        ndk { abiFilters.add("arm64-v8a") }
 
         buildConfigField(
             "String",
@@ -30,13 +81,54 @@ android {
         )
     }
 
+    signingConfigs {
+        create("dev") {
+            keyAlias = debugCred.second
+            keyPassword = debugCred.third
+            storePassword = debugCred.first
+            storeFile = releaseKeystoreFile
+        }
+        create("release") {
+            keyAlias = releaseCred.second
+            keyPassword = releaseCred.third
+            storePassword = releaseCred.first
+            storeFile = releaseKeystoreFile
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            versionNameSuffix = "-${gitShortSha()}-$name"
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
+        }
+        debug {
+            versionNameSuffix = "-${gitShortSha()}-$name"
+            signingConfig = signingConfigs.getByName("dev")
+        }
+        create("playdebug") {
+            initWith(getByName("release"))
+            versionNameSuffix = "-${gitShortSha()}-$name"
+        }
+        create("local") {
+            initWith(getByName("debug"))
+            versionNameSuffix = "-${gitShortSha()}-$name"
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
         }
     }
     compileOptions {

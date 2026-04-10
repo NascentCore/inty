@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ai.core.ui.theme.ChatSettingsColors
 import com.ai.core.utils.getCdnImageUrl
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.chat.data.bean.AgentInfo
 
 @OptIn(ExperimentalMaterial3Api::class)

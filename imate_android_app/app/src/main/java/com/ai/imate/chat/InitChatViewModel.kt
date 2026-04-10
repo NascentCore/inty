@@ -4,7 +4,7 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ai.core.data.exceptions.globalCatch
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.chat.data.InitChatOnboardingRepository
 import com.ai.imate.chat.data.bean.AgentInfo
 import com.ai.imate.chat.data.bean.CreateAgentRequest

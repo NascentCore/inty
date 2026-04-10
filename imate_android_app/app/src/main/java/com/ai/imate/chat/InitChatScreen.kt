@@ -57,7 +57,7 @@ import androidx.navigation3.runtime.NavKey
 import coil3.compose.AsyncImage
 import com.ai.core.utils.getCdnImageUrl
 import com.ai.core.ui.theme.InitChatColors
-import com.ai.imate.R
+import com.ai.intellimate.R
 import kotlinx.serialization.Serializable
 
 @Serializable

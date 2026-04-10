@@ -29,7 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.system.report.data.ReportReasonCode
 import com.ai.imate.system.ui.ReportDescriptionContainer
 import com.ai.imate.system.ui.ReportImageEvidenceContainer

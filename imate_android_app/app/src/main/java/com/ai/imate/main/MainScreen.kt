@@ -25,7 +25,7 @@ import com.ai.imate.chat.Chat
 import com.ai.imate.chat.ChatScreen
 import com.ai.imate.chat.InitChat
 import com.ai.imate.chat.InitChatRoute
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.main.viewmodel.MainViewModel
 
 @Composable

@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import com.ai.imate.R
+import com.ai.intellimate.R
 
 @Composable
 fun ReportItemRow(text: String, selected: Boolean, onClick: () -> Unit) {

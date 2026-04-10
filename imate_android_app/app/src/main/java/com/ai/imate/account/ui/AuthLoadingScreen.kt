@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.account.ui.viewmodel.LoginViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

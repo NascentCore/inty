@@ -9,8 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.ai.core.utils.AppUtils
 import com.ai.core.utils.ImageCompressUtils
 import com.ai.core.utils.ToastUtils
-import com.ai.imate.BuildConfig
-import com.ai.imate.R
+import com.ai.intellimate.BuildConfig
+import com.ai.intellimate.R
 import com.ai.imate.system.SystemReportEntry
 import com.ai.imate.system.report.data.CreateReportOutcome
 import com.ai.imate.system.report.data.ReportCreateRequest

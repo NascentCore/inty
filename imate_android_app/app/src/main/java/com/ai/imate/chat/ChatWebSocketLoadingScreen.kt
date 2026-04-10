@@ -34,7 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ai.imate.R
+import com.ai.intellimate.R
 
 /**
  * Full-screen loading UI aligned with [com.ai.imate.account.ui.AuthLoadingScreen] visuals, used while
