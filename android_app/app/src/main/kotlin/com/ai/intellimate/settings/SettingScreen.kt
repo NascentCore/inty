@@ -690,7 +690,11 @@ private fun SettingDialogs(
 ) {
     // 删除账号对话框
     if (dialogState.showDeleteAccountDialog) {
-        DeleteAccountDialog(onDismiss = onHideDeleteDialog, onConfirm = onConfirmDelete)
+        DeleteAccountDialog(
+            onDismiss = onHideDeleteDialog,
+            onConfirm = onConfirmDelete,
+            isDeleting = dialogState.deleteAccountInProgress,
+        )
     }
 
     // 退出登录对话框

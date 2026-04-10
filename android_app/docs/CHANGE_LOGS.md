@@ -9,6 +9,10 @@
 - Write 1 sentence summary, this is for filling in Google Play release notes. And then nested with detailed description.
 
 
+## 2026-04-10
+
+- Deleting your account from Settings now keeps the confirmation dialog open with a progress bar until the server confirms deletion.
+
 ## 2026-04-07
 
 - Chat sends your **device local time and time zone** by default so AI replies can match the time of day.
