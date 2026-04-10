@@ -3,6 +3,7 @@ package com.ai.intellimate.login
 import ai.sxwl.android.common.base.BaseVM
 import ai.sxwl.android.data.api.model.GENDER
 import ai.sxwl.android.utils.ToastUtils
+import ai.sxwl.android.utils.Utils
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.ViewModelEvent
 import com.ai.intellimate.utils.IntyUserProfileSDK

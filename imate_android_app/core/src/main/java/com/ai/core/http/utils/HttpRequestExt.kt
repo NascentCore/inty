@@ -28,7 +28,8 @@ internal fun <T : Any> unwrapHttpResultOrThrow(result: HttpResult<T>): T {
 @PublishedApi
 internal suspend inline fun <reified T : Any> parseHttpResult(
     response: HttpResponse
-): HttpResult<T> = HttpErrorHandler.parseHttpResultOrFailure(response)
+): HttpResult<T> =
+    HttpErrorHandler.parseHttpResultOrFailure(response, KtorHttpClientSingleton.ktorHttpJson)
 
 suspend inline fun <reified T : Any> post(
     url: String,
@@ -36,7 +37,7 @@ suspend inline fun <reified T : Any> post(
 ): T {
     try {
         val response = KtorHttpClientSingleton.httpClient.post(url, block)
-        val result: HttpResult<T> = parseHttpResult(response)
+        val result = HttpErrorHandler.parseHttpResultOrFailure<T>(response, KtorHttpClientSingleton.ktorHttpJson)
         return unwrapHttpResultOrThrow(result)
     } catch (t: HttpRequestTimeoutException) {
         throw t.toIntyException("post $url")
@@ -51,7 +52,7 @@ suspend inline fun <reified T : Any> get(
 ): T {
     try {
         val response = KtorHttpClientSingleton.httpClient.get(url, block)
-        val result: HttpResult<T> = parseHttpResult(response)
+        val result = HttpErrorHandler.parseHttpResultOrFailure<T>(response, KtorHttpClientSingleton.ktorHttpJson)
         return unwrapHttpResultOrThrow(result)
     } catch (t: HttpRequestTimeoutException) {
         throw t.toIntyException("get $url")
@@ -66,7 +67,52 @@ suspend inline fun <reified T : Any> put(
 ): T {
     try {
         val response = KtorHttpClientSingleton.httpClient.put(url, block)
-        val result: HttpResult<T> = parseHttpResult(response)
+        val result = HttpErrorHandler.parseHttpResultOrFailure<T>(response, KtorHttpClientSingleton.ktorHttpJson)
+        return unwrapHttpResultOrThrow(result)
+    } catch (t: HttpRequestTimeoutException) {
+        throw t.toIntyException("put $url")
+    } catch (t: Throwable) {
+        throw t.toIntyException("put $url")
+    }
+}
+
+suspend inline fun <reified T : Any> getRaw(
+    url: String,
+    noinline block: HttpRequestBuilder.() -> Unit = {},
+): T {
+    try {
+        val response = KtorHttpClientSingleton.httpClient.get(url, block)
+        val result = HttpErrorHandler.parseRawBodyOrFailure<T>(response, KtorHttpClientSingleton.ktorHttpJson)
+        return unwrapHttpResultOrThrow(result)
+    } catch (t: HttpRequestTimeoutException) {
+        throw t.toIntyException("get $url")
+    } catch (t: Throwable) {
+        throw t.toIntyException("get $url")
+    }
+}
+
+suspend inline fun <reified T : Any> postRaw(
+    url: String,
+    noinline block: HttpRequestBuilder.() -> Unit = {},
+): T {
+    try {
+        val response = KtorHttpClientSingleton.httpClient.post(url, block)
+        val result = HttpErrorHandler.parseRawBodyOrFailure<T>(response, KtorHttpClientSingleton.ktorHttpJson)
+        return unwrapHttpResultOrThrow(result)
+    } catch (t: HttpRequestTimeoutException) {
+        throw t.toIntyException("post $url")
+    } catch (t: Throwable) {
+        throw t.toIntyException("post $url")
+    }
+}
+
+suspend inline fun <reified T : Any> putRaw(
+    url: String,
+    noinline block: HttpRequestBuilder.() -> Unit = {},
+): T {
+    try {
+        val response = KtorHttpClientSingleton.httpClient.put(url, block)
+        val result = HttpErrorHandler.parseRawBodyOrFailure<T>(response, KtorHttpClientSingleton.ktorHttpJson)
         return unwrapHttpResultOrThrow(result)
     } catch (t: HttpRequestTimeoutException) {
         throw t.toIntyException("put $url")

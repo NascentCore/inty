@@ -11,9 +11,9 @@ enum class InitChatOnboardingGender {
 
 @Serializable
 data class InitChatOnboarding(
-    val completed: Boolean = false,
     val nickname: String? = null,
     val gender: InitChatOnboardingGender? = null,
     val avatarUrl: String? = null,
+    val createdAgent: AgentInfo? = null,
 )
 

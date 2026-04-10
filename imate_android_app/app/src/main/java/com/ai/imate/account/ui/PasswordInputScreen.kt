@@ -46,7 +46,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ai.core.ui.theme.IMateTheme
-import com.ai.imate.R
+import com.ai.intellimate.R
 
 @Composable
 fun PasswordInputScreen(

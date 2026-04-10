@@ -40,6 +40,25 @@ object UnifiedOkHttpClientFactory {
             .build()
     }
 
+    /** Chat WS: shared [READ_TIMEOUT_MS] would idle-close ~30s without inbound frames; JSON ping is outbound-only. */
+    fun createForLongLivedWebSocket(authTokenProvider: () -> String?): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .writeTimeout(WRITE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .pingInterval(20L, TimeUnit.SECONDS)
+            .connectionPool(
+                ConnectionPool(
+                    MAX_CONNECTIONS,
+                    KEEP_ALIVE_DURATION_MS,
+                    TimeUnit.MILLISECONDS,
+                )
+            )
+            .dns(Dns.SYSTEM)
+            .addInterceptor(AuthInterceptor(authTokenProvider))
+            .build()
+    }
+
     private object ChatImageTimeoutInterceptor : Interceptor {
         override fun intercept(chain: Interceptor.Chain): Response {
             val request = chain.request()

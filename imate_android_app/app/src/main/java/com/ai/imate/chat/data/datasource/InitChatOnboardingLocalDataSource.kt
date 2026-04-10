@@ -4,6 +4,7 @@ import android.content.Context
 import com.ai.core.data.store.jsonDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import com.ai.imate.chat.data.bean.AgentInfo
 import com.ai.imate.chat.data.bean.InitChatOnboarding
 import com.ai.imate.chat.data.bean.InitChatOnboardingGender
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.initChatOnboardingStore by jsonDataStore(
-    fileName = "init_chat_onboarding",
+    fileName = "init_chat_onboarding_v2",
     defaultValue = InitChatOnboarding(),
 )
 
@@ -20,7 +21,8 @@ class InitChatOnboardingLocalDataSource @Inject constructor(
 ) {
     val onboarding: Flow<InitChatOnboarding> = context.initChatOnboardingStore.data
 
-    val onboardingCompleted: Flow<Boolean> = onboarding.map { it.completed }
+    val onboardingCompleted: Flow<Boolean> =
+        onboarding.map { !it.createdAgent?.id.isNullOrBlank() }
 
     val nickname: Flow<String?> = onboarding.map { it.nickname }
 
@@ -29,10 +31,10 @@ class InitChatOnboardingLocalDataSource @Inject constructor(
     val avatarUrl: Flow<String?> = onboarding.map { it.avatarUrl }
 
     suspend fun isOnboardingCompleted(): Boolean =
-        context.initChatOnboardingStore.data.first().completed
+        !context.initChatOnboardingStore.data.first().createdAgent?.id.isNullOrBlank()
 
-    suspend fun setOnboardingCompleted(completed: Boolean) {
-        context.initChatOnboardingStore.updateData { it.copy(completed = completed) }
+    suspend fun setCreatedAgent(agent: AgentInfo) {
+        context.initChatOnboardingStore.updateData { it.copy(createdAgent = agent) }
     }
 
     suspend fun setNickname(nickname: String) {
@@ -45,5 +47,9 @@ class InitChatOnboardingLocalDataSource @Inject constructor(
 
     suspend fun setAvatarUrl(avatarUrl: String) {
         context.initChatOnboardingStore.updateData { it.copy(avatarUrl = avatarUrl) }
+    }
+
+    suspend fun resetOnboarding() {
+        context.initChatOnboardingStore.updateData { InitChatOnboarding() }
     }
 }

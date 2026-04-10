@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ai.imate.R
+import com.ai.intellimate.R
 import com.ai.imate.account.ui.viewmodel.LoginViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -51,16 +51,16 @@ fun AuthLoadingScreen(
         coroutineScope {
             progress.snapTo(0f)
 
-            val minLoadingDone = async {
+            val atLeastTwoSecondsTo08 = async {
                 progress.animateTo(
                     targetValue = 0.8f,
                     animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
                 )
             }
-            val loginDone = async { viewModel.isLogin.filter { it }.first() }
+            val loginTrue = async { viewModel.isLogin.filter { it }.first() }
 
-            minLoadingDone.await()
-            loginDone.await()
+            atLeastTwoSecondsTo08.await()
+            loginTrue.await()
 
             progress.animateTo(
                 targetValue = 1.0f,

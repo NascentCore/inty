@@ -314,11 +314,13 @@ object HolidayCelebrationColors {
 }
 
 object InitChatColors {
-    // Common surfaces
+    // Common surfaces (main chat bubbles: Figma MainChatScreen)
     val AgentBubbleBackground = Color(0xD93C3445) // rgba(60,52,69,0.85)
-    val AgentBubbleBorder = Color(0x262C7BB6) // rgba(44,123,182,0.15)
-    val UserBubbleGradientStart = Color(0xFF2C7BB6)
-    val UserBubbleGradientEnd = Color(0xFF5BA3D4)
+    val AgentBubbleBorder = Color(0x26C567F5) // rgba(197,103,245,0.15)
+    val UserBubbleGradientStart = Color(0xFFC567F5)
+    val UserBubbleGradientEnd = Color(0xFF9E97FF)
+    /** 0px 4px 16px rgba(197,103,245,0.3) user bubble glow */
+    val UserBubbleShadowTint = Color(0x4DC567F5)
     val BottomBarBackground = Color(0xF21C1523) // rgba(28,21,35,0.95)
     val Divider = Color(0x0FFFFFFF) // rgba(255,255,255,0.06)
 
@@ -334,7 +336,11 @@ object InitChatColors {
 
     // Input
     val TextFieldBackground = Color(0xB33C3445) // rgba(60,52,69,0.7)
-    val TextFieldBorder = Color(0x402C7BB6) // rgba(44,123,182,0.25)
+    val TextFieldBorder = Color(0x33C567F5) // rgba(197,103,245,0.2)
+
+    // Assistant typing indicator (Figma TypingIndicator)
+    val TypingIndicatorBackground = Color(0xFF3C3445)
+    val TypingIndicatorDot = Color(0xFF5BA3D4)
 
     // Gender cards
     val GenderMaleAccent = Color(0xFF4FC3F7)
@@ -343,6 +349,20 @@ object InitChatColors {
     val GenderFemaleBackground = Color(0x1FFF88B3) // rgba(255,136,179,0.12)
     val GenderNoPrefAccent = Color(0xFF2C7BB6)
     val GenderNoPrefBackground = Color(0x1F2C7BB6) // rgba(44,123,182,0.12)
+}
+
+/** Settings bottom sheet (Figma chat settings frame); not in MaterialScheme. */
+object ChatSettingsColors {
+    val SheetBackground = Color(0xFF251B30)
+    val SheetTopBorder = Color(0x2EC567F5) // rgba(197,103,245,0.18)
+    val Scrim = Color(0x99000000) // rgba(0,0,0,0.6)
+    val ProfileCardBackground = Color(0x803C3445) // rgba(60,52,69,0.5)
+    val ProfileCardBorder = Color(0x1FC567F5) // rgba(197,103,245,0.12)
+    val DragHandle = Color(0x33FFFFFF) // rgba(255,255,255,0.2)
+    val IconTileBackground = Color(0xCC3C3445) // rgba(60,52,69,0.8)
+    val DestructiveIconBackground = Color(0x1FE53E3E) // rgba(229,62,62,0.12)
+    val CloseButtonBackground = Color(0x14FFFFFF) // rgba(255,255,255,0.08)
+    val RowDivider = Color(0x12FFFFFF) // rgba(255,255,255,0.07)
 }
 
 // endregion

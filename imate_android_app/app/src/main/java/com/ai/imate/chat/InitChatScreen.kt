@@ -57,7 +57,7 @@ import androidx.navigation3.runtime.NavKey
 import coil3.compose.AsyncImage
 import com.ai.core.utils.getCdnImageUrl
 import com.ai.core.ui.theme.InitChatColors
-import com.ai.imate.R
+import com.ai.intellimate.R
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -67,7 +67,6 @@ data object InitChat: NavKey
 fun InitChatRoute(
     modifier: Modifier = Modifier,
     viewModel: InitChatViewModel = viewModel(),
-    onBeginJourney: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -82,7 +81,7 @@ fun InitChatRoute(
             }
         },
         onGenderSelected = viewModel::selectGender,
-        onBeginJourney = onBeginJourney,
+        onConfirmEnterChat = viewModel::confirmEnterChat,
         modifier = modifier,
     )
 }
@@ -93,7 +92,7 @@ fun InitChatScreen(
     onInputTextChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onGenderSelected: (InitChatGender) -> Unit,
-    onBeginJourney: () -> Unit,
+    onConfirmEnterChat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -142,7 +141,7 @@ fun InitChatScreen(
             onInputTextChanged = onInputTextChanged,
             onSubmit = onSubmit,
             onGenderSelected = onGenderSelected,
-            onBeginJourney = onBeginJourney,
+            onConfirmEnterChat = onConfirmEnterChat,
         )
     }
 }
@@ -356,7 +355,7 @@ private fun InitChatBottomBar(
     onInputTextChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onGenderSelected: (InitChatGender) -> Unit,
-    onBeginJourney: () -> Unit,
+    onConfirmEnterChat: () -> Unit,
 ) {
     Column(
         modifier =
@@ -406,7 +405,7 @@ private fun InitChatBottomBar(
                 }
 
                 InitChatStep.Done -> {
-                    InitChatBeginButton(enabled = uiState.doneEnabled, onClick = onBeginJourney)
+                    InitChatBeginButton(enabled = uiState.doneEnabled, onClick = onConfirmEnterChat)
                 }
             }
         }

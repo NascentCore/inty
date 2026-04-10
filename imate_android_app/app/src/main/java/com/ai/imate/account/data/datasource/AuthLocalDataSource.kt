@@ -4,7 +4,6 @@ import android.content.Context
 import com.ai.core.data.store.jsonDataStore
 import com.ai.imate.account.data.bean.LoginResponse
 import com.ai.imate.account.data.bean.UserProfile
-import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -21,5 +20,9 @@ class AuthLocalDataSource @Inject constructor(
 
     suspend fun updateAccount(loginResponse: LoginResponse) {
         context.account.updateData { loginResponse }
+    }
+
+    suspend fun clearAccount() {
+        context.account.updateData { LoginResponse("", UserProfile()) }
     }
 }

@@ -9,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -25,13 +25,13 @@ import com.ai.imate.chat.Chat
 import com.ai.imate.chat.ChatScreen
 import com.ai.imate.chat.InitChat
 import com.ai.imate.chat.InitChatRoute
+import com.ai.intellimate.R
 import com.ai.imate.main.viewmodel.MainViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
     val viewModel = viewModel<MainViewModel>()
     val destination by viewModel.navigationDestination.collectAsState()
 
@@ -67,22 +67,18 @@ fun MainScreen() {
                 entry<Login> {
                     EmailAuthNavHost(
                         onLoginSuccess = {
-                            // 路由由 MainViewModel.navigationDestination（登录态 + 引导态）统一驱动
+                            viewModel.onEmailAuthLoadingFinished()
                         },
                         onOpenTerms = {
+                            uriHandler.openUri(context.getString(R.string.login_terms_url))
                         },
                         onOpenPrivacy = {
+                            uriHandler.openUri(context.getString(R.string.login_privacy_url))
                         },
                     )
                 }
                 entry<InitChat> {
-                    InitChatRoute(
-                        onBeginJourney = {
-                            scope.launch {
-                                viewModel.setInitChatOnboardingCompleted(true)
-                            }
-                        },
-                    )
+                    InitChatRoute()
                 }
                 entry<Chat> {
                     ChatScreen()

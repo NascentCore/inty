@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,8 +36,19 @@ import com.ai.intellimate.ui.UiConfigs
 
 /** 删除账号确认对话框 */
 @Composable
-fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+fun DeleteAccountDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    isDeleting: Boolean = false,
+) {
+    Dialog(
+        onDismissRequest = { if (!isDeleting) onDismiss() },
+        properties =
+            DialogProperties(
+                dismissOnBackPress = !isDeleting,
+                dismissOnClickOutside = !isDeleting,
+            ),
+    ) {
         Column(
             modifier =
                 Modifier.fillMaxWidth()
@@ -54,13 +66,24 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                     color = Color.White,
                 )
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = { if (!isDeleting) onDismiss() }, enabled = !isDeleting) {
                     Icon(
                         painter = painterResource(R.drawable.close),
                         contentDescription = "",
                         tint = Color.White,
                     )
                 }
+            }
+
+            if (isDeleting) {
+                Spacer(Modifier.height(UiConfigs.Spacing.Small))
+                LinearProgressIndicator(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(UiConfigs.SpacingGrid.Space4),
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.25f),
+                )
             }
 
             Spacer(Modifier.height(UiConfigs.Spacing.Small))
@@ -84,6 +107,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             // 按钮
             Button(
                 onClick = onDismiss,
+                enabled = !isDeleting,
                 modifier =
                     Modifier.fillMaxWidth(UiConfigs.Fractions.DialogButtonWidth)
                         .align(Alignment.CenterHorizontally),
@@ -97,6 +121,7 @@ fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 
             TextButton(
                 onClick = onConfirm,
+                enabled = !isDeleting,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
                 Text(

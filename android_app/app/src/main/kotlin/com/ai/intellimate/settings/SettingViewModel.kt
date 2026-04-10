@@ -88,7 +88,8 @@ class SettingViewModel : BaseVM() {
 
     /** 显示删除账号对话框 */
     fun showDeleteAccountDialog() {
-        _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = true)
+        _dialogState.value =
+            _dialogState.value.copy(showDeleteAccountDialog = true, deleteAccountInProgress = false)
     }
 
     /** 显示退出登录确认对话框 */
@@ -98,7 +99,8 @@ class SettingViewModel : BaseVM() {
 
     /** 隐藏删除账号对话框 */
     fun hideDeleteAccountDialog() {
-        _dialogState.value = _dialogState.value.copy(showDeleteAccountDialog = false)
+        _dialogState.value =
+            _dialogState.value.copy(showDeleteAccountDialog = false, deleteAccountInProgress = false)
     }
 
     /** 隐藏退出登录确认对话框 */
@@ -122,40 +124,22 @@ class SettingViewModel : BaseVM() {
 
     /** 删除账号（已包含删除检查逻辑） */
     fun deleteUserAccount() {
-        viewModelScope.launch(Dispatchers.IO) {
+        if (_dialogState.value.deleteAccountInProgress) return
+        viewModelScope.launch {
+            _dialogState.update { it.copy(deleteAccountInProgress = true) }
             try {
-                val result = NetServiceMgr.getUserApi().userDeleteAccount()
+                val result =
+                    withContext(Dispatchers.IO) { NetServiceMgr.getUserApi().userDeleteAccount() }
+                when (result) {
+                    is HttpResult.Success -> {
+                        if (result.data.success) {
+                            deleteAccountResultFlow.value = true
+                        } else {
+                            val errorMessage =
+                                result.data.message
+                                    ?: Utils.getApp()
+                                        .getString(R.string.toast_account_deletion_error)
 
-                withContext(Dispatchers.Main) {
-                    when (result) {
-                        is HttpResult.Success -> {
-                            if (result.data.success) {
-                                deleteAccountResultFlow.emit(true)
-                            } else {
-                                // 删除失败，显示后端返回的错误信息
-                                val errorMessage =
-                                    result.data.message
-                                        ?: Utils.getApp()
-                                            .getString(R.string.toast_account_deletion_error)
-
-                                // 如果错误信息包含订阅相关关键词，显示特定的提示
-                                if (
-                                    errorMessage.contains("订阅", ignoreCase = true) ||
-                                        errorMessage.contains("subscription", ignoreCase = true)
-                                ) {
-                                    ToastUtils.showShort(
-                                        Utils.getApp()
-                                            .getString(R.string.toast_cancel_subscription_first)
-                                    )
-                                } else {
-                                    ToastUtils.showShort(errorMessage)
-                                }
-                            }
-                        }
-
-                        is HttpResult.Failure -> {
-                            // 检查错误消息是否包含订阅相关关键词
-                            val errorMessage = result.message
                             if (
                                 errorMessage.contains("订阅", ignoreCase = true) ||
                                     errorMessage.contains("subscription", ignoreCase = true)
@@ -165,28 +149,42 @@ class SettingViewModel : BaseVM() {
                                         .getString(R.string.toast_cancel_subscription_first)
                                 )
                             } else {
-                                // 如果有错误消息，显示错误消息；否则显示通用错误
-                                if (errorMessage.isNotEmpty()) {
-                                    ToastUtils.showShort(errorMessage)
-                                } else {
-                                    ToastUtils.showShort(
-                                        Utils.getApp()
-                                            .getString(R.string.toast_account_deletion_error)
-                                    )
-                                }
+                                ToastUtils.showShort(errorMessage)
+                            }
+                        }
+                    }
+
+                    is HttpResult.Failure -> {
+                        val errorMessage = result.message
+                        if (
+                            errorMessage.contains("订阅", ignoreCase = true) ||
+                                errorMessage.contains("subscription", ignoreCase = true)
+                        ) {
+                            ToastUtils.showShort(
+                                Utils.getApp().getString(R.string.toast_cancel_subscription_first)
+                            )
+                        } else {
+                            if (errorMessage.isNotEmpty()) {
+                                ToastUtils.showShort(errorMessage)
+                            } else {
+                                ToastUtils.showShort(
+                                    Utils.getApp()
+                                        .getString(R.string.toast_account_deletion_error)
+                                )
                             }
                         }
                     }
                 }
             } catch (e: HttpException) {
-                // 专门处理HTTP异常
                 LogUtils.e("deleteUserAccount HTTP Exception: ${e.code()} - ${e.message()}")
                 val errorMessage = HttpErrorHandler.handleHttpException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
+                ToastUtils.showShort(errorMessage)
             } catch (e: Exception) {
                 LogUtils.e("删除用户账号 exception: ${e.message}")
                 val errorMessage = HttpErrorHandler.handleGeneralException(e, "account")
-                withContext(Dispatchers.Main) { ToastUtils.showShort(errorMessage) }
+                ToastUtils.showShort(errorMessage)
+            } finally {
+                _dialogState.update { it.copy(deleteAccountInProgress = false) }
             }
         }
     }
@@ -196,4 +194,5 @@ class SettingViewModel : BaseVM() {
 data class DialogState(
     val showDeleteAccountDialog: Boolean = false,
     val showLogoutConfirmDialog: Boolean = false,
+    val deleteAccountInProgress: Boolean = false,
 )
