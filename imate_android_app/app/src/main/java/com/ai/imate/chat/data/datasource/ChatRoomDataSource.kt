@@ -1,4 +1,4 @@
-package com.ai.imate.chat.data
+package com.ai.imate.chat.data.datasource
 
 import androidx.room.withTransaction
 import com.ai.imate.chat.local.db.ChatMessageDao

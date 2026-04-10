@@ -2,6 +2,8 @@ package com.ai.imate.chat.data
 
 import com.ai.imate.chat.data.datasource.InitChatOnboardingLocalDataSource
 import com.ai.imate.chat.data.datasource.InitChatRemoteDataSource
+import com.ai.imate.chat.data.bean.AgentInfo
+import com.ai.imate.chat.data.bean.CreateAgentRequest
 import com.ai.imate.chat.data.bean.GenerateAvatarResponse
 import com.ai.imate.chat.data.bean.InitChatOnboarding
 import com.ai.imate.chat.data.bean.InitChatOnboardingGender
@@ -24,9 +26,12 @@ class InitChatOnboardingRepository @Inject constructor(
 
     suspend fun isOnboardingCompleted(): Boolean = localDataSource.isOnboardingCompleted()
 
-    suspend fun setOnboardingCompleted(completed: Boolean) {
-        localDataSource.setOnboardingCompleted(completed)
+    suspend fun setCreatedAgent(agent: AgentInfo) {
+        localDataSource.setCreatedAgent(agent)
     }
+
+    suspend fun createAgent(request: CreateAgentRequest): AgentInfo =
+        remoteDataSource.createAgent(request)
 
     suspend fun setNickname(nickname: String) {
         localDataSource.setNickname(nickname)

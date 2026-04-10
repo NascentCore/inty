@@ -1,7 +1,10 @@
-package com.ai.imate.account.ui
+package com.ai.imate.chat
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -19,8 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,47 +34,29 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ai.imate.R
-import com.ai.imate.account.ui.viewmodel.LoginViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 
+/**
+ * Full-screen loading UI aligned with [com.ai.imate.account.ui.AuthLoadingScreen] visuals, used while
+ * the chat WebSocket session is not yet active.
+ */
 @Composable
-fun AuthLoadingScreen(
-    onLoginSuccess: () -> Unit,
-    viewModel: LoginViewModel = viewModel()
-) {
-    val progress = remember { Animatable(0f) }
-
-    LaunchedEffect(Unit) {
-        coroutineScope {
-            progress.snapTo(0f)
-
-            val atLeastTwoSecondsTo08 = async {
-                progress.animateTo(
-                    targetValue = 0.8f,
-                    animationSpec = tween(durationMillis = 2000, easing = LinearEasing),
-                )
-            }
-            val loginTrue = async { viewModel.isLogin.filter { it }.first() }
-
-            atLeastTwoSecondsTo08.await()
-            loginTrue.await()
-
-            progress.animateTo(
-                targetValue = 1.0f,
-                animationSpec = tween(durationMillis = 100, easing = LinearEasing),
-            )
-            onLoginSuccess()
-        }
-    }
+fun ChatWebSocketLoadingScreen(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "chatWsLoading")
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0.18f,
+        targetValue = 0.95f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 1600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "chatWsProgress",
+    )
 
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
                 .background(
                     brush =
@@ -190,7 +174,7 @@ fun AuthLoadingScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.auth_loading_tagline),
+                text = stringResource(R.string.chat_ws_connecting_tagline),
                 color = Color(0xFFC3F0FD).copy(alpha = 0.7f),
                 fontSize = 13.sp,
                 lineHeight = 19.5.sp,
@@ -220,7 +204,7 @@ fun AuthLoadingScreen(
                                     1f to Color(0xFF5BA3D4),
                                 ),
                         )
-                        .fillMaxWidth(progress.value.coerceIn(0f, 1f))
+                        .fillMaxWidth(progress.coerceIn(0f, 1f))
                         .height(2.dp),
             )
         }

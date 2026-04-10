@@ -60,6 +60,8 @@ ktor-client-android = { group = "io.ktor", name = "ktor-client-android" }
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp"}
+ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging" }
 
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 

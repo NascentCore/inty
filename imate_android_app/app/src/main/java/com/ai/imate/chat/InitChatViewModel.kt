@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.ai.core.data.exceptions.globalCatch
 import com.ai.imate.R
 import com.ai.imate.chat.data.InitChatOnboardingRepository
+import com.ai.imate.chat.data.bean.AgentInfo
+import com.ai.imate.chat.data.bean.CreateAgentRequest
 import com.ai.imate.chat.data.bean.InitChatOnboardingGender
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -63,6 +65,12 @@ class InitChatViewModel @Inject constructor(
 
     val uiState: StateFlow<InitChatUiState> = _uiState.asStateFlow()
 
+    private var messageKeySeq = 0
+
+    private var pendingCreatedAgent: AgentInfo? = null
+
+    private fun nextMessageId(base: String): String = "${base}_${++messageKeySeq}"
+
     init {
         viewModelScope.launch {
             appendAgentLine(agentRes("hello", R.string.init_chat_msg_hello))
@@ -89,7 +97,7 @@ class InitChatViewModel @Inject constructor(
                 progress = 0.38f,
                 headerTitle = InitChatMessageText.Plain(name),
                 headerSubtitle = InitChatMessageText.Res(R.string.init_chat_header_subtitle_getting_to_know),
-                messages = it.messages + userText("user_name", InitChatMessageText.Plain(name)),
+                messages = it.messages + userText(nextMessageId("user_name"), InitChatMessageText.Plain(name)),
             )
         }
 
@@ -129,7 +137,7 @@ class InitChatViewModel @Inject constructor(
                 step = InitChatStep.Appearance,
                 progress = 0.66f,
                 headerTitle = InitChatMessageText.Plain(nickname),
-                messages = state.messages + userText("user_gender", genderText),
+                messages = state.messages + userText(nextMessageId("user_gender"), genderText),
             )
         }
 
@@ -157,7 +165,7 @@ class InitChatViewModel @Inject constructor(
                 step = InitChatStep.Generating,
                 progress = 0.88f,
                 headerTitle = InitChatMessageText.Plain(nickname),
-                messages = state.messages + userText("user_appearance", InitChatMessageText.Plain(appearance)),
+                messages = state.messages + userText(nextMessageId("user_appearance"), InitChatMessageText.Plain(appearance)),
             )
         }
 
@@ -186,13 +194,59 @@ class InitChatViewModel @Inject constructor(
                 }
                 appendAgentLine(
                     InitChatMessage(
-                        id = "agent_avatar_failed_retry",
+                        id = nextMessageId("agent_avatar_failed_retry"),
                         role = InitChatRole.Agent,
                         text = InitChatMessageText.Plain("Something went wrong. Please describe my appearance again."),
                     ),
                 )
                 return@launch
             }
+
+            if (!avatarUrl.isNullOrBlank()) {
+                onboardingRepository.setAvatarUrl(avatarUrl)
+            }
+
+            val genderApi = _uiState.value.gender.toApiGender()
+            val createRequest =
+                CreateAgentRequest(
+                    name = nickname,
+                    gender = genderApi,
+                    background = avatarUrl,
+                    intro = appearance,
+                    opening = "",
+                    visibility = "PRIVATE",
+                )
+            var createdId: String? = null
+            var createdAgent: AgentInfo? = null
+            globalCatch {
+                val agent = onboardingRepository.createAgent(createRequest)
+                if (!agent.id.isBlank()) {
+                    createdAgent = agent
+                    createdId = agent.id
+                }
+            }
+            if (createdId.isNullOrBlank()) {
+                _uiState.update { state ->
+                    state.copy(
+                        step = InitChatStep.Appearance,
+                        progress = 0.66f,
+                        inputText = "",
+                    )
+                }
+                appendAgentLine(
+                    InitChatMessage(
+                        id = nextMessageId("agent_create_failed_retry"),
+                        role = InitChatRole.Agent,
+                        text =
+                            InitChatMessageText.Plain(
+                                "Something went wrong creating your companion. Please describe my appearance again.",
+                            ),
+                    ),
+                )
+                return@launch
+            }
+
+            pendingCreatedAgent = createdAgent
 
             delay(GENERATING_HOLD_MS)
             _uiState.update { state ->
@@ -205,16 +259,16 @@ class InitChatViewModel @Inject constructor(
                     messages = state.messages + agentDoneIntro(nickname),
                 )
             }
-            if (!avatarUrl.isNullOrBlank()) {
-                onboardingRepository.setAvatarUrl(avatarUrl)
-            }
             delay(MESSAGE_STAGGER_MS)
             appendAgentLine(agentRes("done_ready", R.string.init_chat_msg_done_ready))
         }
     }
 
-    fun completeOnboarding() {
-        viewModelScope.launch { onboardingRepository.setOnboardingCompleted(true) }
+    fun confirmEnterChat() {
+        val agent = pendingCreatedAgent ?: return
+        pendingCreatedAgent = null
+        _uiState.update { it.copy(doneEnabled = false) }
+        viewModelScope.launch { onboardingRepository.setCreatedAgent(agent) }
     }
 
     private fun appendAgentLine(message: InitChatMessage) {
@@ -223,7 +277,7 @@ class InitChatViewModel @Inject constructor(
 
     private fun agentNameConfirm(name: String) =
         InitChatMessage(
-            id = "agent_name_confirm",
+            id = nextMessageId("agent_name_confirm"),
             role = InitChatRole.Agent,
             text =
                 InitChatMessageText.Parts(
@@ -237,7 +291,7 @@ class InitChatViewModel @Inject constructor(
 
     private fun agentGeneratingVision(appearance: String) =
         InitChatMessage(
-            id = "agent_generating_vision",
+            id = nextMessageId("agent_generating_vision"),
             role = InitChatRole.Agent,
             text =
                 InitChatMessageText.Parts(
@@ -251,7 +305,7 @@ class InitChatViewModel @Inject constructor(
 
     private fun agentDoneIntro(name: String) =
         InitChatMessage(
-            id = "agent_done_intro",
+            id = nextMessageId("agent_done_intro"),
             role = InitChatRole.Agent,
             text =
                 InitChatMessageText.Parts(
@@ -265,7 +319,7 @@ class InitChatViewModel @Inject constructor(
 
     private fun agentRes(id: String, @StringRes textId: Int) =
         InitChatMessage(
-            id = "agent_$id",
+            id = nextMessageId("agent_$id"),
             role = InitChatRole.Agent,
             text = InitChatMessageText.Res(textId),
         )
@@ -307,5 +361,12 @@ private fun InitChatGender.toOnboardingGender(): InitChatOnboardingGender =
         InitChatGender.Male -> InitChatOnboardingGender.Male
         InitChatGender.Female -> InitChatOnboardingGender.Female
         InitChatGender.NoPref -> InitChatOnboardingGender.NoPref
+    }
+
+private fun InitChatGender?.toApiGender(): String =
+    when (this) {
+        InitChatGender.Male -> "MALE"
+        InitChatGender.Female -> "FEMALE"
+        InitChatGender.NoPref, null -> "OTHER"
     }
 

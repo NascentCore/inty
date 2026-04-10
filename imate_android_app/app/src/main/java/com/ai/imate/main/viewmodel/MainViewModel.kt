@@ -4,13 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation3.runtime.NavKey
 import com.ai.core.http.di.KtorHttpClientSingleton
+import com.ai.imate.account.AuthPostLoginNavigationGate
 import com.ai.imate.account.data.AuthRepository
 import com.ai.imate.account.navigation.Login
 import com.ai.imate.chat.Chat
 import com.ai.imate.chat.InitChat
+import com.ai.imate.chat.data.ChatMainRepository
 import com.ai.imate.chat.data.InitChatOnboardingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class MainViewModel
@@ -25,6 +29,8 @@ class MainViewModel
 constructor(
     private val authRepository: AuthRepository,
     private val initChatOnboardingRepository: InitChatOnboardingRepository,
+    private val chatMainRepository: ChatMainRepository,
+    private val authPostLoginNavigationGate: AuthPostLoginNavigationGate,
 ) : ViewModel() {
     val token = authRepository.token.stateIn(viewModelScope, SharingStarted.Eagerly, "")
     val isLogin = authRepository.isLogin.distinctUntilChanged()
@@ -34,6 +40,7 @@ constructor(
 
     init {
         KtorHttpClientSingleton.setBearerTokenProvider { token.value }
+        viewModelScope.launch(Dispatchers.IO) { chatMainRepository.connectWebSocketWhenLoggedIn() }
     }
 
     /**
@@ -47,9 +54,11 @@ constructor(
                 combine(
                     authRepository.isLogin,
                     initChatOnboardingRepository.onboardingCompleted,
-                ) { loggedIn, initDone ->
+                    authPostLoginNavigationGate.holdPostLoginNavigation,
+                ) { loggedIn, initDone, holdPostLogin ->
                     when {
                         !loggedIn -> Login
+                        holdPostLogin -> Login
                         !initDone -> InitChat
                         else -> Chat
                     }
@@ -64,7 +73,7 @@ constructor(
     suspend fun isInitChatOnboardingCompleted(): Boolean =
         initChatOnboardingRepository.isOnboardingCompleted()
 
-    suspend fun setInitChatOnboardingCompleted(completed: Boolean) {
-        initChatOnboardingRepository.setOnboardingCompleted(completed)
+    fun onEmailAuthLoadingFinished() {
+        authPostLoginNavigationGate.releaseHold()
     }
 }

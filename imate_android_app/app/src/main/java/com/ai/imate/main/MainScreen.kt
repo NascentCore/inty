@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,12 +25,10 @@ import com.ai.imate.chat.ChatScreen
 import com.ai.imate.chat.InitChat
 import com.ai.imate.chat.InitChatRoute
 import com.ai.imate.main.viewmodel.MainViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val viewModel = viewModel<MainViewModel>()
     val destination by viewModel.navigationDestination.collectAsState()
 
@@ -67,7 +64,7 @@ fun MainScreen() {
                 entry<Login> {
                     EmailAuthNavHost(
                         onLoginSuccess = {
-                            // 路由由 MainViewModel.navigationDestination（登录态 + 引导态）统一驱动
+                            viewModel.onEmailAuthLoadingFinished()
                         },
                         onOpenTerms = {
                         },
@@ -76,13 +73,7 @@ fun MainScreen() {
                     )
                 }
                 entry<InitChat> {
-                    InitChatRoute(
-                        onBeginJourney = {
-                            scope.launch {
-                                viewModel.setInitChatOnboardingCompleted(true)
-                            }
-                        },
-                    )
+                    InitChatRoute()
                 }
                 entry<Chat> {
                     ChatScreen()

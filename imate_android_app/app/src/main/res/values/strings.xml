@@ -62,4 +62,27 @@
     <string name="content_desc_send">Send</string>
     <string name="content_desc_select_gender">Select gender</string>
     <string name="content_desc_begin_journey">Begin our journey</string>
+
+    <!-- Main chat -->
+    <string name="chat_online_status">Online</string>
+    <string name="chat_message_placeholder">Message %1$s…</string>
+    <string name="chat_settings_title">Settings</string>
+    <string name="chat_companion_subtitle">Your AI companion</string>
+    <string name="chat_send_feedback_title">Send Feedback</string>
+    <string name="chat_send_feedback_subtitle">Help us improve imate</string>
+    <string name="chat_report_issue_title">Report an Issue</string>
+    <string name="chat_report_issue_subtitle">Something not right?</string>
+    <string name="chat_terms_title">Terms of Use</string>
+    <string name="chat_terms_subtitle">Read our terms</string>
+    <string name="chat_privacy_title">Privacy Policy</string>
+    <string name="chat_privacy_subtitle">How we handle your data</string>
+    <string name="chat_logout_title">Logout</string>
+    <string name="chat_logout_subtitle">Sign out of your account</string>
+    <string name="chat_delete_account_title">Delete Account</string>
+    <string name="chat_delete_account_subtitle">This action cannot be undone</string>
+    <string name="chat_agent_missing">Companion not ready. Please finish onboarding.</string>
+    <string name="content_desc_settings">Open settings</string>
+    <string name="content_desc_close_settings">Close settings</string>
+    <string name="content_desc_agent_avatar">Companion avatar</string>
+    <string name="chat_ws_connecting_tagline">connecting to your companion...</string>
 </resources>
