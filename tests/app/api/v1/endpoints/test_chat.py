@@ -582,6 +582,8 @@ def test_v1_chat_completions_guest_saves_local_id_meta_on_limit(
     with _client_with_user(chat_business_error_app, user) as client:
         response = client.post("/api/v1/chat/completions/agent-1", json=payload)
     assert response.status_code == 200
+    body = response.json()
+    assert body["data"]["local_id"] == "guest-limit-local-1"
     assert len(calls) == 1
     assert calls[0]["meta_data"] == {"localId": "guest-limit-local-1"}
 
@@ -739,7 +741,9 @@ def test_v1_chat_completions_forwards_local_id_to_agent(
     with _client_with_user(chat_business_error_app, user) as client:
         response = client.post("/api/v1/chat/completions/agent-1", json=payload)
     assert response.status_code == 200
-    assert response.json()["code"] == 200
+    body = response.json()
+    assert body["code"] == 200
+    assert body["data"]["local_id"] == "temp-client-1"
     assert captured.get("client_local_message_id") == "temp-client-1"
 
 

@@ -35,6 +35,8 @@ interface VerifyMessage {
   role: "user" | "assistant";
   content: string;
   error?: string;
+  /** 服务端 data.local_id 回显（应与发送的 localId 一致） */
+  echoedLocalId?: string;
 }
 
 export const ChatWsVerifyPage: React.FC = () => {
@@ -44,6 +46,7 @@ export const ChatWsVerifyPage: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const lastSentLocalIdRef = useRef<string | null>(null);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -68,30 +71,57 @@ export const ChatWsVerifyPage: React.FC = () => {
         const payload = JSON.parse(event.data as string) as {
           code?: number;
           message?: string;
-          data?: { choices?: Array<{ message?: { content?: string } }> };
+          data?: {
+            local_id?: string;
+            choices?: Array<{ message?: { content?: string } }>;
+          };
           agent_id?: string;
         };
+        const sentLocalId = lastSentLocalIdRef.current;
+        const echoLocal =
+          payload.data &&
+          typeof payload.data === "object" &&
+          "local_id" in payload.data
+            ? payload.data.local_id
+            : undefined;
         if (payload.code !== 200) {
-          setMessages((prev) =>
-            prev.concat({
-              id: `err-${Date.now()}`,
+          setMessages((prev) => {
+            const errId = `err-${Date.now()}`;
+            const base = prev.map((m) =>
+              sentLocalId &&
+              m.id === sentLocalId &&
+              m.role === "user" &&
+              typeof echoLocal === "string"
+                ? { ...m, echoedLocalId: echoLocal }
+                : m,
+            );
+            return base.concat({
+              id: errId,
               role: "assistant",
               content: "",
               error: payload.message ?? "Unknown error",
-            }),
-          );
+            });
+          });
           setSending(false);
           return;
         }
         const content =
           payload.data?.choices?.[0]?.message?.content ?? payload.message ?? "";
-        setMessages((prev) =>
-          prev.concat({
+        setMessages((prev) => {
+          const withEcho = prev.map((m) =>
+            sentLocalId &&
+            m.id === sentLocalId &&
+            m.role === "user" &&
+            typeof echoLocal === "string"
+              ? { ...m, echoedLocalId: echoLocal }
+              : m,
+          );
+          return withEcho.concat({
             id: `ai-${Date.now()}`,
             role: "assistant",
             content,
-          }),
-        );
+          });
+        });
       } catch {
         setMessages((prev) =>
           prev.concat({
@@ -127,10 +157,12 @@ export const ChatWsVerifyPage: React.FC = () => {
       else if (!connected) antMessage.warning("请先连接 WebSocket");
       return;
     }
+    const localId = `ws_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    lastSentLocalIdRef.current = localId;
     setSending(true);
     setInputValue("");
     setMessages((prev) =>
-      prev.concat({ id: `user-${Date.now()}`, role: "user", content: text }),
+      prev.concat({ id: localId, role: "user", content: text }),
     );
     const payload = {
       agent_id: selectedAgent.id,
@@ -139,6 +171,7 @@ export const ChatWsVerifyPage: React.FC = () => {
         stream: false,
         model: "chatbot",
         language: "zh",
+        localId,
       },
     };
     wsRef.current.send(JSON.stringify(payload));
@@ -216,7 +249,19 @@ export const ChatWsVerifyPage: React.FC = () => {
                               )
                             }
                             title={item.role === "user" ? "用户" : "助手"}
-                            description={item.error ?? (item.content || "(空)")}
+                            description={
+                              <>
+                                {item.error ?? (item.content || "(空)")}
+                                {item.role === "user" &&
+                                  item.echoedLocalId !== undefined && (
+                                    <div>
+                                      <Text type="secondary" style={{ fontSize: 12 }}>
+                                        data.local_id: {item.echoedLocalId || "(none)"}
+                                      </Text>
+                                    </div>
+                                  )}
+                              </>
+                            }
                           />
                         </List.Item>
                       )}

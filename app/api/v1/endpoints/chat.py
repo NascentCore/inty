@@ -197,16 +197,22 @@ async def _handle_subscription_limit_error(
     except Exception as e:
         logger.warning(f"保存用户消息失败: {str(e)}")
 
+    limit_extra: dict[str, Any] = {
+        "used_count": used_count,
+        "daily_limit": daily_limit,
+    }
+    if client_local_id:
+        limit_extra["local_id"] = client_local_id
+
     if current_user.auth_type == AuthType.GUEST:
         return create_business_error_response(
             error_info=BusinessErrorCode.GUEST_LOGIN_REQUIRED,
-            extra_data={"used_count": used_count, "daily_limit": daily_limit},
+            extra_data=limit_extra,
         )
-    else:
-        return create_business_error_response(
-            error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
-            extra_data={"used_count": used_count, "daily_limit": daily_limit},
-        )
+    return create_business_error_response(
+        error_info=BusinessErrorCode.SUBSCRIPTION_REQUIRED,
+        extra_data=limit_extra,
+    )
 
 
 def _build_surprise_snap_choice_message(
@@ -351,6 +357,7 @@ def _build_chat_response(
     source_imate_id: Optional[str],
     user_message_id: Optional[int] = None,
     subscription_actions: Optional[List[BizAction]] = None,
+    client_local_id: Optional[str] = None,
 ) -> dict:
     """构建聊天响应数据"""
     message = {"role": "assistant", "content": response_text_content}
@@ -390,6 +397,8 @@ def _build_chat_response(
     }
     if source_imate_id is not None:
         response["source_imate_id"] = source_imate_id
+    if client_local_id:
+        response["local_id"] = client_local_id
     return response
 
 
@@ -831,6 +840,7 @@ async def agent_chat_completions(
             source_imate_id=request.target_imate_id,
             user_message_id=user_message_id,
             subscription_actions=subscription_actions,
+            client_local_id=effective_local_id,
         )
 
         if premium_preview_choice is not None:
@@ -1086,6 +1096,10 @@ async def chat_completions_websocket_verify(
             if user_time_context == {}:
                 user_time_context = None
 
+            effective_local_id = (
+                (request.local_id or request.message_id or "").strip() or None
+            )
+
             try:
                 gen_result = await agent.generate_message_without_user_save(
                     user_id=current_user.id,
@@ -1129,6 +1143,7 @@ async def chat_completions_websocket_verify(
                 source_imate_id=request.target_imate_id,
                 user_message_id=None,
                 subscription_actions=[],
+                client_local_id=effective_local_id,
             )
             response = schemas.APIResponse.success(data=data)
             response_data = response.model_dump(exclude_none=True)

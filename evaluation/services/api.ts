@@ -1042,11 +1042,14 @@ export const chatApi = {
       content: ChatMessageContent;
     }>,
     stream: boolean = false,
+    options?: { localId?: string },
   ): Promise<{
     id: string;
     object: string;
     created: number;
     model: string;
+    user_message_id?: number;
+    local_id?: string;
     choices: Array<{
       index: number;
       message: {
@@ -1060,13 +1063,18 @@ export const chatApi = {
       completion_tokens: number;
       total_tokens: number;
     };
-  }> =>
-    apiClient.post(`/chat/completions/${agentId}`, {
+  }> => {
+    const body: Record<string, unknown> = {
       messages,
       stream,
       model: "chatbot",
       language: "zh",
-    }),
+    };
+    if (options?.localId) {
+      body.localId = options.localId;
+    }
+    return apiClient.post(`/chat/completions/${agentId}`, body);
+  },
 
   // 获取Agent聊天详情和消息历史
   getChatDetail: (
@@ -1094,7 +1102,9 @@ export const chatApi = {
       festival_memory_id?: number;
       image_url?: string;
       user_vote?: "like" | "dislike" | null;
+      local_id?: string;
       meta_data?: {
+        localId?: string;
         generated_image?: {
           image_url: string;
           width: number;
@@ -1153,7 +1163,9 @@ export const chatApi = {
       price?: number;
       is_locked?: boolean;
       user_vote?: "like" | "dislike" | null;
+      local_id?: string;
       meta_data?: {
+        localId?: string;
         generated_image?: {
           image_url: string;
           width: number;

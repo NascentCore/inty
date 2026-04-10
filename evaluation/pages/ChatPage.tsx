@@ -76,6 +76,8 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   remoteId?: string; // 数据库消息ID，用于删除和重发功能
+  /** 服务端消息列表 / completions 回显的客户端本地 id（对齐乐观 UI） */
+  local_id?: string;
   type?: "text" | "image" | "festival_memory_prompt" | "surprise_snap"; // 消息类型：文本、图片、节日记忆提示、Surprise Snap
   festival_memory_id?: number; // 节日记忆提示消息对应的 memory 记录 id（仅 type=festival_memory_prompt 时）
   image_url?: string; // 图片URL（仅图片消息）
@@ -311,6 +313,7 @@ export const ChatPage: React.FC = () => {
             price: msg.price,
             is_locked: msg.is_locked,
             user_vote: msg.user_vote || null,
+            local_id: msg.local_id,
             meta_data: msg.meta_data,
           }),
         );
@@ -576,6 +579,7 @@ export const ChatPage: React.FC = () => {
           price: msg.price,
           is_locked: msg.is_locked,
           user_vote: msg.user_vote || null,
+          local_id: msg.local_id,
           meta_data: msg.meta_data,
         }));
         const unique = converted.filter(
@@ -632,6 +636,7 @@ export const ChatPage: React.FC = () => {
           price: msg.price,
           is_locked: msg.is_locked,
           user_vote: msg.user_vote || null,
+          local_id: msg.local_id,
           meta_data: msg.meta_data,
         }));
 
@@ -737,6 +742,7 @@ export const ChatPage: React.FC = () => {
                 price: msg.price,
                 is_locked: msg.is_locked,
                 user_vote: msg.user_vote || null,
+                local_id: msg.local_id,
                 meta_data: msg.meta_data,
               }),
             );
@@ -793,6 +799,8 @@ export const ChatPage: React.FC = () => {
       const response = await api.chat.sendMessage(
         selectedAgent.id,
         messageHistory,
+        false,
+        { localId: userMessage.id },
       );
 
       // 提取助手回复
@@ -805,8 +813,6 @@ export const ChatPage: React.FC = () => {
         content: assistantContent,
         timestamp: new Date().toISOString(),
         remoteId: `assistant_${Date.now() + 1}`, // 为AI消息添加临时 remoteId
-        // 注意：由于当前的sendMessage API不返回消息ID，暂时使用本地ID
-        // 如果需要真正的远程ID，需要调用getChatDetail获取最新的消息
       };
 
       const finalMessages = [...messagesWithUser, assistantMessage];
@@ -843,6 +849,7 @@ export const ChatPage: React.FC = () => {
               price: msg.price,
               is_locked: msg.is_locked,
               user_vote: msg.user_vote || null,
+              local_id: msg.local_id,
               meta_data: msg.meta_data,
             }),
           );
@@ -977,6 +984,7 @@ export const ChatPage: React.FC = () => {
             price: msg.price,
             is_locked: msg.is_locked,
             user_vote: msg.user_vote || null,
+            local_id: msg.local_id,
             meta_data: msg.meta_data,
           }));
 
@@ -1160,6 +1168,8 @@ export const ChatPage: React.FC = () => {
             const response = await api.chat.sendMessage(
               selectedAgent.id,
               messageHistory,
+              false,
+              { localId: userMessage.id },
             );
 
             const assistantContent =
