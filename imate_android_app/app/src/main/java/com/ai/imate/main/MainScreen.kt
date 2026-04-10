@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -24,11 +25,13 @@ import com.ai.imate.chat.Chat
 import com.ai.imate.chat.ChatScreen
 import com.ai.imate.chat.InitChat
 import com.ai.imate.chat.InitChatRoute
+import com.ai.imate.R
 import com.ai.imate.main.viewmodel.MainViewModel
 
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val viewModel = viewModel<MainViewModel>()
     val destination by viewModel.navigationDestination.collectAsState()
 
@@ -67,8 +70,10 @@ fun MainScreen() {
                             viewModel.onEmailAuthLoadingFinished()
                         },
                         onOpenTerms = {
+                            uriHandler.openUri(context.getString(R.string.login_terms_url))
                         },
                         onOpenPrivacy = {
+                            uriHandler.openUri(context.getString(R.string.login_privacy_url))
                         },
                     )
                 }

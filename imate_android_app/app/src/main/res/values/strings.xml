@@ -13,8 +13,8 @@
     <string name="login_privacy">Privacy Policy</string>
     <string name="login_disclaimer">By continuing, you agree to our terms</string>
 
-    <string name="login_terms_url" translatable="false">https://policies.google.com/terms</string>
-    <string name="login_privacy_url" translatable="false">https://policies.google.com/privacy</string>
+    <string name="login_terms_url" translatable="false">https://app.termly.io/policy-viewer/policy.html?policyUUID=97416d63-aebb-4ea5-b990-eccc5aa6cff1</string>
+    <string name="login_privacy_url" translatable="false">https://app.termly.io/policy-viewer/policy.html?policyUUID=c82c3bfa-10a0-4075-a7f1-a98d5146d71c</string>
     <string name="continue_with_email">Continue with Email</string>
 
     <string name="enter_email">Email</string>
@@ -78,11 +78,56 @@
     <string name="chat_privacy_subtitle">How we handle your data</string>
     <string name="chat_logout_title">Logout</string>
     <string name="chat_logout_subtitle">Sign out of your account</string>
+    <string name="chat_logout_confirm_title">Sign out?</string>
+    <string name="chat_logout_confirm_message">You will be signed out on this device. You can sign in again anytime.</string>
+    <string name="chat_logout_confirm_confirm">Sign out</string>
     <string name="chat_delete_account_title">Delete Account</string>
     <string name="chat_delete_account_subtitle">This action cannot be undone</string>
+    <string name="chat_delete_account_confirm_title">Delete your account?</string>
+    <string name="chat_delete_account_confirm_message">This will permanently delete your account on the server. Local chat data will be removed. This cannot be undone.</string>
+    <string name="chat_delete_account_confirm_delete">Delete</string>
+    <string name="chat_delete_account_confirm_cancel">Cancel</string>
     <string name="chat_agent_missing">Companion not ready. Please finish onboarding.</string>
     <string name="content_desc_settings">Open settings</string>
     <string name="content_desc_close_settings">Close settings</string>
     <string name="content_desc_agent_avatar">Companion avatar</string>
     <string name="chat_ws_connecting_tagline">connecting to your companion...</string>
+
+    <!-- System: report / feedback / legal (aligned with IntelliMate android_app) -->
+    <string name="system_str_report">Report</string>
+    <string name="system_feedback_title">Help Us Improve</string>
+    <string name="system_feedback_subtitle">Was everything to your satisfaction?</string>
+    <string name="system_feedback_description">Feedback description</string>
+    <string name="system_feedback_description_placeholder">Please describe your experience or suggestions…</string>
+    <string name="system_report_description">Report description</string>
+    <string name="system_npc_asterisk_full">NPC *</string>
+    <string name="system_please_fill_feedback_full">Please fill in the feedback content…</string>
+    <string name="system_image_evidence_full">Image evidence</string>
+    <string name="system_submit_button">Submit</string>
+    <string name="system_content_desc_add_evidence">Add image evidence</string>
+    <string name="system_toast_please_select_reason">Please select at least one reason</string>
+    <string name="system_toast_please_enter_description">Please enter a description</string>
+    <string name="system_toast_feedback_submitted">Thanks for helping improve the experience.</string>
+    <string name="system_toast_submitted_successfully">Submitted successfully. We will review it soon.</string>
+    <string name="system_toast_report_creation_failed">Report creation failed</string>
+    <string name="system_toast_login_required_for_report">Please sign in to continue</string>
+    <string name="system_report_reason_sensitive_content">Sensitive or sexual content</string>
+    <string name="system_report_reason_misinformation">Misinformation</string>
+    <string name="system_report_reason_fraud_scams">Fraud or scams</string>
+    <string name="system_report_reason_privacy_violation">Violation of privacy</string>
+    <string name="system_report_reason_harmful_minors">Harmful to minors</string>
+    <string name="system_report_reason_ip_violation">Violations of my intellectual property</string>
+    <string name="system_report_reason_other">Other, details in report description</string>
+    <string name="system_feedback_reason_chat_not_natural">Chat replies don\'t feel natural / off-topic</string>
+    <string name="system_feedback_reason_character_mismatch">The iMate doesn\'t match its persona</string>
+    <string name="system_feedback_reason_app_slow">The app is slow or gets stuck</string>
+    <string name="system_feedback_reason_feature_hard_to_find">I couldn\'t find / how to use this feature</string>
+    <string name="system_feedback_reason_ui_inconvenient">UI or interaction feels inconvenient</string>
+    <string name="system_feedback_reason_new_feature">Suggest a new feature or improvement</string>
+    <string name="system_feedback_reason_other">Other, please describe below</string>
+    <string name="system_feedback_reason_image_low_quality">Low image quality (low definition, poor details, etc.)</string>
+    <string name="system_feedback_reason_image_style_mismatch">Artistic style not matching the reference image</string>
+    <string name="system_feedback_reason_image_content_mismatch">Image does not match my expectation</string>
+    <string name="system_feedback_reason_image_anatomy_or_structure_error">Body distortion, weird posture, AI glitches, etc.</string>
+    <string name="system_feedback_reason_image_other">Other, please write in the details</string>
 </resources>

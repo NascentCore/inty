@@ -4,6 +4,7 @@ import android.util.Log
 import com.ai.core.BuildConfig
 import com.ai.core.http.ktor.ChatImageTimeoutPlugin
 import com.ai.core.http.okhttp.UnifiedOkHttpClientFactory
+import okhttp3.OkHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.DefaultRequest
@@ -87,4 +88,8 @@ object KtorHttpClientSingleton {
     }
 
     fun httpBaseUrlTrimmed(): String = BASE_URL.trimEnd('/')
+
+    /** 与 [httpClient] 相同鉴权，用于 multipart 等不适合走 DefaultRequest JSON 的请求。 */
+    fun authenticatedOkHttp(): OkHttpClient =
+        UnifiedOkHttpClientFactory.create { bearerTokenProvider() }
 }

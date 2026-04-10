@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,10 +36,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -61,8 +68,11 @@ import androidx.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import com.ai.core.ui.theme.InitChatColors
 import com.ai.core.utils.getCdnImageUrl
+import com.ai.core.utils.ToastUtils
 import com.ai.imate.R
 import com.ai.imate.chat.local.db.MessageEntity
+import com.ai.imate.system.SystemReportEntry
+import com.ai.imate.system.report.SystemReportPage
 import kotlinx.serialization.Serializable
 
 private const val ASSISTANT_LOADING_PLACEHOLDER = "loading_animation"
@@ -73,9 +83,15 @@ data object Chat : NavKey
 @Composable
 fun ChatScreen(modifier: Modifier = Modifier) {
     val viewModel: ChatViewModel = viewModel()
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    var systemReportEntry by remember { mutableStateOf<SystemReportEntry?>(null) }
+    var logoutConfirmVisible by remember { mutableStateOf(false) }
+    var deleteAccountConfirmVisible by remember { mutableStateOf(false) }
     val agent by viewModel.agent.collectAsStateWithLifecycle()
     val inputText by viewModel.inputText.collectAsStateWithLifecycle()
     val settingsVisible by viewModel.settingsVisible.collectAsStateWithLifecycle()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
     val wsConnected by viewModel.isChatWebSocketConnected.collectAsStateWithLifecycle()
     val hasWsEver by viewModel.hasWebSocketConnectedAtLeastOnce.collectAsStateWithLifecycle()
     val lazyPagingItems = viewModel.messages.collectAsLazyPagingItems()
@@ -202,7 +218,102 @@ fun ChatScreen(modifier: Modifier = Modifier) {
             agent = companion,
             visible = settingsVisible,
             onDismiss = { viewModel.setSettingsVisible(false) },
+            onSendFeedback = {
+                if (!isLoggedIn) {
+                    ToastUtils.showShort(R.string.system_toast_login_required_for_report)
+                    return@ChatSettingsBottomSheet
+                }
+                viewModel.setSettingsVisible(false)
+                systemReportEntry =
+                    SystemReportEntry(
+                        isFeedback = true,
+                        targetType = "AGENT",
+                        targetId = companion.id,
+                    )
+            },
+            onReportIssue = {
+                if (!isLoggedIn) {
+                    ToastUtils.showShort(R.string.system_toast_login_required_for_report)
+                    return@ChatSettingsBottomSheet
+                }
+                viewModel.setSettingsVisible(false)
+                systemReportEntry =
+                    SystemReportEntry(
+                        isFeedback = false,
+                        targetType = "AGENT",
+                        targetId = companion.id,
+                    )
+            },
+            onOpenTerms = {
+                runCatching { uriHandler.openUri(context.getString(R.string.login_terms_url)) }
+            },
+            onOpenPrivacy = {
+                runCatching { uriHandler.openUri(context.getString(R.string.login_privacy_url)) }
+            },
+            onLogout = {
+                viewModel.setSettingsVisible(false)
+                logoutConfirmVisible = true
+            },
+            onDeleteAccount = {
+                viewModel.setSettingsVisible(false)
+                deleteAccountConfirmVisible = true
+            },
         )
+
+        if (logoutConfirmVisible) {
+            AlertDialog(
+                onDismissRequest = { logoutConfirmVisible = false },
+                title = { Text(stringResource(R.string.chat_logout_confirm_title)) },
+                text = { Text(stringResource(R.string.chat_logout_confirm_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            logoutConfirmVisible = false
+                            viewModel.logout()
+                        }
+                    ) {
+                        Text(stringResource(R.string.chat_logout_confirm_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { logoutConfirmVisible = false }) {
+                        Text(stringResource(R.string.chat_delete_account_confirm_cancel))
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
+        }
+
+        if (deleteAccountConfirmVisible) {
+            AlertDialog(
+                onDismissRequest = { deleteAccountConfirmVisible = false },
+                title = { Text(stringResource(R.string.chat_delete_account_confirm_title)) },
+                text = { Text(stringResource(R.string.chat_delete_account_confirm_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            deleteAccountConfirmVisible = false
+                            viewModel.deleteAccount()
+                        }
+                    ) {
+                        Text(stringResource(R.string.chat_delete_account_confirm_delete))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteAccountConfirmVisible = false }) {
+                        Text(stringResource(R.string.chat_delete_account_confirm_cancel))
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
+        }
+
+        systemReportEntry?.let { entry ->
+            SystemReportPage(
+                entry = entry,
+                onBack = { systemReportEntry = null },
+            )
+        }
     }
 }
 

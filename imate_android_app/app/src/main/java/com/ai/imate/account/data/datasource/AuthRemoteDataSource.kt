@@ -1,12 +1,13 @@
 package com.ai.imate.account.data.datasource
 
+import com.ai.core.http.utils.post
+import com.ai.imate.account.data.bean.AccountDeletionResponse
 import com.ai.imate.account.data.bean.LoginRequest
 import com.ai.imate.account.data.bean.LoginResponse
 import io.ktor.client.request.setBody
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import com.ai.core.http.utils.post
 
 class AuthRemoteDataSource @Inject constructor() {
     /**
@@ -22,5 +23,9 @@ class AuthRemoteDataSource @Inject constructor() {
         return post<LoginResponse>("/api/v1/auth/google/login") {
             setBody(LoginRequest(email = email, password = password))
         }
+    }
+
+    suspend fun deleteAccount(): AccountDeletionResponse {
+        return post<AccountDeletionResponse>("/api/v1/users/delete-account") {}
     }
 }

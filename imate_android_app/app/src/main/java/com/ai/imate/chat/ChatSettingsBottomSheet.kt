@@ -53,6 +53,12 @@ fun ChatSettingsBottomSheet(
     agent: AgentInfo,
     visible: Boolean,
     onDismiss: () -> Unit,
+    onSendFeedback: () -> Unit,
+    onReportIssue: () -> Unit,
+    onOpenTerms: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    onLogout: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     if (!visible) return
 
@@ -75,7 +81,16 @@ fun ChatSettingsBottomSheet(
         },
         tonalElevation = 0.dp,
     ) {
-        ChatSettingsSheetContent(agent = agent, onClose = onDismiss)
+        ChatSettingsSheetContent(
+            agent = agent,
+            onClose = onDismiss,
+            onSendFeedback = onSendFeedback,
+            onReportIssue = onReportIssue,
+            onOpenTerms = onOpenTerms,
+            onOpenPrivacy = onOpenPrivacy,
+            onLogout = onLogout,
+            onDeleteAccount = onDeleteAccount,
+        )
     }
 }
 
@@ -83,6 +98,12 @@ fun ChatSettingsBottomSheet(
 private fun ChatSettingsSheetContent(
     agent: AgentInfo,
     onClose: () -> Unit,
+    onSendFeedback: () -> Unit,
+    onReportIssue: () -> Unit,
+    onOpenTerms: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    onLogout: () -> Unit,
+    onDeleteAccount: () -> Unit,
 ) {
     Column(
         modifier =
@@ -144,7 +165,7 @@ private fun ChatSettingsSheetContent(
                 title = stringResource(R.string.chat_send_feedback_title),
                 subtitle = stringResource(R.string.chat_send_feedback_subtitle),
                 titleColor = Color.White,
-                onClick = {},
+                onClick = onSendFeedback,
             )
             SettingsRow(
                 icon = Icons.Outlined.Flag,
@@ -152,7 +173,7 @@ private fun ChatSettingsSheetContent(
                 title = stringResource(R.string.chat_report_issue_title),
                 subtitle = stringResource(R.string.chat_report_issue_subtitle),
                 titleColor = Color.White,
-                onClick = {},
+                onClick = onReportIssue,
             )
             SettingsRow(
                 icon = Icons.Outlined.Description,
@@ -160,7 +181,7 @@ private fun ChatSettingsSheetContent(
                 title = stringResource(R.string.chat_terms_title),
                 subtitle = stringResource(R.string.chat_terms_subtitle),
                 titleColor = Color.White,
-                onClick = {},
+                onClick = onOpenTerms,
             )
             SettingsRow(
                 icon = Icons.Outlined.Shield,
@@ -168,7 +189,7 @@ private fun ChatSettingsSheetContent(
                 title = stringResource(R.string.chat_privacy_title),
                 subtitle = stringResource(R.string.chat_privacy_subtitle),
                 titleColor = Color.White,
-                onClick = {},
+                onClick = onOpenPrivacy,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -185,7 +206,7 @@ private fun ChatSettingsSheetContent(
                 title = stringResource(R.string.chat_logout_title),
                 subtitle = stringResource(R.string.chat_logout_subtitle),
                 titleColor = Color.White,
-                onClick = {},
+                onClick = onLogout,
             )
             SettingsRow(
                 icon = Icons.Outlined.DeleteOutline,
@@ -193,7 +214,7 @@ private fun ChatSettingsSheetContent(
                 title = stringResource(R.string.chat_delete_account_title),
                 subtitle = stringResource(R.string.chat_delete_account_subtitle),
                 titleColor = Color(0xFFE53E3E),
-                onClick = {},
+                onClick = onDeleteAccount,
             )
         }
     }

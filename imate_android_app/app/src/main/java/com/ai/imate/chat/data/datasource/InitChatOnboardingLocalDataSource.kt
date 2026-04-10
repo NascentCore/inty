@@ -48,4 +48,8 @@ class InitChatOnboardingLocalDataSource @Inject constructor(
     suspend fun setAvatarUrl(avatarUrl: String) {
         context.initChatOnboardingStore.updateData { it.copy(avatarUrl = avatarUrl) }
     }
+
+    suspend fun resetOnboarding() {
+        context.initChatOnboardingStore.updateData { InitChatOnboarding() }
+    }
 }

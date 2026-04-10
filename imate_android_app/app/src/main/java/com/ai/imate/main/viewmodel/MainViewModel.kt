@@ -45,7 +45,7 @@ constructor(
 
     /**
      * 首次为 null：等待登录态与引导状态都至少发出一次后再展示界面，避免冷启动先闪登录页再跳转。
-     * 之后为 [Login] / [InitChat] / [Chat]。
+     * 之后为 [Login] / [InitChat] / [Chat]。本地已有 companion（onboarding 完成）时，重新登录后会进入 [Chat]。
      */
     val navigationDestination: StateFlow<NavKey?> =
         flow {
@@ -66,7 +66,7 @@ constructor(
             )
         }.stateIn(
             viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
+            SharingStarted.Eagerly,
             null,
         )
 

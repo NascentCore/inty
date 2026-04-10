@@ -87,4 +87,10 @@ constructor() {
 
     fun messagesPagingSource(agentId: String): PagingSource<Int, MessageEntity> =
         chatMessageDao.pagingSource(agentId)
+
+    suspend fun clearAllMessages() {
+        withContext(Dispatchers.IO) {
+            database.withTransaction { chatMessageDao.deleteAll() }
+        }
+    }
 }
