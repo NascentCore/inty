@@ -71,6 +71,7 @@ import com.ai.core.utils.getCdnImageUrl
 import com.ai.core.utils.ToastUtils
 import com.ai.intellimate.R
 import com.ai.imate.chat.local.db.MessageEntity
+import com.ai.imate.chat.local.db.createAgentOpeningMessageEntity
 import com.ai.imate.system.SystemReportEntry
 import com.ai.imate.system.report.SystemReportPage
 import kotlinx.serialization.Serializable
@@ -203,6 +204,16 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                         message = message,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+
+                val openingLine = companion.opening.trim()
+                if (openingLine.isNotEmpty()) {
+                    item(key = "agent_opening_${companion.id}", contentType = 3) {
+                        ChatMessageBubble(
+                            message = createAgentOpeningMessageEntity(companion.id, openingLine),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
 

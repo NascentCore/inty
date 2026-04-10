@@ -122,3 +122,18 @@ fun createTempSendingLoadingEntity(agentId: String): MessageEntity {
         status = MessageEntity.Status.SENDING,
     )
 }
+
+fun createAgentOpeningMessageEntity(agentId: String, opening: String): MessageEntity =
+    MessageEntity(
+        id = "__agent_opening__",
+        indexId = "0",
+        role = "assistant",
+        content = opening,
+        timestamp = null,
+        metaData =
+            MessageEntity.MetaData(
+                agentId = agentId,
+                isOpening = true,
+            ),
+        status = MessageEntity.Status.SUCCESS,
+    )
