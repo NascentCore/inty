@@ -1097,8 +1097,8 @@ async def chat_completions_websocket_verify(
                 user_time_context = None
 
             effective_local_id = (
-                (request.local_id or request.message_id or "").strip() or None
-            )
+                request.local_id or request.message_id or ""
+            ).strip() or None
 
             try:
                 gen_result = await agent.generate_message_without_user_save(

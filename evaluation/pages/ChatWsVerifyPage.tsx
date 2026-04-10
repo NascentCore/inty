@@ -255,8 +255,12 @@ export const ChatWsVerifyPage: React.FC = () => {
                                 {item.role === "user" &&
                                   item.echoedLocalId !== undefined && (
                                     <div>
-                                      <Text type="secondary" style={{ fontSize: 12 }}>
-                                        data.local_id: {item.echoedLocalId || "(none)"}
+                                      <Text
+                                        type="secondary"
+                                        style={{ fontSize: 12 }}
+                                      >
+                                        data.local_id:{" "}
+                                        {item.echoedLocalId || "(none)"}
                                       </Text>
                                     </div>
                                   )}

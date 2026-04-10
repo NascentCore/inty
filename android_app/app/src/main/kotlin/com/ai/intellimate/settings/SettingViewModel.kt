@@ -100,7 +100,10 @@ class SettingViewModel : BaseVM() {
     /** 隐藏删除账号对话框 */
     fun hideDeleteAccountDialog() {
         _dialogState.value =
-            _dialogState.value.copy(showDeleteAccountDialog = false, deleteAccountInProgress = false)
+            _dialogState.value.copy(
+                showDeleteAccountDialog = false,
+                deleteAccountInProgress = false,
+            )
     }
 
     /** 隐藏退出登录确认对话框 */
@@ -168,8 +171,7 @@ class SettingViewModel : BaseVM() {
                                 ToastUtils.showShort(errorMessage)
                             } else {
                                 ToastUtils.showShort(
-                                    Utils.getApp()
-                                        .getString(R.string.toast_account_deletion_error)
+                                    Utils.getApp().getString(R.string.toast_account_deletion_error)
                                 )
                             }
                         }
