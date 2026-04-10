@@ -36,18 +36,11 @@ import com.ai.intellimate.ui.UiConfigs
 
 /** 删除账号确认对话框 */
 @Composable
-fun DeleteAccountDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-    isDeleting: Boolean = false,
-) {
+fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: () -> Unit, isDeleting: Boolean = false) {
     Dialog(
         onDismissRequest = { if (!isDeleting) onDismiss() },
         properties =
-            DialogProperties(
-                dismissOnBackPress = !isDeleting,
-                dismissOnClickOutside = !isDeleting,
-            ),
+            DialogProperties(dismissOnBackPress = !isDeleting, dismissOnClickOutside = !isDeleting),
     ) {
         Column(
             modifier =
@@ -78,9 +71,7 @@ fun DeleteAccountDialog(
             if (isDeleting) {
                 Spacer(Modifier.height(UiConfigs.Spacing.Small))
                 LinearProgressIndicator(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .height(UiConfigs.SpacingGrid.Space4),
+                    modifier = Modifier.fillMaxWidth().height(UiConfigs.SpacingGrid.Space4),
                     color = Color.White,
                     trackColor = Color.White.copy(alpha = 0.25f),
                 )
