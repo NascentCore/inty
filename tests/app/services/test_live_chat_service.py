@@ -69,10 +69,10 @@ def test_build_live_config_uses_merged_speech_override():
     service = _build_service_with_language_config()
 
     live_config = service._build_live_config(
+        merged_speech_language_code="ar-SA",
         voice_id="Zephyr",
         agent_gender="FEMALE",
         system_instruction="test",
-        merged_speech_language_code="ar-SA",
     )
 
     if "language_code" in getattr(types.SpeechConfig, "model_fields", {}):
@@ -83,10 +83,10 @@ def test_build_live_config_sets_speech_language_code_when_supported():
     service = _build_service_with_language_config()
 
     live_config = service._build_live_config(
+        merged_speech_language_code="en-US",
         voice_id="Zephyr",
         agent_gender="FEMALE",
         system_instruction="test",
-        merged_speech_language_code="en-US",
     )
 
     assert live_config.speech_config is not None
@@ -108,10 +108,10 @@ def test_build_live_config_accepts_google_prefixed_voice_id():
     service = _build_service_with_language_config()
 
     live_config = service._build_live_config(
+        merged_speech_language_code="en-US",
         voice_id="google/Zephyr",
         agent_gender="FEMALE",
         system_instruction="test",
-        merged_speech_language_code="en-US",
     )
 
     assert live_config.speech_config is not None
@@ -133,10 +133,10 @@ def test_build_live_config_non_gemini_voice_id_falls_back_without_error(
     monkeypatch.setattr(live_chat_module.logger, "error", fake_error)
 
     live_config = service._build_live_config(
+        merged_speech_language_code="en-US",
         voice_id="elevenlabs/2OMO1Tj9atc7AKQjMwxW",
         agent_gender="FEMALE",
         system_instruction="test",
-        merged_speech_language_code="en-US",
     )
 
     assert live_config.speech_config is not None

@@ -456,10 +456,11 @@ class LiveChatService:
 
     def _build_live_config(
         self,
+        *,
+        merged_speech_language_code: str,
         voice_id: Optional[str] = None,
         agent_gender: Optional[str] = None,
         system_instruction: Optional[str] = None,
-        merged_speech_language_code: Optional[str] = None,
     ) -> types.LiveConnectConfig:
         """构建 Gemini Live 连接配置。支持带 google/ 前缀与无前缀的 voice_id。"""
         fallback_voice_name = GENDER_TO_GEMINI_VOICE_MAPPING.get(
@@ -491,12 +492,7 @@ class LiveChatService:
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
             )
         }
-        if merged_speech_language_code is not None:
-            speech_language_code = (merged_speech_language_code or "").strip()
-        else:
-            speech_language_code = (
-                getattr(self._config, "speech_language_code", "") or ""
-            ).strip()
+        speech_language_code = (merged_speech_language_code or "").strip()
         speech_fields = getattr(types.SpeechConfig, "model_fields", {})
         if speech_language_code and "language_code" in speech_fields:
             speech_config_kwargs["language_code"] = speech_language_code
@@ -759,10 +755,10 @@ class LiveChatService:
             voice_id = session.config.voice_id or agent_data.get("voice_id")
             agent_gender = agent_data.get("gender")
             live_config = self._build_live_config(
+                merged_speech_language_code=resolved_speech_code,
                 voice_id=voice_id,
                 agent_gender=agent_gender,
                 system_instruction=system_instruction,
-                merged_speech_language_code=resolved_speech_code,
             )
 
             client = self._get_client()

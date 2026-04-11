@@ -3,10 +3,30 @@
 CREATED_BY_AGENT
 """
 
+import re
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# BCP-47-ish: ASCII alnum, single internal hyphens/underscores, no spaces or punctuation (prompt injection).
+_SAFE_SPEECH_LANGUAGE_CODE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$")
+# Human language label for system instruction: letters and spaces only (no digits, newlines, markup).
+_SAFE_RESPONSE_LANGUAGE_NAME = re.compile(r"^[A-Za-z][A-Za-z ]{0,127}$")
+_RESPONSE_LANGUAGE_FORBIDDEN_WORDS = frozenset(
+    {
+        "ignore",
+        "disregard",
+        "forget",
+        "override",
+        "system",
+        "previous",
+        "instruction",
+        "prompt",
+        "jailbreak",
+        "bypass",
+    }
+)
 
 
 class LiveChatStatus(str, Enum):
@@ -59,6 +79,42 @@ class LiveChatConfig(BaseModel):
         default=None,
         description="指定 AI 语音 ID，为空则使用角色默认语音或系统默认语音",
     )
+
+    @field_validator("speech_language_code", mode="before")
+    @classmethod
+    def validate_speech_language_code(cls, v: object) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            return None
+        if not _SAFE_SPEECH_LANGUAGE_CODE.fullmatch(s):
+            raise ValueError(
+                "speech_language_code must match ASCII BCP-47-like tags "
+                "(alphanumeric, hyphens, underscores; no spaces or control characters)"
+            )
+        return s
+
+    @field_validator("response_language_name", mode="before")
+    @classmethod
+    def validate_response_language_name(cls, v: object) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            return None
+        if not _SAFE_RESPONSE_LANGUAGE_NAME.fullmatch(s):
+            raise ValueError(
+                "response_language_name must be letters and spaces only "
+                "(English-readable language name; no digits or punctuation)"
+            )
+        lowered = s.lower()
+        for tok in re.findall(r"[a-z]+", lowered):
+            if tok in _RESPONSE_LANGUAGE_FORBIDDEN_WORDS:
+                raise ValueError(
+                    f"response_language_name contains forbidden word: {tok!r}"
+                )
+        return s
 
 
 class LiveChatMessage(BaseModel):

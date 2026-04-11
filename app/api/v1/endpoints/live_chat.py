@@ -53,14 +53,8 @@ async def get_live_chat_status(
             "default_voice": config.default_voice,
             "send_sample_rate": config.send_sample_rate,
             "receive_sample_rate": config.receive_sample_rate,
-            "default_speech_language_code": getattr(
-                config, "speech_language_code", ""
-            )
-            or "",
-            "default_response_language_name": getattr(
-                config, "response_language_name", ""
-            )
-            or "",
+            "default_speech_language_code": config.speech_language_code,
+            "default_response_language_name": config.response_language_name,
         }
     )
 
