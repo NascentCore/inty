@@ -54,5 +54,7 @@ def configure_evaluation_web_routes(
         include_in_schema=False,
     )
     async def evaluation_static_files(path: str):
+        if not path or not str(path).strip("/"):
+            return FileResponse(evaluation_index)
         file_path = os.path.join(evaluation_static_dir, path)
         return FileResponse(file_path)
