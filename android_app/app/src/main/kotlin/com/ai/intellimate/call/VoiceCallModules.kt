@@ -1,7 +1,8 @@
 package com.ai.intellimate.call
 
 import ai.sxwl.android.data.di.networkModule
-import com.ai.intellimate.call.data.AICallDataSource
+import ai.sxwl.android.inty.voicecall.IntyVoiceCallClient
+import ai.sxwl.android.inty.voicecall.VoiceCallWebSocketDataSource
 import com.ai.intellimate.call.data.AICallRepository
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.core.module.dsl.scopedOf
@@ -14,7 +15,8 @@ val voiceCallModule = module {
     includes(networkModule)
     viewModelOf(::VoiceCallViewModel)
     viewModelScope {
-        scopedOf(::AICallDataSource)
+        scopedOf(::VoiceCallWebSocketDataSource)
+        scopedOf(::IntyVoiceCallClient)
         scopedOf(::AICallRepository)
     }
 }
