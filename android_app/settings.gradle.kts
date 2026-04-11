@@ -42,3 +42,5 @@ include(":core:firebase")
 include(":library:utils")
 
 include(":library:network")
+
+include(":library:inty_voice_call")

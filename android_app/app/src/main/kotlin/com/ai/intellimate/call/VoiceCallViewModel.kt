@@ -5,9 +5,11 @@ import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ai.sxwl.android.data.voicecall.errorEnum
+import ai.sxwl.android.inty.voicecall.CallType
+import ai.sxwl.android.inty.voicecall.VoiceCallConnectionState
 import com.ai.intellimate.call.data.AICallRepository
-import com.ai.intellimate.call.data.ConnectionState
-import com.ai.intellimate.call.data.bean.CallType
+import com.ai.intellimate.call.toUi
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
@@ -72,14 +74,14 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             repository
                 .getConnectionState()
                 .onEach { connectionState ->
-                    _uiState.update { it.copy(connectionState = connectionState) }
+                    _uiState.update { it.copy(connectionState = connectionState.toUi()) }
 
-                    if (connectionState == ConnectionState.CONNECTING) {
+                    if (connectionState == VoiceCallConnectionState.CONNECTING) {
                         _error.trySend(null)
                     }
                 }
                 .collectLatest { state ->
-                    if (state == ConnectionState.CONNECTED) {
+                    if (state == VoiceCallConnectionState.CONNECTED) {
                         while (true) {
                             delay(1.seconds)
 
@@ -118,7 +120,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                     )
                     // #endregion
                     LogUtils.e("连接语音通话失败: ${error.message}")
-                    _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
+                    _uiState.update { it.copy(connectionState = VoiceCallConnectionUi.ERROR) }
                 }
                 .collect { packet ->
                     when (packet.typeEnum) {
@@ -139,7 +141,7 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.ERROR -> {
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
-                            _uiState.update { it.copy(connectionState = ConnectionState.ERROR) }
+                            _uiState.update { it.copy(connectionState = VoiceCallConnectionUi.ERROR) }
                             packet.errorEnum?.let {
                                 _error.trySend(it to packet.errorCode.orEmpty())
                             }

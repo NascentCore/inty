@@ -84,8 +84,7 @@ import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioParams
 import com.ai.intellimate.audio.AudioRecordManager
 import com.ai.intellimate.audio.AudioStreamPlayer
-import com.ai.intellimate.call.data.ConnectionState
-import com.ai.intellimate.call.data.bean.CallStatus
+import ai.sxwl.android.inty.voicecall.CallStatus
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs
@@ -145,7 +144,7 @@ fun VoiceCallScreen(
             // 管理播放器生命周期
             LaunchedEffect(uiState.connectionState) {
                 when (uiState.connectionState) {
-                    ConnectionState.CONNECTED -> {
+                    VoiceCallConnectionUi.CONNECTED -> {
                         // 连接建立时启动播放（24kHz PCM，单声道，16位）
                         val playbackParams =
                             AudioParams(
@@ -155,9 +154,9 @@ fun VoiceCallScreen(
                             )
                         audioStreamPlayer.startPlayback(playbackParams)
                     }
-                    ConnectionState.DISCONNECTED,
-                    ConnectionState.ERROR,
-                    ConnectionState.DISCONNECTING -> {
+                    VoiceCallConnectionUi.DISCONNECTED,
+                    VoiceCallConnectionUi.ERROR,
+                    VoiceCallConnectionUi.DISCONNECTING -> {
                         // 断开连接时停止播放
                         audioStreamPlayer.stopPlayback()
                     }
@@ -167,7 +166,8 @@ fun VoiceCallScreen(
 
             LaunchedEffect(Unit) {
                 snapshotFlow {
-                        uiState.connectionState == ConnectionState.CONNECTED && !uiState.isMuted
+                        uiState.connectionState == VoiceCallConnectionUi.CONNECTED &&
+                            !uiState.isMuted
                     }
                     .collect {
                         if (it) {
@@ -363,7 +363,7 @@ private fun VoiceCallContent(
             isSpeaking -> null
             uiState.callState == CallStatus.LISTENING ->
                 stringResource(R.string.voice_call_ai_status_listening)
-            uiState.connectionState == ConnectionState.CONNECTED ->
+            uiState.connectionState == VoiceCallConnectionUi.CONNECTED ->
                 stringResource(R.string.voice_call_ai_status_listening)
             else -> uiState.connectionState.textRes?.let { stringResource(it) }
         }
@@ -672,7 +672,7 @@ private fun VoiceCallPreview() {
                 uiState =
                     VoiceCallUiState(
                         agent = AgentInfo(name = "July"),
-                        connectionState = ConnectionState.CONNECTING,
+                        connectionState = VoiceCallConnectionUi.CONNECTING,
                         callState = CallStatus.SPEAKING,
                         time = VoiceCallUiState.Time(30, 100),
                     ),

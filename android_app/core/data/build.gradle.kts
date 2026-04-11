@@ -49,6 +49,7 @@ android {
 }
 
 dependencies {
+    api(projects.library.intyVoiceCall)
     implementation(libs.androidx.dataStore.preferences)
     implementation(libs.androidx.dataStore)
     implementation(libs.mmkv)
