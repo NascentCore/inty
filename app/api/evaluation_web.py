@@ -54,5 +54,9 @@ def configure_evaluation_web_routes(
         include_in_schema=False,
     )
     async def evaluation_static_files(path: str):
-        file_path = os.path.join(evaluation_static_dir, path)
+        # GET /evaluation/ matches this route with an empty path; join(..., "") is the directory, not a file.
+        segment = (path or "").strip("/")
+        if not segment:
+            return FileResponse(evaluation_index)
+        file_path = os.path.join(evaluation_static_dir, segment)
         return FileResponse(file_path)
