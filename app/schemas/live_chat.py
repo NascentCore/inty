@@ -45,6 +45,16 @@ class LiveChatConfig(BaseModel):
         default=True,
         description="是否将语音对话保存到聊天历史",
     )
+    speech_language_code: Optional[str] = Field(
+        default=None,
+        max_length=64,
+        description="BCP-47 speech language for Gemini Live SpeechConfig; None uses server gemini_live default",
+    )
+    response_language_name: Optional[str] = Field(
+        default=None,
+        max_length=128,
+        description="Human-readable reply language for system instruction; None uses server gemini_live default",
+    )
     voice_id: Optional[str] = Field(
         default=None,
         description="指定 AI 语音 ID，为空则使用角色默认语音或系统默认语音",

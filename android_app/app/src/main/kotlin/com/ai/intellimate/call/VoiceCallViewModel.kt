@@ -102,15 +102,18 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
         }
     }
 
-    fun startCalling(agentId: String) {
+    fun startCalling(
+        agentId: String,
+        speechLanguageCode: String? = null,
+        responseLanguageName: String? = null,
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAgentInfo(agentId).collect { result ->
                 result.getOrNull()?.let { agent -> _uiState.update { it.copy(agent = agent) } }
             }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            repository
-                .call(agentId)
+            repository.call(agentId, speechLanguageCode, responseLanguageName)
                 .catch { error ->
                     // #region agent log（上报 Crashlytics）
                     NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(

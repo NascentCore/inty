@@ -45,6 +45,8 @@ class TestLiveChatStatus:
         assert "default_voice" in status_data
         assert "send_sample_rate" in status_data
         assert "receive_sample_rate" in status_data
+        assert "default_speech_language_code" in status_data
+        assert "default_response_language_name" in status_data
 
     def test_get_live_chat_status_without_auth(self):
         """测试未认证时获取状态"""

@@ -214,6 +214,8 @@
 | `/api/v1/live-chat/{agent_id}` | WebSocket | `app/api/v1/endpoints/live_chat.py` |
 
 > **注意**：WebSocket 端点不会出现在 Swagger 文档中。关于消息协议和错误码的详细说明，请参考 [`docs/FR_LIVE_VOICE_CHAT.md`](../../docs/FR_LIVE_VOICE_CHAT.md)。
+> **Live Chat WS 可选 query**：`speech_language_code`（BCP-47）、`response_language_name`（英文可读语言名，用于 system instruction）。非法参数关闭码 `4000`。
+> **Live Chat status**：响应 `data` 含 `default_speech_language_code`、`default_response_language_name`（服务端 `gemini_live` 默认，未传 query 时使用）。
 
 ### 评测 (Evaluation)
 

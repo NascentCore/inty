@@ -18,12 +18,18 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 
 class AICallRepository(private val voiceCallClient: IntyVoiceCallClient) {
-    fun call(agentId: String): Flow<CallPacket> {
+    fun call(
+        agentId: String,
+        speechLanguageCode: String? = null,
+        responseLanguageName: String? = null,
+    ): Flow<CallPacket> {
         val url =
             IntyVoiceCallUrls.liveChatWebSocketUrl(
                 NetworkConfig.getWebsocketAddress(),
                 agentId,
                 IntySetting.getCurToken(),
+                speechLanguageCode = speechLanguageCode,
+                responseLanguageName = responseLanguageName,
             )
         LogUtils.d("开始连接语音通话，agentId: $agentId, url: $url")
         return voiceCallClient.packets(url)
