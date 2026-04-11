@@ -18,6 +18,7 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 
 - **Single source of behavior**: extract or centralize the body of `agent_chat_completions` so both `POST /api/v1/chat/completions/{agent_id}` and `/ws` call the same function (e.g. inner impl + thin HTTP/WS adapters). Avoid duplicating subscription limits, errors, and persistence.
 - Introduce a narrow executor or branch inside that function: `legacy` vs `agentic_v2`, selected by config.
+- **Shipped (partial)**: `app.features.chat_use_companion_kernel_agent_ids` routes matching agents through `CompanionManager` / companion `run_turn` inside `agent_chat_completions`, with `chat_history` persistence for user and assistant lines. Gray-list rollout; verify endpoint still legacy-only until Phase 5.
 
 ## 4. Phase 2 - Persistence decision (before workspace mapping)
 

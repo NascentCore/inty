@@ -74,6 +74,8 @@
 | `/api/v1/chat/images/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/music/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 
+> **Agentic companion kernel (inty v2 REPL same stack)**：当 `app.features.chat_use_companion_kernel_agent_ids` 非空且请求路径中的 `agent_id` 命中该列表时，`POST /api/v1/chat/completions/{agent_id}` 与 `WS /api/v1/chat/ws`（二者均走 `agent_chat_completions`）使用 `CompanionManager` + `app/core/agentic_kernel/companion/turn.run_turn` 生成回复，并写入 `chat_history`（与未命中列表时的落库路径一致）。可选：`app.features.companion_workspaces_base_dir`（workspace 根目录）、`app.features.companion_default_context_mode`。实现见 `app/services/companion_chat_service.py`。
+
 > **`/api/v1/chat/completions/{agent_id}` 多模态输入约定**：
 >
 > - `messages[].content` 兼容两种格式：

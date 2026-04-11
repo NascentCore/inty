@@ -48,6 +48,7 @@ from app.schemas.response import (
     create_business_error_response,
 )
 from app.services import agent_service, chat_history_service, chat_service
+from app.services import companion_chat_service
 from app.services.memory_service import (
     deliver_daily_memories_for_user_agent,
     deliver_festival_memories_for_user_agent,
@@ -583,7 +584,7 @@ async def agent_chat_completions(
         with log_time(f"获取 Agent 实例: {chat.agent_id}"):
             agent = await agent_manager.get_agent(agent_data)
 
-        session_id = generate_session_id(chat.id)
+        session_id = generate_session_id(str(chat.id))
 
         with log_time(f"订阅检查: user_id={current_user.id}"):
             is_allowed, used_count, daily_limit = (
@@ -601,6 +602,7 @@ async def agent_chat_completions(
             )
 
         # 获取聊天设置和AI回复
+        use_companion = False
         try:
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
                 chat_settings = await chat_service.get_or_create_chat_settings(
@@ -618,33 +620,75 @@ async def agent_chat_completions(
                 logger.debug(
                     f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
-                chat_result = await agent.chat(
-                    user_id=current_user.id,
-                    session_id=session_id,
-                    messages=messages,
-                    chat_settings=chat_settings,
-                    user_time_context=user_time_context,
-                    model_override=model_override,
-                    is_subscribed=is_subscribed,
-                    client_local_message_id=effective_local_id,
+                use_companion = companion_chat_service.use_companion_kernel_for_agent(
+                    agent_id
                 )
-                response_content, ai_message_id = (
-                    (chat_result[0], chat_result[1])
-                    if isinstance(chat_result, tuple)
-                    else (chat_result, None)
-                )
+                if use_companion:
+                    companion_reply = (
+                        await companion_chat_service.run_companion_chat_turn_for_api(
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                            user_text=last_user_text,
+                            is_subscribed=is_subscribed,
+                            defer_memory_update=True,
+                        )
+                    )
+                    if effective_local_id:
+                        await chat_history_service.add_user_message_async(
+                            session_id,
+                            last_user_message,
+                            meta_data={"localId": effective_local_id},
+                        )
+                    else:
+                        await chat_history_service.add_user_message_async(
+                            session_id, last_user_message
+                        )
+                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                        session_id,
+                        companion_reply,
+                        agent_id=chat.agent_id,
+                    )
+                    response_content = companion_reply
+                    if response_content is None or not str(response_content).strip():
+                        logger.error(
+                            f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
+                        )
+                        raise HTTPException(
+                            status_code=500, detail="Chat returned no content"
+                        )
+                    (
+                        response_text_content,
+                        response_content_parts,
+                    ) = _normalize_chat_response_content(response_content)
+                else:
+                    chat_result = await agent.chat(
+                        user_id=current_user.id,
+                        session_id=session_id,
+                        messages=messages,
+                        chat_settings=chat_settings,
+                        user_time_context=user_time_context,
+                        model_override=model_override,
+                        is_subscribed=is_subscribed,
+                        client_local_message_id=effective_local_id,
+                    )
+                    response_content, ai_message_id = (
+                        (chat_result[0], chat_result[1])
+                        if isinstance(chat_result, tuple)
+                        else (chat_result, None)
+                    )
 
-                if response_content is None:
-                    logger.error(
-                        f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
-                    )
-                    raise HTTPException(
-                        status_code=500, detail="Chat returned no content"
-                    )
-                (
-                    response_text_content,
-                    response_content_parts,
-                ) = _normalize_chat_response_content(response_content)
+                    if response_content is None:
+                        logger.error(
+                            f"Chat 返回无内容 - agent_id={agent_id}, user_id={current_user.id}"
+                        )
+                        raise HTTPException(
+                            status_code=500, detail="Chat returned no content"
+                        )
+                    (
+                        response_text_content,
+                        response_content_parts,
+                    ) = _normalize_chat_response_content(response_content)
 
             response_preview = (
                 response_text_content[:100]
@@ -655,7 +699,7 @@ async def agent_chat_completions(
             subscription_actions = None
             premium_preview_choice = None
             next_chat_count = used_count + 1
-            if _should_trigger_premium_preview(
+            if not use_companion and _should_trigger_premium_preview(
                 is_subscribed=is_subscribed,
                 next_chat_count=next_chat_count,
             ):
@@ -1076,7 +1120,7 @@ async def chat_completions_websocket_verify(
                 continue
 
             agent = await agent_manager.get_agent(agent_data)
-            session_id = generate_session_id(chat.id)
+            session_id = generate_session_id(str(chat.id))
 
             chat_settings = await chat_service.get_or_create_chat_settings(
                 db, chat.id, current_user.id, agent_id
