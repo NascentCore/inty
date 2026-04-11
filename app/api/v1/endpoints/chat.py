@@ -644,10 +644,12 @@ async def agent_chat_completions(
                         await chat_history_service.add_user_message_async(
                             session_id, last_user_message
                         )
-                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                        session_id,
-                        companion_reply,
-                        agent_id=chat.agent_id,
+                    ai_message_id = (
+                        await chat_history_service.add_ai_message_sync_async(
+                            session_id,
+                            companion_reply,
+                            agent_id=chat.agent_id,
+                        )
                     )
                     response_content = companion_reply
                     if response_content is None or not str(response_content).strip():

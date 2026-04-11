@@ -14,7 +14,9 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 @lru_cache(maxsize=1)
 def _companion_agent_id_allowlist() -> frozenset[str]:
-    raw = global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
+    raw = (
+        global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
+    )
     if not raw:
         return frozenset()
     return frozenset(str(x).strip() for x in raw if str(x).strip())
@@ -32,7 +34,9 @@ def clear_companion_chat_service_caches() -> None:
 
 
 @lru_cache(maxsize=32)
-def _companion_manager_for_resolved_model(resolved_chat_model_id: str) -> CompanionManager:
+def _companion_manager_for_resolved_model(
+    resolved_chat_model_id: str,
+) -> CompanionManager:
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
     base = Path(feats.companion_workspaces_base_dir).expanduser()
