@@ -24,6 +24,7 @@ class IntyVoiceCallClient(private val dataSource: VoiceCallWebSocketDataSource) 
                     true
                 }
             }
+    }
 
     suspend fun sendPacket(packet: CallPacket) {
         dataSource.sendPacket(packet)
