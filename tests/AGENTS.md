@@ -3,6 +3,7 @@
 - Do not write unit tests
 - Write feature tests: call backend service running locally to test a feature end-to-end
 - WebSocket chat handler tests in `tests/app/api/v1/endpoints/test_chat.py` may monkeypatch auth and `agent_chat_completions` for isolation; prefer real server plus token for new contract-critical paths when feasible (aligns with `app/AGENTS.md` "Avoid using monkepatch" as a documented narrow exception).
+- Fixture `integration_client` (`tests/app/api/v1/endpoints/conftest.py`) skips when `INTY_API_BASE_URL` (default `http://localhost:8000`) is unreachable, so local `pytest tests/` without a running backend does not ERROR on HTTP E2E tests.
 - Access real database, and do not patch sqlalchemy
 - Use [fake external services](/app/external_services/fakes) when writing tests.
 
