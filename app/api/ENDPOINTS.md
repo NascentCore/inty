@@ -1,23 +1,40 @@
 # API 端点列表
 
-本文档列出了 `app/` 目录下实现的所有 API 端点及其对应的实现文件。
+本文档列出当前代码中注册的 HTTP 与 WebSocket 路径及实现文件。表格中的路径除 `{...}` 占位段外为字面量。
 
 ## 双应用说明
 
-- **backend/inty**（主后端）：面向 Android 的 `/api/v1`。
-- **backend/ops**（运营平台）：提供 evaluation Web UI 与完整 `/api/v1`（含 evaluation、festival_memory 与所有 shared 端点）。部署后通过 ops.inty.cc / dev.ops.inty.cc 访问。
+| 应用 | 入口模块 | 典型部署 | `/api/v1` 来源 |
+|------|----------|----------|----------------|
+| **Inty**（主后端，Android） | `backend/inty/main.py` | App 对应后端 | `app.api.v1.router.api_router` |
+| **Ops**（运营 / evaluation） | `backend/ops/main.py` | ops.inty.cc、dev.ops.inty.cc | `shared_router`（`backend/ops/api/v1/shared.py`）+ `backend/ops/api/v1/evaluation.py` + `backend/ops/api/v1/festival_memory.py` |
 
-## 根路径端点
+WebSocket 在 OpenAPI 中不可见；下表方法列写 `WS`。
+
+## 根路径与其它非 `/api/v1`
+
+### Inty（`backend/inty/main.py`）
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/` | GET | `backend/inty/main.py` 或 `app/api/evaluation_web.py`（ops 评测页入口） |
-| `/metrics` | GET | `backend/inty/main.py` |
-| `/health` | GET | `backend/ops/main.py` |
+| `/` | GET | `backend/inty/main.py`（`build_health_check_data(ops=False)`） |
+| `/metrics` | GET | `backend/inty/main.py`（`app.debug` 为 true 或 `environment` 为 `TEST` 时可用；否则 404） |
+
+### Ops（`backend/ops/main.py` + `app/api/evaluation_web.py`）
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/` | GET | `app/api/evaluation_web.py`（评测静态入口；`INTY_API_ONLY` 开启时不注册） |
 | `/evaluation` | GET | `app/api/evaluation_web.py` |
 | `/evaluation/{path:path}` | GET | `app/api/evaluation_web.py` |
+| `/health` | GET | `backend/ops/main.py`（`build_health_check_data(ops=True)`） |
+| `/static` | mount | `app/api/evaluation_web.py`（存在 `app/static` 时挂载 `StaticFiles`） |
 
-## API v1 端点 (`/api/v1`)
+Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页，与 Inty 的 JSON 健康根路径不同。
+
+## API v1 共有端点（Inty 与 Ops）
+
+下列路由由 `app/api/v1/router.py` 注册；Ops 通过 `backend/ops/api/v1/shared.py` 中的 `shared_router` 再导出同一套处理器。
 
 ### 认证 (Auth)
 
@@ -30,20 +47,20 @@
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/api/v1/users/profile` | GET | `app/api/v1/endpoints/users.py` |
+| `/api/v1/users/profile` | GET | `app/api/v1/endpoints/users.py`（deprecated，兼容 v1.0.3） |
 | `/api/v1/users/me` | GET | `app/api/v1/endpoints/users.py` |
 | `/api/v1/users/profile` | PUT | `app/api/v1/endpoints/users.py` |
 | `/api/v1/users/device/register` | POST | `app/api/v1/endpoints/users.py` |
-| `/api/v1/users/deletion/check` | GET | `app/api/v1/endpoints/users.py` |
+| `/api/v1/users/deletion/check` | GET | `app/api/v1/endpoints/users.py`（deprecated） |
 | `/api/v1/users/delete-account` | POST | `app/api/v1/endpoints/users.py` |
-| `/api/v1/users` | GET | `app/api/v1/endpoints/users.py` |
+| `/api/v1/users` | GET | `app/api/v1/endpoints/users.py`（评测 / 内部用；`include_in_schema=False`；handler 未挂鉴权依赖，见代码 TODO） |
 
 ### AI 角色 (Agents)
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/api/v1/ai/agents/` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/me` | GET | `app/api/v1/endpoints/agents.py` |
+| `/api/v1/ai/agents/admin/list` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/search` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/recommend` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents` | POST | `app/api/v1/endpoints/agents.py` |
@@ -52,11 +69,10 @@
 | `/api/v1/ai/agents/{agent_id}` | DELETE | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/{agent_id}/generate-background-animated` | POST | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/text-to-image` | POST | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/creator/{creator_id}/stats` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/models/openrouter` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/image-generation/config` | GET | `app/api/v1/endpoints/agents.py` |
-| `/api/v1/ai/agents/prompts/available` | GET | `app/api/v1/endpoints/agents.py` |
 | `/api/v1/ai/agents/image-generation/config` | PUT | `app/api/v1/endpoints/agents.py` |
+| `/api/v1/ai/agents/prompts/available` | GET | `app/api/v1/endpoints/agents.py` |
 
 > **关于 `/recommend` 端点的行为说明**：
 >
@@ -69,8 +85,8 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v1/chat/completions/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
-| `/api/v1/chat/ws` | WebSocket | `app/api/v1/endpoints/chat.py` |
-| `/api/v1/chat/ws/verify` | WebSocket | `app/api/v1/endpoints/chat.py` |
+| `/api/v1/chat/ws` | WS | `app/api/v1/endpoints/chat.py` |
+| `/api/v1/chat/ws/verify` | WS | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/images/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 | `/api/v1/chat/music/{agent_id}` | POST | `app/api/v1/endpoints/chat.py` |
 
@@ -96,24 +112,19 @@
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
+| `/api/v1/chats/modes` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/` | POST | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/modes` | GET | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/{chat_id}` | DELETE | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/status` | GET | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/initialize` | POST | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/cleanup` | DELETE | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/{chat_id}/detail` | GET | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/{agent_id}/detail` | GET | `app/api/v1/endpoints/chats.py` |
+| `/api/v1/chats/agents/status` | GET | `app/api/v1/endpoints/chats.py`（deprecated） |
 | `/api/v1/chats/agents/{agent_id}/messages` | GET | `app/api/v1/endpoints/chats.py` |
+| `/api/v1/chats/surprise-snap/unlock` | POST | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/messages/vote` | POST | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/{agent_id}/chat/completions` | POST | `app/api/v1/endpoints/chats.py` |
 | `/api/v1/chats/agents/{agent_id}/messages/{message_id}/voice` | POST | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/voices/{voice_id}` | GET | `app/api/v1/endpoints/chats.py` |
+| `/api/v1/chats/voices/{voice_id}` | GET | `app/api/v1/endpoints/chats.py`（deprecated） |
 | `/api/v1/chats/agents/{agent_id}/settings` | PUT | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/{agent_id}/settings` | GET | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/{agent_id}/chats` | DELETE | `app/api/v1/endpoints/chats.py` |
-| `/api/v1/chats/agents/{agent_id}/debug-messages` | GET | `app/api/v1/endpoints/chats.py` |
+| `/api/v1/chats/agents/{agent_id}/settings` | GET | `app/api/v1/endpoints/chats.py`（deprecated 说明见代码 docstring） |
+| `/api/v1/chats/agents/{agent_id}/chats` | DELETE | `app/api/v1/endpoints/chats.py`（deprecated） |
 | `/api/v1/chats/agents/{agent_id}/clear-messages` | POST | `app/api/v1/endpoints/chats.py` |
 
 > **节日记忆提示消息（与 Android App 的接口约定）**：
@@ -148,14 +159,13 @@
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/api/v1/report/upload-image` | POST | `app/api/v1/endpoints/report.py` |
-| `/api/v1/report/` | POST | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/` | GET | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}` | GET | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}/conversation-groups` | GET | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}/conversation-messages` | GET | `app/api/v1/endpoints/report.py` |
-| `/api/v1/report/{report_id}` | DELETE | `app/api/v1/endpoints/report.py` |
 | `/api/v1/report/{report_id}/github-issue` | PUT | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/` | POST | `app/api/v1/endpoints/report.py` |
+| `/api/v1/report/{report_id}` | DELETE | `app/api/v1/endpoints/report.py` |
 
 ### 设置 (Settings)
 
@@ -211,11 +221,27 @@
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/api/v1/live-chat/status` | GET | `app/api/v1/endpoints/live_chat.py` |
-| `/api/v1/live-chat/{agent_id}` | WebSocket | `app/api/v1/endpoints/live_chat.py` |
+| `/api/v1/live-chat/{agent_id}` | WS | `app/api/v1/endpoints/live_chat.py` |
 
 > **注意**：WebSocket 端点不会出现在 Swagger 文档中。关于消息协议和错误码的详细说明，请参考 [`docs/FR_LIVE_VOICE_CHAT.md`](../../docs/FR_LIVE_VOICE_CHAT.md)。
 
-### 评测 (Evaluation)
+## 仅 Ops：`/api/v1/evaluation` 与节日记忆管理
+
+以下路由由 `backend/ops/api/v1/router.py` 额外挂载，**不在** `backend/inty/main.py` 中。
+
+### 节日记忆（超级用户，`backend/ops/api/v1/festival_memory.py`）
+
+Router 前缀：`/evaluation/admin`（完整路径以 `/api/v1` 开头）。
+
+| 路径 | 方法 | 实现文件 |
+|------|------|----------|
+| `/api/v1/evaluation/admin/festival-memory-configs` | GET | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs` | POST | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | DELETE | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-configs/{config_id}` | PUT | `backend/ops/api/v1/festival_memory.py` |
+| `/api/v1/evaluation/admin/festival-memory-extraction/run` | POST | `backend/ops/api/v1/festival_memory.py` |
+
+### 评测（`backend/ops/api/v1/evaluation.py`）
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
@@ -225,11 +251,11 @@
 | `/api/v1/evaluation/sessions/{session_id}` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/sessions/{session_id}/results` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/sessions/{session_id}/cancel` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/sessions/{session_id}/monitor` | WS | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/questions/parse` | POST | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/models` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/scoring-criteria/validate` | POST | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/stats` | GET | `backend/ops/api/v1/evaluation.py` |
-| `/api/v1/evaluation/sessions/{session_id}/monitor` | WebSocket | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/agents` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/agents` | POST | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/agents/{agent_id}` | PUT | `backend/ops/api/v1/evaluation.py` |
@@ -237,6 +263,8 @@
 | `/api/v1/evaluation/agents/{agent_id}/check-background-aspect-ratio` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/agents/{agent_id}/upload-cropped-background` | POST | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/agents/{agent_id}/deploy` | POST | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/{agent_id}/generated-images` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/agents/generated-images/counts` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/templates` | POST | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/templates` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/sessions/batch` | POST | `backend/ops/api/v1/evaluation.py` |
@@ -251,11 +279,17 @@
 | `/api/v1/evaluation/user-analytics/agent-analytics` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-sessions-detail` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/conversations-detail` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/conversations-detail/user-agent-paginated` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/stats` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/reports` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/image-generation-failures` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/image-generation-latency` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-daily-messages` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-today-stats` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/user-sessions` | GET | `backend/ops/api/v1/evaluation.py` |
 | `/api/v1/evaluation/user-analytics/session-messages` | GET | `backend/ops/api/v1/evaluation.py` |
-
+| `/api/v1/evaluation/user-analytics/daily-voice-audios` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/live-chat-stats` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/live-chat-latency` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/llm-latency` | GET | `backend/ops/api/v1/evaluation.py` |
+| `/api/v1/evaluation/user-analytics/user-generated-images` | GET | `backend/ops/api/v1/evaluation.py` |
