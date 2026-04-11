@@ -630,7 +630,7 @@ async def agent_chat_completions(
                             agent_id=agent_id,
                             chat_id=chat.id,
                             user_text=last_user_text,
-                            is_subscribed=is_subscribed,
+                            resolved_chat_model_id=model_override,
                             defer_memory_update=True,
                         )
                     )

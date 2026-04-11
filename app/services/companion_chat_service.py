@@ -7,10 +7,9 @@ from pathlib import Path
 
 from loguru import logger
 
-from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
+from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.model_selection import select_chat_model
 
 
 @lru_cache(maxsize=1)
@@ -29,27 +28,27 @@ def use_companion_kernel_for_agent(agent_id: str) -> bool:
 def clear_companion_chat_service_caches() -> None:
     """For tests or hot reload when config path changes."""
     _companion_agent_id_allowlist.cache_clear()
-    _companion_manager_for_subscription.cache_clear()
+    _companion_manager_for_resolved_model.cache_clear()
 
 
-@lru_cache(maxsize=2)
-def _companion_manager_for_subscription(is_subscribed: bool) -> CompanionManager:
+@lru_cache(maxsize=32)
+def _companion_manager_for_resolved_model(resolved_chat_model_id: str) -> CompanionManager:
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
     base = Path(feats.companion_workspaces_base_dir).expanduser()
     base.mkdir(parents=True, exist_ok=True)
-    model_id = select_chat_model(user=object(), is_subscribed=is_subscribed)
+    api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
     llm = CompanionLLMConfig(
-        api_key=cfg.agent.api_key,
+        api_key=api_key,
         api_base=(cfg.agent.chat_llm_base_url or cfg.agent.base_url or "").strip()
         or "https://openrouter.ai/api/v1",
-        default_model=model_id,
-        chat_model=model_id,
-        tool_model=model_id,
-        memory_model=model_id,
-        day_summary_model=model_id,
-        user_model=model_id,
-        soul_model=model_id,
+        default_model=resolved_chat_model_id,
+        chat_model=resolved_chat_model_id,
+        tool_model=resolved_chat_model_id,
+        memory_model=resolved_chat_model_id,
+        day_summary_model=resolved_chat_model_id,
+        user_model=resolved_chat_model_id,
+        soul_model=resolved_chat_model_id,
     )
     companion_cfg = CompanionConfig(
         workspaces_base_dir=str(base),
@@ -66,15 +65,18 @@ async def run_companion_chat_turn_for_api(
     agent_id: str,
     chat_id: str | int,
     user_text: str,
-    is_subscribed: bool,
+    resolved_chat_model_id: str,
     defer_memory_update: bool = True,
 ) -> str:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
     When the workspace is not yet initialized, the first user line is consumed by bootstrap.
+
+    ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
+    (caller typically passes ``model_override`` from ``agent_chat_completions``).
     """
-    manager = _companion_manager_for_subscription(is_subscribed)
+    manager = _companion_manager_for_resolved_model(resolved_chat_model_id)
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
     if not session.is_initialized:
