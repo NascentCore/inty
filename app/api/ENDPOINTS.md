@@ -1,13 +1,13 @@
 # API 端点列表
 
-本文档列出当前代码中注册的 HTTP 与 WebSocket 路径及实现文件。路径前缀均为字面量；`{name}` 为路径参数。
+本文档列出当前代码中注册的 HTTP 与 WebSocket 路径及实现文件。表格中的路径除 `{...}` 占位段外为字面量。
 
 ## 双应用说明
 
 | 应用 | 入口模块 | 典型部署 | `/api/v1` 来源 |
 |------|----------|----------|----------------|
 | **Inty**（主后端，Android） | `backend/inty/main.py` | App 对应后端 | `app.api.v1.router.api_router` |
-| **Ops**（运营 / evaluation） | `backend/ops/main.py` | ops.inty.cc、dev.ops.inty.cc | 上表相同 shared 路由 + `backend/ops/api/v1/evaluation.py` + `backend/ops/api/v1/festival_memory.py` |
+| **Ops**（运营 / evaluation） | `backend/ops/main.py` | ops.inty.cc、dev.ops.inty.cc | `shared_router`（`backend/ops/api/v1/shared.py`）+ `backend/ops/api/v1/evaluation.py` + `backend/ops/api/v1/festival_memory.py` |
 
 WebSocket 在 OpenAPI 中不可见；下表方法列写 `WS`。
 
@@ -18,7 +18,7 @@ WebSocket 在 OpenAPI 中不可见；下表方法列写 `WS`。
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
 | `/` | GET | `backend/inty/main.py`（`build_health_check_data(ops=False)`） |
-| `/metrics` | GET | `backend/inty/main.py`（非 prod 且非 test 环境外可能 404） |
+| `/metrics` | GET | `backend/inty/main.py`（`app.debug` 为 true 或 `environment` 为 `TEST` 时可用；否则 404） |
 
 ### Ops（`backend/ops/main.py` + `app/api/evaluation_web.py`）
 
@@ -34,7 +34,7 @@ Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页�
 
 ## API v1 共有端点（Inty 与 Ops）
 
-下列路由由 `app/api/v1/router.py` 注册；Ops 通过 `backend/ops/api/v1/shared/shared_router` 再导出同一套处理器。
+下列路由由 `app/api/v1/router.py` 注册；Ops 通过 `backend/ops/api/v1/shared.py` 中的 `shared_router` 再导出同一套处理器。
 
 ### 认证 (Auth)
 
@@ -53,7 +53,7 @@ Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页�
 | `/api/v1/users/device/register` | POST | `app/api/v1/endpoints/users.py` |
 | `/api/v1/users/deletion/check` | GET | `app/api/v1/endpoints/users.py`（deprecated） |
 | `/api/v1/users/delete-account` | POST | `app/api/v1/endpoints/users.py` |
-| `/api/v1/users` | GET | `app/api/v1/endpoints/users.py`（evaluation，无 schema） |
+| `/api/v1/users` | GET | `app/api/v1/endpoints/users.py`（评测 / 内部用；`include_in_schema=False`；handler 未挂鉴权依赖，见代码 TODO） |
 
 ### AI 角色 (Agents)
 
