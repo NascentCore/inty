@@ -219,7 +219,8 @@ const AppContent: React.FC = () => {
       key: "chat-ws-verify",
       icon: <MessageOutlined />,
       label: "WebSocket 对话验证",
-      description: "走生产 /api/v1/chat/ws，与线上一致（Assume user 走 query）",
+      description:
+        "连接生产 WS /api/v1/chat/ws 做协议验证；IntelliMate App 聊天走 HTTP completions（Assume user 走 query）",
     },
     {
       key: "voice-chat",

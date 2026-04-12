@@ -1,6 +1,8 @@
 # FR_CHAT_WS_VERIFY - 聊天 WebSocket 对接文档（App 端）
 
-本文档面向 Android App 端开发，说明通过 WebSocket 进行聊天对话的接口约定与协议。当前提供两种端点：**校验端点**（不落库，用于联调/验证）与**现有生产端点**（落库，一发一收）。
+本文档说明通过 WebSocket 进行聊天对话的接口约定与协议。当前提供两种端点：**校验端点**（不落库，用于联调/验证）与**生产端点**（落库，一发一收）。
+
+**IntelliMate（Google Play 上架的 Android 客户端）** 的聊天发送仅使用 `POST /api/v1/chat/completions/{agent_id}`，**不**连接 `WebSocket /api/v1/chat/ws` 或 `/ws/verify`。WebSocket 聊天保留给未来 **iMate** 智能体陪伴等产品形态与运营侧 evaluation 等工具使用。
 
 ---
 
@@ -13,7 +15,7 @@
 
 - **引擎对齐**：生产 `/ws` 走 `agent_chat_completions`（落库）；`/ws/verify` 当前实现走 `generate_message_without_user_save`，与生产推理路径不完全相同。接入 Inty v2 时须按 [FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md](/docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md) 第 7 节统一或显式标注差异，避免联调结论与线上一致性落空。
 - **Base URL**：与现有 HTTP API 一致，如 `wss://<host>/api/v1/chat/ws` 或 `wss://<host>/api/v1/chat/ws/verify`（HTTPS 环境用 `wss`，HTTP 用 `ws`）。
-- **兼容性**：老版本 App 可继续使用 `POST /api/v1/chat/completions/{agent_id}` 或现有 `/api/v1/chat/ws`，无需改动。
+- **IntelliMate 客户端**：仅 `POST /api/v1/chat/completions/{agent_id}`；不调用本页 WebSocket 端点。
 
 ---
 

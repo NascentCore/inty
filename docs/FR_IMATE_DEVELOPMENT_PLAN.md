@@ -20,10 +20,9 @@
   - endpoint -> service -> repository 分层模式。
   - 依赖通过 `app/api/deps.py` + Depends 注入，避免 endpoint 直接绑定全局单例。
   - 面向新版 Android app 的各项功能，凡能依赖 `app/` 现有 API 路由与 HTTP path 实现则优先复用；数据层采用 iMate 独立模型与表，统一使用 `imate_` 前缀与 IntelliMate 区分；**独立部署实例时** iMate 侧 DB 与 GCS bucket 与 IntelliMate **物理隔离**（推荐），与代码复用不矛盾。
-- Chat 通信复用：
-  - app + backend 使用 WebSocket 主链路。
-  - iMate 新链路的 chat 路径仅提供 WebSocket，不提供 HTTP fallback。
-  - IntelliMate 存量 HTTP chat 路径保留用于兼容与回归，不作为 iMate 新能力入口。
+- Chat 通信：
+  - **IntelliMate（现网 Android）**：聊天发送仅 `POST /api/v1/chat/completions/{agent_id}`（HTTP）。
+  - **iMate**：规划为 WebSocket 主链路（`WS /api/v1/chat/ws`），不提供 HTTP fallback；与 IntelliMate 发送路径分离。
 
 ### 2.2 新版 iMate(or IntelliMate 2.0) 的核心目标
 
@@ -503,7 +502,7 @@
   - `android_app/app`：产品层，组装登录、聊天、设置、陪伴状态 UI/UX。
 - 运行链路遵循：
   - `Compose UI -> ViewModel -> Repository -> (Room + DataStore + HTTP/WS)`。
-  - 聊天链路 `WS only`，HTTP 仅用于登录、设置、历史、非聊天能力。
+  - **iMate** 聊天链路规划为 `WS`（`WS /api/v1/chat/ws`）；HTTP 用于登录、设置、历史等。**IntelliMate** 当前产品聊天发送仅 `POST /api/v1/chat/completions/{agent_id}`，不使用聊天 WebSocket。
 - 设计目标：
   - 保持与 IntelliMate 兼容，不改坏既有链路。
   - iMate 业务侧在上层组装，不复制底层实现。
@@ -514,13 +513,10 @@
   - `NetServiceMgr` 统一 Retrofit API 入口（`getUserApi/getChatApi/getCommonApi`）。
   - `IUserApi`、`IChatApi`、`ICommonApi` 作为当前已存在的 HTTP 契约接口。
   - `NetworkStackCoordinator` 负责环境与网络状态初始化。
-- 聊天 WebSocket 采用独立会话管理器模式：
-  - 复用 `ChatWebSocketSessionManager` 的关键语义：
-    - token 维度单连接复用。
-    - 请求级互斥（`requestMutex`）保证一发一收。
-    - token 变化自动重建连接。
+- 聊天 WebSocket 采用独立会话管理器模式（iMate 实现时可新建会话管理类，语义对齐后端 `WS /api/v1/chat/ws` 一发一收）：
+  - token 维度单连接复用、请求级互斥、token 变化重建连接等，与后端 WebSocket 契约一致即可。
   - iMate chat 仅使用 `WS /api/v1/chat/ws`，`/verify` 仅用于验收联调。
-  - `ChatViewModel -> ChatMessageRepository.sendMessage()` 的 HTTP chat 旧路径只保留给 IntelliMate 回归，不允许在 iMate 新流程中使用。
+  - IntelliMate 仅 `ChatMessageRepository.sendMessage()`（HTTP）；iMate 新流程使用 WebSocket 发送，不混用 IntelliMate 的 HTTP 发送路径。
 - API 端点矩阵（Android 侧调用视角）：
 
 | 能力 | 协议 | Endpoint | Android 入口 |
@@ -531,7 +527,7 @@
 | 用户设置读写（通用） | HTTP | `GET/PUT /api/v1/settings/` | `Phase 1` 在 `core/data/api` 新增 `ISettingsApi`（仍由 `NetServiceMgr` 托管，按 `Settings` 裸响应独立解析） |
 | 历史消息拉取 | HTTP | `GET /api/v1/chats/agents/{agent_id}/messages` | `IChatApi.getMsgs` |
 | chat settings 读写 | HTTP | `GET/PUT /api/v1/chats/agents/{agent_id}/settings` | `IChatApi.getChatSettings/updateChatSettings` |
-| 实时聊天 | WS | `WS /api/v1/chat/ws` | `ChatWebSocketSessionManager.sendMessage` |
+| 实时聊天 | WS | `WS /api/v1/chat/ws` | iMate 客户端 WebSocket 会话管理器（IntelliMate 用 `IChatApi.sendMsg` HTTP） |
 | 版本门控 | HTTP | `POST /api/v1/version/check` | `ICommonApi.checkAppUpgrade` |
 
 - 协议治理要求：
@@ -565,7 +561,7 @@
   - 网络返回先写 Room，再由 UI 被动刷新，不允许 ViewModel 直接拼接网络瞬态消息列表。
   - 消息状态固定 `SENDING -> SUCCESS | SENDING_FAILED`，允许失败重试。
   - 去重主键使用 `id/indexId/localMsgId` 组合策略，避免重复插入。
-  - 主 WebSocket 模式下沿用 `MainRepository + MainRemoteDataSource` 的 fire-and-forget + 回包落库路径，保持与现有实现一致。
+  - iMate WebSocket 模式下由专用会话管理器接收回包并写 Room（IntelliMate 无全局聊天 WebSocket）。
 
 #### 11.12.4 第三层 - 核心陪伴 UX/UI（Compose）
 
@@ -578,8 +574,8 @@
   - 异常分支：`SendingFailed`、`WSDisconnected`、`RateLimited`、`Unauthorized`
   - 所有状态必须可映射到用户可见 UI，不允许静默失败。
 - WS-only 体验约束（iMate 强制）：
-  - iMate 聊天发送入口只保留 `sendMessageViaMainWebSocket` 路径。
-  - HTTP chat 发送分支仅保留在 IntelliMate 存量流程，作为回归兼容路径，不进入 iMate 新功能开发。
+  - iMate 聊天发送入口仅 WebSocket，不调用 `POST /api/v1/chat/completions/{agent_id}`。
+  - IntelliMate 仅 HTTP `POST /api/v1/chat/completions/{agent_id}`，不进入 iMate WS-only 新功能开发。
 - 陪伴体验组件（v1 必须项）：
   - 顶部关系条：展示关系阶段、最近互动时间、能量变化。
   - 会话列表：本地历史秒开，网络恢复后增量同步。

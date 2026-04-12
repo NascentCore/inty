@@ -28,7 +28,7 @@ import java.time.format.DateTimeFormatter
 class ChatRemoteDataSource {
 
     companion object {
-        /** Release 默认上报；Debug 可在调试设置中关闭。供主 WebSocket 连接后发送 client_context。 */
+        /** Release 默认上报；Debug 可在调试设置中关闭。供 POST chat completions 请求体中的 time_context 使用。 */
         fun buildUserTimeContextOrNull(): UserTimeContext? {
             if (!shouldReportUserTimeContext()) return null
             val now = ZonedDateTime.now()
@@ -104,7 +104,7 @@ class ChatRemoteDataSource {
         }
     }
 
-    /** 构建与 HTTP/WebSocket 发送一致的 SendMsgReq，供 sendMessage 与主 WebSocket 发送复用。 */
+    /** 构建与 HTTP 发送一致的 SendMsgReq。 */
     fun buildSendMsgReq(
         agentId: String,
         userText: String,

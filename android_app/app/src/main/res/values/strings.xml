@@ -48,9 +48,6 @@
     <string name="settings_debug_custom_backend_placeholder">http://192.168.x.x:8000/</string>
     <string name="settings_debug_custom_backend_apply">Apply custom URL</string>
     <string name="settings_debug_reset_to_default">Reset to default</string>
-    <string name="settings_debug_chat_websocket_title">Chat websocket mode</string>
-    <string name="settings_debug_chat_websocket_on">Enabled</string>
-    <string name="settings_debug_chat_websocket_off">Disabled</string>
     <string name="logout">Log out</string>
     <string name="crop_image">Crop Image</string>
     <string name="introduction">Introduction</string>

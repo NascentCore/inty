@@ -4,7 +4,7 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 
 ## 1. Goals and constraints
 
-- Same path as Android today: `wss://{base}/api/v1/chat/ws`, one JSON request per turn, one JSON response (shape of `SendMsgResponse`), plus `ping` / `pong` text frames.
+- Same WebSocket path for future iMate-style clients: `wss://{base}/api/v1/chat/ws`, one JSON request per turn, one JSON response (shape of `SendMsgResponse`), plus `ping` / `pong` text frames. IntelliMate Android ships chat over `POST /api/v1/chat/completions/{agent_id}` only.
 - Land v2 inside the same `backend/inty` process; prototype code converges into `app/` product paths (see `docs/DEVOPS_IMATE_BACKEND_PLAN.md`).
 - API user-facing error strings stay English (`app/AGENTS.md`).
 

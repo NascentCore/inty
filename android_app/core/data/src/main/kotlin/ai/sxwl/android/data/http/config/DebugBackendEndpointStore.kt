@@ -12,8 +12,6 @@ object DebugBackendEndpointStore {
     private const val KEY_BASE_URL = "override_base_url"
     private const val KEY_REMIX_BUTTON_VISIBLE = "char_remix_button_visible"
     private const val KEY_USER_TIME_CONTEXT_REPORTING = "chat_user_time_context_reporting"
-    private const val KEY_CHAT_WEBSOCKET_ENABLED = "chat_websocket_enabled"
-    private const val KEY_CHAT_WEBSOCKET_VERIFY_PATH = "chat_websocket_verify_path"
 
     private val prefs by lazy {
         Utils.getApp().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -96,33 +94,4 @@ object DebugBackendEndpointStore {
         LogUtils.i("DebugBackendEndpointStore", "Runtime user time context override cleared")
     }
 
-    fun getChatWebSocketEnabled(): Boolean {
-        if (!isRuntimeOverrideSupported()) return false
-        return prefs.getBoolean(KEY_CHAT_WEBSOCKET_ENABLED, false)
-    }
-
-    fun persistChatWebSocketEnabled(enabled: Boolean) {
-        require(isRuntimeOverrideSupported()) {
-            "Runtime chat websocket toggle is only available for debug builds"
-        }
-        prefs.edit().putBoolean(KEY_CHAT_WEBSOCKET_ENABLED, enabled).apply()
-        LogUtils.i("DebugBackendEndpointStore", "Runtime chat websocket updated to $enabled")
-    }
-
-    /** 是否使用校验端点 /api/v1/chat/ws/verify（不落库，仅联调验证）。仅 debug 有效。 */
-    fun getChatWebSocketUseVerifyPath(): Boolean {
-        if (!isRuntimeOverrideSupported()) return false
-        return prefs.getBoolean(KEY_CHAT_WEBSOCKET_VERIFY_PATH, false)
-    }
-
-    fun persistChatWebSocketUseVerifyPath(useVerify: Boolean) {
-        require(isRuntimeOverrideSupported()) {
-            "Runtime chat websocket verify path is only available for debug builds"
-        }
-        prefs.edit().putBoolean(KEY_CHAT_WEBSOCKET_VERIFY_PATH, useVerify).apply()
-        LogUtils.i(
-            "DebugBackendEndpointStore",
-            "Runtime chat websocket verify path updated to $useVerify",
-        )
-    }
 }

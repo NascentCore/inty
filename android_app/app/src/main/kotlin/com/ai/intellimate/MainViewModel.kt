@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.viewModelScope
 import com.ai.intellimate.audio.AudioManager
 import com.ai.intellimate.boost.BoostManager
-import com.ai.intellimate.main.data.MainRepository
 import com.ai.intellimate.utils.CredentialManagerHelper.clearCredentialState
 import com.ai.intellimate.utils.UnifiedStartupManager
 import com.ai.intellimate.utils.UserProfileManager
@@ -48,8 +47,6 @@ enum class HomeTabIndex {
 }
 
 class MainViewModel : BaseVM() {
-
-    private val mainRepository = MainRepository()
 
     val followingAgents = mutableStateListOf<AgentInfo>() // 关注的agents列表数据
 
@@ -92,8 +89,6 @@ class MainViewModel : BaseVM() {
     // 反馈请求弹窗显示状态
     private val _showFeedbackRequestDialog = MutableStateFlow(false)
     val showFeedbackRequestDialog: StateFlow<Boolean> = _showFeedbackRequestDialog.asStateFlow()
-    val subLimit = mainRepository.subLimit
-
     private val pushMessageSubscriber =
         object : EventSubscriber<PushNotificationEvent.MessageReceived> {
             override fun onEvent(event: PushNotificationEvent.MessageReceived) {
@@ -152,7 +147,6 @@ class MainViewModel : BaseVM() {
             }
         }
 
-        viewModelScope.launch(Dispatchers.IO) { mainRepository.connectWebSocket() }
     }
 
     private fun getInitialTabFromRemoteConfig(): HomeTabIndex {

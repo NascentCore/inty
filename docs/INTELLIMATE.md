@@ -125,7 +125,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 
 ### 5. Settings
 - **Debug Backend Endpoint** (debug builds only): Change the API base URL at runtime; cache clears automatically so the next request uses the new server.
-- **User time context reporting** (debug builds only, under Debug Backend Endpoint): When enabled, the app includes device local time and IANA time zone in chat API/WebSocket payloads so the assistant can use time-of-day context; release builds include this by default without a toggle.
+- **User time context reporting** (debug builds only, under Debug Backend Endpoint): When enabled, the app includes device local time and IANA time zone in chat HTTP request bodies so the assistant can use time-of-day context; release builds include this by default without a toggle.
 - **Help & Feedback**: Add your FAQ or form link here so end users can submit issues without leaving the app.
 - **Remote Config**: Features such as auto-enabling Keep Talking are controlled centrally. Sudden UI changes may come from new Remote Config values.
 

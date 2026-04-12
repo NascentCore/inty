@@ -193,32 +193,6 @@ fun DebugBackendSettingsEntry(modifier: Modifier = Modifier) {
                 )
             }
 
-            Spacer(Modifier.height(Spacing.MediumSpacer))
-            Text(
-                text = stringResource(R.string.settings_debug_chat_websocket_title),
-                color = Color.White.copy(alpha = TextConfig.SecondaryTextAlpha),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(Modifier.height(Spacing.SmallSpacer))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text =
-                        if (uiState.chatWebSocketEnabled) {
-                            stringResource(R.string.settings_debug_chat_websocket_on)
-                        } else {
-                            stringResource(R.string.settings_debug_chat_websocket_off)
-                        },
-                    color = Color.White,
-                    fontWeight = FontWeight.Medium,
-                )
-                Switch(
-                    checked = uiState.chatWebSocketEnabled,
-                    onCheckedChange = { viewModel.toggleChatWebSocketEnabled() },
-                )
-            }
         }
     }
 }
