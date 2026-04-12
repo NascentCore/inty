@@ -1,83 +1,94 @@
 # FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN
 
-Revised integration plan for Inty v2 agentic companion via existing `WebSocket /api/v1/chat/ws`, incorporating review fixes (contract, verify parity, scope, DB session, idle timeout, tests).
+基于当前仓库内 Inty 后端（`app/`）代码整理的 v2（companion / agentic kernel）与既有 `WebSocket /api/v1/chat/ws` 的集成说明与后续事项。面向调用方的 API 错误文案仍须为英文（见 `app/AGENTS.md`）。
 
-## 1. Goals and constraints
+## 1. 目标与约束
 
-- Same path as Android today: `wss://{base}/api/v1/chat/ws`, one JSON request per turn, one JSON response (shape of `SendMsgResponse`), plus `ping` / `pong` text frames.
-- Land v2 inside the same `backend/inty` process; prototype code converges into `app/` product paths (see `docs/DEVOPS_IMATE_BACKEND_PLAN.md`).
-- API user-facing error strings stay English (`app/AGENTS.md`).
+- 与 Android 现网一致的路径：`wss://{base}/api/v1/chat/ws`；每轮一条 JSON 请求、一条 JSON 响应（`SendMsgResponse` 形态）；控制帧支持 `ping` / `pong` 文本 JSON，以及会话级 `client_context`（见下）。
+- v2 落在同一进程内；原型能力经 `app/services/companion_chat_service.py` 与 `app/core/agentic_kernel/companion/` 收敛到产品路径。
+- 面向调用方的错误字符串保持英文。
 
-## 2. Phase 0 - Contract and scope freeze
+## 2. 阶段 0 - 契约与范围
 
-- Map `ChatWebSocketRequest` (`app/schemas/chat.py`) to Android `ChatWebSocketReq` / `SendMsgReq` / `SendMsgResponse` (`android_app/core/data/.../ChatBeans.kt`). New server fields are optional until the app needs them (client ignores unknown JSON keys).
-- **Scope for first ship**: user-triggered turns only (same as current WS). Do not bind proactive heartbeat, inner tick, or schedule-driven turns to the first WS integration; those need a worker or a new client protocol.
-- **Rollout note**: production `/ws` always uses the companion kernel; gray-list by `agent_id` was removed (`chat_use_companion_kernel_agent_ids` ignored in YAML). Other keys (header, user segment) remain available for unrelated features.
+- 服务端 `ChatWebSocketRequest`（`app/schemas/chat.py`）与 Android `ChatWebSocketReq` / `SendMsgReq` / `SendMsgResponse`（`android_app/core/data/.../ChatBeans.kt`）对齐；新增字段在客户端未使用前应为可选（客户端可忽略未知 JSON 键）。
+- **首版范围**：仅用户主动发起的轮次，与现网 WS 一致。不把 proactive heartbeat、内核 tick、排程驱动轮次绑到首版 WS；这些需要 worker 或新客户端协议。
+- **灰度**：生产 `/ws` 一律走 companion 内核；YAML 中的 `chat_use_companion_kernel_agent_ids` 在 `load_config` 时被丢弃（`app/utils/config.py`），不再作为按 `agent_id` 开关。
 
-## 3. Phase 1 - Shared chat turn entry (HTTP and WS)
+## 3. 阶段 1 - 共享聊天入口（HTTP 与 WS）- 已实现
 
-- **Single source of behavior**: extract or centralize the body of `agent_chat_completions` so both `POST /api/v1/chat/completions/{agent_id}` and `/ws` call the same function (e.g. inner impl + thin HTTP/WS adapters). Avoid duplicating subscription limits, errors, and persistence.
-- Introduce a narrow executor or branch inside that function: `legacy` vs `agentic_v2`, selected by config.
-- **Shipped**: **`WS /api/v1/chat/ws`** always routes through `CompanionManager` / companion `run_turn` (`_agent_chat_completions_impl` with `chat_route="websocket"`), with `chat_history` persistence. **`POST /api/v1/chat/completions/{agent_id}`** keeps the legacy `Agent` stack. Deprecated YAML key `chat_use_companion_kernel_agent_ids` is ignored at config load. Verify endpoint still legacy-only until Phase 5.
+- **单一行为入口**：`POST /api/v1/chat/completions/{agent_id}` 与 `WebSocket /api/v1/chat/ws` 均调用 `_agent_chat_completions_impl`（`app/api/v1/endpoints/chat.py`），通过参数 `chat_route: Literal["http", "websocket"]` 区分，避免订阅、错误与持久化逻辑分叉复制。
+- **路由规则**：`chat_route == "websocket"` 时使用 companion（`companion_chat_service.run_companion_chat_turn_for_api`）；`chat_route == "http"` 时仍走 legacy `Agent.chat`。
+- **生产 WS**：`chat_completions_websocket` 在收到合法 `ChatWebSocketRequest` 后固定传入 `chat_route="websocket"`。
 
-## 4. Phase 2 - Persistence decision (before workspace mapping)
+## 4. 阶段 2 - 持久化 - 已实现（需知局限）
 
-- Decide before wiring `run_turn`: whether each turn also writes `chat_history` (and matches list APIs). If v2 only writes `transcript.jsonl` (or v2-only store), either sync into `chat_history` or extend message-list APIs; otherwise the Android history UI breaks.
-- Align subscription counting and business errors with the HTTP path.
+- companion 路径在 `run_companion_chat_turn_for_api` 返回文本后，依次 `chat_history_service.add_user_message_async` 与 `add_ai_message_sync_async` 写入 `chat_history`，与消息列表 API 一致。
+- **顺序与一致性**：先 companion 工作区落盘，再写 `chat_history`；两阶段之间失败可能导致工作区与列表短暂不一致（见 backlog「原子性」）。
 
-## 5. Phase 3 - Identity and workspace mapping
+## 5. 阶段 3 - 身份与工作区映射 - 已实现
 
-- Define stable mapping from `user_id`, `agent_id`, `chat.id` to companion workspace root or DB-backed transcript (no ambiguous paths on shared VMs).
-- Implement conversion from `SendMsgReq` messages (including multimodal parts) to v2 transcript rows.
+- `CompanionManager.get_or_create_session(user_id, agent_id, chat_key)`，`chat_key` 为 `str(chat.id)`（`companion_chat_service.run_companion_chat_turn_for_api`）。
+- 工作区根目录由 `app.features.companion_workspaces_base_dir` 配置（默认 `/var/lib/inty/companion_workspaces`），进程内会 `mkdir`。
+- 用户多段纯文本在 HTTP/WS 侧仍经 `HumanMessage` / `extract_text_content` 等路径；companion 路径当前以**拼接后的纯文本** `user_text` 调用 `run_turn`（含图的多模态见 backlog）。
 
-## 6. Phase 4 - Async, timeout, and DB session rules
+## 6. 阶段 4 - 异步、超时与 DB 会话
 
-- **Idle timeout** (wait for next client text frame): `app.features.chat_ws_idle_timeout_seconds` in `config.yaml` (default 60, validated 10..3600 in `_validate_config`). Long LLM or tool work does not extend this window; the client must send `ping` (or any frame) often enough, or raise the config value for known slow agents.
-- **AsyncSession**: the WS handler uses one `AsyncSession` for the whole connection (`Depends(get_async_db)`). Do not pass that session into `asyncio.to_thread` or any thread. If v2 runs blocking work in a thread, open a **new** DB session inside that worker (or avoid DB in the worker and pass plain IDs).
-- **Turn timeout**: cap wall time for one turn so the server can return a structured error instead of hanging; keep under client read timeouts where possible.
+- **空闲超时**：`app.features.chat_ws_idle_timeout_seconds`（默认 60；校验范围 10..3600，`_validate_config`）。`asyncio.wait_for(websocket.receive_text(), timeout=...)`；长 LLM/工具执行**不会**单独延长该计时器，客户端需定期发 `ping` 或任意文本帧，或调大配置。
+- **控制帧与会话时间**：`_handle_chat_websocket_control_json` 处理 `type: ping`（回 `pong`）、`type: client_context`（校验 `time_context` 为 `UserTimeContext`，成功则 `client_context_ack` 且写入会话级 dict）。后续聊天帧若请求体未带 `user_time_context`，由 `_chat_request_with_merged_ws_time_context` 合并该会话缓存。
+- **AsyncSession**：整条 WS 连接共用一个 `Depends(deps.get_async_db)` 得到的 session；不得传入 `asyncio.to_thread` 或其它线程；若 companion 将来在 worker 线程跑阻塞逻辑，须在线程内新开 session 或避免在该线程用 DB。
+- **单轮墙钟上限**：当前代码中**未**实现单独的单轮超时配置；仍依赖客户端读超时与上游 LLM 行为。若需要结构化「超时错误」响应，需后续加配置与 `wait_for` 包裹。
 
-## 7. Phase 5 - `/ws/verify` parity
+## 7. 阶段 5 - `/ws/verify` 与生产 `/ws` 对齐 - 未完成
 
-- Today verify uses `generate_message_without_user_save`, not `agent_chat_completions` (`app/api/v1/endpoints/chat.py` docstring).
-- When v2 is added to `/ws`, either:
-  - **A (recommended)** refactor a shared dispatcher with a `persist: bool` flag so verify and prod share engine selection and only differ on persistence, or
-  - **B** document verify as legacy-engine-only until aligned (risk: false confidence in QA).
+- `chat_completions_websocket_verify` 仍使用 `generate_message_without_user_save`，**不**走 `_agent_chat_completions_impl`，**不**写 `chat_history`，**不**跑 companion（见该端点 docstring）。
+- 建议后续：抽共享调度器并带 `persist: bool`（或与生产共用 `chat_route` + `persist`），否则 QA 需明确「verify 仅验证 legacy 引擎与连接」，与生产 companion 行为不一致。
 
-## 8. Phase 6 - Testing
+## 8. 阶段 6 - 测试
 
-- `tests/AGENTS.md` prefers E2E without monkeypatch; **exception**: isolated WS handler tests may monkeypatch auth and completion stubs (see `tests/app/api/v1/endpoints/test_chat.py`). Prefer real server + token for new contract-critical paths when feasible.
-- Add or extend tests for configurable idle timeout and for v2 routing once implemented.
+- `tests/AGENTS.md` 倾向 E2E；WS 处理器在 `tests/app/api/v1/endpoints/test_chat.py` 中可对鉴权与 completion 做隔离桩（与仓库约定一致）。
+- 已覆盖：空闲超时相关、companion 路径多模态拒绝（400 + JSON 错误帧且连接保持）等；新增契约时继续扩展该文件。
 
-## 9. Rollout
+## 9. 上线与回滚
 
-- Production `/ws` always uses the companion kernel; monitor errors and latency; rollback requires a code deploy or traffic shift, not an allowlist toggle.
+- 生产 `/ws` 一律 companion；回滚依赖发版或流量切换，不再依赖 YAML 白名单。
 
-## 10. Config reference
+## 10. 配置参考（与实现对齐）
 
 ```yaml
 app:
   features:
     chat_ws_idle_timeout_seconds: 60
-    # companion_workspaces_base_dir: "/var/lib/inty/companion_workspaces"
-    # companion_default_context_mode: "intimate"
+    companion_workspaces_base_dir: "/var/lib/inty/companion_workspaces"
+    companion_default_context_mode: "intimate"
+    # 可选：companion 转写压缩；null 关闭
+    # companion_transcript_compaction: ...
+    # 可选：加载转写窗口上限
+    # companion_transcript_llm_window_max_messages: ...
 ```
 
-Optional nested keys under `app` are parsed in `load_config` (e.g. `app.api_endpoints` for `APIEndpointsConfig`).
+- `FeaturesConfig` 定义见 `app/utils/config.py`；`companion_transcript_compaction` 默认由 `DEFAULT_COMPANION_FEATURE_COMPACTION` 填充。
+- 嵌套 `app.api_endpoints` 等仍由 `load_config` 解析。
 
-## 11. Follow-up backlog (companion kernel in `_agent_chat_completions_impl` / WebSocket path)
+## 11. 评估与 WS 辅助行为（代码现状）
 
-Track these after the companion-on-`/ws` ship; execute in order when touching the same code paths.
+- **assume_user_id**：超级用户可在 query 传 `assume_user_id`，语义与 HTTP `X-Assume-User-Id` 对齐（`_resolve_assumed_chat_websocket_user`）。
+- **appVersionCode**：WS 从请求头 `appVersionCode` 读取整型，用于节日/日常记忆等门控（与 HTTP 头一致）。
+- **premium_preview**：仅 `not use_companion` 时计算；companion WS 路径不生成付费预览 choice。
 
-| Step | Item | Notes |
-|------|------|-------|
-| 1 | **Multimodal user turns** | **Done (2026-04-12):** Production WebSocket `/api/v1/chat/ws` (always companion): if the last user message includes an `image_url` part, return **HTTP 400** with English detail (also sent as JSON on `/ws` with `code`/`message`/`agent_id`, connection stays open). Multiple **text-only** parts still run (joined text passed to `run_turn`). Fixed inner `except Exception` in `_agent_chat_completions_impl` so `HTTPException` is not swallowed. Full multimodal rows in the kernel remain future work. |
-| 2 | **Atomicity: workspace vs `chat_history`** | `run_turn` persists to companion store first; user/assistant rows are appended via `chat_history_service` after. A failure between the two can diverge. Define compensation, ordering, or a single transactional boundary. |
-| 3 | **First-turn bootstrap semantics** | `bootstrap_session` consumes the first user line until workspace init passes. Document product/QA expectation for first HTTP/WS message vs local REPL. |
-| 4 | **Config hot reload** | `companion_chat_service` uses `lru_cache` on resolved model id. Changing YAML without process restart does not refresh caches unless something calls `clear_companion_chat_service_caches()`. Document ops expectation or wire reload hook. |
-| 5 | **`/ws/verify` parity** | Still Phase 5: verify path does not run companion kernel; align or keep explicit QA disclaimer. |
-| 6 | **Lazy `get_agent` for companion path** | WebSocket companion path still loads legacy `Agent` (needed for voice, premium preview, etc.). Optional: defer `get_agent` until after branch or split dependencies. |
-| 7 | **E2E** | Add real-server or integration test for one WS companion round-trip (WS + message list), when CI has stable LLM stub or env flag. |
+## 12. 后续 backlog（按 touching 同一链路时优先级自排）
 
-### Task log
+| 序号 | 项 | 说明 |
+|------|-----|------|
+| 1 | **多模态用户轮** | **已完成（2026-04-12）**：WS companion 路径若最后一条用户消息含 `image_url`，返回 HTTP 400 等价信息（WS 上为 JSON：`code` / `message` / `agent_id`，连接不关闭）。多段纯文本仍合并为文本进入 `run_turn`。内核内完整多模态行仍为后续工作。实现见 `ChatMessage.has_image_content_part`、`_companion_rejects_multimodal_user_turn`、`chat_completions_websocket` 对 `HTTPException` 的 JSON 映射；`_agent_chat_completions_impl` 内层 `except HTTPException: raise` 避免吞掉业务异常。 |
+| 2 | **原子性：工作区 vs chat_history** | `run_turn` 与 `chat_history` 两步之间失败时的补偿或单事务边界。 |
+| 3 | **首轮 bootstrap 语义** | `bootstrap_session` 会消费首条用户输入直至工作区初始化完成；需产品/QA 文档化与 HTTP/WS/REPL 的差异。 |
+| 4 | **配置热更新** | `_companion_manager_for_resolved_model` 使用 `lru_cache`；改 YAML 不重启进程时须调用 `clear_companion_chat_service_caches()` 或接入重载钩子。 |
+| 5 | **`/ws/verify` 与 companion 对齐** | 同阶段 5。 |
+| 6 | **lazy `get_agent`** | companion 路径仍为语音等逻辑加载 legacy `Agent`；可评估延后加载或拆分依赖。 |
+| 7 | **单轮超时** | 配置化墙钟上限，在超时返回结构化错误（当前未实现）。 |
+| 8 | **E2E** | CI 稳定 stub 或环境开关下，补充「WS companion 一轮 + 消息列表」真实服务级测试。 |
 
-- **2026-04-12:** Completed backlog step 1 (multimodal user turns on WS companion path). Code: `ChatMessage.has_image_content_part`, `_companion_rejects_multimodal_user_turn` in `app/api/v1/endpoints/chat.py`, WS handler maps `HTTPException` to JSON error frame; tests in `tests/app/api/v1/endpoints/test_chat.py`.
+### 变更记录
+
+- **2026-04-12**：backlog 项「多模态用户轮（WS companion）」完成；测试见 `tests/app/api/v1/endpoints/test_chat.py`。
+- **2026-04-13**：本文档按 `chat.py`、`companion_chat_service.py`、`config.py` 当前实现重写为中文并补充 `client_context`、companion 配置项与 verify 差异。
