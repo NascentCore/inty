@@ -72,10 +72,14 @@ Track these after the initial gray-list ship; execute in order when touching the
 
 | Step | Item | Notes |
 |------|------|-------|
-| 1 | **Multimodal user turns** | Companion branch passes `last_user_text` into `run_turn` only. Image / mixed `messages[].content` parts are dropped for allowlisted agents. Either reject with 400 + clear message, or extend kernel + transcript contract to carry multimodal user rows. |
+| 1 | **Multimodal user turns** | **Done (2026-04-12):** WebSocket + companion allowlist: if the last user message includes an `image_url` part, return **HTTP 400** with English detail (also sent as JSON on `/ws` with `code`/`message`/`agent_id`, connection stays open). Multiple **text-only** parts still run (joined text passed to `run_turn`). Fixed inner `except Exception` in `_agent_chat_completions_impl` so `HTTPException` is not swallowed. Full multimodal rows in the kernel remain future work. |
 | 2 | **Atomicity: workspace vs `chat_history`** | `run_turn` persists to companion store first; user/assistant rows are appended via `chat_history_service` after. A failure between the two can diverge. Define compensation, ordering, or a single transactional boundary. |
 | 3 | **First-turn bootstrap semantics** | `bootstrap_session` consumes the first user line until workspace init passes. Document product/QA expectation for first HTTP/WS message vs local REPL. |
 | 4 | **Config hot reload** | `companion_chat_service` uses `lru_cache` on allowlist and on resolved model id. Changing YAML without process restart does not refresh caches unless something calls `clear_companion_chat_service_caches()`. Document ops expectation or wire reload hook. |
 | 5 | **`/ws/verify` parity** | Still Phase 5: verify path does not run companion kernel; align or keep explicit QA disclaimer. |
 | 6 | **Lazy `get_agent` for companion path** | WebSocket companion path still loads legacy `Agent` (needed for voice, premium preview, etc.). Optional: defer `get_agent` until after branch or split dependencies. |
 | 7 | **E2E** | Add real-server or integration test for one allowlisted agent round-trip (WS + message list), when CI has stable LLM stub or env flag. |
+
+### Task log
+
+- **2026-04-12:** Completed backlog step 1 (multimodal user turns on WS companion path). Code: `ChatMessage.has_image_content_part`, `_companion_rejects_multimodal_user_turn` in `app/api/v1/endpoints/chat.py`, WS handler maps `HTTPException` to JSON error frame; tests in `tests/app/api/v1/endpoints/test_chat.py`.
