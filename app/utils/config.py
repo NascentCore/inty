@@ -162,6 +162,8 @@ class FeaturesConfig:
     # WebSocket /api/v1/chat/ws: when the last completed turn used the companion kernel, the server
     # may run an intrinsic-beat (inner_tick) turn on idle between min(idle, inner_wait).
     companion_ws_inner_tick_min_gap_seconds: float = 120.0
+    # Min seconds after a user companion turn before the first inner_tick may run (avoids immediate fire).
+    companion_ws_inner_tick_first_after_user_seconds: float = 15.0
     companion_ws_inner_tick_min_transcript_messages: int = 2
     companion_ws_inner_tick_poll_cap_seconds: float = 90.0
     companion_ws_inner_tick_blocked_max_seconds: float = 60.0
@@ -737,6 +739,12 @@ def _validate_config(config: Config):
     ):
         raise ValueError(
             "app.features.companion_ws_inner_tick_min_gap_seconds must be between 0 and 604800"
+        )
+    if feats.companion_ws_inner_tick_first_after_user_seconds < 0.0 or (
+        feats.companion_ws_inner_tick_first_after_user_seconds > 3600.0
+    ):
+        raise ValueError(
+            "app.features.companion_ws_inner_tick_first_after_user_seconds must be between 0 and 3600"
         )
     if feats.companion_ws_inner_tick_poll_cap_seconds < 1.0 or (
         feats.companion_ws_inner_tick_poll_cap_seconds > 3600.0

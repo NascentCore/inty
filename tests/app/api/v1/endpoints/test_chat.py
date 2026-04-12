@@ -1105,7 +1105,24 @@ def test_chat_websocket_companion_inner_tick_push(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     user = _make_user(auth_type=AuthType.GOOGLE)
-    captured: dict = {"inner_calls": 0, "mono": [50_000.0], "wait_phase": 0}
+    captured: dict = {"inner_calls": 0, "mono": [50_000.0], "wait_phase": 0, "usage": []}
+
+    async def fake_inner_limit_check(db, user):
+        return True, 0, 100
+
+    async def fake_inner_record_usage(db, user_id, kind, amount, extra_data=None):
+        captured["usage"].append((kind, amount, extra_data))
+
+    monkeypatch.setattr(
+        global_subscription_service,
+        "check_chat_limit",
+        fake_inner_limit_check,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "record_usage",
+        fake_inner_record_usage,
+    )
 
     async def fake_ws_user(websocket, db):
         return user
@@ -1117,6 +1134,7 @@ def test_chat_websocket_companion_inner_tick_push(
                 "chat_id": "99",
                 "session_id": "sess-inner",
                 "resolved_chat_model_id": "m1",
+                "last_companion_user_turn_mono": 50_000.0,
             }
         )
         return APIResponse.success(
@@ -1241,6 +1259,99 @@ def test_chat_websocket_companion_inner_tick_push(
     assert second["data"]["choices"][0]["message"]["content"] == "inner-body"
     assert captured["inner_calls"] == 1
     assert captured.get("user_meta", {}).get("companionInnerTick") is True
+    assert len(captured["usage"]) == 1
+    assert captured["usage"][0][0] == "chat"
+    assert captured["usage"][0][1] == 1
+    assert captured["usage"][0][2].get("companion_inner_tick") is True
+
+
+def test_chat_websocket_companion_inner_tick_skipped_when_chat_limit(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    captured: dict = {"mono": [50_000.0], "wait_phase": 0}
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(**kwargs):
+        chat_v1.chat_ws_inner_tick_last_context.set(
+            {
+                "agent_id": "agent-inner",
+                "chat_id": "99",
+                "session_id": "sess-inner",
+                "resolved_chat_model_id": "m1",
+                "last_companion_user_turn_mono": 50_000.0,
+            }
+        )
+        return APIResponse.success(
+            data={
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "user-turn"},
+                        "finish_reason": "stop",
+                    }
+                ],
+            }
+        )
+
+    def fake_monotonic() -> float:
+        return captured["mono"][0]
+
+    real_wait = asyncio.wait
+
+    async def fake_wait(fs, timeout=None, return_when=asyncio.FIRST_COMPLETED):
+        captured["wait_phase"] += 1
+        if captured["wait_phase"] == 1:
+            return await real_wait(fs, timeout=30.0, return_when=return_when)
+        if timeout is not None and timeout > 0:
+            captured["mono"][0] += float(timeout)
+        return (set(), fs)
+
+    async def fake_inner_limit_check(db, user):
+        return False, 100, 100
+
+    monkeypatch.setattr(
+        global_subscription_service,
+        "check_chat_limit",
+        fake_inner_limit_check,
+    )
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+    monkeypatch.setattr(chat_v1.time, "monotonic", fake_monotonic)
+    monkeypatch.setattr(chat_v1.asyncio, "wait", fake_wait)
+    monkeypatch.setattr(
+        companion_chat_service,
+        "use_companion_kernel_for_agent",
+        lambda agent_id: True,
+    )
+    monkeypatch.setattr(chat_v1, "_chat_ws_idle_timeout_seconds", lambda: 0.05)
+
+    inner_called = {"n": 0}
+
+    async def fake_inner_track(**kwargs):
+        inner_called["n"] += 1
+        return "should-not"
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "run_companion_inner_tick_turn_for_api",
+        fake_inner_track,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-inner",
+                    "request": {"messages": [{"role": "user", "content": "hi"}]},
+                }
+            )
+            websocket.receive_json()
+
+    assert inner_called["n"] == 0
 
 
 def test_chat_websocket_assume_user_id_ignored_for_non_superuser(

@@ -109,6 +109,7 @@ def companion_ws_inner_tick_wait_seconds(
     chat_id: str | int,
     resolved_chat_model_id: str,
     last_inner_fire_monotonic: float | None,
+    last_chat_turn_complete_monotonic: float | None,
 ) -> float:
     feats = global_config_loaded_from_config_yaml.app.features
     manager = _companion_manager_for_resolved_model(resolved_chat_model_id)
@@ -117,6 +118,8 @@ def companion_ws_inner_tick_wait_seconds(
         session.workspace_path,
         session.store,
         last_inner_fire_monotonic=last_inner_fire_monotonic,
+        last_chat_turn_complete_monotonic=last_chat_turn_complete_monotonic,
+        first_after_user_seconds=feats.companion_ws_inner_tick_first_after_user_seconds,
         min_gap_seconds=feats.companion_ws_inner_tick_min_gap_seconds,
         min_transcript_messages=feats.companion_ws_inner_tick_min_transcript_messages,
         poll_cap_seconds=feats.companion_ws_inner_tick_poll_cap_seconds,

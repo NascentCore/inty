@@ -47,6 +47,8 @@ def next_companion_inner_tick_wait_seconds(
     store: MemoryStore,
     *,
     last_inner_fire_monotonic: float | None,
+    last_chat_turn_complete_monotonic: float | None,
+    first_after_user_seconds: float,
     min_gap_seconds: float,
     min_transcript_messages: int,
     poll_cap_seconds: float,
@@ -72,10 +74,17 @@ def next_companion_inner_tick_wait_seconds(
         return blocked_sleep
 
     min_gap = max(0.0, float(min_gap_seconds))
-    if last_inner_fire_monotonic is None:
+    first_after = max(0.0, float(first_after_user_seconds))
+
+    t_after_user = 0.0
+    if last_inner_fire_monotonic is None and last_chat_turn_complete_monotonic is not None:
+        t_after_user = max(0.0, first_after - (now - last_chat_turn_complete_monotonic))
+
+    t_after_inner = 0.0
+    if last_inner_fire_monotonic is not None:
+        t_after_inner = max(0.0, min_gap - (now - last_inner_fire_monotonic))
+
+    need = max(t_after_user, t_after_inner)
+    if need <= 0.0:
         return 0.0
-    elapsed = now - last_inner_fire_monotonic
-    remain = min_gap - elapsed
-    if remain <= 0.0:
-        return 0.0
-    return min(remain, poll)
+    return min(need, poll)

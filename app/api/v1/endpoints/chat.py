@@ -675,6 +675,7 @@ async def agent_chat_completions(
                             "chat_id": str(chat.id),
                             "session_id": session_id,
                             "resolved_chat_model_id": model_override,
+                            "last_companion_user_turn_mono": time.monotonic(),
                         }
                     )
                 else:
@@ -1015,20 +1016,27 @@ async def chat_completions_websocket(
             idle_deadline = last_activity_mono + idle_sec
             now = time.monotonic()
             inner_deadline: float | None = None
-            feats = global_config_loaded_from_config_yaml.app.features
             ctx = chat_ws_inner_tick_last_context.get()
             if ctx is not None and companion_chat_service.use_companion_kernel_for_agent(
                 ctx["agent_id"]
             ):
-                w = companion_chat_service.companion_ws_inner_tick_wait_seconds(
-                    user_id=current_user.id,
-                    agent_id=ctx["agent_id"],
-                    chat_id=ctx["chat_id"],
-                    resolved_chat_model_id=ctx["resolved_chat_model_id"],
-                    last_inner_fire_monotonic=inner_last_fire_mono,
-                )
-                if w < 86400.0 * 30:
-                    inner_deadline = now + max(0.0, w)
+                limit_ok, _, _ = await subscription_svc.check_chat_limit(db, current_user)
+                if limit_ok:
+                    user_turn_mono = ctx.get("last_companion_user_turn_mono")
+                    if not isinstance(user_turn_mono, (int, float)):
+                        user_turn_mono = None
+                    else:
+                        user_turn_mono = float(user_turn_mono)
+                    w = companion_chat_service.companion_ws_inner_tick_wait_seconds(
+                        user_id=current_user.id,
+                        agent_id=ctx["agent_id"],
+                        chat_id=ctx["chat_id"],
+                        resolved_chat_model_id=ctx["resolved_chat_model_id"],
+                        last_inner_fire_monotonic=inner_last_fire_mono,
+                        last_chat_turn_complete_monotonic=user_turn_mono,
+                    )
+                    if w < float(idle_sec):
+                        inner_deadline = now + max(0.0, w)
 
             if inner_deadline is None:
                 timeout = max(0.001, idle_deadline - now)
@@ -1071,6 +1079,13 @@ async def chat_completions_websocket(
                 response_data = response.model_dump(exclude_none=True)
                 response_data["agent_id"] = websocket_request.agent_id
                 await websocket.send_json(response_data)
+                if (
+                    response.code == 200
+                    and not companion_chat_service.use_companion_kernel_for_agent(
+                        websocket_request.agent_id
+                    )
+                ):
+                    chat_ws_inner_tick_last_context.set(None)
                 continue
 
             now2 = time.monotonic()
@@ -1096,6 +1111,27 @@ async def chat_completions_websocket(
                     continue
                 inner_last_fire_mono = time.monotonic()
                 last_activity_mono = inner_last_fire_mono
+                try:
+                    with log_time(
+                        f"record_usage companion_inner_tick user_id={current_user.id}"
+                    ):
+                        await subscription_svc.record_usage(
+                            db,
+                            current_user.id,
+                            "chat",
+                            1,
+                            extra_data={
+                                "agent_id": ctx2["agent_id"],
+                                "message_length": 0,
+                                "companion_inner_tick": True,
+                            },
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "record_usage companion_inner_tick failed user_id={} err={}",
+                        current_user.id,
+                        str(e),
+                    )
                 session_id_inner = ctx2["session_id"]
                 await chat_history_service.add_user_message_async(
                     session_id_inner,
