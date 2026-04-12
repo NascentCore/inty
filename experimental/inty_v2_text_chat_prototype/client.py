@@ -21,7 +21,7 @@ from app.core.agentic_kernel.providers.facade import (
 )
 from .env_util import env_flag_enabled
 
-_DEFAULT_MODEL = "deepseek/deepseek-v3.2"
+_DEFAULT_MODEL = "google/gemini-2.5-flash"
 
 _CLIENT: OpenAI | None = None
 # 双路并行（chat 无 tools + tool 全量）：LangSmith 中需区分 run 名称，故分两个 wrap_openai 实例。
