@@ -1,3 +1,6 @@
+import tempfile
+from pathlib import Path
+
 import pytest
 
 from app.utils.companion_feature_defaults import (
@@ -23,6 +26,7 @@ from app.utils.config import (
     SecurityConfig,
     VerificationConfig,
     _validate_config,
+    load_config,
 )
 
 
@@ -381,3 +385,32 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
         "dev1@example.com",
         "dev2@example.com",
     ]
+
+
+def test_load_config_ignores_deprecated_chat_use_companion_kernel_agent_ids():
+    yaml_text = """
+app:
+  name: loadcfg-ws-companion-test
+  environment: test
+  gcp_service_account_key: ".secrets/inty-backend-key.json"
+  features:
+    chat_use_companion_kernel_agent_ids: ["should-be-ignored"]
+security:
+  secret_key: "test-secret"
+database:
+  host: localhost
+agent:
+  api_key: "test-openrouter"
+  langchain_api_key: "test-langchain"
+gcs:
+  bucket: "test-bucket"
+firebase:
+  service_account_path: "test-firebase.json"
+elevenlabs:
+  api_key: "test-eleven"
+"""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert not hasattr(cfg.app.features, "chat_use_companion_kernel_agent_ids")

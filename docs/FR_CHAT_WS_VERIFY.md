@@ -8,10 +8,10 @@
 
 | 路径 | 用途 | 是否写入 chat_history |
 |------|------|------------------------|
-| `WebSocket /api/v1/chat/ws` | 生产：一发一收，请求/响应 JSON 与 POST completions 同构；命中 companion allowlist 时走 inty v2 kernel（POST 始终 legacy） | 是 |
+| `WebSocket /api/v1/chat/ws` | 生产：一发一收，请求/响应 JSON 与 POST completions 同构；始终走 inty v2 companion kernel（POST 始终 legacy） | 是 |
 | `WebSocket /api/v1/chat/ws/verify` | 校验：协议相同，仅用于验证连接与对话效果 | 否 |
 
-- **引擎对齐**：生产 `/ws` 走 `_agent_chat_completions_impl`（落库），allowlist 命中时用 companion kernel；`POST /completions` 始终 legacy `Agent`。`/ws/verify` 仍走 `generate_message_without_user_save`。按 [FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md](/docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md) 第 7 节统一 verify 或保留 QA 差异说明。
+- **引擎对齐**：生产 `/ws` 走 `_agent_chat_completions_impl`（落库），始终用 companion kernel；`POST /completions` 始终 legacy `Agent`。`/ws/verify` 仍走 `generate_message_without_user_save`。按 [FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md](/docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md) 第 7 节统一 verify 或保留 QA 差异说明。
 - **Base URL**：与现有 HTTP API 一致，如 `wss://<host>/api/v1/chat/ws` 或 `wss://<host>/api/v1/chat/ws/verify`（HTTPS 环境用 `wss`，HTTP 用 `ws`）。
 - **兼容性**：老版本 App 可继续使用 `POST /api/v1/chat/completions/{agent_id}` 或现有 `/api/v1/chat/ws`，无需改动。
 
@@ -169,7 +169,7 @@
 ### 4.1 现有生产端点 `/api/v1/chat/ws`
 
 - **一发一收**：客户端发送一条上行消息后，应等待一条下行消息（成功或失败），再发送下一条；同一连接上可顺序多发，但服务端按「收到一条、处理一条、回一条」的模式工作。
-- **落库**：用户消息与 AI 回复会写入 `chat_history`（与 POST completions 一致）；命中 companion allowlist 时推理引擎与 POST 不同。
+- **落库**：用户消息与 AI 回复会写入 `chat_history`（与 POST completions 一致）；生产 `/ws` 始终走 companion kernel，推理引擎与 POST 不同。
 - **多角色**：同一连接可发送不同 `agent_id` 的请求，下行通过 `agent_id` 区分。
 
 ### 4.2 校验端点 `/api/v1/chat/ws/verify`

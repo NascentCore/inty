@@ -813,12 +813,6 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        ["agent-companion-1"],
-        raising=False,
-    )
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
         "companion_workspaces_base_dir",
         "/tmp/inty_test_companion_ws",
         raising=False,
@@ -978,25 +972,13 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     assert captured.get("agent_chat_called") is True
 
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [],
-        raising=False,
-    )
 
 
 def test_chat_websocket_companion_kernel_branch_writes_history(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """Allowlisted agent_id on WebSocket uses companion kernel (same stubs as HTTP path)."""
+    """WebSocket /api/v1/chat/ws always uses companion kernel (same stubs as HTTP path)."""
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        ["agent-companion-ws"],
-        raising=False,
-    )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_workspaces_base_dir",
@@ -1170,12 +1152,6 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["ai_save"][1] == "companion-ws-reply"
 
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [],
-        raising=False,
-    )
 
 
 def test_chat_websocket_reuses_connection_for_multiple_agents(
