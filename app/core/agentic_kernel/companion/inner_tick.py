@@ -19,7 +19,6 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
     "请结合上文与「内在活动（ai_private）」行事；不要向用户解释本机制，不要提系统、节拍、等待。）"
 )
 
-_DISABLED_WAIT_SEC = 86400.0 * 365.0
 _AI_PRIVATE_MAX_CHARS = 12_000
 
 
@@ -47,7 +46,6 @@ def next_companion_inner_tick_wait_seconds(
     workspace: Path,
     store: MemoryStore,
     *,
-    enabled: bool,
     last_inner_fire_monotonic: float | None,
     min_gap_seconds: float,
     min_transcript_messages: int,
@@ -57,11 +55,8 @@ def next_companion_inner_tick_wait_seconds(
 ) -> float:
     """
     Seconds until an inner tick may run; <= 0 means eligible now (subject to transcript).
-    When disabled or workspace not ready, returns a very large value.
+    When workspace not ready for inner tick, returns a short poll-like wait.
     """
-    if not enabled:
-        return _DISABLED_WAIT_SEC
-
     now = now_monotonic if now_monotonic is not None else time.monotonic()
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)

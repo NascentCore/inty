@@ -1184,12 +1184,6 @@ def test_chat_websocket_companion_inner_tick_push(
     monkeypatch.setattr(chat_v1.time, "monotonic", fake_monotonic)
     monkeypatch.setattr(chat_v1.asyncio, "wait", fake_wait)
     monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_inner_tick_enabled",
-        True,
-        raising=False,
-    )
-    monkeypatch.setattr(
         companion_chat_service,
         "use_companion_kernel_for_agent",
         lambda agent_id: True,
@@ -1247,13 +1241,6 @@ def test_chat_websocket_companion_inner_tick_push(
     assert second["data"]["choices"][0]["message"]["content"] == "inner-body"
     assert captured["inner_calls"] == 1
     assert captured.get("user_meta", {}).get("companionInnerTick") is True
-
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_ws_inner_tick_enabled",
-        False,
-        raising=False,
-    )
 
 
 def test_chat_websocket_assume_user_id_ignored_for_non_superuser(

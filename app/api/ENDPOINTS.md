@@ -110,7 +110,7 @@ Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页�
 >
 > **Chat WebSocket idle**：`app.features.chat_ws_idle_timeout_seconds`（默认 60）秒内无上行文本帧则关闭连接；`ping`/`pong` 计入上行。
 >
-> **Companion inner tick on `/api/v1/chat/ws`**（默认关闭）：当 `app.features.companion_ws_inner_tick_enabled` 为 `true`、且该连接上最近一次成功完成的聊天回合走了 companion kernel（`chat_use_companion_kernel_agent_ids` 命中）时，服务端在「空闲等待」与「内在节拍」二者中取**较短**的 `asyncio.wait` 超时；到期且 transcript 满足条件时额外推送一条 JSON，顶层含 `companion_inner_tick: true`，`data` 形状与正常聊天回合一致（assistant 文本可能为空）。该推送会写入 `chat_history`（用户行 `content` 可为空字符串，`meta_data.companionInnerTick: true`）。可调：`companion_ws_inner_tick_min_gap_seconds`、`companion_ws_inner_tick_min_transcript_messages`、`companion_ws_inner_tick_poll_cap_seconds`、`companion_ws_inner_tick_blocked_max_seconds`。
+> **Companion inner tick on `/api/v1/chat/ws`**（默认开启，无单独开关）：当该连接上最近一次成功完成的聊天回合走了 companion kernel（`chat_use_companion_kernel_agent_ids` 命中）时，服务端在「空闲等待」与「内在节拍」二者中取**较短**的 `asyncio.wait` 超时；到期且 transcript 满足条件时额外推送一条 JSON，顶层含 `companion_inner_tick: true`，`data` 形状与正常聊天回合一致（assistant 文本可能为空）。该推送会写入 `chat_history`（用户行 `content` 可为空字符串，`meta_data.companionInnerTick: true`）。可调：`companion_ws_inner_tick_min_gap_seconds`、`companion_ws_inner_tick_min_transcript_messages`、`companion_ws_inner_tick_poll_cap_seconds`、`companion_ws_inner_tick_blocked_max_seconds`。
 
 ### 聊天会话 (Chats)
 

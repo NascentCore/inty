@@ -159,9 +159,8 @@ class FeaturesConfig:
     companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
     companion_default_context_mode: str = "intimate"
-    # WebSocket /api/v1/chat/ws: when True and the last completed turn used the companion kernel,
-    # the server may run an intrinsic-beat (inner_tick) turn on idle between min(idle, inner_wait).
-    companion_ws_inner_tick_enabled: bool = False
+    # WebSocket /api/v1/chat/ws: when the last completed turn used the companion kernel, the server
+    # may run an intrinsic-beat (inner_tick) turn on idle between min(idle, inner_wait).
     companion_ws_inner_tick_min_gap_seconds: float = 120.0
     companion_ws_inner_tick_min_transcript_messages: int = 2
     companion_ws_inner_tick_poll_cap_seconds: float = 90.0

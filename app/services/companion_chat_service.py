@@ -116,7 +116,6 @@ def companion_ws_inner_tick_wait_seconds(
     return next_companion_inner_tick_wait_seconds(
         session.workspace_path,
         session.store,
-        enabled=feats.companion_ws_inner_tick_enabled,
         last_inner_fire_monotonic=last_inner_fire_monotonic,
         min_gap_seconds=feats.companion_ws_inner_tick_min_gap_seconds,
         min_transcript_messages=feats.companion_ws_inner_tick_min_transcript_messages,

@@ -1017,10 +1017,8 @@ async def chat_completions_websocket(
             inner_deadline: float | None = None
             feats = global_config_loaded_from_config_yaml.app.features
             ctx = chat_ws_inner_tick_last_context.get()
-            if (
-                feats.companion_ws_inner_tick_enabled
-                and ctx is not None
-                and companion_chat_service.use_companion_kernel_for_agent(ctx["agent_id"])
+            if ctx is not None and companion_chat_service.use_companion_kernel_for_agent(
+                ctx["agent_id"]
             ):
                 w = companion_chat_service.companion_ws_inner_tick_wait_seconds(
                     user_id=current_user.id,
