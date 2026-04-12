@@ -184,8 +184,13 @@ def load_transcript_from_store(
 TRANSCRIPT_WINDOW_MAX_MESSAGES: int = 20
 
 
-def transcript_for_llm_turn(loaded: list[ChatMessage]) -> list[ChatMessage]:
+def transcript_for_llm_turn(
+    loaded: list[ChatMessage], *, max_messages: int | None = None
+) -> list[ChatMessage]:
     """组装送入本轮 chat.completions 的历史消息尾部窗口。"""
-    if len(loaded) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
+    cap = max_messages if max_messages is not None else TRANSCRIPT_WINDOW_MAX_MESSAGES
+    if cap < 1:
+        cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
+    if len(loaded) <= cap:
         return loaded
-    return loaded[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
+    return loaded[-cap:]

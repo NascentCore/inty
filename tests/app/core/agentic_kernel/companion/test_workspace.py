@@ -28,6 +28,7 @@ def test_workspace_paths_properties(tmp_path: Path) -> None:
     assert p.memory_raw_diary("2026-04-05") == root / "memory" / "daily" / "2026-04-05.md"
     assert p.memory_day_summary("2026-04-05") == root / "memory" / "2026-04-05.md"
     assert p.memory_pipeline_state_json == root / ".companion_memory_pipeline.json"
+    assert p.context_compaction_state_json == root / ".companion_context_compaction_state.json"
     assert p.schedule_queue_json == root / ".companion_schedule_tasks.json"
 
 

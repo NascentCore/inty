@@ -66,6 +66,16 @@ def test_transcript_for_llm_turn_truncate() -> None:
     assert out[0].content == str(25 - TRANSCRIPT_WINDOW_MAX_MESSAGES)
 
 
+def test_transcript_for_llm_turn_custom_window() -> None:
+    loaded = [
+        ChatMessage(role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z")
+        for i in range(15)
+    ]
+    out = transcript_for_llm_turn(loaded, max_messages=8)
+    assert len(out) == 8
+    assert out[0].content == str(15 - 8)
+
+
 def test_load_transcript_empty_file(tmp_path: Path) -> None:
     missing = tmp_path / "missing.jsonl"
     assert load_transcript(missing) == []

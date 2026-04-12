@@ -81,6 +81,10 @@ class WorkspacePaths:
         return self.root / f"{self.state_file_prefix}_memory_pipeline.json"
 
     @property
+    def context_compaction_state_json(self) -> Path:
+        return self.root / f"{self.state_file_prefix}_context_compaction_state.json"
+
+    @property
     def schedule_queue_json(self) -> Path:
         return self.root / f"{self.state_file_prefix}_schedule_tasks.json"
 

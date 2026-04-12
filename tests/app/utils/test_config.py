@@ -1,8 +1,12 @@
 import pytest
 
+from app.utils.companion_feature_defaults import (
+    DEFAULT_COMPANION_FEATURE_COMPACTION,
+)
 from app.utils.config import (
     AgentConfig,
     AppConfig,
+    FeaturesConfig,
     CloudflareConfig,
     Config,
     DatabaseSettings,
@@ -248,6 +252,49 @@ def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(con
     # 应该不抛出异常
     _validate_config(config)
     assert config.app.limits.test_only_guest_user_image_gen_24h_limit == 0
+
+
+def test_features_config_default_companion_transcript_compaction():
+    f = FeaturesConfig()
+    assert f.companion_transcript_compaction is not None
+    assert f.companion_transcript_compaction == DEFAULT_COMPANION_FEATURE_COMPACTION
+
+
+def test_features_config_companion_transcript_compaction_null_disables():
+    f = FeaturesConfig(companion_transcript_compaction=None)
+    assert f.companion_transcript_compaction is None
+
+
+def test_companion_transcript_compaction_config_validates(config):
+    config.app.features = FeaturesConfig(
+        companion_transcript_compaction={
+            "max_context_chars": 12000,
+            "keep_recent_messages": 24,
+            "max_messages_per_episode": 6,
+            "max_episodic_entries": 8,
+            "max_semantic_entries": 8,
+            "summary_max_chars": 800,
+            "retrieval_episode_count": 3,
+            "retrieval_semantic_count": 4,
+            "retrieval_open_loop_count": 3,
+        },
+        companion_transcript_llm_window_max_messages=80,
+    )
+    _validate_config(config)
+
+
+def test_companion_transcript_compaction_invalid_raises(config):
+    config.app.features = FeaturesConfig(
+        companion_transcript_compaction={"max_context_chars": 50},
+    )
+    with pytest.raises(ValueError):
+        _validate_config(config)
+
+
+def test_companion_transcript_window_out_of_range_raises(config):
+    config.app.features = FeaturesConfig(companion_transcript_llm_window_max_messages=1)
+    with pytest.raises(ValueError):
+        _validate_config(config)
 
 
 def test_name_for_openrouter_dev_environment():

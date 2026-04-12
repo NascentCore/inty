@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -9,12 +11,17 @@ from loguru import logger
 
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
+from app.core.agentic_kernel.companion.transcript_compaction import (
+    CompactionConfig as TranscriptCompactionConfig,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 
 
 @lru_cache(maxsize=1)
 def _companion_agent_id_allowlist() -> frozenset[str]:
-    raw = global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
+    raw = (
+        global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
+    )
     if not raw:
         return frozenset()
     return frozenset(str(x).strip() for x in raw if str(x).strip())
@@ -31,8 +38,24 @@ def clear_companion_chat_service_caches() -> None:
     _companion_manager_for_resolved_model.cache_clear()
 
 
-@lru_cache(maxsize=32)
-def _companion_manager_for_resolved_model(resolved_chat_model_id: str) -> CompanionManager:
+def _companion_runtime_config_fingerprint() -> str:
+    feats = global_config_loaded_from_config_yaml.app.features
+    raw = feats.companion_transcript_compaction
+    raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
+    parts = [
+        str(feats.companion_workspaces_base_dir),
+        str(feats.companion_default_context_mode),
+        raw_json,
+        str(feats.companion_transcript_llm_window_max_messages or ""),
+    ]
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
+
+
+@lru_cache(maxsize=64)
+def _companion_manager_for_resolved_model(
+    resolved_chat_model_id: str, runtime_fingerprint: str
+) -> CompanionManager:
+    _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
     base = Path(feats.companion_workspaces_base_dir).expanduser()
@@ -50,11 +73,19 @@ def _companion_manager_for_resolved_model(resolved_chat_model_id: str) -> Compan
         user_model=resolved_chat_model_id,
         soul_model=resolved_chat_model_id,
     )
+    tc_raw = feats.companion_transcript_compaction
+    transcript_compaction = (
+        TranscriptCompactionConfig.model_validate(tc_raw)
+        if tc_raw is not None
+        else None
+    )
     companion_cfg = CompanionConfig(
         workspaces_base_dir=str(base),
         memory_pg_dsn=cfg.database.url,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
+        transcript_compaction=transcript_compaction,
+        transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
     )
     return CompanionManager(companion_cfg)
 
@@ -76,7 +107,9 @@ async def run_companion_chat_turn_for_api(
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from ``agent_chat_completions``).
     """
-    manager = _companion_manager_for_resolved_model(resolved_chat_model_id)
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id, _companion_runtime_config_fingerprint()
+    )
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
     if not session.is_initialized:
