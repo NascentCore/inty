@@ -155,8 +155,8 @@ class FeaturesConfig:
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # When non-empty, chat completions and /api/v1/chat/ws use the agentic companion kernel (inty v2 REPL
-    # same code path) for these agent UUIDs instead of the legacy Agent stack.
+    # When non-empty, WebSocket /api/v1/chat/ws uses the agentic companion kernel (inty v2 REPL same
+    # code path) for these agent UUIDs. POST /api/v1/chat/completions/{agent_id} always uses the legacy Agent stack.
     chat_use_companion_kernel_agent_ids: List[str] = field(default_factory=list)
     # On-disk base directory for companion workspaces (user_id / agent_id / chat_id).
     companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"

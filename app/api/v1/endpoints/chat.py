@@ -3,7 +3,7 @@ import json
 import time
 import uuid
 from types import SimpleNamespace
-from typing import Any, List, Optional, TypeAlias, Union
+from typing import Any, List, Literal, Optional, TypeAlias, Union
 
 from fastapi import (
     APIRouter,
@@ -496,36 +496,17 @@ async def _try_generate_premium_preview_choice(
     return _build_premium_preview_choice(preview_content)
 
 
-@router.post(
-    "/completions/{agent_id}",
-    response_model=schemas.APIResponse[dict],
-    summary="返回与指定 Agent 聊天的下一条消息",
-    description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
-    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
-)
-async def agent_chat_completions(
+async def _agent_chat_completions_impl(
     *,
-    db: AsyncSession = Depends(deps.get_async_db),
+    db: AsyncSession,
     agent_id: str,
     request: ChatCompletionRequest,
-    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
-    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
-    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
-    voice_svc: VoiceService = Depends(deps.get_voice_service),
-):
-    """
-    基于Agent ID的OpenAI风格聊天接口；evaluation 可传 X-Assume-User-Id 以该用户身份聊天并加载其历史。
-    如果用户还没有和该Agent创建会话，则自动创建
-    """
-    if (
-        global_config_loaded_from_config_yaml.app.api_endpoints.disable_api_v1_chat_completions
-    ):
-        raise HTTPException(
-            status_code=404, detail="API v1 chat completions is disabled"
-        )
-    if request.stream:
-        raise HTTPException(status_code=400, detail="Stream is not supported")
-
+    current_user: schemas.User,
+    app_version_code: Optional[int],
+    subscription_svc: SubscriptionService,
+    voice_svc: VoiceService,
+    chat_route: Literal["http", "websocket"],
+) -> schemas.APIResponse[dict]:
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -620,8 +601,9 @@ async def agent_chat_completions(
                 logger.debug(
                     f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
-                use_companion = companion_chat_service.use_companion_kernel_for_agent(
-                    agent_id
+                use_companion = (
+                    chat_route == "websocket"
+                    and companion_chat_service.use_companion_kernel_for_agent(agent_id)
                 )
                 if use_companion:
                     companion_reply = (
@@ -963,6 +945,48 @@ async def agent_chat_completions(
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
+@router.post(
+    "/completions/{agent_id}",
+    response_model=schemas.APIResponse[dict],
+    summary="返回与指定 Agent 聊天的下一条消息",
+    description="可以处理包括图片在内的各种消息类型，媒体类型应该先上传，然后将 URL 作为索引发送到此 API",
+    tags=[ANDROID_APP_TAG, WEB_APP_TAG, INTY_EVAL_TAG],
+)
+async def agent_chat_completions(
+    *,
+    db: AsyncSession = Depends(deps.get_async_db),
+    agent_id: str,
+    request: ChatCompletionRequest,
+    current_user: schemas.User = Depends(deps.get_effective_user_for_eval),
+    app_version_code: Optional[int] = Header(None, alias="appVersionCode"),
+    subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
+    voice_svc: VoiceService = Depends(deps.get_voice_service),
+):
+    """
+    基于Agent ID的OpenAI风格聊天接口；evaluation 可传 X-Assume-User-Id 以该用户身份聊天并加载其历史。
+    如果用户还没有和该Agent创建会话，则自动创建
+    """
+    if (
+        global_config_loaded_from_config_yaml.app.api_endpoints.disable_api_v1_chat_completions
+    ):
+        raise HTTPException(
+            status_code=404, detail="API v1 chat completions is disabled"
+        )
+    if request.stream:
+        raise HTTPException(status_code=400, detail="Stream is not supported")
+
+    return await _agent_chat_completions_impl(
+        db=db,
+        agent_id=agent_id,
+        request=request,
+        current_user=current_user,
+        app_version_code=app_version_code,
+        subscription_svc=subscription_svc,
+        voice_svc=voice_svc,
+        chat_route="http",
+    )
+
+
 @router.websocket("/ws")
 async def chat_completions_websocket(
     websocket: WebSocket,
@@ -1011,7 +1035,7 @@ async def chat_completions_websocket(
                 websocket_request.request,
                 tc_box[0],
             )
-            response = await agent_chat_completions(
+            response = await _agent_chat_completions_impl(
                 db=db,
                 agent_id=websocket_request.agent_id,
                 request=merged_request,
@@ -1019,6 +1043,7 @@ async def chat_completions_websocket(
                 app_version_code=app_version_code,
                 subscription_svc=subscription_svc,
                 voice_svc=voice_svc,
+                chat_route="websocket",
             )
             response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = websocket_request.agent_id
