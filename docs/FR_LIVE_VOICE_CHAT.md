@@ -84,6 +84,29 @@ gemini_live:
 ws://<host>/api/v1/live-chat/{agent_id}
 ```
 
+#### 可选 query（客户端/SDK 按会话选语言）
+
+在鉴权参数之外可追加（均可选；不传则使用 `config.yaml` 里 `gemini_live` 的默认语言）：
+
+| 参数 | 含义 |
+| ---- | ---- |
+| `speech_language_code` | BCP-47 风格标签，写入 Gemini `SpeechConfig.language_code`（如 `en-US`、`ar-SA`） |
+| `response_language_name` | 英文可读语言名，写入 system instruction 的 “ONLY in …” 策略（如 `English`、`Arabic`） |
+
+规则：
+
+- `speech_language_code`：仅允许 ASCII 字母数字及 `-` `_`，长度不超过 64，不得含空格或控制字符。
+- `response_language_name`：仅允许英文字母与空格，长度不超过 128；按空格分词后不得出现 `ignore`、`system`、`previous` 等注入常用词（完整列表见 `app/schemas/live_chat.py` 中 `_RESPONSE_LANGUAGE_FORBIDDEN_WORDS`）。
+- 若只传 `speech_language_code`，未传 `response_language_name` 时，回复语言策略会回退为与该 code 相同的字符串（仍为上述字符集约束下的值）。
+- 非法参数：握手未完成前关闭，**WebSocket close code 4000**（reason: `Invalid language parameters`）。
+
+#### HTTP：`GET /api/v1/live-chat/status`
+
+在原有字段外，`data` 增加：
+
+- `default_speech_language_code`：服务端 `gemini_live.speech_language_code`
+- `default_response_language_name`：服务端 `gemini_live.response_language_name`
+
 #### 鉴权方式（推荐）
 
 WebSocket 与其他 HTTP 接口保持一致，使用请求头：

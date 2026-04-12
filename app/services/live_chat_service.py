@@ -197,6 +197,7 @@ class LiveChatService:
         self,
         agent_data: dict,
         history_messages: List[Any],
+        merged_response_language_name: Optional[str] = None,
     ) -> str:
         """
         构建 Gemini Live 的 system instruction
@@ -224,20 +225,29 @@ class LiveChatService:
             if history_summary:
                 parts.append(f"## 之前的对话\n{history_summary}")
 
-        parts.append(self._build_live_response_constraints())
+        parts.append(
+            self._build_live_response_constraints(
+                merged_response_language_name=merged_response_language_name
+            )
+        )
 
         return "\n\n".join(parts)
 
-    def _build_live_response_constraints(self) -> str:
+    def _build_live_response_constraints(
+        self, merged_response_language_name: Optional[str] = None
+    ) -> str:
         """构建 Live 对话回复约束。"""
         parts = [
             "## 输出格式\n"
             "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
         ]
 
-        response_language_name = (
-            getattr(self._config, "response_language_name", "") or ""
-        ).strip()
+        if merged_response_language_name is None:
+            response_language_name = (
+                getattr(self._config, "response_language_name", "") or ""
+            ).strip()
+        else:
+            response_language_name = (merged_response_language_name or "").strip()
         if response_language_name:
             parts.append(
                 "## Language policy\n"
@@ -265,7 +275,9 @@ class LiveChatService:
         return ""
 
     def _build_system_instruction_from_text_chat_system_messages(
-        self, system_messages: List[SystemMessage]
+        self,
+        system_messages: List[SystemMessage],
+        merged_response_language_name: Optional[str] = None,
     ) -> str:
         """
         用文本聊天系统消息构建 Live system instruction，保持与文本聊天一致。
@@ -275,7 +287,11 @@ class LiveChatService:
             text = self._message_content_to_text(getattr(message, "content", ""))
             if text:
                 instruction_parts.append(text)
-        instruction_parts.append(self._build_live_response_constraints())
+        instruction_parts.append(
+            self._build_live_response_constraints(
+                merged_response_language_name=merged_response_language_name
+            )
+        )
         return "\n\n".join(instruction_parts)
 
     def _build_prefill_turns_from_history_messages(
@@ -423,8 +439,25 @@ class LiveChatService:
         "Zubenelgenubi",
     }
 
+    def _resolved_speech_language_code(self, session: LiveSession) -> str:
+        ov = session.config.speech_language_code
+        if ov is not None and ov.strip():
+            return ov.strip()
+        return (getattr(self._config, "speech_language_code", "") or "").strip()
+
+    def _resolved_response_language_name(self, session: LiveSession) -> str:
+        ov = session.config.response_language_name
+        if ov is not None and ov.strip():
+            return ov.strip()
+        speech_ov = session.config.speech_language_code
+        if speech_ov is not None and speech_ov.strip():
+            return speech_ov.strip()
+        return (getattr(self._config, "response_language_name", "") or "").strip()
+
     def _build_live_config(
         self,
+        *,
+        merged_speech_language_code: str,
         voice_id: Optional[str] = None,
         agent_gender: Optional[str] = None,
         system_instruction: Optional[str] = None,
@@ -459,9 +492,7 @@ class LiveChatService:
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
             )
         }
-        speech_language_code = (
-            getattr(self._config, "speech_language_code", "") or ""
-        ).strip()
+        speech_language_code = (merged_speech_language_code or "").strip()
         speech_fields = getattr(types.SpeechConfig, "model_fields", {})
         if speech_language_code and "language_code" in speech_fields:
             speech_config_kwargs["language_code"] = speech_language_code
@@ -672,6 +703,10 @@ class LiveChatService:
             # 1) 文本聊天 system messages 作为 system_instruction
             # 2) 既有 user/AI 消息作为 turns 回放到 Live 模型
             prefill_turns: List[types.Content] = []
+            merged_response_language_name = self._resolved_response_language_name(
+                session
+            )
+            resolved_speech_code = self._resolved_speech_language_code(session)
             try:
                 agent = await agent_manager.get_agent(agent_data)
                 chat_settings = await get_or_create_chat_settings(
@@ -694,7 +729,8 @@ class LiveChatService:
                 )
                 system_instruction = (
                     self._build_system_instruction_from_text_chat_system_messages(
-                        text_chat_system_messages
+                        text_chat_system_messages,
+                        merged_response_language_name=merged_response_language_name,
                     )
                 )
                 prefill_turns = self._build_prefill_turns_from_history_messages(
@@ -708,7 +744,9 @@ class LiveChatService:
                     session.session_id
                 )
                 system_instruction = self._build_system_instruction(
-                    agent_data, history_messages
+                    agent_data,
+                    history_messages,
+                    merged_response_language_name=merged_response_language_name,
                 )
                 prefill_turns = self._build_prefill_turns_from_history_messages(
                     history_messages
@@ -717,6 +755,7 @@ class LiveChatService:
             voice_id = session.config.voice_id or agent_data.get("voice_id")
             agent_gender = agent_data.get("gender")
             live_config = self._build_live_config(
+                merged_speech_language_code=resolved_speech_code,
                 voice_id=voice_id,
                 agent_gender=agent_gender,
                 system_instruction=system_instruction,

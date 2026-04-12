@@ -5,7 +5,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 import pytest
 
 import app.services.live_chat_service as live_chat_module
-from app.services.live_chat_service import LiveChatService
+from app.schemas.live_chat import LiveChatConfig
+from app.services.live_chat_service import LiveChatService, LiveSession
 
 
 def _build_service_with_language_config() -> LiveChatService:
@@ -38,10 +39,51 @@ def test_build_system_instruction_includes_english_only_policy():
     assert "Never switch to any other language" in instruction
 
 
+def test_build_system_instruction_merged_response_language_override():
+    service = _build_service_with_language_config()
+
+    instruction = service._build_system_instruction(
+        agent_data={"personality": "P", "scenario": "S", "intro": "I"},
+        history_messages=[],
+        merged_response_language_name="Arabic",
+    )
+
+    assert "ONLY in Arabic" in instruction
+    assert "ONLY in English" not in instruction
+
+
+def test_resolved_response_language_falls_back_to_speech_code():
+    service = _build_service_with_language_config()
+    session = LiveSession(
+        session_id="s1",
+        agent_id="a1",
+        user_id="u1",
+        chat_id="c1",
+        config=LiveChatConfig(speech_language_code="ar-SA"),
+    )
+    assert service._resolved_response_language_name(session) == "ar-SA"
+    assert service._resolved_speech_language_code(session) == "ar-SA"
+
+
+def test_build_live_config_uses_merged_speech_override():
+    service = _build_service_with_language_config()
+
+    live_config = service._build_live_config(
+        merged_speech_language_code="ar-SA",
+        voice_id="Zephyr",
+        agent_gender="FEMALE",
+        system_instruction="test",
+    )
+
+    if "language_code" in getattr(types.SpeechConfig, "model_fields", {}):
+        assert live_config.speech_config.language_code == "ar-SA"
+
+
 def test_build_live_config_sets_speech_language_code_when_supported():
     service = _build_service_with_language_config()
 
     live_config = service._build_live_config(
+        merged_speech_language_code="en-US",
         voice_id="Zephyr",
         agent_gender="FEMALE",
         system_instruction="test",
@@ -66,6 +108,7 @@ def test_build_live_config_accepts_google_prefixed_voice_id():
     service = _build_service_with_language_config()
 
     live_config = service._build_live_config(
+        merged_speech_language_code="en-US",
         voice_id="google/Zephyr",
         agent_gender="FEMALE",
         system_instruction="test",
@@ -90,6 +133,7 @@ def test_build_live_config_non_gemini_voice_id_falls_back_without_error(
     monkeypatch.setattr(live_chat_module.logger, "error", fake_error)
 
     live_config = service._build_live_config(
+        merged_speech_language_code="en-US",
         voice_id="elevenlabs/2OMO1Tj9atc7AKQjMwxW",
         agent_gender="FEMALE",
         system_instruction="test",

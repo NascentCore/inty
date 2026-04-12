@@ -4,35 +4,40 @@
 CREATED_BY_AGENT
 """
 
+import contextlib
+import json
 import os
 
-import httpx
 import pytest
+from fastapi.testclient import TestClient as FastAPITestClient
 
+from app.api import deps
+from backend.inty.main import app
 from tests.app.api.test_client import TestClient
+from tests.app.api.v1.endpoints.conftest import _make_user
 
 API_BASE_URL = os.getenv("INTY_API_BASE_URL", "http://localhost:8000")
 
 
-@pytest.fixture
-def integration_client():
-    client = TestClient(API_BASE_URL)
-    client.create_user()
+@contextlib.contextmanager
+def _live_chat_status_client_with_auth():
+    async def override_get_current_user():
+        return _make_user()
+
+    app.dependency_overrides[deps.get_current_user] = override_get_current_user
     try:
-        yield client
+        with FastAPITestClient(app) as client:
+            yield client
     finally:
-        client.delete_user()
-        client.close()
+        app.dependency_overrides.pop(deps.get_current_user, None)
 
 
 class TestLiveChatStatus:
-    """测试实时语音通话状态接口"""
+    """测试实时语音通话状态接口（进程内 ASGI，不依赖已启动的 localhost:8000）"""
 
-    def test_get_live_chat_status(self, integration_client: TestClient):
-        """测试获取实时语音通话服务状态"""
-        response = integration_client.client.get(
-            f"{integration_client.base_url}/api/v1/live-chat/status"
-        )
+    def test_get_live_chat_status(self):
+        with _live_chat_status_client_with_auth() as client:
+            response = client.get("/api/v1/live-chat/status")
 
         assert response.status_code == 200
         data = response.json()
@@ -45,12 +50,13 @@ class TestLiveChatStatus:
         assert "default_voice" in status_data
         assert "send_sample_rate" in status_data
         assert "receive_sample_rate" in status_data
+        assert "default_speech_language_code" in status_data
+        assert "default_response_language_name" in status_data
 
     def test_get_live_chat_status_without_auth(self):
-        """测试未认证时获取状态"""
-        with httpx.Client() as client:
-            response = client.get(f"{API_BASE_URL}/api/v1/live-chat/status")
-            assert response.status_code == 401
+        with FastAPITestClient(app) as client:
+            response = client.get("/api/v1/live-chat/status")
+        assert response.status_code == 401
 
 
 class TestLiveChatWebSocket:
@@ -107,8 +113,6 @@ class TestLiveChatWebSocket:
         2. 有效的 Agent ID
         3. gemini_live.enabled = true
         """
-        import json
-
         import websocket
 
         ws_url = API_BASE_URL.replace("http://", "ws://").replace("https://", "wss://")

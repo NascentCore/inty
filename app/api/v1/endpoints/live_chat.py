@@ -12,6 +12,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from loguru import logger
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import schemas
@@ -19,6 +20,7 @@ from app.api import deps
 from app.api.tags import INTY_EVAL_TAG
 from app.schemas.live_chat import (
     LiveChatAudioResponseMessage,
+    LiveChatConfig,
     LiveChatErrorMessage,
     LiveChatLatencyMessage,
     LiveChatMessageType,
@@ -51,6 +53,8 @@ async def get_live_chat_status(
             "default_voice": config.default_voice,
             "send_sample_rate": config.send_sample_rate,
             "receive_sample_rate": config.receive_sample_rate,
+            "default_speech_language_code": config.speech_language_code,
+            "default_response_language_name": config.response_language_name,
         }
     )
 
@@ -130,7 +134,12 @@ async def live_chat_session(
     - 下行 status: {"type": "status", "status": "...", "message": "..."}
     - 下行 error: {"type": "error", "code": 10001008, "error_code": "...", "message": "..."}
 
+    Optional query params (per-session language for SDK clients):
+    - speech_language_code: BCP-47 tag for SpeechConfig.language_code (e.g. ar-SA, en-US)
+    - response_language_name: human-readable reply language for system instruction (e.g. Arabic)
+
     WebSocket 关闭码与错误信息：
+    - 4000: Invalid language query parameters
     - 4001: 认证失败
     - 4003: 功能未启用
     - 4010: Agent 数量限制（reason 为 JSON 格式的业务错误）
@@ -197,6 +206,20 @@ async def live_chat_session(
         await websocket.close()
         return
 
+    speech_q = websocket.query_params.get("speech_language_code")
+    response_q = websocket.query_params.get("response_language_name")
+    live_cfg_kwargs = {}
+    if speech_q is not None and speech_q.strip():
+        live_cfg_kwargs["speech_language_code"] = speech_q.strip()
+    if response_q is not None and response_q.strip():
+        live_cfg_kwargs["response_language_name"] = response_q.strip()
+    try:
+        live_overrides = LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
+    except ValidationError as e:
+        logger.warning(f"Live chat invalid language query: {e}")
+        await websocket.close(code=4000, reason="Invalid language parameters")
+        return
+
     remaining_duration = limit_info.get("remaining_duration", 300)
     agent_limit = limit_info.get("agent_limit", 0)
     agent_count = limit_info.get("agent_count", 0)
@@ -224,6 +247,7 @@ async def live_chat_session(
             db=db,
             agent_id=agent_id,
             user_id=current_user.id,
+            config=live_overrides,
         )
 
         input_queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
