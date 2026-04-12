@@ -29,7 +29,28 @@ class MavenPublishPlugin : Plugin<Project> {
                         }
                     }
 
-                    repositories { mavenLocal() }
+                    repositories {
+                        mavenLocal()
+                        val pkgUrl =
+                            findProperty("gpr.package.url") as String?
+                                ?: System.getenv("GITHUB_PACKAGES_URL")
+                        val gprUser = findProperty("gpr.user") as String?
+                        val gprKey = findProperty("gpr.key") as String?
+                        val actor = System.getenv("GITHUB_ACTOR")
+                        val token = System.getenv("GITHUB_TOKEN")
+                        val user = gprUser ?: actor
+                        val password = gprKey ?: token
+                        if (!pkgUrl.isNullOrBlank() && !user.isNullOrBlank() && !password.isNullOrBlank()) {
+                            maven {
+                                name = "GitHubPackages"
+                                url = uri(pkgUrl)
+                                credentials {
+                                    username = user
+                                    this.password = password
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

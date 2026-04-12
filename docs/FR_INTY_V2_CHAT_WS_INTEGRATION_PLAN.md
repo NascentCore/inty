@@ -18,6 +18,7 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 
 - **Single source of behavior**: extract or centralize the body of `agent_chat_completions` so both `POST /api/v1/chat/completions/{agent_id}` and `/ws` call the same function (e.g. inner impl + thin HTTP/WS adapters). Avoid duplicating subscription limits, errors, and persistence.
 - Introduce a narrow executor or branch inside that function: `legacy` vs `agentic_v2`, selected by config.
+- **Shipped (partial)**: `app.features.chat_use_companion_kernel_agent_ids` routes matching agents through `CompanionManager` / companion `run_turn` inside `agent_chat_completions`, with `chat_history` persistence for user and assistant lines. Gray-list rollout; verify endpoint still legacy-only until Phase 5.
 
 ## 4. Phase 2 - Persistence decision (before workspace mapping)
 
@@ -57,6 +58,24 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 app:
   features:
     chat_ws_idle_timeout_seconds: 60
+    # Optional: gray-list agent UUIDs for companion kernel (see Phase 1 shipped note).
+    # chat_use_companion_kernel_agent_ids: []
+    # companion_workspaces_base_dir: "/var/lib/inty/companion_workspaces"
+    # companion_default_context_mode: "intimate"
 ```
 
 Optional nested keys under `app` are parsed in `load_config` (e.g. `app.api_endpoints` for `APIEndpointsConfig`).
+
+## 11. Follow-up backlog (companion kernel in `agent_chat_completions`)
+
+Track these after the initial gray-list ship; execute in order when touching the same code paths.
+
+| Step | Item | Notes |
+|------|------|-------|
+| 1 | **Multimodal user turns** | Companion branch passes `last_user_text` into `run_turn` only. Image / mixed `messages[].content` parts are dropped for allowlisted agents. Either reject with 400 + clear message, or extend kernel + transcript contract to carry multimodal user rows. |
+| 2 | **Atomicity: workspace vs `chat_history`** | `run_turn` persists to companion store first; user/assistant rows are appended via `chat_history_service` after. A failure between the two can diverge. Define compensation, ordering, or a single transactional boundary. |
+| 3 | **First-turn bootstrap semantics** | `bootstrap_session` consumes the first user line until workspace init passes. Document product/QA expectation for first HTTP/WS message vs local REPL. |
+| 4 | **Config hot reload** | `companion_chat_service` uses `lru_cache` on allowlist and on resolved model id. Changing YAML without process restart does not refresh caches unless something calls `clear_companion_chat_service_caches()`. Document ops expectation or wire reload hook. |
+| 5 | **`/ws/verify` parity** | Still Phase 5: verify path does not run companion kernel; align or keep explicit QA disclaimer. |
+| 6 | **Lazy `get_agent` for companion path** | `agent_chat_completions` still loads legacy `Agent` when companion is used (needed for voice, premium preview, etc.). Optional: defer `get_agent` until after branch or split dependencies. |
+| 7 | **E2E** | Add real-server or integration test for one allowlisted agent round-trip (WS + message list), when CI has stable LLM stub or env flag. |

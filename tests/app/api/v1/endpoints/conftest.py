@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient as FastAPITestClient
@@ -65,6 +66,14 @@ def _client_with_user(app: FastAPI, user: User):
 
 @pytest.fixture
 def integration_client():
+    base = API_BASE_URL.rstrip("/")
+    try:
+        httpx.get(f"{base}/docs", timeout=2.0)
+    except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
+        pytest.skip(
+            f"HTTP API not reachable at {base} ({exc!r}); "
+            "start Postgres + backend (see tests/AGENTS.md) for integration_client tests"
+        )
     client = TestClient(API_BASE_URL)
     client.create_user()
     try:
