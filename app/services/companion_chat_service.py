@@ -19,7 +19,9 @@ from app.core.config import global_config_loaded_from_config_yaml
 
 @lru_cache(maxsize=1)
 def _companion_agent_id_allowlist() -> frozenset[str]:
-    raw = global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
+    raw = (
+        global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
+    )
     if not raw:
         return frozenset()
     return frozenset(str(x).strip() for x in raw if str(x).strip())
@@ -73,7 +75,9 @@ def _companion_manager_for_resolved_model(
     )
     tc_raw = feats.companion_transcript_compaction
     transcript_compaction = (
-        TranscriptCompactionConfig.model_validate(tc_raw) if tc_raw is not None else None
+        TranscriptCompactionConfig.model_validate(tc_raw)
+        if tc_raw is not None
+        else None
     )
     companion_cfg = CompanionConfig(
         workspaces_base_dir=str(base),

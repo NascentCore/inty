@@ -138,9 +138,7 @@ async def run_turn(
             {"role": "system", "content": system},
             *transcript_rows_to_openai_dialogue(transcript),
         ]
-        outcome = compactor.maybe_compact(
-            messages=pre_user, turn=compaction_turn_idx
-        )
+        outcome = compactor.maybe_compact(messages=pre_user, turn=compaction_turn_idx)
         messages = list(outcome.messages)
         if outcome.did_compact:
             save_compaction_state_to_store(store, rel_compact, outcome.state)

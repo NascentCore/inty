@@ -101,7 +101,9 @@ class ConversationCompactor:
         self, config: CompactionConfig, *, initial_state: CompactionState | None = None
     ) -> None:
         self._config = config
-        self._state = initial_state if initial_state is not None else CompactionState.empty()
+        self._state = (
+            initial_state if initial_state is not None else CompactionState.empty()
+        )
 
     @property
     def state(self) -> CompactionState:
