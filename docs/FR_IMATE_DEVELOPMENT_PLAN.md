@@ -402,10 +402,11 @@
 ### 11.6 iMate 在 inty 后端内的分层设计（本期落地版）
 
 - **说明**：下表描述 **同一 `app/` 代码库** 内的模块划分。iMate **无独立后端仓库**；**部署上**推荐 iMate 专用 inty 实例（独立进程与配置），与 IntelliMate 实例分离。
+- **表内「chat 仅 WS」指 iMate（新版）Android 客户端**；**IntelliMate（现网 Google Play 客户端）聊天发送仍为 `POST /api/v1/chat/completions/{agent_id}`**，与下表 iMate 约束并行存在，勿混读。
 
 | 层级 | 目标 | 复用现有能力 | 新增实现（iMate v1） | 边界约束 |
 |---|---|---|---|---|
-| Interface 层（HTTP + WebSocket） | 对 Android 暴露稳定契约与实时链路 | `app/api/v1/endpoints/auth.py`、`settings.py`、`chats.py`、`chat.py` | `chat.py` 内补全 iMate 分流与 WS 会话语义（会话上下文、断链原因、观测字段） | chat 仅 WS，不提供 HTTP fallback；路径仍为 `/api/v1/chat/ws*` |
+| Interface 层（HTTP + WebSocket） | 对 Android 暴露稳定契约与实时链路 | `app/api/v1/endpoints/auth.py`、`settings.py`、`chats.py`、`chat.py` | `chat.py` 内补全 iMate 分流与 WS 会话语义（会话上下文、断链原因、观测字段） | iMate 客户端 chat 仅 WS，不提供 HTTP fallback；路径仍为 `/api/v1/chat/ws*` |
 | Application 层（Service 编排） | 聚合业务流程与策略，不承载协议细节 | `app/services/chat_service.py`、`subscription_service.py`、`voice_service.py`、`user_service.py` | 优先在现有 service 中引入 iMate 编排分支；复杂度上升后再下沉 `app/services/imate/` 子域服务 | endpoint 仅做校验与转发，禁止回流复杂业务 |
 | Domain/Data 层（Repository + Model） | 保证会话、消息、设置、陪伴状态的一致性 | `app/services/*_service.py` 中现有 CRUD 模式、`app/db/session.py` | 新增 iMate 独立 ORM 与 repository，表统一 `imate_` 前缀（关系阶段、记忆命中、触达节奏） | 所有 schema 变更必须走 Alembic |
 | Infra 层（模型/存储/观测） | 对接 LLM、GCS、日志与指标 | `app/core/*`、`app/services/gcs_service.py`、现有日志体系 | 统一 `trace_id/request_id/session_id/agent_id/user_id` 观测字段 | 不在本期引入新消息总线 |

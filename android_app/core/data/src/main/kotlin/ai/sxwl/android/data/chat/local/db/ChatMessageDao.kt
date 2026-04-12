@@ -58,18 +58,6 @@ interface ChatMessageDao {
     @Query("DELETE FROM message WHERE agentId = :agentId AND status = 'SENDING'")
     suspend fun deleteSendingMsg(agentId: String)
 
-    /** 获取当前发送中的用户消息（用于主 WebSocket 收到响应时落库用户消息）。 */
-    @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user' LIMIT 1"
-    )
-    suspend fun getSendingUserMessage(agentId: String): MessageEntity?
-
-    /** 获取最早一条发送中且未失败的用户消息（用于连发时只更新对应的一条）。 */
-    @Query(
-        "SELECT * FROM message WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user' ORDER BY Cast(id as INTEGER) ASC, Cast(indexId as INTEGER) ASC, indexId ASC LIMIT 1"
-    )
-    suspend fun getEarliestSendingUserMessage(agentId: String): MessageEntity?
-
     /** 将发送中的用户消息标记为 SENDING_FAILED（仅更新 status，不删记录） */
     @Query(
         "UPDATE message SET status = 'SENDING_FAILED' WHERE agentId = :agentId AND status = 'SENDING' AND role = 'user'"

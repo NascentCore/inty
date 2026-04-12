@@ -20,7 +20,7 @@ data class SendMsgResponse(
     val code: Int? = null,
     val message: String? = null,
     val data: SentMsgRspData? = null,
-    /** 下行顶层 agent_id，多角色时区分；与 FR_CHAT_WS_VERIFY 约定一致。 */
+    /** 下行顶层 agent_id，多角色时区分。 */
     @Json(name = "agent_id") val agentId: String? = null,
 ) {
     @Serializable
@@ -70,23 +70,6 @@ data class SendMsgReq(
     @Json(name = "time_context") val timeContext: UserTimeContext? = null,
     @Json(name = "target_imate_id") val targetImateId: String? = null,
 )
-
-@JsonClass(generateAdapter = true)
-data class ChatWebSocketReq(@Json(name = "agent_id") val agentId: String, val request: SendMsgReq)
-
-/** 主 WebSocket 连接建立后上报本地时区与时间，与后端 `client_context` 帧对齐。 */
-@JsonClass(generateAdapter = true)
-data class ChatClientContextWsMessage(
-    val type: String = "client_context",
-    @Json(name = "time_context") val timeContext: UserTimeContext,
-)
-
-/** Chat WebSocket downstream frames that only carry `type` (e.g. pong, client_context_ack). */
-@JsonClass(generateAdapter = true)
-data class ChatWsControlFrame(@Json(name = "type") val type: String?)
-
-fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" || this?.type == "client_context_ack"
 
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(

@@ -7,6 +7,7 @@ import ai.sxwl.android.data.api.model.DeviceTokenRegisterRequest
 import ai.sxwl.android.data.billing.BillingRepository
 import ai.sxwl.android.data.di.DataModule
 import ai.sxwl.android.data.http.NetworkStackCoordinator
+import ai.sxwl.android.data.http.config.DebugBackendEndpointStore
 import ai.sxwl.android.data.http.config.NetworkConfig
 import ai.sxwl.android.data.store.IntySetting
 import ai.sxwl.android.data.store.SettingStateManager
@@ -32,6 +33,8 @@ class IntelliMateApp : Application() {
         super.onCreate()
 
         IntySetting.initialize(this)
+
+        DebugBackendEndpointStore.removeLegacyChatWebSocketPreferenceKeysIfPresent()
 
         NetworkStackCoordinator.initialize(this, buildType = BuildConfig.BUILD_TYPE)
 

@@ -12,6 +12,8 @@ object DebugBackendEndpointStore {
     private const val KEY_BASE_URL = "override_base_url"
     private const val KEY_REMIX_BUTTON_VISIBLE = "char_remix_button_visible"
     private const val KEY_USER_TIME_CONTEXT_REPORTING = "chat_user_time_context_reporting"
+    private const val LEGACY_KEY_CHAT_WEBSOCKET_ENABLED = "chat_websocket_enabled"
+    private const val LEGACY_KEY_CHAT_WEBSOCKET_VERIFY_PATH = "chat_websocket_verify_path"
 
     private val prefs by lazy {
         Utils.getApp().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -92,6 +94,27 @@ object DebugBackendEndpointStore {
         if (!prefs.contains(KEY_USER_TIME_CONTEXT_REPORTING)) return
         prefs.edit().remove(KEY_USER_TIME_CONTEXT_REPORTING).apply()
         LogUtils.i("DebugBackendEndpointStore", "Runtime user time context override cleared")
+    }
+
+    /**
+     * Removes debug prefs from builds that previously offered chat WebSocket toggles.
+     * Safe to call once at app startup; no-ops when keys are absent.
+     */
+    fun removeLegacyChatWebSocketPreferenceKeysIfPresent() {
+        val editor = prefs.edit()
+        var changed = false
+        if (prefs.contains(LEGACY_KEY_CHAT_WEBSOCKET_ENABLED)) {
+            editor.remove(LEGACY_KEY_CHAT_WEBSOCKET_ENABLED)
+            changed = true
+        }
+        if (prefs.contains(LEGACY_KEY_CHAT_WEBSOCKET_VERIFY_PATH)) {
+            editor.remove(LEGACY_KEY_CHAT_WEBSOCKET_VERIFY_PATH)
+            changed = true
+        }
+        if (changed) {
+            editor.apply()
+            LogUtils.i("DebugBackendEndpointStore", "Removed legacy chat websocket debug prefs")
+        }
     }
 
 }
