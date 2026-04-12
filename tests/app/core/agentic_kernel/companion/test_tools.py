@@ -7,6 +7,7 @@ from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.tools import (
     WRITABLE_RELATIVE_PATHS,
     build_companion_tools,
+    build_companion_tools_inner_tick,
     execute_tool_call,
 )
 
@@ -22,6 +23,17 @@ def test_build_companion_tools() -> None:
         "workspace_write_file",
         "workspace_list_dir",
         "workspace_mkdir",
+    ]
+
+
+def test_build_companion_tools_inner_tick() -> None:
+    tools = build_companion_tools_inner_tick()
+    names = [t["function"]["name"] for t in tools]
+    assert names == [
+        "user_profile_record",
+        "workspace_list_dir",
+        "workspace_read_file",
+        "workspace_write_file",
     ]
 
 

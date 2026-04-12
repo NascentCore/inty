@@ -196,6 +196,7 @@ class CompanionManager:
         user_text: str,
         *,
         heartbeat_turn: bool = False,
+        inner_tick_turn: bool = False,
         defer_memory_update: bool = True,
     ) -> str:
         """执行一轮对话。"""
@@ -205,6 +206,7 @@ class CompanionManager:
             store=session.store,
             llm_client=session.llm_client,
             heartbeat_turn=heartbeat_turn,
+            inner_tick_turn=inner_tick_turn,
             defer_memory_update=defer_memory_update,
             memory_config=session.config.memory,
         )

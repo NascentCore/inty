@@ -7,6 +7,9 @@ from pathlib import Path
 
 from loguru import logger
 
+from app.core.agentic_kernel.companion.inner_tick import (
+    next_companion_inner_tick_wait_seconds,
+)
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
 from app.core.config import global_config_loaded_from_config_yaml
@@ -96,4 +99,46 @@ async def run_companion_chat_turn_for_api(
         session,
         user_text,
         defer_memory_update=defer_memory_update,
+    )
+
+
+def companion_ws_inner_tick_wait_seconds(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+    last_inner_fire_monotonic: float | None,
+) -> float:
+    feats = global_config_loaded_from_config_yaml.app.features
+    manager = _companion_manager_for_resolved_model(resolved_chat_model_id)
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    return next_companion_inner_tick_wait_seconds(
+        session.workspace_path,
+        session.store,
+        enabled=feats.companion_ws_inner_tick_enabled,
+        last_inner_fire_monotonic=last_inner_fire_monotonic,
+        min_gap_seconds=feats.companion_ws_inner_tick_min_gap_seconds,
+        min_transcript_messages=feats.companion_ws_inner_tick_min_transcript_messages,
+        poll_cap_seconds=feats.companion_ws_inner_tick_poll_cap_seconds,
+        blocked_max_seconds=feats.companion_ws_inner_tick_blocked_max_seconds,
+    )
+
+
+async def run_companion_inner_tick_turn_for_api(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+) -> str | None:
+    manager = _companion_manager_for_resolved_model(resolved_chat_model_id)
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    if not session.is_initialized:
+        return None
+    return await manager.run_turn(
+        session,
+        "",
+        inner_tick_turn=True,
+        defer_memory_update=True,
     )

@@ -1059,7 +1059,7 @@ def test_chat_websocket_idle_timeout_reads_config(
 ):
     """Regression: idle wait uses app.features.chat_ws_idle_timeout_seconds (not a hard-coded constant)."""
     user = _make_user(auth_type=AuthType.GOOGLE)
-    captured = {"timeouts": []}
+    captured: dict = {"timeouts": [], "mono": [0.0], "wait_phase": 0}
 
     async def fake_ws_user(websocket, db):
         return user
@@ -1067,15 +1067,23 @@ def test_chat_websocket_idle_timeout_reads_config(
     async def fake_agent_chat_completions(**kwargs):
         return APIResponse.success(data={"choices": []})
 
-    async def fake_wait_for(aw, timeout):
+    def fake_monotonic() -> float:
+        return captured["mono"][0]
+
+    real_wait = asyncio.wait
+
+    async def fake_wait(fs, timeout=None, return_when=asyncio.FIRST_COMPLETED):
+        captured["wait_phase"] += 1
+        if captured["wait_phase"] == 1:
+            return await real_wait(fs, timeout=30.0, return_when=return_when)
         captured["timeouts"].append(timeout)
-        if len(captured["timeouts"]) == 1:
-            return await aw
-        raise asyncio.TimeoutError()
+        captured["mono"][0] = 200.0
+        return (set(), fs)
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
     monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
-    monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
+    monkeypatch.setattr(chat_v1.time, "monotonic", fake_monotonic)
+    monkeypatch.setattr(chat_v1.asyncio, "wait", fake_wait)
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -1090,7 +1098,162 @@ def test_chat_websocket_idle_timeout_reads_config(
     expected = float(
         global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
     )
-    assert captured["timeouts"] and all(t == expected for t in captured["timeouts"])
+    assert captured["timeouts"] == [expected]
+
+
+def test_chat_websocket_companion_inner_tick_push(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    captured: dict = {"inner_calls": 0, "mono": [50_000.0], "wait_phase": 0}
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    async def fake_agent_chat_completions(**kwargs):
+        chat_v1.chat_ws_inner_tick_last_context.set(
+            {
+                "agent_id": "agent-inner",
+                "chat_id": "99",
+                "session_id": "sess-inner",
+                "resolved_chat_model_id": "m1",
+            }
+        )
+        return APIResponse.success(
+            data={
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "user-turn"},
+                        "finish_reason": "stop",
+                    }
+                ],
+            }
+        )
+
+    def fake_monotonic() -> float:
+        return captured["mono"][0]
+
+    real_wait = asyncio.wait
+
+    async def fake_wait(fs, timeout=None, return_when=asyncio.FIRST_COMPLETED):
+        captured["wait_phase"] += 1
+        if captured["wait_phase"] == 1:
+            return await real_wait(fs, timeout=30.0, return_when=return_when)
+        if timeout is not None and timeout > 0:
+            captured["mono"][0] += float(timeout)
+        return (set(), fs)
+
+    inner_wait_calls = {"n": 0}
+
+    def fake_inner_wait(**kwargs):
+        inner_wait_calls["n"] += 1
+        if inner_wait_calls["n"] == 1:
+            return 0.0
+        return 86400.0 * 365.0
+
+    async def fake_inner_turn(**kwargs):
+        captured["inner_calls"] += 1
+        return "inner-body"
+
+    async def fake_add_user(session_id, message, meta_data=None):
+        captured["user_meta"] = meta_data
+        return None
+
+    async def fake_add_ai(session_id, message, agent_id=None, meta_data=None):
+        captured["ai_meta"] = meta_data
+        return 777
+
+    async def fake_get_ai_by_id(db, message_id):
+        return {
+            "id": message_id,
+            "content": "inner-body",
+            "audio_url": None,
+            "meta_data": {"companionInnerTick": True},
+            "timestamp": "2026-01-01T00:00:00",
+        }
+
+    async def fake_latest_ai(db, session_id):
+        return None
+
+    async def fake_latest_user_id(db, session_id):
+        return 888
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+    monkeypatch.setattr(chat_v1, "agent_chat_completions", fake_agent_chat_completions)
+    monkeypatch.setattr(chat_v1.time, "monotonic", fake_monotonic)
+    monkeypatch.setattr(chat_v1.asyncio, "wait", fake_wait)
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_inner_tick_enabled",
+        True,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "use_companion_kernel_for_agent",
+        lambda agent_id: True,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "companion_ws_inner_tick_wait_seconds",
+        fake_inner_wait,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "run_companion_inner_tick_turn_for_api",
+        fake_inner_turn,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_user_message_async",
+        fake_add_user,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_ai_message_sync_async",
+        fake_add_ai,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_ai_message_info_by_id",
+        fake_get_ai_by_id,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_ai_message_info",
+        fake_latest_ai,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_user_message_id",
+        fake_latest_user_id,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-inner",
+                    "request": {"messages": [{"role": "user", "content": "hi"}]},
+                }
+            )
+            first = websocket.receive_json()
+            second = websocket.receive_json()
+
+    assert first["code"] == 200
+    assert second["code"] == 200
+    assert second.get("companion_inner_tick") is True
+    assert second["data"]["choices"][0]["message"]["content"] == "inner-body"
+    assert captured["inner_calls"] == 1
+    assert captured.get("user_meta", {}).get("companionInnerTick") is True
+
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_inner_tick_enabled",
+        False,
+        raising=False,
+    )
 
 
 def test_chat_websocket_assume_user_id_ignored_for_non_superuser(

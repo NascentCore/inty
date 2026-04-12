@@ -26,8 +26,14 @@ from .models import (
     load_transcript_from_store,
     transcript_for_llm_turn,
 )
+from .inner_tick import INNER_TICK_SYNTHETIC_USER_TEXT, read_ai_private_text_for_inner_tick
 from .prompts import build_system_prompt
-from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools, execute_tool_call
+from .tools import (
+    WRITABLE_RELATIVE_PATHS,
+    build_companion_tools,
+    build_companion_tools_inner_tick,
+    execute_tool_call,
+)
 from .utc import utc_iso_ts
 from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace import WorkspacePaths
@@ -68,6 +74,7 @@ async def run_turn(
     store: MemoryStore,
     llm_client: CompanionLLMClient,
     heartbeat_turn: bool = False,
+    inner_tick_turn: bool = False,
     defer_memory_update: bool = True,
     memory_config: MemoryPipelineConfig | None = None,
 ) -> str:
@@ -87,14 +94,19 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
+    if heartbeat_turn and inner_tick_turn:
+        raise ValueError("heartbeat_turn and inner_tick_turn cannot both be true")
     if heartbeat_turn:
         user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
+    elif inner_tick_turn:
+        user_text = INNER_TICK_SYNTHETIC_USER_TEXT
 
     logger.info(
-        "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={}",
+        "run_turn start path={} user_chars={} heartbeat_turn={} inner_tick_turn={} defer_memory={}",
         root,
         len(user_text),
         heartbeat_turn,
+        inner_tick_turn,
         defer_memory_update,
     )
 
@@ -105,11 +117,16 @@ async def run_turn(
     loaded = load_transcript_from_store(store, rel_tr)
     transcript = transcript_for_llm_turn(loaded)
 
+    ai_private_text = read_ai_private_text_for_inner_tick(root) if inner_tick_turn else ""
+
     system = build_system_prompt(
         bundle,
         context,
-        enable_tools=not heartbeat_turn,
+        enable_tools=not heartbeat_turn and not inner_tick_turn,
+        enable_user_profile_tool=inner_tick_turn,
         heartbeat_turn=heartbeat_turn,
+        inner_tick_turn=inner_tick_turn,
+        ai_private_text=ai_private_text,
     )
 
     # 组装 messages
@@ -123,7 +140,12 @@ async def run_turn(
     trace_id = str(uuid.uuid4())
 
     # Tool loop
-    tools = [] if heartbeat_turn else build_companion_tools()
+    if heartbeat_turn:
+        tools: list[dict[str, Any]] = []
+    elif inner_tick_turn:
+        tools = build_companion_tools_inner_tick()
+    else:
+        tools = build_companion_tools()
     last_text = ""
     t_loop = time.perf_counter()
 
@@ -135,10 +157,11 @@ async def run_turn(
             tools=tools or None,
         )
         logger.info(
-            "run_turn llm_round={} chat_completions_ms={:.0f} heartbeat={}",
+            "run_turn llm_round={} chat_completions_ms={:.0f} heartbeat={} inner_tick={}",
             round_idx,
             (time.perf_counter() - t_api) * 1000.0,
             heartbeat_turn,
+            inner_tick_turn,
         )
 
         msg = resp.choices[0].message
@@ -200,8 +223,11 @@ async def run_turn(
     }
     if heartbeat_turn:
         user_row["heartbeat"] = True
+    if inner_tick_turn:
+        user_row["inner_tick"] = True
     user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
+    assistant_src = "inner_tick" if inner_tick_turn else "chat"
     store.append_jsonl_record(
         rel_tr,
         {
@@ -210,7 +236,7 @@ async def run_turn(
             "ts": utc_iso_ts(),
             "uuid": assistant_msg_uuid,
             "reply_to": user_msg_uuid,
-            "source": "chat",
+            "source": assistant_src,
             "trace_id": trace_id,
         },
     )
@@ -218,6 +244,8 @@ async def run_turn(
     # 记忆管线
     if heartbeat_turn:
         logger.debug("run_turn memory_pipeline=skipped (heartbeat_turn)")
+    elif inner_tick_turn:
+        logger.debug("run_turn memory_pipeline=skipped (inner_tick_turn)")
     elif defer_memory_update:
 
         def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:

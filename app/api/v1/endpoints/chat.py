@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 import uuid
+from contextvars import ContextVar
 from types import SimpleNamespace
 from typing import Any, List, Optional, TypeAlias, Union
 
@@ -38,6 +39,7 @@ from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
 from app.schemas.chat import (
     ChatCompletionRequest,
+    ChatMessage,
     ChatWebSocketRequest,
     UserTimeContext,
 )
@@ -67,6 +69,10 @@ from app.services.voice_service import (
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+chat_ws_inner_tick_last_context: ContextVar[dict[str, Any] | None] = ContextVar(
+    "chat_ws_inner_tick_last_context", default=None
+)
 
 # WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
 # Handlers must not pass that session into asyncio.to_thread or other threads; open a new
@@ -526,6 +532,8 @@ async def agent_chat_completions(
     if request.stream:
         raise HTTPException(status_code=400, detail="Stream is not supported")
 
+    chat_ws_inner_tick_last_context.set(None)
+
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -661,6 +669,14 @@ async def agent_chat_completions(
                         response_text_content,
                         response_content_parts,
                     ) = _normalize_chat_response_content(response_content)
+                    chat_ws_inner_tick_last_context.set(
+                        {
+                            "agent_id": agent_id,
+                            "chat_id": str(chat.id),
+                            "session_id": session_id,
+                            "resolved_chat_model_id": model_override,
+                        }
+                    )
                 else:
                     chat_result = await agent.chat(
                         user_id=current_user.id,
@@ -990,41 +1006,155 @@ async def chat_completions_websocket(
     )
 
     tc_box: list[Optional[dict]] = [None]
+    inner_last_fire_mono: float | None = None
+    last_activity_mono = time.monotonic()
+    recv_task: asyncio.Task[str] | None = asyncio.create_task(websocket.receive_text())
     try:
         while True:
-            try:
-                raw = await asyncio.wait_for(
-                    websocket.receive_text(),
-                    timeout=_chat_ws_idle_timeout_seconds(),
+            idle_sec = _chat_ws_idle_timeout_seconds()
+            idle_deadline = last_activity_mono + idle_sec
+            now = time.monotonic()
+            inner_deadline: float | None = None
+            feats = global_config_loaded_from_config_yaml.app.features
+            ctx = chat_ws_inner_tick_last_context.get()
+            if (
+                feats.companion_ws_inner_tick_enabled
+                and ctx is not None
+                and companion_chat_service.use_companion_kernel_for_agent(ctx["agent_id"])
+            ):
+                w = companion_chat_service.companion_ws_inner_tick_wait_seconds(
+                    user_id=current_user.id,
+                    agent_id=ctx["agent_id"],
+                    chat_id=ctx["chat_id"],
+                    resolved_chat_model_id=ctx["resolved_chat_model_id"],
+                    last_inner_fire_monotonic=inner_last_fire_mono,
                 )
-            except asyncio.TimeoutError:
+                if w < 86400.0 * 30:
+                    inner_deadline = now + max(0.0, w)
+
+            if inner_deadline is None:
+                timeout = max(0.001, idle_deadline - now)
+            else:
+                timeout = max(0.001, min(idle_deadline, inner_deadline) - now)
+
+            assert recv_task is not None
+            done, _ = await asyncio.wait(
+                {recv_task},
+                timeout=timeout,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if recv_task in done:
+                try:
+                    raw = recv_task.result()
+                except WebSocketDisconnect:
+                    return
+                recv_task = asyncio.create_task(websocket.receive_text())
+                last_activity_mono = time.monotonic()
+                try:
+                    data = json.loads(raw)
+                except json.JSONDecodeError:
+                    data = None
+                if await _handle_chat_websocket_control_json(websocket, data, tc_box):
+                    continue
+                websocket_request = ChatWebSocketRequest.model_validate_json(raw)
+                merged_request = _chat_request_with_merged_ws_time_context(
+                    websocket_request.request,
+                    tc_box[0],
+                )
+                response = await agent_chat_completions(
+                    db=db,
+                    agent_id=websocket_request.agent_id,
+                    request=merged_request,
+                    current_user=current_user,
+                    app_version_code=app_version_code,
+                    subscription_svc=subscription_svc,
+                    voice_svc=voice_svc,
+                )
+                response_data = response.model_dump(exclude_none=True)
+                response_data["agent_id"] = websocket_request.agent_id
+                await websocket.send_json(response_data)
+                continue
+
+            now2 = time.monotonic()
+            if now2 >= idle_deadline:
+                recv_task.cancel()
+                try:
+                    await recv_task
+                except (asyncio.CancelledError, WebSocketDisconnect):
+                    pass
                 await websocket.close()
                 return
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                data = None
-            if await _handle_chat_websocket_control_json(websocket, data, tc_box):
-                continue
-            websocket_request = ChatWebSocketRequest.model_validate_json(raw)
-            merged_request = _chat_request_with_merged_ws_time_context(
-                websocket_request.request,
-                tc_box[0],
-            )
-            response = await agent_chat_completions(
-                db=db,
-                agent_id=websocket_request.agent_id,
-                request=merged_request,
-                current_user=current_user,
-                app_version_code=app_version_code,
-                subscription_svc=subscription_svc,
-                voice_svc=voice_svc,
-            )
-            response_data = response.model_dump(exclude_none=True)
-            response_data["agent_id"] = websocket_request.agent_id
-            await websocket.send_json(response_data)
+            if inner_deadline is not None and now2 + 0.001 >= inner_deadline:
+                ctx2 = chat_ws_inner_tick_last_context.get()
+                if ctx2 is None:
+                    continue
+                inner_text = await companion_chat_service.run_companion_inner_tick_turn_for_api(
+                    user_id=current_user.id,
+                    agent_id=ctx2["agent_id"],
+                    chat_id=ctx2["chat_id"],
+                    resolved_chat_model_id=ctx2["resolved_chat_model_id"],
+                )
+                if inner_text is None:
+                    continue
+                inner_last_fire_mono = time.monotonic()
+                last_activity_mono = inner_last_fire_mono
+                session_id_inner = ctx2["session_id"]
+                await chat_history_service.add_user_message_async(
+                    session_id_inner,
+                    {"role": "user", "content": ""},
+                    meta_data={"companionInnerTick": True},
+                )
+                ai_mid = await chat_history_service.add_ai_message_sync_async(
+                    session_id_inner,
+                    inner_text,
+                    agent_id=ctx2["agent_id"],
+                    meta_data={"companionInnerTick": True},
+                )
+                latest_info = None
+                if ai_mid is not None:
+                    latest_info = await chat_history_service.get_ai_message_info_by_id(
+                        db, ai_mid
+                    )
+                if latest_info is None:
+                    latest_info = await chat_history_service.get_latest_ai_message_info(
+                        db, session_id_inner
+                    )
+                user_mid = await chat_history_service.get_latest_user_message_id(
+                    db, session_id_inner
+                )
+                inner_req = ChatCompletionRequest(
+                    messages=[ChatMessage(role="user", content="")]
+                )
+                data_inner = _build_chat_response(
+                    inner_text,
+                    None,
+                    "",
+                    latest_info,
+                    None,
+                    inner_req,
+                    source_imate_id=None,
+                    user_message_id=user_mid,
+                    subscription_actions=None,
+                    client_local_id=None,
+                )
+                await websocket.send_json(
+                    {
+                        "code": 200,
+                        "message": "success",
+                        "data": data_inner,
+                        "agent_id": ctx2["agent_id"],
+                        "companion_inner_tick": True,
+                    }
+                )
     except WebSocketDisconnect:
         return
+    finally:
+        if recv_task is not None and not recv_task.done():
+            recv_task.cancel()
+            try:
+                await recv_task
+            except (asyncio.CancelledError, WebSocketDisconnect):
+                pass
 
 
 @router.websocket("/ws/verify")

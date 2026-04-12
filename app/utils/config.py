@@ -159,6 +159,13 @@ class FeaturesConfig:
     companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
     companion_default_context_mode: str = "intimate"
+    # WebSocket /api/v1/chat/ws: when True and the last completed turn used the companion kernel,
+    # the server may run an intrinsic-beat (inner_tick) turn on idle between min(idle, inner_wait).
+    companion_ws_inner_tick_enabled: bool = False
+    companion_ws_inner_tick_min_gap_seconds: float = 120.0
+    companion_ws_inner_tick_min_transcript_messages: int = 2
+    companion_ws_inner_tick_poll_cap_seconds: float = 90.0
+    companion_ws_inner_tick_blocked_max_seconds: float = 60.0
 
 
 @dataclass
@@ -723,4 +730,30 @@ def _validate_config(config: Config):
     if ws_idle < 10 or ws_idle > 3600:
         raise ValueError(
             "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
+        )
+
+    feats = config.app.features
+    if feats.companion_ws_inner_tick_min_gap_seconds < 0 or (
+        feats.companion_ws_inner_tick_min_gap_seconds > 86400.0 * 7
+    ):
+        raise ValueError(
+            "app.features.companion_ws_inner_tick_min_gap_seconds must be between 0 and 604800"
+        )
+    if feats.companion_ws_inner_tick_poll_cap_seconds < 1.0 or (
+        feats.companion_ws_inner_tick_poll_cap_seconds > 3600.0
+    ):
+        raise ValueError(
+            "app.features.companion_ws_inner_tick_poll_cap_seconds must be between 1 and 3600"
+        )
+    if feats.companion_ws_inner_tick_blocked_max_seconds < 1.0 or (
+        feats.companion_ws_inner_tick_blocked_max_seconds > 3600.0
+    ):
+        raise ValueError(
+            "app.features.companion_ws_inner_tick_blocked_max_seconds must be between 1 and 3600"
+        )
+    if feats.companion_ws_inner_tick_min_transcript_messages < 1 or (
+        feats.companion_ws_inner_tick_min_transcript_messages > 50
+    ):
+        raise ValueError(
+            "app.features.companion_ws_inner_tick_min_transcript_messages must be between 1 and 50"
         )

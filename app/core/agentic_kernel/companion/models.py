@@ -189,3 +189,12 @@ def transcript_for_llm_turn(loaded: list[ChatMessage]) -> list[ChatMessage]:
     if len(loaded) <= TRANSCRIPT_WINDOW_MAX_MESSAGES:
         return loaded
     return loaded[-TRANSCRIPT_WINDOW_MAX_MESSAGES:]
+
+
+def transcript_without_trailing_presence_signals(
+    msgs: list[ChatMessage],
+) -> list[ChatMessage]:
+    i = len(msgs)
+    while i > 0 and msgs[i - 1].role == "user" and msgs[i - 1].presence is not None:
+        i -= 1
+    return msgs[:i]

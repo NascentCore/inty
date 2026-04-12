@@ -27,6 +27,13 @@ WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     }
 )
 
+_INNER_TICK_TOOL_FUNCTION_NAMES: tuple[str, ...] = (
+    "user_profile_record",
+    "workspace_list_dir",
+    "workspace_read_file",
+    "workspace_write_file",
+)
+
 
 def build_companion_tools() -> list[dict[str, Any]]:
     """Return OpenAI function tool schemas for companion tools."""
@@ -146,6 +153,24 @@ def build_companion_tools() -> list[dict[str, Any]]:
             },
         },
     ]
+
+
+def build_companion_tools_inner_tick() -> list[dict[str, Any]]:
+    full = build_companion_tools()
+    want = set(_INNER_TICK_TOOL_FUNCTION_NAMES)
+    picked = [
+        t
+        for t in full
+        if t.get("type") == "function" and t.get("function", {}).get("name") in want
+    ]
+    by_name = {t["function"]["name"]: t for t in picked}
+    missing = want - set(by_name)
+    if missing:
+        raise RuntimeError(
+            "build_companion_tools_inner_tick: missing tool defs "
+            + ", ".join(sorted(missing))
+        )
+    return [by_name[n] for n in _INNER_TICK_TOOL_FUNCTION_NAMES]
 
 
 def execute_tool_call(
