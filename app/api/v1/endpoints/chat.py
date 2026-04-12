@@ -38,6 +38,7 @@ from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
 from app.schemas.chat import (
     ChatCompletionRequest,
+    ChatMessage,
     ChatWebSocketRequest,
     UserTimeContext,
 )
@@ -496,6 +497,10 @@ async def _try_generate_premium_preview_choice(
     return _build_premium_preview_choice(preview_content)
 
 
+def _companion_rejects_multimodal_user_turn(last_user_message: ChatMessage) -> bool:
+    return last_user_message.has_image_content_part()
+
+
 async def _agent_chat_completions_impl(
     *,
     db: AsyncSession,
@@ -605,6 +610,16 @@ async def _agent_chat_completions_impl(
                     chat_route == "websocket"
                     and companion_chat_service.use_companion_kernel_for_agent(agent_id)
                 )
+                if use_companion and _companion_rejects_multimodal_user_turn(
+                    user_messages[-1]
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Multimodal user turns with images are not supported for the "
+                            "companion kernel on WebSocket yet. Send text-only content."
+                        ),
+                    )
                 if use_companion:
                     companion_reply = (
                         await companion_chat_service.run_companion_chat_turn_for_api(
@@ -721,6 +736,8 @@ async def _agent_chat_completions_impl(
                     f"标记用户推送为已读失败: user_id={current_user.id}, error={str(e)}"
                 )
 
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
@@ -939,6 +956,8 @@ async def _agent_chat_completions_impl(
 
         return schemas.APIResponse.success(data=data)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")
@@ -1035,16 +1054,29 @@ async def chat_completions_websocket(
                 websocket_request.request,
                 tc_box[0],
             )
-            response = await _agent_chat_completions_impl(
-                db=db,
-                agent_id=websocket_request.agent_id,
-                request=merged_request,
-                current_user=current_user,
-                app_version_code=app_version_code,
-                subscription_svc=subscription_svc,
-                voice_svc=voice_svc,
-                chat_route="websocket",
-            )
+            try:
+                response = await _agent_chat_completions_impl(
+                    db=db,
+                    agent_id=websocket_request.agent_id,
+                    request=merged_request,
+                    current_user=current_user,
+                    app_version_code=app_version_code,
+                    subscription_svc=subscription_svc,
+                    voice_svc=voice_svc,
+                    chat_route="websocket",
+                )
+            except HTTPException as e:
+                detail = e.detail
+                message = detail if isinstance(detail, str) else str(detail)
+                await websocket.send_json(
+                    {
+                        "code": e.status_code,
+                        "message": message,
+                        "data": None,
+                        "agent_id": websocket_request.agent_id,
+                    }
+                )
+                continue
             response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = websocket_request.agent_id
             await websocket.send_json(response_data)

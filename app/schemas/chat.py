@@ -380,6 +380,11 @@ class ChatMessage(BaseModel):
         ]
         return "\n".join(text_parts)
 
+    def has_image_content_part(self) -> bool:
+        if isinstance(self.content, str):
+            return False
+        return any(isinstance(part, ChatMessageImageContentPart) for part in self.content)
+
 
 class UserTimeContext(BaseModel):
     """用户时间上下文（来自客户端）"""
