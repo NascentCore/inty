@@ -77,9 +77,7 @@ def _load_state(root: Path) -> dict[str, Any]:
 def _save_state(root: Path, state: dict[str, Any]) -> None:
     paths = WorkspacePaths(root=root.resolve())
     target = paths.image_gate_json
-    write_text_atomic(
-        target, json.dumps(state, ensure_ascii=False, indent=2) + "\n"
-    )
+    write_text_atomic(target, json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
 
 def _read_profile_doc(root: Path, relative_path: str) -> str:

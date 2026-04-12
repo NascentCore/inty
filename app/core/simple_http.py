@@ -18,5 +18,7 @@ def http_get_json(
     r.raise_for_status()
     data = r.json()
     if not isinstance(data, dict):
-        raise ValueError(f"expected JSON object from {url!r}, got {type(data).__name__}")
+        raise ValueError(
+            f"expected JSON object from {url!r}, got {type(data).__name__}"
+        )
     return data
