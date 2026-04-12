@@ -26,6 +26,13 @@ from .models import (
     load_transcript_from_store,
     transcript_for_llm_turn,
 )
+from .transcript_compaction import (
+    CompactionConfig as TranscriptCompactionConfig,
+    ConversationCompactor,
+    load_compaction_state_from_store,
+    save_compaction_state_to_store,
+    transcript_rows_to_openai_dialogue,
+)
 from .prompts import build_system_prompt
 from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools, execute_tool_call
 from .utc import utc_iso_ts
@@ -70,6 +77,8 @@ async def run_turn(
     heartbeat_turn: bool = False,
     defer_memory_update: bool = True,
     memory_config: MemoryPipelineConfig | None = None,
+    transcript_compaction: TranscriptCompactionConfig | None = None,
+    transcript_llm_window_max_messages: int | None = None,
 ) -> str:
     """
     执行一轮完整对话。
@@ -103,7 +112,10 @@ async def run_turn(
     bundle = load_prompt_bundle(paths, store, meta=context)
     rel_tr = paths.transcript.relative_to(root).as_posix()
     loaded = load_transcript_from_store(store, rel_tr)
-    transcript = transcript_for_llm_turn(loaded)
+    window_cap = transcript_llm_window_max_messages
+    if window_cap is None:
+        window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
+    transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
     system = build_system_prompt(
         bundle,
@@ -112,10 +124,36 @@ async def run_turn(
         heartbeat_turn=heartbeat_turn,
     )
 
-    # 组装 messages
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    for m in transcript:
-        messages.append({"role": m.role, "content": m.content})
+    prior_user_turns = sum(1 for m in loaded if m.role == "user")
+    compaction_turn_idx = prior_user_turns + 1
+
+    if transcript_compaction is not None and not heartbeat_turn:
+        rel_compact = paths.context_compaction_state_json.relative_to(root).as_posix()
+        prior_state = load_compaction_state_from_store(store, rel_compact)
+        compactor = ConversationCompactor(
+            transcript_compaction,
+            initial_state=prior_state,
+        )
+        pre_user: list[dict[str, Any]] = [
+            {"role": "system", "content": system},
+            *transcript_rows_to_openai_dialogue(transcript),
+        ]
+        outcome = compactor.maybe_compact(
+            messages=pre_user, turn=compaction_turn_idx
+        )
+        messages = list(outcome.messages)
+        if outcome.did_compact:
+            save_compaction_state_to_store(store, rel_compact, outcome.state)
+            logger.info(
+                "run_turn transcript_compaction did_compact=true reason={} before={} after={}",
+                outcome.reason,
+                outcome.approx_chars_before,
+                outcome.approx_chars_after,
+            )
+    else:
+        messages = [{"role": "system", "content": system}]
+        for m in transcript:
+            messages.append({"role": m.role, "content": m.content})
     user_msg_uuid = str(uuid.uuid4())
     messages.append({"role": "user", "content": user_text})
 

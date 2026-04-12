@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from .bootstrap import run_workspace_bootstrap_loop
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from .memory_pipeline import MemoryPipelineConfig
+from .transcript_compaction import CompactionConfig
 from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
 from .file_store import write_text
@@ -47,6 +48,13 @@ class CompanionConfig(BaseModel):
 
     # Context
     default_context_mode: str = "intimate"
+
+    # Optional: fold older transcript dialogue into a structured system snapshot when
+    # the OpenAI message list exceeds a character budget (see transcript_compaction).
+    transcript_compaction: CompactionConfig | None = None
+    # When transcript_compaction is set, cap transcript rows before compaction; None
+    # uses companion.models.TRANSCRIPT_WINDOW_MAX_MESSAGES.
+    transcript_llm_window_max_messages: int | None = None
 
 
 def _store_allow_disk_fallback(cfg: CompanionConfig) -> bool:
@@ -207,6 +215,8 @@ class CompanionManager:
             heartbeat_turn=heartbeat_turn,
             defer_memory_update=defer_memory_update,
             memory_config=session.config.memory,
+            transcript_compaction=session.config.transcript_compaction,
+            transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
         )
 
     def shutdown_session(

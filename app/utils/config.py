@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
@@ -159,6 +159,12 @@ class FeaturesConfig:
     companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
     companion_default_context_mode: str = "intimate"
+    # Optional: OpenAI message-list compaction for companion kernel (same stack as WS). When set,
+    # older transcript dialogue is folded into a structured system snapshot when over budget.
+    # Shape matches app.core.agentic_kernel.companion.transcript_compaction.CompactionConfig fields.
+    companion_transcript_compaction: Optional[dict[str, Any]] = None
+    # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
+    companion_transcript_llm_window_max_messages: Optional[int] = None
 
 
 @dataclass
@@ -724,3 +730,17 @@ def _validate_config(config: Config):
         raise ValueError(
             "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
         )
+
+    from app.core.agentic_kernel.companion.transcript_compaction import (
+        CompactionConfig as CompanionTranscriptCompactionConfig,
+    )
+
+    feats = config.app.features
+    if feats.companion_transcript_llm_window_max_messages is not None:
+        w = feats.companion_transcript_llm_window_max_messages
+        if w < 2 or w > 500:
+            raise ValueError(
+                "app.features.companion_transcript_llm_window_max_messages must be between 2 and 500"
+            )
+    if feats.companion_transcript_compaction is not None:
+        CompanionTranscriptCompactionConfig.model_validate(feats.companion_transcript_compaction)
