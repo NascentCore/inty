@@ -18,6 +18,17 @@ if TYPE_CHECKING:
 
 PresenceSignal = Literal["repl_online", "repl_offline"]
 
+INNER_TICK_SYNTHETIC_USER_TEXT = (
+    "（内在节拍：用户此刻没有键入新内容。这不是请你「对用户接话」的聊天轮，而是一次短时的内在处理——"
+    "像在活人头脑里持续活动的那一小团注意：整理刚才的对话与场景印象，掂量哪些值得写入长期材料，"
+    "以及在上下文变沉时考虑是否要通过工作区工具做核对、归档或压缩式整理；"
+    "同时根据当前对话里的场景与节拍，**轻推下一拍**（一个自然的小进展、未决事的微小落地或情绪上的细微位移），"
+    "若上文已自然收束或明显该换景，可**软转场**进入下一情境，避免生硬重开一局。"
+    "请结合上文与「内在活动（ai_private）」行事；不要向用户解释本机制，不要提系统、节拍、等待。）"
+)
+
+AI_PRIVATE_INJECT_MAX_CHARS = 12_000
+
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system"]
@@ -139,7 +150,7 @@ def load_context_meta(path: Path) -> ContextMeta:
     return ContextMeta.model_validate(raw)
 
 
-def load_transcript_text(text: str) -> list[ChatMessage]:
+def load_transcript_text(text: str, *, log_label: str = "transcript") -> list[ChatMessage]:
     out: list[ChatMessage] = []
     for line in text.splitlines():
         line = line.strip()
@@ -148,27 +159,36 @@ def load_transcript_text(text: str) -> list[ChatMessage]:
         try:
             raw = json.loads(line)
         except json.JSONDecodeError:
-            logger.warning("{}: transcript skipped non-json line", path)
+            logger.warning("{}: transcript skipped non-json line", log_label)
             continue
         if not isinstance(raw, dict):
-            logger.warning("{}: transcript skipped non-object json line", path)
+            logger.warning("{}: transcript skipped non-object json line", log_label)
             continue
         try:
             out.append(ChatMessage.model_validate(raw))
         except ValidationError:
             logger.warning(
                 "{}: transcript skipped invalid ChatMessage row (first 240 chars): {!r}",
-                path,
+                log_label,
                 line[:240],
             )
             continue
     return out
 
 
+def transcript_without_trailing_presence_signals(
+    msgs: list[ChatMessage],
+) -> list[ChatMessage]:
+    i = len(msgs)
+    while i > 0 and msgs[i - 1].role == "user" and msgs[i - 1].presence is not None:
+        i -= 1
+    return msgs[:i]
+
+
 def load_transcript(path: Path) -> list[ChatMessage]:
     if not path.is_file():
         return []
-    return load_transcript_text(read_text(path))
+    return load_transcript_text(read_text(path), log_label=str(path))
 
 
 def load_transcript_from_store(

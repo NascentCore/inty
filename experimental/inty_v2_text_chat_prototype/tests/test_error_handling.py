@@ -44,7 +44,7 @@ def test_create_chat_completion_retries_after_json_decode_error() -> None:
     with patch("inty_v2_text_chat_prototype.client.time.sleep", return_value=None):
         resp = create_chat_completion(
             client,
-            model="deepseek/deepseek-v3.2",
+            model="google/gemini-2.5-flash",
             messages_payload=[{"role": "user", "content": "hi"}],
             tools=[],
         )
@@ -58,7 +58,7 @@ def test_create_chat_completion_raises_domain_error_after_max_retries() -> None:
         try:
             create_chat_completion(
                 client,
-                model="deepseek/deepseek-v3.2",
+                model="google/gemini-2.5-flash",
                 messages_payload=[{"role": "user", "content": "hi"}],
                 tools=[],
             )

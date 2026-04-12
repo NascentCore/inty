@@ -88,6 +88,10 @@ class WorkspacePaths:
     def schedule_queue_json(self) -> Path:
         return self.root / f"{self.state_file_prefix}_schedule_tasks.json"
 
+    @property
+    def image_gate_json(self) -> Path:
+        return self.root / f"{self.state_file_prefix}_image_gate.json"
+
 
 _REQUIRED_FILES_ATTR = ("identity", "soul", "user_md", "memory_md", "transcript")
 

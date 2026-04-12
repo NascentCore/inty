@@ -10,6 +10,7 @@ from typing import Any
 from loguru import logger
 
 from .llm_client import CompanionLLMClient
+from .message_format import openai_assistant_message_dict
 from .memory_pipeline import (
     MemoryPipelineConfig,
     memory_update_after_turn,
@@ -34,31 +35,13 @@ from .transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .prompts import build_system_prompt
-from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools, execute_tool_call
+from .repl_workspace_tools import execute_tool_call as repl_execute_tool_call
+from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools
 from .utc import utc_iso_ts
 from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace import WorkspacePaths
 
 _MAX_TOOL_ROUNDS = 24
-
-
-def openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
-    """Convert an OpenAI ChatCompletionMessage to a dict for message history."""
-    row: dict[str, Any] = {"role": "assistant", "content": msg.content or ""}
-    tool_calls = getattr(msg, "tool_calls", None) or []
-    if tool_calls:
-        row["tool_calls"] = [
-            {
-                "id": tc.id,
-                "type": getattr(tc, "type", "function"),
-                "function": {
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments or "",
-                },
-            }
-            for tc in tool_calls
-        ]
-    return row
 
 
 def _preview(s: str, max_len: int = 280) -> str:
@@ -196,9 +179,8 @@ async def run_turn(
                 name,
                 trace_id,
             )
-            result = execute_tool_call(
+            result = await repl_execute_tool_call(
                 root,
-                store,
                 name,
                 args,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,

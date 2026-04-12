@@ -21,7 +21,7 @@ from app.core.agentic_kernel.providers.facade import (
 )
 from .env_util import env_flag_enabled
 
-_DEFAULT_MODEL = "deepseek/deepseek-v3.2"
+_DEFAULT_MODEL = "google/gemini-2.5-flash"
 
 _CLIENT: OpenAI | None = None
 # 双路并行（chat 无 tools + tool 全量）：LangSmith 中需区分 run 名称，故分两个 wrap_openai 实例。
@@ -76,6 +76,14 @@ def _ensure_dotenv() -> None:
     load_prototype_dotenv()
 
 
+def _prototype_langsmith_wrap_enabled() -> bool:
+    """Only wrap OpenAI when LangSmith tracing is on; avoids 403 spam when tracing is off or key invalid."""
+    _ensure_dotenv()
+    from langsmith import utils as ls_utils
+
+    return ls_utils.tracing_is_enabled() is True
+
+
 def get_client() -> OpenAI:
     global _CLIENT
     _ensure_dotenv()
@@ -96,7 +104,7 @@ def get_client() -> OpenAI:
         OpenAICompatibleClientOptions(
             base_url=base_url,
             api_key=key,
-            wrap_langsmith=True,
+            wrap_langsmith=_prototype_langsmith_wrap_enabled(),
             chat_name="IntyV2Proto_ChatOpenAI",
             completions_name="IntyV2Proto_OpenAI",
             use_fake_openai=False,
@@ -117,7 +125,7 @@ def _openrouter_langsmith_options(*, chat_name: str) -> OpenAICompatibleClientOp
     return OpenAICompatibleClientOptions(
         base_url="https://openrouter.ai/api/v1",
         api_key=key,
-        wrap_langsmith=True,
+        wrap_langsmith=_prototype_langsmith_wrap_enabled(),
         chat_name=chat_name,
         completions_name="IntyV2Proto_OpenAI",
         use_fake_openai=False,

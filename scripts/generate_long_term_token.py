@@ -2,7 +2,9 @@
 """
 生成长期有效Token的命令行工具
 
-使用方法:
+在仓库根目录执行，并设置 PYTHONPATH:
+
+export PYTHONPATH=.
 python scripts/generate_long_term_token.py --user-id user_123 --days 365
 python scripts/generate_long_term_token.py --phone 13800138000 --days 365
 python scripts/generate_long_term_token.py --email test@example.com --days 365
@@ -11,26 +13,23 @@ python scripts/generate_long_term_token.py --email test@example.com --days 365
 import asyncio
 import sys
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Optional
 
-# 添加项目根目录到路径
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 import cyclopts
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
 from app.db.session import get_async_db
 from app.models.user import User
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def find_user_by_criteria(
     db: AsyncSession,
-    user_id: str = None,
-    phone: str = None,
-    email: str = None,
+    user_id: Optional[str] = None,
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
 ) -> User:
     """根据不同条件查找用户"""
 
@@ -53,29 +52,23 @@ async def find_user_by_criteria(
 
 
 async def generate_long_term_token(
-    user_id: str = None,
-    phone: str = None,
-    email: str = None,
+    user_id: Optional[str] = None,
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
     days: int = 365,
 ):
     """生成长期有效的token"""
 
     try:
-        # 获取数据库会话
         async for db in get_async_db():
-            # 查找用户
             user = await find_user_by_criteria(
                 db, user_id=user_id, phone=phone, email=email
             )
 
-            # 生成长期token
             expire_delta = timedelta(days=days)
             token = create_access_token(subject=user.id, expires_delta=expire_delta)
-
-            # 计算过期时间
             expire_time = datetime.utcnow() + expire_delta
 
-            # 输出结果
             print("=" * 60)
             print("🎉 长期Token生成成功!")
             print("=" * 60)
@@ -101,8 +94,11 @@ async def generate_long_term_token(
 
             break
 
-    except Exception as e:
-        print(f"❌ 生成Token失败: {str(e)}")
+    except ValueError as e:
+        print(f"❌ 生成Token失败: {e}")
+        sys.exit(1)
+    except SQLAlchemyError as e:
+        print(f"❌ 数据库错误: {e}")
         sys.exit(1)
 
 

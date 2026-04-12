@@ -106,8 +106,8 @@ async def test_run_turn_real_llm_lists_workspace_then_names_hello_file(tmp_path)
         soul_update_disabled=True,
     )
     user_prompt = (
-        "You MUST call the workspace_list_dir tool first with path \".\" to list the "
-        "workspace root. Do not guess. After you receive the tool output, reply in one "
+        "You MUST call the workspace_list_dir tool first with relative_path \"\" (empty string) "
+        "to list the workspace root. Do not guess. After you receive the tool output, reply in one "
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
     out = await run_turn(

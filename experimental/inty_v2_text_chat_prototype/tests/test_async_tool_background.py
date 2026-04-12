@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 import tempfile
@@ -10,7 +11,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
@@ -19,10 +20,12 @@ from inty_v2_text_chat_prototype import orchestrator
 from inty_v2_text_chat_prototype.models import load_transcript
 from inty_v2_text_chat_prototype.paths import WorkspacePaths
 from inty_v2_text_chat_prototype.tool_background import (
+    ToolOutputEvent,
     _append_local_image_paths_for_display,
     _background_turn_should_force_tools,
     _last_user_message_text,
     _local_paths_from_tool_messages,
+    background_tasks_count,
     clear_output_queue,
     pop_output_events_nowait,
 )
@@ -30,6 +33,19 @@ from inty_v2_text_chat_prototype.workspace_init_tools import (
     TEXT_RESPONSE_INCLUDE_IN_CHAT,
     tool_text_response_should_include_in_chat,
 )
+
+
+def _wait_first_output_event(
+    root: Path, *, deadline_sec: float = 2.0
+) -> list[ToolOutputEvent]:
+    deadline = time.time() + deadline_sec
+    while time.time() < deadline:
+        evs = pop_output_events_nowait(workspace=root)
+        if evs:
+            return evs
+        asyncio.run(asyncio.sleep(0.01))
+        time.sleep(0.02)
+    return []
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -143,6 +159,14 @@ class TestAsyncToolBackground(unittest.TestCase):
         clear_output_queue()
 
     def tearDown(self) -> None:
+        deadline = time.time() + 30.0
+        while background_tasks_count() > 0 and time.time() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(
+            background_tasks_count(),
+            0,
+            "tool_bg thread still alive after 30s; following tests may flake",
+        )
         clear_output_queue()
 
     def _init_workspace(self, root: Path) -> WorkspacePaths:
@@ -185,9 +209,10 @@ class TestAsyncToolBackground(unittest.TestCase):
                 patch.object(
                     orchestrator, "schedule_memory_update_after_turn", return_value=None
                 ),
-                patch(
-                    "inty_v2_text_chat_prototype.tool_background.execute_tool_call",
-                    side_effect=lambda *a, **k: "OK tool result",
+                patch.object(
+                    orchestrator,
+                    "execute_tool_call",
+                    new=AsyncMock(return_value="OK tool result"),
                 ),
                 patch.dict(
                     os.environ, {"INTY_V2_PROTO_ASYNC_TOOL_BG": "1"}, clear=False
@@ -206,14 +231,7 @@ class TestAsyncToolBackground(unittest.TestCase):
                 self.assertEqual(early_events, [])
 
                 # Wait up to 2s and ensure side-effect-only tools do not emit user-visible bg text.
-                got_events = []
-                deadline = time.time() + 2.0
-                while time.time() < deadline:
-                    got_events = pop_output_events_nowait(workspace=root)
-                    if got_events:
-                        break
-                    asyncio.run(asyncio.sleep(0.01))
-                    time.sleep(0.02)
+                got_events = _wait_first_output_event(root, deadline_sec=2.0)
                 self.assertEqual(got_events, [])
 
             rows = load_transcript((root / "transcript.jsonl"))
@@ -276,14 +294,7 @@ class TestAsyncToolBackground(unittest.TestCase):
                 )
                 self.assertEqual(out, "chat-fast-r1")
 
-                got_events = []
-                deadline = time.time() + 2.0
-                while time.time() < deadline:
-                    got_events = pop_output_events_nowait(workspace=root)
-                    if got_events:
-                        break
-                    asyncio.run(asyncio.sleep(0.01))
-                    time.sleep(0.02)
+                got_events = _wait_first_output_event(root, deadline_sec=2.0)
                 self.assertEqual(len(got_events), 1)
                 self.assertIn("tool-final-image-r2", got_events[0].text)
                 self.assertIn("/tmp/z_image_1.jpeg", got_events[0].text)
@@ -294,6 +305,20 @@ class TestAsyncToolBackground(unittest.TestCase):
             self.assertEqual(rows[2].source, "tool_bg")
             self.assertIn("tool-final-image-r2", rows[2].content)
             self.assertIn("/tmp/z_image_1.jpeg", rows[2].content)
+            turn_tid = rows[0].trace_id
+            assert turn_tid is not None
+            self.assertEqual(got_events[0].trace_id, turn_tid)
+            tb_lines = [
+                ln
+                for ln in (root / "tool_background.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if ln.strip()
+            ]
+            self.assertTrue(tb_lines)
+            tb_last = json.loads(tb_lines[-1])
+            self.assertEqual(tb_last.get("trace_id"), turn_tid)
+            self.assertEqual(tb_last.get("assistant_msg_uuid"), rows[2].uuid)
 
     def test_no_tool_calls_skips_queue_no_tool_bg_transcript_row(self) -> None:
         fake_completions = _FakeCompletionsNoToolCalls()
@@ -462,6 +487,7 @@ class TestLocalPathDisplay(unittest.TestCase):
                     "file:///tmp/a.png",
                     "https://example.com/b.jpg",
                 ],
+                trace_id="tid-bg-test",
             )
             body = (root / "tool_background.jsonl").read_text(encoding="utf-8")
             self.assertIn('"kind": "tool_background_done"', body)
@@ -469,6 +495,7 @@ class TestLocalPathDisplay(unittest.TestCase):
                 '"generated_image_uris": ["file:///tmp/a.png", "https://example.com/b.jpg"]',
                 body,
             )
+            self.assertIn('"trace_id": "tid-bg-test"', body)
 
 
 class TestToolTextResponseTags(unittest.TestCase):
