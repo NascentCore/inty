@@ -806,10 +806,164 @@ def test_v1_chat_completions_returns_source_imate_id_when_target_imate_id_sent(
     assert body["data"]["source_imate_id"] == "imate-target-1"
 
 
+def _setup_companion_ws_chat_test_env(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    agent_id: str,
+    workspace_dir: str,
+    chat_id: str,
+    latest_user_message_db_id: int,
+    ai_message_id: int,
+    run_companion_chat_turn_for_api,
+) -> None:
+    companion_chat_service.clear_companion_chat_service_caches()
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_workspaces_base_dir",
+        workspace_dir,
+        raising=False,
+    )
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
+        return SimpleNamespace(id=chat_id, agent_id=agent_id)
+
+    async def fake_get_agent_for_chat(db, agent_id=None, **_kwargs):
+        return {"id": agent_id, "voice_id": "voice-1", "gender": "FEMALE"}
+
+    class DummyAgent:
+        async def chat(self, *args, **kwargs):
+            return ("legacy-unused", 1)
+
+    async def fake_get_agent(agent_data):
+        return DummyAgent()
+
+    async def fake_check_chat_limit(db, user):
+        return True, 0, 100
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    async def fake_get_or_create_chat_settings(db, cid, user_id, aid):
+        return SimpleNamespace(
+            voice_enabled=False,
+            style_prompt=None,
+            premium_mode=False,
+            language="en",
+        )
+
+    async def fake_record_usage(*args, **kwargs):
+        return None
+
+    async def fake_add_user_message_async(session_id, message, meta_data=None):
+        return None
+
+    async def fake_add_ai_message_sync_async(session_id, message, **_kwargs):
+        return ai_message_id
+
+    async def fake_get_ai_message_info_by_id(db, message_id):
+        return {
+            "id": message_id,
+            "meta_data": {},
+            "timestamp": 1735689600000,
+            "audio_url": None,
+        }
+
+    async def fake_get_latest_user_message_id(db, session_id):
+        return latest_user_message_db_id
+
+    async def fake_get_latest_ai_message_info(db, session_id):
+        return None
+
+    async def fake_mark_user_push_notifications_as_read(db, user_id):
+        return 0
+
+    async def fake_try_trigger_surprise_snap(db, session_id, user_id, aid):
+        return None
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "run_companion_chat_turn_for_api",
+        run_companion_chat_turn_for_api,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(agent_service, "get_agent_for_chat", fake_get_agent_for_chat)
+    monkeypatch.setattr(
+        agent_module.agent_manager,
+        "get_agent",
+        fake_get_agent,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "check_chat_limit",
+        fake_check_chat_limit,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_settings",
+        fake_get_or_create_chat_settings,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "record_usage",
+        fake_record_usage,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_user_message_async",
+        fake_add_user_message_async,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "add_ai_message_sync_async",
+        fake_add_ai_message_sync_async,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_ai_message_info_by_id",
+        fake_get_ai_message_info_by_id,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_user_message_id",
+        fake_get_latest_user_message_id,
+    )
+    monkeypatch.setattr(
+        chat_history_service,
+        "get_latest_ai_message_info",
+        fake_get_latest_ai_message_info,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "mark_user_push_notifications_as_read",
+        fake_mark_user_push_notifications_as_read,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "try_trigger_surprise_snap",
+        fake_try_trigger_surprise_snap,
+    )
+
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+
 def test_chat_completions_companion_kernel_branch_writes_history(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """POST completions ignores companion allowlist and uses legacy Agent (companion is WS-only)."""
+    """POST completions always uses legacy Agent (companion kernel is WebSocket-only)."""
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
@@ -1150,6 +1304,102 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["companion_calls"] == 1
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {"companion_calls": 0}
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["companion_calls"] += 1
+        return "should-not-run"
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-mm",
+        workspace_dir="/tmp/inty_test_companion_ws_mm",
+        chat_id="chat-mm-1",
+        latest_user_message_db_id=57,
+        ai_message_id=1,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-mm",
+                    "request": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": "caption"},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {"url": "https://example.com/x.png"},
+                                    },
+                                ],
+                            }
+                        ],
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 400
+    assert "Multimodal" in body["message"]
+    assert captured["companion_calls"] == 0
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {"companion_calls": 0}
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["companion_calls"] += 1
+        assert kwargs["user_text"] == "a\nb"
+        return "ok-parts"
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-txtparts",
+        workspace_dir="/tmp/inty_test_companion_ws_txtparts",
+        chat_id="chat-txtparts-1",
+        latest_user_message_db_id=58,
+        ai_message_id=904,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-txtparts",
+                    "request": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": "a"},
+                                    {"type": "text", "text": "b"},
+                                ],
+                            }
+                        ],
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    assert body["data"]["choices"][0]["message"]["content"] == "ok-parts"
+    assert captured["companion_calls"] == 1
 
     companion_chat_service.clear_companion_chat_service_caches()
 
