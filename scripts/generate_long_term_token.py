@@ -6,7 +6,6 @@
 python scripts/generate_long_term_token.py --user-id user_123 --days 365
 python scripts/generate_long_term_token.py --phone 13800138000 --days 365
 python scripts/generate_long_term_token.py --email test@example.com --days 365
-python scripts/generate_long_term_token.py --readable-id 10000001 --days 365
 """
 
 import asyncio
@@ -32,7 +31,6 @@ async def find_user_by_criteria(
     user_id: str = None,
     phone: str = None,
     email: str = None,
-    readable_id: str = None,
 ) -> User:
     """根据不同条件查找用户"""
 
@@ -42,10 +40,8 @@ async def find_user_by_criteria(
         stmt = select(User).where(User.phone == phone)
     elif email:
         stmt = select(User).where(User.email == email)
-    elif readable_id:
-        stmt = select(User).where(User.readable_id == readable_id)
     else:
-        raise ValueError("必须提供用户ID、手机号、邮箱或readable_id中的一个")
+        raise ValueError("必须提供用户ID、手机号或邮箱中的一个")
 
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
@@ -60,7 +56,6 @@ async def generate_long_term_token(
     user_id: str = None,
     phone: str = None,
     email: str = None,
-    readable_id: str = None,
     days: int = 365,
 ):
     """生成长期有效的token"""
@@ -70,7 +65,7 @@ async def generate_long_term_token(
         async for db in get_async_db():
             # 查找用户
             user = await find_user_by_criteria(
-                db, user_id=user_id, phone=phone, email=email, readable_id=readable_id
+                db, user_id=user_id, phone=phone, email=email
             )
 
             # 生成长期token
@@ -119,12 +114,11 @@ def main(
     user_id: Optional[str] = None,
     phone: Optional[str] = None,
     email: Optional[str] = None,
-    readable_id: Optional[str] = None,
     days: int = 365,
 ):
-    if _count_non_empty([user_id, phone, email, readable_id]) != 1:
+    if _count_non_empty([user_id, phone, email]) != 1:
         raise ValueError(
-            "必须且只能提供 --user-id、--phone、--email、--readable-id 中的一个"
+            "必须且只能提供 --user-id、--phone、--email 中的一个"
         )
 
     if days <= 0:
@@ -144,7 +138,6 @@ def main(
             user_id=user_id,
             phone=phone,
             email=email,
-            readable_id=readable_id,
             days=days,
         )
     )
