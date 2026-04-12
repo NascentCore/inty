@@ -20,6 +20,20 @@ from .models import ChatMessage
 COMPACTION_SYSTEM_TAG = "[MEMORY_COMPACTION_SNAPSHOT]"
 _MAX_TEXT_PREVIEW = 220
 
+# Default companion transcript compaction when config.yaml omits app.features.companion_transcript_compaction.
+# Set app.features.companion_transcript_compaction to null in YAML to disable.
+DEFAULT_COMPANION_FEATURE_COMPACTION: dict[str, Any] = {
+    "max_context_chars": 12000,
+    "keep_recent_messages": 24,
+    "max_messages_per_episode": 6,
+    "max_episodic_entries": 8,
+    "max_semantic_entries": 8,
+    "summary_max_chars": 800,
+    "retrieval_episode_count": 3,
+    "retrieval_semantic_count": 4,
+    "retrieval_open_loop_count": 3,
+}
+
 _EMOTION_KEYWORDS: dict[str, tuple[str, ...]] = {
     "stressed": ("stressed", "stress", "anxious", "overwhelmed"),
     "sad": ("sad", "down", "depressed", "lonely"),

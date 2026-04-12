@@ -1,5 +1,8 @@
 import pytest
 
+from app.core.agentic_kernel.companion.transcript_compaction import (
+    DEFAULT_COMPANION_FEATURE_COMPACTION,
+)
 from app.utils.config import (
     AgentConfig,
     AppConfig,
@@ -249,6 +252,17 @@ def test_local_only_guest_user_image_gen_limit_zero_in_non_local_environment(con
     # 应该不抛出异常
     _validate_config(config)
     assert config.app.limits.test_only_guest_user_image_gen_24h_limit == 0
+
+
+def test_features_config_default_companion_transcript_compaction():
+    f = FeaturesConfig()
+    assert f.companion_transcript_compaction is not None
+    assert f.companion_transcript_compaction == DEFAULT_COMPANION_FEATURE_COMPACTION
+
+
+def test_features_config_companion_transcript_compaction_null_disables():
+    f = FeaturesConfig(companion_transcript_compaction=None)
+    assert f.companion_transcript_compaction is None
 
 
 def test_companion_transcript_compaction_config_validates(config):

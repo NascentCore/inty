@@ -13,6 +13,9 @@ from pydantic import AnyHttpUrl
 
 from loguru import logger
 
+from app.core.agentic_kernel.companion.transcript_compaction import (
+    DEFAULT_COMPANION_FEATURE_COMPACTION,
+)
 from app.utils import models_catalog
 
 # 所有配置项必须有默认值，防止出现校验失败。
@@ -159,10 +162,13 @@ class FeaturesConfig:
     companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
     companion_default_context_mode: str = "intimate"
-    # Optional: OpenAI message-list compaction for companion kernel (same stack as WS). When set,
-    # older transcript dialogue is folded into a structured system snapshot when over budget.
-    # Shape matches app.core.agentic_kernel.companion.transcript_compaction.CompactionConfig fields.
-    companion_transcript_compaction: Optional[dict[str, Any]] = None
+    # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
+    # dialogue is folded into a structured system snapshot when over budget. Default matches
+    # app.core.agentic_kernel.companion.transcript_compaction.DEFAULT_COMPANION_FEATURE_COMPACTION.
+    # Set to null in YAML to disable.
+    companion_transcript_compaction: Optional[dict[str, Any]] = field(
+        default_factory=lambda: dict(DEFAULT_COMPANION_FEATURE_COMPACTION)
+    )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
     companion_transcript_llm_window_max_messages: Optional[int] = None
 
@@ -743,4 +749,6 @@ def _validate_config(config: Config):
                 "app.features.companion_transcript_llm_window_max_messages must be between 2 and 500"
             )
     if feats.companion_transcript_compaction is not None:
-        CompanionTranscriptCompactionConfig.model_validate(feats.companion_transcript_compaction)
+        CompanionTranscriptCompactionConfig.model_validate(
+            feats.companion_transcript_compaction
+        )
