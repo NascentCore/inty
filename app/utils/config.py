@@ -13,10 +13,10 @@ from pydantic import AnyHttpUrl
 
 from loguru import logger
 
-from app.core.agentic_kernel.companion.transcript_compaction import (
+from app.utils import models_catalog
+from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
-from app.utils import models_catalog
 
 # 所有配置项必须有默认值，防止出现校验失败。
 # 这些默认值允许在没有实际配置文件的情况下使用。
@@ -164,7 +164,7 @@ class FeaturesConfig:
     companion_default_context_mode: str = "intimate"
     # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
     # dialogue is folded into a structured system snapshot when over budget. Default matches
-    # app.core.agentic_kernel.companion.transcript_compaction.DEFAULT_COMPANION_FEATURE_COMPACTION.
+    # app.utils.companion_feature_defaults.DEFAULT_COMPANION_FEATURE_COMPACTION.
     # Set to null in YAML to disable.
     companion_transcript_compaction: Optional[dict[str, Any]] = field(
         default_factory=lambda: dict(DEFAULT_COMPANION_FEATURE_COMPACTION)

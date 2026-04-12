@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.agentic_kernel.companion.transcript_compaction import (
+from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
 from app.utils.config import (
