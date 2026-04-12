@@ -32,7 +32,7 @@
 
 ### 2.2 P1-高价值支撑能力
 
-- `experimental/memory_prompt_benchmark`
+- `research/memory_prompt_benchmark`（仓库内已从 `experimental/memory_prompt_benchmark` 迁出；不在 `experimental/` 下）
   - tool trigger 与 memory 注入结构评测
 - `experimental/prompt_layer`
   - prompt 版本管理与可追踪
@@ -131,7 +131,7 @@
 
 ### Phase 4 - 评测与灰度系统（中优先）
 
-- 并入 `memory_prompt_benchmark` 与 `prompt_layer`
+- 并入 `research/memory_prompt_benchmark` 与 `prompt_layer`
   - 建立 prompt 版本对比、memory 注入策略对比、tool trigger 回归评测
 - 并入外围能力（按需）
   - 通过 feature flag 方式接入运营和增长能力，不污染核心编排
@@ -147,7 +147,7 @@
 | `perpetual_agent/core_v2` | `core_v2/*` | 子模块迁移 + 适配层 | P0 |
 | `perpetual_agent/telegram_*` | `bridges/telegram_*` | 协议复用 + pipeline 对齐 | P0 |
 | `agentic_loop_sleep_demo` | `tests/` + `orchestrator` contract | 转为回归测试 | P0 |
-| `memory_prompt_benchmark` | `evaluation/memory_trigger/*` | 评测工具化 | P1 |
+| `research/memory_prompt_benchmark` | `evaluation/memory_trigger/*` | 评测工具化 | P1 |
 | `prompt_layer` | `prompting/versioning/*` | 轻量接入 | P1 |
 | `voice_chat` | `bridges/voice_webrtc/*` | 接口抽象后并入 | P1 |
 | `gemini_native_audio_websocket_demo` | `bridges/voice_ws/*` | 重连策略与会话管理复用 | P1 |
@@ -162,7 +162,7 @@
 | Telegram loop | `experimental/perpetual_agent/telegram_*` | `experimental/inty_v2_text_chat_prototype/bridges/telegram_*` | 旧模块转发到新模块并打印 deprecation 日志 |
 | 语音 websocket | `experimental/gemini_native_audio_websocket_demo/*` | `experimental/inty_v2_text_chat_prototype/bridges/voice_ws/*` | 先镜像接口，再切默认入口 |
 | voice chat server | `experimental/voice_chat/server/*` | `experimental/inty_v2_text_chat_prototype/bridges/voice_webrtc/*` | 先共享协议层，后迁移运行入口 |
-| tool benchmark | `experimental/memory_prompt_benchmark/*` | `experimental/inty_v2_text_chat_prototype/evaluation/*` | 保留旧脚本，结果目录统一到新路径 |
+| tool benchmark | `research/memory_prompt_benchmark/*` | `experimental/inty_v2_text_chat_prototype/evaluation/*` | 保留旧脚本，结果目录统一到新路径 |
 
 ## 6. 测试与验收矩阵
 
@@ -219,7 +219,7 @@
   - 通过标准：语音 websocket 与 webRTC demo 都可启动，断连后能按策略恢复。
 
 - Phase 4 Gate
-  - `/workspace/.venv/bin/python experimental/memory_prompt_benchmark/tool_trigger_benchmark.py --config devops/config.yaml.dev --model "google/gemini-2.5-flash" --samples-per-case 4 --temperature 0.4 --max-completion-tokens 200 --timeout-seconds 90`
+  - `/workspace/.venv/bin/python research/memory_prompt_benchmark/tool_trigger_benchmark.py --config devops/config.yaml.dev --model "google/gemini-2.5-flash" --samples-per-case 4 --temperature 0.4 --max-completion-tokens 200 --timeout-seconds 90`
   - 通过标准：
     - `layered.trigger_rate_when_needed >= flat.trigger_rate_when_needed`
     - `layered.trigger_rate_when_not_needed < flat.trigger_rate_when_not_needed`
