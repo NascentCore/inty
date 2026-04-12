@@ -8,7 +8,7 @@
 | --- | --- |
 | 「独立 API 服务」 | 语音通话能力以 **Inty 主后端** 中的路由形式提供（`/api/v1/live-chat/...`），**不是**单独进程或单独域名下的微服务。若必须物理隔离，需要运维侧做独立部署或网关拆分（本仓库未提供现成「仅语音」部署形态）。 |
 | 「Kotlin client library」 | 仓库内存在 Android 库模块 `android_app/library/inty_voice_call`，用于 **Android（Ktor WebSocket）** 集成；**不是**纯 JVM 无 Android 依赖的 SDK。非 Android 客户端应直接按本文 **WebSocket JSON 协议** 实现。 |
-| 「生成 API key」 | 当前实现使用 **JWT（Bearer）** 校验用户身份（与 App 其它接口一致），**没有**面向第三方的专用静态 API key 机制。对外分享凭证时，等价于分享 **某一 Inty 用户账号的长期或短期 JWT**，需在运营与安全流程上按「账号/令牌」管理，而不是「API key 控制台」。 |
+| 「生成 API key」 | 当前实现使用 **JWT（Bearer）** 校验用户身份（与 App 其它接口一致），**没有**面向第三方的专用静态 API key 机制。常见做法是：在目标环境数据库中创建 **邮箱密码（`AuthType.EMAIL`）用户**，再调用登录接口换取 JWT（见 **2.1**）。对外沟通时仍建议称「访问令牌 / JWT」而非 API key。 |
 
 在以上前提下：**技术上可行**（调用 dev 环境同一套 Inty 后端即可），但命名上更准确的表述是「开放 Live Chat WebSocket 与配套 HTTP 接口」，而非「独立语音微服务 + API key」。
 
@@ -18,9 +18,46 @@
 
 1. **Dev 环境 HTTPS 基地址**（示例占位符：`<YOUR_INTY_DEV_BASE_URL>`，无尾部斜杠）。生产环境若开放，同理替换为 prod 基地址。
 2. **可用的 `agent_id`**：对应 Inty 中已配置、且该用户有权使用的角色（Agent）。
-3. **访问令牌**：JWT 字符串，在 HTTP/WebSocket 请求中作为 `Authorization: Bearer <token>` 传递（见下文）。令牌对应 Inty 中的 **真实用户**，用量与订阅策略绑定到该用户。
+3. **访问令牌**：JWT 字符串，在 HTTP/WebSocket 请求中作为 `Authorization: Bearer <token>` 传递（见下文）。令牌对应 Inty 中的 **真实用户**，用量与订阅策略绑定到该用户。获取方式之一见 **2.1**。
 
 **服务端必须开启 Live Chat**：若功能关闭，WebSocket 会以关闭码 `4003` 拒绝（reason：`Live chat is disabled`）。
+
+### 2.1 邮箱密码用户与登录换票（可行）
+
+**结论**：可行。Inty 支持在请求体中同时提供 `email` 与 `password` 时走邮箱密码校验，成功后返回与其它登录方式相同的 JWT（见 `app/api/v1/endpoints/auth.py` 中 `POST .../google/login` 分支调用 `email_password_login`）。
+
+**运营方（有该环境数据库与代码检出）典型流程**：
+
+1. **配置**：在仓库根目录使用 **该 dev 环境** 对应的 `config.yaml`（或等价环境变量），保证脚本的 `AsyncSessionLocal` 连到 dev 库（与运行中的 Inty dev 实例一致）。
+2. **创建用户**：在仓库根执行（需已安装应用依赖与 `PYTHONPATH=.`）：
+
+   ```bash
+   export PYTHONPATH=.
+   python scripts/create_email_password_superuser.py \
+     --email partner-dev@example.com \
+     --password '<strong-password>' \
+     --is-superuser=false \
+     --nickname "Live chat integration" \
+     --yes
+   ```
+
+   - 脚本路径：`scripts/create_email_password_superuser.py`；更细的字段说明见 `scripts/CREATE_EMAIL_PASSWORD_USER.md`。
+   - 对 **外部集成专用账号** 建议使用 `--is-superuser=false`，避免误用超级用户权限（例如 WebSocket 上的 `assume_user_id` 仅对 superuser 生效）。
+3. **换取 JWT**：对 **同一 dev 环境的 HTTP 基地址** 调用：
+
+   ```bash
+   curl -sS -X POST "<YOUR_INTY_DEV_BASE_URL>/api/v1/auth/google/login" \
+     -H "Content-Type: application/json" \
+     -d '{"email":"partner-dev@example.com","password":"<strong-password>"}'
+   ```
+
+   成功时响应为统一 `APIResponse` 包装：`code == 200` 且 `data.token` 即为 JWT。将该值作为 `Authorization: Bearer ...` 用于 `GET /api/v1/live-chat/status` 与 Live Chat WebSocket。
+
+**集成方注意**：
+
+- 若环境将 `app.api_endpoints.use_dummy_api_v1_auth_google_login` 设为 `true`，该登录端点会返回固定假数据，**无法**用真实邮箱密码换票；需 Inty 运营方在 dev 上关闭该开关后再联调。
+- 令牌过期时间由服务端 `security.access_token_expire_minutes` 等配置决定；过期后需用同一登录请求刷新 JWT。
+- 邮箱与密码由运营方安全渠道单独交付集成方，**不要**把密码写进版本库或聊天日志。
 
 ## 3. HTTP：查询能力状态
 
