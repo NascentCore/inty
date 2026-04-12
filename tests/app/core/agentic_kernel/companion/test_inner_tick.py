@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.agentic_kernel.companion.inner_tick import next_companion_inner_tick_wait_seconds
+from app.core.agentic_kernel.companion.inner_tick import (
+    next_companion_inner_tick_wait_seconds,
+)
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 
 

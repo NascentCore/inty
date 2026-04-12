@@ -652,10 +652,12 @@ async def agent_chat_completions(
                         await chat_history_service.add_user_message_async(
                             session_id, last_user_message
                         )
-                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                        session_id,
-                        companion_reply,
-                        agent_id=chat.agent_id,
+                    ai_message_id = (
+                        await chat_history_service.add_ai_message_sync_async(
+                            session_id,
+                            companion_reply,
+                            agent_id=chat.agent_id,
+                        )
                     )
                     response_content = companion_reply
                     if response_content is None or not str(response_content).strip():
@@ -1017,10 +1019,15 @@ async def chat_completions_websocket(
             now = time.monotonic()
             inner_deadline: float | None = None
             ctx = chat_ws_inner_tick_last_context.get()
-            if ctx is not None and companion_chat_service.use_companion_kernel_for_agent(
-                ctx["agent_id"]
+            if (
+                ctx is not None
+                and companion_chat_service.use_companion_kernel_for_agent(
+                    ctx["agent_id"]
+                )
             ):
-                limit_ok, _, _ = await subscription_svc.check_chat_limit(db, current_user)
+                limit_ok, _, _ = await subscription_svc.check_chat_limit(
+                    db, current_user
+                )
                 if limit_ok:
                     user_turn_mono = ctx.get("last_companion_user_turn_mono")
                     if not isinstance(user_turn_mono, (int, float)):
@@ -1101,11 +1108,13 @@ async def chat_completions_websocket(
                 ctx2 = chat_ws_inner_tick_last_context.get()
                 if ctx2 is None:
                     continue
-                inner_text = await companion_chat_service.run_companion_inner_tick_turn_for_api(
-                    user_id=current_user.id,
-                    agent_id=ctx2["agent_id"],
-                    chat_id=ctx2["chat_id"],
-                    resolved_chat_model_id=ctx2["resolved_chat_model_id"],
+                inner_text = (
+                    await companion_chat_service.run_companion_inner_tick_turn_for_api(
+                        user_id=current_user.id,
+                        agent_id=ctx2["agent_id"],
+                        chat_id=ctx2["chat_id"],
+                        resolved_chat_model_id=ctx2["resolved_chat_model_id"],
+                    )
                 )
                 if inner_text is None:
                     continue

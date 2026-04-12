@@ -7,7 +7,11 @@ from pathlib import Path
 
 from .file_store import read_text
 from .memory_store import MemoryStore
-from .models import ChatMessage, load_transcript_from_store, transcript_without_trailing_presence_signals
+from .models import (
+    ChatMessage,
+    load_transcript_from_store,
+    transcript_without_trailing_presence_signals,
+)
 from .workspace import WorkspacePaths
 
 INNER_TICK_SYNTHETIC_USER_TEXT = (
@@ -77,7 +81,10 @@ def next_companion_inner_tick_wait_seconds(
     first_after = max(0.0, float(first_after_user_seconds))
 
     t_after_user = 0.0
-    if last_inner_fire_monotonic is None and last_chat_turn_complete_monotonic is not None:
+    if (
+        last_inner_fire_monotonic is None
+        and last_chat_turn_complete_monotonic is not None
+    ):
         t_after_user = max(0.0, first_after - (now - last_chat_turn_complete_monotonic))
 
     t_after_inner = 0.0
