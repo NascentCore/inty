@@ -819,12 +819,6 @@ def _setup_companion_ws_chat_test_env(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [agent_id],
-        raising=False,
-    )
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
         "companion_workspaces_base_dir",
         workspace_dir,
         raising=False,
@@ -969,14 +963,8 @@ def _setup_companion_ws_chat_test_env(
 def test_chat_completions_companion_kernel_branch_writes_history(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """POST completions ignores companion allowlist and uses legacy Agent (companion is WS-only)."""
+    """POST completions always uses legacy Agent (companion kernel is WebSocket-only)."""
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        ["agent-companion-1"],
-        raising=False,
-    )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_workspaces_base_dir",
@@ -1138,25 +1126,13 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     assert captured.get("agent_chat_called") is True
 
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [],
-        raising=False,
-    )
 
 
 def test_chat_websocket_companion_kernel_branch_writes_history(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    """Allowlisted agent_id on WebSocket uses companion kernel (same stubs as HTTP path)."""
+    """WebSocket /api/v1/chat/ws always uses companion kernel (same stubs as HTTP path)."""
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        ["agent-companion-ws"],
-        raising=False,
-    )
     monkeypatch.setattr(
         global_config_loaded_from_config_yaml.app.features,
         "companion_workspaces_base_dir",
@@ -1330,12 +1306,6 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["ai_save"][1] == "companion-ws-reply"
 
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [],
-        raising=False,
-    )
 
 
 def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
@@ -1385,12 +1355,6 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
     assert captured["companion_calls"] == 0
 
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [],
-        raising=False,
-    )
 
 
 def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
@@ -1438,12 +1402,6 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     assert captured["companion_calls"] == 1
 
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "chat_use_companion_kernel_agent_ids",
-        [],
-        raising=False,
-    )
 
 
 def test_chat_websocket_reuses_connection_for_multiple_agents(

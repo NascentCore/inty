@@ -155,9 +155,6 @@ class FeaturesConfig:
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # When non-empty, WebSocket /api/v1/chat/ws uses the agentic companion kernel (inty v2 REPL same
-    # code path) for these agent UUIDs. POST /api/v1/chat/completions/{agent_id} always uses the legacy Agent stack.
-    chat_use_companion_kernel_agent_ids: List[str] = field(default_factory=list)
     # On-disk base directory for companion workspaces (user_id / agent_id / chat_id).
     companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
@@ -618,7 +615,9 @@ def load_config(path: str) -> Config:
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
-        app_data["features"] = FeaturesConfig(**app_data["features"])
+        feats_raw = dict(app_data["features"])
+        feats_raw.pop("chat_use_companion_kernel_agent_ids", None)
+        app_data["features"] = FeaturesConfig(**feats_raw)
     if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
         app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])
 

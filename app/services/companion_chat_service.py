@@ -17,24 +17,8 @@ from app.core.agentic_kernel.companion.transcript_compaction import (
 from app.core.config import global_config_loaded_from_config_yaml
 
 
-@lru_cache(maxsize=1)
-def _companion_agent_id_allowlist() -> frozenset[str]:
-    raw = (
-        global_config_loaded_from_config_yaml.app.features.chat_use_companion_kernel_agent_ids
-    )
-    if not raw:
-        return frozenset()
-    return frozenset(str(x).strip() for x in raw if str(x).strip())
-
-
-def use_companion_kernel_for_agent(agent_id: str) -> bool:
-    allow = _companion_agent_id_allowlist()
-    return bool(allow) and agent_id in allow
-
-
 def clear_companion_chat_service_caches() -> None:
     """For tests or hot reload when config path changes."""
-    _companion_agent_id_allowlist.cache_clear()
     _companion_manager_for_resolved_model.cache_clear()
 
 

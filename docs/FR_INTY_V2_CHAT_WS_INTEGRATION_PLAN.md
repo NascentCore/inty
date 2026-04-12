@@ -12,13 +12,13 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 
 - Map `ChatWebSocketRequest` (`app/schemas/chat.py`) to Android `ChatWebSocketReq` / `SendMsgReq` / `SendMsgResponse` (`android_app/core/data/.../ChatBeans.kt`). New server fields are optional until the app needs them (client ignores unknown JSON keys).
 - **Scope for first ship**: user-triggered turns only (same as current WS). Do not bind proactive heartbeat, inner tick, or schedule-driven turns to the first WS integration; those need a worker or a new client protocol.
-- **Gray-scale keys** (pick before coding): config allowlist by `agent_id`, header (e.g. `X-App-Id`), and/or user segment. Document the chosen key in config comments.
+- **Rollout note**: production `/ws` always uses the companion kernel; gray-list by `agent_id` was removed (`chat_use_companion_kernel_agent_ids` ignored in YAML). Other keys (header, user segment) remain available for unrelated features.
 
 ## 3. Phase 1 - Shared chat turn entry (HTTP and WS)
 
 - **Single source of behavior**: extract or centralize the body of `agent_chat_completions` so both `POST /api/v1/chat/completions/{agent_id}` and `/ws` call the same function (e.g. inner impl + thin HTTP/WS adapters). Avoid duplicating subscription limits, errors, and persistence.
 - Introduce a narrow executor or branch inside that function: `legacy` vs `agentic_v2`, selected by config.
-- **Shipped (partial)**: `app.features.chat_use_companion_kernel_agent_ids` routes matching agents through `CompanionManager` / companion `run_turn` only on **`WS /api/v1/chat/ws`** (`_agent_chat_completions_impl` with `chat_route="websocket"`), with `chat_history` persistence. **`POST /api/v1/chat/completions/{agent_id}`** keeps the legacy `Agent` stack. Gray-list rollout; verify endpoint still legacy-only until Phase 5.
+- **Shipped**: **`WS /api/v1/chat/ws`** always routes through `CompanionManager` / companion `run_turn` (`_agent_chat_completions_impl` with `chat_route="websocket"`), with `chat_history` persistence. **`POST /api/v1/chat/completions/{agent_id}`** keeps the legacy `Agent` stack. Deprecated YAML key `chat_use_companion_kernel_agent_ids` is ignored at config load. Verify endpoint still legacy-only until Phase 5.
 
 ## 4. Phase 2 - Persistence decision (before workspace mapping)
 
@@ -50,7 +50,7 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 
 ## 9. Rollout
 
-- Default off or tiny allowlist; monitor errors and latency; rollback via config only.
+- Production `/ws` always uses the companion kernel; monitor errors and latency; rollback requires a code deploy or traffic shift, not an allowlist toggle.
 
 ## 10. Config reference
 
@@ -58,8 +58,6 @@ Revised integration plan for Inty v2 agentic companion via existing `WebSocket /
 app:
   features:
     chat_ws_idle_timeout_seconds: 60
-    # Optional: gray-list agent UUIDs for companion kernel (see Phase 1 shipped note).
-    # chat_use_companion_kernel_agent_ids: []
     # companion_workspaces_base_dir: "/var/lib/inty/companion_workspaces"
     # companion_default_context_mode: "intimate"
 ```
@@ -68,17 +66,17 @@ Optional nested keys under `app` are parsed in `load_config` (e.g. `app.api_endp
 
 ## 11. Follow-up backlog (companion kernel in `_agent_chat_completions_impl` / WebSocket path)
 
-Track these after the initial gray-list ship; execute in order when touching the same code paths.
+Track these after the companion-on-`/ws` ship; execute in order when touching the same code paths.
 
 | Step | Item | Notes |
 |------|------|-------|
-| 1 | **Multimodal user turns** | **Done (2026-04-12):** WebSocket + companion allowlist: if the last user message includes an `image_url` part, return **HTTP 400** with English detail (also sent as JSON on `/ws` with `code`/`message`/`agent_id`, connection stays open). Multiple **text-only** parts still run (joined text passed to `run_turn`). Fixed inner `except Exception` in `_agent_chat_completions_impl` so `HTTPException` is not swallowed. Full multimodal rows in the kernel remain future work. |
+| 1 | **Multimodal user turns** | **Done (2026-04-12):** Production WebSocket `/api/v1/chat/ws` (always companion): if the last user message includes an `image_url` part, return **HTTP 400** with English detail (also sent as JSON on `/ws` with `code`/`message`/`agent_id`, connection stays open). Multiple **text-only** parts still run (joined text passed to `run_turn`). Fixed inner `except Exception` in `_agent_chat_completions_impl` so `HTTPException` is not swallowed. Full multimodal rows in the kernel remain future work. |
 | 2 | **Atomicity: workspace vs `chat_history`** | `run_turn` persists to companion store first; user/assistant rows are appended via `chat_history_service` after. A failure between the two can diverge. Define compensation, ordering, or a single transactional boundary. |
 | 3 | **First-turn bootstrap semantics** | `bootstrap_session` consumes the first user line until workspace init passes. Document product/QA expectation for first HTTP/WS message vs local REPL. |
-| 4 | **Config hot reload** | `companion_chat_service` uses `lru_cache` on allowlist and on resolved model id. Changing YAML without process restart does not refresh caches unless something calls `clear_companion_chat_service_caches()`. Document ops expectation or wire reload hook. |
+| 4 | **Config hot reload** | `companion_chat_service` uses `lru_cache` on resolved model id. Changing YAML without process restart does not refresh caches unless something calls `clear_companion_chat_service_caches()`. Document ops expectation or wire reload hook. |
 | 5 | **`/ws/verify` parity** | Still Phase 5: verify path does not run companion kernel; align or keep explicit QA disclaimer. |
 | 6 | **Lazy `get_agent` for companion path** | WebSocket companion path still loads legacy `Agent` (needed for voice, premium preview, etc.). Optional: defer `get_agent` until after branch or split dependencies. |
-| 7 | **E2E** | Add real-server or integration test for one allowlisted agent round-trip (WS + message list), when CI has stable LLM stub or env flag. |
+| 7 | **E2E** | Add real-server or integration test for one WS companion round-trip (WS + message list), when CI has stable LLM stub or env flag. |
 
 ### Task log
 

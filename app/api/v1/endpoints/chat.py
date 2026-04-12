@@ -606,10 +606,7 @@ async def _agent_chat_completions_impl(
                 logger.debug(
                     f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
                 )
-                use_companion = (
-                    chat_route == "websocket"
-                    and companion_chat_service.use_companion_kernel_for_agent(agent_id)
-                )
+                use_companion = chat_route == "websocket"
                 if use_companion and _companion_rejects_multimodal_user_turn(
                     user_messages[-1]
                 ):
