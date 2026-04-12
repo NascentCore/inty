@@ -105,7 +105,7 @@ async def run_companion_chat_turn_for_api(
     When the workspace is not yet initialized, the first user line is consumed by bootstrap.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
-    (caller typically passes ``model_override`` from ``agent_chat_completions``).
+    (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
     """
     manager = _companion_manager_for_resolved_model(
         resolved_chat_model_id, _companion_runtime_config_fingerprint()
