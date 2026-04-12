@@ -1111,6 +1111,18 @@ async def chat_completions_websocket(
                     continue
                 inner_last_fire_mono = time.monotonic()
                 last_activity_mono = inner_last_fire_mono
+                session_id_inner = ctx2["session_id"]
+                await chat_history_service.add_user_message_async(
+                    session_id_inner,
+                    {"role": "user", "content": ""},
+                    meta_data={"companionInnerTick": True},
+                )
+                ai_mid = await chat_history_service.add_ai_message_sync_async(
+                    session_id_inner,
+                    inner_text,
+                    agent_id=ctx2["agent_id"],
+                    meta_data={"companionInnerTick": True},
+                )
                 try:
                     with log_time(
                         f"record_usage companion_inner_tick user_id={current_user.id}"
@@ -1132,18 +1144,6 @@ async def chat_completions_websocket(
                         current_user.id,
                         str(e),
                     )
-                session_id_inner = ctx2["session_id"]
-                await chat_history_service.add_user_message_async(
-                    session_id_inner,
-                    {"role": "user", "content": ""},
-                    meta_data={"companionInnerTick": True},
-                )
-                ai_mid = await chat_history_service.add_ai_message_sync_async(
-                    session_id_inner,
-                    inner_text,
-                    agent_id=ctx2["agent_id"],
-                    meta_data={"companionInnerTick": True},
-                )
                 latest_info = None
                 if ai_mid is not None:
                     latest_info = await chat_history_service.get_ai_message_info_by_id(
