@@ -31,6 +31,8 @@ def _companion_runtime_config_fingerprint() -> str:
         str(feats.companion_default_context_mode),
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
+        # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
+        "companion_repo_only_ws_v1",
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
