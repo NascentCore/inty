@@ -1,0 +1,14 @@
+{
+  "debug": {
+    "storeFile": "imate.jks",
+    "storePassword": "com.ai.imate",
+    "keyAlias": "dev",
+    "keyPassword": "com.ai.imate"
+  },
+  "release": {
+    "storeFile": "imate.jks",
+    "storePassword": "com.ai.imate",
+    "keyAlias": "imate-key-alias",
+    "keyPassword": "com.ai.imate"
+  }
+}
