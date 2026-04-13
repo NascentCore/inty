@@ -75,6 +75,7 @@ async def run_workspace_bootstrap_loop(
     model: str = "deepseek/deepseek-v3.2",
     max_rounds: int = 48,
     on_tool: Callable[[str, str], None] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     """
     Agentic 初始化循环。
@@ -167,6 +168,7 @@ async def run_workspace_bootstrap_loop(
                 name,
                 raw_arguments,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
+                repository_only_workspace_text=repository_only_workspace_text,
             )
             logger.info(
                 "bootstrap tool_done round={} name={} execute_ms={:.0f} result_chars={}",

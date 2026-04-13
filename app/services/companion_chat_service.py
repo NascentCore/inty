@@ -70,6 +70,8 @@ def _companion_manager_for_resolved_model(
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
+        repository_only_workspace_text=True,
+        memory_allow_workspace_disk_fallback=False,
     )
     return CompanionManager(companion_cfg)
 

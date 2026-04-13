@@ -62,6 +62,7 @@ async def run_turn(
     memory_config: MemoryPipelineConfig | None = None,
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     """
     执行一轮完整对话。
@@ -91,7 +92,7 @@ async def run_turn(
     )
 
     # 加载 context 与 prompt bundle
-    context = load_context_meta(paths.context_json)
+    context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
     rel_tr = paths.transcript.relative_to(root).as_posix()
     loaded = load_transcript_from_store(store, rel_tr)
@@ -184,6 +185,7 @@ async def run_turn(
                 name,
                 args,
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
+                repository_only_workspace_text=repository_only_workspace_text,
             )
             logger.info(
                 "run_turn tool_done round={} name={} result_chars={} ok={}",
