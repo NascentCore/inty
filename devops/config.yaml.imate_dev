@@ -70,7 +70,7 @@ agent:
   free_user_premium_preview_max_chars: 200
 
 google_play:
-  package_name: "com.ai.imate"
+  package_name: "com.inty.imate"
   webhook_secret: ""
   enable_version_check: false
   min_supported_version: 1
