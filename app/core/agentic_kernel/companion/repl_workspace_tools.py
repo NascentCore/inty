@@ -131,10 +131,18 @@ def _workspace_text_via_memory_store(
     return rel in {"transcript.jsonl", "context.json", "ai_private.md"}
 
 
+def _list_dir_prefix_for_store_query(rel_dir: str) -> str:
+    """Treat Path.relative_to(workspace) of '.' or '' as workspace root for DB prefix matching."""
+    s = rel_dir.strip().replace("\\", "/").rstrip("/")
+    if s in (".", ""):
+        return ""
+    return s
+
+
 def _list_dir_extra_names_from_store(root: Path, rel_dir: str) -> set[str]:
     store = get_memory_store(root)
     paths = store.iter_stored_relative_paths()
-    prefix = rel_dir.strip().replace("\\", "/").rstrip("/")
+    prefix = _list_dir_prefix_for_store_query(rel_dir)
     pfx = f"{prefix}/" if prefix else ""
     out: set[str] = set()
     for sp in paths:
@@ -278,7 +286,8 @@ def tool_workspace_list_dir(
     d = resolve_under_workspace(root, relative_path)
     if not d.is_dir():
         return f"ERROR: not a directory: {relative_path!r}"
-    rel_dir = d.relative_to(root).as_posix()
+    rel_dir_raw = d.relative_to(root).as_posix()
+    list_prefix = _list_dir_prefix_for_store_query(rel_dir_raw)
     names = sorted(d.iterdir(), key=lambda p: p.name.lower())
     lines: set[str] = set()
     for p in names:
@@ -286,7 +295,7 @@ def tool_workspace_list_dir(
             continue
         lines.add(f"{p.name}/" if p.is_dir() else p.name)
     if repository_only_workspace_text:
-        lines |= _list_dir_extra_names_from_store(root, rel_dir)
+        lines |= _list_dir_extra_names_from_store(root, list_prefix)
     ordered = sorted(lines, key=lambda s: s.lower())
     return "\n".join(ordered) if ordered else "(empty)"
 
@@ -925,6 +934,22 @@ def _repl_write_allowed(
     return None
 
 
+def _companion_workspace_tool_fns(
+    *, repository_only_workspace_text: bool
+) -> tuple[Any, Any, Any]:
+    if repository_only_workspace_text:
+        return (
+            partial(tool_workspace_list_dir, repository_only_workspace_text=True),
+            partial(tool_workspace_read_file, repository_only_workspace_text=True),
+            partial(tool_workspace_write_file, repository_only_workspace_text=True),
+        )
+    return (
+        tool_workspace_list_dir,
+        tool_workspace_read_file,
+        tool_workspace_write_file,
+    )
+
+
 async def _dispatch(
     root: Path,
     name: str,
@@ -936,20 +961,8 @@ async def _dispatch(
     if not _BASE_TOOL_REGISTRY.is_allowed(name):
         return f"ERROR: unknown tool {name!r}"
 
-    list_fn = (
-        partial(tool_workspace_list_dir, repository_only_workspace_text=True)
-        if repository_only_workspace_text
-        else tool_workspace_list_dir
-    )
-    read_fn = (
-        partial(tool_workspace_read_file, repository_only_workspace_text=True)
-        if repository_only_workspace_text
-        else tool_workspace_read_file
-    )
-    write_fn = (
-        partial(tool_workspace_write_file, repository_only_workspace_text=True)
-        if repository_only_workspace_text
-        else tool_workspace_write_file
+    list_fn, read_fn, write_fn = _companion_workspace_tool_fns(
+        repository_only_workspace_text=repository_only_workspace_text
     )
 
     workspace_dispatch_result = dispatch_workspace_tool(
