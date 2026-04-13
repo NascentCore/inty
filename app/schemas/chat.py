@@ -383,7 +383,9 @@ class ChatMessage(BaseModel):
     def has_image_content_part(self) -> bool:
         if isinstance(self.content, str):
             return False
-        return any(isinstance(part, ChatMessageImageContentPart) for part in self.content)
+        return any(
+            isinstance(part, ChatMessageImageContentPart) for part in self.content
+        )
 
 
 class UserTimeContext(BaseModel):

@@ -162,7 +162,9 @@ def load_context_meta(
     return ContextMeta.model_validate(raw)
 
 
-def load_transcript_text(text: str, *, log_label: str = "transcript") -> list[ChatMessage]:
+def load_transcript_text(
+    text: str, *, log_label: str = "transcript"
+) -> list[ChatMessage]:
     out: list[ChatMessage] = []
     for line in text.splitlines():
         line = line.strip()

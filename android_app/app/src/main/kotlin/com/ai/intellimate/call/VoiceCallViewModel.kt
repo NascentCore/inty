@@ -1,15 +1,14 @@
 package com.ai.intellimate.call
 
 import ai.sxwl.android.data.http.IntyErrorCode
+import ai.sxwl.android.data.voicecall.errorEnum
+import ai.sxwl.android.inty.voicecall.CallType
+import ai.sxwl.android.inty.voicecall.VoiceCallConnectionState
 import ai.sxwl.android.utils.LogUtils
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ai.sxwl.android.data.voicecall.errorEnum
-import ai.sxwl.android.inty.voicecall.CallType
-import ai.sxwl.android.inty.voicecall.VoiceCallConnectionState
 import com.ai.intellimate.call.data.AICallRepository
-import com.ai.intellimate.call.toUi
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.UiConfigs
 import com.ai.intellimate.utils.NetworkErrorHandler
@@ -113,7 +112,8 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
             }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            repository.call(agentId, speechLanguageCode, responseLanguageName)
+            repository
+                .call(agentId, speechLanguageCode, responseLanguageName)
                 .catch { error ->
                     // #region agent log（上报 Crashlytics）
                     NetworkErrorHandler.reportTlsParseToCrashlyticsIfRelevant(
@@ -144,7 +144,9 @@ class VoiceCallViewModel(private val repository: AICallRepository) : ViewModel()
                         CallType.ERROR -> {
                             // 处理错误消息
                             LogUtils.e("收到错误消息: ${packet.message}")
-                            _uiState.update { it.copy(connectionState = VoiceCallConnectionUi.ERROR) }
+                            _uiState.update {
+                                it.copy(connectionState = VoiceCallConnectionUi.ERROR)
+                            }
                             packet.errorEnum?.let {
                                 _error.trySend(it to packet.errorCode.orEmpty())
                             }

@@ -154,9 +154,7 @@ def _load_tasks(root: Path) -> list[ScheduleTask]:
 def _save_tasks(root: Path, tasks: list[ScheduleTask]) -> None:
     p = _schedule_file(root)
     body = {"tasks": [t.to_dict() for t in tasks]}
-    write_text_atomic(
-        p, json.dumps(body, ensure_ascii=False, indent=2) + "\n"
-    )
+    write_text_atomic(p, json.dumps(body, ensure_ascii=False, indent=2) + "\n")
 
 
 def _retry_backoff_seconds(attempts: int) -> float:
@@ -214,7 +212,9 @@ def _pick_next_due_task(
             x[0].created_at_utc,
             x[0].id,
         ),
-    )[0][0]
+    )[
+        0
+    ][0]
 
 
 def _seconds_until_next_pending_task(

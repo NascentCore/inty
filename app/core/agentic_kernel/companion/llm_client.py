@@ -60,7 +60,9 @@ class CompanionLLMConfig(BaseModel):
         default_async_tool_background: bool | None = None,
         default_enable_dual_llm: bool | None = None,
     ) -> CompanionLLMConfig:
-        key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or "").strip()
+        key = (
+            os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+        ).strip()
         async_bg = (
             async_tool_background_enabled_from_env()
             if default_async_tool_background is None
@@ -71,21 +73,29 @@ class CompanionLLMConfig(BaseModel):
             if default_enable_dual_llm is None
             else default_enable_dual_llm
         )
-        timeout_raw = os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600").strip()
+        timeout_raw = os.getenv(
+            "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
+        ).strip()
         try:
             timeout_sec = float(timeout_raw) if timeout_raw else 600.0
         except ValueError:
             timeout_sec = 600.0
         return cls(
             api_key=key,
-            api_base=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip()
+            api_base=os.getenv(
+                "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
+            ).strip()
             or "https://openrouter.ai/api/v1",
-            default_model=os.getenv("INTY_V2_PROTO_MODEL", "deepseek/deepseek-v3.2").strip()
+            default_model=os.getenv(
+                "INTY_V2_PROTO_MODEL", "deepseek/deepseek-v3.2"
+            ).strip()
             or "deepseek/deepseek-v3.2",
             chat_model=(os.getenv("INTY_V2_PROTO_CHAT_MODEL") or "").strip(),
             tool_model=(os.getenv("INTY_V2_PROTO_TOOL_MODEL") or "").strip(),
             memory_model=(os.getenv("INTY_V2_PROTO_MEMORY_MODEL") or "").strip(),
-            day_summary_model=(os.getenv("INTY_V2_PROTO_DAY_SUMMARY_MODEL") or "").strip(),
+            day_summary_model=(
+                os.getenv("INTY_V2_PROTO_DAY_SUMMARY_MODEL") or ""
+            ).strip(),
             user_model=(os.getenv("INTY_V2_PROTO_USER_MODEL") or "").strip(),
             soul_model=(os.getenv("INTY_V2_PROTO_SOUL_MODEL") or "").strip(),
             enable_async_tool_background=async_bg,
@@ -142,9 +152,7 @@ class CompanionLLMClient:
             )
         return self._client_dual_tool
 
-    def sync_client_for_route(
-        self, route: Literal["unified", "chat", "tool"]
-    ) -> Any:
+    def sync_client_for_route(self, route: Literal["unified", "chat", "tool"]) -> Any:
         if not self._config.enable_dual_llm:
             return self._client
         if route == "chat":
