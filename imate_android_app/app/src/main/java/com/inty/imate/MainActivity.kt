@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import com.ai.core.data.exceptions.GlobalErrorHandler
+import com.ai.core.data.exceptions.IntyException
 import com.ai.core.ui.theme.IMateTheme
 import com.ai.core.utils.ToastUtils
 import com.inty.imate.main.MainScreen
@@ -25,9 +26,19 @@ class MainActivity : ComponentActivity() {
                         .collect {
                             it.printStackTrace()
 
-                            val message = it.message
-                            if (!message.isNullOrEmpty()) {
-                                ToastUtils.showShort(message)
+                            when (it) {
+                                is IntyException -> {
+                                    val message = it.msg
+                                    if (message.isNotEmpty()) {
+                                        ToastUtils.showShort(message)
+                                    }
+                                }
+                                else -> {
+                                    val message = it.message
+                                    if (!message.isNullOrEmpty()) {
+                                        ToastUtils.showShort(message)
+                                    }
+                                }
                             }
                         }
                 }
