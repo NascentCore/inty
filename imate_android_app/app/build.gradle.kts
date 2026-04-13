@@ -49,8 +49,7 @@ private fun Project.gitCommitCount(): Int = 1
 //        .toInt()
 
 android {
-    // TEMP: align with android_app for install/OAuth; revert to com.ai.imate when splitting apps again
-    namespace = "com.ai.intellimate"
+    namespace = "com.inty.imate"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -64,7 +63,7 @@ android {
     val releaseCred = loadSigningCredentials(signDir, "release")
 
     defaultConfig {
-        applicationId = "com.ai.intellimate"
+        applicationId = "com.inty.imate"
         minSdk = 29
         targetSdk = 36
         versionCode = gitCommitCount()
