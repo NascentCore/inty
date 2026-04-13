@@ -11,8 +11,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-private fun Project.intyAndroidSignDir(): File =
-    rootProject.projectDir.parentFile.resolve("android_app/build-logic/sign")
+private fun Project.imateSignDir(): File = rootProject.projectDir.resolve("sign")
 
 private fun loadSigningCredentials(signDir: File, jsonKey: String): Triple<String, String, String> {
     val jsonFile = signDir.resolve("signing-config.json")
@@ -56,9 +55,9 @@ android {
         }
     }
 
-    val signDir = intyAndroidSignDir()
-    val releaseKeystoreFile = signDir.resolve("intellimate-release-key.jks")
-    check(releaseKeystoreFile.exists()) { "Missing keystore: ${releaseKeystoreFile.absolutePath}" }
+    val signDir = imateSignDir()
+    val imateKeystoreFile = signDir.resolve("imate.jks")
+    check(imateKeystoreFile.exists()) { "Missing keystore: ${imateKeystoreFile.absolutePath}" }
     val debugCred = loadSigningCredentials(signDir, "debug")
     val releaseCred = loadSigningCredentials(signDir, "release")
 
@@ -85,13 +84,13 @@ android {
             keyAlias = debugCred.second
             keyPassword = debugCred.third
             storePassword = debugCred.first
-            storeFile = releaseKeystoreFile
+            storeFile = imateKeystoreFile
         }
         create("release") {
             keyAlias = releaseCred.second
             keyPassword = releaseCred.third
             storePassword = releaseCred.first
-            storeFile = releaseKeystoreFile
+            storeFile = imateKeystoreFile
         }
     }
 
