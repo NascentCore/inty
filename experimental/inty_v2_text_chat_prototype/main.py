@@ -29,6 +29,13 @@ if str(_REPO_ROOT) not in sys.path:
 
 from experimental.inty_v2_text_chat_prototype.client import load_prototype_dotenv
 from experimental.inty_v2_text_chat_prototype.client import OpenRouterInvalidJsonError
+from experimental.inty_v2_text_chat_prototype.backend_chat_ws import (
+    BackendChatWsBridge,
+    BackendChatWsError,
+    chat_turn_single_http_base,
+    default_api_base_url,
+    http_base_to_ws_chat_url,
+)
 
 load_prototype_dotenv()
 
@@ -940,6 +947,94 @@ def _preview_line(s: str, max_len: int = 200) -> str:
     return one[: max_len - 1] + "…"
 
 
+def _backend_ws_enabled(cli_flag: bool) -> bool:
+    if cli_flag:
+        return True
+    v = os.environ.get("INTY_V2_REPL_BACKEND_WS", "").strip().lower()
+    return v in ("1", "true", "yes", "on")
+
+
+def _resolve_chat_agent_id_cli(agent_id: str | None) -> str:
+    if agent_id is not None and str(agent_id).strip():
+        return str(agent_id).strip()
+    env = os.environ.get("INTY_V2_CHAT_AGENT_ID", "").strip()
+    if env:
+        return env
+    raise SystemExit(
+        "backend WebSocket mode requires --agent-id or environment INTY_V2_CHAT_AGENT_ID"
+    )
+
+
+def _resolve_bearer_token_cli() -> str:
+    t = os.environ.get("INTY_ACCESS_TOKEN", "").strip()
+    if t:
+        return t
+    raise SystemExit(
+        "backend WebSocket mode requires INTY_ACCESS_TOKEN (Bearer JWT for the backend)"
+    )
+
+
+def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
+    print(
+        f"[{_local_ts_str()}] backend-ws repl (agent_id={agent_id}); "
+        "quit / exit / q to leave; history lives on the server."
+    )
+    while True:
+        try:
+            line = input("> ")
+        except EOFError:
+            print()
+            break
+        if line.strip() in ("quit", "exit", "q"):
+            break
+        if not line.strip():
+            continue
+        _print_repl_user_input(line)
+        t0 = time.perf_counter()
+        try:
+            out = bridge.send_turn(agent_id, line)
+        except BackendChatWsError as exc:
+            print(
+                f"[{_local_ts_str()}] chat-ws-error code={exc.code} "
+                f"message={exc.agent_message!r}"
+            )
+            continue
+        except Exception as exc:
+            logger.exception("backend ws turn failed")
+            print(f"[{_local_ts_str()}] error: {exc}")
+            continue
+        _print_assistant_reply(out, time.perf_counter() - t0)
+
+
+def _repl_run_backend_ws_branch(
+    ws: Path,
+    *,
+    agent_id: str | None,
+    api_base_url: str | None,
+    log_file: Path | None,
+    no_log_file: bool,
+) -> None:
+    agent_resolved = _resolve_chat_agent_id_cli(agent_id)
+    base = (api_base_url or default_api_base_url()).strip()
+    token = _resolve_bearer_token_cli()
+    url = http_base_to_ws_chat_url(base)
+    logger.info(
+        "repl backend-ws api_base={} ws_url={} agent_id={}",
+        base,
+        url,
+        agent_resolved,
+    )
+    _init_proto_logging(ws, log_file, no_log_file)
+    _configure_llm_trace_for_workspace(ws)
+    bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
+    bridge.start()
+    try:
+        _repl_interactive_backend_ws_loop(bridge, agent_resolved)
+    finally:
+        bridge.stop()
+        _flush_and_shutdown_memory_store(ws.resolve())
+
+
 app = App(
     name="inty-v2-text-chat-prototype",
     help="INTY v2 本地文本聊天原型（Memory 主读 + Postgres 异步持久化 + 文件镜像）。",
@@ -1087,9 +1182,39 @@ def repl(
         bool,
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
+    backend_ws: Annotated[
+        bool,
+        Parameter(
+            name="--backend-ws",
+            help="走本地 Inty 后端 WebSocket /api/v1/chat/ws（需 INTY_ACCESS_TOKEN 与 agent id）",
+        ),
+    ] = False,
+    agent_id: Annotated[
+        str | None,
+        Parameter(
+            name="--agent-id",
+            help="后端聊天 agent id；可改用环境变量 INTY_V2_CHAT_AGENT_ID",
+        ),
+    ] = None,
+    api_base_url: Annotated[
+        str | None,
+        Parameter(
+            name="--api-base-url",
+            help="HTTP API 根（默认 INTY_API_BASE_URL 或 http://127.0.0.1:8000），用于推导 ws URL",
+        ),
+    ] = None,
 ) -> None:
     """交互循环，输入 quit 或 EOF 结束。"""
     ws = workspace or _default_workspace()
+    if _backend_ws_enabled(backend_ws):
+        _repl_run_backend_ws_branch(
+            ws,
+            agent_id=agent_id,
+            api_base_url=api_base_url,
+            log_file=log_file,
+            no_log_file=no_log_file,
+        )
+        return
     try:
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
@@ -1221,12 +1346,56 @@ def once(
         bool,
         Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
     ] = False,
+    backend_ws: Annotated[
+        bool,
+        Parameter(
+            name="--backend-ws",
+            help="走本地 Inty 后端 WebSocket /api/v1/chat/ws（需 INTY_ACCESS_TOKEN 与 agent id）",
+        ),
+    ] = False,
+    agent_id: Annotated[
+        str | None,
+        Parameter(
+            name="--agent-id",
+            help="后端聊天 agent id；可改用环境变量 INTY_V2_CHAT_AGENT_ID",
+        ),
+    ] = None,
+    api_base_url: Annotated[
+        str | None,
+        Parameter(
+            name="--api-base-url",
+            help="HTTP API 根（默认 INTY_API_BASE_URL 或 http://127.0.0.1:8000），用于推导 ws URL",
+        ),
+    ] = None,
 ) -> None:
     """单轮对话。"""
     ws = workspace or _default_workspace()
     try:
         _init_proto_logging(ws, log_file, no_log_file)
         _configure_llm_trace_for_workspace(ws)
+        if _backend_ws_enabled(backend_ws):
+            token = _resolve_bearer_token_cli()
+            base = (api_base_url or default_api_base_url()).strip()
+            aid = _resolve_chat_agent_id_cli(agent_id)
+            logger.debug(
+                "cli once backend-ws ws={} base={} agent_id={} message_chars={} preview={}",
+                ws.resolve(),
+                base,
+                aid,
+                len(message),
+                _preview_line(message, max_len=240),
+            )
+            t0 = time.perf_counter()
+            out = asyncio.run(
+                chat_turn_single_http_base(
+                    http_base=base,
+                    bearer_token=token,
+                    agent_id=aid,
+                    user_text=message,
+                )
+            )
+            _print_assistant_reply(out, time.perf_counter() - t0)
+            return
         logger.debug(
             "cli once ws={} message_chars={} preview={}",
             ws.resolve(),
