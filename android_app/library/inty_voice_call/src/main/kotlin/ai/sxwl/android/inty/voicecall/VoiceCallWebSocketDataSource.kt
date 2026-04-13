@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -23,8 +22,7 @@ class VoiceCallWebSocketDataSource(private val httpClient: HttpClient) {
     private var _session: DefaultClientWebSocketSession? = null
     private val sessionMutex = Mutex()
 
-    private val _connectionState =
-        MutableStateFlow(VoiceCallConnectionState.DISCONNECTED)
+    private val _connectionState = MutableStateFlow(VoiceCallConnectionState.DISCONNECTED)
     val connectionState: StateFlow<VoiceCallConnectionState> = _connectionState.asStateFlow()
 
     private var closedByClient = false

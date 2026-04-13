@@ -13,9 +13,7 @@ class IntyVoiceCallClient(private val dataSource: VoiceCallWebSocketDataSource) 
 
     fun packets(url: String): Flow<CallPacket> {
         reconnectEnabled = true
-        return flow {
-                dataSource.connect(url).collect { packet -> emit(packet) }
-            }
+        return flow { dataSource.connect(url).collect { packet -> emit(packet) } }
             .retryWhen { _, attempt ->
                 if (!reconnectEnabled) {
                     false

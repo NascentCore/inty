@@ -40,7 +40,11 @@ class MavenPublishPlugin : Plugin<Project> {
                         val token = System.getenv("GITHUB_TOKEN")
                         val user = gprUser ?: actor
                         val password = gprKey ?: token
-                        if (!pkgUrl.isNullOrBlank() && !user.isNullOrBlank() && !password.isNullOrBlank()) {
+                        if (
+                            !pkgUrl.isNullOrBlank() &&
+                                !user.isNullOrBlank() &&
+                                !password.isNullOrBlank()
+                        ) {
                             maven {
                                 name = "GitHubPackages"
                                 url = uri(pkgUrl)

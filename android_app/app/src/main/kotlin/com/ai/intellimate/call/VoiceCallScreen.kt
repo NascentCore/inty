@@ -5,6 +5,7 @@ import ai.sxwl.android.data.api.model.AgentInfo
 import ai.sxwl.android.data.http.IntyErrorCode
 import ai.sxwl.android.design.isInEditMode
 import ai.sxwl.android.design.theme.IntelliMateTheme
+import ai.sxwl.android.inty.voicecall.CallStatus
 import ai.sxwl.android.utils.ToastUtils
 import android.Manifest
 import android.annotation.SuppressLint
@@ -84,7 +85,6 @@ import com.ai.intellimate.R
 import com.ai.intellimate.audio.AudioParams
 import com.ai.intellimate.audio.AudioRecordManager
 import com.ai.intellimate.audio.AudioStreamPlayer
-import ai.sxwl.android.inty.voicecall.CallStatus
 import com.ai.intellimate.call.uistate.VoiceCallUiState
 import com.ai.intellimate.ui.ChatDialogData
 import com.ai.intellimate.ui.UiConfigs

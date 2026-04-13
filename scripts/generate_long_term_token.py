@@ -113,9 +113,7 @@ def main(
     days: int = 365,
 ):
     if _count_non_empty([user_id, phone, email]) != 1:
-        raise ValueError(
-            "必须且只能提供 --user-id、--phone、--email 中的一个"
-        )
+        raise ValueError("必须且只能提供 --user-id、--phone、--email 中的一个")
 
     if days <= 0:
         print("❌ 错误: 有效期必须大于0天")
