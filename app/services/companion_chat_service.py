@@ -31,6 +31,8 @@ def _companion_runtime_config_fingerprint() -> str:
         str(feats.companion_default_context_mode),
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
+        # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
+        "companion_repo_only_ws_v1",
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
@@ -70,6 +72,8 @@ def _companion_manager_for_resolved_model(
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
+        repository_only_workspace_text=True,
+        memory_allow_workspace_disk_fallback=False,
     )
     return CompanionManager(companion_cfg)
 

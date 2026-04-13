@@ -139,7 +139,19 @@ def load_prompt_bundle(
     )
 
 
-def load_context_meta(path: Path) -> ContextMeta:
+def load_context_meta(
+    path: Path,
+    *,
+    store: "MemoryStore | None" = None,
+) -> ContextMeta:
+    if store is not None:
+        body = store.read_document_if_exists("context.json")
+        if body is not None and body.strip():
+            try:
+                raw = json.loads(body)
+            except json.JSONDecodeError as e:
+                raise ValueError("context.json: invalid JSON in memory store") from e
+            return ContextMeta.model_validate(raw)
     if not path.is_file():
         return ContextMeta()
     raw_text = read_text(path)

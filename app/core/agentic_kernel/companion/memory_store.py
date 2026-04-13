@@ -104,6 +104,19 @@ class PostgresMemoryRepository:
             created_at=str(created_at),
         )
 
+    def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
+        import psycopg
+
+        sql = (
+            f"SELECT DISTINCT relative_path FROM {self._table_name} "
+            "WHERE workspace_root = %s ORDER BY relative_path"
+        )
+        with psycopg.connect(self._dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (workspace_root,))
+                rows = cur.fetchall()
+        return [str(r[0]) for r in rows]
+
     def append_document(
         self,
         *,
@@ -221,6 +234,16 @@ class MemoryStore:
         if cur is not None:
             return cur.sequence_id + 1
         return 1
+
+    def iter_stored_relative_paths(self) -> list[str]:
+        repo = self._repository
+        if repo is None:
+            return []
+        list_fn = getattr(repo, "list_all_relative_paths", None)
+        if not callable(list_fn):
+            return []
+        out: list[str] = list_fn(workspace_root=self._workspace_root_str)
+        return list(out)
 
     def read_document_if_exists(self, relative_path: str) -> str | None:
         rel = self._normalize_relative_path(relative_path)

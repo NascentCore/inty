@@ -6,6 +6,7 @@ import asyncio
 import json
 import time
 from datetime import date
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
@@ -117,6 +118,48 @@ def _is_memory_document(relative_path: str) -> bool:
     }:
         return True
     return rel.startswith("memory/") and rel.lower().endswith(".md")
+
+
+def _workspace_text_via_memory_store(
+    relative_path: str, *, repository_only_workspace_text: bool
+) -> bool:
+    if _is_memory_document(relative_path):
+        return True
+    if not repository_only_workspace_text:
+        return False
+    rel = (relative_path or "").strip().replace("\\", "/")
+    return rel in {"transcript.jsonl", "context.json", "ai_private.md"}
+
+
+def _list_dir_prefix_for_store_query(rel_dir: str) -> str:
+    """Treat Path.relative_to(workspace) of '.' or '' as workspace root for DB prefix matching."""
+    s = rel_dir.strip().replace("\\", "/").rstrip("/")
+    if s in (".", ""):
+        return ""
+    return s
+
+
+def _list_dir_extra_names_from_store(root: Path, rel_dir: str) -> set[str]:
+    store = get_memory_store(root)
+    paths = store.iter_stored_relative_paths()
+    prefix = _list_dir_prefix_for_store_query(rel_dir)
+    pfx = f"{prefix}/" if prefix else ""
+    out: set[str] = set()
+    for sp in paths:
+        sp = sp.strip().replace("\\", "/")
+        if prefix:
+            if not sp.startswith(pfx):
+                continue
+            rest = sp[len(pfx) :]
+        else:
+            rest = sp
+        if not rest:
+            continue
+        if "/" in rest:
+            out.add(rest.split("/")[0] + "/")
+        else:
+            out.add(rest)
+    return out
 
 
 _BASE_TOOL_REGISTRY = ToolRegistry(
@@ -232,18 +275,29 @@ def resolve_under_workspace(root: Path, relative_path: str) -> Path:
     return candidate
 
 
-def tool_workspace_list_dir(root: Path, relative_path: str) -> str:
+def tool_workspace_list_dir(
+    root: Path,
+    relative_path: str,
+    *,
+    repository_only_workspace_text: bool = False,
+) -> str:
     """列出目录下的直接子项（文件与目录名）；目录名以 / 结尾。"""
+    root = root.resolve()
     d = resolve_under_workspace(root, relative_path)
     if not d.is_dir():
         return f"ERROR: not a directory: {relative_path!r}"
+    rel_dir_raw = d.relative_to(root).as_posix()
+    list_prefix = _list_dir_prefix_for_store_query(rel_dir_raw)
     names = sorted(d.iterdir(), key=lambda p: p.name.lower())
-    lines: list[str] = []
+    lines: set[str] = set()
     for p in names:
         if p.name.startswith("."):
             continue
-        lines.append(f"{p.name}/" if p.is_dir() else p.name)
-    return "\n".join(lines) if lines else "(empty)"
+        lines.add(f"{p.name}/" if p.is_dir() else p.name)
+    if repository_only_workspace_text:
+        lines |= _list_dir_extra_names_from_store(root, list_prefix)
+    ordered = sorted(lines, key=lambda s: s.lower())
+    return "\n".join(ordered) if ordered else "(empty)"
 
 
 def _parse_optional_max_chars(raw: Any) -> int | None:
@@ -268,11 +322,17 @@ def _parse_optional_max_chars(raw: Any) -> int | None:
 
 
 def tool_workspace_read_file(
-    root: Path, relative_path: str, max_chars: int | None = None
+    root: Path,
+    relative_path: str,
+    max_chars: int | None = None,
+    *,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
-    if _is_memory_document(rel):
+    if _workspace_text_via_memory_store(
+        rel, repository_only_workspace_text=repository_only_workspace_text
+    ):
         body = get_memory_store(root).read_document_if_exists(rel)
         if body is None:
             return f"ERROR: not a file: {relative_path!r}"
@@ -313,11 +373,19 @@ def _transcript_jsonl_validate_for_tool_write(content: str) -> str | None:
     return None
 
 
-def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> str:
+def tool_workspace_write_file(
+    root: Path,
+    relative_path: str,
+    content: str,
+    *,
+    repository_only_workspace_text: bool = False,
+) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
     prev_body: str | None = None
-    if _is_memory_document(rel):
+    if _workspace_text_via_memory_store(
+        rel, repository_only_workspace_text=repository_only_workspace_text
+    ):
         prev_body = get_memory_store(root).read_document_if_exists(rel)
     elif p.is_file():
         prev_body = read_text(p)
@@ -325,7 +393,9 @@ def tool_workspace_write_file(root: Path, relative_path: str, content: str) -> s
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
             return v_err
-    if _is_memory_document(rel):
+    if _workspace_text_via_memory_store(
+        rel, repository_only_workspace_text=repository_only_workspace_text
+    ):
         get_memory_store(root).write_document(rel, content)
     else:
         write_text(p, content)
@@ -864,24 +934,45 @@ def _repl_write_allowed(
     return None
 
 
+def _companion_workspace_tool_fns(
+    *, repository_only_workspace_text: bool
+) -> tuple[Any, Any, Any]:
+    if repository_only_workspace_text:
+        return (
+            partial(tool_workspace_list_dir, repository_only_workspace_text=True),
+            partial(tool_workspace_read_file, repository_only_workspace_text=True),
+            partial(tool_workspace_write_file, repository_only_workspace_text=True),
+        )
+    return (
+        tool_workspace_list_dir,
+        tool_workspace_read_file,
+        tool_workspace_write_file,
+    )
+
+
 async def _dispatch(
     root: Path,
     name: str,
     arguments: dict[str, Any],
     *,
     write_allowlist: frozenset[str] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     if not _BASE_TOOL_REGISTRY.is_allowed(name):
         return f"ERROR: unknown tool {name!r}"
+
+    list_fn, read_fn, write_fn = _companion_workspace_tool_fns(
+        repository_only_workspace_text=repository_only_workspace_text
+    )
 
     workspace_dispatch_result = dispatch_workspace_tool(
         root=root,
         name=name,
         arguments=arguments,
         write_allowlist=write_allowlist,
-        tool_workspace_list_dir=tool_workspace_list_dir,
-        tool_workspace_read_file=tool_workspace_read_file,
-        tool_workspace_write_file=tool_workspace_write_file,
+        tool_workspace_list_dir=list_fn,
+        tool_workspace_read_file=read_fn,
+        tool_workspace_write_file=write_fn,
         tool_workspace_mkdir=tool_workspace_mkdir,
         tool_user_profile_record=tool_user_profile_record,
         parse_optional_max_chars=_parse_optional_max_chars,
@@ -1057,6 +1148,7 @@ async def execute_tool_call(
     arguments_json: str,
     *,
     write_allowlist: frozenset[str] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     from loguru import logger
 
@@ -1072,7 +1164,13 @@ async def execute_tool_call(
         logger.warning("tool {} {}", name, err)
         return err
     try:
-        out = await _dispatch(root, name, parsed, write_allowlist=write_allowlist)
+        out = await _dispatch(
+            root,
+            name,
+            parsed,
+            write_allowlist=write_allowlist,
+            repository_only_workspace_text=repository_only_workspace_text,
+        )
     except (OSError, ValueError) as exc:
         err = f"ERROR: {exc}"
         logger.warning("tool {} dispatch: {}", name, err)
@@ -1090,11 +1188,16 @@ async def _execute_tool_call_blocking_impl(
     arguments_json: str,
     *,
     write_allowlist: frozenset[str] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     """`asyncio.run` 结束前释放 fal 全局 client，避免连续多次 blocking 调用踩 closed loop。"""
     try:
         return await execute_tool_call(
-            root, name, arguments_json, write_allowlist=write_allowlist
+            root,
+            name,
+            arguments_json,
+            write_allowlist=write_allowlist,
+            repository_only_workspace_text=repository_only_workspace_text,
         )
     finally:
         await reset_fal_async_client_after_short_lived_loop()
@@ -1106,13 +1209,18 @@ def execute_tool_call_blocking(
     arguments_json: str,
     *,
     write_allowlist: frozenset[str] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> str:
     """Sync entry: safe from async contexts via a fresh event loop in a worker thread."""
 
     def _run_new_loop() -> str:
         return asyncio.run(
             _execute_tool_call_blocking_impl(
-                root, name, arguments_json, write_allowlist=write_allowlist
+                root,
+                name,
+                arguments_json,
+                write_allowlist=write_allowlist,
+                repository_only_workspace_text=repository_only_workspace_text,
             )
         )
 

@@ -43,6 +43,9 @@ class CompanionConfig(BaseModel):
     memory_mirror_to_files: bool = False
     memory_allow_workspace_disk_fallback: bool = False
 
+    # API WebSocket companion: IDENTITY/SOUL/USER/MEMORY/transcript/context 等仅走 MemoryStore（DB + 内存缓存），不落盘
+    repository_only_workspace_text: bool = True
+
     # Bootstrap
     bootstrap_max_rounds: int = 48
 
@@ -135,19 +138,20 @@ class CompanionManager:
                 allow_workspace_disk_fallback=_store_allow_disk_fallback(self._config),
             )
 
-            # 写入 context.json (如果不存在)
-            context_path = ws_path / "context.json"
-            if not context_path.is_file():
-                context_data = {
-                    "context_mode": self._config.default_context_mode,
-                    "user_id": user_id,
-                    "companion_id": companion_id,
-                    "chat_id": chat_id,
-                }
-                write_text(
-                    context_path,
-                    json.dumps(context_data, indent=2, ensure_ascii=False) + "\n",
-                )
+            context_data = {
+                "context_mode": self._config.default_context_mode,
+                "user_id": user_id,
+                "companion_id": companion_id,
+                "chat_id": chat_id,
+            }
+            context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
+            if self._config.repository_only_workspace_text:
+                if store.read_document_if_exists("context.json") is None:
+                    store.write_document("context.json", context_json)
+            else:
+                context_path = ws_path / "context.json"
+                if not context_path.is_file():
+                    write_text(context_path, context_json)
 
             session = CompanionSession(
                 user_id=user_id,
@@ -196,6 +200,7 @@ class CompanionManager:
             chat_completion_fn=_chat_fn,
             model=session.llm_client._resolve_model("tool"),
             max_rounds=session.config.bootstrap_max_rounds,
+            repository_only_workspace_text=session.config.repository_only_workspace_text,
         )
 
     async def run_turn(
@@ -217,6 +222,7 @@ class CompanionManager:
             memory_config=session.config.memory,
             transcript_compaction=session.config.transcript_compaction,
             transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
+            repository_only_workspace_text=session.config.repository_only_workspace_text,
         )
 
     def shutdown_session(
