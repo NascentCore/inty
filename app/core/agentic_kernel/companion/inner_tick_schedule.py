@@ -7,7 +7,10 @@ import time
 from pathlib import Path
 
 from .memory_registry import get_memory_store
-from .models import load_transcript_from_store, transcript_without_trailing_presence_signals
+from .models import (
+    load_transcript_from_store,
+    transcript_without_trailing_presence_signals,
+)
 
 REPL_IDLE_MAX_SLEEP_CHUNK_SEC = 3600.0
 

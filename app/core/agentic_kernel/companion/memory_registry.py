@@ -57,7 +57,9 @@ def get_memory_store(
         if (dsn or "").strip():
             uid, cid, ck = (
                 (user_id, companion_id, chat_id)
-                if user_id is not None and companion_id is not None and chat_id is not None
+                if user_id is not None
+                and companion_id is not None
+                and chat_id is not None
                 else _scope_from_workspace_path(root)
             )
             repository = SqlAlchemyMemoryRepository(

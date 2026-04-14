@@ -142,14 +142,24 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         store = get_memory_store(root)
         day = local_date_str()
         out["store_documents"] = {
-            "context_json": _read_store_optional(store, "context.json", max_chars=max_chars_per_doc),
+            "context_json": _read_store_optional(
+                store, "context.json", max_chars=max_chars_per_doc
+            ),
             "chat_settings": _read_store_optional(
                 store, _CHAT_SETTINGS_REL, max_chars=max_chars_per_doc
             ),
-            "IDENTITY.md": _read_store_optional(store, "IDENTITY.md", max_chars=max_chars_per_doc),
-            "SOUL.md": _read_store_optional(store, "SOUL.md", max_chars=max_chars_per_doc),
-            "USER.md": _read_store_optional(store, "USER.md", max_chars=max_chars_per_doc),
-            "MEMORY.md": _read_store_optional(store, "MEMORY.md", max_chars=max_chars_per_doc),
+            "IDENTITY.md": _read_store_optional(
+                store, "IDENTITY.md", max_chars=max_chars_per_doc
+            ),
+            "SOUL.md": _read_store_optional(
+                store, "SOUL.md", max_chars=max_chars_per_doc
+            ),
+            "USER.md": _read_store_optional(
+                store, "USER.md", max_chars=max_chars_per_doc
+            ),
+            "MEMORY.md": _read_store_optional(
+                store, "MEMORY.md", max_chars=max_chars_per_doc
+            ),
             f"memory/daily/{day}.md": _read_store_optional(
                 store, f"memory/daily/{day}.md", max_chars=max_chars_per_doc
             ),

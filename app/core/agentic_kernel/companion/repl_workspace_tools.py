@@ -81,6 +81,7 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     }
 )
 
+
 def _latest_generated_image_http_url_from_index(root: Path) -> str | None:
     for row in reversed(list_image_asset_records(root)):
         u = str(row.get("gcs_http_url") or "").strip()
@@ -362,7 +363,11 @@ def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
 def read_chat_output_format_prompt(root: Path) -> str | None:
     root_r = root.resolve()
     store = get_memory_store(root_r)
-    rel = resolve_under_workspace(root_r, _CHAT_SETTINGS_REL).relative_to(root_r).as_posix()
+    rel = (
+        resolve_under_workspace(root_r, _CHAT_SETTINGS_REL)
+        .relative_to(root_r)
+        .as_posix()
+    )
     raw_body = store.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
         return None
@@ -390,7 +395,11 @@ def tool_update_chat_settings(root: Path, output_format_prompt: str) -> str:
     payload = {_CHAT_OUTPUT_FORMAT_PROMPT_KEY: prompt}
     root_r = root.resolve()
     store = get_memory_store(root_r)
-    rel = resolve_under_workspace(root_r, _CHAT_SETTINGS_REL).relative_to(root_r).as_posix()
+    rel = (
+        resolve_under_workspace(root_r, _CHAT_SETTINGS_REL)
+        .relative_to(root_r)
+        .as_posix()
+    )
     body = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
     store.write_document(rel, body)
     return "OK updated chat output format prompt"
@@ -1061,9 +1070,7 @@ async def _dispatch(
         path_s = raw_path.strip() if isinstance(raw_path, str) else ""
         url_s = raw_url.strip() if isinstance(raw_url, str) else ""
         if path_s and url_s:
-            return (
-                "ERROR: use only one of source_image_relative_path or source_image_url, not both"
-            )
+            return "ERROR: use only one of source_image_relative_path or source_image_url, not both"
         src_path: Path | None = None
         if path_s:
             try:
@@ -1077,9 +1084,7 @@ async def _dispatch(
                     src_path = None
                     url_s = u
                 else:
-                    return (
-                        f"ERROR: source image in index has no http(s) URL for {path_s!r}"
-                    )
+                    return f"ERROR: source image in index has no http(s) URL for {path_s!r}"
             else:
                 return f"ERROR: source image not in index: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
