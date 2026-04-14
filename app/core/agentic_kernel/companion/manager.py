@@ -87,7 +87,6 @@ class CompanionSession:
         self.store = store
         self.llm_client = llm_client
         self.config = config
-        self._lock = threading.Lock()
 
     @property
     def is_initialized(self) -> bool:
@@ -180,13 +179,18 @@ class CompanionManager:
         """对未初始化的 session 执行 agentic bootstrap。返回第一条 assistant 消息。"""
         if session.is_initialized:
             logger.info(
-                "companion_manager bootstrap_skipped (already initialized) user={} companion={}",
+                "companion_manager bootstrap_skipped (already initialized) user={} companion={} chat={}",
                 session.user_id,
                 session.companion_id,
+                session.chat_id,
             )
             return ""
 
-        def _chat_fn(messages: list[dict[str, Any]], model: str, tools: list) -> Any:
+        def _chat_fn(
+            messages: list[dict[str, Any]],
+            model: str,
+            tools: list[Any] | None = None,
+        ) -> Any:
             return session.llm_client.chat_completion(
                 messages=messages,
                 model=model,
