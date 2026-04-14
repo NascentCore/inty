@@ -152,6 +152,7 @@ def load_context_meta(
             except json.JSONDecodeError as e:
                 raise ValueError("context.json: invalid JSON in memory store") from e
             return ContextMeta.model_validate(raw)
+        return ContextMeta()
     if not path.is_file():
         return ContextMeta()
     raw_text = read_text(path)

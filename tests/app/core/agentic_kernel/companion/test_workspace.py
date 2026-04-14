@@ -5,6 +5,7 @@ from pathlib import Path
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.workspace import (
     WorkspacePaths,
+    ensure_minimal_workspace_documents_in_store,
     is_workspace_initialized,
     is_workspace_initialized_from_store,
 )
@@ -90,3 +91,19 @@ def test_is_workspace_initialized_partial(tmp_path: Path) -> None:
     for name in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
         (d / name).write_text("x", encoding="utf-8")
     assert is_workspace_initialized(d) is False
+
+
+def test_ensure_minimal_workspace_documents_in_store(tmp_path: Path) -> None:
+    root = tmp_path / "seed_ws"
+    root.mkdir()
+    store = MemoryStore(
+        workspace_root=root,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    assert is_workspace_initialized_from_store(root, store) is False
+    ensure_minimal_workspace_documents_in_store(root, store)
+    assert is_workspace_initialized_from_store(root, store) is True
+    ensure_minimal_workspace_documents_in_store(root, store)
+    assert is_workspace_initialized_from_store(root, store) is True

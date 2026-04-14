@@ -46,7 +46,8 @@ class CompanionConfig(BaseModel):
     # API WebSocket companion: IDENTITY/SOUL/USER/MEMORY/transcript/context 等仅走 MemoryStore（DB + 内存缓存），不落盘
     repository_only_workspace_text: bool = True
 
-    # Bootstrap
+    # Bootstrap (off by default; set companion_workspace_bootstrap_enabled true in app.features YAML)
+    workspace_bootstrap_enabled: bool = False
     bootstrap_max_rounds: int = 48
 
     # Context

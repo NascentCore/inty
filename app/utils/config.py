@@ -168,6 +168,8 @@ class FeaturesConfig:
     )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
     companion_transcript_llm_window_max_messages: Optional[int] = None
+    # WebSocket companion: agentic workspace bootstrap on first message (default off; set true in YAML to enable).
+    companion_workspace_bootstrap_enabled: bool = False
 
 
 @dataclass

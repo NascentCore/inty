@@ -121,6 +121,30 @@ def is_workspace_initialized_from_store(workspace: Path, store: MemoryStore) -> 
     return True
 
 
+_MINIMAL_DOC_SEED = "Placeholder; refine in conversation.\n"
+_MINIMAL_TRANSCRIPT_SEED = "# companion_minimal_seed\n"
+
+
+def ensure_minimal_workspace_documents_in_store(
+    workspace: Path,
+    store: MemoryStore,
+) -> None:
+    """Write non-empty stubs for required paths into MemoryStore only (no disk authority)."""
+    root = workspace.resolve()
+    if is_workspace_initialized_from_store(root, store):
+        return
+    paths = WorkspacePaths(root=root)
+    for attr in _REQUIRED_FILES_ATTR:
+        rel = getattr(paths, attr).relative_to(root).as_posix()
+        body = store.read_document_if_exists(rel)
+        if body is not None and body.strip():
+            continue
+        if attr == "transcript":
+            store.write_document(rel, _MINIMAL_TRANSCRIPT_SEED)
+        else:
+            store.write_document(rel, _MINIMAL_DOC_SEED)
+
+
 # IDENTITY/USER 仍像模板或未约定时的子串
 _IDENTITY_STUB_MARKERS: tuple[str, ...] = (
     "（在此填写",
