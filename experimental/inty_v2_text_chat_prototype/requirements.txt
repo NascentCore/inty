@@ -9,3 +9,4 @@ PyYAML
 pillow
 fal-client
 google-cloud-storage
+websockets
