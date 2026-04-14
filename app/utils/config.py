@@ -3,7 +3,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -147,6 +147,14 @@ class APIEndpointsConfig:
     use_dummy_api_v1_character_themes_id_get: bool = False
 
 
+class CompanionWorkspaceBootstrapType(StrEnum):
+    """WS companion workspace bootstrap mode (app.features.companion_workspace_bootstrap_type)."""
+
+    NONE = "NONE"
+    LEGACY = "LEGACY"
+    USER_INTERACTIVE = "USER_INTERACTIVE"
+
+
 @dataclass
 class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = True
@@ -168,14 +176,21 @@ class FeaturesConfig:
     )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
     companion_transcript_llm_window_max_messages: Optional[int] = None
-    # WebSocket companion: agentic workspace bootstrap on first message (default off; set true in YAML to enable).
-    companion_workspace_bootstrap_enabled: bool = False
-    # When true: first-turn internal bootstrap loop is skipped; user stays in run_turn while the model
-    # uses companion_update_prompt_slice / companion_bootstrap_user_interactive_complete (see bootstrap_user_interactive).
-    # If both this and companion_workspace_bootstrap_enabled are true, interactive mode wins (no bootstrap_session).
-    companion_workspace_bootstrap_user_interactive_enabled: bool = False
+    # WS companion: NONE = seed minimal docs only; LEGACY = first user message runs bootstrap_session loop;
+    # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
+    companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
     # Companion kernel: use separate OpenAI-compatible clients for chat vs tool rounds (LangSmith names companion_dual_*).
     companion_enable_dual_llm: bool = False
+
+    def __post_init__(self) -> None:
+        raw = (self.companion_workspace_bootstrap_type or "").strip().upper()
+        allowed = {m.value for m in CompanionWorkspaceBootstrapType}
+        if raw not in allowed:
+            raise ValueError(
+                "app.features.companion_workspace_bootstrap_type must be one of "
+                f"{sorted(allowed)}, got {self.companion_workspace_bootstrap_type!r}"
+            )
+        self.companion_workspace_bootstrap_type = raw
 
 
 @dataclass
@@ -625,6 +640,22 @@ def load_config(path: str) -> Config:
     if "features" in app_data and isinstance(app_data["features"], dict):
         feats_raw = dict(app_data["features"])
         feats_raw.pop("chat_use_companion_kernel_agent_ids", None)
+        leg = feats_raw.pop("companion_workspace_bootstrap_enabled", None)
+        inter = feats_raw.pop("companion_workspace_bootstrap_user_interactive_enabled", None)
+        if "companion_workspace_bootstrap_type" not in feats_raw:
+            if inter is True:
+                feats_raw["companion_workspace_bootstrap_type"] = (
+                    CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+                )
+            elif leg is True:
+                feats_raw["companion_workspace_bootstrap_type"] = (
+                    CompanionWorkspaceBootstrapType.LEGACY.value
+                )
+            else:
+                feats_raw.setdefault(
+                    "companion_workspace_bootstrap_type",
+                    CompanionWorkspaceBootstrapType.NONE.value,
+                )
         app_data["features"] = FeaturesConfig(**feats_raw)
     if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
         app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])

@@ -15,6 +15,7 @@ from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.utils.config import CompanionWorkspaceBootstrapType
 
 
 def clear_companion_chat_service_caches() -> None:
@@ -31,8 +32,7 @@ def _companion_runtime_config_fingerprint() -> str:
         str(feats.companion_default_context_mode),
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
-        str(feats.companion_workspace_bootstrap_enabled),
-        str(feats.companion_workspace_bootstrap_user_interactive_enabled),
+        str(feats.companion_workspace_bootstrap_type),
         str(feats.companion_enable_dual_llm),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
@@ -77,8 +77,7 @@ def _companion_manager_for_resolved_model(
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
         repository_only_workspace_text=True,
-        workspace_bootstrap_enabled=feats.companion_workspace_bootstrap_enabled,
-        workspace_bootstrap_user_interactive_enabled=feats.companion_workspace_bootstrap_user_interactive_enabled,
+        workspace_bootstrap_type=feats.companion_workspace_bootstrap_type,
     )
     return CompanionManager(companion_cfg)
 
@@ -95,15 +94,13 @@ async def run_companion_chat_turn_for_api(
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
-    When the workspace is not yet initialized and ``app.features.companion_workspace_bootstrap_enabled``
-    is true and ``companion_workspace_bootstrap_user_interactive_enabled`` is false, the first user line
-    is consumed by the legacy agentic bootstrap loop (``bootstrap_session``).
-    When ``companion_workspace_bootstrap_user_interactive_enabled`` is true, minimal workspace seeds
-    are written at session creation and every user line is handled by ``run_turn`` until the model
-    calls ``companion_bootstrap_user_interactive_complete``. If both bootstrap flags are true,
-    interactive mode takes precedence (no ``bootstrap_session``).
-    When both bootstrap flags are false, required workspace documents are seeded at session creation
-    and this user line is handled by ``run_turn``.
+    ``app.features.companion_workspace_bootstrap_type`` controls workspace bootstrap: ``NONE`` seeds
+    minimal documents at session create and every message uses ``run_turn`` only; ``LEGACY`` skips
+    pre-seeding until the first user message, which is consumed by ``bootstrap_session`` until the
+    workspace five-pack exists; ``USER_INTERACTIVE`` seeds minimal docs and every message uses
+    ``run_turn`` with interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
+    Deprecated YAML booleans ``companion_workspace_bootstrap_enabled`` / ``companion_workspace_bootstrap_user_interactive_enabled``
+    are mapped to this enum at load time when ``companion_workspace_bootstrap_type`` is absent.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
@@ -128,11 +125,17 @@ async def run_companion_chat_turn_for_api(
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
     if not session.is_initialized:
-        if session.config.workspace_bootstrap_user_interactive_enabled:
+        if (
+            session.config.workspace_bootstrap_type
+            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+        ):
             raise RuntimeError(
                 "Companion workspace not seeded (interactive bootstrap requires minimal documents in store)"
             )
-        if session.config.workspace_bootstrap_enabled:
+        if (
+            session.config.workspace_bootstrap_type
+            == CompanionWorkspaceBootstrapType.LEGACY.value
+        ):
             logger.info(
                 "companion_chat bootstrap user={} agent={} chat={}",
                 user_id,

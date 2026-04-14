@@ -9,6 +9,8 @@ from typing import Any
 
 from loguru import logger
 
+from app.utils.config import CompanionWorkspaceBootstrapType
+
 from .llm_client import CompanionLLMClient
 from .message_format import openai_assistant_message_dict
 from .memory_pipeline import (
@@ -75,7 +77,7 @@ async def run_turn(
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
     repository_only_workspace_text: bool = False,
-    workspace_bootstrap_user_interactive_enabled: bool = False,
+    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
 ) -> str:
     """
     执行一轮完整对话。
@@ -115,7 +117,10 @@ async def run_turn(
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
     interactive_bootstrap = interactive_bootstrap_active(
-        feature_enabled=workspace_bootstrap_user_interactive_enabled,
+        feature_enabled=(
+            workspace_bootstrap_type
+            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+        ),
         meta=context,
     )
     rel_tr = paths.transcript.relative_to(root).as_posix()

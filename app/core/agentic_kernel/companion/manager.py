@@ -10,6 +10,8 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.utils.config import CompanionWorkspaceBootstrapType
+
 from .bootstrap import run_workspace_bootstrap_loop
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from .memory_pipeline import MemoryPipelineConfig
@@ -43,9 +45,8 @@ class CompanionConfig(BaseModel):
     # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 repl_workspace_tools）
     repository_only_workspace_text: bool = True
 
-    # Bootstrap (off by default; set companion_workspace_bootstrap_enabled true in app.features YAML)
-    workspace_bootstrap_enabled: bool = False
-    workspace_bootstrap_user_interactive_enabled: bool = False
+    # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | LEGACY | USER_INTERACTIVE).
+    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
     bootstrap_max_rounds: int = 48
 
     # Context
@@ -140,15 +141,18 @@ class CompanionManager:
                 "companion_id": companion_id,
                 "chat_id": chat_id,
             }
-            if self._config.workspace_bootstrap_user_interactive_enabled:
+            if (
+                self._config.workspace_bootstrap_type
+                == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+            ):
                 context_data["workspace_bootstrap_user_interactive_completed"] = False
             context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
             if store.read_document_if_exists("context.json") is None:
                 store.write_document("context.json", context_json)
 
             if (
-                not self._config.workspace_bootstrap_enabled
-                or self._config.workspace_bootstrap_user_interactive_enabled
+                self._config.workspace_bootstrap_type
+                != CompanionWorkspaceBootstrapType.LEGACY.value
             ):
                 ensure_minimal_workspace_documents_in_store(ws_path, store)
 
@@ -227,7 +231,7 @@ class CompanionManager:
             transcript_compaction=session.config.transcript_compaction,
             transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
             repository_only_workspace_text=session.config.repository_only_workspace_text,
-            workspace_bootstrap_user_interactive_enabled=session.config.workspace_bootstrap_user_interactive_enabled,
+            workspace_bootstrap_type=session.config.workspace_bootstrap_type,
         )
 
     def shutdown_session(

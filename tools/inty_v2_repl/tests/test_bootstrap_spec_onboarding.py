@@ -1,4 +1,4 @@
-"""templates/BOOSTRAP.md：收尾须包含邀请共同定义与询问对方基本信息（可执行规范）。"""
+"""templates/BOOTSTRAP.md：收尾须包含邀请共同定义与询问对方基本信息（可执行规范）。"""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class TestBootstrapSpecOnboarding(unittest.TestCase):
         spec = (
             Path(workspace_init_loop.__file__).resolve().parent
             / "templates"
-            / "BOOSTRAP.md"
+            / "BOOTSTRAP.md"
         )
         self.assertTrue(
             spec.is_file(),

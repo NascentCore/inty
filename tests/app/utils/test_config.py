@@ -9,6 +9,7 @@ from app.utils.companion_feature_defaults import (
 from app.utils.config import (
     AgentConfig,
     AppConfig,
+    CompanionWorkspaceBootstrapType,
     FeaturesConfig,
     CloudflareConfig,
     Config,
@@ -385,6 +386,86 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
         "dev1@example.com",
         "dev2@example.com",
     ]
+
+
+def test_features_config_companion_workspace_bootstrap_type_default():
+    f = FeaturesConfig()
+    assert f.companion_workspace_bootstrap_type == CompanionWorkspaceBootstrapType.NONE.value
+
+
+def test_features_config_companion_workspace_bootstrap_type_normalizes_case():
+    f = FeaturesConfig(companion_workspace_bootstrap_type="legacy")
+    assert f.companion_workspace_bootstrap_type == CompanionWorkspaceBootstrapType.LEGACY.value
+
+
+def test_features_config_companion_workspace_bootstrap_type_invalid_raises():
+    with pytest.raises(ValueError, match="companion_workspace_bootstrap_type"):
+        FeaturesConfig(companion_workspace_bootstrap_type="BOGUS")
+
+
+def _minimal_yaml_for_load_config(extra_features: str) -> str:
+    return f"""
+app:
+  name: loadcfg-bootstrap-test
+  environment: test
+  gcp_service_account_key: ".secrets/inty-backend-key.json"
+  features:
+{extra_features}
+security:
+  secret_key: "test-secret"
+database:
+  host: localhost
+agent:
+  api_key: "test-openrouter"
+  langchain_api_key: "test-langchain"
+gcs:
+  bucket: "test-bucket"
+firebase:
+  service_account_path: "test-firebase.json"
+elevenlabs:
+  api_key: "test-eleven"
+"""
+
+
+def test_load_config_maps_deprecated_bootstrap_booleans_to_enum():
+    cases = [
+        (
+            "    companion_workspace_bootstrap_user_interactive_enabled: true\n"
+            "    companion_workspace_bootstrap_enabled: true\n",
+            CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value,
+        ),
+        (
+            "    companion_workspace_bootstrap_user_interactive_enabled: false\n"
+            "    companion_workspace_bootstrap_enabled: true\n",
+            CompanionWorkspaceBootstrapType.LEGACY.value,
+        ),
+        (
+            "    companion_workspace_bootstrap_user_interactive_enabled: false\n"
+            "    companion_workspace_bootstrap_enabled: false\n",
+            CompanionWorkspaceBootstrapType.NONE.value,
+        ),
+    ]
+    for feats_yaml, expected in cases:
+        yaml_text = _minimal_yaml_for_load_config(feats_yaml)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "config.yaml"
+            path.write_text(yaml_text, encoding="utf-8")
+            cfg = load_config(str(path))
+        assert cfg.app.features.companion_workspace_bootstrap_type == expected
+
+
+def test_load_config_explicit_bootstrap_type_wins_over_deprecated_booleans():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_workspace_bootstrap_type: LEGACY\n"
+        "    companion_workspace_bootstrap_user_interactive_enabled: true\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.app.features.companion_workspace_bootstrap_type == (
+        CompanionWorkspaceBootstrapType.LEGACY.value
+    )
 
 
 def test_load_config_ignores_deprecated_chat_use_companion_kernel_agent_ids():

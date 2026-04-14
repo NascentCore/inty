@@ -19,10 +19,8 @@ app:
   features:
     # macOS 本地开发：避免默认 /var/lib/inty（无写权限）
     companion_workspaces_base_dir: "~/.inty_workspace"
-    # WS companion: interactive bootstrap (every turn is run_turn; model uses companion_update_prompt_slice + companion_bootstrap_user_interactive_complete).
-    companion_workspace_bootstrap_user_interactive_enabled: true
-    # Legacy: first user message consumed by internal bootstrap loop until five workspace files exist. Omit when using interactive bootstrap above.
-    # companion_workspace_bootstrap_enabled: true
+    # WS companion bootstrap: NONE | LEGACY | USER_INTERACTIVE
+    companion_workspace_bootstrap_type: USER_INTERACTIVE
     # Separate chat vs tool HTTP clients in companion kernel (same stack as INTY_V2_PROTO_DUAL_LLM for REPL).
     companion_enable_dual_llm: true
 

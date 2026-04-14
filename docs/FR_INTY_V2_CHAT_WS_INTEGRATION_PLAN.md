@@ -81,7 +81,7 @@ app:
 |------|-----|------|
 | 1 | **多模态用户轮** | **已完成（2026-04-12）**：WS companion 路径若最后一条用户消息含 `image_url`，返回 HTTP 400 等价信息（WS 上为 JSON：`code` / `message` / `agent_id`，连接不关闭）。多段纯文本仍合并为文本进入 `run_turn`。内核内完整多模态行仍为后续工作。实现见 `ChatMessage.has_image_content_part`、`_companion_rejects_multimodal_user_turn`、`chat_completions_websocket` 对 `HTTPException` 的 JSON 映射；`_agent_chat_completions_impl` 内层 `except HTTPException: raise` 避免吞掉业务异常。 |
 | 2 | **原子性：工作区 vs chat_history** | `run_turn` 与 `chat_history` 两步之间失败时的补偿或单事务边界。 |
-| 3 | **首轮 bootstrap 语义** | 旧开关：`bootstrap_session` 消费首条用户输入直至五件套就绪。新开关 `companion_workspace_bootstrap_user_interactive_enabled`：用户始终在 `run_turn`，由 `bootstrap_user_interactive` 注入规范与切片工具，模型调用 `companion_bootstrap_user_interactive_complete` 结束阶段；与旧开关同时为 true 时交互式优先。 |
+| 3 | **首轮 bootstrap 语义** | `app.features.companion_workspace_bootstrap_type`：`LEGACY` 时 `bootstrap_session` 消费首条用户输入直至五件套就绪；`USER_INTERACTIVE` 时用户始终在 `run_turn`，由 `bootstrap_user_interactive` 注入规范与切片工具，模型调用 `companion_bootstrap_user_interactive_complete` 结束阶段；`NONE` 为默认。缺少该 YAML 键时，旧布尔项会映射为该枚举（交互式优先于 legacy）。 |
 | 4 | **配置热更新** | `_companion_manager_for_resolved_model` 使用 `lru_cache`；改 YAML 不重启进程时须调用 `clear_companion_chat_service_caches()` 或接入重载钩子。 |
 | 5 | **`/ws/verify` 与 companion 对齐** | 同阶段 5。 |
 | 6 | **lazy `get_agent`** | companion 路径仍为语音等逻辑加载 legacy `Agent`；可评估延后加载或拆分依赖。 |
