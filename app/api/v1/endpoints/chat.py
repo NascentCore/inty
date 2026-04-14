@@ -606,9 +606,8 @@ async def _agent_chat_completions_impl(
                 use_companion = chat_route == "websocket"
                 _agent_cfg = global_config_loaded_from_config_yaml.agent
                 _chat_llm_base = (
-                    (_agent_cfg.chat_llm_base_url or _agent_cfg.base_url or "").strip()
-                    or "https://openrouter.ai/api/v1"
-                )
+                    _agent_cfg.chat_llm_base_url or _agent_cfg.base_url or ""
+                ).strip() or "https://openrouter.ai/api/v1"
                 logger.debug(
                     "chat_turn route={} companion={} user={} chat_id={} agent_id={} model={} subscribed={} chat_llm_api_base={}",
                     chat_route,

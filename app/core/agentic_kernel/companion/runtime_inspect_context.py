@@ -66,7 +66,8 @@ def runtime_inspect_thread_overlay_end() -> None:
 def runtime_inspect_get_bundle() -> dict[str, Any] | None:
     d = _inspect_var.get(None)
     if d is not None and (
-        d.get("runtime_config") is not None or d.get("last_chat_completion_request") is not None
+        d.get("runtime_config") is not None
+        or d.get("last_chat_completion_request") is not None
     ):
         return copy.deepcopy(d)
     td = getattr(_thread_overlay, "bundle", None)
@@ -155,9 +156,11 @@ def build_turn_runtime_config_dict(
         "memory_pipeline": mem_cfg.model_dump(),
         "heartbeat_turn": heartbeat_turn,
         "repository_only_workspace_text": repository_only_workspace_text,
-        "transcript_compaction": transcript_compaction.model_dump()
-        if transcript_compaction is not None
-        else None,
+        "transcript_compaction": (
+            transcript_compaction.model_dump()
+            if transcript_compaction is not None
+            else None
+        ),
         "turn_limits": {
             "transcript_llm_window_max_messages": transcript_llm_window_max_messages,
             "transcript_window_default": TRANSCRIPT_WINDOW_MAX_MESSAGES,

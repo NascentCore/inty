@@ -147,7 +147,9 @@ def _load_tasks(root: Path) -> list[ScheduleTask]:
                 out.append(_legacy_list_item_to_task(x))
         return out
     if not isinstance(loaded, dict):
-        raise ValueError("schedule tasks document must be a JSON object or legacy array")
+        raise ValueError(
+            "schedule tasks document must be a JSON object or legacy array"
+        )
     raw_tasks = loaded.get("tasks", [])
     if not isinstance(raw_tasks, list):
         raise ValueError("schedule tasks: key 'tasks' must be an array")

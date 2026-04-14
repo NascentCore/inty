@@ -20,7 +20,10 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
-from .llm_chat_runtime import create_chat_completion_sync, tool_path_chat_completion_kwargs
+from .llm_chat_runtime import (
+    create_chat_completion_sync,
+    tool_path_chat_completion_kwargs,
+)
 from .memory_registry import get_memory_store
 from .runtime_inspect_context import (
     build_last_chat_completion_request_payload,

@@ -36,9 +36,7 @@ from app.services.chat_service import generate_session_id
 def _resolve_user_id_from_token() -> str:
     raw = (os.environ.get("INTY_ACCESS_TOKEN") or "").strip()
     if not raw:
-        raise SystemExit(
-            "需要 INTY_ACCESS_TOKEN（JWT），或使用 --user-id 显式传入 sub"
-        )
+        raise SystemExit("需要 INTY_ACCESS_TOKEN（JWT），或使用 --user-id 显式传入 sub")
     cfg = global_config_loaded_from_config_yaml
     try:
         payload = jwt.decode(
@@ -78,24 +76,24 @@ async def _run(
                 f"未找到活跃聊天: user_id={user_id!r} agent_id={agent_id!r}"
             )
         if len(rows) > 1:
-            raise SystemExit(
-                f"查到多条活跃聊天（{len(rows)}），请人工处理或收窄条件"
-            )
+            raise SystemExit(f"查到多条活跃聊天（{len(rows)}），请人工处理或收窄条件")
         chat = rows[0]
         chat_id_str = str(chat.id)
         session_id = generate_session_id(chat_id_str)
 
         cnt_ws = await db.scalar(
-            select(func.count()).select_from(CompanionWorkspaceDocumentVersion).where(
+            select(func.count())
+            .select_from(CompanionWorkspaceDocumentVersion)
+            .where(
                 CompanionWorkspaceDocumentVersion.user_id == user_id,
                 CompanionWorkspaceDocumentVersion.companion_id == agent_id,
                 CompanionWorkspaceDocumentVersion.chat_id == chat_id_str,
             )
         )
         cnt_hist = await db.scalar(
-            select(func.count()).select_from(ChatHistory).where(
-                ChatHistory.session_id == uuid.UUID(session_id)
-            )
+            select(func.count())
+            .select_from(ChatHistory)
+            .where(ChatHistory.session_id == uuid.UUID(session_id))
         )
 
         logger.info(
@@ -125,12 +123,12 @@ async def _run(
             )
         )
         await db.execute(
-            delete(ChatHistory).where(
-                ChatHistory.session_id == uuid.UUID(session_id)
-            )
+            delete(ChatHistory).where(ChatHistory.session_id == uuid.UUID(session_id))
         )
         await db.commit()
-        print("已删除。请重启 Inty 后端（例如 8001）再连 WebSocket，否则会读到旧 MemoryStore 缓存。")
+        print(
+            "已删除。请重启 Inty 后端（例如 8001）再连 WebSocket，否则会读到旧 MemoryStore 缓存。"
+        )
 
 
 def main(
@@ -155,9 +153,7 @@ def main(
     ] = False,
 ) -> None:
     uid = user_id or _resolve_user_id_from_token()
-    asyncio.run(
-        _run(agent_id=agent_id, user_id=uid, execute=no_dry_run, yes=yes)
-    )
+    asyncio.run(_run(agent_id=agent_id, user_id=uid, execute=no_dry_run, yes=yes))
 
 
 if __name__ == "__main__":
