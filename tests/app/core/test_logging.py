@@ -39,7 +39,9 @@ def test_logging_timezone_format():
     assert len(target_messages) == 3
 
     for message in target_messages:
-        assert " UTC " in message, f"Expected UTC timezone, got: {message}"
+        assert re.search(r"\d{3} [+-]\d{4}", message), (
+            f"Expected local wall time with numeric offset (ZZ), got: {message}"
+        )
 
 
 def test_logging_environment_timezone():
@@ -52,9 +54,8 @@ def test_logging_environment_timezone():
         
         # 重新初始化日志
         init_logger()
-        
-        # 验证TZ被强制设置为UTC
-        assert os.environ.get("TZ") == "UTC"
+
+        assert os.environ.get("TZ") == "Asia/Shanghai"
         
     finally:
         # 恢复原始环境变量

@@ -36,6 +36,7 @@ def test_build_companion_tools() -> None:
         "workspace_read_file",
         "workspace_write_file",
         "tool_update_chat_settings",
+        "companion_runtime_inspect",
         "google_web_search",
         "generate_image",
         "modify_image",

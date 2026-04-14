@@ -10,7 +10,6 @@ import sys
 import threading
 import time
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Callable, Mapping
 
@@ -50,6 +49,7 @@ from tools.inty_v2_repl.bootstrap import (
 from tools.inty_v2_repl.llm_trace import configure_llm_trace_file
 from tools.inty_v2_repl.proto_log import (
     configure_proto_log,
+    repl_wall_ts_str,
     resolve_proto_log_file,
 )
 
@@ -107,11 +107,6 @@ def _default_workspace() -> Path:
     return Path(__file__).resolve().parent / "workspace"
 
 
-def _local_ts_str() -> str:
-    dt = datetime.now().astimezone()
-    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + dt.strftime(" %z")
-
-
 def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     u = ids.get("user_msg_uuid", "")
     a = ids.get("assistant_msg_uuid", "")
@@ -131,7 +126,7 @@ def _repl_assistant_banner_label(ids: Mapping[str, str] | None) -> str:
 
 
 def _print_repl_user_input(text: str) -> None:
-    print(f"[{_local_ts_str()}] user-input")
+    print(f"[{repl_wall_ts_str()}] user-input")
     print(text)
 
 
@@ -145,7 +140,7 @@ def _print_assistant_reply(
     ms = elapsed_s * 1000
     suffix = _repl_transcript_id_suffix(transcript_ids) if transcript_ids else ""
     label = repl_source_label or _repl_assistant_banner_label(transcript_ids)
-    print(f"[{_local_ts_str()}] {label} {ms:.0f}ms{suffix}")
+    print(f"[{repl_wall_ts_str()}] {label} {ms:.0f}ms{suffix}")
     print(out)
 
 
@@ -156,7 +151,7 @@ def _drain_async_tool_events(ws: Path) -> None:
         tr = (ev.trace_id or "").strip()
         trace_part = f" trace={tr}" if tr else ""
         print(
-            f"[{_local_ts_str()}] AI-tool-bg {ev.elapsed_ms}ms{trace_part} "
+            f"[{repl_wall_ts_str()}] AI-tool-bg {ev.elapsed_ms}ms{trace_part} "
             f"(user={ev.user_msg_uuid[:8]} asst={ev.assistant_msg_uuid[:8]})"
         )
         print(ev.text)
@@ -188,7 +183,7 @@ def _process_due_schedule_events(
         mark_task_fired(ws, ev.task_id)
         id_suffix = _repl_transcript_id_suffix(ids)
         print(
-            f"[{_local_ts_str()}] AI-chat {int((time.perf_counter() - t0) * 1000)}ms "
+            f"[{repl_wall_ts_str()}] AI-chat {int((time.perf_counter() - t0) * 1000)}ms "
             f"(schedule-task task={ev.task_id[:8]}){id_suffix}"
         )
         print(out)
@@ -292,7 +287,7 @@ def _configure_llm_trace_for_workspace(root: Path) -> None:
 
 
 def _print_openrouter_invalid_json_retry_hint() -> None:
-    print(f"[{_local_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+    print(f"[{repl_wall_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
 
 
 def _undo_repl_online_presence_after_failed_ack(ws: Path) -> None:
@@ -304,7 +299,7 @@ def _undo_repl_online_presence_after_failed_ack(ws: Path) -> None:
 
 
 def _print_repl_online_ack_failure_hint(exc: BaseException) -> None:
-    print(f"[{_local_ts_str()}] REPL 上线问候失败: {exc}")
+    print(f"[{repl_wall_ts_str()}] REPL 上线问候失败: {exc}")
 
 
 def _flush_and_shutdown_memory_store(root: Path) -> None:
@@ -978,7 +973,7 @@ def _resolve_bearer_token_cli() -> str:
 
 def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
     print(
-        f"[{_local_ts_str()}] backend-ws repl (agent_id={agent_id}); "
+        f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
         "quit / exit / q to leave; history lives on the server."
     )
     while True:
@@ -997,13 +992,13 @@ def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str
             out = bridge.send_turn(agent_id, line)
         except BackendChatWsError as exc:
             print(
-                f"[{_local_ts_str()}] chat-ws-error code={exc.code} "
+                f"[{repl_wall_ts_str()}] chat-ws-error code={exc.code} "
                 f"message={exc.agent_message!r}"
             )
             continue
         except Exception as exc:
             logger.exception("backend ws turn failed")
-            print(f"[{_local_ts_str()}] error: {exc}")
+            print(f"[{repl_wall_ts_str()}] error: {exc}")
             continue
         _print_assistant_reply(out, time.perf_counter() - t0)
 

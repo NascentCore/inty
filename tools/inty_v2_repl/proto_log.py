@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
@@ -14,6 +15,15 @@ _CONFIGURED = False
 _FILE_LEVEL = (
     os.getenv("INTY_V2_PROTO_LOG_FILE_LEVEL", "DEBUG").strip().upper() or "DEBUG"
 )
+
+# 与 app.utils.config.LOGGING_TIME_FORMAT 中 ZZ 一致，便于与 REPL 横幅对齐
+_PROTO_TIME = "{time:YYYY-MM-DD HH:mm:ss.SSS ZZ}"
+
+
+def repl_wall_ts_str() -> str:
+    """本地墙钟时间字符串，与 proto log / 后端 LOGGING_TIME_FORMAT（ZZ）一致。"""
+    dt = datetime.now().astimezone()
+    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + dt.strftime(" %z")
 
 
 def configure_proto_log(log_file: Path | None, *, stderr_level: str = "INFO") -> None:
@@ -39,8 +49,7 @@ def configure_proto_log(log_file: Path | None, *, stderr_level: str = "INFO") ->
             encoding="utf-8",
             enqueue=True,
             format=(
-                "{time:YYYY-MM-DD HH:mm:ss.SSSZZ} | {level: <8} | "
-                "{name}:{function}:{line} | {message}"
+                _PROTO_TIME + " | {level: <8} | {name}:{function}:{line} | {message}"
             ),
         )
     else:
@@ -48,9 +57,9 @@ def configure_proto_log(log_file: Path | None, *, stderr_level: str = "INFO") ->
             sys.stderr,
             level=stderr_level,
             format=(
-                "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-                "<level>{level: <8}</level> | "
-                "<level>{message}</level>"
+                "<green>"
+                + _PROTO_TIME
+                + "</green> | <level>{level: <8}</level> | <level>{message}</level>"
             ),
         )
 

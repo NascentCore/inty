@@ -20,8 +20,15 @@ from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
-from .llm_chat_runtime import create_chat_completion_sync
+from .llm_chat_runtime import create_chat_completion_sync, tool_path_chat_completion_kwargs
 from .memory_registry import get_memory_store
+from .runtime_inspect_context import (
+    build_last_chat_completion_request_payload,
+    runtime_inspect_set_last_chat_completion_request,
+    runtime_inspect_thread_overlay_begin,
+    runtime_inspect_thread_overlay_end,
+    tools_summary_from_openai_tools,
+)
 from .repl_workspace_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
     execute_tool_call,
@@ -353,6 +360,26 @@ async def _run_background_tool_loop(
             )
             return
 
+        runtime_inspect_thread_overlay_begin(
+            {
+                "runtime_config": {
+                    "source": "tool_background",
+                    "tool_model_name": tool_model_name,
+                    "trace_id": trace_id,
+                    "tools_summary": tools_summary_from_openai_tools(tools),
+                    "llm_call_notes": (
+                        "Foreground CompanionLLMConfig is not copied into this async tool_background "
+                        "path; use tool_model_name and last_chat_completion_request. "
+                        "temperature/max_tokens are not set in companion code (provider defaults)."
+                    ),
+                    "openrouter_extra_body_tool_path": tool_path_chat_completion_kwargs(
+                        tool_model_name
+                    ),
+                },
+                "last_chat_completion_request": None,
+            }
+        )
+
         resolved_client = client
         t0 = time.perf_counter()
         working_messages = deepcopy(request_messages)
@@ -362,6 +389,13 @@ async def _run_background_tool_loop(
 
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
+        runtime_inspect_set_last_chat_completion_request(
+            build_last_chat_completion_request_payload(
+                model=tool_model_name,
+                messages=list(payload),
+                tools=tools,
+            )
+        )
         force_tools = bool(tools) and _background_turn_should_force_tools(
             _last_user_message_text(working_messages)
         )
@@ -460,11 +494,19 @@ async def _run_background_tool_loop(
             rounds_used += 1
             active_round = rounds_used
             request_snapshot_inner = deepcopy(messages_with_tool_results)
+            inner_payload = _openai_messages_payload(messages_with_tool_results)
+            runtime_inspect_set_last_chat_completion_request(
+                build_last_chat_completion_request_payload(
+                    model=tool_model_name,
+                    messages=list(inner_payload),
+                    tools=tools,
+                )
+            )
             next_resp = await asyncio.to_thread(
                 create_chat_completion_sync,
                 resolved_client,
                 model=tool_model_name,
-                messages_payload=_openai_messages_payload(messages_with_tool_results),
+                messages_payload=inner_payload,
                 tools=tools,
             )
             _log_bg_llm_round_result(
@@ -567,6 +609,7 @@ async def _run_background_tool_loop(
             )
         )
     finally:
+        runtime_inspect_thread_overlay_end()
         clear_tool_background_abort_flag(user_msg_uuid)
 
 

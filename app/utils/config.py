@@ -58,7 +58,7 @@ class Environment(str, Enum):
     PROD = "prod"
 
 
-LOGGING_TIME_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS zz}"
+LOGGING_TIME_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS ZZ}"
 LOGGING_LEVEL_FORMAT = "{level: <8}"
 LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
 LOGGING_MESSAGE_FORMAT = "{message}"
