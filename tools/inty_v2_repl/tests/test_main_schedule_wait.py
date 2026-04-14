@@ -12,8 +12,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from experimental.inty_v2_text_chat_prototype.main import _next_idle_wait_seconds
-from experimental.inty_v2_text_chat_prototype.schedule_queue import add_schedule_task
+from tools.inty_v2_repl.main import _next_idle_wait_seconds
+from tools.inty_v2_repl.schedule_queue import add_schedule_task
 
 
 class TestMainScheduleWait(unittest.TestCase):

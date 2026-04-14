@@ -38,12 +38,12 @@ class OpenRouterInvalidJsonError(RuntimeError):
 def _register_module_aliases() -> None:
     """
     Keep one shared module object for both import paths:
-    - experimental.inty_v2_text_chat_prototype.client
+    - tools.inty_v2_repl.client
     - inty_v2_text_chat_prototype.client
     This avoids exception class identity mismatch in mixed import styles.
     """
     module = sys.modules[__name__]
-    sys.modules.setdefault("experimental.inty_v2_text_chat_prototype.client", module)
+    sys.modules.setdefault("tools.inty_v2_repl.client", module)
     sys.modules.setdefault("inty_v2_text_chat_prototype.client", module)
 
 

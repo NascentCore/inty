@@ -14,7 +14,7 @@ from typing import Any, Literal
 
 from loguru import logger
 
-from .file_store import read_text, write_text_atomic
+from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 
@@ -104,8 +104,9 @@ def _parse_utc_ts(ts: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
-def _schedule_file(root: Path) -> Path:
-    return WorkspacePaths(root=root.resolve()).schedule_queue_json
+def _schedule_document_rel_path(root: Path) -> str:
+    r = root.resolve()
+    return WorkspacePaths(root=r).schedule_queue_json.relative_to(r).as_posix()
 
 
 def _legacy_list_item_to_task(raw: dict[str, Any]) -> ScheduleTask:
@@ -133,10 +134,12 @@ def _legacy_list_item_to_task(raw: dict[str, Any]) -> ScheduleTask:
 
 
 def _load_tasks(root: Path) -> list[ScheduleTask]:
-    p = _schedule_file(root)
-    if not p.is_file():
+    store = get_memory_store(root)
+    rel = _schedule_document_rel_path(root)
+    raw_body = store.read_document_if_exists(rel)
+    if raw_body is None or not raw_body.strip():
         return []
-    loaded = json.loads(read_text(p))
+    loaded = json.loads(raw_body)
     if isinstance(loaded, list):
         out: list[ScheduleTask] = []
         for x in loaded:
@@ -144,17 +147,19 @@ def _load_tasks(root: Path) -> list[ScheduleTask]:
                 out.append(_legacy_list_item_to_task(x))
         return out
     if not isinstance(loaded, dict):
-        raise ValueError(f"{p} must be a JSON object or legacy array")
+        raise ValueError("schedule tasks document must be a JSON object or legacy array")
     raw_tasks = loaded.get("tasks", [])
     if not isinstance(raw_tasks, list):
-        raise ValueError(f"{p}: key 'tasks' must be an array")
+        raise ValueError("schedule tasks: key 'tasks' must be an array")
     return [ScheduleTask.from_dict(x) for x in raw_tasks]
 
 
 def _save_tasks(root: Path, tasks: list[ScheduleTask]) -> None:
-    p = _schedule_file(root)
     body = {"tasks": [t.to_dict() for t in tasks]}
-    write_text_atomic(p, json.dumps(body, ensure_ascii=False, indent=2) + "\n")
+    payload = json.dumps(body, ensure_ascii=False, indent=2) + "\n"
+    store = get_memory_store(root)
+    rel = _schedule_document_rel_path(root)
+    store.write_document(rel, payload)
 
 
 def _retry_backoff_seconds(attempts: int) -> float:

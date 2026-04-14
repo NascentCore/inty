@@ -5,17 +5,16 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
+from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.inner_tick_schedule import (
     inner_tick_enabled_from_env,
     next_inner_tick_wait_seconds,
 )
 
 
-def _write_transcript(path: Path, rows: list[dict[str, object]]) -> None:
-    path.write_text(
-        "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n",
-        encoding="utf-8",
-    )
+def _write_transcript_store(root: Path, rows: list[dict[str, object]]) -> None:
+    body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
+    get_memory_store(root).write_document("transcript.jsonl", body)
 
 
 def test_inner_tick_env_unset_defaults_enabled() -> None:
@@ -25,8 +24,8 @@ def test_inner_tick_env_unset_defaults_enabled() -> None:
 
 def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> None:
     root = tmp_path
-    _write_transcript(
-        root / "transcript.jsonl",
+    _write_transcript_store(
+        root,
         [
             {
                 "role": "user",

@@ -6,8 +6,8 @@ import os
 import time
 from pathlib import Path
 
-from .models import load_transcript, transcript_without_trailing_presence_signals
-from .workspace import WorkspacePaths
+from .memory_registry import get_memory_store
+from .models import load_transcript_from_store, transcript_without_trailing_presence_signals
 
 REPL_IDLE_MAX_SLEEP_CHUNK_SEC = 3600.0
 
@@ -63,9 +63,9 @@ def next_inner_tick_wait_seconds(
 
     now = now_monotonic if now_monotonic is not None else time.monotonic()
     root = workspace.resolve()
-    paths = WorkspacePaths(root=root)
+    store = get_memory_store(root)
     msgs = transcript_without_trailing_presence_signals(
-        load_transcript(paths.transcript)
+        load_transcript_from_store(store, "transcript.jsonl")
     )
     min_lines = _env_int(
         "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",

@@ -32,7 +32,6 @@ def test_compaction_state_roundtrip_via_memory_store(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=True,
     )
     rel = ".companion_context_compaction_state.json"
     state = CompactionState(

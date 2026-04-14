@@ -1,4 +1,4 @@
-"""Memory store: DB-authoritative append-only versions + optional file mirror."""
+"""Memory store: DB-authoritative append-only versions; in-memory only when no repository."""
 
 from __future__ import annotations
 
@@ -9,8 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .file_store import read_text, write_text_atomic
 from .utc import utc_iso_ts
+from .workspace_doc_mapping import (
+    CompanionWorkspaceDocKind,
+    parse_workspace_relative_path,
+    relative_path_for_kind,
+)
 
 
 @dataclass(frozen=True)
@@ -39,41 +43,31 @@ class MemoryRepository(Protocol):
         record_uuid: str,
     ) -> MemoryRecord: ...
 
+    def list_all_relative_paths(self, *, workspace_root: str) -> list[str]: ...
 
-class PostgresMemoryRepository:
-    """PostgreSQL append-only persistence for memory documents."""
+
+class SqlAlchemyMemoryRepository:
+    """Append-only companion workspace documents via SQLAlchemy ORM."""
 
     def __init__(
         self,
         *,
-        dsn: str,
-        table_name: str = "companion_memory_doc_versions",
+        user_id: str,
+        companion_id: str,
+        chat_id: str,
     ) -> None:
-        self._dsn = dsn
-        self._table_name = table_name
+        self._user_id = user_id
+        self._companion_id = companion_id
+        self._chat_id = chat_id
 
-    def ensure_schema(self) -> None:
-        import psycopg
+    def _orm(self):
+        from sqlalchemy import and_ as sql_and
+        from sqlalchemy import select as sql_select
 
-        ddl = (
-            f"CREATE TABLE IF NOT EXISTS {self._table_name} ("
-            "sequence_id BIGSERIAL PRIMARY KEY, "
-            "record_uuid TEXT NOT NULL UNIQUE, "
-            "workspace_root TEXT NOT NULL, "
-            "relative_path TEXT NOT NULL, "
-            "content TEXT NOT NULL, "
-            "created_at TIMESTAMPTZ NOT NULL DEFAULT now()"
-            ")"
-        )
-        idx = (
-            f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_ws_rel_seq "
-            f"ON {self._table_name} (workspace_root, relative_path, sequence_id DESC)"
-        )
-        with psycopg.connect(self._dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(ddl)
-                cur.execute(idx)
-            conn.commit()
+        from app.db.base import SessionLocal
+        from app.models.companion_workspace import CompanionWorkspaceDocumentVersion
+
+        return sql_and, sql_select, SessionLocal, CompanionWorkspaceDocumentVersion
 
     def read_document(
         self,
@@ -81,41 +75,64 @@ class PostgresMemoryRepository:
         workspace_root: str,
         relative_path: str,
     ) -> MemoryRecord | None:
-        import psycopg
-
-        sql = (
-            f"SELECT record_uuid, sequence_id, content, created_at::text "
-            f"FROM {self._table_name} "
-            "WHERE workspace_root = %s AND relative_path = %s "
-            "ORDER BY sequence_id DESC LIMIT 1"
+        sql_and, sql_select, SessionLocal, CompanionWorkspaceDocumentVersion = self._orm()
+        _ = workspace_root
+        kind, cal = parse_workspace_relative_path(relative_path)
+        filters = [
+            sql_and(
+                CompanionWorkspaceDocumentVersion.user_id == self._user_id,
+                CompanionWorkspaceDocumentVersion.companion_id == self._companion_id,
+                CompanionWorkspaceDocumentVersion.chat_id == self._chat_id,
+            ),
+            CompanionWorkspaceDocumentVersion.document_kind == kind.value,
+        ]
+        if cal is None:
+            filters.append(CompanionWorkspaceDocumentVersion.calendar_date.is_(None))
+        else:
+            filters.append(CompanionWorkspaceDocumentVersion.calendar_date == cal)
+        stmt = (
+            sql_select(CompanionWorkspaceDocumentVersion)
+            .where(sql_and(*filters))
+            .order_by(CompanionWorkspaceDocumentVersion.sequence_id.desc())
+            .limit(1)
         )
-        with psycopg.connect(self._dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql, (workspace_root, relative_path))
-                row = cur.fetchone()
+        with SessionLocal() as session:
+            row = session.scalars(stmt).first()
         if row is None:
             return None
-        record_uuid, sequence_id, content, created_at = row
+        created_at = row.created_at.isoformat() if row.created_at else ""
         return MemoryRecord(
-            record_uuid=str(record_uuid),
-            sequence_id=int(sequence_id),
+            record_uuid=str(row.record_uuid),
+            sequence_id=int(row.sequence_id),
             relative_path=relative_path,
-            content=str(content),
-            created_at=str(created_at),
+            content=str(row.content),
+            created_at=created_at,
         )
 
     def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
-        import psycopg
-
-        sql = (
-            f"SELECT DISTINCT relative_path FROM {self._table_name} "
-            "WHERE workspace_root = %s ORDER BY relative_path"
+        sql_and, sql_select, SessionLocal, CompanionWorkspaceDocumentVersion = self._orm()
+        _ = workspace_root
+        stmt = (
+            sql_select(
+                CompanionWorkspaceDocumentVersion.document_kind,
+                CompanionWorkspaceDocumentVersion.calendar_date,
+            )
+            .where(
+                sql_and(
+                    CompanionWorkspaceDocumentVersion.user_id == self._user_id,
+                    CompanionWorkspaceDocumentVersion.companion_id == self._companion_id,
+                    CompanionWorkspaceDocumentVersion.chat_id == self._chat_id,
+                )
+            )
+            .distinct()
         )
-        with psycopg.connect(self._dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql, (workspace_root,))
-                rows = cur.fetchall()
-        return [str(r[0]) for r in rows]
+        with SessionLocal() as session:
+            pairs = list(session.execute(stmt).all())
+        out: list[str] = []
+        for kind_val, cal in pairs:
+            kind = CompanionWorkspaceDocKind(kind_val)
+            out.append(relative_path_for_kind(kind, cal))
+        return sorted(out)
 
     def append_document(
         self,
@@ -125,27 +142,29 @@ class PostgresMemoryRepository:
         content: str,
         record_uuid: str,
     ) -> MemoryRecord:
-        import psycopg
-
-        sql = (
-            f"INSERT INTO {self._table_name} "
-            "(record_uuid, workspace_root, relative_path, content) "
-            "VALUES (%s, %s, %s, %s) "
-            "RETURNING sequence_id, created_at::text"
+        _, _, SessionLocal, CompanionWorkspaceDocumentVersion = self._orm()
+        _ = workspace_root
+        kind, cal = parse_workspace_relative_path(relative_path)
+        row = CompanionWorkspaceDocumentVersion(
+            record_uuid=record_uuid,
+            user_id=self._user_id,
+            companion_id=self._companion_id,
+            chat_id=self._chat_id,
+            document_kind=kind.value,
+            calendar_date=cal,
+            content=content,
         )
-        with psycopg.connect(self._dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(sql, (record_uuid, workspace_root, relative_path, content))
-                row = cur.fetchone()
-            conn.commit()
-        assert row is not None
-        sequence_id, created_at = row
+        with SessionLocal() as session:
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+        created_at = row.created_at.isoformat() if row.created_at else ""
         return MemoryRecord(
             record_uuid=record_uuid,
-            sequence_id=int(sequence_id),
+            sequence_id=int(row.sequence_id),
             relative_path=relative_path,
             content=content,
-            created_at=str(created_at),
+            created_at=created_at,
         )
 
 
@@ -168,57 +187,30 @@ class MemoryCache:
             self._records[record.relative_path] = record
             return record
 
-
-class MemoryFileMirror:
-    """Mirror memory records back to workspace files for local observability."""
-
-    def __init__(self, *, workspace_root: Path, enabled: bool) -> None:
-        self._root = workspace_root.resolve()
-        self._enabled = enabled
-
-    def _absolute(self, relative_path: str) -> Path:
-        rel = relative_path.strip().replace("\\", "/")
-        if rel.startswith("/"):
-            raise ValueError("relative_path must be workspace-relative")
-        p = (self._root / rel).resolve()
-        p.relative_to(self._root)
-        return p
-
-    def read_if_exists(self, *, relative_path: str) -> str | None:
-        if not self._enabled:
-            return None
-        p = self._absolute(relative_path)
-        if not p.is_file():
-            return None
-        return read_text(p)
-
-    def write(self, *, record: MemoryRecord) -> None:
-        if not self._enabled:
-            return
-        write_text_atomic(self._absolute(record.relative_path), record.content)
+    def relative_paths(self) -> list[str]:
+        with self._lock:
+            return sorted(self._records.keys())
 
 
 class MemoryStore:
-    """DB-authoritative memory store with optional file mirror."""
+    """Repository-backed or in-process-only memory store (never reads user workspace files)."""
 
     def __init__(
         self,
         *,
         workspace_root: Path,
         repository: MemoryRepository | None,
-        mirror_to_files: bool,
-        allow_workspace_disk_fallback: bool = True,
         flush_batch_size: int = 64,
     ) -> None:
         self._workspace_root = workspace_root.resolve()
         self._workspace_root_str = str(self._workspace_root)
         self._cache = MemoryCache()
-        self._mirror = MemoryFileMirror(
-            workspace_root=self._workspace_root,
-            enabled=mirror_to_files,
-        )
         self._repository = repository
-        self.allow_workspace_disk_fallback = allow_workspace_disk_fallback
+        _ = flush_batch_size
+
+    @property
+    def uses_repository_without_workspace_disk(self) -> bool:
+        return self._repository is not None
 
     def _normalize_relative_path(self, relative_path: str) -> str:
         rel = (relative_path or "").strip().replace("\\", "/")
@@ -237,13 +229,11 @@ class MemoryStore:
 
     def iter_stored_relative_paths(self) -> list[str]:
         repo = self._repository
-        if repo is None:
-            return []
-        list_fn = getattr(repo, "list_all_relative_paths", None)
-        if not callable(list_fn):
-            return []
-        out: list[str] = list_fn(workspace_root=self._workspace_root_str)
-        return list(out)
+        if repo is not None:
+            list_fn = getattr(repo, "list_all_relative_paths", None)
+            if callable(list_fn):
+                return list(list_fn(workspace_root=self._workspace_root_str))
+        return self._cache.relative_paths()
 
     def read_document_if_exists(self, relative_path: str) -> str | None:
         rel = self._normalize_relative_path(relative_path)
@@ -258,36 +248,8 @@ class MemoryStore:
             )
             if rec is not None:
                 loaded = self._cache.put_committed(rec)
-                self._mirror.write(record=loaded)
                 return loaded.content
-
-        mirrored = self._mirror.read_if_exists(relative_path=rel)
-        if mirrored is not None:
-            local_record = MemoryRecord(
-                record_uuid=str(uuid_mod.uuid4()),
-                sequence_id=0,
-                relative_path=rel,
-                content=mirrored,
-                created_at=utc_iso_ts(),
-            )
-            self._cache.put_committed(local_record)
-            return mirrored
-        if not self.allow_workspace_disk_fallback:
-            return None
-        p = (self._workspace_root / rel).resolve()
-        p.relative_to(self._workspace_root)
-        if not p.is_file():
-            return None
-        body = read_text(p)
-        local_record = MemoryRecord(
-            record_uuid=str(uuid_mod.uuid4()),
-            sequence_id=0,
-            relative_path=rel,
-            content=body,
-            created_at=utc_iso_ts(),
-        )
-        self._cache.put_committed(local_record)
-        return body
+        return None
 
     def read_document(self, relative_path: str) -> str:
         body = self.read_document_if_exists(relative_path)
@@ -315,8 +277,7 @@ class MemoryStore:
                 content=content,
                 created_at=utc_iso_ts(),
             )
-        applied = self._cache.put_committed(committed)
-        self._mirror.write(record=applied)
+        self._cache.put_committed(committed)
 
     def append_line(self, relative_path: str, line: str) -> None:
         rel = self._normalize_relative_path(relative_path)

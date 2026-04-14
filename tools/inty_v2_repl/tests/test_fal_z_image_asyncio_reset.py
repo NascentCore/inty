@@ -14,7 +14,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from experimental.inty_v2_text_chat_prototype.fal_z_image_tool import (
+from tools.inty_v2_repl.fal_z_image_tool import (
     _reset_fal_async_client_after_short_lived_loop,
 )
 

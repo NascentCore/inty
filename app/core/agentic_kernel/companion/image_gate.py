@@ -9,7 +9,6 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from .file_store import read_text, write_text_atomic
 from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
@@ -41,13 +40,9 @@ _MODE_MODIFY_RE = re.compile(
 )
 
 
-def _state_path(root: Path) -> Path:
-    paths = WorkspacePaths(root=root.resolve())
-    canonical = paths.image_gate_json
-    legacy = root.resolve() / ".inty_v2_image_gate.json"
-    if not canonical.is_file() and legacy.is_file():
-        return legacy
-    return canonical
+def _image_gate_document_rel_path(root: Path) -> str:
+    r = root.resolve()
+    return WorkspacePaths(root=r).image_gate_json.relative_to(r).as_posix()
 
 
 def _default_state(root: Path) -> dict[str, Any]:
@@ -63,30 +58,31 @@ def _default_state(root: Path) -> dict[str, Any]:
 
 
 def _load_state(root: Path) -> dict[str, Any]:
-    p = _state_path(root)
-    if not p.is_file():
+    store = get_memory_store(root)
+    rel = _image_gate_document_rel_path(root)
+    raw_body = store.read_document_if_exists(rel)
+    if raw_body is None or not raw_body.strip():
         return _default_state(root)
-    raw = json.loads(read_text(p))
+    raw = json.loads(raw_body)
     if not isinstance(raw, dict):
-        raise ValueError(f"{p} must contain a JSON object")
+        raise ValueError("image_gate document must contain a JSON object")
     out = _default_state(root)
     out.update(raw)
     return out
 
 
 def _save_state(root: Path, state: dict[str, Any]) -> None:
-    paths = WorkspacePaths(root=root.resolve())
-    target = paths.image_gate_json
-    write_text_atomic(target, json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    payload = json.dumps(state, ensure_ascii=False, indent=2) + "\n"
+    store = get_memory_store(root)
+    rel = _image_gate_document_rel_path(root)
+    store.write_document(rel, payload)
 
 
 def _read_profile_doc(root: Path, relative_path: str) -> str:
-    body = get_memory_store(root).read_document_if_exists(relative_path)
+    store = get_memory_store(root)
+    body = store.read_document_if_exists(relative_path)
     if body is not None:
         return body
-    p = root.resolve() / relative_path
-    if p.is_file():
-        return read_text(p)
     return ""
 
 
@@ -251,10 +247,7 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
     store = get_memory_store(root)
     body = store.read_document_if_exists(_IMAGE_ASSET_INDEX_REL)
     if body is None or not body.strip():
-        p = root.resolve() / _IMAGE_ASSET_INDEX_REL
-        if not p.is_file():
-            return []
-        body = read_text(p)
+        return []
     out: list[dict[str, Any]] = []
     for line in body.splitlines():
         s = line.strip()

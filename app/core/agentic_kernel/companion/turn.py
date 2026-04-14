@@ -90,6 +90,13 @@ async def run_turn(
         heartbeat_turn,
         defer_memory_update,
     )
+    logger.debug(
+        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm={}",
+        llm_client.config.api_base,
+        llm_client._resolve_model("chat"),
+        llm_client._resolve_model("tool"),
+        llm_client.config.enable_dual_llm,
+    )
 
     # 加载 context 与 prompt bundle
     context = load_context_meta(paths.context_json, store=store)
@@ -149,9 +156,16 @@ async def run_turn(
 
     for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
         t_api = time.perf_counter()
+        resolved_model = llm_client._resolve_model("tool" if tools else "chat")
+        logger.debug(
+            "run_turn llm_request round={} model={} tools_enabled={}",
+            round_idx,
+            resolved_model,
+            bool(tools),
+        )
         resp = llm_client.chat_completion(
             messages=messages,
-            model=llm_client._resolve_model("tool" if tools else "chat"),
+            model=resolved_model,
             tools=tools or None,
         )
         logger.info(

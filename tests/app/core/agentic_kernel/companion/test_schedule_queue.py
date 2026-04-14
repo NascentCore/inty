@@ -4,8 +4,9 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.schedule_queue import (
-    _schedule_file,
+    _schedule_document_rel_path,
     add_schedule_task,
     get_due_tasks,
     mark_task_fired,
@@ -36,11 +37,12 @@ def test_mark_task_fired(tmp_path: Path) -> None:
 def test_legacy_top_level_array_rewritten_as_tasks_object(tmp_path: Path) -> None:
     root = tmp_path
     root.mkdir(exist_ok=True)
-    p = _schedule_file(root)
-    p.parent.mkdir(parents=True, exist_ok=True)
+    store = get_memory_store(root)
+    rel = _schedule_document_rel_path(root)
     legacy_id = "11111111-1111-1111-1111-111111111111"
     past = "2025-01-01T00:00:00+00:00"
-    p.write_text(
+    store.write_document(
+        rel,
         json.dumps(
             [
                 {
@@ -54,11 +56,10 @@ def test_legacy_top_level_array_rewritten_as_tasks_object(tmp_path: Path) -> Non
             ensure_ascii=False,
         )
         + "\n",
-        encoding="utf-8",
     )
     future = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
     add_schedule_task(root, exec_time_utc=future, task_text="new")
-    body = json.loads(p.read_text(encoding="utf-8"))
+    body = json.loads(store.read_document(rel))
     assert isinstance(body.get("tasks"), list)
     ids = {t["id"] for t in body["tasks"]}
     assert legacy_id in ids

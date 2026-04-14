@@ -8,8 +8,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from .models import ChatMessage, load_transcript
-from .workspace import WorkspacePaths
+from .memory_registry import get_memory_store
+from .models import ChatMessage, load_transcript_from_store
 
 HEARTBEAT_SYNTHETIC_USER_TEXT = (
     "（陪伴心跳：用户尚未输入新内容。请读本窗口里**正在进行的场景、话题与语气**，用一两句自然接话，"
@@ -115,8 +115,8 @@ def next_heartbeat_wait_seconds(
         return _NEVER
 
     root = workspace.resolve()
-    paths = WorkspacePaths(root=root)
-    msgs = load_transcript(paths.transcript)
+    store = get_memory_store(root)
+    msgs = load_transcript_from_store(store, "transcript.jsonl")
     if len(msgs) < config.min_transcript_lines:
         return _NEVER
 

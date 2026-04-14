@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Annotated, Callable, Mapping
 
 from cyclopts import App, Parameter
+from dotenv import load_dotenv
 from loguru import logger
 
 # `python main.py` loads this file as __main__ with no package; ensure parent of this
@@ -27,9 +28,9 @@ if __package__ is None:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from experimental.inty_v2_text_chat_prototype.client import load_prototype_dotenv
-from experimental.inty_v2_text_chat_prototype.client import OpenRouterInvalidJsonError
-from experimental.inty_v2_text_chat_prototype.backend_chat_ws import (
+from tools.inty_v2_repl.client import load_prototype_dotenv
+from tools.inty_v2_repl.client import OpenRouterInvalidJsonError
+from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsBridge,
     BackendChatWsError,
     chat_turn_single_http_base,
@@ -38,34 +39,35 @@ from experimental.inty_v2_text_chat_prototype.backend_chat_ws import (
 )
 
 load_prototype_dotenv()
+load_dotenv(_REPO_ROOT / ".env")
 
 from app.core.repl_input.sleep_chunk import clamp_sleep_seconds
 from app.core.repl_input.stdin_queue import spawn_stdin_line_reader
 
-from experimental.inty_v2_text_chat_prototype.bootstrap import (
+from tools.inty_v2_repl.bootstrap import (
     init_workspace as bootstrap_init_workspace,
 )
-from experimental.inty_v2_text_chat_prototype.llm_trace import configure_llm_trace_file
-from experimental.inty_v2_text_chat_prototype.proto_log import (
+from tools.inty_v2_repl.llm_trace import configure_llm_trace_file
+from tools.inty_v2_repl.proto_log import (
     configure_proto_log,
     resolve_proto_log_file,
 )
 
-from experimental.inty_v2_text_chat_prototype.inner_tick_schedule import (
+from tools.inty_v2_repl.inner_tick_schedule import (
     REPL_IDLE_MAX_SLEEP_CHUNK_SEC,
     inner_tick_enabled_from_env,
     next_inner_tick_wait_seconds,
 )
-from experimental.inty_v2_text_chat_prototype.orchestrator import (
+from tools.inty_v2_repl.orchestrator import (
     ReplTurnSuperseded,
     is_workspace_initialized,
     needs_startup_profile_inquiry,
     run_turn,
 )
-from experimental.inty_v2_text_chat_prototype.tool_background import (
+from tools.inty_v2_repl.tool_background import (
     pop_output_events_nowait,
 )
-from experimental.inty_v2_text_chat_prototype.schedule_queue import (
+from tools.inty_v2_repl.schedule_queue import (
     mark_task_fired,
     next_due_wait_seconds,
     mark_task_retry,
@@ -74,25 +76,25 @@ from experimental.inty_v2_text_chat_prototype.schedule_queue import (
     start_schedule_scheduler,
     stop_schedule_scheduler,
 )
-from experimental.inty_v2_text_chat_prototype.memory_store_registry import (
+from tools.inty_v2_repl.memory_store_registry import (
     flush_memory_store,
     shutdown_memory_store,
 )
-from experimental.inty_v2_text_chat_prototype.jsonl_db_store import (
+from tools.inty_v2_repl.jsonl_db_store import (
     append_jsonl_with_db,
     flush_jsonl_db_store,
     shutdown_jsonl_db_store,
 )
-from experimental.inty_v2_text_chat_prototype.models import (
+from tools.inty_v2_repl.models import (
     PresenceSignal,
     REPL_ONLINE_ACK_USER_TEXT,
     REPL_PRESENCE_USER_TEXT_OFFLINE,
     REPL_PRESENCE_USER_TEXT_ONLINE,
     undo_trailing_repl_online_presence_line,
 )
-from experimental.inty_v2_text_chat_prototype.paths import WorkspacePaths
-from experimental.inty_v2_text_chat_prototype.utc import utc_iso_ts
-from experimental.inty_v2_text_chat_prototype.workspace_init_loop import (
+from tools.inty_v2_repl.paths import WorkspacePaths
+from tools.inty_v2_repl.utc import utc_iso_ts
+from tools.inty_v2_repl.workspace_init_loop import (
     run_workspace_bootstrap_loop,
 )
 

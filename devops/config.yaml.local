@@ -16,6 +16,11 @@ app:
     subscribed_user_image_gen_24h_limit: 8
     free_user_agent_creation_24h_limit: 1
     subscribed_user_agent_creation_24h_limit: 2
+  features:
+    # macOS 本地开发：避免默认 /var/lib/inty（无写权限）
+    companion_workspaces_base_dir: "~/.inty_workspace"
+    # Default in code is false; uncomment to use agentic workspace bootstrap on first WS message.
+    # companion_workspace_bootstrap_enabled: true
 
 sentry:
   # dev-inty/default

@@ -44,18 +44,22 @@ def test_build_companion_tools() -> None:
 
 def test_tool_workspace_list_dir(tmp_path: Path) -> None:
     root = tmp_path
-    (root / "a.txt").write_text("x", encoding="utf-8")
-    sub = root / "d"
-    sub.mkdir()
-    (sub / "inner.md").write_text("y", encoding="utf-8")
-    get_memory_store(root)
+    st = get_memory_store(root)
+    st.write_document("USER.md", "u")
+    st.write_document("memory/daily/2099-01-01.md", "d")
     out = _run_tool(
         root,
         "workspace_list_dir",
         json.dumps({"relative_path": "."}),
     )
-    assert "a.txt" in out
-    assert "d/" in out
+    assert "USER.md" in out
+    assert "memory/" in out
+    out_mem = _run_tool(
+        root,
+        "workspace_list_dir",
+        json.dumps({"relative_path": "memory"}),
+    )
+    assert "daily/" in out_mem
 
 
 def test_tool_workspace_read_write(tmp_path: Path) -> None:

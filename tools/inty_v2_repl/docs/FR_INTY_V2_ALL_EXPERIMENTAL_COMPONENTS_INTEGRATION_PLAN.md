@@ -158,7 +158,7 @@
 
 | 兼容项 | 旧路径/旧命令 | 新路径/新命令 | 过渡策略 |
 |---|---|---|---|
-| core_v2 CLI | `python -m experimental.perpetual_agent.core_v2.main ...` | `python -m experimental.inty_v2_text_chat_prototype.core_v2.main ...` | 保留旧 CLI shim，两版本并行 2 个里程碑后移除 |
+| core_v2 CLI | `python -m experimental.perpetual_agent.core_v2.main ...` | `python -m tools.inty_v2_repl.core_v2.main ...` | 保留旧 CLI shim，两版本并行 2 个里程碑后移除 |
 | Telegram loop | `experimental/perpetual_agent/telegram_*` | `experimental/inty_v2_text_chat_prototype/bridges/telegram_*` | 旧模块转发到新模块并打印 deprecation 日志 |
 | 语音 websocket | `experimental/gemini_native_audio_websocket_demo/*` | `experimental/inty_v2_text_chat_prototype/bridges/voice_ws/*` | 先镜像接口，再切默认入口 |
 | voice chat server | `experimental/voice_chat/server/*` | `experimental/inty_v2_text_chat_prototype/bridges/voice_webrtc/*` | 先共享协议层，后迁移运行入口 |
@@ -203,7 +203,7 @@
 - Phase 1 Gate
   - `pytest -q experimental/agentic_ai_companion/tests/test_image_gen.py`
   - `pytest -q experimental/agentic_ai_companion/tests/test_memory_compaction.py`
-  - `python -m experimental.inty_v2_text_chat_prototype.main once --workspace experimental/inty_v2_text_chat_prototype/_ws --message "Generate an intimate role-play image where we hug near a window."`
+  - `python -m tools.inty_v2_repl.main once --workspace experimental/inty_v2_text_chat_prototype/_ws --message "Generate an intimate role-play image where we hug near a window."`
   - 通过标准：工具触发成功，返回可用产物路径，compaction 开关行为符合预期。
 
 - Phase 2 Gate

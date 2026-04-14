@@ -603,10 +603,23 @@ async def _agent_chat_completions_impl(
                 model_override = select_chat_model(
                     user=current_user, is_subscribed=is_subscribed
                 )
-                logger.debug(
-                    f"chat completions model_override: agent_id={agent_id}, model_override={model_override}, is_subscribed={is_subscribed}"
-                )
                 use_companion = chat_route == "websocket"
+                _agent_cfg = global_config_loaded_from_config_yaml.agent
+                _chat_llm_base = (
+                    (_agent_cfg.chat_llm_base_url or _agent_cfg.base_url or "").strip()
+                    or "https://openrouter.ai/api/v1"
+                )
+                logger.debug(
+                    "chat_turn route={} companion={} user={} chat_id={} agent_id={} model={} subscribed={} chat_llm_api_base={}",
+                    chat_route,
+                    use_companion,
+                    current_user.id,
+                    chat.id,
+                    agent_id,
+                    model_override,
+                    is_subscribed,
+                    _chat_llm_base,
+                )
                 if use_companion and _companion_rejects_multimodal_user_turn(
                     user_messages[-1]
                 ):

@@ -7,22 +7,20 @@ import pytest
 from app.core.agentic_kernel.companion.memory_store import MemoryCache, MemoryRecord, MemoryStore
 
 
-def test_memory_store_write_read_file_mirror(tmp_path: Path) -> None:
+def test_memory_store_write_read_in_memory(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=True,
     )
-    store.write_document("notes/x.md", "hello mirror")
-    assert (tmp_path / "notes" / "x.md").read_text(encoding="utf-8") == "hello mirror"
-    assert store.read_document("notes/x.md") == "hello mirror"
+    store.write_document("notes/x.md", "hello")
+    assert not (tmp_path / "notes" / "x.md").exists()
+    assert store.read_document("notes/x.md") == "hello"
 
 
 def test_memory_store_read_nonexistent(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=True,
     )
     with pytest.raises(FileNotFoundError):
         store.read_document("missing.md")
@@ -32,7 +30,6 @@ def test_memory_store_read_if_exists_none(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=True,
     )
     assert store.read_document_if_exists("nope.md") is None
 
@@ -41,8 +38,6 @@ def test_memory_store_append_jsonl_record(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=False,
-        allow_workspace_disk_fallback=False,
     )
     store.append_jsonl_record("transcript.jsonl", {"role": "user", "content": "a"})
     store.append_jsonl_record("transcript.jsonl", {"role": "assistant", "content": "b"})
@@ -51,14 +46,29 @@ def test_memory_store_append_jsonl_record(tmp_path: Path) -> None:
     assert len(lines) == 2
 
 
-def test_memory_store_production_no_mirror_no_fallback_no_disk_files(
+def test_memory_store_uses_repository_without_workspace_disk_predicate(
     tmp_path: Path,
 ) -> None:
+    class _DummyRepo:
+        def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
+            return []
+
+    s_repo = MemoryStore(
+        workspace_root=tmp_path,
+        repository=_DummyRepo(),
+    )
+    assert s_repo.uses_repository_without_workspace_disk is True
+    s_no_repo = MemoryStore(
+        workspace_root=tmp_path,
+        repository=None,
+    )
+    assert s_no_repo.uses_repository_without_workspace_disk is False
+
+
+def test_memory_store_no_disk_files(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=False,
-        allow_workspace_disk_fallback=False,
     )
     store.write_document("SOUL.md", "# soul\n")
     assert not (tmp_path / "SOUL.md").is_file()
@@ -69,11 +79,19 @@ def test_memory_store_append_line(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=True,
     )
     store.append_line("log.txt", "line1")
     store.append_line("log.txt", "line2")
     assert store.read_document("log.txt") == "line1\nline2\n"
+
+
+def test_memory_store_iter_stored_relative_paths_in_memory(tmp_path: Path) -> None:
+    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    store.write_document("A.md", "a")
+    store.write_document("b/B.md", "b")
+    paths = store.iter_stored_relative_paths()
+    assert "A.md" in paths
+    assert "b/B.md" in paths
 
 
 def test_memory_cache_put_get() -> None:

@@ -16,10 +16,10 @@ from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
 from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
-from .file_store import write_text
 from .turn import run_turn
 from .workspace import (
     WorkspacePaths,
+    ensure_minimal_workspace_documents_in_store,
     is_workspace_initialized_from_store,
     needs_startup_profile_inquiry,
 )
@@ -37,16 +37,14 @@ class CompanionConfig(BaseModel):
     # 记忆管线配置
     memory: MemoryPipelineConfig = Field(default_factory=MemoryPipelineConfig)
 
-    # PostgreSQL DSN for memory store (空串 = 纯内存 + 可选磁盘回退，见 memory_allow_workspace_disk_fallback)
+    # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (app.models.companion_workspace).
     memory_pg_dsn: str = ""
-    memory_pg_table: str = "companion_memory_doc_versions"
-    memory_mirror_to_files: bool = False
-    memory_allow_workspace_disk_fallback: bool = False
 
-    # API WebSocket companion: IDENTITY/SOUL/USER/MEMORY/transcript/context 等仅走 MemoryStore（DB + 内存缓存），不落盘
+    # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 repl_workspace_tools）
     repository_only_workspace_text: bool = True
 
-    # Bootstrap
+    # Bootstrap (off by default; set companion_workspace_bootstrap_enabled true in app.features YAML)
+    workspace_bootstrap_enabled: bool = False
     bootstrap_max_rounds: int = 48
 
     # Context
@@ -59,11 +57,10 @@ class CompanionConfig(BaseModel):
     # uses companion.models.TRANSCRIPT_WINDOW_MAX_MESSAGES.
     transcript_llm_window_max_messages: int | None = None
 
-
-def _store_allow_disk_fallback(cfg: CompanionConfig) -> bool:
-    if not cfg.memory_pg_dsn.strip():
+    @property
+    def skip_workspace_directory_creation(self) -> bool:
+        """Session state does not require a directory under workspaces_base_dir."""
         return True
-    return cfg.memory_allow_workspace_disk_fallback
 
 
 class CompanionSession:
@@ -127,14 +124,13 @@ class CompanionManager:
                 return existing
 
             ws_path = self._workspace_path(user_id, companion_id, chat_id)
-            ws_path.mkdir(parents=True, exist_ok=True)
 
             store = get_memory_store(
                 ws_path,
                 dsn=self._config.memory_pg_dsn,
-                table_name=self._config.memory_pg_table,
-                mirror_to_files=self._config.memory_mirror_to_files,
-                allow_workspace_disk_fallback=_store_allow_disk_fallback(self._config),
+                user_id=user_id,
+                companion_id=companion_id,
+                chat_id=chat_id,
             )
 
             context_data = {
@@ -144,13 +140,11 @@ class CompanionManager:
                 "chat_id": chat_id,
             }
             context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
-            if self._config.repository_only_workspace_text:
-                if store.read_document_if_exists("context.json") is None:
-                    store.write_document("context.json", context_json)
-            else:
-                context_path = ws_path / "context.json"
-                if not context_path.is_file():
-                    write_text(context_path, context_json)
+            if store.read_document_if_exists("context.json") is None:
+                store.write_document("context.json", context_json)
+
+            if not self._config.workspace_bootstrap_enabled:
+                ensure_minimal_workspace_documents_in_store(ws_path, store)
 
             session = CompanionSession(
                 user_id=user_id,
@@ -240,7 +234,12 @@ class CompanionManager:
             session = self._sessions.pop(key, None)
         if session is None:
             return
-        shutdown_memory_store(session.workspace_path)
+        shutdown_memory_store(
+            session.workspace_path,
+            user_id=session.user_id,
+            companion_id=session.companion_id,
+            chat_id=session.chat_id,
+        )
         logger.info(
             "companion_manager session_shutdown user={} companion={} chat={}",
             user_id,
@@ -253,5 +252,10 @@ class CompanionManager:
             sessions = list(self._sessions.values())
             self._sessions.clear()
         for session in sessions:
-            shutdown_memory_store(session.workspace_path)
+            shutdown_memory_store(
+                session.workspace_path,
+                user_id=session.user_id,
+                companion_id=session.companion_id,
+                chat_id=session.chat_id,
+            )
         logger.info("companion_manager all_sessions_shutdown count={}", len(sessions))

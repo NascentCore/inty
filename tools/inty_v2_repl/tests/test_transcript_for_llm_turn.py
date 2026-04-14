@@ -12,7 +12,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from experimental.inty_v2_text_chat_prototype.models import (
+from tools.inty_v2_repl.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     load_transcript,
