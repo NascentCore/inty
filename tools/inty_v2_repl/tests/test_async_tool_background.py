@@ -29,6 +29,7 @@ from inty_v2_text_chat_prototype.tool_background import (
     clear_output_queue,
     pop_output_events_nowait,
 )
+from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
 from inty_v2_text_chat_prototype.workspace_init_tools import (
     TEXT_RESPONSE_INCLUDE_IN_CHAT,
     tool_text_response_should_include_in_chat,
@@ -176,6 +177,11 @@ class TestAsyncToolBackground(unittest.TestCase):
         paths.user_md.write_text("# U\n", encoding="utf-8")
         paths.memory_md.write_text("# M\n", encoding="utf-8")
         paths.transcript.write_text("", encoding="utf-8")
+        st = get_memory_store(root)
+        st.write_document("IDENTITY.md", "# I\n")
+        st.write_document("SOUL.md", "# S\n")
+        st.write_document("USER.md", "# U\n")
+        st.write_document("MEMORY.md", "# M\n")
         return paths
 
     def test_side_effect_only_tool_does_not_emit_background_user_visible_reply(
@@ -272,7 +278,7 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator, "schedule_memory_update_after_turn", return_value=None
                 ),
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_tools.run_generate_image_z_image_turbo",
+                    "app.core.agentic_kernel.companion.repl_workspace_tools.run_generate_image_z_image_turbo",
                     return_value=(
                         "OK fal z-image generated: "
                         "prompt='sunrise portrait' image_size=portrait_4_3 "
@@ -308,13 +314,9 @@ class TestAsyncToolBackground(unittest.TestCase):
             turn_tid = rows[0].trace_id
             assert turn_tid is not None
             self.assertEqual(got_events[0].trace_id, turn_tid)
-            tb_lines = [
-                ln
-                for ln in (root / "tool_background.jsonl")
-                .read_text(encoding="utf-8")
-                .splitlines()
-                if ln.strip()
-            ]
+            tb_raw = get_memory_store(root).read_document_if_exists("tool_background.jsonl")
+            self.assertIsNotNone(tb_raw)
+            tb_lines = [ln for ln in tb_raw.splitlines() if ln.strip()]
             self.assertTrue(tb_lines)
             tb_last = json.loads(tb_lines[-1])
             self.assertEqual(tb_last.get("trace_id"), turn_tid)
@@ -489,7 +491,9 @@ class TestLocalPathDisplay(unittest.TestCase):
                 ],
                 trace_id="tid-bg-test",
             )
-            body = (root / "tool_background.jsonl").read_text(encoding="utf-8")
+            raw = get_memory_store(root).read_document_if_exists("tool_background.jsonl")
+            self.assertIsNotNone(raw)
+            body = raw
             self.assertIn('"kind": "tool_background_done"', body)
             self.assertIn(
                 '"generated_image_uris": ["file:///tmp/a.png", "https://example.com/b.jpg"]',

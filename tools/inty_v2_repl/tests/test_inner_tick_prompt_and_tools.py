@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
@@ -50,7 +51,10 @@ class TestInnerTickPromptAndTools(unittest.TestCase):
     def test_build_system_prompt_inner_tick_contract(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            init_workspace(root, write_context=False)
+            # init_workspace clears the registry store in ``finally``; keep it so
+            # ``load_prompt_bundle`` reads the seeded docs from the same MemoryStore.
+            with patch("inty_v2_text_chat_prototype.bootstrap.shutdown_memory_store"):
+                init_workspace(root, write_context=False)
             paths = WorkspacePaths(root=root)
             bundle = load_prompt_bundle(paths, meta=ContextMeta())
             system = build_system_prompt(

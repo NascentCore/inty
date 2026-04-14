@@ -21,6 +21,8 @@ app:
     companion_workspaces_base_dir: "~/.inty_workspace"
     # Default in code is false; uncomment to use agentic workspace bootstrap on first WS message.
     # companion_workspace_bootstrap_enabled: true
+    # Separate chat vs tool HTTP clients in companion kernel (same stack as INTY_V2_PROTO_DUAL_LLM for REPL).
+    companion_enable_dual_llm: true
 
 sentry:
   # dev-inty/default
@@ -68,8 +70,10 @@ agent:
   # 模型本地无法访问，IP 被限制
   # sub_user_chat_model: "google/gemini-2.5-flash-lite"
   # free_user_chat_model: "google/gemini-2.5-flash-lite"
-  free_user_chat_model: "inception/mercury-2"
-  sub_user_chat_model: "inception/mercury-2"
+  # free_user_chat_model: "inception/mercury-2"
+  # sub_user_chat_model: "inception/mercury-2"
+  free_user_chat_model: "deepseek/deepseek-v3.2"
+  sub_user_chat_model: "deepseek/deepseek-v3.2"
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"

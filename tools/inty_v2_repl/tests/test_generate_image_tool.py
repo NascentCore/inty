@@ -17,6 +17,7 @@ sys.path.insert(0, str(_REPO_ROOT))
 
 from inty_v2_text_chat_prototype.fal_z_image_tool import MAX_NUM_IMAGES_PER_CALL
 from inty_v2_text_chat_prototype.image_gate import prepare_image_gate_for_turn
+from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
 from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
 
 
@@ -101,7 +102,7 @@ class TestGenerateImageTool(unittest.TestCase):
             root = Path(td)
             self._init_workspace(root)
             with patch(
-                "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_call",
+                "app.core.agentic_kernel.companion.fal_z_image_tool._z_image_turbo_call",
                 new=_fake_z_image_turbo_call,
             ):
                 out = execute_tool_call_blocking(
@@ -114,23 +115,20 @@ class TestGenerateImageTool(unittest.TestCase):
             self.assertIn("returned=1", out)
             self.assertIn("gcs_http_url=https://example.com/fake.jpg", out)
             self.assertIn("size=640x480", out)
-            self.assertIn("local_path=", out)
             self.assertIn("asset_id=", out)
             self.assertIn("persona_revision_id=", out)
-            gen_dir = root / "generated_images"
-            self.assertTrue(gen_dir.is_dir())
-            files = list(gen_dir.glob("z_image_*.jpeg"))
-            self.assertEqual(len(files), 1)
-            self.assertEqual(files[0].read_bytes(), b"\xff\xd8\xff\xd9")
-            idx = root / "generated_images" / "index.jsonl"
-            self.assertTrue(idx.is_file())
+            idx_body = get_memory_store(root).read_document_if_exists(
+                "generated_images/index.jsonl"
+            )
+            self.assertIsNotNone(idx_body)
+            self.assertIn("https://example.com/fake.jpg", idx_body)
 
     def test_multi_image_summary_numbered(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._init_workspace(root)
             with patch(
-                "inty_v2_text_chat_prototype.fal_z_image_tool._z_image_turbo_call",
+                "app.core.agentic_kernel.companion.fal_z_image_tool._z_image_turbo_call",
                 new=_fake_z_image_turbo_call_two,
             ):
                 out = execute_tool_call_blocking(
