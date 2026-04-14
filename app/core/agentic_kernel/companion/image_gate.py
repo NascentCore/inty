@@ -50,6 +50,11 @@ def _state_path(root: Path) -> Path:
     return canonical
 
 
+def _image_gate_document_rel_path(root: Path) -> str:
+    r = root.resolve()
+    return WorkspacePaths(root=r).image_gate_json.relative_to(r).as_posix()
+
+
 def _default_state(root: Path) -> dict[str, Any]:
     return {
         "persona_revision_id": compute_persona_revision_id(root),
@@ -63,6 +68,18 @@ def _default_state(root: Path) -> dict[str, Any]:
 
 
 def _load_state(root: Path) -> dict[str, Any]:
+    store = get_memory_store(root)
+    if store.uses_repository_without_workspace_disk:
+        rel = _image_gate_document_rel_path(root)
+        raw_body = store.read_document_if_exists(rel)
+        if raw_body is None or not raw_body.strip():
+            return _default_state(root)
+        raw = json.loads(raw_body)
+        if not isinstance(raw, dict):
+            raise ValueError("image_gate document must contain a JSON object")
+        out = _default_state(root)
+        out.update(raw)
+        return out
     p = _state_path(root)
     if not p.is_file():
         return _default_state(root)
@@ -75,15 +92,24 @@ def _load_state(root: Path) -> dict[str, Any]:
 
 
 def _save_state(root: Path, state: dict[str, Any]) -> None:
+    payload = json.dumps(state, ensure_ascii=False, indent=2) + "\n"
+    store = get_memory_store(root)
+    if store.uses_repository_without_workspace_disk:
+        rel = _image_gate_document_rel_path(root)
+        store.write_document(rel, payload)
+        return
     paths = WorkspacePaths(root=root.resolve())
     target = paths.image_gate_json
-    write_text_atomic(target, json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    write_text_atomic(target, payload)
 
 
 def _read_profile_doc(root: Path, relative_path: str) -> str:
-    body = get_memory_store(root).read_document_if_exists(relative_path)
+    store = get_memory_store(root)
+    body = store.read_document_if_exists(relative_path)
     if body is not None:
         return body
+    if store.uses_repository_without_workspace_disk:
+        return ""
     p = root.resolve() / relative_path
     if p.is_file():
         return read_text(p)
@@ -251,6 +277,8 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
     store = get_memory_store(root)
     body = store.read_document_if_exists(_IMAGE_ASSET_INDEX_REL)
     if body is None or not body.strip():
+        if store.uses_repository_without_workspace_disk:
+            return []
         p = root.resolve() / _IMAGE_ASSET_INDEX_REL
         if not p.is_file():
             return []

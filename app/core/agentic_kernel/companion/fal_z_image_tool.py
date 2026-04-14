@@ -16,6 +16,7 @@ from .image_gate import (
     find_latest_asset_by_local_relative_path,
     relative_path_under_workspace,
 )
+from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
@@ -128,6 +129,8 @@ def _build_image_to_image_input(kwargs: dict[str, Any]) -> Any:
 
 
 def _maybe_write_local_copy(root: Path, item: Any) -> Path | None:
+    if get_memory_store(root).uses_repository_without_workspace_disk:
+        return None
     raw = getattr(item, "raw_data", None)
     if not isinstance(raw, bytes) or len(raw) == 0:
         return None

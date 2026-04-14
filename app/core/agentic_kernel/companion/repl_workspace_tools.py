@@ -32,6 +32,7 @@ from .image_gate import (
     check_image_tool_allowed,
     current_persona_revision_id,
     find_latest_asset_by_local_relative_path,
+    list_image_asset_records,
     mark_image_tool_completed,
     register_profile_write,
 )
@@ -102,6 +103,14 @@ def _latest_generated_image_under_workspace(root: Path) -> Path | None:
         if best is None or mtime_ns > best[0]:
             best = (mtime_ns, p)
     return best[1] if best is not None else None
+
+
+def _latest_generated_image_http_url_from_index(root: Path) -> str | None:
+    for row in reversed(list_image_asset_records(root)):
+        u = str(row.get("gcs_http_url") or "").strip()
+        if u.startswith("http://") or u.startswith("https://"):
+            return u
+    return None
 
 
 def _is_memory_document(relative_path: str) -> bool:
@@ -283,13 +292,29 @@ def tool_workspace_list_dir(
 ) -> str:
     """列出目录下的直接子项（文件与目录名）；目录名以 / 结尾。"""
     root = root.resolve()
+    store = get_memory_store(root)
     d = resolve_under_workspace(root, relative_path)
-    if not d.is_dir():
-        return f"ERROR: not a directory: {relative_path!r}"
     rel_dir_raw = d.relative_to(root).as_posix()
     list_prefix = _list_dir_prefix_for_store_query(rel_dir_raw)
+    if store.uses_repository_without_workspace_disk:
+        if d.is_dir():
+            names = sorted(d.iterdir(), key=lambda p: p.name.lower())
+            lines: set[str] = set()
+            for p in names:
+                if p.name.startswith("."):
+                    continue
+                lines.add(f"{p.name}/" if p.is_dir() else p.name)
+            if repository_only_workspace_text:
+                lines |= _list_dir_extra_names_from_store(root, list_prefix)
+            ordered = sorted(lines, key=lambda s: s.lower())
+            return "\n".join(ordered) if ordered else "(empty)"
+        lines = _list_dir_extra_names_from_store(root, list_prefix)
+        ordered = sorted(lines, key=lambda s: s.lower())
+        return "\n".join(ordered) if ordered else "(empty)"
+    if not d.is_dir():
+        return f"ERROR: not a directory: {relative_path!r}"
     names = sorted(d.iterdir(), key=lambda p: p.name.lower())
-    lines: set[str] = set()
+    lines = set()
     for p in names:
         if p.name.startswith("."):
             continue
@@ -330,13 +355,16 @@ def tool_workspace_read_file(
 ) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
+    st = get_memory_store(root)
     if _workspace_text_via_memory_store(
         rel, repository_only_workspace_text=repository_only_workspace_text
     ):
-        body = get_memory_store(root).read_document_if_exists(rel)
+        body = st.read_document_if_exists(rel)
         if body is None:
             return f"ERROR: not a file: {relative_path!r}"
     else:
+        if st.uses_repository_without_workspace_disk:
+            return f"ERROR: not a file: {relative_path!r}"
         if not p.is_file():
             return f"ERROR: not a file: {relative_path!r}"
         body = read_text(p)
@@ -382,12 +410,13 @@ def tool_workspace_write_file(
 ) -> str:
     p = resolve_under_workspace(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
+    st = get_memory_store(root)
     prev_body: str | None = None
     if _workspace_text_via_memory_store(
         rel, repository_only_workspace_text=repository_only_workspace_text
     ):
-        prev_body = get_memory_store(root).read_document_if_exists(rel)
-    elif p.is_file():
+        prev_body = st.read_document_if_exists(rel)
+    elif not st.uses_repository_without_workspace_disk and p.is_file():
         prev_body = read_text(p)
     if rel == "transcript.jsonl":
         v_err = _transcript_jsonl_validate_for_tool_write(content)
@@ -396,8 +425,13 @@ def tool_workspace_write_file(
     if _workspace_text_via_memory_store(
         rel, repository_only_workspace_text=repository_only_workspace_text
     ):
-        get_memory_store(root).write_document(rel, content)
+        st.write_document(rel, content)
     else:
+        if st.uses_repository_without_workspace_disk:
+            return (
+                f"ERROR: cannot write {relative_path!r} "
+                "(API companion persists only via memory store documents)"
+            )
         write_text(p, content)
     changed = prev_body != content
     register_profile_write(root, rel, changed=changed, new_content=content)
@@ -405,16 +439,27 @@ def tool_workspace_write_file(
 
 
 def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
+    if get_memory_store(root).uses_repository_without_workspace_disk:
+        return f"OK mkdir {relative_path}"
     p = resolve_under_workspace(root, relative_path)
     p.mkdir(parents=True, exist_ok=True)
     return f"OK mkdir {relative_path}"
 
 
 def read_chat_output_format_prompt(root: Path) -> str | None:
-    p = resolve_under_workspace(root, _CHAT_SETTINGS_REL)
-    if not p.is_file():
-        return None
-    raw = read_text(p).strip()
+    root_r = root.resolve()
+    store = get_memory_store(root_r)
+    rel = resolve_under_workspace(root_r, _CHAT_SETTINGS_REL).relative_to(root_r).as_posix()
+    if store.uses_repository_without_workspace_disk:
+        raw_body = store.read_document_if_exists(rel)
+        if raw_body is None or not raw_body.strip():
+            return None
+        raw = raw_body.strip()
+    else:
+        p = resolve_under_workspace(root_r, _CHAT_SETTINGS_REL)
+        if not p.is_file():
+            return None
+        raw = read_text(p).strip()
     if not raw:
         return None
     parsed = json.loads(raw)
@@ -436,11 +481,15 @@ def tool_update_chat_settings(root: Path, output_format_prompt: str) -> str:
     if not prompt:
         return "ERROR: output_format_prompt must be a non-empty string"
     payload = {_CHAT_OUTPUT_FORMAT_PROMPT_KEY: prompt}
-    p = resolve_under_workspace(root, _CHAT_SETTINGS_REL)
-    write_text(
-        p,
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-    )
+    root_r = root.resolve()
+    store = get_memory_store(root_r)
+    rel = resolve_under_workspace(root_r, _CHAT_SETTINGS_REL).relative_to(root_r).as_posix()
+    body = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    if store.uses_repository_without_workspace_disk:
+        store.write_document(rel, body)
+        return "OK updated chat output format prompt"
+    p = resolve_under_workspace(root_r, _CHAT_SETTINGS_REL)
+    write_text(p, body)
     return "OK updated chat output format prompt"
 
 
@@ -1088,21 +1137,47 @@ async def _dispatch(
         path_s = raw_path.strip() if isinstance(raw_path, str) else ""
         url_s = raw_url.strip() if isinstance(raw_url, str) else ""
         src_path: Path | None = None
+        img_store = get_memory_store(root)
         if path_s:
             try:
                 src_path = resolve_under_workspace(root, path_s)
             except ValueError as exc:
                 return f"ERROR: {exc}"
             if not src_path.is_file():
-                return f"ERROR: source image not found or not a file: {path_s!r}"
+                if img_store.uses_repository_without_workspace_disk:
+                    if url_s:
+                        src_path = None
+                    else:
+                        asset = find_latest_asset_by_local_relative_path(root, path_s)
+                        if asset is not None:
+                            u = str(asset.get("gcs_http_url") or "").strip()
+                            if u.startswith("http://") or u.startswith("https://"):
+                                src_path = None
+                                url_s = u
+                            else:
+                                return (
+                                    f"ERROR: source image in index has no http(s) URL for {path_s!r}"
+                                )
+                        else:
+                            return f"ERROR: source image not in index: {path_s!r}"
+                else:
+                    return f"ERROR: source image not found or not a file: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
         if src_path is None and src_url_out is None:
-            src_path = _latest_generated_image_under_workspace(root)
-            if src_path is None:
-                return (
-                    "ERROR: modify_image requires source_image_relative_path or source_image_url; "
-                    "also found no fallback image under generated_images/"
-                )
+            if img_store.uses_repository_without_workspace_disk:
+                src_url_out = _latest_generated_image_http_url_from_index(root)
+                if src_url_out is None:
+                    return (
+                        "ERROR: modify_image requires source_image_relative_path or source_image_url; "
+                        "no prior image URL in index (DB-only workspace)"
+                    )
+            else:
+                src_path = _latest_generated_image_under_workspace(root)
+                if src_path is None:
+                    return (
+                        "ERROR: modify_image requires source_image_relative_path or source_image_url; "
+                        "also found no fallback image under generated_images/"
+                    )
         image_size = arguments.get("image_size")
         if image_size is not None and not isinstance(image_size, str):
             return "ERROR: image_size must be a string or omitted"

@@ -92,6 +92,8 @@ Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页�
 
 > **Agentic companion kernel (inty v2 REPL same stack)**：**`WS /api/v1/chat/ws`** 通过 `_agent_chat_completions_impl(..., chat_route="websocket")` 始终使用 `CompanionManager` + `app/core/agentic_kernel/companion/turn.run_turn` 生成回复，并写入 `chat_history`。**`POST /api/v1/chat/completions/{agent_id}`** 始终走既有 legacy `Agent` 栈（同一请求/响应契约，不切换 companion）。LLM 网关与 companion 使用与主聊天一致的 `select_chat_model` 结果（`model_override`）以及 `agent.chat_llm_api_key`（若配置）否则 `agent.api_key`，`agent.chat_llm_base_url` 否则 `agent.base_url`。可选：`app.features.companion_workspaces_base_dir`、`app.features.companion_default_context_mode`。默认启用：`app.features.companion_transcript_compaction` 缺省时使用与 `app.utils.companion_feature_defaults.DEFAULT_COMPANION_FEATURE_COMPACTION` 相同的 dict，在单轮 LLM 请求前对 transcript 窗口做确定性压缩；在 YAML 中设为 `null` 可关闭。可覆盖各字段（同 `CompactionConfig`）。`app.features.companion_transcript_llm_window_max_messages` 可放大载入 transcript 行数再压缩。状态持久化在 workspace 的 `{state_file_prefix}_context_compaction_state.json`（默认 `.companion_context_compaction_state.json`）。实现见 `app/services/companion_chat_service.py`；已知限制与后续步骤见 `docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md` 第 11 节。旧版 YAML 中的 `chat_use_companion_kernel_agent_ids` 在加载配置时会被忽略。
 
+> **API companion 无 workspace 磁盘权威**：经 `companion_chat_service` 的 WebSocket companion 路径在配置好数据库 DSN 时，不在 `companion_workspaces_base_dir` 下 `mkdir` 或写入权威状态文件；约定文档、transcript、context、定时队列、image gate、chat settings、生图索引元数据等经 `MemoryStore` 写入 Postgres（`companion_memory_doc_versions`），进程内缓存读取；`companion_workspaces_base_dir` 仅参与 `workspace_root` 字符串键。生图二进制可走 GCS；无本地 generated 文件时 `modify_image` 默认源依赖索引中的 `gcs_http_url`。
+
 > **`/api/v1/chat/completions/{agent_id}` 多模态输入约定**：
 >
 > - `messages[].content` 兼容两种格式：

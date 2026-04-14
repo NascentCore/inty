@@ -33,6 +33,7 @@ def _companion_runtime_config_fingerprint() -> str:
         str(feats.companion_transcript_llm_window_max_messages or ""),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
+        "companion_db_only_workspace_v2",
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
@@ -45,7 +46,6 @@ def _companion_manager_for_resolved_model(
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
     base = Path(feats.companion_workspaces_base_dir).expanduser()
-    base.mkdir(parents=True, exist_ok=True)
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
     llm = CompanionLLMConfig(
         api_key=api_key,
@@ -68,6 +68,7 @@ def _companion_manager_for_resolved_model(
     companion_cfg = CompanionConfig(
         workspaces_base_dir=str(base),
         memory_pg_dsn=cfg.database.url,
+        memory_mirror_to_files=False,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,
@@ -75,6 +76,8 @@ def _companion_manager_for_resolved_model(
         repository_only_workspace_text=True,
         memory_allow_workspace_disk_fallback=False,
     )
+    if not companion_cfg.skip_workspace_directory_creation:
+        base.mkdir(parents=True, exist_ok=True)
     return CompanionManager(companion_cfg)
 
 

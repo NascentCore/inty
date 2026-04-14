@@ -82,7 +82,8 @@ async def run_workspace_bootstrap_loop(
     chat_completion_fn(messages, model, tools) -> OpenAI ChatCompletion response
     """
     root = workspace.resolve()
-    root.mkdir(parents=True, exist_ok=True)
+    if not store.uses_repository_without_workspace_disk:
+        root.mkdir(parents=True, exist_ok=True)
     logger.debug(
         "bootstrap loop start ws={} max_rounds={} user_message_chars={}",
         root,

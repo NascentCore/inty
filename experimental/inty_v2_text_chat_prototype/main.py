@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Annotated, Callable, Mapping
 
 from cyclopts import App, Parameter
+from dotenv import load_dotenv
 from loguru import logger
 
 # `python main.py` loads this file as __main__ with no package; ensure parent of this
@@ -38,6 +39,7 @@ from experimental.inty_v2_text_chat_prototype.backend_chat_ws import (
 )
 
 load_prototype_dotenv()
+load_dotenv(_REPO_ROOT / ".env")
 
 from app.core.repl_input.sleep_chunk import clamp_sleep_seconds
 from app.core.repl_input.stdin_queue import spawn_stdin_line_reader

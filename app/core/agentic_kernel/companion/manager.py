@@ -59,6 +59,11 @@ class CompanionConfig(BaseModel):
     # uses companion.models.TRANSCRIPT_WINDOW_MAX_MESSAGES.
     transcript_llm_window_max_messages: int | None = None
 
+    @property
+    def skip_workspace_directory_creation(self) -> bool:
+        """True when Postgres backs MemoryStore and workspace dirs must not be mkdir'd."""
+        return bool(self.memory_pg_dsn.strip()) and not self.memory_allow_workspace_disk_fallback
+
 
 def _store_allow_disk_fallback(cfg: CompanionConfig) -> bool:
     if not cfg.memory_pg_dsn.strip():
@@ -127,7 +132,8 @@ class CompanionManager:
                 return existing
 
             ws_path = self._workspace_path(user_id, companion_id, chat_id)
-            ws_path.mkdir(parents=True, exist_ok=True)
+            if not self._config.skip_workspace_directory_creation:
+                ws_path.mkdir(parents=True, exist_ok=True)
 
             store = get_memory_store(
                 ws_path,

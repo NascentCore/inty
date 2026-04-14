@@ -51,6 +51,35 @@ def test_memory_store_append_jsonl_record(tmp_path: Path) -> None:
     assert len(lines) == 2
 
 
+def test_memory_store_uses_repository_without_workspace_disk_predicate(
+    tmp_path: Path,
+) -> None:
+    class _DummyRepo:
+        pass
+
+    s_repo = MemoryStore(
+        workspace_root=tmp_path,
+        repository=_DummyRepo(),
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    assert s_repo.uses_repository_without_workspace_disk is True
+    s_allow = MemoryStore(
+        workspace_root=tmp_path,
+        repository=_DummyRepo(),
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=True,
+    )
+    assert s_allow.uses_repository_without_workspace_disk is False
+    s_no_repo = MemoryStore(
+        workspace_root=tmp_path,
+        repository=None,
+        mirror_to_files=False,
+        allow_workspace_disk_fallback=False,
+    )
+    assert s_no_repo.uses_repository_without_workspace_disk is False
+
+
 def test_memory_store_production_no_mirror_no_fallback_no_disk_files(
     tmp_path: Path,
 ) -> None:

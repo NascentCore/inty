@@ -220,6 +220,11 @@ class MemoryStore:
         self._repository = repository
         self.allow_workspace_disk_fallback = allow_workspace_disk_fallback
 
+    @property
+    def uses_repository_without_workspace_disk(self) -> bool:
+        """Postgres is authoritative; do not read/write companion state files under workspace_root."""
+        return self._repository is not None and not self.allow_workspace_disk_fallback
+
     def _normalize_relative_path(self, relative_path: str) -> str:
         rel = (relative_path or "").strip().replace("\\", "/")
         if not rel:
@@ -258,20 +263,22 @@ class MemoryStore:
             )
             if rec is not None:
                 loaded = self._cache.put_committed(rec)
-                self._mirror.write(record=loaded)
+                if not self.uses_repository_without_workspace_disk:
+                    self._mirror.write(record=loaded)
                 return loaded.content
 
-        mirrored = self._mirror.read_if_exists(relative_path=rel)
-        if mirrored is not None:
-            local_record = MemoryRecord(
-                record_uuid=str(uuid_mod.uuid4()),
-                sequence_id=0,
-                relative_path=rel,
-                content=mirrored,
-                created_at=utc_iso_ts(),
-            )
-            self._cache.put_committed(local_record)
-            return mirrored
+        if not self.uses_repository_without_workspace_disk:
+            mirrored = self._mirror.read_if_exists(relative_path=rel)
+            if mirrored is not None:
+                local_record = MemoryRecord(
+                    record_uuid=str(uuid_mod.uuid4()),
+                    sequence_id=0,
+                    relative_path=rel,
+                    content=mirrored,
+                    created_at=utc_iso_ts(),
+                )
+                self._cache.put_committed(local_record)
+                return mirrored
         if not self.allow_workspace_disk_fallback:
             return None
         p = (self._workspace_root / rel).resolve()
@@ -316,7 +323,8 @@ class MemoryStore:
                 created_at=utc_iso_ts(),
             )
         applied = self._cache.put_committed(committed)
-        self._mirror.write(record=applied)
+        if not self.uses_repository_without_workspace_disk:
+            self._mirror.write(record=applied)
 
     def append_line(self, relative_path: str, line: str) -> None:
         rel = self._normalize_relative_path(relative_path)

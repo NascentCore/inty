@@ -23,12 +23,12 @@
 ## 4. 阶段 2 - 持久化 - 已实现（需知局限）
 
 - companion 路径在 `run_companion_chat_turn_for_api` 返回文本后，依次 `chat_history_service.add_user_message_async` 与 `add_ai_message_sync_async` 写入 `chat_history`，与消息列表 API 一致。
-- **顺序与一致性**：先 companion 工作区落盘，再写 `chat_history`；两阶段之间失败可能导致工作区与列表短暂不一致（见 backlog「原子性」）。
+- **顺序与一致性**：先 companion 状态持久化（API 路径为 Postgres + MemoryStore，非 workspace 磁盘），再写 `chat_history`；两阶段之间失败可能导致 companion 状态与列表短暂不一致（见 backlog「原子性」）。
 
 ## 5. 阶段 3 - 身份与工作区映射 - 已实现
 
 - `CompanionManager.get_or_create_session(user_id, agent_id, chat_key)`，`chat_key` 为 `str(chat.id)`（`companion_chat_service.run_companion_chat_turn_for_api`）。
-- 工作区根目录由 `app.features.companion_workspaces_base_dir` 配置（默认 `/var/lib/inty/companion_workspaces`），进程内会 `mkdir`。
+- 工作区根目录由 `app.features.companion_workspaces_base_dir` 配置（默认 `/var/lib/inty/companion_workspaces`），仅参与 `workspace_root` 数据库键前缀；在 `companion_chat_service` + 已配置数据库 DSN 时**不在**该路径下 `mkdir` 或写入权威状态文件（见 `app/api/ENDPOINTS.md` 与 `MemoryStore.uses_repository_without_workspace_disk`）。
 - 用户多段纯文本在 HTTP/WS 侧仍经 `HumanMessage` / `extract_text_content` 等路径；companion 路径当前以**拼接后的纯文本** `user_text` 调用 `run_turn`（含图的多模态见 backlog）。
 
 ## 6. 阶段 4 - 异步、超时与 DB 会话
