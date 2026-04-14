@@ -52,3 +52,6 @@ python experimental/inty_v2_text_chat_prototype/main.py repl \
     --agent-id <AGENT_ID> \
     --api-base-url http://127.0.0.1:8001
 ```
+
+<img width="600" height="1140" alt="image" src="https://github.com/user-attachments/assets/ef6e2ec7-bcdb-46d1-8dee-085d0c66670f" />
+<img width="600" height="1512" alt="image" src="https://github.com/user-attachments/assets/9c337f9b-174f-469d-bf97-a772063ff9cf" />
