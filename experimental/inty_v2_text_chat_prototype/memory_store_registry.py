@@ -27,18 +27,10 @@ def _env_bool(name: str, *, default: bool) -> bool:
 
 def get_memory_store(workspace_root: Path) -> MemoryStore:
     dsn = (os.getenv("INTY_V2_PROTO_MEMORY_PG_DSN") or "").strip()
-    table_name = (
-        os.getenv(
-            "INTY_V2_PROTO_MEMORY_PG_TABLE",
-            "proto_memory_doc_versions",
-        ).strip()
-        or "proto_memory_doc_versions"
-    )
     mirror = _env_bool("INTY_V2_PROTO_MEMORY_MIRROR_TO_FILES", default=True)
     return _kernel_get(
         workspace_root,
         dsn=dsn,
-        table_name=table_name,
         mirror_to_files=mirror,
     )
 

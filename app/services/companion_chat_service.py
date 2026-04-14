@@ -37,7 +37,7 @@ def _companion_runtime_config_fingerprint() -> str:
         str(feats.companion_workspace_bootstrap_enabled),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
-        "companion_db_only_workspace_v2",
+        "companion_db_only_workspace_v3_orm",
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 

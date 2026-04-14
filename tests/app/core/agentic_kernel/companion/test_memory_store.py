@@ -55,7 +55,8 @@ def test_memory_store_uses_repository_without_workspace_disk_predicate(
     tmp_path: Path,
 ) -> None:
     class _DummyRepo:
-        pass
+        def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
+            return []
 
     s_repo = MemoryStore(
         workspace_root=tmp_path,

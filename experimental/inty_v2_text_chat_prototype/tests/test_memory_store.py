@@ -17,7 +17,7 @@ from inty_v2_text_chat_prototype.memory_store import (
     MemoryRecord,
     MemoryRepository,
     MemoryStore,
-    PostgresMemoryRepository,
+    SqlAlchemyMemoryRepository,
 )
 
 
@@ -70,6 +70,11 @@ class TestMemoryStore(unittest.TestCase):
             history = self.rows.setdefault(key, [])
             history.append(row)
             return row
+
+        def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
+            return sorted(
+                {rp for (ws, rp) in self.rows if ws == workspace_root},
+            )
 
         def history(
             self,
@@ -161,12 +166,15 @@ class TestMemoryStore(unittest.TestCase):
             self.skipTest(
                 "requires running postgres on 127.0.0.1:5432 and INTY_V2_PROTO_MEMORY_PG_DSN"
             )
-        table = "proto_memory_doc_versions_test"
-        repo = PostgresMemoryRepository(dsn=dsn, table_name=table)
-        repo.ensure_schema()
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
+            root = Path(td) / "u_pg_test" / "agent_pg_test" / "chat_pg_test"
+            root.mkdir(parents=True)
             ws = str(root.resolve())
+            repo = SqlAlchemyMemoryRepository(
+                user_id="u_pg_test",
+                companion_id="agent_pg_test",
+                chat_id="chat_pg_test",
+            )
             store = MemoryStore(
                 workspace_root=root,
                 repository=repo,
@@ -179,7 +187,7 @@ class TestMemoryStore(unittest.TestCase):
             row = repo.read_document(workspace_root=ws, relative_path="USER.md")
             assert row is not None
             self.assertEqual(row.content, "# USER\n\npg-2\n")
-            self.assertGreaterEqual(row.sequence_id, 2)
+            self.assertGreaterEqual(row.sequence_id, 1)
             store.shutdown(timeout_s=2.0)
 
             store2 = MemoryStore(

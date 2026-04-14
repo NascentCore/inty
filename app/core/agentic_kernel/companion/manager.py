@@ -37,9 +37,8 @@ class CompanionConfig(BaseModel):
     # 记忆管线配置
     memory: MemoryPipelineConfig = Field(default_factory=MemoryPipelineConfig)
 
-    # PostgreSQL DSN for memory store (空串 = 纯内存 + 可选磁盘回退，见 memory_allow_workspace_disk_fallback)
+    # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (app.models.companion_workspace).
     memory_pg_dsn: str = ""
-    memory_pg_table: str = "companion_memory_doc_versions"
     memory_mirror_to_files: bool = False
     memory_allow_workspace_disk_fallback: bool = False
 
@@ -139,9 +138,11 @@ class CompanionManager:
             store = get_memory_store(
                 ws_path,
                 dsn=self._config.memory_pg_dsn,
-                table_name=self._config.memory_pg_table,
                 mirror_to_files=self._config.memory_mirror_to_files,
                 allow_workspace_disk_fallback=_store_allow_disk_fallback(self._config),
+                user_id=user_id,
+                companion_id=companion_id,
+                chat_id=chat_id,
             )
 
             context_data = {

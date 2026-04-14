@@ -6,5 +6,5 @@ from app.core.agentic_kernel.companion.memory_store import (  # noqa: F401
     MemoryRecord,
     MemoryRepository,
     MemoryStore,
-    PostgresMemoryRepository,
+    SqlAlchemyMemoryRepository,
 )
