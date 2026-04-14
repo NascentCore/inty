@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 LOCAL=false
+DEBUG=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -16,9 +17,14 @@ while [[ $# -gt 0 ]]; do
       LOCAL=true
       shift
       ;;
+    --debug)
+      DEBUG=true
+      shift
+      ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev]"
+      echo "Usage: $0 [--local|--dev] [--debug]"
       echo "  --local|--dev   Dev/local mode: seed admin + report fixtures, uvicorn --reload"
+      echo "  --debug         Loguru + uvicorn log level DEBUG (via INTY_LOGGING_LEVEL)"
       exit 0
       ;;
     *)
@@ -34,6 +40,15 @@ alembic -c "$ALEMBIC_CONFIG" upgrade head
 
 OPS_PORT="${PORT:-8001}"
 
+if [ "$DEBUG" = true ]; then
+  export INTY_LOGGING_LEVEL=DEBUG
+fi
+
+UVICORN_LOG_LEVEL=()
+if [ "$DEBUG" = true ]; then
+  UVICORN_LOG_LEVEL=(--log-level debug)
+fi
+
 if [ "$LOCAL" = true ]; then
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
@@ -44,8 +59,8 @@ if [ "$LOCAL" = true ]; then
   echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
   echo "cd evaluation && npm run dev"
   echo "Starting ops backend server in dev mode on port $OPS_PORT..."
-  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" --reload "${UVICORN_LOG_LEVEL[@]}"
 else
   echo "Starting ops in normal mode on port $OPS_PORT..."
-  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT"
+  python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"
 fi

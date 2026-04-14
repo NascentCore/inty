@@ -48,10 +48,14 @@ def init_logger():
     # 配置默认的 request_id，避免在非请求上下文中出错
     logger.configure(extra={"request_id": "-"})
 
+    log_level = os.environ.get("INTY_LOGGING_LEVEL", "").strip()
+    if not log_level:
+        log_level = global_config_loaded_from_config_yaml.logging.level
+
     # 添加控制台输出；colorize=True 时格式中的 <level>/<green> 等标签才会变为 ANSI 颜色
     logger.add(
         sys.stderr,
-        level=global_config_loaded_from_config_yaml.logging.level,
+        level=log_level,
         format=global_config_loaded_from_config_yaml.logging.format,
         # 不指定这个参数，也没影响命令行颜色输出，但是保险起见，就加上了
         colorize=global_config_loaded_from_config_yaml.logging.colorize,
