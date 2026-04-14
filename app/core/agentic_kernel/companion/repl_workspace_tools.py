@@ -1060,27 +1060,28 @@ async def _dispatch(
             return "ERROR: source_image_url must be a string or omitted"
         path_s = raw_path.strip() if isinstance(raw_path, str) else ""
         url_s = raw_url.strip() if isinstance(raw_url, str) else ""
+        if path_s and url_s:
+            return (
+                "ERROR: use only one of source_image_relative_path or source_image_url, not both"
+            )
         src_path: Path | None = None
         if path_s:
             try:
                 src_path = resolve_under_workspace(root, path_s)
             except ValueError as exc:
                 return f"ERROR: {exc}"
-            if url_s:
-                src_path = None
-            else:
-                asset = find_latest_asset_by_local_relative_path(root, path_s)
-                if asset is not None:
-                    u = str(asset.get("gcs_http_url") or "").strip()
-                    if u.startswith("http://") or u.startswith("https://"):
-                        src_path = None
-                        url_s = u
-                    else:
-                        return (
-                            f"ERROR: source image in index has no http(s) URL for {path_s!r}"
-                        )
+            asset = find_latest_asset_by_local_relative_path(root, path_s)
+            if asset is not None:
+                u = str(asset.get("gcs_http_url") or "").strip()
+                if u.startswith("http://") or u.startswith("https://"):
+                    src_path = None
+                    url_s = u
                 else:
-                    return f"ERROR: source image not in index: {path_s!r}"
+                    return (
+                        f"ERROR: source image in index has no http(s) URL for {path_s!r}"
+                    )
+            else:
+                return f"ERROR: source image not in index: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
         if src_path is None and src_url_out is None:
             src_url_out = _latest_generated_image_http_url_from_index(root)

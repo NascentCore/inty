@@ -170,6 +170,8 @@ class FeaturesConfig:
     companion_transcript_llm_window_max_messages: Optional[int] = None
     # WebSocket companion: agentic workspace bootstrap on first message (default off; set true in YAML to enable).
     companion_workspace_bootstrap_enabled: bool = False
+    # Companion kernel: use separate OpenAI-compatible clients for chat vs tool rounds (LangSmith names companion_dual_*).
+    companion_enable_dual_llm: bool = False
 
 
 @dataclass

@@ -8,11 +8,12 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
+from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
 from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
 
 
@@ -32,11 +33,13 @@ class TestGoogleWebSearchTool(unittest.TestCase):
                 ),
             )
             self.assertTrue(out.startswith("OK scheduled task"))
-            queue_file = root / ".inty_v2_schedule_tasks.json"
-            self.assertTrue(queue_file.is_file())
-            body = json.loads(queue_file.read_text(encoding="utf-8"))
-            self.assertEqual(len(body["tasks"]), 1)
-            self.assertEqual(body["tasks"][0]["task_text"], "提醒我出门")
+            body = get_memory_store(root).read_document_if_exists(
+                ".companion_schedule_tasks.json"
+            )
+            self.assertIsNotNone(body)
+            loaded = json.loads(body)
+            self.assertEqual(len(loaded["tasks"]), 1)
+            self.assertEqual(loaded["tasks"][0]["task_text"], "提醒我出门")
 
     def test_schedule_task_invalid_time_errors(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -82,24 +85,6 @@ class TestGoogleWebSearchTool(unittest.TestCase):
             self.assertTrue(out.startswith("ERROR:"))
 
     def test_success_formats_items(self) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.text = "{}"
-        mock_resp.json.return_value = {
-            "items": [
-                {
-                    "title": "Example",
-                    "link": "https://example.com/page",
-                    "snippet": "A short snippet.",
-                }
-            ]
-        }
-        client = MagicMock()
-        client.get = AsyncMock(return_value=mock_resp)
-        cm = MagicMock()
-        cm.__aenter__ = AsyncMock(return_value=client)
-        cm.__aexit__ = AsyncMock(return_value=None)
-
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             with patch.dict(
@@ -107,8 +92,16 @@ class TestGoogleWebSearchTool(unittest.TestCase):
                 {"GOOGLE_CSE_API_KEY": "k", "GOOGLE_CSE_ID": "cx"},
             ):
                 with patch(
-                    "inty_v2_text_chat_prototype.google_web_search.httpx.AsyncClient",
-                    return_value=cm,
+                    "app.core.agentic_kernel.companion.google_web_search.http_get_json",
+                    return_value={
+                        "items": [
+                            {
+                                "title": "Example",
+                                "link": "https://example.com/page",
+                                "snippet": "A short snippet.",
+                            }
+                        ]
+                    },
                 ):
                     out = execute_tool_call_blocking(
                         root,
@@ -121,15 +114,6 @@ class TestGoogleWebSearchTool(unittest.TestCase):
         self.assertFalse(out.startswith("ERROR:"))
 
     def test_http_error_string(self) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 403
-        mock_resp.text = "forbidden"
-        client = MagicMock()
-        client.get = AsyncMock(return_value=mock_resp)
-        cm = MagicMock()
-        cm.__aenter__ = AsyncMock(return_value=client)
-        cm.__aexit__ = AsyncMock(return_value=None)
-
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             with patch.dict(
@@ -137,8 +121,8 @@ class TestGoogleWebSearchTool(unittest.TestCase):
                 {"GOOGLE_CSE_API_KEY": "k", "GOOGLE_CSE_ID": "cx"},
             ):
                 with patch(
-                    "inty_v2_text_chat_prototype.google_web_search.httpx.AsyncClient",
-                    return_value=cm,
+                    "app.core.agentic_kernel.companion.google_web_search.http_get_json",
+                    side_effect=RuntimeError("403 Client Error: Forbidden for url"),
                 ):
                     out = execute_tool_call_blocking(
                         root,
@@ -149,15 +133,6 @@ class TestGoogleWebSearchTool(unittest.TestCase):
         self.assertIn("403", out)
 
     def test_no_items_returns_placeholder(self) -> None:
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {"items": []}
-        client = MagicMock()
-        client.get = AsyncMock(return_value=mock_resp)
-        cm = MagicMock()
-        cm.__aenter__ = AsyncMock(return_value=client)
-        cm.__aexit__ = AsyncMock(return_value=None)
-
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             with patch.dict(
@@ -165,8 +140,8 @@ class TestGoogleWebSearchTool(unittest.TestCase):
                 {"GOOGLE_CSE_API_KEY": "k", "GOOGLE_CSE_ID": "cx"},
             ):
                 with patch(
-                    "inty_v2_text_chat_prototype.google_web_search.httpx.AsyncClient",
-                    return_value=cm,
+                    "app.core.agentic_kernel.companion.google_web_search.http_get_json",
+                    return_value={"items": []},
                 ):
                     out = execute_tool_call_blocking(
                         root,
