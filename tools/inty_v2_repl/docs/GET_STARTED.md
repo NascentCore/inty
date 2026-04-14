@@ -38,7 +38,13 @@ cp devops/config.yaml.local config.yaml
 # 启动过程中会创建管理员账户及打印对应的 bearer token，复制并拷贝进 .env
 # INTY_ACCESS_TOKEN
 backend/ops/start.sh --local
+```
 
+OPs 平台启动后，参考下面的截图来创建智能体，并使用该智能体进行测试。
+<img width="600" height="1140" alt="image" src="https://github.com/user-attachments/assets/ef6e2ec7-bcdb-46d1-8dee-085d0c66670f" />
+<img width="600" height="1512" alt="image" src="https://github.com/user-attachments/assets/9c337f9b-174f-469d-bf97-a772063ff9cf" />
+
+```
 # 启动 repl 之前，需要在运营平台上创建新的角色用于接入 Inty 后端。
 http://localhost:8001/
 
@@ -52,6 +58,3 @@ python experimental/inty_v2_text_chat_prototype/main.py repl \
     --agent-id <AGENT_ID> \
     --api-base-url http://127.0.0.1:8001
 ```
-
-<img width="600" height="1140" alt="image" src="https://github.com/user-attachments/assets/ef6e2ec7-bcdb-46d1-8dee-085d0c66670f" />
-<img width="600" height="1512" alt="image" src="https://github.com/user-attachments/assets/9c337f9b-174f-469d-bf97-a772063ff9cf" />
