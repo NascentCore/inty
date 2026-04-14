@@ -14,5 +14,5 @@
 
 ## 日志（Logging）
 
-- 自 2025-10 起，后端日志时间统一为 UTC（通过 `TZ=UTC` 与 Loguru `timezone="UTC"` 设置）。
-- Uvicorn/FastAPI 等标准 `logging` 日志会被拦截并转发到 Loguru，时间同样为 UTC。
+- 日志时间为进程本地时区的墙钟时间，格式含与 UTC 的数值偏移（`ZZ`，如 `+0800`），与本地 REPL 横幅一致。
+- Uvicorn/FastAPI 等标准 `logging` 日志会被拦截并转发到 Loguru，时间戳规则相同。

@@ -16,7 +16,6 @@ Optional env (read in ``init_logger()``): ``INTY_LOGGING_LEVEL`` overrides YAML
 import logging
 import os
 import sys
-import time
 
 from loguru import logger
 
@@ -48,9 +47,6 @@ class InterceptHandler(logging.Handler):
 
 def init_logger():
     """初始化日志配置"""
-    # 强制使用 UTC 时区，确保所有日志时间为 UTC
-    os.environ["TZ"] = "UTC"
-    time.tzset()
     # 移除默认的处理器
     logger.remove()
 
