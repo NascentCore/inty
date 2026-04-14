@@ -17,6 +17,7 @@ from .memory_pipeline import (
     schedule_memory_update_after_turn,
 )
 from .memory_store import MemoryStore
+from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
@@ -74,6 +75,7 @@ async def run_turn(
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
     repository_only_workspace_text: bool = False,
+    workspace_bootstrap_user_interactive_enabled: bool = False,
 ) -> str:
     """
     执行一轮完整对话。
@@ -112,6 +114,10 @@ async def run_turn(
     # 加载 context 与 prompt bundle
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
+    interactive_bootstrap = interactive_bootstrap_active(
+        feature_enabled=workspace_bootstrap_user_interactive_enabled,
+        meta=context,
+    )
     rel_tr = paths.transcript.relative_to(root).as_posix()
     loaded = load_transcript_from_store(store, rel_tr)
     window_cap = transcript_llm_window_max_messages
@@ -124,6 +130,7 @@ async def run_turn(
         context,
         enable_tools=not heartbeat_turn,
         heartbeat_turn=heartbeat_turn,
+        interactive_bootstrap_active=interactive_bootstrap,
     )
 
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
@@ -161,7 +168,11 @@ async def run_turn(
     trace_id = str(uuid.uuid4())
 
     # Tool loop
-    tools = [] if heartbeat_turn else build_companion_tools()
+    tools = (
+        []
+        if heartbeat_turn
+        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+    )
     last_text = ""
     t_loop = time.perf_counter()
 

@@ -1,0 +1,106 @@
+from __future__ import annotations
+
+import asyncio
+import json
+from pathlib import Path
+
+from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
+    interactive_bootstrap_active,
+    tool_companion_bootstrap_user_interactive_complete,
+    tool_companion_update_prompt_slice,
+)
+from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.models import ContextMeta
+from app.core.agentic_kernel.companion.repl_workspace_tools import execute_tool_call
+from app.core.agentic_kernel.companion.tools import build_companion_tools
+
+
+def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> None:
+    assert not interactive_bootstrap_active(
+        feature_enabled=False,
+        meta=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+    )
+    assert not interactive_bootstrap_active(
+        feature_enabled=True,
+        meta=ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+    )
+    assert interactive_bootstrap_active(
+        feature_enabled=True,
+        meta=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+    )
+
+
+def test_build_companion_tools_interactive_excludes_workspace_write(tmp_path: Path) -> None:
+    names = [t["function"]["name"] for t in build_companion_tools(interactive_bootstrap_active=True)]
+    assert "workspace_write_file" not in names
+    assert "companion_update_prompt_slice" in names
+    assert "companion_bootstrap_user_interactive_complete" in names
+
+
+def test_tool_companion_update_prompt_slice_writes_user_md(tmp_path: Path) -> None:
+    root = tmp_path
+    get_memory_store(root)
+    out = tool_companion_update_prompt_slice(root, "USER", "# user\n")
+    assert out.startswith("OK ")
+    st = get_memory_store(root)
+    assert st.read_document("USER.md") == "# user\n"
+
+
+def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    st = get_memory_store(root)
+    ctx = {
+        "context_mode": "intimate",
+        "user_id": "u1",
+        "companion_id": "a1",
+        "chat_id": "c1",
+        "workspace_bootstrap_user_interactive_completed": False,
+    }
+    st.write_document("context.json", json.dumps(ctx, ensure_ascii=False) + "\n")
+    out = tool_companion_bootstrap_user_interactive_complete(root, "done")
+    assert out.startswith("OK ")
+    data = json.loads(st.read_document("context.json"))
+    assert data["workspace_bootstrap_user_interactive_completed"] is True
+    assert data["workspace_bootstrap_user_interactive_complete_note"] == "done"
+
+
+def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
+    root = tmp_path
+    st = get_memory_store(root)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "intimate",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": False,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    st.write_document("SOUL.md", "old")
+    r1 = asyncio.run(
+        execute_tool_call(
+            root,
+            "companion_update_prompt_slice",
+            json.dumps({"slice": "SOUL", "content": "new soul"}),
+        )
+    )
+    assert r1.startswith("OK ")
+    assert st.read_document("SOUL.md") == "new soul"
+    r2 = asyncio.run(
+        execute_tool_call(
+            root,
+            "companion_bootstrap_user_interactive_complete",
+            json.dumps({}),
+        )
+    )
+    assert r2.startswith("OK ")
+    assert json.loads(st.read_document("context.json"))[
+        "workspace_bootstrap_user_interactive_completed"
+    ] is True

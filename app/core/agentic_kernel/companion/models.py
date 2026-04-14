@@ -83,6 +83,8 @@ class ContextMeta(BaseModel):
     user_id: str = ""
     companion_id: str = ""
     chat_id: str = ""
+    # True = skip interactive-bootstrap injection (default for legacy context.json without this key).
+    workspace_bootstrap_user_interactive_completed: bool = True
 
 
 def load_prompt_bundle(

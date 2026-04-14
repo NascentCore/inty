@@ -10,6 +10,7 @@ app:
   features:
     # Matches code default: WebSocket companion skips agentic bootstrap; minimal docs seeded in DB.
     companion_workspace_bootstrap_enabled: false
+    companion_workspace_bootstrap_user_interactive_enabled: false
 
 sentry:
   # 测试当中关闭 sentry 数据采集，避免混杂测试数据与 dev/prod 环境、干扰正常阅读 sentry web ui 上的数据

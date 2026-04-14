@@ -47,6 +47,7 @@ def test_prompt_bundle_defaults() -> None:
 def test_context_meta_defaults() -> None:
     c = ContextMeta()
     assert c.context_mode == "intimate"
+    assert c.workspace_bootstrap_user_interactive_completed is True
 
 
 def test_transcript_for_llm_turn_short() -> None:

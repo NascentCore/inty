@@ -32,6 +32,7 @@ def _companion_runtime_config_fingerprint() -> str:
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
         str(feats.companion_workspace_bootstrap_enabled),
+        str(feats.companion_workspace_bootstrap_user_interactive_enabled),
         str(feats.companion_enable_dual_llm),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
@@ -77,6 +78,7 @@ def _companion_manager_for_resolved_model(
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
         repository_only_workspace_text=True,
         workspace_bootstrap_enabled=feats.companion_workspace_bootstrap_enabled,
+        workspace_bootstrap_user_interactive_enabled=feats.companion_workspace_bootstrap_user_interactive_enabled,
     )
     return CompanionManager(companion_cfg)
 
@@ -94,9 +96,14 @@ async def run_companion_chat_turn_for_api(
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
     When the workspace is not yet initialized and ``app.features.companion_workspace_bootstrap_enabled``
-    is true, the first user line is consumed by agentic bootstrap. When bootstrap is disabled,
-    required workspace documents are seeded from package templates at session creation
-    (``CompanionManager.get_or_create_session``), and this user line is handled by ``run_turn``.
+    is true and ``companion_workspace_bootstrap_user_interactive_enabled`` is false, the first user line
+    is consumed by the legacy agentic bootstrap loop (``bootstrap_session``).
+    When ``companion_workspace_bootstrap_user_interactive_enabled`` is true, minimal workspace seeds
+    are written at session creation and every user line is handled by ``run_turn`` until the model
+    calls ``companion_bootstrap_user_interactive_complete``. If both bootstrap flags are true,
+    interactive mode takes precedence (no ``bootstrap_session``).
+    When both bootstrap flags are false, required workspace documents are seeded at session creation
+    and this user line is handled by ``run_turn``.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
@@ -121,6 +128,10 @@ async def run_companion_chat_turn_for_api(
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
     if not session.is_initialized:
+        if session.config.workspace_bootstrap_user_interactive_enabled:
+            raise RuntimeError(
+                "Companion workspace not seeded (interactive bootstrap requires minimal documents in store)"
+            )
         if session.config.workspace_bootstrap_enabled:
             logger.info(
                 "companion_chat bootstrap user={} agent={} chat={}",
@@ -134,10 +145,9 @@ async def run_companion_chat_turn_for_api(
                     "Companion workspace failed to initialize after bootstrap"
                 )
             return reply
-        if not session.is_initialized:
-            raise RuntimeError(
-                "Companion workspace not initialized (bootstrap disabled; expected seed at session create)"
-            )
+        raise RuntimeError(
+            "Companion workspace not initialized (bootstrap disabled; expected seed at session create)"
+        )
     return await manager.run_turn(
         session,
         user_text,

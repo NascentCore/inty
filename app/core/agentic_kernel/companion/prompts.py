@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .bootstrap_user_interactive import build_interactive_bootstrap_system_append
 from .models import ContextMeta, PromptBundle
 
 SYSTEM_PROMPT_SEP = "\n\n---\n\n"
@@ -129,6 +130,29 @@ def _output_contract_text_with_tools(
     return base
 
 
+def _output_contract_text_interactive_bootstrap_tools(
+    *,
+    include_repl_image_generation_contract: bool = True,
+) -> str:
+    base = (
+        "输出与工具（交互式关系建立阶段）："
+        "（0）本阶段须用 **companion_update_prompt_slice** 覆盖写入约定切片（IDENTITY / SOUL / USER / MEMORY 等）；"
+        "**禁止**使用 workspace_write_file 写入上述根目录约定稿。"
+        "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
+        "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
+        "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
+        "（2）核对工作区时可用 workspace_list_dir / workspace_read_file；勿编造文件内容。"
+        "（3）凡涉及可与工作区核对的事实，须先读文件再作答。"
+        "（4）需要公开可核验信息且工作区无依据时，须先调用 google_web_search。"
+        "（5）模型与实现细节类问题须先调用 companion_runtime_inspect。"
+    )
+    if include_repl_image_generation_contract:
+        base += _repl_tool_contract_image_generation_clause()
+    base += _repl_tool_contract_suffix_after_image_clause()
+    return base
+
+
 def _heartbeat_clause() -> str:
     return (
         "## 本轮（陪伴心跳）\n\n"
@@ -209,6 +233,7 @@ def build_system_prompt(
     include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
     chat_output_format_prompt: str | None = None,
+    interactive_bootstrap_active: bool = False,
 ) -> str:
     # enable_user_profile_tool 是 prototype 用的参数名, enable_tools 是原 kernel 参数名
     # 任一为 True 即启用工具
@@ -270,15 +295,30 @@ def build_system_prompt(
         if not skip_memory_blocks and bundle.memory_md.strip():
             parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
 
+    if (
+        interactive_bootstrap_active
+        and tools_on
+        and not heartbeat_turn
+        and not inner_tick_turn
+    ):
+        parts.append(build_interactive_bootstrap_system_append())
+
     if inner_tick_turn:
         parts.append(_output_contract_text_inner_tick())
     elif tools_on and not heartbeat_turn and not inner_tick_turn:
         if include_repl_image_generation_contract:
-            parts.append(
-                _output_contract_text_with_tools(
-                    include_repl_image_generation_contract=True,
+            if interactive_bootstrap_active:
+                parts.append(
+                    _output_contract_text_interactive_bootstrap_tools(
+                        include_repl_image_generation_contract=True,
+                    )
                 )
-            )
+            else:
+                parts.append(
+                    _output_contract_text_with_tools(
+                        include_repl_image_generation_contract=True,
+                    )
+                )
         else:
             parts.append(_output_contract_text_chat_branch_mirrored_tools())
     else:

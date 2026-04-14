@@ -170,6 +170,10 @@ class FeaturesConfig:
     companion_transcript_llm_window_max_messages: Optional[int] = None
     # WebSocket companion: agentic workspace bootstrap on first message (default off; set true in YAML to enable).
     companion_workspace_bootstrap_enabled: bool = False
+    # When true: first-turn internal bootstrap loop is skipped; user stays in run_turn while the model
+    # uses companion_update_prompt_slice / companion_bootstrap_user_interactive_complete (see bootstrap_user_interactive).
+    # If both this and companion_workspace_bootstrap_enabled are true, interactive mode wins (no bootstrap_session).
+    companion_workspace_bootstrap_user_interactive_enabled: bool = False
     # Companion kernel: use separate OpenAI-compatible clients for chat vs tool rounds (LangSmith names companion_dual_*).
     companion_enable_dual_llm: bool = False
 
