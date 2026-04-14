@@ -119,6 +119,9 @@ def _output_contract_text_with_tools(
         "（5）当用户需要**实时或可核验的公开信息**（新闻、股价、赛事、政策法规、可引用的公开资料等），"
         "且工作区文档与当前对话无法提供依据时，须先调用 google_web_search 再作答；"
         "未读到工具返回前不得编造检索结果、链接或摘要。"
+        "（6）当用户询问**当前所用模型、调用参数、上下文窗口、真实注入的 system/对话栈**或与实现细节相关、"
+        "且需要可核验的事实时，必须先调用 companion_runtime_inspect 读取 JSON 快照，再依据其中字段用自然语言作答；"
+        "**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）。"
     )
     if include_repl_image_generation_contract:
         base += _repl_tool_contract_image_generation_clause()
@@ -189,6 +192,7 @@ def _tool_side_compact_directive() -> str:
         "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
         "（联网检索、生图/改图、档案、工作区读写等）。若需要，必须先调用工具并依据返回作答；"
         "不要仅用角色扮演替代未执行的工具。"
+        "若用户问当前模型名、调用参数或真实请求内容，须先调用 companion_runtime_inspect 再作答。"
     )
 
 

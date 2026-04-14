@@ -35,7 +35,18 @@ from .transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .prompts import build_system_prompt
-from .repl_workspace_tools import execute_tool_call as repl_execute_tool_call
+from .repl_workspace_tools import (
+    WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+    execute_tool_call as repl_execute_tool_call,
+)
+from .runtime_inspect_context import (
+    build_last_chat_completion_request_payload,
+    build_turn_runtime_config_dict,
+    runtime_inspect_begin_turn,
+    runtime_inspect_end_turn,
+    runtime_inspect_set_last_chat_completion_request,
+    runtime_inspect_set_runtime_config,
+)
 from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools
 from .utc import utc_iso_ts
 from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
@@ -154,75 +165,99 @@ async def run_turn(
     last_text = ""
     t_loop = time.perf_counter()
 
-    for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
-        t_api = time.perf_counter()
-        resolved_model = llm_client._resolve_model("tool" if tools else "chat")
-        logger.debug(
-            "run_turn llm_request round={} model={} tools_enabled={}",
-            round_idx,
-            resolved_model,
-            bool(tools),
-        )
-        resp = llm_client.chat_completion(
-            messages=messages,
-            model=resolved_model,
-            tools=tools or None,
-        )
-        logger.info(
-            "run_turn llm_round={} chat_completions_ms={:.0f} heartbeat={}",
-            round_idx,
-            (time.perf_counter() - t_api) * 1000.0,
-            heartbeat_turn,
-        )
-
-        msg = resp.choices[0].message
-        tool_calls = getattr(msg, "tool_calls", None) or []
-        messages.append(openai_assistant_message_dict(msg))
-
-        if not tool_calls:
-            last_text = (msg.content or "").strip()
-            break
-
-        # 执行 tools
-        for tc in tool_calls:
-            fn = tc.function
-            name = fn.name
-            args = fn.arguments if fn.arguments is not None else ""
-            logger.info(
-                "run_turn tool_call round={} name={} trace_id={}",
-                round_idx,
-                name,
-                trace_id,
-            )
-            result = await repl_execute_tool_call(
-                root,
-                name,
-                args,
-                write_allowlist=WRITABLE_RELATIVE_PATHS,
+    inspect_token = runtime_inspect_begin_turn()
+    try:
+        runtime_inspect_set_runtime_config(
+            build_turn_runtime_config_dict(
+                llm_client=llm_client,
+                mem_cfg=mem_cfg,
+                context=context,
+                transcript_llm_window_max_messages=window_cap,
+                heartbeat_turn=heartbeat_turn,
                 repository_only_workspace_text=repository_only_workspace_text,
+                transcript_compaction=transcript_compaction,
+                workspace_read_file_max_chars_cap=WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+            )
+        )
+
+        for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
+            t_api = time.perf_counter()
+            resolved_model = llm_client._resolve_model("tool" if tools else "chat")
+            logger.debug(
+                "run_turn llm_request round={} model={} tools_enabled={}",
+                round_idx,
+                resolved_model,
+                bool(tools),
+            )
+            runtime_inspect_set_last_chat_completion_request(
+                build_last_chat_completion_request_payload(
+                    model=resolved_model,
+                    messages=messages,
+                    tools=tools or None,
+                )
+            )
+            resp = llm_client.chat_completion(
+                messages=messages,
+                model=resolved_model,
+                tools=tools or None,
             )
             logger.info(
-                "run_turn tool_done round={} name={} result_chars={} ok={}",
+                "run_turn llm_round={} chat_completions_ms={:.0f} heartbeat={}",
                 round_idx,
-                name,
-                len(result),
-                not result.startswith("ERROR:"),
+                (time.perf_counter() - t_api) * 1000.0,
+                heartbeat_turn,
             )
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": result,
-                }
-            )
-    else:
-        raise RuntimeError(f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}")
 
-    logger.info(
-        "run_turn loop_done rounds={} loop_total_ms={:.0f}",
-        round_idx,
-        (time.perf_counter() - t_loop) * 1000.0,
-    )
+            msg = resp.choices[0].message
+            tool_calls = getattr(msg, "tool_calls", None) or []
+            messages.append(openai_assistant_message_dict(msg))
+
+            if not tool_calls:
+                last_text = (msg.content or "").strip()
+                break
+
+            # 执行 tools
+            for tc in tool_calls:
+                fn = tc.function
+                name = fn.name
+                args = fn.arguments if fn.arguments is not None else ""
+                logger.info(
+                    "run_turn tool_call round={} name={} trace_id={}",
+                    round_idx,
+                    name,
+                    trace_id,
+                )
+                result = await repl_execute_tool_call(
+                    root,
+                    name,
+                    args,
+                    write_allowlist=WRITABLE_RELATIVE_PATHS,
+                    repository_only_workspace_text=repository_only_workspace_text,
+                )
+                logger.info(
+                    "run_turn tool_done round={} name={} result_chars={} ok={}",
+                    round_idx,
+                    name,
+                    len(result),
+                    not result.startswith("ERROR:"),
+                )
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result,
+                    }
+                )
+        else:
+            raise RuntimeError(f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}")
+
+        logger.info(
+            "run_turn loop_done rounds={} loop_total_ms={:.0f}",
+            round_idx,
+            (time.perf_counter() - t_loop) * 1000.0,
+        )
+    finally:
+        runtime_inspect_end_turn(inspect_token)
 
     # 持久化 transcript
     assistant_msg_uuid = str(uuid.uuid4())

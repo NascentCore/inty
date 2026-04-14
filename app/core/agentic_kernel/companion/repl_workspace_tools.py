@@ -39,6 +39,7 @@ from .message_format import openai_assistant_message_dict
 from .workspace_doc_mapping import parse_workspace_relative_path
 from .models import ChatMessage
 from .google_web_search import run_google_web_search
+from .runtime_inspect_tool import tool_companion_runtime_inspect
 from .schedule_queue import add_schedule_task
 
 _USER_MD_REL = "USER.md"
@@ -140,6 +141,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "google_web_search",
         "generate_image",
         "modify_image",
+        "companion_runtime_inspect",
     )
 )
 
@@ -682,6 +684,44 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "companion_runtime_inspect",
+                "description": (
+                    "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
+                    "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
+                    "and optionally workspace documents from MemoryStore (SOUL, USER, MEMORY, daily memory). "
+                    "Use when the user asks for verifiable facts about the active model, parameters, or injected "
+                    "prompt stack. For self-check only: answer the user in natural language without reading "
+                    "this JSON aloud verbatim."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "max_chars_per_doc": {
+                            "type": "integer",
+                            "description": "Max characters per stored document body (default 8000, min 100).",
+                        },
+                        "max_chars_llm_messages": {
+                            "type": "integer",
+                            "description": (
+                                "Max serialized size for last request messages array "
+                                "(default 120000, min 1000)."
+                            ),
+                        },
+                        "include_store_documents": {
+                            "type": "boolean",
+                            "description": "If false, omit MemoryStore document bodies (default true).",
+                        },
+                    },
+                    "required": [],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
+    out.append(
+        {
+            "type": "function",
+            "function": {
                 "name": "google_web_search",
                 "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
@@ -934,6 +974,8 @@ async def _dispatch(
             )
         except ValueError as exc:
             return f"ERROR: {exc}"
+    if name == "companion_runtime_inspect":
+        return tool_companion_runtime_inspect(root, dict(arguments or {}))
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):
