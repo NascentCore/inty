@@ -83,6 +83,10 @@ python experimental/inty_v2_text_chat_prototype/main.py once --backend-ws "你�
 
 也可不设 `--backend-ws`，改设环境变量 `INTY_V2_REPL_BACKEND_WS=1`（`true` / `yes` / `on` 均可）。
 
+若通过 **`backend/ops/start.sh --local`** 起本地栈，可对脚本追加 **`--debug`**（`INTY_LOGGING_LEVEL=DEBUG` + uvicorn `--log-level debug`）与 **`--log-file PATH`**（`INTY_LOG_FILE`，Loguru UTF-8 追加写文件，与控制台并行），便于对照 REPL 与后端 WebSocket 日志。说明与步骤见 [docs/GET_STARTED.md](docs/GET_STARTED.md)。
+
 空闲保活：服务端对下一帧有超时（默认约 60s），客户端在后台线程内定期发送 JSON `{"type":"ping"}`。可调 `INTY_V2_BACKEND_WS_PING_INTERVAL_SEC`（默认 25）、单轮等待 `INTY_V2_BACKEND_WS_RECV_TIMEOUT_SEC`（默认 600）。
+
+**REPL 自动重连（仅 `--backend-ws`）**：读循环因对端或网络异常结束后，**同一后台线程**会按指数退避再次建立 WebSocket，一般无需重启 REPL。若一轮发送过程中连接已关闭，会**整轮重试**（含重发该条用户消息），上限由 `INTY_V2_BACKEND_WS_SEND_RETRIES`（默认 8）控制。退避节奏由 `INTY_V2_BACKEND_WS_RECONNECT_INITIAL_SEC`（默认 0.5）与 `INTY_V2_BACKEND_WS_RECONNECT_MAX_SEC`（默认 20）约束。
 
 与本地 `_ws` 并行使用同一 `agent_id` 会在服务端与磁盘各有一套状态，产品联调时请以服务端为准。

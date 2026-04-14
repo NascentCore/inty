@@ -1,12 +1,12 @@
 # INTY v2 文本原型：启动后端与本地 REPL
 
-本文说明如何在本机拉起 **Inty 主后端**，以及如何用本目录的 **REPL** 做联调测试。
+本文说明如何在本机拉起 **Inty 主后端**（或与 Ops 同栈的本地 API），以及如何用 **`tools/inty_v2_repl`** 的 REPL 做联调测试。
 
 ## 0. 固定约定
 
-- **工作目录**：凡运行 `python experimental/...` 或 `./backend/inty/start.sh`，均在 **仓库根目录** 的 shell 中执行。`app.core.config` 要求根目录存在 `config.yaml`。
-- **虚拟环境与依赖**：与后端共用根目录 `.venv` 即可；需安装根 `requirements.txt` 与 `experimental/inty_v2_text_chat_prototype/requirements.txt`（首次安装步骤见 [README.md](../README.md)「安装」）。
-- **环境变量**：`cp experimental/inty_v2_text_chat_prototype/.env.example .env` 并填入真实 Key；从根目录启动时 `load_prototype_dotenv()` 会加载该 `.env`。
+- **工作目录**：凡运行 `python -m tools.inty_v2_repl...` 或 `./backend/inty/start.sh` / `backend/ops/start.sh`，均在 **仓库根目录** 的 shell 中执行。`app.core.config` 要求根目录存在 `config.yaml`。
+- **虚拟环境与依赖**：与后端共用根目录 `.venv` 即可；需安装根 `requirements.txt` 与 `tools/inty_v2_repl/requirements.txt`（更多说明见 [README.md](../README.md)「安装」）。
+- **环境变量**：`load_prototype_dotenv()` 会依次加载 **当前工作目录** 下的 `.env`，以及 `tools/inty_v2_repl/.env`；入口还会加载仓库根目录的 `.env`。可参考 `tools/inty_v2_repl/.env.example` 自建上述任一位置的 `.env`，并填入真实 Key。
 
 **以下各节默认已执行**（路径请换成你的本机仓库）：
 
@@ -14,14 +14,12 @@
 cd /path/to/inty/repo
 uv venv
 source .venv/bin/activate
-# 安装 Inty 后端依赖文件
 uv pip install -r requirements.txt
-# 安装本地 repl 依赖文件
 uv pip install -r tools/inty_v2_repl/requirements.txt
 export PYTHONPATH=.
 ```
 
-## 启动 Inty 后端
+## 启动 Inty 后端（Ops 本地栈）
 
 ```bash
 # 启动后端数据库
@@ -34,27 +32,57 @@ docker run --rm --name pg-inty -p 5432:5432 \
 # 拷贝配置文件
 cp devops/config.yaml.local config.yaml
 
-# 启动本地 Inty Ops 后端服务，包含了 Inty API server 及运营平台 Web UI
-# 启动过程中会创建管理员账户及打印对应的 bearer token，复制并拷贝进 .env
-# INTY_ACCESS_TOKEN
-backend/ops/start.sh --local
+# 启动本地 Inty Ops 后端（含 Inty API 与运营 Web UI）
+# 启动过程中会创建管理员账户并打印 bearer token，复制到 .env 的 INTY_ACCESS_TOKEN
+backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log
 ```
 
-OPs 平台启动后，参考下面的截图来创建智能体，并使用该智能体进行测试。
+### `backend/ops/start.sh`：`--debug` 与 `--log-file`
+
+与 `--local`（或 `--dev`）组合使用，便于联调 WebSocket、`/api/v1/chat/ws`、companion 等：
+
+- **`--debug`**：导出 `INTY_LOGGING_LEVEL=DEBUG`，并为 uvicorn 增加 `--log-level debug`，应用内 Loguru 与访问日志更细。
+- **`--log-file PATH`**：导出 `INTY_LOG_FILE=PATH`，由 `app/core/logging.py` 为 Loguru **追加**一个 UTF-8 文件 sink（与控制台并行）。`PATH` 相对**当前 shell 工作目录**，常用写法如 `./inty-ops-local.log` 或 `./logs/ops.log`。
+
+查看全部选项：`backend/ops/start.sh --help`。
+
+若只跑 `./backend/inty/start.sh --test` 等未封装上述 flag 的入口，仍可在启动前手动 `export INTY_LOGGING_LEVEL=DEBUG` 与 `export INTY_LOG_FILE=./inty-backend.log`（同一套环境变量，由应用统一初始化日志）。
+
+Ops 平台启动后，参考下面的截图来创建智能体，并使用该智能体进行测试。
+
 <img width="600" height="1140" alt="image" src="https://github.com/user-attachments/assets/ef6e2ec7-bcdb-46d1-8dee-085d0c66670f" />
 <img width="600" height="1512" alt="image" src="https://github.com/user-attachments/assets/9c337f9b-174f-469d-bf97-a772063ff9cf" />
 
-```
-# 启动 repl 之前，需要在运营平台上创建新的角色用于接入 Inty 后端。
-http://localhost:8001/
+## 启动 REPL（`--backend-ws`）
 
-# 记录该角色的 AGENT_ID，并将前面启动 Inty Ops 后端服务时拷贝的 bearer token
-# 写入 .env 
-# 在另一个 terminal 窗口启动 repl 实例
+1. 打开运营平台：<http://localhost:8001/>，在平台上创建角色并记下 **AGENT_ID**。
+2. 将 Ops 启动时打印的 **bearer token** 与 `AGENT_ID` 写入仓库根 `.env` 或 `tools/inty_v2_repl/.env`，或在另一个终端里 `export`。
 
-cp .env.example .env
-python experimental/inty_v2_text_chat_prototype/main.py repl \
-    --backend-ws \
-    --agent-id <AGENT_ID> \
-    --api-base-url http://127.0.0.1:8001
+```bash
+# 仓库根目录，已 export PYTHONPATH=.
+python -m tools.inty_v2_repl.main repl \
+  --backend-ws \
+  --agent-id <AGENT_ID> \
+  --api-base-url http://127.0.0.1:8001
 ```
+
+`INTY_ACCESS_TOKEN` 也可用环境变量提供；`--agent-id` 可由 `INTY_V2_CHAT_AGENT_ID` 代替。启用 WebSocket 模式还可设 `INTY_V2_REPL_BACKEND_WS=1`（或 `true` / `yes` / `on`）而不写 `--backend-ws`。
+
+### REPL 后端 WebSocket：自动重连
+
+`--backend-ws` 下，REPL 在**单独的后台线程**里维持到 `INTY_API_BASE_URL` 对应主机的 `/api/v1/chat/ws` 连接：
+
+- **读循环结束**（对端关闭、网络闪断等）时，同一线程会按 **指数退避** 自动再次 `connect`，一般**不必**为短暂断网重启 REPL 进程。
+- **正在发送的一轮**若遇到已关闭的 socket（`ConnectionClosed`），会**整轮重试**（含重新发同一条用户消息），次数有上限。
+
+可调环境变量（默认值见下）：
+
+| 变量 | 含义 |
+|------|------|
+| `INTY_V2_BACKEND_WS_RECONNECT_INITIAL_SEC` | 重连退避初始间隔秒（0.5） |
+| `INTY_V2_BACKEND_WS_RECONNECT_MAX_SEC` | 退避上限秒（20） |
+| `INTY_V2_BACKEND_WS_SEND_RETRIES` | 单轮发送遇断连时的最大重试次数（8） |
+| `INTY_V2_BACKEND_WS_PING_INTERVAL_SEC` | 客户端 JSON `ping` 间隔秒（25） |
+| `INTY_V2_BACKEND_WS_RECV_TIMEOUT_SEC` | 单轮等待服务端带 `code` 的回包上限秒（600） |
+
+与「仅 Inty 主后端 + 仓库 JWT」的对照、`once --backend-ws` 示例见 [README.md](../README.md)「后端 WebSocket 模式」。

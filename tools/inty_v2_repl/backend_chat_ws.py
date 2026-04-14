@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import threading
+import time
 import uuid
 from typing import Any
 
@@ -75,6 +76,38 @@ def default_recv_timeout_sec() -> float:
     return max(30.0, min(v, 3600.0))
 
 
+def default_reconnect_initial_sec() -> float:
+    raw = os.environ.get("INTY_V2_BACKEND_WS_RECONNECT_INITIAL_SEC", "0.5").strip()
+    try:
+        v = float(raw)
+    except ValueError:
+        return 0.5
+    return max(0.1, min(v, 120.0))
+
+
+def default_reconnect_max_sec() -> float:
+    raw = os.environ.get("INTY_V2_BACKEND_WS_RECONNECT_MAX_SEC", "20").strip()
+    try:
+        v = float(raw)
+    except ValueError:
+        return 20.0
+    return max(0.5, min(v, 300.0))
+
+
+def default_send_turn_retries() -> int:
+    raw = os.environ.get("INTY_V2_BACKEND_WS_SEND_RETRIES", "8").strip()
+    try:
+        v = int(raw)
+    except ValueError:
+        return 8
+    return max(1, min(v, 50))
+
+
+def reconnect_delay_sec(attempt_index: int, *, initial: float, cap: float) -> float:
+    base = min(initial * (2**attempt_index), cap)
+    return base
+
+
 class BackendChatWsBridge:
     """
     One WebSocket connection on a dedicated asyncio loop (background thread).
@@ -95,6 +128,10 @@ class BackendChatWsBridge:
         self._start_error: BaseException | None = None
         self._ping_interval = default_ping_interval_sec()
         self._recv_timeout = default_recv_timeout_sec()
+        self._reconnect_initial = default_reconnect_initial_sec()
+        self._reconnect_max = default_reconnect_max_sec()
+        self._send_max_retries = default_send_turn_retries()
+        self._online_ev: asyncio.Event | None = None
 
     def start(self, *, connect_timeout: float = 30.0) -> None:
         if self._thread is not None:
@@ -141,40 +178,107 @@ class BackendChatWsBridge:
             self.stop()
             raise RuntimeError("WebSocket failed to start (no connection)")
 
+    async def _sleep_backoff(self, attempt_index: int, halt: asyncio.Event) -> None:
+        delay = reconnect_delay_sec(
+            attempt_index, initial=self._reconnect_initial, cap=self._reconnect_max
+        )
+        logger.info("chat ws reconnect sleeping {:.2f}s", delay)
+        end = time.monotonic() + delay
+        while time.monotonic() < end:
+            if halt.is_set():
+                return
+            await asyncio.sleep(min(0.2, max(0.0, end - time.monotonic())))
+
     async def _run_session(self, *, connect_timeout: float) -> None:
         headers = [("Authorization", f"Bearer {self._bearer_token}")]
         halt = asyncio.Event()
         self._halt = halt
-        ws = await websockets.connect(
-            self._ws_url,
-            additional_headers=headers,
-            open_timeout=connect_timeout,
-            ping_interval=None,
-        )
-        self._ws = ws
-        self._response_q = asyncio.Queue()
-        reader = asyncio.create_task(self._read_loop(ws))
-        pinger = asyncio.create_task(self._pinger_loop(ws, halt))
-        self._ready.set()
+        self._online_ev = asyncio.Event()
+        reconnect_idx = 0
         try:
-            await halt.wait()
+            while not halt.is_set():
+                self._online_ev.clear()
+                self._ws = None
+                self._response_q = None
+                ws: Any = None
+                try:
+                    ws = await websockets.connect(
+                        self._ws_url,
+                        additional_headers=headers,
+                        open_timeout=connect_timeout,
+                        ping_interval=None,
+                    )
+                except BaseException as exc:
+                    if not self._ready.is_set():
+                        raise RuntimeError(f"initial WebSocket connect failed: {exc}") from exc
+                    logger.warning("chat ws reconnect connect failed: {}", exc)
+                    await self._sleep_backoff(reconnect_idx, halt)
+                    reconnect_idx += 1
+                    continue
+                self._ws = ws
+                self._response_q = asyncio.Queue()
+                self._online_ev.set()
+                if not self._ready.is_set():
+                    self._ready.set()
+                reconnect_idx = 0
+                reader_task = asyncio.create_task(self._read_loop(ws))
+                pinger = asyncio.create_task(self._pinger_loop(ws, halt))
+                halt_task = asyncio.create_task(halt.wait())
+                try:
+                    _done, pending = await asyncio.wait(
+                        {reader_task, halt_task},
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for t in pending:
+                        t.cancel()
+                    await asyncio.gather(*pending, return_exceptions=True)
+                finally:
+                    pinger.cancel()
+                    try:
+                        await pinger
+                    except asyncio.CancelledError:
+                        pass
+                    except BaseException:
+                        logger.exception("pinger task exit")
+                if halt.is_set():
+                    reader_task.cancel()
+                    try:
+                        await reader_task
+                    except asyncio.CancelledError:
+                        pass
+                    except BaseException:
+                        logger.exception("reader task exit")
+                    try:
+                        await ws.close()
+                    except BaseException:
+                        pass
+                    self._ws = None
+                    self._online_ev.clear()
+                    break
+                try:
+                    await asyncio.wait_for(reader_task, timeout=2.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    reader_task.cancel()
+                    try:
+                        await reader_task
+                    except asyncio.CancelledError:
+                        pass
+                    except BaseException:
+                        logger.exception("reader task exit")
+                logger.info("chat ws read loop ended; reconnecting")
+                try:
+                    await ws.close()
+                except BaseException:
+                    pass
+                self._ws = None
+                self._response_q = None
+                self._online_ev.clear()
+                await self._sleep_backoff(reconnect_idx, halt)
+                reconnect_idx += 1
         finally:
-            pinger.cancel()
-            reader.cancel()
-            try:
-                await pinger
-            except asyncio.CancelledError:
-                pass
-            except BaseException:
-                logger.exception("pinger task exit")
-            try:
-                await reader
-            except asyncio.CancelledError:
-                pass
-            except BaseException:
-                logger.exception("reader task exit")
-            await ws.close()
+            self._online_ev.clear()
             self._ws = None
+            self._response_q = None
             self._halt = None
 
     async def _read_loop(self, ws: Any) -> None:
@@ -224,30 +328,72 @@ class BackendChatWsBridge:
             self._thread.join(timeout=15.0)
             self._thread = None
 
+    async def _wait_online_async(self, *, deadline_monotonic: float) -> None:
+        ev = self._online_ev
+        if ev is None or self._halt is None:
+            raise RuntimeError("bridge stopped")
+        while time.monotonic() < deadline_monotonic:
+            if self._halt.is_set():
+                raise RuntimeError("bridge stopped")
+            if self._ws is not None and self._response_q is not None and ev.is_set():
+                return
+            try:
+                await asyncio.wait_for(ev.wait(), timeout=0.5)
+            except TimeoutError:
+                continue
+        raise TimeoutError("wait for chat WebSocket online timed out")
+
     def send_turn(self, agent_id: str, user_text: str) -> str:
         if not self._loop:
             raise RuntimeError("bridge not started")
-        coro = self._send_turn_async(agent_id, user_text)
-        fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return fut.result(timeout=self._recv_timeout + 30.0)
-
-    async def _send_turn_async(self, agent_id: str, user_text: str) -> str:
-        if not self._ws or not self._response_q:
-            raise RuntimeError("websocket not connected")
-        req = ChatWebSocketRequest(
-            agent_id=agent_id,
-            request=ChatCompletionRequest(
-                messages=[ChatMessage(role="user", content=user_text)],
-                message_id=str(uuid.uuid4()),
-            ),
+        result_cap = (
+            self._recv_timeout
+            + 45.0
+            + float(self._send_max_retries) * (self._reconnect_max + 25.0)
         )
-        await self._ws.send(req.model_dump_json(by_alias=True))
-        while True:
-            data = await asyncio.wait_for(self._response_q.get(), timeout=self._recv_timeout)
+        deadline = time.monotonic() + max(120.0, result_cap)
+        coro = self._send_turn_async(agent_id, user_text, deadline_monotonic=deadline)
+        fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        return fut.result(timeout=max(120.0, result_cap))
+
+    async def _send_turn_async(
+        self, agent_id: str, user_text: str, *, deadline_monotonic: float
+    ) -> str:
+        last_transport: BaseException | None = None
+        for attempt in range(self._send_max_retries):
+            await self._wait_online_async(deadline_monotonic=deadline_monotonic)
+            if not self._ws or not self._response_q:
+                last_transport = RuntimeError("websocket not connected")
+                logger.warning("chat ws not connected before send (attempt {})", attempt)
+                continue
             try:
-                return _parse_chat_response_payload(data)
-            except ValueError as e:
-                logger.warning("chat ws skipped unexpected payload: {}", e)
+                req = ChatWebSocketRequest(
+                    agent_id=agent_id,
+                    request=ChatCompletionRequest(
+                        messages=[ChatMessage(role="user", content=user_text)],
+                        message_id=str(uuid.uuid4()),
+                    ),
+                )
+                await self._ws.send(req.model_dump_json(by_alias=True))
+                while True:
+                    data = await asyncio.wait_for(
+                        self._response_q.get(), timeout=self._recv_timeout
+                    )
+                    try:
+                        return _parse_chat_response_payload(data)
+                    except ValueError as e:
+                        logger.warning("chat ws skipped unexpected payload: {}", e)
+            except ConnectionClosed as e:
+                last_transport = e
+                logger.info(
+                    "chat ws ConnectionClosed during send_turn (attempt {})", attempt
+                )
+                continue
+        if last_transport is not None:
+            raise RuntimeError(
+                f"chat ws send_turn failed after {self._send_max_retries} attempts"
+            ) from last_transport
+        raise RuntimeError(f"chat ws send_turn failed after {self._send_max_retries} attempts")
 
 
 async def chat_turn_single_http_base(
