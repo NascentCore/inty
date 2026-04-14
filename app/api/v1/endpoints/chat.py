@@ -638,6 +638,7 @@ async def _agent_chat_completions_impl(
                             user_text=last_user_text,
                             resolved_chat_model_id=model_override,
                             defer_memory_update=True,
+                            session_id=session_id,
                         )
                     )
                     if effective_local_id:
@@ -1017,6 +1018,105 @@ async def agent_chat_completions(
     )
 
 
+async def _try_send_ws_user_interactive_bootstrap_kickoff(
+    websocket: WebSocket,
+    *,
+    db: AsyncSession,
+    current_user: schemas.User,
+    agent_id: str,
+    subscription_svc: SubscriptionService,
+) -> None:
+    """
+    When the client passes ``agent_id`` as a WebSocket query param, send at most one proactive
+    assistant message to start USER_INTERACTIVE bootstrap before the first user chat frame.
+    """
+    try:
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+        if chat.agent_id != agent_id:
+            return
+        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
+            db, current_user
+        )
+        if not is_allowed:
+            logger.info(
+                "ws interactive bootstrap kickoff skipped (subscription) user={} used={} limit={}",
+                current_user.id,
+                used_count,
+                daily_limit,
+            )
+            return
+        session_id = generate_session_id(str(chat.id))
+        subscription = await subscription_svc.get_user_current_subscription(
+            db, current_user.id
+        )
+        is_subscribed = bool(subscription)
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=is_subscribed
+        )
+        kick_reply = await companion_chat_service.run_companion_interactive_bootstrap_kickoff_for_ws(
+            user_id=current_user.id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            session_id=session_id,
+            resolved_chat_model_id=model_override,
+        )
+        if kick_reply is None:
+            return
+        ai_message_id = await chat_history_service.add_ai_message_sync_async(
+            session_id,
+            kick_reply,
+            agent_id=chat.agent_id,
+            meta_data={"messageType": "companion_ws_interactive_bootstrap_kickoff"},
+        )
+        try:
+            await subscription_svc.record_usage(
+                db,
+                current_user.id,
+                "chat",
+                1,
+                extra_data={
+                    "agent_id": agent_id,
+                    "message_length": 0,
+                    "ws_interactive_bootstrap_kickoff": True,
+                },
+            )
+        except Exception as e:
+            logger.warning("record_usage ws kickoff failed: {}", str(e))
+
+        latest_message_info = None
+        if ai_message_id is not None:
+            try:
+                latest_message_info = await chat_history_service.get_ai_message_info_by_id(
+                    db, ai_message_id
+                )
+            except Exception as e:
+                logger.warning("ws kickoff get_ai_message_info_by_id failed: {}", str(e))
+
+        kick_req = ChatCompletionRequest(
+            messages=[ChatMessage(role="user", content="")],
+        )
+        data = _build_chat_response(
+            kick_reply,
+            None,
+            "",
+            latest_message_info,
+            None,
+            kick_req,
+            source_imate_id=None,
+            user_message_id=None,
+            subscription_actions=None,
+            client_local_id=None,
+        )
+        payload = schemas.APIResponse.success(data=data)
+        out = payload.model_dump(exclude_none=True)
+        out["agent_id"] = agent_id
+        await websocket.send_json(out)
+    except Exception:
+        logger.exception("ws interactive bootstrap kickoff failed agent_id={}", agent_id)
+
+
 @router.websocket("/ws")
 async def chat_completions_websocket(
     websocket: WebSocket,
@@ -1042,6 +1142,16 @@ async def chat_completions_websocket(
         if app_version_code_header is not None and app_version_code_header.isdigit()
         else None
     )
+
+    kick_agent_id = (websocket.query_params.get("agent_id") or "").strip()
+    if kick_agent_id:
+        await _try_send_ws_user_interactive_bootstrap_kickoff(
+            websocket,
+            db=db,
+            current_user=current_user,
+            agent_id=kick_agent_id,
+            subscription_svc=subscription_svc,
+        )
 
     tc_box: list[Optional[dict]] = [None]
     try:

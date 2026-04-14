@@ -4,18 +4,31 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from functools import lru_cache
 from pathlib import Path
 
 from loguru import logger
 
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
-from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
+from app.core.agentic_kernel.companion.manager import (
+    CompanionConfig,
+    CompanionManager,
+    CompanionSession,
+)
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
+from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
+    INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.utils.config import CompanionWorkspaceBootstrapType
+
+DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
+    "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
+    "并温和邀请对方说说此刻状态或想聊的事；不要提及系统、连接、初始化、工具名。"
+)
 
 
 def clear_companion_chat_service_caches() -> None:
@@ -34,6 +47,7 @@ def _companion_runtime_config_fingerprint() -> str:
         str(feats.companion_transcript_llm_window_max_messages or ""),
         str(feats.companion_workspace_bootstrap_type),
         str(feats.companion_enable_dual_llm),
+        str(feats.companion_ws_session_system_text or ""),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
         "companion_db_only_workspace_v3_orm",
@@ -82,6 +96,174 @@ def _companion_manager_for_resolved_model(
     return CompanionManager(companion_cfg)
 
 
+def _mark_companion_ws_session_system_written_in_store(
+    session: CompanionSession,
+) -> None:
+    from app.core.agentic_kernel.companion.repl_workspace_tools import (
+        resolve_under_workspace,
+    )
+
+    root_r = session.workspace_path.resolve()
+    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
+    raw = session.store.read_document_if_exists(rel)
+    if raw is None or not str(raw).strip():
+        return
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        return
+    data["companion_ws_session_system_written"] = True
+    session.store.write_document(
+        rel, json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    )
+
+
+async def _maybe_append_companion_ws_session_system(
+    *,
+    session: CompanionSession,
+    session_id: str | None,
+) -> None:
+    if not session_id or not str(session_id).strip():
+        return
+    if (
+        session.config.workspace_bootstrap_type
+        != CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    ):
+        return
+    from app.core.agentic_kernel.companion.models import load_context_meta
+    from app.core.agentic_kernel.companion.utc import utc_iso_ts
+    from app.core.agentic_kernel.companion.workspace import WorkspacePaths
+    from app.services import chat_history_service
+
+    paths = WorkspacePaths(root=session.workspace_path.resolve())
+    meta = load_context_meta(paths.context_json, store=session.store)
+    if meta.workspace_bootstrap_user_interactive_completed:
+        return
+    if meta.companion_ws_session_system_written:
+        return
+
+    feats = global_config_loaded_from_config_yaml.app.features
+    text = (feats.companion_ws_session_system_text or "").strip() or (
+        DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT
+    )
+    trace_id = str(uuid.uuid4())
+    msg_uuid = str(uuid.uuid4())
+    meta_row = {"messageType": "companion_ws_session_system"}
+
+    await chat_history_service.add_system_message_async(
+        session_id,
+        text,
+        meta_data=meta_row,
+    )
+
+    root_r = session.workspace_path.resolve()
+    rel_tr = paths.transcript.relative_to(root_r).as_posix()
+    session.store.append_jsonl_record(
+        rel_tr,
+        {
+            "role": "system",
+            "content": text,
+            "ts": utc_iso_ts(),
+            "uuid": msg_uuid,
+            "trace_id": trace_id,
+            "source": "chat",
+            "companion_ws_session_system": True,
+        },
+    )
+    _mark_companion_ws_session_system_written_in_store(session)
+    logger.info(
+        "companion_ws_session_system_written user={} agent={} chat={}",
+        session.user_id,
+        session.companion_id,
+        session.chat_id,
+    )
+
+
+def _mark_companion_ws_interactive_kickoff_sent_in_store(
+    session: CompanionSession,
+) -> None:
+    from app.core.agentic_kernel.companion.repl_workspace_tools import (
+        resolve_under_workspace,
+    )
+
+    root_r = session.workspace_path.resolve()
+    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
+    raw = session.store.read_document_if_exists(rel)
+    if raw is None or not str(raw).strip():
+        return
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        return
+    data["companion_ws_interactive_kickoff_sent"] = True
+    session.store.write_document(
+        rel, json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    )
+
+
+async def run_companion_interactive_bootstrap_kickoff_for_ws(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    session_id: str,
+    resolved_chat_model_id: str,
+) -> str | None:
+    """
+    One-shot assistant turn when USER_INTERACTIVE bootstrap is incomplete and WS kickoff not yet sent.
+
+    Uses a fixed internal user line so the model opens the relationship phase without a real user message.
+    """
+    feats = global_config_loaded_from_config_yaml.app.features
+    if (
+        feats.companion_workspace_bootstrap_type
+        != CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    ):
+        return None
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id, _companion_runtime_config_fingerprint()
+    )
+    chat_key = str(chat_id)
+    session = manager.get_or_create_session(user_id, agent_id, chat_key)
+    if not session.is_initialized:
+        return None
+    from app.core.agentic_kernel.companion.models import load_context_meta
+    from app.core.agentic_kernel.companion.workspace import WorkspacePaths
+
+    paths = WorkspacePaths(root=session.workspace_path.resolve())
+    meta = load_context_meta(paths.context_json, store=session.store)
+    if meta.workspace_bootstrap_user_interactive_completed:
+        return None
+    if meta.companion_ws_interactive_kickoff_sent:
+        return None
+
+    await _maybe_append_companion_ws_session_system(
+        session=session,
+        session_id=session_id,
+    )
+    reply = await manager.run_turn(
+        session,
+        INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
+        defer_memory_update=True,
+    )
+    if not reply or not str(reply).strip():
+        logger.warning(
+            "companion_ws_interactive_kickoff empty reply user={} agent={} chat={}",
+            user_id,
+            agent_id,
+            chat_id,
+        )
+        return None
+    # Mark before chat_history persist so reconnect does not run a second run_turn (transcript already
+    # has this turn). If add_ai_message later fails, operators may see transcript vs chat_history skew.
+    _mark_companion_ws_interactive_kickoff_sent_in_store(session)
+    logger.info(
+        "companion_ws_interactive_kickoff_sent user={} agent={} chat={}",
+        user_id,
+        agent_id,
+        chat_id,
+    )
+    return reply
+
+
 async def run_companion_chat_turn_for_api(
     *,
     user_id: str,
@@ -90,6 +272,7 @@ async def run_companion_chat_turn_for_api(
     user_text: str,
     resolved_chat_model_id: str,
     defer_memory_update: bool = True,
+    session_id: str | None = None,
 ) -> str:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
@@ -151,6 +334,10 @@ async def run_companion_chat_turn_for_api(
         raise RuntimeError(
             "Companion workspace not initialized (bootstrap disabled; expected seed at session create)"
         )
+    await _maybe_append_companion_ws_session_system(
+        session=session,
+        session_id=session_id,
+    )
     return await manager.run_turn(
         session,
         user_text,
