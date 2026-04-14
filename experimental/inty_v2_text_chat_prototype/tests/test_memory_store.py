@@ -1,4 +1,4 @@
-"""MemoryStore: cache/mirror/postgres/version behavior."""
+"""MemoryStore: cache / postgres / version behavior."""
 
 from __future__ import annotations
 
@@ -84,20 +84,16 @@ class TestMemoryStore(unittest.TestCase):
         ) -> list[MemoryRecord]:
             return list(self.rows.get((workspace_root, relative_path), []))
 
-    def test_cache_write_and_mirror_read(self) -> None:
+    def test_cache_write_in_memory_only(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             store = MemoryStore(
                 workspace_root=root,
                 repository=None,
-                mirror_to_files=True,
-                flush_batch_size=8,
             )
             store.write_document("USER.md", "# USER\n\nx\n")
             self.assertEqual(store.read_document("USER.md"), "# USER\n\nx\n")
-            self.assertEqual(
-                (root / "USER.md").read_text(encoding="utf-8"), "# USER\n\nx\n"
-            )
+            self.assertFalse((root / "USER.md").exists())
             store.shutdown(timeout_s=2.0)
 
     def test_append_line_formats_newline(self) -> None:
@@ -106,8 +102,6 @@ class TestMemoryStore(unittest.TestCase):
             store = MemoryStore(
                 workspace_root=root,
                 repository=None,
-                mirror_to_files=True,
-                flush_batch_size=8,
             )
             store.append_line("memory/daily/2099-01-01.md", "a")
             store.append_line("memory/daily/2099-01-01.md", "b")
@@ -131,8 +125,6 @@ class TestMemoryStore(unittest.TestCase):
             store = MemoryStore(
                 workspace_root=root,
                 repository=repo,
-                mirror_to_files=False,
-                flush_batch_size=8,
             )
             self.assertEqual(
                 store.read_document("MEMORY.md"), "# MEMORY\n\nfrom-repo\n"
@@ -147,8 +139,6 @@ class TestMemoryStore(unittest.TestCase):
             store = MemoryStore(
                 workspace_root=root,
                 repository=repo,
-                mirror_to_files=False,
-                flush_batch_size=8,
             )
             store.write_document("MEMORY.md", "v1")
             store.write_document("MEMORY.md", "v2")
@@ -178,8 +168,6 @@ class TestMemoryStore(unittest.TestCase):
             store = MemoryStore(
                 workspace_root=root,
                 repository=repo,
-                mirror_to_files=False,
-                flush_batch_size=8,
             )
             store.write_document("USER.md", "# USER\n\npg-1\n")
             store.write_document("USER.md", "# USER\n\npg-2\n")
@@ -193,8 +181,6 @@ class TestMemoryStore(unittest.TestCase):
             store2 = MemoryStore(
                 workspace_root=root,
                 repository=repo,
-                mirror_to_files=False,
-                flush_batch_size=8,
             )
             self.assertEqual(store2.read_document("USER.md"), "# USER\n\npg-2\n")
             store2.shutdown(timeout_s=2.0)

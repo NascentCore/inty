@@ -52,13 +52,7 @@ def load_bootstrap_instruction_text() -> str:
     """加载 templates/BOOTSTRAP.md。"""
     if not _BOOTSTRAP_PATH.is_file():
         raise FileNotFoundError(f"missing bootstrap spec: {_BOOTSTRAP_PATH}")
-    base = _BOOTSTRAP_PATH.read_text(encoding="utf-8").rstrip()
-    appendix = (
-        "你必须在 bootstrap 对话早期自然询问用户希望定义为何种 companionship。"
-        "优先给出可选示例（如 朋友/爱人/亲人/其他自定义），并允许用户自定义。"
-        "在用户明确后，后续语气、边界、称呼和收尾邀请都按该类型保持一致。"
-    )
-    return f"{base}\n\n## companionship 类型确认规范\n\n- {appendix}\n"
+    return _BOOTSTRAP_PATH.read_text(encoding="utf-8").rstrip()
 
 
 def _openai_assistant_message_dict(msg: Any) -> dict[str, Any]:
@@ -82,8 +76,6 @@ async def run_workspace_bootstrap_loop(
     chat_completion_fn(messages, model, tools) -> OpenAI ChatCompletion response
     """
     root = workspace.resolve()
-    if not store.uses_repository_without_workspace_disk:
-        root.mkdir(parents=True, exist_ok=True)
     logger.debug(
         "bootstrap loop start ws={} max_rounds={} user_message_chars={}",
         root,
@@ -101,8 +93,9 @@ async def run_workspace_bootstrap_loop(
         "metaphors. Only human, relational language toward the user. "
         "Use the tools silently to read/list/write under the workspace root. "
         "When initialization is complete (required documents exist in the memory store) and you return without further "
-        "tool calls, your last assistant message must follow the spec's 收尾 section: invite "
-        "the user to co-define you and gently ask for basic information about them.\n\n"
+        "tool calls, your last assistant message must follow the spec's 收尾 section: brief, sincere tone that "
+        "celebrates being ready to walk together, aligned with the companionship type the user chose; avoid slogan-like "
+        "clichés or overwrought sentiment.\n\n"
         f"{spec}"
     )
 

@@ -66,7 +66,7 @@ async def test_run_turn_real_llm_lists_workspace_then_names_hello_file(tmp_path)
     _require_real_agentic_kernel_llm_test()
 
     root = tmp_path
-    store = MemoryStore(workspace_root=root, repository=None, mirror_to_files=True)
+    store = MemoryStore(workspace_root=root, repository=None)
     paths = WorkspacePaths(root=root)
     store.write_document(
         paths.identity.relative_to(root).as_posix(),

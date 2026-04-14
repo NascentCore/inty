@@ -16,7 +16,6 @@ from .image_gate import (
     find_latest_asset_by_local_relative_path,
     relative_path_under_workspace,
 )
-from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
@@ -128,28 +127,6 @@ def _build_image_to_image_input(kwargs: dict[str, Any]) -> Any:
     return ZImageTurboImageToImageInput(**kwargs)
 
 
-def _maybe_write_local_copy(root: Path, item: Any) -> Path | None:
-    if get_memory_store(root).uses_repository_without_workspace_disk:
-        return None
-    raw = getattr(item, "raw_data", None)
-    if not isinstance(raw, bytes) or len(raw) == 0:
-        return None
-    fmt = getattr(item, "format", None)
-    ext = getattr(fmt, "value", None) if fmt is not None else None
-    if not isinstance(ext, str) or not ext:
-        ext = "bin"
-    out_dir = root.resolve() / "generated_images"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    suffix = (
-        datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        + "_"
-        + uuid.uuid4().hex[:10]
-    )
-    path = out_dir / f"z_image_{suffix}.{ext}"
-    path.write_bytes(raw)
-    return path
-
-
 def _append_one_image_summary(
     parts: list[str],
     root: Path,
@@ -172,11 +149,7 @@ def _append_one_image_summary(
     h = getattr(getattr(item, "size", None), "height", None)
     if w is not None and h is not None:
         parts.append(f"size={w}x{h}")
-    local = _maybe_write_local_copy(root, item)
     local_rel: str | None = None
-    if local is not None:
-        parts.append(f"local_path={local.resolve()}")
-        local_rel = relative_path_under_workspace(root, local)
 
     asset_id = str(uuid.uuid4())
     parts.append(f"asset_id={asset_id}")
@@ -193,7 +166,7 @@ def _append_one_image_summary(
             "source_image_relative_path": source_image_relative_path,
             "source_image_url": source_image_url,
             "local_path_relative": local_rel,
-            "local_path_absolute": str(local.resolve()) if local is not None else None,
+            "local_path_absolute": None,
             "gcs_http_url": url if url else None,
             "width": int(w) if w is not None else None,
             "height": int(h) if h is not None else None,

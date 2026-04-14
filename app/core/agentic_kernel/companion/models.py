@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Literal
 from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
-from .file_store import read_text
 from .utc import local_date_str
 
 if TYPE_CHECKING:
@@ -144,23 +143,18 @@ def load_context_meta(
     *,
     store: "MemoryStore | None" = None,
 ) -> ContextMeta:
-    if store is not None:
-        body = store.read_document_if_exists("context.json")
-        if body is not None and body.strip():
-            try:
-                raw = json.loads(body)
-            except json.JSONDecodeError as e:
-                raise ValueError("context.json: invalid JSON in memory store") from e
-            return ContextMeta.model_validate(raw)
-        return ContextMeta()
-    if not path.is_file():
-        return ContextMeta()
-    raw_text = read_text(path)
-    try:
-        raw = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"{path}: invalid JSON in context file") from e
-    return ContextMeta.model_validate(raw)
+    if store is None:
+        from .memory_registry import get_memory_store
+
+        store = get_memory_store(path.parent.resolve())
+    body = store.read_document_if_exists("context.json")
+    if body is not None and body.strip():
+        try:
+            raw = json.loads(body)
+        except json.JSONDecodeError as e:
+            raise ValueError("context.json: invalid JSON in memory store") from e
+        return ContextMeta.model_validate(raw)
+    return ContextMeta()
 
 
 def load_transcript_text(
@@ -201,9 +195,12 @@ def transcript_without_trailing_presence_signals(
 
 
 def load_transcript(path: Path) -> list[ChatMessage]:
-    if not path.is_file():
-        return []
-    return load_transcript_text(read_text(path), log_label=str(path))
+    from .memory_registry import get_memory_store
+
+    root = path.parent.resolve()
+    store = get_memory_store(root)
+    rel = path.resolve().relative_to(root).as_posix()
+    return load_transcript_from_store(store, rel)
 
 
 def load_transcript_from_store(

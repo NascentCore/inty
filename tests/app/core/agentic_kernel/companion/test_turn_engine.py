@@ -21,7 +21,8 @@ def test_persist_repl_turn_transcript_rows_writes_jsonl(tmp_path: Path) -> None:
         trace_id="tr1",
     )
     assert aid
-    lines = (root / "transcript.jsonl").read_text(encoding="utf-8").strip().splitlines()
+    body = get_memory_store(root).read_document("transcript.jsonl")
+    lines = body.strip().splitlines()
     assert len(lines) == 2
     u = json.loads(lines[0])
     a = json.loads(lines[1])

@@ -69,17 +69,13 @@ def _companion_manager_for_resolved_model(
     companion_cfg = CompanionConfig(
         workspaces_base_dir=str(base),
         memory_pg_dsn=cfg.database.url,
-        memory_mirror_to_files=False,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
         repository_only_workspace_text=True,
-        memory_allow_workspace_disk_fallback=False,
         workspace_bootstrap_enabled=feats.companion_workspace_bootstrap_enabled,
     )
-    if not companion_cfg.skip_workspace_directory_creation:
-        base.mkdir(parents=True, exist_ok=True)
     return CompanionManager(companion_cfg)
 
 

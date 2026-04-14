@@ -95,8 +95,6 @@ def test_load_transcript_from_store(tmp_path: Path) -> None:
     store = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
-        mirror_to_files=False,
-        allow_workspace_disk_fallback=False,
     )
     row = {"role": "user", "content": "x", "ts": "2026-01-01T00:00:00Z"}
     store.write_document("transcript.jsonl", json.dumps(row) + "\n")
@@ -129,13 +127,18 @@ def test_transcript_without_trailing_presence_signals_strips_trailing_presence_u
 
 
 def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
-    p = tmp_path / "t.jsonl"
+    from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+
+    root = tmp_path
+    store = get_memory_store(root)
     rows = [
         {"role": "user", "content": "a", "ts": "2026-01-01T00:00:00Z"},
         {"role": "assistant", "content": "b", "timestamp": "2026-01-01T00:01:00Z"},
     ]
-    p.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
-    msgs = load_transcript(p)
+    store.write_document(
+        "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
+    )
+    msgs = load_transcript(root / "transcript.jsonl")
     assert len(msgs) == 2
     assert msgs[0].role == "user" and msgs[0].content == "a"
     assert msgs[1].role == "assistant" and msgs[1].content == "b"

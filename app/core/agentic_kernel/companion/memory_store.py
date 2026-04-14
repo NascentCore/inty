@@ -1,4 +1,4 @@
-"""Memory store: DB-authoritative append-only versions + optional file mirror."""
+"""Memory store: DB-authoritative append-only versions; in-memory only when no repository."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .file_store import read_text, write_text_atomic
 from .utc import utc_iso_ts
 from .workspace_doc_mapping import (
     CompanionWorkspaceDocKind,
@@ -188,62 +187,30 @@ class MemoryCache:
             self._records[record.relative_path] = record
             return record
 
-
-class MemoryFileMirror:
-    """Mirror memory records back to workspace files for local observability."""
-
-    def __init__(self, *, workspace_root: Path, enabled: bool) -> None:
-        self._root = workspace_root.resolve()
-        self._enabled = enabled
-
-    def _absolute(self, relative_path: str) -> Path:
-        rel = relative_path.strip().replace("\\", "/")
-        if rel.startswith("/"):
-            raise ValueError("relative_path must be workspace-relative")
-        p = (self._root / rel).resolve()
-        p.relative_to(self._root)
-        return p
-
-    def read_if_exists(self, *, relative_path: str) -> str | None:
-        if not self._enabled:
-            return None
-        p = self._absolute(relative_path)
-        if not p.is_file():
-            return None
-        return read_text(p)
-
-    def write(self, *, record: MemoryRecord) -> None:
-        if not self._enabled:
-            return
-        write_text_atomic(self._absolute(record.relative_path), record.content)
+    def relative_paths(self) -> list[str]:
+        with self._lock:
+            return sorted(self._records.keys())
 
 
 class MemoryStore:
-    """DB-authoritative memory store with optional file mirror."""
+    """Repository-backed or in-process-only memory store (never reads user workspace files)."""
 
     def __init__(
         self,
         *,
         workspace_root: Path,
         repository: MemoryRepository | None,
-        mirror_to_files: bool,
-        allow_workspace_disk_fallback: bool = True,
         flush_batch_size: int = 64,
     ) -> None:
         self._workspace_root = workspace_root.resolve()
         self._workspace_root_str = str(self._workspace_root)
         self._cache = MemoryCache()
-        self._mirror = MemoryFileMirror(
-            workspace_root=self._workspace_root,
-            enabled=mirror_to_files,
-        )
         self._repository = repository
-        self.allow_workspace_disk_fallback = allow_workspace_disk_fallback
+        _ = flush_batch_size
 
     @property
     def uses_repository_without_workspace_disk(self) -> bool:
-        """Postgres is authoritative; do not read/write companion state files under workspace_root."""
-        return self._repository is not None and not self.allow_workspace_disk_fallback
+        return self._repository is not None
 
     def _normalize_relative_path(self, relative_path: str) -> str:
         rel = (relative_path or "").strip().replace("\\", "/")
@@ -262,13 +229,11 @@ class MemoryStore:
 
     def iter_stored_relative_paths(self) -> list[str]:
         repo = self._repository
-        if repo is None:
-            return []
-        list_fn = getattr(repo, "list_all_relative_paths", None)
-        if not callable(list_fn):
-            return []
-        out: list[str] = list_fn(workspace_root=self._workspace_root_str)
-        return list(out)
+        if repo is not None:
+            list_fn = getattr(repo, "list_all_relative_paths", None)
+            if callable(list_fn):
+                return list(list_fn(workspace_root=self._workspace_root_str))
+        return self._cache.relative_paths()
 
     def read_document_if_exists(self, relative_path: str) -> str | None:
         rel = self._normalize_relative_path(relative_path)
@@ -283,38 +248,8 @@ class MemoryStore:
             )
             if rec is not None:
                 loaded = self._cache.put_committed(rec)
-                if not self.uses_repository_without_workspace_disk:
-                    self._mirror.write(record=loaded)
                 return loaded.content
-
-        if not self.uses_repository_without_workspace_disk:
-            mirrored = self._mirror.read_if_exists(relative_path=rel)
-            if mirrored is not None:
-                local_record = MemoryRecord(
-                    record_uuid=str(uuid_mod.uuid4()),
-                    sequence_id=0,
-                    relative_path=rel,
-                    content=mirrored,
-                    created_at=utc_iso_ts(),
-                )
-                self._cache.put_committed(local_record)
-                return mirrored
-        if not self.allow_workspace_disk_fallback:
-            return None
-        p = (self._workspace_root / rel).resolve()
-        p.relative_to(self._workspace_root)
-        if not p.is_file():
-            return None
-        body = read_text(p)
-        local_record = MemoryRecord(
-            record_uuid=str(uuid_mod.uuid4()),
-            sequence_id=0,
-            relative_path=rel,
-            content=body,
-            created_at=utc_iso_ts(),
-        )
-        self._cache.put_committed(local_record)
-        return body
+        return None
 
     def read_document(self, relative_path: str) -> str:
         body = self.read_document_if_exists(relative_path)
@@ -342,9 +277,7 @@ class MemoryStore:
                 content=content,
                 created_at=utc_iso_ts(),
             )
-        applied = self._cache.put_committed(committed)
-        if not self.uses_repository_without_workspace_disk:
-            self._mirror.write(record=applied)
+        self._cache.put_committed(committed)
 
     def append_line(self, relative_path: str, line: str) -> None:
         rel = self._normalize_relative_path(relative_path)
