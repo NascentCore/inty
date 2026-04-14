@@ -19,7 +19,7 @@
   - **会话消息**：**必须**使用 `transcript.jsonl`（每行一条 JSON：`role`, `content`, `ts`），用于持久化轮次；**不得**采用「仅内存、不落 transcript」模式，以满足 §8 续聊验收。
   - **控制面上下文（建议）**：`context.json`（可选小文件）固定本 workspace 对应的 **`context_mode`**、以及原型用的 **`user_id` / `companion_id` / `chat_id` 占位字符串**（与架构 §4、§20.2 字段对齐，便于将来对接 REST；无则代码内默认 `intimate` + 占位 ID）。
 - 用 **Pydantic** 描述内存中的结构体（加载自文件后的对象）；写回时用字符串拼接或模板即可，**不必**上 front matter 解析库。
-- 用 **Cyclopts** + 显式 **`main.py`** 作为入口（与仓库 [AGENTS.md](../../AGENTS.md) 约定一致），例如：`python -m experimental.inty_v2_text_chat_prototype.main repl --workspace ./workspace`。
+- 用 **Cyclopts** + 显式 **`main.py`** 作为入口（与仓库 [AGENTS.md](../../AGENTS.md) 约定一致），例如：`python -m tools.inty_v2_repl.main repl --workspace ./workspace`。
 
 ### 1.2 非目标（刻意不做）
 

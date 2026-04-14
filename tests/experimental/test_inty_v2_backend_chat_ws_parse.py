@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from experimental.inty_v2_text_chat_prototype.backend_chat_ws import (
+from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
     _parse_chat_response_payload,
     http_base_to_ws_chat_url,

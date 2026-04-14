@@ -14,11 +14,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from experimental.inty_v2_text_chat_prototype.inner_tick_schedule import (
+from tools.inty_v2_repl.inner_tick_schedule import (
     inner_tick_enabled_from_env,
     next_inner_tick_wait_seconds,
 )
-from experimental.inty_v2_text_chat_prototype.models import (
+from tools.inty_v2_repl.models import (
     REPL_PRESENCE_USER_TEXT_ONLINE,
     ChatMessage,
     is_transcript_real_user_message,

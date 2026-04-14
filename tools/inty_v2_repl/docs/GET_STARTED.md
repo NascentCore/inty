@@ -17,7 +17,7 @@ source .venv/bin/activate
 # 安装 Inty 后端依赖文件
 uv pip install -r requirements.txt
 # 安装本地 repl 依赖文件
-uv pip install -r experimental/inty_v2_text_chat_prototype/requirements.txt
+uv pip install -r tools/inty_v2_repl/requirements.txt
 export PYTHONPATH=.
 ```
 
@@ -40,10 +40,13 @@ cp devops/config.yaml.local config.yaml
 backend/ops/start.sh --local
 
 # 启动 repl 之前，需要在运营平台上创建新的角色用于接入 Inty 后端。
+http://localhost:8001/
+
 # 记录该角色的 AGENT_ID，并将前面启动 Inty Ops 后端服务时拷贝的 bearer token
 # 写入 .env 
 # 在另一个 terminal 窗口启动 repl 实例
 
+cp .env.example .env
 python experimental/inty_v2_text_chat_prototype/main.py repl \
     --backend-ws \
     --agent-id <AGENT_ID> \

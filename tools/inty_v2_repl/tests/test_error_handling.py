@@ -98,7 +98,7 @@ def test_repl_drain_user_turns_recovers_from_openrouter_invalid_json_error() -> 
 
 def test_client_exception_identity_shared_between_import_paths() -> None:
     pkg_mod = importlib.import_module("inty_v2_text_chat_prototype.client")
-    exp_mod = importlib.import_module("experimental.inty_v2_text_chat_prototype.client")
+    exp_mod = importlib.import_module("tools.inty_v2_repl.client")
     assert pkg_mod is exp_mod
     assert (
         pkg_mod.OpenRouterInvalidJsonError
