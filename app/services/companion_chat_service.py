@@ -99,6 +99,21 @@ async def run_companion_chat_turn_for_api(
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
     """
+    cfg = global_config_loaded_from_config_yaml
+    agent_cfg = cfg.agent
+    api_base = (
+        (agent_cfg.chat_llm_base_url or agent_cfg.base_url or "").strip()
+        or "https://openrouter.ai/api/v1"
+    )
+    logger.debug(
+        "companion_chat_turn start user={} agent={} chat={} model={} api_base={} defer_memory={}",
+        user_id,
+        agent_id,
+        chat_id,
+        resolved_chat_model_id,
+        api_base,
+        defer_memory_update,
+    )
     manager = _companion_manager_for_resolved_model(
         resolved_chat_model_id, _companion_runtime_config_fingerprint()
     )
