@@ -8,6 +8,9 @@ from loguru import logger
 def your_function():
     logger.info("Hello, world!")
 ```
+
+Optional env (read in ``init_logger()``): ``INTY_LOGGING_LEVEL`` overrides YAML
+``logging.level``; ``INTY_LOG_FILE`` appends a plain-text file sink (UTF-8, enqueue).
 """
 
 import logging
@@ -18,6 +21,12 @@ import time
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
+from app.utils.config import (
+    LOGGING_FILE_FORMAT,
+    LOGGING_LEVEL_FORMAT,
+    LOGGING_MESSAGE_FORMAT,
+    LOGGING_TIME_FORMAT,
+)
 
 
 class InterceptHandler(logging.Handler):
@@ -60,6 +69,21 @@ def init_logger():
         # 不指定这个参数，也没影响命令行颜色输出，但是保险起见，就加上了
         colorize=global_config_loaded_from_config_yaml.logging.colorize,
     )
+
+    log_file = os.environ.get("INTY_LOG_FILE", "").strip()
+    if log_file:
+        file_format = (
+            f"{LOGGING_TIME_FORMAT} | {LOGGING_LEVEL_FORMAT} | "
+            f"{LOGGING_FILE_FORMAT} - {LOGGING_MESSAGE_FORMAT}"
+        )
+        logger.add(
+            log_file,
+            level=log_level,
+            format=file_format,
+            encoding="utf-8",
+            colorize=False,
+            enqueue=True,
+        )
 
     # 拦截标准 logging 的日志（例如 FastAPI/uvicorn）
     intercept_handler = InterceptHandler()

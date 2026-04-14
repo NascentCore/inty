@@ -2,6 +2,7 @@
 
 LOCAL=false
 DEBUG=false
+LOG_FILE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -21,10 +22,17 @@ while [[ $# -gt 0 ]]; do
       DEBUG=true
       shift
       ;;
+    --log-file)
+      shift
+      if [[ $# -eq 0 ]]; then echo "error: --log-file requires a path"; exit 1; fi
+      LOG_FILE="$1"
+      shift
+      ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev] [--debug]"
+      echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH]"
       echo "  --local|--dev   Dev/local mode: seed admin + report fixtures, uvicorn --reload"
       echo "  --debug         Loguru + uvicorn log level DEBUG (via INTY_LOGGING_LEVEL)"
+      echo "  --log-file PATH Also write logs to PATH (via INTY_LOG_FILE; UTF-8 append)"
       exit 0
       ;;
     *)
@@ -42,6 +50,10 @@ OPS_PORT="${PORT:-8001}"
 
 if [ "$DEBUG" = true ]; then
   export INTY_LOGGING_LEVEL=DEBUG
+fi
+
+if [ -n "$LOG_FILE" ]; then
+  export INTY_LOG_FILE="$LOG_FILE"
 fi
 
 UVICORN_LOG_LEVEL=()
