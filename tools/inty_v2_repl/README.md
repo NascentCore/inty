@@ -85,4 +85,6 @@ python experimental/inty_v2_text_chat_prototype/main.py once --backend-ws "你�
 
 空闲保活：服务端对下一帧有超时（默认约 60s），客户端在后台线程内定期发送 JSON `{"type":"ping"}`。可调 `INTY_V2_BACKEND_WS_PING_INTERVAL_SEC`（默认 25）、单轮等待 `INTY_V2_BACKEND_WS_RECV_TIMEOUT_SEC`（默认 600）。
 
+断线后 REPL 会在同一后台线程内自动重连（指数退避，可调 `INTY_V2_BACKEND_WS_RECONNECT_INITIAL_SEC` / `INTY_V2_BACKEND_WS_RECONNECT_MAX_SEC`）；单轮发送遇断连会重试，次数由 `INTY_V2_BACKEND_WS_SEND_RETRIES` 控制（默认 8）。
+
 与本地 `_ws` 并行使用同一 `agent_id` 会在服务端与磁盘各有一套状态，产品联调时请以服务端为准。
