@@ -11,9 +11,6 @@ from loguru import logger
 
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
-from app.core.agentic_kernel.companion.workspace import (
-    ensure_minimal_workspace_documents_in_store,
-)
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
@@ -100,8 +97,8 @@ async def run_companion_chat_turn_for_api(
 
     When the workspace is not yet initialized and ``app.features.companion_workspace_bootstrap_enabled``
     is true, the first user line is consumed by agentic bootstrap. When bootstrap is disabled,
-    minimal placeholder documents are written to MemoryStore and this user line is handled by
-    ``run_turn``.
+    required workspace documents are seeded from package templates at session creation
+    (``CompanionManager.get_or_create_session``), and this user line is handled by ``run_turn``.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
@@ -125,16 +122,9 @@ async def run_companion_chat_turn_for_api(
                     "Companion workspace failed to initialize after bootstrap"
                 )
             return reply
-        logger.info(
-            "companion_chat workspace_seed_no_bootstrap user={} agent={} chat={}",
-            user_id,
-            agent_id,
-            chat_id,
-        )
-        ensure_minimal_workspace_documents_in_store(session.workspace_path, session.store)
         if not session.is_initialized:
             raise RuntimeError(
-                "Companion workspace failed to initialize after minimal store seed"
+                "Companion workspace not initialized (bootstrap disabled; expected seed at session create)"
             )
     return await manager.run_turn(
         session,

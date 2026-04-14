@@ -105,5 +105,9 @@ def test_ensure_minimal_workspace_documents_in_store(tmp_path: Path) -> None:
     assert is_workspace_initialized_from_store(root, store) is False
     ensure_minimal_workspace_documents_in_store(root, store)
     assert is_workspace_initialized_from_store(root, store) is True
+    memory = store.read_document("MEMORY.md")
+    assert "记忆库" in memory
+    assert "42" not in memory
+    assert "待对话填充" in store.read_document("USER.md")
     ensure_minimal_workspace_documents_in_store(root, store)
     assert is_workspace_initialized_from_store(root, store) is True

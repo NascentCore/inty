@@ -7,7 +7,17 @@ from pathlib import Path
 
 from loguru import logger
 
+from .file_store import read_text
 from .memory_store import MemoryStore
+
+_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+
+
+def load_workspace_seed_text(filename: str) -> str:
+    path = _TEMPLATES_DIR / filename
+    if not path.is_file():
+        raise FileNotFoundError(f"missing companion workspace seed template: {path}")
+    return read_text(path).rstrip() + "\n"
 
 
 @dataclass(frozen=True)
@@ -121,7 +131,6 @@ def is_workspace_initialized_from_store(workspace: Path, store: MemoryStore) -> 
     return True
 
 
-_MINIMAL_DOC_SEED = "Placeholder; refine in conversation.\n"
 _MINIMAL_TRANSCRIPT_SEED = "# companion_minimal_seed\n"
 
 
@@ -129,7 +138,7 @@ def ensure_minimal_workspace_documents_in_store(
     workspace: Path,
     store: MemoryStore,
 ) -> None:
-    """Write non-empty stubs for required paths into MemoryStore only (no disk authority)."""
+    """Write seed content for required paths into MemoryStore only (no disk authority)."""
     root = workspace.resolve()
     if is_workspace_initialized_from_store(root, store):
         return
@@ -142,12 +151,13 @@ def ensure_minimal_workspace_documents_in_store(
         if attr == "transcript":
             store.write_document(rel, _MINIMAL_TRANSCRIPT_SEED)
         else:
-            store.write_document(rel, _MINIMAL_DOC_SEED)
+            store.write_document(rel, load_workspace_seed_text(rel))
 
 
 # IDENTITY/USER 仍像模板或未约定时的子串
 _IDENTITY_STUB_MARKERS: tuple[str, ...] = (
     "（在此填写",
+    "（待定义）",
     "还没定",
     "等你来",
     "待对话填充",

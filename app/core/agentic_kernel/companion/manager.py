@@ -20,6 +20,7 @@ from .file_store import write_text
 from .turn import run_turn
 from .workspace import (
     WorkspacePaths,
+    ensure_minimal_workspace_documents_in_store,
     is_workspace_initialized_from_store,
     needs_startup_profile_inquiry,
 )
@@ -159,6 +160,9 @@ class CompanionManager:
                 context_path = ws_path / "context.json"
                 if not context_path.is_file():
                     write_text(context_path, context_json)
+
+            if not self._config.workspace_bootstrap_enabled:
+                ensure_minimal_workspace_documents_in_store(ws_path, store)
 
             session = CompanionSession(
                 user_id=user_id,
