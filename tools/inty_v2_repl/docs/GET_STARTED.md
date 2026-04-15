@@ -6,7 +6,8 @@
 
 - **工作目录**：凡运行 `python -m tools.inty_v2_repl...` 或 `./backend/inty/start.sh` / `backend/ops/start.sh`，均在 **仓库根目录** 的 shell 中执行。`app.core.config` 要求根目录存在 `config.yaml`。
 - **虚拟环境与依赖**：与后端共用根目录 `.venv` 即可；需安装根 `requirements.txt` 与 `tools/inty_v2_repl/requirements.txt`（更多说明见 [README.md](../README.md)「安装」）。
-- **环境变量**：`load_prototype_dotenv()` 会依次加载 **当前工作目录** 下的 `.env`，以及 `tools/inty_v2_repl/.env`；入口还会加载仓库根目录的 `.env`。可参考 `tools/inty_v2_repl/.env.example` 自建上述任一位置的 `.env`，并填入真实 Key。
+- **环境变量（REPL）**：`load_prototype_dotenv()` 会依次加载 **当前工作目录** 下的 `.env`，以及 `tools/inty_v2_repl/.env`；`main` 随后还会 `load_dotenv` **仓库根** `.env`（路径由包内 `_REPO_ROOT` 解析，不依赖 cwd）。可参考 `tools/inty_v2_repl/.env.example` 与仓库根 [.env.example](/.env.example) 自建 `.env`，并填入真实 Key。
+- **环境变量（Inty / Ops / push_worker 进程）**：`backend/inty/main.py`、`backend/ops/main.py`、`backend/push_worker/main.py` 在导入 `app` 之前调用 `load_dotenv()`（无参），从 **进程当前工作目录** 读取 `.env`（与上文「始终在仓库根执行」一致）。与 REPL 共用仓库根 `.env` 时，后端启动即可拾取下列 `INTY_*` 等键；**已在 shell 中 `export` 的变量优先于 `.env` 中的同名键**（`python-dotenv` 默认 `override=False`）。仓库根另有 [.env.example](/.env.example) 可作模板。
 
 **以下各节默认已执行**（路径请换成你的本机仓库）：
 
@@ -46,7 +47,17 @@ backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log
 
 查看全部选项：`backend/ops/start.sh --help`。
 
-若只跑 `./backend/inty/start.sh --test` 等未封装上述 flag 的入口，仍可在启动前手动 `export INTY_LOGGING_LEVEL=DEBUG` 与 `export INTY_LOG_FILE=./inty-backend.log`（同一套环境变量，由应用统一初始化日志）。
+若只跑 `./backend/inty/start.sh --test` 等未封装上述 flag 的入口，可在仓库根 `.env` 中写入下表变量，或启动前手动 `export`（同一套键名，由 `app/core/logging.py` 的 `init_logger()` 读取）。
+
+### 后端日志相关环境变量（可选）
+
+| 变量 | 作用 |
+|------|------|
+| `INTY_LOGGING_LEVEL` | Loguru **文件** sink 与「控制台默认级别」的基准（如 `DEBUG`、`INFO`）。未设置时回落到 `config.yaml` 的 `logging.level`。 |
+| `INTY_CONSOLE_LOGGING_LEVEL` | 仅控制 **stderr** 上的 Loguru 级别；未设置时与 `INTY_LOGGING_LEVEL`（或 YAML）相同。可与 `INTY_LOGGING_LEVEL=DEBUG` 组合实现「终端 INFO、文件 DEBUG」。 |
+| `INTY_LOG_FILE` | 若为非空路径，Loguru 额外 **追加** UTF-8 文件 sink（`enqueue=True`）。路径为**相对路径时相对于进程 cwd**，请在仓库根启动或写绝对路径。 |
+
+`LANGSMITH_TRACING_V2` 等也可写在仓库根 `.env` 中以便启动前进入 `os.environ`；但 `app.core.config` 在导入后仍可能按 `config.yaml` 覆盖 LangSmith 相关键，勿假定仅改 `.env` 即可关闭线上 tracing，以 YAML 与部署文档为准。
 
 Ops 平台启动后，参考下面的截图来创建智能体，并使用该智能体进行测试。
 
