@@ -14,7 +14,9 @@ from loguru import logger
 from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, Field
 
-from .bootstrap_user_interactive import soul_prompt_is_locked_after_interactive_bootstrap
+from .bootstrap_user_interactive import (
+    soul_prompt_is_locked_after_interactive_bootstrap,
+)
 from .memory_store import MemoryStore
 from .utc import local_date_str, local_iso_ts
 from .workspace import WorkspacePaths
@@ -437,11 +439,7 @@ def memory_update_after_turn(
         _soul_turn_has_fundamental_signal(user_text, assistant_text)
     )
     soul_locked = soul_prompt_is_locked_after_interactive_bootstrap(store=store)
-    run_soul_llm = (
-        (not soul_locked)
-        and soul_interval_hits
-        and soul_signal_ok
-    )
+    run_soul_llm = (not soul_locked) and soul_interval_hits and soul_signal_ok
     if run_soul_llm:
         _rewrite_soul_md(
             store,

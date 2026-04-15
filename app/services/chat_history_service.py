@@ -1702,7 +1702,9 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
                     if message_type in ["human", "HumanMessage"]:
                         messages.append(HumanMessage(content=content, **message_kwargs))
                     elif message_type == "system":
-                        messages.append(SystemMessage(content=content, **message_kwargs))
+                        messages.append(
+                            SystemMessage(content=content, **message_kwargs)
+                        )
                     else:
                         messages.append(AIMessage(content=content, **message_kwargs))
 

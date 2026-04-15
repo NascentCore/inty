@@ -1088,11 +1088,15 @@ async def _try_send_ws_user_interactive_bootstrap_kickoff(
         latest_message_info = None
         if ai_message_id is not None:
             try:
-                latest_message_info = await chat_history_service.get_ai_message_info_by_id(
-                    db, ai_message_id
+                latest_message_info = (
+                    await chat_history_service.get_ai_message_info_by_id(
+                        db, ai_message_id
+                    )
                 )
             except Exception as e:
-                logger.warning("ws kickoff get_ai_message_info_by_id failed: {}", str(e))
+                logger.warning(
+                    "ws kickoff get_ai_message_info_by_id failed: {}", str(e)
+                )
 
         kick_req = ChatCompletionRequest(
             messages=[ChatMessage(role="user", content="")],
@@ -1114,7 +1118,9 @@ async def _try_send_ws_user_interactive_bootstrap_kickoff(
         out["agent_id"] = agent_id
         await websocket.send_json(out)
     except Exception:
-        logger.exception("ws interactive bootstrap kickoff failed agent_id={}", agent_id)
+        logger.exception(
+            "ws interactive bootstrap kickoff failed agent_id={}", agent_id
+        )
 
 
 @router.websocket("/ws")
