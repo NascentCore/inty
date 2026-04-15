@@ -20,6 +20,11 @@
 - **跑通 `run_turn` 不是硬性必需**：`load_context_meta` 在 store 中无文件或内容为空时返回默认 `ContextMeta()`（`context_mode` 默认为 `intimate`，三个 id 为空字符串）。
 - **仍建议保留并写入**：持久化非默认的 `context_mode`；在同一张版本表里留下 `(user_id, companion_id, chat_id)` 便于排查与扩展（当前 system 主要消费 `context_mode`，见 `load_prompt_bundle` 与 `prompts.build_system_messages` / `build_system_prompt` 中的 `_context_mode_clause`）。
 
+## 模板目录 `templates/`
+
+- 多数 `.md` 由 `workspace.load_workspace_seed_text` 等在缺省时写入工作区；`BOOTSTRAP.md` 由交互式 bootstrap 读入，不对应持久化切片名。
+- **`AXIOM.md`**：产品层「根本法则」文案，**当前内核路径未加载**（未出现在 `prompt_slices` / `ensure_minimal_workspace_documents_in_store` 等）；若要让模型稳定看到，需再接到 `prompts.build_system_prompt` 或等价注入点。
+
 ## System 与提示词切片
 
 - **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`，由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。

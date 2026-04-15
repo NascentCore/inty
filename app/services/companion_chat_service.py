@@ -292,11 +292,10 @@ async def run_companion_chat_turn_for_api(
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
-    ``app.features.companion_workspace_bootstrap_type`` controls workspace bootstrap: ``NONE`` seeds
-    minimal documents at session create and every message uses ``run_turn`` only; ``LEGACY`` skips
-    pre-seeding until the first user message, which is consumed by ``bootstrap_session`` until the
-    workspace five-pack exists; ``USER_INTERACTIVE`` seeds minimal docs and every message uses
-    ``run_turn`` with interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
+    ``app.features.companion_workspace_bootstrap_type`` controls companion bootstrap: ``NONE`` seeds
+    minimal documents at session create and every message uses ``run_turn`` only; ``USER_INTERACTIVE``
+    seeds minimal docs and every message uses ``run_turn`` with interactive bootstrap tools until the
+    model calls ``companion_bootstrap_user_interactive_complete``.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).
@@ -332,33 +331,8 @@ async def run_companion_chat_turn_for_api(
             raise RuntimeError(
                 "Companion workspace not seeded (interactive bootstrap requires minimal documents in store)"
             )
-        if (
-            session.config.workspace_bootstrap_type
-            == CompanionWorkspaceBootstrapType.LEGACY.value
-        ):
-            logger.info(
-                "companion_chat bootstrap user={} agent={} chat={}",
-                user_id,
-                agent_id,
-                chat_id,
-            )
-            reply = await manager.bootstrap_session(session, user_text)
-            if not session.is_initialized:
-                raise RuntimeError(
-                    "Companion workspace failed to initialize after bootstrap"
-                )
-            logger.info(
-                "companion_chat_turn finished path=bootstrap user={} agent={} chat={} total_ms={:.0f} manager_session_ms={:.0f} user_chars={}",
-                user_id,
-                agent_id,
-                chat_id,
-                (time.perf_counter() - t0) * 1000.0,
-                manager_session_ms,
-                len(user_text),
-            )
-            return reply
         raise RuntimeError(
-            "Companion workspace not initialized (bootstrap disabled; expected seed at session create)"
+            "Companion workspace not initialized (expected minimal seed at session create)"
         )
     t_ws0 = time.perf_counter()
     await _maybe_append_companion_ws_session_system(

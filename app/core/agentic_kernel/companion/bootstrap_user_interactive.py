@@ -1,4 +1,4 @@
-"""User-interactive companion workspace bootstrap (separate from bootstrap.py loop)."""
+"""User-interactive companion workspace bootstrap (tool-driven phase in run_turn)."""
 
 from __future__ import annotations
 

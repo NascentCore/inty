@@ -394,8 +394,10 @@ def test_features_config_companion_workspace_bootstrap_type_default():
 
 
 def test_features_config_companion_workspace_bootstrap_type_normalizes_case():
-    f = FeaturesConfig(companion_workspace_bootstrap_type="legacy")
-    assert f.companion_workspace_bootstrap_type == CompanionWorkspaceBootstrapType.LEGACY.value
+    f = FeaturesConfig(companion_workspace_bootstrap_type="user_interactive")
+    assert f.companion_workspace_bootstrap_type == (
+        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    )
 
 
 def test_features_config_companion_workspace_bootstrap_type_invalid_raises():
@@ -429,12 +431,12 @@ elevenlabs:
 
 def test_load_config_explicit_companion_workspace_bootstrap_type():
     yaml_text = _minimal_yaml_for_load_config(
-        "    companion_workspace_bootstrap_type: LEGACY\n",
+        "    companion_workspace_bootstrap_type: USER_INTERACTIVE\n",
     )
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
     assert cfg.app.features.companion_workspace_bootstrap_type == (
-        CompanionWorkspaceBootstrapType.LEGACY.value
+        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
     )

@@ -148,8 +148,8 @@ def ensure_template_seeded_core_companion_documents_in_store(
     """
     Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
     body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
-    Does not touch transcript.jsonl so LEGACY bootstrap can still run until the five-piece gate
-    is satisfied.
+    Does not touch transcript.jsonl; ``ensure_minimal_workspace_documents_in_store`` adds a
+    minimal transcript seed when the five-piece is not yet satisfied.
     """
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)

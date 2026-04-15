@@ -151,7 +151,6 @@ class CompanionWorkspaceBootstrapType(StrEnum):
     """WS companion workspace bootstrap mode (app.features.companion_workspace_bootstrap_type)."""
 
     NONE = "NONE"
-    LEGACY = "LEGACY"
     USER_INTERACTIVE = "USER_INTERACTIVE"
 
 
@@ -174,7 +173,7 @@ class FeaturesConfig:
     )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
     companion_transcript_llm_window_max_messages: Optional[int] = None
-    # WS companion: NONE = seed minimal docs only; LEGACY = first user message runs bootstrap_session loop;
+    # WS companion: NONE = seed minimal docs only, always run_turn;
     # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
     companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.

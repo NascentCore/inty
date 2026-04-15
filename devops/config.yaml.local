@@ -17,7 +17,7 @@ app:
     free_user_agent_creation_24h_limit: 1
     subscribed_user_agent_creation_24h_limit: 2
   features:
-    # WS companion bootstrap: NONE | LEGACY | USER_INTERACTIVE
+    # WS companion bootstrap: NONE | USER_INTERACTIVE
     companion_workspace_bootstrap_type: USER_INTERACTIVE
 
 sentry:

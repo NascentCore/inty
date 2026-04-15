@@ -23,12 +23,11 @@ WebSocket handler: `app/api/v1/endpoints/chat.py` (`router` prefix `/chat`, so f
 - **`app/services/companion_chat_service.py`**
   - Builds `CompanionConfig` / `CompanionLLMConfig` from `global_config_loaded_from_config_yaml` (`app.features`, `agent.chat_llm_*`, `agent.api_key`, `database.url` for MemoryStore DSN).
   - LRU-caches `CompanionManager` per resolved chat model id + runtime fingerprint.
-  - `run_companion_chat_turn_for_api`: `get_or_create_session`, optional `bootstrap_session` (**LEGACY** only), optional `_maybe_append_companion_ws_session_system` (**USER_INTERACTIVE**), then `manager.run_turn`.
+  - `run_companion_chat_turn_for_api`: `get_or_create_session`, optional `_maybe_append_companion_ws_session_system` (**USER_INTERACTIVE**), then `manager.run_turn`.
   - `run_companion_interactive_bootstrap_kickoff_for_ws`: connect-time kickoff using fixed internal user line from `bootstrap_user_interactive.py`.
 
 - **`app/core/agentic_kernel/companion/manager.py`**
-  - `get_or_create_session`: registers `MemoryStore` for workspace path `.../user_id/companion_id/chat_id`, seeds `context.json`, optionally `ensure_minimal_workspace_documents_in_store`.
-  - `bootstrap_session`: **LEGACY** only, delegates to `bootstrap.run_workspace_bootstrap_loop`.
+  - `get_or_create_session`: registers `MemoryStore` for workspace path `.../user_id/companion_id/chat_id`, seeds `context.json`, `ensure_minimal_workspace_documents_in_store`.
   - `run_turn`: thin async wrapper calling `companion.turn.run_turn` with session store and config flags.
 
 ## Core turn (`companion/turn.py`)
@@ -50,10 +49,9 @@ One user line (or heartbeat synthetic text) executes:
 | Value | Session create | First user message on API path |
 | --- | --- | --- |
 | `NONE` (default) | Minimal seed docs in store | `run_turn` only |
-| `LEGACY` | No minimal seed at create (per manager) | Consumed by `bootstrap_session` / `run_workspace_bootstrap_loop` until workspace init predicate passes |
 | `USER_INTERACTIVE` | Minimal seed + `context.json` flags for interactive phase | Always `run_turn`; model uses `companion_update_prompt_slice` / `companion_bootstrap_user_interactive_complete` (`bootstrap_user_interactive.py`); SOUL lock rules in `memory_pipeline` + `repl_workspace_tools` |
 
-Implementation references: `manager.py` (session create), `companion_chat_service.py` (branching), `bootstrap.py` (LEGACY loop).
+Implementation references: `manager.py` (session create), `companion_chat_service.py` (branching).
 
 ## Shared `agentic_kernel` building blocks (companion path)
 
@@ -61,10 +59,6 @@ These are imported by companion code on the WebSocket path:
 
 - **`providers/facade.py`** (+ `openai_compatible.py`): HTTP chat/completions client used by `CompanionLLMClient`.
 - **`tools/registry.py`**, **`tools/dispatchers/*`**: REPL tool registry and shared workspace/media dispatch helpers from `repl_workspace_tools.py`.
-
-**LEGACY bootstrap only** additionally uses:
-
-- **`tools/runtime.py`** (`resolve_official_assistant_tool_loop`): wired from `companion/bootstrap.py`.
 
 ## Not on the WebSocket companion path
 
@@ -118,7 +112,6 @@ flowchart TB
 
   subgraph MGR["app/core/agentic_kernel/companion/manager.py"]
     CM["CompanionManager"]
-    BOOT["bootstrap_session"]
     MRT["run_turn delegate"]
   end
 
@@ -149,9 +142,7 @@ flowchart TB
   API_TURN --> SESSYS
 
   WS_KICK --> MRT
-  API_TURN --> BOOT
   API_TURN --> MRT
-  BOOT --> RT
   MRT --> RT
 
   RT --> PR

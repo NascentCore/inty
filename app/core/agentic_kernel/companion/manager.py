@@ -5,14 +5,12 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.utils.config import CompanionWorkspaceBootstrapType
 
-from .bootstrap import run_workspace_bootstrap_loop
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
@@ -20,9 +18,7 @@ from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
 from .turn import run_turn
 from .workspace import (
-    WorkspacePaths,
     ensure_minimal_workspace_documents_in_store,
-    ensure_template_seeded_core_companion_documents_in_store,
     is_workspace_initialized_from_store,
     needs_startup_profile_inquiry,
 )
@@ -46,9 +42,8 @@ class CompanionConfig(BaseModel):
     # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 repl_workspace_tools）
     repository_only_workspace_text: bool = True
 
-    # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | LEGACY | USER_INTERACTIVE).
+    # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | USER_INTERACTIVE).
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
-    bootstrap_max_rounds: int = 48
 
     # Context
     default_context_mode: str = "intimate"
@@ -153,13 +148,7 @@ class CompanionManager:
             if store.read_document_if_exists("context.json") is None:
                 store.write_document("context.json", context_json)
 
-            if (
-                self._config.workspace_bootstrap_type
-                == CompanionWorkspaceBootstrapType.LEGACY.value
-            ):
-                ensure_template_seeded_core_companion_documents_in_store(ws_path, store)
-            else:
-                ensure_minimal_workspace_documents_in_store(ws_path, store)
+            ensure_minimal_workspace_documents_in_store(ws_path, store)
 
             session = CompanionSession(
                 user_id=user_id,
@@ -179,42 +168,6 @@ class CompanionManager:
                 ws_path,
             )
             return session
-
-    async def bootstrap_session(
-        self,
-        session: CompanionSession,
-        user_message: str,
-    ) -> str:
-        """对未初始化的 session 执行 agentic bootstrap。返回第一条 assistant 消息。"""
-        if session.is_initialized:
-            logger.info(
-                "companion_manager bootstrap_skipped (already initialized) user={} companion={} chat={}",
-                session.user_id,
-                session.companion_id,
-                session.chat_id,
-            )
-            return ""
-
-        def _chat_fn(
-            messages: list[dict[str, Any]],
-            model: str,
-            tools: list[Any] | None = None,
-        ) -> Any:
-            return session.llm_client.chat_completion(
-                messages=messages,
-                model=model,
-                tools=tools,
-            )
-
-        return await run_workspace_bootstrap_loop(
-            session.workspace_path,
-            user_message,
-            store=session.store,
-            chat_completion_fn=_chat_fn,
-            model=session.llm_client._resolve_model("tool"),
-            max_rounds=session.config.bootstrap_max_rounds,
-            repository_only_workspace_text=session.config.repository_only_workspace_text,
-        )
 
     async def run_turn(
         self,
