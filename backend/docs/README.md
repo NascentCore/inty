@@ -21,7 +21,7 @@
 
 - [ ] `app/README.md`
 - [ ] `app/AGENTS.md`
-- [ ] `docs/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`
+- [ ] `docs/completed/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`
 - [ ] `app/STAINLESS.md`
 - [ ] `app/docs/AGENTS.md`
 - [ ] `app/docs/CHAT_MESSAGE_IMAGE_GENERATION.md`

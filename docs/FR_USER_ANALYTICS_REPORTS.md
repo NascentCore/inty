@@ -79,7 +79,7 @@ database:
 - **GET /api/v1/evaluation/user-analytics/reports**：从副本读 `user_analytics_report`。
 - **预计算日报/周报**（定时任务、补算、脚本）：统计类查询从副本读，写入 `user_analytics_report` 仍走主库。
 
-未配置 `replica_host` 时行为与之前一致，全部使用主库。若日报在副本上出现 conflict with recovery，参见 [FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md](FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md)。
+未配置 `replica_host` 时行为与之前一致，全部使用主库。若日报在副本上出现 conflict with recovery，参见 [FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md](completed/FR_USER_ANALYTICS_DAILY_REPORT_STANDBY_CONFLICT.md)。
 
 ## 补算脚本
 
