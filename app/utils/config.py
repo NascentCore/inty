@@ -179,8 +179,6 @@ class FeaturesConfig:
     # WS companion: NONE = seed minimal docs only; LEGACY = first user message runs bootstrap_session loop;
     # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
     companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
-    # Companion kernel: use separate OpenAI-compatible clients for chat vs tool rounds (LangSmith names companion_dual_*).
-    companion_enable_dual_llm: bool = False
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
 
@@ -642,6 +640,7 @@ def load_config(path: str) -> Config:
     if "features" in app_data and isinstance(app_data["features"], dict):
         feats_raw = dict(app_data["features"])
         feats_raw.pop("chat_use_companion_kernel_agent_ids", None)
+        feats_raw.pop("companion_enable_dual_llm", None)
         leg = feats_raw.pop("companion_workspace_bootstrap_enabled", None)
         inter = feats_raw.pop("companion_workspace_bootstrap_user_interactive_enabled", None)
         if "companion_workspace_bootstrap_type" not in feats_raw:

@@ -21,8 +21,6 @@ app:
     companion_workspaces_base_dir: "~/.inty_workspace"
     # WS companion bootstrap: NONE | LEGACY | USER_INTERACTIVE
     companion_workspace_bootstrap_type: USER_INTERACTIVE
-    # Separate chat vs tool HTTP clients in companion kernel (same stack as INTY_V2_PROTO_DUAL_LLM for REPL).
-    companion_enable_dual_llm: true
 
 sentry:
   # dev-inty/default

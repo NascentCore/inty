@@ -106,11 +106,10 @@ async def run_turn(
         defer_memory_update,
     )
     logger.debug(
-        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm={}",
+        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
         llm_client.config.api_base,
         llm_client._resolve_model("chat"),
         llm_client._resolve_model("tool"),
-        llm_client.config.enable_dual_llm,
     )
 
     # 加载 context 与 prompt bundle

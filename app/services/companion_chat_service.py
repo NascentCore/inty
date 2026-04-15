@@ -47,7 +47,6 @@ def _companion_runtime_config_fingerprint() -> str:
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
         str(feats.companion_workspace_bootstrap_type),
-        str(feats.companion_enable_dual_llm),
         str(feats.companion_ws_session_system_text or ""),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
@@ -76,7 +75,6 @@ def _companion_manager_for_resolved_model(
         day_summary_model=resolved_chat_model_id,
         user_model=resolved_chat_model_id,
         soul_model=resolved_chat_model_id,
-        enable_dual_llm=feats.companion_enable_dual_llm,
     )
     tc_raw = feats.companion_transcript_compaction
     transcript_compaction = (
