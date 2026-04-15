@@ -30,6 +30,9 @@ docker run --rm --name pg-inty -p 5432:5432 \
   -e POSTGRES_DB=inty \
   -d postgres:16
 
+# 拷贝环境变量文件
+cp .env.example .env
+
 # 拷贝配置文件
 cp devops/config.yaml.local config.yaml
 
