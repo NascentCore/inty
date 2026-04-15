@@ -297,8 +297,6 @@ async def run_companion_chat_turn_for_api(
     pre-seeding until the first user message, which is consumed by ``bootstrap_session`` until the
     workspace five-pack exists; ``USER_INTERACTIVE`` seeds minimal docs and every message uses
     ``run_turn`` with interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
-    Deprecated YAML booleans ``companion_workspace_bootstrap_enabled`` / ``companion_workspace_bootstrap_user_interactive_enabled``
-    are mapped to this enum at load time when ``companion_workspace_bootstrap_type`` is absent.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).

@@ -427,37 +427,9 @@ elevenlabs:
 """
 
 
-def test_load_config_maps_deprecated_bootstrap_booleans_to_enum():
-    cases = [
-        (
-            "    companion_workspace_bootstrap_user_interactive_enabled: true\n"
-            "    companion_workspace_bootstrap_enabled: true\n",
-            CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value,
-        ),
-        (
-            "    companion_workspace_bootstrap_user_interactive_enabled: false\n"
-            "    companion_workspace_bootstrap_enabled: true\n",
-            CompanionWorkspaceBootstrapType.LEGACY.value,
-        ),
-        (
-            "    companion_workspace_bootstrap_user_interactive_enabled: false\n"
-            "    companion_workspace_bootstrap_enabled: false\n",
-            CompanionWorkspaceBootstrapType.NONE.value,
-        ),
-    ]
-    for feats_yaml, expected in cases:
-        yaml_text = _minimal_yaml_for_load_config(feats_yaml)
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "config.yaml"
-            path.write_text(yaml_text, encoding="utf-8")
-            cfg = load_config(str(path))
-        assert cfg.app.features.companion_workspace_bootstrap_type == expected
-
-
-def test_load_config_explicit_bootstrap_type_wins_over_deprecated_booleans():
+def test_load_config_explicit_companion_workspace_bootstrap_type():
     yaml_text = _minimal_yaml_for_load_config(
-        "    companion_workspace_bootstrap_type: LEGACY\n"
-        "    companion_workspace_bootstrap_user_interactive_enabled: true\n"
+        "    companion_workspace_bootstrap_type: LEGACY\n",
     )
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yaml"
@@ -466,32 +438,3 @@ def test_load_config_explicit_bootstrap_type_wins_over_deprecated_booleans():
     assert cfg.app.features.companion_workspace_bootstrap_type == (
         CompanionWorkspaceBootstrapType.LEGACY.value
     )
-
-
-def test_load_config_ignores_deprecated_chat_use_companion_kernel_agent_ids():
-    yaml_text = """
-app:
-  name: loadcfg-ws-companion-test
-  environment: test
-  gcp_service_account_key: ".secrets/inty-backend-key.json"
-  features:
-    chat_use_companion_kernel_agent_ids: ["should-be-ignored"]
-security:
-  secret_key: "test-secret"
-database:
-  host: localhost
-agent:
-  api_key: "test-openrouter"
-  langchain_api_key: "test-langchain"
-gcs:
-  bucket: "test-bucket"
-firebase:
-  service_account_path: "test-firebase.json"
-elevenlabs:
-  api_key: "test-eleven"
-"""
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "config.yaml"
-        path.write_text(yaml_text, encoding="utf-8")
-        cfg = load_config(str(path))
-    assert not hasattr(cfg.app.features, "chat_use_companion_kernel_agent_ids")

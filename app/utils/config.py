@@ -636,27 +636,7 @@ def load_config(path: str) -> Config:
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
-        feats_raw = dict(app_data["features"])
-        feats_raw.pop("chat_use_companion_kernel_agent_ids", None)
-        feats_raw.pop("companion_enable_dual_llm", None)
-        feats_raw.pop("companion_workspaces_base_dir", None)
-        leg = feats_raw.pop("companion_workspace_bootstrap_enabled", None)
-        inter = feats_raw.pop("companion_workspace_bootstrap_user_interactive_enabled", None)
-        if "companion_workspace_bootstrap_type" not in feats_raw:
-            if inter is True:
-                feats_raw["companion_workspace_bootstrap_type"] = (
-                    CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
-                )
-            elif leg is True:
-                feats_raw["companion_workspace_bootstrap_type"] = (
-                    CompanionWorkspaceBootstrapType.LEGACY.value
-                )
-            else:
-                feats_raw.setdefault(
-                    "companion_workspace_bootstrap_type",
-                    CompanionWorkspaceBootstrapType.NONE.value,
-                )
-        app_data["features"] = FeaturesConfig(**feats_raw)
+        app_data["features"] = FeaturesConfig(**dict(app_data["features"]))
     if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
         app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])
 

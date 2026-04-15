@@ -12,7 +12,7 @@
 
 - 服务端 `ChatWebSocketRequest`（`app/schemas/chat.py`）与 Android `ChatWebSocketReq` / `SendMsgReq` / `SendMsgResponse`（`android_app/core/data/.../ChatBeans.kt`）对齐；新增字段在客户端未使用前应为可选（客户端可忽略未知 JSON 键）。
 - **首版范围**：仅用户主动发起的轮次，与现网 WS 一致。不把 proactive heartbeat、内核 tick、排程驱动轮次绑到首版 WS；这些需要 worker 或新客户端协议。
-- **灰度**：生产 `/ws` 一律走 companion 内核；YAML 中的 `chat_use_companion_kernel_agent_ids` 在 `load_config` 时被丢弃（`app/utils/config.py`），不再作为按 `agent_id` 开关。
+- **灰度**：生产 `/ws` 一律走 companion 内核；`app.features` 仅接受 `FeaturesConfig` 中声明的键，未知键会导致配置加载失败。
 
 ## 3. 阶段 1 - 共享聊天入口（HTTP 与 WS）- 已实现
 
@@ -80,7 +80,7 @@ app:
 |------|-----|------|
 | 1 | **多模态用户轮** | **已完成（2026-04-12）**：WS companion 路径若最后一条用户消息含 `image_url`，返回 HTTP 400 等价信息（WS 上为 JSON：`code` / `message` / `agent_id`，连接不关闭）。多段纯文本仍合并为文本进入 `run_turn`。内核内完整多模态行仍为后续工作。实现见 `ChatMessage.has_image_content_part`、`_companion_rejects_multimodal_user_turn`、`chat_completions_websocket` 对 `HTTPException` 的 JSON 映射；`_agent_chat_completions_impl` 内层 `except HTTPException: raise` 避免吞掉业务异常。 |
 | 2 | **原子性：工作区 vs chat_history** | `run_turn` 与 `chat_history` 两步之间失败时的补偿或单事务边界。 |
-| 3 | **首轮 bootstrap 语义** | `app.features.companion_workspace_bootstrap_type`：`LEGACY` 时 `bootstrap_session` 消费首条用户输入直至五件套就绪；`USER_INTERACTIVE` 时用户始终在 `run_turn`，由 `bootstrap_user_interactive` 注入规范与切片工具，模型调用 `companion_bootstrap_user_interactive_complete` 结束阶段；`NONE` 为默认。缺少该 YAML 键时，旧布尔项会映射为该枚举（交互式优先于 legacy）。 |
+| 3 | **首轮 bootstrap 语义** | `app.features.companion_workspace_bootstrap_type`：`LEGACY` 时 `bootstrap_session` 消费首条用户输入直至五件套就绪；`USER_INTERACTIVE` 时用户始终在 `run_turn`，由 `bootstrap_user_interactive` 注入规范与切片工具，模型调用 `companion_bootstrap_user_interactive_complete` 结束阶段；`NONE` 为默认（未写 YAML 时由 `FeaturesConfig` 缺省值提供）。 |
 | 4 | **配置热更新** | `_companion_manager_for_resolved_model` 使用 `lru_cache`；改 YAML 不重启进程时须调用 `clear_companion_chat_service_caches()` 或接入重载钩子。 |
 | 5 | **`/ws/verify` 与 companion 对齐** | 同阶段 5。 |
 | 6 | **lazy `get_agent`** | companion 路径仍为语音等逻辑加载 legacy `Agent`；可评估延后加载或拆分依赖。 |
