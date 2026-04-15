@@ -80,6 +80,20 @@ def default_recv_timeout_sec() -> float:
     return max(30.0, min(v, 3600.0))
 
 
+def default_kickoff_drain_sec() -> float:
+    """Burst wait for kickoff already in flight right after WS connect (REPL).
+
+    Late frames while idle at the prompt are handled by ``try_pop_queued_chat`` sideband
+    (see ``_readline_backend_ws_with_sideband`` in ``main.py``).
+    """
+    raw = os.environ.get("INTY_V2_BACKEND_WS_KICKOFF_DRAIN_SEC", "10").strip()
+    try:
+        v = float(raw)
+    except ValueError:
+        return 10.0
+    return max(0.0, min(v, 600.0))
+
+
 def default_reconnect_initial_sec() -> float:
     raw = os.environ.get("INTY_V2_BACKEND_WS_RECONNECT_INITIAL_SEC", "0.5").strip()
     try:
@@ -182,30 +196,74 @@ class BackendChatWsBridge:
             self.stop()
             raise RuntimeError("WebSocket failed to start (no connection)")
 
-    def drain_proactive_assistant_if_any(self, *, timeout_sec: float = 8.0) -> str | None:
+    def drain_proactive_assistant_if_any(self, *, timeout_sec: float | None = None) -> str | None:
         """
         After connect, the server may push one ``USER_INTERACTIVE`` bootstrap kickoff completion
         before any client chat frame. Drain at most one such JSON response and return assistant text.
+        Use ``INTY_V2_BACKEND_WS_KICKOFF_DRAIN_SEC`` (default 10) when ``timeout_sec`` is omitted.
         """
         if not self._loop:
             raise RuntimeError("bridge not started")
+        wait = timeout_sec if timeout_sec is not None else default_kickoff_drain_sec()
         fut = asyncio.run_coroutine_threadsafe(
-            self._drain_proactive_assistant_async(timeout_sec=timeout_sec),
+            self._drain_proactive_assistant_async(timeout_sec=wait),
             self._loop,
         )
-        return fut.result(timeout=max(timeout_sec + 10.0, 30.0))
+        return fut.result(timeout=max(wait + 30.0, 60.0))
+
+    def try_pop_queued_chat(
+        self,
+    ) -> tuple[str | None, tuple[int, str] | None]:
+        """Non-blocking: pop one queued chat JSON if present (runs on the bridge event loop).
+
+        Returns ``(assistant_text, None)`` on success, ``(None, (code, message))`` on API error
+        frames, ``(None, None)`` if the queue was empty or the frame was not a chat completion.
+        """
+        if not self._loop or not self._response_q:
+            return None, None
+
+        async def _pop_raw() -> dict[str, Any] | None:
+            q = self._response_q
+            if q is None:
+                return None
+            try:
+                return q.get_nowait()
+            except asyncio.QueueEmpty:
+                return None
+
+        fut = asyncio.run_coroutine_threadsafe(_pop_raw(), self._loop)
+        try:
+            raw = fut.result(timeout=3.0)
+        except Exception:
+            return None, None
+        if raw is None:
+            return None, None
+        try:
+            text = _parse_chat_response_payload(raw)
+            return text, None
+        except BackendChatWsError as exc:
+            return None, (int(exc.code), str(exc.agent_message))
+        except ValueError:
+            logger.warning("chat ws queued frame dropped: {}", raw)
+            return None, None
 
     async def _drain_proactive_assistant_async(self, *, timeout_sec: float) -> str | None:
         deadline = time.monotonic() + 35.0
         await self._wait_online_async(deadline_monotonic=deadline)
         if not self._response_q:
             return None
-        try:
-            data = await asyncio.wait_for(
-                self._response_q.get(), timeout=timeout_sec
-            )
-        except TimeoutError:
-            return None
+        if timeout_sec <= 0:
+            try:
+                data = self._response_q.get_nowait()
+            except asyncio.QueueEmpty:
+                return None
+        else:
+            try:
+                data = await asyncio.wait_for(
+                    self._response_q.get(), timeout=timeout_sec
+                )
+            except TimeoutError:
+                return None
         try:
             return _parse_chat_response_payload(data)
         except (BackendChatWsError, ValueError) as e:

@@ -24,6 +24,7 @@ from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsBridge,
     BackendChatWsError,
     default_api_base_url,
+    default_kickoff_drain_sec,
     http_base_to_ws_chat_url,
 )
 from tools.inty_v2_repl.jsonl_db_store import (
@@ -134,6 +135,51 @@ def _resolve_bearer_token_cli() -> str:
     raise SystemExit("repl requires INTY_ACCESS_TOKEN (Bearer JWT for the backend)")
 
 
+_BACKEND_WS_SIDEBAND_POLL_SEC = 0.25
+
+
+def _readline_backend_ws_with_sideband(
+    bridge: BackendChatWsBridge, prompt: str
+) -> str:
+    """Block for one user line while printing late server-pushed chat frames (POSIX TTY)."""
+    if sys.platform == "win32" or not sys.stdin.isatty():
+        return input(prompt)
+    try:
+        import select as _select
+    except ImportError:
+        return input(prompt)
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    while True:
+        try:
+            r, _, _ = _select.select(
+                [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
+            )
+        except (ValueError, OSError):
+            return input(prompt)
+        if not r:
+            assistant, err = bridge.try_pop_queued_chat()
+            if assistant is not None:
+                print()
+                _print_assistant_reply(assistant, 0.0)
+                sys.stdout.write(prompt)
+                sys.stdout.flush()
+            elif err is not None:
+                code, msg = err
+                print()
+                print(
+                    f"[{repl_wall_ts_str()}] chat-ws-error sideband code={code} "
+                    f"message={msg!r}"
+                )
+                sys.stdout.write(prompt)
+                sys.stdout.flush()
+            continue
+        line = sys.stdin.readline()
+        if line == "":
+            raise EOFError
+        return line[:-1] if line.endswith("\n") else line
+
+
 def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
     print(
         f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
@@ -141,7 +187,7 @@ def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str
     )
     while True:
         try:
-            line = input("> ")
+            line = _readline_backend_ws_with_sideband(bridge, "> ")
         except EOFError:
             print()
             break
@@ -189,7 +235,9 @@ def _repl_run_backend_ws_branch(
     bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
     bridge.start()
     try:
-        kick = bridge.drain_proactive_assistant_if_any(timeout_sec=8.0)
+        kick = bridge.drain_proactive_assistant_if_any(
+            timeout_sec=default_kickoff_drain_sec()
+        )
         if kick:
             _print_assistant_reply(kick, 0.0)
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)

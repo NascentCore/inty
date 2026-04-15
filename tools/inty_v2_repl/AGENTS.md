@@ -3,6 +3,7 @@
 ## CLI（`main.py`）
 
 - `python -m tools.inty_v2_repl.main repl` **仅**连接 Inty `/api/v1/chat/ws`（`backend_chat_ws.BackendChatWsBridge`）；对话与 bootstrap 由服务端处理。
+- 连接后首轮 **burst drain** 等服务端主动 kickoff：`INTY_V2_BACKEND_WS_KICKOFF_DRAIN_SEC`（默认 10，单位秒，上限 600；0 表示仅 `get_nowait` 一次）。POSIX 且 TTY 时在 `>` 等输入会 **侧带** 轮询 `try_pop_queued_chat`，晚到的聊天 JSON 也会打印；Windows / 非 TTY 仍为阻塞 `input()`。
 - `--workspace` 只影响本进程的 **日志**（`inty_v2.log`）与 **`llm_trace.jsonl`** 路径，不是对话权威存储。
 
 ## Kernel re-export 架构

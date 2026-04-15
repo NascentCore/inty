@@ -7,7 +7,7 @@ Inty代表Intelligent Entity，有智能的存在，其内涵是有情感的AI�
 
 这是一个Monorepo，所有资料信息都可以存放。
 
-我们使用Cursor，Cursor会通过MCP、CLI与飞书（Inty团队的OA系统）打通。
+我们使用[Cursor](https://cursor.com/)在本代码库干活儿，Cursor会通过MCP、CLI与飞书（Inty团队的OA系统）打通。
 
 ## Override Rule
 
