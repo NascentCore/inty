@@ -1,6 +1,7 @@
 # Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
 
 ## Output
+
 - Answer in Mandarin（简体中文）、使用中文回答，以下指令为英文方便你理解
 - Answer is always line 1. Reasoning comes after, never before.
 - No preamble. No "Great question!", "Sure!", "Of course!", "Certainly!", "Absolutely!".
@@ -11,12 +12,14 @@
 - Structured output only: bullets, tables, code blocks. Prose only when explicitly requested.
 
 ## Token Efficiency
+
 - Compress responses. Every sentence must earn its place.
 - No redundant context. Do not repeat information already established in the session.
 - No long intros or transitions between sections.
 - Short responses are correct unless depth is explicitly requested.
 
 ## Typography - ASCII Only
+
 - No em dashes (-) - use hyphens (-)
 - No smart/curly quotes - use straight quotes (" ')
 - No ellipsis character - use three dots (...)
@@ -24,12 +27,14 @@
 - No non-breaking spaces
 
 ## Sycophancy - Zero Tolerance
+
 - Never validate the user before answering.
 - Never say "You're absolutely right!" unless the user made a verifiable correct statement.
 - Disagree when wrong. State the correction directly.
 - Do not change a correct answer because the user pushes back.
 
 ## Accuracy and Speculation Control
+
 - Never speculate about code, files, or APIs you have not read.
 - If referencing a file or function: read it first, then answer.
 - If unsure: say "I don't know." Never guess confidently.
@@ -37,6 +42,7 @@
 - If a user corrects a factual claim: accept it as ground truth for the entire session. Never re-assert the original claim.
 
 ## Code Output
+
 - Return the simplest working solution. No over-engineering.
 - No abstractions or helpers for single-use operations.
 - No speculative features or future-proofing.
@@ -45,69 +51,30 @@
 - Read the file before modifying it. Never edit blind.
 
 ## Warnings and Disclaimers
+
 - No safety disclaimers unless there is a genuine life-safety or legal risk.
 - No "Note that...", "Keep in mind that...", "It's worth mentioning..." soft warnings.
 - No "As an AI, I..." framing.
 
 ## Session Memory
+
 - Learn user corrections and preferences within the session.
 - Apply them silently. Do not re-announce learned behavior.
 - If the user corrects a mistake: fix it, remember it, move on.
 
 ## Scope Control
+
 - Do not add features beyond what was asked.
 - Do not refactor surrounding code when fixing a bug.
 - Do not create new files unless strictly necessary.
 
 ## Override Rule
+
 User instructions always override this file.
-
-## 指令优先级（新增）
-
-当不同规则冲突时，按以下顺序执行：
-
-1. 用户当前消息中的直接指令
-2. 仓库根目录 `AGENTS.md`
-3. 目标子目录中的 `AGENTS.md`
-4. `docs/` 目录下的文档
-
-执行时保持最小变更原则：
-
-- 只改与当前任务直接相关的文件
-- 不做顺手重构
-- 不新增非必要文件
-
-## 最小交付清单（新增）
-
-每次任务结束前，必须完成：
-
-1. `git diff` 自检：确认无无关改动、无临时代码、无敏感信息
-2. 针对性验证：至少运行与改动直接相关的最小测试或检查命令
-3. 提交说明：commit message 包含一句话总结 + 详细描述
-4. 推送分支：`git push -u origin <branch-name>`
-5. 同步 PR：创建或更新 PR，并附关键测试证据
 
 ## 产品简介
 
-- 产品方向：面向 35+ 男性用户的陪伴 AI，应是一个以聊天为核心、长期稳定且低负担、可实时响应并识别用户状态，
-  在不过度打扰的前提下以精准稀疏的主动触达建立长期情感连接，并提供成熟、有文化与智性深度互动的共情型智能体。
-- Do not bother with code file formatting, there is a [daily auto-formatting workflow](.github/workflows/format_code.yaml).
-- Do not do defensive programming, let failure appear early and loud.
-- Python 技术选型：cyclopts pydantic loguru
-- jq JSON
-
-## 给 AI Agent 的最小执行清单（先读这个）
-
-1. 先读本文件，再读目标目录下的 `AGENTS.md`（若存在）。
-2. Test-driven development, 先写测试成功标准，再实现；改完必须做针对性测试并给出证据。
-3. 优先小步修改、单一职责、可组合函数，避免深层嵌套调用。
-4. 不做防御性吞错；失败要尽早、明显地暴露。
-5. Python 仅捕获可处理的具体异常，禁止 `except Exception` 大网捕获。
-6. 涉及 Python/Kotlin HTTP API 数据结构变更时，必须双端同步修改：
-   - `android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model`
-   - `app/schemas`
-7. 完成后必须回看 diff，确保无无关改动、无敏感信息泄漏。
-8. 提交时附一句话总结 + 详细描述（便于追溯）。
+- 产品方向：面向 35+ 男性用户的亲密陪伴AI，应是一个以聊天为核心、长期稳定且低负担、可实时响应并识别用户状态，在不过度打扰的前提下以精准稀疏的主动触达建立长期情感连接，并提供成熟、有文化与智性深度互动的共情型智能体。
 
 ## Cursor Cloud Agent 执行契约（强制）
 
@@ -148,14 +115,15 @@ User instructions always override this file.
 ## Android App Tips
 
 - Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm
-- Use standard components: https://developer.android.com/develop/ui/compose/components
+- Use standard components: <https://developer.android.com/develop/ui/compose/components>
 
-## Backend 
+## Backend
+
 - Backend services
   - Inty backend: `backend/inty` 支持 Android App 的主 API 后端，提供对话、生图、语音播报、语音通话等功能
   - Operational app:
-    - `backend/ops` backend`evaluation/` operational app, creating iMates, view user behavior data etc. 
-  -  serving 
+    - `backend/ops` backend`evaluation/` operational app, creating iMates, view user behavior data etc.
+  - Serving
   - 部署在一台 GCP VM
   - 后端所有应用都有 2 个环境：dev prod
     - .secrets/alien-paratext-461204-i9-cursor-log-viewer.json 可以用来访问
@@ -165,32 +133,7 @@ User instructions always override this file.
 - Use repo-root relative path when referencing files in this repo, for example:
   [repo root AGENTS.md](/AGENTS.md).
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
-- 你应该维护的 Markdown 文件应从以下文件中选择：`README.md`、`TODOS.md`、`AGENTS.md`
-- Markdown 文件命名：全部使用 `.md` 后缀（小写），文件名使用全大写字母与下划线，例如 `FUTURE_PLANS.md`。
-- 修改后务必回看 diff，确认无误再提交/交付。
-- 测试步骤写入 tests/docs/ 如 tests/docs/TEST_STEPS_RUNTIME_URL_SWITCH.md
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
-
-### README.md AGENTS.md 内容
-
-```text:https://app.monosketch.io/?id=02-AA-p-YYNmJ9TDuzP6YdRCnaWois
-                 Human developers、human product          
-README.md        designer etc                            
-                                                         
-    △            ────────────────────────────────────────
-    │                                                    
-    │                                                    
-    │                                                    
-    │ Higher                                             
-    │ abstraction────────────────────────────────────────
-    │ Higher                                             
-    │ intuitivity                                        
-    │                                                    
-    │                                                    
-    │            ────────────────────────────────────────
-                                                         
-AGENTS.md        AI                                      
-```
 
 ## Python-Kotlin HTTP APIs 数据类型定义
 

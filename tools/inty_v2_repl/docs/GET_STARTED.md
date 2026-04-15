@@ -67,7 +67,7 @@ Ops 平台启动后，参考下面的截图来创建智能体，并使用该智�
 <img width="600" height="1140" alt="image" src="https://github.com/user-attachments/assets/ef6e2ec7-bcdb-46d1-8dee-085d0c66670f" />
 <img width="600" height="1512" alt="image" src="https://github.com/user-attachments/assets/9c337f9b-174f-469d-bf97-a772063ff9cf" />
 
-## 启动 REPL（`--backend-ws`）
+## 启动 REPL（后端 WebSocket）
 
 1. 打开运营平台：<http://localhost:8001/>，在平台上创建角色并记下 **AGENT_ID**。
 2. 将 Ops 启动时打印的 **bearer token** 与 `AGENT_ID` 写入仓库根 `.env` 或 `tools/inty_v2_repl/.env`，或在另一个终端里 `export`。
@@ -75,16 +75,15 @@ Ops 平台启动后，参考下面的截图来创建智能体，并使用该智�
 ```bash
 # 仓库根目录，已 export PYTHONPATH=.
 python -m tools.inty_v2_repl.main repl \
-  --backend-ws \
   --agent-id <AGENT_ID> \
   --api-base-url http://127.0.0.1:8001
 ```
 
-`INTY_ACCESS_TOKEN` 也可用环境变量提供；`--agent-id` 可由 `INTY_V2_CHAT_AGENT_ID` 代替。启用 WebSocket 模式还可设 `INTY_V2_REPL_BACKEND_WS=1`（或 `true` / `yes` / `on`）而不写 `--backend-ws`。
+`INTY_ACCESS_TOKEN` 也可用环境变量提供；`--agent-id` 可由 `INTY_V2_CHAT_AGENT_ID` 代替。
 
 ### REPL 后端 WebSocket：自动重连
 
-`--backend-ws` 下，REPL 在**单独的后台线程**里维持到 `INTY_API_BASE_URL` 对应主机的 `/api/v1/chat/ws` 连接：
+REPL 在**单独的后台线程**里维持到 `INTY_API_BASE_URL` 对应主机的 `/api/v1/chat/ws` 连接：
 
 - **读循环结束**（对端关闭、网络闪断等）时，同一线程会按 **指数退避** 自动再次 `connect`，一般**不必**为短暂断网重启 REPL 进程。
 - **正在发送的一轮**若遇到已关闭的 socket（`ConnectionClosed`），会**整轮重试**（含重新发同一条用户消息），次数有上限。
@@ -99,4 +98,4 @@ python -m tools.inty_v2_repl.main repl \
 | `INTY_V2_BACKEND_WS_PING_INTERVAL_SEC` | 客户端 JSON `ping` 间隔秒（25） |
 | `INTY_V2_BACKEND_WS_RECV_TIMEOUT_SEC` | 单轮等待服务端带 `code` 的回包上限秒（600） |
 
-与「仅 Inty 主后端 + 仓库 JWT」的对照、`once --backend-ws` 示例见 [README.md](../README.md)「后端 WebSocket 模式」。
+CLI 仅保留 `repl`；对话与 bootstrap 由服务端处理。`--workspace` 仅影响本地 `inty_v2.log` / `llm_trace.jsonl` 路径。

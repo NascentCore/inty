@@ -1,5 +1,10 @@
 # Workspace context loading — design spec
 
+## CLI（`main.py`）
+
+- `python -m tools.inty_v2_repl.main repl` **仅**连接 Inty `/api/v1/chat/ws`（`backend_chat_ws.BackendChatWsBridge`）；对话与 bootstrap 由服务端处理。
+- `--workspace` 只影响本进程的 **日志**（`inty_v2.log`）与 **`llm_trace.jsonl`** 路径，不是对话权威存储。
+
 ## Kernel re-export 架构
 
 本 prototype 的核心数据类型和逻辑从 `app/core/agentic_kernel/companion/` (companion kernel) 导入:
@@ -35,8 +40,8 @@ Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of 
 
 - **`INTY_V2_PROTO_ASYNC_TOOL_BG`** — default **on** (unset): chat-first reply in `run_turn`, tool loop in background; set to `0`/`false`/`no`/`off` for synchronous tool loop (then `INTY_V2_PROTO_DUAL_LLM` can apply).
 - **`context.json`** is read first (`load_context_meta`). It drives **`context_mode`** (e.g. `intimate` vs other): when not intimate, long-term and day-scoped private memory files are **not** injected into the bundle (see `models.load_prompt_bundle`).
-- **REPL stdin** (`main._repl_interactive_loop`): on **POSIX + TTY**, **`run_turn` runs in a worker thread** while the **main thread** uses **`select` + `readline`** to queue further lines (so long tool calls e.g. image gen do not block typing in integrated terminals). **Including when inner tick is on**, user lines are read after `select` via **`_repl_stdin_read_line_after_select`**: on TTY it **`import readline`** then **`input()`** (libedit/GNU readline line edit) instead of **`sys.stdin.readline()`** alone, which fixes CJK backspace/display drift in some integrated terminals; non-TTY still uses **`readline()`** on the file object. On **Windows / non-TTY**, falls back to **`app.core.repl_input.spawn_stdin_line_reader`** (daemon thread). When **idle** (no inner tick / no schedule due), the loop **polls stdin on a short timeout** instead of blocking `readline` forever so **`source=tool_bg` async replies** can print as they arrive. The **stdin pump** (`_run_turn_with_stdin_pump`) **does not** print `tool_bg` output on `select` timeouts while the user may be editing a line (avoids TTY/CJK echo corruption); it flushes those events **after** `readline()` returns (supersede line) and **after** the worker thread joins. **`INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC`** (default **600**) bounds the foreground chat HTTP call in `async_chat_tool_background`; on timeout `run_turn` raises **`RuntimeError`** so the REPL does not hang silently.
-- **REPL 连续输入（仅 POSIX + TTY 泵路径）**：当前 `run_turn` 仍在执行时，用户若再输入**非空行**，主线程置取消标志；`run_turn(..., repl_cancel_check=...)` 在 HTTP/工具间隙协作式检查并抛出 **`ReplTurnSuperseded`**，**不落盘**该轮 user/assistant；泵循环以**最后一条**非空输入重跑。空行不取消，仍入 `pending` FIFO。若取代输入为 `quit`/`exit`/`q`，泵将退出词放入 `pending` 并返回空串，由外层 `_repl_drain_user_turns` 结束 REPL。已启动的 **`tool_bg`** 通过 `mark_tool_background_aborted(user_msg_uuid)` 作废：后台在轮次间隙退出且**不写** `transcript` / `tool_background.jsonl` / 输出队列事件（单次进行中 HTTP 仍可能跑完，属协作式取消固有限制）。Windows / 非 TTY 路径不保证此行为。
+- **交互式 `run_turn` 驱动方**（单测或自写脚本在本地 workspace 上调用 `orchestrator.run_turn`，**不是**当前 Cyclopts `repl`）：在 **POSIX + TTY** 上常见模式为 **`run_turn` 跑在工作线程**、主线程 **`select` + `readline`** 排队输入（长工具调用时不阻塞输入）。TTY 上可用 **`readline` + `input()`** 缓解部分集成终端里 CJK 退格错位；**Windows / 非 TTY** 可退回 **`app.core.repl_input.spawn_stdin_line_reader`**。空闲时对 stdin **短超时 poll**，以便 **`source=tool_bg`** 等异步输出有机会刷出；泵路径需避免在用户编辑行中途打印破坏 TTY。`INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC`（默认 **600**）约束 `async_chat_tool_background` 前景 HTTP；超时 `run_turn` 抛 **`RuntimeError`**。
+- **连续输入与取代（POSIX + TTY 泵路径）**：`run_turn` 执行中用户再输入非空行可触发协作式取消与 **`ReplTurnSuperseded`**（不落盘该轮）；**`tool_bg`** 经 `mark_tool_background_aborted(user_msg_uuid)` 作废等语义仍见 `orchestrator` / `tool_background`。Windows / 非 TTY 不保证与 POSIX 泵完全一致。
 
 ## System prompt order (what the model sees)
 
