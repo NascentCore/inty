@@ -71,7 +71,10 @@ class PromptBundle(BaseModel):
     soul: str
     user_md: str
     memory_md: str
-    agents_md: str = ""
+    agents_md: str = Field(
+        default="",
+        description="Deprecated: AGENTS.md is not loaded or injected; kept default-empty for callers/tests.",
+    )
     tools_md: str = ""
     heartbeat_md: str = ""
     memory_raw_diary_today_md: str = ""
@@ -83,6 +86,12 @@ class ContextMeta(BaseModel):
     user_id: str = ""
     companion_id: str = ""
     chat_id: str = ""
+    # True = skip interactive-bootstrap injection (default for legacy context.json without this key).
+    workspace_bootstrap_user_interactive_completed: bool = True
+    # True = skip inserting the one-shot WS companion session system line (default for legacy / non-interactive).
+    companion_ws_session_system_written: bool = True
+    # True = skip WebSocket connect-time interactive bootstrap kickoff (default for legacy / non-interactive).
+    companion_ws_interactive_kickoff_sent: bool = True
 
 
 def load_prompt_bundle(
@@ -118,11 +127,6 @@ def load_prompt_bundle(
         soul=_read_memory_document_required(store, "SOUL.md"),
         user_md=_read_memory_document_required(store, "USER.md"),
         memory_md=memory_long,
-        agents_md=_read_memory_document_optional(
-            store,
-            "AGENTS.md",
-            max_chars=_OPTIONAL_DOC_MAX_CHARS,
-        ),
         tools_md=_read_memory_document_optional(
             store,
             "TOOLS.md",

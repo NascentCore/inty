@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from loguru import logger
@@ -18,6 +19,16 @@ def load_workspace_seed_text(filename: str) -> str:
     if not path.is_file():
         raise FileNotFoundError(f"missing companion workspace seed template: {path}")
     return read_text(path).rstrip() + "\n"
+
+
+@lru_cache(maxsize=1)
+def get_imate_axiom_system_text() -> str | None:
+    """Product axiom from templates/AXIOM.md; first system slice for iMate. None if empty."""
+    body = load_workspace_seed_text("AXIOM.md").strip()
+    if not body:
+        logger.warning("AXIOM.md is empty after strip; skipping axiom system injection")
+        return None
+    return body
 
 
 @dataclass(frozen=True)
@@ -133,12 +144,39 @@ def is_workspace_initialized_from_store(workspace: Path, store: MemoryStore) -> 
 
 _MINIMAL_TRANSCRIPT_SEED = "# companion_minimal_seed\n"
 
+_CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
+    "identity",
+    "soul",
+    "user_md",
+    "memory_md",
+)
+
+
+def ensure_template_seeded_core_companion_documents_in_store(
+    workspace: Path,
+    store: MemoryStore,
+) -> None:
+    """
+    Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
+    body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
+    Does not touch transcript.jsonl; ``ensure_minimal_workspace_documents_in_store`` adds a
+    minimal transcript seed when the five-piece is not yet satisfied.
+    """
+    root = workspace.resolve()
+    paths = WorkspacePaths(root=root)
+    for attr in _CORE_COMPANION_TEMPLATE_ATTRS:
+        rel = getattr(paths, attr).relative_to(root).as_posix()
+        body = store.read_document_if_exists(rel)
+        if body is None or not body.strip():
+            store.write_document(rel, load_workspace_seed_text(rel))
+
 
 def ensure_minimal_workspace_documents_in_store(
     workspace: Path,
     store: MemoryStore,
 ) -> None:
     """Write seed content for required paths into MemoryStore only (no disk authority)."""
+    ensure_template_seeded_core_companion_documents_in_store(workspace, store)
     root = workspace.resolve()
     if is_workspace_initialized_from_store(root, store):
         return

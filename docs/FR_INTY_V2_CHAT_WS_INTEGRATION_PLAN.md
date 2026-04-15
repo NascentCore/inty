@@ -12,7 +12,7 @@
 
 - 服务端 `ChatWebSocketRequest`（`app/schemas/chat.py`）与 Android `ChatWebSocketReq` / `SendMsgReq` / `SendMsgResponse`（`android_app/core/data/.../ChatBeans.kt`）对齐；新增字段在客户端未使用前应为可选（客户端可忽略未知 JSON 键）。
 - **首版范围**：仅用户主动发起的轮次，与现网 WS 一致。不把 proactive heartbeat、内核 tick、排程驱动轮次绑到首版 WS；这些需要 worker 或新客户端协议。
-- **灰度**：生产 `/ws` 一律走 companion 内核；YAML 中的 `chat_use_companion_kernel_agent_ids` 在 `load_config` 时被丢弃（`app/utils/config.py`），不再作为按 `agent_id` 开关。
+- **灰度**：生产 `/ws` 一律走 companion 内核；`app.features` 仅接受 `FeaturesConfig` 中声明的键，未知键会导致配置加载失败。
 
 ## 3. 阶段 1 - 共享聊天入口（HTTP 与 WS）- 已实现
 
@@ -28,7 +28,7 @@
 ## 5. 阶段 3 - 身份与工作区映射 - 已实现
 
 - `CompanionManager.get_or_create_session(user_id, agent_id, chat_key)`，`chat_key` 为 `str(chat.id)`（`companion_chat_service.run_companion_chat_turn_for_api`）。
-- 工作区根目录由 `app.features.companion_workspaces_base_dir` 配置（默认 `/var/lib/inty/companion_workspaces`），仅参与 `workspace_root` 数据库键前缀；在 `companion_chat_service` + 已配置数据库 DSN 时**不在**该路径下 `mkdir` 或写入权威状态文件（见 `app/api/ENDPOINTS.md` 与 `MemoryStore.uses_repository_without_workspace_disk`）。
+- 工作区根路径前缀为 `app.services.companion_chat_service.COMPANION_API_WORKSPACE_ROOT_PREFIX`（默认 `/var/lib/inty/companion_workspaces`）+ `user_id/agent_id/chat_id`，用于 `Path` 拼接与进程内 `MemoryStore` 注册；在 `companion_chat_service` + 已配置数据库 DSN 时 ORM 键为 `user_id` + `companion_id` + `chat_id`，**不在**磁盘 `mkdir` 或写入权威状态文件（见 `app/api/ENDPOINTS.md` 与 `MemoryStore.uses_repository_without_workspace_disk`）。
 - 用户多段纯文本在 HTTP/WS 侧仍经 `HumanMessage` / `extract_text_content` 等路径；companion 路径当前以**拼接后的纯文本** `user_text` 调用 `run_turn`（含图的多模态见 backlog）。
 
 ## 6. 阶段 4 - 异步、超时与 DB 会话
@@ -58,7 +58,6 @@
 app:
   features:
     chat_ws_idle_timeout_seconds: 60
-    companion_workspaces_base_dir: "/var/lib/inty/companion_workspaces"
     companion_default_context_mode: "intimate"
     # 可选：companion 转写压缩；null 关闭
     # companion_transcript_compaction: ...
@@ -81,7 +80,7 @@ app:
 |------|-----|------|
 | 1 | **多模态用户轮** | **已完成（2026-04-12）**：WS companion 路径若最后一条用户消息含 `image_url`，返回 HTTP 400 等价信息（WS 上为 JSON：`code` / `message` / `agent_id`，连接不关闭）。多段纯文本仍合并为文本进入 `run_turn`。内核内完整多模态行仍为后续工作。实现见 `ChatMessage.has_image_content_part`、`_companion_rejects_multimodal_user_turn`、`chat_completions_websocket` 对 `HTTPException` 的 JSON 映射；`_agent_chat_completions_impl` 内层 `except HTTPException: raise` 避免吞掉业务异常。 |
 | 2 | **原子性：工作区 vs chat_history** | `run_turn` 与 `chat_history` 两步之间失败时的补偿或单事务边界。 |
-| 3 | **首轮 bootstrap 语义** | `bootstrap_session` 会消费首条用户输入直至工作区初始化完成；需产品/QA 文档化与 HTTP/WS/REPL 的差异。 |
+| 3 | **首轮 bootstrap 语义** | `app.features.companion_workspace_bootstrap_type`：`USER_INTERACTIVE` 时用户始终在 `run_turn`，由 `bootstrap_user_interactive` 注入规范与切片工具，模型调用 `companion_bootstrap_user_interactive_complete` 结束阶段；`NONE` 为默认（未写 YAML 时由 `FeaturesConfig` 缺省值提供）。已移除 `LEGACY`（首条用户消息驱动的自举循环）。 |
 | 4 | **配置热更新** | `_companion_manager_for_resolved_model` 使用 `lru_cache`；改 YAML 不重启进程时须调用 `clear_companion_chat_service_caches()` 或接入重载钩子。 |
 | 5 | **`/ws/verify` 与 companion 对齐** | 同阶段 5。 |
 | 6 | **lazy `get_agent`** | companion 路径仍为语音等逻辑加载 legacy `Agent`；可评估延后加载或拆分依赖。 |

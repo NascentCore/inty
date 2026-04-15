@@ -9,8 +9,12 @@ import signal
 import sys
 from typing import Optional
 
+from dotenv import load_dotenv
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# 系统级别行为配置通过环境变量配置，比如日志级别、LangSmith追踪等。
+load_dotenv()
 
 from app.core.agent.agent import agent_manager
 from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision

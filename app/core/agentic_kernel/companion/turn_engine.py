@@ -9,7 +9,7 @@ from typing import Any
 from .memory_registry import get_memory_store
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import ChatMessage, ContextMeta, PromptBundle
-from .prompts import build_system_prompt
+from .prompts import build_system_messages
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 
@@ -24,7 +24,7 @@ def build_repl_turn_base_messages(
     inner_tick_turn: bool = False,
     ai_private_text: str = "",
 ) -> tuple[list[dict[str, Any]], str]:
-    system = build_system_prompt(
+    system_messages = build_system_messages(
         bundle,
         context,
         enable_user_profile_tool=True,
@@ -32,7 +32,7 @@ def build_repl_turn_base_messages(
         repl_online_ack_turn=repl_online_ack_turn,
         ai_private_text=ai_private_text,
     )
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+    messages: list[dict[str, Any]] = list(system_messages)
     for m in transcript:
         row: dict[str, Any] = {"role": m.role, "content": m.content}
         if m.uuid:

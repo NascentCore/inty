@@ -32,7 +32,8 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH]"
       echo "  --local|--dev   Dev/local mode: seed admin + report fixtures, uvicorn --reload"
       echo "  --debug         Loguru + uvicorn log level DEBUG (via INTY_LOGGING_LEVEL)"
-      echo "  --log-file PATH Also write logs to PATH (via INTY_LOG_FILE; UTF-8 append)"
+      echo "  --log-file PATH Also write logs to PATH (via INTY_LOG_FILE; UTF-8 append)."
+      echo "                  With --debug: stderr INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
       exit 0
       ;;
     *)
@@ -54,6 +55,9 @@ fi
 
 if [ -n "$LOG_FILE" ]; then
   export INTY_LOG_FILE="$LOG_FILE"
+  if [ "$DEBUG" = true ]; then
+    export INTY_CONSOLE_LOGGING_LEVEL=INFO
+  fi
 fi
 
 UVICORN_LOG_LEVEL=()

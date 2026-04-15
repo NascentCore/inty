@@ -35,6 +35,12 @@ from .image_gate import (
     register_profile_write,
 )
 from .memory_registry import get_memory_store
+from .bootstrap_user_interactive import (
+    PROMPT_SLICE_TO_REL,
+    soul_prompt_is_locked_after_interactive_bootstrap,
+    tool_companion_bootstrap_user_interactive_complete,
+    tool_companion_update_prompt_slice,
+)
 from .message_format import openai_assistant_message_dict
 from .workspace_doc_mapping import parse_workspace_relative_path
 from .models import ChatMessage
@@ -70,7 +76,6 @@ WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 # REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
-        "AGENTS.md",
         "CAPABILITIES.md",
         "HEARTBEAT.md",
         "IDENTITY.md",
@@ -143,6 +148,8 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "generate_image",
         "modify_image",
         "companion_runtime_inspect",
+        "companion_update_prompt_slice",
+        "companion_bootstrap_user_interactive_complete",
     )
 )
 
@@ -344,6 +351,11 @@ def tool_workspace_write_file(
     st = get_memory_store(root)
     if not _is_orm_mapped_workspace_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
+    if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
+        return (
+            "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
+            "you may still update IDENTITY.md, USER.md, MEMORY.md, and other allowed paths."
+        )
     prev_body = st.read_document_if_exists(rel)
     if rel == "transcript.jsonl":
         v_err = _transcript_jsonl_validate_for_tool_write(content)
@@ -589,7 +601,67 @@ def build_openai_tools() -> list[dict[str, Any]]:
     ]
 
 
-def build_openai_repl_tools() -> list[dict[str, Any]]:
+def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
+    slice_enum = sorted(s.value for s in PROMPT_SLICE_TO_REL)
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "companion_update_prompt_slice",
+                "description": (
+                    "Overwrite one workspace prompt slice (root markdown) in MemoryStore. "
+                    "Use during interactive relationship bootstrap instead of workspace_write_file. "
+                    "Pass the full updated markdown as content. "
+                    "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
+                    "IDENTITY / USER / MEMORY and other listed slices may still be updated."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "slice": {
+                            "type": "string",
+                            "enum": slice_enum,
+                            "description": "Which prompt document to replace.",
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Full UTF-8 body to write for that slice.",
+                        },
+                    },
+                    "required": ["slice", "content"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "companion_bootstrap_user_interactive_complete",
+                "description": (
+                    "Mark interactive workspace bootstrap as finished in context.json. "
+                    "Bootstrap here means the SOUL slice has been initialized for this relationship; "
+                    "after this call SOUL.md must not change (tools and background updates). "
+                    "Call when that phase is done; IDENTITY / USER / MEMORY slices may still be edited later."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "note": {
+                            "type": "string",
+                            "description": "Optional short internal note (not shown to user).",
+                        },
+                    },
+                    "required": [],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    ]
+
+
+def build_openai_repl_tools(
+    *, interactive_bootstrap_active: bool = False
+) -> list[dict[str, Any]]:
     """
     REPL 对话轮：用户档案追加 + 工作区文档读写（写入仅限 REPL_WRITABLE_RELATIVE_PATHS）。
     """
@@ -599,13 +671,21 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
         for t in full
         if t.get("type") == "function" and "function" in t
     }
-    names = (
-        "user_profile_record",
-        "schedule_task",
-        "workspace_list_dir",
-        "workspace_read_file",
-        "workspace_write_file",
-    )
+    if interactive_bootstrap_active:
+        names = (
+            "user_profile_record",
+            "schedule_task",
+            "workspace_list_dir",
+            "workspace_read_file",
+        )
+    else:
+        names = (
+            "user_profile_record",
+            "schedule_task",
+            "workspace_list_dir",
+            "workspace_read_file",
+            "workspace_write_file",
+        )
     out: list[dict[str, Any]] = []
     for n in names:
         t = by_name.get(n)
@@ -887,6 +967,8 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
             },
         }
     )
+    if interactive_bootstrap_active:
+        out.extend(_openai_interactive_bootstrap_tools())
     return out
 
 
@@ -1131,6 +1213,19 @@ async def _dispatch(
         if not out.startswith("ERROR:"):
             mark_image_tool_completed(root, tool_name="modify_image")
         return out
+    if name == "companion_update_prompt_slice":
+        raw_slice = arguments.get("slice")
+        raw_content = arguments.get("content")
+        if not isinstance(raw_slice, str):
+            return "ERROR: slice must be a string"
+        if not isinstance(raw_content, str):
+            return "ERROR: content must be a string"
+        return tool_companion_update_prompt_slice(root, raw_slice, raw_content)
+    if name == "companion_bootstrap_user_interactive_complete":
+        raw_note = arguments.get("note")
+        if raw_note is not None and not isinstance(raw_note, str):
+            return "ERROR: note must be a string or omitted"
+        return tool_companion_bootstrap_user_interactive_complete(root, raw_note)
     return f"ERROR: unknown tool {name!r}"
 
 

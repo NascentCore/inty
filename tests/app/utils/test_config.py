@@ -9,6 +9,7 @@ from app.utils.companion_feature_defaults import (
 from app.utils.config import (
     AgentConfig,
     AppConfig,
+    CompanionWorkspaceBootstrapType,
     FeaturesConfig,
     CloudflareConfig,
     Config,
@@ -387,14 +388,31 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
     ]
 
 
-def test_load_config_ignores_deprecated_chat_use_companion_kernel_agent_ids():
-    yaml_text = """
+def test_features_config_companion_workspace_bootstrap_type_default():
+    f = FeaturesConfig()
+    assert f.companion_workspace_bootstrap_type == CompanionWorkspaceBootstrapType.NONE.value
+
+
+def test_features_config_companion_workspace_bootstrap_type_normalizes_case():
+    f = FeaturesConfig(companion_workspace_bootstrap_type="user_interactive")
+    assert f.companion_workspace_bootstrap_type == (
+        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    )
+
+
+def test_features_config_companion_workspace_bootstrap_type_invalid_raises():
+    with pytest.raises(ValueError, match="companion_workspace_bootstrap_type"):
+        FeaturesConfig(companion_workspace_bootstrap_type="BOGUS")
+
+
+def _minimal_yaml_for_load_config(extra_features: str) -> str:
+    return f"""
 app:
-  name: loadcfg-ws-companion-test
+  name: loadcfg-bootstrap-test
   environment: test
   gcp_service_account_key: ".secrets/inty-backend-key.json"
   features:
-    chat_use_companion_kernel_agent_ids: ["should-be-ignored"]
+{extra_features}
 security:
   secret_key: "test-secret"
 database:
@@ -409,8 +427,16 @@ firebase:
 elevenlabs:
   api_key: "test-eleven"
 """
+
+
+def test_load_config_explicit_companion_workspace_bootstrap_type():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    companion_workspace_bootstrap_type: USER_INTERACTIVE\n",
+    )
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
-    assert not hasattr(cfg.app.features, "chat_use_companion_kernel_agent_ids")
+    assert cfg.app.features.companion_workspace_bootstrap_type == (
+        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    )

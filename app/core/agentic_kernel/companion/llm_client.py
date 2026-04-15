@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Literal
 
 from loguru import logger
@@ -14,13 +15,6 @@ from app.core.agentic_kernel.providers.facade import (
 )
 
 from .llm_chat_runtime import create_chat_completion_sync
-
-
-def _env_flag_enabled(name: str) -> bool:
-    raw = os.environ.get(name)
-    if raw is None or not str(raw).strip():
-        return False
-    return str(raw).strip().lower() in ("1", "true", "yes", "on")
 
 
 def async_tool_background_enabled_from_env() -> bool:
@@ -50,7 +44,6 @@ class CompanionLLMConfig(BaseModel):
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
     enable_async_tool_background: bool = False
-    enable_dual_llm: bool = False
     async_chat_front_timeout_sec: float = Field(default=600.0, ge=1.0)
 
     @classmethod
@@ -58,7 +51,6 @@ class CompanionLLMConfig(BaseModel):
         cls,
         *,
         default_async_tool_background: bool | None = None,
-        default_enable_dual_llm: bool | None = None,
     ) -> CompanionLLMConfig:
         key = (
             os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
@@ -67,11 +59,6 @@ class CompanionLLMConfig(BaseModel):
             async_tool_background_enabled_from_env()
             if default_async_tool_background is None
             else default_async_tool_background
-        )
-        dual = (
-            _env_flag_enabled("INTY_V2_PROTO_DUAL_LLM")
-            if default_enable_dual_llm is None
-            else default_enable_dual_llm
         )
         timeout_raw = os.getenv(
             "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
@@ -99,7 +86,6 @@ class CompanionLLMConfig(BaseModel):
             user_model=(os.getenv("INTY_V2_PROTO_USER_MODEL") or "").strip(),
             soul_model=(os.getenv("INTY_V2_PROTO_SOUL_MODEL") or "").strip(),
             enable_async_tool_background=async_bg,
-            enable_dual_llm=dual,
             async_chat_front_timeout_sec=timeout_sec,
         )
 
@@ -153,8 +139,6 @@ class CompanionLLMClient:
         return self._client_dual_tool
 
     def sync_client_for_route(self, route: Literal["unified", "chat", "tool"]) -> Any:
-        if not self._config.enable_dual_llm:
-            return self._client
         if route == "chat":
             return self._ensure_dual_chat_client()
         if route == "tool":
@@ -175,16 +159,12 @@ class CompanionLLMClient:
     ) -> Any:
         tool_list = list(tools or [])
         has_tools = bool(tool_list)
-        if self._config.enable_dual_llm:
-            if has_tools:
-                client = self._ensure_dual_tool_client()
-                m = model or self._resolve_model("tool")
-            else:
-                client = self._ensure_dual_chat_client()
-                m = model or self._resolve_model("chat")
+        if has_tools:
+            client = self._ensure_dual_tool_client()
+            m = model or self._resolve_model("tool")
         else:
-            client = self._client
-            m = model or self._resolve_model("tool" if has_tools else "chat")
+            client = self._ensure_dual_chat_client()
+            m = model or self._resolve_model("chat")
         return create_chat_completion_sync(
             client,
             model=m,
@@ -218,7 +198,17 @@ class CompanionLLMClient:
         model_role: str = "memory",
     ) -> str:
         m = self._resolve_model(model_role)
+        approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
+        t_api = time.perf_counter()
         resp = self._client.chat.completions.create(model=m, messages=messages)
+        api_ms = (time.perf_counter() - t_api) * 1000.0
+        logger.info(
+            "companion complete_text model_role={} model={} chat_completions_ms={:.0f} approx_chars={}",
+            model_role,
+            m,
+            api_ms,
+            approx_chars,
+        )
         content = resp.choices[0].message.content
         if not isinstance(content, str):
             logger.warning(

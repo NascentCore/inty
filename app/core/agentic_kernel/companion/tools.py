@@ -14,8 +14,12 @@ WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 WRITABLE_RELATIVE_PATHS = REPL_WRITABLE_RELATIVE_PATHS
 
 
-def build_companion_tools() -> list[dict[str, Any]]:
-    return build_openai_repl_tools()
+def build_companion_tools(
+    *, interactive_bootstrap_active: bool = False
+) -> list[dict[str, Any]]:
+    return build_openai_repl_tools(
+        interactive_bootstrap_active=interactive_bootstrap_active
+    )
 
 
 __all__ = [

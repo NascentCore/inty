@@ -7,6 +7,7 @@ from typing import Any, Callable, Optional
 from langchain_core.messages import SystemMessage
 
 from app.core.agent import prompts
+from app.core.agentic_kernel.companion.workspace import get_imate_axiom_system_text
 
 RenderPromptFn = Callable[[str, str, Optional[str]], str]
 PromptOverrideLookupFn = Callable[[str, str], Any]
@@ -53,6 +54,13 @@ def _extract_user_name_from_profile(user_profile: str) -> Optional[str]:
 
 def _is_official_assistant(*, context: Any, config: PromptAssemblerConfig) -> bool:
     return context.agent_id == config.official_agent_id
+
+
+def _axiom_system_messages_prefix() -> list[SystemMessage]:
+    axiom = get_imate_axiom_system_text()
+    if not axiom:
+        return []
+    return [SystemMessage(content=axiom)]
 
 
 def _get_effective_main_prompt(
@@ -134,6 +142,7 @@ def build_system_messages(
 ) -> list[SystemMessage]:
     user_name = _extract_user_name_from_profile(request.user_profile)
     system_messages: list[SystemMessage] = []
+    system_messages.extend(_axiom_system_messages_prefix())
 
     main_prompt = _get_effective_main_prompt(context=context, deps=deps, config=config)
     if main_prompt:
@@ -233,6 +242,7 @@ def build_system_messages_for_official_assistant(
 ) -> list[SystemMessage]:
     user_name = _extract_user_name_from_profile(request.user_profile)
     system_messages: list[SystemMessage] = []
+    system_messages.extend(_axiom_system_messages_prefix())
 
     system_messages.extend(
         _build_character_context(

@@ -14,6 +14,7 @@ from loguru import logger
 from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, Field
 
+from .bootstrap_user_interactive import soul_prompt_is_locked_after_interactive_bootstrap
 from .memory_store import MemoryStore
 from .utc import local_date_str, local_iso_ts
 from .workspace import WorkspacePaths
@@ -435,7 +436,12 @@ def memory_update_after_turn(
     soul_signal_ok = (not config.soul_require_fundamental_signal) or (
         _soul_turn_has_fundamental_signal(user_text, assistant_text)
     )
-    run_soul_llm = soul_interval_hits and soul_signal_ok
+    soul_locked = soul_prompt_is_locked_after_interactive_bootstrap(store=store)
+    run_soul_llm = (
+        (not soul_locked)
+        and soul_interval_hits
+        and soul_signal_ok
+    )
     if run_soul_llm:
         _rewrite_soul_md(
             store,
@@ -443,6 +449,13 @@ def memory_update_after_turn(
             assistant_text=assistant_text,
             complete_fn=complete_fn,
             config=config,
+        )
+    elif soul_locked and soul_interval_hits:
+        logger.debug(
+            "memory_pipeline step=soul_md skipped turn={} every_n={} ws={} reason=soul_locked_after_interactive_bootstrap",
+            turn_n,
+            soul_every_n,
+            ws,
         )
     elif soul_interval_hits and not soul_signal_ok:
         logger.debug(

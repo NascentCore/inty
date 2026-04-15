@@ -9,6 +9,8 @@ from typing import Any
 
 from loguru import logger
 
+from app.utils.config import CompanionWorkspaceBootstrapType
+
 from .llm_client import CompanionLLMClient
 from .message_format import openai_assistant_message_dict
 from .memory_pipeline import (
@@ -17,6 +19,7 @@ from .memory_pipeline import (
     schedule_memory_update_after_turn,
 )
 from .memory_store import MemoryStore
+from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
@@ -34,7 +37,7 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompts import build_system_prompt
+from .prompts import build_system_messages
 from .repl_workspace_tools import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
@@ -74,6 +77,7 @@ async def run_turn(
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
     repository_only_workspace_text: bool = False,
+    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
 ) -> str:
     """
     执行一轮完整对话。
@@ -102,16 +106,22 @@ async def run_turn(
         defer_memory_update,
     )
     logger.debug(
-        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm={}",
+        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
         llm_client.config.api_base,
         llm_client._resolve_model("chat"),
         llm_client._resolve_model("tool"),
-        llm_client.config.enable_dual_llm,
     )
 
     # 加载 context 与 prompt bundle
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
+    interactive_bootstrap = interactive_bootstrap_active(
+        feature_enabled=(
+            workspace_bootstrap_type
+            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+        ),
+        meta=context,
+    )
     rel_tr = paths.transcript.relative_to(root).as_posix()
     loaded = load_transcript_from_store(store, rel_tr)
     window_cap = transcript_llm_window_max_messages
@@ -119,11 +129,12 @@ async def run_turn(
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
-    system = build_system_prompt(
+    system_messages = build_system_messages(
         bundle,
         context,
         enable_tools=not heartbeat_turn,
         heartbeat_turn=heartbeat_turn,
+        interactive_bootstrap_active=interactive_bootstrap,
     )
 
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
@@ -137,7 +148,7 @@ async def run_turn(
             initial_state=prior_state,
         )
         pre_user: list[dict[str, Any]] = [
-            {"role": "system", "content": system},
+            *system_messages,
             *transcript_rows_to_openai_dialogue(transcript),
         ]
         outcome = compactor.maybe_compact(messages=pre_user, turn=compaction_turn_idx)
@@ -151,7 +162,7 @@ async def run_turn(
                 outcome.approx_chars_after,
             )
     else:
-        messages = [{"role": "system", "content": system}]
+        messages = list(system_messages)
         for m in transcript:
             messages.append({"role": m.role, "content": m.content})
     user_msg_uuid = str(uuid.uuid4())
@@ -161,7 +172,11 @@ async def run_turn(
     trace_id = str(uuid.uuid4())
 
     # Tool loop
-    tools = [] if heartbeat_turn else build_companion_tools()
+    tools = (
+        []
+        if heartbeat_turn
+        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+    )
     last_text = ""
     t_loop = time.perf_counter()
 
@@ -201,10 +216,16 @@ async def run_turn(
                 model=resolved_model,
                 tools=tools or None,
             )
+            approx_ctx_chars = sum(
+                len(str(m.get("content") or "")) for m in messages
+            )
             logger.info(
-                "run_turn llm_round={} chat_completions_ms={:.0f} heartbeat={}",
+                "run_turn llm_round={} model={} chat_completions_ms={:.0f} approx_ctx_chars={} tools={} heartbeat={}",
                 round_idx,
+                resolved_model,
                 (time.perf_counter() - t_api) * 1000.0,
+                approx_ctx_chars,
+                len(tools or []),
                 heartbeat_turn,
             )
 

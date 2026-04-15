@@ -46,6 +46,18 @@ def test_build_system_prompt_tools() -> None:
     assert "workspace_read_file" in text
 
 
+def test_build_system_prompt_interactive_bootstrap_injects_spec() -> None:
+    text = build_system_prompt(
+        _minimal_bundle(),
+        ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+        enable_tools=True,
+        interactive_bootstrap_active=True,
+    )
+    assert "INTERACTIVE_BOOTSTRAP" in text
+    assert "companion_update_prompt_slice" in text
+    assert "companion_bootstrap_user_interactive_complete" in text
+
+
 def test_build_system_prompt_intimate_memory() -> None:
     b = PromptBundle(
         identity="i",

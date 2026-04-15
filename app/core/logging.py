@@ -9,8 +9,17 @@ def your_function():
     logger.info("Hello, world!")
 ```
 
+The Inty, Ops, and push worker entry modules call ``load_dotenv()`` (``python-dotenv``)
+before importing ``app``, loading ``.env`` from the process current working directory
+(assume repo root when starting via ``start.sh`` / ``uvicorn`` from the repo). Pytest
+and ad-hoc scripts that only import ``init_logger`` do not run that unless they call
+``load_dotenv`` themselves.
+
 Optional env (read in ``init_logger()``): ``INTY_LOGGING_LEVEL`` overrides YAML
-``logging.level``; ``INTY_LOG_FILE`` appends a plain-text file sink (UTF-8, enqueue).
+``logging.level`` and applies to the file sink when ``INTY_LOG_FILE`` is set.
+``INTY_CONSOLE_LOGGING_LEVEL`` overrides stderr only (omit to match ``INTY_LOGGING_LEVEL`` /
+YAML). Use e.g. ``INTY_LOGGING_LEVEL=DEBUG`` + ``INTY_CONSOLE_LOGGING_LEVEL=INFO`` +
+``INTY_LOG_FILE=...`` for DEBUG in file and INFO on terminal.
 """
 
 import logging
@@ -57,10 +66,14 @@ def init_logger():
     if not log_level:
         log_level = global_config_loaded_from_config_yaml.logging.level
 
+    console_level = os.environ.get("INTY_CONSOLE_LOGGING_LEVEL", "").strip()
+    if not console_level:
+        console_level = log_level
+
     # 添加控制台输出；colorize=True 时格式中的 <level>/<green> 等标签才会变为 ANSI 颜色
     logger.add(
         sys.stderr,
-        level=log_level,
+        level=console_level,
         format=global_config_loaded_from_config_yaml.logging.format,
         # 不指定这个参数，也没影响命令行颜色输出，但是保险起见，就加上了
         colorize=global_config_loaded_from_config_yaml.logging.colorize,

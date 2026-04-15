@@ -18,7 +18,18 @@
 ### 是否必需
 
 - **跑通 `run_turn` 不是硬性必需**：`load_context_meta` 在 store 中无文件或内容为空时返回默认 `ContextMeta()`（`context_mode` 默认为 `intimate`，三个 id 为空字符串）。
-- **仍建议保留并写入**：持久化非默认的 `context_mode`；在同一张版本表里留下 `(user_id, companion_id, chat_id)` 便于排查与扩展（当前 system prompt 主要消费 `context_mode`，见 `load_prompt_bundle` 与 `prompts.build_system_prompt` 中的 `_context_mode_clause`）。
+- **仍建议保留并写入**：持久化非默认的 `context_mode`；在同一张版本表里留下 `(user_id, companion_id, chat_id)` 便于排查与扩展（当前 system 主要消费 `context_mode`，见 `load_prompt_bundle` 与 `prompts.build_system_messages` / `build_system_prompt` 中的 `_context_mode_clause`）。
+
+## 模板目录 `templates/`
+
+- 多数 `.md` 由 `workspace.load_workspace_seed_text` 等在缺省时写入工作区；`BOOTSTRAP.md` 由交互式 bootstrap 读入，不对应持久化切片名。
+- **`AXIOM.md`**：产品层「根本法则」文案，**不**作为工作区持久化切片；正文由 `workspace.get_imate_axiom_system_text()` 从包内 `templates/AXIOM.md` 读取（`lru_cache`），并在 `prompts.build_system_messages` 中作为**首条** `system` 注入（先于安全基线与 `IDENTITY` / `SOUL` 等）。
+
+## System 与提示词切片
+
+- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`（**首条**为 AXIOM（若非空），其次为安全基线，余下为 TOOLS / HEARTBEAT / IDENTITY / SOUL 等），由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
+- **切片枚举**：`prompt_slices.PromptSliceId`（无 `AGENTS`）与 `companion_update_prompt_slice` 可写映射 `PROMPT_SLICE_TO_REL` 同源。
+- **AGENTS.md**：不再注入模型、不由 `load_prompt_bundle` 读取、`PromptBundle.agents_md` 恒为默认空；版本表仍可能保留历史 `AGENTS` 文档 kind，仅作遗留数据。
 
 ### 持久化
 

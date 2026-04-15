@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +8,9 @@ from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# 系统级别行为配置通过环境变量配置，比如日志级别、LangSmith追踪等。
+load_dotenv()
 
 # ！！！ 这个 import 必须在所有导入其他应用代码之前。
 # 因为这里设置了 LangSmith 环境变量

@@ -3,7 +3,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -147,6 +147,13 @@ class APIEndpointsConfig:
     use_dummy_api_v1_character_themes_id_get: bool = False
 
 
+class CompanionWorkspaceBootstrapType(StrEnum):
+    """WS companion workspace bootstrap mode (app.features.companion_workspace_bootstrap_type)."""
+
+    NONE = "NONE"
+    USER_INTERACTIVE = "USER_INTERACTIVE"
+
+
 @dataclass
 class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = True
@@ -155,8 +162,6 @@ class FeaturesConfig:
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # On-disk base directory for companion workspaces (user_id / agent_id / chat_id).
-    companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
     companion_default_context_mode: str = "intimate"
     # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
@@ -168,10 +173,21 @@ class FeaturesConfig:
     )
     # Optional: max transcript rows loaded before compaction (default: kernel TRANSCRIPT_WINDOW_MAX_MESSAGES).
     companion_transcript_llm_window_max_messages: Optional[int] = None
-    # WebSocket companion: agentic workspace bootstrap on first message (default off; set true in YAML to enable).
-    companion_workspace_bootstrap_enabled: bool = False
-    # Companion kernel: use separate OpenAI-compatible clients for chat vs tool rounds (LangSmith names companion_dual_*).
-    companion_enable_dual_llm: bool = False
+    # WS companion: NONE = seed minimal docs only, always run_turn;
+    # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
+    companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
+    # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
+    companion_ws_session_system_text: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        raw = (self.companion_workspace_bootstrap_type or "").strip().upper()
+        allowed = {m.value for m in CompanionWorkspaceBootstrapType}
+        if raw not in allowed:
+            raise ValueError(
+                "app.features.companion_workspace_bootstrap_type must be one of "
+                f"{sorted(allowed)}, got {self.companion_workspace_bootstrap_type!r}"
+            )
+        self.companion_workspace_bootstrap_type = raw
 
 
 @dataclass
@@ -619,9 +635,7 @@ def load_config(path: str) -> Config:
     if "limits" in app_data and isinstance(app_data["limits"], dict):
         app_data["limits"] = AppConfig.LimitsConfig(**app_data["limits"])
     if "features" in app_data and isinstance(app_data["features"], dict):
-        feats_raw = dict(app_data["features"])
-        feats_raw.pop("chat_use_companion_kernel_agent_ids", None)
-        app_data["features"] = FeaturesConfig(**feats_raw)
+        app_data["features"] = FeaturesConfig(**dict(app_data["features"]))
     if "api_endpoints" in app_data and isinstance(app_data["api_endpoints"], dict):
         app_data["api_endpoints"] = APIEndpointsConfig(**app_data["api_endpoints"])
 

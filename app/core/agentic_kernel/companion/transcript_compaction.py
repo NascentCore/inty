@@ -299,7 +299,7 @@ def save_compaction_state_to_store(
 def transcript_rows_to_openai_dialogue(rows: list[ChatMessage]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for m in rows:
-        if m.role not in ("user", "assistant"):
+        if m.role not in ("user", "assistant", "system"):
             continue
         out.append({"role": m.role, "content": m.content})
     return out
