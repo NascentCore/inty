@@ -2,6 +2,7 @@
 
 LOCAL=false
 DEBUG=false
+BUILD_FRONTEND=true
 LOG_FILE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/../../alembic/alembic.ini" ]]; then
@@ -22,6 +23,14 @@ while [[ $# -gt 0 ]]; do
       DEBUG=true
       shift
       ;;
+    --build-frontend)
+      BUILD_FRONTEND=true
+      shift
+      ;;
+    --no-build-frontend)
+      BUILD_FRONTEND=false
+      shift
+      ;;
     --log-file)
       shift
       if [[ $# -eq 0 ]]; then echo "error: --log-file requires a path"; exit 1; fi
@@ -29,7 +38,10 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help|-h)
-      echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH]"
+      echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]"
+      echo "  With --local|--dev only (ignored otherwise):"
+      echo "  --build-frontend     Run evaluation/build.sh before uvicorn (default: on)"
+      echo "  --no-build-frontend  Skip that step; use existing app/static/evaluation"
       echo "  --local|--dev   Dev/local mode: seed admin + report fixtures, uvicorn --reload"
       echo "  --debug         Loguru + uvicorn log level DEBUG (via INTY_LOGGING_LEVEL)"
       echo "  --log-file PATH Also write logs to PATH (via INTY_LOG_FILE; UTF-8 append)."
@@ -66,6 +78,13 @@ if [ "$DEBUG" = true ]; then
 fi
 
 if [ "$LOCAL" = true ]; then
+  if [ "$BUILD_FRONTEND" = true ]; then
+    echo "Building evaluation static assets (npm install + build -> app/static/evaluation)..."
+    ./evaluation/build.sh
+  else
+    echo "Skipping evaluation static build (--no-build-frontend)."
+  fi
+
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
 

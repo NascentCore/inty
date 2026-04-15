@@ -42,10 +42,10 @@ cp devops/config.yaml.test config.yaml
 
 在**仓库根目录**执行：
 
-**开发模式**（会构建 evaluation 前端、注入测试用户与种子数据、uvicorn --reload）：
+**开发模式**（默认先跑 `evaluation/build.sh` 同步静态资源、注入测试用户与种子数据、uvicorn `--reload`；加快迭代可加 `--no-build-frontend`）：
 
 ```bash
-# 启动后端、然后启动 npm dev server
+# 启动 Ops；另开终端按需运行: cd evaluation && npm run dev
 ./backend/ops/start.sh --dev
 ```
 
