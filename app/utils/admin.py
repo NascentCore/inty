@@ -15,8 +15,6 @@ SUPER_USER_EMAILS = [
     "charlesfengyu@gmail.com",
     # 与上面原因类似，学宝的 Google 账户 email
     "1032505449sl@gmail.com",
-    # 陈平个人 Google 账户，因测试live chat，加入列表方便测试
-    "kotlinaai@gmail.com",
 ]
 
 # 公共的 Google Email 用于测试，目前只是记录该信息，没有在后端做特别处理。
