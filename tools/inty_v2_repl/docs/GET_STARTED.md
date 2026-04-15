@@ -42,7 +42,7 @@ backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log
 与 `--local`（或 `--dev`）组合使用，便于联调 WebSocket、`/api/v1/chat/ws`、companion 等：
 
 - **`--debug`**：导出 `INTY_LOGGING_LEVEL=DEBUG`，并为 uvicorn 增加 `--log-level debug`，应用内 Loguru 与访问日志更细。
-- **`--log-file PATH`**：导出 `INTY_LOG_FILE=PATH`，由 `app/core/logging.py` 为 Loguru **追加**一个 UTF-8 文件 sink（与控制台并行）。`PATH` 相对**当前 shell 工作目录**，常用写法如 `./inty-ops-local.log` 或 `./logs/ops.log`。
+- **`--log-file PATH`**：导出 `INTY_LOG_FILE=PATH`，由 `app/core/logging.py` 为 Loguru **追加**一个 UTF-8 文件 sink（与控制台并行）。与 **`--debug` 同用时**，脚本会设 `INTY_CONSOLE_LOGGING_LEVEL=INFO`，终端 INFO、文件仍 DEBUG。`PATH` 相对**当前 shell 工作目录**。
 
 查看全部选项：`backend/ops/start.sh --help`。
 

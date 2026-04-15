@@ -1014,7 +1014,7 @@ def _repl_run_backend_ws_branch(
     agent_resolved = _resolve_chat_agent_id_cli(agent_id)
     base = (api_base_url or default_api_base_url()).strip()
     token = _resolve_bearer_token_cli()
-    url = http_base_to_ws_chat_url(base)
+    url = http_base_to_ws_chat_url(base, agent_id=agent_resolved)
     logger.info(
         "repl backend-ws api_base={} ws_url={} agent_id={}",
         base,
@@ -1026,6 +1026,9 @@ def _repl_run_backend_ws_branch(
     bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
     bridge.start()
     try:
+        kick = bridge.drain_proactive_assistant_if_any(timeout_sec=8.0)
+        if kick:
+            _print_assistant_reply(kick, 0.0)
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)
     finally:
         bridge.stop()

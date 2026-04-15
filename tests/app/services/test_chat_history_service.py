@@ -1,8 +1,10 @@
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.services.chat_history_service import (
+    _parse_message_content,
     get_latest_ai_message_info,
     get_latest_user_message_id,
 )
@@ -10,6 +12,10 @@ from app.services.chat_history_service import (
 
 class TestChatHistoryService:
     """Test chat history service functionality"""
+
+    def test_parse_message_content_system_type(self) -> None:
+        raw = json.dumps({"type": "system", "data": {"content": "gate"}})
+        assert _parse_message_content(raw) == {"content": "gate", "role": "system"}
 
     @pytest.mark.asyncio
     async def test_get_latest_ai_message_info_returns_none_when_no_chat_history(self):

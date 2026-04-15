@@ -85,6 +85,10 @@ class ContextMeta(BaseModel):
     chat_id: str = ""
     # True = skip interactive-bootstrap injection (default for legacy context.json without this key).
     workspace_bootstrap_user_interactive_completed: bool = True
+    # True = skip inserting the one-shot WS companion session system line (default for legacy / non-interactive).
+    companion_ws_session_system_written: bool = True
+    # True = skip WebSocket connect-time interactive bootstrap kickoff (default for legacy / non-interactive).
+    companion_ws_interactive_kickoff_sent: bool = True
 
 
 def load_prompt_bundle(

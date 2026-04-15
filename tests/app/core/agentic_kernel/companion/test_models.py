@@ -48,6 +48,8 @@ def test_context_meta_defaults() -> None:
     c = ContextMeta()
     assert c.context_mode == "intimate"
     assert c.workspace_bootstrap_user_interactive_completed is True
+    assert c.companion_ws_session_system_written is True
+    assert c.companion_ws_interactive_kickoff_sent is True
 
 
 def test_transcript_for_llm_turn_short() -> None:

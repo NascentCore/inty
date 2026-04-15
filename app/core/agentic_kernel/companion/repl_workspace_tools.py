@@ -37,6 +37,7 @@ from .image_gate import (
 from .memory_registry import get_memory_store
 from .bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
+    soul_prompt_is_locked_after_interactive_bootstrap,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_update_prompt_slice,
 )
@@ -351,6 +352,11 @@ def tool_workspace_write_file(
     st = get_memory_store(root)
     if not _is_orm_mapped_workspace_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
+    if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
+        return (
+            "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
+            "you may still update IDENTITY.md, USER.md, MEMORY.md, and other allowed paths."
+        )
     prev_body = st.read_document_if_exists(rel)
     if rel == "transcript.jsonl":
         v_err = _transcript_jsonl_validate_for_tool_write(content)
@@ -606,7 +612,9 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                 "description": (
                     "Overwrite one workspace prompt slice (root markdown) in MemoryStore. "
                     "Use during interactive relationship bootstrap instead of workspace_write_file. "
-                    "Pass the full updated markdown as content."
+                    "Pass the full updated markdown as content. "
+                    "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
+                    "IDENTITY / USER / MEMORY and other listed slices may still be updated."
                 ),
                 "parameters": {
                     "type": "object",
@@ -632,8 +640,9 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                 "name": "companion_bootstrap_user_interactive_complete",
                 "description": (
                     "Mark interactive workspace bootstrap as finished in context.json. "
-                    "Call only when you judge the opening relationship-building phase is done; "
-                    "after this, normal workspace_write_file rules apply again on future turns."
+                    "Bootstrap here means the SOUL slice has been initialized for this relationship; "
+                    "after this call SOUL.md must not change (tools and background updates). "
+                    "Call when that phase is done; IDENTITY / USER / MEMORY slices may still be edited later."
                 ),
                 "parameters": {
                     "type": "object",

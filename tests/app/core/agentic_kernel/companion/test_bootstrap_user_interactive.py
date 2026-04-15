@@ -6,12 +6,16 @@ from pathlib import Path
 
 from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
     interactive_bootstrap_active,
+    soul_prompt_is_locked_after_interactive_bootstrap,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_update_prompt_slice,
 )
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.models import ContextMeta
-from app.core.agentic_kernel.companion.repl_workspace_tools import execute_tool_call
+from app.core.agentic_kernel.companion.repl_workspace_tools import (
+    execute_tool_call,
+    tool_workspace_write_file,
+)
 from app.core.agentic_kernel.companion.tools import build_companion_tools
 
 
@@ -104,3 +108,78 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
     assert json.loads(st.read_document("context.json"))[
         "workspace_bootstrap_user_interactive_completed"
     ] is True
+
+
+def test_soul_lock_helper_requires_explicit_context_key(tmp_path: Path) -> None:
+    st = get_memory_store(tmp_path)
+    assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
+    st.write_document(
+        "context.json",
+        json.dumps({"user_id": "u"}, ensure_ascii=False) + "\n",
+    )
+    assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {"user_id": "u", "workspace_bootstrap_user_interactive_completed": False},
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {"user_id": "u", "workspace_bootstrap_user_interactive_completed": True},
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    assert soul_prompt_is_locked_after_interactive_bootstrap(store=st)
+
+
+def test_soul_slice_rejected_after_interactive_bootstrap_complete(tmp_path: Path) -> None:
+    root = tmp_path
+    st = get_memory_store(root)
+    st.write_document("SOUL.md", "seed")
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "intimate",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    err = tool_companion_update_prompt_slice(root, "SOUL", "nope")
+    assert err.startswith("ERROR:")
+    assert st.read_document("SOUL.md") == "seed"
+    ok = tool_companion_update_prompt_slice(root, "USER", "# ok\n")
+    assert ok.startswith("OK ")
+    assert st.read_document("USER.md") == "# ok\n"
+
+
+def test_workspace_write_soul_rejected_after_interactive_bootstrap_complete(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    st = get_memory_store(root)
+    st.write_document("SOUL.md", "seed")
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "workspace_bootstrap_user_interactive_completed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    err = tool_workspace_write_file(root, "SOUL.md", "hacked")
+    assert err.startswith("ERROR:")
+    assert st.read_document("SOUL.md") == "seed"

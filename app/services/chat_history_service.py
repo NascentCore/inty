@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Set, Union
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_postgres import PostgresChatMessageHistory
 from loguru import logger
 from sqlalchemy import and_, desc, func, or_, select, update
@@ -74,7 +74,12 @@ def _parse_message_content(message_raw) -> Dict[str, str]:
             content = _extract_text_from_content(message_data["content"])
 
         # 确定角色
-        role = "user" if message_type in ["human", "HumanMessage"] else "assistant"
+        if message_type == "system":
+            role = "system"
+        elif message_type in ["human", "HumanMessage"]:
+            role = "user"
+        else:
+            role = "assistant"
 
         return {"content": content, "role": role}
 
@@ -410,6 +415,44 @@ def add_ai_message_sync(
 
     except Exception as e:
         logger.error(f"添加AI消息失败(sync) {session_id}: {str(e)}")
+        raise
+
+
+def add_system_message_sync(
+    session_id: str,
+    message: str | List[Dict[str, Any]],
+    meta_data: Optional[dict] = None,
+) -> Optional[int]:
+    """Persist a system role line for chat history (e.g. companion WS session gate)."""
+    try:
+        conn = get_chat_history_connection()
+        message_data = {"type": "system", "data": {"content": message}}
+        final_meta = meta_data.copy() if meta_data else None
+        insert_query = """
+            INSERT INTO chat_history (session_id, message, meta_data)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                insert_query,
+                (
+                    session_id,
+                    json.dumps(message_data),
+                    json.dumps(final_meta) if final_meta else None,
+                ),
+            )
+            result = cur.fetchone()
+            message_id = result[0] if result else None
+        logger.debug(
+            "添加 system 消息到会话 {}: {} ID={}",
+            session_id,
+            _message_preview_for_log(message),
+            message_id,
+        )
+        return message_id
+    except Exception as e:
+        logger.error(f"添加 system 消息失败(sync) {session_id}: {str(e)}")
         raise
 
 
@@ -1359,11 +1402,15 @@ def get_messages_paginated(
                     content = _extract_text_from_content(raw_content)
 
                     # 确定角色
-                    role = (
-                        "user"
-                        if message_type in ["human", "HumanMessage"]
-                        else "assistant"
-                    )
+                    if message_type == "system":
+                        role = "system"
+                        sender_type = "SYSTEM"
+                    elif message_type in ["human", "HumanMessage"]:
+                        role = "user"
+                        sender_type = "USER"
+                    else:
+                        role = "assistant"
+                        sender_type = "AI"
 
                     # 处理meta_data
                     meta_data = None
@@ -1378,9 +1425,7 @@ def get_messages_paginated(
                     message_obj = {
                         "id": message_id,  # 添加消息ID
                         "role": role,
-                        "sender_type": (
-                            "USER" if role == "user" else "AI"
-                        ),  # 添加 sender_type 以保持向后兼容
+                        "sender_type": sender_type,
                         "content": content,
                         "audio_url": audio_url,  # 添加audio_url字段
                         "meta_data": meta_data,  # 添加meta_data字段
@@ -1656,6 +1701,8 @@ def get_history_messages(session_id: str) -> List[BaseMessage]:
 
                     if message_type in ["human", "HumanMessage"]:
                         messages.append(HumanMessage(content=content, **message_kwargs))
+                    elif message_type == "system":
+                        messages.append(SystemMessage(content=content, **message_kwargs))
                     else:
                         messages.append(AIMessage(content=content, **message_kwargs))
 
@@ -1730,6 +1777,20 @@ async def add_ai_message_sync_async(
         session_id,
         message,
         agent_id,
+        meta_data,
+    )
+
+
+async def add_system_message_async(
+    session_id: str,
+    message: str | List[Dict[str, Any]],
+    meta_data: Optional[dict] = None,
+) -> Optional[int]:
+    """在线程池中执行同步 system 消息写入。"""
+    return await asyncio.to_thread(
+        add_system_message_sync,
+        session_id,
+        message,
         meta_data,
     )
 

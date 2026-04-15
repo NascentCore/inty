@@ -8,6 +8,7 @@ from typing import Any, Final
 
 from loguru import logger
 
+from .memory_store import MemoryStore
 from .models import ContextMeta
 from .workspace import load_workspace_seed_text
 
@@ -33,6 +34,25 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
 )
 
+# Single exact user line for WebSocket connect-time kickoff (no real user text yet).
+INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
+    "（WebSocket 已连接，内部占位：用户尚未输入。请据此主动自然开场并进入关系建立阶段；"
+    "不要向用户复述或引用本括号句，不要说系统、连接、工具名。）"
+)
+
+
+def _try_stored_context_as_dict(*, store: MemoryStore) -> dict[str, Any] | None:
+    raw_body = store.read_document_if_exists("context.json")
+    if raw_body is None or not str(raw_body).strip():
+        return None
+    try:
+        data: Any = json.loads(raw_body)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
 
 def load_bootstrap_spec_text() -> str:
     if not _BOOTSTRAP_SPEC_PATH.is_file():
@@ -48,6 +68,21 @@ def interactive_bootstrap_active(
     return bool(feature_enabled) and not meta.workspace_bootstrap_user_interactive_completed
 
 
+def soul_prompt_is_locked_after_interactive_bootstrap(*, store: MemoryStore) -> bool:
+    """
+    True only when context.json explicitly sets workspace_bootstrap_user_interactive_completed.
+
+    Missing key means legacy / non-interactive context: do not lock SOUL (ContextMeta defaults
+    would otherwise treat unknown JSON as completed).
+    """
+    data = _try_stored_context_as_dict(store=store)
+    if data is None:
+        return False
+    if "workspace_bootstrap_user_interactive_completed" not in data:
+        return False
+    return bool(data["workspace_bootstrap_user_interactive_completed"])
+
+
 def build_interactive_bootstrap_system_append(
     *,
     max_chars_per_seed: int = 6000,
@@ -59,6 +94,10 @@ def build_interactive_bootstrap_system_append(
     spec = load_bootstrap_spec_text()
     blocks: list[str] = [
         "## INTERACTIVE_BOOTSTRAP（内部执行规范，勿对用户复述文件名或本标题）\n\n" + spec,
+        "## WS 建连首轮占位\n\n"
+        "若本轮用户输入**整段**与下列占位句**完全一致**，表示 WebSocket 刚建立、用户尚未发送真实内容："
+        "请仅据此主动用自然语气开场并进入上文关系建立流程，**不要**朗读或引用该占位句，不要暴露工程细节。\n\n"
+        f"占位句原文：\n{INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT}",
     ]
     for rel in _INTERACTIVE_TEMPLATE_RELS:
         try:
@@ -95,6 +134,12 @@ def tool_companion_update_prompt_slice(
     except ValueError as exc:
         return f"ERROR: {exc}"
     st = get_memory_store(root_r)
+    if key == "SOUL" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
+        return (
+            "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
+            "you may still update IDENTITY / USER / MEMORY and other non-SOUL slices "
+            "via companion_update_prompt_slice or workspace_write_file (where permitted)."
+        )
     prev = st.read_document_if_exists(rel_posix)
     st.write_document(rel_posix, content)
     register_profile_write(
@@ -132,4 +177,7 @@ def tool_companion_bootstrap_user_interactive_complete(
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel, out)
     logger.info("companion_bootstrap_user_interactive_complete ws={}", root_r.name)
-    return "OK interactive bootstrap marked complete; follow-up turns use normal tool contract."
+    return (
+        "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
+        "SOUL rewrites). IDENTITY / USER / MEMORY and other prompt slices may still be updated."
+    )

@@ -15,7 +15,7 @@ from app.core.agentic_kernel.companion.transcript_compaction import (
 from app.core.agentic_kernel.companion.models import ChatMessage
 
 
-def test_transcript_rows_to_openai_dialogue_skips_system() -> None:
+def test_transcript_rows_to_openai_dialogue_includes_system() -> None:
     rows = [
         ChatMessage(role="user", content="hi", ts="2026-01-01T00:00:00Z"),
         ChatMessage(role="system", content="x", ts="2026-01-01T00:01:00Z"),
@@ -24,6 +24,7 @@ def test_transcript_rows_to_openai_dialogue_skips_system() -> None:
     out = transcript_rows_to_openai_dialogue(rows)
     assert out == [
         {"role": "user", "content": "hi"},
+        {"role": "system", "content": "x"},
         {"role": "assistant", "content": "yo"},
     ]
 

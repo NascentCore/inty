@@ -181,6 +181,8 @@ class FeaturesConfig:
     companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
     # Companion kernel: use separate OpenAI-compatible clients for chat vs tool rounds (LangSmith names companion_dual_*).
     companion_enable_dual_llm: bool = False
+    # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
+    companion_ws_session_system_text: Optional[str] = None
 
     def __post_init__(self) -> None:
         raw = (self.companion_workspace_bootstrap_type or "").strip().upper()

@@ -25,10 +25,14 @@ class BackendChatWsError(RuntimeError):
         super().__init__(f"chat ws error code={code} message={message!r}")
 
 
-def http_base_to_ws_chat_url(http_base: str) -> str:
+def http_base_to_ws_chat_url(http_base: str, *, agent_id: str | None = None) -> str:
     base = http_base.strip().rstrip("/")
     ws_base = base.replace("http://", "ws://").replace("https://", "wss://")
-    return f"{ws_base}/api/v1/chat/ws"
+    url = f"{ws_base}/api/v1/chat/ws"
+    aid = (agent_id or "").strip()
+    if aid:
+        url = f"{url}?agent_id={aid}"
+    return url
 
 
 def _parse_chat_response_payload(data: dict[str, Any]) -> str:
@@ -177,6 +181,36 @@ class BackendChatWsBridge:
         if not self._loop or not self._ws:
             self.stop()
             raise RuntimeError("WebSocket failed to start (no connection)")
+
+    def drain_proactive_assistant_if_any(self, *, timeout_sec: float = 8.0) -> str | None:
+        """
+        After connect, the server may push one ``USER_INTERACTIVE`` bootstrap kickoff completion
+        before any client chat frame. Drain at most one such JSON response and return assistant text.
+        """
+        if not self._loop:
+            raise RuntimeError("bridge not started")
+        fut = asyncio.run_coroutine_threadsafe(
+            self._drain_proactive_assistant_async(timeout_sec=timeout_sec),
+            self._loop,
+        )
+        return fut.result(timeout=max(timeout_sec + 10.0, 30.0))
+
+    async def _drain_proactive_assistant_async(self, *, timeout_sec: float) -> str | None:
+        deadline = time.monotonic() + 35.0
+        await self._wait_online_async(deadline_monotonic=deadline)
+        if not self._response_q:
+            return None
+        try:
+            data = await asyncio.wait_for(
+                self._response_q.get(), timeout=timeout_sec
+            )
+        except TimeoutError:
+            return None
+        try:
+            return _parse_chat_response_payload(data)
+        except (BackendChatWsError, ValueError) as e:
+            logger.warning("chat ws proactive drain skipped: {}", e)
+            return None
 
     async def _sleep_backoff(self, attempt_index: int, halt: asyncio.Event) -> None:
         delay = reconnect_delay_sec(

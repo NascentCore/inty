@@ -81,6 +81,28 @@ def test_logging_config_colorize():
     assert stripped == cfg_plain.format, "colorized format must equal plain format after stripping color tags"
 
 
+def test_inty_console_logging_level_filters_stderr_not_file(
+    tmp_path, monkeypatch, capsys
+):
+    log_path = tmp_path / "app.log"
+    monkeypatch.setenv("INTY_LOGGING_LEVEL", "DEBUG")
+    monkeypatch.setenv("INTY_CONSOLE_LOGGING_LEVEL", "INFO")
+    monkeypatch.setenv("INTY_LOG_FILE", str(log_path))
+    logger.remove()
+    init_logger()
+
+    logger.debug("inty_split_log_debug_marker")
+    logger.info("inty_split_log_info_marker")
+    logger.complete()
+
+    err = capsys.readouterr().err
+    assert "inty_split_log_debug_marker" not in err
+    assert "inty_split_log_info_marker" in err
+    body = log_path.read_text(encoding="utf-8")
+    assert "inty_split_log_debug_marker" in body
+    assert "inty_split_log_info_marker" in body
+
+
 def test_logging_suppresses_openai_request_payload_debug_logs():
     init_logger()
 

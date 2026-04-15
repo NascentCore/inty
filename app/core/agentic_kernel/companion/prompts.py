@@ -136,8 +136,10 @@ def _output_contract_text_interactive_bootstrap_tools(
 ) -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
-        "（0）本阶段须用 **companion_update_prompt_slice** 覆盖写入约定切片（IDENTITY / SOUL / USER / MEMORY 等）；"
-        "**禁止**使用 workspace_write_file 写入上述根目录约定稿。"
+        "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 等落到可用初稿）；"
+        "须用 **companion_update_prompt_slice** 写入各约定切片；**禁止**使用 workspace_write_file 写入上述根目录约定稿。"
+        "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
+        "IDENTITY / USER / MEMORY 等切片在后续日常轮次仍可用 companion_update_prompt_slice 或 workspace_write_file 按需更新。"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
         "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
