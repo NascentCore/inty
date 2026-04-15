@@ -44,33 +44,22 @@ logger.debug(
 _validate_config(global_config_loaded_from_config_yaml)
 
 
-def _langsmith_tracing_v2_from_environment() -> bool | None:
+def _langsmith_tracing_v2_enabled() -> bool:
     """
-    If LANGSMITH_TRACING_V2 is set to a recognized boolean string, return that intent.
-    None means unset or empty: caller should fall back to config-derived default.
+    Sole switch for LangSmith tracing: enable only when LANGSMITH_TRACING_V2 is a
+    truthy token. Unset, empty, false-like, or unrecognized values all mean off.
     """
     raw = os.environ.get("LANGSMITH_TRACING_V2")
     if raw is None:
-        return None
-    s = raw.strip()
-    if not s:
-        return None
-    lo = s.lower()
-    if lo in ("1", "true", "yes", "on"):
-        return True
-    if lo in ("0", "false", "no", "off"):
         return False
-    return None
+    lo = raw.strip().lower()
+    return lo in ("1", "true", "yes", "on")
 
 
 def set_langsmith_environment_variables(config: Config) -> None:
     # LangSmith 仅支持通过环境变量控制 tracing，不支持依赖注入。
     langsmith_project = f"{config.app.name}-{config.app.environment.value}"
-    explicit = _langsmith_tracing_v2_from_environment()
-    if explicit is not None:
-        tracing_enabled = explicit
-    else:
-        tracing_enabled = config.app.environment != Environment.TEST
+    tracing_enabled = _langsmith_tracing_v2_enabled()
     os.environ["LANGSMITH_TRACING_V2"] = "true" if tracing_enabled else "false"
     os.environ["LANGSMITH_PROJECT"] = langsmith_project
     os.environ["LANGCHAIN_API_KEY"] = config.agent.langchain_api_key

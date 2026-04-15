@@ -60,7 +60,7 @@ backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log
 | `INTY_CONSOLE_LOGGING_LEVEL` | 仅控制 **stderr** 上的 Loguru 级别；未设置时与 `INTY_LOGGING_LEVEL`（或 YAML）相同。可与 `INTY_LOGGING_LEVEL=DEBUG` 组合实现「终端 INFO、文件 DEBUG」。 |
 | `INTY_LOG_FILE` | 若为非空路径，Loguru 额外 **追加** UTF-8 文件 sink（`enqueue=True`）。路径为**相对路径时相对于进程 cwd**，请在仓库根启动或写绝对路径。 |
 
-`LANGSMITH_TRACING_V2` 等也可写在仓库根 `.env` 中以便启动前进入 `os.environ`；但 `app.core.config` 在导入后仍可能按 `config.yaml` 覆盖 LangSmith 相关键，勿假定仅改 `.env` 即可关闭线上 tracing，以 YAML 与部署文档为准。
+`LANGSMITH_TRACING_V2` 写在仓库根 `.env`（或进程环境）中：`true` / `1` / `yes` / `on`（大小写不敏感）为唯一开启 LangSmith tracing 的方式；未设置、空字符串、`false` / `0` / `no` / `off` 或其它值一律关闭。`app.core.config` 在导入时会把该变量规范成 `true` 或 `false` 并仍设置 `LANGSMITH_PROJECT` 与 `LANGCHAIN_API_KEY`（来自 `config.yaml`）。
 
 Ops 平台启动后，参考下面的截图来创建智能体，并使用该智能体进行测试。
 
