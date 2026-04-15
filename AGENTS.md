@@ -69,7 +69,7 @@ User instructions always override this file.
 1. 用户当前消息中的直接指令
 2. 仓库根目录 `AGENTS.md`
 3. 目标子目录中的 `AGENTS.md`
-4. 其他文档（`README.md`、`TODOS.md`）
+4. `docs/` 目录下的文档
 
 执行时保持最小变更原则：
 
