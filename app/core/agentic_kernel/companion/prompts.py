@@ -7,6 +7,7 @@ from typing import Any
 from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
 from .models import ContextMeta, PromptBundle
 from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
+from .workspace import get_imate_axiom_system_text
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 
@@ -253,6 +254,9 @@ def build_system_messages(
     )
 
     out: list[dict[str, Any]] = []
+    axiom = get_imate_axiom_system_text()
+    if axiom:
+        out.append(_system_message(axiom))
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:

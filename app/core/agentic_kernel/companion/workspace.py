@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from loguru import logger
@@ -18,6 +19,16 @@ def load_workspace_seed_text(filename: str) -> str:
     if not path.is_file():
         raise FileNotFoundError(f"missing companion workspace seed template: {path}")
     return read_text(path).rstrip() + "\n"
+
+
+@lru_cache(maxsize=1)
+def get_imate_axiom_system_text() -> str | None:
+    """Product axiom from templates/AXIOM.md; first system slice for iMate. None if empty."""
+    body = load_workspace_seed_text("AXIOM.md").strip()
+    if not body:
+        logger.warning("AXIOM.md is empty after strip; skipping axiom system injection")
+        return None
+    return body
 
 
 @dataclass(frozen=True)

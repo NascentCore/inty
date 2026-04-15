@@ -23,11 +23,11 @@
 ## 模板目录 `templates/`
 
 - 多数 `.md` 由 `workspace.load_workspace_seed_text` 等在缺省时写入工作区；`BOOTSTRAP.md` 由交互式 bootstrap 读入，不对应持久化切片名。
-- **`AXIOM.md`**：产品层「根本法则」文案，**当前内核路径未加载**（未出现在 `prompt_slices` / `ensure_minimal_workspace_documents_in_store` 等）；若要让模型稳定看到，需再接到 `prompts.build_system_prompt` 或等价注入点。
+- **`AXIOM.md`**：产品层「根本法则」文案，**不**作为工作区持久化切片；正文由 `workspace.get_imate_axiom_system_text()` 从包内 `templates/AXIOM.md` 读取（`lru_cache`），并在 `prompts.build_system_messages` 中作为**首条** `system` 注入（先于安全基线与 `IDENTITY` / `SOUL` 等）。
 
 ## System 与提示词切片
 
-- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`，由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
+- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`（**首条**为 AXIOM（若非空），其次为安全基线，余下为 TOOLS / HEARTBEAT / IDENTITY / SOUL 等），由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
 - **切片枚举**：`prompt_slices.PromptSliceId`（无 `AGENTS`）与 `companion_update_prompt_slice` 可写映射 `PROMPT_SLICE_TO_REL` 同源。
 - **AGENTS.md**：不再注入模型、不由 `load_prompt_bundle` 读取、`PromptBundle.agents_md` 恒为默认空；版本表仍可能保留历史 `AGENTS` 文档 kind，仅作遗留数据。
 

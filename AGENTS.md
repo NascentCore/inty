@@ -1,4 +1,17 @@
-# Inty 长期 AI 陪伴（仓库总入口 AGENTS.md）
+# Inty：长期AI情感陪伴
+
+Inty代表Intelligent Entity，有智能的存在，其内涵是有情感的AI。
+
+这个代码仓库是以这个理念指引的各类产品。包括Python写的智能体云端服务、Android移动端App
+为用户提供交互界面；以及OPs平台用于支持运营和商业化。
+
+这是一个Monorepo，所有资料信息都可以存放。
+
+我们使用Cursor，Cursor会通过MCP、CLI与飞书（Inty团队的OA系统）打通。
+
+## Override Rule
+
+User instructions always override this file.
 
 ## Output
 
@@ -67,14 +80,6 @@
 - Do not add features beyond what was asked.
 - Do not refactor surrounding code when fixing a bug.
 - Do not create new files unless strictly necessary.
-
-## Override Rule
-
-User instructions always override this file.
-
-## 产品简介
-
-- 产品方向：面向 35+ 男性用户的亲密陪伴AI，应是一个以聊天为核心、长期稳定且低负担、可实时响应并识别用户状态，在不过度打扰的前提下以精准稀疏的主动触达建立长期情感连接，并提供成熟、有文化与智性深度互动的共情型智能体。
 
 ## Cursor Cloud Agent 执行契约（强制）
 

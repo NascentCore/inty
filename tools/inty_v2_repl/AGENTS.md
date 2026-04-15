@@ -47,23 +47,24 @@ Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of 
 
 Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with `\n\n---\n\n`.
 
-1. Fixed security baseline (untrusted user input; respect SOUL/USER boundaries).
-2. **`AGENTS.md`** — if non-empty.
-3. **`TOOLS.md`** — if non-empty.
-4. **`HEARTBEAT.md`** — if non-empty.
-5. **`IDENTITY.md`**
-6. **`SOUL.md`**
-7. Context-mode clause (derived from `context.json`, not a file).
-8. **`USER.md`**
-9. **Only if `context_mode` is `intimate`**, and file has content (after caps):
+1. **`AXIOM.md`** (package template via `workspace.get_imate_axiom_system_text`) — product axiom; omitted if file empty after strip.
+2. Fixed security baseline (untrusted user input; respect SOUL/USER boundaries).
+3. **`AGENTS.md`** — if non-empty.
+4. **`TOOLS.md`** — if non-empty.
+5. **`HEARTBEAT.md`** — if non-empty.
+6. **`IDENTITY.md`**
+7. **`SOUL.md`**
+8. Context-mode clause (derived from `context.json`, not a file).
+9. **`USER.md`**
+10. **Only if `context_mode` is `intimate`**, and file has content (after caps):
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
-10. Output / tool contract (REPL adds `user_profile_record`, `schedule_task`, workspace file tools, optional `google_web_search` (Google Custom Search API; env `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`), optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
+11. Output / tool contract (REPL adds `user_profile_record`, `schedule_task`, workspace file tools, optional `google_web_search` (Google Custom Search API; env `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`), optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
 
 `generate_image` at runtime uses the **Inty repo-root** `config.yaml` (`fal.api_key`, GCS settings) via `app.core.images.fal`; see [README.md](README.md). Optional env `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` overrides the GCS object prefix; `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` skips GCS upload for faster local-only images.
 
-Optional docs (2–4) omitted entirely when missing or empty — no placeholder sections.
+Optional docs (3–5) omitted entirely when missing or empty — no placeholder sections.
 
 ## Disk read order in `load_prompt_bundle`
 
