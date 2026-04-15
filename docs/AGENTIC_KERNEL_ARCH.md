@@ -96,7 +96,7 @@ flowchart LR
   SVC --> HIST
 ```
 
-- **Workspace authority** for API companion: documents and transcript versions go through **`MemoryStore`** (ORM-backed), not local disk under `companion_workspaces_base_dir` as source of truth when DSN is configured (see `app/api/ENDPOINTS.md` companion section).
+- **Workspace authority** for API companion: documents and transcript versions go through **`MemoryStore`** (ORM-backed), not local disk as source of truth when DSN is configured (see `app/api/ENDPOINTS.md` companion section).
 - **Product chat history**: user/assistant (and optional system / kickoff metadata) via `chat_history_service` after companion returns.
 
 ## End-to-end control flow (WebSocket + companion)

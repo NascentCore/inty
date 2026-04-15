@@ -163,8 +163,6 @@ class FeaturesConfig:
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # On-disk base directory for companion workspaces (user_id / agent_id / chat_id).
-    companion_workspaces_base_dir: str = "/var/lib/inty/companion_workspaces"
     # Default context_mode written to new companion context.json (e.g. intimate).
     companion_default_context_mode: str = "intimate"
     # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
@@ -641,6 +639,7 @@ def load_config(path: str) -> Config:
         feats_raw = dict(app_data["features"])
         feats_raw.pop("chat_use_companion_kernel_agent_ids", None)
         feats_raw.pop("companion_enable_dual_llm", None)
+        feats_raw.pop("companion_workspaces_base_dir", None)
         leg = feats_raw.pop("companion_workspace_bootstrap_enabled", None)
         inter = feats_raw.pop("companion_workspace_bootstrap_user_interactive_enabled", None)
         if "companion_workspace_bootstrap_type" not in feats_raw:

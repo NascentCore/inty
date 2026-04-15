@@ -26,6 +26,10 @@ from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
 from app.core.config import global_config_loaded_from_config_yaml
 from app.utils.config import CompanionWorkspaceBootstrapType
 
+# Synthetic Path prefix for workspace_root joining; Postgres MemoryStore keys are
+# user_id + companion_id + chat_id only (see SqlAlchemyMemoryRepository).
+COMPANION_API_WORKSPACE_ROOT_PREFIX = Path("/var/lib/inty/companion_workspaces")
+
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
     "并温和邀请对方说说此刻状态或想聊的事；不要提及系统、连接、初始化、工具名。"
@@ -42,7 +46,7 @@ def _companion_runtime_config_fingerprint() -> str:
     raw = feats.companion_transcript_compaction
     raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
     parts = [
-        str(feats.companion_workspaces_base_dir),
+        str(COMPANION_API_WORKSPACE_ROOT_PREFIX),
         str(feats.companion_default_context_mode),
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
@@ -62,7 +66,7 @@ def _companion_manager_for_resolved_model(
     _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
-    base = Path(feats.companion_workspaces_base_dir).expanduser()
+    base = COMPANION_API_WORKSPACE_ROOT_PREFIX.expanduser()
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
     llm = CompanionLLMConfig(
         api_key=api_key,

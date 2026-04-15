@@ -22,6 +22,7 @@ from .turn import run_turn
 from .workspace import (
     WorkspacePaths,
     ensure_minimal_workspace_documents_in_store,
+    ensure_template_seeded_core_companion_documents_in_store,
     is_workspace_initialized_from_store,
     needs_startup_profile_inquiry,
 )
@@ -154,8 +155,10 @@ class CompanionManager:
 
             if (
                 self._config.workspace_bootstrap_type
-                != CompanionWorkspaceBootstrapType.LEGACY.value
+                == CompanionWorkspaceBootstrapType.LEGACY.value
             ):
+                ensure_template_seeded_core_companion_documents_in_store(ws_path, store)
+            else:
                 ensure_minimal_workspace_documents_in_store(ws_path, store)
 
             session = CompanionSession(

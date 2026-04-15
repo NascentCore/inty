@@ -133,12 +133,39 @@ def is_workspace_initialized_from_store(workspace: Path, store: MemoryStore) -> 
 
 _MINIMAL_TRANSCRIPT_SEED = "# companion_minimal_seed\n"
 
+_CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
+    "identity",
+    "soul",
+    "user_md",
+    "memory_md",
+)
+
+
+def ensure_template_seeded_core_companion_documents_in_store(
+    workspace: Path,
+    store: MemoryStore,
+) -> None:
+    """
+    Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
+    body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
+    Does not touch transcript.jsonl so LEGACY bootstrap can still run until the five-piece gate
+    is satisfied.
+    """
+    root = workspace.resolve()
+    paths = WorkspacePaths(root=root)
+    for attr in _CORE_COMPANION_TEMPLATE_ATTRS:
+        rel = getattr(paths, attr).relative_to(root).as_posix()
+        body = store.read_document_if_exists(rel)
+        if body is None or not body.strip():
+            store.write_document(rel, load_workspace_seed_text(rel))
+
 
 def ensure_minimal_workspace_documents_in_store(
     workspace: Path,
     store: MemoryStore,
 ) -> None:
     """Write seed content for required paths into MemoryStore only (no disk authority)."""
+    ensure_template_seeded_core_companion_documents_in_store(workspace, store)
     root = workspace.resolve()
     if is_workspace_initialized_from_store(root, store):
         return

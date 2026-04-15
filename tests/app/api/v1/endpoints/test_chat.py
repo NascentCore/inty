@@ -4,6 +4,7 @@ import asyncio
 import json
 import uuid
 from datetime import date, datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -818,10 +819,9 @@ def _setup_companion_ws_chat_test_env(
 ) -> None:
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_workspaces_base_dir",
-        workspace_dir,
-        raising=False,
+        companion_chat_service,
+        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        Path(workspace_dir),
     )
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
@@ -966,10 +966,9 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     """POST completions always uses legacy Agent (companion kernel is WebSocket-only)."""
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_workspaces_base_dir",
-        "/tmp/inty_test_companion_ws",
-        raising=False,
+        companion_chat_service,
+        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        Path("/tmp/inty_test_companion_ws"),
     )
 
     captured: dict = {"companion_calls": 0}
@@ -1134,10 +1133,9 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     """WebSocket /api/v1/chat/ws always uses companion kernel (same stubs as HTTP path)."""
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
-        global_config_loaded_from_config_yaml.app.features,
-        "companion_workspaces_base_dir",
-        "/tmp/inty_test_companion_ws_ws",
-        raising=False,
+        companion_chat_service,
+        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        Path("/tmp/inty_test_companion_ws_ws"),
     )
 
     captured: dict = {"companion_calls": 0}

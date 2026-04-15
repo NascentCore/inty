@@ -28,7 +28,7 @@
 ## 5. 阶段 3 - 身份与工作区映射 - 已实现
 
 - `CompanionManager.get_or_create_session(user_id, agent_id, chat_key)`，`chat_key` 为 `str(chat.id)`（`companion_chat_service.run_companion_chat_turn_for_api`）。
-- 工作区根目录由 `app.features.companion_workspaces_base_dir` 配置（默认 `/var/lib/inty/companion_workspaces`），仅参与 `workspace_root` 数据库键前缀；在 `companion_chat_service` + 已配置数据库 DSN 时**不在**该路径下 `mkdir` 或写入权威状态文件（见 `app/api/ENDPOINTS.md` 与 `MemoryStore.uses_repository_without_workspace_disk`）。
+- 工作区根路径前缀为 `app.services.companion_chat_service.COMPANION_API_WORKSPACE_ROOT_PREFIX`（默认 `/var/lib/inty/companion_workspaces`）+ `user_id/agent_id/chat_id`，用于 `Path` 拼接与进程内 `MemoryStore` 注册；在 `companion_chat_service` + 已配置数据库 DSN 时 ORM 键为 `user_id` + `companion_id` + `chat_id`，**不在**磁盘 `mkdir` 或写入权威状态文件（见 `app/api/ENDPOINTS.md` 与 `MemoryStore.uses_repository_without_workspace_disk`）。
 - 用户多段纯文本在 HTTP/WS 侧仍经 `HumanMessage` / `extract_text_content` 等路径；companion 路径当前以**拼接后的纯文本** `user_text` 调用 `run_turn`（含图的多模态见 backlog）。
 
 ## 6. 阶段 4 - 异步、超时与 DB 会话
@@ -58,7 +58,6 @@
 app:
   features:
     chat_ws_idle_timeout_seconds: 60
-    companion_workspaces_base_dir: "/var/lib/inty/companion_workspaces"
     companion_default_context_mode: "intimate"
     # 可选：companion 转写压缩；null 关闭
     # companion_transcript_compaction: ...
