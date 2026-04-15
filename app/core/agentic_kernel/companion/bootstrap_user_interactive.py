@@ -60,7 +60,10 @@ def interactive_bootstrap_active(
     feature_enabled: bool,
     meta: ContextMeta,
 ) -> bool:
-    return bool(feature_enabled) and not meta.workspace_bootstrap_user_interactive_completed
+    return (
+        bool(feature_enabled)
+        and not meta.workspace_bootstrap_user_interactive_completed
+    )
 
 
 def soul_prompt_is_locked_after_interactive_bootstrap(*, store: MemoryStore) -> bool:
@@ -87,7 +90,8 @@ def build_interactive_bootstrap_system_message_parts(
     """
     spec = load_bootstrap_spec_text()
     blocks: list[str] = [
-        "## INTERACTIVE_BOOTSTRAP（内部执行规范，勿对用户复述文件名或本标题）\n\n" + spec,
+        "## INTERACTIVE_BOOTSTRAP（内部执行规范，勿对用户复述文件名或本标题）\n\n"
+        + spec,
         "## WS 建连首轮占位\n\n"
         "若本轮用户输入**整段**与下列占位句**完全一致**，表示 WebSocket 刚建立、用户尚未发送真实内容："
         "请仅据此主动用自然语气开场并进入上文关系建立流程，**不要**朗读或引用该占位句，不要暴露工程细节。\n\n"
@@ -111,7 +115,9 @@ def build_interactive_bootstrap_system_append(
 ) -> str:
     """Legacy single-string join of bootstrap blocks (prefer build_interactive_bootstrap_system_message_parts)."""
     return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
-        build_interactive_bootstrap_system_message_parts(max_chars_per_seed=max_chars_per_seed)
+        build_interactive_bootstrap_system_message_parts(
+            max_chars_per_seed=max_chars_per_seed
+        )
     )
 
 
@@ -127,9 +133,7 @@ def tool_companion_update_prompt_slice(
 
     sid = parse_persistable_prompt_slice_id(slice_name)
     if sid is None:
-        return (
-            f"ERROR: unknown slice {slice_name!r}; use one of: {persistable_slice_names_csv()}"
-        )
+        return f"ERROR: unknown slice {slice_name!r}; use one of: {persistable_slice_names_csv()}"
     rel = PROMPT_SLICE_TO_REL[sid]
     root_r = root.resolve()
     p = resolve_under_workspace(root_r, rel)
@@ -139,7 +143,9 @@ def tool_companion_update_prompt_slice(
     except ValueError as exc:
         return f"ERROR: {exc}"
     st = get_memory_store(root_r)
-    if sid == PromptSliceId.SOUL and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
+    if sid == PromptSliceId.SOUL and soul_prompt_is_locked_after_interactive_bootstrap(
+        store=st
+    ):
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
             "you may still update IDENTITY / USER / MEMORY and other non-SOUL slices "
@@ -153,7 +159,12 @@ def tool_companion_update_prompt_slice(
         changed=(prev != content),
         new_content=content,
     )
-    logger.info("companion_update_prompt_slice slice={} rel={} chars={}", sid.value, rel_posix, len(content))
+    logger.info(
+        "companion_update_prompt_slice slice={} rel={} chars={}",
+        sid.value,
+        rel_posix,
+        len(content),
+    )
     return f"OK wrote prompt slice {sid.value} to {rel_posix} ({len(content)} chars)"
 
 
@@ -178,7 +189,9 @@ def tool_companion_bootstrap_user_interactive_complete(
         return "ERROR: context.json must be a JSON object"
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
-        data["workspace_bootstrap_user_interactive_complete_note"] = str(note).strip()[:2000]
+        data["workspace_bootstrap_user_interactive_complete_note"] = str(note).strip()[
+            :2000
+        ]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel, out)
     logger.info("companion_bootstrap_user_interactive_complete ws={}", root_r.name)

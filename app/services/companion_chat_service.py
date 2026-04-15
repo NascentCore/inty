@@ -303,9 +303,8 @@ async def run_companion_chat_turn_for_api(
     cfg = global_config_loaded_from_config_yaml
     agent_cfg = cfg.agent
     api_base = (
-        (agent_cfg.chat_llm_base_url or agent_cfg.base_url or "").strip()
-        or "https://openrouter.ai/api/v1"
-    )
+        agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
+    ).strip() or "https://openrouter.ai/api/v1"
     t0 = time.perf_counter()
     logger.debug(
         "companion_chat_turn start user={} agent={} chat={} model={} api_base={} defer_memory={}",

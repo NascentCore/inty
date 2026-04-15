@@ -260,9 +260,15 @@ def build_system_messages(
     out.append(_system_message(_security_base()))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
-        out.append(_system_message("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip()))
+        out.append(
+            _system_message("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
+        )
     if bundle.heartbeat_md.strip():
-        out.append(_system_message("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip()))
+        out.append(
+            _system_message(
+                "## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip()
+            )
+        )
 
     if heartbeat_turn:
         out.append(_system_message(_heartbeat_clause()))
@@ -297,12 +303,15 @@ def build_system_messages(
         if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
             out.append(
                 _system_message(
-                    "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
+                    "## MEMORY 当日总结\n\n"
+                    + bundle.memory_day_summary_today_md.strip()
                 )
             )
         if not skip_memory_blocks and bundle.memory_md.strip():
             out.append(
-                _system_message("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
+                _system_message(
+                    "## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip()
+                )
             )
 
     if (
@@ -335,7 +344,9 @@ def build_system_messages(
                     )
                 )
         else:
-            out.append(_system_message(_output_contract_text_chat_branch_mirrored_tools()))
+            out.append(
+                _system_message(_output_contract_text_chat_branch_mirrored_tools())
+            )
     else:
         out.append(_system_message(_output_contract_text()))
 
