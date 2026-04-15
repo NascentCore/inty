@@ -17,7 +17,6 @@ class PromptContext(BaseModel):
     soul: str = ""
     user_md: str = ""
     memory_md: str = ""
-    agents_md: str = ""
     tools_md: str = ""
     heartbeat_md: str = ""
 

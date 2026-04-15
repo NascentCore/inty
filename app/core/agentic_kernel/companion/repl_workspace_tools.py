@@ -76,7 +76,6 @@ WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 # REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
-        "AGENTS.md",
         "CAPABILITIES.md",
         "HEARTBEAT.md",
         "IDENTITY.md",
@@ -603,7 +602,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
 
 
 def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
-    slice_enum = sorted(PROMPT_SLICE_TO_REL.keys())
+    slice_enum = sorted(s.value for s in PROMPT_SLICE_TO_REL)
     return [
         {
             "type": "function",

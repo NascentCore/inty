@@ -37,7 +37,7 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompts import build_system_prompt
+from .prompts import build_system_messages
 from .repl_workspace_tools import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
@@ -129,7 +129,7 @@ async def run_turn(
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
-    system = build_system_prompt(
+    system_messages = build_system_messages(
         bundle,
         context,
         enable_tools=not heartbeat_turn,
@@ -148,7 +148,7 @@ async def run_turn(
             initial_state=prior_state,
         )
         pre_user: list[dict[str, Any]] = [
-            {"role": "system", "content": system},
+            *system_messages,
             *transcript_rows_to_openai_dialogue(transcript),
         ]
         outcome = compactor.maybe_compact(messages=pre_user, turn=compaction_turn_idx)
@@ -162,7 +162,7 @@ async def run_turn(
                 outcome.approx_chars_after,
             )
     else:
-        messages = [{"role": "system", "content": system}]
+        messages = list(system_messages)
         for m in transcript:
             messages.append({"role": m.role, "content": m.content})
     user_msg_uuid = str(uuid.uuid4())

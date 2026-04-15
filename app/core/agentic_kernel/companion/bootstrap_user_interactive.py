@@ -10,22 +10,17 @@ from loguru import logger
 
 from .memory_store import MemoryStore
 from .models import ContextMeta
+from .prompt_slices import (
+    PROMPT_SLICE_TO_REL,
+    SYSTEM_PROMPT_SLICE_SEPARATOR,
+    PromptSliceId,
+    parse_persistable_prompt_slice_id,
+    persistable_slice_names_csv,
+)
 from .workspace import load_workspace_seed_text
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "templates" / "BOOTSTRAP.md"
-
-# Slice names accepted by companion_update_prompt_slice (maps to workspace root files).
-PROMPT_SLICE_TO_REL: Final[dict[str, str]] = {
-    "IDENTITY": "IDENTITY.md",
-    "SOUL": "SOUL.md",
-    "USER": "USER.md",
-    "MEMORY": "MEMORY.md",
-    "AGENTS": "AGENTS.md",
-    "HEARTBEAT": "HEARTBEAT.md",
-    "TOOLS": "TOOLS.md",
-    "CAPABILITIES": "CAPABILITIES.md",
-}
 
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "IDENTITY.md",
@@ -83,13 +78,12 @@ def soul_prompt_is_locked_after_interactive_bootstrap(*, store: MemoryStore) -> 
     return bool(data["workspace_bootstrap_user_interactive_completed"])
 
 
-def build_interactive_bootstrap_system_append(
+def build_interactive_bootstrap_system_message_parts(
     *,
     max_chars_per_seed: int = 6000,
-) -> str:
+) -> list[str]:
     """
-    Internal-only text appended to system prompt while interactive bootstrap is active.
-    Includes BOOTSTRAP.md plus package seed templates for orientation (not live store bodies).
+    Ordered system bodies while interactive bootstrap is active (one string per future system message).
     """
     spec = load_bootstrap_spec_text()
     blocks: list[str] = [
@@ -108,7 +102,17 @@ def build_interactive_bootstrap_system_append(
         if max_chars_per_seed > 0 and len(body) > max_chars_per_seed:
             body = body[: max_chars_per_seed - 1] + "\n…[truncated]"
         blocks.append(f"## TEMPLATE_REFERENCE {rel}\n\n{body}")
-    return "\n\n---\n\n".join(blocks)
+    return blocks
+
+
+def build_interactive_bootstrap_system_append(
+    *,
+    max_chars_per_seed: int = 6000,
+) -> str:
+    """Legacy single-string join of bootstrap blocks (prefer build_interactive_bootstrap_system_message_parts)."""
+    return SYSTEM_PROMPT_SLICE_SEPARATOR.join(
+        build_interactive_bootstrap_system_message_parts(max_chars_per_seed=max_chars_per_seed)
+    )
 
 
 def tool_companion_update_prompt_slice(
@@ -121,11 +125,12 @@ def tool_companion_update_prompt_slice(
     from .repl_workspace_tools import resolve_under_workspace
     from .workspace_doc_mapping import parse_workspace_relative_path
 
-    key = (slice_name or "").strip().upper()
-    rel = PROMPT_SLICE_TO_REL.get(key)
-    if rel is None:
-        allowed = ", ".join(sorted(PROMPT_SLICE_TO_REL))
-        return f"ERROR: unknown slice {slice_name!r}; use one of: {allowed}"
+    sid = parse_persistable_prompt_slice_id(slice_name)
+    if sid is None:
+        return (
+            f"ERROR: unknown slice {slice_name!r}; use one of: {persistable_slice_names_csv()}"
+        )
+    rel = PROMPT_SLICE_TO_REL[sid]
     root_r = root.resolve()
     p = resolve_under_workspace(root_r, rel)
     rel_posix = p.relative_to(root_r).as_posix()
@@ -134,7 +139,7 @@ def tool_companion_update_prompt_slice(
     except ValueError as exc:
         return f"ERROR: {exc}"
     st = get_memory_store(root_r)
-    if key == "SOUL" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
+    if sid == PromptSliceId.SOUL and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
             "you may still update IDENTITY / USER / MEMORY and other non-SOUL slices "
@@ -148,8 +153,8 @@ def tool_companion_update_prompt_slice(
         changed=(prev != content),
         new_content=content,
     )
-    logger.info("companion_update_prompt_slice slice={} rel={} chars={}", key, rel_posix, len(content))
-    return f"OK wrote prompt slice {key} to {rel_posix} ({len(content)} chars)"
+    logger.info("companion_update_prompt_slice slice={} rel={} chars={}", sid.value, rel_posix, len(content))
+    return f"OK wrote prompt slice {sid.value} to {rel_posix} ({len(content)} chars)"
 
 
 def tool_companion_bootstrap_user_interactive_complete(

@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
-from .bootstrap_user_interactive import build_interactive_bootstrap_system_append
-from .models import ContextMeta, PromptBundle
+from typing import Any
 
-SYSTEM_PROMPT_SEP = "\n\n---\n\n"
+from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
+from .models import ContextMeta, PromptBundle
+from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
+
+SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
+
+
+def _system_message(content: str) -> dict[str, Any]:
+    return {"role": "system", "content": content}
 
 
 def _security_base() -> str:
@@ -222,6 +229,119 @@ def _tool_side_compact_directive() -> str:
     )
 
 
+def build_system_messages(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    *,
+    enable_tools: bool = False,
+    enable_user_profile_tool: bool = False,
+    heartbeat_turn: bool = False,
+    inner_tick_turn: bool = False,
+    repl_online_ack_turn: bool = False,
+    ai_private_text: str = "",
+    include_repl_image_generation_contract: bool = True,
+    tool_side_compact: bool = False,
+    chat_output_format_prompt: str | None = None,
+    interactive_bootstrap_active: bool = False,
+) -> list[dict[str, Any]]:
+    tools_on = enable_tools or enable_user_profile_tool
+    chat_branch_no_tool_api = (
+        tools_on
+        and not heartbeat_turn
+        and not inner_tick_turn
+        and not include_repl_image_generation_contract
+    )
+
+    out: list[dict[str, Any]] = []
+    out.append(_system_message(_security_base()))
+
+    if bundle.tools_md.strip() and not chat_branch_no_tool_api:
+        out.append(_system_message("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip()))
+    if bundle.heartbeat_md.strip():
+        out.append(_system_message("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip()))
+
+    if heartbeat_turn:
+        out.append(_system_message(_heartbeat_clause()))
+
+    if inner_tick_turn:
+        out.append(_system_message(_inner_tick_ai_private_section(ai_private_text)))
+        out.append(_system_message(_inner_tick_turn_section()))
+
+    if repl_online_ack_turn:
+        out.append(_system_message(_repl_online_ack_clause()))
+
+    if tool_side_compact and not heartbeat_turn and not inner_tick_turn:
+        out.append(_system_message(_tool_side_compact_directive()))
+
+    out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
+    out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
+    out.append(_system_message(_context_mode_clause(context)))
+    out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
+
+    skip_memory_blocks = (
+        tool_side_compact and not heartbeat_turn and not inner_tick_turn
+    )
+    intimate = context.context_mode.strip().lower() == "intimate"
+    if intimate:
+        if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
+            out.append(
+                _system_message(
+                    "## MEMORY 日记（今日原始）\n\n"
+                    + bundle.memory_raw_diary_today_md.strip()
+                )
+            )
+        if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
+            out.append(
+                _system_message(
+                    "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
+                )
+            )
+        if not skip_memory_blocks and bundle.memory_md.strip():
+            out.append(
+                _system_message("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
+            )
+
+    if (
+        interactive_bootstrap_active
+        and tools_on
+        and not heartbeat_turn
+        and not inner_tick_turn
+    ):
+        for block in build_interactive_bootstrap_system_message_parts():
+            out.append(_system_message(block))
+
+    if inner_tick_turn:
+        out.append(_system_message(_output_contract_text_inner_tick()))
+    elif tools_on and not heartbeat_turn and not inner_tick_turn:
+        if include_repl_image_generation_contract:
+            if interactive_bootstrap_active:
+                out.append(
+                    _system_message(
+                        _output_contract_text_interactive_bootstrap_tools(
+                            include_repl_image_generation_contract=True,
+                        )
+                    )
+                )
+            else:
+                out.append(
+                    _system_message(
+                        _output_contract_text_with_tools(
+                            include_repl_image_generation_contract=True,
+                        )
+                    )
+                )
+        else:
+            out.append(_system_message(_output_contract_text_chat_branch_mirrored_tools()))
+    else:
+        out.append(_system_message(_output_contract_text()))
+
+    chat_output = (chat_output_format_prompt or "").strip()
+    if chat_output:
+        out.append(_system_message(_chat_output_format_contract_text(chat_output)))
+
+    return out
+
+
 def build_system_prompt(
     bundle: PromptBundle,
     context: ContextMeta,
@@ -237,97 +357,18 @@ def build_system_prompt(
     chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
 ) -> str:
-    # enable_user_profile_tool 是 prototype 用的参数名, enable_tools 是原 kernel 参数名
-    # 任一为 True 即启用工具
-    tools_on = enable_tools or enable_user_profile_tool
-
-    # chat 分支: 不挂载工具 API 的 chat 路, 镜像工具定义但不调用
-    chat_branch_no_tool_api = (
-        tools_on
-        and not heartbeat_turn
-        and not inner_tick_turn
-        and not include_repl_image_generation_contract
+    msgs = build_system_messages(
+        bundle,
+        context,
+        enable_tools=enable_tools,
+        enable_user_profile_tool=enable_user_profile_tool,
+        heartbeat_turn=heartbeat_turn,
+        inner_tick_turn=inner_tick_turn,
+        repl_online_ack_turn=repl_online_ack_turn,
+        ai_private_text=ai_private_text,
+        include_repl_image_generation_contract=include_repl_image_generation_contract,
+        tool_side_compact=tool_side_compact,
+        chat_output_format_prompt=chat_output_format_prompt,
+        interactive_bootstrap_active=interactive_bootstrap_active,
     )
-
-    parts: list[str] = [_security_base()]
-
-    if bundle.agents_md.strip():
-        parts.append("## AGENTS（工作空间约定）\n\n" + bundle.agents_md.strip())
-    if bundle.tools_md.strip() and not chat_branch_no_tool_api:
-        parts.append("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
-    if bundle.heartbeat_md.strip():
-        parts.append("## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip())
-
-    if heartbeat_turn:
-        parts.append(_heartbeat_clause())
-
-    if inner_tick_turn:
-        parts.append(_inner_tick_ai_private_section(ai_private_text))
-        parts.append(_inner_tick_turn_section())
-
-    if repl_online_ack_turn:
-        parts.append(_repl_online_ack_clause())
-
-    if tool_side_compact and not heartbeat_turn and not inner_tick_turn:
-        parts.append(_tool_side_compact_directive())
-
-    parts.extend(
-        [
-            "## IDENTITY\n\n" + bundle.identity.strip(),
-            "## SOUL\n\n" + bundle.soul.strip(),
-            _context_mode_clause(context),
-            "## USER\n\n" + bundle.user_md.strip(),
-        ]
-    )
-
-    skip_memory_blocks = (
-        tool_side_compact and not heartbeat_turn and not inner_tick_turn
-    )
-    intimate = context.context_mode.strip().lower() == "intimate"
-    if intimate:
-        if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
-            parts.append(
-                "## MEMORY 日记（今日原始）\n\n"
-                + bundle.memory_raw_diary_today_md.strip()
-            )
-        if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
-            parts.append(
-                "## MEMORY 当日总结\n\n" + bundle.memory_day_summary_today_md.strip()
-            )
-        if not skip_memory_blocks and bundle.memory_md.strip():
-            parts.append("## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip())
-
-    if (
-        interactive_bootstrap_active
-        and tools_on
-        and not heartbeat_turn
-        and not inner_tick_turn
-    ):
-        parts.append(build_interactive_bootstrap_system_append())
-
-    if inner_tick_turn:
-        parts.append(_output_contract_text_inner_tick())
-    elif tools_on and not heartbeat_turn and not inner_tick_turn:
-        if include_repl_image_generation_contract:
-            if interactive_bootstrap_active:
-                parts.append(
-                    _output_contract_text_interactive_bootstrap_tools(
-                        include_repl_image_generation_contract=True,
-                    )
-                )
-            else:
-                parts.append(
-                    _output_contract_text_with_tools(
-                        include_repl_image_generation_contract=True,
-                    )
-                )
-        else:
-            parts.append(_output_contract_text_chat_branch_mirrored_tools())
-    else:
-        parts.append(_output_contract_text())
-
-    chat_output = (chat_output_format_prompt or "").strip()
-    if chat_output:
-        parts.append(_chat_output_format_contract_text(chat_output))
-
-    return SYSTEM_PROMPT_SEP.join(parts)
+    return SYSTEM_PROMPT_SEP.join(str(m.get("content") or "") for m in msgs)
