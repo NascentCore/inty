@@ -217,10 +217,16 @@ async def run_turn(
                 model=resolved_model,
                 tools=tools or None,
             )
+            approx_ctx_chars = sum(
+                len(str(m.get("content") or "")) for m in messages
+            )
             logger.info(
-                "run_turn llm_round={} chat_completions_ms={:.0f} heartbeat={}",
+                "run_turn llm_round={} model={} chat_completions_ms={:.0f} approx_ctx_chars={} tools={} heartbeat={}",
                 round_idx,
+                resolved_model,
                 (time.perf_counter() - t_api) * 1000.0,
+                approx_ctx_chars,
+                len(tools or []),
                 heartbeat_turn,
             )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Literal
 
 from loguru import logger
@@ -218,7 +219,17 @@ class CompanionLLMClient:
         model_role: str = "memory",
     ) -> str:
         m = self._resolve_model(model_role)
+        approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
+        t_api = time.perf_counter()
         resp = self._client.chat.completions.create(model=m, messages=messages)
+        api_ms = (time.perf_counter() - t_api) * 1000.0
+        logger.info(
+            "companion complete_text model_role={} model={} chat_completions_ms={:.0f} approx_chars={}",
+            model_role,
+            m,
+            api_ms,
+            approx_chars,
+        )
         content = resp.choices[0].message.content
         if not isinstance(content, str):
             logger.warning(

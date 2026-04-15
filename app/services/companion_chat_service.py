@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import uuid
 from functools import lru_cache
 from pathlib import Path
@@ -235,31 +236,43 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
     if meta.companion_ws_interactive_kickoff_sent:
         return None
 
+    t0 = time.perf_counter()
+    t_ws0 = time.perf_counter()
     await _maybe_append_companion_ws_session_system(
         session=session,
         session_id=session_id,
     )
+    ws_system_ms = (time.perf_counter() - t_ws0) * 1000.0
+    t_rt0 = time.perf_counter()
     reply = await manager.run_turn(
         session,
         INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
         defer_memory_update=True,
     )
+    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
+    total_ms = (time.perf_counter() - t0) * 1000.0
     if not reply or not str(reply).strip():
         logger.warning(
-            "companion_ws_interactive_kickoff empty reply user={} agent={} chat={}",
+            "companion_ws_interactive_kickoff empty reply user={} agent={} chat={} total_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f}",
             user_id,
             agent_id,
             chat_id,
+            total_ms,
+            ws_system_ms,
+            run_turn_ms,
         )
         return None
     # Mark before chat_history persist so reconnect does not run a second run_turn (transcript already
     # has this turn). If add_ai_message later fails, operators may see transcript vs chat_history skew.
     _mark_companion_ws_interactive_kickoff_sent_in_store(session)
     logger.info(
-        "companion_ws_interactive_kickoff_sent user={} agent={} chat={}",
+        "companion_ws_interactive_kickoff_sent user={} agent={} chat={} total_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f}",
         user_id,
         agent_id,
         chat_id,
+        total_ms,
+        ws_system_ms,
+        run_turn_ms,
     )
     return reply
 
@@ -291,8 +304,10 @@ async def run_companion_chat_turn_for_api(
     cfg = global_config_loaded_from_config_yaml
     agent_cfg = cfg.agent
     api_base = (
-        agent_cfg.chat_llm_base_url or agent_cfg.base_url or ""
-    ).strip() or "https://openrouter.ai/api/v1"
+        (agent_cfg.chat_llm_base_url or agent_cfg.base_url or "").strip()
+        or "https://openrouter.ai/api/v1"
+    )
+    t0 = time.perf_counter()
     logger.debug(
         "companion_chat_turn start user={} agent={} chat={} model={} api_base={} defer_memory={}",
         user_id,
@@ -302,11 +317,13 @@ async def run_companion_chat_turn_for_api(
         api_base,
         defer_memory_update,
     )
+    t_mgr0 = time.perf_counter()
     manager = _companion_manager_for_resolved_model(
         resolved_chat_model_id, _companion_runtime_config_fingerprint()
     )
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
+    manager_session_ms = (time.perf_counter() - t_mgr0) * 1000.0
     if not session.is_initialized:
         if (
             session.config.workspace_bootstrap_type
@@ -330,16 +347,43 @@ async def run_companion_chat_turn_for_api(
                 raise RuntimeError(
                     "Companion workspace failed to initialize after bootstrap"
                 )
+            logger.info(
+                "companion_chat_turn finished path=bootstrap user={} agent={} chat={} total_ms={:.0f} manager_session_ms={:.0f} user_chars={}",
+                user_id,
+                agent_id,
+                chat_id,
+                (time.perf_counter() - t0) * 1000.0,
+                manager_session_ms,
+                len(user_text),
+            )
             return reply
         raise RuntimeError(
             "Companion workspace not initialized (bootstrap disabled; expected seed at session create)"
         )
+    t_ws0 = time.perf_counter()
     await _maybe_append_companion_ws_session_system(
         session=session,
         session_id=session_id,
     )
-    return await manager.run_turn(
+    ws_system_ms = (time.perf_counter() - t_ws0) * 1000.0
+    t_rt0 = time.perf_counter()
+    out = await manager.run_turn(
         session,
         user_text,
         defer_memory_update=defer_memory_update,
     )
+    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
+    logger.info(
+        "companion_chat_turn finished path=kernel user={} agent={} chat={} model={} total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} user_chars={} defer_memory={}",
+        user_id,
+        agent_id,
+        chat_id,
+        resolved_chat_model_id,
+        (time.perf_counter() - t0) * 1000.0,
+        manager_session_ms,
+        ws_system_ms,
+        run_turn_ms,
+        len(user_text),
+        defer_memory_update,
+    )
+    return out
