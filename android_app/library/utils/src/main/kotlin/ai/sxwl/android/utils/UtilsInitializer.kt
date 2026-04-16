@@ -19,7 +19,6 @@ class UtilsInitializer : Initializer<Unit> {
 
             // 初始化Utils工具类
             Utils.init(app)
-            CrashUtils.init()
             LogUtils.getConfig()
                 .setLogSwitch(AppUtils.isAppDebug())
                 .setBorderSwitch(false)
