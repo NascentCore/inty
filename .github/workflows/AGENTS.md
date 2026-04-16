@@ -18,7 +18,7 @@
 
 Dev & prod sharing the same VM on GCP.
 
-**iMate 第二 Inty 实例**：在 [build_and_deploy_backend.yml](build_and_deploy_backend.yml) / [build_and_deploy_ops.yml](build_and_deploy_ops.yml) 的 **Run workflow** 中选择 Environment `imate-dev`、`imate-prod` 或 **`imate`**（Ops 独立库与域名，见 [docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md](../../docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md)）；需对应 GitHub Environment `vars`（含 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL` 等，见 `devops/README.md`）。
+**iMate 第二 Inty 实例**：[build_and_deploy_backend.yml](build_and_deploy_backend.yml)：`main` **push** 默认 **`imate-dev`**（`config.yaml.imate_dev`）；**schedule** 默认 GitHub Environment **`imate-prod`**（`config.yaml.imate_prod` / `inty-backend-imate-prod`）。手动 **Run workflow** 默认 `imate-dev`。与 [build_and_deploy_ops.yml](build_and_deploy_ops.yml) 一样可选 `imate-dev` / `imate-prod` / **`imate`**（Ops 见 [docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md](../../docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md)）；需对应 GitHub Environment `vars`（后端为 `SERVICE_PORT_ON_HOST`、`SERVICE_PUBLIC_URL` 等，见 `devops/README.md`）。
 
 ## Dify 定时聊天调用
 
