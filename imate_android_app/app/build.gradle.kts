@@ -77,7 +77,7 @@ android {
         buildConfigField(
             "String",
             "WEB_CLIENT_ID",
-            "\"1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com\"",
+            "\"1034291688895-f7eurgtisf1hhi16k4lti13g0grjtrit.apps.googleusercontent.com\"",
         )
     }
 
@@ -105,6 +105,12 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
+            )
+
+            buildConfigField(
+                "String",
+                "WEB_CLIENT_ID",
+                "\"1034291688895-h5qhttfnanvv3c382aijomaqe9p7ei7f.apps.googleusercontent.com\"",
             )
         }
         debug {

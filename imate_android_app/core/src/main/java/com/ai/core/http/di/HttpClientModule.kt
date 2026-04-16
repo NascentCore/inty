@@ -20,7 +20,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object KtorHttpClientSingleton {
-    private const val BASE_URL = " https://dev.imate.sxwl.ai/"
+    private const val BASE_URL = "https://dev.imate.sxwl.ai/"
     private const val LOG_TAG = "KtorHttp"
 
     private val debugNetworkLogger =
