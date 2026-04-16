@@ -515,7 +515,9 @@ async def generate_background_animated(
         )
 
 
-def get_opposite_gender(gender: str) -> str:
+def get_opposite_gender(gender: str | None) -> str:
+    if not gender:
+        return ""
     gender_mapping = {
         "male": "female",
         "female": "male",
