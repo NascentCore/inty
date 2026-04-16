@@ -9,14 +9,16 @@
 - **受众**：投资人、行业观察者、社区贡献者
 - **非受众**：非终端用户
 
-## 语言风格
+## 叙事参照（语言密度与意象）
 
-[The Book of the New Sun](https://en.wikipedia.org/wiki/The_Book_of_the_New_Sun)
-1980 The Shadow of the Torturer
-1981 The Claw of the Conciliator
-1982 The Sword of the Lictor
-1983 The Citadel of the Autarch
-1987 The Urth of the New Sun
+希望近未来都市叙事带一点「不可靠叙述者、仪式化细节、科技即神话」的重量感，而非轻喜剧口吻。参照谱系之一：
+
+- [The Book of the New Sun](https://en.wikipedia.org/wiki/The_Book_of_the_New_Sun)（Gene Wolfe）
+  - 1980 *The Shadow of the Torturer*
+  - 1981 *The Claw of the Conciliator*
+  - 1982 *The Sword of the Lictor*
+  - 1983 *The Citadel of the Autarch*
+  - 1987 *The Urth of the New Sun*
 
 ## 一句话梗概
 
@@ -85,5 +87,4 @@
 
 ## 灵感
 
-https://youtu.be/ssxdSVQN14I?si=4Eargckyrawheg2B
-小鹏 iron 机器人如何更像人
+- [小鹏 Iron 人形机器人相关讨论（视频）](https://youtu.be/ssxdSVQN14I?si=4Eargckyrawheg2B)：人机动作与「像人」边界，可对照多模态陪伴的「真实感」设计。
