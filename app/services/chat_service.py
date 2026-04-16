@@ -5,7 +5,8 @@ from typing import List, Optional, Union
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -690,17 +691,50 @@ async def get_or_create_chat_by_agent(
             )
             logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
 
-        # 8. 创建新的聊天会话
-        chat_id = str(uuid.uuid4())
-        db_chat = models.Chat(id=chat_id, user_id=user_id, agent_id=agent_id)
-
+        # 8. 原子创建聊天会话，避免并发下触发唯一索引冲突日志
+        new_chat_id = str(uuid.uuid4())
         logger.debug(
-            f"创建新聊天会话 - Chat ID: {chat_id}, User ID: {user_id}, Agent ID: {agent_id}"
+            f"创建新聊天会话 - Chat ID: {new_chat_id}, User ID: {user_id}, Agent ID: {agent_id}"
         )
 
-        db.add(db_chat)
+        insert_stmt = (
+            pg_insert(models.Chat)
+            .values(
+                id=new_chat_id,
+                user_id=user_id,
+                agent_id=agent_id,
+                is_active=True,
+            )
+            .on_conflict_do_nothing(
+                index_elements=[models.Chat.user_id, models.Chat.agent_id],
+                index_where=text("is_active = true"),
+            )
+            .returning(models.Chat.id)
+        )
+        inserted_chat_id = (await db.execute(insert_stmt)).scalar_one_or_none()
         await db.commit()
-        await db.refresh(db_chat)
+
+        resolved_chat_id = inserted_chat_id
+        if resolved_chat_id is None:
+            logger.debug(
+                f"并发请求已创建聊天会话，复用已有会话 - User ID: {user_id}, Agent ID: {agent_id}"
+            )
+            resolved_chat_id = (
+                await db.execute(
+                    select(models.Chat.id).where(
+                        models.Chat.user_id == user_id,
+                        models.Chat.agent_id == agent_id,
+                        models.Chat.is_active == True,
+                    )
+                )
+            ).scalar_one_or_none()
+
+            if resolved_chat_id is None:
+                raise HTTPException(status_code=500, detail="Failed to create chat session")
+
+        chat_id = resolved_chat_id
+        result = await db.execute(select(models.Chat).where(models.Chat.id == chat_id))
+        db_chat = result.scalar_one()
 
         # 验证创建后的agent_id
         if db_chat.agent_id != agent_id:

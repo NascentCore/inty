@@ -2,6 +2,7 @@
 测试聊天服务功能
 """
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -2147,35 +2148,57 @@ class TestGetOrCreateChatByAgent:
     async def test_concurrent_create_integrity_error_handling(
         self, db_session: AsyncSession
     ):
-        """测试并发创建冲突（IntegrityError）的处理"""
+        """测试并发创建场景下只会创建一个活跃会话"""
         user = await self._create_test_user(db_session)
-        agent = await self._create_test_agent(db_session, user.id)
+        agent = await self._create_test_agent(db_session, user.id, opening=None)
 
         # 清理所有缓存
         cache_service.clear_all_caches()
 
-        # 手动创建一个chat，模拟并发创建的情况
-        chat_id = str(uuid.uuid4())
-        existing_chat = models.Chat(
-            id=chat_id, user_id=user.id, agent_id=agent.id, is_active=True
+        engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=8,
+            max_overflow=8,
+            pool_pre_ping=True,
         )
-        db_session.add(existing_chat)
+        async_session = sessionmaker(
+            bind=engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async def _worker() -> str:
+            async with async_session() as session:
+                chat = await chat_service.get_or_create_chat_by_agent(
+                    db=session, user_id=user.id, agent_id=agent.id
+                )
+                return chat.id
+
+        try:
+            chat_ids = await asyncio.gather(*[_worker() for _ in range(12)])
+            assert len(set(chat_ids)) == 1
+
+            async with async_session() as verify_db:
+                result = await verify_db.execute(
+                    select(models.Chat).where(
+                        models.Chat.user_id == user.id,
+                        models.Chat.agent_id == agent.id,
+                        models.Chat.is_active == True,
+                    )
+                )
+                active_chats = result.scalars().all()
+                assert len(active_chats) == 1
+                assert active_chats[0].id == chat_ids[0]
+        finally:
+            await engine.dispose()
+
+        result = await db_session.execute(
+            select(models.Chat).where(
+                models.Chat.user_id == user.id,
+                models.Chat.agent_id == agent.id,
+            )
+        )
+        chats_to_cleanup = result.scalars().all()
+        for chat in chats_to_cleanup:
+            await db_session.delete(chat)
+        await db_session.delete(agent)
+        await db_session.delete(user)
         await db_session.commit()
-        await db_session.refresh(existing_chat)
-
-        # 尝试再次创建（模拟并发冲突）
-        # 由于唯一性约束，这应该会触发IntegrityError
-        # 但实际测试中，由于查询条件包含agent_id，不会真正触发冲突
-        # 这里主要验证代码中有IntegrityError处理逻辑
-
-        # 调用函数，应该返回已存在的chat
-        retrieved_chat = await chat_service.get_or_create_chat_by_agent(
-            db=db_session, user_id=user.id, agent_id=agent.id
-        )
-
-        # 验证返回的是已存在的chat
-        assert retrieved_chat.id == existing_chat.id
-        assert retrieved_chat.user_id == user.id
-        assert retrieved_chat.agent_id == agent.id
-
-        await self._cleanup_test_data(db_session, user, agent, existing_chat)
