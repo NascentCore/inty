@@ -1,5 +1,39 @@
 # FR_AGENTIC_MEMORY_STORE
 
+## 中文执行计划
+
+本 FR 目标：为 agentic companion 提供可持久化的命名记忆、可审计来源、层次结构、PostgreSQL + pgvector 向量检索与全文混合检索、进程内运行时缓存，以及与其它提示词切片统一的 LLM 上下文组装能力。
+
+### 前置决策（阶段 0）
+
+- 在 **扩展现有 `memory` 表（方案 A）** 与 **新建 `agentic_memory` 等表（方案 B，本文默认）** 之间定案；避免与节日/日常抽取语义纠缠者选 B。
+- 固化 **作用域键**：`user_id` 必选；`agent_id` / `chat_id` 是否参与过滤与唯一约束写清。
+- 固化 **嵌入合同**：模型 id、向量维度、是否归一化、距离算子（与 HNSW opclass 一致）、`embedding_version` 升级与全量重算策略。
+
+### 分阶段交付
+
+| 阶段 | 中文说明 | 主要产出 |
+|------|----------|----------|
+| 0 | 决策与契约 | 方案 A/B、作用域与嵌入合同文档化 |
+| 1 | 数据库 | Alembic：`CREATE EXTENSION vector`、新表、B-tree / HNSW / GIN 索引 |
+| 2 | 数据访问层 | SQLAlchemy 模型、Repository、嵌入失败状态与重试钩子 |
+| 3 | 写入流水线 | 提炼 -> 归一化/去重 -> 调嵌入 API -> 同事务写主表与 provenance -> 通知缓存失效 |
+| 4 | 运行时内存 | 工作集、热点 LRU、写合并；**以 PG 为准**，进程可冷启动重建 |
+| 5 | 检索服务 | 过滤后向量 Top-K + 全文 Top-K -> RRF/加权融合 -> 可选重排；层次打包进 token 预算 |
+| 6 | 提示词组装 | 记忆单独成块注入；顺序：静态系统 -> 工具策略 -> **记忆** -> 近期对话；各层 max_tokens |
+| 7 | 对外 API（若需要） | HTTP 契约；同步 `app/schemas` 与 Kotlin `api/model` |
+| 8 | 质量与观测 | 集成测试、回归（旧 `memory` 不受影响）、延迟与嵌入失败率指标 |
+| 9 | 上线 | 功能开关、重嵌入与索引重建运维说明 |
+
+### 关键依赖与风险
+
+- **依赖**：带 pgvector 的 Postgres 镜像或实例；嵌入服务配额与密钥；与 `companion_chat_service` 的 `memory_pg_dsn` 是否共用。
+- **风险**：大表 HNSW 构建窗口；过滤过窄时预过滤与召回需调参；来源字段含 PII 须与聊天记录同等留存与权限；检索需防跨租户（禁止仅按向量查）。
+
+### 详细英文规格
+
+以下各节为与实现对齐的英文规格说明（表结构字段、流水线细节、仓库路径引用等）。
+
 ## Goal
 
 Design and implement a persistent memory mechanism for agentic companion runtime that:
