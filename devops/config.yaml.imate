@@ -1,0 +1,121 @@
+app:
+  debug: true
+  environment: dev
+  limits:
+    free_user_chat_24h_limit: 20
+    guest_user_chat_24h_limit: 1
+    free_user_voice_24h_limit: 500
+    guest_user_voice_24h_limit: 1
+    subscribed_user_voice_24h_limit: 10
+    free_user_image_gen_24h_limit: 500
+    subscribed_user_image_gen_24h_limit: 10
+    free_user_agent_creation_24h_limit: 500
+    subscribed_user_agent_creation_24h_limit: 10
+  gcp_service_account_key: "inty-backend-key.json"
+  min_app_version_code_for_festival_memory: 3345
+
+sentry:
+  dsn: "https://43877f17f1d13e7e2847d7fa994b5fd9@o4510350447411200.ingest.us.sentry.io/4510871322034176"
+  enabled: true
+  traces_sample_rate: 1.0
+
+security:
+  secret_key: "your-secret-key-here"
+  algorithm: "HS256"
+  access_token_expire_minutes: 10080
+
+database:
+  host: "10.41.177.3"
+  user: postgres
+  password: "sxwl666A!"
+  db: "imate"
+  pool_size: 20
+  max_overflow: 10
+  pool_timeout: 10
+  pool_recycle: 3600
+  pool_pre_ping: true
+  connect_timeout: 5
+  command_timeout: 30
+  replica_host: "10.41.177.17"
+
+google_oauth:
+  client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
+  client_secret: "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"
+  redirect_uri: "https://imate.inty.cc/api/v1/auth/google/callback"
+
+gcs:
+  bucket: "inty-static"
+
+verification:
+  code_expire_minutes: 5
+
+logging:
+  level: "DEBUG"
+
+firebase:
+  service_account_path: "inty-firebase-key.json"
+
+agent:
+  api_key: "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"
+  langchain_api_key: "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"
+  free_user_chat_image_model: "Z Image Turbo Image to Image"
+  sub_user_chat_image_model: "NewAPI Nano Banana 2"
+  newapi_gemini_base_url: "https://llm.sxwl.ai"
+  vertex_ai_location: "global"
+  newapi_gemini_bearer_token: "sk-NgSZYRAbWEPRtfgSObaz242qA2VhpneytPop97LkmeP4aBy7"
+  langsmith_text_chat_sample_rate: 1.0
+  enable_chat_image_match_fallback: true
+  enable_free_user_premium_preview: true
+  free_user_premium_preview_every_n_messages: 10
+  free_user_premium_preview_max_chars: 200
+
+google_play:
+  package_name: "com.inty.imate"
+  webhook_secret: ""
+  enable_version_check: false
+  min_supported_version: 1
+  release_track: internal
+  fallback_tracks: [internal]
+  current_version_code: 0
+
+elevenlabs:
+  api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
+  model: "eleven_flash_v2_5"
+  voice_id: "EXAVITQu4vr4xnSDxMaL"
+  output_format: "mp3_22050_32"
+  enabled: true
+  max_text_length: 5000
+
+cloudflare:
+  domain: "images.sxwl.dev"
+  enabled: true
+  fallback_to_original: true
+
+gemini_live:
+  enabled: true
+  project_id: "alien-paratext-461204-i9"
+  location: "us-central1"
+  model: "gemini-live-2.5-flash-preview-native-audio-09-2025"
+  send_sample_rate: 16000
+  receive_sample_rate: 24000
+  default_voice: "Zephyr"
+  session_resumption: true
+  input_transcription: true
+  output_transcription: true
+  save_voice_history: true
+  free_user_max_session_duration: 120
+  sub_user_max_session_duration: 300
+
+fal:
+  api_key: e5d909a2-5707-455a-bd91-1777531504b8:7e7cc84b6ebcb998a51cb830f77f2c13
+
+tts:
+  use_gemini_prompted_tts: true
+  enable_gemini_tts_then_elevenlabs_voice_changer_for_imate: true
+
+surprise_snap:
+  enabled_since: "2026-02-24T08:00:00"
+  trigger_rounds: [2, 4, 7, 11]
+
+memory_extraction:
+  workflow_mode: "daily_incremental_summarization"

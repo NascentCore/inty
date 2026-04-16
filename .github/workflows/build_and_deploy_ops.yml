@@ -81,6 +81,9 @@ jobs:
             imate-prod)
               echo "config_file=devops/config.yaml.imate_prod" >> $GITHUB_OUTPUT
               ;;
+            imate)
+              echo "config_file=devops/config.yaml.imate" >> $GITHUB_OUTPUT
+              ;;
             *)
               echo "Unsupported environment: ${{ steps.prep.outputs.environment }}"
               exit 1

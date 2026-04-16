@@ -34,7 +34,10 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 ```sql
 CREATE DATABASE "inty-imate-dev";
 CREATE DATABASE "inty-imate";
+CREATE DATABASE "imate";
 ```
+
+也可用 `gcloud sql databases create imate --instance=inty-prod`（与 [config.yaml.imate](config.yaml.imate) 中 `database.db` 一致）。
 
 `postgres` 超级用户默认可连接新库；若使用独立角色，需 `GRANT ALL PRIVILEGES ON DATABASE ...`。
 
