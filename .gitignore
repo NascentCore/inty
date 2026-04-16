@@ -103,6 +103,10 @@ inty-firebase-key.json
 
 # stainless output sdks
 /app/inty-typescript/
+
+# Local upstream SDK checkouts (optional clones; not app source)
+android_app/library/inty_sdk/
+evaluation/inty_sdk/
 # Android studio playdebug build type 写 apk/aab 的目录
 /playdebug/
 
