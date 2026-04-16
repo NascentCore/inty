@@ -2,19 +2,25 @@
 
 ## 中文执行计划
 
-本 FR 目标：为 agentic companion 提供可持久化的命名记忆、可审计来源、层次结构、PostgreSQL + pgvector 向量检索与全文混合检索、进程内运行时缓存，以及与其它提示词切片统一的 LLM 上下文组装能力。
+本 FR 目标：为 **AGENTIC kernel**（`app/core/agentic_kernel/` 下的 companion 运行时）提供**专用**长期记忆：可持久化的命名记忆、可审计来源、层次结构、PostgreSQL + pgvector 与全文混合检索、进程内运行时缓存，以及与其它提示词切片统一的 LLM 上下文组装能力。
+
+**与 legacy 记忆系统的关系（强制边界）**
+
+- **Legacy** 指：既有 PostgreSQL `memory` 表、节日/日常记忆抽取与推送、`memory_extraction_log` 等主 App 管线；**本 FR 不沿用、不扩展、不在读写路径上耦合**该表或该管线。
+- **Agentic kernel 记忆** 使用**独立表名与独立 Repository/服务**（例如 `agentic_kernel_ltm` + `agentic_kernel_ltm_provenance`，名称以最终实现为准），仅由 kernel 编排层与可选的后台任务访问。
+- 主 App 的 legacy 记忆可继续服务旧客户端；agentic 路径是否**并行展示**由产品另定，但**存储与代码边界保持分离**。
 
 ### 前置决策（阶段 0）
 
-- 在 **扩展现有 `memory` 表（方案 A）** 与 **新建 `agentic_memory` 等表（方案 B，本文默认）** 之间定案；避免与节日/日常抽取语义纠缠者选 B。
-- 固化 **作用域键**：`user_id` 必选；`agent_id` / `chat_id` 是否参与过滤与唯一约束写清。
+- 固化 **新表前缀与模块布局**（全部落在 agentic kernel 或明确标注的 `backend` 子模块，禁止混入 legacy `memory` 的 ORM 模型）。
+- 固化 **作用域键**：`user_id` 必选；`agent_id` / `chat_id` / `workspace` 或 kernel 会话键是否参与过滤与唯一约束写清。
 - 固化 **嵌入合同**：模型 id、向量维度、是否归一化、距离算子（与 HNSW opclass 一致）、`embedding_version` 升级与全量重算策略。
 
 ### 分阶段交付
 
 | 阶段 | 中文说明 | 主要产出 |
 |------|----------|----------|
-| 0 | 决策与契约 | 方案 A/B、作用域与嵌入合同文档化 |
+| 0 | 决策与契约 | 表前缀、作用域键、嵌入合同、与 legacy 的隔离清单（代码路径级） |
 | 1 | 数据库 | Alembic：`CREATE EXTENSION vector`、新表、B-tree / HNSW / GIN 索引 |
 | 2 | 数据访问层 | SQLAlchemy 模型、Repository、嵌入失败状态与重试钩子 |
 | 3 | 写入流水线 | 提炼 -> 归一化/去重 -> 调嵌入 API -> 同事务写主表与 provenance -> 通知缓存失效 |
@@ -22,12 +28,12 @@
 | 5 | 检索服务 | 过滤后向量 Top-K + 全文 Top-K -> RRF/加权融合 -> 可选重排；层次打包进 token 预算 |
 | 6 | 提示词组装 | 记忆单独成块注入；顺序：静态系统 -> 工具策略 -> **记忆** -> 近期对话；各层 max_tokens |
 | 7 | 对外 API（若需要） | HTTP 契约；同步 `app/schemas` 与 Kotlin `api/model` |
-| 8 | 质量与观测 | 集成测试、回归（旧 `memory` 不受影响）、延迟与嵌入失败率指标 |
+| 8 | 质量与观测 | 集成测试；**断言** agentic 读写从不触及 legacy `memory` 表；延迟与嵌入失败率指标 |
 | 9 | 上线 | 功能开关、重嵌入与索引重建运维说明 |
 
 ### 关键依赖与风险
 
-- **依赖**：带 pgvector 的 Postgres 镜像或实例；嵌入服务配额与密钥；与 `companion_chat_service` 的 `memory_pg_dsn` 是否共用。
+- **依赖**：带 pgvector 的 Postgres 镜像或实例；嵌入服务配额与密钥；DSN 可与现网 PG **同实例不同表**，但连接与配置须**独立**于 legacy 记忆服务（避免共享 Repository）。
 - **风险**：大表 HNSW 构建窗口；过滤过窄时预过滤与召回需调参；来源字段含 PII 须与聊天记录同等留存与权限；检索需防跨租户（禁止仅按向量查）。
 
 ### 详细英文规格
@@ -36,7 +42,7 @@
 
 ## Goal
 
-Design and implement a persistent memory mechanism for agentic companion runtime that:
+Design and implement a persistent memory mechanism **used only by the AGENTIC kernel** (`app/core/agentic_kernel/`) that:
 
 1. Stores each memory with a stable human-readable **name** (slug within scope) and **provenance** (which conversation fragments and metadata justified the extraction).
 2. Supports **hierarchical** organization (tree or DAG via `parent_id` and optional edge table).
@@ -44,29 +50,27 @@ Design and implement a persistent memory mechanism for agentic companion runtime
 4. Provides an **in-process runtime** layer (cache, working set, write coalescing) backed by Postgres as source of truth.
 5. Feeds a **prompt assembly** slot that composes retrieved memories with static prompt slices and other slices (tools, mode, transcript) for the LLM.
 
-This document is the execution-oriented spec. Schema and table names below are proposals until reviewed against existing tables.
+**Non-goals:** reusing, migrating, or extending the legacy `memory` table and its extraction pipelines; dual-writing kernel LTM into legacy tables.
+
+This document is the execution-oriented spec. Schema and table names below are proposals; table names **must not** collide with legacy `memory`.
 
 ## Relationship to existing systems
 
-### Existing `memory` table (extraction pipeline)
+### Legacy `memory` (out of scope for this design)
 
-- Alembic: `alembic/versions/20260127_120000_add_memory_tables.py`.
-- Columns today: `user_id`, `memory_type` (`user_common` | `user_agent`), `agent_id`, `content`, `extracted_at`, etc.
-- Later migrations add delivery, metadata, festival fields (see `alembic/versions/` under `memory`).
+- Historical App feature: `memory` table (see `alembic/versions/20260127_120000_add_memory_tables.py`), festival/daily extraction, related APIs and push.
+- **This FR does not read or write legacy `memory`.** No shared ORM model, no shared repository, no foreign key from kernel LTM to `memory.id`.
 
-**Decision required (Phase 0):**
+### Agentic kernel workspace store (orthogonal)
 
-- **Option A - Evolve**: extend `memory` with `name`, `parent_id`, `embedding`, provenance child table, FTS. Risk: coupling to festival/daily extraction semantics and migrations.
-- **Option B - New tables** (recommended for clarity): e.g. `agentic_memory` + `agentic_memory_provenance` (+ optional `agentic_memory_edge`). Keeps festival/daily rows unchanged; companion LTM is explicit.
+- Code: `app/core/agentic_kernel/companion/memory_store.py`, `memory_registry.py`, used from `turn_engine.py`.
+- Today: workspace-scoped state (e.g. compaction); **not** the kernel LTM store. Keep concerns split: **workspace store** vs **`AgenticKernelLtmStore`** (or equivalent) backed by new tables.
 
-This FR assumes **Option B** unless product explicitly merges both lifecycles.
+**Integration:** introduce a dedicated **read-through / write-through** `AgenticKernelLtmRuntime` (name illustrative) called from kernel turn assembly only. DSN may be the same Postgres cluster as the rest of the app, but **code and migrations for LTM are kernel-owned**. Process restart must rebuild in-memory indexes from PG.
 
-### Companion runtime memory (workspace / kernel)
+### Orchestration boundary
 
-- Code: `app/core/agentic_kernel/companion/memory_store.py`, `memory_registry.py`, used from `turn_engine.py` and `companion_chat_service.py` (`memory_pg_dsn`).
-- Today: workspace-scoped store for compaction and related state; not a substitute for long-term named vector memory unless extended.
-
-**Integration:** add a thin **read-through / write-through** adapter from kernel turn path to Postgres-backed LTM, or a dedicated `AgenticMemoryRuntime` that shares DSN with `SqlAlchemyMemoryRepository` patterns. Process restart must rebuild in-memory indexes from PG.
+- `companion_chat_service.py` may pass a **DSN or session factory** into the kernel; it must not route kernel LTM through legacy memory services. Optional: defer/async for embedding follows kernel or caller policy, without calling legacy extraction jobs.
 
 ### Prompt assembly
 
@@ -80,7 +84,7 @@ This FR assumes **Option B** unless product explicitly merges both lifecycles.
 
 ## Proposed logical data model
 
-### Table: `agentic_memory` (name illustrative)
+### Table: `agentic_kernel_ltm` (name illustrative; not legacy `memory`)
 
 | Column | Purpose |
 |--------|---------|
@@ -105,18 +109,18 @@ Indexes (illustrative):
 - HNSW on `embedding` with operator class matching distance used in queries.
 - GIN on `content_tsv`.
 
-### Table: `agentic_memory_provenance`
+### Table: `agentic_kernel_ltm_provenance`
 
 | Column | Purpose |
 |--------|---------|
 | `id` | PK |
-| `memory_id` | FK to `agentic_memory` |
+| `memory_id` | FK to `agentic_kernel_ltm` |
 | `source_type` | e.g. `chat_message`, `chat_window`, `tool`, `document` |
 | `source_id` | External id (message id, chat id, chunk id) |
 | `excerpt` | Truncated raw text optional |
 | `meta` | JSONB for extractor version, prompt hash, offsets |
 
-### Optional: `agentic_memory_edge`
+### Optional: `agentic_kernel_ltm_edge`
 
 - For non-tree relations: `related_to`, `supersedes`, `derived_from` with `(from_id, to_id, kind)`.
 
@@ -139,10 +143,10 @@ Rules:
 1. **Extract**: LLM or rule job emits structured fields (`name`, `content`, `parent_id`, provenance rows).
 2. **Normalize**: trim name, enforce uniqueness policy, merge or bump version if same `name`.
 3. **Embed**: call configured embedding provider; on failure set `embedding_status` (add column) and enqueue retry job.
-4. **Persist**: single transaction: insert/update `agentic_memory`, insert provenance rows, update `content_tsv` if not generated.
+4. **Persist**: single transaction: insert/update `agentic_kernel_ltm`, insert provenance rows, update `content_tsv` if not generated.
 5. **Notify runtime**: invalidate or patch cache.
 
-Async: long embedding should not block user-visible chat completion; align with `defer_memory_update` patterns in `companion_chat_service.py` where applicable.
+Async: long embedding should not block user-visible chat completion; use kernel-level or caller-level deferral **without** invoking legacy memory extraction.
 
 ## Read / retrieval pipeline
 
@@ -180,18 +184,18 @@ If mobile or ops clients list or edit memories:
 
 1. Migration: fresh DB `alembic upgrade head`; extension `vector` present.
 2. Repository integration tests: insert, hybrid search, uniqueness, parent chain, supersede.
-3. Regression: existing `memory` extraction and APIs unchanged when using Option B tables.
+3. Isolation: static analysis or integration tests assert kernel LTM module imports no legacy `memory` models or services.
 4. Load smoke: fixed row count, assert p95 below agreed threshold on CI-sized DB.
 
 ## Execution phases (checklist)
 
 | Phase | Deliverable |
 |-------|-------------|
-| 0 | Choose Option A vs B; document scope keys and embedding contract |
+| 0 | Table prefix, scope keys, embedding contract, legacy isolation checklist |
 | 1 | Alembic revision: `CREATE EXTENSION vector`, new tables, indexes |
 | 2 | SQLAlchemy models + repository + `embedding_status` / retry worker hook |
 | 3 | Write pipeline: extract -> normalize -> embed -> persist -> cache invalidate |
-| 4 | `AgenticMemoryRuntime` (or extend `MemoryStore`) read/write-through |
+| 4 | `AgenticKernelLtmRuntime` read/write-through; **do not** overload legacy `MemoryStore` semantics |
 | 5 | Hybrid search API (internal service first; HTTP if required) |
 | 6 | Prompt memory slice + token budget in companion / kernel assembly path |
 | 7 | Client schemas if user-facing CRUD |
@@ -200,9 +204,10 @@ If mobile or ops clients list or edit memories:
 
 ## References (repo paths)
 
-- `alembic/versions/20260127_120000_add_memory_tables.py` - existing `memory` table
+- `alembic/versions/20260127_120000_add_memory_tables.py` - legacy `memory` (reference only; **not** extended by this FR)
 - `alembic/AGENTS.md` - migration workflow
-- `app/core/agentic_kernel/companion/memory_store.py` - runtime store
-- `app/services/companion_chat_service.py` - `memory_pg_dsn`, defer patterns
+- `app/core/agentic_kernel/companion/memory_store.py` - workspace store (orthogonal to LTM)
+- `app/core/agentic_kernel/companion/turn_engine.py` - kernel turn hook for prompt assembly
+- `app/services/companion_chat_service.py` - optional DSN injection boundary only
 - `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md` - prompt assembly direction
 - `backend/ARCH.md`, `backend/AGENTS.md` - pgvector / compose notes
