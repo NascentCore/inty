@@ -9,6 +9,9 @@ Inty代表Intelligent Entity，有智能的存在，其内涵是有情感的AI�
 
 我们使用[Cursor](https://cursor.com/)在本代码库干活儿，Cursor会通过MCP、CLI与飞书（Inty团队的OA系统）打通。
 
+android_app/是IntelliMate Android App，imate_android_app/是iMate Android App，两者相互独立。
+iMate Android App是基于IntelliMate开发运营经验之上开发的新一代智能体陪伴移动App。
+
 ## Override Rule
 
 User instructions always override this file.
