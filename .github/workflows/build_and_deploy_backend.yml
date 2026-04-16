@@ -41,10 +41,11 @@ on:
     # 美西凌晨 3 点 UTC（Pacific）：11 AM UTC = 3:00 PST（冬令时），夏令时期间为当地 4:00
     - cron: "0 11 * * *"
 
-# 部署环境名（须与 jobs.build-and-deploy.env.DEPLOY_ENV 一致；group 不能引用 job env）：
-#   workflow_dispatch -> inputs.environment
-#   schedule -> imate-prod
-#   其他（如 push main）-> imate-dev
+# 部署环境解析（以下三处表达式必须完全一致；concurrency 与 jobs.*.environment 不能使用 job env）：
+#   concurrency.group
+#   jobs.build-and-deploy.environment
+#   jobs.build-and-deploy.env.DEPLOY_ENV
+# 语义：workflow_dispatch -> inputs.environment；schedule -> imate-prod；其余（如 push main）-> imate-dev
 concurrency:
   group: inty-deploy-backend-${{ inputs.environment || (github.event_name == 'schedule' && 'imate-prod') || 'imate-dev' }}
   cancel-in-progress: true
@@ -65,8 +66,7 @@ jobs:
       # Create tag/release (and checkout repository)
       contents: write
 
-    # 自动运行：inputs.environment 为空；schedule 为 imate-prod；push 为 imate-dev（见 env.DEPLOY_ENV）
-    environment: ${{ env.DEPLOY_ENV }}
+    environment: ${{ inputs.environment || (github.event_name == 'schedule' && 'imate-prod') || 'imate-dev' }}
 
     steps:
       - uses: actions/checkout@v4
