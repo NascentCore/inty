@@ -153,6 +153,7 @@ private fun LoginContent(
                             buildAnnotatedString {
                                 append(stringResource(R.string.login_info_prefix))
                                 withStyle(SpanStyle(color = Color(0xFF5BA3D4), fontWeight = FontWeight.SemiBold)) {
+                                    append(" ")
                                     append(stringResource(R.string.login_info_highlight))
                                 }
                                 append(stringResource(R.string.login_info_suffix))
