@@ -1,0 +1,4 @@
+out/
+*.jsonl
+!fixtures/*.jsonl
+!results/**/*.jsonl

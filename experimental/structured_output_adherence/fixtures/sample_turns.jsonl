@@ -1,0 +1,1 @@
+{"chat_id": "fixture-chat-001", "messages": [{"role": "user", "content": "Hey, rough day at work."}, {"role": "assistant", "content": "Want to talk about it? I am here."}, {"role": "user", "content": "My manager blamed me for a bug I did not write."}]}
