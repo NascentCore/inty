@@ -212,11 +212,14 @@ def create_chat_completion(
     messages_payload: list[dict[str, Any]],
     tools: list[Any],
     tool_choice: str | None = None,
+    response_format: dict[str, Any] | None = None,
 ) -> Any:
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
     }
+    if response_format is not None:
+        create_kw["response_format"] = response_format
     if tools:
         create_kw.update(tool_path_chat_completion_kwargs(model))
         create_kw["tools"] = tools
