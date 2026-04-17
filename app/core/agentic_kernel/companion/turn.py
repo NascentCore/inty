@@ -38,6 +38,10 @@ from .transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .prompts import build_system_messages
+from .significance_perception import (
+    DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    split_dual_llm_chat_branch_content,
+)
 from .repl_workspace_tools import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
@@ -129,12 +133,20 @@ async def run_turn(
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
+    tools_for_turn = (
+        []
+        if heartbeat_turn
+        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+    )
+    use_dual_structured_chat = (not heartbeat_turn) and not tools_for_turn
+
     system_messages = build_system_messages(
         bundle,
         context,
         enable_tools=not heartbeat_turn,
         heartbeat_turn=heartbeat_turn,
         interactive_bootstrap_active=interactive_bootstrap,
+        include_significance_perception_slice=use_dual_structured_chat,
     )
 
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
@@ -172,12 +184,9 @@ async def run_turn(
     trace_id = str(uuid.uuid4())
 
     # Tool loop
-    tools = (
-        []
-        if heartbeat_turn
-        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
-    )
+    tools = tools_for_turn
     last_text = ""
+    significance_meta: dict[str, Any] | None = None
     t_loop = time.perf_counter()
 
     inspect_token = runtime_inspect_begin_turn()
@@ -215,6 +224,9 @@ async def run_turn(
                 messages=messages,
                 model=resolved_model,
                 tools=tools or None,
+                response_format=(
+                    DUAL_LLM_CHAT_RESPONSE_FORMAT if use_dual_structured_chat else None
+                ),
             )
             approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in messages)
             logger.info(
@@ -232,7 +244,13 @@ async def run_turn(
             messages.append(openai_assistant_message_dict(msg))
 
             if not tool_calls:
-                last_text = (msg.content or "").strip()
+                raw_content = msg.content or ""
+                if use_dual_structured_chat:
+                    last_text, significance_meta = split_dual_llm_chat_branch_content(
+                        raw_content
+                    )
+                else:
+                    last_text = raw_content.strip()
                 break
 
             # 执行 tools
@@ -290,18 +308,18 @@ async def run_turn(
         user_row["heartbeat"] = True
     user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
-    store.append_jsonl_record(
-        rel_tr,
-        {
-            "role": "assistant",
-            "content": last_text,
-            "ts": utc_iso_ts(),
-            "uuid": assistant_msg_uuid,
-            "reply_to": user_msg_uuid,
-            "source": "chat",
-            "trace_id": trace_id,
-        },
-    )
+    assistant_row: dict[str, Any] = {
+        "role": "assistant",
+        "content": last_text,
+        "ts": utc_iso_ts(),
+        "uuid": assistant_msg_uuid,
+        "reply_to": user_msg_uuid,
+        "source": "chat",
+        "trace_id": trace_id,
+    }
+    if significance_meta:
+        assistant_row["significance_perception"] = significance_meta
+    store.append_jsonl_record(rel_tr, assistant_row)
 
     # 记忆管线
     if heartbeat_turn:

@@ -92,3 +92,18 @@ def test_build_system_prompt_non_intimate_no_memory() -> None:
     assert "should not appear" not in text
     assert "raw" not in text
     assert "sum" not in text
+
+
+def test_build_system_prompt_significance_slice_when_flag() -> None:
+    b = _minimal_bundle()
+    b.significance_perception_md = "Custom slice body."
+    text = build_system_prompt(
+        b,
+        ContextMeta(),
+        enable_user_profile_tool=True,
+        include_repl_image_generation_contract=False,
+        include_significance_perception_slice=True,
+    )
+    assert "## SIGNIFICANCE PERCEPTION" in text
+    assert "Custom slice body." in text
+    assert "Dual-LLM chat branch: structured reply envelope" in text

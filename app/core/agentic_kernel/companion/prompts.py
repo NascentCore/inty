@@ -68,6 +68,20 @@ def _chat_output_format_contract_text(output_format_prompt: str) -> str:
     )
 
 
+def _dual_llm_chat_structured_output_contract_text() -> str:
+    return (
+        "## Dual-LLM chat branch: structured reply envelope\n\n"
+        "Your **entire** assistant `message.content` must be **valid JSON only** "
+        "(no markdown fences, no text before or after the JSON object). "
+        "It must match the API `response_format` schema. Fields:\n"
+        "- `user_facing_reply` (string): natural-language text for the user; may be empty when the parallel tool branch will carry the visible reply.\n"
+        "- `importance_round` (integer 1-10): importance of this turn overall given transcript and system context.\n"
+        "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
+        "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n\n"
+        "This branch still must not call tools (`tool_choice=none`).\n"
+    )
+
+
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
         "输出通道：仅自然语言文本快速回复。你会看到与并行工具路相同的工具定义，"
@@ -244,6 +258,7 @@ def build_system_messages(
     tool_side_compact: bool = False,
     chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
+    include_significance_perception_slice: bool = False,
 ) -> list[dict[str, Any]]:
     tools_on = enable_tools or enable_user_profile_tool
     chat_branch_no_tool_api = (
@@ -287,6 +302,14 @@ def build_system_messages(
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
     out.append(_system_message(_context_mode_clause(context)))
     out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
+
+    if include_significance_perception_slice and not heartbeat_turn and not inner_tick_turn:
+        out.append(
+            _system_message(
+                "## SIGNIFICANCE PERCEPTION\n\n"
+                + bundle.significance_perception_md.strip()
+            )
+        )
 
     skip_memory_blocks = (
         tool_side_compact and not heartbeat_turn and not inner_tick_turn
@@ -350,6 +373,11 @@ def build_system_messages(
     else:
         out.append(_system_message(_output_contract_text()))
 
+    if include_significance_perception_slice and chat_branch_no_tool_api:
+        out.append(
+            _system_message(_dual_llm_chat_structured_output_contract_text())
+        )
+
     chat_output = (chat_output_format_prompt or "").strip()
     if chat_output:
         out.append(_system_message(_chat_output_format_contract_text(chat_output)))
@@ -371,6 +399,7 @@ def build_system_prompt(
     tool_side_compact: bool = False,
     chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
+    include_significance_perception_slice: bool = False,
 ) -> str:
     msgs = build_system_messages(
         bundle,
@@ -385,5 +414,6 @@ def build_system_prompt(
         tool_side_compact=tool_side_compact,
         chat_output_format_prompt=chat_output_format_prompt,
         interactive_bootstrap_active=interactive_bootstrap_active,
+        include_significance_perception_slice=include_significance_perception_slice,
     )
     return SYSTEM_PROMPT_SEP.join(str(m.get("content") or "") for m in msgs)

@@ -17,6 +17,7 @@ class PromptSliceId(StrEnum):
     TOOLS = "TOOLS"
     HEARTBEAT = "HEARTBEAT"
     CAPABILITIES = "CAPABILITIES"
+    SIGNIFICANCE_PERCEPTION = "SIGNIFICANCE_PERCEPTION"
 
 
 # Joins legacy single-string system prompt and interactive-bootstrap block strings.
@@ -39,6 +40,7 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
         PromptSliceId.TOOLS,
         PromptSliceId.HEARTBEAT,
         PromptSliceId.CAPABILITIES,
+        PromptSliceId.SIGNIFICANCE_PERCEPTION,
     }
 )
 

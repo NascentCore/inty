@@ -80,6 +80,7 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "HEARTBEAT.md",
         "IDENTITY.md",
         "MEMORY.md",
+        "SIGNIFICANCE_PERCEPTION.md",
         "SOUL.md",
         "TOOLS.md",
         "USER.md",
