@@ -13,8 +13,8 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
-from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
+from inty_v2_repl.memory_store_registry import get_memory_store
+from inty_v2_repl.workspace_init_tools import execute_tool_call_blocking
 
 
 class TestGoogleWebSearchTool(unittest.TestCase):

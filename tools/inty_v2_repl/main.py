@@ -19,24 +19,24 @@ if __package__ is None:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from tools.inty_v2_repl.client import load_prototype_dotenv
-from tools.inty_v2_repl.backend_chat_ws import (
+from .client import load_prototype_dotenv
+from .backend_chat_ws import (
     BackendChatWsBridge,
     BackendChatWsError,
     default_api_base_url,
     default_kickoff_drain_sec,
     http_base_to_ws_chat_url,
 )
-from tools.inty_v2_repl.jsonl_db_store import (
+from .jsonl_db_store import (
     flush_jsonl_db_store,
     shutdown_jsonl_db_store,
 )
-from tools.inty_v2_repl.llm_trace import configure_llm_trace_file
-from tools.inty_v2_repl.memory_store_registry import (
+from .llm_trace import configure_llm_trace_file
+from .memory_store_registry import (
     flush_memory_store,
     shutdown_memory_store,
 )
-from tools.inty_v2_repl.proto_log import (
+from .proto_log import (
     configure_proto_log,
     repl_wall_ts_str,
     resolve_proto_log_file,
@@ -297,8 +297,6 @@ def repl(
         no_log_file=no_log_file,
     )
 
-
-sys.modules.setdefault("inty_v2_text_chat_prototype.main", sys.modules[__name__])
 
 if __name__ == "__main__":
     app()

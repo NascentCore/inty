@@ -11,14 +11,14 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.workspace_init_tools import (
+from inty_v2_repl.workspace_init_tools import (
     append_user_profile_facts_to_user_md,
     execute_tool_call_blocking,
     read_chat_output_format_prompt,
     tool_user_profile_record,
     tool_update_chat_settings,
 )
-from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
+from inty_v2_repl.memory_store_registry import shutdown_memory_store
 
 
 class TestAppendUserProfileFacts(unittest.TestCase):

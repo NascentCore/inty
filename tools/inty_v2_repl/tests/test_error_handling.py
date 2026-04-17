@@ -13,12 +13,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-import tools.inty_v2_repl.client
-from tools.inty_v2_repl.client import (
+import inty_v2_repl.client
+from inty_v2_repl.client import (
     OpenRouterInvalidJsonError,
     create_chat_completion,
 )
-from tools.inty_v2_repl.main import _print_openrouter_invalid_json_retry_hint
+from inty_v2_repl.main import _print_openrouter_invalid_json_retry_hint
 
 
 class _FlakyCompletions:
@@ -37,7 +37,7 @@ class _FlakyCompletions:
 
 def test_create_chat_completion_retries_after_json_decode_error() -> None:
     client = SimpleNamespace(chat=SimpleNamespace(completions=_FlakyCompletions(1)))
-    with patch("tools.inty_v2_repl.client.time.sleep", return_value=None):
+    with patch("inty_v2_repl.client.time.sleep", return_value=None):
         resp = create_chat_completion(
             client,
             model="google/gemini-2.5-flash",
@@ -50,7 +50,7 @@ def test_create_chat_completion_retries_after_json_decode_error() -> None:
 
 def test_create_chat_completion_raises_domain_error_after_max_retries() -> None:
     client = SimpleNamespace(chat=SimpleNamespace(completions=_FlakyCompletions(9)))
-    with patch("tools.inty_v2_repl.client.time.sleep", return_value=None):
+    with patch("inty_v2_repl.client.time.sleep", return_value=None):
         try:
             create_chat_completion(
                 client,
@@ -65,19 +65,19 @@ def test_create_chat_completion_raises_domain_error_after_max_retries() -> None:
 
 
 def test_client_exception_identity_shared_between_import_paths() -> None:
-    pkg_mod = importlib.import_module("tools.inty_v2_repl.client")
-    exp_mod = importlib.import_module("inty_v2_text_chat_prototype.client")
-    assert pkg_mod is exp_mod
+    tools_pkg = importlib.import_module("tools.inty_v2_repl.client")
+    short_pkg = importlib.import_module("inty_v2_repl.client")
+    assert tools_pkg is short_pkg
     assert (
-        pkg_mod.OpenRouterInvalidJsonError
-        is exp_mod.OpenRouterInvalidJsonError
+        tools_pkg.OpenRouterInvalidJsonError
+        is short_pkg.OpenRouterInvalidJsonError
         is OpenRouterInvalidJsonError
     )
 
 
 def test_print_openrouter_invalid_json_retry_hint() -> None:
     with (
-        patch("tools.inty_v2_repl.main.repl_wall_ts_str", return_value="2026-04-03"),
+        patch("inty_v2_repl.main.repl_wall_ts_str", return_value="2026-04-03"),
         patch("builtins.print") as mock_print,
     ):
         _print_openrouter_invalid_json_retry_hint()

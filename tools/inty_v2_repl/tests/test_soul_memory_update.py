@@ -11,10 +11,10 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace
-from inty_v2_text_chat_prototype.memory_update import memory_update_after_turn
-from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
+from inty_v2_repl.bootstrap import init_workspace
+from inty_v2_repl.memory_update import memory_update_after_turn
+from inty_v2_repl.memory_store_registry import shutdown_memory_store
+from inty_v2_repl.paths import WorkspacePaths
 
 # SOUL 策展默认需「底线/边界/…」等信号；测试里在助手侧带一词以触发。
 _TURN_SOUL = ("用户", "助手 底线")
@@ -37,7 +37,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
-                    "inty_v2_text_chat_prototype.memory_update.complete"
+                    "inty_v2_repl.memory_update.complete"
                 ) as m_complete:
                     m_complete.side_effect = [
                         "# MEMORY\n\nx\n",
@@ -71,7 +71,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
-                    "inty_v2_text_chat_prototype.memory_update.complete"
+                    "inty_v2_repl.memory_update.complete"
                 ) as m_complete:
                     m_complete.side_effect = ["# MEMORY\n\nx\n", "# USER\n\nz\n"]
                     memory_update_after_turn(
@@ -100,7 +100,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
-                    "inty_v2_text_chat_prototype.memory_update.complete"
+                    "inty_v2_repl.memory_update.complete"
                 ) as m_complete:
                     m_complete.side_effect = ["# MEMORY\n\nx\n", "# SOUL\n\ny\n"]
                     memory_update_after_turn(
@@ -128,7 +128,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
-                    "inty_v2_text_chat_prototype.memory_update.complete"
+                    "inty_v2_repl.memory_update.complete"
                 ) as m_complete:
                     m_complete.side_effect = ["# MEMORY\n\nx\n", "# USER\n\nz\n"]
                     memory_update_after_turn(
@@ -158,7 +158,7 @@ class TestSoulMemoryUpdate(unittest.TestCase):
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
-                    "inty_v2_text_chat_prototype.memory_update.complete"
+                    "inty_v2_repl.memory_update.complete"
                 ) as m_complete:
                     n_calls = 0
 

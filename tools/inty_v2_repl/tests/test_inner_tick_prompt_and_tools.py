@@ -11,11 +11,11 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace
-from inty_v2_text_chat_prototype.models import ContextMeta, load_prompt_bundle
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.prompts import build_system_prompt
-from inty_v2_text_chat_prototype.workspace_init_tools import (
+from inty_v2_repl.bootstrap import init_workspace
+from inty_v2_repl.models import ContextMeta, load_prompt_bundle
+from inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl.prompts import build_system_prompt
+from inty_v2_repl.workspace_init_tools import (
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
 )
@@ -53,7 +53,7 @@ class TestInnerTickPromptAndTools(unittest.TestCase):
             root = Path(td)
             # init_workspace clears the registry store in ``finally``; keep it so
             # ``load_prompt_bundle`` reads the seeded docs from the same MemoryStore.
-            with patch("inty_v2_text_chat_prototype.bootstrap.shutdown_memory_store"):
+            with patch("inty_v2_repl.bootstrap.shutdown_memory_store"):
                 init_workspace(root, write_context=False)
             paths = WorkspacePaths(root=root)
             bundle = load_prompt_bundle(paths, meta=ContextMeta())

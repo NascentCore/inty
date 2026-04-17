@@ -11,7 +11,7 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.workspace_init_tools import (
+from inty_v2_repl.workspace_init_tools import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call_blocking,
     tool_workspace_read_file,

@@ -10,10 +10,10 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace
-from inty_v2_text_chat_prototype.models import ContextMeta, load_prompt_bundle
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.prompts import build_system_prompt
+from inty_v2_repl.bootstrap import init_workspace
+from inty_v2_repl.models import ContextMeta, load_prompt_bundle
+from inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl.prompts import build_system_prompt
 
 
 class TestCapabilitiesNotInjected(unittest.TestCase):

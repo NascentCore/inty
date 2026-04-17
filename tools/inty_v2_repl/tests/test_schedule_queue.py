@@ -17,8 +17,8 @@ import sys
 if str(_EXPERIMENTAL) not in sys.path:
     sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.schedule_queue import (
+from inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl.schedule_queue import (
     add_schedule_task,
     mark_task_fired,
     mark_task_retry,
@@ -28,7 +28,7 @@ from inty_v2_text_chat_prototype.schedule_queue import (
     start_schedule_scheduler,
     stop_schedule_scheduler,
 )
-import inty_v2_text_chat_prototype.schedule_queue as schedule_queue
+import inty_v2_repl.schedule_queue as schedule_queue
 
 
 class TestScheduleQueueKernel(unittest.TestCase):

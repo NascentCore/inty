@@ -16,9 +16,9 @@ from unittest.mock import AsyncMock, patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype import orchestrator
-from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
-from inty_v2_text_chat_prototype.models import ContextMeta, PromptBundle
+from inty_v2_repl import orchestrator
+from inty_v2_repl.memory_store_registry import get_memory_store
+from inty_v2_repl.models import ContextMeta, PromptBundle
 
 
 def _dual_llm_chat_envelope_json(user_facing: str) -> str:

@@ -11,7 +11,7 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.client import async_tool_background_enabled
+from inty_v2_repl.client import async_tool_background_enabled
 
 
 class TestAsyncToolBgEnv(unittest.TestCase):

@@ -10,8 +10,8 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.models import load_transcript
-from inty_v2_text_chat_prototype.workspace_init_tools import tool_workspace_write_file
+from inty_v2_repl.models import load_transcript
+from inty_v2_repl.workspace_init_tools import tool_workspace_write_file
 
 
 class TestLoadTranscriptLenient(unittest.TestCase):
