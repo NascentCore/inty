@@ -31,7 +31,9 @@ from schema import ConversationScenario, response_format_json_schema_strict  # n
 
 
 SYSTEM_PROMPT = """You label a private chat transcript for internal research.
-Return ONLY JSON matching the requested schema. No markdown fences.
+Return ONLY one JSON object. No markdown fences. No outer wrapper key.
+The top-level keys must be exactly: title, one_line_summary, inferred_topics, emotional_tone, contains_sensitive_content, confidence_0_1.
+emotional_tone must be exactly one of these strings: warm, tense, playful, supportive, conflicted, neutral, other.
 If the transcript is empty, still return valid JSON with neutral fields."""
 
 
@@ -41,7 +43,10 @@ USER_TEMPLATE = """Transcript (oldest to newest, same language as users wrote):
 {transcript}
 ---
 
-Infer a ConversationScenario JSON object describing the situation so far (not the next reply)."""
+Infer labels for the situation so far (not the next reply).
+
+Example shape (values are illustrative only):
+{{"title":"...","one_line_summary":"...","inferred_topics":["..."],"emotional_tone":"neutral","contains_sensitive_content":false,"confidence_0_1":0.7}}"""
 
 
 @dataclass
@@ -140,11 +145,32 @@ def _call_model(
     return "", None, None, elapsed, last_err
 
 
+def _normalize_scenario_json_text(content: str) -> str:
+    """
+    If the model wraps the payload as {"ConversationScenario": {...}}, unwrap once.
+    Root must still be the scenario object for Pydantic.
+    """
+    raw = content.strip()
+    if not raw:
+        return raw
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+    if not isinstance(data, dict):
+        return raw
+    inner = data.get("ConversationScenario")
+    if isinstance(inner, dict) and len(data) == 1:
+        return json.dumps(inner, ensure_ascii=False)
+    return raw
+
+
 def _evaluate_content(content: str) -> tuple[bool, Optional[str]]:
     if not content.strip():
         return False, "empty_content"
+    normalized = _normalize_scenario_json_text(content)
     try:
-        ConversationScenario.model_validate_json(content)
+        ConversationScenario.model_validate_json(normalized)
         return True, None
     except Exception as e:
         return False, f"schema:{e.__class__.__name__}:{e}"
@@ -312,6 +338,8 @@ def main() -> int:
         kwargs: Dict[str, Any] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
+        elif os.getenv("OPENROUTER_API_KEY"):
+            kwargs["base_url"] = "https://openrouter.ai/api/v1"
         client = OpenAI(**kwargs)
 
     items: List[tuple[str, List[Dict[str, str]]]] = []

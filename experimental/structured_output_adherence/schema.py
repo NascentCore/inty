@@ -16,7 +16,8 @@ class ConversationScenario(BaseModel):
     one_line_summary: str = Field(..., max_length=500)
     inferred_topics: List[str] = Field(
         default_factory=list,
-        description="Short noun phrases, max 10 items.",
+        max_length=10,
+        description="Short noun phrases, at most 10 items.",
     )
     emotional_tone: Literal[
         "warm",

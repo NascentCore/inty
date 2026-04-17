@@ -12,7 +12,8 @@ See [PLAN.md](PLAN.md) for the full experiment design.
 
 Copy `.env.example` to `.env` in this folder or set variables in the shell:
 
-- `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`)
+- `OPENROUTER_API_KEY` (or `OPENAI_API_KEY`); if you only set `OPENROUTER_API_KEY`, the script defaults `base_url` to `https://openrouter.ai/api/v1`.
+- Optional: `OPENAI_BASE_URL` / `OPENROUTER_BASE_URL` to override the API host.
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (or pass `--database-url`)
 
 ## Dry run (no DB, no API)
@@ -51,3 +52,7 @@ Adjust `--since` / `--until` (ISO dates, UTC) to limit rows scanned.
 
 - `<out-dir>/turns.jsonl` - one record per model call.
 - `<out-dir>/summary.json` - aggregate metrics.
+
+## Recorded real-LLM smoke run
+
+See [results/REAL_LLM_RUN.md](results/REAL_LLM_RUN.md) and committed outputs under [results/real_llm_fixture_run/](results/real_llm_fixture_run/) (fixture-only transcript).
