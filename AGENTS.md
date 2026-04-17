@@ -12,6 +12,8 @@ Inty代表Intelligent Entity，有智能的存在，其内涵是有情感的AI�
 android_app/是IntelliMate Android App，imate_android_app/是iMate Android App，两者相互独立。
 iMate Android App是基于IntelliMate开发运营经验之上开发的新一代智能体陪伴移动App。
 
+agentic companion 是模拟的异地亲密伴侣，不能见面其他跟活人一样。
+
 ## Override Rule
 
 User instructions always override this file.
