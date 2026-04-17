@@ -128,7 +128,7 @@ def tool_companion_update_prompt_slice(
 ) -> str:
     from .image_gate import register_profile_write
     from .memory_registry import get_memory_store
-    from .repl_workspace_tools import resolve_under_workspace
+    from .companion_tool_runtime import resolve_under_workspace
     from .workspace_doc_mapping import parse_workspace_relative_path
 
     sid = parse_persistable_prompt_slice_id(slice_name)
@@ -173,7 +173,7 @@ def tool_companion_bootstrap_user_interactive_complete(
     note: str | None = None,
 ) -> str:
     from .memory_registry import get_memory_store
-    from .repl_workspace_tools import resolve_under_workspace
+    from .companion_tool_runtime import resolve_under_workspace
 
     root_r = root.resolve()
     rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()

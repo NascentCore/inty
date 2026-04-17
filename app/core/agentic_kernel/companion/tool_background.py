@@ -32,7 +32,7 @@ from .runtime_inspect_context import (
     runtime_inspect_thread_overlay_end,
     tools_summary_from_openai_tools,
 )
-from .repl_workspace_tools import (
+from .companion_tool_runtime import (
     REPL_WRITABLE_RELATIVE_PATHS,
     execute_tool_call,
     openai_assistant_message_dict,

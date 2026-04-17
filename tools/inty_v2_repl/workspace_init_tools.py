@@ -1,4 +1,4 @@
-"""Shim: REPL workspace tools are implemented in companion.repl_workspace_tools."""
+"""Shim: companion tool execution lives in companion.companion_tool_runtime."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from app.core.agentic_kernel.companion.fal_z_image_tool import (
     run_modify_image_z_image_turbo,
 )
 from app.core.agentic_kernel.companion.message_format import openai_assistant_message_dict
-from app.core.agentic_kernel.companion.repl_workspace_tools import (
+from app.core.agentic_kernel.companion.companion_tool_runtime import (
     REPL_WRITABLE_RELATIVE_PATHS,
     TEXT_RESPONSE_INCLUDE_IN_CHAT,
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,

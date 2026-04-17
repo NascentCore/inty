@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.agentic_kernel.companion.repl_workspace_tools import execute_tool_call
+from app.core.agentic_kernel.companion.companion_tool_runtime import execute_tool_call
 from app.core.agentic_kernel.companion.tool_background import (
     BackgroundToolLoopAborted,
     ToolBackgroundTraceHooks,

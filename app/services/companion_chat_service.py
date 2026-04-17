@@ -103,7 +103,7 @@ def _companion_manager_for_resolved_model(
 def _mark_companion_ws_session_system_written_in_store(
     session: CompanionSession,
 ) -> None:
-    from app.core.agentic_kernel.companion.repl_workspace_tools import (
+    from app.core.agentic_kernel.companion.companion_tool_runtime import (
         resolve_under_workspace,
     )
 
@@ -185,7 +185,7 @@ async def _maybe_append_companion_ws_session_system(
 def _mark_companion_ws_interactive_kickoff_sent_in_store(
     session: CompanionSession,
 ) -> None:
-    from app.core.agentic_kernel.companion.repl_workspace_tools import (
+    from app.core.agentic_kernel.companion.companion_tool_runtime import (
         resolve_under_workspace,
     )
 

@@ -278,7 +278,7 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator, "schedule_memory_update_after_turn", return_value=None
                 ),
                 patch(
-                    "app.core.agentic_kernel.companion.repl_workspace_tools.run_generate_image_z_image_turbo",
+                    "app.core.agentic_kernel.companion.companion_tool_runtime.run_generate_image_z_image_turbo",
                     return_value=(
                         "OK fal z-image generated: "
                         "prompt='sunrise portrait' image_size=portrait_4_3 "

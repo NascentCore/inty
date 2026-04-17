@@ -40,7 +40,7 @@ class CompanionConfig(BaseModel):
     # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (app.models.companion_workspace).
     memory_pg_dsn: str = ""
 
-    # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 repl_workspace_tools）
+    # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 companion_tool_runtime）
     repository_only_workspace_text: bool = True
 
     # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | USER_INTERACTIVE).

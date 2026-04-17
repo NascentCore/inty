@@ -43,7 +43,7 @@ from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_content,
 )
-from .repl_workspace_tools import (
+from .companion_tool_runtime import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
 )

@@ -20,7 +20,7 @@ from app.core.agentic_kernel.companion.runtime_inspect_context import (
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
 )
-from app.core.agentic_kernel.companion.repl_workspace_tools import (
+from app.core.agentic_kernel.companion.companion_tool_runtime import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call,
 )
