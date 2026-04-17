@@ -119,7 +119,7 @@ gemini_live:
   # Live Chat 用量限制（开发环境放宽限制）
   free_user_max_session_duration: 120  # 免费用户单次会话最大时长（秒）
   sub_user_max_session_duration: 300  # 订阅用户单次会话最大时长（秒）
-  free_user_total_duration_24h: 1200 
+  free_user_total_duration_24h: 12000
 
 fal:
   # inty-dev API Key FAL.AI
