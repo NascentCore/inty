@@ -1246,6 +1246,10 @@ class Agent:
                 if status_code in (401, 429) or (500 <= status_code <= 503):
                     return True
 
+        # 某些供应商会返回 200 但 choices 为空，通常是瞬时异常，可重试。
+        if isinstance(error, ValueError) and str(error).strip() == "LLM returned no choices":
+            return True
+
         return False
 
     def _call_openai_api_with_retry(
@@ -1371,6 +1375,12 @@ class Agent:
                     response = client.chat.completions.create(
                         **create_kwargs,
                     )
+                if (
+                    response is None
+                    or not getattr(response, "choices", None)
+                    or len(response.choices) == 0
+                ):
+                    raise ValueError("LLM returned no choices")
                 # 成功则返回 (response, trace_id)
                 if attempt > 0:
                     logger.info(

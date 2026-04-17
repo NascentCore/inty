@@ -1,4 +1,9 @@
 # 测试 Agent._chat_extra_body、get_agent_model_config、build_agent_from_data（review 增强补充）
+from types import SimpleNamespace
+
+import pytest
+
+from app.core.agent import agent as agent_module
 from app.core.agent.agent import Agent, build_agent_from_data, get_agent_model_config
 
 
@@ -70,3 +75,90 @@ def test_chat_extra_body_different_user_id():
     """_chat_extra_body 的 user 字段与传入的 user_id 一致。"""
     agent = _minimal_agent()
     assert agent._chat_extra_body("another_user", "google/gemini-2.5-flash")["user"] == "another_user"
+
+
+def test_call_openai_api_with_retry_retries_when_choices_are_empty(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """上游返回空 choices 时应按可重试错误处理，直到拿到有效响应。"""
+
+    class DummyCompletions:
+        def __init__(self):
+            self._responses = [
+                SimpleNamespace(choices=[], model="test-model", usage=None),
+                SimpleNamespace(
+                    choices=[
+                        SimpleNamespace(
+                            message=SimpleNamespace(content="ok", tool_calls=None),
+                            finish_reason="stop",
+                        )
+                    ],
+                    model="test-model",
+                    usage=None,
+                ),
+            ]
+            self.call_count = 0
+
+        def create(self, **kwargs):
+            response = self._responses[self.call_count]
+            self.call_count += 1
+            return response
+
+    completions = DummyCompletions()
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    agent = _minimal_agent()
+    monkeypatch.setattr(agent_module, "_should_trace", lambda _email: False)
+
+    response, trace_id = agent._call_openai_api_with_retry(
+        client=client,
+        model="google/gemini-2.5-flash",
+        openai_messages=[{"role": "user", "content": "hello"}],
+        temperature=0.7,
+        max_tokens=128,
+        top_p=1.0,
+        extra_body={"user": "user-123"},
+        user_id="user-123",
+        max_retries=3,
+        initial_delay=0.0,
+        user_email="user@example.com",
+    )
+
+    assert completions.call_count == 2
+    assert response.choices[0].message.content == "ok"
+    assert trace_id is None
+
+
+def test_call_openai_api_with_retry_raises_after_empty_choices_exhaust_retries(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """连续空 choices 超过重试上限后应抛出原始错误。"""
+
+    class DummyCompletions:
+        def __init__(self):
+            self.call_count = 0
+
+        def create(self, **kwargs):
+            self.call_count += 1
+            return SimpleNamespace(choices=[], model="test-model", usage=None)
+
+    completions = DummyCompletions()
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    agent = _minimal_agent()
+    monkeypatch.setattr(agent_module, "_should_trace", lambda _email: False)
+
+    with pytest.raises(ValueError, match="LLM returned no choices"):
+        agent._call_openai_api_with_retry(
+            client=client,
+            model="google/gemini-2.5-flash",
+            openai_messages=[{"role": "user", "content": "hello"}],
+            temperature=0.7,
+            max_tokens=128,
+            top_p=1.0,
+            extra_body={"user": "user-123"},
+            user_id="user-123",
+            max_retries=2,
+            initial_delay=0.0,
+            user_email="user@example.com",
+        )
+
+    assert completions.call_count == 2
