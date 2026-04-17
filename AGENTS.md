@@ -1,18 +1,26 @@
 # Inty：长期AI情感陪伴
 
-Inty代表Intelligent Entity，有智能的存在，其内涵是有情感的AI。
+Inty代表Intelligent Entity，智能存在；因情感是人类智能层次中最等级、Inty的内涵是有情感的AI。
+本仓库是以这个理念指引的各类智能体系统和消费者产品。
+包括Python写的智能体云端服务、Android移动端App为用户提供交互界面；
+以及OPs工具用于支持运营和商业化。
 
-这个代码仓库是以这个理念指引的各类产品。包括Python写的智能体云端服务、Android移动端App
-为用户提供交互界面；以及OPs平台用于支持运营和商业化。
+这是一个Monorepo
 
-这是一个Monorepo，所有资料信息都可以存放。
+工程师主要使用[Cursor](https://cursor.com/)；产品经理用
+1. [Claude Code](https://code.claude.com/docs/en/overview)
+2. [OpenAI Codex](https://openai.com/codex/)
 
-我们使用[Cursor](https://cursor.com/)在本代码库干活儿，Cursor会通过MCP、CLI与飞书（Inty团队的OA系统）打通。
+这些编码智能体通过
+[飞书MCP](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/mcp_integration/mcp_introduction?lang=zh-CN)、
+或[飞书CLI](https://www.feishu.cn/feishu-cli)与飞书（我们使用的OA系统）打通。
 
-android_app/是IntelliMate Android App，imate_android_app/是iMate Android App，两者相互独立。
-iMate Android App是基于IntelliMate开发运营经验之上开发的新一代智能体陪伴移动App。
+[IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，
+基于后端[chat completions](/app/core/chat.py)对话机制；
+[iMate Android App](imate_android_app/)是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，
+基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
 
-agentic companion 是模拟的异地亲密伴侣，不能见面其他跟活人一样。
+Agentic companion模拟的是异地亲密伴侣（不能见面的爱人、其他跟活人一样）。
 
 ## Override Rule
 
