@@ -26,7 +26,7 @@
 | 3 | 写入流水线 | 提炼 -> 归一化/去重 -> 调嵌入 API -> 同事务写主表与 provenance -> 通知缓存失效 |
 | 4 | 运行时内存 | 工作集、热点 LRU、写合并；**以 PG 为准**，进程可冷启动重建 |
 | 5 | 检索服务 | 过滤后向量 Top-K + 全文 Top-K -> RRF/加权融合 -> 可选重排；层次打包进 token 预算 |
-| 6 | 提示词组装 | 记忆单独成块注入；顺序：静态系统 -> 工具策略 -> **记忆** -> 近期对话；各层 max_tokens |
+| 6 | 提示词组装 | 在 **companion 唯一出口** 注入 LTM 块；与工作区 `memory_pipeline` 文档块顺序可配置；与 `prompting/assembler.py` 路径去重 |
 | 7 | 对外 API（若需要） | HTTP 契约；同步 `app/schemas` 与 Kotlin `api/model` |
 | 8 | 质量与观测 | 集成测试；**断言** agentic 读写从不触及 legacy `memory` 表；延迟与嵌入失败率指标 |
 | 9 | 上线 | 功能开关、重嵌入与索引重建运维说明 |
@@ -75,7 +75,51 @@
 ### 提示词组装
 
 - 对齐 `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`（类型化切片边界）。
-- 记忆块由单一入口生成（如小型 `PromptAssembler`），避免多处字符串拼接。
+- 记忆块须由 **单一入口** 生成（ companion 侧专用小模块或扩展现有 `build_system_messages` 链路），避免多处字符串拼接。
+- **`app/core/agentic_kernel/prompting/assembler.py`** 偏向主站 Agent 的 LangChain 拼装；**本 FR 的向量 LTM 切片默认挂在 companion 回合路径**（如 `companion/prompts.py` / `build_system_messages` / `turn_engine.py` 的最终 message list），与 assembler 并行存在时须 **明确只选一条主路径** 注入，避免重复塞入两套「记忆」。
+
+## 架构审查结论（纳入本 FR）
+
+本节吸收对当前 `agentic_kernel/` 代码的对照结论，作为实现约束。
+
+### 与现有 companion 运行时的兼容度（高）
+
+- **`CompanionManager`**（`companion/manager.py`）按 `user_id` + `companion_id` + `chat_id` 管理 `CompanionSession`，工作区目录为 `workspaces_base_dir/user_id/companion_id/chat_id`，与 FR 中 LTM **作用域键** 一致。
+- **`get_memory_store`**（`companion/memory_registry.py`）以 `CompanionScope.registry_key()` 为键，在 **单进程内** 对同一三元组复用同一个 `MemoryStore`，Repository 绑定相同作用域；LTM 的租户隔离语义与此 **同构**，不冲突。
+- **`runtime/turn_orchestrator.py`** 提供通用单轮 `prepare / invoke / handle / persist`；LTM 的检索与写入可挂在 `prepare_turn`（注入上下文）与 `persistence` 或会话尾部，无需推翻该抽象。
+
+### 与 `memory_pipeline`（工作区文档记忆）正交（须保持）
+
+- **`companion/memory_pipeline.py`** 负责基于工作区文件的 **MEMORY / SOUL / USER、日记与日总结** 等 **markdown 策展管线**，属于 **工作区 store** 能力。
+- FR 定义的 **pgvector LTM**（命名 + provenance + 层次）是 **另一条纵轴**；实现上 **禁止** 把 LTM 读写混进 `MemoryStore` 既有语义或替换 `SqlAlchemyMemoryRepository` 的职责。
+- **提示词顺序**须产品化约定：例如 **静态 axiom -> 工作区文档块（若有）-> 向量 LTM 块 -> 工具策略 -> 近期 transcript**；实现时在 **单一组装函数** 内用配置固定顺序，避免两处各塞一半上下文。
+
+### LTM 运行时注册策略（对齐 `memory_registry` 模式，已决案）
+
+| 层级 | 是否共享 | 说明 |
+|------|----------|------|
+| **代码与无状态服务** | 共享 | 全进程一份 LTM Repository 类、查询与融合逻辑、（可选）全局限流后的嵌入客户端。 |
+| **数据库连接池** | 共享 | 与现有后端共用同一 PG 连接池或 DSN 工厂即可；表前缀独立。 |
+| **有状态运行时句柄** | **按作用域一份** | 仿 `get_memory_store`：按 `(user_id, companion_id, chat_id)`（或与 FR 一致的 scope key）注册 **`AgenticKernelLtmRuntime`（示例名）**，内含该 scope 的工作集缓存、写合并队列；**禁止** 无 scope 的全局单例承载租户状态。 |
+| **OS 进程** | 默认共享 | **不**为每个 companion 默认独占一整套 OS 进程级「记忆模块」（不符合 WebSocket 多连接与弹性伸缩）；仅当合规明确要求 **硬进程隔离** 时再单独评估。 |
+
+**持久化隔离**：一切 SQL 必须带 **`user_id`（及既定 `agent_id`/`chat_id`）谓词**；禁止仅靠向量相似度、不带租户过滤的扫描。
+
+### 多智能体与 iMate 后端（能力与缺口）
+
+**已有基础**
+
+- **单用户、多会话 / 多 chat**：已由 `CompanionSession` 键与 scope 化 store 支持 **逻辑隔离**；LTM 表沿用相同 scope 列即可与 PG 层一致。
+- **多 companion 共用基础设施**：同一进程内多连接、多会话共享连接池与 LTM 服务代码是自然部署形态。
+
+**缺口（本 FR 不假装已解决，后续可单列 FR）**
+
+- **跨 companion 共享知识**：若同一用户下多个 agent 需共享一条「用户级」LTM，须在 schema 中显式 **`memory_scope` 或 `agent_id` 可空语义** 与检索策略（仅用户级 / 角色级 / 会话级）；不能默认仅 `chat_id`。
+- **多智能体编排**：`TurnOrchestrator` 是 **单次 turn** 抽象，**不包含** 多 agent 路由、handoff、共享黑板或跨 agent 消息总线；若产品要做「多智能体协作」，需要 **kernel 之上的编排层**，本 FR 的 LTM 仅提供 **可被多调用方共享读写的存储与检索**，不替代编排引擎。
+
+### 阶段 6 补充（提示词）
+
+- 实现清单中须列出 **唯一** 的 companion 注入点文件名（落地时以 PR 为准），并增加 **基线测试**：LTM 块只出现一次、与工作区 markdown 记忆块顺序可配置。
 
 ## 存储选型
 
@@ -189,8 +233,14 @@
 
 - `alembic/versions/20260127_120000_add_memory_tables.py`：legacy `memory`（仅对照，本 FR 不扩展）
 - `alembic/AGENTS.md`：迁移流程
+- `app/core/agentic_kernel/companion/manager.py`：`CompanionManager` / `CompanionSession`，会话 scope 来源
+- `app/core/agentic_kernel/companion/memory_registry.py`：`get_memory_store` 注册表模式（LTM 运行时应对齐）
 - `app/core/agentic_kernel/companion/memory_store.py`：工作区 store（与 LTM 正交）
-- `app/core/agentic_kernel/companion/turn_engine.py`：kernel 回合与提示组装挂点
+- `app/core/agentic_kernel/companion/memory_pipeline.py`：工作区 markdown 记忆策展（与向量 LTM 并行，勿混）
+- `app/core/agentic_kernel/companion/turn_engine.py`：回合与 transcript 持久化挂点
+- `app/core/agentic_kernel/companion/prompts.py`：companion `build_system_messages` 等（LTM 切片首选注入链）
+- `app/core/agentic_kernel/prompting/assembler.py`：主站 Agent 提示拼装（与 companion 路径区分）
+- `app/core/agentic_kernel/runtime/turn_orchestrator.py`：单轮编排抽象（多 agent 编排不在此 FR）
 - `app/services/companion_chat_service.py`：可选 DSN 注入边界
 - `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`：提示词组装方向
 - `backend/ARCH.md`、`backend/AGENTS.md`：pgvector 与 compose 说明
