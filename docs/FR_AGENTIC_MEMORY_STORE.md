@@ -36,178 +36,161 @@
 - **依赖**：带 pgvector 的 Postgres 镜像或实例；嵌入服务配额与密钥；DSN 可与现网 PG **同实例不同表**，但连接与配置须**独立**于 legacy 记忆服务（避免共享 Repository）。
 - **风险**：大表 HNSW 构建窗口；过滤过窄时预过滤与召回需调参；来源字段含 PII 须与聊天记录同等留存与权限；检索需防跨租户（禁止仅按向量查）。
 
-### 详细英文规格
+### 详细规格说明（与实现对齐）
 
-以下各节为与实现对齐的英文规格说明（表结构字段、流水线细节、仓库路径引用等）。
+以下与上文「分阶段交付」一致，补充字段级与流水线级说明。
 
-## Goal
+## 目标与非目标
 
-Design and implement a persistent memory mechanism **used only by the AGENTIC kernel** (`app/core/agentic_kernel/`) that:
+**目标**（仅 `app/core/agentic_kernel/` 使用）：
 
-1. Stores each memory with a stable human-readable **name** (slug within scope) and **provenance** (which conversation fragments and metadata justified the extraction).
-2. Supports **hierarchical** organization (tree or DAG via `parent_id` and optional edge table).
-3. Persists in **PostgreSQL** with the **pgvector** extension for semantic similarity search, plus **full-text** (or keyword) retrieval for hybrid ranking.
-4. Provides an **in-process runtime** layer (cache, working set, write coalescing) backed by Postgres as source of truth.
-5. Feeds a **prompt assembly** slot that composes retrieved memories with static prompt slices and other slices (tools, mode, transcript) for the LLM.
+1. 每条记忆有稳定 **命名**（作用域内 slug）与 **来源**（provenance：哪些对话片段与元数据支撑提炼）。
+2. **层次化**：`parent_id` 树，可选 `agentic_kernel_ltm_edge` 表达 DAG（关联、替代、派生）。
+3. **持久化**：PostgreSQL + **pgvector** 语义检索，配合 **全文**（`tsvector` + GIN）做混合排序。
+4. **进程内运行时**：工作集、热点缓存、写合并；**PostgreSQL 为权威数据源**。
+5. **提示词组装**：独立「记忆切片」，与静态系统切片、工具策略切片、近期对话等拼装为发给 LLM 的上下文。
 
-**Non-goals:** reusing, migrating, or extending the legacy `memory` table and its extraction pipelines; dual-writing kernel LTM into legacy tables.
+**非目标**：复用、迁移或扩展 legacy `memory` 表及其抽取管线；向 legacy 表双写 kernel LTM。
 
-This document is the execution-oriented spec. Schema and table names below are proposals; table names **must not** collide with legacy `memory`.
+表名与列名为提案，**禁止**与 legacy `memory` 同名冲突。
 
-## Relationship to existing systems
+## 与现有系统的关系
 
-### Legacy `memory` (out of scope for this design)
+### Legacy `memory`（本设计不触碰）
 
-- Historical App feature: `memory` table (see `alembic/versions/20260127_120000_add_memory_tables.py`), festival/daily extraction, related APIs and push.
-- **This FR does not read or write legacy `memory`.** No shared ORM model, no shared repository, no foreign key from kernel LTM to `memory.id`.
+- 历史主 App 能力：`memory` 表（见 `alembic/versions/20260127_120000_add_memory_tables.py`）、节日/日常抽取与推送等。
+- **本 FR 不读不写** legacy `memory`：不共享 ORM、不共享 Repository、LTM 行不 `FOREIGN KEY` 指向 `memory.id`。
 
-### Agentic kernel workspace store (orthogonal)
+### Agentic kernel 工作区存储（正交）
 
-- Code: `app/core/agentic_kernel/companion/memory_store.py`, `memory_registry.py`, used from `turn_engine.py`.
-- Today: workspace-scoped state (e.g. compaction); **not** the kernel LTM store. Keep concerns split: **workspace store** vs **`AgenticKernelLtmStore`** (or equivalent) backed by new tables.
+- 代码：`app/core/agentic_kernel/companion/memory_store.py`、`memory_registry.py`、`turn_engine.py`。
+- 现状：工作区级状态（如 compaction），**不是** kernel LTM。职责拆分：**工作区 store** 与 **`AgenticKernelLtmStore`**（示例名，以代码为准）及新表。
 
-**Integration:** introduce a dedicated **read-through / write-through** `AgenticKernelLtmRuntime` (name illustrative) called from kernel turn assembly only. DSN may be the same Postgres cluster as the rest of the app, but **code and migrations for LTM are kernel-owned**. Process restart must rebuild in-memory indexes from PG.
+**集成**：在 **kernel 回合组装** 路径上引入专用 **读穿/写穿** `AgenticKernelLtmRuntime`（示例名）。DSN 可与业务共用同一 PG 集群，但 **LTM 迁移与代码归 kernel 侧拥有**；进程重启后从 PG 重建内存侧索引。
 
-### Orchestration boundary
+### 编排边界
 
-- `companion_chat_service.py` may pass a **DSN or session factory** into the kernel; it must not route kernel LTM through legacy memory services. Optional: defer/async for embedding follows kernel or caller policy, without calling legacy extraction jobs.
+- `companion_chat_service.py` 仅可传入 **DSN 或 session 工厂**；不得把 kernel LTM 路由到 legacy 记忆服务。嵌入可异步/延迟，**不得**调用 legacy 抽取任务。
 
-### Prompt assembly
+### 提示词组装
 
-- Related: `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md` (typed assembly, slice boundaries).
-- Memory slice should be a **single injected block** built by a small `PromptAssembler` or equivalent, not ad hoc string concat in multiple call sites.
+- 对齐 `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`（类型化切片边界）。
+- 记忆块由单一入口生成（如小型 `PromptAssembler`），避免多处字符串拼接。
 
-## Storage choice
+## 存储选型
 
-- **PostgreSQL + pgvector**: one transactional store for metadata, provenance, ACL filters, and vectors. Aligns with `backend/ARCH.md`, `backend/AGENTS.md`, and `docker compose up pgvector`.
-- **Hybrid retrieval**: `embedding <=> query_embedding` (or `<->` / cosine per normalization contract) plus `tsvector` + GIN for lexical channel; merge with RRF or weighted scores.
+- **PostgreSQL + pgvector**：元数据、来源、租户过滤与向量同事务；与 `backend/ARCH.md`、`backend/AGENTS.md`、`docker compose up pgvector` 一致。
+- **混合检索**：向量距离（如 `<=>` / `<->`，与归一化及 HNSW **opclass** 一致）+ `tsvector` 全文通道，RRF 或加权融合。
 
-## Proposed logical data model
+## 逻辑数据模型
 
-### Table: `agentic_kernel_ltm` (name illustrative; not legacy `memory`)
+### 表 `agentic_kernel_ltm`（示例名，非 legacy `memory`）
 
-| Column | Purpose |
-|--------|---------|
-| `id` | UUID or BIGSERIAL primary key |
-| `user_id` | Tenant; mandatory on every query |
-| `agent_id` | Nullable if memory is user-global; else scoped to companion/agent |
-| `chat_id` | Optional finer scope for session-bound memories |
-| `parent_id` | Hierarchy; NULL for root |
-| `name` | Slug unique per `(user_id, agent_id, chat_id)` scope (exact rules in migration) |
-| `content` | Text shown to LLM as the memory body |
-| `embedding` | `vector(N)`; N fixed per `embedding_model` |
-| `embedding_model` | Model id string |
-| `embedding_version` | Integer or string for re-embed campaigns |
-| `content_tsv` | Generated `tsvector` from `content` (+ optional `name`) |
-| `valid_from`, `valid_to` | Soft delete / supersession |
-| `created_at`, `updated_at` | Audit |
+| 列名 | 说明 |
+|------|------|
+| `id` | 主键 UUID 或 BIGSERIAL |
+| `user_id` | 租户；每条查询必选过滤条件 |
+| `agent_id` | 可空：用户全局记忆；否则绑定角色/ companion |
+| `chat_id` | 可空：会话级更细粒度 |
+| `parent_id` | 层次；根为 NULL |
+| `name` | slug；在 `(user_id, agent_id, chat_id)` 等作用域内唯一（迁移中写死规则） |
+| `content` | 写入 LLM 提示的正文 |
+| `embedding` | `vector(N)`，`N` 与 `embedding_model` 绑定 |
+| `embedding_model` | 模型 id 字符串 |
+| `embedding_version` | 重嵌入批次标识 |
+| `content_tsv` | 由 `content`（及可选 `name`）生成的 `tsvector` |
+| `valid_from` / `valid_to` | 软删或替代 |
+| `created_at` / `updated_at` | 审计 |
 
-Indexes (illustrative):
+**索引（示例）**
 
-- B-tree: `(user_id)`, `(user_id, agent_id)`, `(user_id, agent_id, parent_id)`.
-- Unique: `(user_id, agent_id, name)` where `agent_id` is nullable use partial indexes or surrogate scope key.
-- HNSW on `embedding` with operator class matching distance used in queries.
-- GIN on `content_tsv`.
+- B-tree：`user_id`，`(user_id, agent_id)`，`(user_id, agent_id, parent_id)`。
+- 唯一：`(user_id, agent_id, name)`；`agent_id` 可空时用部分索引或 surrogate scope。
+- `embedding` 上 HNSW，**opclass 与查询距离一致**。
+- `content_tsv` 上 GIN。
 
-### Table: `agentic_kernel_ltm_provenance`
+### 表 `agentic_kernel_ltm_provenance`
 
-| Column | Purpose |
-|--------|---------|
-| `id` | PK |
-| `memory_id` | FK to `agentic_kernel_ltm` |
-| `source_type` | e.g. `chat_message`, `chat_window`, `tool`, `document` |
-| `source_id` | External id (message id, chat id, chunk id) |
-| `excerpt` | Truncated raw text optional |
-| `meta` | JSONB for extractor version, prompt hash, offsets |
+| 列名 | 说明 |
+|------|------|
+| `id` | 主键 |
+| `memory_id` | 外键指向 `agentic_kernel_ltm` |
+| `source_type` | 如 `chat_message`、`chat_window`、`tool`、`document` |
+| `source_id` | 外部 id |
+| `excerpt` | 可选截断原文 |
+| `meta` | JSONB：提炼器版本、prompt 哈希、偏移等 |
 
-### Optional: `agentic_kernel_ltm_edge`
+### 可选表 `agentic_kernel_ltm_edge`
 
-- For non-tree relations: `related_to`, `supersedes`, `derived_from` with `(from_id, to_id, kind)`.
+- 非树关系：`related_to`、`supersedes`、`derived_from`，行 `(from_id, to_id, kind)`。
 
-## In-process runtime subsystem
+## 进程内运行时子系统
 
-Responsibilities:
+**职责**
 
-1. **Working set**: last-N turns or pending writes not yet visible to retriever.
-2. **Hot cache**: subset of embeddings for active `user_id` / `agent_id` (LRU or explicit pin for session duration).
-3. **Write queue**: debounce duplicate upserts by `name`; batch embed API calls where safe.
+1. **工作集**：最近 N 轮或尚未对检索可见的待写数据。
+2. **热点缓存**：当前 `user_id` / `agent_id` 下部分向量（LRU 或会话固定）。
+3. **写队列**：按 `name` 去抖合并；安全时批量调用嵌入 API。
 
-Rules:
+**规则**
 
-- **Postgres is source of truth**; in-memory structures are disposable.
-- After PG commit, update or invalidate cache entries by `id` + version.
-- Startup: no mandatory warm load; lazy load on first retrieval for scope.
+- **以 PostgreSQL 为准**；内存结构可丢弃。
+- PG 提交后按 `id` + 版本更新或失效缓存。
+- 启动：不强制全量预热；按作用域首次检索懒加载。
 
-## Write pipeline
+## 写入流水线
 
-1. **Extract**: LLM or rule job emits structured fields (`name`, `content`, `parent_id`, provenance rows).
-2. **Normalize**: trim name, enforce uniqueness policy, merge or bump version if same `name`.
-3. **Embed**: call configured embedding provider; on failure set `embedding_status` (add column) and enqueue retry job.
-4. **Persist**: single transaction: insert/update `agentic_kernel_ltm`, insert provenance rows, update `content_tsv` if not generated.
-5. **Notify runtime**: invalidate or patch cache.
+1. **提炼**：LLM 或规则任务输出结构化字段（`name`、`content`、`parent_id`、多行 provenance）。
+2. **归一化**：裁剪 `name`、唯一性策略、同名则合并或升版本。
+3. **嵌入**：调用嵌入服务；失败则写 `embedding_status`（迁移中增加列）并入队重试。
+4. **持久化**：单事务写 `agentic_kernel_ltm`、插入 provenance、若非生成列则更新 `content_tsv`。
+5. **通知运行时**：失效或补丁式更新缓存。
 
-Async: long embedding should not block user-visible chat completion; use kernel-level or caller-level deferral **without** invoking legacy memory extraction.
+异步：长耗时嵌入不阻塞用户可见回合完成；由 kernel 或调用方延迟，**不**走 legacy 抽取。
 
-## Read / retrieval pipeline
+## 读取与检索流水线
 
-1. Build `query_embedding` from latest user utterance or aggregated task string.
-2. SQL filter: `user_id = ?` AND optional `agent_id`, `chat_id`, `valid_to IS NULL`, hierarchy constraints.
-3. Vector branch: `ORDER BY embedding <=> :q LIMIT k_vec`.
-4. FTS branch: `ts_rank_cd` or plain `@@` query, `LIMIT k_txt`.
-5. Fuse: RRF or weighted sum; optional cross-encoder rerank on top M (feature-flagged).
-6. **Hierarchy-aware pack**: include ancestor summaries + leaf details under token budget (configurable).
+1. 由最新用户话轮或聚合任务串生成 `query_embedding`。
+2. SQL 过滤：`user_id = ?`，可选 `agent_id`、`chat_id`、`valid_to IS NULL`、层次条件。
+3. 向量分支：`ORDER BY embedding <=> :q LIMIT k_vec`。
+4. 全文分支：`ts_rank_cd` 或 `@@`，`LIMIT k_txt`。
+5. 融合：RRF 或加权和；可选对 Top M 交叉编码器重排（特性开关）。
+6. **层次感知打包**：在 token 预算内组合祖先摘要与叶子细节（可配置）。
 
-## Prompt assembly integration
+## 提示词组装集成
 
-Suggested message order (align with clean prompt system when merged):
+建议消息顺序（与 clean prompt 体系统一时再对齐）：
 
-1. Static system slices (persona, safety, format).
-2. Tool / policy slices.
-3. **Memory slice**: bullet or numbered list; each item: `name`, `content`, one-line provenance reference (ids only in compact mode).
-4. Recent transcript window.
+1. 静态系统切片（人格、安全、格式）。
+2. 工具与策略切片。
+3. **记忆切片**：列表项含 `name`、`content`、一行来源引用（紧凑模式可仅 id）。
+4. 近期对话窗口。
 
-Token caps per slice in config; memory slice truncates lowest-ranked items first.
+各切片在配置中设 `max_tokens`；记忆切片先丢融合分最低项。
 
-## HTTP / schema sync
+## HTTP 与双端 schema
 
-If mobile or ops clients list or edit memories:
+若移动端或 Ops 需列改记忆：更新 `app/schemas` 与 `android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model`（仓库约定）。
 
-- Update `app/schemas` and Kotlin models under `android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model` per repo convention.
+## 安全
 
-## Security
+- 每条读路径必须带 **租户过滤**（`user_id`）；禁止仅靠向量检索。
+- provenance 可能含 PII：留存与访问控制与聊天记录同级。
+- 缓解记忆投毒：Top-K 多样性、置信度标记、高影响写入可选人工审核队列。
 
-- Every read path must include **tenant filter** (`user_id`); never retrieve by vector alone.
-- Provenance may contain PII; apply same retention and access control as chat history.
-- Mitigate memory poisoning: diversity in top-K, confidence flags, optional human review queue for high-impact writes.
+## 测试要点
 
-## Testing
+1. 迁移：空库 `alembic upgrade head`，确认已安装 `vector` 扩展。
+2. Repository 集成：插入、混合检索、唯一性、父链、替代。
+3. **隔离**：静态分析或集成测试断言 kernel LTM 模块不 import legacy `memory` 模型或服务。
+4. 负载烟测：固定行数，在 CI 体量 DB 上记录 p95 基线。
 
-1. Migration: fresh DB `alembic upgrade head`; extension `vector` present.
-2. Repository integration tests: insert, hybrid search, uniqueness, parent chain, supersede.
-3. Isolation: static analysis or integration tests assert kernel LTM module imports no legacy `memory` models or services.
-4. Load smoke: fixed row count, assert p95 below agreed threshold on CI-sized DB.
+## 仓库路径索引
 
-## Execution phases (checklist)
-
-| Phase | Deliverable |
-|-------|-------------|
-| 0 | Table prefix, scope keys, embedding contract, legacy isolation checklist |
-| 1 | Alembic revision: `CREATE EXTENSION vector`, new tables, indexes |
-| 2 | SQLAlchemy models + repository + `embedding_status` / retry worker hook |
-| 3 | Write pipeline: extract -> normalize -> embed -> persist -> cache invalidate |
-| 4 | `AgenticKernelLtmRuntime` read/write-through; **do not** overload legacy `MemoryStore` semantics |
-| 5 | Hybrid search API (internal service first; HTTP if required) |
-| 6 | Prompt memory slice + token budget in companion / kernel assembly path |
-| 7 | Client schemas if user-facing CRUD |
-| 8 | Tests + observability (latency, embed failures, queue depth) |
-| 9 | Rollout: feature flag; runbook for re-embed and index rebuild |
-
-## References (repo paths)
-
-- `alembic/versions/20260127_120000_add_memory_tables.py` - legacy `memory` (reference only; **not** extended by this FR)
-- `alembic/AGENTS.md` - migration workflow
-- `app/core/agentic_kernel/companion/memory_store.py` - workspace store (orthogonal to LTM)
-- `app/core/agentic_kernel/companion/turn_engine.py` - kernel turn hook for prompt assembly
-- `app/services/companion_chat_service.py` - optional DSN injection boundary only
-- `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md` - prompt assembly direction
-- `backend/ARCH.md`, `backend/AGENTS.md` - pgvector / compose notes
+- `alembic/versions/20260127_120000_add_memory_tables.py`：legacy `memory`（仅对照，本 FR 不扩展）
+- `alembic/AGENTS.md`：迁移流程
+- `app/core/agentic_kernel/companion/memory_store.py`：工作区 store（与 LTM 正交）
+- `app/core/agentic_kernel/companion/turn_engine.py`：kernel 回合与提示组装挂点
+- `app/services/companion_chat_service.py`：可选 DSN 注入边界
+- `docs/FR_CLEAN_AGENT_PROMPTS_SYSTEM.md`：提示词组装方向
+- `backend/ARCH.md`、`backend/AGENTS.md`：pgvector 与 compose 说明
