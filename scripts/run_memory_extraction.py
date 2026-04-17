@@ -47,7 +47,8 @@ async def main() -> int:
         logger.info(f"user_id={args.user_id} 消息数: {len(msgs)}")
         if msgs:
             logger.info("前 3 条示例 (role, content 前 80 字):")
-            for i, (r, c) in enumerate(msgs[:3]):
+            for i, row in enumerate(msgs[:3]):
+                r, c = row[0], row[1]
                 logger.info(f"  [{i+1}] {r}: {(c or '')[:80]}...")
         return 0
 

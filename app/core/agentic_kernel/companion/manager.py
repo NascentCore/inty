@@ -16,6 +16,7 @@ from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
 from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
+from .models import CompanionTurnResult
 from .turn import run_turn
 from .workspace import (
     ensure_minimal_workspace_documents_in_store,
@@ -176,7 +177,7 @@ class CompanionManager:
         *,
         heartbeat_turn: bool = False,
         defer_memory_update: bool = True,
-    ) -> str:
+    ) -> CompanionTurnResult:
         """执行一轮对话。"""
         return await run_turn(
             session.workspace_path,

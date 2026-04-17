@@ -227,4 +227,4 @@ def test_run_turn_inspect_snapshot_during_tool_call(tmp_path: Path) -> None:
                     llm_client=client,
                 )
             )
-    assert out == "final assistant"
+    assert out.assistant_text == "final assistant"

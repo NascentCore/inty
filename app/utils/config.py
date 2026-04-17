@@ -448,6 +448,9 @@ class MemoryExtractionConfig:
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
+    # When companion writes significance_perception into chat_history.meta_data, use it to
+    # rank turns and annotate the extraction prompt (does not drop messages by default).
+    use_significance_perception_in_extraction: bool = False
 
     def __post_init__(self):
         mode = self.workflow_mode

@@ -23,6 +23,7 @@ from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
+    CompanionTurnResult,
     ContextMeta,
     PromptBundle,
     load_context_meta,
@@ -82,7 +83,7 @@ async def run_turn(
     transcript_llm_window_max_messages: int | None = None,
     repository_only_workspace_text: bool = False,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
-) -> str:
+) -> CompanionTurnResult:
     """
     执行一轮完整对话。
 
@@ -92,7 +93,7 @@ async def run_turn(
     - 持久化 transcript
     - 调度记忆管线
 
-    返回 assistant_text。
+    返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     """
     t0 = time.perf_counter()
     root = workspace.resolve()
@@ -356,4 +357,7 @@ async def run_turn(
         len(last_text),
         (time.perf_counter() - t0) * 1000.0,
     )
-    return last_text
+    return CompanionTurnResult(
+        assistant_text=last_text,
+        significance_perception=significance_meta,
+    )

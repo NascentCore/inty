@@ -18,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
+from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
@@ -975,7 +976,7 @@ def test_chat_completions_companion_kernel_branch_writes_history(
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
-        return "companion-reply-xyz"
+        return CompanionTurnResult(assistant_text="companion-reply-xyz")
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
         return SimpleNamespace(id="chat-42", agent_id=agent_id)
@@ -1142,7 +1143,14 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
-        return "companion-ws-reply"
+        return CompanionTurnResult(
+            assistant_text="companion-ws-reply",
+            significance_perception={
+                "importance_round": 9,
+                "importance_user_message": 8,
+                "importance_assistant_message": 7,
+            },
+        )
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
         return SimpleNamespace(id="chat-ws-1", agent_id=agent_id)
@@ -1302,6 +1310,13 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["companion_calls"] == 1
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
+    assert captured["ai_save"][3] == {
+        "significance_perception": {
+            "importance_round": 9,
+            "importance_user_message": 8,
+            "importance_assistant_message": 7,
+        }
+    }
 
     companion_chat_service.clear_companion_chat_service_caches()
 
@@ -1313,7 +1328,7 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
-        return "should-not-run"
+        return CompanionTurnResult(assistant_text="should-not-run")
 
     _setup_companion_ws_chat_test_env(
         monkeypatch,
@@ -1363,7 +1378,7 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
         assert kwargs["user_text"] == "a\nb"
-        return "ok-parts"
+        return CompanionTurnResult(assistant_text="ok-parts")
 
     _setup_companion_ws_chat_test_env(
         monkeypatch,

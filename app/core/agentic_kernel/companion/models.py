@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
@@ -28,6 +28,13 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
 )
 
 AI_PRIVATE_INJECT_MAX_CHARS = 12_000
+
+
+class CompanionTurnResult(BaseModel):
+    """One companion kernel turn: visible assistant text plus optional significance scores."""
+
+    assistant_text: str = ""
+    significance_perception: dict[str, Any] | None = None
 
 
 class ChatMessage(BaseModel):

@@ -18,6 +18,7 @@ def _load_memory_extraction_service_module():
             trigger_new_user_messages=30,
             trigger_incremental_messages=30,
             model="",
+            use_significance_perception_in_extraction=False,
         ),
     )
     fake_core_config_module = types.ModuleType("app.core.config")
@@ -96,8 +97,8 @@ def test_get_all_messages_for_user_prefers_replica_connection():
         fetchall_results=[
             [("chat-1",)],
             [
-                ({"type": "human", "data": {"content": "hi"}},),
-                ({"type": "ai", "data": {"content": "hello"}},),
+                ({"type": "human", "data": {"content": "hi"}}, None),
+                ({"type": "ai", "data": {"content": "hello"}}, None),
             ],
         ]
     )
@@ -117,7 +118,7 @@ def test_get_all_messages_for_user_prefers_replica_connection():
     ):
         rows = service.get_all_messages_for_user("user-1", prefer_replica_read=True)
 
-    assert rows == [("user", "hi"), ("assistant", "hello")]
+    assert rows == [("user", "hi", None), ("assistant", "hello", None)]
     mock_replica_conn.assert_called_once()
     mock_primary_conn.assert_not_called()
 
@@ -127,7 +128,7 @@ def test_get_all_messages_for_user_fallbacks_to_primary_when_replica_fails():
         fetchall_results=[
             [("chat-1",)],
             [
-                ({"type": "human", "data": {"content": "fallback"}},),
+                ({"type": "human", "data": {"content": "fallback"}}, None),
             ],
         ]
     )
@@ -151,8 +152,59 @@ def test_get_all_messages_for_user_fallbacks_to_primary_when_replica_fails():
     ):
         rows = service.get_all_messages_for_user("user-1", prefer_replica_read=True)
 
-    assert rows == [("user", "fallback")]
+    assert rows == [("user", "fallback", None)]
     mock_primary_conn.assert_called_once()
+
+
+def test_format_chat_for_prompt_includes_significance_brackets() -> None:
+    text = service._format_chat_for_prompt(
+        [
+            (
+                "assistant",
+                "hello",
+                {
+                    "significance_perception": {
+                        "importance_round": 9,
+                        "importance_user_message": 8,
+                        "importance_assistant_message": 7,
+                    }
+                },
+            ),
+        ]
+    )
+    assert "significance round=9/10" in text
+    assert "user_msg=8/10" in text
+    assert "assistant_msg=7/10" in text
+
+
+def test_prepare_messages_sorts_by_importance_round() -> None:
+    rows = [
+        (
+            "assistant",
+            "low",
+            {
+                "significance_perception": {
+                    "importance_round": 2,
+                    "importance_user_message": 2,
+                    "importance_assistant_message": 2,
+                }
+            },
+        ),
+        ("user", "u", None),
+        (
+            "assistant",
+            "high",
+            {
+                "significance_perception": {
+                    "importance_round": 9,
+                    "importance_user_message": 9,
+                    "importance_assistant_message": 9,
+                }
+            },
+        ),
+    ]
+    out = service._prepare_messages_for_memory_extraction(rows, use_significance=True)
+    assert [r[1] for r in out] == ["high", "low", "u"]
 
 
 @pytest.mark.asyncio

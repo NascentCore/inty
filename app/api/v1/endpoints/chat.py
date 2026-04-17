@@ -630,7 +630,7 @@ async def _agent_chat_completions_impl(
                         ),
                     )
                 if use_companion:
-                    companion_reply = (
+                    companion_turn = (
                         await companion_chat_service.run_companion_chat_turn_for_api(
                             user_id=current_user.id,
                             agent_id=agent_id,
@@ -641,6 +641,11 @@ async def _agent_chat_completions_impl(
                             session_id=session_id,
                         )
                     )
+                    companion_reply = companion_turn.assistant_text
+                    companion_ai_meta: dict | None = None
+                    sp = companion_turn.significance_perception
+                    if isinstance(sp, dict) and sp:
+                        companion_ai_meta = {"significance_perception": sp}
                     if effective_local_id:
                         await chat_history_service.add_user_message_async(
                             session_id,
@@ -656,6 +661,7 @@ async def _agent_chat_completions_impl(
                             session_id,
                             companion_reply,
                             agent_id=chat.agent_id,
+                            meta_data=companion_ai_meta,
                         )
                     )
                     response_content = companion_reply

@@ -17,6 +17,7 @@ from app.core.agentic_kernel.companion.manager import (
     CompanionManager,
     CompanionSession,
 )
+from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
@@ -246,11 +247,12 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
     )
     ws_system_ms = (time.perf_counter() - t_ws0) * 1000.0
     t_rt0 = time.perf_counter()
-    reply = await manager.run_turn(
+    turn = await manager.run_turn(
         session,
         INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
         defer_memory_update=True,
     )
+    reply = turn.assistant_text
     run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
     total_ms = (time.perf_counter() - t0) * 1000.0
     if not reply or not str(reply).strip():
@@ -288,7 +290,7 @@ async def run_companion_chat_turn_for_api(
     resolved_chat_model_id: str,
     defer_memory_update: bool = True,
     session_id: str | None = None,
-) -> str:
+) -> CompanionTurnResult:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
