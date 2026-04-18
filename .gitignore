@@ -125,3 +125,8 @@ tmp/
 .cursor/hooks/state
 
 output/
+
+# Android App Bundle二进制包文件
+*.aab
+# Android Studio Kotlin编译器临时目录
+.kotlin/

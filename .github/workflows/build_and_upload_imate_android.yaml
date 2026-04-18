@@ -1,0 +1,130 @@
+# iMate (com.inty.imate)：构建 release AAB 并上传到 Google Play Internal testing。
+# Play Developer API：默认使用仓库 Secret GCP_SERVICE_ACCOUNT_KEY_GPLAY_UPLOAD；
+# 该 JSON 对应的服务账号必须在 Play Console「API 访问」中对应用 com.inty.imate 有上传权限。
+# 若要与 IntelliMate 密钥隔离，可复制为 GCP_SERVICE_ACCOUNT_KEY_GPLAY_UPLOAD_IMATE 并在下方替换引用。
+
+name: Release - iMate GPlay 内测轨道
+
+on:
+  # 北京时间 10:30 发布一次；比 IntelliMate workflow 晚 30 分钟，降低同一时刻 runner 争抢（GitHub 使用 UTC）
+  schedule:
+    - cron: "30 2 * * *" # 02:30 UTC = 10:30 北京
+
+  workflow_dispatch:
+
+jobs:
+  build-aab:
+    runs-on: android-builder
+    timeout-minutes: 60
+
+    env:
+      IMATE_AAB_PATH: imate_android_app/app/build/outputs/bundle/release/app-release.aab
+
+    permissions:
+      # Create tag + push release
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      # https://github.com/actions/cache/blob/main/examples.md#java---gradle
+      - name: Cache Gradle dependencies and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            imate_android_app/.gradle
+            imate_android_app/build
+            imate_android_app/app/build
+            imate_android_app/core/build
+          key: ${{ runner.os }}-gradle-imate-${{ hashFiles('imate_android_app/**/*.gradle*', 'imate_android_app/**/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-imate-${{ hashFiles('imate_android_app/**/*.gradle*', 'imate_android_app/**/gradle-wrapper.properties') }}-
+
+      - name: Build release bundle (AAB)
+        run: |
+          cd imate_android_app
+          ./gradlew bundleRelease
+
+      - name: Upload AAB to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: imate-app-release-aab
+          path: ${{ env.IMATE_AAB_PATH }}
+          retention-days: 7
+
+      - name: Upload release bundle to Google Play internal testing
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_GPLAY_UPLOAD }}
+          packageName: com.inty.imate
+          releaseFiles: ${{ env.IMATE_AAB_PATH }}
+          track: internal
+          status: completed
+          changesNotSentForReview: false
+
+      - name: Create and push tag
+        id: tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG_NAME="${SHORT_SHA}-imate"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+          echo "Creating tag: $TAG_NAME for commit: $SHORT_SHA"
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists; skipping creation."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG_NAME"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin "$TAG_NAME"
+
+          echo "Successfully created and pushed tag: $TAG_NAME"
+
+      - name: Create pre-release and upload AAB
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          AAB_PATH="${{ env.IMATE_AAB_PATH }}"
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG_NAME already exists; uploading AAB only."
+            gh release upload "$TAG_NAME" "$AAB_PATH" --clobber
+            exit 0
+          fi
+
+          NOTES="iMate 内测构建，提交 \`${TAG_NAME%-imate}\`。"
+          gh release create "$TAG_NAME" "$AAB_PATH" \
+            --prerelease \
+            --title "iMate 内测 $TAG_NAME" \
+            --notes "$NOTES"
+
+      - name: Publish upload summary
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          SHORT_SHA="${TAG_NAME%-imate}"
+          ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+          {
+            echo "## 上传产物摘要"
+            echo
+            echo "- 提交短 SHA: \`$SHORT_SHA\`"
+            echo "- Tag: \`$TAG_NAME\`"
+            echo "- AAB 路径: \`${{ env.IMATE_AAB_PATH }}\`"
+            echo "- GitHub Artifacts: [查看并下载 AAB]($ARTIFACT_URL)"
+            echo "- Pre-release（含 AAB）: [$TAG_NAME]($RELEASE_URL)"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -32,6 +32,7 @@ android {
                 "proguard-rules.pro",
                 "consumer-rules.pro",
             )
+            buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
         }
         release {
             isMinifyEnabled = false
@@ -40,6 +41,7 @@ android {
                 "proguard-rules.pro",
                 "consumer-rules.pro",
             )
+            buildConfigField("String", "API_BASE_URL", "\"https://imate.inty.cc/\"")
         }
         create("playdebug") {
             isMinifyEnabled = false
@@ -48,6 +50,7 @@ android {
                 "proguard-rules.pro",
                 "consumer-rules.pro",
             )
+            buildConfigField("String", "API_BASE_URL", "\"https://imate.inty.cc/\"")
         }
         create("local") {
             isMinifyEnabled = false
@@ -56,6 +59,7 @@ android {
                 "proguard-rules.pro",
                 "consumer-rules.pro",
             )
+            buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
         }
     }
 

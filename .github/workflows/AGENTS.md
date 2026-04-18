@@ -8,6 +8,19 @@
 
 然后用 adspower 指纹浏览器打开[内测轨道](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/tracks/internal-testing)
 
+## iMate 发布内测轨道 AAB
+
+运行 [build_and_upload_imate_android.yaml](https://github.com/NascentCore/inty-app/actions/workflows/build_and_upload_imate_android.yaml) 在 [`imate_android_app/`](/imate_android_app/) 构建 `bundleRelease`，将 AAB 上传到 **Google Play Internal testing**（`packageName`: `com.inty.imate`）。定时默认每日 **UTC 02:30**（北京时间 10:30），也可手动 **Run workflow**。
+
+**Secrets**：默认使用 `GCP_SERVICE_ACCOUNT_KEY_GPLAY_UPLOAD`（与 IntelliMate 同名）。须满足其一：
+
+- 同一服务账号在 Play Console「API 访问」中已对应用 **com.inty.imate** 授权上传；或
+- 另存一份仅用于 iMate 的 JSON，命名为仓库 Secret（例如 `GCP_SERVICE_ACCOUNT_KEY_GPLAY_UPLOAD_IMATE`），并修改 [build_and_upload_imate_android.yaml](build_and_upload_imate_android.yaml) 中 `upload-google-play` 步骤的 `serviceAccountJsonPlainText` 引用。
+
+**构建前提（CI 与本地一致）**：`imate_android_app/sign/imate.jks` 与 `signing-config.json` 须在检出后的工作区中存在（通常已纳入仓库或由内部流程注入），否则 Gradle 配置阶段会失败。
+
+在 Play Console 打开 **com.inty.imate** 对应应用的 **Internal testing** 轨道查看版本（URL 随开发者账号与应用 ID 变化，以控制台为准）。
+
 <img width="860" alt="image" src="https://github.com/user-attachments/assets/abf30b54-311b-460c-a472-586cb25d85c6" />
 
 <img width="860" alt="image" src="https://github.com/user-attachments/assets/a7956951-a72c-4832-b75a-fd32c0cc62c5" />

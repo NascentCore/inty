@@ -26,28 +26,30 @@ private fun loadSigningCredentials(signDir: File, jsonKey: String): Triple<Strin
     return Triple(storePassword, keyAlias, keyPassword)
 }
 
-private fun Project.gitShortSha(): String = "debug"
-//    providers
-//        .exec {
-//            commandLine("git", "rev-parse", "--short", "HEAD")
-//            workingDir(rootProject.projectDir)
-//        }
-//        .standardOutput
-//        .asText
-//        .get()
-//        .trim()
+/** 与 android_app/build-logic/.../AndroidApplicationExt.kt 一致：短 SHA + suffix 区分构建类型 */
+private fun Project.gitShortSha(): String =
+    providers
+        .exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+            workingDir(rootDir)
+        }
+        .standardOutput
+        .asText
+        .get()
+        .trim()
 
-private fun Project.gitCommitCount(): Int = 1
-//    providers
-//        .exec {
-//            commandLine("git", "rev-list", "--count", "HEAD")
-//            workingDir(rootProject.projectDir)
-//        }
-//        .standardOutput
-//        .asText
-//        .get()
-//        .trim()
-//        .toInt()
+/** versionCode = git 提交次数（不使用 android_app 的 +10000 补救） */
+private fun Project.gitCommitCount(): Int =
+    providers
+        .exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+            workingDir(rootDir)
+        }
+        .standardOutput
+        .asText
+        .get()
+        .trim()
+        .toInt()
 
 android {
     namespace = "com.inty.imate"
@@ -72,7 +74,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
-        ndk { abiFilters.add("arm64-v8a") }
+        ndk {
+            abiFilters.add("arm64-v8a")
+            debugSymbolLevel = "SYMBOL_TABLE"
+        }
 
         buildConfigField(
             "String",

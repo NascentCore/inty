@@ -46,6 +46,10 @@ on:
 #   jobs.build-and-deploy.environment
 #   jobs.build-and-deploy.env.DEPLOY_ENV
 # 语义：workflow_dispatch -> inputs.environment；schedule -> imate-prod；其余（如 push main）-> imate-dev
+#
+# iMate Android（imate_android_app core BuildConfig.API_BASE_URL）与 GitHub Environment vars.SERVICE_PUBLIC_URL 对齐：
+#   imate-dev  -> https://dev.imate.inty.cc/（对应 app debug / local）
+#   imate-prod -> https://imate.inty.cc/（对应 app release / playdebug）
 concurrency:
   group: inty-deploy-backend-${{ inputs.environment || (github.event_name == 'schedule' && 'imate-prod') || 'imate-dev' }}
   cancel-in-progress: true

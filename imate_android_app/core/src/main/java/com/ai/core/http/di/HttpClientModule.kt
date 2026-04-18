@@ -20,7 +20,6 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object KtorHttpClientSingleton {
-    private const val BASE_URL = "https://dev.imate.sxwl.ai/"
     private const val LOG_TAG = "KtorHttp"
 
     private val debugNetworkLogger =
@@ -64,7 +63,7 @@ object KtorHttpClientSingleton {
             install(ChatImageTimeoutPlugin)
             install(DefaultRequest) {
                 contentType(ContentType.Application.Json)
-                url(BASE_URL)
+                url(BuildConfig.API_BASE_URL)
             }
         }
     }
@@ -87,7 +86,7 @@ object KtorHttpClientSingleton {
         }
     }
 
-    fun httpBaseUrlTrimmed(): String = BASE_URL.trimEnd('/')
+    fun httpBaseUrlTrimmed(): String = BuildConfig.API_BASE_URL.trimEnd('/')
 
     /** 与 [httpClient] 相同鉴权，用于 multipart 等不适合走 DefaultRequest JSON 的请求。 */
     fun authenticatedOkHttp(): OkHttpClient =
