@@ -13,7 +13,7 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.memory_store import (
+from inty_v2_repl.memory_store import (
     MemoryRecord,
     MemoryRepository,
     MemoryStore,

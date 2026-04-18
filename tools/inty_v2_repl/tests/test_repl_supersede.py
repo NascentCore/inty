@@ -14,16 +14,16 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype import orchestrator
-from inty_v2_text_chat_prototype.models import load_transcript
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.tool_background import (
+from inty_v2_repl import orchestrator
+from inty_v2_repl.models import load_transcript
+from inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl.tool_background import (
     _run_background_tool_loop,
     clear_output_queue,
     is_tool_background_aborted,
     mark_tool_background_aborted,
 )
-from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call
+from inty_v2_repl.workspace_init_tools import execute_tool_call
 
 
 def _resp_text(content: str) -> SimpleNamespace:

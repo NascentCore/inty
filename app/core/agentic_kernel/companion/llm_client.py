@@ -156,6 +156,7 @@ class CompanionLLMClient:
         model: str | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> Any:
         tool_list = list(tools or [])
         has_tools = bool(tool_list)
@@ -171,6 +172,7 @@ class CompanionLLMClient:
             messages_payload=messages,
             tools=tool_list,
             tool_choice=tool_choice,
+            response_format=response_format,
         )
 
     def chat_completion_unified(

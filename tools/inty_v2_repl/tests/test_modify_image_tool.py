@@ -21,8 +21,8 @@ if str(_EXPERIMENTAL) not in sys.path:
 from app.core.agentic_kernel.companion.image_gate import list_image_asset_records
 from app.core.images.types import GeneratedImageProcessResult
 from app.utils.image import ImageFormat, ImageSize
-from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
-from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
+from inty_v2_repl.memory_store_registry import get_memory_store
+from inty_v2_repl.workspace_init_tools import execute_tool_call_blocking
 
 
 async def _fake_z_image_turbo_image_to_image(

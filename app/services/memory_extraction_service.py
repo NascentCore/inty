@@ -9,7 +9,7 @@ import re
 import time
 from datetime import date, datetime, time as dt_time, timedelta, timezone
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from loguru import logger
 from sqlalchemy import delete, text
@@ -221,24 +221,104 @@ def _utc_day_bounds(target_date_utc: date) -> tuple[datetime, datetime]:
     return start, end
 
 
-def _build_daily_profile_prompt(chat_text: str, target_date_utc: date) -> str:
+def _build_daily_profile_prompt(
+    chat_text: str, target_date_utc: date, *, include_significance_hints: bool = False
+) -> str:
     header = _DAILY_PROFILE_PROMPT_TEMPLATE.format(
         target_day=target_date_utc.isoformat()
     )
-    return f"{header}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
+    sig = (
+        f"\n\n{_significance_extraction_prompt_block()}"
+        if include_significance_hints
+        else ""
+    )
+    return (
+        f"{header}{sig}\n\n---\n\n# User chat history for the target day\n\n{chat_text}"
+    )
 
 
 def _build_incremental_update_prompt(
-    existing_profile: str, daily_profile: str, target_date_utc: date
+    existing_profile: str,
+    daily_profile: str,
+    target_date_utc: date,
+    *,
+    include_significance_hints: bool = False,
 ) -> str:
     header = _INCREMENTAL_UPDATE_PROMPT_TEMPLATE.format(
         target_day=target_date_utc.isoformat()
     )
+    sig = (
+        f"\n\n{_significance_extraction_prompt_block()}"
+        if include_significance_hints
+        else ""
+    )
     existing = existing_profile.strip() if existing_profile else "(empty)"
     return (
-        f"{header}\n\n---\n\n# Previous persisted profile\n\n{existing}\n\n---\n\n"
+        f"{header}{sig}\n\n---\n\n# Previous persisted profile\n\n{existing}\n\n---\n\n"
         f"# New daily profile\n\n{daily_profile}"
     )
+
+
+def _importance_round_from_meta(meta: dict[str, Any] | None) -> int:
+    if not meta:
+        return 0
+    sp = meta.get("significance_perception")
+    if not isinstance(sp, dict):
+        return 0
+    v = sp.get("importance_round")
+    if isinstance(v, bool) or not isinstance(v, int):
+        return 0
+    return max(0, min(10, v))
+
+
+def _format_chat_for_prompt(
+    messages: List[Tuple[str, str, dict[str, Any] | None]],
+) -> str:
+    lines = []
+    for role, content, meta in messages:
+        label = "用户" if role == "user" else "AI"
+        extra = ""
+        if meta and isinstance(meta.get("significance_perception"), dict):
+            sp = meta["significance_perception"]
+            if isinstance(sp, dict):
+                ir = sp.get("importance_round")
+                iu = sp.get("importance_user_message")
+                ia = sp.get("importance_assistant_message")
+                if all(
+                    isinstance(x, int) and not isinstance(x, bool) for x in (ir, iu, ia)
+                ):
+                    extra = (
+                        f" [significance round={ir}/10 user_msg={iu}/10 "
+                        f"assistant_msg={ia}/10]"
+                    )
+        lines.append(f"**{label}**{extra}: {content}")
+    return "\n".join(lines)
+
+
+def _significance_extraction_prompt_block() -> str:
+    return (
+        "## Significance hints (optional metadata)\n\n"
+        "Some lines may include bracket tags like "
+        "`[significance round=R/10 user_msg=U/10 assistant_msg=A/10]` on AI messages. "
+        "These come from the companion kernel when available: higher scores suggest the turn "
+        "was more important for long-term user modeling. "
+        "Use them as soft prioritization when deciding what to include in the profile summary; "
+        "do not invent scores when the tags are absent."
+    )
+
+
+def _prepare_messages_for_memory_extraction(
+    rows: List[Tuple[str, str, dict[str, Any] | None]],
+    *,
+    use_significance: bool,
+) -> List[Tuple[str, str, dict[str, Any] | None]]:
+    if not use_significance:
+        return rows
+    indexed = list(enumerate(rows))
+    indexed.sort(
+        key=lambda it: (-_importance_round_from_meta(it[1][2]), it[0]),
+    )
+    return [it[1] for it in indexed]
 
 
 def _sum_optional_int(values: list[int | None]) -> int | None:
@@ -265,9 +345,9 @@ async def _chat_completion_with_structured_fallback(
 
 def get_all_messages_for_user(
     user_id: str, prefer_replica_read: bool = False
-) -> List[Tuple[str, str]]:
+) -> List[Tuple[str, str, dict[str, Any] | None]]:
     """
-    拉取该用户在所有会话中的全部消息 (role, content)，按 created_at 升序。
+    拉取该用户在所有会话中的全部消息 (role, content, meta_data)，按 created_at 升序。
     不按 agent 过滤，不限制条数。
     """
     conn = None
@@ -288,21 +368,34 @@ def get_all_messages_for_user(
         return []
     session_ids = [generate_session_id(cid) for cid in chat_ids]
     placeholders = ",".join("%s" for _ in session_ids)
-    query = f"""
-        SELECT message
-        FROM chat_history
-        WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
-        ORDER BY created_at ASC
-    """
-    out: List[Tuple[str, str]] = []
+    out: List[Tuple[str, str, dict[str, Any] | None]] = []
     with conn.cursor() as cur:
-        cur.execute(query, session_ids)
+        cur.execute(
+            f"""
+            SELECT message, meta_data
+            FROM chat_history
+            WHERE session_id::text IN ({placeholders}) AND deleted_at IS NULL
+            ORDER BY created_at ASC
+            """,
+            session_ids,
+        )
         for row in cur.fetchall():
             raw = row[0]
+            meta_raw = row[1]
+            meta: dict[str, Any] | None = None
+            if meta_raw is not None:
+                try:
+                    if isinstance(meta_raw, str):
+                        parsed = json.loads(meta_raw)
+                    elif isinstance(meta_raw, dict):
+                        parsed = meta_raw
+                    else:
+                        parsed = json.loads(str(meta_raw))
+                    meta = parsed if isinstance(parsed, dict) else None
+                except Exception:
+                    meta = None
             try:
                 if isinstance(raw, str):
-                    import json
-
                     data = json.loads(raw)
                 elif isinstance(raw, dict):
                     data = raw
@@ -321,15 +414,15 @@ def get_all_messages_for_user(
             elif "content" in data:
                 content = data["content"] or ""
             role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
-            out.append((role, str(content)))
+            out.append((role, str(content), meta))
     return out
 
 
 def get_messages_for_user_in_utc_day(
     user_id: str, target_date_utc: date, prefer_replica_read: bool = False
-) -> List[Tuple[str, str]]:
+) -> List[Tuple[str, str, dict[str, Any] | None]]:
     """
-    拉取该用户在指定 UTC 日内的全部消息 (role, content)，按 created_at 升序。
+    拉取该用户在指定 UTC 日内的全部消息 (role, content, meta_data)，按 created_at 升序。
     """
     start_at, end_at = _utc_day_bounds(target_date_utc)
     conn = None
@@ -350,20 +443,35 @@ def get_messages_for_user_in_utc_day(
         return []
     session_ids = [generate_session_id(cid) for cid in chat_ids]
     placeholders = ",".join("%s" for _ in session_ids)
-    query = f"""
-        SELECT message
-        FROM chat_history
-        WHERE session_id::text IN ({placeholders})
-          AND deleted_at IS NULL
-          AND created_at >= %s
-          AND created_at < %s
-        ORDER BY created_at ASC
-    """
-    out: List[Tuple[str, str]] = []
+    out: List[Tuple[str, str, dict[str, Any] | None]] = []
     with conn.cursor() as cur:
-        cur.execute(query, session_ids + [start_at, end_at])
+        cur.execute(
+            f"""
+            SELECT message, meta_data
+            FROM chat_history
+            WHERE session_id::text IN ({placeholders})
+              AND deleted_at IS NULL
+              AND created_at >= %s
+              AND created_at < %s
+            ORDER BY created_at ASC
+            """,
+            session_ids + [start_at, end_at],
+        )
         for row in cur.fetchall():
             raw = row[0]
+            meta_raw = row[1]
+            meta: dict[str, Any] | None = None
+            if meta_raw is not None:
+                try:
+                    if isinstance(meta_raw, str):
+                        parsed = json.loads(meta_raw)
+                    elif isinstance(meta_raw, dict):
+                        parsed = meta_raw
+                    else:
+                        parsed = json.loads(str(meta_raw))
+                    meta = parsed if isinstance(parsed, dict) else None
+                except Exception:
+                    meta = None
             try:
                 if isinstance(raw, str):
                     data = json.loads(raw)
@@ -384,16 +492,8 @@ def get_messages_for_user_in_utc_day(
             elif "content" in data:
                 content = data["content"] or ""
             role = "user" if msg_type in ("human", "HumanMessage") else "assistant"
-            out.append((role, str(content)))
+            out.append((role, str(content), meta))
     return out
-
-
-def _format_chat_for_prompt(messages: List[Tuple[str, str]]) -> str:
-    lines = []
-    for role, content in messages:
-        label = "用户" if role == "user" else "AI"
-        lines.append(f"**{label}**: {content}")
-    return "\n".join(lines)
 
 
 _USAGE_TYPE_CHAT = "chat"
@@ -655,8 +755,19 @@ async def extract_and_save(
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
         return
 
-    chat_text = _format_chat_for_prompt(messages)
-    full_prompt = f"{prompt}\n\n---\n\n# User chat history\n\n{chat_text}"
+    sig_enabled = bool(
+        getattr(cfg, "use_significance_perception_in_extraction", False)
+    )
+    messages_for_prompt = _prepare_messages_for_memory_extraction(
+        messages, use_significance=sig_enabled
+    )
+    chat_text = _format_chat_for_prompt(messages_for_prompt)
+    sig_block = (
+        f"\n\n{_significance_extraction_prompt_block()}" if sig_enabled else ""
+    )
+    full_prompt = (
+        f"{prompt}{sig_block}\n\n---\n\n# User chat history\n\n{chat_text}"
+    )
 
     start_time = time.perf_counter()
     try:
@@ -759,8 +870,18 @@ async def extract_and_save_incremental_daily(
         )
         return
 
-    chat_text = _format_chat_for_prompt(messages)
-    daily_prompt = _build_daily_profile_prompt(chat_text, target_date_utc)
+    sig_enabled = bool(
+        getattr(cfg, "use_significance_perception_in_extraction", False)
+    )
+    messages_for_prompt = _prepare_messages_for_memory_extraction(
+        messages, use_significance=sig_enabled
+    )
+    chat_text = _format_chat_for_prompt(messages_for_prompt)
+    daily_prompt = _build_daily_profile_prompt(
+        chat_text,
+        target_date_utc,
+        include_significance_hints=sig_enabled,
+    )
     start_time = time.perf_counter()
     try:
         llm_config = _memory_llm_config(cfg)
@@ -785,7 +906,10 @@ async def extract_and_save_incremental_daily(
 
         previous_profile = await _latest_user_common_memory_content(db, user_id)
         update_prompt = _build_incremental_update_prompt(
-            previous_profile, daily_profile, target_date_utc
+            previous_profile,
+            daily_profile,
+            target_date_utc,
+            include_significance_hints=sig_enabled,
         )
         full_analysis, update_prompt_tokens, update_completion_tokens = (
             await _chat_completion_with_structured_fallback(

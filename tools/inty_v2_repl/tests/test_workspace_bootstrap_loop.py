@@ -12,7 +12,7 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.workspace_init_loop import run_workspace_bootstrap_loop
+from inty_v2_repl.workspace_init_loop import run_workspace_bootstrap_loop
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -80,19 +80,19 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
 
             with (
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client_dual_llm_tool",
+                    "inty_v2_repl.workspace_init_loop.get_client_dual_llm_tool",
                     return_value=fake_client,
                 ),
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.default_model",
+                    "inty_v2_repl.workspace_init_loop.default_model",
                     return_value="fake-model",
                 ),
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.tool_executor_for_root",
+                    "inty_v2_repl.workspace_init_loop.tool_executor_for_root",
                     return_value=fake_run_tool,
                 ),
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.build_openai_tools",
+                    "inty_v2_repl.workspace_init_loop.build_openai_tools",
                     return_value=[{"type": "function"}],
                 ),
             ):
@@ -118,15 +118,15 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
             root = Path(td)
             with (
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.get_client_dual_llm_tool",
+                    "inty_v2_repl.workspace_init_loop.get_client_dual_llm_tool",
                     return_value=fake_client,
                 ),
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.default_model",
+                    "inty_v2_repl.workspace_init_loop.default_model",
                     return_value="fake-model",
                 ),
                 patch(
-                    "inty_v2_text_chat_prototype.workspace_init_loop.build_openai_tools",
+                    "inty_v2_repl.workspace_init_loop.build_openai_tools",
                     return_value=[{"type": "function"}],
                 ),
             ):

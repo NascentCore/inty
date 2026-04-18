@@ -14,8 +14,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from tools.inty_v2_repl import ai_private_store
-from tools.inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl import ai_private_store
+from inty_v2_repl.paths import WorkspacePaths
 
 
 class TestAiPrivateStore(unittest.TestCase):

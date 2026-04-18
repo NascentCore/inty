@@ -23,6 +23,7 @@ from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
+    CompanionTurnResult,
     ContextMeta,
     PromptBundle,
     load_context_meta,
@@ -38,7 +39,11 @@ from .transcript_compaction import (
     transcript_rows_to_openai_dialogue,
 )
 from .prompts import build_system_messages
-from .repl_workspace_tools import (
+from .significance_perception import (
+    DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    split_dual_llm_chat_branch_content,
+)
+from .companion_tool_runtime import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
 )
@@ -78,7 +83,7 @@ async def run_turn(
     transcript_llm_window_max_messages: int | None = None,
     repository_only_workspace_text: bool = False,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
-) -> str:
+) -> CompanionTurnResult:
     """
     执行一轮完整对话。
 
@@ -88,7 +93,7 @@ async def run_turn(
     - 持久化 transcript
     - 调度记忆管线
 
-    返回 assistant_text。
+    返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     """
     t0 = time.perf_counter()
     root = workspace.resolve()
@@ -129,12 +134,20 @@ async def run_turn(
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
+    tools_for_turn = (
+        []
+        if heartbeat_turn
+        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+    )
+    use_dual_structured_chat = (not heartbeat_turn) and not tools_for_turn
+
     system_messages = build_system_messages(
         bundle,
         context,
         enable_tools=not heartbeat_turn,
         heartbeat_turn=heartbeat_turn,
         interactive_bootstrap_active=interactive_bootstrap,
+        include_significance_perception_slice=use_dual_structured_chat,
     )
 
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
@@ -172,12 +185,9 @@ async def run_turn(
     trace_id = str(uuid.uuid4())
 
     # Tool loop
-    tools = (
-        []
-        if heartbeat_turn
-        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
-    )
+    tools = tools_for_turn
     last_text = ""
+    significance_meta: dict[str, Any] | None = None
     t_loop = time.perf_counter()
 
     inspect_token = runtime_inspect_begin_turn()
@@ -215,6 +225,9 @@ async def run_turn(
                 messages=messages,
                 model=resolved_model,
                 tools=tools or None,
+                response_format=(
+                    DUAL_LLM_CHAT_RESPONSE_FORMAT if use_dual_structured_chat else None
+                ),
             )
             approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in messages)
             logger.info(
@@ -232,7 +245,13 @@ async def run_turn(
             messages.append(openai_assistant_message_dict(msg))
 
             if not tool_calls:
-                last_text = (msg.content or "").strip()
+                raw_content = msg.content or ""
+                if use_dual_structured_chat:
+                    last_text, significance_meta = split_dual_llm_chat_branch_content(
+                        raw_content
+                    )
+                else:
+                    last_text = raw_content.strip()
                 break
 
             # 执行 tools
@@ -290,18 +309,18 @@ async def run_turn(
         user_row["heartbeat"] = True
     user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
-    store.append_jsonl_record(
-        rel_tr,
-        {
-            "role": "assistant",
-            "content": last_text,
-            "ts": utc_iso_ts(),
-            "uuid": assistant_msg_uuid,
-            "reply_to": user_msg_uuid,
-            "source": "chat",
-            "trace_id": trace_id,
-        },
-    )
+    assistant_row: dict[str, Any] = {
+        "role": "assistant",
+        "content": last_text,
+        "ts": utc_iso_ts(),
+        "uuid": assistant_msg_uuid,
+        "reply_to": user_msg_uuid,
+        "source": "chat",
+        "trace_id": trace_id,
+    }
+    if significance_meta:
+        assistant_row["significance_perception"] = significance_meta
+    store.append_jsonl_record(rel_tr, assistant_row)
 
     # 记忆管线
     if heartbeat_turn:
@@ -338,4 +357,7 @@ async def run_turn(
         len(last_text),
         (time.perf_counter() - t0) * 1000.0,
     )
-    return last_text
+    return CompanionTurnResult(
+        assistant_text=last_text,
+        significance_perception=significance_meta,
+    )

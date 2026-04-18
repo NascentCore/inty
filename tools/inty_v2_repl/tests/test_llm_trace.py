@@ -10,7 +10,7 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.llm_trace import (
+from inty_v2_repl.llm_trace import (
     LLM_TRACE_JSONL_VERSION,
     TRANSCRIPT_MSG_UUID_KEY,
     configure_llm_trace_file,
@@ -19,7 +19,7 @@ from inty_v2_text_chat_prototype.llm_trace import (
     summarize_messages,
     summarize_system_message_content,
 )
-from inty_v2_text_chat_prototype.prompts import (
+from inty_v2_repl.prompts import (
     SYSTEM_PROMPT_SEP,
     system_prompt_security_prefix,
 )

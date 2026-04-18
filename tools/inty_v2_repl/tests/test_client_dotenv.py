@@ -9,13 +9,13 @@ from unittest.mock import call, patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype import client as client_mod
-from inty_v2_text_chat_prototype.client import load_prototype_dotenv
+from inty_v2_repl import client as client_mod
+from inty_v2_repl.client import load_prototype_dotenv
 
 
 def test_load_prototype_dotenv_calls_load_dotenv_for_cwd_then_package() -> None:
     pkg_env = Path(client_mod.__file__).resolve().parent / ".env"
-    with patch("inty_v2_text_chat_prototype.client.load_dotenv") as mock_ld:
+    with patch("inty_v2_repl.client.load_dotenv") as mock_ld:
         load_prototype_dotenv()
     assert mock_ld.call_count == 2
     mock_ld.assert_has_calls([call(), call(pkg_env)])

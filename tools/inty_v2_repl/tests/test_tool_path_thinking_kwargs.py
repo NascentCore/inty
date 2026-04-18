@@ -16,7 +16,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 if str(_EXPERIMENTAL) not in sys.path:
     sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.client import tool_path_chat_completion_kwargs
+from inty_v2_repl.client import tool_path_chat_completion_kwargs
 
 
 def _env_without_tool_thinking_flag() -> dict[str, str]:

@@ -16,8 +16,23 @@ from unittest.mock import AsyncMock, patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype import orchestrator
-from inty_v2_text_chat_prototype.models import ContextMeta, PromptBundle
+from inty_v2_repl import orchestrator
+from inty_v2_repl.memory_store_registry import get_memory_store
+from inty_v2_repl.models import ContextMeta, PromptBundle
+
+
+def _dual_llm_chat_envelope_json(user_facing: str) -> str:
+    import json
+
+    return json.dumps(
+        {
+            "user_facing_reply": user_facing,
+            "importance_round": 5,
+            "importance_user_message": 4,
+            "importance_assistant_message": 6,
+        },
+        ensure_ascii=False,
+    )
 
 
 def _resp_text(content: str) -> SimpleNamespace:
@@ -51,6 +66,7 @@ class _FakeCompletions:
                     "messages": messages,
                     "tools": tools,
                     "tool_choice": kwargs.get("tool_choice"),
+                    "response_format": kwargs.get("response_format"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -58,6 +74,8 @@ class _FakeCompletions:
         if model == "chat-fast":
             time.sleep(0.01)
             if idx == 1:
+                if kwargs.get("response_format"):
+                    return _resp_text(_dual_llm_chat_envelope_json("chat-r1"))
                 return _resp_text("chat-r1")
             if idx == 2:
                 return _resp_text("chat-r2")
@@ -91,6 +109,7 @@ class _FakeCompletionsToolFirst:
                     "messages": messages,
                     "tools": tools,
                     "tool_choice": kwargs.get("tool_choice"),
+                    "response_format": kwargs.get("response_format"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -98,6 +117,8 @@ class _FakeCompletionsToolFirst:
         if model == "chat-fast":
             time.sleep(0.03)
             if idx == 1:
+                if kwargs.get("response_format"):
+                    return _resp_text(_dual_llm_chat_envelope_json("chat-r1"))
                 return _resp_text("chat-r1")
             if idx == 2:
                 return _resp_text("chat-r2")
@@ -132,6 +153,7 @@ class _FakeCompletionsChatToolChoiceReject:
                     "messages": messages,
                     "tools": tools,
                     "tool_choice": tool_choice,
+                    "response_format": kwargs.get("response_format"),
                 }
             )
             idx = self._per_model_count.get(model, 0) + 1
@@ -140,6 +162,8 @@ class _FakeCompletionsChatToolChoiceReject:
             if tool_choice == "none":
                 raise _ChatBranchNoneRejected("tool_choice none not supported")
             if idx == 2:
+                if kwargs.get("response_format"):
+                    return _resp_text(_dual_llm_chat_envelope_json("chat-r1"))
                 return _resp_text("chat-r1")
             if idx == 4:
                 return _resp_text("chat-r2")
@@ -204,11 +228,26 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
+                        bundle=PromptBundle(
+                            identity="id",
+                            soul="soul",
+                            user_md="user",
+                            memory_md="memory",
+                        ),
+                        context=ContextMeta(),
                         supersede_check=lambda _m: None,
                     )
                 )
 
-        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        self.assertEqual(out["assistant_text"], "chat-r2\n\ntool-r2")
+        self.assertEqual(
+            out.get("significance_perception"),
+            {
+                "importance_round": 5,
+                "importance_user_message": 4,
+                "importance_assistant_message": 6,
+            },
+        )
         self.assertEqual(len(fake_completions.calls), 4)
         chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
         tool_calls = [c for c in fake_completions.calls if c["model"] == "tool-smart"]
@@ -216,10 +255,12 @@ class TestDualLlmChatTool(unittest.TestCase):
         self.assertEqual(len(tool_calls), 2)
         self.assertTrue(all(c["tools"] for c in chat_calls))
         self.assertTrue(all(c["tool_choice"] == "none" for c in chat_calls))
+        self.assertIsNotNone(chat_calls[0]["response_format"])
+        self.assertIsNone(chat_calls[1]["response_format"])
 
-        # Round-wise, both routes must receive exactly the same context snapshot.
-        self.assertEqual(chat_calls[0]["messages"], tool_calls[0]["messages"])
-        self.assertEqual(chat_calls[1]["messages"], tool_calls[1]["messages"])
+        # Round-wise, both routes share the same transcript tail; chat branch replaces system[0].
+        self.assertEqual(chat_calls[0]["messages"][1:], tool_calls[0]["messages"][1:])
+        self.assertEqual(chat_calls[1]["messages"][1:], tool_calls[1]["messages"][1:])
 
         # The second-round context already contains both branch outputs + tool result.
         second_payload = chat_calls[1]["messages"]
@@ -228,7 +269,7 @@ class TestDualLlmChatTool(unittest.TestCase):
             for m in second_payload
             if isinstance(m, dict) and m.get("role") == "assistant"
         ]
-        self.assertIn("chat-r1", assistant_bodies)
+        self.assertIn(_dual_llm_chat_envelope_json("chat-r1"), assistant_bodies)
         self.assertIn("tool-r1", assistant_bodies)
         tool_bodies = [
             str(m.get("content", ""))
@@ -285,11 +326,18 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
+                        bundle=PromptBundle(
+                            identity="id",
+                            soul="soul",
+                            user_md="user",
+                            memory_md="memory",
+                        ),
+                        context=ContextMeta(),
                         supersede_check=lambda _m: None,
                     )
                 )
 
-        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        self.assertEqual(out["assistant_text"], "chat-r2\n\ntool-r2")
         self.assertEqual(len(fake_completions.calls), 4)
         # After round-1 execution, ordering must keep tool protocol contiguous:
         # tool assistant(tool_calls) -> tool result before any round-2 assistant messages.
@@ -364,15 +412,25 @@ class TestDualLlmChatTool(unittest.TestCase):
                         messages,
                         root,
                         llm_trace=False,
+                        bundle=PromptBundle(
+                            identity="id",
+                            soul="soul",
+                            user_md="user",
+                            memory_md="memory",
+                        ),
+                        context=ContextMeta(),
                         supersede_check=lambda _m: None,
                     )
                 )
 
-        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        self.assertEqual(out["assistant_text"], "chat-r2\n\ntool-r2")
         chat_calls = [c for c in fake_completions.calls if c["model"] == "chat-fast"]
         self.assertEqual(chat_calls[0]["tool_choice"], "none")
+        self.assertIsNotNone(chat_calls[0]["response_format"])
         self.assertIsNone(chat_calls[1]["tools"])
         self.assertIsNone(chat_calls[1]["tool_choice"])
+        self.assertIsNone(chat_calls[2]["response_format"])
+        self.assertIsNone(chat_calls[3]["response_format"])
 
     def test_tool_update_chat_settings_updates_next_chat_branch_system_prompt(
         self,
@@ -395,9 +453,10 @@ class TestDualLlmChatTool(unittest.TestCase):
                 self.assertEqual(
                     write_allowlist, orchestrator.REPL_WRITABLE_RELATIVE_PATHS
                 )
-                (root_arg / ".inty_v2_chat_settings.json").write_text(
+                st = get_memory_store(root_arg)
+                st.write_document(
+                    ".inty_v2_chat_settings.json",
                     '{"chat_output_format_prompt":"必须输出 JSON: {\\"reply\\":\\"...\\"}"}\n',
-                    encoding="utf-8",
                 )
                 return "OK updated chat output format prompt"
 
@@ -423,12 +482,17 @@ class TestDualLlmChatTool(unittest.TestCase):
                                 "messages": messages_payload,
                                 "tools": tools,
                                 "tool_choice": kwargs.get("tool_choice"),
+                                "response_format": kwargs.get("response_format"),
                             }
                         )
                         idx = self._per_model_count.get(model, 0) + 1
                         self._per_model_count[model] = idx
                     if model == "chat-fast":
                         if idx == 1:
+                            if kwargs.get("response_format"):
+                                return _resp_text(
+                                    _dual_llm_chat_envelope_json("chat-r1")
+                                )
                             return _resp_text("chat-r1")
                         if idx == 2:
                             return _resp_text("chat-r2")
@@ -486,7 +550,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                     )
                 )
 
-        self.assertEqual(out, "chat-r2\n\ntool-r2")
+        self.assertEqual(out["assistant_text"], "chat-r2\n\ntool-r2")
         chat_calls = [c for c in fake_completions2.calls if c["model"] == "chat-fast"]
         self.assertEqual(len(chat_calls), 2)
         round2_system = str(chat_calls[1]["messages"][0]["content"])
@@ -550,7 +614,7 @@ class TestDualLlmChatTool(unittest.TestCase):
                     )
                 )
 
-        self.assertEqual(out, "solo-reply")
+        self.assertEqual(out["assistant_text"], "solo-reply")
         self.assertEqual(models_seen, ["default-m"])
 
 

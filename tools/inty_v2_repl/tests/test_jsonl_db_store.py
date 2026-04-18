@@ -12,7 +12,7 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.jsonl_db_store import (
+from inty_v2_repl.jsonl_db_store import (
     PostgresJsonlEventRepository,
     append_jsonl_with_db,
     shutdown_jsonl_db_store,

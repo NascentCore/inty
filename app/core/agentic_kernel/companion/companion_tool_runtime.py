@@ -1,4 +1,8 @@
-"""Workspace bootstrap 工具：仅允许在 workspace 根目录内读写（与 agentic_ai_companion 工具模式对齐）。"""
+"""Companion tool runtime: schemas, dispatch, and ``execute_tool_call`` for the REPL/agentic kernel.
+
+Persisted companion documents and transcript go through MemoryStore; tool_surface helpers may still use
+workspace-relative paths aligned with ``workspace_doc_mapping``.
+"""
 
 from __future__ import annotations
 
@@ -80,6 +84,7 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
         "HEARTBEAT.md",
         "IDENTITY.md",
         "MEMORY.md",
+        "SIGNIFICANCE_PERCEPTION.md",
         "SOUL.md",
         "TOOLS.md",
         "USER.md",

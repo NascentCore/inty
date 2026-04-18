@@ -1,4 +1,4 @@
-from tools.inty_v2_repl.backend_chat_ws import reconnect_delay_sec
+from inty_v2_repl.backend_chat_ws import reconnect_delay_sec
 
 
 def test_reconnect_delay_sec_exponential_cap() -> None:

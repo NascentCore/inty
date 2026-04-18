@@ -10,7 +10,7 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.orchestrator import is_workspace_initialized
+from inty_v2_repl.orchestrator import is_workspace_initialized
 
 
 def _touch(p: Path) -> None:

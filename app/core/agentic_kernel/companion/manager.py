@@ -16,6 +16,7 @@ from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
 from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
+from .models import CompanionTurnResult
 from .turn import run_turn
 from .workspace import (
     ensure_minimal_workspace_documents_in_store,
@@ -39,7 +40,7 @@ class CompanionConfig(BaseModel):
     # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (app.models.companion_workspace).
     memory_pg_dsn: str = ""
 
-    # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 repl_workspace_tools）
+    # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 companion_tool_runtime）
     repository_only_workspace_text: bool = True
 
     # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | USER_INTERACTIVE).
@@ -176,7 +177,7 @@ class CompanionManager:
         *,
         heartbeat_turn: bool = False,
         defer_memory_update: bool = True,
-    ) -> str:
+    ) -> CompanionTurnResult:
         """执行一轮对话。"""
         return await run_turn(
             session.workspace_path,

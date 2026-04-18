@@ -10,11 +10,11 @@ from pathlib import Path
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace
-from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
-from inty_v2_text_chat_prototype.models import load_transcript
-from inty_v2_text_chat_prototype.orchestrator import needs_startup_profile_inquiry
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
+from inty_v2_repl.bootstrap import init_workspace
+from inty_v2_repl.memory_store_registry import shutdown_memory_store
+from inty_v2_repl.models import load_transcript
+from inty_v2_repl.orchestrator import needs_startup_profile_inquiry
+from inty_v2_repl.paths import WorkspacePaths
 
 
 class TestStartupProfileInquiry(unittest.TestCase):

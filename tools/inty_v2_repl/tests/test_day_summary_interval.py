@@ -11,11 +11,11 @@ from unittest.mock import patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.bootstrap import init_workspace
-from inty_v2_text_chat_prototype.memory_store_registry import shutdown_memory_store
-from inty_v2_text_chat_prototype.memory_update import memory_update_after_turn
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.utc import local_date_str
+from inty_v2_repl.bootstrap import init_workspace
+from inty_v2_repl.memory_store_registry import shutdown_memory_store
+from inty_v2_repl.memory_update import memory_update_after_turn
+from inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl.utc import local_date_str
 
 
 class TestDaySummaryInterval(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestDaySummaryInterval(unittest.TestCase):
             }
             with patch.dict("os.environ", env, clear=False):
                 with patch(
-                    "inty_v2_text_chat_prototype.memory_update.complete"
+                    "inty_v2_repl.memory_update.complete"
                 ) as m_complete:
                     # turn 1: memory, user, soul — no day_summary
                     m_complete.side_effect = [

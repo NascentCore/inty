@@ -1,10 +1,10 @@
-"""Companion workspace tools: full REPL schemas; execution lives in repl_workspace_tools."""
+"""Companion tools: OpenAI schemas in this module; execution lives in companion_tool_runtime."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from .repl_workspace_tools import (
+from .companion_tool_runtime import (
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,

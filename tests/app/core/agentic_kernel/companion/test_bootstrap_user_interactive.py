@@ -12,7 +12,7 @@ from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
 )
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.models import ContextMeta
-from app.core.agentic_kernel.companion.repl_workspace_tools import (
+from app.core.agentic_kernel.companion.companion_tool_runtime import (
     execute_tool_call,
     tool_workspace_write_file,
 )

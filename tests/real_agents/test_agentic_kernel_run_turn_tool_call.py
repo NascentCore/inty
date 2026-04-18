@@ -44,6 +44,7 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
         model: str | None = None,
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> Any:
         self.chat_rounds += 1
         resp = super().chat_completion(
@@ -51,6 +52,7 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
             model=model,
             tools=tools,
             tool_choice=tool_choice,
+            response_format=response_format,
         )
         msg = resp.choices[0].message
         tcs = getattr(msg, "tool_calls", None) or []
@@ -121,6 +123,6 @@ async def test_run_turn_real_llm_lists_workspace_then_names_hello_file(tmp_path)
 
     assert client.saw_assistant_tool_calls, "model never returned tool_calls"
     assert client.chat_rounds >= 2, "expected at least one tool round and one final reply"
-    assert "hello.txt" in out.lower()
+    assert "hello.txt" in out.assistant_text.lower()
     tr = store.read_document("transcript.jsonl")
     assert "hello.txt" in tr.lower()

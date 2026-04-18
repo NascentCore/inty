@@ -15,10 +15,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(_EXPERIMENTAL))
 sys.path.insert(0, str(_REPO_ROOT))
 
-from inty_v2_text_chat_prototype.fal_z_image_tool import MAX_NUM_IMAGES_PER_CALL
-from inty_v2_text_chat_prototype.image_gate import prepare_image_gate_for_turn
-from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
-from inty_v2_text_chat_prototype.workspace_init_tools import execute_tool_call_blocking
+from inty_v2_repl.fal_z_image_tool import MAX_NUM_IMAGES_PER_CALL
+from inty_v2_repl.image_gate import prepare_image_gate_for_turn
+from inty_v2_repl.memory_store_registry import get_memory_store
+from inty_v2_repl.workspace_init_tools import execute_tool_call_blocking
 
 
 async def _fake_z_image_turbo_call(

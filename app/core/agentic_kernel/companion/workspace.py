@@ -68,6 +68,10 @@ class WorkspacePaths:
         return self.root / "TOOLS.md"
 
     @property
+    def significance_perception_md(self) -> Path:
+        return self.root / "SIGNIFICANCE_PERCEPTION.md"
+
+    @property
     def transcript(self) -> Path:
         return self.root / "transcript.jsonl"
 
@@ -149,6 +153,7 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "soul",
     "user_md",
     "memory_md",
+    "significance_perception_md",
 )
 
 

@@ -16,10 +16,10 @@ from unittest.mock import AsyncMock, patch
 _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype import orchestrator
-from inty_v2_text_chat_prototype.models import load_transcript
-from inty_v2_text_chat_prototype.paths import WorkspacePaths
-from inty_v2_text_chat_prototype.tool_background import (
+from inty_v2_repl import orchestrator
+from inty_v2_repl.models import load_transcript
+from inty_v2_repl.paths import WorkspacePaths
+from inty_v2_repl.tool_background import (
     ToolOutputEvent,
     _append_local_image_paths_for_display,
     _background_turn_should_force_tools,
@@ -29,8 +29,8 @@ from inty_v2_text_chat_prototype.tool_background import (
     clear_output_queue,
     pop_output_events_nowait,
 )
-from inty_v2_text_chat_prototype.memory_store_registry import get_memory_store
-from inty_v2_text_chat_prototype.workspace_init_tools import (
+from inty_v2_repl.memory_store_registry import get_memory_store
+from inty_v2_repl.workspace_init_tools import (
     TEXT_RESPONSE_INCLUDE_IN_CHAT,
     tool_text_response_should_include_in_chat,
 )
@@ -278,7 +278,7 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator, "schedule_memory_update_after_turn", return_value=None
                 ),
                 patch(
-                    "app.core.agentic_kernel.companion.repl_workspace_tools.run_generate_image_z_image_turbo",
+                    "app.core.agentic_kernel.companion.companion_tool_runtime.run_generate_image_z_image_turbo",
                     return_value=(
                         "OK fal z-image generated: "
                         "prompt='sunrise portrait' image_size=portrait_4_3 "
@@ -474,7 +474,7 @@ class TestLocalPathDisplay(unittest.TestCase):
         self.assertIn("/tmp/z_image_1.jpeg", t)
 
     def test_background_log_records_generated_image_uris(self) -> None:
-        from inty_v2_text_chat_prototype.tool_background import _append_background_log
+        from inty_v2_repl.tool_background import _append_background_log
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

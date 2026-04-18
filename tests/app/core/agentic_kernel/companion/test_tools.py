@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
-from app.core.agentic_kernel.companion.repl_workspace_tools import execute_tool_call
+from app.core.agentic_kernel.companion.companion_tool_runtime import execute_tool_call
 from app.core.agentic_kernel.companion.tools import (
     WRITABLE_RELATIVE_PATHS,
     build_companion_tools,

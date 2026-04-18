@@ -13,13 +13,13 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 if str(_EXPERIMENTAL) not in sys.path:
     sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.image_gate import (
+from inty_v2_repl.image_gate import (
     check_image_tool_allowed,
     current_persona_revision_id,
     prepare_image_gate_for_turn,
     register_profile_write,
 )
-from inty_v2_text_chat_prototype.memory_store_registry import (
+from inty_v2_repl.memory_store_registry import (
     get_memory_store,
     shutdown_memory_store,
 )

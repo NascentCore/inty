@@ -37,9 +37,9 @@ One user line (or heartbeat synthetic text) executes:
 1. Load `ContextMeta` and `PromptBundle` from `MemoryStore` (`models.load_context_meta`, `load_prompt_bundle`).
 2. Load `transcript.jsonl`, optional transcript compaction (`transcript_compaction.py`).
 3. `build_system_prompt` (`prompts.py`), including interactive-bootstrap append when `workspace_bootstrap_type == USER_INTERACTIVE` and phase not completed.
-4. `build_companion_tools` (`tools.py` -> `repl_workspace_tools.build_openai_repl_tools`), tool list shrinks during interactive bootstrap.
+4. `build_companion_tools` (`tools.py` -> `companion_tool_runtime.build_openai_repl_tools`), tool list shrinks during interactive bootstrap.
 5. Tool loop: `CompanionLLMClient.chat_completion` -> OpenAI-compatible HTTP via **`app/core/agentic_kernel/providers/facade.py`** (`llm_client.py`).
-6. Tool execution: **`repl_workspace_tools`** -> **`app/core/agentic_kernel/tools/registry.py`** and **`tools/dispatchers/workspace.py`** / **`media.py`** for shared parsing; companion-specific logic stays under `companion/`.
+6. Tool execution: **`companion_tool_runtime`** -> **`app/core/agentic_kernel/tools/registry.py`** and **`tools/dispatchers/workspace.py`** / **`media.py`** for shared parsing; companion-specific logic stays under `companion/`.
 7. Append user/assistant (and tool traces as designed) to transcript; `schedule_memory_update_after_turn` / `memory_pipeline.py` for post-turn curation.
 
 **`companion/turn_engine.py`**: helpers for **local REPL** (`tools/inty_v2_repl`) to assemble base OpenAI messages and transcript rows. Production **`WS /api/v1/chat/ws`** does not import `turn_engine`; it goes through `turn.run_turn` inside `companion_chat_service`.
@@ -49,7 +49,7 @@ One user line (or heartbeat synthetic text) executes:
 | Value | Session create | First user message on API path |
 | --- | --- | --- |
 | `NONE` (default) | Minimal seed docs in store | `run_turn` only |
-| `USER_INTERACTIVE` | Minimal seed + `context.json` flags for interactive phase | Always `run_turn`; model uses `companion_update_prompt_slice` / `companion_bootstrap_user_interactive_complete` (`bootstrap_user_interactive.py`); SOUL lock rules in `memory_pipeline` + `repl_workspace_tools` |
+| `USER_INTERACTIVE` | Minimal seed + `context.json` flags for interactive phase | Always `run_turn`; model uses `companion_update_prompt_slice` / `companion_bootstrap_user_interactive_complete` (`bootstrap_user_interactive.py`); SOUL lock rules in `memory_pipeline` + `companion_tool_runtime` |
 
 Implementation references: `manager.py` (session create), `companion_chat_service.py` (branching).
 
@@ -58,7 +58,7 @@ Implementation references: `manager.py` (session create), `companion_chat_servic
 These are imported by companion code on the WebSocket path:
 
 - **`providers/facade.py`** (+ `openai_compatible.py`): HTTP chat/completions client used by `CompanionLLMClient`.
-- **`tools/registry.py`**, **`tools/dispatchers/*`**: REPL tool registry and shared workspace/media dispatch helpers from `repl_workspace_tools.py`.
+- **`tools/registry.py`**, **`tools/dispatchers/*`**: REPL tool registry and shared workspace/media dispatch helpers from `companion_tool_runtime.py`.
 
 ## Not on the WebSocket companion path
 
@@ -67,7 +67,7 @@ The following live under `app/core/agentic_kernel/` but are **not** imported by 
 - **`contracts/`** (`turn.py`, `tool.py`, `prompt.py`, `heartbeat.py`): used by **`runtime/turn_orchestrator.py`**, **`runtime/persistence.py`**, **`bridges/experimental_bridge.py`** - a separate typed turn pipeline, not the companion REPL loop.
 - **`runtime/turn_orchestrator.py`**: orchestrates `TurnInput` / `TurnOutput`; not used for `/chat/ws` companion replies today.
 
-Do not assume WebSocket companion behavior from `contracts/` alone; follow `companion/turn.py` and `repl_workspace_tools.py`.
+Do not assume WebSocket companion behavior from `contracts/` alone; follow `companion/turn.py` and `companion_tool_runtime.py`.
 
 ## Persistence (conceptual)
 
@@ -120,7 +120,7 @@ flowchart TB
     PR["prompts.build_system_prompt"]
     TL["tools.build_companion_tools"]
     LLM["CompanionLLMClient"]
-    EX["repl_workspace_tools.execute_tool_call"]
+    EX["companion_tool_runtime.execute_tool_call"]
     MEM["memory_pipeline"]
   end
 

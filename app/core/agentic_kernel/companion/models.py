@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
 from .utc import local_date_str
+from .significance_perception import default_significance_perception_markdown
 
 if TYPE_CHECKING:
     from .memory_store import MemoryStore
@@ -27,6 +28,13 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
 )
 
 AI_PRIVATE_INJECT_MAX_CHARS = 12_000
+
+
+class CompanionTurnResult(BaseModel):
+    """One companion kernel turn: visible assistant text plus optional significance scores."""
+
+    assistant_text: str = ""
+    significance_perception: dict[str, Any] | None = None
 
 
 class ChatMessage(BaseModel):
@@ -71,6 +79,7 @@ class PromptBundle(BaseModel):
     soul: str
     user_md: str
     memory_md: str
+    significance_perception_md: str = ""
     agents_md: str = Field(
         default="",
         description="Deprecated: AGENTS.md is not loaded or injected; kept default-empty for callers/tests.",
@@ -136,6 +145,14 @@ def load_prompt_bundle(
             store,
             "HEARTBEAT.md",
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
+        ),
+        significance_perception_md=(
+            _read_memory_document_optional(
+                store,
+                "SIGNIFICANCE_PERCEPTION.md",
+                max_chars=_OPTIONAL_DOC_MAX_CHARS,
+            ).strip()
+            or default_significance_perception_markdown()
         ),
         memory_raw_diary_today_md=raw_md,
         memory_day_summary_today_md=summary_md,

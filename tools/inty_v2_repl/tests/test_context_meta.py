@@ -15,7 +15,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 if str(_EXPERIMENTAL) not in sys.path:
     sys.path.insert(0, str(_EXPERIMENTAL))
 
-from inty_v2_text_chat_prototype.models import ContextMeta, load_context_meta
+from inty_v2_repl.models import ContextMeta, load_context_meta
 
 
 class TestLoadContextMeta(unittest.TestCase):

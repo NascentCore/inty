@@ -23,6 +23,7 @@ def build_repl_turn_base_messages(
     repl_online_ack_turn: bool = False,
     inner_tick_turn: bool = False,
     ai_private_text: str = "",
+    include_significance_perception_slice: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
     system_messages = build_system_messages(
         bundle,
@@ -31,6 +32,7 @@ def build_repl_turn_base_messages(
         inner_tick_turn=inner_tick_turn,
         repl_online_ack_turn=repl_online_ack_turn,
         ai_private_text=ai_private_text,
+        include_significance_perception_slice=include_significance_perception_slice,
     )
     messages: list[dict[str, Any]] = list(system_messages)
     for m in transcript:
@@ -61,6 +63,7 @@ def persist_repl_turn_transcript_rows(
     inner_tick_turn: bool = False,
     assistant_source: str = "chat",
     trace_id: str | None = None,
+    assistant_extra: dict[str, Any] | None = None,
 ) -> str:
     root = workspace_root.resolve()
     paths = WorkspacePaths(root=root)
@@ -80,16 +83,16 @@ def persist_repl_turn_transcript_rows(
         user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
     assistant_msg_uuid = str(uuid.uuid4())
-    store.append_jsonl_record(
-        rel_tr,
-        {
-            "role": "assistant",
-            "content": assistant_text,
-            "ts": utc_iso_ts(),
-            "uuid": assistant_msg_uuid,
-            "reply_to": assistant_reply_to,
-            "source": assistant_source,
-            "trace_id": trace_id,
-        },
-    )
+    assistant_row: dict[str, Any] = {
+        "role": "assistant",
+        "content": assistant_text,
+        "ts": utc_iso_ts(),
+        "uuid": assistant_msg_uuid,
+        "reply_to": assistant_reply_to,
+        "source": assistant_source,
+        "trace_id": trace_id,
+    }
+    if assistant_extra:
+        assistant_row["significance_perception"] = assistant_extra
+    store.append_jsonl_record(rel_tr, assistant_row)
     return assistant_msg_uuid

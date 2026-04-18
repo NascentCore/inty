@@ -69,6 +69,10 @@ from app.core.agentic_kernel.companion.tool_background import (
     mark_tool_background_aborted,
     start_tool_background_job,
 )
+from app.core.agentic_kernel.companion.significance_perception import (
+    DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    split_dual_llm_chat_branch_content,
+)
 from app.core.agentic_kernel.companion.turn_engine import (
     build_repl_turn_base_messages,
     persist_repl_turn_transcript_rows,
@@ -156,12 +160,29 @@ def _assistant_text_from_completion_response(resp: Any) -> str:
     return content.strip()
 
 
+def _dual_llm_significance_slice_active(
+    *,
+    inner_tick_turn: bool,
+    dual_llm: bool,
+    async_tool_bg: bool,
+) -> bool:
+    return bool(dual_llm and not inner_tick_turn and not async_tool_bg)
+
+
+def _invoke_model_result(assistant_text: str, significance: dict[str, Any] | None) -> dict[str, Any]:
+    out: dict[str, Any] = {"assistant_text": assistant_text}
+    if significance is not None:
+        out["significance_perception"] = significance
+    return out
+
+
 def _create_chat_completion_mirrored_tools_no_call(
     client: Any,
     *,
     model: str,
     messages_payload: list[dict[str, Any]],
     tools: list[Any],
+    response_format: dict[str, Any] | None = None,
 ) -> Any:
     """
     Keep mirrored tool definitions in chat-branch context while forcing no tool calls.
@@ -176,6 +197,7 @@ def _create_chat_completion_mirrored_tools_no_call(
             # Keep tool definitions mirrored in chat branch context, but force no tool calls.
             # OpenAI tool_choice docs: https://developers.openai.com/api/docs/guides/function-calling#tool-choice
             tool_choice="none",
+            response_format=response_format,
         )
     except (BadRequestError, APIError) as exc:
         logger.warning(
@@ -188,6 +210,7 @@ def _create_chat_completion_mirrored_tools_no_call(
             messages_payload=messages_payload,
             tools=[],
             tool_choice=None,
+            response_format=response_format,
         )
 
 
@@ -313,9 +336,10 @@ async def _run_turn_fast_chat_then_tool_background(
     bundle: PromptBundle,
     context: ContextMeta,
     repl_online_ack_turn: bool = False,
+    significance_slice: bool = False,
     supersede_check: Callable[[bool], None],
     tool_bg_started_cell: list[bool],
-) -> str:
+) -> dict[str, Any]:
     """
     Front path: return chat-branch text quickly.
     Back path: tool branch + tool execution runs in background; completion is emitted to output queue.
@@ -352,6 +376,7 @@ async def _run_turn_fast_chat_then_tool_background(
         repl_online_ack_turn=repl_online_ack_turn,
         include_repl_image_generation_contract=False,
         chat_output_format_prompt=chat_output_format_prompt,
+        include_significance_perception_slice=significance_slice,
     )
     chat_payload = _openai_messages_payload(chat_messages)
     chat_log_messages = chat_messages
@@ -380,6 +405,9 @@ async def _run_turn_fast_chat_then_tool_background(
                 model=chat_route_model,
                 messages_payload=chat_payload,
                 tools=tools,
+                response_format=(
+                    DUAL_LLM_CHAT_RESPONSE_FORMAT if significance_slice else None
+                ),
             ),
             timeout=timeout_s,
         )
@@ -405,7 +433,11 @@ async def _run_turn_fast_chat_then_tool_background(
         root=root,
         trace_id=trace_id,
     )
-    chat_text = _assistant_text_from_completion_response(chat_resp)
+    chat_raw = _assistant_text_from_completion_response(chat_resp)
+    if significance_slice:
+        chat_text, sig_meta = split_dual_llm_chat_branch_content(chat_raw)
+    else:
+        chat_text, sig_meta = chat_raw, None
     logger.info(
         "repl.turn async_chat_tool_background_done trace_id={} llm_route={} "
         "chat_model={} tool_model={} llm_trace_where_chat=repl.turn.bg.chat_front",
@@ -415,7 +447,7 @@ async def _run_turn_fast_chat_then_tool_background(
         tool_route_model,
     )
     supersede_check(True)
-    return chat_text
+    return _invoke_model_result(chat_text, sig_meta)
 
 
 async def _run_turn_with_user_profile_tools(
@@ -430,7 +462,7 @@ async def _run_turn_with_user_profile_tools(
     bundle: PromptBundle | None = None,
     context: ContextMeta | None = None,
     supersede_check: Callable[[bool], None],
-) -> str:
+) -> dict[str, Any]:
     """chat.completions + user_profile_record，直到模型不再调用工具。"""
     client = get_client()
     model = default_model()
@@ -460,6 +492,7 @@ async def _run_turn_with_user_profile_tools(
         model,
     )
     last_text = ""
+    last_sig: dict[str, Any] | None = None
     t_loop = time.perf_counter()
     for round_idx in range(1, _REPL_USER_PROFILE_TOOL_MAX_ROUNDS + 1):
         supersede_check(False)
@@ -475,6 +508,7 @@ async def _run_turn_with_user_profile_tools(
             )
             base_payload = _openai_messages_payload(messages)
             request_messages = deepcopy(messages)
+            significance_slice = round_idx == 1
             if bundle is not None and context is not None:
                 chat_messages = deepcopy(messages)
                 chat_messages[0]["content"] = build_system_prompt(
@@ -486,6 +520,7 @@ async def _run_turn_with_user_profile_tools(
                     ai_private_text=ai_private_text,
                     include_repl_image_generation_contract=False,
                     chat_output_format_prompt=chat_output_format_prompt,
+                    include_significance_perception_slice=significance_slice,
                 )
                 chat_branch_payload = _openai_messages_payload(chat_messages)
                 chat_log_messages = chat_messages
@@ -504,6 +539,9 @@ async def _run_turn_with_user_profile_tools(
                     model=chat_route_model,
                     messages_payload=chat_branch_payload,
                     tools=tools,
+                    response_format=(
+                        DUAL_LLM_CHAT_RESPONSE_FORMAT if significance_slice else None
+                    ),
                 )
                 logger.info(
                     "repl.turn llm_round={} branch=chat trace_id={} chat_completions_ms={:.0f} "
@@ -565,9 +603,15 @@ async def _run_turn_with_user_profile_tools(
                 root=root,
                 trace_id=trace_id,
             )
-            chat_text = _assistant_text_from_completion_response(chat_resp)
+            chat_raw = _assistant_text_from_completion_response(chat_resp)
+            if significance_slice:
+                chat_plain, sig_meta = split_dual_llm_chat_branch_content(chat_raw)
+                if sig_meta is not None:
+                    last_sig = sig_meta
+            else:
+                chat_plain = chat_raw
             tool_text = _assistant_text_from_completion_response(tool_resp)
-            last_text = _merge_visible_assistant_text(chat_text, tool_text)
+            last_text = _merge_visible_assistant_text(chat_plain, tool_text)
             tool_msg = tool_resp.choices[0].message
             tool_calls = getattr(tool_msg, "tool_calls", None) or []
             logger.info(
@@ -625,6 +669,7 @@ async def _run_turn_with_user_profile_tools(
             messages.append(openai_assistant_message_dict(msg))
             if not tool_calls:
                 last_text = _assistant_text_from_completion_response(resp)
+                last_sig = None
                 break
         propose = ",".join(
             getattr(getattr(tc, "function", None), "name", "?") for tc in tool_calls
@@ -692,7 +737,7 @@ async def _run_turn_with_user_profile_tools(
         (time.perf_counter() - t_loop) * 1000.0,
     )
     supersede_check(False)
-    return last_text
+    return _invoke_model_result(last_text, last_sig)
 
 
 def is_workspace_initialized(workspace: Path) -> bool:
@@ -794,6 +839,13 @@ async def run_turn(
             print(system)
             print("=" * 80)
 
+        async_bg_probe = async_tool_background_enabled()
+        dual_on_probe = dual_llm_enabled()
+        significance_slice = _dual_llm_significance_slice_active(
+            inner_tick_turn=inner_tick_turn,
+            dual_llm=dual_on_probe,
+            async_tool_bg=async_bg_probe and not inner_tick_turn,
+        )
         messages, user_msg_uuid = build_repl_turn_base_messages(
             bundle=bundle,
             context=context,
@@ -802,6 +854,7 @@ async def run_turn(
             repl_online_ack_turn=repl_online_ack_turn,
             inner_tick_turn=inner_tick_turn,
             ai_private_text=ai_private_text,
+            include_significance_perception_slice=significance_slice,
         )
         turn_trace_id = _new_turn_trace_id()
 
@@ -831,7 +884,7 @@ async def run_turn(
         async def _prepare_turn(turn_input: TurnInput) -> TurnInput:
             return turn_input
 
-        async def _invoke_model(turn_input: TurnInput) -> str:
+        async def _invoke_model(turn_input: TurnInput) -> dict[str, Any]:
             input_messages = message_snapshots_to_dicts(turn_input.history)
             async_bg = async_tool_background_enabled()
             dual_on = dual_llm_enabled()
@@ -862,6 +915,7 @@ async def run_turn(
                     bundle=bundle,
                     context=context,
                     repl_online_ack_turn=repl_online_ack_turn,
+                    significance_slice=significance_slice,
                     supersede_check=supersede_check,
                     tool_bg_started_cell=tool_bg_started_cell,
                 )
@@ -878,15 +932,19 @@ async def run_turn(
                 supersede_check=supersede_check,
             )
 
-        async def _handle_response(_: TurnInput, assistant_text: str) -> TurnOutput:
+        async def _handle_response(
+            _: TurnInput, invoke_out: dict[str, Any]
+        ) -> TurnOutput:
             supersede_check(True)
-            return TurnOutput(
-                assistant_text=assistant_text,
-                metadata={
-                    "trace_id": turn_trace_id,
-                    "user_msg_uuid": user_msg_uuid,
-                },
-            )
+            assistant_text = str(invoke_out.get("assistant_text") or "")
+            sig = invoke_out.get("significance_perception")
+            meta: dict[str, Any] = {
+                "trace_id": turn_trace_id,
+                "user_msg_uuid": user_msg_uuid,
+            }
+            if isinstance(sig, dict):
+                meta["significance_perception"] = sig
+            return TurnOutput(assistant_text=assistant_text, metadata=meta)
 
         persist_transcript_ms = 0.0
 
@@ -898,6 +956,10 @@ async def run_turn(
             nonlocal persist_transcript_ms
             t_persist_inner = time.perf_counter()
             assistant_src = "inner_tick" if inner_tick_turn else "chat"
+            sig_extra = turn_output.metadata.get("significance_perception")
+            assistant_extra = (
+                sig_extra if isinstance(sig_extra, dict) and sig_extra else None
+            )
             assistant_msg_uuid = persist_repl_turn_transcript_rows(
                 root,
                 user_text=turn_input.user_text,
@@ -909,6 +971,7 @@ async def run_turn(
                 inner_tick_turn=inner_tick_turn,
                 assistant_source=assistant_src,
                 trace_id=turn_trace_id,
+                assistant_extra=assistant_extra,
             )
             persist_transcript_ms = (time.perf_counter() - t_persist_inner) * 1000.0
             return {"assistant_msg_uuid": assistant_msg_uuid}

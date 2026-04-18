@@ -35,19 +35,14 @@ class OpenRouterInvalidJsonError(RuntimeError):
     """OpenRouter returned a response body that was not valid JSON."""
 
 
-def _register_module_aliases() -> None:
-    """
-    Keep one shared module object for both import paths:
-    - tools.inty_v2_repl.client
-    - inty_v2_text_chat_prototype.client
-    This avoids exception class identity mismatch in mixed import styles.
-    """
-    module = sys.modules[__name__]
-    sys.modules.setdefault("tools.inty_v2_repl.client", module)
-    sys.modules.setdefault("inty_v2_text_chat_prototype.client", module)
+def _register_sys_modules_aliases() -> None:
+    """Same module object for ``inty_v2_repl.client`` and ``tools.inty_v2_repl.client`` import paths."""
+    m = sys.modules[__name__]
+    sys.modules.setdefault("inty_v2_repl.client", m)
+    sys.modules.setdefault("tools.inty_v2_repl.client", m)
 
 
-_register_module_aliases()
+_register_sys_modules_aliases()
 
 
 def _flush_langsmith_traces_on_exit() -> None:
@@ -212,11 +207,14 @@ def create_chat_completion(
     messages_payload: list[dict[str, Any]],
     tools: list[Any],
     tool_choice: str | None = None,
+    response_format: dict[str, Any] | None = None,
 ) -> Any:
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
     }
+    if response_format is not None:
+        create_kw["response_format"] = response_format
     if tools:
         create_kw.update(tool_path_chat_completion_kwargs(model))
         create_kw["tools"] = tools
