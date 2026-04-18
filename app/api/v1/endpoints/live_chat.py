@@ -95,13 +95,12 @@ async def get_current_user_ws(
         logger.warning("WebSocket 连接缺少 token")
         return None
 
-    try:
-        user = await deps.get_user_from_token(token, db)
-        logger.info(f"WebSocket 用户认证成功: {user.id}")
-        return user
-    except Exception as e:
-        logger.warning(f"WebSocket 认证失败: {str(e)}")
+    user = await deps.get_user_from_token(token, db)
+    if user is None:
+        logger.warning("WebSocket 认证失败: invalid or expired token")
         return None
+    logger.info(f"WebSocket 用户认证成功: {user.id}")
+    return user
 
 
 @router.websocket("/{agent_id}")
