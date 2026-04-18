@@ -32,7 +32,9 @@ android {
                 "proguard-rules.pro",
                 "consumer-rules.pro",
             )
-            buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
+            // buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
+            // TODO(DG): 为上面👆的链接配置Google OAuth
+            buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.sxwl.ai/\"")
         }
         release {
             isMinifyEnabled = false
@@ -42,24 +44,6 @@ android {
                 "consumer-rules.pro",
             )
             buildConfigField("String", "API_BASE_URL", "\"https://imate.inty.cc/\"")
-        }
-        create("playdebug") {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
-            )
-            buildConfigField("String", "API_BASE_URL", "\"https://imate.inty.cc/\"")
-        }
-        create("local") {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
-            )
-            buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
         }
     }
 

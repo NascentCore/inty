@@ -122,14 +122,6 @@ android {
             versionNameSuffix = "-${gitShortSha()}-$name"
             signingConfig = signingConfigs.getByName("dev")
         }
-        create("playdebug") {
-            initWith(getByName("release"))
-            versionNameSuffix = "-${gitShortSha()}-$name"
-        }
-        create("local") {
-            initWith(getByName("debug"))
-            versionNameSuffix = "-${gitShortSha()}-$name"
-        }
     }
 
     packaging {

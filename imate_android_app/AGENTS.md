@@ -11,6 +11,7 @@ alwaysApply: true
 # Agentic AI companion App on Android
 
 - [开发计划](/docs/FR_IMATE_DEVELOPMENT_PLAN.md)
+- 用户可见变更与用户向说明：[docs/CHANGE_LOGS.md](docs/CHANGE_LOGS.md)、[docs/USER_MANUAL.md](docs/USER_MANUAL.md)（维护方式对齐 `android_app/docs/CHANGE_LOGS.md` 与根目录 `docs/INTELLIMATE.md`）
 
 # UI实现原则
 - 尽量避免自定义颜色、字体和形状，而是通过标准Material3获取

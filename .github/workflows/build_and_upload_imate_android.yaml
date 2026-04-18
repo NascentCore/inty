@@ -12,6 +12,10 @@ on:
 
   workflow_dispatch:
 
+concurrency:
+  group: imate-gplay-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-aab:
     runs-on: android-builder
@@ -29,6 +33,7 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
+          fetch-tags: true
 
       - uses: actions/setup-java@v4
         with:
