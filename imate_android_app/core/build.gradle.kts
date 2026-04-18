@@ -41,22 +41,6 @@ android {
                 "consumer-rules.pro",
             )
         }
-        create("playdebug") {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
-            )
-        }
-        create("local") {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-                "consumer-rules.pro",
-            )
-        }
     }
 
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }

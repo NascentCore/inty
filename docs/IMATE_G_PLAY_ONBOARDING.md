@@ -26,7 +26,7 @@
 | `compileSdk` | 36（含 minor 1） |
 | ABI | `ndk.abiFilters` 仅 `arm64-v8a` |
 | Release | `minify` + `shrinkResources` + `proguard-rules.pro` |
-| 变体 | `debug`、`release`、`playdebug`（继承 release，用于接近上架包的可调试用构建）、`local` |
+| 变体 | `debug`、`release` |
 | 签名 | 要求 `imate_android_app/sign/imate.jks` 与 `sign/signing-config.json` 存在，否则配置阶段失败 |
 | 版本 | `versionName` 固定 `"1.0"`；`versionCode` 经 `gitCommitCount()` **当前写死为 `1`**，**不满足**商店多次上架递增要求，必须改为单调递增策略 |
 | Git 版本脚本 | `gitShortSha` / `gitCommitCount` 中基于 `git` 的逻辑被注释，需恢复或改为 CI 注入 |
@@ -58,7 +58,7 @@
 1. **versionCode**：实现严格单调递增（例如：`git rev-list --count HEAD`、或 `CI_BUILD_NUMBER`、或日期+序号）；每次上架新包必须大于上一版。
 2. **versionName**：与产品版本策略对齐；决定是否保留 `versionNameSuffix`（当前 release 会带 `-debug-release` 类后缀，因 `gitShortSha()` 为占位），避免商店展示异常。
 3. **恢复或替换 Git 信息**：恢复 `git rev-parse` / `git rev-list` 的 `Provider` 实现，或改为仅 CI 注入 `VERSION_CODE` / `VERSION_NAME`。
-4. **发布构建命令**：以商店为准使用 **`release`** 变体产出 AAB：`./gradlew :app:bundleRelease`（在 `imate_android_app/` 下执行）；`playdebug` 仅用于调试，不替代正式 release 上架策略（除非团队明确约定）。
+4. **发布构建命令**：以商店为准使用 **`release`** 变体产出 AAB：`./gradlew :app:bundleRelease`（在 `imate_android_app/` 下执行）。
 5. **AGP 稳定性**：评估 alpha AGP 是否可接受；若不能，在 iMate 工程内单独降级/锁定稳定 AGP，**不要**与 `android_app` 共用版本表。
 6. **可选**：新增 **仅针对 `imate_android_app/**` 的 GitHub Actions**（构建 `bundleRelease`、上传至指定 `packageName: com.inty.imate`、指定 track）。勿复用 `android_app` 的 workflow 路径与 `packageName`。
 7. **服务账号**：为 Play 开发者 API 创建 JSON 密钥，授予最小权限（上传 artifact、管理对应应用）；存入 GitHub Secrets 等，变量名由团队自定。
