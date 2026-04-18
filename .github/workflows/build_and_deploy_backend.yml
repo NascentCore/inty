@@ -148,7 +148,7 @@ jobs:
 
       - name: Pull deployment images
         uses: appleboy/ssh-action@v1.2.5
-        timeout-minutes: 5
+        timeout-minutes: 15
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -159,7 +159,7 @@ jobs:
 
       - name: Deploy backend to ${{ steps.prep.outputs.environment }}
         uses: appleboy/ssh-action@v1.2.5
-        timeout-minutes: 5
+        timeout-minutes: 30
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -185,20 +185,20 @@ jobs:
               --volume ${{ steps.map.outputs.keys_dir }}/inty-backend-key.json:/inty-backend-key.json \
               --volume ${{ steps.map.outputs.keys_dir }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-            echo "Waiting for application startup..."
+            echo "Waiting for HTTP readiness on 127.0.0.1:${{ vars.SERVICE_PORT_ON_HOST }} ..."
             n=0
-            max_wait=300
-            while ! sudo docker logs ${{ steps.map.outputs.container_name }} 2>&1 | grep -q "Application startup complete"
+            max_wait=600
+            while ! curl -sfS --max-time 3 "http://127.0.0.1:${{ vars.SERVICE_PORT_ON_HOST }}/" >/dev/null
             do
               n=$((n + 1))
               if [ "$n" -ge "$max_wait" ]; then
-                echo "Timeout after ${max_wait}s waiting for Application startup complete"
+                echo "Timeout after ${max_wait}s waiting for GET / on published port"
                 sudo docker logs ${{ steps.map.outputs.container_name }} 2>&1 | tail -n 120
                 exit 1
               fi
               sleep 1
             done
-            echo "Application startup complete detected!"
+            echo "Backend responded on localhost; startup complete."
 
       - name: Sanity check
         run: |
