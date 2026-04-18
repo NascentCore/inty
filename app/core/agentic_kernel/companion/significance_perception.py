@@ -120,7 +120,9 @@ def parse_dual_llm_chat_envelope_json(raw: str) -> DualLlmChatBranchEnvelope | N
         return None
 
 
-def envelope_to_assistant_metadata_dict(env: DualLlmChatBranchEnvelope) -> dict[str, Any]:
+def envelope_to_assistant_metadata_dict(
+    env: DualLlmChatBranchEnvelope,
+) -> dict[str, Any]:
     return {
         "importance_round": env.importance_round,
         "importance_user_message": env.importance_user_message,
