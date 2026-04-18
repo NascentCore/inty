@@ -155,6 +155,7 @@ private fun LoginContent(
                                 withStyle(SpanStyle(color = Color(0xFF5BA3D4), fontWeight = FontWeight.SemiBold)) {
                                     append(" ")
                                     append(stringResource(R.string.login_info_highlight))
+                                    append(" ")
                                 }
                                 append(stringResource(R.string.login_info_suffix))
                             },
