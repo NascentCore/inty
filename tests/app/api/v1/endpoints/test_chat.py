@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient as FastAPITestClient
 from jose import jwt
 from loguru import logger
+from starlette.websockets import WebSocketDisconnect
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -1468,6 +1469,40 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     assert second_response["code"] == 200
     assert second_response["agent_id"] == "agent-b"
     assert second_response["data"]["source_imate_id"] == "imate-b"
+
+
+def test_chat_websocket_auth_http_exception_closes_connection(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_get_user_from_token(token: str, db):
+        raise chat_v1.HTTPException(status_code=401, detail="Could not validate credentials")
+
+    monkeypatch.setattr(deps, "get_user_from_token", fake_get_user_from_token)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws?token=expired-token") as websocket:
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                websocket.receive_json()
+
+    assert excinfo.value.code == 4001
+
+
+def test_chat_websocket_verify_auth_http_exception_closes_connection(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_get_user_from_token(token: str, db):
+        raise chat_v1.HTTPException(status_code=401, detail="Could not validate credentials")
+
+    monkeypatch.setattr(deps, "get_user_from_token", fake_get_user_from_token)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect(
+            "/api/v1/chat/ws/verify?token=expired-token"
+        ) as websocket:
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                websocket.receive_json()
+
+    assert excinfo.value.code == 4001
 
 
 def test_chat_websocket_idle_timeout_reads_config(

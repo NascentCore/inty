@@ -143,7 +143,15 @@ async def _get_current_user_from_websocket(
         token = websocket.query_params.get("token")
     if token is None or token == "":
         return None
-    return await deps.get_user_from_token(token, db)
+    try:
+        return await deps.get_user_from_token(token, db)
+    except HTTPException as auth_error:
+        logger.warning(
+            "chat websocket auth rejected: status_code={} detail={}",
+            auth_error.status_code,
+            auth_error.detail,
+        )
+        return None
 
 
 async def _resolve_assumed_chat_websocket_user(
