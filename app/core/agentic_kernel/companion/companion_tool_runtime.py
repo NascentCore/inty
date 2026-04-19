@@ -51,6 +51,7 @@ from .models import ChatMessage
 from .google_web_search import run_google_web_search
 from .runtime_inspect_tool import tool_companion_runtime_inspect
 from .schedule_queue import add_schedule_task
+from app.services.agent_status_line import tool_update_agent_status_line
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
@@ -155,6 +156,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "companion_runtime_inspect",
         "companion_update_prompt_slice",
         "companion_bootstrap_user_interactive_complete",
+        "tool_update_agent_status_line",
     )
 )
 
@@ -603,6 +605,31 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_update_agent_status_line",
+                "description": (
+                    "Set the short one-line status shown under your name in the user's chat header "
+                    "(mood, vibe, or current thought). Use the same language as the user. "
+                    "Keep it brief (roughly one short sentence). Pass an empty string to clear it. "
+                    "Do not mention this tool to the user."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status_line": {
+                            "type": "string",
+                            "description": (
+                                "Header subtitle text, or empty string to clear."
+                            ),
+                        },
+                    },
+                    "required": ["status_line"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     ]
 
 
@@ -680,6 +707,7 @@ def build_openai_repl_tools(
         names = (
             "user_profile_record",
             "schedule_task",
+            "tool_update_agent_status_line",
             "workspace_list_dir",
             "workspace_read_file",
         )
@@ -687,6 +715,7 @@ def build_openai_repl_tools(
         names = (
             "user_profile_record",
             "schedule_task",
+            "tool_update_agent_status_line",
             "workspace_list_dir",
             "workspace_read_file",
             "workspace_write_file",
@@ -979,6 +1008,7 @@ def build_openai_repl_tools(
 
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
+    "tool_update_agent_status_line",
     "workspace_list_dir",
     "workspace_read_file",
     "workspace_write_file",
@@ -1047,6 +1077,11 @@ async def _dispatch(
     )
     if workspace_dispatch_result is not None:
         return workspace_dispatch_result
+    if name == "tool_update_agent_status_line":
+        raw_sl = arguments.get("status_line")
+        if not isinstance(raw_sl, str):
+            return "ERROR: status_line must be a string"
+        return await tool_update_agent_status_line(root, raw_sl)
     if name == "tool_update_chat_settings":
         output_format_prompt = arguments.get("output_format_prompt")
         if not isinstance(output_format_prompt, str):

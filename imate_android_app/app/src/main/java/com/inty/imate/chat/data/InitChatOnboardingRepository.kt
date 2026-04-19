@@ -9,6 +9,7 @@ import com.inty.imate.chat.data.bean.InitChatOnboarding
 import com.inty.imate.chat.data.bean.InitChatOnboardingGender
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 class InitChatOnboardingRepository @Inject constructor(
     private val localDataSource: InitChatOnboardingLocalDataSource,
@@ -47,4 +48,11 @@ class InitChatOnboardingRepository @Inject constructor(
 
     suspend fun generateAvatar(prompt: String): GenerateAvatarResponse =
         remoteDataSource.generateAvatar(prompt)
+
+    suspend fun refreshCreatedAgentFromServer(agentId: String) {
+        val cur = onboarding.first().createdAgent ?: return
+        if (cur.id != agentId) return
+        val remote = remoteDataSource.getAgent(agentId)
+        setCreatedAgent(remote)
+    }
 }

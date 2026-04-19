@@ -11,6 +11,7 @@ data class AgentInfo(
     @SerialName("background_animated") val backgroundAnimatedUrl: String? = null,
     val id: String = "",
     val name: String = "",
+    @SerialName("status_line") val statusLine: String = "",
     val opening: String = "",
     @SerialName("opening_audio_url") val openingAudioUrl: String = "",
     val intro: String = "",
@@ -39,6 +40,7 @@ data class SendMsgResponse(
     val message: String? = null,
     val data: SentMsgRspData? = null,
     @SerialName("agent_id") val agentId: String? = null,
+    @SerialName("status_line") val statusLine: String? = null,
 ) {
     @Serializable
     data class SentMsgRspData(

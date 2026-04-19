@@ -501,6 +501,20 @@ def _companion_rejects_multimodal_user_turn(last_user_message: ChatMessage) -> b
     return last_user_message.has_image_content_part()
 
 
+async def _agent_status_line_for_chat_header(
+    db: AsyncSession, agent_id: str
+) -> Optional[str]:
+    r = await db.execute(
+        select(models.Agent.status_line).where(
+            models.Agent.id == agent_id,
+            models.Agent.deleted_at.is_(None),
+        )
+    )
+    raw = r.scalar_one_or_none()
+    text = (raw or "").strip()
+    return text if text else None
+
+
 async def _agent_chat_completions_impl(
     *,
     db: AsyncSession,
@@ -511,7 +525,7 @@ async def _agent_chat_completions_impl(
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
     chat_route: Literal["http", "websocket"],
-) -> schemas.APIResponse[dict]:
+) -> Union[schemas.APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
         logger.debug(
@@ -972,7 +986,13 @@ async def _agent_chat_completions_impl(
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
 
-        return schemas.APIResponse.success(data=data)
+        payload = schemas.APIResponse.success(data=data)
+        if chat_route == "websocket":
+            sl = await _agent_status_line_for_chat_header(db, agent_id)
+            out = payload.model_dump(exclude_none=True)
+            out["status_line"] = sl
+            return out
+        return payload
 
     except HTTPException:
         raise
@@ -1122,6 +1142,7 @@ async def _try_send_ws_user_interactive_bootstrap_kickoff(
         payload = schemas.APIResponse.success(data=data)
         out = payload.model_dump(exclude_none=True)
         out["agent_id"] = agent_id
+        out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
         await websocket.send_json(out)
     except Exception:
         logger.exception(
@@ -1210,7 +1231,10 @@ async def chat_completions_websocket(
                     }
                 )
                 continue
-            response_data = response.model_dump(exclude_none=True)
+            if isinstance(response, dict):
+                response_data = dict(response)
+            else:
+                response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = websocket_request.agent_id
             await websocket.send_json(response_data)
     except WebSocketDisconnect:
@@ -1382,6 +1406,9 @@ async def chat_completions_websocket_verify(
             response = schemas.APIResponse.success(data=data)
             response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = agent_id
+            response_data["status_line"] = await _agent_status_line_for_chat_header(
+                db, agent_id
+            )
             await websocket.send_json(response_data)
     except WebSocketDisconnect:
         return

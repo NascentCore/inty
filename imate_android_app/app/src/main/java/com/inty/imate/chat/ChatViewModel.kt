@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.ai.core.data.exceptions.GlobalErrorHandler
+import com.ai.core.utils.LogUtils
 import com.inty.imate.chat.data.ChatMainRepository
 import com.inty.imate.chat.data.ChatMessageRepository
 import com.inty.imate.account.data.AuthRepository
@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -74,9 +77,27 @@ constructor(
                 }
             }
         }
+        chatMainRepository.agentStatusLineUpdates
+            .onEach { (agentId, text) ->
+                val cur = _agent.value ?: return@onEach
+                if (cur.id != agentId) return@onEach
+                _agent.value = cur.copy(statusLine = text)
+            }
+            .launchIn(viewModelScope)
         viewModelScope.launch {
             onboardingRepository.onboarding.collect { onboarding ->
                 _agent.value = onboarding.createdAgent
+            }
+        }
+    }
+
+    fun refreshAgentFromServer() {
+        viewModelScope.launch {
+            val id = agent.value?.id?.takeIf { it.isNotBlank() } ?: return@launch
+            try {
+                onboardingRepository.refreshCreatedAgentFromServer(id)
+            } catch (e: Exception) {
+                LogUtils.d("refreshAgentFromServer failed: ${e.message}")
             }
         }
     }

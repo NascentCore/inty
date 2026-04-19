@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -119,6 +121,10 @@ fun ChatScreen(modifier: Modifier = Modifier) {
 
     val companion = agent!!
 
+    LaunchedEffect(agentId) {
+        viewModel.refreshAgentFromServer()
+    }
+
     if (!wsConnected && !hasWsEver) {
         ChatWebSocketLoadingScreen(modifier = modifier.fillMaxSize())
         return
@@ -134,6 +140,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
             ChatTopBar(
                 agentName = companion.name.ifBlank { stringResource(R.string.app_name) },
                 avatarUrl = companion.avatar.takeIf { it.isNotBlank() }?.let { getCdnImageUrl(it) },
+                statusLine = companion.statusLine.trim(),
                 onOpenSettings = { viewModel.setSettingsVisible(true) },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -332,6 +339,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
 private fun ChatTopBar(
     agentName: String,
     avatarUrl: String?,
+    statusLine: String,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -382,22 +390,14 @@ private fun ChatTopBar(
                     fontWeight = FontWeight.Bold,
                     lineHeight = 24.sp,
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF4ADE80).copy(alpha = 0.85f)),
-                    )
+                if (statusLine.isNotEmpty()) {
                     Text(
-                        text = stringResource(R.string.chat_online_status),
+                        text = statusLine,
                         color = Color.White.copy(alpha = 0.45f),
                         fontSize = 11.sp,
                         lineHeight = 16.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

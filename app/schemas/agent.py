@@ -133,6 +133,11 @@ class AgentBase(BaseModel):
         ),
     )
     intro: Optional[str] = None
+    status_line: Optional[str] = Field(
+        None,
+        max_length=256,
+        description="Short mood or status line shown under the agent name in chat",
+    )
     opening: Optional[str] = None
     opening_audio_url: Optional[str] = None
     visibility: AgentVisibility = AgentVisibility.PUBLIC

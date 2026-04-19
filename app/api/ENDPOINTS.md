@@ -111,6 +111,8 @@ Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页�
 > **`/api/v1/chat/ws` 与 `/api/v1/chat/ws/verify` 上行扩展**：除 `{"type":"ping"}` 与既有 `ChatWebSocketRequest` JSON 外，可发送 `{"type":"client_context","time_context":{...}}`，字段与 HTTP `time_context`（`UserTimeContext`：`local_time`、`timezone`、`utc_offset_minutes`）一致。服务端回 `{"type":"client_context_ack","ok":true|false}`；该连接上若后续 chat 帧未带 `time_context`，则沿用最近一次成功写入的 `client_context`。
 >
 > **Chat WebSocket idle**：`app.features.chat_ws_idle_timeout_seconds`（默认 60）秒内无上行文本帧则关闭连接；`ping`/`pong` 计入上行。
+>
+> **Chat header status line**：成功完成一轮 **WS** `/api/v1/chat/ws` 或 `/api/v1/chat/ws/verify` 聊天后，顶层 JSON 含可选 `status_line`（来自 `agents.status_line`，空则省略或 `null`），供客户端聊天顶栏副标题刷新；与 `code`/`data`/`agent_id` 并列。
 
 ### 聊天会话 (Chats)
 
