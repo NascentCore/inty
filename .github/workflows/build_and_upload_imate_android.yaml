@@ -74,7 +74,8 @@ jobs:
           packageName: com.inty.imate
           releaseFiles: ${{ env.IMATE_AAB_PATH }}
           track: internal
-          status: completed
+          # Draft app (Play Console) only allows draft releases via API; switch to completed when app is publishable.
+          status: draft
           changesNotSentForReview: false
 
       - name: Create and push tag
