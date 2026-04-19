@@ -114,7 +114,7 @@ jobs:
               ;;
             imate-prod)
               echo "config_file=devops/config.yaml.imate_prod" >> $GITHUB_OUTPUT
-              echo "container_name=inty-backend-imate-prod" >> $GITHUB_OUTPUT
+              echo "container_name=${{ vars.CONTAINER_NAME }}" >> $GITHUB_OUTPUT
               echo "keys_dir=/opt/inty-imate-prod" >> $GITHUB_OUTPUT
               echo "app_label=inty-backend-imate" >> $GITHUB_OUTPUT
               echo "langchain_project=inty-backend-imate-prod" >> $GITHUB_OUTPUT
