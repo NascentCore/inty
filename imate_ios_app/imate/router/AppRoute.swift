@@ -10,13 +10,19 @@ import Combine
 
 
 enum AppRoute: Hashable {
-    case productDetail(id: String)
-    case userProfile(username: String)
-    case settings
+    case login
+    case home
 }
 
-class NavigationRouter: ObservableObject {
+class Router: ObservableObject {
     @Published var path = NavigationPath() // 存储导航栈数据
+    
+    // 返回上一级
+    func pop() {
+        if !path.isEmpty {
+            path.removeLast()
+        }
+    }
     
     func push(_ route: AppRoute) {
         path.append(route)

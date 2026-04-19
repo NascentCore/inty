@@ -9,7 +9,7 @@ import SwiftUI
 
 
 struct MainTabView: View {
-    @StateObject private var router = NavigationRouter()
+    @StateObject private var router = Router()
 
     var body: some View {
         NavigationStack(path: $router.path) {

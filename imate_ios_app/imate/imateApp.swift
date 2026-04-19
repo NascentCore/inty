@@ -11,7 +11,7 @@ import SwiftUI
 struct imateApp: App {
     var body: some Scene {
         WindowGroup {
-            IMateLoginView()
+            Entrance()
         }
     }
 }
