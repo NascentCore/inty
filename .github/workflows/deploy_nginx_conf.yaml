@@ -15,6 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Remove stale staging file (may be root-owned from manual sudo)
+        uses: appleboy/ssh-action@master
+        timeout-minutes: 1
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            sudo rm -f /tmp/sxwl.ai.conf
+
       - name: Copy nginx config to server
         uses: appleboy/scp-action@master
         with:
