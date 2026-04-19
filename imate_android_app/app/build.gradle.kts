@@ -76,7 +76,6 @@ android {
         vectorDrawables { useSupportLibrary = true }
         ndk {
             abiFilters.add("arm64-v8a")
-            debugSymbolLevel = "SYMBOL_TABLE"
         }
 
         buildConfigField(
@@ -107,6 +106,9 @@ android {
             isShrinkResources = true
             versionNameSuffix = "-${gitShortSha()}-$name"
             signingConfig = signingConfigs.getByName("release")
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
