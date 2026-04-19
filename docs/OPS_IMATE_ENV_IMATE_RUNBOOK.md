@@ -11,7 +11,7 @@
 | 逻辑库名 | `imate` |
 | 构建配置 | [devops/config.yaml.imate](../devops/config.yaml.imate) |
 | GitHub Environment | `imate` |
-| 建议 `vars` | `OPS_SERVICE_PORT_ON_HOST=8301`，`OPS_SERVICE_PUBLIC_URL=https://imate.inty.cc` |
+| 建议 `vars` | `OPS_SERVICE_PORT_ON_HOST=8301`，`OPS_SERVICE_PUBLIC_URL=https://ops.imate.inty.cc` |
 | 容器名 | `inty-ops-imate` |
 | VM 密钥目录 | `/opt/inty-imate/`（`inty-backend-key.json`、`inty-firebase-key.json`） |
 
@@ -53,26 +53,26 @@ sudo chmod 700 /opt/inty-imate
 
 ## 4. TLS 与 Nginx
 
-- 仓库配置：[devops/nginx/conf.d/sxwl.ai.conf](../devops/nginx/conf.d/sxwl.ai.conf) 中 `imate.inty.cc` 反代至 **8301**（与 GitHub `vars` 一致）。
-- VM 上若尚无证书：`certbot` 为 `imate.inty.cc` 签发后，路径应与 `ssl_certificate` 中 `/etc/letsencrypt/live/imate.inty.cc/` 一致；`nginx -t` 后 `reload`。
+- 仓库配置：[devops/nginx/conf.d/sxwl.ai.conf](../devops/nginx/conf.d/sxwl.ai.conf) 中 **`imate.inty.cc` 反代 iMate prod 后端 8120**（`imate-prod` / [config.yaml.imate_prod](../devops/config.yaml.imate_prod)）；**`ops.imate.inty.cc` 反代** Environment `imate` 的 Ops **8301**（与 `vars.OPS_SERVICE_PORT_ON_HOST` 一致）。
+- VM 上为 `ops.imate.inty.cc` 单独签发证书后，路径与 [sxwl.ai.conf](../devops/nginx/conf.d/sxwl.ai.conf) 中 `ssl_certificate`（`/etc/letsencrypt/live/ops.imate.inty.cc/`）一致；`nginx -t` 后 `reload`。
 
 ## 5. GitHub Actions
 
 合并包含 workflow 与配置的变更后，打开 **Release - Inty Ops 平台**，**Run workflow**，Environment 选 **`imate`**。
 
-依赖与其它 Ops 部署相同：`DEV_SERVER_*`、`LANGCHAIN_API_KEY` 等；本环境额外依赖 **`imate` Environment** 下的 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL`。
+依赖与其它 Ops 部署相同：`DEV_SERVER_*`、`LANGCHAIN_API_KEY` 等；本环境额外依赖 **`imate` Environment** 下的 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL`（建议与 `ops.imate.inty.cc` 对齐）。
 
 ## 6. 验证
 
 ```bash
-curl -v --fail --retry 3 --retry-delay 3 "https://imate.inty.cc/"
+curl -v --fail --retry 3 --retry-delay 3 "https://ops.imate.inty.cc/"
 ```
 
 ## 回滚
 
-- Nginx：将 `imate.inty.cc` 的 `proxy_pass` 改回所需上游端口并 `reload`。
+- Nginx：按需调整 `ops.imate.inty.cc` 的 `proxy_pass` 并 `reload`。
 - 容器：`sudo docker stop inty-ops-imate && sudo docker rm inty-ops-imate`（按需）。
 
 ## 说明
 
-`imate.inty.cc` 若曾指向 iMate **后端**（例如 :8120），改为 Ops（:8301）后，原后端公网入口需另域名或端口；部署前请与产品约定。
+iMate prod **API** 公网为 **`https://imate.inty.cc/`**（后端容器 `inty-backend-imate-prod`，宿主 **8120**）；本手册中的 Ops 入口为 **`https://ops.imate.inty.cc/`**，勿与 API 根域混用。

@@ -24,7 +24,7 @@
 
 ## iMate 域名 TLS
 
-iMate dev API 公网入口为 **`dev.imate.sxwl.ai`**（`conf.d/sxwl.ai.conf` 反代 8200；可并列 `dev.imate.inty.cc`）。iMate dev Ops 为 **`dev.ops.imate.inty.cc`**（反代 8201）。DNS 指向本机后按 Certbot webroot（`-w /var/www/inty.cc`）分别签发证书，路径与 `ssl_certificate` 一致，再 `nginx -t` / reload。
+iMate dev API 公网入口为 **`dev.imate.sxwl.ai`**（`conf.d/sxwl.ai.conf` 反代 8200；可并列 `dev.imate.inty.cc`）。iMate dev Ops 为 **`dev.ops.imate.inty.cc`**（反代 8201）。**iMate prod API** 为 **`imate.inty.cc`**（反代 **8120**，对应 `imate-prod` / `config.yaml.imate_prod`）；Environment **`imate`** 的 Ops 为 **`ops.imate.inty.cc`**（反代 **8301**），须单独为该主机名签发证书。DNS 指向本机后按 Certbot webroot（`-w /var/www/inty.cc`）分别签发证书，路径与 `ssl_certificate` 一致，再 `nginx -t` / reload。
 
 ## 更新 Nginx 配置
 
