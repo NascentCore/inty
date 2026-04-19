@@ -1,5 +1,7 @@
 # Workflows
 
+- IntelliMate已经进入维护状态（maintenance mode），不应该再进行改动
+
 ## 发布内测轨道 AAB
 
 运行[build_and_upload_android.yaml](https://github.com/NascentCore/inty-app/actions/workflows/build_and_upload_android.yaml)构建 release 变体，并上传 AAB 到 Google Play Internal Testing 轨道。
