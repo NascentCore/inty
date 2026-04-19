@@ -235,11 +235,13 @@ async def get_effective_user_for_eval(
     return user
 
 
-async def get_user_from_token(token: str, db: AsyncSession) -> User:
+async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
     """
     从 token 获取用户（供 WebSocket 使用）
 
-    与 get_current_user 类似，但接受 token 字符串而非依赖注入
+    与 get_current_user 类似，但接受 token 字符串而非依赖注入。
+    鉴权失败返回 None（不抛 HTTPException），避免在 WebSocket 已 accept 后
+    触发 Starlette 将 401 当作 HTTP 响应写入 WS 连接而导致 RuntimeError。
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -255,12 +257,23 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User:
 
         user_id: str = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
+            return None
 
-    except JWTError:
-        raise credentials_exception
+    except JWTError as jwt_error:
+        if isinstance(jwt_error, ExpiredSignatureError):
+            logger.warning(
+                f"JWT已过期(WebSocket token): {jwt_error} (类型: {type(jwt_error).__name__})"
+            )
+        else:
+            logger.warning(
+                f"JWT解码失败(WebSocket token): {jwt_error} (类型: {type(jwt_error).__name__})"
+            )
+        return None
 
-    cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
+    try:
+        cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
+    except HTTPException:
+        return None
     if cached_user is not None:
         return cached_user
 
@@ -268,10 +281,10 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User:
     user = user.scalar_one_or_none()
 
     if not user:
-        raise credentials_exception
+        return None
 
     if user.deleted_at:
-        raise credentials_exception
+        return None
 
     _cache_user_auth_snapshot(user)
     return user
