@@ -1270,6 +1270,77 @@ class TestGetOrCreateChatByAgent:
         await self._cleanup_test_data(db_session, user, agent, chat)
 
     @pytest.mark.asyncio
+    async def test_integrity_error_retry_returns_hydrated_chat(
+        self, db_session: AsyncSession
+    ):
+        """When commit hits uq_chats_user_agent_active, retry must return a fully hydrated Chat."""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(
+            db_session, user.id, opening=None, opening_audio_url=None
+        )
+
+        user_id_str = user.id
+        agent_id_str = agent.id
+        expected_agent_name = agent.name
+        expected_agent_avatar = agent.avatar
+        expected_agent_intro = agent.intro
+
+        session_key = f"{user_id_str}:{agent_id_str}"
+        cache_service.invalidate_session_info(session_key)
+
+        async_engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=1,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        concurrent_session_factory = sessionmaker(
+            bind=async_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        real_commit = db_session.commit
+        phase = 0
+
+        async def commit_after_concurrent_insert():
+            nonlocal phase
+            if phase == 0:
+                phase = 1
+                winner = models.Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id_str,
+                    agent_id=agent_id_str,
+                    is_active=True,
+                )
+                async with concurrent_session_factory() as s2:
+                    s2.add(winner)
+                    await s2.commit()
+            await real_commit()
+
+        db_session.commit = commit_after_concurrent_insert  # type: ignore[method-assign]
+
+        try:
+            chat = await chat_service.get_or_create_chat_by_agent(
+                db=db_session, user_id=user_id_str, agent_id=agent_id_str
+            )
+        finally:
+            db_session.commit = real_commit  # type: ignore[method-assign]
+            await async_engine.dispose()
+
+        assert chat.user_id == user_id_str
+        assert chat.agent_id == agent_id_str
+        assert chat.agent_name == expected_agent_name
+        assert chat.agent_avatar == expected_agent_avatar
+        assert chat.agent_intro == expected_agent_intro
+
+        sess = cache_service.get_session_info(session_key)
+        assert sess is not None
+        assert sess["agent_name"] == expected_agent_name
+
+        await db_session.refresh(user)
+        await db_session.refresh(agent)
+        await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
     async def test_get_existing_chat_with_agent_cache(self, db_session: AsyncSession):
         """测试从数据库获取已存在会话，Agent信息在缓存中"""
         user = await self._create_test_user(db_session)
