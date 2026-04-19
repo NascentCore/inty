@@ -23,6 +23,7 @@ jobs:
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           source: "devops/nginx/conf.d/sxwl.ai.conf"
           target: "/tmp"
+          overwrite: true  # remote /tmp/sxwl.ai.conf may exist from prior runs; tar needs overwrite
           strip_components: 3  # devops/nginx/conf.d → file lands at /tmp/sxwl.ai.conf
 
       - name: Install config and restart nginx
