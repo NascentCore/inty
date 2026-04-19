@@ -8,6 +8,10 @@
 
 然后用 adspower 指纹浏览器打开[内测轨道](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/tracks/internal-testing)
 
+## iMate Android CI（编译）
+
+变更 [`imate_android_app/`](/imate_android_app/) 或 [ci_imate_android_app.yaml](ci_imate_android_app.yaml) 时触发：在 `android-builder` 上执行 `./gradlew :app:assembleDebug`，作为合并前编译检查。
+
 ## iMate 发布内测轨道 AAB
 
 运行 [build_and_upload_imate_android.yaml](https://github.com/NascentCore/inty-app/actions/workflows/build_and_upload_imate_android.yaml) 在 [`imate_android_app/`](/imate_android_app/) 构建 `bundleRelease`，将 AAB 上传到 **Google Play Internal testing**（`packageName`: `com.inty.imate`）。定时默认每日 **UTC 02:30**（北京时间 10:30），也可手动 **Run workflow**。
