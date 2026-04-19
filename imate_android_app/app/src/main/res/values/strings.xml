@@ -9,6 +9,7 @@
     <string name="login_info_highlight">you</string>
     <string name="login_info_suffix">and evolving along with you.</string>
     <string name="login_continue_google">Continue with Google</string>
+    <string name="login_google_sign_in_connectivity">Google sign-in could not reach Google (network or Play services). Check your connection, VPN, or try again shortly.</string>
     <string name="login_terms">Terms of Use</string>
     <string name="login_privacy">Privacy Policy</string>
     <string name="login_disclaimer">By continuing, you agree to our terms</string>

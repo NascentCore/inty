@@ -10,6 +10,7 @@ import com.ai.core.data.exceptions.IntyException
 import com.ai.core.ui.theme.IMateTheme
 import com.ai.core.utils.ToastUtils
 import com.inty.imate.main.MainScreen
+import com.inty.imate.utils.CredentialToastMapper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -35,8 +36,10 @@ class MainActivity : ComponentActivity() {
                                 }
                                 else -> {
                                     val message = it.message
-                                    if (!message.isNullOrEmpty()) {
-                                        ToastUtils.showShort(message)
+                                    val toastText =
+                                        CredentialToastMapper.toastMessage(this@MainActivity, it, message)
+                                    if (toastText.isNotEmpty()) {
+                                        ToastUtils.showShort(toastText)
                                     }
                                 }
                             }
@@ -48,5 +51,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 
