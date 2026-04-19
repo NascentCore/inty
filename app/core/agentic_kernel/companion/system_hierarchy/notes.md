@@ -5,8 +5,10 @@
 这些约束是大模型用来理解“用户与智能体”这一交互对中，对双方交互模式的整体性理解，并不能完全作为智能体本身的描述。
 这也是为何，这些提示词被称为system-hierarchy（而非智能体描述之类的说法）。
 
-AXIOM.md
-SOUL.md
-IDENTITY.md
-USER.md
-MEMORY.md
+以下文件对应[templates](/app/core/agentic_kernel/companion/templates/)下的文件：
+
+1. AXIOM.md
+1. SOUL.md
+1. IDENTITY.md
+1. USER.md
+1. MEMORY.md
