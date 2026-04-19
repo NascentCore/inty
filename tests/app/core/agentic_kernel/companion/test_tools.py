@@ -32,6 +32,7 @@ def test_build_companion_tools() -> None:
     assert names == [
         "user_profile_record",
         "schedule_task",
+        "tool_update_agent_status_line",
         "workspace_list_dir",
         "workspace_read_file",
         "workspace_write_file",

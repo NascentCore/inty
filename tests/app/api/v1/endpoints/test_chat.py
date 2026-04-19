@@ -960,6 +960,15 @@ def _setup_companion_ws_chat_test_env(
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
 
+    async def fake_agent_status_line(db, agent_id):
+        return None
+
+    monkeypatch.setattr(
+        chat_v1,
+        "_agent_status_line_for_chat_header",
+        fake_agent_status_line,
+    )
+
 
 def test_chat_completions_companion_kernel_branch_writes_history(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
@@ -1291,6 +1300,15 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         return user
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    async def fake_agent_status_line(db, agent_id):
+        return None
+
+    monkeypatch.setattr(
+        chat_v1,
+        "_agent_status_line_for_chat_header",
+        fake_agent_status_line,
+    )
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
