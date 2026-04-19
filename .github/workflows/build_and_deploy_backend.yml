@@ -114,7 +114,6 @@ jobs:
               ;;
             imate-prod)
               echo "config_file=devops/config.yaml.imate_prod" >> $GITHUB_OUTPUT
-              echo "container_name=${{ vars.CONTAINER_NAME }}" >> $GITHUB_OUTPUT
               echo "keys_dir=/opt/inty-imate-prod" >> $GITHUB_OUTPUT
               echo "app_label=inty-backend-imate" >> $GITHUB_OUTPUT
               echo "langchain_project=inty-backend-imate-prod" >> $GITHUB_OUTPUT
@@ -169,15 +168,15 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
           script: |
-            sudo docker stop ${{ steps.map.outputs.container_name }} || true
-            sudo docker rm ${{ steps.map.outputs.container_name }} || true
+            sudo docker stop ${{ steps.prep.outputs.environment == 'imate-prod' && vars.CONTAINER_NAME || steps.map.outputs.container_name }} || true
+            sudo docker rm ${{ steps.prep.outputs.environment == 'imate-prod' && vars.CONTAINER_NAME || steps.map.outputs.container_name }} || true
             # log-driver: https://docs.docker.com/engine/logging/drivers/gcplogs/
             #   运行于 gcp 环境，docker engine 探测 gcp 环境信息，相关设置都自动提取
             #   https://docs.docker.com/engine/logging/drivers/gcplogs/#gcplogs-options
             # LANGCHAIN_* 相关环境变量应该不需要设置，已经在代码中强制设置，以后考虑清理
             # https://github.com/NascentCore/inty/blob/ef9c9735c62a9cb2d6be4b2414bebed410f1ff56/app/core/config.py#L267
             sudo docker run --detach --log-driver=gcplogs \
-              --name ${{ steps.map.outputs.container_name }} \
+              --name ${{ steps.prep.outputs.environment == 'imate-prod' && vars.CONTAINER_NAME || steps.map.outputs.container_name }} \
               --restart unless-stopped \
               --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
               --env LANGCHAIN_TRACING_V2=true \
@@ -197,7 +196,7 @@ jobs:
               n=$((n + 1))
               if [ "$n" -ge "$max_wait" ]; then
                 echo "Timeout after ${max_wait}s waiting for GET / on published port"
-                sudo docker logs ${{ steps.map.outputs.container_name }} 2>&1 | tail -n 120
+                sudo docker logs ${{ steps.prep.outputs.environment == 'imate-prod' && vars.CONTAINER_NAME || steps.map.outputs.container_name }} 2>&1 | tail -n 120
                 exit 1
               fi
               sleep 1
@@ -241,7 +240,7 @@ jobs:
         run: |
           echo "## Build and deploy"
           echo "GitHub ref: ${{ github.ref }}"
-          echo "Container: ${{ steps.map.outputs.container_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Container: ${{ steps.prep.outputs.environment == 'imate-prod' && vars.CONTAINER_NAME || steps.map.outputs.container_name }}" >> $GITHUB_STEP_SUMMARY
           echo "Deployed to ${{ steps.prep.outputs.environment }} for ${{ vars.SERVICE_PUBLIC_URL }}" >> $GITHUB_STEP_SUMMARY
           echo "Backend image: ${{ env.INTY_SERVER_IMAGE }}:${{ steps.prep.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.prep.outputs.environment }}" = "prod" ]; then
