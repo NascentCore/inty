@@ -39,6 +39,9 @@ constructor(
     private val _subLimitChannel = Channel<ChatSubLimitSignal>(Channel.BUFFERED)
     val subLimit = _subLimitChannel.receiveAsFlow()
 
+    private val _agentStatusLineChannel = Channel<Pair<String, String>>(Channel.BUFFERED)
+    val agentStatusLineUpdates = _agentStatusLineChannel.receiveAsFlow()
+
     val isChatWebSocketConnected: StateFlow<Boolean> = chatWebSocketRemoteDataSource.isSessionActive
 
     suspend fun sendMessageViaWebSocketFireAndForget(agentId: String, request: SendMsgReq) {
@@ -102,6 +105,8 @@ constructor(
                     LogUtils.d("Chat WS incoming messages: ${entities.size}")
                     chatLocalDataSource.appendMessages(entities)
                 }
+                val sl = message.statusLine?.trim().orEmpty()
+                _agentStatusLineChannel.send(agentId to sl)
             }
         }
     }

@@ -693,3 +693,29 @@ def test_update_agent_adds_energy_points(
 
     finally:
         integration_client.delete_agent(agent_id)
+
+
+def test_agent_status_line_put_and_get_roundtrip(integration_client):
+    integration_client.create_user()
+    agent_id = integration_client.create_agent(name="Status Line Agent")
+
+    try:
+        tag = "Mood line for chat header test"
+        put_resp = integration_client.client.put(
+            f"{integration_client.base_url}/api/v1/ai/agents/{agent_id}",
+            json={"status_line": tag},
+        )
+        assert put_resp.status_code == 200, put_resp.text
+        put_payload = put_resp.json()
+        assert (
+            put_payload.get("status_line") == tag
+        ), f"PUT response should echo status_line, got {put_payload}"
+
+        got = integration_client.get_agent(agent_id)
+        envelope = got.get("data") if isinstance(got.get("data"), dict) else None
+        agent_body = envelope if envelope is not None else got
+        assert (
+            agent_body.get("status_line") == tag
+        ), f"GET agent should include status_line, got {got}"
+    finally:
+        integration_client.delete_agent(agent_id)

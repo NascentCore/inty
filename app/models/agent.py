@@ -49,6 +49,11 @@ class Agent(Base):
     # 免费用户和付费用户设置的默认模型。
     settings = Column(JSON)
     intro = Column(String)
+    status_line = Column(
+        String,
+        nullable=True,
+        comment="Short mood/tagline for chat header (iMate status line)",
+    )
     opening = Column(String)
     visibility = Column(
         Enum(AgentVisibility, name="visibility"), default=AgentVisibility.PUBLIC
