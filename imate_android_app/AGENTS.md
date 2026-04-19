@@ -10,6 +10,7 @@ alwaysApply: true
 
 # Agentic AI companion App on Android
 
+- PR / `main` 推送变更 `imate_android_app/` 时，由 [.github/workflows/ci_imate_android_app.yaml](/.github/workflows/ci_imate_android_app.yaml) 运行 `:app:assembleDebug` 做编译门禁。
 - [开发计划](/docs/FR_IMATE_DEVELOPMENT_PLAN.md)
 - 用户可见变更与用户向说明：[docs/CHANGE_LOGS.md](docs/CHANGE_LOGS.md)、[docs/USER_MANUAL.md](docs/USER_MANUAL.md)（维护方式对齐 `android_app/docs/CHANGE_LOGS.md` 与根目录 `docs/INTELLIMATE.md`）
 

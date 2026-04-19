@@ -1,0 +1,73 @@
+name: CI - iMate Android App
+
+# 第一阶段：编译检查（assembleDebug）。后续可在本 workflow 追加单元测试、lint 等 job。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "imate_android_app/**/*.kt"
+      - "imate_android_app/**/*.kts"
+      - "imate_android_app/**/*.java"
+      - "imate_android_app/**/*.xml"
+      - "imate_android_app/**/*.pro"
+      - "imate_android_app/**/*.gradle*"
+      - "imate_android_app/gradle/**"
+      - "imate_android_app/**/gradle.properties"
+      - "imate_android_app/gradlew"
+      - ".github/workflows/ci_imate_android_app.yaml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "imate_android_app/**/*.kt"
+      - "imate_android_app/**/*.kts"
+      - "imate_android_app/**/*.java"
+      - "imate_android_app/**/*.xml"
+      - "imate_android_app/**/*.pro"
+      - "imate_android_app/**/*.gradle*"
+      - "imate_android_app/gradle/**"
+      - "imate_android_app/**/gradle.properties"
+      - "imate_android_app/gradlew"
+      - ".github/workflows/ci_imate_android_app.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  compile:
+    runs-on: android-builder
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Cache Gradle dependencies and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            imate_android_app/.gradle
+            imate_android_app/build
+            imate_android_app/app/build
+            imate_android_app/core/build
+          key: ${{ runner.os }}-gradle-imate-ci-${{ hashFiles('imate_android_app/**/*.gradle*', 'imate_android_app/**/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-imate-ci-${{ hashFiles('imate_android_app/**/*.gradle*', 'imate_android_app/**/gradle-wrapper.properties') }}-
+
+      - name: Compile debug (assembleDebug)
+        run: |
+          cd imate_android_app
+          ./gradlew :app:assembleDebug
