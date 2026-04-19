@@ -1,5 +1,5 @@
-# 手动部署 nginx 站点配置到 inty 服务器；dev/prod 同机，environment 仅用于审批与审计
-name: Deploy nginx config (sxwl.ai)
+# 手动部署 nginx 站点配置到 inty 服务器；dev/prod 同机
+name: Release - Nginx 配置
 
 on:
   workflow_dispatch:
