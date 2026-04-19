@@ -1,6 +1,48 @@
-# iMate companion 设计（与 `app/core/agentic_kernel` 实现一致）
+# iMate companion 设计（kernel）
 
-## 两条对话路径
+## 路由
+
+- HTTP `chat/completions`：传统 `Agent.chat`。
+- WebSocket `chat/ws`：`companion_chat_service` → `CompanionManager` → `companion.turn.run_turn`。权威：`MemoryStore`（ORM 持久化文档 + `transcript.jsonl`）；产品聊天行：`chat_history_service`。
+
+## 回合
+
+- 由 prompt 切片（`PromptBundle`）组装 system + transcript 窗口 + 可选 compaction。
+- LLM：`CompanionLLMClient`（OpenAI 兼容）；tool 循环调用 `companion_tool_runtime.execute_tool_call`（schema 在 `tools.py`）。
+- 回合后：按配置将记忆管线入队或同步。
+
+## 双 LLM
+
+- 启用时：chat 与 tool 分流不同模型路由；tool 路可同步或异步（异步场景下前台 chat + 后台 tool 循环）。
+- Chat 路可携带与并行路相同的工具定义镜像，并约定 `tool_choice=none`，以便对齐上下文而不在 chat 路实际调用工具。
+
+**实现补充（与代码对齐）**：`CompanionLLMClient.chat_completion` 按「本轮请求是否带 tools」切换两套同步客户端并分别解析 `chat_model` / `tool_model`。上述「异步前台 chat + 后台 tool 循环」由 `companion/tool_background.py` 与 `tools/inty_v2_repl/orchestrator.py` 使用；**HTTP API 的 `run_companion_chat_turn_for_api` 当前未挂载** `start_tool_background_job`。提示词里关于「镜像工具 + chat 路禁调用」的分支主要在 **`prompts.build_system_messages`**（例如 `include_repl_image_generation_contract=False` 时的 chat 分支契约）；生产 WebSocket 默认路径见下文「回合」详细说明。
+
+## 重要性感知
+
+- Prompt 切片 **`SIGNIFICANCE_PERCEPTION`**（模板文件 `SIGNIFICANCE_PERCEPTION.md`，经 `bundle.significance_perception_md`）；当 **chat** 分支为非 tool 路时，可选用结构化信封（`response_format` JSON schema，定义见 `significance_perception.py` 中 `DUAL_LLM_CHAT_RESPONSE_FORMAT`）。
+- 字段：`user_facing_reply`、`importance_round`、`importance_user_message`、`importance_assistant_message`（均为 1-10 的重要性整数）。
+- Assistant 的 transcript 行可携带 `significance_perception`；WebSocket 路径可将该 dict 写入 AI 消息的 `chat_history.meta_data`，供下游任务消费。
+
+**实现补充（与代码对齐）**：`companion/turn.py` 中 `use_dual_structured_chat = (not heartbeat_turn) and not tools_for_turn`。当前 **`build_companion_tools` → `build_openai_repl_tools` 在正常用户轮次下返回的工具列表非空**，故在该约定未改前，**上述 JSON envelope 与 transcript 上的 `significance_perception` 在默认 WebSocket 闲聊路径上通常不会生效**；`chat.py` 仍会在 dict 非空时写入 `meta_data["significance_perception"]`。
+
+## 记忆抽取（可选）
+
+- 配置 **`memory_extraction.use_significance_perception_in_extraction`**：为真时按 `importance_round` 排序回合、在 prompt 行上标注分数、向抽取 prompt 追加短英文提示块。默认关闭（见 `app/services/memory_extraction_service.py`）。
+
+## 命名
+
+- **`companion_tool_runtime.py`**：companion 工具 schema、派发与执行（不限于文件系统 I/O）。
+
+## REPL
+
+- **`tools/inty_v2_repl`**：本地 harness；通过将 `tools/` 置于 `sys.path` 以 import `inty_v2_repl.*`（见 `tests/conftest.py`）。
+
+---
+
+以下为与 **`app/core/agentic_kernel`** 及 **`companion_chat_service` / WebSocket** 实现对齐的扩展说明（路由表、入口、bootstrap、持久化等）。
+
+## 两条对话路径（对照）
 
 | 路由 | 核心栈 | `app/core/agentic_kernel` 作用 |
 | --- | --- | --- |
@@ -75,29 +117,10 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 
 ---
 
-## 回合内行为（kernel 摘要）
+## 回合内行为（kernel 实现摘要）
 
 - **System**：来自 `PromptBundle`、上下文模式、`TOOLS.md` / `HEARTBEAT.md`（若有）、`IDENTITY` / `SOUL` / `USER`、亲密模式下可选 MEMORY 块、可选 interactive bootstrap 片段、输出契约等；组装函数为 **`build_system_messages`**。
 - **Transcript**：窗口由 `transcript_llm_window_max_messages` 与默认上限共同约束；可配置 compaction。
 - **LLM**：OpenAI 兼容 **`CompanionLLMClient.chat_completion`**；无 tools 时用 chat 路由客户端与 chat model，有 tools 时用 tool 路由客户端与 tool model（见 `_resolve_model`）。
 - **Tools**：`tools.py` 暴露 schema；执行在 **`companion_tool_runtime.execute_tool_call`**。
 - **回合后**：`defer_memory_update=True`（API 默认）时异步调度记忆管线。
-
-## 双客户端（chat / tool）与「双路 LLM」文档表述
-
-代码中 **`CompanionLLMClient.chat_completion`** 按「本轮请求是否携带 tools」在两套同步 OpenAI 兼容客户端之间切换，并分别解析 **`chat_model` / `tool_model`**（未配置则回退 `default_model`）。这与「并行前台 chat + 后台 tool 队列」不是同一机制：**后者**在 **`companion/tool_background.py`** 与 **`tools/inty_v2_repl/orchestrator.py`**，**当前 HTTP API 与 `run_companion_chat_turn_for_api` 未挂载** `start_tool_background_job`。
-
-## 重要性感知（significance）
-
-- Prompt slice：**`SIGNIFICANCE_PERCEPTION.md`**（经 `bundle.significance_perception_md`）。
-- **`run_turn`** 中 `use_dual_structured_chat = (not heartbeat_turn) and not tools_for_turn`。实现上：**`heartbeat_turn=True` 时强制 `tools_for_turn=[]`**；**非 heartbeat 时 `tools_for_turn = build_companion_tools(...)` 且当前返回的工具列表恒非空**。因此 **`use_dual_structured_chat` 在本文件编写时的 `turn.py` 逻辑下恒为假**：**`response_format`（`significance_perception.py` 中 `DUAL_LLM_CHAT_RESPONSE_FORMAT`）与 transcript 行的 `significance_perception` 在此路径上不会被填充**，除非日后修改「无工具用户轮」或 `build_companion_tools` 的约定。
-- WebSocket 已将 **非空** `significance_perception` dict 写入 **`chat_history`** AI 消息的 **`meta_data["significance_perception"]`**（见 `chat.py`）；在当前约束下该字段通常为 absent。
-
-## 记忆抽取（可选，产品侧）
-
-- 配置 **`memory_extraction.use_significance_perception_in_extraction`**（默认 `False`）：为真时可在抽取流程中利用重要性字段排序与标注（见 `app/services/memory_extraction_service.py`）。
-
-## 命名与本地 REPL
-
-- **`companion_tool_runtime.py`**：工具 schema、派发与 **`execute_tool_call`**，不限于文件系统 I/O。
-- **`tools/inty_v2_repl`**：本地 harness；测试里可通过 `sys.path` 挂载（如 `tests/conftest.py`）。
