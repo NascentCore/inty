@@ -130,3 +130,8 @@ output/
 *.aab
 # Android Studio Kotlin编译器临时目录
 .kotlin/
+
+### Xcode ###
+# 忽略所有 xcuserdata 文件夹
+xcuserdata/
+*.userdata
