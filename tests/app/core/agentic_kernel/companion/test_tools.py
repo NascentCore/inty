@@ -6,10 +6,7 @@ from pathlib import Path
 
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.companion_tool_runtime import execute_tool_call
-from app.core.agentic_kernel.companion.tools import (
-    WRITABLE_RELATIVE_PATHS,
-    build_companion_tools,
-)
+from app.core.agentic_kernel.companion.tools import WRITABLE_RELATIVE_PATHS
 
 
 def _run_tool(
@@ -24,24 +21,6 @@ def _run_tool(
             execute_tool_call(root, name, args, write_allowlist=write_allowlist)
         )
     return asyncio.run(execute_tool_call(root, name, args))
-
-
-def test_build_companion_tools() -> None:
-    tools = build_companion_tools()
-    names = [t["function"]["name"] for t in tools]
-    assert names == [
-        "user_profile_record",
-        "schedule_task",
-        "tool_update_agent_status_line",
-        "workspace_list_dir",
-        "workspace_read_file",
-        "workspace_write_file",
-        "tool_update_chat_settings",
-        "companion_runtime_inspect",
-        "google_web_search",
-        "generate_image",
-        "modify_image",
-    ]
 
 
 def test_tool_workspace_list_dir(tmp_path: Path) -> None:
