@@ -35,7 +35,7 @@
 
 Dev & prod sharing the same VM on GCP.
 
-**iMate 第二 Inty 实例**：[build_and_deploy_backend.yml](build_and_deploy_backend.yml)：`main` **push** 默认 **`imate-dev`**（`config.yaml.imate_dev`）；**schedule** 默认 GitHub Environment **`imate-prod`**（`config.yaml.imate_prod`）。容器名统一由当前 **Environment 变量 `CONTAINER_NAME`**（`vars.CONTAINER_NAME`）决定，各 Environment（如 `dev`、`prod`、`imate-dev`、`imate-prod`）分别配置。手动 **Run workflow** 默认 `imate-dev`。与 [build_and_deploy_ops.yml](build_and_deploy_ops.yml) 一样可选 `imate-dev` / `imate-prod` / **`imate`**（Ops 见 [docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md](../../docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md)）；还需 `SERVICE_PORT_ON_HOST`、`SERVICE_PUBLIC_URL` 等（见 `devops/README.md`）。
+**iMate 第二 Inty 实例**：[build_and_deploy_backend.yml](build_and_deploy_backend.yml)：`main` **push** 默认 **`imate-dev`**（`config.yaml.imate_dev`）；**schedule** 默认 GitHub Environment **`imate-prod`**（`config.yaml.imate_prod`）。容器名统一由当前 **Environment 变量 `INTY_BACKEND_CONTAINER_NAME`**（`vars.INTY_BACKEND_CONTAINER_NAME`）决定，各 Environment（如 `dev`、`prod`、`imate-dev`、`imate-prod`）分别配置。手动 **Run workflow** 默认 `imate-dev`。与 [build_and_deploy_ops.yml](build_and_deploy_ops.yml) 一样可选 `imate-dev` / `imate-prod` / **`imate`**（Ops 见 [docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md](../../docs/OPS_IMATE_ENV_IMATE_RUNBOOK.md)）；还需 `SERVICE_PORT_ON_HOST`、`SERVICE_PUBLIC_URL` 等（见 `devops/README.md`）。
 
 ## Dify 定时聊天调用
 
