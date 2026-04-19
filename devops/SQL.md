@@ -1,5 +1,9 @@
 # SQL 查询用于支持开发和运营
 
+```sql:为新的Inty后端服务实例创建新数据库
+CREATE DATABASE "inty-imate";
+```
+
 ```sql:更新用户和某角色的聊天中国的 chat-style
 UPDATE chat_settings
    SET style_prompt = 'write very detailed and elaborate descriptions of actions and thoughts'
