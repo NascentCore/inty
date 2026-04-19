@@ -133,6 +133,7 @@ Top-right quick actions currently include **Help**, **Daily Check-in**, and **Se
 
 ### Network / Sign-in
 - **Google sign-in missing**: Install Google Play Services (GMS). Mainland China devices usually require manual GMS installation.
+- **Google sign-in fails after choosing an account**: Usually means the device cannot reach Google through Play services—check Wi‑Fi or VPN so traffic to Google isn’t blocked, wait and retry, or install/update Play services when the system prompts.
 - **Blank screens / failed loads**: Clear IntelliMate storage in Android Settings and relaunch, or switch back to the default backend in debug builds.
 
 ### Chat & Media
