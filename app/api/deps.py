@@ -80,6 +80,24 @@ def _get_user_from_auth_snapshot(
         return None
 
 
+def _get_user_from_auth_snapshot_for_websocket(user_id: str) -> User | None:
+    """WebSocket 鉴权用快照解析：永不抛出 HTTPException，避免已 accept 的 WS 上冒泡异常。"""
+    cached_snapshot = cache_service.get_user_auth_snapshot(user_id)
+    if cached_snapshot is None:
+        return None
+    if cached_snapshot.get("deleted_at"):
+        logger.warning(f"WebSocket 鉴权: 缓存快照中用户已删除，将回源数据库: {user_id}")
+        return None
+    try:
+        return User(**cached_snapshot)
+    except Exception as cache_error:
+        logger.warning(
+            f"WebSocket 鉴权: 恢复快照失败，回源数据库: user_id={user_id}, error={cache_error}"
+        )
+        cache_service.invalidate_user_auth_snapshot(user_id)
+        return None
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
 ) -> User:
@@ -243,10 +261,6 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
     鉴权失败返回 None（不抛 HTTPException），避免在 WebSocket 已 accept 后
     触发 Starlette 将 401 当作 HTTP 响应写入 WS 连接而导致 RuntimeError。
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-    )
 
     try:
         payload = jwt.decode(
@@ -269,11 +283,13 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
                 f"JWT解码失败(WebSocket token): {jwt_error} (类型: {type(jwt_error).__name__})"
             )
         return None
-
-    try:
-        cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
-    except HTTPException:
+    except Exception as unexpected:
+        logger.warning(
+            f"WebSocket token 解析发生未预期错误: {unexpected} (类型: {type(unexpected).__name__})"
+        )
         return None
+
+    cached_user = _get_user_from_auth_snapshot_for_websocket(user_id)
     if cached_user is not None:
         return cached_user
 
