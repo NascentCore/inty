@@ -32,9 +32,7 @@ android {
                 "proguard-rules.pro",
                 "consumer-rules.pro",
             )
-            // buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
-            // TODO(DG): 为上面👆的链接配置Google OAuth
-            buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.sxwl.ai/\"")
+             buildConfigField("String", "API_BASE_URL", "\"https://dev.imate.inty.cc/\"")
         }
         release {
             isMinifyEnabled = false
