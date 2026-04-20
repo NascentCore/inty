@@ -8,6 +8,9 @@
 import SwiftUI
 
 struct LoginView: View {
+    
+    @EnvironmentObject var router: Router
+    
     var body: some View {
         ZStack {
             LoginWidgets.HeaderBg()
@@ -20,11 +23,22 @@ struct LoginView: View {
                 LoginWidgets.DescView()
                 
                 Spacer().frame(height: 30)
-                LoginWidgets.ButtonView()
+                LoginWidgets.ButtonView(
+                    onAppleAction: goAppleLogin, onEmailAction: goEmailLogin
+                )
                 
                 Spacer(minLength: 40)
                 LoginWidgets.TermsView()
             }
         }
+    }
+    
+    private func goAppleLogin() {
+        
+    }
+    
+    private func goEmailLogin() {
+        print("Some val si ------>")
+        router.push(.loginEmail)
     }
 }

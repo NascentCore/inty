@@ -22,6 +22,8 @@ struct Entrance: View {
                     LoginView()
                 case .home:
                     HomeView()
+                case .loginEmail:
+                    LoginEmail()
                 }
             }
         }

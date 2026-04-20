@@ -12,6 +12,8 @@ import Combine
 enum AppRoute: Hashable {
     case login
     case home
+    
+    case loginEmail
 }
 
 class Router: ObservableObject {
