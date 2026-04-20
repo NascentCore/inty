@@ -27,8 +27,10 @@ from db_util import (  # noqa: E402
     session_id_for_chat,
 )
 from messages import parse_lc_message_row, transcript_upto  # noqa: E402
-from schema import ConversationScenario, response_format_json_schema_strict  # noqa: E402
-
+from schema import (
+    ConversationScenario,
+    response_format_json_schema_strict,
+)  # noqa: E402
 
 SYSTEM_PROMPT = """You label a private chat transcript for internal research.
 Return ONLY one JSON object. No markdown fences. No outer wrapper key.
@@ -303,15 +305,23 @@ def main() -> int:
     parser.add_argument("--min-rows", type=int, default=10)
     parser.add_argument("--max-turns-per-chat", type=int, default=20)
     parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("--since", default=None, help="ISO date/datetime UTC lower bound.")
-    parser.add_argument("--until", default=None, help="ISO date/datetime UTC upper bound (exclusive).")
-    parser.add_argument("--fixture", default=None, help="JSONL fixture: {chat_id, turns: [text...]}")
+    parser.add_argument(
+        "--since", default=None, help="ISO date/datetime UTC lower bound."
+    )
+    parser.add_argument(
+        "--until", default=None, help="ISO date/datetime UTC upper bound (exclusive)."
+    )
+    parser.add_argument(
+        "--fixture", default=None, help="JSONL fixture: {chat_id, turns: [text...]}"
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model", default="openai/gpt-4o-mini")
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--no-strict-schema", action="store_true")
-    parser.add_argument("--out-dir", default="experimental/structured_output_adherence/out")
+    parser.add_argument(
+        "--out-dir", default="experimental/structured_output_adherence/out"
+    )
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
     if args.seed is not None:

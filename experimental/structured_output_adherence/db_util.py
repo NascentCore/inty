@@ -54,9 +54,7 @@ def load_db_config(
     return None, db_kwargs
 
 
-def connect_db(
-    config_path: Optional[str], database_url: Optional[str]
-) -> PgConnection:
+def connect_db(config_path: Optional[str], database_url: Optional[str]) -> PgConnection:
     url, kwargs = load_db_config(config_path, database_url)
     if url:
         return psycopg2.connect(url)
