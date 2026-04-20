@@ -303,7 +303,11 @@ def build_system_messages(
     out.append(_system_message(_context_mode_clause(context)))
     out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
 
-    if include_significance_perception_slice and not heartbeat_turn and not inner_tick_turn:
+    if (
+        include_significance_perception_slice
+        and not heartbeat_turn
+        and not inner_tick_turn
+    ):
         out.append(
             _system_message(
                 "## SIGNIFICANCE PERCEPTION\n\n"
@@ -374,9 +378,7 @@ def build_system_messages(
         out.append(_system_message(_output_contract_text()))
 
     if include_significance_perception_slice and chat_branch_no_tool_api:
-        out.append(
-            _system_message(_dual_llm_chat_structured_output_contract_text())
-        )
+        out.append(_system_message(_dual_llm_chat_structured_output_contract_text()))
 
     chat_output = (chat_output_format_prompt or "").strip()
     if chat_output:

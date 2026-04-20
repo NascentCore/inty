@@ -755,19 +755,13 @@ async def extract_and_save(
         logger.debug(f"记忆抽取跳过：user_id={user_id} 无消息")
         return
 
-    sig_enabled = bool(
-        getattr(cfg, "use_significance_perception_in_extraction", False)
-    )
+    sig_enabled = bool(getattr(cfg, "use_significance_perception_in_extraction", False))
     messages_for_prompt = _prepare_messages_for_memory_extraction(
         messages, use_significance=sig_enabled
     )
     chat_text = _format_chat_for_prompt(messages_for_prompt)
-    sig_block = (
-        f"\n\n{_significance_extraction_prompt_block()}" if sig_enabled else ""
-    )
-    full_prompt = (
-        f"{prompt}{sig_block}\n\n---\n\n# User chat history\n\n{chat_text}"
-    )
+    sig_block = f"\n\n{_significance_extraction_prompt_block()}" if sig_enabled else ""
+    full_prompt = f"{prompt}{sig_block}\n\n---\n\n# User chat history\n\n{chat_text}"
 
     start_time = time.perf_counter()
     try:
@@ -870,9 +864,7 @@ async def extract_and_save_incremental_daily(
         )
         return
 
-    sig_enabled = bool(
-        getattr(cfg, "use_significance_perception_in_extraction", False)
-    )
+    sig_enabled = bool(getattr(cfg, "use_significance_perception_in_extraction", False))
     messages_for_prompt = _prepare_messages_for_memory_extraction(
         messages, use_significance=sig_enabled
     )
