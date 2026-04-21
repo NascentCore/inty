@@ -24,6 +24,10 @@ struct Entrance: View {
                     HomeView()
                 case .loginEmail:
                     LoginEmail()
+                case .loginEmailPassword:
+                    LoginEmailPassword()
+                case .loginAuth:
+                    LoginAuth()
                 }
             }
         }

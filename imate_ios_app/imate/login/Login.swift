@@ -38,7 +38,6 @@ struct LoginView: View {
     }
     
     private func goEmailLogin() {
-        print("Some val si ------>")
         router.push(.loginEmail)
     }
 }

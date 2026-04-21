@@ -41,11 +41,11 @@ struct LoginEmail: View {
                         .frame(width: 44, height: 44)
                 }
                 .padding(.leading, 12)
-                .padding(.top, 8)
+                .padding(.top, 0)
                 
                 VStack(alignment: .leading, spacing: 40) {
                     // 3. 标题
-                    Text("Enter email")
+                    Text("Email")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -54,7 +54,7 @@ struct LoginEmail: View {
                     VStack(alignment: .leading, spacing: 8) {
                         // 4. 输入框 (OutlinedTextField 风格)
                         TextField("", text: $email, prompt:
-                            Text("Email address")
+                            Text("Enter your Email")
                                 .foregroundColor(.white.opacity(0.5)) // alpha = 0.5f
                         )
                         .focused($isTextFieldFocused)
@@ -112,11 +112,13 @@ struct LoginEmail: View {
     
     // 验证逻辑
     private func handleContinue() {
-        if email.trimmingCharacters(in: .whitespaces).isEmpty || !isValidEmail(email) {
-            emailError = "Invalid email format"
-        } else {
+//        if email.trimmingCharacters(in: .whitespaces).isEmpty || !isValidEmail(email) {
+//            emailError = "Invalid email format"
+//        } else {
 //            onContinue(email)
-        }
+//        }
+        
+        router.push(.loginEmailPassword)
     }
     
     private func isValidEmail(_ email: String) -> Bool {
