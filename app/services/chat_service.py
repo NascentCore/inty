@@ -30,6 +30,12 @@ def generate_session_id(chat_id: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, chat_id))
 
 
+def _is_unique_active_chat_violation(exc: IntegrityError) -> bool:
+    orig = getattr(exc, "orig", None)
+    msg = str(orig) if orig is not None else str(exc)
+    return "uq_chats_user_agent_active" in msg
+
+
 async def get_chat(db: AsyncSession, chat_id: str) -> Optional[models.Chat]:
     """
     Get chat by ID
@@ -289,6 +295,23 @@ async def create_chat(
 
     except IntegrityError as e:
         await db.rollback()
+        if _is_unique_active_chat_violation(e):
+            result = await db.execute(
+                select(models.Chat).where(
+                    models.Chat.user_id == user_id,
+                    models.Chat.agent_id == chat_in.agent_id,
+                    models.Chat.is_active == True,
+                )
+            )
+            existing = result.scalar_one_or_none()
+            if existing:
+                logger.warning(
+                    "create_chat: active chat already exists for user "
+                    f"{user_id} and agent {chat_in.agent_id}, returning chat {existing.id}"
+                )
+                existing_chat = await get_chat(db, existing.id)
+                if existing_chat:
+                    return existing_chat
         logger.error(f"Data integrity error - create chat: {str(e)}")
         if "user_id" in str(e):
             raise HTTPException(status_code=400, detail="Invalid user ID")
@@ -834,7 +857,9 @@ async def get_or_create_chat_by_agent(
                 logger.debug(
                     f"并发创建冲突，返回已存在的聊天会话 - Chat ID: {existing_chat.id}"
                 )
-                return existing_chat
+                hydrated = await get_chat(db, existing_chat.id)
+                if hydrated:
+                    return hydrated
         except Exception as retry_e:
             logger.error(f"重试查询失败: {str(retry_e)}")
             pass

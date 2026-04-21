@@ -2,6 +2,7 @@
 测试聊天服务功能
 """
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -11,14 +12,22 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import sessionmaker
 
 from app import models
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
-from app.schemas.chat import ChatImageGenerationResponse, ChatMusicGenerationResponse
+from app.schemas.chat import (
+    ChatCreate,
+    ChatImageGenerationResponse,
+    ChatMusicGenerationResponse,
+)
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services import chat_history_service, chat_service
@@ -2179,3 +2188,63 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_id == agent.id
 
         await self._cleanup_test_data(db_session, user, agent, existing_chat)
+
+    @pytest.mark.asyncio
+    async def test_create_chat_returns_existing_active_session(
+        self, db_session: AsyncSession
+    ):
+        """POST /chats duplicate: return existing active chat instead of failing."""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+
+        existing = models.Chat(
+            id=str(uuid.uuid4()), user_id=user.id, agent_id=agent.id, is_active=True
+        )
+        db_session.add(existing)
+        await db_session.commit()
+        await db_session.refresh(existing)
+
+        returned = await chat_service.create_chat(
+            db_session,
+            chat_in=ChatCreate(agent_id=agent.id),
+            user_id=user.id,
+        )
+        assert returned.id == existing.id
+        await db_session.refresh(user)
+        await db_session.refresh(agent)
+        await self._cleanup_test_data(db_session, user, agent, existing)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_get_or_create_single_chat(
+        self, db_session: AsyncSession
+    ):
+        """Two parallel get_or_create calls must yield the same chat row."""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+        cache_service.clear_all_caches()
+
+        share_engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=3,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        concurrent_factory = async_sessionmaker(
+            share_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async def run_once():
+            async with concurrent_factory() as s:
+                return await chat_service.get_or_create_chat_by_agent(
+                    db=s, user_id=user.id, agent_id=agent.id
+                )
+
+        try:
+            first, second = await asyncio.gather(run_once(), run_once())
+            assert first.id == second.id
+
+            chat = await chat_service.get_chat(db_session, first.id)
+            await self._cleanup_test_data(db_session, user, agent, chat)
+        finally:
+            await share_engine.dispose()
+
