@@ -16,7 +16,7 @@ from inty_v2_repl.workspace_init_loop import (
 
 
 class TestBootstrapSpecOnboarding(unittest.TestCase):
-    def test_templates_boostrap_md_committed_beside_package(self) -> None:
+    def test_templates_bootstrap_md_committed_beside_package(self) -> None:
         spec = (
             Path(workspace_init_loop.__file__).resolve().parent
             / "templates"
