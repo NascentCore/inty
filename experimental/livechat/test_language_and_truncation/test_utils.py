@@ -167,12 +167,9 @@ class IntyLiveChatClient:
             await self._ws.close()
 
     async def send_audio_wav(self, wav_path: Path, chunk_ms: int = SEND_CHUNK_MS):
-        """发送 WAV 音频文件"""
+        """发送 WAV 音频文件（纯 VAD 模式，不发送 activity_start/end）"""
         pcm = load_wav_pcm(wav_path)
         chunk_size = int(SEND_SAMPLE_RATE * 2 * chunk_ms / 1000)
-
-        # 先发 activity_start
-        await self._send_json({"type": "activity_start"})
 
         for chunk in chunk_pcm(pcm, chunk_size):
             await self._send_json({
@@ -181,8 +178,8 @@ class IntyLiveChatClient:
             })
             await asyncio.sleep(chunk_ms / 1000)
 
-        # 发送 activity_end
-        await self._send_json({"type": "activity_end"})
+        # 发完音频后等待静音让 VAD 检测 end_of_speech（silence_duration_ms=800 + buffer）
+        await asyncio.sleep(1.2)
         self._log.audio_count += 1
 
     async def send_text(self, text: str):

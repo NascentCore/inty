@@ -79,6 +79,10 @@ class LiveChatConfig(BaseModel):
         default=None,
         description="指定 AI 语音 ID，为空则使用角色默认语音或系统默认语音",
     )
+    enable_prefill: bool = Field(
+        default=False,
+        description="是否启用文本聊天历史预填充（将既有对话上下文灌入 Gemini Live）",
+    )
 
     @field_validator("speech_language_code", mode="before")
     @classmethod
