@@ -28,6 +28,7 @@ DEFAULT_TRAILING_SILENCE_MS = 1000
 @dataclass
 class TranscriptEvent:
     """转录事件"""
+
     timestamp: float
     role: str  # "user" | "assistant"
     text: str
@@ -37,6 +38,7 @@ class TranscriptEvent:
 @dataclass
 class StatusEvent:
     """状态事件"""
+
     timestamp: float
     status: str
     message: Optional[str] = None
@@ -45,6 +47,7 @@ class StatusEvent:
 @dataclass
 class ErrorEvent:
     """错误事件"""
+
     timestamp: float
     code: Optional[int] = None
     error_code: Optional[str] = None
@@ -54,6 +57,7 @@ class ErrorEvent:
 @dataclass
 class SessionLog:
     """会话日志"""
+
     session_start: float = field(default_factory=time.time)
     transcripts: list[TranscriptEvent] = field(default_factory=list)
     statuses: list[StatusEvent] = field(default_factory=list)
@@ -63,27 +67,33 @@ class SessionLog:
     session_info: dict = field(default_factory=dict)
 
     def add_transcript(self, role: str, text: str, message_id: Optional[int] = None):
-        self.transcripts.append(TranscriptEvent(
-            timestamp=time.time(),
-            role=role,
-            text=text,
-            message_id=message_id,
-        ))
+        self.transcripts.append(
+            TranscriptEvent(
+                timestamp=time.time(),
+                role=role,
+                text=text,
+                message_id=message_id,
+            )
+        )
 
     def add_status(self, status: str, message: Optional[str] = None):
-        self.statuses.append(StatusEvent(
-            timestamp=time.time(),
-            status=status,
-            message=message,
-        ))
+        self.statuses.append(
+            StatusEvent(
+                timestamp=time.time(),
+                status=status,
+                message=message,
+            )
+        )
 
     def add_error(self, code=None, error_code=None, message=None):
-        self.errors.append(ErrorEvent(
-            timestamp=time.time(),
-            code=code,
-            error_code=error_code,
-            message=message,
-        ))
+        self.errors.append(
+            ErrorEvent(
+                timestamp=time.time(),
+                code=code,
+                error_code=error_code,
+                message=message,
+            )
+        )
 
 
 def load_wav_pcm(wav_path: Path) -> bytes:
@@ -108,7 +118,7 @@ def wav_info(wav_path: Path) -> dict:
 
 def chunk_pcm(pcm_data: bytes, chunk_size: int = SEND_CHUNK_SIZE) -> list[bytes]:
     """将 PCM 数据按固定大小分块"""
-    return [pcm_data[i:i + chunk_size] for i in range(0, len(pcm_data), chunk_size)]
+    return [pcm_data[i : i + chunk_size] for i in range(0, len(pcm_data), chunk_size)]
 
 
 class IntyLiveChatClient:
@@ -186,10 +196,12 @@ class IntyLiveChatClient:
         silence = b"\x00" * chunk_size
         n = max(1, (duration_ms + chunk_ms - 1) // chunk_ms)
         for _ in range(n):
-            await self._send_json({
-                "type": "audio",
-                "data": base64.b64encode(silence).decode("utf-8"),
-            })
+            await self._send_json(
+                {
+                    "type": "audio",
+                    "data": base64.b64encode(silence).decode("utf-8"),
+                }
+            )
             await asyncio.sleep(chunk_ms / 1000)
 
     async def send_audio_wav(
@@ -213,10 +225,12 @@ class IntyLiveChatClient:
         chunk_size = int(SEND_SAMPLE_RATE * 2 * chunk_ms / 1000)
 
         for chunk in chunk_pcm(pcm, chunk_size):
-            await self._send_json({
-                "type": "audio",
-                "data": base64.b64encode(chunk).decode("utf-8"),
-            })
+            await self._send_json(
+                {
+                    "type": "audio",
+                    "data": base64.b64encode(chunk).decode("utf-8"),
+                }
+            )
             await asyncio.sleep(chunk_ms / 1000)
 
         if use_explicit_activity:
@@ -323,8 +337,7 @@ def save_test_report(name: str, log: SessionLog, extra: Optional[dict] = None):
         "duration_s": round(time.time() - log.session_start, 2),
         "session_info": log.session_info,
         "transcripts": [
-            {"role": t.role, "text": t.text, "ts": t.timestamp}
-            for t in log.transcripts
+            {"role": t.role, "text": t.text, "ts": t.timestamp} for t in log.transcripts
         ],
         "status_sequence": [
             {"status": s.status, "message": s.message, "ts": s.timestamp}
@@ -375,7 +388,9 @@ def check_language_mixing(transcripts: list[TranscriptEvent]) -> dict:
             continue
         lang = detect_language(t.text)
         if lang == "mixed":
-            mixed_turns.append({"role": t.role, "text": t.text, "languages": ["zh", "en"]})
+            mixed_turns.append(
+                {"role": t.role, "text": t.text, "languages": ["zh", "en"]}
+            )
 
     return {
         "has_mixing": len(mixed_turns) > 0,

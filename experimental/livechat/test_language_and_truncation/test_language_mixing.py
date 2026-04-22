@@ -81,7 +81,9 @@ async def run_scenario(
             detected = detect_language(ai_text)
             print(f"  检测到语言: {detected}")
             if detected != scenario["expected_language"] and detected != "mixed":
-                print(f"  [WARNING] 语言不匹配! 期望 {scenario['expected_language']}, 实际 {detected}")
+                print(
+                    f"  [WARNING] 语言不匹配! 期望 {scenario['expected_language']}, 实际 {detected}"
+                )
         else:
             print(f"  [WARNING] 未收到 AI 回复")
 
@@ -97,13 +99,21 @@ async def main():
     parser.add_argument("--token", required=True, help="认证 token")
     parser.add_argument("--agent-id", required=True, help="Agent ID")
     parser.add_argument("--base-url", default="ws://localhost:8000", help="服务端地址")
-    parser.add_argument("--language", default="Chinese", help="期望的回复语言 (默认: Chinese)")
-    parser.add_argument("--speech-code", default=None, help="BCP-47 语音代码 (如 zh-CN)")
+    parser.add_argument(
+        "--language", default="Chinese", help="期望的回复语言 (默认: Chinese)"
+    )
+    parser.add_argument(
+        "--speech-code", default=None, help="BCP-47 语音代码 (如 zh-CN)"
+    )
     args = parser.parse_args()
 
     # 检查音频文件
-    missing = [s["audio"] for s in LANGUAGE_MIXING_SCENARIOS
-               for a in s["audio"] if not (TEST_AUDIO_DIR / a).exists()]
+    missing = [
+        s["audio"]
+        for s in LANGUAGE_MIXING_SCENARIOS
+        for a in s["audio"]
+        if not (TEST_AUDIO_DIR / a).exists()
+    ]
     if missing:
         print("缺少测试音频文件，请先运行 generate_test_audio.py")
         return
@@ -141,14 +151,18 @@ async def main():
         print(f"  - [{turn['role']}] {turn['text'][:100]}...")
 
     # 保存报告
-    save_test_report("language_mixing", client.log, extra={
-        "config": {
-            "response_language_name": args.language,
-            "speech_language_code": args.speech_code,
-            "agent_id": args.agent_id,
+    save_test_report(
+        "language_mixing",
+        client.log,
+        extra={
+            "config": {
+                "response_language_name": args.language,
+                "speech_language_code": args.speech_code,
+                "agent_id": args.agent_id,
+            },
+            "analysis": result,
         },
-        "analysis": result,
-    })
+    )
 
 
 if __name__ == "__main__":

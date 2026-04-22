@@ -70,9 +70,7 @@ class LiveSession:
     reconnect_count: int = 0
     # 预填充完成事件：receive_loop 收到首个 turn_complete（无 model_turn）时 set，
     # 在此之前音频发送到 Gemini 可能被丢弃（模型还在处理预填充）。
-    prefill_complete: asyncio.Event = field(
-        default_factory=asyncio.Event, repr=False
-    )
+    prefill_complete: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     pending_audio: deque[bytes] = field(
         default_factory=lambda: deque(maxlen=1000), repr=False
     )
@@ -898,9 +896,7 @@ class LiveChatService:
                                 )
                             )
                             flushed += 1
-                        await gs.send_realtime_input(
-                            activity_end=types.ActivityEnd()
-                        )
+                        await gs.send_realtime_input(activity_end=types.ActivityEnd())
                         logger.debug(
                             f"预填充完成后 flush {flushed} 个缓冲音频包到 Gemini"
                         )
@@ -1056,7 +1052,10 @@ class LiveChatService:
                     # 处理 Gemini Live API 周期性返回的 token 用量统计
                     if hasattr(response, "usage_metadata") and response.usage_metadata:
                         usage = response.usage_metadata
-                        if hasattr(usage, "total_token_count") and usage.total_token_count:
+                        if (
+                            hasattr(usage, "total_token_count")
+                            and usage.total_token_count
+                        ):
                             session.total_token_count = usage.total_token_count
                             logger.debug(
                                 f"Token 用量统计 - 总计: {usage.total_token_count} tokens"
@@ -1143,7 +1142,8 @@ class LiveChatService:
                                 response_after_silence_ms: Optional[int] = None
                                 if session.last_audio_sent_time is not None:
                                     response_after_silence_ms = int(
-                                        (time.time() - session.last_audio_sent_time) * 1000
+                                        (time.time() - session.last_audio_sent_time)
+                                        * 1000
                                     )
                                     session.last_response_after_silence_ms = (
                                         response_after_silence_ms
@@ -1156,7 +1156,8 @@ class LiveChatService:
                                     session.current_turn_start_time = None
                                     if on_latency:
                                         turn_latencies_ms = [
-                                            int(t * 1000) for t in session.turn_latencies
+                                            int(t * 1000)
+                                            for t in session.turn_latencies
                                         ]
                                         avg_turn_latency_ms = int(
                                             sum(session.turn_latencies)
@@ -1168,9 +1169,9 @@ class LiveChatService:
                                             "avg_turn_latency_ms": avg_turn_latency_ms,
                                         }
                                         if response_after_silence_ms is not None:
-                                            payload["first_response_after_silence_ms"] = (
-                                                response_after_silence_ms
-                                            )
+                                            payload[
+                                                "first_response_after_silence_ms"
+                                            ] = response_after_silence_ms
                                         await on_latency(payload)
                                 session.status = LiveChatStatus.SPEAKING
                                 logger.debug("发送 SPEAKING 状态到前端")

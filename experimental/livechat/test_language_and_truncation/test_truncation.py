@@ -139,8 +139,10 @@ async def run_scenario(
     result = check_truncation(ai_text)
     print(f"\n  AI 回复 ({len(ai_text)} 字符):")
     print(f"  {ai_text[:200]}{'...' if len(ai_text) > 200 else ''}")
-    print(f"\n  截断检测: {'[TRUNCATED]' if result['is_truncated'] else '[OK]'} "
-          f"({result['reason']}, 置信度: {result['confidence']})")
+    print(
+        f"\n  截断检测: {'[TRUNCATED]' if result['is_truncated'] else '[OK]'} "
+        f"({result['reason']}, 置信度: {result['confidence']})"
+    )
 
     if scenario["expect_truncation"] and not result["is_truncated"]:
         print(f"  [INFO] 期望截断但未检测到(可能静音段不够长)")
@@ -155,12 +157,17 @@ async def main():
     parser.add_argument("--token", required=True, help="认证 token")
     parser.add_argument("--agent-id", required=True, help="Agent ID")
     parser.add_argument("--base-url", default="ws://localhost:8000", help="服务端地址")
-    parser.add_argument("--language", default="Chinese", help="回复语言 (默认: Chinese)")
+    parser.add_argument(
+        "--language", default="Chinese", help="回复语言 (默认: Chinese)"
+    )
     args = parser.parse_args()
 
     # 检查音频文件
-    missing = [s["audio"] for s in TRUNCATION_SCENARIOS
-               if not (TEST_AUDIO_DIR / s["audio"]).exists()]
+    missing = [
+        s["audio"]
+        for s in TRUNCATION_SCENARIOS
+        if not (TEST_AUDIO_DIR / s["audio"]).exists()
+    ]
     if missing:
         print(f"缺少测试音频文件: {missing}")
         print("请先运行 generate_test_audio.py")
@@ -223,13 +230,22 @@ async def main():
     if false_positives:
         print(f"\n  [WARNING] 误报截断(不期望截断但检测到): {false_positives}")
     if false_negatives:
-        print(f"\n  [INFO] 漏报截断(期望截断但未检测到,可能静音段不够): {false_negatives}")
+        print(
+            f"\n  [INFO] 漏报截断(期望截断但未检测到,可能静音段不够): {false_negatives}"
+        )
 
     # 保存最后一个场景的日志作为示例
-    save_test_report("truncation", client.log, extra={
-        "config": {"response_language_name": args.language, "agent_id": args.agent_id},
-        "scenarios": all_results,
-    })
+    save_test_report(
+        "truncation",
+        client.log,
+        extra={
+            "config": {
+                "response_language_name": args.language,
+                "agent_id": args.agent_id,
+            },
+            "scenarios": all_results,
+        },
+    )
 
 
 if __name__ == "__main__":
