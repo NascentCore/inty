@@ -81,18 +81,14 @@ TEST_CASES = [
     ),
     (
         "cn_long_pause",
-        (
-            "今天我想跟你详细聊一聊关于人工智能的发展历程，"
-        ),
+        ("今天我想跟你详细聊一聊关于人工智能的发展历程，"),
         "zh-CN-YunxiNeural",
         "中文长句+人工静音段(触发VAD截断)",
         True,  # 将在 TTS 后插入 600ms 静音
     ),
     (
         "en_long_pause",
-        (
-            "I'd like to talk about the history of artificial intelligence in detail, "
-        ),
+        ("I'd like to talk about the history of artificial intelligence in detail, "),
         "en-US-JennyNeural",
         "英文长句+人工静音段(触发VAD截断)",
         True,
@@ -162,15 +158,27 @@ def _convert_mp3_to_wav(mp3_path: Path, wav_path: Path) -> None:
         from pydub import AudioSegment
 
         audio = AudioSegment.from_mp3(str(mp3_path))
-        audio = audio.set_frame_rate(SAMPLE_RATE).set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH)
+        audio = (
+            audio.set_frame_rate(SAMPLE_RATE)
+            .set_channels(CHANNELS)
+            .set_sample_width(SAMPLE_WIDTH)
+        )
         audio.export(str(wav_path), format="wav")
     except ImportError:
         # fallback: 使用 ffmpeg
         subprocess.run(
             [
-                "ffmpeg", "-y", "-i", str(mp3_path),
-                "-ar", str(SAMPLE_RATE), "-ac", str(CHANNELS),
-                "-sample_fmt", "s16", str(wav_path),
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(mp3_path),
+                "-ar",
+                str(SAMPLE_RATE),
+                "-ac",
+                str(CHANNELS),
+                "-sample_fmt",
+                "s16",
+                str(wav_path),
             ],
             capture_output=True,
             check=True,
@@ -231,7 +239,9 @@ async def generate_all():
             # 打印音频信息
             pcm = _get_pcm_from_wav(wav_path)
             duration_ms = len(pcm) / (SAMPLE_RATE * SAMPLE_WIDTH) * 1000
-            print(f"  -> {len(pcm)} bytes, {duration_ms:.0f}ms, {SAMPLE_RATE}Hz mono 16bit")
+            print(
+                f"  -> {len(pcm)} bytes, {duration_ms:.0f}ms, {SAMPLE_RATE}Hz mono 16bit"
+            )
         except Exception as e:
             print(f"  -> 失败: {e}")
 
