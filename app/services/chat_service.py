@@ -5,7 +5,8 @@ from typing import List, Optional, Union
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -690,17 +691,39 @@ async def get_or_create_chat_by_agent(
             )
             logger.debug(f"验证Agent存在 - Agent ID: {agent_id}, Name: {agent_name}")
 
-        # 8. 创建新的聊天会话
+        # 8. 创建新的聊天会话（ON CONFLICT 避免并发下违反 uq_chats_user_agent_active）
         chat_id = str(uuid.uuid4())
-        db_chat = models.Chat(id=chat_id, user_id=user_id, agent_id=agent_id)
 
         logger.debug(
             f"创建新聊天会话 - Chat ID: {chat_id}, User ID: {user_id}, Agent ID: {agent_id}"
         )
 
-        db.add(db_chat)
+        await db.execute(
+            pg_insert(models.Chat)
+            .values(id=chat_id, user_id=user_id, agent_id=agent_id)
+            .on_conflict_do_nothing(
+                index_elements=["user_id", "agent_id"],
+                index_where=text("is_active = true"),
+            )
+        )
         await db.commit()
-        await db.refresh(db_chat)
+
+        result = await db.execute(
+            select(models.Chat).where(
+                models.Chat.user_id == user_id,
+                models.Chat.agent_id == agent_id,
+                models.Chat.is_active == True,
+            )
+        )
+        db_chat = result.scalar_one_or_none()
+        if not db_chat:
+            logger.error(
+                "Active chat missing after upsert insert for "
+                f"user_id={user_id} agent_id={agent_id}"
+            )
+            raise HTTPException(
+                status_code=500, detail="Failed to create chat session"
+            )
 
         # 验证创建后的agent_id
         if db_chat.agent_id != agent_id:
@@ -715,7 +738,7 @@ async def get_or_create_chat_by_agent(
         # 9. 异步添加Agent开场白（避免阻塞）
         if agent_opening:
             try:
-                session_id = generate_session_id(chat_id)
+                session_id = generate_session_id(db_chat.id)
                 # 检查是否已有消息，避免重复添加开场白
                 existing_messages = (
                     await chat_history_service.get_messages_paginated_async(

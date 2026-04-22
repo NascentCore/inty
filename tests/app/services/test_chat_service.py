@@ -2,6 +2,7 @@
 测试聊天服务功能
 """
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -1268,6 +1269,57 @@ class TestGetOrCreateChatByAgent:
         assert cached_chat.agent_opening == agent.opening
 
         await self._cleanup_test_data(db_session, user, agent, chat)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_get_or_create_single_active_chat(self):
+        """并发创建同 user+agent 会话时只应存在一条 is_active 记录（uq_chats_user_agent_active）。"""
+        engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=24,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        async_session = sessionmaker(
+            bind=engine, class_=AsyncSession, expire_on_commit=False
+        )
+        cache_service.clear_all_caches()
+        async with async_session() as db:
+            user = await self._create_test_user(db)
+            agent = await self._create_test_agent(
+                db, user.id, opening=None, opening_audio_url=None
+            )
+            user_id, agent_id = user.id, agent.id
+
+        async def one_call():
+            async with async_session() as db:
+                return await chat_service.get_or_create_chat_by_agent(
+                    db=db, user_id=user_id, agent_id=agent_id
+                )
+
+        chats = await asyncio.gather(*(one_call() for _ in range(24)))
+        chat_ids = {c.id for c in chats}
+        assert len(chat_ids) == 1
+        winner_id = next(iter(chat_ids))
+
+        async with async_session() as db:
+            res = await db.execute(
+                select(models.Chat).where(
+                    models.Chat.user_id == user_id,
+                    models.Chat.agent_id == agent_id,
+                    models.Chat.is_active == True,
+                )
+            )
+            rows = res.scalars().all()
+            assert len(rows) == 1
+            assert rows[0].id == winner_id
+
+        async with async_session() as db:
+            u = await db.get(models.User, user_id)
+            a = await db.get(models.Agent, agent_id)
+            c = await db.get(models.Chat, winner_id)
+            await self._cleanup_test_data(db, u, a, c)
+
+        await engine.dispose()
 
     @pytest.mark.asyncio
     async def test_get_existing_chat_with_agent_cache(self, db_session: AsyncSession):
