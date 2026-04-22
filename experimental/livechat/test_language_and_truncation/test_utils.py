@@ -21,6 +21,8 @@ TEST_RESULTS_DIR = Path(__file__).resolve().parent / "test_results"
 SEND_SAMPLE_RATE = 16000
 SEND_CHUNK_MS = 20  # 每块 20ms
 SEND_CHUNK_SIZE = int(SEND_SAMPLE_RATE * 2 * SEND_CHUNK_MS / 1000)  # 640 bytes
+# 真机麦克风会持续推送含静音的 PCM；服务端 VAD silence_duration_ms=800，尾随静音帮助判句尾
+DEFAULT_TRAILING_SILENCE_MS = 1000
 
 
 @dataclass
@@ -166,8 +168,47 @@ class IntyLiveChatClient:
         if self._ws:
             await self._ws.close()
 
-    async def send_audio_wav(self, wav_path: Path, chunk_ms: int = SEND_CHUNK_MS):
-        """发送 WAV 音频文件（纯 VAD 模式，不发送 activity_start/end）"""
+    async def send_activity_start(self):
+        """与服务端协议一致：显式标记用户开始说话（与 inty_voice_call 可选 API 对齐）。"""
+        await self._send_json({"type": "activity_start"})
+
+    async def send_activity_end(self):
+        """显式标记用户说完一轮，避免仅发 PCM 后断流导致 Gemini VAD 长期不结束。"""
+        await self._send_json({"type": "activity_end"})
+
+    async def send_silence_pcm(
+        self,
+        duration_ms: int,
+        chunk_ms: int = SEND_CHUNK_MS,
+    ):
+        """发送 16-bit mono 静音 PCM 分块（与语音包相同 chunk 节奏），模拟麦克风尾音。"""
+        chunk_size = int(SEND_SAMPLE_RATE * 2 * chunk_ms / 1000)
+        silence = b"\x00" * chunk_size
+        n = max(1, (duration_ms + chunk_ms - 1) // chunk_ms)
+        for _ in range(n):
+            await self._send_json({
+                "type": "audio",
+                "data": base64.b64encode(silence).decode("utf-8"),
+            })
+            await asyncio.sleep(chunk_ms / 1000)
+
+    async def send_audio_wav(
+        self,
+        wav_path: Path,
+        chunk_ms: int = SEND_CHUNK_MS,
+        *,
+        use_explicit_activity: bool = True,
+        trailing_silence_ms: int = DEFAULT_TRAILING_SILENCE_MS,
+    ):
+        """发送 WAV 音频（16k/mono/int16 PCM）。
+
+        默认在 PCM 前后发送 activity_start / activity_end，与后端 WebSocket 协议一致；
+        activity_end 之后再发一段静音 PCM，对齐真机麦克风持续推流行为，便于 VAD 判句尾。
+        若需复现纯 VAD、无 activity 时可设 use_explicit_activity=False（发完后 sleep 等静音窗）。
+        """
+        if use_explicit_activity:
+            await self.send_activity_start()
+
         pcm = load_wav_pcm(wav_path)
         chunk_size = int(SEND_SAMPLE_RATE * 2 * chunk_ms / 1000)
 
@@ -178,8 +219,14 @@ class IntyLiveChatClient:
             })
             await asyncio.sleep(chunk_ms / 1000)
 
-        # 发完音频后等待静音让 VAD 检测 end_of_speech（silence_duration_ms=800 + buffer）
-        await asyncio.sleep(1.2)
+        if use_explicit_activity:
+            await self.send_activity_end()
+            if trailing_silence_ms > 0:
+                await self.send_silence_pcm(trailing_silence_ms, chunk_ms=chunk_ms)
+        else:
+            # 纯 VAD：发完音频后等待静音让服务端检测 end_of_speech（silence_duration_ms=800 + buffer）
+            await asyncio.sleep(1.2)
+
         self._log.audio_count += 1
 
     async def send_text(self, text: str):
