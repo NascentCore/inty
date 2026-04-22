@@ -236,7 +236,12 @@ class LiveChatService:
     def _build_live_response_constraints(
         self, merged_response_language_name: Optional[str] = None
     ) -> str:
-        """构建 Live 对话回复约束。"""
+        """构建 Live 对话回复约束。
+
+        对于 native-audio 模型（gemini-live-2.5-flash-native-audio），
+        speech_config.language_code 不生效，必须通过 system instruction 强制约束语言。
+        参考: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/live-api/configure-language-voice
+        """
         parts = [
             "## 输出格式\n"
             "这是实时语音对话，请直接用自然口语回复，不要使用括号描述动作或场景。"
@@ -250,10 +255,15 @@ class LiveChatService:
             response_language_name = (merged_response_language_name or "").strip()
         if response_language_name:
             parts.append(
-                "## Language policy\n"
-                f"You must speak ONLY in {response_language_name}. "
-                "Never switch to any other language, even if the user asks or speaks in another language. "
-                "If the user speaks another language, politely continue in the required language."
+                "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY\n\n"
+                f"YOU MUST SPEAK ONLY IN {response_language_name} AT ALL TIMES. "
+                "This is a strict requirement that cannot be overridden. "
+                "Even if the user speaks to you in a different language, "
+                "you MUST reply ONLY in the required language. "
+                "DO NOT code-switch or mix languages under any circumstances. "
+                "DO NOT translate what the user said — just respond naturally in the required language. "
+                "If you are unsure, default to the required language. "
+                "VIOLATING THIS RULE IS UNACCEPTABLE."
             )
         return "\n\n".join(parts)
 
@@ -516,14 +526,16 @@ class LiveChatService:
                 if self._config.output_transcription
                 else None
             ),
-            # 恢复自动 VAD 模式进行测试（手动 VAD 多轮问题待排查）
+            # 自动 VAD 模式
+            # silence_duration_ms=800: 容忍长句中自然的换气/逗号停顿，避免长句被截断
+            # end_of_speech_sensitivity=LOW: 降低结束检测敏感度，减少误触发
             realtime_input_config=types.RealtimeInputConfig(
                 automatic_activity_detection=types.AutomaticActivityDetection(
                     disabled=False,
                     start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
                     end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
                     prefix_padding_ms=20,
-                    silence_duration_ms=500,
+                    silence_duration_ms=800,
                 )
             ),
         )
@@ -1011,6 +1023,7 @@ class LiveChatService:
                         hasattr(server_content, "model_turn")
                         and server_content.model_turn
                     ):
+                        session._current_turn_has_model_response = True
                         if session.status != LiveChatStatus.SPEAKING:
                             response_after_silence_ms: Optional[int] = None
                             if session.last_audio_sent_time is not None:
@@ -1075,6 +1088,20 @@ class LiveChatService:
                         hasattr(server_content, "turn_complete")
                         and server_content.turn_complete
                     ):
+                        # 关键：只有模型真正产生了回复（model_turn）后才触发重连。
+                        # 预填充后 Gemini 可能发送 turn_complete 表示"处理完毕，等待输入"，
+                        # 此时没有 model_turn，不应重连，否则第一轮用户音频会被送到
+                        # 一个没有聊天历史的新 session 导致无响应。
+                        had_model_turn = getattr(
+                            session, "_current_turn_has_model_response", False
+                        )
+                        if not had_model_turn:
+                            logger.debug(
+                                "收到 turn_complete 但本轮无 model_turn（预填充完成信号），跳过重连"
+                            )
+                            continue
+
+                        session._current_turn_has_model_response = False
                         logger.debug("AI 回复完成，发送 LISTENING 状态到前端")
                         session.status = LiveChatStatus.LISTENING
                         await on_status(LiveChatStatus.LISTENING, None)

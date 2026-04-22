@@ -547,7 +547,7 @@ class GeminiLiveConfig:
     enabled: bool = False  # 是否启用实时语音通话功能
     project_id: str = "inty-backend"  # GCP 项目 ID
     location: str = "us-central1"  # Vertex AI 区域
-    model: str = "gemini-live-2.5-flash-preview-native-audio-09-2025"  # Live API 模型
+    model: str = "gemini-live-2.5-flash-native-audio"  # Live API 模型
     send_sample_rate: int = 16000  # 上行音频采样率 (Hz)
     receive_sample_rate: int = 24000  # 下行音频采样率 (Hz)
     default_voice: str = "Zephyr"  # 默认 AI 语音
