@@ -10,6 +10,7 @@ import SwiftUI
 struct Entrance: View {
     // 初始化 Router
     @StateObject private var router = Router()
+    @StateObject var userManager = UserManager.shared
     
     var body: some View {
         // 将 path 绑定到 NavigationStack
@@ -33,5 +34,6 @@ struct Entrance: View {
         }
         // 注入环境对象，子页面通过 @EnvironmentObject 获取
         .environmentObject(router)
+        .environmentObject(userManager)
     }
 }

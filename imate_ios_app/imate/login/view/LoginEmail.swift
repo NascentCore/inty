@@ -14,6 +14,7 @@ struct LoginEmail: View {
     @FocusState private var isTextFieldFocused: Bool // 自动聚焦控制
     
     @EnvironmentObject var router: Router
+    @EnvironmentObject var userManager: UserManager
     
     // 颜色配置
     private let backgroundGradient = LinearGradient(
@@ -112,13 +113,15 @@ struct LoginEmail: View {
     
     // 验证逻辑
     private func handleContinue() {
-//        if email.trimmingCharacters(in: .whitespaces).isEmpty || !isValidEmail(email) {
-//            emailError = "Invalid email format"
-//        } else {
+        if email.trimmingCharacters(in: .whitespaces).isEmpty || !isValidEmail(email) {
+            emailError = "Invalid email format"
+        } else {
 //            onContinue(email)
-//        }
+//            userManager.
+            router.push(.loginEmailPassword)
+        }
         
-        router.push(.loginEmailPassword)
+        
     }
     
     private func isValidEmail(_ email: String) -> Bool {
