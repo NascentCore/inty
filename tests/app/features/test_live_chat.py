@@ -10,11 +10,13 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient as FastAPITestClient
+from starlette.websockets import WebSocketDisconnect
 
 from app.api import deps
+from app.db.session import get_async_db
 from backend.inty.main import app
 from tests.app.api.test_client import TestClient
-from tests.app.api.v1.endpoints.conftest import _make_user
+from tests.app.api.v1.endpoints.conftest import _create_mock_db_session, _make_user
 
 API_BASE_URL = os.getenv("INTY_API_BASE_URL", "http://localhost:8000")
 
@@ -65,6 +67,37 @@ class TestLiveChatWebSocket:
     注意：完整的 WebSocket 测试需要实际的 Gemini Live API 连接，
     这里仅测试基本的连接验证逻辑。
     """
+
+    def test_unauthorized_rejection_does_not_raise_asgi_mismatch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Invalid token: reject during handshake (WebSocket close), not HTTP/WS ASGI state bug."""
+
+        async def _mock_get_user_from_token(*_args, **_kwargs):
+            return None
+
+        monkeypatch.setattr(deps, "get_user_from_token", _mock_get_user_from_token)
+
+        async def _override_get_async_db():
+            db = _create_mock_db_session()
+            try:
+                yield db
+            finally:
+                pass
+
+        app.dependency_overrides[get_async_db] = _override_get_async_db
+        try:
+            with FastAPITestClient(app) as client:
+                with pytest.raises(WebSocketDisconnect) as exc:
+                    with client.websocket_connect(
+                        "/api/v1/live-chat/test-agent?token=invalid"
+                    ):
+                        pass
+        finally:
+            app.dependency_overrides.pop(get_async_db, None)
+
+        assert exc.value.code == 4001
+        assert exc.value.reason == "Unauthorized"
 
     @pytest.mark.skip(reason="需要 websocket-client 包和运行中的服务器")
     def test_websocket_without_token(self):

@@ -11,6 +11,7 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import WebSocketException
 from loguru import logger
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -154,8 +155,7 @@ async def live_chat_session(
     current_user = await get_current_user_ws(websocket, db)
     if not current_user:
         logger.warning(f"WebSocket 认证失败，拒绝连接 - agent_id: {agent_id}")
-        await websocket.close(code=4001, reason="Unauthorized")
-        return
+        raise WebSocketException(code=4001, reason="Unauthorized")
 
     # Evaluation: superuser can pass assume_user_id query param to act as another user (load their history)
     assume_user_id = websocket.query_params.get("assume_user_id")
@@ -175,8 +175,7 @@ async def live_chat_session(
 
     if not live_chat_service.is_enabled():
         logger.warning("Live chat 功能未启用，拒绝连接")
-        await websocket.close(code=4003, reason="Live chat is disabled")
-        return
+        raise WebSocketException(code=4003, reason="Live chat is disabled")
 
     is_allowed, reject_reason, limit_info = (
         await subscription_service.check_live_chat_limit(db, current_user, agent_id)
@@ -216,8 +215,7 @@ async def live_chat_session(
         live_overrides = LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
     except ValidationError as e:
         logger.warning(f"Live chat invalid language query: {e}")
-        await websocket.close(code=4000, reason="Invalid language parameters")
-        return
+        raise WebSocketException(code=4000, reason="Invalid language parameters")
 
     remaining_duration = limit_info.get("remaining_duration", 300)
     agent_limit = limit_info.get("agent_limit", 0)
