@@ -12,16 +12,10 @@ class UserManager: ObservableObject {
     static let shared = UserManager()
     private init() {}
     
-    @Published var currentUser: User?
+    @Published var email: String = ""
     @Published var isLoggedIn: Bool = false
     
     func login(name: String) {
         isLoggedIn = true
     }
-}
-
-// 用户模型
-struct User {
-    let name: String
-    let emai: String
 }

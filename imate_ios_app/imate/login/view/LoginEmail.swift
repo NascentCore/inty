@@ -9,7 +9,6 @@ import SwiftUI
 
 struct LoginEmail: View {
     // 状态管理
-    @State private var email: String = ""
     @State private var emailError: String? = nil
     @FocusState private var isTextFieldFocused: Bool // 自动聚焦控制
     
@@ -54,7 +53,7 @@ struct LoginEmail: View {
                     
                     VStack(alignment: .leading, spacing: 8) {
                         // 4. 输入框 (OutlinedTextField 风格)
-                        TextField("", text: $email, prompt:
+                        TextField("", text: $userManager.email, prompt:
                             Text("Enter your Email")
                                 .foregroundColor(.white.opacity(0.5)) // alpha = 0.5f
                         )
@@ -69,8 +68,8 @@ struct LoginEmail: View {
                             RoundedRectangle(cornerRadius: 30)
                                 .stroke(emailError != nil ? Color.red : Color.purple, lineWidth: 1) // 对应 primary 颜色
                         )
-                        .onChange(of: email) { _ in
-                            if email.count > 50 { email = String(email.prefix(50)) }
+                        .onChange(of: userManager.email) { _ in
+                            if userManager.email.count > 50 { userManager.email = String(userManager.email.prefix(50)) }
                             emailError = nil
                         }
                         
@@ -113,20 +112,13 @@ struct LoginEmail: View {
     
     // 验证逻辑
     private func handleContinue() {
-        if email.trimmingCharacters(in: .whitespaces).isEmpty || !isValidEmail(email) {
+        if userManager.email.trimmingCharacters(in: .whitespaces).isEmpty || !ToolHelper.isValidEmail(userManager.email) {
             emailError = "Invalid email format"
         } else {
-//            onContinue(email)
-//            userManager.
+//            print("on Emai err is---->\(userManager.email)")
             router.push(.loginEmailPassword)
         }
-        
-        
     }
     
-    private func isValidEmail(_ email: String) -> Bool {
-        let pattern = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
-        let predicate = NSPredicate(format: "SELF MATCHES %@", pattern)
-        return predicate.evaluate(with: email)
-    }
+    
 }

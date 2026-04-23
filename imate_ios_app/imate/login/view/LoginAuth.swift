@@ -19,6 +19,7 @@ struct Dot: Hashable {
 struct LoginAuth: View {
     // 参数回调
 //    var onLoginSuccess: () -> Void
+    @EnvironmentObject var router: Router
     
     // 状态管理
     @State private var progress: CGFloat = 0.0
@@ -152,7 +153,7 @@ struct LoginAuth: View {
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-//                onLoginSuccess()
+                router.push(.LoginInitChat)
                 print("on  animation end ------>")
             }
         }

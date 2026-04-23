@@ -16,6 +16,7 @@ enum AppRoute: Hashable {
     case loginEmail
     case loginEmailPassword
     case loginAuth
+    case LoginInitChat
 }
 
 class Router: ObservableObject {

@@ -12,6 +12,7 @@ import SwiftUI
 struct LoginEmailPassword: View {
     
     @EnvironmentObject var router: Router
+    @EnvironmentObject var userManager: UserManager
     
     // 外部传入参数
 //    let email: String
@@ -61,7 +62,7 @@ struct LoginEmailPassword: View {
                 Spacer().frame(height: 40)
 
                 // Email 输入框 (禁用状态)
-                TextField("", text: .constant("email"))
+                TextField("", text: .constant(userManager.email))
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 30)
@@ -97,7 +98,7 @@ struct LoginEmailPassword: View {
                 // 登录按钮
                 Button(action: {
                     if !password.isEmpty {
-//                        onLogin(email, password)
+                        goLogin()
                     }
                 }) {
                     Text("Login")
@@ -122,5 +123,10 @@ struct LoginEmailPassword: View {
             .padding(.top, 20) // 考虑到系统安全区域
         }
         .navigationBarHidden(true) // 隐藏系统原生导航栏
+    }
+    
+    // 方法区
+    private func goLogin() {
+        router.push(.loginAuth)
     }
 }

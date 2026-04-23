@@ -29,6 +29,8 @@ struct Entrance: View {
                     LoginEmailPassword()
                 case .loginAuth:
                     LoginAuth()
+                case .LoginInitChat:
+                    LoginInitChat()
                 }
             }
         }
