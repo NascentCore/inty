@@ -8,7 +8,7 @@ import os
 import threading
 import time
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 import websockets
 from websockets.exceptions import ConnectionClosed
@@ -495,6 +495,9 @@ async def chat_turn_single_http_base(
     agent_id: str,
     user_text: str,
     connect_timeout: float = 30.0,
+    # websockets 15+ defaults to proxy=True (read env). Use None to connect directly (e.g. localhost
+    # without python-socks when ALL_PROXY is socks5://).
+    proxy: str | Literal[True] | None = True,
 ) -> str:
     url = http_base_to_ws_chat_url(http_base)
     headers = [("Authorization", f"Bearer {bearer_token.strip()}")]
@@ -504,6 +507,7 @@ async def chat_turn_single_http_base(
         additional_headers=headers,
         open_timeout=connect_timeout,
         ping_interval=None,
+        proxy=proxy,
     ) as ws:
         req = ChatWebSocketRequest(
             agent_id=agent_id,
