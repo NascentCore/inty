@@ -70,9 +70,6 @@ def _build_cache_key(options: GeminiClientOptions) -> _GeminiClientCacheKey:
 
 
 def _build_gemini_client(options: GeminiClientOptions) -> Any:
-    if options.credentials_path and os.path.exists(options.credentials_path):
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = options.credentials_path
-
     kwargs: dict[str, Any] = {}
     if options.api_key:
         kwargs["api_key"] = options.api_key
@@ -84,6 +81,20 @@ def _build_gemini_client(options: GeminiClientOptions) -> Any:
         kwargs["location"] = options.location
     if options.http_options:
         kwargs["http_options"] = options.http_options
+
+    # Do not set GOOGLE_APPLICATION_CREDENTIALS for Vertex: other libraries (TTS, Firebase,
+    # or a second inty key path) may overwrite the env, and the genai client would then use
+    # the wrong key (JWT invalid_grant / account not found). Pass explicit credentials.
+    if options.credentials_path and os.path.exists(options.credentials_path):
+        if options.vertexai:
+            from google.oauth2 import service_account
+
+            kwargs["credentials"] = service_account.Credentials.from_service_account_file(
+                options.credentials_path,
+                scopes=("https://www.googleapis.com/auth/cloud-platform",),
+            )
+        else:
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = options.credentials_path
 
     client = genai.Client(**kwargs)
     if not options.wrap_langsmith:
