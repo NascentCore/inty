@@ -1,0 +1,2 @@
+# 可选：仅在使用 --config 读取 YAML 时需要
+PyYAML>=6.0
