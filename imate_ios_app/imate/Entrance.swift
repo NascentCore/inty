@@ -19,10 +19,9 @@ struct Entrance: View {
             // 统一配置跳转逻辑
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
+                    
                 case .login:
                     LoginView()
-                case .home:
-                    HomeView()
                 case .loginEmail:
                     LoginEmail()
                 case .loginEmailPassword:
@@ -31,6 +30,9 @@ struct Entrance: View {
                     LoginAuth()
                 case .LoginInitChat:
                     LoginInitChat()
+                    
+                case .chatPage:
+                    ChatPage()
                 }
             }
         }

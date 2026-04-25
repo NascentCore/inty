@@ -34,7 +34,7 @@ struct LoginView: View {
     }
     
     private func goAppleLogin() {
-        router.push(.LoginInitChat)
+        router.push(.chatPage)
     }
     
     private func goEmailLogin() {
