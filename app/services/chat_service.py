@@ -289,10 +289,44 @@ async def create_chat(
 
     except IntegrityError as e:
         await db.rollback()
-        logger.error(f"Data integrity error - create chat: {str(e)}")
-        if "user_id" in str(e):
+        err_s = str(e.orig) if getattr(e, "orig", None) is not None else str(e)
+        if "uq_chats_user_agent_active" in err_s:
+            logger.warning(
+                f"Active chat already exists for user/agent (concurrent create) - "
+                f"user_id={user_id} agent_id={chat_in.agent_id}: {err_s}"
+            )
+            try:
+                result = await db.execute(
+                    select(models.Chat)
+                    .options(
+                        selectinload(models.Chat.settings),
+                        selectinload(models.Chat.agent),
+                    )
+                    .where(
+                        models.Chat.user_id == user_id,
+                        models.Chat.agent_id == chat_in.agent_id,
+                        models.Chat.is_active == True,
+                    )
+                )
+                row = result.scalar_one_or_none()
+                if row:
+                    return await _prepare_existing_chat_for_agent_response(
+                        db, user_id, chat_in.agent_id, row
+                    )
+            except HTTPException:
+                raise
+            except Exception as retry_e:
+                logger.error(
+                    f"Failed to load existing chat after uq_chats conflict: {retry_e}"
+                )
+            raise HTTPException(
+                status_code=409,
+                detail="An active chat for this agent already exists",
+            )
+        logger.error(f"Data integrity error - create chat: {err_s}")
+        if "user_id" in err_s:
             raise HTTPException(status_code=400, detail="Invalid user ID")
-        elif "agent_id" in str(e):
+        elif "agent_id" in err_s:
             raise HTTPException(status_code=400, detail="Invalid Agent ID")
         else:
             raise HTTPException(
@@ -389,6 +423,190 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+async def _prepare_existing_chat_for_agent_response(
+    db: AsyncSession, user_id: str, agent_id: str, existing_chat: models.Chat
+) -> models.Chat:
+    """
+    Enrich an already-loaded active chat for (user, agent), align with get_or_create
+    (agent fields, cache, opening message, skip last_message query for perf).
+    """
+    session_key = f"{user_id}:{agent_id}"
+    logger.debug(
+        f"准备返回既有的活跃聊天 - Chat ID: {existing_chat.id}, Agent ID: {agent_id}"
+    )
+
+    if existing_chat.agent_id != agent_id:
+        logger.error(
+            f"聊天会话中的Agent ID不匹配！期望: {agent_id}, 实际: {existing_chat.agent_id}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Chat session data mismatch: expected agent ID "
+                f"{agent_id}, got {existing_chat.agent_id}"
+            ),
+        )
+
+    cached_agent = None
+    if not hasattr(existing_chat, "_agent_loaded"):
+        cached_agent = cache_service.get_agent_config(agent_id)
+        if cached_agent:
+            existing_chat.agent_name = cached_agent.get("name")
+            existing_chat.agent_avatar = cached_agent.get("avatar")
+            existing_chat.agent_background_animated = cached_agent.get(
+                "background_animated"
+            )
+            existing_chat.agent_intro = cached_agent.get("intro")
+            existing_chat.agent_opening = cached_agent.get("opening")
+            existing_chat.agent_opening_audio_url = cached_agent.get("opening_audio_url")
+            agent_result = await db.execute(
+                select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
+            )
+            agent_info = agent_result.first()
+            existing_chat.agent_is_deleted = (
+                agent_info[0] is not None if agent_info else None
+            )
+        else:
+            agent_result = await db.execute(
+                select(
+                    models.Agent.name,
+                    models.Agent.avatar,
+                    models.Agent.background_animated,
+                    models.Agent.intro,
+                    models.Agent.opening,
+                    models.Agent.opening_audio_url,
+                    models.Agent.deleted_at,
+                ).where(models.Agent.id == agent_id)
+            )
+            agent_info = agent_result.first()
+            if agent_info:
+                existing_chat.agent_name = agent_info[0]
+                existing_chat.agent_avatar = agent_info[1]
+                existing_chat.agent_background_animated = agent_info[2]
+                existing_chat.agent_intro = agent_info[3]
+                existing_chat.agent_opening = agent_info[4]
+                existing_chat.agent_opening_audio_url = agent_info[5]
+                existing_chat.agent_is_deleted = agent_info[6] is not None
+                cache_service.set_agent_config(
+                    agent_id,
+                    {
+                        "name": agent_info[0],
+                        "avatar": agent_info[1],
+                        "background_animated": agent_info[2],
+                        "intro": agent_info[3],
+                        "opening": agent_info[4],
+                        "opening_audio_url": agent_info[5],
+                    },
+                )
+            else:
+                existing_chat.agent_name = None
+                existing_chat.agent_avatar = None
+                existing_chat.agent_intro = None
+                existing_chat.agent_opening = None
+                existing_chat.agent_opening_audio_url = None
+                existing_chat.agent_is_deleted = None
+        existing_chat._agent_loaded = True
+    else:
+        cached_agent = cache_service.get_agent_config(agent_id)
+        if cached_agent:
+            existing_chat.agent_name = cached_agent.get("name")
+            existing_chat.agent_avatar = cached_agent.get("avatar")
+            existing_chat.agent_background_animated = cached_agent.get(
+                "background_animated"
+            )
+            existing_chat.agent_intro = cached_agent.get("intro")
+            existing_chat.agent_opening = cached_agent.get("opening")
+            existing_chat.agent_opening_audio_url = cached_agent.get(
+                "opening_audio_url"
+            )
+        agent_result = await db.execute(
+            select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
+        )
+        agent_info = agent_result.first()
+        existing_chat.agent_is_deleted = (
+            agent_info[0] is not None if agent_info else None
+        )
+
+    try:
+        session_id = generate_session_id(existing_chat.id)
+        existing_messages = await chat_history_service.get_messages_paginated_async(
+            session_id=session_id, limit=1, offset=0
+        )
+        if existing_messages.get("total", 0) == 0:
+            agent_opening = None
+            opening_audio_url = None
+            if cached_agent:
+                agent_opening = cached_agent.get("opening")
+                opening_audio_url = cached_agent.get("opening_audio_url")
+            else:
+                agent_result = await db.execute(
+                    select(models.Agent.opening, models.Agent.opening_audio_url).where(
+                        models.Agent.id == agent_id
+                    )
+                )
+                agent_info = agent_result.first()
+                if agent_info:
+                    agent_opening = agent_info[0]
+                    opening_audio_url = agent_info[1]
+
+            if agent_opening:
+                user_result = await db.execute(
+                    select(models.User.nickname).where(models.User.id == user_id)
+                )
+                user_nickname = user_result.scalar_one_or_none() or "you"
+
+                agent_result = await db.execute(
+                    select(models.Agent.name).where(models.Agent.id == agent_id)
+                )
+                agent_name = agent_result.scalar_one_or_none() or "IntelliMate"
+
+                await chat_history_service.add_agent_opening_message(
+                    db,
+                    session_id,
+                    agent_opening,
+                    opening_audio_url,
+                    agent_id,
+                    agent_name=agent_name,
+                    user_name=user_nickname,
+                )
+                logger.debug(
+                    f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
+                )
+            else:
+                logger.debug(f"Agent无开场白，跳过添加 - Agent ID: {agent_id}")
+        else:
+            logger.debug(
+                f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
+            )
+    except Exception as e:
+        logger.error(f"检查或添加现有聊天开场白失败: {str(e)}")
+
+    session_data = {
+        "chat_id": existing_chat.id,
+        "user_id": user_id,
+        "agent_id": agent_id,
+        "agent_name": getattr(existing_chat, "agent_name", None),
+        "agent_avatar": getattr(existing_chat, "agent_avatar", None),
+        "agent_background": getattr(existing_chat, "agent_background", None),
+        "agent_background_animated": getattr(
+            existing_chat, "agent_background_animated", None
+        ),
+        "agent_intro": getattr(existing_chat, "agent_intro", None),
+        "agent_opening": getattr(existing_chat, "agent_opening", None),
+        "agent_opening_audio_url": getattr(
+            existing_chat, "agent_opening_audio_url", None
+        ),
+        "created_at": existing_chat.created_at,
+        "updated_at": existing_chat.updated_at,
+    }
+    cache_service.set_session_info(session_key, session_data)
+
+    existing_chat.last_message = None
+    existing_chat.last_message_time = None
+
+    return existing_chat
+
+
 async def get_or_create_chat_by_agent(
     db: AsyncSession, user_id: str, agent_id: str
 ) -> models.Chat:
@@ -438,203 +656,9 @@ async def get_or_create_chat_by_agent(
             logger.debug(
                 f"找到已存在的聊天会话 - Chat ID: {existing_chat.id}, Agent ID: {existing_chat.agent_id}"
             )
-
-            # 验证agent_id的一致性
-            if existing_chat.agent_id != agent_id:
-                logger.error(
-                    f"聊天会话中的Agent ID不匹配！期望: {agent_id}, 实际: {existing_chat.agent_id}"
-                )
-                raise HTTPException(
-                    status_code=500,
-                    detail=(
-                        "Chat session data mismatch: expected agent ID "
-                        f"{agent_id}, got {existing_chat.agent_id}"
-                    ),
-                )
-
-            # 3. 并行获取Agent信息（如果未缓存）
-            cached_agent = None
-            if not hasattr(existing_chat, "_agent_loaded"):
-                # 从Agent缓存获取
-                cached_agent = cache_service.get_agent_config(agent_id)
-                if cached_agent:
-                    existing_chat.agent_name = cached_agent.get("name")
-                    existing_chat.agent_avatar = cached_agent.get("avatar")
-                    existing_chat.agent_background_animated = cached_agent.get(
-                        "background_animated"
-                    )
-                    existing_chat.agent_intro = cached_agent.get("intro")
-                    existing_chat.agent_opening = cached_agent.get("opening")
-                    existing_chat.agent_opening_audio_url = cached_agent.get(
-                        "opening_audio_url"
-                    )
-                    # For cached agents, we need to check the actual database for deletion status
-                    # since the cache might not include deleted_at info
-                    agent_result = await db.execute(
-                        select(models.Agent.deleted_at).where(
-                            models.Agent.id == agent_id
-                        )
-                    )
-                    agent_info = agent_result.first()
-                    existing_chat.agent_is_deleted = (
-                        agent_info[0] is not None if agent_info else None
-                    )
-                else:
-                    # 数据库查询Agent信息
-                    agent_result = await db.execute(
-                        select(
-                            models.Agent.name,
-                            models.Agent.avatar,
-                            models.Agent.background_animated,
-                            models.Agent.intro,
-                            models.Agent.opening,
-                            models.Agent.opening_audio_url,
-                            models.Agent.deleted_at,
-                        ).where(models.Agent.id == agent_id)
-                    )
-                    agent_info = agent_result.first()
-                    if agent_info:
-                        existing_chat.agent_name = agent_info[0]
-                        existing_chat.agent_avatar = agent_info[1]
-                        existing_chat.agent_background_animated = agent_info[2]
-                        existing_chat.agent_intro = agent_info[3]
-                        existing_chat.agent_opening = agent_info[4]
-                        existing_chat.agent_opening_audio_url = agent_info[5]
-                        existing_chat.agent_is_deleted = agent_info[6] is not None
-                        # 缓存Agent信息
-                        cache_service.set_agent_config(
-                            agent_id,
-                            {
-                                "name": agent_info[0],
-                                "avatar": agent_info[1],
-                                "background_animated": agent_info[2],
-                                "intro": agent_info[3],
-                                "opening": agent_info[4],
-                                "opening_audio_url": agent_info[5],
-                            },
-                        )
-                    else:
-                        existing_chat.agent_name = None
-                        existing_chat.agent_avatar = None
-                        existing_chat.agent_intro = None
-                        existing_chat.agent_opening = None
-                        existing_chat.agent_opening_audio_url = None
-                        existing_chat.agent_is_deleted = None
-                existing_chat._agent_loaded = True
-            else:
-                # 如果agent信息已经加载过，从缓存获取以备后续使用
-                cached_agent = cache_service.get_agent_config(agent_id)
-                # 即使agent信息已加载，也需要更新所有agent字段，因为它们可能已更新
-                if cached_agent:
-                    existing_chat.agent_name = cached_agent.get("name")
-                    existing_chat.agent_avatar = cached_agent.get("avatar")
-                    existing_chat.agent_background_animated = cached_agent.get(
-                        "background_animated"
-                    )
-                    existing_chat.agent_intro = cached_agent.get("intro")
-                    existing_chat.agent_opening = cached_agent.get("opening")
-                    existing_chat.agent_opening_audio_url = cached_agent.get(
-                        "opening_audio_url"
-                    )
-                # 检查deleted_at状态，因为它可能已更新
-                agent_result = await db.execute(
-                    select(models.Agent.deleted_at).where(models.Agent.id == agent_id)
-                )
-                agent_info = agent_result.first()
-                existing_chat.agent_is_deleted = (
-                    agent_info[0] is not None if agent_info else None
-                )
-
-            # 4. 检查现有聊天是否有消息，如果为空则添加Agent开场白
-            try:
-                session_id = generate_session_id(existing_chat.id)
-                existing_messages = (
-                    await chat_history_service.get_messages_paginated_async(
-                        session_id=session_id, limit=1, offset=0
-                    )
-                )
-                if existing_messages.get("total", 0) == 0:
-                    # 获取agent开场白和语音URL
-                    agent_opening = None
-                    opening_audio_url = None
-                    if cached_agent:
-                        agent_opening = cached_agent.get("opening")
-                        opening_audio_url = cached_agent.get("opening_audio_url")
-                    else:
-                        # 如果缓存中没有开场白，从数据库查询
-                        agent_result = await db.execute(
-                            select(
-                                models.Agent.opening, models.Agent.opening_audio_url
-                            ).where(models.Agent.id == agent_id)
-                        )
-                        agent_info = agent_result.first()
-                        if agent_info:
-                            agent_opening = agent_info[0]
-                            opening_audio_url = agent_info[1]
-
-                    # 如果有开场白，添加到聊天历史
-                    if agent_opening:
-                        # 获取用户和 Agent 信息用于变量替换
-                        user_result = await db.execute(
-                            select(models.User.nickname).where(
-                                models.User.id == user_id
-                            )
-                        )
-                        user_nickname = user_result.scalar_one_or_none() or "you"
-
-                        agent_result = await db.execute(
-                            select(models.Agent.name).where(models.Agent.id == agent_id)
-                        )
-                        agent_name = agent_result.scalar_one_or_none() or "IntelliMate"
-
-                        await chat_history_service.add_agent_opening_message(
-                            db,
-                            session_id,
-                            agent_opening,
-                            opening_audio_url,
-                            agent_id,
-                            agent_name=agent_name,
-                            user_name=user_nickname,
-                        )
-                        logger.debug(
-                            f"为已存在的空聊天会话添加Agent开场白成功 - Session ID: {session_id}"
-                        )
-                    else:
-                        logger.debug(f"Agent无开场白，跳过添加 - Agent ID: {agent_id}")
-                else:
-                    logger.debug(
-                        f"聊天会话已有消息({existing_messages.get('total', 0)}条)，跳过开场白添加 - Session ID: {session_id}"
-                    )
-            except Exception as e:
-                logger.error(f"检查或添加现有聊天开场白失败: {str(e)}")
-                # 继续执行，不影响chat返回
-
-            # 5. 缓存会话信息
-            session_data = {
-                "chat_id": existing_chat.id,
-                "user_id": user_id,
-                "agent_id": agent_id,
-                "agent_name": getattr(existing_chat, "agent_name", None),
-                "agent_avatar": getattr(existing_chat, "agent_avatar", None),
-                "agent_background": getattr(existing_chat, "agent_background", None),
-                "agent_background_animated": getattr(
-                    existing_chat, "agent_background_animated", None
-                ),
-                "agent_intro": getattr(existing_chat, "agent_intro", None),
-                "agent_opening": getattr(existing_chat, "agent_opening", None),
-                "agent_opening_audio_url": getattr(
-                    existing_chat, "agent_opening_audio_url", None
-                ),
-                "created_at": existing_chat.created_at,
-                "updated_at": existing_chat.updated_at,
-            }
-            cache_service.set_session_info(session_key, session_data)
-
-            # 跳过last_message查询以提升性能（可在需要时单独查询）
-            existing_chat.last_message = None
-            existing_chat.last_message_time = None
-
-            return existing_chat
+            return await _prepare_existing_chat_for_agent_response(
+                db, user_id, agent_id, existing_chat
+            )
 
         # 6. 如果不存在，则创建新的会话
         logger.debug(f"未找到已存在的聊天会话，创建新的会话 - Agent ID: {agent_id}")
@@ -834,10 +858,13 @@ async def get_or_create_chat_by_agent(
                 logger.debug(
                     f"并发创建冲突，返回已存在的聊天会话 - Chat ID: {existing_chat.id}"
                 )
-                return existing_chat
+                return await _prepare_existing_chat_for_agent_response(
+                    db, user_id, agent_id, existing_chat
+                )
+        except HTTPException:
+            raise
         except Exception as retry_e:
             logger.error(f"重试查询失败: {str(retry_e)}")
-            pass
         raise HTTPException(status_code=500, detail="Failed to create chat session")
     except SQLAlchemyError as e:
         await db.rollback()

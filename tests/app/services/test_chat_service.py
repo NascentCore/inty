@@ -18,7 +18,11 @@ from app import models
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.agent import AgentStatus, AgentVisibility
 from app.models.user import AuthType, Gender
-from app.schemas.chat import ChatImageGenerationResponse, ChatMusicGenerationResponse
+from app.schemas.chat import (
+    ChatCreate,
+    ChatImageGenerationResponse,
+    ChatMusicGenerationResponse,
+)
 from app.schemas.response import BizError, BusinessErrorCode, UsageLimitExceeded
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.services import chat_history_service, chat_service
@@ -2179,3 +2183,35 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_id == agent.id
 
         await self._cleanup_test_data(db_session, user, agent, existing_chat)
+
+    @pytest.mark.asyncio
+    async def test_create_chat_returns_existing_on_uq_chats_user_agent_active(
+        self, db_session: AsyncSession
+    ):
+        """
+        When POST /chats races with get_or_create, the unique index may reject insert;
+        create_chat must return the already-active row (prod Cloud SQL logs).
+        """
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id, opening=None)
+        cache_service.clear_all_caches()
+
+        chat_id = str(uuid.uuid4())
+        pre = models.Chat(
+            id=chat_id, user_id=user.id, agent_id=agent.id, is_active=True
+        )
+        db_session.add(pre)
+        await db_session.commit()
+        await db_session.refresh(pre)
+
+        created = await chat_service.create_chat(
+            db_session,
+            chat_in=ChatCreate(agent_id=agent.id),
+            user_id=user.id,
+        )
+        assert created.id == pre.id
+        assert created.agent_id == agent.id
+
+        await db_session.refresh(user)
+        await db_session.refresh(agent)
+        await self._cleanup_test_data(db_session, user, agent, pre)
