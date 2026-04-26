@@ -18,7 +18,8 @@ def _build_service_with_language_config() -> LiveChatService:
         send_sample_rate=16000,
         speech_language_code="en-US",
         response_language_name="English",
-        session_resumption=False,
+        # Matches app.utils.config.LiveChat* section when _build_live_config reads it.
+        session_resumption=True,
         trigger_tokens=10000,
         target_tokens=512,
     )
@@ -206,7 +207,7 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         response_language_name="English",
         enabled=True,
         audio_temp_dir="",
-        session_resumption=False,
+        session_resumption=True,
         trigger_tokens=10000,
         target_tokens=512,
     )

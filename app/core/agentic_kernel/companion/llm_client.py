@@ -100,7 +100,7 @@ class CompanionLLMClient:
                 api_key=config.api_key or None,
                 base_url=config.api_base or None,
                 wrap_langsmith=True,
-                chat_name="companion",
+                chat_name="companion_unified_chat",
             )
         )
         self._client_dual_chat: Any | None = None
