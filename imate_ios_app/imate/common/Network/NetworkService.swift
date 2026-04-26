@@ -1,0 +1,72 @@
+//
+//  NetworkService.swift
+//  imate
+//
+//  Created by 天之行 on 2026/4/26.
+//
+
+import Foundation
+
+final class NetworkService {
+    
+    static let shared = NetworkService()
+    
+    private init() {}
+    
+    func request<T: Decodable>(
+        _ endpoint: APIEndpoint,
+        decoder: JSONDecoder = JSONDecoder()
+    ) async throws -> T {
+        
+        // 1. 构建 URL
+        guard var urlComponents = URLComponents(string: endpoint.baseURL + endpoint.path) else {
+            throw SLNetworkError.invalidURL
+        }
+        
+        urlComponents.queryItems = endpoint.queryItems
+        
+        guard let url = urlComponents.url else {
+            throw SLNetworkError.invalidURL
+        }
+        
+        // 2. 构建 Request
+        var request = URLRequest(url: url)
+        request.httpMethod = endpoint.method.rawValue
+        request.httpBody = endpoint.body
+        
+        // 默认 JSON
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 自定义 Header
+        endpoint.headers?.forEach { key, value in
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        do {
+            // 3. 发起请求
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // 4. 校验响应
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw SLNetworkError.invalidResponse
+            }
+            print("on request data val si ------->\(httpResponse)")
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw SLNetworkError.statusCode(httpResponse.statusCode)
+            }
+            
+            // 5. 解析数据
+            do {
+                return try decoder.decode(T.self, from: data)
+            } catch {
+                throw SLNetworkError.decodeError
+            }
+            
+        } catch let error as SLNetworkError {
+            throw error
+        } catch {
+            throw SLNetworkError.unknown(error)
+        }
+    }
+}

@@ -35,9 +35,22 @@ struct LoginView: View {
     
     private func goAppleLogin() {
         router.push(.chatPage)
+//        Task {
+//            await fetchProfile()
+//        }
     }
     
     private func goEmailLogin() {
         router.push(.loginEmail)
+    }
+    
+    
+    func fetchProfile() async {
+        do {
+            let data: Data? = try await NetworkService.shared.request(UserAPI.login(email: "1@qq.com", password: "341"));
+            print("on release data val si ------->\(data, default: "dd")");
+        } catch {
+            print(error)
+        }
     }
 }
