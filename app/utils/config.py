@@ -175,7 +175,9 @@ class FeaturesConfig:
     companion_transcript_llm_window_max_messages: Optional[int] = None
     # WS companion: NONE = seed minimal docs only, always run_turn;
     # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
-    companion_workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
+    companion_workspace_bootstrap_type: str = (
+        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    )
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
 

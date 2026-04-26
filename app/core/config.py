@@ -63,10 +63,13 @@ def set_langsmith_environment_variables(config: Config) -> None:
     os.environ["LANGSMITH_TRACING_V2"] = "true" if tracing_enabled else "false"
     os.environ["LANGSMITH_PROJECT"] = langsmith_project
     os.environ["LANGCHAIN_API_KEY"] = config.agent.langchain_api_key
-    logger.debug("Setting LangSmith environment variables")
+    logger.debug("Setting LangSmith environment variables (before init_logger; may only hit default sink)")
     logger.debug(f"LANGSMITH_TRACING_V2: {os.getenv('LANGSMITH_TRACING_V2')}")
     logger.debug(f"LANGSMITH_PROJECT: {os.getenv('LANGSMITH_PROJECT')}")
-    logger.debug(f"LANGCHAIN_API_KEY: {os.getenv('LANGCHAIN_API_KEY')}")
+    has_ls_key = bool((config.agent.langchain_api_key or "").strip())
+    logger.debug(
+        f"LANGCHAIN_API_KEY: {'set' if has_ls_key else 'empty'} (value not logged)"
+    )
 
 
 set_langsmith_environment_variables(global_config_loaded_from_config_yaml)

@@ -98,4 +98,10 @@ REPL 在**单独的后台线程**里维持到 `INTY_API_BASE_URL` 对应主机�
 | `INTY_V2_BACKEND_WS_PING_INTERVAL_SEC` | 客户端 JSON `ping` 间隔秒（25） |
 | `INTY_V2_BACKEND_WS_RECV_TIMEOUT_SEC` | 单轮等待服务端带 `code` 的回包上限秒（600） |
 
+### 全双工输入（默认开启）
+
+- **行为**：`send_turn` 在**后台线程**执行时，在 **POSIX 终端**下主循环仍可用 `select` 读入**下一整行**并先排进 FIFO，上一轮返回后再按顺序发出；在 `>` 无进行中的轮次时，仍像以往一样可 `try_pop_queued_chat` 打印**空闲**时服务端已入队的侧带消息；**有未完成的 `send_turn` 时**不再 `try_pop`（与共享 `_response_q` 的 FIFO 一致，避免抢帧）。
+- **非 TTY / Windows**：等回复时仅退化为周期等待，**不能**在等一条回复时先敲下一行（可改终端或 `export` 到类 Unix 环境）。
+- **回滚旧行为**（主线程同步阻塞在 `send_turn`）：`export INTY_V2_REPL_DUPLEX=0`（或 `false` / `no` / `off` / `n`）。
+
 CLI 仅保留 `repl`；对话与 bootstrap 由服务端处理。`--workspace` 仅影响本地 `inty_v2.log` / `llm_trace.jsonl` 路径。
