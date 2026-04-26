@@ -289,15 +289,24 @@ async def create_chat(
 
     except IntegrityError as e:
         await db.rollback()
-        logger.error(f"Data integrity error - create chat: {str(e)}")
-        if "user_id" in str(e):
-            raise HTTPException(status_code=400, detail="Invalid user ID")
-        elif "agent_id" in str(e):
-            raise HTTPException(status_code=400, detail="Invalid Agent ID")
-        else:
-            raise HTTPException(
-                status_code=400, detail="Data integrity constraint violation"
+        err_text = f"{getattr(e, 'orig', '')} {e}"
+        if "uq_chats_user_agent_active" in err_text:
+            # Concurrent create_chat vs get_or_create, or two POST /chats: return one active chat
+            logger.warning(
+                f"Create chat hit uq_chats_user_agent_active for user {user_id} "
+                f"agent {chat_in.agent_id}, returning existing or created session"
             )
+            return await get_or_create_chat_by_agent(
+                db, user_id, chat_in.agent_id
+            )
+        logger.error(f"Data integrity error - create chat: {str(e)}")
+        if "user_id" in str(e) and "uq_chats" not in err_text:
+            raise HTTPException(status_code=400, detail="Invalid user ID")
+        if "agent_id" in str(e) and "uq_chats" not in err_text:
+            raise HTTPException(status_code=400, detail="Invalid Agent ID")
+        raise HTTPException(
+            status_code=400, detail="Data integrity constraint violation"
+        )
     except SQLAlchemyError as e:
         await db.rollback()
         logger.error(f"Database error - create chat: {str(e)}")
@@ -390,7 +399,11 @@ async def delete_chat(db: AsyncSession, *, db_chat: models.Chat) -> models.Chat:
 
 
 async def get_or_create_chat_by_agent(
-    db: AsyncSession, user_id: str, agent_id: str
+    db: AsyncSession,
+    user_id: str,
+    agent_id: str,
+    *,
+    _integrity_retry: bool = False,
 ) -> models.Chat:
     """
     根据用户ID和Agent ID获取或创建唯一的聊天会话（高性能优化版）
@@ -815,8 +828,23 @@ async def get_or_create_chat_by_agent(
         raise
     except IntegrityError as e:
         await db.rollback()
-        logger.warning(f"数据完整性错误 - 获取或创建聊天（并发冲突已重试）: {str(e)}")
-        # 可能是并发创建导致的重复，尝试再次查询
+        err_text = f"{getattr(e, 'orig', '')} {e}"
+        if "uq_chats_user_agent_active" in err_text and not _integrity_retry:
+            logger.warning(
+                "Unique active chat per user+agent: concurrent insert conflict, "
+                f"re-running get_or_create: user_id={user_id} agent_id={agent_id}"
+            )
+            return await get_or_create_chat_by_agent(
+                db, user_id, agent_id, _integrity_retry=True
+            )
+        if "uq_chats_user_agent_active" in err_text and _integrity_retry:
+            logger.error(
+                f"Still unique constraint conflict after re-query path: {err_text}"
+            )
+        logger.warning(
+            f"Data integrity while get_or_create chat (concurrency or DB issue): {err_text}"
+        )
+        # 可能是并发创建导致的重复，再次查询
         try:
             result = await db.execute(
                 select(models.Chat)
@@ -832,12 +860,11 @@ async def get_or_create_chat_by_agent(
             existing_chat = result.scalar_one_or_none()
             if existing_chat:
                 logger.debug(
-                    f"并发创建冲突，返回已存在的聊天会话 - Chat ID: {existing_chat.id}"
+                    f"After IntegrityError, returning existing chat: {existing_chat.id}"
                 )
                 return existing_chat
         except Exception as retry_e:
-            logger.error(f"重试查询失败: {str(retry_e)}")
-            pass
+            logger.error(f"Re-query after IntegrityError failed: {str(retry_e)}")
         raise HTTPException(status_code=500, detail="Failed to create chat session")
     except SQLAlchemyError as e:
         await db.rollback()
