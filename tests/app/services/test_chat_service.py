@@ -2,6 +2,7 @@
 测试聊天服务功能
 """
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -9,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -2179,3 +2180,50 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_id == agent.id
 
         await self._cleanup_test_data(db_session, user, agent, existing_chat)
+
+    @pytest.mark.asyncio
+    async def test_get_or_create_true_concurrent_deduplication(
+        self, db_session: AsyncSession
+    ):
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+        cache_service.clear_all_caches()
+
+        concurrent_engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=2,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        concurrent_session_factory = sessionmaker(
+            bind=concurrent_engine, class_=AsyncSession, expire_on_commit=False
+        )
+        try:
+            async with concurrent_session_factory() as s1, concurrent_session_factory() as s2:
+                a, b = await asyncio.gather(
+                    chat_service.get_or_create_chat_by_agent(
+                        s1, user_id=user.id, agent_id=agent.id
+                    ),
+                    chat_service.get_or_create_chat_by_agent(
+                        s2, user_id=user.id, agent_id=agent.id
+                    ),
+                )
+        finally:
+            await concurrent_engine.dispose()
+
+        assert a.id == b.id
+        assert a.user_id == user.id
+        n = await db_session.scalar(
+            select(func.count())
+            .select_from(models.Chat)
+            .where(
+                models.Chat.user_id == user.id,
+                models.Chat.agent_id == agent.id,
+                models.Chat.is_active.is_(True),
+            )
+        )
+        assert n == 1
+        await db_session.execute(
+            text("DELETE FROM chats WHERE id = :cid"), {"cid": a.id}
+        )
+        await self._cleanup_test_data(db_session, user, agent, None)
