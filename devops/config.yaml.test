@@ -2,7 +2,7 @@
 # External services are fakes. Tracing is disabled.
 
 app:
-  debug: false
+  debug: true
   backend_cors_origins: ["http://localhost:3000"]
   environment: "test"
   # 这是一个非零值，用于测试该配置项等效果
