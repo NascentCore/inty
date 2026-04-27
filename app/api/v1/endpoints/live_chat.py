@@ -209,7 +209,9 @@ async def live_chat_session(
 
     speech_q = websocket.query_params.get("speech_language_code")
     response_q = websocket.query_params.get("response_language_name")
-    starts_q = (websocket.query_params.get("agent_starts_conversation") or "").strip().lower()
+    starts_q = (
+        (websocket.query_params.get("agent_starts_conversation") or "").strip().lower()
+    )
     live_cfg_kwargs = {}
     if speech_q is not None and speech_q.strip():
         live_cfg_kwargs["speech_language_code"] = speech_q.strip()
