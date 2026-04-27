@@ -9,6 +9,7 @@ object IntyVoiceCallUrls {
         agentId: String,
         speechLanguageCode: String? = null,
         responseLanguageName: String? = null,
+        agentStartsConversation: Boolean = false,
     ): String {
         val base = wssBaseUrl.trimEnd('/')
         val sb = StringBuilder("$base/api/v1/live-chat/$agentId")
@@ -20,6 +21,9 @@ object IntyVoiceCallUrls {
         responseLanguageName?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
             val q = URLEncoder.encode(name, StandardCharsets.UTF_8).replace("+", "%20")
             qs.add("response_language_name=$q")
+        }
+        if (agentStartsConversation) {
+            qs.add("agent_starts_conversation=true")
         }
         if (qs.isNotEmpty()) {
             sb.append('?').append(qs.joinToString("&"))

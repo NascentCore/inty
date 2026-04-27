@@ -364,8 +364,8 @@ async def test_send_opening_conversation_trigger_idempotent_and_no_user_buffer()
     await service._send_opening_conversation_trigger(session, "English")
     assert len(sent) == 1
     assert sent[0][1] is True
-    assert sent[0][0].role == "user"
-    assert "English" in sent[0][0].parts[0].text
+    assert isinstance(sent[0][0], str)
+    assert "English" in sent[0][0]
     assert session.user_transcript_buffer == ""
     assert session.opening_conversation_trigger_sent is True
 

@@ -1533,13 +1533,9 @@ class LiveChatService:
             return
         text = self._opening_conversation_trigger_text(merged_response_language_name)
         try:
-            await gs.send(
-                input=types.Content(
-                    role="user",
-                    parts=[types.Part(text=text)],
-                ),
-                end_of_turn=True,
-            )
+            # google-genai Live：send 的 input 需为 str（或 SDK 支持的少数类型），
+            # 传 types.Content 会报 Unsupported input type。
+            await gs.send(input=text, end_of_turn=True)
             session.opening_conversation_trigger_sent = True
             logger.debug(
                 f"已发送开场对话触发（不落用户转录）: session_id={session.session_id}"
@@ -1559,13 +1555,7 @@ class LiveChatService:
         if not session or not session.gemini_session:
             raise ValueError(f"Session not found or not connected: {session_id}")
 
-        await session.gemini_session.send(
-            input=types.Content(
-                role="user",
-                parts=[types.Part(text=text)],
-            ),
-            end_of_turn=True,
-        )
+        await session.gemini_session.send(input=text, end_of_turn=True)
 
         session.user_transcript_buffer += f" {text}"
 

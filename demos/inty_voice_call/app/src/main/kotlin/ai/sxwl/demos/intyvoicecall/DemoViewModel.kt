@@ -28,6 +28,7 @@ data class DemoUiState(
     val apiEndpoint: String = "",
     val apiKey: String = "",
     val agentId: String = "",
+    val agentStartsConversation: Boolean = true,
     val speechLanguageCode: String = "en-US",
     val responseLanguageName: String = "English",
     val statusLine: String = "",
@@ -70,6 +71,10 @@ class DemoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateResponseLanguage(v: String) {
         ui = ui.copy(responseLanguageName = v)
+    }
+
+    fun updateAgentStartsConversation(enabled: Boolean) {
+        ui = ui.copy(agentStartsConversation = enabled)
     }
 
     fun setMicPermissionGranted(granted: Boolean) {
@@ -145,6 +150,7 @@ class DemoViewModel(application: Application) : AndroidViewModel(application) {
                             agent,
                             speechLanguageCode = ui.speechLanguageCode.trim().ifEmpty { null },
                             responseLanguageName = ui.responseLanguageName.trim().ifEmpty { null },
+                            agentStartsConversation = ui.agentStartsConversation,
                         )
 
                     appendLog("WS $wsUrl")
