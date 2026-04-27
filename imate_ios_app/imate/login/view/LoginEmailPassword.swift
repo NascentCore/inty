@@ -31,12 +31,7 @@ struct LoginEmailPassword: View {
     var body: some View {
         ZStack {
             // 1. 背景层：线性渐变
-            LinearGradient(
-                gradient: Gradient(colors: [backgroundColorTop, backgroundColorBottom]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            LoginWidgets.HeaderBg()
 
             // 2. 内容层
             VStack(alignment: .leading, spacing: 0) {
@@ -54,7 +49,7 @@ struct LoginEmailPassword: View {
                 Spacer().frame(height: 40)
 
                 // 标题
-                Text("Login with email password")
+                Text("Login with Email + Password")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -127,6 +122,20 @@ struct LoginEmailPassword: View {
     
     // 方法区
     private func goLogin() {
-        router.push(.loginAuth)
+        Task {
+            await loginRequest();
+        }
+    }
+    
+    func loginRequest() async {
+        do {
+            let cb: LoginResponse = try await NetworkService.shared.request(UserAPI.login(email: userManager.email, password: password));
+            // print("on release data val si ------->\(cb.token)");
+            ToastManager.shared.show("Login success", type: .success);
+            router.push(.loginAuth)
+        } catch {
+            // print("on error si val----->\(error)")
+            ToastManager.shared.show("on login error \(error)", duration: 5, type: .error);
+        }
     }
 }
