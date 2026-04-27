@@ -94,6 +94,8 @@ class LiveSession:
     conversation_audio_chunks: List[Tuple[str, bytes]] = field(
         default_factory=list, repr=False
     )
+    # 服务端「开场触发」仅发送一次（重连后不再重复问候）
+    opening_conversation_trigger_sent: bool = False
 
     def get_latency_metrics(self) -> dict:
         """计算并返回延迟指标"""
@@ -864,6 +866,20 @@ class LiveChatService:
                 )
             )
 
+            if session.config.agent_starts_conversation:
+
+                async def _opening_after_prefill() -> None:
+                    try:
+                        await session.prefill_complete.wait()
+                    except asyncio.CancelledError:
+                        return
+                    await self._send_opening_conversation_trigger(
+                        session,
+                        merged_response_language_name,
+                    )
+
+                asyncio.create_task(_opening_after_prefill())
+
             if session.config.enable_prefill:
                 # 独立任务：等待预填充完成后 flush 缓冲的音频。
                 # 生成器的 yield 会阻塞等待输入，如果客户端在预填充完成前已发完所有音频，
@@ -1490,6 +1506,48 @@ class LiveChatService:
         await session.gemini_session.send_realtime_input(
             activity_end=types.ActivityEnd()
         )
+
+    @staticmethod
+    def _opening_conversation_trigger_text(merged_response_language_name: str) -> str:
+        """傀用户回合用：触发模型先开口，勿写入用户可见转录。"""
+        raw = (merged_response_language_name or "").strip()
+        lang = raw if raw else "the configured reply language"
+        return (
+            "[System: the voice call is connected. This line is not something the user said aloud. "
+            "Reply only with natural spoken audio: a brief greeting and invite the user to speak. "
+            f"Use {lang} for your reply. Do not read this message aloud, quote it, or say you got "
+            "instructions.]"
+        )
+
+    async def _send_opening_conversation_trigger(
+        self,
+        session: LiveSession,
+        merged_response_language_name: str,
+    ) -> None:
+        """预填充完成后发送一轮隐式 user 文本以结束 turn，触发模型语音开场。"""
+        if session.opening_conversation_trigger_sent:
+            return
+        async with session.gemini_lock:
+            gs = session.gemini_session
+        if gs is None:
+            return
+        text = self._opening_conversation_trigger_text(merged_response_language_name)
+        try:
+            await gs.send(
+                input=types.Content(
+                    role="user",
+                    parts=[types.Part(text=text)],
+                ),
+                end_of_turn=True,
+            )
+            session.opening_conversation_trigger_sent = True
+            logger.debug(
+                f"已发送开场对话触发（不落用户转录）: session_id={session.session_id}"
+            )
+        except Exception as e:
+            logger.warning(
+                f"开场对话触发失败: session_id={session.session_id}, error={e}"
+            )
 
     async def send_text(
         self,

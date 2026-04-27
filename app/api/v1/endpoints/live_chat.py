@@ -136,6 +136,8 @@ async def live_chat_session(
     Optional query params (per-session language for SDK clients):
     - speech_language_code: BCP-47 tag for SpeechConfig.language_code (e.g. ar-SA, en-US)
     - response_language_name: human-readable reply language for system instruction (e.g. Arabic)
+    - agent_starts_conversation: if true/1/yes, server sends a hidden trigger after connect
+      (and after history prefill when enabled) so the model speaks first; not stored as user text
 
     WebSocket 关闭码与错误信息：
     - 4000: Invalid language query parameters
@@ -207,11 +209,14 @@ async def live_chat_session(
 
     speech_q = websocket.query_params.get("speech_language_code")
     response_q = websocket.query_params.get("response_language_name")
+    starts_q = (websocket.query_params.get("agent_starts_conversation") or "").strip().lower()
     live_cfg_kwargs = {}
     if speech_q is not None and speech_q.strip():
         live_cfg_kwargs["speech_language_code"] = speech_q.strip()
     if response_q is not None and response_q.strip():
         live_cfg_kwargs["response_language_name"] = response_q.strip()
+    if starts_q in ("1", "true", "yes"):
+        live_cfg_kwargs["agent_starts_conversation"] = True
     try:
         live_overrides = LiveChatConfig(**live_cfg_kwargs) if live_cfg_kwargs else None
     except ValidationError as e:
