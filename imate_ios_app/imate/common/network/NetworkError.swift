@@ -14,6 +14,8 @@ enum SLNetworkError: Error, LocalizedError {
     case statusCode(Int)
     case decodeError
     case unknown(Error)
+    case serverError(String)
+    case emptyData
     
     var errorDescription: String? {
         switch self {
@@ -27,6 +29,10 @@ enum SLNetworkError: Error, LocalizedError {
             return "数据解析失败"
         case .unknown(let error):
             return error.localizedDescription
+        case .serverError(let error):
+            return "Server error \(error)"
+        case .emptyData:
+            return "empty data"
         }
     }
 }

@@ -7,6 +7,13 @@
 
 import Foundation
 
+// 通用返回结构（后端统一格式）
+struct APIResponse<T: Decodable>: Decodable {
+    let code: Int
+    let message: String
+    let data: T?
+}
+
 final class NetworkService {
     
     static let shared = NetworkService()
@@ -50,18 +57,39 @@ final class NetworkService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw SLNetworkError.invalidResponse
             }
-            print("on request data val si ------->\(httpResponse)")
             
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw SLNetworkError.statusCode(httpResponse.statusCode)
             }
             
-            // 5. 解析数据
-            do {
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                throw SLNetworkError.decodeError
+            // 👉 Debug 打印
+            #if DEBUG
+            if let raw = String(data: data, encoding: .utf8) {
+                print("✅ Raw Response:\n\(raw)")
             }
+            #endif
+            
+            // 5. 解析数据
+//            do {
+//                return try decoder.decode(T.self, from: data)
+//            } catch {
+//                throw SLNetworkError.decodeError
+//            }
+            
+            // 5️⃣ 解析为通用结构
+            let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
+            
+            // 6️⃣ 业务状态判断
+            if apiResponse.code != 200 {
+                throw SLNetworkError.serverError(apiResponse.message)
+            }
+            
+            // 7️⃣ 取 data
+            guard let result = apiResponse.data else {
+                throw SLNetworkError.emptyData
+            }
+            
+            return result
             
         } catch let error as SLNetworkError {
             throw error

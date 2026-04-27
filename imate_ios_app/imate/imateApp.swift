@@ -12,6 +12,7 @@ struct imateApp: App {
     var body: some Scene {
         WindowGroup {
             Entrance()
+                .overlay(GlobalToastOverlay())  // 挂载Toast 到最顶端
         }
     }
 }

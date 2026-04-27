@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct LoginView: View {
     
@@ -34,10 +35,7 @@ struct LoginView: View {
     }
     
     private func goAppleLogin() {
-        router.push(.chatPage)
-//        Task {
-//            await fetchProfile()
-//        }
+        ToastManager.shared.show("正在接入中...", type: .info);
     }
     
     private func goEmailLogin() {
@@ -45,12 +43,13 @@ struct LoginView: View {
     }
     
     
-    func fetchProfile() async {
-        do {
-            let data: Data? = try await NetworkService.shared.request(UserAPI.login(email: "1@qq.com", password: "341"));
-            print("on release data val si ------->\(data, default: "dd")");
-        } catch {
-            print(error)
-        }
-    }
+//    func fetchProfile() async {
+//        do {
+//            let cb: LoginResponse = try await NetworkService.shared.request(UserAPI.login(email: "1@qq.com", password: "341"));
+//            print("on release data val si ------->\(cb.token)");
+//        } catch {
+//            print("on error si val----->\(error)")
+//            ToastManager.shared.show("on login error \(error)", duration: 5, type: .error);
+//        }
+//    }
 }
