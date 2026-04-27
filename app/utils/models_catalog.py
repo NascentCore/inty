@@ -825,6 +825,9 @@ CHAT_TEXT_MODELS = [
     GEMINI_2_5_FLASH,
 ]
 
+# When user messages include image parts, OpenRouter returns 404 for text-only models.
+OPENROUTER_VISION_CHAT_FALLBACK_ID = GEMINI_2_5_FLASH.id_on_provider
+
 
 def resolve_chat_model_to_id(value: str) -> str:
     """

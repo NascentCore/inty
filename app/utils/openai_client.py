@@ -30,6 +30,7 @@ from loguru import logger
 from openai import AsyncOpenAI, OpenAI
 
 from app.api.types.llm_config import LLMConfig
+from app.utils.models_catalog import CHAT_TEXT_MODELS, OPENROUTER_VISION_CHAT_FALLBACK_ID
 from app.core.agentic_kernel.providers.facade import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_async_client,
@@ -249,6 +250,45 @@ async def chat_completion_for_extraction(
     prompt_tokens = usage.prompt_tokens if usage else None
     completion_tokens = usage.completion_tokens if usage else None
     return (content, prompt_tokens, completion_tokens)
+
+
+def openai_chat_messages_include_image_parts(messages: list[dict[str, Any]]) -> bool:
+    """True if any message uses OpenAI multimodal content with an image part."""
+    for msg in messages:
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") == "image_url":
+                return True
+            if part.get("type") == "input_image":
+                return True
+    return False
+
+
+def resolve_chat_model_for_openai_messages(
+    resolved_model_id: str,
+    openai_messages: list[dict[str, Any]],
+) -> str:
+    """
+    Use a vision-capable OpenRouter model when the payload includes images but the
+    configured chat model is text-only (catalog CHAT_TEXT_MODELS).
+    """
+    if not openai_chat_messages_include_image_parts(openai_messages):
+        return resolved_model_id
+    if resolved_model_id == OPENROUTER_VISION_CHAT_FALLBACK_ID:
+        return resolved_model_id
+    text_only_ids = {m.id_on_provider for m in CHAT_TEXT_MODELS}
+    if resolved_model_id not in text_only_ids:
+        return resolved_model_id
+    logger.info(
+        "Chat includes image parts; switching model from {} to {} for vision support",
+        resolved_model_id,
+        OPENROUTER_VISION_CHAT_FALLBACK_ID,
+    )
+    return OPENROUTER_VISION_CHAT_FALLBACK_ID
 
 
 def langchain_message_to_openai_message(

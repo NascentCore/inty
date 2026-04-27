@@ -55,6 +55,7 @@ from app.utils.openai_client import (
     get_chat_llm_provider,
     get_chat_openai_client,
     langchain_message_to_openai_message,
+    resolve_chat_model_for_openai_messages,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
 
@@ -1563,6 +1564,9 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
+                model_name = resolve_chat_model_for_openai_messages(
+                    model_name, openai_messages
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1914,6 +1918,9 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
+                model_name = resolve_chat_model_for_openai_messages(
+                    model_name, openai_messages
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
