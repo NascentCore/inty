@@ -28,8 +28,11 @@ def init_firebase() -> None:
         logger.info("Firebase Admin SDK initialized successfully")
 
     except Exception as e:
-        logger.error(f"Failed to initialize Firebase Admin SDK: {str(e)}")
         if debug:
-            logger.error("Failure ignored in debug mode")
+            logger.warning(
+                "Firebase Admin SDK not initialized (ignored in debug): {}",
+                e,
+            )
         else:
+            logger.error(f"Failed to initialize Firebase Admin SDK: {str(e)}")
             raise e
