@@ -30,11 +30,13 @@ def test_companion_llm_clients_use_distinct_langsmith_chat_names(
     client = CompanionLLMClient(CompanionLLMConfig(api_key="test-key"))
     client.sync_client_for_route("chat")
     client.sync_client_for_route("tool")
+    client.sync_client_for_route("inner_tick")
 
     chat_names = [options.chat_name for options in captured_options]
     assert chat_names == [
-        "companion_unified_chat",
-        "companion_dual_chat",
-        "companion_dual_tool",
+        "agentic_companion_unified_chat",
+        "agentic_companion_chat",
+        "agentic_companion_tool_call",
+        "agentic_companion_inner_tick",
     ]
     assert len(set(chat_names)) == len(chat_names)
