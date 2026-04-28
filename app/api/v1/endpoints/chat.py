@@ -3,7 +3,7 @@ import json
 import time
 import uuid
 from types import SimpleNamespace
-from typing import Any, List, Literal, Optional, TypeAlias, Union
+from typing import Any, Callable, List, Literal, Optional, TypeAlias, Union
 
 from fastapi import (
     APIRouter,
@@ -34,6 +34,7 @@ from app.api.utils.feature_gating import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
 from app.schemas.chat import (
@@ -501,6 +502,66 @@ def _companion_rejects_multimodal_user_turn(last_user_message: ChatMessage) -> b
     return last_user_message.has_image_content_part()
 
 
+async def _send_companion_tool_background_ws_completion(
+    *,
+    db: AsyncSession,
+    websocket: WebSocket,
+    agent_id: str,
+    session_id: str,
+    ev: ToolOutputEvent,
+    request: ChatCompletionRequest,
+    effective_local_id: Optional[str],
+    foreground_user_message_id: Optional[int] = None,
+) -> None:
+    meta_data = {
+        "source": "tool_bg",
+        "trace_id": ev.trace_id,
+        "reply_to_user_msg_uuid": ev.user_msg_uuid,
+    }
+    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+        session_id,
+        ev.text,
+        agent_id=agent_id,
+        meta_data=meta_data,
+    )
+    latest_message_info = None
+    try:
+        if ai_message_id is not None:
+            latest_message_info = await chat_history_service.get_ai_message_info_by_id(
+                db, ai_message_id
+            )
+    except Exception as e:
+        logger.warning(f"tool_bg get_ai_message_info_by_id failed: {e}")
+    user_message_id = foreground_user_message_id
+    if user_message_id is None:
+        try:
+            user_message_id = await chat_history_service.get_latest_user_message_id(
+                db, session_id
+            )
+        except Exception as e:
+            logger.warning(f"tool_bg get_latest_user_message_id failed: {e}")
+    subscription_actions = [
+        BizAction(action_type=ActionType.NONE, message=""),
+    ]
+    data = _build_chat_response(
+        ev.text,
+        None,
+        "",
+        latest_message_info,
+        None,
+        request,
+        source_imate_id=request.target_imate_id,
+        user_message_id=user_message_id,
+        subscription_actions=subscription_actions,
+        client_local_id=effective_local_id,
+    )
+    payload = schemas.APIResponse.success(data=data)
+    out = payload.model_dump(exclude_none=True)
+    out["agent_id"] = agent_id
+    out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
+    await websocket.send_json(out)
+
+
 async def _agent_status_line_for_chat_header(
     db: AsyncSession, agent_id: str
 ) -> Optional[str]:
@@ -525,6 +586,8 @@ async def _agent_chat_completions_impl(
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService,
     chat_route: Literal["http", "websocket"],
+    companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
+    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
 ) -> Union[schemas.APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
@@ -644,32 +707,72 @@ async def _agent_chat_completions_impl(
                         ),
                     )
                 if use_companion:
-                    companion_turn = (
-                        await companion_chat_service.run_companion_chat_turn_for_api(
-                            user_id=current_user.id,
-                            agent_id=agent_id,
-                            chat_id=chat.id,
-                            user_text=last_user_text,
-                            resolved_chat_model_id=model_override,
-                            defer_memory_update=True,
-                            session_id=session_id,
+                    companion_preset_uid: str | None = None
+                    if (
+                        chat_route == "websocket"
+                        and companion_ws_foreground_pending is not None
+                    ):
+                        companion_preset_uid = str(uuid.uuid4())
+                        companion_ws_foreground_pending[companion_preset_uid] = {
+                            "session_id": session_id,
+                            "agent_id": agent_id,
+                            "request": request,
+                            "effective_local_id": effective_local_id,
+                        }
+                    try:
+                        companion_turn = (
+                            await companion_chat_service.run_companion_chat_turn_for_api(
+                                user_id=current_user.id,
+                                agent_id=agent_id,
+                                chat_id=chat.id,
+                                user_text=last_user_text,
+                                resolved_chat_model_id=model_override,
+                                defer_memory_update=True,
+                                session_id=session_id,
+                                background_output_sink=companion_background_sink,
+                                preset_user_msg_uuid=companion_preset_uid,
+                            )
                         )
-                    )
+                        if (
+                            companion_preset_uid is not None
+                            and companion_ws_foreground_pending is not None
+                            and not companion_turn.used_async_tool_background
+                        ):
+                            companion_ws_foreground_pending.pop(
+                                companion_preset_uid, None
+                            )
+                    except Exception:
+                        if (
+                            companion_preset_uid is not None
+                            and companion_ws_foreground_pending is not None
+                        ):
+                            companion_ws_foreground_pending.pop(
+                                companion_preset_uid, None
+                            )
+                        raise
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta: dict | None = None
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:
                         companion_ai_meta = {"significance_perception": sp}
                     if effective_local_id:
-                        await chat_history_service.add_user_message_async(
+                        companion_user_row_id = await chat_history_service.add_user_message_async(
                             session_id,
                             last_user_message,
                             meta_data={"localId": effective_local_id},
                         )
                     else:
-                        await chat_history_service.add_user_message_async(
+                        companion_user_row_id = await chat_history_service.add_user_message_async(
                             session_id, last_user_message
                         )
+                    if (
+                        companion_preset_uid is not None
+                        and companion_ws_foreground_pending is not None
+                        and companion_preset_uid in companion_ws_foreground_pending
+                    ):
+                        companion_ws_foreground_pending[companion_preset_uid][
+                            "foreground_user_message_id"
+                        ] = companion_user_row_id
                     ai_message_id = (
                         await chat_history_service.add_ai_message_sync_async(
                             session_id,
@@ -1187,13 +1290,69 @@ async def chat_completions_websocket(
         )
 
     tc_box: list[Optional[dict]] = [None]
+    ws_fg_pending: dict[str, dict[str, Any]] = {}
+    bg_queue: asyncio.Queue[ToolOutputEvent] = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    def companion_bg_sink(ev: ToolOutputEvent) -> None:
+        loop.call_soon_threadsafe(bg_queue.put_nowait, ev)
+
+    idle = _chat_ws_idle_timeout_seconds()
     try:
         while True:
+            recv_task = asyncio.create_task(
+                asyncio.wait_for(websocket.receive_text(), timeout=idle)
+            )
+            queue_task = asyncio.create_task(bg_queue.get())
+            done, _pending = await asyncio.wait(
+                {recv_task, queue_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            if queue_task in done:
+                recv_task.cancel()
+                try:
+                    await recv_task
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+                except Exception:
+                    pass
+                try:
+                    ev = queue_task.result()
+                except Exception as exc:
+                    logger.warning(f"companion tool_bg queue result failed: {exc}")
+                    continue
+                ctx = ws_fg_pending.pop(ev.user_msg_uuid, None)
+                if ctx is None:
+                    logger.warning(
+                        "companion tool_bg missing foreground ctx user_msg_uuid={}",
+                        ev.user_msg_uuid,
+                    )
+                    continue
+                try:
+                    await _send_companion_tool_background_ws_completion(
+                        db=db,
+                        websocket=websocket,
+                        agent_id=str(ctx["agent_id"]),
+                        session_id=str(ctx["session_id"]),
+                        ev=ev,
+                        request=ctx["request"],
+                        effective_local_id=ctx["effective_local_id"],
+                        foreground_user_message_id=ctx.get(
+                            "foreground_user_message_id"
+                        ),
+                    )
+                except Exception:
+                    logger.exception("companion tool_bg ws completion failed")
+                continue
+
+            queue_task.cancel()
             try:
-                raw = await asyncio.wait_for(
-                    websocket.receive_text(),
-                    timeout=_chat_ws_idle_timeout_seconds(),
-                )
+                await queue_task
+            except asyncio.CancelledError:
+                pass
+            try:
+                raw = recv_task.result()
             except asyncio.TimeoutError:
                 await websocket.close()
                 return
@@ -1218,6 +1377,8 @@ async def chat_completions_websocket(
                     subscription_svc=subscription_svc,
                     voice_svc=voice_svc,
                     chat_route="websocket",
+                    companion_background_sink=companion_bg_sink,
+                    companion_ws_foreground_pending=ws_fg_pending,
                 )
             except HTTPException as e:
                 detail = e.detail

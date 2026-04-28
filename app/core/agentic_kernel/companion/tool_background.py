@@ -353,6 +353,8 @@ async def _run_background_tool_loop(
     execute_tool_call_fn: Callable[..., Any],
     client: Any,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
+    write_allowlist: frozenset[str] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> None:
     try:
         if is_tool_background_aborted(user_msg_uuid):
@@ -473,6 +475,12 @@ async def _run_background_tool_loop(
             return
         total_tool_calls += len(initial_tool_calls)
 
+        allow = (
+            write_allowlist
+            if write_allowlist is not None
+            else REPL_WRITABLE_RELATIVE_PATHS
+        )
+
         async def execute_tool_call(
             name: str, raw_arguments: str
         ) -> tuple[str, str | None]:
@@ -480,7 +488,8 @@ async def _run_background_tool_loop(
                 ws_root,
                 name,
                 raw_arguments,
-                write_allowlist=REPL_WRITABLE_RELATIVE_PATHS,
+                write_allowlist=allow,
+                repository_only_workspace_text=repository_only_workspace_text,
             )
             return result, None
 
@@ -624,11 +633,19 @@ def start_tool_background_job(
     user_msg_uuid: str,
     trace_id: str,
     tools: list[Any],
-    on_event: Callable[[ToolOutputEvent], None] = push_output_event,
+    on_event: Callable[[ToolOutputEvent], None] | None = None,
     execute_tool_call_fn: Callable[..., Any] = execute_tool_call,
     client: Any,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
+    write_allowlist: frozenset[str] | None = None,
+    repository_only_workspace_text: bool = False,
 ) -> None:
+    def _effective_on_event(ev: ToolOutputEvent) -> None:
+        if on_event is not None:
+            on_event(ev)
+        else:
+            push_output_event(ev)
+
     def _runner() -> None:
         try:
             asyncio.run(
@@ -639,10 +656,12 @@ def start_tool_background_job(
                     user_msg_uuid=user_msg_uuid,
                     trace_id=trace_id,
                     tools=tools,
-                    on_event=on_event,
+                    on_event=_effective_on_event,
                     execute_tool_call_fn=execute_tool_call_fn,
                     client=client,
                     trace_hooks=trace_hooks,
+                    write_allowlist=write_allowlist,
+                    repository_only_workspace_text=repository_only_workspace_text,
                 )
             )
         except BaseException:

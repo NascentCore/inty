@@ -8,6 +8,10 @@
 - v2 落在同一进程内；原型能力经 `app/services/companion_chat_service.py` 与 `app/core/agentic_kernel/companion/` 收敛到产品路径。
 - 面向调用方的错误字符串保持英文。
 
+## 1.1 概念架构（WebSocket 与 Agentic Kernel）
+
+Mermaid 架构图与面向 App 的说明见 **[`docs/imate/ARCH.md`](imate/ARCH.md)**。Dual-LLM 异步双路、落库与连接级队列行为见 `app/api/ENDPOINTS.md` 与 `app/api/v1/endpoints/chat.py`。
+
 ## 2. 阶段 0 - 契约与范围
 
 - 服务端 `ChatWebSocketRequest`（`app/schemas/chat.py`）与 Android `ChatWebSocketReq` / `SendMsgReq` / `SendMsgResponse`（`android_app/core/data/.../ChatBeans.kt`）对齐；新增字段在客户端未使用前应为可选（客户端可忽略未知 JSON 键）。
@@ -89,5 +93,6 @@ app:
 
 ### 变更记录
 
+- **2026-04-28**：新增 §1.1，概念架构图迁至 [`docs/imate/ARCH.md`](imate/ARCH.md)。
 - **2026-04-12**：backlog 项「多模态用户轮（WS companion）」完成；测试见 `tests/app/api/v1/endpoints/test_chat.py`。
 - **2026-04-13**：本文档按 `chat.py`、`companion_chat_service.py`、`config.py` 当前实现重写为中文并补充 `client_context`、companion 配置项与 verify 差异。

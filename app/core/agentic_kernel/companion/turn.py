@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -44,11 +46,17 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompts import build_system_messages
+from .prompts import build_system_messages, build_system_prompt
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_content,
 )
+from .tool_background import (
+    ToolOutputEvent,
+    push_output_event,
+    start_tool_background_job,
+)
+from .turn_routes import BackgroundToolEventSink, TurnRouteMode, resolve_turn_route_mode
 from .companion_tool_runtime import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
@@ -73,6 +81,15 @@ from .workspace import WorkspacePaths
 _MAX_TOOL_ROUNDS = 24
 
 
+def _replace_leading_system_messages(
+    messages: list[dict[str, Any]], system_content: str
+) -> list[dict[str, Any]]:
+    i = 0
+    while i < len(messages) and messages[i].get("role") == "system":
+        i += 1
+    return [{"role": "system", "content": system_content}, *messages[i:]]
+
+
 def _preview(s: str, max_len: int = 280) -> str:
     one = s.replace("\n", " ").strip()
     if len(one) <= max_len:
@@ -94,6 +111,8 @@ async def run_turn(
     transcript_llm_window_max_messages: int | None = None,
     repository_only_workspace_text: bool = False,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
@@ -159,8 +178,17 @@ async def run_turn(
             else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
         )
     )
+    route_mode = resolve_turn_route_mode(
+        heartbeat_turn=heartbeat_turn,
+        inner_tick_turn=inner_tick_turn,
+        tools_enabled=bool(tools_for_turn),
+        enable_async_tool_background=llm_client.config.enable_async_tool_background,
+    )
     use_dual_structured_chat = (
-        (not heartbeat_turn) and (not inner_tick_turn) and not tools_for_turn
+        (not heartbeat_turn)
+        and (not inner_tick_turn)
+        and (not tools_for_turn)
+        and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
 
     system_messages = build_system_messages(
@@ -201,7 +229,7 @@ async def run_turn(
         messages = list(system_messages)
         for m in transcript:
             messages.append({"role": m.role, "content": m.content})
-    user_msg_uuid = str(uuid.uuid4())
+    user_msg_uuid = preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
     messages.append({"role": "user", "content": user_text})
 
     ts_user = utc_iso_ts()
@@ -211,6 +239,7 @@ async def run_turn(
     tools = tools_for_turn
     last_text = ""
     significance_meta: dict[str, Any] | None = None
+    used_async_tool_background = False
     t_loop = time.perf_counter()
 
     inspect_token = runtime_inspect_begin_turn()
@@ -228,101 +257,208 @@ async def run_turn(
             )
         )
 
-        for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
-            t_api = time.perf_counter()
-            resolved_model = llm_client._resolve_model("tool" if tools else "chat")
-            logger.debug(
-                "run_turn llm_request round={} model={} tools_enabled={}",
-                round_idx,
-                resolved_model,
-                bool(tools),
+        if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
+            used_async_tool_background = True
+            tool_system_text = build_system_prompt(
+                bundle,
+                context,
+                enable_tools=True,
+                enable_user_profile_tool=False,
+                heartbeat_turn=False,
+                inner_tick_turn=False,
+                include_repl_image_generation_contract=True,
+                tool_side_compact=True,
+                interactive_bootstrap_active=interactive_bootstrap,
+                include_significance_perception_slice=False,
             )
+            chat_system_text = build_system_prompt(
+                bundle,
+                context,
+                enable_tools=True,
+                enable_user_profile_tool=False,
+                heartbeat_turn=False,
+                inner_tick_turn=False,
+                include_repl_image_generation_contract=False,
+                tool_side_compact=False,
+                interactive_bootstrap_active=interactive_bootstrap,
+                include_significance_perception_slice=True,
+            )
+            chat_msgs = _replace_leading_system_messages(messages, chat_system_text)
+            tool_msgs = _replace_leading_system_messages(messages, tool_system_text)
+            chat_model = llm_client._resolve_model("chat")
+            tool_model = llm_client._resolve_model("tool")
+
+            def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
+                if background_output_sink is not None:
+                    background_output_sink(ev)
+                else:
+                    push_output_event(ev)
+
+            start_tool_background_job(
+                ws_root=root,
+                request_messages=deepcopy(tool_msgs),
+                tool_model_name=tool_model,
+                user_msg_uuid=user_msg_uuid,
+                trace_id=trace_id,
+                tools=tools_for_turn,
+                on_event=_kernel_bg_on_event,
+                execute_tool_call_fn=repl_execute_tool_call,
+                client=llm_client.sync_client_for_route("tool"),
+                write_allowlist=WRITABLE_RELATIVE_PATHS,
+                repository_only_workspace_text=repository_only_workspace_text,
+            )
+
             runtime_inspect_set_last_chat_completion_request(
                 build_last_chat_completion_request_payload(
-                    model=resolved_model,
-                    messages=messages,
-                    tools=tools or None,
+                    model=chat_model,
+                    messages=chat_msgs,
+                    tools=None,
                 )
             )
-            llm_scene = (
-                LLM_SCENE_INNER_TICK
-                if inner_tick_turn
-                else (LLM_SCENE_TOOL_CALL if tools else LLM_SCENE_CHAT)
-            )
-            resp = llm_client.chat_completion(
-                messages=messages,
-                model=resolved_model,
-                tools=tools or None,
-                response_format=(
-                    DUAL_LLM_CHAT_RESPONSE_FORMAT if use_dual_structured_chat else None
-                ),
-                scene=llm_scene,
-            )
-            approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in messages)
+            t_api = time.perf_counter()
+            try:
+
+                def _chat_sync() -> Any:
+                    return llm_client.chat_completion(
+                        messages=chat_msgs,
+                        model=chat_model,
+                        tools=None,
+                        response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
+                        scene=LLM_SCENE_CHAT,
+                    )
+
+                resp = await asyncio.wait_for(
+                    asyncio.to_thread(_chat_sync),
+                    timeout=llm_client.config.async_chat_front_timeout_sec,
+                )
+            except asyncio.TimeoutError as exc:
+                raise RuntimeError(
+                    f"async chat front timed out after "
+                    f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
+                    f"(trace_id={trace_id})"
+                ) from exc
+
+            approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in chat_msgs)
             logger.info(
-                "run_turn llm_round={} model={} chat_completions_ms={:.0f} approx_ctx_chars={} tools={} heartbeat={}",
-                round_idx,
-                resolved_model,
+                "run_turn llm_round={} model={} chat_completions_ms={:.0f} approx_ctx_chars={} "
+                "async_chat_tool_background foreground_chat scene={}",
+                1,
+                chat_model,
                 (time.perf_counter() - t_api) * 1000.0,
                 approx_ctx_chars,
-                len(tools or []),
-                heartbeat_turn,
+                LLM_SCENE_CHAT,
             )
-
             msg = resp.choices[0].message
-            tool_calls = getattr(msg, "tool_calls", None) or []
-            messages.append(openai_assistant_message_dict(msg))
-
-            if not tool_calls:
-                raw_content = msg.content or ""
-                if use_dual_structured_chat:
-                    last_text, significance_meta = split_dual_llm_chat_branch_content(
-                        raw_content
-                    )
-                else:
-                    last_text = raw_content.strip()
-                break
-
-            # 执行 tools
-            for tc in tool_calls:
-                fn = tc.function
-                name = fn.name
-                args = fn.arguments if fn.arguments is not None else ""
-                logger.info(
-                    "run_turn tool_call round={} name={} trace_id={}",
-                    round_idx,
-                    name,
-                    trace_id,
-                )
-                result = await repl_execute_tool_call(
-                    root,
-                    name,
-                    args,
-                    write_allowlist=WRITABLE_RELATIVE_PATHS,
-                    repository_only_workspace_text=repository_only_workspace_text,
-                )
-                logger.info(
-                    "run_turn tool_done round={} name={} result_chars={} ok={}",
-                    round_idx,
-                    name,
-                    len(result),
-                    not result.startswith("ERROR:"),
-                )
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": result,
-                    }
-                )
+            raw_content = msg.content or ""
+            last_text, significance_meta = split_dual_llm_chat_branch_content(
+                raw_content
+            )
+            logger.info(
+                "run_turn loop_done rounds={} loop_total_ms={:.0f} route={}",
+                1,
+                (time.perf_counter() - t_loop) * 1000.0,
+                route_mode.value,
+            )
         else:
-            raise RuntimeError(f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}")
+            for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
+                t_api = time.perf_counter()
+                resolved_model = llm_client._resolve_model("tool" if tools else "chat")
+                logger.debug(
+                    "run_turn llm_request round={} model={} tools_enabled={}",
+                    round_idx,
+                    resolved_model,
+                    bool(tools),
+                )
+                runtime_inspect_set_last_chat_completion_request(
+                    build_last_chat_completion_request_payload(
+                        model=resolved_model,
+                        messages=messages,
+                        tools=tools or None,
+                    )
+                )
+                llm_scene = (
+                    LLM_SCENE_INNER_TICK
+                    if inner_tick_turn
+                    else (LLM_SCENE_TOOL_CALL if tools else LLM_SCENE_CHAT)
+                )
+                resp = llm_client.chat_completion(
+                    messages=messages,
+                    model=resolved_model,
+                    tools=tools or None,
+                    response_format=(
+                        DUAL_LLM_CHAT_RESPONSE_FORMAT
+                        if use_dual_structured_chat
+                        else None
+                    ),
+                    scene=llm_scene,
+                )
+                approx_ctx_chars = sum(
+                    len(str(m.get("content") or "")) for m in messages
+                )
+                logger.info(
+                    "run_turn llm_round={} model={} chat_completions_ms={:.0f} "
+                    "approx_ctx_chars={} tools={} heartbeat={}",
+                    round_idx,
+                    resolved_model,
+                    (time.perf_counter() - t_api) * 1000.0,
+                    approx_ctx_chars,
+                    len(tools or []),
+                    heartbeat_turn,
+                )
 
-        logger.info(
-            "run_turn loop_done rounds={} loop_total_ms={:.0f}",
-            round_idx,
-            (time.perf_counter() - t_loop) * 1000.0,
-        )
+                msg = resp.choices[0].message
+                tool_calls = getattr(msg, "tool_calls", None) or []
+                messages.append(openai_assistant_message_dict(msg))
+
+                if not tool_calls:
+                    raw_content = msg.content or ""
+                    if use_dual_structured_chat:
+                        last_text, significance_meta = (
+                            split_dual_llm_chat_branch_content(raw_content)
+                        )
+                    else:
+                        last_text = raw_content.strip()
+                    break
+
+                for tc in tool_calls:
+                    fn = tc.function
+                    name = fn.name
+                    args = fn.arguments if fn.arguments is not None else ""
+                    logger.info(
+                        "run_turn tool_call round={} name={} trace_id={}",
+                        round_idx,
+                        name,
+                        trace_id,
+                    )
+                    result = await repl_execute_tool_call(
+                        root,
+                        name,
+                        args,
+                        write_allowlist=WRITABLE_RELATIVE_PATHS,
+                        repository_only_workspace_text=repository_only_workspace_text,
+                    )
+                    logger.info(
+                        "run_turn tool_done round={} name={} result_chars={} ok={}",
+                        round_idx,
+                        name,
+                        len(result),
+                        not result.startswith("ERROR:"),
+                    )
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": result,
+                        }
+                    )
+            else:
+                raise RuntimeError(f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}")
+
+            logger.info(
+                "run_turn loop_done rounds={} loop_total_ms={:.0f}",
+                round_idx,
+                (time.perf_counter() - t_loop) * 1000.0,
+            )
     finally:
         runtime_inspect_end_turn(inspect_token)
 
@@ -393,4 +529,7 @@ async def run_turn(
     return CompanionTurnResult(
         assistant_text=last_text,
         significance_perception=significance_meta,
+        user_msg_uuid=user_msg_uuid,
+        trace_id=trace_id,
+        used_async_tool_background=used_async_tool_background,
     )

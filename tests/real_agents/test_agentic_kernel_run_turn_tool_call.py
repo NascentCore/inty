@@ -45,6 +45,7 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
+        scene: str | None = None,
     ) -> Any:
         self.chat_rounds += 1
         resp = super().chat_completion(
@@ -53,6 +54,7 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
             tools=tools,
             tool_choice=tool_choice,
             response_format=response_format,
+            scene=scene,
         )
         msg = resp.choices[0].message
         tcs = getattr(msg, "tool_calls", None) or []

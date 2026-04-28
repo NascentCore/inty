@@ -35,6 +35,9 @@ class CompanionTurnResult(BaseModel):
 
     assistant_text: str = ""
     significance_perception: dict[str, Any] | None = None
+    user_msg_uuid: str = ""
+    trace_id: str = ""
+    used_async_tool_background: bool = False
 
 
 class ChatMessage(BaseModel):
