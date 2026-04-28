@@ -18,6 +18,9 @@ def _build_service_with_language_config() -> LiveChatService:
         send_sample_rate=16000,
         speech_language_code="en-US",
         response_language_name="English",
+        session_resumption=False,
+        trigger_tokens=10000,
+        target_tokens=512,
     )
     return service
 
@@ -34,9 +37,9 @@ def test_build_system_instruction_includes_english_only_policy():
         history_messages=[],
     )
 
-    assert "Language policy" in instruction
-    assert "ONLY in English" in instruction
-    assert "Never switch to any other language" in instruction
+    assert "CRITICAL LANGUAGE RULE" in instruction
+    assert "YOU MUST SPEAK ONLY IN English" in instruction
+    assert "DO NOT code-switch or mix languages" in instruction
 
 
 def test_build_system_instruction_merged_response_language_override():
@@ -48,8 +51,8 @@ def test_build_system_instruction_merged_response_language_override():
         merged_response_language_name="Arabic",
     )
 
-    assert "ONLY in Arabic" in instruction
-    assert "ONLY in English" not in instruction
+    assert "YOU MUST SPEAK ONLY IN Arabic" in instruction
+    assert "YOU MUST SPEAK ONLY IN English" not in instruction
 
 
 def test_resolved_response_language_falls_back_to_speech_code():
@@ -161,8 +164,8 @@ def test_build_system_instruction_from_text_chat_system_messages():
     assert "System A" in instruction
     assert "System B" in instruction
     assert "这是实时语音对话" in instruction
-    assert "Language policy" in instruction
-    assert "ONLY in English" in instruction
+    assert "CRITICAL LANGUAGE RULE" in instruction
+    assert "YOU MUST SPEAK ONLY IN English" in instruction
 
 
 def test_build_prefill_turns_from_history_messages():
@@ -203,6 +206,9 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         response_language_name="English",
         enabled=True,
         audio_temp_dir="",
+        session_resumption=False,
+        trigger_tokens=10000,
+        target_tokens=512,
     )
 
     async def fake_get_agent_for_chat(db, agent_id):
@@ -296,6 +302,7 @@ async def test_start_live_session_prefills_text_chat_context(monkeypatch):
         agent_id="agent-1",
         user_id="user-1",
         chat_id="chat-1",
+        config=LiveChatConfig(enable_prefill=True),
     )
 
     status_events = []
