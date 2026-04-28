@@ -8,16 +8,16 @@ vi.mock("react-plotly.js", () => ({
 
 describe("VoiceAudiosGroupCard", () => {
   it("renders a permanent link for each recording file", async () => {
-    const audioUrl = "https://storage.googleapis.com/inty-static/live_chat/u1/a1.wav";
+    const audioUrl =
+      "https://storage.googleapis.com/inty-static/live_chat/u1/a1.wav";
     vi.stubGlobal("window", {
       location: {
         origin: "http://localhost:3000",
         pathname: "/evaluation/",
       },
     });
-    const { VoiceAudiosGroupCard } = await import(
-      "../pages/UserAnalyticsReportsPage"
-    );
+    const { VoiceAudiosGroupCard } =
+      await import("../pages/UserAnalyticsReportsPage");
 
     const html = renderToStaticMarkup(
       <VoiceAudiosGroupCard

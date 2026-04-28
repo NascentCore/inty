@@ -12,9 +12,7 @@ from .workspace import get_imate_axiom_system_text
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 
 # 与 workspace_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
-_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = (
-    "路径工具（workspace_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
-)
+_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = "路径工具（workspace_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
 
 
 def _system_message(content: str) -> dict[str, Any]:
