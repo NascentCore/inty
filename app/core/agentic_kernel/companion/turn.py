@@ -26,6 +26,7 @@ from .memory_pipeline import (
 from .memory_store import MemoryStore
 from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
+    INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     CompanionTurnResult,
@@ -110,8 +111,12 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
+    if heartbeat_turn and inner_tick_turn:
+        raise ValueError("heartbeat_turn and inner_tick_turn cannot both be true")
     if heartbeat_turn:
         user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
+    elif inner_tick_turn:
+        user_text = INNER_TICK_SYNTHETIC_USER_TEXT
 
     logger.info(
         "run_turn start path={} user_chars={} heartbeat_turn={} inner_tick_turn={} defer_memory={}",
@@ -171,7 +176,7 @@ async def run_turn(
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
     compaction_turn_idx = prior_user_turns + 1
 
-    if transcript_compaction is not None and not heartbeat_turn:
+    if transcript_compaction is not None and not heartbeat_turn and not inner_tick_turn:
         rel_compact = paths.context_compaction_state_json.relative_to(root).as_posix()
         prior_state = load_compaction_state_from_store(store, rel_compact)
         compactor = ConversationCompactor(
@@ -331,6 +336,8 @@ async def run_turn(
     }
     if heartbeat_turn:
         user_row["heartbeat"] = True
+    if inner_tick_turn:
+        user_row["inner_tick"] = True
     user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
     assistant_row: dict[str, Any] = {
@@ -339,7 +346,7 @@ async def run_turn(
         "ts": utc_iso_ts(),
         "uuid": assistant_msg_uuid,
         "reply_to": user_msg_uuid,
-        "source": "chat",
+        "source": "inner_tick" if inner_tick_turn else "chat",
         "trace_id": trace_id,
     }
     if significance_meta:

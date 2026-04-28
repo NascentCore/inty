@@ -101,23 +101,6 @@ python -m pytest -m "not noci" -v -s tests/
 
 完成后**按需**结束后台的 `start.sh`/`uvicorn` 进程，避免与后续或日常开发占口冲突。
 
-## 6) Push worker 启动冒烟（`Start push worker and verify startup`）
-
-```bash
-cp devops/config.yaml.test config.yaml
-./backend/push_worker/start.sh 2>&1 | tee push_worker.log &
-
-for i in {1..30}; do
-  if grep -q -E "推送服务初始化完成|推送服务启动成功|推送服务未启用" push_worker.log 2>/dev/null; then
-    echo "Push worker is ready!"
-    break
-  fi
-  echo "Attempt $i: waiting..."
-  sleep 2
-done
-grep -q -E "推送服务初始化完成|推送服务启动成功|推送服务未启用" push_worker.log
-```
-
 ## 与真实 CI 的差异（心里有数即可）
 
 - **Runner**：你本机的 OS/文件句柄/负载与 `ubuntu-latest` 可能不同；**偶发**的时序/端口问题在 CI 上可能不出现或相反。

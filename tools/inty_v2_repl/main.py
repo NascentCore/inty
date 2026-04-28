@@ -123,7 +123,7 @@ def _print_send_turn_exception(
         )
         return
     log_key = "backend ws turn failed (eof wait)" if eof_wait else "backend ws turn failed"
-    logger.exception(log_key)
+    logger.opt(exception=exc).error(log_key)
     print(f"[{repl_wall_ts_str()}] error: {exc}")
 
 
