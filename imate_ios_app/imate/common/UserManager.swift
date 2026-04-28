@@ -12,6 +12,8 @@ class UserManager: ObservableObject {
     static let shared = UserManager()
     private init() {}
     
+    @Published var token: String = ""
+    
     @Published var email: String = ""
     @Published var isLoggedIn: Bool = false
     

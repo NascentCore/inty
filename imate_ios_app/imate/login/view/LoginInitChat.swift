@@ -19,12 +19,14 @@ struct InitChatColors {
 }
 
 struct LoginInitChat: View {
-    @State private var messages: [String] = ["Hello! I'm your AI companion.", "What's your name?"]
+    @State private var messages: [String] = ["Hello! I'm your AI companion.", "What's your name?", "fwefwe2"]
     @State private var inputText: String = ""
-    @State private var progress: Double = 0.2
+    @State private var progress: Double = 0.5
     
     var body: some View {
         VStack(spacing: 0) {
+            LoginWidgets.HeaderBg()
+            
             // 1. 顶部
             LoginInitChatWidgets.InitChatHeader(
                 progress: progress,
@@ -81,3 +83,8 @@ struct LoginInitChat: View {
         progress += 0.2 // 模拟进度增加
     }
 }
+
+#Preview {
+    LoginInitChat()
+}
+
