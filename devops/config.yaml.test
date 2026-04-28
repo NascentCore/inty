@@ -30,7 +30,7 @@ agent:
   # 测试用 API key，每周上限 $1，inty-testing API key，intellimate-dev project
   api_key: "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"
   # inty-testing API key
-  langchain_api_key: "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"
+  langchain_api_key: "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"
   # 测试环境使用 Gemini 模型，避免调用真实 FAL API（需要 FAL_KEY）
   free_user_text_to_image_model: "imagen-3.0-generate-002"
   sub_user_text_to_image_model: "imagen-3.0-generate-002"
