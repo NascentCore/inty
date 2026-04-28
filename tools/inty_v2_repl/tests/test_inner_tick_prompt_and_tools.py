@@ -30,12 +30,13 @@ class TestInnerTickPromptAndTools(unittest.TestCase):
             inner_names,
             {
                 "user_profile_record",
+                "tool_update_agent_status_line",
                 "workspace_list_dir",
                 "workspace_read_file",
                 "workspace_write_file",
             },
         )
-        self.assertEqual(len(inner), 4)
+        self.assertEqual(len(inner), 5)
         full_names = {t["function"]["name"] for t in full}
         self.assertTrue(inner_names.issubset(full_names))
         banned = (

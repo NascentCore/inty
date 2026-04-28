@@ -58,6 +58,7 @@ class _FakeAsyncDualLLMClient:
 async def test_async_dual_calls_foreground_chat_without_tools_and_starts_background(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    loop = asyncio.get_running_loop()
     root = tmp_path
     store = get_memory_store(root)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
@@ -93,3 +94,4 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert client.chat_calls[0].get("tools") is None
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["tool_model_name"] == "m/tool"
+    assert bg_jobs[0]["main_event_loop"] is loop

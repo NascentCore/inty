@@ -11,6 +11,11 @@ from .workspace import get_imate_axiom_system_text
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 
+# 与 workspace_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
+_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = (
+    "路径工具（workspace_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
+)
+
 
 def _system_message(content: str) -> dict[str, Any]:
     return {"role": "system", "content": content}
@@ -50,11 +55,12 @@ def _output_contract_text() -> str:
 def _output_contract_text_inner_tick() -> str:
     return (
         "## 内在节拍输出与工具契约\n\n"
-        "本回合 API 侧**可以**携带工具列表（仅工作区与 USER 档案维护类）。"
+        "本回合 API 侧**可以**携带工具列表（仅持久化约定文档路径工具与 USER 档案维护类；"
+        "路径指向 MemoryStore，非用户设备上的文件夹）。"
         "面向用户的最终自然语言正文可以为空。\n"
         "若需推进场景或软转场，外显正文仍以**一句为主**；与工具调用并用时，先完成必要工具再收束外显。\n"
         "若调用了工具，在得到工具结果后应用自然语言收束本轮（仍可保持对用户正文为空）。\n"
-        "不要在没有调用工具的情况下声称已读写文件或已更新记忆。\n"
+        "不要在没有调用工具的情况下声称已读写持久化文档或已更新记忆。\n"
         "遵守 SOUL / USER 边界与安全底线；内在节拍不是绕过边界的理由。"
     )
 
@@ -86,7 +92,7 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
         "输出通道：仅自然语言文本快速回复。你会看到与并行工具路相同的工具定义，"
         "这些工具仅用于让你感知另一路会处理哪些任务；本路禁止调用任何工具。"
-        "当用户请求生图、改图、联网检索、文件核对等工具型任务时，不要拒绝，"
+        "当用户请求生图、改图、联网检索、持久化文档核对等工具型任务时，不要拒绝，"
         "不要宣称已完成或编造结果；请用一句简短自然的话承接并说明正在处理，"
         "等待并行工具路产出结果后补充。保持简洁有温度，避免机械列表堆砌。"
     )
@@ -94,12 +100,12 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
 
 def _repl_tool_contract_image_generation_clause() -> str:
     return (
-        "（6）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
+        "（7）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
         "再根据工具返回作答；张数由对话判定写入工具参数（默认 1）。"
         "当用户要**修改、重画、换风格、在已有图基础上改**时，须调用 modify_image（Fal z-image-turbo **图生图**），"
-        "并传入工作区内源图路径（如 generated_images/...）或公网 source_image_url；**不要**用 generate_image 做改图。"
+        "并传入持久化档案中的相对路径（如 generated_images/...）或公网 source_image_url；**不要**用 generate_image 做改图。"
         "生图若含**生肖像、年节/主题化肖像、风格化头像**等仍须呈现助手**约定外观**时：须以 **IDENTITY.md 中外貌相关小节**"
-        "（常见标题如「外貌与形象」）为**外形蓝本**，在工具 `prompt` 中显式写入该小节已落盘的**可核对特征**；"
+        "（常见标题如「外貌与形象」）为**外形蓝本**，在工具 `prompt` 中显式写入该小节已写入持久化档案的**可核对特征**；"
         "**禁止**擅自改写、弱化或替换已约定的**发型发色、眼型瞳色、五官标志性细节、肤色与体态锚点**等核心特征；"
         "生肖/主题/节日元素仅作**服饰、道具、场景、氛围或装饰性**叠加，不得与上述蓝本冲突。"
         "改图（modify_image）时若涉及主题化或换风格，同样须保持与 IDENTITY 外貌小节一致的关键特征，不得仅用提示词「换脸」或推翻既有约定。"
@@ -109,9 +115,9 @@ def _repl_tool_contract_image_generation_clause() -> str:
 
 def _repl_tool_contract_suffix_after_image_clause() -> str:
     return (
-        "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/本地路径；"
+        "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/档案中不存在的路径；"
         "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
-        "无落盘需求、无磁盘事实核验、无自察必要、无生图请求时，不要调用工具。"
+        "无写入持久化档案需求、无需核对 MemoryStore 中持久化内容、无自察必要、无生图请求时，不要调用工具。"
         "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
     )
 
@@ -122,25 +128,27 @@ def _output_contract_text_with_tools(
 ) -> str:
     base = (
         "输出与工具："
-        "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
+        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
+        + "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
         "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
-        "task_text 写提醒内容；禁止只口头答应而不落盘。"
+        "task_text 写提醒内容；禁止只口头答应而不写入定时队列。"
         "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
         "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
-        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 中已落盘的边界与约束一致，避免自相矛盾；"
+        "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 约定文档中已持久化的边界与约束一致，避免自相矛盾；"
         "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
-        "REPL 仅允许覆盖工作区根目录下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
-        "（3）为核对工作区约定、记忆规则或控制面设置，可使用 workspace_list_dir / workspace_read_file "
-        "查看工作区内文档与子目录（如约定稿、context、memory 等）；仅在确有信息缺口时再读，避免重复读取"
-        "本回合 system 中已完整给出且未变更的同一文件。"
-        "送入模型的仅为近期对话窗口；若必须核对磁盘上的完整 transcript.jsonl，应用工具参数限制返回长度。"
-        "（4）凡用户问题涉及**可与磁盘核对**的事实（例如某文件行数、是否包含某段原文、磁盘版本是否与当前认知一致），"
-        "必须先调用 workspace_read_file 或 workspace_list_dir 取得依据后再作答；**禁止**仅凭对话记忆、"
-        "想象或「内部读取」叙事来报具体数字或断言文件内容。"
-        "在尚未完成上述工具调用前，不要声称已检查文件或已同步磁盘。"
+        "REPL 仅允许覆盖会话档案根路径（路径工具所指根）下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
+        "（3）核对持久化约定、记忆规则或控制面设置时，优先使用 workspace_read_file；"
+        "**不要**为日常闲聊或无核验目的调用 workspace_list_dir 列举根目录；"
+        "仅在即将 read/write 某路径且不确定同层有哪些名称、用户明确询问某路径或目录是否存在、或须核对本回合 system 未给出的全文（含 transcript.jsonl）时"
+        "再调用 workspace_list_dir；避免重复读取本回合 system 中已完整给出且未变更的同一文档。"
+        "送入模型的仅为近期对话窗口；若必须核对持久化档案中的完整 transcript.jsonl，应用工具参数限制返回长度。"
+        "（4）凡用户问题涉及**可与持久化档案核对**的事实（例如某文档行数、是否包含某段原文、持久化版本是否与当前认知一致），"
+        "必须先调用 workspace_read_file，或在确有列举必要时 workspace_list_dir，取得依据后再作答；**禁止**仅凭对话记忆、"
+        "想象或「内部读取」叙事来报具体数字或断言文档内容。"
+        "在尚未完成上述工具调用前，不要声称已检查持久化内容或已与档案同步。"
         "（5）当用户需要**实时或可核验的公开信息**（新闻、股价、赛事、政策法规、可引用的公开资料等），"
-        "且工作区文档与当前对话无法提供依据时，须先调用 google_web_search 再作答；"
+        "且持久化约定文档与当前对话无法提供依据时，须先调用 google_web_search 再作答；"
         "未读到工具返回前不得编造检索结果、链接或摘要。"
         "（6）当用户询问**当前所用模型、调用参数、上下文窗口、真实注入的 system/对话栈**或与实现细节相关、"
         "且需要可核验的事实时，必须先调用 companion_runtime_inspect 读取 JSON 快照，再依据其中字段用自然语言作答；"
@@ -158,7 +166,8 @@ def _output_contract_text_interactive_bootstrap_tools(
 ) -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
-        "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 等落到可用初稿）；"
+        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
+        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 等落到可用初稿）；"
         "须用 **companion_update_prompt_slice** 写入各约定切片；**禁止**使用 workspace_write_file 写入上述根目录约定稿。"
         "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
         "IDENTITY / USER / MEMORY 等切片在后续日常轮次仍可用 companion_update_prompt_slice 或 workspace_write_file 按需更新。"
@@ -166,9 +175,10 @@ def _output_contract_text_interactive_bootstrap_tools(
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
         "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
         "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
-        "（2）核对工作区时可用 workspace_list_dir / workspace_read_file；勿编造文件内容。"
-        "（3）凡涉及可与工作区核对的事实，须先读文件再作答。"
-        "（4）需要公开可核验信息且工作区无依据时，须先调用 google_web_search。"
+        "（2）确有核对持久化约定稿需求时可用 workspace_list_dir / workspace_read_file；勿编造内容。"
+        "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
+        "（3）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
+        "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
         "（5）模型与实现细节类问题须先调用 companion_runtime_inspect。"
     )
     if include_repl_image_generation_contract:
@@ -222,15 +232,15 @@ def _inner_tick_turn_section() -> str:
         "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
         "**工具（允许且鼓励在需要时使用）**：\n"
         "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`user_profile_record`）、"
-        "在确有必要时读写工作区约定稿与 `memory/` 下文档（`workspace_read_file` / `workspace_write_file` 等，"
-        "以 TOOLS.md 与工作区规则为准）。\n"
-        "- 为**缓解上下文压力**：若判断对话窗口与磁盘记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
-        "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前工作区工具能力为界；"
+        "在确有必要时读写持久化约定稿与 `memory/` 下文档（`workspace_read_file` / `workspace_write_file` 等，"
+        "以 TOOLS.md 与路径工具规则为准；路径指向 MemoryStore）。\n"
+        "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
+        "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
         "**不要**假设存在未在工具列表中出现的 API）。\n"
         "- **不要做**与「内在整理」无关的炫技：除非与已悬而未决且对话中已明确需要的任务强相关，"
         "否则本节拍**不要**生图、不要联网检索、不要安排与用户无关的定时提醒。\n\n"
         "**与 ai_private**：内在侧写由进程维护的 `ai_private` 注入下一轮；"
-        "本节拍仅用允许的工具维护工作区与 USER 档案一致，勿编造不存在的工具名。"
+        "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
     )
 
 
@@ -238,7 +248,7 @@ def _tool_side_compact_directive() -> str:
     return (
         "## 工具侧（后台）\n\n"
         "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
-        "（联网检索、生图/改图、档案、工作区读写等）。若需要，必须先调用工具并依据返回作答；"
+        "（联网检索、生图/改图、档案、持久化约定文档路径工具等）。若需要，必须先调用工具并依据返回作答；"
         "不要仅用角色扮演替代未执行的工具。"
         "若用户问当前模型名、调用参数或真实请求内容，须先调用 companion_runtime_inspect 再作答。"
     )
@@ -276,7 +286,7 @@ def build_system_messages(
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
         out.append(
-            _system_message("## TOOLS（本地工具配置）\n\n" + bundle.tools_md.strip())
+            _system_message("## TOOLS（工具说明切片）\n\n" + bundle.tools_md.strip())
         )
     if bundle.heartbeat_md.strip():
         out.append(

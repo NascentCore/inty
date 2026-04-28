@@ -394,6 +394,7 @@ async def _run_turn_fast_chat_then_tool_background(
         execute_tool_call_fn=execute_tool_call,
         client=tool_client,
         trace_hooks=trace_hooks,
+        main_event_loop=asyncio.get_running_loop(),
     )
     tool_bg_started_cell[0] = True
     timeout_s = _async_chat_front_timeout_sec()
