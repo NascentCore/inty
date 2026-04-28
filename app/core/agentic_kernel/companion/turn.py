@@ -175,7 +175,9 @@ async def run_turn(
         else (
             build_openai_repl_tools_inner_tick()
             if inner_tick_turn
-            else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+            else build_companion_tools(
+                interactive_bootstrap_active=interactive_bootstrap
+            )
         )
     )
     route_mode = resolve_turn_route_mode(

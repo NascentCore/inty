@@ -76,9 +76,7 @@ def _companion_manager_for_resolved_model(
     feats = cfg.app.features
     base = COMPANION_API_WORKSPACE_ROOT_PREFIX.expanduser()
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
-    timeout_raw = os.getenv(
-        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
-    ).strip()
+    timeout_raw = os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600").strip()
     try:
         async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
     except ValueError:

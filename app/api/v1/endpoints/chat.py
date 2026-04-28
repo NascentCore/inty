@@ -720,18 +720,16 @@ async def _agent_chat_completions_impl(
                             "effective_local_id": effective_local_id,
                         }
                     try:
-                        companion_turn = (
-                            await companion_chat_service.run_companion_chat_turn_for_api(
-                                user_id=current_user.id,
-                                agent_id=agent_id,
-                                chat_id=chat.id,
-                                user_text=last_user_text,
-                                resolved_chat_model_id=model_override,
-                                defer_memory_update=True,
-                                session_id=session_id,
-                                background_output_sink=companion_background_sink,
-                                preset_user_msg_uuid=companion_preset_uid,
-                            )
+                        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                            user_text=last_user_text,
+                            resolved_chat_model_id=model_override,
+                            defer_memory_update=True,
+                            session_id=session_id,
+                            background_output_sink=companion_background_sink,
+                            preset_user_msg_uuid=companion_preset_uid,
                         )
                         if (
                             companion_preset_uid is not None
@@ -756,14 +754,18 @@ async def _agent_chat_completions_impl(
                     if isinstance(sp, dict) and sp:
                         companion_ai_meta = {"significance_perception": sp}
                     if effective_local_id:
-                        companion_user_row_id = await chat_history_service.add_user_message_async(
-                            session_id,
-                            last_user_message,
-                            meta_data={"localId": effective_local_id},
+                        companion_user_row_id = (
+                            await chat_history_service.add_user_message_async(
+                                session_id,
+                                last_user_message,
+                                meta_data={"localId": effective_local_id},
+                            )
                         )
                     else:
-                        companion_user_row_id = await chat_history_service.add_user_message_async(
-                            session_id, last_user_message
+                        companion_user_row_id = (
+                            await chat_history_service.add_user_message_async(
+                                session_id, last_user_message
+                            )
                         )
                     if (
                         companion_preset_uid is not None
