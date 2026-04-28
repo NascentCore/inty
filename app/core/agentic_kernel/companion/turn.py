@@ -306,6 +306,7 @@ async def run_turn(
                 client=llm_client.sync_client_for_route("tool"),
                 write_allowlist=WRITABLE_RELATIVE_PATHS,
                 repository_only_workspace_text=repository_only_workspace_text,
+                main_event_loop=asyncio.get_running_loop(),
             )
 
             runtime_inspect_set_last_chat_completion_request(

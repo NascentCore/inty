@@ -16,6 +16,11 @@ from typing import Any, Callable, Protocol
 from loguru import logger
 from openai import APIError, BadRequestError
 
+from app.services.agent_status_line import (
+    clear_tool_background_db_loop,
+    set_tool_background_db_loop,
+)
+
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
@@ -639,6 +644,7 @@ def start_tool_background_job(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
+    main_event_loop: asyncio.AbstractEventLoop | None = None,
 ) -> None:
     def _effective_on_event(ev: ToolOutputEvent) -> None:
         if on_event is not None:
@@ -648,24 +654,29 @@ def start_tool_background_job(
 
     def _runner() -> None:
         try:
-            asyncio.run(
-                _run_background_tool_loop(
-                    ws_root=ws_root,
-                    request_messages=request_messages,
-                    tool_model_name=tool_model_name,
-                    user_msg_uuid=user_msg_uuid,
-                    trace_id=trace_id,
-                    tools=tools,
-                    on_event=_effective_on_event,
-                    execute_tool_call_fn=execute_tool_call_fn,
-                    client=client,
-                    trace_hooks=trace_hooks,
-                    write_allowlist=write_allowlist,
-                    repository_only_workspace_text=repository_only_workspace_text,
+            if main_event_loop is not None:
+                set_tool_background_db_loop(main_event_loop)
+            try:
+                asyncio.run(
+                    _run_background_tool_loop(
+                        ws_root=ws_root,
+                        request_messages=request_messages,
+                        tool_model_name=tool_model_name,
+                        user_msg_uuid=user_msg_uuid,
+                        trace_id=trace_id,
+                        tools=tools,
+                        on_event=_effective_on_event,
+                        execute_tool_call_fn=execute_tool_call_fn,
+                        client=client,
+                        trace_hooks=trace_hooks,
+                        write_allowlist=write_allowlist,
+                        repository_only_workspace_text=repository_only_workspace_text,
+                    )
                 )
-            )
-        except BaseException:
-            logger.exception("repl.turn.bg job failed")
+            except BaseException:
+                logger.exception("repl.turn.bg job failed")
+            finally:
+                clear_tool_background_db_loop()
         finally:
             _unregister_thread(threading.current_thread())
 

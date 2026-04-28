@@ -16,7 +16,7 @@
 - 启用时：chat 与 tool 分流不同模型路由；tool 路可同步或异步（异步场景下前台 chat + 后台 tool 循环）。
 - Chat 路可携带与并行路相同的工具定义镜像，并约定 `tool_choice=none`，以便对齐上下文而不在 chat 路实际调用工具。
 
-**实现补充（与代码对齐）**：`CompanionLLMClient.chat_completion` 按「本轮请求是否带 tools」切换两套同步客户端并分别解析 `chat_model` / `tool_model`。上述「异步前台 chat + 后台 tool 循环」由 `companion/tool_background.py` 与 `tools/inty_v2_repl/orchestrator.py` 使用；**HTTP API 的 `run_companion_chat_turn_for_api` 当前未挂载** `start_tool_background_job`。提示词里关于「镜像工具 + chat 路禁调用」的分支主要在 **`prompts.build_system_messages`**（例如 `include_repl_image_generation_contract=False` 时的 chat 分支契约）；生产 WebSocket 默认路径见下文「回合」详细说明。
+**实现补充（与代码对齐）**：`CompanionLLMClient.chat_completion` 按「本轮请求是否带 tools」切换两套同步客户端并分别解析 `chat_model` / `tool_model`。上述「异步前台 chat + 后台 tool 循环」由 `companion/tool_background.py` 与 `tools/inty_v2_repl/orchestrator.py` 使用；**HTTP API 的 `run_companion_chat_turn_for_api` 当前未挂载** `start_tool_background_job`。后台线程 `asyncio.run` 不可与安全共享全局 `AsyncSessionLocal` 混用；`start_tool_background_job(..., main_event_loop=...)` 时，`tool_update_agent_status_line` 的 PG 写入由 `app/services/agent_status_line.persist_agent_status_line` 经 `run_coroutine_threadsafe` 投递回主事件循环。提示词里关于「镜像工具 + chat 路禁调用」的分支主要在 **`prompts.build_system_messages`**（例如 `include_repl_image_generation_contract=False` 时的 chat 分支契约）；生产 WebSocket 默认路径见下文「回合」详细说明。
 
 ## 重要性感知
 

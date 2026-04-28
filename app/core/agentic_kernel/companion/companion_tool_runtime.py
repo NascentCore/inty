@@ -447,7 +447,8 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 "description": (
                     "List immediate children of a directory under the workspace root. "
                     "Use empty relative_path for the workspace root. "
-                    "Directory names are shown with a trailing slash."
+                    "Directory names are shown with a trailing slash. "
+                    "Backing store is MemoryStore; listing is derived from stored paths, not a host filesystem scan."
                 ),
                 "parameters": {
                     "type": "object",
@@ -470,7 +471,8 @@ def build_openai_tools() -> list[dict[str, Any]]:
                 "description": (
                     "Read a UTF-8 text file under the workspace. "
                     "Optional max_chars returns only the beginning of the file (prefix), "
-                    f"up to {WORKSPACE_READ_FILE_MAX_CHARS_CAP}, to limit tool output size."
+                    f"up to {WORKSPACE_READ_FILE_MAX_CHARS_CAP}, to limit tool output size. "
+                    "Backing store is MemoryStore for persisted companion documents."
                 ),
                 "parameters": {
                     "type": "object",
@@ -731,8 +733,9 @@ def build_openai_repl_tools(
             wfn["description"] = (
                 "List immediate children under the workspace root. "
                 "Use empty relative_path for the workspace root. "
-                "Directory names end with /. You may explore subdirectories (e.g. memory/) "
-                "to understand layout and workspace conventions before reading files."
+                "Directory names end with /. Backing store is MemoryStore; listing is derived from stored paths, "
+                "not a host filesystem scan. Prefer workspace_read_file when the path is known; list mainly "
+                "when you need sibling names or layout before reading."
             )
             w["function"] = wfn
             out.append(w)
@@ -742,11 +745,12 @@ def build_openai_repl_tools(
             wfn["description"] = (
                 "Read a UTF-8 file under the workspace for self-orientation (workspace docs, "
                 "context.json, memory/*) or before editing allowed root markdown files. "
+                "Backing store is MemoryStore for persisted companion documents. "
                 "Optional max_chars (1.."
                 + str(WORKSPACE_READ_FILE_MAX_CHARS_CAP)
                 + ") returns only a prefix of the file to avoid huge tool results; omit for full file. "
                 "transcript.jsonl can be very large—prefer the conversation already in the message "
-                "history; if you must read it from disk, always pass max_chars."
+                "history; if you must read it via this tool from the persisted store, always pass max_chars."
             )
             w["function"] = wfn
             out.append(w)
