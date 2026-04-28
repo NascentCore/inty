@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 
 from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -8,6 +8,7 @@ from jose.exceptions import JWTError, ExpiredSignatureError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.websockets import WebSocket
 
 from loguru import logger
 
@@ -179,9 +180,27 @@ async def validation_error_handler(request: Request, exc: ValidationError):
 
 
 async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException | HTTPException
+    request: Union[Request, WebSocket],
+    exc: StarletteHTTPException | HTTPException,
 ):
     status_code = exc.status_code
+
+    if isinstance(request, WebSocket):
+        detail = exc.detail
+        reason = detail if isinstance(detail, str) else str(detail)
+        if len(reason) > 120:
+            reason = reason[:117] + "..."
+        close_code = 4001 if status_code == status.HTTP_401_UNAUTHORIZED else 4400
+        try:
+            await request.close(code=close_code, reason=reason)
+        except Exception:
+            logger.warning(
+                "websocket close after HTTPException failed status={} code={}",
+                status_code,
+                close_code,
+            )
+        return None
+
     details = {"detail": exc.detail}
 
     if isinstance(exc.detail, str):

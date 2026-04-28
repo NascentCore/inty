@@ -1,5 +1,7 @@
-from fastapi import FastAPI, HTTPException
+import pytest
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from app.middleware.error_handler import (
     http_exception_handler,
@@ -33,6 +35,22 @@ def test_http_exception_uses_unified_error_envelope():
     assert body["request_id"]
     assert response.headers["x-request-id"] == body["request_id"]
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_http_exception_on_websocket_closes_without_json_response():
+    app = FastAPI()
+    app.add_exception_handler(HTTPException, http_exception_handler)
+
+    @app.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept()
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+    client = TestClient(app, raise_server_exceptions=False)
+    with client.websocket_connect("/ws") as socket:
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            socket.receive_text()
+    assert excinfo.value.code == 4001
 
 
 def test_validation_exception_uses_unified_error_envelope():
