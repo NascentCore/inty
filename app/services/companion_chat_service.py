@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 import uuid
 from functools import lru_cache
@@ -11,7 +12,11 @@ from pathlib import Path
 
 from loguru import logger
 
-from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
+from app.core.agentic_kernel.companion.llm_client import (
+    CompanionLLMConfig,
+    async_tool_background_enabled_from_env,
+)
+from app.core.agentic_kernel.companion.turn_routes import BackgroundToolEventSink
 from app.core.agentic_kernel.companion.manager import (
     CompanionConfig,
     CompanionManager,
@@ -56,6 +61,8 @@ def _companion_runtime_config_fingerprint() -> str:
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
         "companion_db_only_workspace_v3_orm",
+        str(async_tool_background_enabled_from_env()),
+        os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600") or "",
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
@@ -69,6 +76,13 @@ def _companion_manager_for_resolved_model(
     feats = cfg.app.features
     base = COMPANION_API_WORKSPACE_ROOT_PREFIX.expanduser()
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
+    timeout_raw = os.getenv(
+        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
+    ).strip()
+    try:
+        async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
+    except ValueError:
+        async_chat_timeout = 600.0
     llm = CompanionLLMConfig(
         api_key=api_key,
         api_base=(cfg.agent.chat_llm_base_url or cfg.agent.base_url or "").strip()
@@ -80,6 +94,8 @@ def _companion_manager_for_resolved_model(
         day_summary_model=resolved_chat_model_id,
         user_model=resolved_chat_model_id,
         soul_model=resolved_chat_model_id,
+        enable_async_tool_background=async_tool_background_enabled_from_env(),
+        async_chat_front_timeout_sec=async_chat_timeout,
     )
     tc_raw = feats.companion_transcript_compaction
     transcript_compaction = (
@@ -290,6 +306,8 @@ async def run_companion_chat_turn_for_api(
     resolved_chat_model_id: str,
     defer_memory_update: bool = True,
     session_id: str | None = None,
+    background_output_sink: BackgroundToolEventSink | None = None,
+    preset_user_msg_uuid: str | None = None,
 ) -> CompanionTurnResult:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
@@ -346,6 +364,8 @@ async def run_companion_chat_turn_for_api(
         session,
         user_text,
         defer_memory_update=defer_memory_update,
+        background_output_sink=background_output_sink,
+        preset_user_msg_uuid=preset_user_msg_uuid,
     )
     run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
     logger.info(

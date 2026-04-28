@@ -24,7 +24,7 @@ class _FakeLLMClient:
         return f"test/{role}"
 
     def chat_completion(self, **kwargs: Any) -> Any:
-        self.calls.append(kwargs)
+        self.calls.append(dict(kwargs))
         msg = SimpleNamespace(content="inner reply", tool_calls=[])
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 

@@ -18,6 +18,7 @@ from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
 from .models import CompanionTurnResult
 from .turn import run_turn
+from .turn_routes import BackgroundToolEventSink
 from .workspace import (
     ensure_minimal_workspace_documents_in_store,
     is_workspace_initialized_from_store,
@@ -177,6 +178,8 @@ class CompanionManager:
         *,
         heartbeat_turn: bool = False,
         defer_memory_update: bool = True,
+        background_output_sink: BackgroundToolEventSink | None = None,
+        preset_user_msg_uuid: str | None = None,
     ) -> CompanionTurnResult:
         """执行一轮对话。"""
         return await run_turn(
@@ -191,6 +194,8 @@ class CompanionManager:
             transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
             repository_only_workspace_text=session.config.repository_only_workspace_text,
             workspace_bootstrap_type=session.config.workspace_bootstrap_type,
+            background_output_sink=background_output_sink,
+            preset_user_msg_uuid=preset_user_msg_uuid,
         )
 
     def shutdown_session(
