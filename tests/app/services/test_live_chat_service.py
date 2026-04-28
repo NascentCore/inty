@@ -38,8 +38,8 @@ def test_build_system_instruction_includes_english_only_policy():
         history_messages=[],
     )
 
-    assert "CRITICAL LANGUAGE RULE" in instruction
-    assert "YOU MUST SPEAK ONLY IN English" in instruction
+    assert "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY" in instruction
+    assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." in instruction
     assert "DO NOT code-switch or mix languages" in instruction
 
 
@@ -52,8 +52,8 @@ def test_build_system_instruction_merged_response_language_override():
         merged_response_language_name="Arabic",
     )
 
-    assert "YOU MUST SPEAK ONLY IN Arabic" in instruction
-    assert "YOU MUST SPEAK ONLY IN English" not in instruction
+    assert "YOU MUST SPEAK ONLY IN Arabic AT ALL TIMES." in instruction
+    assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." not in instruction
 
 
 def test_resolved_response_language_falls_back_to_speech_code():
@@ -165,8 +165,8 @@ def test_build_system_instruction_from_text_chat_system_messages():
     assert "System A" in instruction
     assert "System B" in instruction
     assert "这是实时语音对话" in instruction
-    assert "CRITICAL LANGUAGE RULE" in instruction
-    assert "YOU MUST SPEAK ONLY IN English" in instruction
+    assert "## CRITICAL LANGUAGE RULE - YOU MUST FOLLOW THIS EXACTLY" in instruction
+    assert "YOU MUST SPEAK ONLY IN English AT ALL TIMES." in instruction
 
 
 def test_build_prefill_turns_from_history_messages():
