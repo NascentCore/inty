@@ -216,7 +216,7 @@ function getAgentTrendColor(agentName: string): string {
   return TOP_AGENT_TREND_COLORS[colorIndex];
 }
 
-function VoiceAudiosGroupCard({
+export function VoiceAudiosGroupCard({
   title,
   groups,
   previewLimit,
@@ -294,6 +294,15 @@ function VoiceAudiosGroupCard({
                   style={{ fontSize: 12 }}
                 >
                   Open recording
+                </a>
+                <a
+                  href={a.audio_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Permanent recording file link"
+                  style={{ fontSize: 12 }}
+                >
+                  Permanent link
                 </a>
                 {a.duration_seconds != null && (
                   <span style={{ fontSize: 12, color: "#999" }}>
