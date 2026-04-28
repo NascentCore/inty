@@ -1,11 +1,23 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-import { VoiceAudiosGroupCard } from "../pages/UserAnalyticsReportsPage";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("react-plotly.js", () => ({
+  default: () => null,
+}));
 
 describe("VoiceAudiosGroupCard", () => {
-  it("renders a permanent link for each recording file", () => {
+  it("renders a permanent link for each recording file", async () => {
     const audioUrl = "https://storage.googleapis.com/inty-static/live_chat/u1/a1.wav";
+    vi.stubGlobal("window", {
+      location: {
+        origin: "http://localhost:3000",
+        pathname: "/evaluation/",
+      },
+    });
+    const { VoiceAudiosGroupCard } = await import(
+      "../pages/UserAnalyticsReportsPage"
+    );
 
     const html = renderToStaticMarkup(
       <VoiceAudiosGroupCard
