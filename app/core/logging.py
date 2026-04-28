@@ -119,3 +119,23 @@ def init_logger():
     logging.getLogger("openai._base_client").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+    # LangSmith：set_langsmith_environment_variables 在 import app.core.config 时已执行，
+    # 那会早于本函数，早先的 logger.debug 往往进不了文件 sink；这里再打一条便于确认是否开启。
+    _raw = (os.environ.get("LANGSMITH_TRACING_V2") or "").strip().lower()
+    _tracing_on = _raw in ("1", "true", "yes", "on")
+    _project = os.environ.get("LANGSMITH_PROJECT", "")
+    _key_set = bool((os.environ.get("LANGCHAIN_API_KEY") or "").strip())
+    logger.info(
+        "LangSmith: tracing_v2={} (env LANGSMITH_TRACING_V2={!r}), project={!r}, api_key_set={}",
+        "on" if _tracing_on else "off",
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        _project,
+        _key_set,
+    )
+    logger.debug(
+        "LangSmith: full env check LANGSMITH_TRACING_V2={!r} LANGSMITH_PROJECT={!r} LANGCHAIN_API_KEY_set={}",
+        os.environ.get("LANGSMITH_TRACING_V2"),
+        os.environ.get("LANGSMITH_PROJECT"),
+        _key_set,
+    )

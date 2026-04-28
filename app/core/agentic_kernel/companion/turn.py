@@ -11,7 +11,12 @@ from loguru import logger
 
 from app.utils.config import CompanionWorkspaceBootstrapType
 
-from .llm_client import CompanionLLMClient
+from .llm_client import (
+    LLM_SCENE_CHAT,
+    LLM_SCENE_INNER_TICK,
+    LLM_SCENE_TOOL_CALL,
+    CompanionLLMClient,
+)
 from .message_format import openai_assistant_message_dict
 from .memory_pipeline import (
     MemoryPipelineConfig,
@@ -21,6 +26,7 @@ from .memory_pipeline import (
 from .memory_store import MemoryStore
 from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
+    INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     CompanionTurnResult,
@@ -55,7 +61,11 @@ from .runtime_inspect_context import (
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
 )
-from .tools import WRITABLE_RELATIVE_PATHS, build_companion_tools
+from .tools import (
+    WRITABLE_RELATIVE_PATHS,
+    build_companion_tools,
+    build_openai_repl_tools_inner_tick,
+)
 from .utc import utc_iso_ts
 from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
 from .workspace import WorkspacePaths
@@ -77,6 +87,7 @@ async def run_turn(
     store: MemoryStore,
     llm_client: CompanionLLMClient,
     heartbeat_turn: bool = False,
+    inner_tick_turn: bool = False,
     defer_memory_update: bool = True,
     memory_config: MemoryPipelineConfig | None = None,
     transcript_compaction: TranscriptCompactionConfig | None = None,
@@ -100,14 +111,19 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
+    if heartbeat_turn and inner_tick_turn:
+        raise ValueError("heartbeat_turn and inner_tick_turn cannot both be true")
     if heartbeat_turn:
         user_text = HEARTBEAT_SYNTHETIC_USER_TEXT
+    elif inner_tick_turn:
+        user_text = INNER_TICK_SYNTHETIC_USER_TEXT
 
     logger.info(
-        "run_turn start path={} user_chars={} heartbeat_turn={} defer_memory={}",
+        "run_turn start path={} user_chars={} heartbeat_turn={} inner_tick_turn={} defer_memory={}",
         root,
         len(user_text),
         heartbeat_turn,
+        inner_tick_turn,
         defer_memory_update,
     )
     logger.debug(
@@ -137,15 +153,22 @@ async def run_turn(
     tools_for_turn = (
         []
         if heartbeat_turn
-        else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+        else (
+            build_openai_repl_tools_inner_tick()
+            if inner_tick_turn
+            else build_companion_tools(interactive_bootstrap_active=interactive_bootstrap)
+        )
     )
-    use_dual_structured_chat = (not heartbeat_turn) and not tools_for_turn
+    use_dual_structured_chat = (
+        (not heartbeat_turn) and (not inner_tick_turn) and not tools_for_turn
+    )
 
     system_messages = build_system_messages(
         bundle,
         context,
         enable_tools=not heartbeat_turn,
         heartbeat_turn=heartbeat_turn,
+        inner_tick_turn=inner_tick_turn,
         interactive_bootstrap_active=interactive_bootstrap,
         include_significance_perception_slice=use_dual_structured_chat,
     )
@@ -153,7 +176,7 @@ async def run_turn(
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
     compaction_turn_idx = prior_user_turns + 1
 
-    if transcript_compaction is not None and not heartbeat_turn:
+    if transcript_compaction is not None and not heartbeat_turn and not inner_tick_turn:
         rel_compact = paths.context_compaction_state_json.relative_to(root).as_posix()
         prior_state = load_compaction_state_from_store(store, rel_compact)
         compactor = ConversationCompactor(
@@ -221,6 +244,11 @@ async def run_turn(
                     tools=tools or None,
                 )
             )
+            llm_scene = (
+                LLM_SCENE_INNER_TICK
+                if inner_tick_turn
+                else (LLM_SCENE_TOOL_CALL if tools else LLM_SCENE_CHAT)
+            )
             resp = llm_client.chat_completion(
                 messages=messages,
                 model=resolved_model,
@@ -228,6 +256,7 @@ async def run_turn(
                 response_format=(
                     DUAL_LLM_CHAT_RESPONSE_FORMAT if use_dual_structured_chat else None
                 ),
+                scene=llm_scene,
             )
             approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in messages)
             logger.info(
@@ -307,6 +336,8 @@ async def run_turn(
     }
     if heartbeat_turn:
         user_row["heartbeat"] = True
+    if inner_tick_turn:
+        user_row["inner_tick"] = True
     user_row["trace_id"] = trace_id
     store.append_jsonl_record(rel_tr, user_row)
     assistant_row: dict[str, Any] = {
@@ -315,7 +346,7 @@ async def run_turn(
         "ts": utc_iso_ts(),
         "uuid": assistant_msg_uuid,
         "reply_to": user_msg_uuid,
-        "source": "chat",
+        "source": "inner_tick" if inner_tick_turn else "chat",
         "trace_id": trace_id,
     }
     if significance_meta:
@@ -325,6 +356,8 @@ async def run_turn(
     # 记忆管线
     if heartbeat_turn:
         logger.debug("run_turn memory_pipeline=skipped (heartbeat_turn)")
+    elif inner_tick_turn:
+        logger.debug("run_turn memory_pipeline=skipped (inner_tick_turn)")
     elif defer_memory_update:
 
         def _complete_fn(msgs: list[dict[str, Any]], model_role: str) -> str:

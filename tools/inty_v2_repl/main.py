@@ -5,8 +5,10 @@ from __future__ import annotations
 import os
 import sys
 import time
+from collections import deque
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import Annotated, Mapping
+from typing import Annotated, Callable, Deque, Mapping
 
 from cyclopts import App, Parameter
 from dotenv import load_dotenv
@@ -110,6 +112,21 @@ def _print_openrouter_invalid_json_retry_hint() -> None:
     print(f"[{repl_wall_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
 
 
+def _print_send_turn_exception(
+    exc: BaseException, *, eof_wait: bool = False
+) -> None:
+    """Log and print a failure from ``bridge.send_turn`` / ``fut.result()``."""
+    if isinstance(exc, BackendChatWsError):
+        print(
+            f"[{repl_wall_ts_str()}] chat-ws-error code={exc.code} "
+            f"message={exc.agent_message!r}"
+        )
+        return
+    log_key = "backend ws turn failed (eof wait)" if eof_wait else "backend ws turn failed"
+    logger.opt(exception=exc).error(log_key)
+    print(f"[{repl_wall_ts_str()}] error: {exc}")
+
+
 def _flush_and_shutdown_memory_store(root: Path) -> None:
     flush_memory_store(root, timeout_s=5.0)
     flush_jsonl_db_store(timeout_s=5.0)
@@ -136,6 +153,81 @@ def _resolve_bearer_token_cli() -> str:
 
 
 _BACKEND_WS_SIDEBAND_POLL_SEC = 0.25
+
+
+def _repl_duplex_env_enabled() -> bool:
+    """Full-duplex REPL: queue input while send_turn is in flight. Set INTY_V2_REPL_DUPLEX=0 to use legacy (blocking) loop."""
+    raw = os.environ.get("INTY_V2_REPL_DUPLEX", "").strip().lower()
+    if not raw:
+        return True
+    if raw in ("0", "false", "no", "off", "n"):
+        return False
+    return True
+
+
+def _use_posix_tty_duplex_select() -> bool:
+    if sys.platform == "win32":
+        return False
+    if not sys.stdin.isatty():
+        return False
+    try:
+        import select  # noqa: F401, PLC0415
+    except ImportError:
+        return False
+    return True
+
+
+def _write_pipe1(wfd: int) -> None:
+    try:
+        os.write(wfd, b"\x00")
+    except OSError:
+        pass
+
+
+def _duplex_inflight_degraded_wait(fut: Future) -> None:
+    """No stdin multiplex: wait without queueing the next line (e.g. Windows / non-tty)."""
+    while not fut.done():
+        time.sleep(_BACKEND_WS_SIDEBAND_POLL_SEC)
+
+
+def _duplex_inflight_posix_select_wait(
+    fut: Future,
+    rpipe: int,
+    pending: Deque[str],
+    *,
+    stdin_fd: int,
+    readline_fn: Callable[[], str],
+    select_fn: Callable[..., tuple[list[int], list[int], list[int]]],
+    poll_sec: float = _BACKEND_WS_SIDEBAND_POLL_SEC,
+    prompt: str = "> ",
+) -> None:
+    """Block until ``fut`` is done, appending any full user lines to ``pending``; no try_pop (MVP).
+
+    Prints ``prompt`` before the first block on stdin and after each full line if the turn is
+    still in flight, so the user can type ahead with an explicit REPL line marker.
+    """
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    while not fut.done():
+        rlist, _, _ = select_fn(
+            [stdin_fd, rpipe], [], [], poll_sec
+        )
+        for ready in rlist:
+            if ready == rpipe:
+                try:
+                    os.read(rpipe, 256)
+                except OSError:
+                    pass
+            elif ready == stdin_fd:
+                line = readline_fn()
+                if line == "":
+                    raise EOFError
+                pending.append(
+                    line[:-1] if line.endswith("\n") else line
+                )
+                if not fut.done():
+                    sys.stdout.write(prompt)
+                    sys.stdout.flush()
 
 
 def _readline_backend_ws_with_sideband(
@@ -180,11 +272,8 @@ def _readline_backend_ws_with_sideband(
         return line[:-1] if line.endswith("\n") else line
 
 
-def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
-    print(
-        f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
-        "quit / exit / q to leave; history lives on the server."
-    )
+def _repl_interactive_backend_ws_loop_legacy(bridge: BackendChatWsBridge, agent_id: str) -> None:
+    """Block on ``send_turn`` in the main thread; no line queueing during wait (``INTY_V2_REPL_DUPLEX=0``)."""
     while True:
         try:
             line = _readline_backend_ws_with_sideband(bridge, "> ")
@@ -199,17 +288,104 @@ def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str
         t0 = time.perf_counter()
         try:
             out = bridge.send_turn(agent_id, line)
-        except BackendChatWsError as exc:
-            print(
-                f"[{repl_wall_ts_str()}] chat-ws-error code={exc.code} "
-                f"message={exc.agent_message!r}"
-            )
-            continue
-        except (TimeoutError, OSError, RuntimeError, ValueError) as exc:
-            logger.exception("backend ws turn failed")
-            print(f"[{repl_wall_ts_str()}] error: {exc}")
+        except (BackendChatWsError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
+            _print_send_turn_exception(exc)
             continue
         _print_assistant_reply(out, time.perf_counter() - t0)
+
+
+def _repl_interactive_backend_ws_loop_duplex(bridge: BackendChatWsBridge, agent_id: str) -> None:
+    """
+    Offload ``send_turn`` to a single-worker pool; while a turn is in flight, read full
+    lines into a FIFO (POSIX TTY: ``select`` + pipe; else: degraded sleep wait only).
+    No ``try_pop_queued_chat`` while a turn is in flight (MVP, shared _response_q).
+    """
+    pending: Deque[str] = deque()
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        while True:
+            if pending:
+                line = pending.popleft()
+            else:
+                try:
+                    line = _readline_backend_ws_with_sideband(bridge, "> ")
+                except EOFError:
+                    print()
+                    break
+            st = line.strip()
+            if st in ("quit", "exit", "q"):
+                break
+            if not st:
+                continue
+            _print_repl_user_input(line)
+            t0 = time.perf_counter()
+            fut = ex.submit(bridge.send_turn, agent_id, line)
+            rpipe, wpipe = os.pipe()
+            err_exc: Exception | None = None
+            out: str | None = None
+            try:
+                fut.add_done_callback(
+                    lambda _done_f, wpipe_fd=wpipe: _write_pipe1(wpipe_fd)
+                )
+                try:
+                    if _use_posix_tty_duplex_select():
+                        import select  # noqa: PLC0415
+
+                        _duplex_inflight_posix_select_wait(
+                            fut,
+                            rpipe,
+                            pending,
+                            stdin_fd=sys.stdin.fileno(),
+                            readline_fn=sys.stdin.readline,
+                            select_fn=select.select,
+                        )
+                    else:
+                        _duplex_inflight_degraded_wait(fut)
+                except EOFError:
+                    try:
+                        out = fut.result()
+                    except (BackendChatWsError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
+                        _print_send_turn_exception(exc, eof_wait=True)
+                        print()
+                        return
+                    # Successful reply: still show it; user hit EOF while waiting.
+                    assert out is not None
+                    print()
+                    _print_assistant_reply(out, time.perf_counter() - t0)
+                    print()
+                    return
+                try:
+                    out = fut.result()
+                except (
+                    BackendChatWsError,
+                    TimeoutError,
+                    OSError,
+                    RuntimeError,
+                    ValueError,
+                ) as e:
+                    err_exc = e
+            finally:
+                for fd in (rpipe, wpipe):
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass
+            if err_exc is not None:
+                _print_send_turn_exception(err_exc)
+                continue
+            assert out is not None
+            # Line-buffered TTY delivers whole lines; blank line separates the reply from any in-flight input context.
+            print()
+            _print_assistant_reply(out, time.perf_counter() - t0)
+
+
+def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
+    print(
+        f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
+        "quit / exit / q to leave; history lives on the server."
+    )
+    if not _repl_duplex_env_enabled():
+        return _repl_interactive_backend_ws_loop_legacy(bridge, agent_id)
+    return _repl_interactive_backend_ws_loop_duplex(bridge, agent_id)
 
 
 def _repl_run_backend_ws_branch(

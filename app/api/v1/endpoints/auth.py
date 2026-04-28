@@ -65,7 +65,12 @@ async def google_login(
     db: AsyncSession = Depends(get_async_db),
     login_in: schemas.GoogleAuthRequest,
 ) -> Any:
-    """Google登录或Email密码登录"""
+    """
+    两种登录二选一（请求体在 `GoogleAuthRequest` 中互斥校验）：
+
+    - 仅 `id_token`：Google OAuth
+    - 仅 `email` + `password`：邮箱密码（不走 Google 验证）
+    """
     if (
         global_config_loaded_from_config_yaml.app.api_endpoints.use_dummy_api_v1_auth_google_login
     ):

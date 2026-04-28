@@ -294,10 +294,10 @@ async def run_companion_chat_turn_for_api(
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
-    ``app.features.companion_workspace_bootstrap_type`` controls companion bootstrap: ``NONE`` seeds
-    minimal documents at session create and every message uses ``run_turn`` only; ``USER_INTERACTIVE``
-    seeds minimal docs and every message uses ``run_turn`` with interactive bootstrap tools until the
-    model calls ``companion_bootstrap_user_interactive_complete``.
+    ``app.features.companion_workspace_bootstrap_type`` (default ``USER_INTERACTIVE``) controls
+    companion bootstrap: ``NONE`` seeds minimal documents at session create and every message uses
+    ``run_turn`` only; ``USER_INTERACTIVE`` seeds minimal docs and every message uses ``run_turn`` with
+    interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
 
     ``resolved_chat_model_id`` must match ``select_chat_model`` for the same user and subscription
     (caller typically passes ``model_override`` from the chat completion path, e.g. WebSocket handler).

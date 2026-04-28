@@ -390,7 +390,9 @@ def test_agent_config_langsmith_always_trace_user_emails_supports_explicit_value
 
 def test_features_config_companion_workspace_bootstrap_type_default():
     f = FeaturesConfig()
-    assert f.companion_workspace_bootstrap_type == CompanionWorkspaceBootstrapType.NONE.value
+    assert f.companion_workspace_bootstrap_type == (
+        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    )
 
 
 def test_features_config_companion_workspace_bootstrap_type_normalizes_case():

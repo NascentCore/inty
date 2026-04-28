@@ -16,6 +16,12 @@ from app.core.agentic_kernel.providers.facade import (
 
 from .llm_chat_runtime import create_chat_completion_sync
 
+LLM_SCENE_CHAT = "chat"
+LLM_SCENE_TOOL_CALL = "tool_call"
+LLM_SCENE_INNER_TICK = "inner_tick"
+
+LLMScene = Literal["chat", "tool_call", "inner_tick"]
+
 
 def async_tool_background_enabled_from_env() -> bool:
     raw = os.environ.get("INTY_V2_PROTO_ASYNC_TOOL_BG")
@@ -100,11 +106,12 @@ class CompanionLLMClient:
                 api_key=config.api_key or None,
                 base_url=config.api_base or None,
                 wrap_langsmith=True,
-                chat_name="companion",
+                chat_name="agentic_companion_unified_chat",
             )
         )
         self._client_dual_chat: Any | None = None
         self._client_dual_tool: Any | None = None
+        self._client_inner_tick: Any | None = None
 
     @property
     def config(self) -> CompanionLLMConfig:
@@ -117,7 +124,7 @@ class CompanionLLMClient:
                     api_key=self._config.api_key or None,
                     base_url=self._config.api_base or None,
                     wrap_langsmith=True,
-                    chat_name="companion_dual_chat",
+                    chat_name="agentic_companion_chat",
                     completions_name="companion_OpenAI",
                     use_fake_openai=False,
                 )
@@ -131,18 +138,36 @@ class CompanionLLMClient:
                     api_key=self._config.api_key or None,
                     base_url=self._config.api_base or None,
                     wrap_langsmith=True,
-                    chat_name="companion_dual_tool",
+                    chat_name="agentic_companion_tool_call",
                     completions_name="companion_OpenAI",
                     use_fake_openai=False,
                 )
             )
         return self._client_dual_tool
 
-    def sync_client_for_route(self, route: Literal["unified", "chat", "tool"]) -> Any:
+    def _ensure_inner_tick_client(self) -> Any:
+        if self._client_inner_tick is None:
+            self._client_inner_tick = get_openai_compatible_sync_client(
+                OpenAICompatibleClientOptions(
+                    api_key=self._config.api_key or None,
+                    base_url=self._config.api_base or None,
+                    wrap_langsmith=True,
+                    chat_name="agentic_companion_inner_tick",
+                    completions_name="companion_OpenAI",
+                    use_fake_openai=False,
+                )
+            )
+        return self._client_inner_tick
+
+    def sync_client_for_route(
+        self, route: Literal["unified", "chat", "tool", "inner_tick"]
+    ) -> Any:
         if route == "chat":
             return self._ensure_dual_chat_client()
         if route == "tool":
             return self._ensure_dual_tool_client()
+        if route == "inner_tick":
+            return self._ensure_inner_tick_client()
         return self._client
 
     def _resolve_model(self, role: str) -> str:
@@ -157,10 +182,18 @@ class CompanionLLMClient:
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
+        scene: LLMScene | None = None,
     ) -> Any:
         tool_list = list(tools or [])
-        has_tools = bool(tool_list)
-        if has_tools:
+        resolved_scene: LLMScene = (
+            scene
+            if scene is not None
+            else (LLM_SCENE_TOOL_CALL if tool_list else LLM_SCENE_CHAT)
+        )
+        if resolved_scene == LLM_SCENE_INNER_TICK:
+            client = self._ensure_inner_tick_client()
+            m = model or self._resolve_model("tool" if tool_list else "chat")
+        elif resolved_scene == LLM_SCENE_TOOL_CALL:
             client = self._ensure_dual_tool_client()
             m = model or self._resolve_model("tool")
         else:

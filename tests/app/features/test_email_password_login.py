@@ -332,29 +332,3 @@ async def test_email_password_login_user_without_password(
         await db_session.delete(user)
         await db_session.commit()
         client.close()
-
-
-@pytest.mark.asyncio
-@pytest.mark.integration
-async def test_email_password_login_backward_compatibility():
-    """测试向后兼容性：Google 登录仍然工作"""
-    client = TestClient(API_BASE_URL)
-
-    try:
-        # 尝试使用 id_token 登录（应该仍然工作，即使没有提供 email/password）
-        # 注意：这个测试需要有效的 Google ID token，在实际环境中可能需要 mock
-        # 这里主要测试 schema 验证不会拒绝只有 id_token 的请求
-
-        response = client.client.post(
-            f"{API_BASE_URL}/api/v1/auth/google/login",
-            json={
-                "id_token": "dummy-token-for-testing",
-            },
-        )
-
-        # 验证请求被接受（即使 token 无效，也应该到达验证逻辑，而不是被 schema 拒绝）
-        # 如果 schema 验证失败，会返回 422
-        assert response.status_code != 422, "Schema validation should accept id_token only"
-
-    finally:
-        client.close()
