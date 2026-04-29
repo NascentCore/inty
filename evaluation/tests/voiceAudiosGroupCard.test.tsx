@@ -42,7 +42,9 @@ describe("VoiceAudiosGroupCard", () => {
     );
 
     expect(html).toContain("Permanent link");
-    expect(html).toContain('title="Permanent recording file link"');
-    expect(html).toContain(`href="${audioUrl}"`);
+    expect(html).toContain('title="Permanent link (ops recording page)"');
+    expect(html).toContain("#voice-recording?");
+    expect(html).toContain("audioUrl=");
+    expect(html).toContain(encodeURIComponent(audioUrl));
   });
 });

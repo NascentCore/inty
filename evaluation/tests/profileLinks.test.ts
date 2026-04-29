@@ -4,6 +4,7 @@ import {
   buildAgentProfilePageUrl,
   buildReportUserConversationsPageUrl,
   buildUserProfilePageUrl,
+  buildVoiceRecordingPageUrl,
   getDeepLinkedAgentIdFromHash,
   getDeepLinkedReportIdFromHash,
   getDeepLinkedUserIdFromHash,
@@ -23,6 +24,19 @@ describe("profileLinks utils", () => {
     expect(buildReportUserConversationsPageUrl(baseUrl, "report-1")).toBe(
       "https://ops.inty.cc/evaluation/#report-user-conversations?reportId=report-1",
     );
+    const recordingUrl = buildVoiceRecordingPageUrl(baseUrl, {
+      audioUrl: "https://storage.googleapis.com/inty-static/live_chat/u1/a1/x.wav",
+      userId: "user-1",
+      agentId: "agent-1",
+      agentName: "Salem",
+      createdAt: "2026-04-28T12:00:00Z",
+      durationSeconds: 24.5,
+      messageId: 42,
+    });
+    expect(recordingUrl).toContain("#voice-recording?");
+    expect(recordingUrl).toContain("userId=user-1");
+    expect(recordingUrl).toContain("agentId=agent-1");
+    expect(recordingUrl).toContain("messageId=42");
   });
 
   it("parses hash route and query parameters", () => {
