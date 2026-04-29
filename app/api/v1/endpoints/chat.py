@@ -68,6 +68,7 @@ from app.services.voice_service import (
     VoiceService,
     get_voice_message_narration_mode_from_agent_settings,
 )
+from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
@@ -81,6 +82,59 @@ def _chat_ws_idle_timeout_seconds() -> float:
     return float(
         global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
     )
+
+
+async def _shutdown_chat_ws_outbound_pump(pump_task: asyncio.Task) -> None:
+    """Join ``chat_ws_outbound_pump``; distinguish normal cancellation from send failures."""
+    if not pump_task.done():
+        pump_task.cancel()
+    try:
+        await pump_task
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        logger.exception(
+            "chat_ws_outbound_pump failed (e.g. WebSocket send_json); "
+            "distinct from normal CancelledError teardown"
+        )
+
+
+async def _verify_ws_simple_llm_reply(
+    *,
+    agent_row: dict[str, Any],
+    user_text: str,
+    model_name: str,
+) -> str:
+    """
+    Single chat-completions call (system + user only). No Agent instance, no history, no tools.
+    Used by ``/ws/verify`` only.
+    """
+    name = (agent_row.get("name") or "Assistant").strip() or "Assistant"
+    snippet = (agent_row.get("personality") or agent_row.get("intro") or "").strip()
+    if snippet:
+        system = f"You are {name}. Character notes: {snippet[:1200]}"
+    else:
+        system = (
+            f"You are {name}. Reply concisely in the same language as the user's message."
+        )
+
+    client = get_chat_openai_client()
+
+    def _sync_call() -> str:
+        resp = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_text},
+            ],
+            max_tokens=2048,
+            temperature=0.7,
+        )
+        if not resp.choices:
+            return ""
+        return (resp.choices[0].message.content or "").strip()
+
+    return await asyncio.to_thread(_sync_call)
 
 
 def _chat_request_with_merged_ws_time_context(
@@ -110,6 +164,12 @@ async def _handle_chat_websocket_control_json(
     """
     Handle ping / client_context on chat WebSockets. tc_box is a length-1 list holding the
     session's last validated time_context dict (or None). Returns True if the frame was consumed.
+
+    **Transport vs logical channel:** control frames (ping/pong, client_context_ack) are answered
+    directly on the WebSocket. They are independent of the connection-level outbound queue used
+    for assistant/business JSON. Intentionally so: the WebSocket sits *below* the repl/client
+    logical session with the agent; control traffic only confirms link/time-context at the wire layer,
+    not the agent dialogue FIFO (which is serialized via ``outbound_queue`` + pump).
     """
     if not isinstance(data, dict):
         return False
@@ -1286,6 +1346,8 @@ async def chat_completions_websocket(
         else None
     )
 
+    # Business / assistant JSON uses a per-connection queue + pump; control frames bypass the queue
+    # (see _handle_chat_websocket_control_json docstring: transport vs logical layer).
     outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
     pump_task = asyncio.create_task(
         chat_ws_outbound_pump(websocket, outbound_queue),
@@ -1415,11 +1477,7 @@ async def chat_completions_websocket(
     except WebSocketDisconnect:
         return
     finally:
-        pump_task.cancel()
-        try:
-            await pump_task
-        except asyncio.CancelledError:
-            pass
+        await _shutdown_chat_ws_outbound_pump(pump_task)
 
 
 @router.websocket("/ws/verify")
@@ -1429,12 +1487,11 @@ async def chat_completions_websocket_verify(
     subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
 ):
     """
-    WebSocket 校验端点：与 /ws 协议一致，但不写入 chat_history，仅用于验证连接与对话效果。
+    Legacy smoke endpoint: same **outbound queue + pump** as ``/ws`` (FIFO business JSON).
 
-    Implementation note: this path uses generate_message_without_user_save, not agent_chat_completions.
-    When adding agentic v2 routing to /ws, either refactor a shared dispatcher with a persist flag so
-    verify stays behaviorally aligned, or document that verify remains legacy-only for engine selection.
-    See docs/FR_INTY_V2_CHAT_WS_INTEGRATION_PLAN.md.
+    Per chat frame: **one** ``chat.completions`` call with system + user messages only (via
+    ``get_chat_openai_client``). No ``Agent`` runtime, no companion pipeline, no chat_history
+    persistence. Use to validate transport, queue behavior, and minimal LLM connectivity.
     """
     await websocket.accept()
     current_user = await _get_current_user_from_websocket(websocket, db)
@@ -1448,6 +1505,11 @@ async def chat_completions_websocket_verify(
         db=db,
     )
 
+    outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
+    pump_task = asyncio.create_task(
+        chat_ws_outbound_pump(websocket, outbound_queue),
+        name="chat_ws_verify_outbound_pump",
+    )
     tc_box: list[Optional[dict]] = [None]
     try:
         while True:
@@ -1474,7 +1536,7 @@ async def chat_completions_websocket_verify(
 
             user_messages = [msg for msg in request.messages if msg.role == "user"]
             if not user_messages:
-                await websocket.send_json(
+                await outbound_queue.put(
                     {
                         "code": 400,
                         "message": "No user message found",
@@ -1484,27 +1546,11 @@ async def chat_completions_websocket_verify(
                 )
                 continue
 
-            last_user_message = user_messages[-1].to_model_content()
             last_user_text = user_messages[-1].extract_text_content()
-            messages = [HumanMessage(content=last_user_message)]
 
-            chat = await chat_service.get_or_create_chat_by_agent(
-                db=db, user_id=current_user.id, agent_id=agent_id
-            )
-            if chat.agent_id != agent_id:
-                await websocket.send_json(
-                    {
-                        "code": 500,
-                        "message": "Agent ID mismatch",
-                        "data": None,
-                        "agent_id": agent_id,
-                    }
-                )
-                continue
-
-            agent_data = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
-            if not agent_data:
-                await websocket.send_json(
+            agent_row = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
+            if not agent_row:
+                await outbound_queue.put(
                     {
                         "code": 404,
                         "message": "Agent not found",
@@ -1514,12 +1560,6 @@ async def chat_completions_websocket_verify(
                 )
                 continue
 
-            agent = await agent_manager.get_agent(agent_data)
-            session_id = generate_session_id(str(chat.id))
-
-            chat_settings = await chat_service.get_or_create_chat_settings(
-                db, chat.id, current_user.id, agent_id
-            )
             subscription = await subscription_svc.get_user_current_subscription(
                 db, current_user.id
             )
@@ -1527,31 +1567,20 @@ async def chat_completions_websocket_verify(
             model_override = select_chat_model(
                 user=current_user, is_subscribed=is_subscribed
             )
-            user_time_context = (
-                request.user_time_context.model_dump(exclude_none=True)
-                if request.user_time_context
-                else None
-            )
-            if user_time_context == {}:
-                user_time_context = None
 
             effective_local_id = (
                 request.local_id or request.message_id or ""
             ).strip() or None
 
             try:
-                gen_result = await agent.generate_message_without_user_save(
-                    user_id=current_user.id,
-                    session_id=session_id,
-                    messages=messages,
-                    chat_settings=chat_settings,
-                    user_time_context=user_time_context,
-                    model_override=model_override,
-                    is_subscribed=is_subscribed,
+                response_text = await _verify_ws_simple_llm_reply(
+                    agent_row=agent_row,
+                    user_text=last_user_text or "",
+                    model_name=model_override,
                 )
             except Exception as e:
-                logger.exception("ws/verify generate_message_without_user_save failed")
-                await websocket.send_json(
+                logger.exception("ws/verify simple chat.completions failed")
+                await outbound_queue.put(
                     {
                         "code": 500,
                         "message": str(e),
@@ -1561,21 +1590,13 @@ async def chat_completions_websocket_verify(
                 )
                 continue
 
-            if gen_result is None:
-                response_text = ""
-            else:
-                response_text, _trace_id = (
-                    gen_result if isinstance(gen_result, tuple) else (gen_result, None)
-                )
-                response_text = response_text or ""
-
             response_text_content, response_content_parts = (
                 _normalize_chat_response_content(response_text)
             )
             data = _build_chat_response(
                 response_text_content,
                 response_content_parts,
-                last_user_text,
+                last_user_text or "",
                 latest_message_info=None,
                 audio_url=None,
                 request=request,
@@ -1590,9 +1611,11 @@ async def chat_completions_websocket_verify(
             response_data["status_line"] = await _agent_status_line_for_chat_header(
                 db, agent_id
             )
-            await websocket.send_json(response_data)
+            await outbound_queue.put(response_data)
     except WebSocketDisconnect:
         return
+    finally:
+        await _shutdown_chat_ws_outbound_pump(pump_task)
 
 
 class ChatImageBizErrorData(BizError):

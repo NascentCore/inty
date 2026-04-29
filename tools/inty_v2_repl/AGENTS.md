@@ -2,6 +2,7 @@
 
 ## CLI（`main.py`）
 
+- **传输 vs 逻辑**：ping/pong 等控制帧由服务端 WebSocket 直连应答；助手业务帧走 inty 侧 **outbound queue + pump**（与 App 一致）。REPL 侧通过 [`repl_message_io`](repl_message_io.py) 消费 tagged 下行，对应「逻辑连接」上的 FIFO。
 - **下行展示**：侧带弹出服务端推送帧时优先通过 [`repl_message_io.pop_downlink_item`](repl_message_io.py)（tagged：`assistant` / `ws_error`），与 app 侧队列契约对齐；与 app 侧实现刻意分离、独立演进。
 - `python -m tools.inty_v2_repl.main repl` **仅**连接 Inty `/api/v1/chat/ws`（`backend_chat_ws.BackendChatWsBridge`）；对话与 bootstrap 由服务端处理。
 - 连接后首轮 **burst drain** 等服务端主动 kickoff：`INTY_V2_BACKEND_WS_KICKOFF_DRAIN_SEC`（默认 10，单位秒，上限 600；0 表示仅 `get_nowait` 一次）。POSIX 且 TTY 时在 `>` 等输入会 **侧带** 轮询 `try_pop_queued_chat`，晚到的聊天 JSON 也会打印；Windows / 非 TTY 仍为阻塞 `input()`。

@@ -20,7 +20,7 @@ data class SendMsgResponse(
     val code: Int? = null,
     val message: String? = null,
     val data: SentMsgRspData? = null,
-    /** 下行顶层 agent_id，多角色时区分；与 FR_CHAT_WS_VERIFY 约定一致。 */
+    /** 下行顶层 agent_id，多角色时区分（与后端 `app/api/ENDPOINTS.md` WebSocket 约定一致）。 */
     @Json(name = "agent_id") val agentId: String? = null,
 ) {
     @Serializable

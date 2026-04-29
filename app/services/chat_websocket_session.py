@@ -1,4 +1,9 @@
-"""Queue-centric helpers for ``/api/v1/chat/ws`` (inty-ws message-io pump)."""
+"""Queue-centric helpers for ``/api/v1/chat/ws`` (inty-ws message-io pump).
+
+Only **business / assistant** JSON goes through this FIFO to ``send_json``. Wire-level control
+frames (ping/pong, client_context_ack) bypass the queue and are sent directly by the route; see
+``chat._handle_chat_websocket_control_json``.
+"""
 
 from __future__ import annotations
 
