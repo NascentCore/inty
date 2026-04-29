@@ -25,7 +25,8 @@ describe("profileLinks utils", () => {
       "https://ops.inty.cc/evaluation/#report-user-conversations?reportId=report-1",
     );
     const recordingUrl = buildVoiceRecordingPageUrl(baseUrl, {
-      audioUrl: "https://storage.googleapis.com/inty-static/live_chat/u1/a1/x.wav",
+      audioUrl:
+        "https://storage.googleapis.com/inty-static/live_chat/u1/a1/x.wav",
       userId: "user-1",
       agentId: "agent-1",
       agentName: "Salem",
