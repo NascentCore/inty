@@ -3,13 +3,14 @@
 import asyncio
 import json
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient as FastAPITestClient
+from starlette.websockets import WebSocketDisconnect
 from jose import jwt
 from loguru import logger
 from sqlalchemy import create_engine
@@ -19,6 +20,7 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
 from app.core.agentic_kernel.companion.models import CompanionTurnResult
+from app.core.security import create_access_token
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
@@ -968,6 +970,18 @@ def _setup_companion_ws_chat_test_env(
         "_agent_status_line_for_chat_header",
         fake_agent_status_line,
     )
+
+
+def test_chat_websocket_expired_token_closes_cleanly(chat_business_error_app: FastAPI):
+    """Expired JWT on /api/v1/chat/ws must not raise HTTPException (prod ASGI spam)."""
+    expired = create_access_token(
+        "user-ws-expired-contract", expires_delta=timedelta(seconds=-3600)
+    )
+    client = FastAPITestClient(chat_business_error_app)
+    with client.websocket_connect(f"/api/v1/chat/ws?token={expired}") as websocket:
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            websocket.receive_json()
+        assert excinfo.value.code == 4001
 
 
 def test_chat_completions_companion_kernel_branch_writes_history(
