@@ -83,10 +83,3 @@ struct ChatPage: View {
         inputText = ""
     }
 }
-
-// 辅助模型
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let text: String
-    let isUser: Bool
-}

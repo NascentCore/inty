@@ -99,5 +99,129 @@ enum LoginInitChatWidgets {
         }
     }
     
+    // 背景渐变色
+    static var background: some View {
+        LinearGradient(
+            colors: [
+//                Color.black,
+//                Color.purple.opacity(0.8),
+//                Color.blue.opacity(0.6)
+                Color(hex: 0xFF1C1523),
+                Color(hex: 0xFF1C1523)
+            ],
+            startPoint: .bottom,
+            endPoint: .top
+        )
+        .ignoresSafeArea()
+    }
+    
+    struct Header: View {
+        let progress: Double
+        let bgColor: Color
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+
+                HStack {
+                    Circle()
+                        .fill(Color.gray)
+                        .frame(width: 40, height: 40)
+
+                    VStack(alignment: .leading) {
+                        Text("Marin")
+                            .foregroundColor(.white)
+                            .bold()
+
+                        Text("Ready! ✨")
+                            .foregroundColor(.white.opacity(0.7))
+                            .font(.caption)
+                    }
+
+                    Spacer()
+                }
+
+                ProgressView(value: progress)
+                    .tint(.purple)
+            }
+            .padding()
+            .background(bgColor)
+        }
+    }
+    
+    
+    // 聊天列表
+    struct ChatList: View {
+        let messages: [ChatMessage]
+        
+        var body: some View {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(messages) { msg in
+                            ChatBubble(message: msg)
+                                .id(msg.id)
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: messages.count) { _ in
+                    if let last = messages.last {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    // 聊天气泡
+    struct ChatBubble: View {
+        let message: ChatMessage
+        
+        var body: some View {
+            HStack {
+                if message.isUser { Spacer() }
+
+                Text(message.text)
+                    .padding()
+                    .background(message.isUser ? Color.purple : Color.gray.opacity(0.3))
+                    .foregroundColor(.white)
+                    .cornerRadius(16)
+
+                if !message.isUser { Spacer() }
+            }
+        }
+    }
+    
+    
+    // 输入框
+    struct InputBar: View {
+        @Binding var inputText: String
+        let onSend: () -> Void
+        
+        var body: some View {
+            HStack {
+                TextField("Type...", text: $inputText)
+                    .padding()
+                    .background(Color.white.opacity(0.1))
+                    .frame(height: 46)
+                    .cornerRadius(23)
+                    .foregroundColor(.white)
+//
+//                Button("Send") {
+//                    onSend()
+//                }
+                Button(action: onSend) {
+                    Image(systemName: "paperplane.fill")
+                        .foregroundColor(.white)
+                        .frame(width: 46, height: 46)
+                        .background(InitChatColors.textFieldBg)
+                        .clipShape(Circle())
+                }
+            }
+            .padding()
+        }
+    }
+    
     
 }

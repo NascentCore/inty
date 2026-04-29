@@ -36,6 +36,9 @@ struct LoginView: View {
     
     private func goAppleLogin() {
         ToastManager.shared.show("正在接入中...", type: .info);
+        
+        // 测试代码
+//        router.push(.LoginInitChat)
     }
     
     private func goEmailLogin() {

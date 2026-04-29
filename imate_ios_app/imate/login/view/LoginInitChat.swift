@@ -19,58 +19,54 @@ struct InitChatColors {
 }
 
 struct LoginInitChat: View {
+    @StateObject var vm = LoginInitChatVM()
+    
     @State private var messages: [String] = ["Hello! I'm your AI companion.", "What's your name?", "fwefwe2"]
     @State private var inputText: String = ""
-    @State private var progress: Double = 0.5
+    @State private var progress: Double = 0.3
     
     var body: some View {
-        VStack(spacing: 0) {
-            LoginWidgets.HeaderBg()
+        ZStack() {
+            LoginInitChatWidgets.background
             
-            // 1. 顶部
-            LoginInitChatWidgets.InitChatHeader(
-                progress: progress,
-                title: "iMate Personalization",
-                subtitle: "Building your companion...",
-                avatarUrl: nil
-            )
-
-            // 2. 聊天列表
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(0..<messages.count, id: \.self) { index in
-                            LoginInitChatWidgets.InitChatBubble(message: messages[index], isAgent: index % 2 == 0)
-                        }
-                    }
-                    .padding()
-                }
-            }
-
-            // 3. 底部输入栏
-            VStack {
-                Divider().background(InitChatColors.divider)
+            VStack(spacing: 0) {
+                // 1. 顶部
+                LoginInitChatWidgets.Header(progress: vm.steps.progress, bgColor: vm.steps.topBgColor)
                 
-                HStack(spacing: 8) {
-                    TextField("Enter your name...", text: $inputText)
-                        .padding(.horizontal, 16)
-                        .frame(height: 46)
-                        .background(InitChatColors.textFieldBg)
-                        .cornerRadius(23)
-                        .foregroundColor(.white)
-                    
-                    Button(action: sendMessage) {
-                        Image(systemName: "paperplane.fill")
-                            .foregroundColor(.white)
-                            .frame(width: 46, height: 46)
-                            .background(InitChatColors.textFieldBg)
-                            .clipShape(Circle())
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 13)
+                // 2. 聊天列表
+                LoginInitChatWidgets.ChatList(messages: vm.messages)
+
+                // 3. 底部输入栏
+                LoginInitChatWidgets.InputBar(
+                    inputText: $vm.inputText,
+                    onSend: vm.sendMessage
+                )
+//                VStack {
+//                    Divider().background(InitChatColors.divider)
+//                    
+//                    HStack(spacing: 8) {
+//                        TextField("Enter your name...", text: $inputText)
+//                            .padding(.horizontal, 16)
+//                            .frame(height: 46)
+//                            .background(InitChatColors.textFieldBg)
+//                            .cornerRadius(23)
+//                            .foregroundColor(.white)
+//                        
+//                        Button(action: sendMessage) {
+//                            Image(systemName: "paperplane.fill")
+//                                .foregroundColor(.white)
+//                                .frame(width: 46, height: 46)
+//                                .background(InitChatColors.textFieldBg)
+//                                .clipShape(Circle())
+//                        }
+//                    }
+//                    .padding(.horizontal)
+//                    .padding(.vertical, 13)
+//                }
+                
             }
-            .background(Color.black)
+            
+            
         }
         .background(Color.black.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
