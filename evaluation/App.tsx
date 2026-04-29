@@ -36,6 +36,7 @@ import GeneratedImagesPage from "./pages/GeneratedImagesPage";
 import { ReportFeedbackPage } from "./pages/ReportFeedbackPage";
 import { ReportUserConversationsPage } from "./pages/ReportUserConversationsPage";
 import { VoiceChatPage } from "./pages/VoiceChatPage";
+import { VoiceRecordingPage } from "./pages/VoiceRecordingPage";
 import { FestivalMemoryPage } from "./pages/FestivalMemoryPage";
 import { LlmMonthlyBillingPage } from "./pages/LlmMonthlyBillingPage";
 import { ApiKeyProvider, useApiKeyContext } from "./hooks/useApiKey";
@@ -68,7 +69,8 @@ type PageKey =
   | "report-feedback"
   | "report-user-conversations"
   | "festival-memory"
-  | "llm-monthly-billing";
+  | "llm-monthly-billing"
+  | "voice-recording";
 
 const HASH_PAGE_KEYS = new Set<PageKey>([
   "evaluation",
@@ -87,6 +89,7 @@ const HASH_PAGE_KEYS = new Set<PageKey>([
   "report-user-conversations",
   "festival-memory",
   "llm-monthly-billing",
+  "voice-recording",
 ]);
 
 interface NavigationItem {
@@ -126,6 +129,17 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     localStorage.setItem("lastVisitedPage", currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const { pageKey } = parseEvaluationHashRoute(window.location.hash);
+      if (HASH_PAGE_KEYS.has(pageKey as PageKey)) {
+        setCurrentPage(pageKey as PageKey);
+      }
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // 响应式检测
   useEffect(() => {
@@ -318,6 +332,8 @@ const AppContent: React.FC = () => {
         return "节日记忆提取";
       case "llm-monthly-billing":
         return "模型月度账单计算器";
+      case "voice-recording":
+        return "语音通话录音";
       default:
         return "智能体评测系统";
     }
@@ -398,6 +414,8 @@ const AppContent: React.FC = () => {
         return <FestivalMemoryPage />;
       case "llm-monthly-billing":
         return <LlmMonthlyBillingPage />;
+      case "voice-recording":
+        return <VoiceRecordingPage />;
 
       default:
         return null;
