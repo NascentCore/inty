@@ -2,6 +2,7 @@
 
 ## CLI（`main.py`）
 
+- **下行展示**：侧带弹出服务端推送帧时优先通过 [`repl_message_io.pop_downlink_item`](repl_message_io.py)（tagged：`assistant` / `ws_error`），与 app 侧队列契约对齐；与 app 侧实现刻意分离、独立演进。
 - `python -m tools.inty_v2_repl.main repl` **仅**连接 Inty `/api/v1/chat/ws`（`backend_chat_ws.BackendChatWsBridge`）；对话与 bootstrap 由服务端处理。
 - 连接后首轮 **burst drain** 等服务端主动 kickoff：`INTY_V2_BACKEND_WS_KICKOFF_DRAIN_SEC`（默认 10，单位秒，上限 600；0 表示仅 `get_nowait` 一次）。POSIX 且 TTY 时在 `>` 等输入会 **侧带** 轮询 `try_pop_queued_chat`，晚到的聊天 JSON 也会打印；Windows / 非 TTY 仍为阻塞 `input()`。
 - 默认 **全双工**（`INTY_V2_REPL_DUPLEX` 非 `0`/`false` 等）：`send_turn` 在单线程池里跑，主循环在等一轮时可 `select` 把下一**整行**排入队列；**有 in-flight 轮次时**不 `try_pop_queued_chat`（与 `BackendChatWsBridge` 共享 FIFO，避免抢帧）。`INTY_V2_REPL_DUPLEX=0` 回退为与旧版相同的主线程同步 `send_turn`。

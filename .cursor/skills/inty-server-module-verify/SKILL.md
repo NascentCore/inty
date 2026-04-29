@@ -17,11 +17,15 @@ description: >-
 ## 约定
 
 1. **工作目录**：始终在**仓库根目录**执行下面的 `python` 命令；脚本会向上查找 `pyproject.toml` / `requirements.txt` 以加入 `sys.path`，从而复用 `app` 与 `tools/inty_v2_repl/backend_chat_ws.py`。
-2. **凭据（Cursor 里无法在「聊天窗」里设置环境变量；命令是在终端里跑的）**  
+2. **输出结论（必须）**：验证脚本在**结束前**须打印一行固定前缀的结论，便于 Agent 与用户不看全文也能判断是否通过：
+   - 成功：`[inty-server-module-verify] RESULT: PASS (exit=0, elapsed=…s)`（stdout，接在助手正文之后）。
+   - 失败：`[inty-server-module-verify] RESULT: FAIL (exit=…)`（stderr，附带简短原因）。
+   **Agent 汇报「端到端 smoke 结果」时，应优先复述该行**，并与退出码交叉核对。
+3. **凭据（Cursor 里无法在「聊天窗」里设置环境变量；命令是在终端里跑的）**  
    Token 优先级：`--token` 参数 > 环境变量 `INTY_BEARER_TOKEN` > 配置文件里可选字段 `bearer_token`。  
    常用方式：在 **Cursor 底部集成终端** 中先 `export INTY_BEARER_TOKEN=...` 再运行 `python3 .../test_chat_ws.py`；或将 [config.example.yaml](config.example.yaml) 复制为 `config.local.yaml`，填写 `bearer_token` 与 `agent_id` 等，并用 `-c` 指定（`config.local.yaml` 已列入本 skill 的 `.gitignore`）。**切勿**将含真 token 的文件提交到 git。  
    `INTY_API_BASE_URL` 可选，与 `--api-base` 或 `api_base_url` 二选一，例如 `http://127.0.0.1:8000`。
-3. **配置文件**：使用 `--config` 指向 yaml 时若未安装 PyYAML，可执行  
+4. **配置文件**：使用 `--config` 指向 yaml 时若未安装 PyYAML，可执行  
    `pip install -r .cursor/skills/inty-server-module-verify/requirements.txt`。
 
 ## 脚本清单
@@ -51,6 +55,8 @@ python3 .cursor/skills/inty-server-module-verify/scripts/test_chat_ws.py \
   -m "你好"
 ```
 
+**无需预先持有 agent id**：加 `--create-agent`（或配置文件里 `create_agent: true`）会先 `POST /api/v1/ai/agents` 创建一个 PRIVATE 测试角色，stdout 会打印一行 `[inty-server-module-verify] created_agent_id=...`，再用该 id 跑同一套 WebSocket 单轮测试。若同时配置了 `--agent-id` / `agent_id`，以新建为准并忽略已有 id（stderr 会提示）。创建失败常见原因：账号已达角色创建上限（业务码非 200，`error_code` / `used_count` / `limit` 见 stderr）、或未登录 token 无效。
+
 使用配置文件：
 
 ```bash
@@ -61,9 +67,22 @@ python3 .cursor/skills/inty-server-module-verify/scripts/test_chat_ws.py -c /tmp
 
 ### 退出码
 
-- `0`：收到 `code=200` 的回复并打印助手文本。
-- `1`：业务错误、连接失败、未授权等。
-- `2`：参数/配置不合法（缺少 `api_base`、`agent_id`、token 等）。
+- `0`：收到 `code=200` 的回复并打印助手文本；stdout 末尾应有 `RESULT: PASS`。
+- `1`：业务错误、连接失败、未授权等；stderr 末尾应有 `RESULT: FAIL`。
+- `2`：参数/配置不合法（缺少 `api_base`、`agent_id`、token 等）；stderr 末尾应有 `RESULT: FAIL`。
+
+### 成功输出示例（节选）
+
+```text
+[inty-server-module-verify] created_agent_id=<uuid>
+OK (6.97s)
+
+<助手回复正文>
+
+[inty-server-module-verify] RESULT: PASS (exit=0, elapsed=6.97s)
+```
+
+（仅 `--create-agent` 时会出现第一行 `created_agent_id`。）
 
 ## 常见故障
 
@@ -73,6 +92,7 @@ python3 .cursor/skills/inty-server-module-verify/scripts/test_chat_ws.py -c /tmp
 | 连接超时 | `api_base_url` 不是当前环境地址，或服务未监听 |
 | `BackendChatWsError` / 非 200 | 订阅限制、禁用接口、或 agent 不存在等，查看 stderr 中的 `code` 与 `message` |
 | `Missing token` | 未设置 `INTY_BEARER_TOKEN` 且未传 `--token` / 配置中无 `bearer_token` |
+| `create agent failed` / `AGENT_CREATION_LIMIT_REACHED` | 用户自建角色数已达上限；删旧角色或换账号 / superuser，再试 `--create-agent` |
 | `python-socks is required to use a SOCKS proxy` | 本机环境变量里配置了 `socks5://` 等代理，而 websockets 默认会走代理。验证脚本已固定 **`proxy=None` 直连**，若你仍用旧版脚本，可 `pip install python-socks[asyncio]` 或取消相关代理环境变量 |
 | 使用 `--config` 时提示需要 PyYAML | 安装 `requirements.txt` 中的依赖 |
 

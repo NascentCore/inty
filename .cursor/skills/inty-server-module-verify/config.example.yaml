@@ -11,7 +11,10 @@
 # HTTP(S) 根地址，与 REST 基址一致（脚本会自行转换为 ws/wss）
 api_base_url: "http://127.0.0.1:8000"
 
-# 要对话的 agent id（必填）
+# 为 true 时通过 POST /api/v1/ai/agents 新建 PRIVATE 测试用角色，无需事先填写 agent_id
+# create_agent: false
+
+# 要对话的 agent id（create_agent 为 true 时可省略；若同时指定则 create_agent 优先并忽略本字段）
 agent_id: ""
 
 # 单轮用户消息
@@ -23,3 +26,6 @@ connect_kickoff: false
 # 可选：连接与收包的超时（秒），不设则与 tools/inty_v2_repl/backend_chat_ws 默认一致
 # connect_timeout_sec: 30
 # recv_timeout_sec: 600
+
+# 可选：创建 agent 的 HTTP 超时（秒），不设则至少 60
+# create_agent_http_timeout_sec: 60

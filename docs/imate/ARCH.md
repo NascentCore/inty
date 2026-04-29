@@ -8,6 +8,8 @@
 
 启用异步双路（Dual-LLM）时，前台 chat 先随一轮 WS 响应返回；后台 tool 侧完成后可能经**同一连接**再推送 assistant 帧；连接级队列与落库规则以前述文档为准。
 
+**队列中心化下行（inty-ws）**：`/api/v1/chat/ws` 上发往客户端的聊天 JSON（含 foreground、tool 异步补帧、kickoff、HTTP 错误帧）经 **`asyncio.Queue`** 交给专用 **`chat_ws_outbound_pump`**（[`app/services/chat_websocket_session.py`](../../app/services/chat_websocket_session.py)）顺序 `send_json`，保持 FIFO；控制类帧（如 ping/pong）仍可由路由直接应答。
+
 ```mermaid
 flowchart LR
   subgraph Client["客户端"]

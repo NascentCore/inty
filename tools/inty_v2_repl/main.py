@@ -43,6 +43,7 @@ from .proto_log import (
     repl_wall_ts_str,
     resolve_proto_log_file,
 )
+from .repl_message_io import format_ws_error_banner, pop_downlink_item
 
 load_prototype_dotenv()
 load_dotenv(_REPO_ROOT / ".env")
@@ -250,19 +251,19 @@ def _readline_backend_ws_with_sideband(
         except (ValueError, OSError):
             return input(prompt)
         if not r:
-            assistant, err = bridge.try_pop_queued_chat()
-            if assistant is not None:
+            item = pop_downlink_item(bridge)
+            if item is not None:
                 print()
-                _print_assistant_reply(assistant, 0.0)
-                sys.stdout.write(prompt)
-                sys.stdout.flush()
-            elif err is not None:
-                code, msg = err
-                print()
-                print(
-                    f"[{repl_wall_ts_str()}] chat-ws-error sideband code={code} "
-                    f"message={msg!r}"
-                )
+                if item["kind"] == "assistant":
+                    _print_assistant_reply(item["text"], 0.0)
+                else:
+                    print(
+                        format_ws_error_banner(
+                            item["code"],
+                            item["message"],
+                            wall_ts=repl_wall_ts_str(),
+                        )
+                    )
                 sys.stdout.write(prompt)
                 sys.stdout.flush()
             continue

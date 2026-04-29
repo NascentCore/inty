@@ -51,6 +51,8 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
+from app.services.chat_websocket_session import chat_ws_outbound_pump
+from app.services.ws_session_messages import WsOutboundPayload
 from app.services.memory_service import (
     deliver_daily_memories_for_user_agent,
     deliver_festival_memories_for_user_agent,
@@ -502,17 +504,16 @@ def _companion_rejects_multimodal_user_turn(last_user_message: ChatMessage) -> b
     return last_user_message.has_image_content_part()
 
 
-async def _send_companion_tool_background_ws_completion(
+async def _build_companion_tool_background_ws_payload(
     *,
     db: AsyncSession,
-    websocket: WebSocket,
     agent_id: str,
     session_id: str,
     ev: ToolOutputEvent,
     request: ChatCompletionRequest,
     effective_local_id: Optional[str],
     foreground_user_message_id: Optional[int] = None,
-) -> None:
+) -> WsOutboundPayload:
     meta_data = {
         "source": "tool_bg",
         "trace_id": ev.trace_id,
@@ -559,7 +560,7 @@ async def _send_companion_tool_background_ws_completion(
     out = payload.model_dump(exclude_none=True)
     out["agent_id"] = agent_id
     out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
-    await websocket.send_json(out)
+    return out
 
 
 async def _agent_status_line_for_chat_header(
@@ -1156,6 +1157,7 @@ async def _try_send_ws_user_interactive_bootstrap_kickoff(
     current_user: schemas.User,
     agent_id: str,
     subscription_svc: SubscriptionService,
+    outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
 ) -> None:
     """
     When the client passes ``agent_id`` as a WebSocket query param, send at most one proactive
@@ -1248,7 +1250,10 @@ async def _try_send_ws_user_interactive_bootstrap_kickoff(
         out = payload.model_dump(exclude_none=True)
         out["agent_id"] = agent_id
         out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
-        await websocket.send_json(out)
+        if outbound_queue is not None:
+            await outbound_queue.put(out)
+        else:
+            await websocket.send_json(out)
     except Exception:
         logger.exception(
             "ws interactive bootstrap kickoff failed agent_id={}", agent_id
@@ -1281,6 +1286,12 @@ async def chat_completions_websocket(
         else None
     )
 
+    outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
+    pump_task = asyncio.create_task(
+        chat_ws_outbound_pump(websocket, outbound_queue),
+        name="chat_ws_outbound_pump",
+    )
+
     kick_agent_id = (websocket.query_params.get("agent_id") or "").strip()
     if kick_agent_id:
         await _try_send_ws_user_interactive_bootstrap_kickoff(
@@ -1289,6 +1300,7 @@ async def chat_completions_websocket(
             current_user=current_user,
             agent_id=kick_agent_id,
             subscription_svc=subscription_svc,
+            outbound_queue=outbound_queue,
         )
 
     tc_box: list[Optional[dict]] = [None]
@@ -1332,9 +1344,8 @@ async def chat_completions_websocket(
                     )
                     continue
                 try:
-                    await _send_companion_tool_background_ws_completion(
+                    bg_payload = await _build_companion_tool_background_ws_payload(
                         db=db,
-                        websocket=websocket,
                         agent_id=str(ctx["agent_id"]),
                         session_id=str(ctx["session_id"]),
                         ev=ev,
@@ -1344,6 +1355,7 @@ async def chat_completions_websocket(
                             "foreground_user_message_id"
                         ),
                     )
+                    await outbound_queue.put(bg_payload)
                 except Exception:
                     logger.exception("companion tool_bg ws completion failed")
                 continue
@@ -1385,7 +1397,7 @@ async def chat_completions_websocket(
             except HTTPException as e:
                 detail = e.detail
                 message = detail if isinstance(detail, str) else str(detail)
-                await websocket.send_json(
+                await outbound_queue.put(
                     {
                         "code": e.status_code,
                         "message": message,
@@ -1399,9 +1411,15 @@ async def chat_completions_websocket(
             else:
                 response_data = response.model_dump(exclude_none=True)
             response_data["agent_id"] = websocket_request.agent_id
-            await websocket.send_json(response_data)
+            await outbound_queue.put(response_data)
     except WebSocketDisconnect:
         return
+    finally:
+        pump_task.cancel()
+        try:
+            await pump_task
+        except asyncio.CancelledError:
+            pass
 
 
 @router.websocket("/ws/verify")
