@@ -69,7 +69,10 @@ export const OpsUserDetailModal: React.FC<{
         <>
           <Descriptions column={1} size="small" bordered>
             <Descriptions.Item label="用户 ID">
-              <Text copyable={{ text: userInfo.user_id }} style={{ fontFamily: "monospace" }}>
+              <Text
+                copyable={{ text: userInfo.user_id }}
+                style={{ fontFamily: "monospace" }}
+              >
                 {userInfo.user_id}
               </Text>
             </Descriptions.Item>

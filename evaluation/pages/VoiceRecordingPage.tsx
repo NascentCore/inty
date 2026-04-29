@@ -25,7 +25,9 @@ export type ParsedVoiceRecordingRoute = {
   messageId: number | null;
 };
 
-export function parseVoiceRecordingHash(hash: string): ParsedVoiceRecordingRoute | null {
+export function parseVoiceRecordingHash(
+  hash: string,
+): ParsedVoiceRecordingRoute | null {
   const { pageKey, params } = parseEvaluationHashRoute(hash);
   if (pageKey !== "voice-recording") {
     return null;
@@ -160,7 +162,11 @@ export const VoiceRecordingPage: React.FC = () => {
           </Text>
           <Text
             copyable={{ text: parsed.audioUrl }}
-            style={{ fontSize: 11, fontFamily: "monospace", wordBreak: "break-all" }}
+            style={{
+              fontSize: 11,
+              fontFamily: "monospace",
+              wordBreak: "break-all",
+            }}
           >
             {parsed.audioUrl}
           </Text>
