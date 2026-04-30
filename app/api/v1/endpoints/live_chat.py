@@ -248,6 +248,28 @@ async def live_chat_session(
     timeout_task: Optional[asyncio.Task] = None
     session_ended_by_timeout = False
 
+    # 下行 AI PCM 合并发送：减轻 Gemini 多小包导致的客户端 AudioTrack 颗粒感（与 WAV 接缝无关）
+    audio_downlink_buf = bytearray()
+    audio_downlink_lock = asyncio.Lock()
+    _DOWNLINK_BATCH_BYTES = 1920  # ~40ms @ 24kHz mono int16
+
+    async def flush_audio_downlink() -> None:
+        remainder = b""
+        async with audio_downlink_lock:
+            if audio_downlink_buf:
+                remainder = bytes(audio_downlink_buf)
+                audio_downlink_buf.clear()
+        if not remainder:
+            return
+        try:
+            msg = LiveChatAudioResponseMessage(
+                data=base64.b64encode(remainder).decode("utf-8"),
+                sample_rate=live_chat_service._config.receive_sample_rate,
+            )
+            await websocket.send_json(msg.model_dump())
+        except Exception as e:
+            logger.debug(f"发送音频失败（连接可能已关闭）: {str(e)}")
+
     try:
         session = await live_chat_service.create_session(
             db=db,
@@ -259,17 +281,33 @@ async def live_chat_session(
         input_queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
 
         async def on_audio(data: bytes):
-            """处理下行音频"""
+            """处理下行音频（按批发送，减少 WS 小包）"""
             if session_ended_by_timeout:
                 return
             try:
-                msg = LiveChatAudioResponseMessage(
-                    data=base64.b64encode(data).decode("utf-8"),
-                    sample_rate=live_chat_service._config.receive_sample_rate,
-                )
-                await websocket.send_json(msg.model_dump())
+                async with audio_downlink_lock:
+                    audio_downlink_buf.extend(data)
+                while True:
+                    async with audio_downlink_lock:
+                        if len(audio_downlink_buf) < _DOWNLINK_BATCH_BYTES:
+                            break
+                        batch = bytes(audio_downlink_buf[:_DOWNLINK_BATCH_BYTES])
+                        del audio_downlink_buf[:_DOWNLINK_BATCH_BYTES]
+                    try:
+                        msg = LiveChatAudioResponseMessage(
+                            data=base64.b64encode(batch).decode("utf-8"),
+                            sample_rate=live_chat_service._config.receive_sample_rate,
+                        )
+                        await websocket.send_json(msg.model_dump())
+                    except Exception as send_e:
+                        logger.debug(
+                            f"发送音频失败（连接可能已关闭）: {str(send_e)}"
+                        )
+                        async with audio_downlink_lock:
+                            audio_downlink_buf[:0] = batch
+                        break
             except Exception as e:
-                logger.debug(f"发送音频失败（连接可能已关闭）: {str(e)}")
+                logger.debug(f"处理下行音频失败: {str(e)}")
 
         async def on_transcript(
             text: str,
@@ -302,6 +340,12 @@ async def live_chat_session(
             if session_ended_by_timeout:
                 return
             try:
+                if status in (
+                    LiveChatStatus.LISTENING,
+                    LiveChatStatus.DISCONNECTED,
+                    LiveChatStatus.ERROR,
+                ):
+                    await flush_audio_downlink()
                 msg = LiveChatStatusMessage(
                     status=status,
                     message=message,
@@ -513,6 +557,10 @@ async def live_chat_session(
         elif session:
             await live_chat_service.end_session(session.session_id)
 
+        try:
+            await flush_audio_downlink()
+        except Exception:
+            pass
         try:
             await websocket.close()
         except Exception:
