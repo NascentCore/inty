@@ -399,8 +399,8 @@ async def run_turn(
                     )
                     msg = resp.choices[0].message
                     raw_content = msg.content or ""
-                    last_text, significance_meta = (
-                        split_dual_llm_chat_branch_content(raw_content)
+                    last_text, significance_meta = split_dual_llm_chat_branch_content(
+                        raw_content
                     )
                     logger.info(
                         "run_turn loop_done rounds={} loop_total_ms={:.0f} route={}",
@@ -413,7 +413,9 @@ async def run_turn(
                         "user_msg_uuid={} ls_trace_id={} defer_parent_end_to_tool_bg_thread=1",
                         trace_id,
                         user_msg_uuid,
-                        companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run),
+                        companion_turn_langsmith_parent_trace_id_str(
+                            langsmith_parent_run
+                        ),
                     )
                 else:
                     for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):

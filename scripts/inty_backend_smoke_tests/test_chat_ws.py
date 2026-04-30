@@ -63,9 +63,15 @@ def _find_repo_root() -> Path:
         if (p / "pyproject.toml").is_file() and (p / "app").is_dir():
             return p
     for p in (here, *here.parents):
-        if (p / "requirements.txt").is_file() and (p / "app").is_dir() and (p / "tools").is_dir():
+        if (
+            (p / "requirements.txt").is_file()
+            and (p / "app").is_dir()
+            and (p / "tools").is_dir()
+        ):
             return p
-    raise RuntimeError("Cannot find Inty repo root (expected pyproject.toml + app/ above script).")
+    raise RuntimeError(
+        "Cannot find Inty repo root (expected pyproject.toml + app/ above script)."
+    )
 
 
 def _ensure_sys_path() -> Path:
@@ -179,7 +185,9 @@ def _create_smoke_agent(
         "personality": "Friendly and brief.",
         "scenario": "Automated verification only.",
     }
-    out = _http_post_json(url=url, body=body, bearer_token=bearer_token, timeout=http_timeout)
+    out = _http_post_json(
+        url=url, body=body, bearer_token=bearer_token, timeout=http_timeout
+    )
     if out.get("code") != 200:
         msg = out.get("message", "")
         data = out.get("data")
@@ -192,7 +200,9 @@ def _create_smoke_agent(
             used = data.get("used_count")
             if lim is not None:
                 extra += f" used_count={used!r} limit={lim!r}"
-        raise RuntimeError(f"create agent failed: code={out.get('code')} message={msg!r}{extra}")
+        raise RuntimeError(
+            f"create agent failed: code={out.get('code')} message={msg!r}{extra}"
+        )
     data = out.get("data")
     if not isinstance(data, dict) or not data.get("id"):
         raise RuntimeError(f"create agent: unexpected response: {out!r}")
@@ -231,7 +241,11 @@ async def _turn_with_connect_kickoff(
     kickoff_drain_sec: float = 5.0,
 ) -> str:
     _ensure_sys_path()
-    from app.schemas.chat import ChatCompletionRequest, ChatMessage, ChatWebSocketRequest
+    from app.schemas.chat import (
+        ChatCompletionRequest,
+        ChatMessage,
+        ChatWebSocketRequest,
+    )
     from tools.inty_v2_repl.backend_chat_ws import (
         _parse_chat_response_payload,
         http_base_to_ws_chat_url,
@@ -303,7 +317,10 @@ async def _run(args: argparse.Namespace) -> int:
         or (_str_opt(cfg, "api_base_url") or "")
     )
     if not api_base:
-        print("Missing api base: use --api-base, INTY_API_BASE_URL, or config api_base_url", file=sys.stderr)
+        print(
+            "Missing api base: use --api-base, INTY_API_BASE_URL, or config api_base_url",
+            file=sys.stderr,
+        )
         _emit_verify_result(
             ok=False,
             exit_code=2,
@@ -313,7 +330,9 @@ async def _run(args: argparse.Namespace) -> int:
 
     create_agent = bool(args.create_agent) or (_bool_opt(cfg, "create_agent") is True)
 
-    agent_id_cli = (args.agent_id or "").strip() or (_str_opt(cfg, "agent_id") or "").strip()
+    agent_id_cli = (args.agent_id or "").strip() or (
+        _str_opt(cfg, "agent_id") or ""
+    ).strip()
     if create_agent and agent_id_cli:
         print(
             f"Ignoring --agent-id / config agent_id ({agent_id_cli!r}); using newly created agent (--create-agent).",
@@ -369,7 +388,10 @@ async def _run(args: argparse.Namespace) -> int:
     else:
         agent_id = agent_id_cli
         if not agent_id:
-            print("Missing --agent-id or config agent_id (or use --create-agent / create_agent: true)", file=sys.stderr)
+            print(
+                "Missing --agent-id or config agent_id (or use --create-agent / create_agent: true)",
+                file=sys.stderr,
+            )
             _emit_verify_result(ok=False, exit_code=2, detail="missing agent_id")
             return 2
 
@@ -394,10 +416,17 @@ async def _run(args: argparse.Namespace) -> int:
             )
     except ConnectionClosed as e:
         if e.code == 4001:
-            print("WebSocket closed: 4001 Unauthorized (check INTY_BEARER_TOKEN).", file=sys.stderr)
-            _emit_verify_result(ok=False, exit_code=1, detail="WebSocket 4001 Unauthorized")
+            print(
+                "WebSocket closed: 4001 Unauthorized (check INTY_BEARER_TOKEN).",
+                file=sys.stderr,
+            )
+            _emit_verify_result(
+                ok=False, exit_code=1, detail="WebSocket 4001 Unauthorized"
+            )
         else:
-            print(f"WebSocket closed: code={e.code} reason={e.reason!r}", file=sys.stderr)
+            print(
+                f"WebSocket closed: code={e.code} reason={e.reason!r}", file=sys.stderr
+            )
             _emit_verify_result(
                 ok=False,
                 exit_code=1,
