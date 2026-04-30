@@ -42,6 +42,7 @@ from app.schemas.chat import (
     ChatMessage,
     ChatWebSocketRequest,
     UserTimeContext,
+    normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.response import (
     BizError,
@@ -564,6 +565,14 @@ def _companion_rejects_multimodal_user_turn(last_user_message: ChatMessage) -> b
     return last_user_message.has_image_content_part()
 
 
+def _require_websocket_companion_message_id_uuid(request: ChatCompletionRequest) -> str:
+    """WebSocket companion turns require a client ``message_id`` that parses as UUID."""
+    try:
+        return normalize_websocket_companion_message_id_uuid(request.message_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 async def _build_companion_tool_background_ws_payload(
     *,
     db: AsyncSession,
@@ -579,6 +588,8 @@ async def _build_companion_tool_background_ws_payload(
         "trace_id": ev.trace_id,
         "reply_to_user_msg_uuid": ev.user_msg_uuid,
     }
+    if ev.langsmith_trace_id:
+        meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -773,7 +784,9 @@ async def _agent_chat_completions_impl(
                         chat_route == "websocket"
                         and companion_ws_foreground_pending is not None
                     ):
-                        companion_preset_uid = str(uuid.uuid4())
+                        companion_preset_uid = _require_websocket_companion_message_id_uuid(
+                            request
+                        )
                         companion_ws_foreground_pending[companion_preset_uid] = {
                             "session_id": session_id,
                             "agent_id": agent_id,
@@ -813,6 +826,14 @@ async def _agent_chat_completions_impl(
                     companion_ai_meta: dict[str, Any] = {
                         "source": companion_turn.assistant_source,
                     }
+                    if companion_turn.trace_id:
+                        companion_ai_meta["trace_id"] = companion_turn.trace_id
+                    if companion_turn.user_msg_uuid:
+                        companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+                    if companion_turn.langsmith_trace_id:
+                        companion_ai_meta["langsmith_trace_id"] = (
+                            companion_turn.langsmith_trace_id
+                        )
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:
                         companion_ai_meta["significance_perception"] = sp

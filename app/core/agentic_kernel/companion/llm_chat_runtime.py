@@ -17,6 +17,41 @@ class OpenRouterInvalidJsonError(RuntimeError):
     """OpenRouter returned a response body that was not valid JSON."""
 
 
+def langsmith_trace_id_from_completion(resp: Any) -> str:
+    """Reads optional ``langsmith_trace_id`` copied onto the ChatCompletion by ``create_chat_completion_sync``."""
+    try:
+        v = getattr(resp, "langsmith_trace_id", None)
+        if v is None:
+            return ""
+        return str(v).strip()
+    except Exception:
+        return ""
+
+
+def _attach_langsmith_trace_to_completion(resp: Any) -> Any:
+    """Best-effort: LangSmith RunTree ``trace_id`` (root trace UUID) onto the completion object."""
+    try:
+        if langsmith_trace_id_from_completion(resp):
+            return resp
+        from langsmith.run_helpers import get_current_run_tree
+
+        rt = get_current_run_tree()
+        if rt is None:
+            return resp
+        tid = getattr(rt, "trace_id", None)
+        if tid is None:
+            return resp
+        s = str(tid).strip()
+        if not s:
+            return resp
+        model_copy = getattr(resp, "model_copy", None)
+        if model_copy is None:
+            return resp
+        return model_copy(update={"langsmith_trace_id": s})
+    except Exception:
+        return resp
+
+
 def tool_path_chat_completion_kwargs(model: str) -> dict[str, Any]:
     import os
 
@@ -62,7 +97,8 @@ def create_chat_completion_sync(
             create_kw["tool_choice"] = tool_choice
     for attempt in range(1, _OPENROUTER_JSON_MAX_ATTEMPTS + 1):
         try:
-            return client.chat.completions.create(**create_kw)
+            raw = client.chat.completions.create(**create_kw)
+            return _attach_langsmith_trace_to_completion(raw)
         except json.JSONDecodeError as exc:
             retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
             logger.warning(

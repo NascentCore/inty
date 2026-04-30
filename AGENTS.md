@@ -180,11 +180,12 @@ The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via ap
 
 1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
    - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
-2. **Backend**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
+2. **Inty backend (port 8000)**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
    - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
-   - `--test` = dev mode minus evaluation frontend build (fast startup)
-   - `--dev` = full dev mode including evaluation frontend build
+   - `--test` and `--dev` both enable dev startup (same seeds and uvicorn `--reload`); `start.sh` only differs by the banner string. Neither runs the evaluation static build (that is Ops `backend/ops/start.sh --local` only).
+   - **`Environment.TEST` in Python** comes from `config.yaml` (`app.environment`), not from the `--test` CLI flag.
    - The server runs on `http://localhost:8000`
+3. **Ops backend (port 8001, optional for REPL / ops stack)**: `source .venv/bin/activate && ./backend/ops/start.sh --local --no-build-frontend` skips `evaluation/build.sh` (faster startup if `app/static/evaluation` is already populated). Omit `--no-build-frontend` when you need a fresh evaluation static bundle. For REPL-style debugging, add `--debug --log-file ./inty-ops-local.log` (details in `tools/inty_v2_repl/docs/GET_STARTED.md`). See `backend/ops/start.sh --help`.
 
 ### Running tests
 

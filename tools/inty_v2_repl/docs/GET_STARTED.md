@@ -37,8 +37,9 @@ cp tools/inty_v2_repl/.env.example tools/inty_v2_repl/.env
 cp devops/config.yaml.local config.yaml
 
 # 启动本地 Inty Ops 后端（含 Inty API 与运营 Web UI）
+# --no-build-frontend：跳过 evaluation 前端构建（依赖已有 app/static/evaluation；首次或改版评测 UI 时请去掉）
 # 启动过程中会打印 bearer token：写入 tools/inty_v2_repl/.env 的 INTY_ACCESS_TOKEN
-backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log
+backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log --no-build-frontend
 ```
 
 ### `backend/ops/start.sh`：`--debug` 与 `--log-file`
@@ -47,6 +48,7 @@ backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log
 
 - **`--debug`**：导出 `INTY_LOGGING_LEVEL=DEBUG`，并为 uvicorn 增加 `--log-level debug`，应用内 Loguru 与访问日志更细。
 - **`--log-file PATH`**：导出 `INTY_LOG_FILE=PATH`，由 `app/core/logging.py` 为 Loguru **追加**一个 UTF-8 文件 sink（与控制台并行）。与 **`--debug` 同用时**，脚本会设 `INTY_CONSOLE_LOGGING_LEVEL=INFO`，终端 INFO、文件仍 DEBUG。`PATH` 相对**当前 shell 工作目录**。
+- **`--no-build-frontend`**：`--local` 下不执行 `evaluation/build.sh`，沿用现有 `app/static/evaluation`。默认会先构建评测静态资源；需要刷新前端产物时去掉该参数或传 `--build-frontend`。
 
 查看全部选项：`backend/ops/start.sh --help`。
 

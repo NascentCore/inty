@@ -76,6 +76,7 @@ from .tools import (
 )
 from .utc import utc_iso_ts
 from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+from .llm_chat_runtime import langsmith_trace_id_from_completion
 from .workspace import WorkspacePaths
 
 _MAX_TOOL_ROUNDS = 24
@@ -236,6 +237,7 @@ async def run_turn(
 
     ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
+    langsmith_trace_acc = ""
 
     # Tool loop
     tools = tools_for_turn
@@ -334,6 +336,9 @@ async def run_turn(
                     asyncio.to_thread(_chat_sync),
                     timeout=llm_client.config.async_chat_front_timeout_sec,
                 )
+                langsmith_trace_acc = (
+                    langsmith_trace_id_from_completion(resp) or langsmith_trace_acc
+                )
             except asyncio.TimeoutError as exc:
                 raise RuntimeError(
                     f"async chat front timed out after "
@@ -394,6 +399,9 @@ async def run_turn(
                         else None
                     ),
                     scene=llm_scene,
+                )
+                langsmith_trace_acc = (
+                    langsmith_trace_id_from_completion(resp) or langsmith_trace_acc
                 )
                 approx_ctx_chars = sum(
                     len(str(m.get("content") or "")) for m in messages
@@ -534,6 +542,7 @@ async def run_turn(
         significance_perception=significance_meta,
         user_msg_uuid=user_msg_uuid,
         trace_id=trace_id,
+        langsmith_trace_id=langsmith_trace_acc,
         used_async_tool_background=used_async_tool_background,
         assistant_source="inner_tick" if inner_tick_turn else "chat",
     )

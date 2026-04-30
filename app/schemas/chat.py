@@ -1,4 +1,5 @@
 import enum
+import uuid
 from datetime import datetime
 from typing import Annotated, Any, Dict, List, Literal, Optional
 
@@ -396,6 +397,16 @@ class UserTimeContext(BaseModel):
     utc_offset_minutes: Optional[int] = None  # UTC 偏移分钟数，如 480 表示 UTC+8
 
 
+def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
+    """Canonical RFC4122 UUID string for WebSocket companion ``message_id`` / transcript user row."""
+    if raw is None or not str(raw).strip():
+        raise ValueError("message_id is required and must be a UUID")
+    try:
+        return str(uuid.UUID(str(raw).strip()))
+    except ValueError as exc:
+        raise ValueError("message_id must be a valid UUID") from exc
+
+
 class ChatCompletionRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -412,7 +423,7 @@ class ChatCompletionRequest(BaseModel):
     )  # 可选的用户时间上下文
     # TODO：目前还在实施中 https://github.com/NascentCore/inty/issues/1364
     message_id: Optional[str] = (
-        None  # Android 端生成的消息唯一标识；前后端用该 ID 确认该信息，ID 由生成方产生。
+        None  # Required for WebSocket companion: RFC4122 UUID, used as transcript user_msg_uuid.
     )
     local_id: Optional[str] = Field(
         default=None,

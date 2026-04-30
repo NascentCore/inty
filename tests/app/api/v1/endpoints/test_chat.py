@@ -1148,10 +1148,11 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         Path("/tmp/inty_test_companion_ws_ws"),
     )
 
-    captured: dict = {"companion_calls": 0}
+    captured: dict = {"companion_calls": 0, "preset_user_msg_uuids": []}
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
+        captured["preset_user_msg_uuids"].append(kwargs.get("preset_user_msg_uuid"))
         return CompanionTurnResult(
             assistant_text="companion-ws-reply",
             significance_perception={
@@ -1310,6 +1311,9 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         fake_agent_status_line,
     )
 
+    first_turn_uuid = "11111111-1111-4111-8111-111111111111"
+    second_turn_uuid = "01234567-89ab-cdef-0123-456789abcdef"
+
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
             websocket.send_json(
@@ -1317,15 +1321,29 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
                     "agent_id": "agent-companion-ws",
                     "request": {
                         "messages": [{"role": "user", "content": "hello ws kernel"}],
+                        "message_id": first_turn_uuid,
                     },
                 }
             )
             body = websocket.receive_json()
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-ws",
+                    "request": {
+                        "messages": [{"role": "user", "content": "second turn"}],
+                        "message_id": second_turn_uuid,
+                    },
+                }
+            )
+            body2 = websocket.receive_json()
 
     assert body["code"] == 200
     assert body["agent_id"] == "agent-companion-ws"
     assert body["data"]["choices"][0]["message"]["content"] == "companion-ws-reply"
-    assert captured["companion_calls"] == 1
+    assert body2["code"] == 200
+    assert captured["companion_calls"] == 2
+    assert captured["preset_user_msg_uuids"][0] == first_turn_uuid
+    assert captured["preset_user_msg_uuids"][1] == second_turn_uuid
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
     assert captured["ai_save"][3] == {
@@ -1389,6 +1407,83 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_rejects_missing_message_id(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {"companion_calls": 0}
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["companion_calls"] += 1
+        return CompanionTurnResult(assistant_text="should-not-run")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-mid",
+        workspace_dir="/tmp/inty_test_companion_ws_mid",
+        chat_id="chat-mid-1",
+        latest_user_message_db_id=59,
+        ai_message_id=1,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-mid",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hi"}],
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 400
+    assert "message_id" in body["message"]
+    assert captured["companion_calls"] == 0
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_rejects_non_uuid_message_id(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {"companion_calls": 0}
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["companion_calls"] += 1
+        return CompanionTurnResult(assistant_text="should-not-run")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-mid2",
+        workspace_dir="/tmp/inty_test_companion_ws_mid2",
+        chat_id="chat-mid-2",
+        latest_user_message_db_id=60,
+        ai_message_id=1,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-mid2",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "message_id": "local-optimistic-123",
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 400
+    assert "UUID" in body["message"]
+    assert captured["companion_calls"] == 0
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -1424,6 +1519,7 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
                                 ],
                             }
                         ],
+                        "message_id": "22222222-2222-4222-8222-222222222222",
                     },
                 }
             )

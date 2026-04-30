@@ -13,7 +13,12 @@ from typing import Any, Literal
 import websockets
 from websockets.exceptions import ConnectionClosed
 
-from app.schemas.chat import ChatCompletionRequest, ChatMessage, ChatWebSocketRequest
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    ChatMessage,
+    ChatWebSocketRequest,
+    normalize_websocket_companion_message_id_uuid,
+)
 from loguru import logger
 
 
@@ -445,7 +450,10 @@ class BackendChatWsBridge:
         raise TimeoutError("wait for chat WebSocket online timed out")
 
     def send_turn(
-        self, agent_id: str, user_text: str
+        self,
+        agent_id: str,
+        user_text: str,
+        message_id: str | None = None,
     ) -> tuple[str, dict[str, Any]]:
         if not self._loop:
             raise RuntimeError("bridge not started")
@@ -455,12 +463,22 @@ class BackendChatWsBridge:
             + float(self._send_max_retries) * (self._reconnect_max + 25.0)
         )
         deadline = time.monotonic() + max(120.0, result_cap)
-        coro = self._send_turn_async(agent_id, user_text, deadline_monotonic=deadline)
+        coro = self._send_turn_async(
+            agent_id,
+            user_text,
+            deadline_monotonic=deadline,
+            message_id=message_id,
+        )
         fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return fut.result(timeout=max(120.0, result_cap))
 
     async def _send_turn_async(
-        self, agent_id: str, user_text: str, *, deadline_monotonic: float
+        self,
+        agent_id: str,
+        user_text: str,
+        *,
+        deadline_monotonic: float,
+        message_id: str | None = None,
     ) -> tuple[str, dict[str, Any]]:
         last_transport: BaseException | None = None
         for attempt in range(self._send_max_retries):
@@ -470,11 +488,16 @@ class BackendChatWsBridge:
                 logger.warning("chat ws not connected before send (attempt {})", attempt)
                 continue
             try:
+                mid = (
+                    normalize_websocket_companion_message_id_uuid(message_id)
+                    if message_id and str(message_id).strip()
+                    else str(uuid.uuid4())
+                )
                 req = ChatWebSocketRequest(
                     agent_id=agent_id,
                     request=ChatCompletionRequest(
                         messages=[ChatMessage(role="user", content=user_text)],
-                        message_id=str(uuid.uuid4()),
+                        message_id=mid,
                     ),
                 )
                 await self._ws.send(req.model_dump_json(by_alias=True))

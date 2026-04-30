@@ -27,6 +27,7 @@ from app.core.agentic_kernel.tools.runtime import (
 
 from .llm_chat_runtime import (
     create_chat_completion_sync,
+    langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
 from .memory_registry import get_memory_store
@@ -193,6 +194,7 @@ class ToolOutputEvent:
     ts: str
     elapsed_ms: int
     trace_id: str = ""  # run_turn turn id; links transcript rows + tool_background_done
+    langsmith_trace_id: str = ""
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -571,6 +573,7 @@ async def _run_background_tool_loop(
             return
 
         assistant_text = _assistant_text_from_completion_response(loop_result.response)
+        bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
         display_text = _append_local_image_paths_for_display(
             assistant_text, image_paths
@@ -623,6 +626,7 @@ async def _run_background_tool_loop(
                 ts=utc_iso_ts(),
                 elapsed_ms=elapsed_ms,
                 trace_id=trace_id,
+                langsmith_trace_id=bg_ls_trace,
             )
         )
     finally:

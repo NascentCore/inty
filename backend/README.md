@@ -25,8 +25,9 @@ cp devops/config.yaml.test config.yaml
 启动 Ops（evaluation 专用，可与 inty 同时运行）：
 
 ```bash
-./backend/ops/start.sh --local
-# 默认 http://localhost:8001，Cloud Run 下 PORT=8080
+# 跳过 evaluation 前端构建（加快启动；需已有 app/static/evaluation）
+./backend/ops/start.sh --local --no-build-frontend
+# 默认 http://localhost:8001，Cloud Run 下 PORT=8080；需重建静态资源时去掉 --no-build-frontend
 ```
 
 ## GCS 配置

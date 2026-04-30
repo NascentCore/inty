@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import uuid
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
@@ -54,9 +55,45 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     u = ids.get("user_msg_uuid", "")
     a = ids.get("assistant_msg_uuid", "")
     tr = ids.get("trace_id", "")
-    if not u and not a and not tr:
+    ls = ids.get("langsmith_trace_id", "")
+    if not u and not a and not tr and not ls:
         return ""
-    return f" user={u} asst={a} trace={tr}"
+    parts: list[str] = []
+    if u:
+        parts.append(f"user={u}")
+    if a:
+        parts.append(f"asst={a}")
+    if tr:
+        parts.append(f"trace={tr}")
+    if ls:
+        parts.append(f"ls={ls}")
+    return " " + " ".join(parts)
+
+
+def _repl_banner_suffix_ids(
+    transcript_ids: Mapping[str, str] | None,
+    meta_data: Mapping[str, Any] | None,
+) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if transcript_ids:
+        for k in ("user_msg_uuid", "assistant_msg_uuid", "trace_id", "langsmith_trace_id"):
+            v = transcript_ids.get(k)
+            if v:
+                out[k] = str(v)
+    if meta_data:
+        for k in ("trace_id", "user_msg_uuid", "langsmith_trace_id"):
+            raw = meta_data.get(k)
+            if raw and k not in out:
+                s = str(raw).strip()
+                if s:
+                    out[k] = s
+        if "user_msg_uuid" not in out:
+            ru = meta_data.get("reply_to_user_msg_uuid")
+            if ru:
+                s = str(ru).strip()
+                if s:
+                    out["user_msg_uuid"] = s
+    return out
 
 
 def _repl_assistant_banner_label(
@@ -82,8 +119,8 @@ def _repl_assistant_banner_label(
     return "chat"
 
 
-def _print_repl_user_input(text: str) -> None:
-    print(f"[{repl_wall_ts_str()}] user-input")
+def _print_repl_user_input(text: str, *, message_uuid: str) -> None:
+    print(f"[{repl_wall_ts_str()}] user-input message-uuid={message_uuid}")
     print(text)
 
 
@@ -96,7 +133,8 @@ def _print_assistant_reply(
     meta_data: Mapping[str, Any] | None = None,
 ) -> None:
     ms = elapsed_s * 1000
-    suffix = _repl_transcript_id_suffix(transcript_ids) if transcript_ids else ""
+    merged = _repl_banner_suffix_ids(transcript_ids, meta_data)
+    suffix = _repl_transcript_id_suffix(merged)
     label = repl_source_label or _repl_assistant_banner_label(
         transcript_ids, meta_data=meta_data
     )
@@ -314,9 +352,10 @@ def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str
                 break
             if not st:
                 continue
-            _print_repl_user_input(line)
+            msg_uuid = str(uuid.uuid4())
+            _print_repl_user_input(line, message_uuid=msg_uuid)
             t0 = time.perf_counter()
-            fut = ex.submit(bridge.send_turn, agent_id, line)
+            fut = ex.submit(bridge.send_turn, agent_id, line, msg_uuid)
             rpipe, wpipe = os.pipe()
             err_exc: Exception | None = None
             out: str | None = None

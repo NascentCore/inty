@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import uuid
 from pathlib import Path
 
 import pytest
@@ -116,6 +117,7 @@ async def test_chat_websocket_dev_real_llm_roundtrip(integration_client: TestCli
             ],
             "stream": False,
             "model": "chatbot",
+            "message_id": str(uuid.uuid4()),
         },
     }
     recv_timeout = float(os.getenv("INTY_CHAT_WS_RECV_TIMEOUT", "120"))
