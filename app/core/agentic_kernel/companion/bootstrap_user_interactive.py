@@ -8,6 +8,8 @@ from typing import Any, Final
 
 from loguru import logger
 
+from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
+
 from .memory_store import MemoryStore
 from .models import ContextMeta
 from .prompt_slices import (
@@ -198,4 +200,54 @@ def tool_companion_bootstrap_user_interactive_complete(
     return (
         "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
         "SOUL rewrites). IDENTITY / USER / MEMORY and other prompt slices may still be updated."
+    )
+
+
+def tool_companion_set_experience_profile(
+    root: Path,
+    context_mode: str,
+    *,
+    user_confirmed: bool,
+    note: str | None = None,
+) -> str:
+    from .memory_registry import get_memory_store
+    from .companion_tool_runtime import resolve_under_workspace
+
+    if user_confirmed is not True:
+        return (
+            "ERROR: user_confirmed must be true only after the user explicitly agrees "
+            "to switch experience mode (do not infer silently)"
+        )
+    try:
+        normalized = normalize_experience_profile_id(context_mode)
+    except ValueError as exc:
+        return f"ERROR: {exc}"
+
+    root_r = root.resolve()
+    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
+    st = get_memory_store(root_r)
+    raw_body = st.read_document_if_exists(rel)
+    if raw_body is None or not str(raw_body).strip():
+        return "ERROR: missing context.json"
+    try:
+        data: dict[str, Any] = json.loads(raw_body)
+    except json.JSONDecodeError as exc:
+        return f"ERROR: invalid context.json: {exc}"
+    if not isinstance(data, dict):
+        return "ERROR: context.json must be a JSON object"
+    previous = str(data.get("context_mode", "")).strip() or "(unset)"
+    data["context_mode"] = normalized
+    if note is not None and str(note).strip():
+        data["experience_profile_change_note"] = str(note).strip()[:2000]
+    out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    st.write_document(rel, out)
+    logger.info(
+        "companion_set_experience_profile ws={} {} -> {}",
+        root_r.name,
+        previous,
+        normalized,
+    )
+    return (
+        f"OK experience profile (context_mode) set to {normalized!r} "
+        f"(previous {previous!r}); applies starting the next companion turn."
     )

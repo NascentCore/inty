@@ -43,6 +43,7 @@ from .bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
     soul_prompt_is_locked_after_interactive_bootstrap,
     tool_companion_bootstrap_user_interactive_complete,
+    tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
 from .message_format import openai_assistant_message_dict
@@ -154,6 +155,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "generate_image",
         "modify_image",
         "companion_runtime_inspect",
+        "companion_set_experience_profile",
         "companion_update_prompt_slice",
         "companion_bootstrap_user_interactive_complete",
         "tool_update_agent_status_line",
@@ -849,6 +851,46 @@ def build_openai_repl_tools(
         {
             "type": "function",
             "function": {
+                "name": "companion_set_experience_profile",
+                "description": (
+                    "Persist the session experience profile id into context.json as context_mode "
+                    "(normalized lowercase). Call only after the user explicitly agrees to switch "
+                    "(e.g. roleplay vs emotional companion). Requires user_confirmed=true; never "
+                    "infer silently. Takes effect on the next companion turn; do not use "
+                    "workspace_write_file on context.json."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "context_mode": {
+                            "type": "string",
+                            "description": (
+                                "Target experience profile id (e.g. intimate, emotional_companion, "
+                                "roleplay, interactive_fiction, public)."
+                            ),
+                        },
+                        "user_confirmed": {
+                            "type": "boolean",
+                            "description": (
+                                "Must be true only when the user clearly confirmed the mode switch "
+                                "in this conversation."
+                            ),
+                        },
+                        "note": {
+                            "type": "string",
+                            "description": "Optional short internal note (not shown to user).",
+                        },
+                    },
+                    "required": ["context_mode", "user_confirmed"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
+    out.append(
+        {
+            "type": "function",
+            "function": {
                 "name": "google_web_search",
                 "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
@@ -1111,6 +1153,22 @@ async def _dispatch(
             return f"ERROR: {exc}"
     if name == "companion_runtime_inspect":
         return tool_companion_runtime_inspect(root, dict(arguments or {}))
+    if name == "companion_set_experience_profile":
+        raw_ctx = arguments.get("context_mode")
+        if not isinstance(raw_ctx, str):
+            return "ERROR: context_mode must be a string"
+        raw_uc = arguments.get("user_confirmed")
+        if not isinstance(raw_uc, bool):
+            return "ERROR: user_confirmed must be a boolean"
+        raw_note = arguments.get("note")
+        if raw_note is not None and not isinstance(raw_note, str):
+            return "ERROR: note must be a string or omitted"
+        return tool_companion_set_experience_profile(
+            root,
+            raw_ctx,
+            user_confirmed=raw_uc,
+            note=raw_note,
+        )
     if name == "google_web_search":
         raw_q = arguments.get("query")
         if not isinstance(raw_q, str):
