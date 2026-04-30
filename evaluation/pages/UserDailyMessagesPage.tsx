@@ -52,6 +52,7 @@ import { buildSessionExportContent } from "../utils/sessionExport";
 import {
   countUserAgentConversationMessages,
   countUserAgentConversationSessions,
+  filterSessionsWithMessages,
   isUserMessageType,
 } from "../utils/userAgentConversations";
 import { CollapsibleMessageContent } from "../components/CollapsibleMessageContent";
@@ -647,6 +648,11 @@ export const UserDailyMessagesPage: React.FC = () => {
     [allUsersConversationPage],
   );
 
+  const visibleSessions = useMemo(
+    () => filterSessionsWithMessages(sessions),
+    [sessions],
+  );
+
   return (
     <div style={{ padding: "24px" }}>
       {/* 查询表单 */}
@@ -954,17 +960,17 @@ export const UserDailyMessagesPage: React.FC = () => {
               title="会话列表和对话历史"
               style={{ marginBottom: "24px" }}
               extra={
-                sessions.length > 0 && (
+                visibleSessions.length > 0 && (
                   <span style={{ fontSize: "12px", color: "#666" }}>
                     点击行展开查看对话记录
                   </span>
                 )
               }
             >
-              {sessions.length > 0 ? (
+              {visibleSessions.length > 0 ? (
                 <Table
                   columns={sessionsColumns}
-                  dataSource={sessions}
+                  dataSource={visibleSessions}
                   rowKey="chat_id"
                   loading={loadingSessions}
                   pagination={false}
@@ -1227,7 +1233,9 @@ export const UserDailyMessagesPage: React.FC = () => {
                   description={
                     loadingSessions
                       ? "加载中..."
-                      : "暂无会话数据，会话列表会在查询用户信息后自动加载"
+                      : sessions.length > 0 && visibleSessions.length === 0
+                        ? "暂无有聊天记录的会话（消息数为 0 的不展示）"
+                        : "暂无会话数据，会话列表会在查询用户信息后自动加载"
                   }
                 />
               )}

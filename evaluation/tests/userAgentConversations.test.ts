@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { UserAgentConversationItem } from "../types";
+import type { UserAgentConversationItem, UserSessionItem } from "../types";
 import {
   countUserAgentConversationMessages,
   countUserAgentConversationSessions,
+  filterSessionsWithMessages,
   isUserMessageType,
 } from "../utils/userAgentConversations";
 
@@ -48,5 +49,27 @@ describe("userAgentConversations", () => {
 
     expect(countUserAgentConversationSessions(items)).toBe(3);
     expect(countUserAgentConversationMessages(items)).toBe(11);
+  });
+
+  it("filterSessionsWithMessages omits zero message_count rows", () => {
+    const sessions: UserSessionItem[] = [
+      {
+        chat_id: "c1",
+        agent_name: "A",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+        message_count: 0,
+      },
+      {
+        chat_id: "c2",
+        agent_name: "B",
+        created_at: "2025-01-01T00:00:00Z",
+        updated_at: "2025-01-01T00:00:00Z",
+        message_count: 3,
+      },
+    ];
+    const filtered = filterSessionsWithMessages(sessions);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].chat_id).toBe("c2");
   });
 });
