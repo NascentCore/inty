@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable, Protocol
 
 from loguru import logger
-from openai import APIError, BadRequestError
+from openai import BadRequestError
 
 from app.services.agent_status_line import (
     clear_tool_background_db_loop,
@@ -47,7 +47,13 @@ from .companion_tool_runtime import (
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )
-from .tool_bg_routing import resolve_tool_bg_routing_sync
+from .tool_bg_routing import (
+    TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME,
+    TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT,
+    parse_tool_bg_first_round_skip,
+    resolve_tool_bg_routing_sync,
+    tool_bg_first_round_skip_schema_enabled,
+)
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 
@@ -340,6 +346,69 @@ def _assistant_text_from_completion_response(resp: Any) -> str:
     return content.strip()
 
 
+@dataclass(frozen=True)
+class _InitialToolBgCompletionMeta:
+    """Winning attempt parameters for tool_background first completion (runtime_inspect)."""
+
+    used_skip_schema: bool
+    tool_choice: str | None
+
+
+def _initial_tool_bg_completion_with_fallbacks(
+    client: Any,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+    force_tools: bool,
+) -> tuple[Any, _InitialToolBgCompletionMeta]:
+    """
+    First tool_background completion. May attach strict skip JSON schema when enabled.
+    Returns (response, meta for last_chat_completion_request snapshot).
+    """
+    schema_on = tool_bg_first_round_skip_schema_enabled()
+    schema_rf: dict[str, Any] | None = (
+        TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT if schema_on else None
+    )
+    attempts: list[tuple[dict[str, Any] | None, str | None]] = []
+    if schema_rf is not None and force_tools:
+        attempts.append((schema_rf, "required"))
+    if schema_rf is not None:
+        attempts.append((schema_rf, None))
+    if force_tools:
+        attempts.append((None, "required"))
+    attempts.append((None, None))
+
+    last_br: BadRequestError | None = None
+    for rf, tc in attempts:
+        try:
+            resp = create_chat_completion_sync(
+                client,
+                model=model,
+                messages_payload=messages_payload,
+                tools=tools,
+                tool_choice=tc,
+                response_format=rf,
+            )
+            meta = _InitialToolBgCompletionMeta(
+                used_skip_schema=rf is not None,
+                tool_choice=tc,
+            )
+            return resp, meta
+        except BadRequestError as exc:
+            last_br = exc
+            logger.warning(
+                "repl.turn.bg initial_completion BadRequest response_format={} tool_choice={} err={}",
+                rf is not None,
+                tc,
+                exc,
+            )
+            continue
+    if last_br is not None:
+        raise last_br
+    raise RuntimeError("tool_background initial completion: empty attempts")
+
+
 def _openai_messages_payload(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{k: v for k, v in m.items() if not k.startswith("_")} for m in messages]
 
@@ -482,48 +551,30 @@ async def _run_background_tool_loop(
 
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
+        force_tools = bool(tools) and _background_turn_should_force_tools(
+            _last_user_message_text(working_messages)
+        )
+        initial_response, initial_meta = await asyncio.to_thread(
+            _initial_tool_bg_completion_with_fallbacks,
+            resolved_client,
+            model=tool_model_name,
+            messages_payload=payload,
+            tools=tools,
+            force_tools=force_tools,
+        )
         runtime_inspect_set_last_chat_completion_request(
             build_last_chat_completion_request_payload(
                 model=tool_model_name,
                 messages=list(payload),
                 tools=tools,
+                tool_choice=initial_meta.tool_choice,
+                response_format_json_schema_name=(
+                    TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME
+                    if initial_meta.used_skip_schema
+                    else None
+                ),
             )
         )
-        force_tools = bool(tools) and _background_turn_should_force_tools(
-            _last_user_message_text(working_messages)
-        )
-        if force_tools:
-            try:
-                initial_response = await asyncio.to_thread(
-                    create_chat_completion_sync,
-                    resolved_client,
-                    model=tool_model_name,
-                    messages_payload=payload,
-                    tools=tools,
-                    tool_choice="required",
-                )
-            except (BadRequestError, APIError) as exc:
-                logger.warning(
-                    "repl.turn.bg tool_choice=required rejected, falling back to auto: {}",
-                    exc,
-                )
-                initial_response = await asyncio.to_thread(
-                    create_chat_completion_sync,
-                    resolved_client,
-                    model=tool_model_name,
-                    messages_payload=payload,
-                    tools=tools,
-                    tool_choice=None,
-                )
-        else:
-            initial_response = await asyncio.to_thread(
-                create_chat_completion_sync,
-                resolved_client,
-                model=tool_model_name,
-                messages_payload=payload,
-                tools=tools,
-                tool_choice=None,
-            )
 
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -550,7 +601,31 @@ async def _run_background_tool_loop(
         )
         if not initial_tool_calls:
             early_text = _assistant_text_from_completion_response(initial_response)
-            if early_text.strip():
+            if initial_meta.used_skip_schema:
+                parsed = parse_tool_bg_first_round_skip(early_text)
+                if parsed is not None and parsed.skip:
+                    logger.debug(
+                        "repl.turn.bg no_tool_calls skip_schema_true trace_id={} user_msg_uuid={}",
+                        trace_id,
+                        user_msg_uuid,
+                    )
+                elif parsed is not None and not parsed.skip:
+                    logger.info(
+                        "repl.turn.bg no_tool_calls skip_false_no_tools trace_id={} "
+                        "user_msg_uuid={} content_chars={}",
+                        trace_id,
+                        user_msg_uuid,
+                        len(early_text),
+                    )
+                else:
+                    logger.info(
+                        "repl.turn.bg no_tool_calls skip_json_invalid trace_id={} "
+                        "user_msg_uuid={} content_chars={}",
+                        trace_id,
+                        user_msg_uuid,
+                        len(early_text),
+                    )
+            elif early_text.strip():
                 logger.info(
                     "repl.turn.bg no_tool_calls skip_output_queue trace_id={} "
                     "user_msg_uuid={} chars={} (foreground chat branch already shown)",

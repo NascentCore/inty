@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any, Final
 
@@ -13,6 +14,35 @@ _MARKDOWN_JSON_FENCE_RE = re.compile(
     r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
     re.DOTALL | re.IGNORECASE,
 )
+
+TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME: Final[str] = "tool_bg_first_round_skip"
+
+TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT: Final[dict[str, Any]] = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME,
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "skip": {
+                    "type": "boolean",
+                    "description": (
+                        "True when this turn needs no tool_calls from the tool-path branch; "
+                        "false when you will emit tool_calls in this same assistant message."
+                    ),
+                },
+            },
+            "required": ["skip"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+class ToolBgFirstRoundEnvelope(BaseModel):
+    skip: bool
+
 
 TOOL_BG_ROUTING_RESPONSE_FORMAT: Final[dict[str, Any]] = {
     "type": "json_schema",
@@ -62,6 +92,30 @@ _ROUTING_SYSTEM_PROMPT = (
     "Set `output_to_user` **false** when only silent persistence ran (e.g. USER profile bullets, "
     "workspace_write_file to SOUL/MEMORY) and no user-visible recap is needed.\n"
 )
+
+
+def tool_bg_first_round_skip_schema_enabled() -> bool:
+    raw = os.environ.get("INTY_TOOL_BG_FIRST_ROUND_SKIP_SCHEMA")
+    if raw is None or not str(raw).strip():
+        return True
+    return str(raw).strip().lower() not in ("0", "false", "no", "off", "none")
+
+
+def parse_tool_bg_first_round_skip(raw: str) -> ToolBgFirstRoundEnvelope | None:
+    """Parse first-round tool-path assistant body; None if invalid."""
+    body = _strip_json_fence(raw)
+    if not body:
+        return None
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    try:
+        return ToolBgFirstRoundEnvelope.model_validate(data)
+    except ValidationError:
+        return None
 
 
 def _strip_json_fence(raw: str) -> str:

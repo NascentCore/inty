@@ -186,6 +186,8 @@ def build_last_chat_completion_request_payload(
     model: str,
     messages: list[dict[str, Any]],
     tools: list[Any] | None,
+    tool_choice: str | None = None,
+    response_format_json_schema_name: str | None = None,
 ) -> dict[str, Any]:
     norm, w = normalize_messages_for_snapshot(messages)
     payload: dict[str, Any] = {
@@ -194,6 +196,10 @@ def build_last_chat_completion_request_payload(
         "tools_summary": tools_summary_from_openai_tools(tools),
         "openrouter_extra_body": tool_path_chat_completion_kwargs(model),
     }
+    if tool_choice is not None:
+        payload["tool_choice"] = tool_choice
+    if response_format_json_schema_name:
+        payload["response_format_json_schema_name"] = response_format_json_schema_name
     if w:
         payload["per_message_warnings"] = w
         payload["messages_serialization_note"] = (
