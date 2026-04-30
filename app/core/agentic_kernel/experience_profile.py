@@ -47,9 +47,7 @@ def experience_profile_system_clause(context_mode: str) -> str:
             "以叙事推进与世界状态为准，将用户输入视为行动或选择，保持体裁连贯。"
         )
     if n == "public":
-        return (
-            "当前体验配置（context_mode）：public。不注入私人记忆层；根据场景保持得体与安全的表达。"
-        )
+        return "当前体验配置（context_mode）：public。不注入私人记忆层；根据场景保持得体与安全的表达。"
     return (
         f"当前体验配置（context_mode）：{raw}。不注入私人记忆层；"
         "请根据该体验适度调节记忆引用深度与表达强度，在需要克制的场景中保持得体与安全。"

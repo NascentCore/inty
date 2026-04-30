@@ -33,7 +33,8 @@ private const val CHAT_WEBSOCKET_VERIFY_PATH = "api/v1/chat/ws/verify"
 private const val PING_INTERVAL_MS = 25_000L
 
 /**
- * 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接（`/api/v1/chat/ws`，见后端 `app/api/ENDPOINTS.md`）。
+ * 主 WebSocket 数据源单例，保证接收（connectWebsocket）与发送（sendMessageFireAndForget）共用同一连接（`/api/v1/chat/ws`，见后端
+ * `app/api/ENDPOINTS.md`）。
  */
 object MainRemoteDataSource {
     private val httpClient: HttpClient = HttpClientProvider.ktorClient

@@ -31,6 +31,4 @@ export const countUserAgentConversationMessages = (
 
 export const filterSessionsWithMessages = (
   sessions: UserSessionItem[],
-): UserSessionItem[] =>
-  sessions.filter((s) => (s.message_count ?? 0) > 0);
-
+): UserSessionItem[] => sessions.filter((s) => (s.message_count ?? 0) > 0);

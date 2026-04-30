@@ -90,7 +90,9 @@ def create_companion_turn_root_run(
         except Exception as exc:
             initial_post_ok = False
             initial_post_err = repr(exc)
-            logger.debug("companion_turn_langsmith_parent initial post skipped: {}", exc)
+            logger.debug(
+                "companion_turn_langsmith_parent initial post skipped: {}", exc
+            )
         logger.info(
             "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
             "ls_trace_id={} ls_run_id={} initial_post_ok={} initial_post_err={!r}",

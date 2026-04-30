@@ -300,9 +300,7 @@ async def live_chat_session(
                         )
                         await websocket.send_json(msg.model_dump())
                     except Exception as send_e:
-                        logger.debug(
-                            f"发送音频失败（连接可能已关闭）: {str(send_e)}"
-                        )
+                        logger.debug(f"发送音频失败（连接可能已关闭）: {str(send_e)}")
                         async with audio_downlink_lock:
                             audio_downlink_buf[:0] = batch
                         break
