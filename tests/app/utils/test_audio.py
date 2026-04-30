@@ -9,7 +9,9 @@ import struct
 import pytest
 
 from app.utils.audio import (
+    AI_PART_CROSSFADE_SAMPLES,
     build_interleaved_pcm_24k,
+    join_pcm_parts_24k_crossfade,
     resample_pcm_16k_to_24k,
 )
 
@@ -117,3 +119,25 @@ def test_build_interleaved_pcm_24k_merges_consecutive_ai():
         ai_sample_rate=24000,
     )
     assert out == a1 + a2
+
+
+def test_join_ai_parts_crossfade_shortens_two_long_parts():
+    """两段 AI PCM 足够长时，接缝 cosine 淡化使总长比直接拼接少重叠字节数。"""
+    n = 500
+    s1 = struct.pack(f"<{n}h", *([1200] * n))
+    s2 = struct.pack(f"<{n}h", *([-800] * n))
+    out = join_pcm_parts_24k_crossfade([s1, s2])
+    overlap = AI_PART_CROSSFADE_SAMPLES * 2
+    assert len(out) == len(s1) + len(s2) - overlap
+
+
+def test_build_interleaved_two_ai_long_parts_matches_join():
+    n = 400
+    a1 = struct.pack(f"<{n}h", *([500] * n))
+    a2 = struct.pack(f"<{n}h", *([-500] * n))
+    out = build_interleaved_pcm_24k(
+        [("ai", a1), ("ai", a2)],
+        user_sample_rate=16000,
+        ai_sample_rate=24000,
+    )
+    assert out == join_pcm_parts_24k_crossfade([a1, a2])
