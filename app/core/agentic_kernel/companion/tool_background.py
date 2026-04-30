@@ -176,7 +176,6 @@ def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
 
 def _tool_bg_nl_filler_from_appended_turn(appended_messages: list[dict[str, Any]]) -> str:
     """Concatenate non-error tool string results when NL summary is empty but output_to_user is true."""
-    pending: dict[str, str] = {}
     chunks: list[str] = []
     max_chunks = 8
     max_chars = 8000
@@ -184,19 +183,6 @@ def _tool_bg_nl_filler_from_appended_turn(appended_messages: list[dict[str, Any]
     for m in appended_messages:
         role = m.get("role")
         if role == "assistant":
-            pending.clear()
-            for tc in m.get("tool_calls") or []:
-                if not isinstance(tc, dict):
-                    continue
-                tid = tc.get("id")
-                fn = tc.get("function")
-                if not isinstance(fn, dict):
-                    continue
-                raw_name = fn.get("name")
-                if isinstance(tid, str) and isinstance(raw_name, str):
-                    n = raw_name.strip()
-                    if n:
-                        pending[tid] = n
             continue
         if role != "tool":
             continue

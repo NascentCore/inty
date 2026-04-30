@@ -1,4 +1,4 @@
-"""Regression: tool_bg visibility uses tools from this background loop only."""
+"""Regression: tool_bg extracts names from appended slice only; NL filler aggregates tool text."""
 
 from app.core.agentic_kernel.companion.tool_background import (
     _extract_tool_call_names,
