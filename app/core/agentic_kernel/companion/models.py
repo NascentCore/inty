@@ -9,7 +9,12 @@ from typing import TYPE_CHECKING, Any, Literal
 AssistantTurnSource = Literal["chat", "inner_tick"]
 
 from loguru import logger
-from pydantic import AliasChoices, BaseModel, Field, ValidationError
+from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator
+
+from app.core.agentic_kernel.experience_profile import (
+    experience_profile_injects_private_memory,
+    normalize_experience_profile_id,
+)
 
 from .utc import local_date_str
 from .significance_perception import default_significance_perception_markdown
@@ -98,6 +103,7 @@ class PromptBundle(BaseModel):
 
 
 class ContextMeta(BaseModel):
+    # Experience profile id (canonical); JSON field name remains context_mode for persistence.
     context_mode: str = "intimate"
     user_id: str = ""
     companion_id: str = ""
@@ -109,6 +115,11 @@ class ContextMeta(BaseModel):
     # True = skip WebSocket connect-time interactive bootstrap kickoff (default for legacy / non-interactive).
     companion_ws_interactive_kickoff_sent: bool = True
 
+    @field_validator("context_mode")
+    @classmethod
+    def _validate_context_mode(cls, v: str) -> str:
+        return normalize_experience_profile_id(v)
+
 
 def load_prompt_bundle(
     paths: WorkspacePaths,
@@ -116,15 +127,15 @@ def load_prompt_bundle(
     *,
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
-    """加载人格与记忆。非 intimate 模式不读取私人记忆文件。"""
+    """加载人格与记忆。未启用私人记忆的体验配置不读取长期与日程私人记忆文件。"""
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
-    intimate = m.context_mode.strip().lower() == "intimate"
+    inject_private = experience_profile_injects_private_memory(m.context_mode)
 
     raw_md = ""
     summary_md = ""
     memory_long = _read_memory_document_required(store, "MEMORY.md")
-    if intimate:
+    if inject_private:
         raw_md = _read_memory_document_optional(
             store,
             f"memory/daily/{day}.md",

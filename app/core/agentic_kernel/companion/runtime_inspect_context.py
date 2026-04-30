@@ -8,6 +8,10 @@ import threading
 from contextvars import ContextVar, Token
 from typing import Any
 
+from app.core.agentic_kernel.experience_profile import (
+    experience_profile_injects_private_memory,
+)
+
 from .llm_chat_runtime import tool_path_chat_completion_kwargs
 from .memory_pipeline import MemoryPipelineConfig
 from .models import (
@@ -139,6 +143,9 @@ def build_turn_runtime_config_dict(
     return {
         "source": "run_turn",
         "context_mode": context.context_mode,
+        "experience_profile_injects_private_memory": experience_profile_injects_private_memory(
+            context.context_mode
+        ),
         "context_ids": {
             "user_id": context.user_id,
             "companion_id": context.companion_id,
