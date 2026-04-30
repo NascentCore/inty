@@ -2,7 +2,7 @@
 
 from app.core.agentic_kernel.companion.tool_background import (
     _extract_tool_call_names,
-    _tagged_tool_result_text_from_appended_turn,
+    _tool_bg_nl_filler_from_appended_turn,
 )
 
 
@@ -44,7 +44,7 @@ def test_extract_tool_call_names_ignores_prior_turn_assistant_tool_calls() -> No
     assert _extract_tool_call_names(this_turn) == ["tool_update_agent_status_line"]
 
 
-def test_tagged_tool_result_text_from_suffix_status_line() -> None:
+def test_tool_bg_nl_filler_from_appended_turn_status_line() -> None:
     appended = [
         {
             "role": "assistant",
@@ -63,6 +63,6 @@ def test_tagged_tool_result_text_from_suffix_status_line() -> None:
         {"role": "assistant", "content": ""},
     ]
     assert (
-        _tagged_tool_result_text_from_appended_turn(appended)
+        _tool_bg_nl_filler_from_appended_turn(appended)
         == 'status line updated to "hi"'
     )
