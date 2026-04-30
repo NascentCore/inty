@@ -93,8 +93,23 @@ async def persist_agent_status_line(agent_id: str, status_line: Optional[str]) -
     await _persist_agent_status_line_body(agent_id, payload)
 
 
+_STATUS_LINE_TOOL_PREVIEW_MAX_CHARS = 280
+
+
+def _status_line_tool_result_quoted_fragment(text: str) -> str:
+    escaped = text.replace("\\", "\\\\").replace('"', '\\"')
+    return escaped
+
+
 async def tool_update_agent_status_line(root: Path, status_line: str) -> str:
     """Companion tool: set short chat-header status line for this agent."""
     agent_id = agent_id_from_companion_workspace_root(root)
     await persist_agent_status_line(agent_id, status_line)
-    return "OK updated agent status line"
+    normalized = (status_line or "").strip()
+    if not normalized:
+        return "status line cleared"
+    preview = normalized
+    if len(preview) > _STATUS_LINE_TOOL_PREVIEW_MAX_CHARS:
+        preview = preview[: _STATUS_LINE_TOOL_PREVIEW_MAX_CHARS] + "..."
+    inner = _status_line_tool_result_quoted_fragment(preview)
+    return f'status line updated to "{inner}"'

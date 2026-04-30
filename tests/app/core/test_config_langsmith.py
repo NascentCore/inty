@@ -52,6 +52,20 @@ def test_set_langsmith_environment_variables_tracing_on_when_config_true():
         _restore_env(original_values)
 
 
+def test_set_langsmith_environment_variables_local_project_includes_username(monkeypatch):
+    keys = ["LANGSMITH_TRACING_V2", "LANGSMITH_PROJECT", "LANGCHAIN_API_KEY"]
+    original_values = {key: os.environ.get(key) for key in keys}
+    try:
+        monkeypatch.setenv("USER", "repl_tester")
+        monkeypatch.delenv("USERNAME", raising=False)
+        os.environ.pop("LANGSMITH_TRACING_V2", None)
+        set_langsmith_environment_variables(_make_config(Environment.LOCAL))
+        assert os.environ["LANGSMITH_PROJECT"] == "inty-backend-local-repl_tester"
+        assert os.environ["LANGCHAIN_API_KEY"] == "langchain-key-for-test"
+    finally:
+        _restore_env(original_values)
+
+
 def test_set_langsmith_environment_variables_prior_config_over_shell_langsmith_env():
     """YAML 开关生效；进程里残留的 LANGSMITH_TRACING_V2 由 set_langsmith 覆盖。"""
     keys = ["LANGSMITH_TRACING_V2", "LANGSMITH_PROJECT", "LANGCHAIN_API_KEY"]

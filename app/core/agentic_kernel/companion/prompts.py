@@ -79,6 +79,8 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "(no markdown fences, no text before or after the JSON object). "
         "It must match the API `response_format` schema. Fields:\n"
         "- `user_facing_reply` (string): natural-language text for the user; may be empty when the parallel tool branch will carry the visible reply.\n"
+        "  Do not refuse or claim you cannot access MemoryStore text in ways the parallel tool branch will contradict "
+        "when it runs allowed file tools; keep this branch aligned with that branch as one persona (fast vs slow).\n"
         "- `importance_round` (integer 1-10): importance of this turn overall given transcript and system context.\n"
         "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
         "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n\n"
@@ -88,11 +90,15 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
 
 def _output_contract_text_chat_branch_mirrored_tools() -> str:
     return (
-        "输出通道：仅自然语言文本快速回复。你会看到与并行工具路相同的工具定义，"
-        "这些工具仅用于让你感知另一路会处理哪些任务；本路禁止调用任何工具。"
-        "当用户请求生图、改图、联网检索、持久化文档核对等工具型任务时，不要拒绝，"
-        "不要宣称已完成或编造结果；请用一句简短自然的话承接并说明正在处理，"
-        "等待并行工具路产出结果后补充。保持简洁有温度，避免机械列表堆砌。"
+        "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
+        "你与**并行工具路**是同一人格的两种速度：本路优先低延迟外显；工具路负责读档案、联网、生图等须核对或慢步骤。"
+        "对用户的事实立场、边界与态度必须一致，禁止「一路拒绝、一路照做」的分裂。\n\n"
+        "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS.md，但你仍须遵守：凡应以持久化档案原文、检索结果或工具返回为准的问题，"
+        "不得以「无法读取」「不能向你展示内部文件」等说法抢先否定并行路即将执行的核对；"
+        "不要编造档案内容；若并行路会给出依据或原文，本路只用简短自然的承接语（可表示细节马上对齐），"
+        "或将 `user_facing_reply` 留空/极短，把可核对正文交给工具路落点。\n\n"
+        "当用户请求生图、改图、联网检索、持久化文档核对等工具型任务时：不要拒绝，不要宣称已完成或编造结果；"
+        "一句承接即可。保持简洁有温度，避免机械列表堆砌。"
     )
 
 
@@ -244,11 +250,13 @@ def _inner_tick_turn_section() -> str:
 
 def _tool_side_compact_directive() -> str:
     return (
-        "## 工具侧（后台）\n\n"
+        "## 工具侧（后台 / 系统 2）\n\n"
         "本回合须优先根据用户**最后一轮**与**上文**判断是否需要调用工具"
         "（联网检索、生图/改图、档案、持久化约定文档路径工具等）。若需要，必须先调用工具并依据返回作答；"
         "不要仅用角色扮演替代未执行的工具。"
-        "若用户问当前模型名、调用参数或真实请求内容，须先调用 companion_runtime_inspect 再作答。"
+        "若用户问当前模型名、调用参数或真实请求内容，须先调用 companion_runtime_inspect 再作答。\n\n"
+        "与并行快思考路径同一立场：若快路径仅有短承接、未下事实断言，你可在工具依据上完整作答；"
+        "若快路径已有表态，非经档案或工具返回明确要求修正，不要随意推翻，避免同一轮两路口径冲突。"
     )
 
 

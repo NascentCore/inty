@@ -73,6 +73,8 @@ _TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
     # 多模态工具：完成后通常要在 chat 中给到文字总结与产物路径。
     "generate_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
     "modify_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    # REPL / WS：异步工具环结束时模型可能不再生成正文；仍需下行可读一行工具结果（见 tool_background 回填）。
+    "tool_update_agent_status_line": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
 }
 
 # workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
@@ -615,7 +617,9 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "Set the short one-line status shown under your name in the user's chat header "
                     "(mood, vibe, or current thought). Use the same language as the user. "
                     "Keep it brief (roughly one short sentence). Pass an empty string to clear it. "
-                    "Do not mention this tool to the user."
+                    "Do not mention this tool or raw JSON to the user. "
+                    "The tool returns a single line: status line cleared, or "
+                    'status line updated to \"...\"; mirror that in your natural reply when needed.'
                 ),
                 "parameters": {
                     "type": "object",
