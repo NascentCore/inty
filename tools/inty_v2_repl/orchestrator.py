@@ -19,6 +19,9 @@ from app.core.agentic_kernel.bridges.experimental_bridge import (
     run_experimental_turn,
 )
 from app.core.agentic_kernel.contracts.turn import TurnInput, TurnOutput
+from app.core.agentic_kernel.experience_profile import (
+    experience_profile_injects_private_memory,
+)
 
 from .client import (
     async_tool_background_enabled,
@@ -123,14 +126,14 @@ def _preview_for_debug(s: str, max_len: int = 280) -> str:
 
 
 def _debug_log_prompt_bundle(bundle: PromptBundle, *, context: ContextMeta) -> None:
-    intimate = context.context_mode.strip().lower() == "intimate"
+    inject_private = experience_profile_injects_private_memory(context.context_mode)
     logger.debug(
-        "run_turn.context mode={} user_id={} companion_id={} chat_id={} intimate={}",
+        "run_turn.context mode={} user_id={} companion_id={} chat_id={} inject_private_memory={}",
         context.context_mode,
         context.user_id,
         context.companion_id,
         context.chat_id,
-        intimate,
+        inject_private,
     )
     logger.debug(
         "run_turn.bundle_chars identity={} soul={} user={} memory={} "

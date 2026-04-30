@@ -14,6 +14,7 @@ from pydantic import AnyHttpUrl
 from loguru import logger
 
 from app.utils import models_catalog
+from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
 from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
@@ -162,7 +163,7 @@ class FeaturesConfig:
     # Chat WebSocket: max seconds to wait for the next text frame before closing (ping/pong resets the wait).
     # Long-running LLM or tools do not extend this window unless the client sends ping or another frame.
     chat_ws_idle_timeout_seconds: int = 60
-    # Default context_mode written to new companion context.json (e.g. intimate).
+    # Default experience profile id (context.json field context_mode), e.g. intimate.
     companion_default_context_mode: str = "intimate"
     # OpenAI message-list compaction for companion kernel (same stack as WS): older transcript
     # dialogue is folded into a structured system snapshot when over budget. Default matches
@@ -190,6 +191,9 @@ class FeaturesConfig:
                 f"{sorted(allowed)}, got {self.companion_workspace_bootstrap_type!r}"
             )
         self.companion_workspace_bootstrap_type = raw
+        self.companion_default_context_mode = normalize_experience_profile_id(
+            self.companion_default_context_mode
+        )
 
 
 @dataclass

@@ -76,6 +76,23 @@ def test_build_system_prompt_intimate_memory() -> None:
     assert "long mem" in text
 
 
+def test_build_system_prompt_emotional_companion_memory_same_as_intimate() -> None:
+    b = PromptBundle(
+        identity="i",
+        soul="s",
+        user_md="u",
+        memory_md="long mem",
+        memory_raw_diary_today_md="raw today",
+        memory_day_summary_today_md="summary today",
+    )
+    text = build_system_prompt(b, ContextMeta(context_mode="emotional_companion"))
+    assert "## MEMORY 日记（今日原始）" in text
+    assert "raw today" in text
+    assert "## MEMORY（长期记忆定稿）" in text
+    assert "long mem" in text
+    assert "情感陪伴" in text
+
+
 def test_build_system_prompt_non_intimate_no_memory() -> None:
     b = PromptBundle(
         identity="i",

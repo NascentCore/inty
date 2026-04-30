@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.agentic_kernel.experience_profile import (
+    experience_profile_injects_private_memory,
+    experience_profile_system_clause,
+)
+
 from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
 from .models import ContextMeta, PromptBundle
 from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
@@ -28,19 +33,6 @@ def _security_base() -> str:
 
 def system_prompt_security_prefix() -> str:
     return _security_base()
-
-
-def _context_mode_clause(meta: ContextMeta) -> str:
-    mode = meta.context_mode.strip().lower()
-    if mode == "intimate":
-        return (
-            "当前上下文模式：亲密主会话。可加载完整长期记忆，语气可更放松、贴近私人对话，"
-            "仍须遵守安全与同意边界。"
-        )
-    return (
-        f"当前上下文模式：{meta.context_mode}。请根据该模式适度调节记忆引用深度与表达强度，"
-        "在需要克制的场景中保持体面与安全。"
-    )
 
 
 def _output_contract_text() -> str:
@@ -308,7 +300,7 @@ def build_system_messages(
 
     out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
-    out.append(_system_message(_context_mode_clause(context)))
+    out.append(_system_message(experience_profile_system_clause(context.context_mode)))
     out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
 
     if (
@@ -326,8 +318,7 @@ def build_system_messages(
     skip_memory_blocks = (
         tool_side_compact and not heartbeat_turn and not inner_tick_turn
     )
-    intimate = context.context_mode.strip().lower() == "intimate"
-    if intimate:
+    if experience_profile_injects_private_memory(context.context_mode):
         if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
             out.append(
                 _system_message(

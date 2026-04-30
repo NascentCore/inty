@@ -7,8 +7,9 @@ import threading
 from pathlib import Path
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
 from app.utils.config import CompanionWorkspaceBootstrapType
 
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
@@ -47,7 +48,7 @@ class CompanionConfig(BaseModel):
     # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | USER_INTERACTIVE).
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
 
-    # Context
+    # Context: default experience profile id written to new sessions (context.json context_mode).
     default_context_mode: str = "intimate"
 
     # Optional: fold older transcript dialogue into a structured system snapshot when
@@ -56,6 +57,11 @@ class CompanionConfig(BaseModel):
     # When transcript_compaction is set, cap transcript rows before compaction; None
     # uses companion.models.TRANSCRIPT_WINDOW_MAX_MESSAGES.
     transcript_llm_window_max_messages: int | None = None
+
+    @field_validator("default_context_mode")
+    @classmethod
+    def _validate_default_context_mode(cls, v: str) -> str:
+        return normalize_experience_profile_id(v)
 
     @property
     def skip_workspace_directory_creation(self) -> bool:

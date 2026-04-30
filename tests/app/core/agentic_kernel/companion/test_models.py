@@ -52,6 +52,11 @@ def test_context_meta_defaults() -> None:
     assert c.companion_ws_interactive_kickoff_sent is True
 
 
+def test_context_meta_normalizes_experience_profile_id() -> None:
+    c = ContextMeta(context_mode="  PUBLIC ")
+    assert c.context_mode == "public"
+
+
 def test_transcript_for_llm_turn_short() -> None:
     loaded = [
         ChatMessage(role="user", content=str(i), ts=f"2026-01-01T00:{i:02d}:00Z")

@@ -41,7 +41,7 @@ Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of 
 ## Control plane
 
 - **`INTY_V2_PROTO_ASYNC_TOOL_BG`** — default **on** (unset): chat-first reply in `run_turn`, tool loop in background; set to `0`/`false`/`no`/`off` for synchronous tool loop (then `INTY_V2_PROTO_DUAL_LLM` can apply).
-- **`context.json`** is read first (`load_context_meta`). It drives **`context_mode`** (e.g. `intimate` vs other): when not intimate, long-term and day-scoped private memory files are **not** injected into the bundle (see `models.load_prompt_bundle`).
+- **`context.json`** is read first (`load_context_meta`). Field **`context_mode`** holds the **experience profile id** (normalized lowercase). Private long-term and day-scoped memory files inject only when `experience_profile_injects_private_memory(context_mode)` is true (see `app/core/agentic_kernel/experience_profile.py` and `models.load_prompt_bundle`).
 - **交互式 `run_turn` 驱动方**（单测或自写脚本在本地 workspace 上调用 `orchestrator.run_turn`，**不是**当前 Cyclopts `repl`）：在 **POSIX + TTY** 上常见模式为 **`run_turn` 跑在工作线程**、主线程 **`select` + `readline`** 排队输入（长工具调用时不阻塞输入）。TTY 上可用 **`readline` + `input()`** 缓解部分集成终端里 CJK 退格错位；**Windows / 非 TTY** 可退回 **`app.core.repl_input.spawn_stdin_line_reader`**。空闲时对 stdin **短超时 poll**，以便 **`source=tool_bg`** 等异步输出有机会刷出；泵路径需避免在用户编辑行中途打印破坏 TTY。`INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC`（默认 **600**）约束 `async_chat_tool_background` 前景 HTTP；超时 `run_turn` 抛 **`RuntimeError`**。
 - **连续输入与取代（POSIX + TTY 泵路径）**：`run_turn` 执行中用户再输入非空行可触发协作式取消与 **`ReplTurnSuperseded`**（不落盘该轮）；**`tool_bg`** 经 `mark_tool_background_aborted(user_msg_uuid)` 作废等语义仍见 `orchestrator` / `tool_background`。Windows / 非 TTY 不保证与 POSIX 泵完全一致。
 
@@ -58,7 +58,7 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
 7. **`SOUL.md`**
 8. Context-mode clause (derived from `context.json`, not a file).
 9. **`USER.md`**
-10. **Only if `context_mode` is `intimate`**, and file has content (after caps):
+10. **Only if the experience profile injects private memory** (`intimate`, `emotional_companion`, ...), and file has content (after caps):
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
@@ -70,7 +70,7 @@ Optional docs (3–5) omitted entirely when missing or empty — no placeholder 
 
 ## Disk read order in `load_prompt_bundle`
 
-Order differs from final prompt section order: implementation reads long-term **`MEMORY.md`** first and clears its body when not intimate; then reads **`IDENTITY` / `SOUL` / `USER`**, then optional **`AGENTS` / `TOOLS` / `HEARTBEAT`**, and under intimate mode the two day-scoped memory paths (`memory/daily/…`, `memory/YYYY-MM-DD.md`). This is an implementation detail; **compatibility and semantics are defined by `build_system_prompt`**, not by read order.
+Order differs from final prompt section order: implementation reads long-term **`MEMORY.md`** first and clears its body when private memory is not injected for the profile; then reads **`IDENTITY` / `SOUL` / `USER`**, then optional **`AGENTS` / `TOOLS` / `HEARTBEAT`**, and when private memory injects the two day-scoped memory paths (`memory/daily/…`, `memory/YYYY-MM-DD.md`). This is an implementation detail; **compatibility and semantics are defined by `build_system_prompt`**, not by read order.
 
 ## Day summary LLM cadence
 
