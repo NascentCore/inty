@@ -8,8 +8,14 @@ import math
 import struct
 from typing import List, Optional, Tuple
 
-# Gemini Live 同一轮内多个 inline_data 分包接缝：用 cosine 淡化，略长于线性窗以减轻「AI 段内」碎裂感
+# Gemini Live 同一轮内多个 inline_data 分包接缝：先裁掉分包之间常见的尾/头近静音垫，再 cosine 淡化
 AI_PART_CROSSFADE_SAMPLES = 224  # ~9.3ms @ 24kHz
+# |sample| < gate 视为静音；仅裁分包边界，单段最多裁若干 ms，避免吃掉句内刻意停顿
+_AI_EDGE_SILENCE_GATE = 384
+_AI_TRIM_TRAIL_MS = 420.0
+_AI_TRIM_LEAD_MS = 220.0
+# 过短分包不做边界裁剪（避免误伤小包/单元测试样例）
+_AI_MIN_SAMPLES_FOR_EDGE_TRIM = 240  # 10ms @ 24kHz
 
 
 def resample_pcm_16k_to_24k(pcm_bytes: bytes) -> bytes:
@@ -41,6 +47,98 @@ def resample_pcm_16k_to_24k(pcm_bytes: bytes) -> bytes:
     return struct.pack(f"<{len(out_list)}h", *out_list)
 
 
+def _trim_leading_near_silence_pcm16_mono(
+    pcm: bytes,
+    *,
+    sample_rate: int,
+    max_trim_ms: float,
+    gate: int,
+) -> bytes:
+    if len(pcm) < 4 or len(pcm) % 2 != 0:
+        return pcm
+    ns = len(pcm) // 2
+    if ns < _AI_MIN_SAMPLES_FOR_EDGE_TRIM:
+        return pcm
+    samples = struct.unpack("<%dh" % ns, pcm)
+    max_sil = int(sample_rate * (max_trim_ms / 1000.0))
+    if max_sil < 1:
+        return pcm
+    t = 0
+    sil = 0
+    while t < ns and abs(samples[t]) < gate and sil < max_sil:
+        t += 1
+        sil += 1
+    if t == 0:
+        return pcm
+    new_ns = ns - t
+    if new_ns < 1:
+        return b""
+    return struct.pack("<%dh" % new_ns, *samples[t:])
+
+
+def _trim_trailing_near_silence_pcm16_mono(
+    pcm: bytes,
+    *,
+    sample_rate: int,
+    max_trim_ms: float,
+    gate: int,
+) -> bytes:
+    if len(pcm) < 4 or len(pcm) % 2 != 0:
+        return pcm
+    ns = len(pcm) // 2
+    if ns < _AI_MIN_SAMPLES_FOR_EDGE_TRIM:
+        return pcm
+    samples = struct.unpack("<%dh" % ns, pcm)
+    max_sil = int(sample_rate * (max_trim_ms / 1000.0))
+    if max_sil < 1:
+        return pcm
+    t = ns - 1
+    sil = 0
+    while t >= 0 and abs(samples[t]) < gate and sil < max_sil:
+        t -= 1
+        sil += 1
+    new_ns = t + 1
+    if new_ns < 1:
+        return b""
+    if new_ns == ns:
+        return pcm
+    return struct.pack("<%dh" % new_ns, *samples[:new_ns])
+
+
+def _preprocess_gemini_ai_parts_edges(
+    parts: List[bytes],
+    *,
+    sample_rate: int = 24000,
+) -> List[bytes]:
+    """
+    去掉相邻 AI 分包之间常见的尾/头近静音（Gemini 分包间易出现数百 ms 低电平），
+    再交给 cosine 淡化接缝；不处理单段内部的句中停顿（中间段尾部最多裁 _AI_TRIM_TRAIL_MS）。
+    """
+    nonempty = [bytes(p) for p in parts if p]
+    if len(nonempty) <= 1:
+        return nonempty
+    out: List[bytes] = []
+    for i, p in enumerate(nonempty):
+        q = p
+        if i > 0:
+            q = _trim_leading_near_silence_pcm16_mono(
+                q,
+                sample_rate=sample_rate,
+                max_trim_ms=_AI_TRIM_LEAD_MS,
+                gate=_AI_EDGE_SILENCE_GATE,
+            )
+        if i < len(nonempty) - 1:
+            q = _trim_trailing_near_silence_pcm16_mono(
+                q,
+                sample_rate=sample_rate,
+                max_trim_ms=_AI_TRIM_TRAIL_MS,
+                gate=_AI_EDGE_SILENCE_GATE,
+            )
+        if len(q) >= 2:
+            out.append(q)
+    return out if out else nonempty
+
+
 def join_pcm_parts_24k_crossfade(
     parts: List[bytes],
     n_samples: int = AI_PART_CROSSFADE_SAMPLES,
@@ -51,7 +149,10 @@ def join_pcm_parts_24k_crossfade(
     针对 Gemini Live 多分包下行：减轻 AI 回复「段内」接缝爆音/碎裂，不做 user/AI 轨切换处理
     （整条会话仍由 build_interleaved_pcm_24k 按顺序拼接）。
     """
-    nonempty = [bytes(p) for p in parts if p]
+    nonempty = _preprocess_gemini_ai_parts_edges(
+        [bytes(p) for p in parts if p],
+        sample_rate=24000,
+    )
     if not nonempty:
         return b""
     if len(nonempty) == 1:

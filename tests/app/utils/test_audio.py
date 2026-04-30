@@ -10,6 +10,7 @@ import pytest
 
 from app.utils.audio import (
     AI_PART_CROSSFADE_SAMPLES,
+    _preprocess_gemini_ai_parts_edges,
     build_interleaved_pcm_24k,
     join_pcm_parts_24k_crossfade,
     resample_pcm_16k_to_24k,
@@ -141,3 +142,16 @@ def test_build_interleaved_two_ai_long_parts_matches_join():
         ai_sample_rate=24000,
     )
     assert out == join_pcm_parts_24k_crossfade([a1, a2])
+
+
+def test_preprocess_trims_inter_packet_silence():
+    sr = 24000
+    speech0 = struct.pack("<300h", *([6000] * 300))
+    trail = struct.pack("<%dh" % (sr // 10), *([0] * (sr // 10)))
+    p0 = speech0 + trail
+    lead = struct.pack("<%dh" % (sr // 20), *([0] * (sr // 20)))
+    p1 = lead + struct.pack("<300h", *([5500] * 300))
+    pre = _preprocess_gemini_ai_parts_edges([p0, p1], sample_rate=sr)
+    assert len(pre) == 2
+    # 100ms 尾零 + 50ms 头零 各被裁掉，仅余两段 300 采样的语音
+    assert sum(len(x) for x in pre) == 600 * 2
