@@ -75,6 +75,9 @@ agent:
   langsmith_text_chat_sample_rate: 1.0
   # 打开生图兜底，使用只包含 iMate 形象的图片作为候选
   enable_chat_image_match_fallback: true
+  # 设置为最理想的聊天模型
+  free_user_chat_model: "deepseek/deepseek-v4-pro"
+  sub_user_chat_model: "deepseek/deepseek-v4-pro"
 
   # 打开高级功能预览，吸引用户付费
   enable_free_user_premium_preview: true

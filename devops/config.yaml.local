@@ -64,12 +64,14 @@ agent:
   # intellimate-dev project, inty-testing api key, personal access token
   langchain_api_key: "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"
   # 模型本地无法访问，IP 被限制
-  # sub_user_chat_model: "google/gemini-2.5-flash-lite"
   # free_user_chat_model: "google/gemini-2.5-flash-lite"
+  # sub_user_chat_model: "google/gemini-2.5-flash-lite"
   # free_user_chat_model: "inception/mercury-2"
   # sub_user_chat_model: "inception/mercury-2"
-  free_user_chat_model: "deepseek/deepseek-v3.2"
-  sub_user_chat_model: "deepseek/deepseek-v3.2"
+  # free_user_chat_model: "deepseek/deepseek-v3.2"
+  # sub_user_chat_model: "deepseek/deepseek-v3.2"
+  free_user_chat_model: "deepseek/deepseek-v4-pro"
+  sub_user_chat_model: "deepseek/deepseek-v4-pro"
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"
