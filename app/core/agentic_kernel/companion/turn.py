@@ -274,6 +274,16 @@ async def run_turn(
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:
             langsmith_trace_acc = _ls_tid
+        if langsmith_parent_run is not None:
+            logger.info(
+                "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
+                "user_msg_uuid={} ls_trace_id={} route_mode={} defer_end_to_bg={}",
+                trace_id,
+                user_msg_uuid,
+                _ls_tid,
+                route_mode.value,
+                route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+            )
 
         _langsmith_cm = nullcontext()
         if langsmith_parent_run is not None:
@@ -398,6 +408,13 @@ async def run_turn(
                         (time.perf_counter() - t_loop) * 1000.0,
                         route_mode.value,
                     )
+                    logger.info(
+                        "langsmith_companion_parent_run run_turn_fg_done inty_trace_id={} "
+                        "user_msg_uuid={} ls_trace_id={} defer_parent_end_to_tool_bg_thread=1",
+                        trace_id,
+                        user_msg_uuid,
+                        companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run),
+                    )
                 else:
                     for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
                         t_api = time.perf_counter()
@@ -509,12 +526,37 @@ async def run_turn(
             except BaseException as exc:
                 if not used_async_tool_background:
                     end_companion_turn_root_run_safe(
-                        langsmith_parent_run, error=repr(exc)
+                        langsmith_parent_run,
+                        error=repr(exc),
+                        ls_end_source="run_turn_sync_exc",
+                    )
+                else:
+                    logger.info(
+                        "langsmith_companion_parent_run run_turn_exc_skip_main_end "
+                        "inty_trace_id={} user_msg_uuid={} ls_trace_id={} exc_type={}",
+                        trace_id,
+                        user_msg_uuid,
+                        companion_turn_langsmith_parent_trace_id_str(
+                            langsmith_parent_run
+                        ),
+                        type(exc).__name__,
                     )
                 raise
             else:
                 if not used_async_tool_background:
-                    end_companion_turn_root_run_safe(langsmith_parent_run)
+                    end_companion_turn_root_run_safe(
+                        langsmith_parent_run, ls_end_source="run_turn_sync_ok"
+                    )
+                else:
+                    logger.info(
+                        "langsmith_companion_parent_run run_turn_exit_skip_main_end "
+                        "inty_trace_id={} user_msg_uuid={} ls_trace_id={}",
+                        trace_id,
+                        user_msg_uuid,
+                        companion_turn_langsmith_parent_trace_id_str(
+                            langsmith_parent_run
+                        ),
+                    )
     finally:
         runtime_inspect_end_turn(inspect_token)
 

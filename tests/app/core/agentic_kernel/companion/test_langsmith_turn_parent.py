@@ -50,6 +50,7 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
     mock_root.post.assert_called_once()
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
 def test_companion_turn_langsmith_parent_trace_id_str_empty_for_none() -> None:
@@ -113,7 +114,9 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     mock_asyncio_run.assert_called_once()
     coro = mock_asyncio_run.call_args[0][0]
     coro.close()
-    mock_end.assert_called_once_with(parent, error=None)
+    mock_end.assert_called_once_with(
+        parent, error=None, ls_end_source="tool_background_thread"
+    )
 
 
 @patch("app.core.agentic_kernel.companion.tool_background.threading.Thread")
@@ -150,7 +153,9 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     mock_sp.assert_not_called()
     mock_asyncio_run.assert_called_once()
     mock_asyncio_run.call_args[0][0].close()
-    mock_end.assert_called_once_with(None, error=None)
+    mock_end.assert_called_once_with(
+        None, error=None, ls_end_source="tool_background_thread"
+    )
 
 
 class _FakeAsyncDualLLMClient:

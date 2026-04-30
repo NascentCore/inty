@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import os
+import threading
 import time
 from copy import deepcopy
 from typing import Any
@@ -18,6 +20,36 @@ from app.utils.config import Environment
 
 _OPENROUTER_JSON_MAX_ATTEMPTS = 3
 _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
+
+_OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
+_OPEN_LANGSMITH_PARENT_RUNS: set[Any] = set()
+_ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED = False
+
+
+def _register_open_langsmith_parent_run(root: Any) -> None:
+    global _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED
+    with _OPEN_LANGSMITH_PARENT_LOCK:
+        _OPEN_LANGSMITH_PARENT_RUNS.add(root)
+        if not _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED:
+            atexit.register(_flush_open_langsmith_parent_runs_on_exit)
+            _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED = True
+
+
+def _unregister_open_langsmith_parent_run(root: Any) -> None:
+    with _OPEN_LANGSMITH_PARENT_LOCK:
+        _OPEN_LANGSMITH_PARENT_RUNS.discard(root)
+
+
+def _flush_open_langsmith_parent_runs_on_exit() -> None:
+    with _OPEN_LANGSMITH_PARENT_LOCK:
+        pending = list(_OPEN_LANGSMITH_PARENT_RUNS)
+        _OPEN_LANGSMITH_PARENT_RUNS.clear()
+    for run in pending:
+        end_companion_turn_root_run_safe(
+            run,
+            error="process exit before langsmith companion parent run was closed",
+            ls_end_source="atexit_open_parent_flush",
+        )
 
 
 class OpenRouterInvalidJsonError(RuntimeError):
@@ -51,10 +83,25 @@ def create_companion_turn_root_run(
             },
             tags=["agentic_companion", "user_turn"],
         )
+        initial_post_ok = True
+        initial_post_err = ""
         try:
             root.post()
         except Exception as exc:
+            initial_post_ok = False
+            initial_post_err = repr(exc)
             logger.debug("companion_turn_langsmith_parent initial post skipped: {}", exc)
+        logger.info(
+            "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
+            "ls_trace_id={} ls_run_id={} initial_post_ok={} initial_post_err={!r}",
+            inty_trace_id,
+            user_msg_uuid,
+            companion_turn_langsmith_parent_trace_id_str(root),
+            companion_turn_langsmith_parent_run_id_str(root),
+            initial_post_ok,
+            initial_post_err,
+        )
+        _register_open_langsmith_parent_run(root)
         return root
     except Exception as exc:
         logger.warning("companion_turn_langsmith_parent create failed: {}", exc)
@@ -73,14 +120,39 @@ def companion_turn_langsmith_parent_trace_id_str(root_run: Any) -> str:
         return ""
 
 
+def companion_turn_langsmith_parent_run_id_str(root_run: Any) -> str:
+    if root_run is None:
+        return ""
+    try:
+        rid = getattr(root_run, "id", None)
+        if rid is None:
+            return ""
+        return str(rid).strip()
+    except Exception:
+        return ""
+
+
 def end_companion_turn_root_run_safe(
     root_run: Any,
     *,
     error: str | None = None,
     outputs: dict[str, Any] | None = None,
+    ls_end_source: str = "",
 ) -> None:
     if root_run is None:
         return
+    ls_tid = companion_turn_langsmith_parent_trace_id_str(root_run)
+    ls_rid = companion_turn_langsmith_parent_run_id_str(root_run)
+    th_name = threading.current_thread().name
+    logger.info(
+        "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        th_name,
+        ls_tid,
+        ls_rid,
+        error is not None,
+    )
     try:
         if error is not None:
             root_run.end(error=error)
@@ -89,12 +161,39 @@ def end_companion_turn_root_run_safe(
         else:
             root_run.end()
     except Exception as exc:
-        logger.warning("companion_turn_langsmith_parent end failed: {}", exc)
+        logger.warning(
+            "companion_turn_langsmith_parent end failed ls_end_source={!r} thread={} "
+            "ls_trace_id={} ls_run_id={} err={}",
+            ls_end_source,
+            th_name,
+            ls_tid,
+            ls_rid,
+            exc,
+        )
         return
     try:
         root_run.post()
     except Exception as exc:
-        logger.warning("companion_turn_langsmith_parent post after end failed: {}", exc)
+        logger.warning(
+            "companion_turn_langsmith_parent post after end failed ls_end_source={!r} "
+            "thread={} ls_trace_id={} ls_run_id={} err={}",
+            ls_end_source,
+            th_name,
+            ls_tid,
+            ls_rid,
+            exc,
+        )
+        return
+    _unregister_open_langsmith_parent_run(root_run)
+    logger.info(
+        "langsmith_companion_parent_run end_posted ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        th_name,
+        ls_tid,
+        ls_rid,
+        error is not None,
+    )
 
 
 def langsmith_trace_id_from_completion(resp: Any) -> str:

@@ -26,6 +26,7 @@ from app.core.agentic_kernel.tools.runtime import (
 )
 
 from .llm_chat_runtime import (
+    companion_turn_langsmith_parent_trace_id_str,
     create_chat_completion_sync,
     end_companion_turn_root_run_safe,
     langsmith_trace_id_from_completion,
@@ -742,12 +743,23 @@ def start_tool_background_job(
                 logger.exception("repl.turn.bg job failed")
             finally:
                 end_companion_turn_root_run_safe(
-                    langsmith_parent_run, error=bg_ls_err
+                    langsmith_parent_run,
+                    error=bg_ls_err,
+                    ls_end_source="tool_background_thread",
                 )
                 clear_tool_background_db_loop()
         finally:
             _unregister_thread(threading.current_thread())
 
-    t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=True)
+    t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
     _register_thread(t)
+    logger.info(
+        "langsmith_companion_parent_run tool_bg_thread_start inty_trace_id={} "
+        "user_msg_uuid={} ls_trace_id={} thread_name={} daemon={}",
+        trace_id,
+        user_msg_uuid,
+        companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run),
+        t.name,
+        t.daemon,
+    )
     t.start()
