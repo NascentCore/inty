@@ -3,13 +3,15 @@
 # Token 优先级：命令行 --token > 环境变量 INTY_BEARER_TOKEN > 本文件中的 bearer_token
 # 说明：Cursor 聊天里无法像终端那样「持久设置」环境变量；要跑通脚本可以：
 #   1) 在 Cursor / VS Code 的「集成终端」里先 export INTY_BEARER_TOKEN=... 再执行 python；或
-#   2) 在本机复制的配置里填 bearer_token（见下方），推荐用 config.local.yaml，已被本 skill 的 .gitignore 忽略
+#   2) 在本机复制的配置里填 bearer_token（见下方），推荐用 config.local.yaml，已被 scripts/inty_backend_smoke_tests/.gitignore 忽略
 
 # 可选。若填写，与 INTY_BEARER_TOKEN 二选一即可
 # bearer_token: ""
 
-# HTTP(S) 根地址，与 REST 基址一致（脚本会自行转换为 ws/wss）
-api_base_url: "http://127.0.0.1:8000"
+# HTTP(S) 根地址，与 REST 基址一致（脚本会自行转换为 ws/wss）。
+# 本地推荐：backend/ops/start.sh --local（默认 :8001，JWT -> 仓库根 .inty_ops_bearer_token）
+# 若只启动 Inty 主后端：改为 http://127.0.0.1:8000
+api_base_url: "http://127.0.0.1:8001"
 
 # 为 true 时通过 POST /api/v1/ai/agents 新建 PRIVATE 测试用角色，无需事先填写 agent_id
 # create_agent: false

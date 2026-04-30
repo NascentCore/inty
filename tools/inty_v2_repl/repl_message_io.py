@@ -8,9 +8,9 @@ from .repl_session_messages import ReplDownlinkItem
 
 def pop_downlink_item(bridge: BackendChatWsBridge) -> ReplDownlinkItem | None:
     """Non-blocking: map ``BackendChatWsBridge.try_pop_queued_chat`` to tagged items."""
-    text, err = bridge.try_pop_queued_chat()
+    text, err, meta = bridge.try_pop_queued_chat()
     if text is not None:
-        return {"kind": "assistant", "text": text, "raw": {}}
+        return {"kind": "assistant", "text": text, "raw": {}, "meta_data": meta}
     if err is not None:
         code, message = err
         return {

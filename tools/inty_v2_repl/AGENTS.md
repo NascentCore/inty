@@ -6,8 +6,8 @@
 - **下行展示**：侧带弹出服务端推送帧时优先通过 [`repl_message_io.pop_downlink_item`](repl_message_io.py)（tagged：`assistant` / `ws_error`），与 app 侧队列契约对齐；与 app 侧实现刻意分离、独立演进。
 - `python -m tools.inty_v2_repl.main repl` **仅**连接 Inty `/api/v1/chat/ws`（`backend_chat_ws.BackendChatWsBridge`）；对话与 bootstrap 由服务端处理。
 - 连接后首轮 **burst drain** 等服务端主动 kickoff：`INTY_V2_BACKEND_WS_KICKOFF_DRAIN_SEC`（默认 10，单位秒，上限 600；0 表示仅 `get_nowait` 一次）。POSIX 且 TTY 时在 `>` 等输入会 **侧带** 轮询 `try_pop_queued_chat`，晚到的聊天 JSON 也会打印；Windows / 非 TTY 仍为阻塞 `input()`。
-- 默认 **全双工**（`INTY_V2_REPL_DUPLEX` 非 `0`/`false` 等）：`send_turn` 在单线程池里跑，主循环在等一轮时可 `select` 把下一**整行**排入队列；**有 in-flight 轮次时**不 `try_pop_queued_chat`（与 `BackendChatWsBridge` 共享 FIFO，避免抢帧）。`INTY_V2_REPL_DUPLEX=0` 回退为与旧版相同的主线程同步 `send_turn`。
-- `--workspace` 只影响本进程的 **日志**（`inty_v2.log`）与 **`llm_trace.jsonl`** 路径，不是对话权威存储。
+- **全双工**：`send_turn` 在单线程池里跑，主循环在等一轮时可 `select` 把下一**整行**排入队列；**有 in-flight 轮次时**不 `try_pop_queued_chat`（与 `BackendChatWsBridge` 共享 FIFO，避免抢帧）。POSIX TTY 下在等待回复时按 ^D 会先断开 WS（不等该轮 `send_turn` 完成）。
+- `--workspace` 只影响本进程的 **日志**（如 `inty_v2.log`）等本地输出路径，不是对话权威存储。
 
 ## Kernel re-export 架构
 
@@ -27,16 +27,15 @@
 | `orchestrator.py` | REPL `run_turn`；transcript 组装/落盘用 `companion.turn_engine`；`is_workspace_initialized` 等仍委托 kernel |
 | `tool_background.py` | shim: 实现见 `companion.tool_background`（输出队列与后台工具环） |
 
-REPL 特有模块: `orchestrator.py`, `client.py`, `llm_trace`, `workspace_init_tools`（薄封装/历史路径）, `main` 等。媒体与检索工具实现已在 `companion`（`fal_z_image_tool`, `google_web_search`, `image_gate`, `schedule_queue`）；prototype 文件可能仍为 re-export 或 shim。
+REPL 特有模块: `orchestrator.py`, `client.py`, `workspace_init_tools`（薄封装/历史路径）, `main` 等。媒体与检索工具实现已在 `companion`（`fal_z_image_tool`, `google_web_search`, `image_gate`, `schedule_queue`）；prototype 文件可能仍为 re-export 或 shim。
 
-`openai_assistant_message_dict` 与 `TRANSCRIPT_MSG_UUID_KEY` 单一真源: `companion.message_format`（`turn_engine` / `turn` / `companion_tool_runtime` / REPL `llm_trace` 引用）。prototype `workspace_init_tools` 若仍导出同名字段，应与 kernel 保持一致。
+`openai_assistant_message_dict` 与 `TRANSCRIPT_MSG_UUID_KEY` 单一真源: `companion.message_format`（`turn_engine` / `turn` / `companion_tool_runtime` / REPL orchestrator 引用）。prototype `workspace_init_tools` 若仍导出同名字段，应与 kernel 保持一致。
 
 改动核心逻辑时应修改 kernel(`app/core/agentic_kernel/companion/`), 本目录 shim 自动生效.
 
-- _ws/ has:
+- _ws/ may have:
   1. inty_v2.log (program logs)
-  2. llm_trace.jsonl (llm invocations)
-  3. transcript.jsonl (messages)
+  2. transcript.jsonl (messages, when running local workspace turns)
 
 Scope: how `experimental/inty_v2_text_chat_prototype` assembles **one turn** of LLM context from a workspace directory (e.g. `_ws/`). Implementation: `orchestrator.run_turn` → `load_context_meta` + `load_prompt_bundle` + `load_transcript` + `models.transcript_for_llm_turn` → `build_system_prompt`.
 
@@ -81,11 +80,11 @@ Order differs from final prompt section order: implementation reads long-term **
 ## Transcript
 
 - **`transcript.jsonl`** is **not** part of `PromptBundle`. It is loaded separately, then **`models.transcript_for_llm_turn`** keeps only the last `TRANSCRIPT_WINDOW_MAX_MESSAGES` entries for **both** normal user turns and **REPL 内在节拍** (`inner_tick_turn`), so proactive replies match the same on-screen conversation as normal turns. Loaded rows are appended **after** the assembled system prompt; `role` is usually `user` / `assistant`, with optional persisted **`system`** rows (e.g. markers) passed through to the API as additional `system` messages in history order.
-- Each line is JSON with `role`, `content`, `ts`, and (for lines written by `orchestrator.run_turn` after this feature) **`uuid`** (stable id for that message; used by `llm_trace` summaries to reference transcript rows without echoing body text). Older lines may omit `uuid`. `role` may be `user`, `assistant`, or `system`. **`inner_tick`: true** on a user row marks the intrinsic-beat synthetic prompt; assistant rows may use **`source`: `inner_tick`**.
+- Each line is JSON with `role`, `content`, `ts`, and (for lines written by `orchestrator.run_turn` after this feature) **`uuid`** (stable id for that message). Older lines may omit `uuid`. `role` may be `user`, `assistant`, or `system`. **`inner_tick`: true** on a user row marks the intrinsic-beat synthetic prompt; assistant rows may use **`source`: `inner_tick`**.
 - **REPL 上下线**：`main.repl` 在进入交互循环前追加一行 `role=user` 且 **`presence`: `repl_online`**，随后立刻跑一轮 `run_turn(..., repl_online_ack_turn=True)`（合成 user 行 `REPL_ONLINE_ACK_USER_TEXT`，持久化时带 **`repl_online_ack`: true**），让助手**立即接话**；退出（含 quit / EOF / 正常离开循环）后追加 **`presence`: `repl_offline`**。`presence` / `repl_online_ack` 行**不算**真实用户输入；`inner_tick_schedule` 与 `models.transcript_without_trailing_presence_signals` 会忽略末尾仅含 `presence` 的 user 行以便判断末条是否为 assistant。`repl_online_ack` 轮**不跑**记忆管线。
 - **`ai_private.md`**（可选，新 workspace 由 `bootstrap.init_workspace` 创建空文件）：内在活动自然语言载体；`ai_private_store` 提供进程内缓存、原子写盘，并通过 **`append_jsonl_with_db`** 写入 **`ai_private.jsonl`**（与 transcript 同 PG 流机制）。注入上限见 **`INTY_V2_PROTO_AI_PRIVATE_MAX_CHARS`**（默认与 `models.AI_PRIVATE_INJECT_MAX_CHARS` 一致）。`run_turn(inner_tick_turn=True)` 时在 system 中注入「内在活动」区块（见 `prompts.build_system_prompt`）。
 - REPL **内在节拍**（`main._repl_interactive_loop` / `inner_tick_schedule.py`）：**`INTY_V2_PROTO_INNER_TICK_SEC`**（默认 90s）是主循环里单次 `select`/睡眠的**上限块**，也是「多久醒来再看一眼」的粒度，**不等于**两次内在节拍之间的真实间隔。**`INTY_V2_PROTO_INNER_TICK_MIN_GAP_SEC`**（默认 120s）才是**两次成功内在节拍**之间的最小间隔（由进程内 `last_inner_fire_mono` 与 `next_inner_tick_wait_seconds` 共同约束）。前置：末条为 assistant、transcript（经 `transcript_without_trailing_presence_signals`）不少于 **`INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS`**（默认 2）。用户输入与到期 `schedule_task` **优先**。开关：**`INTY_V2_PROTO_INNER_TICK_ENABLED`**：未设置或空则默认开启；`0`/`false`/`no`/`off` 关闭（**不再**读取 `INTY_V2_PROTO_HEARTBEAT`）。**工具**：`run_turn(inner_tick_turn=True)` 使用 **`build_openai_repl_tools_inner_tick()`**（仅 `user_profile_record` 与 `workspace_*`），不含定时、联网、生图/改图、chat 输出格式工具；语义见 `prompts.build_system_prompt` 的「本轮（内在节拍）」与「内在节拍输出与工具契约」。内在节拍除内向整理外，还承担**轻推当下场景下一拍**与**适时软转场**（见该节「场景演化」），外显仍以一句为主。**`INTY_V2_PROTO_ASYNC_TOOL_BG` 开启时**，内在节拍仍走同步工具环（不启用 `async_chat_tool_background`），避免与「内向整理」语义冲突。
-- **手工冒烟（可选）**：REPL 等到内在节拍触发后查看 `<workspace>/llm_trace.jsonl` 是否出现工具相关轮次（取决于模型是否发起 `user_profile_record` / `workspace_*`）。
+- **可观测性**：LLM 调用链可用 LangSmith 等托管 tracing；本地 REPL 不以 `llm_trace.jsonl` 为必需输出。
 - REPL 同时运行**非 LLM 驱动**的定时队列调度（见 `schedule_queue.py`）：`schedule_task` 写入 `.inty_v2_schedule_tasks.json` 后，后台线程按 `exec_time_utc <= now` 发出到期事件；主循环优先处理到期事件并注入一轮 synthetic user 给 `run_turn`。成功后任务标记 `fired`，失败按 backoff 重试。
 
 ## Required files for a runnable workspace

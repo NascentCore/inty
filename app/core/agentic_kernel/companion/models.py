@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+AssistantTurnSource = Literal["chat", "inner_tick"]
+
 from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError
 
@@ -38,6 +40,7 @@ class CompanionTurnResult(BaseModel):
     user_msg_uuid: str = ""
     trace_id: str = ""
     used_async_tool_background: bool = False
+    assistant_source: AssistantTurnSource = "chat"
 
 
 class ChatMessage(BaseModel):

@@ -228,7 +228,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        llm_trace=False,
                     )
                 )
                 self.assertEqual(out, "chat-fast-r1")
@@ -295,7 +294,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "帮我生成一张图",
-                        llm_trace=False,
                     )
                 )
                 self.assertEqual(out, "chat-fast-r1")
@@ -360,7 +358,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        llm_trace=False,
                     )
                 )
                 self.assertEqual(out, "chat-fast-r1")
@@ -420,7 +417,6 @@ class TestAsyncToolBackground(unittest.TestCase):
                     orchestrator.run_turn(
                         root,
                         "你好",
-                        llm_trace=False,
                     )
                 )
                 self.assertEqual(out, "chat-fast-fallback-r1")

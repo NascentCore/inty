@@ -33,6 +33,8 @@
 
 - Chat WebSocket against **real LLM** (optional): set `INTY_CHAT_WS_REAL_TEST=1`, set `INTY_DEV_CONFIG_PATH` to the server YAML (e.g. `devops/config.yaml.local` or `devops/config.yaml.dev`; `app.environment` must be `dev` or `local`). See [tests/docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md](docs/TEST_STEPS_CHAT_WEBSOCKET_DEV_E2E.md).
 
+- **Manual smoke scripts** (run against a live backend from repo root, not pytest): [scripts/inty_backend_smoke_tests/](../scripts/inty_backend_smoke_tests/) — usage and env vars are documented in [.cursor/skills/inty-server-module-verify/SKILL.md](../.cursor/skills/inty-server-module-verify/SKILL.md).
+
 - Agentic kernel companion `run_turn` with **real LLM** on OpenRouter (optional): set `INTY_AGENTIC_KERNEL_REAL_LLM_TEST=1` and `OPENROUTER_API_KEY`; run `pytest tests/real_agents/test_agentic_kernel_run_turn_tool_call.py -m noci`. Model: `nvidia/nemotron-3-super-120b-a12b:free`. Optional `OPENROUTER_API_BASE` (default `https://openrouter.ai/api/v1`).
 
 ## 新功能 / API+客户端联调时的防遗漏

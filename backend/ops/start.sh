@@ -43,6 +43,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --build-frontend     Run evaluation/build.sh before uvicorn (default: on)"
       echo "  --no-build-frontend  Skip that step; use existing app/static/evaluation"
       echo "  --local|--dev   Dev/local mode: seed admin + report fixtures, uvicorn --reload"
+      echo "                  JWT for user-testing -> \${INTY_OPS_BEARER_TOKEN_FILE:-<repo>/.inty_ops_bearer_token}"
       echo "  --debug         Loguru + uvicorn log level DEBUG (via INTY_LOGGING_LEVEL)"
       echo "  --log-file PATH Also write logs to PATH (via INTY_LOG_FILE; UTF-8 append)."
       echo "                  With --debug: stderr INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
@@ -85,8 +86,11 @@ if [ "$LOCAL" = true ]; then
     echo "Skipping evaluation static build (--no-build-frontend)."
   fi
 
+  OPS_BEARER_TOKEN_FILE="${INTY_OPS_BEARER_TOKEN_FILE:-$REPO_ROOT/.inty_ops_bearer_token}"
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
-  python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
+  python scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE"
+  chmod 600 "$OPS_BEARER_TOKEN_FILE" 2>/dev/null || true
+  echo "本地测试 JWT 已写入: $OPS_BEARER_TOKEN_FILE（可与 INTY_BEARER_TOKEN / INTY_ACCESS_TOKEN 互换使用）"
 
   echo "Seeding report test data..."
   python scripts/seed_report_test_data.py

@@ -1,12 +1,15 @@
 """
 Smoke 测试 /api/v1/chat/ws（与 HTTP chat completions 同一条处理链）。
 
+本地推荐：先 ./backend/ops/start.sh --local --no-build-frontend（:8001，JWT 写入 .inty_ops_bearer_token），
+再在本脚本里用 --api-base http://127.0.0.1:8001；token 可省略，脚本会读 .inty_ops_bearer_token。
+
 在仓库根目录、已安装依赖的虚拟环境下运行，例如:
-  INTY_BEARER_TOKEN=xxx python3 .cursor/skills/inty-server-module-verify/scripts/test_chat_ws.py \\
-    --api-base http://127.0.0.1:8000 --agent-id <AGENT_ID>
+  python3 scripts/inty_backend_smoke_tests/test_chat_ws.py \\
+    --api-base http://127.0.0.1:8001 --agent-id <AGENT_ID>
 
 创建新 agent 再测（无需事先填写 agent_id）:
-  ... test_chat_ws.py --api-base http://127.0.0.1:8000 --create-agent
+  python3 scripts/inty_backend_smoke_tests/test_chat_ws.py --api-base http://127.0.0.1:8001 --create-agent
 """
 
 from __future__ import annotations
@@ -88,6 +91,17 @@ def _load_yaml_config(path: Path) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise SystemExit("config file must be a mapping at the top level")
     return {str(k): v for k, v in raw.items()}
+
+
+def _read_repo_local_ops_bearer(repo_root: Path) -> str:
+    """JWT written by backend/ops/start.sh --local -> .inty_ops_bearer_token (gitignored)."""
+    p = repo_root / ".inty_ops_bearer_token"
+    if not p.is_file():
+        return ""
+    try:
+        return p.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
 
 
 def _str_opt(cfg: dict[str, Any], key: str) -> str | None:
@@ -245,7 +259,7 @@ async def _turn_with_connect_kickoff(
             else:
                 c = data0.get("code")
                 if c is not None and int(c) != 200:
-                    _parse_chat_response_payload(data0)  # raises BackendChatWsError
+                    _parse_chat_response_payload(data0)[0]  # raises BackendChatWsError
                 # code 200: 视为 kickoff，丢弃
         req = ChatWebSocketRequest(
             agent_id=agent_id,
@@ -260,7 +274,7 @@ async def _turn_with_connect_kickoff(
             data = json.loads(raw)
             if data.get("type") == "pong":
                 continue
-            return _parse_chat_response_payload(data)
+            return _parse_chat_response_payload(data)[0]
 
 
 def _default_recv_timeout() -> float:
@@ -321,11 +335,12 @@ async def _run(args: argparse.Namespace) -> int:
         (args.token or "").strip()
         or os.environ.get("INTY_BEARER_TOKEN", "").strip()
         or (_str_opt(cfg, "bearer_token") or "").strip()
+        or _read_repo_local_ops_bearer(_ensure_sys_path())
     )
     if not token:
         print(
-            "Missing token: use --token, or set INTY_BEARER_TOKEN in the integrated terminal, "
-            "or add bearer_token to a local config (see config.example.yaml).",
+            "Missing token: use --token, INTY_BEARER_TOKEN, config bearer_token, "
+            "or run backend/ops/start.sh --local to create repo-root .inty_ops_bearer_token.",
             file=sys.stderr,
         )
         _emit_verify_result(ok=False, exit_code=2, detail="missing bearer token")
@@ -419,8 +434,15 @@ def main() -> None:
     p = argparse.ArgumentParser(
         description="Smoke test WebSocket /api/v1/chat/ws (companion chat one turn)"
     )
-    p.add_argument("--config", "-c", help="YAML config (see config.example.yaml)")
-    p.add_argument("--api-base", help="e.g. http://127.0.0.1:8000 (or INTY_API_BASE_URL)")
+    p.add_argument(
+        "--config",
+        "-c",
+        help="YAML config (see scripts/inty_backend_smoke_tests/config.example.yaml)",
+    )
+    p.add_argument(
+        "--api-base",
+        help="e.g. http://127.0.0.1:8001 (Ops --local) or :8000 Inty-only; or INTY_API_BASE_URL",
+    )
     p.add_argument("--token", help="Bearer token; prefer INTY_BEARER_TOKEN")
     p.add_argument("--agent-id", help="Agent id (not required when --create-agent)")
     p.add_argument(

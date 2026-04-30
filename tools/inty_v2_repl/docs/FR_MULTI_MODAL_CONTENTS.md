@@ -11,7 +11,7 @@
 - [`models.py`](../models.py)：`ChatMessage.content` 为唯一正文（`str`）。
 - [`orchestrator.py`](../orchestrator.py)：` _build_turn_base_messages` 历史与本轮 user 均为 `{"role", "content": str}`；`_persist_turn_rows` 写 JSONL；助手文本来 `_assistant_text_from_completion_response`（仅 string）。
 - [`memory_update.py`](../memory_update.py)：`user_text` / `assistant_text` 全程纯文本。
-- [`llm_trace.py`](../llm_trace.py)：`content` 非 `str` 时摘要为 `<non-str>`，需增强。
+- （已移除 `llm_trace.jsonl`；若需本地调试摘要，可在托管 tracing 或日志中覆盖 list `content`。）
 - [`image_gate.py`](../image_gate.py)：`prepare_image_gate_for_turn(root, user_text: str)` 仅字符串。
 
 ---
@@ -75,7 +75,7 @@
 | `_assistant_text_from_completion_response` | Phase 1 仍返回 `str`；Phase 2 再扩展。 |
 | 记忆入队 | 使用行上 `content`（已与 `parts` 一致）或统一 flatten。 |
 | `prepare_image_gate_for_turn` | Phase 1 仍 `user_text`；Phase 2 合并 `user_parts` 的扁平串。 |
-| `llm_trace.summarize_messages` | `content` 为 `list` 时输出多段类型统计与长度，避免巨长 URL。 |
+| 调试 / tracing | `content` 为 `list` 时在摘要或 trace 中输出多段类型统计与长度，避免巨长 URL。 |
 | **Transcript 写入审计** | 搜索 `append_jsonl_with_db` / `transcript`：[`main.py`](../main.py) presence、[`tool_background.py`](../tool_background.py) 等，保证新行仍为合法 `ChatMessage`。 |
 
 ---
@@ -121,6 +121,6 @@ flowchart LR
 - [ ] Schema：`MessagePart`、`ChatMessage.parts`、flatten / openai 映射、normalize、体积上限。
 - [ ] 一致性：`load_transcript` 后校验或 normalize（可选 env 放宽）。
 - [ ] Orchestrator：构建消息、持久化、payload 调试、记忆与 image_gate；写入点审计。
-- [ ] `llm_trace`：list `content` 摘要。
+- [ ] list `content` 在观测链路中的摘要策略（LangSmith 等）。
 - [ ] 提供方冒烟：image parts + OpenRouter + 双路路径。
 - [ ] 测试 + `AGENTS.md`。

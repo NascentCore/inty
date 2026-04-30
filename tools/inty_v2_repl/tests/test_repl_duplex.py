@@ -1,31 +1,19 @@
-"""REPL full-duplex: env flag, in-flight wait (mocked select), line queueing."""
+"""REPL full-duplex: in-flight wait (mocked select), line queueing, EOF abort."""
 
 from __future__ import annotations
 
 import os
+import threading
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # ``import inty_v2_repl``：见同目录 conftest（将 ``tools/`` 加入 path）
 from inty_v2_repl.main import (
     _duplex_inflight_degraded_wait,
     _duplex_inflight_posix_select_wait,
-    _repl_duplex_env_enabled,
+    _repl_interactive_backend_ws_loop,
 )
-
-
-def test_repl_duplex_env_default_enabled() -> None:
-    with patch.dict(os.environ, {}, clear=True):
-        assert _repl_duplex_env_enabled() is True
-    with patch.dict(os.environ, {"INTY_V2_REPL_DUPLEX": ""}):
-        assert _repl_duplex_env_enabled() is True
-
-
-def test_repl_duplex_env_disable_values() -> None:
-    for v in ("0", "false", "no", "off", "n", "NO", "False"):
-        with patch.dict(os.environ, {"INTY_V2_REPL_DUPLEX": v}):
-            assert _repl_duplex_env_enabled() is False
 
 
 def test_inflight_posix_select_wait_queues_full_lines() -> None:
@@ -83,3 +71,39 @@ def test_inflight_degraded_wait_completes() -> None:
         fut: Future = ex.submit(lambda: 42)
         _duplex_inflight_degraded_wait(fut)
     assert fut.result() == 42
+
+
+def test_eof_inflight_calls_bridge_stop_without_assistant_print() -> None:
+    evt = threading.Event()
+    bridge = MagicMock()
+
+    def send_turn(_agent_id: str, _text: str) -> tuple[str, dict]:
+        evt.wait(timeout=120)
+        return "never-print", {}
+
+    bridge.send_turn.side_effect = send_turn
+
+    def stop() -> None:
+        evt.set()
+
+    bridge.stop.side_effect = stop
+
+    with patch(
+        "inty_v2_repl.main._readline_backend_ws_with_sideband",
+        return_value="hello",
+    ):
+        with patch(
+            "inty_v2_repl.main._use_posix_tty_duplex_select",
+            return_value=True,
+        ):
+            with patch(
+                "inty_v2_repl.main._duplex_inflight_posix_select_wait",
+                side_effect=EOFError,
+            ):
+                with patch(
+                    "inty_v2_repl.main._print_assistant_reply"
+                ) as print_reply:
+                    _repl_interactive_backend_ws_loop(bridge, "agent-id")
+
+    bridge.stop.assert_called()
+    print_reply.assert_not_called()

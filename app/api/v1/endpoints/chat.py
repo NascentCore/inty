@@ -810,10 +810,12 @@ async def _agent_chat_completions_impl(
                             )
                         raise
                     companion_reply = companion_turn.assistant_text
-                    companion_ai_meta: dict | None = None
+                    companion_ai_meta: dict[str, Any] = {
+                        "source": companion_turn.assistant_source,
+                    }
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:
-                        companion_ai_meta = {"significance_perception": sp}
+                        companion_ai_meta["significance_perception"] = sp
                     if effective_local_id:
                         companion_user_row_id = (
                             await chat_history_service.add_user_message_async(

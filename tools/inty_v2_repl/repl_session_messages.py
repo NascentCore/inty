@@ -11,6 +11,7 @@ class ReplDownlinkAssistant(TypedDict):
     kind: Literal["assistant"]
     text: str
     raw: dict[str, Any]
+    meta_data: dict[str, Any]
 
 
 class ReplDownlinkWsError(TypedDict):
