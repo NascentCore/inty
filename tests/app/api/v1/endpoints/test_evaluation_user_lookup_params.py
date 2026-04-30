@@ -87,6 +87,7 @@ def evaluation_app(monkeypatch: pytest.MonkeyPatch):
             return [
                 {
                     "chat_id": "chat-1",
+                    "agent_id": "0049ba23-03b1-48bd-bba4-099ce6c79320",
                     "agent_name": "Amber",
                     "agent_avatar_url": "https://cdn.example.com/amber.webp",
                     "created_at": None,
@@ -262,6 +263,7 @@ def test_user_sessions_response_includes_agent_avatar_url(evaluation_app: FastAP
         "sessions": [
             {
                 "chat_id": "chat-1",
+                "agent_id": "0049ba23-03b1-48bd-bba4-099ce6c79320",
                 "agent_name": "Amber",
                 "agent_avatar_url": "https://cdn.example.com/amber.webp",
                 "created_at": None,

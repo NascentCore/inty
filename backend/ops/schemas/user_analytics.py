@@ -277,6 +277,7 @@ class UserSessionItem(BaseModel):
     """用户会话项"""
 
     chat_id: str
+    agent_id: str = Field(description="角色 UUID")
     agent_name: str
     agent_avatar_url: Optional[str] = Field(None, description="角色形象图片 URL")
     created_at: Optional[str]

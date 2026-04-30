@@ -1947,6 +1947,7 @@ class UserAnalyticsService:
         query = text("""
             SELECT 
                 c.id as chat_id,
+                a.id::text as agent_id,
                 a.name as agent_name,
                 a.avatar as agent_avatar_url,
                 c.created_at,
@@ -2010,6 +2011,7 @@ class UserAnalyticsService:
         data = []
         for row in chat_records:
             chat_id = row[0]
+            agent_id = row[1]
             session_id = chat_to_session[chat_id]
             message_count = session_to_msg_count.get(session_id, 0)
             # 优先使用最后一条用户消息时间，如果没有则使用最后一条消息时间（包括AI消息）
@@ -2017,15 +2019,16 @@ class UserAnalyticsService:
             last_message_time = session_to_last_message_time.get(session_id)
             updated_at = last_user_message_time or last_message_time
             agent_avatar_url = (
-                image_transform_service.transform_desktop(row[2]) if row[2] else None
+                image_transform_service.transform_desktop(row[3]) if row[3] else None
             )
 
             data.append(
                 {
                     "chat_id": chat_id,
-                    "agent_name": row[1],
+                    "agent_id": agent_id,
+                    "agent_name": row[2],
                     "agent_avatar_url": agent_avatar_url,
-                    "created_at": row[3].isoformat() if row[3] else None,
+                    "created_at": row[4].isoformat() if row[4] else None,
                     "updated_at": (updated_at.isoformat() if updated_at else None),
                     "message_count": message_count,
                 }
