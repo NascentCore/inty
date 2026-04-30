@@ -81,6 +81,12 @@ export const AgentInfoDisplay: React.FC<AgentInfoDisplayProps> = ({
             <strong>音色ID:</strong> {agent.voice_id || "未设置"}
           </p>
           <p>
+            <strong>对话模型:</strong>{" "}
+            {agent.llm_config?.model?.trim()
+              ? agent.llm_config.model.trim()
+              : "平台默认"}
+          </p>
+          <p>
             <strong>头像尺寸:</strong>{" "}
             {agent.avatar_size
               ? `${agent.avatar_size.width} × ${agent.avatar_size.height} 像素`
