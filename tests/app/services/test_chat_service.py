@@ -2,6 +2,7 @@
 测试聊天服务功能
 """
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -2179,3 +2180,55 @@ class TestGetOrCreateChatByAgent:
         assert retrieved_chat.agent_id == agent.id
 
         await self._cleanup_test_data(db_session, user, agent, existing_chat)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_insert_single_active_chat_row(
+        self, db_session: AsyncSession
+    ):
+        """Concurrent get_or_create: only one active chat row per user+agent."""
+        user = await self._create_test_user(db_session)
+        agent = await self._create_test_agent(db_session, user.id)
+        cache_service.clear_all_caches()
+
+        engine = create_async_engine(
+            str(global_config_loaded_from_config_yaml.database.async_url),
+            pool_size=2,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+        async_session_factory = sessionmaker(
+            bind=engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async def create_once():
+            async with async_session_factory() as session:
+                return await chat_service.get_or_create_chat_by_agent(
+                    db=session, user_id=user.id, agent_id=agent.id
+                )
+
+        try:
+            first, second = await asyncio.gather(create_once(), create_once())
+            assert first.id == second.id
+            assert first.user_id == user.id
+            assert first.agent_id == agent.id
+
+            async with async_session_factory() as verify_session:
+                result = await verify_session.execute(
+                    select(models.Chat).where(
+                        models.Chat.user_id == user.id,
+                        models.Chat.agent_id == agent.id,
+                        models.Chat.is_active == True,
+                    )
+                )
+                rows = result.scalars().all()
+                assert len(rows) == 1
+                sole_id = rows[0].id
+
+            reload = await db_session.execute(
+                select(models.Chat).where(models.Chat.id == sole_id)
+            )
+            sole_chat = reload.scalar_one()
+
+            await self._cleanup_test_data(db_session, user, agent, sole_chat)
+        finally:
+            await engine.dispose()
