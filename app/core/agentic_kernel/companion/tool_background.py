@@ -751,7 +751,7 @@ def start_tool_background_job(
         finally:
             _unregister_thread(threading.current_thread())
 
-    t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=True)
+    t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
     _register_thread(t)
     logger.info(
         "langsmith_companion_parent_run tool_bg_thread_start inty_trace_id={} "

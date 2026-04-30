@@ -50,6 +50,7 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
     mock_root.post.assert_called_once()
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
 def test_companion_turn_langsmith_parent_trace_id_str_empty_for_none() -> None:
