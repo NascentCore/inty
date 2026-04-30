@@ -1,3 +1,4 @@
+import getpass
 import os
 
 from loguru import logger
@@ -49,9 +50,26 @@ def _langsmith_tracing_v2_enabled(config: Config) -> bool:
     return bool(getattr(config.agent, "langsmith_tracing_enabled", True))
 
 
+def _langsmith_local_username_slug() -> str:
+    user = (os.getenv("USER") or os.getenv("USERNAME") or "").strip()
+    if not user:
+        try:
+            user = getpass.getuser()
+        except Exception:
+            user = ""
+    if not user:
+        user = "unknown"
+    safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in user)
+    parts = [p for p in safe.split("-") if p]
+    slug = "-".join(parts)
+    return slug or "unknown"
+
+
 def set_langsmith_environment_variables(config: Config) -> None:
     # LangSmith SDK 仍读取进程环境变量；此处根据 YAML 写入 LANGSMITH_TRACING_V2 等。
     langsmith_project = f"{config.app.name}-{config.app.environment.value}"
+    if config.app.environment == Environment.LOCAL:
+        langsmith_project = f"{langsmith_project}-{_langsmith_local_username_slug()}"
     tracing_enabled = _langsmith_tracing_v2_enabled(config)
     os.environ["LANGSMITH_TRACING_V2"] = "true" if tracing_enabled else "false"
     os.environ["LANGSMITH_PROJECT"] = langsmith_project

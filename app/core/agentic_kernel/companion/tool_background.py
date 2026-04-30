@@ -27,6 +27,7 @@ from app.core.agentic_kernel.tools.runtime import (
 
 from .llm_chat_runtime import (
     create_chat_completion_sync,
+    end_companion_turn_root_run_safe,
     langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
@@ -168,6 +169,48 @@ def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
                 if n:
                     names.append(n)
     return names
+
+
+def _tagged_tool_result_text_from_appended_turn(
+    appended_messages: list[dict[str, Any]],
+) -> str:
+    """
+    Build user-visible text from tool role rows in *this* background loop only.
+
+    When the final assistant message is empty but tagged tools ran, surface their
+    string results (e.g. status line confirmation) instead of an empty tool_bg frame.
+    """
+    pending: dict[str, str] = {}
+    chunks: list[str] = []
+    for m in appended_messages:
+        role = m.get("role")
+        if role == "assistant":
+            pending.clear()
+            for tc in m.get("tool_calls") or []:
+                if not isinstance(tc, dict):
+                    continue
+                tid = tc.get("id")
+                fn = tc.get("function")
+                if not isinstance(fn, dict):
+                    continue
+                raw_name = fn.get("name")
+                if isinstance(tid, str) and isinstance(raw_name, str):
+                    n = raw_name.strip()
+                    if n:
+                        pending[tid] = n
+            continue
+        if role != "tool":
+            continue
+        tid = m.get("tool_call_id")
+        if not isinstance(tid, str):
+            continue
+        name = pending.get(tid)
+        if not name or not tool_text_response_include_in_chat(name):
+            continue
+        content = m.get("content")
+        if isinstance(content, str) and content.strip():
+            chunks.append(content.strip())
+    return "\n".join(chunks)
 
 
 def _insert_system_message(
@@ -579,10 +622,15 @@ async def _run_background_tool_loop(
             assistant_text, image_paths
         )
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
-        tool_call_names = _extract_tool_call_names(loop_result.messages)
+        appended_turn_msgs = loop_result.messages[len(working_messages) :]
+        tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         include_text_reply = any(
             tool_text_response_include_in_chat(name) for name in tool_call_names
         )
+        if include_text_reply and not str(display_text).strip():
+            filler = _tagged_tool_result_text_from_appended_turn(appended_turn_msgs)
+            if filler:
+                display_text = filler
         if not include_text_reply:
             logger.debug(
                 "repl.turn.bg suppress_user_visible_output missing_text_response_include_tag "
@@ -649,6 +697,7 @@ def start_tool_background_job(
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
     main_event_loop: asyncio.AbstractEventLoop | None = None,
+    langsmith_parent_run: Any | None = None,
 ) -> None:
     def _effective_on_event(ev: ToolOutputEvent) -> None:
         if on_event is not None:
@@ -657,29 +706,44 @@ def start_tool_background_job(
             push_output_event(ev)
 
     def _runner() -> None:
+        bg_ls_err: str | None = None
+
+        def _run_async_tool_loop() -> None:
+            asyncio.run(
+                _run_background_tool_loop(
+                    ws_root=ws_root,
+                    request_messages=request_messages,
+                    tool_model_name=tool_model_name,
+                    user_msg_uuid=user_msg_uuid,
+                    trace_id=trace_id,
+                    tools=tools,
+                    on_event=_effective_on_event,
+                    execute_tool_call_fn=execute_tool_call_fn,
+                    client=client,
+                    trace_hooks=trace_hooks,
+                    write_allowlist=write_allowlist,
+                    repository_only_workspace_text=repository_only_workspace_text,
+                )
+            )
+
         try:
             if main_event_loop is not None:
                 set_tool_background_db_loop(main_event_loop)
             try:
-                asyncio.run(
-                    _run_background_tool_loop(
-                        ws_root=ws_root,
-                        request_messages=request_messages,
-                        tool_model_name=tool_model_name,
-                        user_msg_uuid=user_msg_uuid,
-                        trace_id=trace_id,
-                        tools=tools,
-                        on_event=_effective_on_event,
-                        execute_tool_call_fn=execute_tool_call_fn,
-                        client=client,
-                        trace_hooks=trace_hooks,
-                        write_allowlist=write_allowlist,
-                        repository_only_workspace_text=repository_only_workspace_text,
-                    )
-                )
-            except BaseException:
+                if langsmith_parent_run is not None:
+                    from langsmith.run_helpers import set_tracing_parent
+
+                    with set_tracing_parent(langsmith_parent_run):
+                        _run_async_tool_loop()
+                else:
+                    _run_async_tool_loop()
+            except BaseException as exc:
+                bg_ls_err = repr(exc)
                 logger.exception("repl.turn.bg job failed")
             finally:
+                end_companion_turn_root_run_safe(
+                    langsmith_parent_run, error=bg_ls_err
+                )
                 clear_tool_background_db_loop()
         finally:
             _unregister_thread(threading.current_thread())

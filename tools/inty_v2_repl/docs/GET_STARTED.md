@@ -62,7 +62,7 @@ backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log --no-build-
 | `INTY_CONSOLE_LOGGING_LEVEL` | 仅控制 **stderr** 上的 Loguru 级别；未设置时与 `INTY_LOGGING_LEVEL`（或 YAML）相同。可与 `INTY_LOGGING_LEVEL=DEBUG` 组合实现「终端 INFO、文件 DEBUG」。 |
 | `INTY_LOG_FILE` | 若为非空路径，Loguru 额外 **追加** UTF-8 文件 sink（`enqueue=True`）。路径为**相对路径时相对于进程 cwd**，请在仓库根启动或写绝对路径。 |
 
-LangSmith tracing 默认开启：未在 YAML 中写出时等价 **`agent.langsmith_tracing_enabled: true`**。若要关闭，在 `config.yaml` 的 `agent` 段显式设 **`langsmith_tracing_enabled: false`**。`app.core.config` 在导入时写入进程内的 `LANGSMITH_TRACING_V2`，并设置 `LANGSMITH_PROJECT` 与 `LANGCHAIN_API_KEY`。
+LangSmith tracing 默认开启：未在 YAML 中写出时等价 **`agent.langsmith_tracing_enabled: true`**。若要关闭，在 `config.yaml` 的 `agent` 段显式设 **`langsmith_tracing_enabled: false`**。`app.core.config` 在导入时写入进程内的 `LANGSMITH_TRACING_V2`，并设置 `LANGSMITH_PROJECT` 与 `LANGCHAIN_API_KEY`。当 `app.environment` 为 **`local`** 时，`LANGSMITH_PROJECT` 为 **`inty-backend-local-<系统用户名>`**（取自 `USER` / `USERNAME` / `getpass.getuser()`），便于多人本地追踪互不混入同一 LangSmith 项目。
 
 Ops 平台启动后，参考下面的截图来创建智能体，并使用该智能体进行测试。
 

@@ -54,19 +54,16 @@ def _default_workspace() -> Path:
 def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     u = ids.get("user_msg_uuid", "")
     a = ids.get("assistant_msg_uuid", "")
-    tr = ids.get("trace_id", "")
     ls = ids.get("langsmith_trace_id", "")
-    if not u and not a and not tr and not ls:
+    if not u and not a and not ls:
         return ""
     parts: list[str] = []
     if u:
         parts.append(f"user={u}")
     if a:
         parts.append(f"asst={a}")
-    if tr:
-        parts.append(f"trace={tr}")
     if ls:
-        parts.append(f"ls={ls}")
+        parts.append(f"langsmith_trace_id={ls}")
     return " " + " ".join(parts)
 
 
@@ -76,12 +73,12 @@ def _repl_banner_suffix_ids(
 ) -> dict[str, str]:
     out: dict[str, str] = {}
     if transcript_ids:
-        for k in ("user_msg_uuid", "assistant_msg_uuid", "trace_id", "langsmith_trace_id"):
+        for k in ("user_msg_uuid", "assistant_msg_uuid", "langsmith_trace_id"):
             v = transcript_ids.get(k)
             if v:
                 out[k] = str(v)
     if meta_data:
-        for k in ("trace_id", "user_msg_uuid", "langsmith_trace_id"):
+        for k in ("user_msg_uuid", "langsmith_trace_id"):
             raw = meta_data.get(k)
             if raw and k not in out:
                 s = str(raw).strip()
