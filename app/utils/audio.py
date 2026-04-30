@@ -16,6 +16,8 @@ _AI_TRIM_TRAIL_MS = 420.0
 _AI_TRIM_LEAD_MS = 220.0
 # 过短分包不做边界裁剪（避免误伤小包/单元测试样例）
 _AI_MIN_SAMPLES_FOR_EDGE_TRIM = 240  # 10ms @ 24kHz
+_USER_INTER_AI_SILENCE_GATE = 384
+_USER_INTER_AI_MAX_LOUD_RATIO = 0.01
 
 
 def resample_pcm_16k_to_24k(pcm_bytes: bytes) -> bytes:
@@ -139,6 +141,64 @@ def _preprocess_gemini_ai_parts_edges(
     return out if out else nonempty
 
 
+def _is_near_silence_pcm16_mono(
+    pcm: bytes,
+    *,
+    gate: int,
+    max_loud_ratio: float,
+) -> bool:
+    if not pcm or len(pcm) % 2 != 0:
+        return False
+    ns = len(pcm) // 2
+    samples = struct.unpack("<%dh" % ns, pcm)
+    loud = sum(1 for sample in samples if abs(sample) >= gate)
+    return (loud / ns) <= max_loud_ratio
+
+
+def _drop_user_near_silence_between_ai(
+    conversation_chunks: List[Tuple[str, bytes]],
+) -> List[Tuple[str, bytes]]:
+    """
+    保存单路 WAV 时，客户端在 AI 回复期间仍可能上传麦克风静音。
+    如果这类 user 近静音刚好夹在两个 AI 分包之间，丢掉它以保持 AI 回复连续。
+    """
+    nonempty = [(role, data) for role, data in conversation_chunks if data]
+    if len(nonempty) < 3:
+        return nonempty
+
+    out: List[Tuple[str, bytes]] = []
+    idx = 0
+    while idx < len(nonempty):
+        role, data = nonempty[idx]
+        if role != "user":
+            out.append((role, data))
+            idx += 1
+            continue
+
+        run_start = idx
+        run: List[Tuple[str, bytes]] = []
+        while idx < len(nonempty) and nonempty[idx][0] == "user":
+            run.append(nonempty[idx])
+            idx += 1
+        prev_role = nonempty[run_start - 1][0] if run_start > 0 else None
+        next_role = nonempty[idx][0] if idx < len(nonempty) else None
+        if (
+            prev_role != "user"
+            and next_role != "user"
+            and all(
+                _is_near_silence_pcm16_mono(
+                    chunk_data,
+                    gate=_USER_INTER_AI_SILENCE_GATE,
+                    max_loud_ratio=_USER_INTER_AI_MAX_LOUD_RATIO,
+                )
+                for _, chunk_data in run
+            )
+        ):
+            continue
+        out.extend(run)
+    return out
+
+
 def join_pcm_parts_24k_crossfade(
     parts: List[bytes],
     n_samples: int = AI_PART_CROSSFADE_SAMPLES,
@@ -219,9 +279,7 @@ def build_interleaved_pcm_24k(
             seg = join_pcm_parts_24k_crossfade(parts, AI_PART_CROSSFADE_SAMPLES)
             out.extend(seg)
 
-    for role, data in conversation_chunks:
-        if not data:
-            continue
+    for role, data in _drop_user_near_silence_between_ai(conversation_chunks):
         if pending_role is not None and role != pending_role:
             _flush_pending()
         if pending_role is None:

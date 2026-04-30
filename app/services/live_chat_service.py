@@ -124,6 +124,26 @@ class LiveChatService:
         self._client: Optional[genai.Client] = None
         self._active_sessions: Dict[str, LiveSession] = {}
 
+    @staticmethod
+    def _should_save_user_audio_chunk(session: LiveSession) -> bool:
+        """AI 回复期间客户端仍会持续上传麦克风静音；保存 WAV 时不要把它插进 AI 轨。"""
+        return not (
+            session.status == LiveChatStatus.SPEAKING
+            or getattr(session, "_current_turn_has_model_response", False)
+        )
+
+    def _append_user_audio_chunk_for_history(
+        self,
+        session: LiveSession,
+        audio_data: bytes,
+    ) -> None:
+        if (
+            session.config.save_history
+            and audio_data
+            and self._should_save_user_audio_chunk(session)
+        ):
+            session.conversation_audio_chunks.append(("user", bytes(audio_data)))
+
     def _get_client(self) -> genai.Client:
         """获取或创建 Gemini 客户端"""
         if self._client is None:
@@ -952,10 +972,9 @@ class LiveChatService:
                                 and audio_data
                             ):
                                 session.pending_audio.append(bytes(audio_data))
-                                if session.config.save_history:
-                                    session.conversation_audio_chunks.append(
-                                        ("user", bytes(audio_data))
-                                    )
+                                self._append_user_audio_chunk_for_history(
+                                    session, bytes(audio_data)
+                                )
                         continue
 
                     # 预填充尚未完成：缓冲音频，等 Gemini 就绪后由 _flush_after_prefill 任务统一 flush。
@@ -972,10 +991,9 @@ class LiveChatService:
                                 and audio_data
                             ):
                                 session.pending_audio.append(bytes(audio_data))
-                                if session.config.save_history:
-                                    session.conversation_audio_chunks.append(
-                                        ("user", bytes(audio_data))
-                                    )
+                                self._append_user_audio_chunk_for_history(
+                                    session, bytes(audio_data)
+                                )
                         continue
 
                     if item_type == "activity_start":
@@ -1014,10 +1032,9 @@ class LiveChatService:
                             mime_type=f"audio/pcm;rate={self._config.send_sample_rate}",
                         )
                     )
-                    if session.config.save_history:
-                        session.conversation_audio_chunks.append(
-                            ("user", bytes(audio_data))
-                        )
+                    self._append_user_audio_chunk_for_history(
+                        session, bytes(audio_data)
+                    )
             finally:
                 if session.receive_task is not None:
                     session.receive_task.cancel()

@@ -155,3 +155,33 @@ def test_preprocess_trims_inter_packet_silence():
     assert len(pre) == 2
     # 100ms 尾零 + 50ms 头零 各被裁掉，仅余两段 300 采样的语音
     assert sum(len(x) for x in pre) == 600 * 2
+
+
+def test_build_interleaved_drops_user_silence_between_ai_parts():
+    ai0 = struct.pack("<hhh", 1000, 2000, 3000)
+    user_silence0 = struct.pack("<%dh" % 800, *([0] * 800))
+    user_silence1 = struct.pack("<%dh" % 800, *([0] * 800))
+    ai1 = struct.pack("<hhh", 4000, 5000, 6000)
+    out = build_interleaved_pcm_24k(
+        [
+            ("ai", ai0),
+            ("user", user_silence0),
+            ("user", user_silence1),
+            ("ai", ai1),
+        ],
+        user_sample_rate=16000,
+        ai_sample_rate=24000,
+    )
+    assert out == ai0 + ai1
+
+
+def test_build_interleaved_keeps_user_speech_between_ai_parts():
+    ai0 = struct.pack("<h", 1000)
+    user_speech = struct.pack("<hh", 1000, 2000)
+    ai1 = struct.pack("<h", 3000)
+    out = build_interleaved_pcm_24k(
+        [("ai", ai0), ("user", user_speech), ("ai", ai1)],
+        user_sample_rate=16000,
+        ai_sample_rate=24000,
+    )
+    assert out == ai0 + resample_pcm_16k_to_24k(user_speech) + ai1
