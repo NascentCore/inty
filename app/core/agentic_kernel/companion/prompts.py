@@ -252,6 +252,22 @@ def _tool_side_compact_directive() -> str:
     )
 
 
+def _tool_background_final_json_routing_contract_text() -> str:
+    return (
+        "## 工具环收尾：对用户可见性的 JSON 路由\n\n"
+        "当**所有** tool_calls 已执行完毕、你给出**不再包含 tool_calls** 的最终 assistant 消息时，"
+        "`message.content` 应为 **合法 JSON 对象**（不要 markdown 围栏），字段：\n"
+        "- `output_to_user`（布尔）：用户是否还应收到一条后续气泡，用于总结本轮工具可读结果"
+        "（读档、列目录、联网检索、状态行、runtime_inspect 等）。"
+        "若本轮仅为静默持久化（如 user_profile_record、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
+        "- `user_visible_text`（字符串）：当 `output_to_user` 为 true 时的简短可见正文；"
+        "可为空字符串（例如仅图片路径将由系统附加）。\n"
+        "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
+        "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
+        "若你无法产出合法 JSON，后端可能追加一次补解析请求。\n"
+    )
+
+
 def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
@@ -305,6 +321,8 @@ def build_system_messages(
 
     if tool_side_compact and not heartbeat_turn and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
+        if tools_on:
+            out.append(_system_message(_tool_background_final_json_routing_contract_text()))
 
     out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))

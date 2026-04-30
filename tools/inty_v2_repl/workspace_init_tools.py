@@ -11,7 +11,7 @@ from app.core.agentic_kernel.companion.fal_z_image_tool import (
 from app.core.agentic_kernel.companion.message_format import openai_assistant_message_dict
 from app.core.agentic_kernel.companion.companion_tool_runtime import (
     REPL_WRITABLE_RELATIVE_PATHS,
-    TEXT_RESPONSE_INCLUDE_IN_CHAT,
+    TOOL_TAG_GENERATION,
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     append_user_profile_facts_to_user_md,
     build_openai_repl_tools,
@@ -21,11 +21,11 @@ from app.core.agentic_kernel.companion.companion_tool_runtime import (
     execute_tool_call_blocking,
     read_chat_output_format_prompt,
     resolve_under_workspace,
+    round_includes_generation_tool,
     tool_executor_for_root,
     tool_has_tag,
+    tool_requires_client_delivery_on_success,
     tool_schedule_task,
-    tool_text_response_include_in_chat,
-    tool_text_response_should_include_in_chat,
     tool_update_chat_settings,
     tool_user_profile_record,
     tool_workspace_list_dir,

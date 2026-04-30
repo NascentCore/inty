@@ -30,9 +30,10 @@ from inty_v2_repl.tool_background import (
     pop_output_events_nowait,
 )
 from inty_v2_repl.memory_store_registry import get_memory_store
-from inty_v2_repl.workspace_init_tools import (
-    TEXT_RESPONSE_INCLUDE_IN_CHAT,
-    tool_text_response_should_include_in_chat,
+from app.core.agentic_kernel.companion.companion_tool_runtime import (
+    TOOL_TAG_GENERATION,
+    round_includes_generation_tool,
+    tool_requires_client_delivery_on_success,
 )
 
 
@@ -300,15 +301,17 @@ class TestAsyncToolBackground(unittest.TestCase):
 
                 got_events = _wait_first_output_event(root, deadline_sec=2.0)
                 self.assertEqual(len(got_events), 1)
-                self.assertIn("tool-final-image-r2", got_events[0].text)
                 self.assertIn("/tmp/z_image_1.jpeg", got_events[0].text)
+                self.assertIn("（生成图片本地路径）", got_events[0].text)
+                self.assertTrue(got_events[0].generation_deliver)
+                self.assertFalse(got_events[0].output_to_user)
 
             rows = load_transcript((root / "transcript.jsonl"))
             self.assertEqual([r.role for r in rows], ["user", "assistant", "assistant"])
             self.assertEqual(rows[1].source, "chat")
             self.assertEqual(rows[2].source, "tool_bg")
-            self.assertIn("tool-final-image-r2", rows[2].content)
             self.assertIn("/tmp/z_image_1.jpeg", rows[2].content)
+            self.assertIn("（生成图片本地路径）", rows[2].content)
             turn_tid = rows[0].trace_id
             assert turn_tid is not None
             self.assertEqual(got_events[0].trace_id, turn_tid)
@@ -498,30 +501,29 @@ class TestLocalPathDisplay(unittest.TestCase):
             self.assertIn('"trace_id": "tid-bg-test"', body)
 
 
-class TestToolTextResponseTags(unittest.TestCase):
-    def test_tools_with_text_response_include_tag(self) -> None:
-        tagged = (
+class TestGenerationToolTags(unittest.TestCase):
+    def test_generation_tools_tagged(self) -> None:
+        for name in ("generate_image", "modify_image"):
+            self.assertTrue(tool_requires_client_delivery_on_success(name), name)
+
+    def test_non_generation_tools(self) -> None:
+        for name in (
             "workspace_list_dir",
             "workspace_read_file",
             "google_web_search",
-            "generate_image",
-            "modify_image",
-        )
-        for name in tagged:
-            self.assertTrue(tool_text_response_should_include_in_chat(name), name)
-
-    def test_tools_without_tag(self) -> None:
-        untagged = (
             "user_profile_record",
-            "workspace_write_file",
-            "workspace_mkdir",
             "unknown_tool_name",
-        )
-        for name in untagged:
-            self.assertFalse(tool_text_response_should_include_in_chat(name), name)
+        ):
+            self.assertFalse(tool_requires_client_delivery_on_success(name), name)
 
-    def test_constant_name(self) -> None:
-        self.assertEqual(TEXT_RESPONSE_INCLUDE_IN_CHAT, "TEXT_RESPONSE_INCLUDE_IN_CHAT")
+    def test_round_includes_generation_tool(self) -> None:
+        self.assertTrue(
+            round_includes_generation_tool(["workspace_read_file", "generate_image"])
+        )
+        self.assertFalse(round_includes_generation_tool(["user_profile_record"]))
+
+    def test_generation_constant(self) -> None:
+        self.assertEqual(TOOL_TAG_GENERATION, "GENERATION")
 
 
 if __name__ == "__main__":

@@ -587,6 +587,8 @@ async def _build_companion_tool_background_ws_payload(
         "source": "tool_bg",
         "trace_id": ev.trace_id,
         "reply_to_user_msg_uuid": ev.user_msg_uuid,
+        "tool_bg_output_to_user": ev.output_to_user,
+        "tool_bg_generation_deliver": ev.generation_deliver,
     }
     if ev.langsmith_trace_id:
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id

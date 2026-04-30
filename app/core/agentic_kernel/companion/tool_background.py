@@ -44,8 +44,10 @@ from .companion_tool_runtime import (
     REPL_WRITABLE_RELATIVE_PATHS,
     execute_tool_call,
     openai_assistant_message_dict,
-    tool_text_response_include_in_chat,
+    round_includes_generation_tool,
+    tool_requires_client_delivery_on_success,
 )
+from .tool_bg_routing import resolve_tool_bg_routing_sync
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 
@@ -172,17 +174,13 @@ def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
     return names
 
 
-def _tagged_tool_result_text_from_appended_turn(
-    appended_messages: list[dict[str, Any]],
-) -> str:
-    """
-    Build user-visible text from tool role rows in *this* background loop only.
-
-    When the final assistant message is empty but tagged tools ran, surface their
-    string results (e.g. status line confirmation) instead of an empty tool_bg frame.
-    """
+def _tool_bg_nl_filler_from_appended_turn(appended_messages: list[dict[str, Any]]) -> str:
+    """Concatenate non-error tool string results when NL summary is empty but output_to_user is true."""
     pending: dict[str, str] = {}
     chunks: list[str] = []
+    max_chunks = 8
+    max_chars = 8000
+    total = 0
     for m in appended_messages:
         role = m.get("role")
         if role == "assistant":
@@ -205,13 +203,64 @@ def _tagged_tool_result_text_from_appended_turn(
         tid = m.get("tool_call_id")
         if not isinstance(tid, str):
             continue
-        name = pending.get(tid)
-        if not name or not tool_text_response_include_in_chat(name):
-            continue
         content = m.get("content")
-        if isinstance(content, str) and content.strip():
-            chunks.append(content.strip())
+        if not isinstance(content, str):
+            continue
+        piece = content.strip()
+        if not piece or piece.startswith("ERROR"):
+            continue
+        if len(chunks) >= max_chunks:
+            break
+        if total + len(piece) > max_chars:
+            piece = piece[: max(0, max_chars - total - 1)] + "..."
+        chunks.append(piece)
+        total += len(piece)
     return "\n".join(chunks)
+
+
+def _generation_tool_execution_deliver(
+    appended_messages: list[dict[str, Any]],
+    tool_call_names: list[str],
+    image_paths: list[str],
+) -> bool:
+    """
+    GENERATION tools must reach the client only when execution succeeded (paths or non-ERROR tool text).
+    """
+    if not round_includes_generation_tool(tool_call_names):
+        return False
+    if image_paths:
+        return True
+    pending: dict[str, str] = {}
+    for m in appended_messages:
+        if m.get("role") == "assistant":
+            pending.clear()
+            for tc in m.get("tool_calls") or []:
+                if not isinstance(tc, dict):
+                    continue
+                tid = tc.get("id")
+                fn = tc.get("function")
+                if not isinstance(fn, dict):
+                    continue
+                raw_name = fn.get("name")
+                if isinstance(tid, str) and isinstance(raw_name, str):
+                    n = raw_name.strip()
+                    if n:
+                        pending[tid] = n
+            continue
+        if m.get("role") != "tool":
+            continue
+        tid = m.get("tool_call_id")
+        if not isinstance(tid, str):
+            continue
+        name = pending.get(tid)
+        if not name or not tool_requires_client_delivery_on_success(name):
+            continue
+        content = str(m.get("content") or "").strip()
+        if content.startswith("ERROR"):
+            continue
+        if content:
+            return True
+    return False
 
 
 def _insert_system_message(
@@ -239,6 +288,8 @@ class ToolOutputEvent:
     elapsed_ms: int
     trace_id: str = ""  # run_turn turn id; links transcript rows + tool_background_done
     langsmith_trace_id: str = ""
+    output_to_user: bool = False
+    generation_deliver: bool = False
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -281,14 +332,14 @@ def pop_output_events_nowait(*, workspace: Path) -> list[ToolOutputEvent]:
     return out
 
 
-def _register_thread(t: threading.Thread) -> None:
+def _register_thread(worker: threading.Thread) -> None:
     with _ACTIVE_THREADS_LOCK:
-        _ACTIVE_THREADS.add(t)
+        _ACTIVE_THREADS.add(worker)
 
 
-def _unregister_thread(t: threading.Thread) -> None:
+def _unregister_thread(worker: threading.Thread) -> None:
     with _ACTIVE_THREADS_LOCK:
-        _ACTIVE_THREADS.discard(t)
+        _ACTIVE_THREADS.discard(worker)
 
 
 def background_tasks_count() -> int:
@@ -616,31 +667,68 @@ async def _run_background_tool_loop(
             )
             return
 
-        assistant_text = _assistant_text_from_completion_response(loop_result.response)
+        raw_final = _assistant_text_from_completion_response(loop_result.response)
         bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
-        image_paths = _local_paths_from_tool_messages(loop_result.messages)
-        display_text = _append_local_image_paths_for_display(
-            assistant_text, image_paths
-        )
-        elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
         appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
-        include_text_reply = any(
-            tool_text_response_include_in_chat(name) for name in tool_call_names
+        image_paths = _local_paths_from_tool_messages(loop_result.messages)
+        generation_deliver = _generation_tool_execution_deliver(
+            appended_turn_msgs, tool_call_names, image_paths
         )
-        if include_text_reply and not str(display_text).strip():
-            filler = _tagged_tool_result_text_from_appended_turn(appended_turn_msgs)
+        routing = resolve_tool_bg_routing_sync(
+            client=resolved_client,
+            model=tool_model_name,
+            create_completion_sync=create_chat_completion_sync,
+            conversation_messages=list(loop_result.messages),
+            final_assistant_content=raw_final,
+            trace_id=trace_id,
+        )
+        output_to_user_flag = routing.output_to_user
+        should_push = generation_deliver or output_to_user_flag
+        base_nl = (routing.user_visible_text or "").strip()
+        if output_to_user_flag and not base_nl:
+            filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
-                display_text = filler
-        if not include_text_reply:
+                base_nl = filler
+        display_text = _append_local_image_paths_for_display(base_nl, image_paths)
+        elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+
+        logger.debug(
+            "repl.turn.bg policy_summary trace_id={} user_msg_uuid={} "
+            "generation_deliver={} output_to_user={} should_push={} tools={} "
+            "image_paths_n={} base_nl_chars={} display_chars={}",
+            trace_id,
+            user_msg_uuid,
+            generation_deliver,
+            output_to_user_flag,
+            should_push,
+            ",".join(tool_call_names),
+            len(image_paths),
+            len(base_nl),
+            len(display_text),
+        )
+
+        if not should_push:
             logger.debug(
-                "repl.turn.bg suppress_user_visible_output missing_text_response_include_tag "
-                "trace_id={} user_msg_uuid={} tool_calls={}",
+                "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
+                "reason=should_push_false",
                 trace_id,
                 user_msg_uuid,
+            )
+            return
+        if not display_text.strip() and not generation_deliver:
+            logger.debug(
+                "repl.turn.bg suppress_user_visible_output empty_display trace_id={} "
+                "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
+                trace_id,
+                user_msg_uuid,
+                generation_deliver,
+                output_to_user_flag,
                 ",".join(tool_call_names),
             )
             return
+        if not display_text.strip() and generation_deliver:
+            display_text = _append_local_image_paths_for_display("", image_paths)
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
                 "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
@@ -666,6 +754,17 @@ async def _run_background_tool_loop(
             generated_image_uris=image_paths,
             trace_id=trace_id,
         )
+        logger.debug(
+            "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
+            "generation_deliver={} output_to_user={} display_chars={} image_paths_n={}",
+            trace_id,
+            user_msg_uuid,
+            assistant_msg_uuid,
+            generation_deliver,
+            output_to_user_flag,
+            len(display_text),
+            len(image_paths),
+        )
         on_event(
             ToolOutputEvent(
                 workspace=ws_root,
@@ -676,6 +775,8 @@ async def _run_background_tool_loop(
                 elapsed_ms=elapsed_ms,
                 trace_id=trace_id,
                 langsmith_trace_id=bg_ls_trace,
+                output_to_user=output_to_user_flag,
+                generation_deliver=generation_deliver,
             )
         )
     finally:
@@ -707,6 +808,9 @@ def start_tool_background_job(
             push_output_event(ev)
 
     def _runner() -> None:
+        # Register here with current_thread(), not the Thread instance from threading.Thread(...).
+        # Unit tests patch threading.Thread with MagicMock; pre-start register would leak mocks.
+        _register_thread(threading.current_thread())
         bg_ls_err: str | None = None
 
         def _run_async_tool_loop() -> None:
@@ -752,7 +856,6 @@ def start_tool_background_job(
             _unregister_thread(threading.current_thread())
 
     t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
-    _register_thread(t)
     logger.info(
         "langsmith_companion_parent_run tool_bg_thread_start inty_trace_id={} "
         "user_msg_uuid={} ls_trace_id={} thread_name={} daemon={}",

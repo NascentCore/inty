@@ -62,7 +62,6 @@ def test_end_companion_turn_root_run_safe_noop_for_none() -> None:
 
 
 @patch("app.core.agentic_kernel.companion.tool_background.threading.Thread")
-@patch("app.core.agentic_kernel.companion.tool_background._unregister_thread")
 @patch("app.core.agentic_kernel.companion.tool_background.set_tool_background_db_loop")
 @patch("app.core.agentic_kernel.companion.tool_background.clear_tool_background_db_loop")
 @patch("asyncio.run")
@@ -74,7 +73,6 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     mock_asyncio_run: MagicMock,
     mock_clear_loop: MagicMock,
     mock_set_loop: MagicMock,
-    mock_unreg: MagicMock,
     mock_thread: MagicMock,
 ) -> None:
     parent = MagicMock()
@@ -120,7 +118,6 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
 
 
 @patch("app.core.agentic_kernel.companion.tool_background.threading.Thread")
-@patch("app.core.agentic_kernel.companion.tool_background._unregister_thread")
 @patch("app.core.agentic_kernel.companion.tool_background.set_tool_background_db_loop")
 @patch("app.core.agentic_kernel.companion.tool_background.clear_tool_background_db_loop")
 @patch("asyncio.run")
@@ -132,7 +129,6 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     mock_asyncio_run: MagicMock,
     mock_clear_loop: MagicMock,
     mock_set_loop: MagicMock,
-    mock_unreg: MagicMock,
     mock_thread: MagicMock,
 ) -> None:
     with patch("langsmith.run_helpers.set_tracing_parent") as mock_sp:

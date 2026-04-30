@@ -208,7 +208,7 @@ def langsmith_trace_id_from_completion(resp: Any) -> str:
 
 
 def _langsmith_trace_id_from_active_run_tree() -> str:
-    """While still inside an active LangSmith traceable frame (e.g. our outer chain wrapper)."""
+    """Best-effort trace id from LangSmith active run (tracing_context parent or nested span)."""
     try:
         from langsmith.run_helpers import get_current_run_tree
 
@@ -238,24 +238,6 @@ def _completion_with_langsmith_trace_id(raw: Any) -> Any:
         return model_copy(update={"langsmith_trace_id": tid})
     except Exception:
         return raw
-
-
-def _openrouter_chat_completion_traced(client: Any, create_kw: dict[str, Any]) -> Any:
-    """Inner body: OpenRouter call plus trace id capture before LangSmith pops the LLM span."""
-    raw = client.chat.completions.create(**create_kw)
-    return _completion_with_langsmith_trace_id(raw)
-
-
-def _traceable_openrouter_chat_completion() -> Any:
-    from langsmith import run_helpers
-
-    return run_helpers.traceable(
-        name="inty_openrouter_chat_completion",
-        run_type="chain",
-    )(_openrouter_chat_completion_traced)
-
-
-_TRACED_OPENROUTER_CHAT_COMPLETION = _traceable_openrouter_chat_completion()
 
 
 def tool_path_chat_completion_kwargs(model: str) -> dict[str, Any]:
@@ -303,7 +285,8 @@ def create_chat_completion_sync(
             create_kw["tool_choice"] = tool_choice
     for attempt in range(1, _OPENROUTER_JSON_MAX_ATTEMPTS + 1):
         try:
-            return _TRACED_OPENROUTER_CHAT_COMPLETION(client, create_kw)
+            raw = client.chat.completions.create(**create_kw)
+            return _completion_with_langsmith_trace_id(raw)
         except json.JSONDecodeError as exc:
             retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
             logger.warning(
