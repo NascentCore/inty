@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 from copy import deepcopy
 from typing import Any
@@ -51,10 +52,24 @@ def create_companion_turn_root_run(
             },
             tags=["agentic_companion", "user_turn"],
         )
+        initial_post_ok = True
+        initial_post_err = ""
         try:
             root.post()
         except Exception as exc:
+            initial_post_ok = False
+            initial_post_err = repr(exc)
             logger.debug("companion_turn_langsmith_parent initial post skipped: {}", exc)
+        logger.info(
+            "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
+            "ls_trace_id={} ls_run_id={} initial_post_ok={} initial_post_err={!r}",
+            inty_trace_id,
+            user_msg_uuid,
+            companion_turn_langsmith_parent_trace_id_str(root),
+            companion_turn_langsmith_parent_run_id_str(root),
+            initial_post_ok,
+            initial_post_err,
+        )
         return root
     except Exception as exc:
         logger.warning("companion_turn_langsmith_parent create failed: {}", exc)
@@ -73,14 +88,39 @@ def companion_turn_langsmith_parent_trace_id_str(root_run: Any) -> str:
         return ""
 
 
+def companion_turn_langsmith_parent_run_id_str(root_run: Any) -> str:
+    if root_run is None:
+        return ""
+    try:
+        rid = getattr(root_run, "id", None)
+        if rid is None:
+            return ""
+        return str(rid).strip()
+    except Exception:
+        return ""
+
+
 def end_companion_turn_root_run_safe(
     root_run: Any,
     *,
     error: str | None = None,
     outputs: dict[str, Any] | None = None,
+    ls_end_source: str = "",
 ) -> None:
     if root_run is None:
         return
+    ls_tid = companion_turn_langsmith_parent_trace_id_str(root_run)
+    ls_rid = companion_turn_langsmith_parent_run_id_str(root_run)
+    th_name = threading.current_thread().name
+    logger.info(
+        "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        th_name,
+        ls_tid,
+        ls_rid,
+        error is not None,
+    )
     try:
         if error is not None:
             root_run.end(error=error)
@@ -89,12 +129,38 @@ def end_companion_turn_root_run_safe(
         else:
             root_run.end()
     except Exception as exc:
-        logger.warning("companion_turn_langsmith_parent end failed: {}", exc)
+        logger.warning(
+            "companion_turn_langsmith_parent end failed ls_end_source={!r} thread={} "
+            "ls_trace_id={} ls_run_id={} err={}",
+            ls_end_source,
+            th_name,
+            ls_tid,
+            ls_rid,
+            exc,
+        )
         return
     try:
         root_run.post()
     except Exception as exc:
-        logger.warning("companion_turn_langsmith_parent post after end failed: {}", exc)
+        logger.warning(
+            "companion_turn_langsmith_parent post after end failed ls_end_source={!r} "
+            "thread={} ls_trace_id={} ls_run_id={} err={}",
+            ls_end_source,
+            th_name,
+            ls_tid,
+            ls_rid,
+            exc,
+        )
+        return
+    logger.info(
+        "langsmith_companion_parent_run end_posted ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        th_name,
+        ls_tid,
+        ls_rid,
+        error is not None,
+    )
 
 
 def langsmith_trace_id_from_completion(resp: Any) -> str:

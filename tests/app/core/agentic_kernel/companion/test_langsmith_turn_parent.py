@@ -113,7 +113,9 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     mock_asyncio_run.assert_called_once()
     coro = mock_asyncio_run.call_args[0][0]
     coro.close()
-    mock_end.assert_called_once_with(parent, error=None)
+    mock_end.assert_called_once_with(
+        parent, error=None, ls_end_source="tool_background_thread"
+    )
 
 
 @patch("app.core.agentic_kernel.companion.tool_background.threading.Thread")
@@ -150,7 +152,9 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     mock_sp.assert_not_called()
     mock_asyncio_run.assert_called_once()
     mock_asyncio_run.call_args[0][0].close()
-    mock_end.assert_called_once_with(None, error=None)
+    mock_end.assert_called_once_with(
+        None, error=None, ls_end_source="tool_background_thread"
+    )
 
 
 class _FakeAsyncDualLLMClient:
