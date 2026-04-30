@@ -301,6 +301,9 @@ class AgentConfig:
     presence_penalty: float = 0.5
     # DEPRECATED: Do not use.
     enable_debug_logging: bool = False  # 是否启用调试日志记录功能
+    # 是否向 LangSmith 上报 trace（应用启动时写入 LANGSMITH_TRACING_V2）。
+    # 关闭时仍会设置 LANGSMITH_PROJECT / LANGCHAIN_API_KEY，仅 tracing 为 false。
+    langsmith_tracing_enabled: bool = True
     # LangSmith 文本聊天追踪采样率（0.0-1.0）。
     # 实际生效值在调用处会被限制到 <=10%，避免文本聊天成功请求过量追踪。
     # 文本聊天的失败概率也极低，因此不需要特别关注错误信息。

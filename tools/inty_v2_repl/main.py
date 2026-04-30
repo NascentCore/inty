@@ -8,10 +8,9 @@ import time
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import Annotated, Callable, Deque, Mapping
+from typing import Annotated, Any, Callable, Deque, Mapping
 
 from cyclopts import App, Parameter
-from dotenv import load_dotenv
 from loguru import logger
 
 _PKG_DIR = Path(__file__).resolve().parent
@@ -33,7 +32,6 @@ from .jsonl_db_store import (
     flush_jsonl_db_store,
     shutdown_jsonl_db_store,
 )
-from .llm_trace import configure_llm_trace_file
 from .memory_store_registry import (
     flush_memory_store,
     shutdown_memory_store,
@@ -43,9 +41,9 @@ from .proto_log import (
     repl_wall_ts_str,
     resolve_proto_log_file,
 )
+from .repl_message_io import format_ws_error_banner, pop_downlink_item
 
 load_prototype_dotenv()
-load_dotenv(_REPO_ROOT / ".env")
 
 
 def _default_workspace() -> Path:
@@ -61,13 +59,27 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     return f" user={u} asst={a} trace={tr}"
 
 
-def _repl_assistant_banner_label(ids: Mapping[str, str] | None) -> str:
-    if not ids:
-        return "AI-chat"
-    raw = ids.get("assistant_source", "chat")
-    if raw == "inner_tick":
+def _repl_assistant_banner_label(
+    ids: Mapping[str, str] | None,
+    *,
+    meta_data: Mapping[str, Any] | None = None,
+) -> str:
+    src = None
+    if meta_data:
+        src = meta_data.get("source")
+    if src == "tool_bg":
+        return "toolcall"
+    if src == "inner_tick":
         return "inner-tick"
-    return "AI-chat"
+    if src == "chat":
+        return "chat"
+    if ids:
+        raw = ids.get("assistant_source", "chat")
+        if raw == "inner_tick":
+            return "inner-tick"
+        if raw == "chat":
+            return "chat"
+    return "chat"
 
 
 def _print_repl_user_input(text: str) -> None:
@@ -81,10 +93,13 @@ def _print_assistant_reply(
     *,
     transcript_ids: Mapping[str, str] | None = None,
     repl_source_label: str | None = None,
+    meta_data: Mapping[str, Any] | None = None,
 ) -> None:
     ms = elapsed_s * 1000
     suffix = _repl_transcript_id_suffix(transcript_ids) if transcript_ids else ""
-    label = repl_source_label or _repl_assistant_banner_label(transcript_ids)
+    label = repl_source_label or _repl_assistant_banner_label(
+        transcript_ids, meta_data=meta_data
+    )
     print(f"[{repl_wall_ts_str()}] {label} {ms:.0f}ms{suffix}")
     print(out)
 
@@ -104,17 +119,11 @@ def _init_proto_logging(
     )
 
 
-def _configure_llm_trace_for_workspace(root: Path) -> None:
-    configure_llm_trace_file(root.resolve() / "llm_trace.jsonl")
-
-
 def _print_openrouter_invalid_json_retry_hint() -> None:
     print(f"[{repl_wall_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
 
 
-def _print_send_turn_exception(
-    exc: BaseException, *, eof_wait: bool = False
-) -> None:
+def _print_send_turn_exception(exc: BaseException) -> None:
     """Log and print a failure from ``bridge.send_turn`` / ``fut.result()``."""
     if isinstance(exc, BackendChatWsError):
         print(
@@ -122,8 +131,7 @@ def _print_send_turn_exception(
             f"message={exc.agent_message!r}"
         )
         return
-    log_key = "backend ws turn failed (eof wait)" if eof_wait else "backend ws turn failed"
-    logger.opt(exception=exc).error(log_key)
+    logger.opt(exception=exc).error("backend ws turn failed")
     print(f"[{repl_wall_ts_str()}] error: {exc}")
 
 
@@ -146,23 +154,27 @@ def _resolve_chat_agent_id_cli(agent_id: str | None) -> str:
 
 
 def _resolve_bearer_token_cli() -> str:
-    t = os.environ.get("INTY_ACCESS_TOKEN", "").strip()
+    t = (
+        os.environ.get("INTY_ACCESS_TOKEN", "").strip()
+        or os.environ.get("INTY_BEARER_TOKEN", "").strip()
+    )
     if t:
         return t
-    raise SystemExit("repl requires INTY_ACCESS_TOKEN (Bearer JWT for the backend)")
+    p = _REPO_ROOT / ".inty_ops_bearer_token"
+    if p.is_file():
+        try:
+            ft = p.read_text(encoding="utf-8").strip()
+        except OSError:
+            ft = ""
+        if ft:
+            return ft
+    raise SystemExit(
+        "repl needs INTY_ACCESS_TOKEN, INTY_BEARER_TOKEN, or repo-root .inty_ops_bearer_token "
+        "(written by backend/ops/start.sh --local)"
+    )
 
 
 _BACKEND_WS_SIDEBAND_POLL_SEC = 0.25
-
-
-def _repl_duplex_env_enabled() -> bool:
-    """Full-duplex REPL: queue input while send_turn is in flight. Set INTY_V2_REPL_DUPLEX=0 to use legacy (blocking) loop."""
-    raw = os.environ.get("INTY_V2_REPL_DUPLEX", "").strip().lower()
-    if not raw:
-        return True
-    if raw in ("0", "false", "no", "off", "n"):
-        return False
-    return True
 
 
 def _use_posix_tty_duplex_select() -> bool:
@@ -250,19 +262,23 @@ def _readline_backend_ws_with_sideband(
         except (ValueError, OSError):
             return input(prompt)
         if not r:
-            assistant, err = bridge.try_pop_queued_chat()
-            if assistant is not None:
+            item = pop_downlink_item(bridge)
+            if item is not None:
                 print()
-                _print_assistant_reply(assistant, 0.0)
-                sys.stdout.write(prompt)
-                sys.stdout.flush()
-            elif err is not None:
-                code, msg = err
-                print()
-                print(
-                    f"[{repl_wall_ts_str()}] chat-ws-error sideband code={code} "
-                    f"message={msg!r}"
-                )
+                if item["kind"] == "assistant":
+                    _print_assistant_reply(
+                        item["text"],
+                        0.0,
+                        meta_data=item.get("meta_data") or {},
+                    )
+                else:
+                    print(
+                        format_ws_error_banner(
+                            item["code"],
+                            item["message"],
+                            wall_ts=repl_wall_ts_str(),
+                        )
+                    )
                 sys.stdout.write(prompt)
                 sys.stdout.flush()
             continue
@@ -272,34 +288,16 @@ def _readline_backend_ws_with_sideband(
         return line[:-1] if line.endswith("\n") else line
 
 
-def _repl_interactive_backend_ws_loop_legacy(bridge: BackendChatWsBridge, agent_id: str) -> None:
-    """Block on ``send_turn`` in the main thread; no line queueing during wait (``INTY_V2_REPL_DUPLEX=0``)."""
-    while True:
-        try:
-            line = _readline_backend_ws_with_sideband(bridge, "> ")
-        except EOFError:
-            print()
-            break
-        if line.strip() in ("quit", "exit", "q"):
-            break
-        if not line.strip():
-            continue
-        _print_repl_user_input(line)
-        t0 = time.perf_counter()
-        try:
-            out = bridge.send_turn(agent_id, line)
-        except (BackendChatWsError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
-            _print_send_turn_exception(exc)
-            continue
-        _print_assistant_reply(out, time.perf_counter() - t0)
+def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
+    """Full-duplex REPL: ``send_turn`` on a worker thread; queue lines during inflight (POSIX TTY ``select`` + pipe).
 
-
-def _repl_interactive_backend_ws_loop_duplex(bridge: BackendChatWsBridge, agent_id: str) -> None:
-    """
-    Offload ``send_turn`` to a single-worker pool; while a turn is in flight, read full
-    lines into a FIFO (POSIX TTY: ``select`` + pipe; else: degraded sleep wait only).
     No ``try_pop_queued_chat`` while a turn is in flight (MVP, shared _response_q).
     """
+    print(
+        f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
+        "quit / exit / q to leave; history lives on the server. "
+        "^D while waiting for a reply (POSIX TTY) disconnects without waiting for that reply."
+    )
     pending: Deque[str] = deque()
     with ThreadPoolExecutor(max_workers=1) as ex:
         while True:
@@ -341,18 +339,9 @@ def _repl_interactive_backend_ws_loop_duplex(bridge: BackendChatWsBridge, agent_
                     else:
                         _duplex_inflight_degraded_wait(fut)
                 except EOFError:
-                    try:
-                        out = fut.result()
-                    except (BackendChatWsError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
-                        _print_send_turn_exception(exc, eof_wait=True)
-                        print()
-                        return
-                    # Successful reply: still show it; user hit EOF while waiting.
-                    assert out is not None
+                    bridge.stop()
                     print()
-                    _print_assistant_reply(out, time.perf_counter() - t0)
-                    print()
-                    return
+                    break
                 try:
                     out = fut.result()
                 except (
@@ -373,19 +362,12 @@ def _repl_interactive_backend_ws_loop_duplex(bridge: BackendChatWsBridge, agent_
                 _print_send_turn_exception(err_exc)
                 continue
             assert out is not None
+            reply_text, reply_meta = out
             # Line-buffered TTY delivers whole lines; blank line separates the reply from any in-flight input context.
             print()
-            _print_assistant_reply(out, time.perf_counter() - t0)
-
-
-def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
-    print(
-        f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
-        "quit / exit / q to leave; history lives on the server."
-    )
-    if not _repl_duplex_env_enabled():
-        return _repl_interactive_backend_ws_loop_legacy(bridge, agent_id)
-    return _repl_interactive_backend_ws_loop_duplex(bridge, agent_id)
+            _print_assistant_reply(
+                reply_text, time.perf_counter() - t0, meta_data=reply_meta
+            )
 
 
 def _repl_run_backend_ws_branch(
@@ -407,7 +389,6 @@ def _repl_run_backend_ws_branch(
         agent_resolved,
     )
     _init_proto_logging(ws, log_file, no_log_file)
-    _configure_llm_trace_for_workspace(ws)
     bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
     bridge.start()
     try:
@@ -415,7 +396,8 @@ def _repl_run_backend_ws_branch(
             timeout_sec=default_kickoff_drain_sec()
         )
         if kick:
-            _print_assistant_reply(kick, 0.0)
+            ktext, kmeta = kick
+            _print_assistant_reply(ktext, 0.0, meta_data=kmeta)
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)
     finally:
         bridge.stop()
@@ -424,7 +406,7 @@ def _repl_run_backend_ws_branch(
 
 app = App(
     name="inty-v2-text-chat-prototype",
-    help="Inty 后端 WebSocket 终端对话（/api/v1/chat/ws）；本地目录仅用于日志与 llm_trace。",
+    help="Inty 后端 WebSocket 终端对话（/api/v1/chat/ws）；本地目录仅用于日志等进程侧输出。",
 )
 
 
@@ -434,7 +416,7 @@ def repl(
         Path | None,
         Parameter(
             name="--workspace",
-            help="日志与 llm_trace.jsonl 目录；默认包内 workspace/",
+            help="日志等本地输出目录；默认包内 workspace/",
         ),
     ] = None,
     log_file: Annotated[

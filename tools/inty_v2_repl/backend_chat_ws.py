@@ -35,7 +35,7 @@ def http_base_to_ws_chat_url(http_base: str, *, agent_id: str | None = None) -> 
     return url
 
 
-def _parse_chat_response_payload(data: dict[str, Any]) -> str:
+def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if data.get("type") == "pong":
         raise ValueError("unexpected pong in response queue")
     code = data.get("code")
@@ -55,7 +55,11 @@ def _parse_chat_response_payload(data: dict[str, Any]) -> str:
     content = msg0.get("content")
     if not isinstance(content, str):
         raise ValueError(f"chat ws assistant content not a string: {content!r}")
-    return content
+    meta_raw = msg0.get("meta_data")
+    meta: dict[str, Any] = {}
+    if isinstance(meta_raw, dict):
+        meta = dict(meta_raw)
+    return content, meta
 
 
 def default_api_base_url() -> str:
@@ -196,7 +200,9 @@ class BackendChatWsBridge:
             self.stop()
             raise RuntimeError("WebSocket failed to start (no connection)")
 
-    def drain_proactive_assistant_if_any(self, *, timeout_sec: float | None = None) -> str | None:
+    def drain_proactive_assistant_if_any(
+        self, *, timeout_sec: float | None = None
+    ) -> tuple[str, dict[str, Any]] | None:
         """
         After connect, the server may push one ``USER_INTERACTIVE`` bootstrap kickoff completion
         before any client chat frame. Drain at most one such JSON response and return assistant text.
@@ -213,14 +219,14 @@ class BackendChatWsBridge:
 
     def try_pop_queued_chat(
         self,
-    ) -> tuple[str | None, tuple[int, str] | None]:
+    ) -> tuple[str | None, tuple[int, str] | None, dict[str, Any]]:
         """Non-blocking: pop one queued chat JSON if present (runs on the bridge event loop).
 
-        Returns ``(assistant_text, None)`` on success, ``(None, (code, message))`` on API error
-        frames, ``(None, None)`` if the queue was empty or the frame was not a chat completion.
+        Returns ``(assistant_text, None, meta_data)`` on success, ``(None, (code, message), {})`` on API error
+        frames, ``(None, None, {})`` if the queue was empty or the frame was not a chat completion.
         """
         if not self._loop or not self._response_q:
-            return None, None
+            return None, None, {}
 
         async def _pop_raw() -> dict[str, Any] | None:
             q = self._response_q
@@ -235,19 +241,21 @@ class BackendChatWsBridge:
         try:
             raw = fut.result(timeout=3.0)
         except Exception:
-            return None, None
+            return None, None, {}
         if raw is None:
-            return None, None
+            return None, None, {}
         try:
-            text = _parse_chat_response_payload(raw)
-            return text, None
+            text, meta = _parse_chat_response_payload(raw)
+            return text, None, meta
         except BackendChatWsError as exc:
-            return None, (int(exc.code), str(exc.agent_message))
+            return None, (int(exc.code), str(exc.agent_message)), {}
         except ValueError:
             logger.warning("chat ws queued frame dropped: {}", raw)
-            return None, None
+            return None, None, {}
 
-    async def _drain_proactive_assistant_async(self, *, timeout_sec: float) -> str | None:
+    async def _drain_proactive_assistant_async(
+        self, *, timeout_sec: float
+    ) -> tuple[str, dict[str, Any]] | None:
         deadline = time.monotonic() + 35.0
         await self._wait_online_async(deadline_monotonic=deadline)
         if not self._response_q:
@@ -265,7 +273,8 @@ class BackendChatWsBridge:
             except TimeoutError:
                 return None
         try:
-            return _parse_chat_response_payload(data)
+            text, meta = _parse_chat_response_payload(data)
+            return text, meta
         except (BackendChatWsError, ValueError) as e:
             logger.warning("chat ws proactive drain skipped: {}", e)
             return None
@@ -435,7 +444,9 @@ class BackendChatWsBridge:
                 continue
         raise TimeoutError("wait for chat WebSocket online timed out")
 
-    def send_turn(self, agent_id: str, user_text: str) -> str:
+    def send_turn(
+        self, agent_id: str, user_text: str
+    ) -> tuple[str, dict[str, Any]]:
         if not self._loop:
             raise RuntimeError("bridge not started")
         result_cap = (
@@ -450,7 +461,7 @@ class BackendChatWsBridge:
 
     async def _send_turn_async(
         self, agent_id: str, user_text: str, *, deadline_monotonic: float
-    ) -> str:
+    ) -> tuple[str, dict[str, Any]]:
         last_transport: BaseException | None = None
         for attempt in range(self._send_max_retries):
             await self._wait_online_async(deadline_monotonic=deadline_monotonic)
@@ -522,4 +533,5 @@ async def chat_turn_single_http_base(
         if data.get("type") == "pong":
             raw2 = await asyncio.wait_for(ws.recv(), timeout=recv_timeout)
             data = json.loads(raw2)
-        return _parse_chat_response_payload(data)
+        text, _meta = _parse_chat_response_payload(data)
+        return text

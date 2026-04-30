@@ -74,11 +74,7 @@ _MODEL_ROLE_TO_FN = {
 }
 
 
-def _make_complete_fn(
-    ws_label: str,
-    *,
-    llm_trace: bool,
-) -> callable:
+def _make_complete_fn(ws_label: str) -> callable:
     """Build a complete_fn matching kernel signature: (messages, model_role) -> str."""
 
     def _complete_fn(messages: list[dict[str, Any]], model_role: str) -> str:
@@ -87,7 +83,6 @@ def _make_complete_fn(
         return complete(
             messages,
             model=model,
-            llm_trace=llm_trace,
             trace_where=f"memory.{model_role}",
             ws_label=ws_label,
             trace_day=local_date_str(),
@@ -101,11 +96,10 @@ def memory_update_after_turn(
     *,
     user_text: str,
     assistant_text: str,
-    llm_trace: bool = False,
 ) -> None:
     store = get_memory_store(paths.root)
     config = _build_config()
-    complete_fn = _make_complete_fn(paths.root.name, llm_trace=llm_trace)
+    complete_fn = _make_complete_fn(paths.root.name)
     _kernel_memory_update(
         paths,
         store,
@@ -121,11 +115,10 @@ def schedule_memory_update_after_turn(
     *,
     user_text: str,
     assistant_text: str,
-    llm_trace: bool = False,
 ) -> None:
     store = get_memory_store(paths.root)
     config = _build_config()
-    complete_fn = _make_complete_fn(paths.root.name, llm_trace=llm_trace)
+    complete_fn = _make_complete_fn(paths.root.name)
     _kernel_schedule_memory_update(
         paths,
         store,

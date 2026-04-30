@@ -14,8 +14,6 @@ from app.core.agentic_kernel.tools.runtime import (
 )
 
 from .client import create_chat_completion, default_model, get_client_dual_llm_tool
-from .llm_trace import emit_trace, summarize_completion_response, summarize_messages
-from .utc import local_date_str
 from .orchestrator import is_workspace_initialized
 from .workspace_init_tools import (
     build_openai_tools,
@@ -72,7 +70,6 @@ def run_workspace_bootstrap_loop(
     model: str | None = None,
     max_rounds: int = 48,
     on_tool: Callable[[str, str], None] | None = None,
-    llm_trace: bool = False,
 ) -> str:
     """
     在 workspace 上运行伴侣向的 agentic 初始化循环（对内落盘，对用户自然语言）。
@@ -134,18 +131,6 @@ def run_workspace_bootstrap_loop(
             m,
         )
         rounds_used += 1
-        if llm_trace:
-            emit_trace(
-                "bootstrap",
-                round_idx=round_idx,
-                model=m,
-                messages=summarize_messages(
-                    messages,
-                    ws_label=root.name,
-                    trace_day=local_date_str(),
-                ),
-                response=summarize_completion_response(resp),
-            )
         msg = resp.choices[0].message
         tool_calls = getattr(msg, "tool_calls", None) or []
         if not tool_calls:
@@ -216,18 +201,6 @@ def run_workspace_bootstrap_loop(
                 (time.perf_counter() - t_api_inner) * 1000.0,
                 m,
             )
-            if llm_trace:
-                emit_trace(
-                    "bootstrap",
-                    round_idx=active_round,
-                    model=m,
-                    messages=summarize_messages(
-                        messages_with_tool_results,
-                        ws_label=root.name,
-                        trace_day=local_date_str(),
-                    ),
-                    response=summarize_completion_response(next_resp),
-                )
             return next_resp, None
 
         try:

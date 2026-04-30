@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Final
+
+_MARKDOWN_JSON_FENCE_RE = re.compile(
+    r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
+    re.DOTALL | re.IGNORECASE,
+)
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -104,8 +110,18 @@ def default_significance_perception_markdown() -> str:
     )
 
 
-def parse_dual_llm_chat_envelope_json(raw: str) -> DualLlmChatBranchEnvelope | None:
+def _strip_markdown_json_fence(raw: str) -> str:
+    """If the model wraps the envelope in a ```json ... ``` fence, return inner JSON text."""
+
     s = (raw or "").strip()
+    m = _MARKDOWN_JSON_FENCE_RE.fullmatch(s)
+    if m:
+        return m.group(1).strip()
+    return s
+
+
+def parse_dual_llm_chat_envelope_json(raw: str) -> DualLlmChatBranchEnvelope | None:
+    s = _strip_markdown_json_fence((raw or "").strip())
     if not s:
         return None
     try:

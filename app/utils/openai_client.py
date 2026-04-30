@@ -73,7 +73,6 @@ def _warn_env_var(env_var: str):
 
 
 _warn_env_var("LANGCHAIN_API_KEY")
-_warn_env_var("LANGSMITH_TRACING_V2")
 _warn_env_var("LANGSMITH_PROJECT")
 
 

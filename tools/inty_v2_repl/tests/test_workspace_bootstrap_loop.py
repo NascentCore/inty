@@ -101,7 +101,6 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                     "hello",
                     max_rounds=4,
                     on_tool=lambda n, a: tool_calls.append((n, a)),
-                    llm_trace=False,
                 )
 
         self.assertEqual(out, "ready to know you")
@@ -135,7 +134,6 @@ class TestWorkspaceBootstrapLoop(unittest.TestCase):
                         root,
                         "hello",
                         max_rounds=2,
-                        llm_trace=False,
                     )
 
 

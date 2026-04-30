@@ -535,4 +535,5 @@ async def run_turn(
         user_msg_uuid=user_msg_uuid,
         trace_id=trace_id,
         used_async_tool_background=used_async_tool_background,
+        assistant_source="inner_tick" if inner_tick_turn else "chat",
     )

@@ -227,7 +227,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                     orchestrator._run_turn_with_user_profile_tools(
                         messages,
                         root,
-                        llm_trace=False,
                         bundle=PromptBundle(
                             identity="id",
                             soul="soul",
@@ -325,7 +324,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                     orchestrator._run_turn_with_user_profile_tools(
                         messages,
                         root,
-                        llm_trace=False,
                         bundle=PromptBundle(
                             identity="id",
                             soul="soul",
@@ -411,7 +409,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                     orchestrator._run_turn_with_user_profile_tools(
                         messages,
                         root,
-                        llm_trace=False,
                         bundle=PromptBundle(
                             identity="id",
                             soul="soul",
@@ -538,7 +535,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                     orchestrator._run_turn_with_user_profile_tools(
                         messages,
                         root,
-                        llm_trace=False,
                         bundle=PromptBundle(
                             identity="id",
                             soul="soul",
@@ -608,7 +604,6 @@ class TestDualLlmChatTool(unittest.TestCase):
                     orchestrator._run_turn_with_user_profile_tools(
                         messages,
                         root,
-                        llm_trace=False,
                         inner_tick_turn=True,
                         supersede_check=lambda _m: None,
                     )

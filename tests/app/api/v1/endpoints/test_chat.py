@@ -1329,11 +1329,12 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured.get("agent_chat_called") is not True
     assert captured["ai_save"][1] == "companion-ws-reply"
     assert captured["ai_save"][3] == {
+        "source": "chat",
         "significance_perception": {
             "importance_round": 9,
             "importance_user_message": 8,
             "importance_assistant_message": 7,
-        }
+        },
     }
 
     companion_chat_service.clear_companion_chat_service_caches()

@@ -1,5 +1,5 @@
 # Used for running backend server in tests.
-# External services are fakes. Tracing is disabled.
+# External services are fakes. LangSmith tracing follows code default (agent.langsmith_tracing_enabled true unless overridden).
 
 app:
   debug: true

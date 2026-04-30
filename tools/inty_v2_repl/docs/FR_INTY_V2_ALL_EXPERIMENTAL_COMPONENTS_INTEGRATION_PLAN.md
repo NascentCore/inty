@@ -107,7 +107,7 @@
 - 并入 `agentic_loop_sleep_demo`：
   - 以测试形式固化工具循环状态机
 - 验收：
-  - 工具调用链路统一且可观测（`llm_trace.jsonl` + `tool_background.jsonl`）
+  - 工具调用链路统一且可观测（LangSmith 等 tracing；`tool_background.jsonl` 事件）
   - 开启/关闭 compaction 时行为可控且可复现
 
 ### Phase 2 - 渠道与自治并轨（高优先）

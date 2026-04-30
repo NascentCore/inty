@@ -26,10 +26,21 @@ def test_parse_chat_response_payload_success() -> None:
     data = {
         "code": 200,
         "message": "success",
-        "data": {"choices": [{"message": {"content": "hello"}}]},
+        "data": {
+            "choices": [
+                {
+                    "message": {
+                        "content": "hello",
+                        "meta_data": {"source": "chat"},
+                    }
+                }
+            ]
+        },
         "agent_id": "agent-1",
     }
-    assert _parse_chat_response_payload(data) == "hello"
+    text, meta = _parse_chat_response_payload(data)
+    assert text == "hello"
+    assert meta == {"source": "chat"}
 
 
 def test_parse_chat_response_payload_error() -> None:

@@ -15,6 +15,7 @@ _EXPERIMENTAL = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_EXPERIMENTAL))
 
 from inty_v2_repl import orchestrator
+from inty_v2_repl.memory_store_registry import get_memory_store
 from inty_v2_repl.models import load_transcript
 from inty_v2_repl.paths import WorkspacePaths
 from inty_v2_repl.tool_background import (
@@ -46,6 +47,12 @@ class TestReplSupersede(unittest.TestCase):
         paths.user_md.write_text("# U\n", encoding="utf-8")
         paths.memory_md.write_text("# M\n", encoding="utf-8")
         paths.transcript.write_text("", encoding="utf-8")
+        st = get_memory_store(root)
+        st.write_document("IDENTITY.md", "# I\n")
+        st.write_document("SOUL.md", "# S\n")
+        st.write_document("USER.md", "# U\n")
+        st.write_document("MEMORY.md", "# M\n")
+        st.write_document("transcript.jsonl", "")
         return paths
 
     def test_run_turn_repl_cancel_immediate_raises_and_skips_transcript(self) -> None:
@@ -85,7 +92,6 @@ class TestReplSupersede(unittest.TestCase):
                         orchestrator.run_turn(
                             root,
                             "你好",
-                            llm_trace=False,
                             repl_cancel_check=lambda: True,
                         )
                     )

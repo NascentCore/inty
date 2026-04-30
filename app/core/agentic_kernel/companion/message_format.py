@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-# In-memory OpenAI message dicts may carry this key; stripped before API calls (see experimental llm_trace).
+# In-memory OpenAI message dicts may carry this key; stripped before API calls.
 TRANSCRIPT_MSG_UUID_KEY = "_transcript_uuid"
 
 

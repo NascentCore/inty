@@ -3,7 +3,7 @@
 本 CLI 的 `repl` **只**连接 Inty 后端的 `/api/v1/chat/ws`（见 `tools/inty_v2_repl/main.py`）。**不再有**本地磁盘上的 agentic `bootstrap-agent` / `run_workspace_bootstrap_loop` 流程。
 
 - **首次对话 / onboarding**：由 **Inty 后端与线上数据** 决定（含服务端 bootstrap），不在本仓库的 REPL 进程里强制落盘 companion 五件套。
-- **本地 `--workspace` 目录**：仅用于 **进程日志**（`inty_v2.log`）与可选的 **`llm_trace.jsonl`**，不是对话权威存储。
+- **本地 `--workspace` 目录**：仅用于 **进程日志**（如 `inty_v2.log`）等本地输出，不是对话权威存储。
 
 联调步骤见 [GET_STARTED.md](GET_STARTED.md)（启动后端、`INTY_ACCESS_TOKEN`、`--agent-id` / `INTY_V2_CHAT_AGENT_ID`、`python -m tools.inty_v2_repl.main repl ...`）。
 

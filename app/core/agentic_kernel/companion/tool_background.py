@@ -56,7 +56,7 @@ _BG_TOOL_MAX_ROUNDS = 24
 
 
 class ToolBackgroundTraceHooks(Protocol):
-    """Optional REPL-side hooks; kernel path stays free of llm_trace imports."""
+    """Optional REPL-side hooks for LLM round tracing (e.g. LangSmith); kernel stays import-free."""
 
     def on_tool_path_llm_round(
         self,
@@ -192,7 +192,7 @@ class ToolOutputEvent:
     text: str
     ts: str
     elapsed_ms: int
-    trace_id: str = ""  # run_turn turn id; join llm_trace + tool_background_done
+    trace_id: str = ""  # run_turn turn id; links transcript rows + tool_background_done
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:

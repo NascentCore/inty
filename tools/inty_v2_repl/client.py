@@ -62,7 +62,7 @@ atexit.register(_flush_langsmith_traces_on_exit)
 
 
 def load_prototype_dotenv() -> None:
-    """Load cwd `.env` first, then package `.env` for keys still unset (repo-root cwd)."""
+    """Load cwd `.env` first, then `tools/inty_v2_repl/.env` for keys still unset."""
     load_dotenv()
     load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -300,7 +300,6 @@ def complete(
     messages: list[dict[str, Any]],
     *,
     model: str | None = None,
-    llm_trace: bool = False,
     trace_where: str = "complete",
     ws_label: str,
     trace_day: str,
@@ -350,23 +349,5 @@ def complete(
         ws_label,
         (time.perf_counter() - t0) * 1000.0,
     )
-    if llm_trace:
-        from .llm_trace import (
-            emit_trace,
-            summarize_completion_response,
-            summarize_messages,
-        )
-
-        emit_trace(
-            trace_where,
-            round_idx=1,
-            model=m,
-            messages=summarize_messages(
-                messages,
-                ws_label=ws_label,
-                trace_day=trace_day,
-            ),
-            response=summarize_completion_response(resp),
-        )
     content = resp.choices[0].message.content
     return content if content is not None else ""

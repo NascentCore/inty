@@ -50,12 +50,7 @@ from .models import (
 )
 from .paths import WorkspacePaths
 from .prompts import build_system_prompt
-from .utc import local_date_str, utc_iso_ts
-from .llm_trace import (
-    emit_trace,
-    summarize_completion_response,
-    summarize_messages,
-)
+from .utc import utc_iso_ts
 from .fal_z_image_tool import _reset_fal_async_client_after_short_lived_loop
 from .workspace_init_tools import (
     REPL_WRITABLE_RELATIVE_PATHS,
@@ -95,7 +90,7 @@ def _llm_route_for_turn(*, async_tool_bg: bool, dual_llm: bool) -> str:
 
 
 def _new_turn_trace_id() -> str:
-    """Stable id to link transcript rows with llm_trace rows for one turn."""
+    """Stable id for one turn (transcript rows, logs)."""
     return str(uuid.uuid4())
 
 
@@ -238,9 +233,6 @@ def _log_llm_round_result(
     model: str,
     resp: Any,
     messages: list[dict[str, Any]],
-    llm_trace: bool,
-    llm_trace_where: str,
-    root: Path,
     trace_id: str | None = None,
 ) -> None:
     ch0 = resp.choices[0]
@@ -274,19 +266,6 @@ def _log_llm_round_result(
         _payload_chars_for_debug(messages),
         tok,
     )
-    if llm_trace:
-        emit_trace(
-            llm_trace_where,
-            round_idx=round_idx,
-            model=model,
-            messages=summarize_messages(
-                messages,
-                ws_label=root.name,
-                trace_day=local_date_str(),
-            ),
-            response=summarize_completion_response(resp),
-            trace_id=trace_id,
-        )
 
 
 def _async_chat_front_timeout_sec() -> float:
@@ -296,41 +275,10 @@ def _async_chat_front_timeout_sec() -> float:
     return float(str(raw).strip())
 
 
-class _ReplToolBgTraceHooks:
-    """Wire experimental llm_trace into companion tool_background without kernel import."""
-
-    def __init__(self, trace_id: str) -> None:
-        self._trace_id = trace_id
-
-    def on_tool_path_llm_round(
-        self,
-        *,
-        round_idx: int,
-        model: str,
-        request_messages: list[dict[str, Any]],
-        response: Any,
-        ws_root: Path,
-        trace_id: str | None,
-    ) -> None:
-        emit_trace(
-            "repl.turn.bg.tool",
-            round_idx=round_idx,
-            model=model,
-            messages=summarize_messages(
-                request_messages,
-                ws_label=ws_root.name,
-                trace_day=local_date_str(),
-            ),
-            response=summarize_completion_response(response),
-            trace_id=trace_id or self._trace_id,
-        )
-
-
 async def _run_turn_fast_chat_then_tool_background(
     messages: list[dict[str, Any]],
     root: Path,
     *,
-    llm_trace: bool,
     user_msg_uuid: str,
     trace_id: str,
     bundle: PromptBundle,
@@ -383,7 +331,6 @@ async def _run_turn_fast_chat_then_tool_background(
     supersede_check(False)
     # Start tool-side work immediately in background; it will do the full tool loop
     # and only append to shared transcript after completion.
-    trace_hooks = _ReplToolBgTraceHooks(trace_id) if llm_trace else None
     start_tool_background_job(
         ws_root=root,
         request_messages=request_messages,
@@ -393,7 +340,7 @@ async def _run_turn_fast_chat_then_tool_background(
         tools=tools,
         execute_tool_call_fn=execute_tool_call,
         client=tool_client,
-        trace_hooks=trace_hooks,
+        trace_hooks=None,
         main_event_loop=asyncio.get_running_loop(),
     )
     tool_bg_started_cell[0] = True
@@ -429,9 +376,6 @@ async def _run_turn_fast_chat_then_tool_background(
         model=chat_route_model,
         resp=chat_resp,
         messages=chat_log_messages,
-        llm_trace=llm_trace,
-        llm_trace_where="repl.turn.bg.chat_front",
-        root=root,
         trace_id=trace_id,
     )
     chat_raw = _assistant_text_from_completion_response(chat_resp)
@@ -441,7 +385,7 @@ async def _run_turn_fast_chat_then_tool_background(
         chat_text, sig_meta = chat_raw, None
     logger.info(
         "repl.turn async_chat_tool_background_done trace_id={} llm_route={} "
-        "chat_model={} tool_model={} llm_trace_where_chat=repl.turn.bg.chat_front",
+        "chat_model={} tool_model={} branch=repl.turn.bg.chat_front",
         trace_id,
         "async_chat_tool_background",
         chat_route_model,
@@ -455,7 +399,6 @@ async def _run_turn_with_user_profile_tools(
     messages: list[dict[str, Any]],
     root: Path,
     *,
-    llm_trace: bool = True,
     inner_tick_turn: bool = False,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
@@ -546,7 +489,7 @@ async def _run_turn_with_user_profile_tools(
                 )
                 logger.info(
                     "repl.turn llm_round={} branch=chat trace_id={} chat_completions_ms={:.0f} "
-                    "model={} llm_trace_where=repl.turn.dual.chat",
+                    "model={} branch=repl.turn.dual.chat",
                     round_idx,
                     trace_id,
                     (time.perf_counter() - t_api_chat) * 1000.0,
@@ -565,7 +508,7 @@ async def _run_turn_with_user_profile_tools(
                 )
                 logger.info(
                     "repl.turn llm_round={} branch=tool trace_id={} chat_completions_ms={:.0f} "
-                    "model={} llm_trace_where=repl.turn.dual.tool",
+                    "model={} branch=repl.turn.dual.tool",
                     round_idx,
                     trace_id,
                     (time.perf_counter() - t_api_tool) * 1000.0,
@@ -589,9 +532,6 @@ async def _run_turn_with_user_profile_tools(
                 model=chat_route_model,
                 resp=chat_resp,
                 messages=chat_log_messages,
-                llm_trace=llm_trace,
-                llm_trace_where="repl.turn.dual.chat",
-                root=root,
                 trace_id=trace_id,
             )
             _log_llm_round_result(
@@ -599,9 +539,6 @@ async def _run_turn_with_user_profile_tools(
                 model=tool_route_model,
                 resp=tool_resp,
                 messages=request_messages,
-                llm_trace=llm_trace,
-                llm_trace_where="repl.turn.dual.tool",
-                root=root,
                 trace_id=trace_id,
             )
             chat_raw = _assistant_text_from_completion_response(chat_resp)
@@ -617,7 +554,7 @@ async def _run_turn_with_user_profile_tools(
             tool_calls = getattr(tool_msg, "tool_calls", None) or []
             logger.info(
                 "repl.turn dual_llm_gather_done trace_id={} round={} "
-                "llm_trace_where_chat=repl.turn.dual.chat llm_trace_where_tool=repl.turn.dual.tool "
+                "branch_chat=repl.turn.dual.chat branch_tool=repl.turn.dual.tool "
                 "chat_model={} tool_model={} tool_branch_has_tool_calls={}",
                 trace_id,
                 round_idx,
@@ -648,7 +585,7 @@ async def _run_turn_with_user_profile_tools(
             )
             logger.info(
                 "repl.turn llm_round={} branch=single trace_id={} chat_completions_ms={:.0f} "
-                "model={} llm_trace_where=repl.turn",
+                "model={} branch=repl.turn",
                 round_idx,
                 trace_id,
                 (time.perf_counter() - t_api) * 1000.0,
@@ -660,9 +597,6 @@ async def _run_turn_with_user_profile_tools(
                 model=model,
                 resp=resp,
                 messages=messages,
-                llm_trace=llm_trace,
-                llm_trace_where="repl.turn",
-                root=root,
                 trace_id=trace_id,
             )
             supersede_check(False)
@@ -769,7 +703,6 @@ async def run_turn(
     repl_online_ack_turn: bool = False,
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
-    llm_trace: bool = False,
     repl_cancel_check: Callable[[], bool] | None = None,
     repl_transcript_ids_out: dict[str, str] | None = None,
 ) -> str:
@@ -793,13 +726,12 @@ async def run_turn(
 
     logger.info(
         "run_turn start path={} user_chars={} inner_tick_turn={} "
-        "repl_online_ack_turn={} defer_memory={} llm_trace={}",
+        "repl_online_ack_turn={} defer_memory={}",
         root,
         len(user_text),
         inner_tick_turn,
         repl_online_ack_turn,
         defer_memory_update,
-        llm_trace,
     )
     try:
         if not is_workspace_initialized(root):
@@ -910,7 +842,6 @@ async def run_turn(
                 return await _run_turn_fast_chat_then_tool_background(
                     input_messages,
                     root,
-                    llm_trace=llm_trace,
                     user_msg_uuid=user_msg_uuid,
                     trace_id=turn_trace_id,
                     bundle=bundle,
@@ -923,7 +854,6 @@ async def run_turn(
             return await _run_turn_with_user_profile_tools(
                 input_messages,
                 root,
-                llm_trace=llm_trace,
                 inner_tick_turn=inner_tick_turn,
                 repl_online_ack_turn=repl_online_ack_turn,
                 ai_private_text=ai_private_text,
@@ -983,7 +913,6 @@ async def run_turn(
                 user_text=user_text,
                 history=messages,
                 metadata={
-                    "llm_trace": llm_trace,
                     "inner_tick_turn": inner_tick_turn,
                     "trace_id": turn_trace_id,
                 },
@@ -1031,7 +960,6 @@ async def run_turn(
                 paths,
                 user_text=user_text,
                 assistant_text=assistant_text,
-                llm_trace=llm_trace,
             )
         else:
             logger.debug(
@@ -1043,7 +971,6 @@ async def run_turn(
                 paths,
                 user_text=user_text,
                 assistant_text=assistant_text,
-                llm_trace=llm_trace,
             )
 
         logger.info(

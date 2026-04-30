@@ -141,12 +141,17 @@ def is_workspace_initialized_from_store(workspace: Path, store: MemoryStore) -> 
     for attr in _REQUIRED_FILES_ATTR:
         rel = getattr(paths, attr).relative_to(root).as_posix()
         body = store.read_document_if_exists(rel)
+        if attr == "transcript":
+            # transcript.jsonl may be empty JSONL; document present is enough (append_jsonl_record OK).
+            if body is None:
+                return False
+            continue
         if body is None or not body.strip():
             return False
     return True
 
 
-_MINIMAL_TRANSCRIPT_SEED = "# companion_minimal_seed\n"
+_MINIMAL_TRANSCRIPT_SEED = ""
 
 _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "identity",
@@ -164,8 +169,8 @@ def ensure_template_seeded_core_companion_documents_in_store(
     """
     Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
     body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
-    Does not touch transcript.jsonl; ``ensure_minimal_workspace_documents_in_store`` adds a
-    minimal transcript seed when the five-piece is not yet satisfied.
+    Does not touch transcript.jsonl; ``ensure_minimal_workspace_documents_in_store`` creates an
+    empty transcript when the five-piece is not yet satisfied.
     """
     root = workspace.resolve()
     paths = WorkspacePaths(root=root)
