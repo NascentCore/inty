@@ -19,8 +19,11 @@ def test_resample_pcm_16k_to_24k_empty():
     assert resample_pcm_16k_to_24k(b"x") == b""
 
 
-def test_resample_pcm_16k_to_24k_odd_length_returns_empty():
-    assert resample_pcm_16k_to_24k(b"xxx") == b""
+def test_resample_pcm_16k_to_24k_odd_length_truncates_last_byte():
+    # 奇数字节：丢弃末尾 1 字节后按偶数帧重采样，避免整段被丢弃
+    three_bytes = struct.pack("<h", 900) + b"\x00"
+    out = resample_pcm_16k_to_24k(three_bytes)
+    assert out == resample_pcm_16k_to_24k(struct.pack("<h", 900))
 
 
 def test_resample_pcm_16k_to_24k_ratio():
@@ -92,3 +95,25 @@ def test_build_interleaved_pcm_24k_interleaved():
     assert len(out) == 6 + 4
     ai_part = out[6:]
     assert ai_part == ai_chunk
+
+
+def test_build_interleaved_pcm_24k_merges_consecutive_user_before_resample():
+    c1 = struct.pack("<hh", 1000, 2000)
+    c2 = struct.pack("<hh", 3000, 4000)
+    out = build_interleaved_pcm_24k(
+        [("user", c1), ("user", c2)],
+        user_sample_rate=16000,
+        ai_sample_rate=24000,
+    )
+    assert out == resample_pcm_16k_to_24k(c1 + c2)
+
+
+def test_build_interleaved_pcm_24k_merges_consecutive_ai():
+    a1 = struct.pack("<h", 11)
+    a2 = struct.pack("<hhh", 22, 33, 44)
+    out = build_interleaved_pcm_24k(
+        [("ai", a1), ("ai", a2)],
+        user_sample_rate=16000,
+        ai_sample_rate=24000,
+    )
+    assert out == a1 + a2
