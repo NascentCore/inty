@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Modal } from "antd";
+import { Button, Modal, Spin } from "antd";
 import type { Agent } from "../../types";
 import AgentInfoDisplay from "./AgentInfoDisplay";
 
@@ -8,6 +8,8 @@ type AgentDetailModalActionKey = "close" | "edit";
 interface AgentDetailModalProps {
   open: boolean;
   agent: Agent | null;
+  /** When true, show loading spinner until agent is set */
+  loading?: boolean;
   onClose: () => void;
   onEdit?: (agent: Agent) => void;
   onDeleteBackgroundImage?: (imageUrl: string) => void;
@@ -30,6 +32,7 @@ export const getAgentDetailModalActionKeys = (
 export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
   open,
   agent,
+  loading = false,
   onClose,
   onEdit,
   onDeleteBackgroundImage,
@@ -70,11 +73,17 @@ export const AgentDetailModal: React.FC<AgentDetailModalProps> = ({
       footer={footer}
       width={width}
     >
-      {agent && (
-        <AgentInfoDisplay
-          agent={agent}
-          onDeleteBackgroundImage={onDeleteBackgroundImage}
-        />
+      {loading && !agent ? (
+        <div style={{ padding: 48, textAlign: "center" }}>
+          <Spin size="large" />
+        </div>
+      ) : (
+        agent && (
+          <AgentInfoDisplay
+            agent={agent}
+            onDeleteBackgroundImage={onDeleteBackgroundImage}
+          />
+        )
       )}
     </Modal>
   );

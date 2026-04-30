@@ -37,11 +37,12 @@ import {
   CalendarOutlined,
   DownloadOutlined,
   PictureOutlined,
+  IdcardOutlined,
 } from "@ant-design/icons";
 import Plot from "react-plotly.js";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
-import { userAnalyticsApi } from "../services/api";
+import { agentApi, userAnalyticsApi } from "../services/api";
 import { formatUtcTimeRaw, getCurrentUtcTime } from "../utils/dateUtils";
 import { getLangsmithTraceUrl } from "../utils/langsmithUrl";
 import {
@@ -57,6 +58,7 @@ import {
 } from "../utils/userAgentConversations";
 import { CollapsibleMessageContent } from "../components/CollapsibleMessageContent";
 import type {
+  Agent,
   ChatMessageResponse,
   PaginatedUserAgentConversationsResponse,
   UserAgentConversationItem,
@@ -68,6 +70,7 @@ import type {
   SessionMessageItem,
   UserGeneratedImageItem,
 } from "../types";
+import { AgentDetailModal } from "../components/common/AgentDetailModal";
 import { getDeepLinkedUserIdFromHash } from "../utils/profileLinks";
 
 const { RangePicker } = DatePicker;
@@ -118,6 +121,11 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [showImagesModal, setShowImagesModal] = useState(false);
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
+  const [characterDetailOpen, setCharacterDetailOpen] = useState(false);
+  const [characterDetailAgent, setCharacterDetailAgent] = useState<Agent | null>(
+    null,
+  );
+  const [characterDetailLoading, setCharacterDetailLoading] = useState(false);
   const deepLinkedUserId = useMemo(() => {
     if (typeof window === "undefined") {
       return "";
@@ -386,6 +394,15 @@ export const UserDailyMessagesPage: React.FC = () => {
   }, [searchType, searchValue]);
 
   // 处理点击生图数卡片
+  const openCharacterDetail = useCallback(async (agentId: string) => {
+    setCharacterDetailOpen(true);
+    setCharacterDetailAgent(null);
+    setCharacterDetailLoading(true);
+    const agent = await agentApi.get(agentId);
+    setCharacterDetailAgent(agent);
+    setCharacterDetailLoading(false);
+  }, []);
+
   const handleImageCountClick = useCallback(() => {
     if (!todayStats || todayStats.total_generated_images === 0) {
       message.info("该用户暂无生成图片");
@@ -491,7 +508,29 @@ export const UserDailyMessagesPage: React.FC = () => {
       title: "角色名称",
       dataIndex: "agent_name",
       key: "agent_name",
-      width: 200,
+      width: 320,
+      render: (_text: string, record: UserSessionItem) => (
+        <div>
+          <div>{record.agent_name}</div>
+          <div style={{ marginTop: 4 }}>
+            <Text type="secondary" style={{ fontSize: 12, marginRight: 6 }}>
+              ID:
+            </Text>
+            <Button
+              type="link"
+              size="small"
+              icon={<IdcardOutlined />}
+              style={{ padding: 0, height: "auto", fontSize: 12 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                void openCharacterDetail(record.agent_id);
+              }}
+            >
+              {record.agent_id}
+            </Button>
+          </div>
+        </div>
+      ),
     },
     {
       title: "消息数",
@@ -1440,6 +1479,17 @@ export const UserDailyMessagesPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      <AgentDetailModal
+        open={characterDetailOpen}
+        agent={characterDetailAgent}
+        loading={characterDetailLoading}
+        onClose={() => {
+          setCharacterDetailOpen(false);
+          setCharacterDetailAgent(null);
+        }}
+        width={800}
+      />
     </div>
   );
 };
