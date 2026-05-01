@@ -4,8 +4,6 @@ from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-debug = global_config_loaded_from_config_yaml.app.debug
-
 
 def init_firebase() -> None:
     """初始化 Firebase Admin SDK
@@ -32,7 +30,7 @@ def init_firebase() -> None:
         logger.info("Firebase Admin SDK initialized successfully")
 
     except Exception as e:
-        if debug:
+        if global_config_loaded_from_config_yaml.app.debug:
             logger.warning(
                 "Firebase Admin SDK not initialized (ignored in debug): {}",
                 e,

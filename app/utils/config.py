@@ -204,7 +204,7 @@ class FeaturesConfig:
 @dataclass
 class AppConfig:
     name: str = "inty-backend"
-    # The app tolerates more failures, and does more logging in the debug mode.
+    # OpenAPI/docs and some non-fatal init failures (e.g. optional Firebase). Log level is not tied to this flag; use logging.level / INTY_* env.
     debug: bool = False
     # DEPRECATED: Do not use.
     debug_messages: bool = True
