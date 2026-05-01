@@ -44,7 +44,7 @@ experimental/harness_seeding_demo/
   results/             # gitignored；自建输出目录
 ```
 
-依赖：仓库根 venv、`PYTHONPATH=.`，LLM 与本仓库 companion 一致使用 `CompanionLLMConfig.from_openrouter_env()`（需 `OPENROUTER_API_KEY` 或 `OPENAI_API_KEY`）。
+依赖：仓库根 venv、`PYTHONPATH=.`，LLM 与本仓库 companion 一致使用 `CompanionLLMConfig.from_openrouter_env()`（需 `OPENROUTER_API_KEY` 或 `OPENAI_API_KEY`）。若已安装 `python-dotenv`，脚本会从仓库根 `.env` 加载。
 
 ### Quick run（单次试验）
 

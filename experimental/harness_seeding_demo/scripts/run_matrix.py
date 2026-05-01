@@ -10,6 +10,15 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(_REPO_ROOT / ".env")
+except ImportError:
+    pass
 
 
 def _parse_args() -> argparse.Namespace:
@@ -25,7 +34,12 @@ def _parse_args() -> argparse.Namespace:
         default=_REPO_ROOT
         / "experimental/harness_seeding_demo/fixtures/work_stress_script.json",
     )
-    p.add_argument("--threshold", type=float, default=0.85)
+    p.add_argument(
+        "--threshold",
+        type=float,
+        default=0.85,
+        help="Passed to run_trial; must be in [0, 1].",
+    )
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument("--defer-memory-ms", type=float, default=800.0)
@@ -34,6 +48,8 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+    if not (0.0 <= args.threshold <= 1.0):
+        raise SystemExit("--threshold must be between 0 and 1")
     seeds_root = args.seeds_root.resolve()
     out_root = args.output_dir.resolve()
     out_root.mkdir(parents=True, exist_ok=True)

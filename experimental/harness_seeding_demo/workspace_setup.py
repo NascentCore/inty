@@ -21,11 +21,14 @@ def seed_memory_store_from_directory(seed_dir: Path, workspace_root: Path) -> No
     Call this before CompanionManager.get_or_create_session so
     ensure_minimal_workspace_documents_in_store does not overwrite non-empty seeds.
     """
+    sd = seed_dir.resolve()
+    if not sd.is_dir():
+        raise FileNotFoundError(f"seed directory not found: {sd}")
     root = workspace_root.resolve()
     root.mkdir(parents=True, exist_ok=True)
     store = get_memory_store(root, dsn="")
     paths = WorkspacePaths(root=root)
-    for src in _iter_seed_files(seed_dir.resolve()):
+    for src in _iter_seed_files(sd):
         if src.suffix.lower() not in TEXT_SUFFIXES:
             continue
         rel = src.name

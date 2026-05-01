@@ -17,6 +17,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(_REPO_ROOT / ".env")
+except ImportError:
+    pass
+
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
@@ -32,7 +39,12 @@ def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--seed-dir", type=Path, required=True)
     p.add_argument("--script", type=Path, required=True)
-    p.add_argument("--threshold", type=float, default=0.85)
+    p.add_argument(
+        "--threshold",
+        type=float,
+        default=0.85,
+        help="Score threshold in [0, 1] for emotional_rubric passing.",
+    )
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--output-dir", type=Path, default=None)
     p.add_argument("--workspaces-base", type=Path, default=None)
@@ -41,6 +53,8 @@ def _parse_args() -> argparse.Namespace:
 
 
 async def _run(args: argparse.Namespace) -> dict:
+    if not (0.0 <= args.threshold <= 1.0):
+        raise SystemExit("--threshold must be between 0 and 1")
     script_lines = load_user_script(args.script)
     if not script_lines:
         raise SystemExit("user script is empty")
@@ -88,31 +102,34 @@ async def _run(args: argparse.Namespace) -> dict:
     turns_out: list[dict] = []
     first_pass_turn: int | None = None
 
-    for i, user_text in enumerate(script_lines[: args.max_turns], start=1):
-        result = await manager.run_turn(
-            session,
-            user_text,
-            defer_memory_update=True,
-        )
-        if args.defer_memory_ms > 0:
-            time.sleep(args.defer_memory_ms / 1000.0)
+    try:
+        for i, user_text in enumerate(script_lines[: args.max_turns], start=1):
+            result = await manager.run_turn(
+                session,
+                user_text,
+                defer_memory_update=True,
+            )
+            if args.defer_memory_ms > 0:
+                time.sleep(args.defer_memory_ms / 1000.0)
 
-        sr = score_emotional_understanding_reply(
-            result.assistant_text,
-            threshold=args.threshold,
-            user_message_text=user_text,
-        )
-        row = {
-            "turn_index": i,
-            "user_text": user_text,
-            "assistant_text": result.assistant_text,
-            "score": sr.score,
-            "passed": sr.passed,
-            "checks": sr.checks,
-        }
-        turns_out.append(row)
-        if sr.passed and first_pass_turn is None:
-            first_pass_turn = i
+            sr = score_emotional_understanding_reply(
+                result.assistant_text,
+                threshold=args.threshold,
+                user_message_text=user_text,
+            )
+            row = {
+                "turn_index": i,
+                "user_text": user_text,
+                "assistant_text": result.assistant_text,
+                "score": sr.score,
+                "passed": sr.passed,
+                "checks": sr.checks,
+            }
+            turns_out.append(row)
+            if sr.passed and first_pass_turn is None:
+                first_pass_turn = i
+    finally:
+        manager.shutdown_session(user_id, companion_id, chat_id)
 
     summary = {
         "run_id": run_id,
@@ -132,7 +149,6 @@ async def _run(args: argparse.Namespace) -> dict:
         for row in turns_out:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    manager.shutdown_session(user_id, companion_id, chat_id)
     return summary
 
 
