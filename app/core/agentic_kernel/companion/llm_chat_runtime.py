@@ -99,7 +99,11 @@ def companion_turn_langsmith_parent_enabled() -> bool:
 
 
 def _langsmith_parent_run_extra_metadata(
-    *, chat_model: str, tool_model: str
+    *,
+    chat_model: str,
+    tool_model: str,
+    user_id: str = "",
+    companion_id: str = "",
 ) -> dict[str, Any]:
     """Align with langsmith.wrappers._openai ``ls_model_name`` for trace filtering."""
     cm = (chat_model or "").strip()
@@ -107,6 +111,8 @@ def _langsmith_parent_run_extra_metadata(
     meta: dict[str, Any] = {
         "inty_chat_model": cm,
         "inty_tool_model": tm,
+        "inty_user_id": (user_id or "").strip(),
+        "inty_companion_id": (companion_id or "").strip(),
     }
     if cm and tm and cm != tm:
         meta["ls_model_name"] = f"{cm} | {tm}"
@@ -117,12 +123,20 @@ def _langsmith_parent_run_extra_metadata(
     return meta
 
 
+def _companion_turn_root_run_name(*, user_id: str, companion_id: str) -> str:
+    uid = (user_id or "").strip() or "unknown"
+    cid = (companion_id or "").strip() or "unknown"
+    return f"agentic_companion_user_turn user={uid} agent={cid}"
+
+
 def create_companion_turn_root_run(
     *,
     inty_trace_id: str,
     user_msg_uuid: str,
     chat_model: str = "",
     tool_model: str = "",
+    user_id: str = "",
+    companion_id: str = "",
 ) -> Any | None:
     if not companion_turn_langsmith_parent_enabled():
         return None
@@ -139,16 +153,27 @@ def create_companion_turn_root_run(
     try:
         from langsmith.run_trees import RunTree
 
+        uid = (user_id or "").strip()
+        cid = (companion_id or "").strip()
         root = RunTree(
-            name="agentic_companion_user_turn",
+            name=_companion_turn_root_run_name(user_id=uid, companion_id=cid),
             run_type="chain",
             inputs={
                 "inty_trace_id": inty_trace_id,
                 "user_msg_uuid": user_msg_uuid,
                 "chat_model": cm,
                 "tool_model": tm,
+                "user_id": uid,
+                "companion_id": cid,
             },
-            extra={"metadata": _langsmith_parent_run_extra_metadata(chat_model=cm, tool_model=tm)},
+            extra={
+                "metadata": _langsmith_parent_run_extra_metadata(
+                    chat_model=cm,
+                    tool_model=tm,
+                    user_id=uid,
+                    companion_id=cid,
+                )
+            },
             tags=["agentic_companion", "user_turn"],
         )
         initial_post_ok = True
@@ -163,9 +188,12 @@ def create_companion_turn_root_run(
             )
         logger.info(
             "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
-            "ls_trace_id={} ls_run_id={} initial_post_ok={} initial_post_err={!r}",
+            "user_id={} companion_id={} ls_trace_id={} ls_run_id={} "
+            "initial_post_ok={} initial_post_err={!r}",
             inty_trace_id,
             user_msg_uuid,
+            uid,
+            cid,
             companion_turn_langsmith_parent_trace_id_str(root),
             companion_turn_langsmith_parent_run_id_str(root),
             initial_post_ok,
