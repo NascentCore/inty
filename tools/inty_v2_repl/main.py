@@ -21,7 +21,6 @@ if __package__ is None:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from .client import load_prototype_dotenv
 from .backend_chat_ws import (
     BackendChatWsBridge,
     BackendChatWsError,
@@ -29,19 +28,12 @@ from .backend_chat_ws import (
     default_kickoff_drain_sec,
     http_base_to_ws_chat_url,
 )
-from .jsonl_db_store import (
-    flush_jsonl_db_store,
-    shutdown_jsonl_db_store,
-)
-from .memory_store_registry import (
-    flush_memory_store,
-    shutdown_memory_store,
-)
 from .proto_log import (
     configure_proto_log,
     repl_wall_ts_str,
     resolve_proto_log_file,
 )
+from .repl_dotenv import load_prototype_dotenv
 from .repl_message_io import format_ws_error_banner, pop_downlink_item
 
 load_prototype_dotenv()
@@ -162,10 +154,6 @@ def _init_proto_logging(
     )
 
 
-def _print_openrouter_invalid_json_retry_hint() -> None:
-    print(f"[{repl_wall_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
-
-
 def _print_send_turn_exception(exc: BaseException) -> None:
     """Log and print a failure from ``bridge.send_turn`` / ``fut.result()``."""
     if isinstance(exc, BackendChatWsError):
@@ -176,13 +164,6 @@ def _print_send_turn_exception(exc: BaseException) -> None:
         return
     logger.opt(exception=exc).error("backend ws turn failed")
     print(f"[{repl_wall_ts_str()}] error: {exc}")
-
-
-def _flush_and_shutdown_memory_store(root: Path) -> None:
-    flush_memory_store(root, timeout_s=5.0)
-    flush_jsonl_db_store(timeout_s=5.0)
-    shutdown_memory_store(root, timeout_s=5.0)
-    shutdown_jsonl_db_store(timeout_s=5.0)
 
 
 def _resolve_chat_agent_id_cli(agent_id: str | None) -> str:
@@ -445,12 +426,11 @@ def _repl_run_backend_ws_branch(
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)
     finally:
         bridge.stop()
-        _flush_and_shutdown_memory_store(ws.resolve())
 
 
 app = App(
-    name="inty-v2-text-chat-prototype",
-    help="Inty 后端 WebSocket 终端对话（/api/v1/chat/ws）；本地目录仅用于日志等进程侧输出。",
+    name="inty-chat-ws-repl",
+    help="Inty /api/v1/chat/ws terminal client; --workspace is for local logs only.",
 )
 
 

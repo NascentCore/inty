@@ -1,12 +1,6 @@
-# Chat REPL：见 README。generate_image 另需仓库根 requirements.txt（fal-client、GCS、Pillow 等）与仓库根 config.yaml。
+# WebSocket REPL: cyclopts CLI + loguru + dotenv + websockets.
+# Running still requires repo-root requirements.txt (app.schemas, FastAPI stack).
 cyclopts
-langsmith
 loguru
-openai
-pydantic
 python-dotenv
-PyYAML
-pillow
-fal-client
-google-cloud-storage
 websockets
