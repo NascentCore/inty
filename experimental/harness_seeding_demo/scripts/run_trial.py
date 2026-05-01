@@ -30,14 +30,14 @@ from experimental.harness_seeding_demo.config_yaml_env import apply_llm_env_from
 _DEFAULT_CONFIG_YAML = _REPO_ROOT / "devops/config.yaml.local"
 
 
-def _maybe_load_config_yaml(path: Path | None) -> None:
+def _maybe_load_config_yaml(path: Path | None) -> dict[str, str]:
     if path is None:
-        return
+        return {}
     p = path.resolve()
     if not p.is_file():
         print(f"harness: skip config yaml (not found): {p}", file=sys.stderr)
-        return
-    apply_llm_env_from_config_yaml(p)
+        return {}
+    return apply_llm_env_from_config_yaml(p)
 
 
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
@@ -89,6 +89,20 @@ async def _run(args: argparse.Namespace) -> dict:
     if not script_lines:
         raise SystemExit("user script is empty")
 
+    llm_cfg = CompanionLLMConfig.from_openrouter_env()
+    yaml_applied = getattr(args, "_harness_config_yaml_applied", {})
+    from_yaml_key = "OPENAI_API_KEY" in yaml_applied
+    openrouter_set = bool((os.getenv("OPENROUTER_API_KEY") or "").strip())
+    openai_set = bool((os.getenv("OPENAI_API_KEY") or "").strip())
+    if openrouter_set:
+        api_key_source = "env_OPENROUTER_API_KEY"
+    elif from_yaml_key:
+        api_key_source = "yaml_agent_api_key"
+    elif openai_set:
+        api_key_source = "env_OPENAI_API_KEY"
+    else:
+        api_key_source = "unset"
+
     run_id = uuid.uuid4().hex[:12]
     out_dir = args.output_dir
     if out_dir is None:
@@ -116,13 +130,12 @@ async def _run(args: argparse.Namespace) -> dict:
         user_update_disabled=True,
         soul_update_disabled=True,
         memory_update_every_n_turns=99999,
-        user_update_every_n_turns=99999,
         soul_update_every_n_turns=99999,
     )
 
     cfg = CompanionConfig(
         workspaces_base_dir=str(base.resolve()),
-        llm=CompanionLLMConfig.from_openrouter_env(),
+        llm=llm_cfg,
         memory=mem_cfg,
         memory_pg_dsn="",
     )
@@ -170,6 +183,15 @@ async def _run(args: argparse.Namespace) -> dict:
         "total_script_lines": len(script_lines),
         "turns_executed": len(turns_out),
         "workspace_path": str(ws_path.resolve()),
+        "llm": {
+            "api_base": llm_cfg.api_base,
+            "default_model": llm_cfg.default_model,
+            "chat_model": (llm_cfg.chat_model or "").strip()
+            or llm_cfg.default_model,
+            "tool_model": (llm_cfg.tool_model or "").strip()
+            or llm_cfg.default_model,
+            "api_key_source": api_key_source,
+        },
     }
 
     with (out_dir / "summary.json").open("w", encoding="utf-8") as f:
@@ -185,8 +207,11 @@ async def _run(args: argparse.Namespace) -> dict:
 def main() -> None:
     args = _parse_args()
     os.environ.setdefault("INTY_V2_PROTO_ASYNC_TOOL_BG", "0")
+    os.environ.setdefault("INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", "1")
+    applied_yaml: dict[str, str] = {}
     if not args.no_config_yaml:
-        _maybe_load_config_yaml(args.config_yaml)
+        applied_yaml = _maybe_load_config_yaml(args.config_yaml)
+    setattr(args, "_harness_config_yaml_applied", applied_yaml)
     summary = asyncio.run(_run(args))
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 

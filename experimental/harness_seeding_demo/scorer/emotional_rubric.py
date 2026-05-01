@@ -38,10 +38,11 @@ def score_emotional_understanding_reply(
     user = (user_message_text or "").strip()
 
     checks: dict[str, bool] = {
+        "non_empty_visible_reply": bool(text),
         "no_dismissive": _DISMISSIVE_RE.search(text) is None,
         "has_validation_language": bool(
             re.search(
-                r"(辛苦|不容易|难受|理解|听起来|感受到|陪你|我在|确实|压力|累)",
+                r"(辛苦|不容易|难受|理解|懂|听起来|感受到|陪你|我在|确实|压力|累|揪心|难熬)",
                 text,
             )
         ),
@@ -65,5 +66,9 @@ def score_emotional_understanding_reply(
     passed_keys = list(checks.keys())
     true_count = sum(1 for k in passed_keys if checks[k])
     score = true_count / len(passed_keys) if passed_keys else 0.0
-    passed = score >= threshold and checks["no_dismissive"]
+    passed = (
+        score >= threshold
+        and checks["no_dismissive"]
+        and checks["non_empty_visible_reply"]
+    )
     return ScoreResult(score=score, passed=passed, checks=checks)

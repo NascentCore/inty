@@ -35,3 +35,21 @@ def test_fails_numbered_fix_first_line_when_distress():
         assistant, threshold=0.85, user_message_text=user
     )
     assert not r.checks["no_immediate_numbered_fix_first_line"]
+
+
+def test_empty_reply_never_passes():
+    user = "我最近工作上特别累。"
+    r = score_emotional_understanding_reply(
+        "", threshold=0.85, user_message_text=user
+    )
+    assert not r.checks["non_empty_visible_reply"]
+    assert not r.passed
+
+
+def test_wo_dong_counts_as_validation():
+    user = "我其实知道应该放松一点。"
+    assistant = "我懂那种感觉，停下来不容易。"
+    r = score_emotional_understanding_reply(
+        assistant, threshold=0.85, user_message_text=user
+    )
+    assert r.checks["has_validation_language"]

@@ -33,11 +33,11 @@ Artifacts on disk (gitignored under `results/`):
 
 ## Caveats noted during run
 
-- `tool_update_agent_status_line` failed: PostgreSQL not reachable on `localhost:5432`.
-- Some turns persisted `assistant_text` as empty after tool rounds; this interacts badly with the rubric and confounds seed comparisons.
+- **Historical note (this snapshot):** PostgreSQL was not running; `tool_update_agent_status_line` failed and some turns had empty `assistant_text`, which skewed rubric scores.
+- **Current harness:** `run_trial` / `run_matrix` default **`INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=1`**, and the rubric requires **`non_empty_visible_reply`**; rerun the matrix for cleaner seed comparisons.
 
 ## Conclusions (same run)
 
 1. Under this environment and script, empathic, functional, and teammate_off reached the rubric threshold on turn 1; baseline on turn 2; teammate_on never within 3 turns.
-2. Interpret teammate_on with care: empty replies and DB tool failures dominated; rerun with Postgres up or a harness that skips DB-backed tools before claiming seed effects.
+2. Treat teammate_on cautiously for this snapshot: empty replies and DB tool failures dominated; prefer reruns with the status-line tool disabled or Postgres up.
 3. The rubric is heuristic; functional seed passing turn 1 does not imply equal empathic quality to humans.

@@ -1,7 +1,7 @@
 # harness_seeding_demo
 
-- **禁止**修改 `app/core/agentic_kernel/`；试验代码仅在本目录（及后续你批准的依赖）内编写。
-- 推理调用通过既有公开入口链：`CompanionManager` / `run_turn`（或 `tools/inty_v2_repl` 对其薄封装），详见根目录 [README.md](README.md)。
-- 新增产物优先：`seeds/`（静态 workspace 模板）、`scorer/`（外部判定）、`scripts/`（批跑与报表）。
-- 仓库根已添加空包 `experimental/__init__.py`，以便 `from experimental.harness_seeding_demo...` 在 `PYTHONPATH=.` 下可用。
-- `scripts/run_trial.py` 与 `run_matrix.py` 在仓库根存在 `.env` 且已安装 `python-dotenv` 时会加载 API Key（与 [experimental/AGENTS.md](../AGENTS.md) 一致）。
+- 试验脚本默认设置 **`INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=1`**（排除依赖 Postgres 的状态行工具），对应内核 `build_openai_repl_tools` 的可选开关；生产路径不设该变量则不变。
+- 推理调用：`CompanionManager` / `run_turn`，详见 [README.md](README.md)。
+- 新增产物优先：`seeds/`、`scorer/`、`scripts/`。
+- 仓库根空包 `experimental/__init__.py` 便于 `PYTHONPATH=.`.
+- `run_trial.py` / `run_matrix.py` 可选加载根目录 `.env`（`python-dotenv`），见 [experimental/AGENTS.md](../AGENTS.md)。

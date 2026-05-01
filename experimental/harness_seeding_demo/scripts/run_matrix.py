@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -63,6 +64,7 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     os.environ.setdefault("INTY_V2_PROTO_ASYNC_TOOL_BG", "0")
+    os.environ.setdefault("INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", "1")
     args = _parse_args()
     if not (0.0 <= args.threshold <= 1.0):
         raise SystemExit("--threshold must be between 0 and 1")
@@ -72,6 +74,8 @@ def main() -> None:
     run_trial = Path(__file__).resolve().parent / "run_trial.py"
 
     rows: list[dict] = []
+    errors: list[dict] = []
+
     for seed_dir in sorted(d for d in seeds_root.iterdir() if d.is_dir()):
         run_out = out_root / seed_dir.name
         cmd = [
@@ -94,15 +98,66 @@ def main() -> None:
             cmd.append("--no-config-yaml")
         else:
             cmd.extend(["--config-yaml", str(args.config_yaml.resolve())])
-        subprocess.run(cmd, check=True, cwd=str(_REPO_ROOT))
+
+        proc = subprocess.run(
+            cmd,
+            cwd=str(_REPO_ROOT),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        row_base = {"seed": seed_dir.name}
+        if proc.returncode != 0:
+            err_tail = (proc.stderr or "")[-8000:]
+            errors.append(
+                {
+                    **row_base,
+                    "exit_code": proc.returncode,
+                    "stderr_tail": err_tail,
+                }
+            )
+            rows.append(
+                {
+                    **row_base,
+                    "first_pass_turn": None,
+                    "turns_executed": None,
+                    "workspace_path": None,
+                    "error": "run_trial_failed",
+                }
+            )
+            continue
+
         summary_path = run_out / "summary.json"
-        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        try:
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(
+                {
+                    **row_base,
+                    "exit_code": proc.returncode,
+                    "stderr_tail": traceback.format_exc(),
+                    "detail": repr(exc),
+                }
+            )
+            rows.append(
+                {
+                    **row_base,
+                    "first_pass_turn": None,
+                    "turns_executed": None,
+                    "workspace_path": None,
+                    "error": "summary_read_failed",
+                }
+            )
+            continue
+
         rows.append(
             {
-                "seed": seed_dir.name,
+                **row_base,
                 "first_pass_turn": summary.get("first_pass_turn"),
                 "turns_executed": summary.get("turns_executed"),
                 "workspace_path": summary.get("workspace_path"),
+                "llm": summary.get("llm"),
             }
         )
 
@@ -110,7 +165,15 @@ def main() -> None:
     matrix_path.write_text(
         json.dumps(rows, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    err_path = out_root / "matrix_errors.json"
+    err_path.write_text(
+        json.dumps(errors, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
     print(matrix_path.read_text(encoding="utf-8"))
+    if errors:
+        print(f"harness matrix: {len(errors)} seed(s) failed; see {err_path}", file=sys.stderr)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

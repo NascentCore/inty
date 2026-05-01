@@ -13,7 +13,7 @@
 - 或直接导出 **`OPENROUTER_API_KEY`** 或 **`OPENAI_API_KEY`**（优先级高于 YAML）。
 - 可选：安装 **`python-dotenv`**，仓库根 **`.env`** 会在读取 YAML 之前加载。
 
-- `run_trial` / `run_matrix` 默认设置 **`INTY_V2_PROTO_ASYNC_TOOL_BG=0`**（同步工具环），减少脚本进程内后台线程噪音；若需与默认 companion 行为一致，可在命令前自行 `export INTY_V2_PROTO_ASYNC_TOOL_BG=1`。
+- `run_trial` / `run_matrix` 默认设置 **`INTY_V2_PROTO_ASYNC_TOOL_BG=0`**（同步工具环），以及 **`INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=1`**，从而在无本地 Postgres 时避免 `tool_update_agent_status_line` 失败导致空可见回复。生产 companion 未设置该变量时行为不变。若需与默认 REPL 工具表完全一致：`export INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=0`（通常需 Postgres 可用）。
 
 ---
 
@@ -85,6 +85,7 @@ python experimental/harness_seeding_demo/scripts/run_matrix.py \
 
 - 每个种子：`results/matrix01/<seed_name>/summary.json` 与 `turns.jsonl`
 - 汇总：`results/matrix01/matrix_summary.json`
+- 若有子进程失败：`results/matrix01/matrix_errors.json`（stderr 尾部）；且 **`run_matrix` 以退出码 1 结束**
 
 内置种子名：`baseline`、`empathic`、`functional`、`teammate_on`、`teammate_off`。
 
@@ -92,7 +93,7 @@ python experimental/harness_seeding_demo/scripts/run_matrix.py \
 
 ## 5. 读懂结果
 
-- **主指标**：`first_pass_turn` 越小，表示在相同台本与阈值下越快达到「情感理解」规则门槛（见 `scorer/emotional_rubric.py`，演示用启发式，非产品质检标准）。
+- **主指标**：`first_pass_turn` 越小越好。`scorer/emotional_rubric.py` 为 **演示用启发式**：含 **`non_empty_visible_reply`**（空正文一律不达标）、轻视用语惩罚、承接词表（含「懂」「揪心」「难熬」等）；**不等于**人工标注的情感理解质量。
 - **对照**：`teammate_on` 与 `teammate_off` 共用相近 `SOUL.md`，差别在是否预填 `USER.md`，用于观察「团队预注」是否减少达标所需轮次（在模型与台本固定时再看）。
 
 ---

@@ -1,7 +1,7 @@
 # Harness seeding demo（试验设计）
 
 本目录承载「Harness + 种子 vs 用户注入」对照试验的**唯一落点**。  
-**约束**：不改动 `app/core/agentic_kernel/` 源码；仅沿用其架构与公开 API。  
+**约束**：业务试验代码只在 `experimental/harness_seeding_demo/`； companion 内核仅允许 **可选环境变量** `INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL`（默认由本试验脚本开启），用于在无 Postgres 时避免 DB 依赖工具干扰对照。  
 **实施计划**：[PLAN.md](PLAN.md)。  
 **运行步骤（实操）**：[RUN.md](RUN.md)。
 
@@ -67,10 +67,14 @@ python experimental/harness_seeding_demo/scripts/run_matrix.py \
 
 默认在每轮后短暂 sleep，以便异步记忆管线落盘（脚本仍关闭重量级 USER/SOUL/MEMORY 策展 LLM，仅保留日记追加）；可用 `--defer-memory-ms 0` 关掉等待。
 
-### 单元测试（仅 scorer，无 LLM）
+### 单元测试（无 LLM）
 
 ```bash
-pytest tests/experimental/test_harness_seeding_demo_scorer.py -v
+pytest tests/experimental/test_harness_seeding_demo_scorer.py \
+  tests/experimental/test_harness_seeding_demo_workspace_setup.py \
+  tests/experimental/test_harness_seeding_demo_config_yaml_env.py \
+  tests/app/core/agentic_kernel/companion/test_build_openai_repl_tools_status_flag.py \
+  -v
 ```
 
 ---
