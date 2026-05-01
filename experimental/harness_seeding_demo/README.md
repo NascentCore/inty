@@ -19,24 +19,58 @@
 
 ---
 
-## 2. 目录规划（建议；尚未实现的占位）
+## 2. 目录与脚本（已实现）
 
 ```
 experimental/harness_seeding_demo/
-  README.md           # 本文件
-  AGENTS.md           # 维护约定
-  seeds/              # 多套 workspace **模板**（copy 后跑）
-    baseline/         # 弱情绪先验
-    empathic/         # 强共情先验（SOUL / TOOLS 等）
-    functional/       # 偏任务拆解先验
-    teammate_on/      # 可选：预填 USER.md 模拟团队注入
-    teammate_off/     # 对照：USER.md 空或极短
-  scripts/            # run_batch.py 等：复制 seed → 跑 N 轮 → 写结果
-  scorer/             # 质量判定（规则或独立 LLM），**不属于** kernel
-  results/            # .gitignore 建议忽略或大文件不进库
+  README.md
+  PLAN.md
+  AGENTS.md
+  workspace_setup.py   # 种子写入 MemoryStore（先于 CompanionManager）
+  user_script.py       # 读取 fixtures 台本
+  fixtures/
+    work_stress_script.json
+  seeds/
+    baseline/
+    empathic/
+    functional/
+    teammate_on/       # 预填 USER.md
+    teammate_off/      # 与 teammate_on 同 SOUL，USER 空白对照
+  scripts/
+    run_trial.py       # 单种子跑 full LLM turn + scorer
+    run_matrix.py      # 遍历 seeds/* 写 matrix_summary.json
+  scorer/
+    emotional_rubric.py
+  results/             # gitignored；自建输出目录
 ```
 
-实现阶段再补 `requirements.txt`；依赖仅从 repo 根 `PYTHONPATH` 导入 kernel。
+依赖：仓库根 venv、`PYTHONPATH=.`，LLM 与本仓库 companion 一致使用 `CompanionLLMConfig.from_openrouter_env()`（需 `OPENROUTER_API_KEY` 或 `OPENAI_API_KEY`）。
+
+### Quick run（单次试验）
+
+```bash
+cd /path/to/repo && source .venv/bin/activate
+export PYTHONPATH=.
+python experimental/harness_seeding_demo/scripts/run_trial.py \
+  --seed-dir experimental/harness_seeding_demo/seeds/empathic \
+  --script experimental/harness_seeding_demo/fixtures/work_stress_script.json \
+  --output-dir experimental/harness_seeding_demo/results/run01
+```
+
+### Quick run（矩阵）
+
+```bash
+python experimental/harness_seeding_demo/scripts/run_matrix.py \
+  --output-dir experimental/harness_seeding_demo/results/matrix01
+```
+
+默认在每轮后短暂 sleep，以便异步记忆管线落盘（脚本仍关闭重量级 USER/SOUL/MEMORY 策展 LLM，仅保留日记追加）；可用 `--defer-memory-ms 0` 关掉等待。
+
+### 单元测试（仅 scorer，无 LLM）
+
+```bash
+pytest tests/experimental/test_harness_seeding_demo_scorer.py -v
+```
 
 ---
 

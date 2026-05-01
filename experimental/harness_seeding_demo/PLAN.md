@@ -89,7 +89,7 @@
 
 ## Checklist before merge
 
-- [ ] No diff in `app/core/agentic_kernel/`
-- [ ] `seeds/*` runnable with one documented command
-- [ ] `scorer` + `scripts` produce comparable `summary.json`
-- [ ] `README.md` updated with run instructions (link this PLAN)
+- [x] No diff in `app/core/agentic_kernel/`
+- [x] `seeds/*` runnable with one documented command
+- [x] `scorer` + `scripts` produce comparable `summary.json`
+- [x] `README.md` updated with run instructions (link this PLAN)
