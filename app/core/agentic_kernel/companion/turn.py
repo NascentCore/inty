@@ -270,6 +270,8 @@ async def run_turn(
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
+            chat_model=llm_client._resolve_model("chat"),
+            tool_model=llm_client._resolve_model("tool"),
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:

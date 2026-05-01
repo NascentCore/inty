@@ -42,13 +42,21 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
 ) -> None:
     mock_root = MagicMock()
     mock_rt_cls.return_value = mock_root
-    out = create_companion_turn_root_run(inty_trace_id="t1", user_msg_uuid="u1")
+    out = create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model="m/chat",
+        tool_model="m/tool",
+    )
     assert out is mock_root
     mock_rt_cls.assert_called_once()
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_user_turn"
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
+    assert kwargs["inputs"]["chat_model"] == "m/chat"
+    assert kwargs["inputs"]["tool_model"] == "m/tool"
+    assert kwargs["extra"]["metadata"]["ls_model_name"] == "m/chat | m/tool"
     mock_root.post.assert_called_once()
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 

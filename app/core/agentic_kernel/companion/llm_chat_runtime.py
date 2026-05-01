@@ -69,21 +69,49 @@ def companion_turn_langsmith_parent_enabled() -> bool:
     return True
 
 
+def _langsmith_parent_run_extra_metadata(
+    *, chat_model: str, tool_model: str
+) -> dict[str, Any]:
+    """Align with langsmith.wrappers._openai ``ls_model_name`` for trace filtering."""
+    cm = (chat_model or "").strip()
+    tm = (tool_model or "").strip()
+    meta: dict[str, Any] = {
+        "inty_chat_model": cm,
+        "inty_tool_model": tm,
+    }
+    if cm and tm and cm != tm:
+        meta["ls_model_name"] = f"{cm} | {tm}"
+    elif cm:
+        meta["ls_model_name"] = cm
+    elif tm:
+        meta["ls_model_name"] = tm
+    return meta
+
+
 def create_companion_turn_root_run(
-    *, inty_trace_id: str, user_msg_uuid: str
+    *,
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: str = "",
+    tool_model: str = "",
 ) -> Any | None:
     if not companion_turn_langsmith_parent_enabled():
         return None
     try:
         from langsmith.run_trees import RunTree
 
+        cm = (chat_model or "").strip()
+        tm = (tool_model or "").strip()
         root = RunTree(
             name="agentic_companion_user_turn",
             run_type="chain",
             inputs={
                 "inty_trace_id": inty_trace_id,
                 "user_msg_uuid": user_msg_uuid,
+                "chat_model": cm,
+                "tool_model": tm,
             },
+            extra={"metadata": _langsmith_parent_run_extra_metadata(chat_model=cm, tool_model=tm)},
             tags=["agentic_companion", "user_turn"],
         )
         initial_post_ok = True
