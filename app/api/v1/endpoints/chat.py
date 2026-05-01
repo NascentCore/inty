@@ -645,11 +645,21 @@ async def _build_companion_tool_background_ws_payload(
     return out
 
 
+def _companion_ws_hb_coords_snapshot(hb_ctx: dict[str, Any]) -> dict[str, Any] | None:
+    hb_uid = str(hb_ctx.get("user_id") or "").strip()
+    aid = str(hb_ctx.get("agent_id") or "").strip()
+    cid = hb_ctx.get("chat_id")
+    if not hb_uid or not aid or cid is None:
+        return None
+    return {"user_id": hb_uid, "agent_id": aid, "chat_id": cid}
+
+
 async def _try_fire_companion_ws_proactive_heartbeat(
     *,
     outbound_queue: asyncio.Queue,
     ctx: dict[str, Any],
     subscription_svc: SubscriptionService,
+    companion_turn_lock: asyncio.Lock,
 ) -> None:
     """If companion transcript says proactive heartbeat is due, run one turn and queue WS payload."""
     user_id = str(ctx.get("user_id") or "").strip()
@@ -714,139 +724,149 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         session_id = generate_session_id(str(chat_row_id))
         preset_uid = str(uuid.uuid4())
 
-    companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_row_id,
-        user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-        resolved_chat_model_id=model_override,
-        defer_memory_update=True,
-        session_id=session_id,
-        background_output_sink=None,
-        preset_user_msg_uuid=preset_uid,
-        inner_tick_turn=True,
-        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
-    )
-
-    companion_reply = companion_turn.assistant_text
-    if companion_reply is None or not str(companion_reply).strip():
-        logger.warning(
-            "companion_ws_proactive_hb empty reply user={} agent={}",
-            user_id,
-            agent_id,
+    async with companion_turn_lock:
+        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_row_id,
+            user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+            resolved_chat_model_id=model_override,
+            defer_memory_update=True,
+            session_id=session_id,
+            background_output_sink=None,
+            preset_user_msg_uuid=preset_uid,
+            inner_tick_turn=True,
+            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
         )
-        return
 
-    user_meta = {
-        "companion_proactive_heartbeat": True,
-        "inner_tick": True,
-        "heartbeat": True,
-    }
-    await chat_history_service.add_user_message_async(
-        session_id,
-        PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-        meta_data=user_meta,
-    )
-
-    companion_ai_meta: dict[str, Any] = {
-        "source": companion_turn.assistant_source,
-    }
-    if companion_turn.trace_id:
-        companion_ai_meta["trace_id"] = companion_turn.trace_id
-    if companion_turn.user_msg_uuid:
-        companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
-    if companion_turn.langsmith_trace_id:
-        companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
-    if companion_turn.langsmith_run_id:
-        companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
-    sp = companion_turn.significance_perception
-    if isinstance(sp, dict) and sp:
-        companion_ai_meta["significance_perception"] = sp
-
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-        session_id,
-        companion_reply,
-        agent_id=chat_row_agent_id,
-        meta_data=companion_ai_meta,
-    )
-
-    async with AsyncSessionLocal() as post_db:
-        try:
-            await subscription_svc.record_usage(
-                post_db,
+        companion_reply = companion_turn.assistant_text
+        if companion_reply is None or not str(companion_reply).strip():
+            logger.warning(
+                "companion_ws_proactive_hb empty reply user={} agent={}",
                 user_id,
-                "chat",
-                1,
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_length": 0,
-                    "companion_ws_proactive_heartbeat": True,
-                },
+                agent_id,
             )
-        except Exception as e:
-            logger.warning("companion_ws_proactive_hb record_usage failed: {}", str(e))
+            return
 
-        stub_request = ChatCompletionRequest(
-            messages=[
-                ChatMessage(
-                    role="user",
-                    content=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-                )
-            ],
-            message_id=preset_uid,
+        user_meta = {
+            "companion_proactive_heartbeat": True,
+            "inner_tick": True,
+            "heartbeat": True,
+        }
+        await chat_history_service.add_user_message_async(
+            session_id,
+            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+            meta_data=user_meta,
         )
-        (
-            response_text_content,
-            response_content_parts,
-        ) = _normalize_chat_response_content(companion_reply)
 
-        latest_message_info = None
-        try:
-            if ai_message_id is not None:
-                latest_message_info = (
-                    await chat_history_service.get_ai_message_info_by_id(
-                        post_db, ai_message_id
-                    )
+        companion_ai_meta: dict[str, Any] = {
+            "source": companion_turn.assistant_source,
+        }
+        if companion_turn.trace_id:
+            companion_ai_meta["trace_id"] = companion_turn.trace_id
+        if companion_turn.user_msg_uuid:
+            companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+        if companion_turn.langsmith_trace_id:
+            companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
+        if companion_turn.langsmith_run_id:
+            companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
+        sp = companion_turn.significance_perception
+        if isinstance(sp, dict) and sp:
+            companion_ai_meta["significance_perception"] = sp
+
+        ai_message_id = await chat_history_service.add_ai_message_sync_async(
+            session_id,
+            companion_reply,
+            agent_id=chat_row_agent_id,
+            meta_data=companion_ai_meta,
+        )
+
+        async with AsyncSessionLocal() as post_db:
+            try:
+                await subscription_svc.record_usage(
+                    post_db,
+                    user_id,
+                    "chat",
+                    1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_length": 0,
+                        "companion_ws_proactive_heartbeat": True,
+                    },
                 )
-            if latest_message_info is None:
-                latest_message_info = (
-                    await chat_history_service.get_latest_ai_message_info(
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_proactive_hb record_usage failed: {}", str(e)
+                )
+
+            stub_request = ChatCompletionRequest(
+                messages=[
+                    ChatMessage(
+                        role="user",
+                        content=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                    )
+                ],
+                message_id=preset_uid,
+            )
+            (
+                response_text_content,
+                response_content_parts,
+            ) = _normalize_chat_response_content(companion_reply)
+
+            latest_message_info = None
+            try:
+                if ai_message_id is not None:
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            post_db, ai_message_id
+                        )
+                    )
+                if latest_message_info is None:
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            post_db, session_id
+                        )
+                    )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_proactive_hb latest_message_info failed: {}", e
+                )
+
+            user_message_id = None
+            try:
+                user_message_id = (
+                    await chat_history_service.get_latest_user_message_id(
                         post_db, session_id
                     )
                 )
-        except Exception as e:
-            logger.warning("companion_ws_proactive_hb latest_message_info failed: {}", e)
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_proactive_hb get_latest_user_message_id failed: {}",
+                    e,
+                )
 
-        user_message_id = None
-        try:
-            user_message_id = await chat_history_service.get_latest_user_message_id(
-                post_db, session_id
+            subscription_actions = [
+                BizAction(action_type=ActionType.NONE, message=""),
+            ]
+            data = _build_chat_response(
+                response_text_content,
+                response_content_parts,
+                PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                latest_message_info,
+                None,
+                stub_request,
+                source_imate_id=None,
+                user_message_id=user_message_id,
+                subscription_actions=subscription_actions,
+                client_local_id=None,
             )
-        except Exception as e:
-            logger.warning(
-                "companion_ws_proactive_hb get_latest_user_message_id failed: {}", e
+            payload = schemas.APIResponse.success(data=data)
+            out = payload.model_dump(exclude_none=True)
+            out["agent_id"] = agent_id
+            out["status_line"] = await _agent_status_line_for_chat_header(
+                post_db, agent_id
             )
-
-        subscription_actions = [
-            BizAction(action_type=ActionType.NONE, message=""),
-        ]
-        data = _build_chat_response(
-            response_text_content,
-            response_content_parts,
-            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-            latest_message_info,
-            None,
-            stub_request,
-            source_imate_id=None,
-            user_message_id=user_message_id,
-            subscription_actions=subscription_actions,
-            client_local_id=None,
-        )
-        payload = schemas.APIResponse.success(data=data)
-        out = payload.model_dump(exclude_none=True)
-        out["agent_id"] = agent_id
-        out["status_line"] = await _agent_status_line_for_chat_header(post_db, agent_id)
-        await outbound_queue.put(out)
+            await outbound_queue.put(out)
     logger.info(
         "companion_ws_proactive_hb pushed assistant user={} agent={} chat_id={}",
         user_id,
@@ -1656,21 +1676,24 @@ async def chat_completions_websocket(
                 pass
             if not feats.companion_ws_proactive_heartbeat_enabled:
                 continue
+            hb_snapshot: dict[str, Any] | None = None
             async with companion_turn_lock:
-                hb_user_for_log = companion_hb_ctx.get("user_id")
-                if not hb_user_for_log:
-                    continue
-                try:
-                    await _try_fire_companion_ws_proactive_heartbeat(
-                        outbound_queue=outbound_queue,
-                        ctx=companion_hb_ctx,
-                        subscription_svc=subscription_svc,
-                    )
-                except Exception:
-                    logger.exception(
-                        "companion_ws_proactive_hb worker failed user_id={}",
-                        hb_user_for_log,
-                    )
+                hb_snapshot = _companion_ws_hb_coords_snapshot(companion_hb_ctx)
+            if hb_snapshot is None:
+                continue
+            hb_user_for_log = hb_snapshot["user_id"]
+            try:
+                await _try_fire_companion_ws_proactive_heartbeat(
+                    outbound_queue=outbound_queue,
+                    ctx=hb_snapshot,
+                    subscription_svc=subscription_svc,
+                    companion_turn_lock=companion_turn_lock,
+                )
+            except Exception:
+                logger.exception(
+                    "companion_ws_proactive_hb worker failed user_id={}",
+                    hb_user_for_log,
+                )
 
     hb_worker_task = asyncio.create_task(
         companion_ws_proactive_hb_worker(),
