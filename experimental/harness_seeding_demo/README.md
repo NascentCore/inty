@@ -2,7 +2,8 @@
 
 本目录承载「Harness + 种子 vs 用户注入」对照试验的**唯一落点**。  
 **约束**：不改动 `app/core/agentic_kernel/` 源码；仅沿用其架构与公开 API。  
-**实施计划**：[PLAN.md](PLAN.md)。
+**实施计划**：[PLAN.md](PLAN.md)。  
+**运行步骤（实操）**：[RUN.md](RUN.md)。
 
 ---
 
