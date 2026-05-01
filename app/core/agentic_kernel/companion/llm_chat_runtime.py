@@ -22,12 +22,13 @@ from app.utils.config import Environment
 _OPENROUTER_JSON_MAX_ATTEMPTS = 3
 _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
 
-# Set inside LangSmith wrap_openai ``process_outputs`` while the LLM run is still current
-# (``get_current_run_tree()`` after ``create`` returns has already reverted to the parent chain).
+# Set in patched LangSmith ``run_helpers._handle_container_end`` before ``process_outputs`` runs.
+# ``process_outputs`` executes outside ``context.run(...)``, so ``get_current_run_tree()`` there
+# sees the outer chain (same id as trace root), not the wrapped chat completion LLM run.
 _LS_WRAPPED_LLM_RUN_ID: contextvars.ContextVar[str] = contextvars.ContextVar(
     "inty_ls_wrapped_llm_run_id", default=""
 )
-_LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED = False
+_LS_HANDLE_CONTAINER_END_PATCHED = False
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
 # RunTree instances are not hashable; track by id(root) so registration cannot throw after root.post().
@@ -276,34 +277,44 @@ def end_companion_turn_root_run_safe(
     )
 
 
-def _ensure_langsmith_openai_chat_process_outputs_patch() -> None:
-    """Capture wrapped chat completion RunTree id during LangSmith ``process_outputs``."""
-    global _LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED
-    if _LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED:
+def _ensure_langsmith_handle_container_end_patch() -> None:
+    """Capture wrap_openai LLM RunTree id from the trace container (not get_current_run_tree)."""
+    global _LS_HANDLE_CONTAINER_END_PATCHED
+    if _LS_HANDLE_CONTAINER_END_PATCHED:
         return
     try:
         from langsmith import run_helpers as ls_rh
-        from langsmith.wrappers import _openai as ls_openai
 
-        _orig = ls_openai._process_chat_completion
+        _orig = ls_rh._handle_container_end
 
-        def _inty_process_chat_completion(outputs: Any):
+        def _inty_handle_container_end(
+            container: Any,
+            outputs: Any = None,
+            error: Any = None,
+            outputs_processor: Any = None,
+        ) -> None:
             try:
-                rt = ls_rh.get_current_run_tree()
-                if rt is not None and getattr(rt, "run_type", None) == "llm":
-                    rid = getattr(rt, "id", None)
-                    if rid is not None:
-                        s = str(rid).strip()
-                        if s:
-                            _LS_WRAPPED_LLM_RUN_ID.set(s)
+                if outputs_processor is not None and isinstance(container, dict):
+                    nr = container.get("new_run")
+                    if nr is not None and getattr(nr, "run_type", None) == "llm":
+                        rid = getattr(nr, "id", None)
+                        if rid is not None:
+                            s = str(rid).strip()
+                            if s:
+                                _LS_WRAPPED_LLM_RUN_ID.set(s)
             except Exception:
                 pass
-            return _orig(outputs)
+            return _orig(
+                container,
+                outputs=outputs,
+                error=error,
+                outputs_processor=outputs_processor,
+            )
 
-        ls_openai._process_chat_completion = _inty_process_chat_completion
-        _LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED = True
+        ls_rh._handle_container_end = _inty_handle_container_end
+        _LS_HANDLE_CONTAINER_END_PATCHED = True
     except Exception as exc:
-        logger.debug("langsmith wrap_openai process_outputs patch skipped: {}", exc)
+        logger.debug("langsmith _handle_container_end patch skipped: {}", exc)
 
 
 def langsmith_llm_run_id_from_completion(resp: Any) -> str:
@@ -400,7 +411,7 @@ def create_chat_completion_sync(
     tool_choice: str | None = None,
     response_format: dict[str, Any] | None = None,
 ) -> Any:
-    _ensure_langsmith_openai_chat_process_outputs_patch()
+    _ensure_langsmith_handle_container_end_patch()
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
@@ -436,3 +447,6 @@ def create_chat_completion_sync(
                 "OpenRouter returned a non-JSON response body "
                 f"for model={model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
             ) from exc
+
+
+_ensure_langsmith_handle_container_end_patch()
