@@ -50,6 +50,7 @@ from .message_format import openai_assistant_message_dict
 from .workspace_doc_mapping import parse_workspace_relative_path
 from .models import ChatMessage
 from .google_web_search import run_google_web_search
+from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
 from .schedule_queue import add_schedule_task
 from app.services.agent_status_line import tool_update_agent_status_line
@@ -71,6 +72,7 @@ _TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
     "workspace_list_dir": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
     "workspace_read_file": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
     "google_web_search": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
+    "read_web_page": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
     # 多模态工具：完成后通常要在 chat 中给到文字总结与产物路径。
     "generate_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
     "modify_image": frozenset({TEXT_RESPONSE_INCLUDE_IN_CHAT}),
@@ -154,6 +156,7 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "tool_update_chat_settings",
         "schedule_task",
         "google_web_search",
+        "read_web_page",
         "generate_image",
         "modify_image",
         "companion_runtime_inspect",
@@ -926,6 +929,43 @@ def build_openai_repl_tools(
         {
             "type": "function",
             "function": {
+                "name": "read_web_page",
+                "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
+                "description": (
+                    "Download an HTML page over HTTP(S), extract readable text, and return a concise "
+                    "markdown bullet-point summary of key information. "
+                    "Also appends the same takeaway bullets under a dated heading in workspace MEMORY.md "
+                    "for long-term recall. "
+                    "Use for one URL at a time when the user wants article/page content (not just search snippets). "
+                    "Does not execute JavaScript; script-heavy SPAs may yield sparse text."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": (
+                                "Absolute http(s) URL of the page to fetch (public hosts only; "
+                                "localhost is blocked)."
+                            ),
+                        },
+                        "max_bullets": {
+                            "type": "integer",
+                            "description": (
+                                "Maximum markdown bullet points in the summary (3..20). Omit for 10."
+                            ),
+                        },
+                    },
+                    "required": ["url"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+    )
+    out.append(
+        {
+            "type": "function",
+            "function": {
                 "name": "generate_image",
                 "x-tags": [TEXT_RESPONSE_INCLUDE_IN_CHAT],
                 "description": (
@@ -1190,6 +1230,23 @@ async def _dispatch(
         else:
             return "ERROR: num_results must be a positive integer or omitted"
         return await run_google_web_search(query=raw_q, num_results=n_opt)
+    if name == "read_web_page":
+        raw_u = arguments.get("url")
+        if not isinstance(raw_u, str):
+            return "ERROR: url must be a string"
+        mb_raw = arguments.get("max_bullets")
+        mb_opt: int | None
+        if mb_raw is None:
+            mb_opt = None
+        elif isinstance(mb_raw, bool):
+            return "ERROR: max_bullets must be a positive integer or omitted"
+        elif isinstance(mb_raw, int):
+            mb_opt = mb_raw
+        elif isinstance(mb_raw, float) and mb_raw.is_integer():
+            mb_opt = int(mb_raw)
+        else:
+            return "ERROR: max_bullets must be a positive integer or omitted"
+        return await run_read_web_page(root, url=raw_u, max_bullets=mb_opt)
     if name == "generate_image":
         gate_err = check_image_tool_allowed(root, tool_name="generate_image")
         if gate_err is not None:
