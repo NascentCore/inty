@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+import codecs
 import os
 import sys
 import time
 import uuid
-from collections import deque
-from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import Annotated, Any, Callable, Deque, Mapping
+from typing import Annotated, Any, Mapping
 
 from cyclopts import App, Parameter
 from loguru import logger
@@ -21,27 +20,18 @@ if __package__ is None:
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from .client import load_prototype_dotenv
 from .backend_chat_ws import (
     BackendChatWsBridge,
     BackendChatWsError,
     default_api_base_url,
-    default_kickoff_drain_sec,
     http_base_to_ws_chat_url,
-)
-from .jsonl_db_store import (
-    flush_jsonl_db_store,
-    shutdown_jsonl_db_store,
-)
-from .memory_store_registry import (
-    flush_memory_store,
-    shutdown_memory_store,
 )
 from .proto_log import (
     configure_proto_log,
     repl_wall_ts_str,
     resolve_proto_log_file,
 )
+from .repl_dotenv import load_prototype_dotenv
 from .repl_message_io import format_ws_error_banner, pop_downlink_item
 
 load_prototype_dotenv()
@@ -162,12 +152,14 @@ def _init_proto_logging(
     )
 
 
-def _print_openrouter_invalid_json_retry_hint() -> None:
-    print(f"[{repl_wall_ts_str()}] LLM API 临时异常（上游返回非 JSON），请重试。")
+def _format_cli_exc(exc: BaseException) -> str:
+    if isinstance(exc, TimeoutError) and str(exc) == "":
+        return repr(exc)
+    return str(exc)
 
 
 def _print_send_turn_exception(exc: BaseException) -> None:
-    """Log and print a failure from ``bridge.send_turn`` / ``fut.result()``."""
+    """Log and print a failure from ``bridge.send_turn`` / ``bridge.post_turn`` / ``fut.result()``."""
     if isinstance(exc, BackendChatWsError):
         print(
             f"[{repl_wall_ts_str()}] chat-ws-error code={exc.code} "
@@ -175,14 +167,7 @@ def _print_send_turn_exception(exc: BaseException) -> None:
         )
         return
     logger.opt(exception=exc).error("backend ws turn failed")
-    print(f"[{repl_wall_ts_str()}] error: {exc}")
-
-
-def _flush_and_shutdown_memory_store(root: Path) -> None:
-    flush_memory_store(root, timeout_s=5.0)
-    flush_jsonl_db_store(timeout_s=5.0)
-    shutdown_memory_store(root, timeout_s=5.0)
-    shutdown_jsonl_db_store(timeout_s=5.0)
+    print(f"[{repl_wall_ts_str()}] error: {_format_cli_exc(exc)}")
 
 
 def _resolve_chat_agent_id_cli(agent_id: str | None) -> str:
@@ -220,198 +205,203 @@ def _resolve_bearer_token_cli() -> str:
 _BACKEND_WS_SIDEBAND_POLL_SEC = 0.25
 
 
-def _use_posix_tty_duplex_select() -> bool:
-    if sys.platform == "win32":
-        return False
-    if not sys.stdin.isatty():
-        return False
+def _posix_select_module_for_stdin() -> Any | None:
+    """``select`` for TTY stdin multiplexing, or None when unsupported."""
+    if sys.platform == "win32" or not sys.stdin.isatty():
+        return None
     try:
-        import select  # noqa: F401, PLC0415
+        import select as select_mod  # noqa: PLC0415
     except ImportError:
-        return False
-    return True
+        return None
+    return select_mod
 
 
-def _write_pipe1(wfd: int) -> None:
-    try:
-        os.write(wfd, b"\x00")
-    except OSError:
-        pass
+def _correlation_uuid_from_meta(meta_data: Mapping[str, Any]) -> str | None:
+    for k in ("user_msg_uuid", "reply_to_user_msg_uuid"):
+        raw = meta_data.get(k)
+        if raw:
+            s = str(raw).strip()
+            if s:
+                return s
+    return None
 
 
-def _duplex_inflight_degraded_wait(fut: Future) -> None:
-    """No stdin multiplex: wait without queueing the next line (e.g. Windows / non-tty)."""
-    while not fut.done():
-        time.sleep(_BACKEND_WS_SIDEBAND_POLL_SEC)
+def _elapsed_for_downlink_assistant(
+    meta_data: Mapping[str, Any],
+    outbound_t0: dict[str, float],
+) -> float:
+    uid = _correlation_uuid_from_meta(meta_data)
+    if not uid:
+        return 0.0
+    t0 = outbound_t0.pop(uid, None)
+    if t0 is None:
+        return 0.0
+    return max(0.0, time.perf_counter() - t0)
 
 
-def _duplex_inflight_posix_select_wait(
-    fut: Future,
-    rpipe: int,
-    pending: Deque[str],
-    *,
-    stdin_fd: int,
-    readline_fn: Callable[[], str],
-    select_fn: Callable[..., tuple[list[int], list[int], list[int]]],
-    poll_sec: float = _BACKEND_WS_SIDEBAND_POLL_SEC,
-    prompt: str = "> ",
+def _emit_downlink_item(
+    item: Mapping[str, Any],
+    outbound_t0: dict[str, float],
 ) -> None:
-    """Block until ``fut`` is done, appending any full user lines to ``pending``; no try_pop (MVP).
-
-    Prints ``prompt`` before the first block on stdin and after each full line if the turn is
-    still in flight, so the user can type ahead with an explicit REPL line marker.
-    """
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    while not fut.done():
-        rlist, _, _ = select_fn(
-            [stdin_fd, rpipe], [], [], poll_sec
+    if item["kind"] == "assistant":
+        meta = item.get("meta_data") or {}
+        elapsed = _elapsed_for_downlink_assistant(meta, outbound_t0)
+        _print_assistant_reply(
+            item["text"],
+            elapsed,
+            meta_data=meta,
         )
-        for ready in rlist:
-            if ready == rpipe:
-                try:
-                    os.read(rpipe, 256)
-                except OSError:
-                    pass
-            elif ready == stdin_fd:
-                line = readline_fn()
-                if line == "":
-                    raise EOFError
-                pending.append(
-                    line[:-1] if line.endswith("\n") else line
-                )
-                if not fut.done():
-                    sys.stdout.write(prompt)
-                    sys.stdout.flush()
+    else:
+        print(
+            format_ws_error_banner(
+                item["code"],
+                item["message"],
+                wall_ts=repl_wall_ts_str(),
+            )
+        )
+
+
+def _drain_downlink_queue(
+    bridge: BackendChatWsBridge,
+    outbound_t0: dict[str, float],
+) -> None:
+    while True:
+        item = pop_downlink_item(bridge)
+        if item is None:
+            break
+        _emit_downlink_item(item, outbound_t0)
 
 
 def _readline_backend_ws_with_sideband(
-    bridge: BackendChatWsBridge, prompt: str
+    bridge: BackendChatWsBridge,
+    prompt: str,
+    outbound_t0: dict[str, float],
 ) -> str:
-    """Block for one user line while printing late server-pushed chat frames (POSIX TTY)."""
-    if sys.platform == "win32" or not sys.stdin.isatty():
-        return input(prompt)
+    """Block for one user line while printing late server-pushed chat frames (POSIX TTY).
+
+    Uses cbreak + no echo and a local buffer so a sideband assistant frame can clear the
+    current input line, print the message, then redraw ``prompt`` and any partial input.
+    """
+    sel = _posix_select_module_for_stdin()
+    if sel is None:
+        line = input(prompt)
+        _drain_downlink_queue(bridge, outbound_t0)
+        return line
+    import termios  # noqa: PLC0415
+    import tty  # noqa: PLC0415
+
+    fd = sys.stdin.fileno()
+    old_attr = termios.tcgetattr(fd)
+    dec = codecs.getincrementaldecoder("utf-8")()
+    buf = ""
+    tty_ready = False
     try:
-        import select as _select
-    except ImportError:
-        return input(prompt)
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    while True:
-        try:
-            r, _, _ = _select.select(
-                [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
-            )
-        except (ValueError, OSError):
-            return input(prompt)
-        if not r:
-            item = pop_downlink_item(bridge)
-            if item is not None:
-                print()
-                if item["kind"] == "assistant":
-                    _print_assistant_reply(
-                        item["text"],
-                        0.0,
-                        meta_data=item.get("meta_data") or {},
-                    )
-                else:
-                    print(
-                        format_ws_error_banner(
-                            item["code"],
-                            item["message"],
-                            wall_ts=repl_wall_ts_str(),
-                        )
-                    )
-                sys.stdout.write(prompt)
-                sys.stdout.flush()
-            continue
-        line = sys.stdin.readline()
-        if line == "":
-            raise EOFError
-        return line[:-1] if line.endswith("\n") else line
+        tty.setcbreak(fd)
+        attrs = termios.tcgetattr(fd)
+        attrs[3] &= ~termios.ECHO
+        termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
+        tty_ready = True
+        sys.stdout.write(prompt + buf)
+        sys.stdout.flush()
+
+        def redraw_edit_line() -> None:
+            sys.stdout.write("\r\033[2K" + prompt + buf)
+            sys.stdout.flush()
+
+        def emit_sideband_item(item: Mapping[str, Any]) -> None:
+            sys.stdout.write("\r\033[2K")
+            sys.stdout.flush()
+            print()
+            _emit_downlink_item(item, outbound_t0)
+            sys.stdout.write(prompt + buf)
+            sys.stdout.flush()
+
+        while True:
+            try:
+                r, _, _ = sel.select(
+                    [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
+                )
+            except (ValueError, OSError):
+                line = input(prompt)
+                _drain_downlink_queue(bridge, outbound_t0)
+                return line
+            if not r:
+                item = pop_downlink_item(bridge)
+                if item is not None:
+                    emit_sideband_item(item)
+                continue
+            while True:
+                chunk = os.read(fd, 1)
+                if not chunk:
+                    raise EOFError
+                text = dec.decode(chunk, final=False)
+                if not text:
+                    continue
+                for ch in text:
+                    if ch in ("\r", "\n"):
+                        sys.stdout.write("\r\033[2K")
+                        sys.stdout.write(prompt + buf + "\n")
+                        sys.stdout.flush()
+                        return buf
+                    if ch == "\x04":
+                        if not buf:
+                            raise EOFError
+                        continue
+                    if ch in ("\x7f", "\x08"):
+                        if buf:
+                            buf = buf[:-1]
+                            redraw_edit_line()
+                        continue
+                    if ord(ch) < 32 and ch != "\t":
+                        continue
+                    buf += ch
+                    redraw_edit_line()
+                r2, _, _ = sel.select([sys.stdin], [], [], 0)
+                if not r2:
+                    break
+    finally:
+        if tty_ready:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
 
 
 def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
-    """Full-duplex REPL: ``send_turn`` on a worker thread; queue lines during inflight (POSIX TTY ``select`` + pipe).
+    """Each user line is ``post_turn`` (send-only); assistant/error frames drain via ``pop_downlink_item``.
 
-    No ``try_pop_queued_chat`` while a turn is in flight (MVP, shared _response_q).
+    Server still processes chat frames in order; multiple ``post_turn`` calls only queue on the wire.
     """
     print(
         f"[{repl_wall_ts_str()}] backend-ws repl (agent_id={agent_id}); "
         "quit / exit / q to leave; history lives on the server. "
-        "^D while waiting for a reply (POSIX TTY) disconnects without waiting for that reply."
+        "^D disconnects the bridge (POSIX TTY cbreak path)."
     )
-    pending: Deque[str] = deque()
-    with ThreadPoolExecutor(max_workers=1) as ex:
-        while True:
-            if pending:
-                line = pending.popleft()
-            else:
-                try:
-                    line = _readline_backend_ws_with_sideband(bridge, "> ")
-                except EOFError:
-                    print()
-                    break
-            st = line.strip()
-            if st in ("quit", "exit", "q"):
-                break
-            if not st:
-                continue
-            msg_uuid = str(uuid.uuid4())
-            _print_repl_user_input(line, message_uuid=msg_uuid)
-            t0 = time.perf_counter()
-            fut = ex.submit(bridge.send_turn, agent_id, line, msg_uuid)
-            rpipe, wpipe = os.pipe()
-            err_exc: Exception | None = None
-            out: str | None = None
-            try:
-                fut.add_done_callback(
-                    lambda _done_f, wpipe_fd=wpipe: _write_pipe1(wpipe_fd)
-                )
-                try:
-                    if _use_posix_tty_duplex_select():
-                        import select  # noqa: PLC0415
-
-                        _duplex_inflight_posix_select_wait(
-                            fut,
-                            rpipe,
-                            pending,
-                            stdin_fd=sys.stdin.fileno(),
-                            readline_fn=sys.stdin.readline,
-                            select_fn=select.select,
-                        )
-                    else:
-                        _duplex_inflight_degraded_wait(fut)
-                except EOFError:
-                    bridge.stop()
-                    print()
-                    break
-                try:
-                    out = fut.result()
-                except (
-                    BackendChatWsError,
-                    TimeoutError,
-                    OSError,
-                    RuntimeError,
-                    ValueError,
-                ) as e:
-                    err_exc = e
-            finally:
-                for fd in (rpipe, wpipe):
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-            if err_exc is not None:
-                _print_send_turn_exception(err_exc)
-                continue
-            assert out is not None
-            reply_text, reply_meta = out
-            # Line-buffered TTY delivers whole lines; blank line separates the reply from any in-flight input context.
+    outbound_t0: dict[str, float] = {}
+    while True:
+        try:
+            line = _readline_backend_ws_with_sideband(bridge, "> ", outbound_t0)
+        except EOFError:
             print()
-            _print_assistant_reply(
-                reply_text, time.perf_counter() - t0, meta_data=reply_meta
-            )
+            break
+        st = line.strip()
+        if st in ("quit", "exit", "q"):
+            break
+        if not st:
+            continue
+        msg_uuid = str(uuid.uuid4())
+        t_send = time.perf_counter()
+        _print_repl_user_input(line, message_uuid=msg_uuid)
+        try:
+            mid_sent = bridge.post_turn(agent_id, line, msg_uuid)
+        except (
+            BackendChatWsError,
+            TimeoutError,
+            OSError,
+            RuntimeError,
+            ValueError,
+        ) as e:
+            _print_send_turn_exception(e)
+            continue
+        outbound_t0[mid_sent] = t_send
+        _drain_downlink_queue(bridge, outbound_t0)
 
 
 def _repl_run_backend_ws_branch(
@@ -436,21 +426,14 @@ def _repl_run_backend_ws_branch(
     bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
     bridge.start()
     try:
-        kick = bridge.drain_proactive_assistant_if_any(
-            timeout_sec=default_kickoff_drain_sec()
-        )
-        if kick:
-            ktext, kmeta = kick
-            _print_assistant_reply(ktext, 0.0, meta_data=kmeta)
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)
     finally:
         bridge.stop()
-        _flush_and_shutdown_memory_store(ws.resolve())
 
 
 app = App(
-    name="inty-v2-text-chat-prototype",
-    help="Inty 后端 WebSocket 终端对话（/api/v1/chat/ws）；本地目录仅用于日志等进程侧输出。",
+    name="inty-chat-ws-repl",
+    help="Inty /api/v1/chat/ws terminal client; --workspace is for local logs only.",
 )
 
 

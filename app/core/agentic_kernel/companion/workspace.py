@@ -60,10 +60,6 @@ class WorkspacePaths:
         return self.root / "AGENTS.md"
 
     @property
-    def heartbeat_md(self) -> Path:
-        return self.root / "HEARTBEAT.md"
-
-    @property
     def tools_md(self) -> Path:
         return self.root / "TOOLS.md"
 

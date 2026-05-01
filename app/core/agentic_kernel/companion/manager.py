@@ -18,7 +18,7 @@ from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
 from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
-from .models import CompanionTurnResult
+from .models import CompanionTurnResult, InnerTickMode
 from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
 from .workspace import (
@@ -183,7 +183,8 @@ class CompanionManager:
         session: CompanionSession,
         user_text: str,
         *,
-        heartbeat_turn: bool = False,
+        inner_tick_turn: bool = False,
+        inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
@@ -195,7 +196,8 @@ class CompanionManager:
             user_text,
             store=session.store,
             llm_client=session.llm_client,
-            heartbeat_turn=heartbeat_turn,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=inner_tick_mode,
             defer_memory_update=defer_memory_update,
             memory_config=session.config.memory,
             transcript_compaction=session.config.transcript_compaction,

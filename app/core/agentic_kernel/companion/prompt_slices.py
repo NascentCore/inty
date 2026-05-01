@@ -15,7 +15,6 @@ class PromptSliceId(StrEnum):
     USER = "USER"
     MEMORY = "MEMORY"
     TOOLS = "TOOLS"
-    HEARTBEAT = "HEARTBEAT"
     CAPABILITIES = "CAPABILITIES"
     SIGNIFICANCE_PERCEPTION = "SIGNIFICANCE_PERCEPTION"
 
@@ -38,7 +37,6 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
         PromptSliceId.USER,
         PromptSliceId.MEMORY,
         PromptSliceId.TOOLS,
-        PromptSliceId.HEARTBEAT,
         PromptSliceId.CAPABILITIES,
         PromptSliceId.SIGNIFICANCE_PERCEPTION,
     }

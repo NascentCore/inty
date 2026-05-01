@@ -122,21 +122,40 @@ def tool_bg_first_round_skip_schema_enabled() -> bool:
     return str(raw).strip().lower() not in ("0", "false", "no", "off", "none")
 
 
-def parse_tool_bg_first_round_skip(raw: str) -> ToolBgFirstRoundEnvelope | None:
-    """Parse first-round assistant ``content`` when it must be skip JSON only; None if invalid."""
+def parse_tool_bg_first_round_skip_details(
+    raw: str,
+) -> tuple[ToolBgFirstRoundEnvelope | None, str | None]:
+    """
+    Parse first-round skip JSON.
+
+    On success returns ``(envelope, None)``. On failure returns ``(None, reason)``
+    where ``reason`` is a short machine-readable tag (never ``None`` when the
+    envelope is ``None``).
+    """
     body = _strip_json_fence(raw)
     if not body:
-        return None
+        return None, "empty_after_strip"
     try:
         data = json.loads(body)
-    except json.JSONDecodeError:
-        return None
+    except json.JSONDecodeError as exc:
+        return None, f"json_decode:{exc.msg}"
     if not isinstance(data, dict):
-        return None
+        return None, f"not_dict:{type(data).__name__}"
     try:
-        return ToolBgFirstRoundEnvelope.model_validate(data)
-    except ValidationError:
-        return None
+        return ToolBgFirstRoundEnvelope.model_validate(data), None
+    except ValidationError as exc:
+        errs = exc.errors()
+        if not errs:
+            return None, "validation:unknown"
+        e0 = errs[0]
+        loc = ".".join(str(x) for x in e0.get("loc", ()))
+        return None, f"validation:{loc}:{e0.get('type', '')}"
+
+
+def parse_tool_bg_first_round_skip(raw: str) -> ToolBgFirstRoundEnvelope | None:
+    """Parse first-round assistant ``content`` when it must be skip JSON only; None if invalid."""
+    env, _ = parse_tool_bg_first_round_skip_details(raw)
+    return env
 
 
 def _strip_json_fence(raw: str) -> str:

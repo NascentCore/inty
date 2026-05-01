@@ -181,6 +181,11 @@ class FeaturesConfig:
     )
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
+    # When True, ``/api/v1/chat/ws`` runs a background task that may emit proactive companion
+    # turns (``InnerTickMode.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
+    companion_ws_proactive_heartbeat_enabled: bool = False
+    # Seconds between eligibility checks for proactive heartbeat (lower = more responsive, more CPU).
+    companion_ws_proactive_heartbeat_poll_seconds: float = 45.0
 
     def __post_init__(self) -> None:
         raw = (self.companion_workspace_bootstrap_type or "").strip().upper()

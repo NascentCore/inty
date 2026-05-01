@@ -20,6 +20,7 @@ from app.services.agent_status_line import (
     clear_tool_background_db_loop,
     set_tool_background_db_loop,
 )
+from app.utils.config import CompanionWorkspaceBootstrapType
 
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
@@ -34,6 +35,8 @@ from .llm_chat_runtime import (
     tool_path_chat_completion_kwargs,
 )
 from .memory_registry import get_memory_store
+from .models import InnerTickMode
+from .prompt_stack import refresh_companion_turn_prompt_stack
 from .runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     runtime_inspect_set_last_chat_completion_request,
@@ -51,7 +54,7 @@ from .companion_tool_runtime import (
 from .tool_bg_routing import (
     TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME,
     TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT,
-    parse_tool_bg_first_round_skip,
+    parse_tool_bg_first_round_skip_details,
     resolve_tool_bg_routing_sync,
     tool_bg_first_round_skip_schema_enabled,
 )
@@ -357,6 +360,13 @@ def _assistant_text_from_completion_response(resp: Any) -> str:
     return content.strip()
 
 
+def _single_line_log_preview(text: str, max_chars: int = 280) -> str:
+    collapsed = " ".join((text or "").split())
+    if len(collapsed) <= max_chars:
+        return collapsed
+    return collapsed[: max_chars - 3] + "..."
+
+
 @dataclass(frozen=True)
 class _InitialToolBgCompletionMeta:
     """Winning attempt parameters for tool_background first completion (runtime_inspect)."""
@@ -526,6 +536,8 @@ async def _run_background_tool_loop(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
+    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    enable_async_tool_background: bool = False,
 ) -> None:
     try:
         if is_tool_background_aborted(user_msg_uuid):
@@ -609,6 +621,15 @@ async def _run_background_tool_loop(
             trace_id=trace_id,
             trace_hooks=trace_hooks,
         )
+        logger.debug(
+            "repl.turn.bg initial_round_meta trace_id={} user_msg_uuid={} force_tools={} "
+            "used_skip_schema={} tool_choice={}",
+            trace_id,
+            user_msg_uuid,
+            force_tools,
+            initial_meta.used_skip_schema,
+            initial_meta.tool_choice,
+        )
 
         initial_tool_calls = (
             getattr(initial_response.choices[0].message, "tool_calls", None) or []
@@ -617,40 +638,61 @@ async def _run_background_tool_loop(
         # skip=false with no tool_calls is logged as skip_false_no_tools; we do not retry here.
         if not initial_tool_calls:
             early_text = _assistant_text_from_completion_response(initial_response)
+            finish0 = getattr(initial_response.choices[0], "finish_reason", None) or "?"
             if initial_meta.used_skip_schema:
-                parsed = parse_tool_bg_first_round_skip(early_text)
+                parsed, skip_fail_reason = parse_tool_bg_first_round_skip_details(
+                    early_text
+                )
                 if parsed is not None and parsed.skip:
                     logger.debug(
-                        "repl.turn.bg no_tool_calls skip_schema_true trace_id={} user_msg_uuid={}",
+                        "repl.turn.bg no_tool_calls skip_schema_true trace_id={} user_msg_uuid={} "
+                        "finish_reason={} content_chars={}",
                         trace_id,
                         user_msg_uuid,
+                        finish0,
+                        len(early_text),
                     )
                 elif parsed is not None and not parsed.skip:
                     logger.info(
                         "repl.turn.bg no_tool_calls skip_false_no_tools trace_id={} "
-                        "user_msg_uuid={} content_chars={}",
+                        "user_msg_uuid={} content_chars={} finish_reason={} content_preview={}",
                         trace_id,
                         user_msg_uuid,
                         len(early_text),
+                        finish0,
+                        _single_line_log_preview(early_text),
                     )
                 else:
                     logger.info(
                         "repl.turn.bg no_tool_calls skip_json_invalid trace_id={} "
-                        "user_msg_uuid={} content_chars={}",
+                        "user_msg_uuid={} content_chars={} finish_reason={} parse_reason={} "
+                        "content_preview={}",
                         trace_id,
                         user_msg_uuid,
                         len(early_text),
+                        finish0,
+                        skip_fail_reason,
+                        _single_line_log_preview(early_text),
                     )
             elif early_text.strip():
                 logger.info(
                     "repl.turn.bg no_tool_calls skip_output_queue trace_id={} "
-                    "user_msg_uuid={} chars={} (foreground chat branch already shown)",
+                    "user_msg_uuid={} chars={} finish_reason={} content_preview={} "
+                    "(foreground chat branch already shown)",
                     trace_id,
                     user_msg_uuid,
                     len(early_text),
+                    finish0,
+                    _single_line_log_preview(early_text),
                 )
             else:
-                logger.debug("repl.turn.bg no_tool_calls skip_transcript")
+                logger.debug(
+                    "repl.turn.bg no_tool_calls skip_transcript trace_id={} user_msg_uuid={} "
+                    "finish_reason={}",
+                    trace_id,
+                    user_msg_uuid,
+                    finish0,
+                )
             return
         total_tool_calls += len(initial_tool_calls)
 
@@ -713,6 +755,23 @@ async def _run_background_tool_loop(
             total_tool_calls += len(tool_calls)
             return next_resp, None
 
+        # Keep tool-path system prefix and OpenAI tools list in sync with workspace
+        # after each tool round (same idea as sync loop in turn.py after tool replies).
+        async def _after_tool_messages_appended(
+            messages_with_tool_results: list[dict[str, Any]],
+        ) -> None:
+            nonlocal tools
+            tools = refresh_companion_turn_prompt_stack(
+                workspace=ws_root,
+                store=get_memory_store(ws_root),
+                workspace_bootstrap_type=workspace_bootstrap_type,
+                inner_tick_turn=False,
+                inner_tick_mode=InnerTickMode.MAINTENANCE,
+                enable_async_tool_background=enable_async_tool_background,
+                messages=messages_with_tool_results,
+                tool_side_compact_system_prompt=True,
+            )
+
         try:
             loop_result = await resolve_official_assistant_tool_loop_async(
                 response=initial_response,
@@ -723,6 +782,7 @@ async def _run_background_tool_loop(
                 build_assistant_tool_call_message=openai_assistant_message_dict,
                 insert_system_message=_insert_system_message,
                 initial_trace_id=None,
+                after_tool_messages_appended=_after_tool_messages_appended,
             )
         except BackgroundToolLoopAborted:
             logger.debug(
@@ -879,6 +939,8 @@ def start_tool_background_job(
     repository_only_workspace_text: bool = False,
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
+    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    enable_async_tool_background: bool = False,
 ) -> None:
     def _effective_on_event(ev: ToolOutputEvent) -> None:
         if on_event is not None:
@@ -907,6 +969,8 @@ def start_tool_background_job(
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,
+                    workspace_bootstrap_type=workspace_bootstrap_type,
+                    enable_async_tool_background=enable_async_tool_background,
                 )
             )
 

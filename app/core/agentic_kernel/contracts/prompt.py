@@ -24,7 +24,6 @@ class PromptContext(BaseModel):
     user_md: str = ""
     memory_md: str = ""
     tools_md: str = ""
-    heartbeat_md: str = ""
 
     @field_validator("context_mode")
     @classmethod
@@ -41,4 +40,5 @@ class PromptBuildInput(BaseModel):
 
     user_profile: str = ""
     include_output_format_prompt: bool = True
-    heartbeat_turn: bool = False
+    inner_tick_turn: bool = False
+    inner_tick_mode: str = "maintenance"

@@ -1603,6 +1603,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         chat_route,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
+        companion_ws_heartbeat_ctx=None,
     ):
         return APIResponse.success(
             data={
@@ -1666,7 +1667,14 @@ def test_chat_websocket_idle_timeout_reads_config(
     async def fake_agent_chat_completions(**kwargs):
         return APIResponse.success(data={"choices": []})
 
+    expected_idle = float(
+        global_config_loaded_from_config_yaml.app.features.chat_ws_idle_timeout_seconds
+    )
+    real_wait_for = chat_v1.asyncio.wait_for
+
     async def fake_wait_for(aw, timeout):
+        if float(timeout) != expected_idle:
+            return await real_wait_for(aw, timeout)
         captured["timeouts"].append(timeout)
         if len(captured["timeouts"]) == 1:
             return await aw
@@ -1713,6 +1721,7 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         chat_route,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
+        companion_ws_heartbeat_ctx=None,
     ):
         captured["effective_user_id"] = current_user.id
         return APIResponse.success(
@@ -1766,6 +1775,7 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         chat_route,
         companion_background_sink=None,
         companion_ws_foreground_pending=None,
+        companion_ws_heartbeat_ctx=None,
     ):
         captured["user_time_context"] = request.user_time_context
         return APIResponse.success(

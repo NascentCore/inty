@@ -28,7 +28,7 @@
 
 ## System 与提示词切片
 
-- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`（**首条**为 AXIOM（若非空），其次为安全基线，余下为 TOOLS / HEARTBEAT / IDENTITY / SOUL 等），由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
+- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`（**首条**为 AXIOM（若非空），其次为安全基线，余下为 TOOLS / IDENTITY / SOUL 等；内在节拍「陪伴心跳」轮次另注入 `_heartbeat_clause()`，不读工作区 `HEARTBEAT.md`），由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
 - **切片枚举**：`prompt_slices.PromptSliceId`（无 `AGENTS`）与 `companion_update_prompt_slice` 可写映射 `PROMPT_SLICE_TO_REL` 同源。
 - **AGENTS.md**：不再注入模型、不由 `load_prompt_bundle` 读取、`PromptBundle.agents_md` 恒为默认空；版本表仍可能保留历史 `AGENTS` 文档 kind，仅作遗留数据。
 

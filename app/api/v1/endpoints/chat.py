@@ -35,6 +35,12 @@ from app.api.utils.feature_gating import (
 from app.api.utils.logger_route import LoggerRoute
 from app.core.agent.agent import agent_manager
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agentic_kernel.companion.heartbeat import (
+    HeartbeatConfig,
+    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+    next_heartbeat_wait_seconds,
+)
+from app.core.agentic_kernel.companion.models import InnerTickMode
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
@@ -60,6 +66,7 @@ from app.services.memory_service import (
     deliver_daily_memories_for_user_agent,
     deliver_festival_memories_for_user_agent,
 )
+from app.db.session import AsyncSessionLocal
 from app.services.chat_service import generate_session_id
 from app.services.subscription_service import SubscriptionService
 from app.services.surprise_snap_service import (
@@ -638,6 +645,236 @@ async def _build_companion_tool_background_ws_payload(
     return out
 
 
+def _companion_ws_hb_coords_snapshot(hb_ctx: dict[str, Any]) -> dict[str, Any] | None:
+    hb_uid = str(hb_ctx.get("user_id") or "").strip()
+    aid = str(hb_ctx.get("agent_id") or "").strip()
+    cid = hb_ctx.get("chat_id")
+    if not hb_uid or not aid or cid is None:
+        return None
+    return {"user_id": hb_uid, "agent_id": aid, "chat_id": cid}
+
+
+async def _try_fire_companion_ws_proactive_heartbeat(
+    *,
+    outbound_queue: asyncio.Queue,
+    ctx: dict[str, Any],
+    subscription_svc: SubscriptionService,
+    companion_turn_lock: asyncio.Lock,
+) -> None:
+    """If companion transcript says proactive heartbeat is due, run one turn and queue WS payload."""
+    user_id = str(ctx.get("user_id") or "").strip()
+    agent_id = str(ctx.get("agent_id") or "").strip()
+    chat_id_raw = ctx.get("chat_id")
+    if not user_id or not agent_id or chat_id_raw is None:
+        return
+
+    async with AsyncSessionLocal() as pre_db:
+        r_user = await pre_db.execute(select(User).where(User.id == user_id))
+        current_user = r_user.scalar_one_or_none()
+        if current_user is None:
+            return
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=pre_db, user_id=user_id, agent_id=agent_id
+        )
+        if str(chat.id) != str(chat_id_raw):
+            logger.debug(
+                "companion_ws_proactive_hb chat_id mismatch ctx={} db_chat_id={}",
+                chat_id_raw,
+                chat.id,
+            )
+            return
+
+        subscription = await subscription_svc.get_user_current_subscription(
+            pre_db, user_id
+        )
+        is_subscribed = bool(subscription)
+        model_override = select_chat_model(user=current_user, is_subscribed=is_subscribed)
+
+        ws_path = companion_chat_service.companion_workspace_path_if_ready(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+        )
+        if ws_path is None:
+            return
+
+        remain = next_heartbeat_wait_seconds(
+            ws_path,
+            HeartbeatConfig(enabled=True),
+        )
+        if remain > 0:
+            return
+
+        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
+            pre_db, current_user
+        )
+        if not is_allowed:
+            logger.info(
+                "companion_ws_proactive_hb skipped subscription user={} used={} limit={}",
+                user_id,
+                used_count,
+                daily_limit,
+            )
+            return
+
+        chat_row_id = chat.id
+        chat_row_agent_id = chat.agent_id
+        session_id = generate_session_id(str(chat_row_id))
+        preset_uid = str(uuid.uuid4())
+
+    async with companion_turn_lock:
+        companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_row_id,
+            user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+            resolved_chat_model_id=model_override,
+            defer_memory_update=True,
+            session_id=session_id,
+            background_output_sink=None,
+            preset_user_msg_uuid=preset_uid,
+            inner_tick_turn=True,
+            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        )
+
+        companion_reply = companion_turn.assistant_text
+        if companion_reply is None or not str(companion_reply).strip():
+            logger.warning(
+                "companion_ws_proactive_hb empty reply user={} agent={}",
+                user_id,
+                agent_id,
+            )
+            return
+
+        user_meta = {
+            "companion_proactive_heartbeat": True,
+            "inner_tick": True,
+            "heartbeat": True,
+        }
+        await chat_history_service.add_user_message_async(
+            session_id,
+            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+            meta_data=user_meta,
+        )
+
+        companion_ai_meta: dict[str, Any] = {
+            "source": companion_turn.assistant_source,
+        }
+        if companion_turn.trace_id:
+            companion_ai_meta["trace_id"] = companion_turn.trace_id
+        if companion_turn.user_msg_uuid:
+            companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+        if companion_turn.langsmith_trace_id:
+            companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
+        if companion_turn.langsmith_run_id:
+            companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
+        sp = companion_turn.significance_perception
+        if isinstance(sp, dict) and sp:
+            companion_ai_meta["significance_perception"] = sp
+
+        ai_message_id = await chat_history_service.add_ai_message_sync_async(
+            session_id,
+            companion_reply,
+            agent_id=chat_row_agent_id,
+            meta_data=companion_ai_meta,
+        )
+
+        async with AsyncSessionLocal() as post_db:
+            try:
+                await subscription_svc.record_usage(
+                    post_db,
+                    user_id,
+                    "chat",
+                    1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_length": 0,
+                        "companion_ws_proactive_heartbeat": True,
+                    },
+                )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_proactive_hb record_usage failed: {}", str(e)
+                )
+
+            stub_request = ChatCompletionRequest(
+                messages=[
+                    ChatMessage(
+                        role="user",
+                        content=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                    )
+                ],
+                message_id=preset_uid,
+            )
+            (
+                response_text_content,
+                response_content_parts,
+            ) = _normalize_chat_response_content(companion_reply)
+
+            latest_message_info = None
+            try:
+                if ai_message_id is not None:
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            post_db, ai_message_id
+                        )
+                    )
+                if latest_message_info is None:
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            post_db, session_id
+                        )
+                    )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_proactive_hb latest_message_info failed: {}", e
+                )
+
+            user_message_id = None
+            try:
+                user_message_id = (
+                    await chat_history_service.get_latest_user_message_id(
+                        post_db, session_id
+                    )
+                )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_proactive_hb get_latest_user_message_id failed: {}",
+                    e,
+                )
+
+            subscription_actions = [
+                BizAction(action_type=ActionType.NONE, message=""),
+            ]
+            data = _build_chat_response(
+                response_text_content,
+                response_content_parts,
+                PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                latest_message_info,
+                None,
+                stub_request,
+                source_imate_id=None,
+                user_message_id=user_message_id,
+                subscription_actions=subscription_actions,
+                client_local_id=None,
+            )
+            payload = schemas.APIResponse.success(data=data)
+            out = payload.model_dump(exclude_none=True)
+            out["agent_id"] = agent_id
+            out["status_line"] = await _agent_status_line_for_chat_header(
+                post_db, agent_id
+            )
+            await outbound_queue.put(out)
+    logger.info(
+        "companion_ws_proactive_hb pushed assistant user={} agent={} chat_id={}",
+        user_id,
+        agent_id,
+        chat_row_id,
+    )
+
+
 async def _agent_status_line_for_chat_header(
     db: AsyncSession, agent_id: str
 ) -> Optional[str]:
@@ -664,6 +901,7 @@ async def _agent_chat_completions_impl(
     chat_route: Literal["http", "websocket"],
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
+    companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
 ) -> Union[schemas.APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
@@ -894,6 +1132,18 @@ async def _agent_chat_completions_impl(
                         response_text_content,
                         response_content_parts,
                     ) = _normalize_chat_response_content(response_content)
+                    if (
+                        companion_ws_heartbeat_ctx is not None
+                        and chat_route == "websocket"
+                    ):
+                        companion_ws_heartbeat_ctx.clear()
+                        companion_ws_heartbeat_ctx.update(
+                            {
+                                "user_id": current_user.id,
+                                "agent_id": agent_id,
+                                "chat_id": chat.id,
+                            }
+                        )
                 else:
                     chat_result = await agent.chat(
                         user_id=current_user.id,
@@ -1411,6 +1661,45 @@ async def chat_completions_websocket(
     def companion_bg_sink(ev: ToolOutputEvent) -> None:
         loop.call_soon_threadsafe(bg_queue.put_nowait, ev)
 
+    companion_hb_ctx: dict[str, Any] = {}
+    companion_turn_lock = asyncio.Lock()
+    hb_worker_stop = asyncio.Event()
+
+    async def companion_ws_proactive_hb_worker() -> None:
+        while not hb_worker_stop.is_set():
+            feats = global_config_loaded_from_config_yaml.app.features
+            poll = max(5.0, float(feats.companion_ws_proactive_heartbeat_poll_seconds))
+            try:
+                await asyncio.wait_for(hb_worker_stop.wait(), timeout=poll)
+                break
+            except asyncio.TimeoutError:
+                pass
+            if not feats.companion_ws_proactive_heartbeat_enabled:
+                continue
+            hb_snapshot: dict[str, Any] | None = None
+            async with companion_turn_lock:
+                hb_snapshot = _companion_ws_hb_coords_snapshot(companion_hb_ctx)
+            if hb_snapshot is None:
+                continue
+            hb_user_for_log = hb_snapshot["user_id"]
+            try:
+                await _try_fire_companion_ws_proactive_heartbeat(
+                    outbound_queue=outbound_queue,
+                    ctx=hb_snapshot,
+                    subscription_svc=subscription_svc,
+                    companion_turn_lock=companion_turn_lock,
+                )
+            except Exception:
+                logger.exception(
+                    "companion_ws_proactive_hb worker failed user_id={}",
+                    hb_user_for_log,
+                )
+
+    hb_worker_task = asyncio.create_task(
+        companion_ws_proactive_hb_worker(),
+        name="companion_ws_proactive_heartbeat",
+    )
+
     idle = _chat_ws_idle_timeout_seconds()
     try:
         while True:
@@ -1444,18 +1733,19 @@ async def chat_completions_websocket(
                     )
                     continue
                 try:
-                    bg_payload = await _build_companion_tool_background_ws_payload(
-                        db=db,
-                        agent_id=str(ctx["agent_id"]),
-                        session_id=str(ctx["session_id"]),
-                        ev=ev,
-                        request=ctx["request"],
-                        effective_local_id=ctx["effective_local_id"],
-                        foreground_user_message_id=ctx.get(
-                            "foreground_user_message_id"
-                        ),
-                    )
-                    await outbound_queue.put(bg_payload)
+                    async with companion_turn_lock:
+                        bg_payload = await _build_companion_tool_background_ws_payload(
+                            db=db,
+                            agent_id=str(ctx["agent_id"]),
+                            session_id=str(ctx["session_id"]),
+                            ev=ev,
+                            request=ctx["request"],
+                            effective_local_id=ctx["effective_local_id"],
+                            foreground_user_message_id=ctx.get(
+                                "foreground_user_message_id"
+                            ),
+                        )
+                        await outbound_queue.put(bg_payload)
                 except Exception:
                     logger.exception("companion tool_bg ws completion failed")
                 continue
@@ -1482,18 +1772,20 @@ async def chat_completions_websocket(
                 tc_box[0],
             )
             try:
-                response = await _agent_chat_completions_impl(
-                    db=db,
-                    agent_id=websocket_request.agent_id,
-                    request=merged_request,
-                    current_user=current_user,
-                    app_version_code=app_version_code,
-                    subscription_svc=subscription_svc,
-                    voice_svc=voice_svc,
-                    chat_route="websocket",
-                    companion_background_sink=companion_bg_sink,
-                    companion_ws_foreground_pending=ws_fg_pending,
-                )
+                async with companion_turn_lock:
+                    response = await _agent_chat_completions_impl(
+                        db=db,
+                        agent_id=websocket_request.agent_id,
+                        request=merged_request,
+                        current_user=current_user,
+                        app_version_code=app_version_code,
+                        subscription_svc=subscription_svc,
+                        voice_svc=voice_svc,
+                        chat_route="websocket",
+                        companion_background_sink=companion_bg_sink,
+                        companion_ws_foreground_pending=ws_fg_pending,
+                        companion_ws_heartbeat_ctx=companion_hb_ctx,
+                    )
             except HTTPException as e:
                 detail = e.detail
                 message = detail if isinstance(detail, str) else str(detail)
@@ -1515,6 +1807,12 @@ async def chat_completions_websocket(
     except WebSocketDisconnect:
         return
     finally:
+        hb_worker_stop.set()
+        hb_worker_task.cancel()
+        try:
+            await hb_worker_task
+        except asyncio.CancelledError:
+            pass
         await _shutdown_chat_ws_outbound_pump(pump_task)
 
 

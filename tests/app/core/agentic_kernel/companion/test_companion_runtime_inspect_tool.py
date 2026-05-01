@@ -11,7 +11,7 @@ from app.core.agentic_kernel.companion.llm_chat_runtime import tool_path_chat_co
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
-from app.core.agentic_kernel.companion.models import ContextMeta
+from app.core.agentic_kernel.companion.models import ContextMeta, InnerTickMode
 from app.core.agentic_kernel.companion.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     build_turn_runtime_config_dict,
@@ -61,7 +61,8 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 mem_cfg=MemoryPipelineConfig(),
                 context=ContextMeta(context_mode="intimate"),
                 transcript_llm_window_max_messages=12,
-                heartbeat_turn=False,
+                inner_tick_turn=False,
+                inner_tick_mode=InnerTickMode.MAINTENANCE,
                 repository_only_workspace_text=True,
                 transcript_compaction=None,
                 workspace_read_file_max_chars_cap=WORKSPACE_READ_FILE_MAX_CHARS_CAP,

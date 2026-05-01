@@ -20,7 +20,6 @@ def test_workspace_paths_properties(tmp_path: Path) -> None:
     assert p.user_md == root / "USER.md"
     assert p.memory_md == root / "MEMORY.md"
     assert p.agents_md == root / "AGENTS.md"
-    assert p.heartbeat_md == root / "HEARTBEAT.md"
     assert p.tools_md == root / "TOOLS.md"
     assert p.transcript == root / "transcript.jsonl"
     assert p.context_json == root / "context.json"

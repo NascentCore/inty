@@ -18,6 +18,7 @@ from .models import (
     AI_PRIVATE_INJECT_MAX_CHARS,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ContextMeta,
+    InnerTickMode,
     _MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,
     _MEMORY_RAW_INJECT_MAX_CHARS,
     _OPTIONAL_DOC_MAX_CHARS,
@@ -129,7 +130,8 @@ def build_turn_runtime_config_dict(
     mem_cfg: MemoryPipelineConfig,
     context: ContextMeta,
     transcript_llm_window_max_messages: int,
-    heartbeat_turn: bool,
+    inner_tick_turn: bool,
+    inner_tick_mode: InnerTickMode,
     repository_only_workspace_text: bool,
     transcript_compaction: TranscriptCompactionConfig | None,
     workspace_read_file_max_chars_cap: int,
@@ -161,7 +163,8 @@ def build_turn_runtime_config_dict(
             "chat.completions; OpenRouter/provider defaults apply."
         ),
         "memory_pipeline": mem_cfg.model_dump(),
-        "heartbeat_turn": heartbeat_turn,
+        "inner_tick_turn": inner_tick_turn,
+        "inner_tick_mode": inner_tick_mode.value,
         "repository_only_workspace_text": repository_only_workspace_text,
         "transcript_compaction": (
             transcript_compaction.model_dump()

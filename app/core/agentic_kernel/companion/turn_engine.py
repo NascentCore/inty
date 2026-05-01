@@ -6,9 +6,13 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from .heartbeat import (
+    HEARTBEAT_SYNTHETIC_USER_TEXT,
+    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+)
 from .memory_registry import get_memory_store
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
-from .models import ChatMessage, ContextMeta, PromptBundle
+from .models import ChatMessage, ContextMeta, InnerTickMode, PromptBundle
 from .prompts import build_system_messages
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
@@ -22,6 +26,7 @@ def build_repl_turn_base_messages(
     user_text: str,
     repl_online_ack_turn: bool = False,
     inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     ai_private_text: str = "",
     include_significance_perception_slice: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
@@ -30,6 +35,7 @@ def build_repl_turn_base_messages(
         context,
         enable_user_profile_tool=True,
         inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=inner_tick_mode,
         repl_online_ack_turn=repl_online_ack_turn,
         ai_private_text=ai_private_text,
         include_significance_perception_slice=include_significance_perception_slice,
@@ -41,13 +47,23 @@ def build_repl_turn_base_messages(
             row[TRANSCRIPT_MSG_UUID_KEY] = m.uuid
         messages.append(row)
     user_msg_uuid = str(uuid.uuid4())
-    messages.append(
-        {
-            "role": "user",
-            "content": user_text,
-            TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-        }
-    )
+    if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
+        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
+        messages.append(
+            {
+                "role": "user",
+                "content": PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+            }
+        )
+    else:
+        messages.append(
+            {
+                "role": "user",
+                "content": user_text,
+                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+            }
+        )
     return messages, user_msg_uuid
 
 
@@ -61,6 +77,7 @@ def persist_repl_turn_transcript_rows(
     assistant_reply_to: str,
     repl_online_ack: bool = False,
     inner_tick_turn: bool = False,
+    inner_tick_proactive_chat: bool = False,
     assistant_source: str = "chat",
     trace_id: str | None = None,
     assistant_extra: dict[str, Any] | None = None,
@@ -77,6 +94,8 @@ def persist_repl_turn_transcript_rows(
     }
     if inner_tick_turn:
         user_row["inner_tick"] = True
+    if inner_tick_proactive_chat:
+        user_row["heartbeat"] = True
     if repl_online_ack:
         user_row["repl_online_ack"] = True
     if trace_id is not None and trace_id.strip():

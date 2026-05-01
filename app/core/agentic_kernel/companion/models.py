@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
-
-AssistantTurnSource = Literal["chat", "inner_tick"]
 
 from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator
@@ -22,6 +21,16 @@ from .significance_perception import default_significance_perception_markdown
 if TYPE_CHECKING:
     from .memory_store import MemoryStore
     from .workspace import WorkspacePaths
+
+AssistantTurnSource = Literal["chat", "inner_tick"]
+
+
+class InnerTickMode(StrEnum):
+    """Synthetic user-idle turns: maintenance uses restricted tools; proactive_chat is no-tools."""
+
+    MAINTENANCE = "maintenance"
+    PROACTIVE_CHAT = "proactive_chat"
+
 
 PresenceSignal = Literal["repl_online", "repl_offline"]
 
@@ -98,7 +107,6 @@ class PromptBundle(BaseModel):
         description="Deprecated: AGENTS.md is not loaded or injected; kept default-empty for callers/tests.",
     )
     tools_md: str = ""
-    heartbeat_md: str = ""
     memory_raw_diary_today_md: str = ""
     memory_day_summary_today_md: str = ""
 
@@ -158,11 +166,6 @@ def load_prompt_bundle(
         tools_md=_read_memory_document_optional(
             store,
             "TOOLS.md",
-            max_chars=_OPTIONAL_DOC_MAX_CHARS,
-        ),
-        heartbeat_md=_read_memory_document_optional(
-            store,
-            "HEARTBEAT.md",
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
         significance_perception_md=(

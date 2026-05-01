@@ -39,7 +39,6 @@ def test_prompt_bundle_defaults() -> None:
     b = PromptBundle(identity="i", soul="s", user_md="u", memory_md="m")
     assert b.agents_md == ""
     assert b.tools_md == ""
-    assert b.heartbeat_md == ""
     assert b.memory_raw_diary_today_md == ""
     assert b.memory_day_summary_today_md == ""
 

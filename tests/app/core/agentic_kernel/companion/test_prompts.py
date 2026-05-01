@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.core.agentic_kernel.companion.models import ContextMeta, PromptBundle
+from app.core.agentic_kernel.companion.models import (
+    ContextMeta,
+    InnerTickMode,
+    PromptBundle,
+)
 from app.core.agentic_kernel.companion.prompts import build_system_prompt
 
 
@@ -32,7 +36,8 @@ def test_build_system_prompt_heartbeat() -> None:
     text = build_system_prompt(
         _minimal_bundle(),
         ContextMeta(),
-        heartbeat_turn=True,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
     )
     assert "## 本轮（陪伴心跳）" in text
     assert "用户尚未发送新消息" in text

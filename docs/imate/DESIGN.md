@@ -16,7 +16,7 @@
 - 启用时：chat 与 tool 分流不同模型路由；tool 路可同步或异步（异步场景下前台 chat + 后台 tool 循环）。
 - Chat 路可携带与并行路相同的工具定义镜像，并约定 `tool_choice=none`，以便对齐上下文而不在 chat 路实际调用工具。
 
-**实现补充（与代码对齐）**：`CompanionLLMClient.chat_completion` 按「本轮请求是否带 tools」切换两套同步客户端并分别解析 `chat_model` / `tool_model`。上述「异步前台 chat + 后台 tool 循环」由 `companion/tool_background.py` 与 `tools/inty_v2_repl/orchestrator.py` 使用；**HTTP API 的 `run_companion_chat_turn_for_api` 当前未挂载** `start_tool_background_job`。后台线程 `asyncio.run` 不可与安全共享全局 `AsyncSessionLocal` 混用；`start_tool_background_job(..., main_event_loop=...)` 时，`tool_update_agent_status_line` 的 PG 写入由 `app/services/agent_status_line.persist_agent_status_line` 经 `run_coroutine_threadsafe` 投递回主事件循环。提示词里关于「镜像工具 + chat 路禁调用」的分支主要在 **`prompts.build_system_messages`**（例如 `include_repl_image_generation_contract=False` 时的 chat 分支契约）；生产 WebSocket 默认路径见下文「回合」详细说明。
+**实现补充（与代码对齐）**：`CompanionLLMClient.chat_completion` 按「本轮请求是否带 tools」切换两套同步客户端并分别解析 `chat_model` / `tool_model`。上述「异步前台 chat + 后台 tool 循环」由 `companion/tool_background.py` 实现并由启用该路径的调用方消费；**HTTP API 的 `run_companion_chat_turn_for_api` 当前未挂载** `start_tool_background_job`。后台线程 `asyncio.run` 不可与安全共享全局 `AsyncSessionLocal` 混用；`start_tool_background_job(..., main_event_loop=...)` 时，`tool_update_agent_status_line` 的 PG 写入由 `app/services/agent_status_line.persist_agent_status_line` 经 `run_coroutine_threadsafe` 投递回主事件循环。提示词里关于「镜像工具 + chat 路禁调用」的分支主要在 **`prompts.build_system_messages`**（例如 `include_repl_image_generation_contract=False` 时的 chat 分支契约）；生产 WebSocket 默认路径见下文「回合」详细说明。
 
 ## 重要性感知
 
@@ -36,7 +36,7 @@
 
 ## REPL
 
-- **`tools/inty_v2_repl`**：本地 harness；通过将 `tools/` 置于 `sys.path` 以 import `inty_v2_repl.*`（见 `tests/conftest.py`）。
+- **`tools/inty_v2_repl`**：仅 WebSocket 终端客户端（`python -m tools.inty_v2_repl.main repl` → `/api/v1/chat/ws`）；companion 推理在 `app/core/agentic_kernel/companion/`。说明见 [`tools/inty_v2_repl/README.md`](../../tools/inty_v2_repl/README.md)。
 
 ---
 
@@ -82,7 +82,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 6. 工具执行：`companion_tool_runtime.execute_tool_call` → **`tools/registry.py`**、`tools/dispatchers/workspace.py`、`tools/dispatchers/media.py` 等与 companion 共用的解析/派发；交互式 bootstrap 专有逻辑在 `companion/` 内。
 7. 将 user/assistant（及 tool 轨迹）写入 transcript；`schedule_memory_update_after_turn` / `memory_pipeline.py` 做回合后记忆处理。
 
-**`companion/turn_engine.py`**：面向本地 REPL（`tools/inty_v2_repl`）拼 OpenAI messages。生产 **`WS /api/v1/chat/ws`** 不 import 它，而是经 `companion_chat_service` 走 **`turn.run_turn`**。
+**`companion/turn_engine.py`**：拼 OpenAI messages 的辅助模块（例如测试或 REPL 风格组装）。生产 **`WS /api/v1/chat/ws`** 不 import 它，而是经 `companion_chat_service` 走 **`turn.run_turn`**。
 
 ## Bootstrap：`companion_workspace_bootstrap_type`
 
@@ -119,7 +119,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 
 ## 回合内行为（kernel 实现摘要）
 
-- **System**：来自 `PromptBundle`、上下文模式、`TOOLS.md` / `HEARTBEAT.md`（若有）、`IDENTITY` / `SOUL` / `USER`、亲密模式下可选 MEMORY 块、可选 interactive bootstrap 片段、输出契约等；组装函数为 **`build_system_messages`**。
+- **System**：来自 `PromptBundle`、上下文模式、`TOOLS.md`（若非空）、`IDENTITY` / `SOUL` / `USER`、亲密模式下可选 MEMORY 块、可选 interactive bootstrap 片段、输出契约等；**陪伴心跳**轮由 `_heartbeat_clause()` 与 `HEARTBEAT_SYNTHETIC_USER_TEXT`（system）驱动，不读工作区 `HEARTBEAT.md`；组装函数为 **`build_system_messages`**。
 - **Transcript**：窗口由 `transcript_llm_window_max_messages` 与默认上限共同约束；可配置 compaction。
 - **LLM**：OpenAI 兼容 **`CompanionLLMClient.chat_completion`**；无 tools 时用 chat 路由客户端与 chat model，有 tools 时用 tool 路由客户端与 tool model（见 `_resolve_model`）。
 - **Tools**：`tools.py` 暴露 schema；执行在 **`companion_tool_runtime.execute_tool_call`**。
