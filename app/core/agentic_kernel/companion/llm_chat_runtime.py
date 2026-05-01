@@ -67,7 +67,27 @@ class OpenRouterInvalidJsonError(RuntimeError):
     """OpenRouter returned a response body that was not valid JSON."""
 
 
+# Kernel unit tests use ``_FakeAsyncDualLLMClient`` which resolves ``chat``/``tool``
+# to these placeholders; they must never create real LangSmith runs (pytest often
+# uses a non-TEST config.yaml while LANGSMITH_TRACING_V2 is inherited from the shell).
+_LANGSMITH_PARENT_SKIP_PLACEHOLDER_CHAT_MODEL = "m/chat"
+_LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL = "m/tool"
+
+
+def _langsmith_parent_models_are_kernel_test_placeholders(
+    chat_model: str, tool_model: str
+) -> bool:
+    cm = (chat_model or "").strip()
+    tm = (tool_model or "").strip()
+    return (
+        cm == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_CHAT_MODEL
+        and tm == _LANGSMITH_PARENT_SKIP_PLACEHOLDER_TOOL_MODEL
+    )
+
+
 def companion_turn_langsmith_parent_enabled() -> bool:
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return False
     if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
         return False
     if not _langsmith_tracing_v2_enabled(global_config_loaded_from_config_yaml):
@@ -105,11 +125,19 @@ def create_companion_turn_root_run(
 ) -> Any | None:
     if not companion_turn_langsmith_parent_enabled():
         return None
+    cm = (chat_model or "").strip()
+    tm = (tool_model or "").strip()
+    if _langsmith_parent_models_are_kernel_test_placeholders(cm, tm):
+        logger.debug(
+            "companion_turn_langsmith_parent skipped: kernel test placeholder models "
+            "chat_model={!r} tool_model={!r}",
+            cm,
+            tm,
+        )
+        return None
     try:
         from langsmith.run_trees import RunTree
 
-        cm = (chat_model or "").strip()
-        tm = (tool_model or "").strip()
         root = RunTree(
             name="agentic_companion_user_turn",
             run_type="chain",
@@ -262,7 +290,7 @@ def _ensure_langsmith_openai_chat_process_outputs_patch() -> None:
         def _inty_process_chat_completion(outputs: Any):
             try:
                 rt = ls_rh.get_current_run_tree()
-                if rt is not None:
+                if rt is not None and getattr(rt, "run_type", None) == "llm":
                     rid = getattr(rt, "id", None)
                     if rid is not None:
                         s = str(rid).strip()
@@ -321,10 +349,7 @@ def _langsmith_trace_id_from_active_run_tree() -> str:
 def _completion_with_langsmith_trace_id(raw: Any) -> Any:
     existing_tid = langsmith_trace_id_from_completion(raw)
     tid = existing_tid or _langsmith_trace_id_from_active_run_tree()
-    try:
-        llm_rid = (_LS_WRAPPED_LLM_RUN_ID.get() or "").strip()
-    except LookupError:
-        llm_rid = ""
+    llm_rid = (_LS_WRAPPED_LLM_RUN_ID.get() or "").strip()
 
     if not tid and not llm_rid:
         return raw
