@@ -102,6 +102,11 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     assert llm_msgs[-1]["content"] == PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
     assert llm_msgs[-2]["role"] == "system"
     assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert not any(
+        m.get("role") == "user"
+        and (m.get("content") or "").strip() == INNER_TICK_SYNTHETIC_USER_TEXT.strip()
+        for m in llm_msgs
+    )
 
     rows = [
         json.loads(line)

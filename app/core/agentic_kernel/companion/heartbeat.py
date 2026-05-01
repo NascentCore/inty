@@ -2,8 +2,9 @@
 
 触发模型回合时，请使用 ``run_turn(..., inner_tick_turn=True,
 inner_tick_mode=InnerTickMode.PROACTIVE_CHAT)``（与原 ``heartbeat_turn`` 等价语义：
-向 API 注入 ``HEARTBEAT_SYNTHETIC_USER_TEXT`` 为 **system** 消息 + 无工具；
-transcript 仍写一条短 ``role=user`` 行（``PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER``）并标 ``heartbeat`` 供调度；本模块保留时间与文案常量。
+向 API 注入 ``HEARTBEAT_SYNTHETIC_USER_TEXT`` 为 **system** 消息，并追加一条 **user**
+占位（``PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER``）以满足 chat completion 对 user 轮的要求；无工具；
+transcript 仍写对应 ``role=user`` 行并标 ``heartbeat`` 供调度；本模块保留时间与文案常量。
 """
 
 from __future__ import annotations

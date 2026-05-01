@@ -6,7 +6,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+from .heartbeat import (
+    HEARTBEAT_SYNTHETIC_USER_TEXT,
+    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+)
 from .memory_registry import get_memory_store
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import ChatMessage, ContextMeta, InnerTickMode, PromptBundle
@@ -46,13 +49,21 @@ def build_repl_turn_base_messages(
     user_msg_uuid = str(uuid.uuid4())
     if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
-    messages.append(
-        {
-            "role": "user",
-            "content": user_text,
-            TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
-        }
-    )
+        messages.append(
+            {
+                "role": "user",
+                "content": PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+            }
+        )
+    else:
+        messages.append(
+            {
+                "role": "user",
+                "content": user_text,
+                TRANSCRIPT_MSG_UUID_KEY: user_msg_uuid,
+            }
+        )
     return messages, user_msg_uuid
 
 
