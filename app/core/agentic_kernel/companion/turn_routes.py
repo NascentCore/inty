@@ -14,7 +14,12 @@ BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
 
 
 class TurnRouteMode(str, Enum):
-    """Which execution strategy run_turn uses for this round."""
+    """Which execution strategy run_turn uses for this round.
+
+    ``HEARTBEAT_SYNC`` vs ``INNER_TICK_SYNC``: both use the same synchronous
+    completion loop in ``turn.run_turn``; the heartbeat value marks proactive
+    chat (no tools, ``LLM_SCENE_CHAT``) for logs and routing taxonomy only.
+    """
 
     HEARTBEAT_SYNC = "heartbeat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"
@@ -30,6 +35,7 @@ def resolve_turn_route_mode(
     tools_enabled: bool,
     enable_async_tool_background: bool,
 ) -> TurnRouteMode:
+    """Pick route label; inner-tick heartbeat/proactive labels differ only before ``run_turn`` merges paths."""
     if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
         return TurnRouteMode.HEARTBEAT_SYNC
     if inner_tick_turn:
