@@ -57,6 +57,11 @@ python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
 python scripts/init_subscription_plans_simple.py
 
+UVICORN_LOG_ARGS=()
+if [ -n "${UVICORN_LOG_LEVEL:-}" ]; then
+  UVICORN_LOG_ARGS=(--log-level "${UVICORN_LOG_LEVEL}")
+fi
+
 if [ "$DEV" = true ]; then
   if [ "$TEST" = true ]; then
     echo "Starting in test mode..."
@@ -67,8 +72,8 @@ if [ "$DEV" = true ]; then
   # python scripts/init_admin_user.py --user-id user-testing --is-superuser=true
   # 生成测试用户用于本地 app 登陆
   python scripts/create_email_password_user.py --email test@sxwl.ai --password test --yes
-  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload
+  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 --reload "${UVICORN_LOG_ARGS[@]}"
 else
   echo "Starting in normal mode without reloading..."
-  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000
+  python -m uvicorn backend.inty.main:app --host 0.0.0.0 --port 8000 "${UVICORN_LOG_ARGS[@]}"
 fi

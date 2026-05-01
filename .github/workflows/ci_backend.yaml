@@ -151,7 +151,11 @@ jobs:
 
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
-          python -m pytest -m "not noci" -v -s tests/
+          python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
+        env:
+          INTY_LOGGING_LEVEL: INFO
+          INTY_CONSOLE_LOGGING_LEVEL: INFO
+          UVICORN_LOG_LEVEL: warning
 
       - name: Start push worker and verify startup
         run: |
