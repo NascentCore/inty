@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import codecs
 import os
 import sys
 import time
@@ -25,7 +26,6 @@ from .backend_chat_ws import (
     BackendChatWsBridge,
     BackendChatWsError,
     default_api_base_url,
-    default_kickoff_drain_sec,
     http_base_to_ws_chat_url,
 )
 from .proto_log import (
@@ -268,44 +268,100 @@ def _duplex_inflight_posix_select_wait(
 def _readline_backend_ws_with_sideband(
     bridge: BackendChatWsBridge, prompt: str
 ) -> str:
-    """Block for one user line while printing late server-pushed chat frames (POSIX TTY)."""
+    """Block for one user line while printing late server-pushed chat frames (POSIX TTY).
+
+    Uses cbreak + no echo and a local buffer so a sideband assistant frame can clear the
+    current input line, print the message, then redraw ``prompt`` and any partial input.
+    """
     sel = _posix_select_module_for_stdin()
     if sel is None:
         return input(prompt)
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    while True:
-        try:
-            r, _, _ = sel.select(
-                [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
-            )
-        except (ValueError, OSError):
-            return input(prompt)
-        if not r:
-            item = pop_downlink_item(bridge)
-            if item is not None:
-                print()
-                if item["kind"] == "assistant":
-                    _print_assistant_reply(
-                        item["text"],
-                        0.0,
-                        meta_data=item.get("meta_data") or {},
+    import termios  # noqa: PLC0415
+    import tty  # noqa: PLC0415
+
+    fd = sys.stdin.fileno()
+    old_attr = termios.tcgetattr(fd)
+    dec = codecs.getincrementaldecoder("utf-8")()
+    buf = ""
+    tty_ready = False
+    try:
+        tty.setcbreak(fd)
+        attrs = termios.tcgetattr(fd)
+        attrs[3] &= ~termios.ECHO
+        termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
+        tty_ready = True
+        sys.stdout.write(prompt + buf)
+        sys.stdout.flush()
+
+        def redraw_edit_line() -> None:
+            sys.stdout.write("\r\033[2K" + prompt + buf)
+            sys.stdout.flush()
+
+        def emit_sideband_item(item: Mapping[str, Any]) -> None:
+            sys.stdout.write("\r\033[2K")
+            sys.stdout.flush()
+            print()
+            if item["kind"] == "assistant":
+                _print_assistant_reply(
+                    item["text"],
+                    0.0,
+                    meta_data=item.get("meta_data") or {},
+                )
+            else:
+                print(
+                    format_ws_error_banner(
+                        item["code"],
+                        item["message"],
+                        wall_ts=repl_wall_ts_str(),
                     )
-                else:
-                    print(
-                        format_ws_error_banner(
-                            item["code"],
-                            item["message"],
-                            wall_ts=repl_wall_ts_str(),
-                        )
-                    )
-                sys.stdout.write(prompt)
-                sys.stdout.flush()
-            continue
-        line = sys.stdin.readline()
-        if line == "":
-            raise EOFError
-        return line[:-1] if line.endswith("\n") else line
+                )
+            sys.stdout.write(prompt + buf)
+            sys.stdout.flush()
+
+        while True:
+            try:
+                r, _, _ = sel.select(
+                    [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
+                )
+            except (ValueError, OSError):
+                return input(prompt)
+            if not r:
+                item = pop_downlink_item(bridge)
+                if item is not None:
+                    emit_sideband_item(item)
+                continue
+            while True:
+                chunk = os.read(fd, 1)
+                if not chunk:
+                    raise EOFError
+                text = dec.decode(chunk, final=False)
+                if not text:
+                    continue
+                for ch in text:
+                    if ch in ("\r", "\n"):
+                        sys.stdout.write("\r\033[2K")
+                        sys.stdout.write(prompt + buf + "\n")
+                        sys.stdout.flush()
+                        return buf
+                    if ch == "\x04":
+                        if not buf:
+                            raise EOFError
+                        continue
+                    if ch in ("\x7f", "\x08"):
+                        if buf:
+                            buf = buf[:-1]
+                            redraw_edit_line()
+                        continue
+                    if ord(ch) < 32 and ch != "\t":
+                        continue
+                    buf += ch
+                    redraw_edit_line()
+                r2, _, _ = sel.select([sys.stdin], [], [], 0)
+                if not r2:
+                    break
+    finally:
+        if tty_ready:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
 
 
 def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
@@ -412,12 +468,6 @@ def _repl_run_backend_ws_branch(
     bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
     bridge.start()
     try:
-        kick = bridge.drain_proactive_assistant_if_any(
-            timeout_sec=default_kickoff_drain_sec()
-        )
-        if kick:
-            ktext, kmeta = kick
-            _print_assistant_reply(ktext, 0.0, meta_data=kmeta)
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)
     finally:
         bridge.stop()
