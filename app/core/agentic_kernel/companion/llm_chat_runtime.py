@@ -22,27 +22,30 @@ _OPENROUTER_JSON_MAX_ATTEMPTS = 3
 _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
-_OPEN_LANGSMITH_PARENT_RUNS: set[Any] = set()
+# RunTree instances are not hashable; track by id(root) so registration cannot throw after root.post().
+_OPEN_LANGSMITH_PARENT_RUNS: dict[int, Any] = {}
 _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED = False
 
 
 def _register_open_langsmith_parent_run(root: Any) -> None:
     global _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED
     with _OPEN_LANGSMITH_PARENT_LOCK:
-        _OPEN_LANGSMITH_PARENT_RUNS.add(root)
+        _OPEN_LANGSMITH_PARENT_RUNS[id(root)] = root
         if not _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED:
             atexit.register(_flush_open_langsmith_parent_runs_on_exit)
             _ATEXIT_LANGSMITH_PARENT_FLUSH_REGISTERED = True
 
 
 def _unregister_open_langsmith_parent_run(root: Any) -> None:
+    if root is None:
+        return
     with _OPEN_LANGSMITH_PARENT_LOCK:
-        _OPEN_LANGSMITH_PARENT_RUNS.discard(root)
+        _OPEN_LANGSMITH_PARENT_RUNS.pop(id(root), None)
 
 
 def _flush_open_langsmith_parent_runs_on_exit() -> None:
     with _OPEN_LANGSMITH_PARENT_LOCK:
-        pending = list(_OPEN_LANGSMITH_PARENT_RUNS)
+        pending = list(_OPEN_LANGSMITH_PARENT_RUNS.values())
         _OPEN_LANGSMITH_PARENT_RUNS.clear()
     for run in pending:
         end_companion_turn_root_run_safe(
