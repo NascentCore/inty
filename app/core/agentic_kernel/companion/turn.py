@@ -47,7 +47,7 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompts import build_system_messages, build_system_prompt
+from .prompts import build_system_messages
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_content,
@@ -81,6 +81,7 @@ from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,
+    langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
 from .workspace import WorkspacePaths
@@ -88,13 +89,14 @@ from .workspace import WorkspacePaths
 _MAX_TOOL_ROUNDS = 24
 
 
-def _replace_leading_system_messages(
-    messages: list[dict[str, Any]], system_content: str
+def _replace_leading_system_messages_multi(
+    messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
+    """Strip initial system role block(s) and prepend structured system messages."""
     i = 0
     while i < len(messages) and messages[i].get("role") == "system":
         i += 1
-    return [{"role": "system", "content": system_content}, *messages[i:]]
+    return [*system_messages, *messages[i:]]
 
 
 def _preview(s: str, max_len: int = 280) -> str:
@@ -244,6 +246,7 @@ async def run_turn(
     ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
+    langsmith_llm_run_acc = ""
 
     # Tool loop
     tools = tools_for_turn
@@ -270,6 +273,8 @@ async def run_turn(
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
+            chat_model=llm_client._resolve_model("chat"),
+            tool_model=llm_client._resolve_model("tool"),
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:
@@ -295,7 +300,7 @@ async def run_turn(
             try:
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     used_async_tool_background = True
-                    tool_system_text = build_system_prompt(
+                    tool_system_msgs = build_system_messages(
                         bundle,
                         context,
                         enable_tools=True,
@@ -307,7 +312,7 @@ async def run_turn(
                         interactive_bootstrap_active=interactive_bootstrap,
                         include_significance_perception_slice=False,
                     )
-                    chat_system_text = build_system_prompt(
+                    chat_system_msgs = build_system_messages(
                         bundle,
                         context,
                         enable_tools=True,
@@ -319,11 +324,11 @@ async def run_turn(
                         interactive_bootstrap_active=interactive_bootstrap,
                         include_significance_perception_slice=True,
                     )
-                    chat_msgs = _replace_leading_system_messages(
-                        messages, chat_system_text
+                    chat_msgs = _replace_leading_system_messages_multi(
+                        messages, chat_system_msgs
                     )
-                    tool_msgs = _replace_leading_system_messages(
-                        messages, tool_system_text
+                    tool_msgs = _replace_leading_system_messages_multi(
+                        messages, tool_system_msgs
                     )
                     chat_model = llm_client._resolve_model("chat")
                     tool_model = llm_client._resolve_model("tool")
@@ -377,6 +382,9 @@ async def run_turn(
                             langsmith_trace_id_from_completion(resp)
                             or langsmith_trace_acc
                         )
+                        ls_lr = langsmith_llm_run_id_from_completion(resp)
+                        if ls_lr:
+                            langsmith_llm_run_acc = ls_lr
                     except asyncio.TimeoutError as exc:
                         raise RuntimeError(
                             f"async chat front timed out after "
@@ -399,8 +407,8 @@ async def run_turn(
                     )
                     msg = resp.choices[0].message
                     raw_content = msg.content or ""
-                    last_text, significance_meta = (
-                        split_dual_llm_chat_branch_content(raw_content)
+                    last_text, significance_meta = split_dual_llm_chat_branch_content(
+                        raw_content
                     )
                     logger.info(
                         "run_turn loop_done rounds={} loop_total_ms={:.0f} route={}",
@@ -413,7 +421,9 @@ async def run_turn(
                         "user_msg_uuid={} ls_trace_id={} defer_parent_end_to_tool_bg_thread=1",
                         trace_id,
                         user_msg_uuid,
-                        companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run),
+                        companion_turn_langsmith_parent_trace_id_str(
+                            langsmith_parent_run
+                        ),
                     )
                 else:
                     for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
@@ -454,6 +464,9 @@ async def run_turn(
                             langsmith_trace_id_from_completion(resp)
                             or langsmith_trace_acc
                         )
+                        ls_lr = langsmith_llm_run_id_from_completion(resp)
+                        if ls_lr:
+                            langsmith_llm_run_acc = ls_lr
                         approx_ctx_chars = sum(
                             len(str(m.get("content") or "")) for m in messages
                         )
@@ -630,6 +643,7 @@ async def run_turn(
         user_msg_uuid=user_msg_uuid,
         trace_id=trace_id,
         langsmith_trace_id=langsmith_trace_acc,
+        langsmith_run_id=langsmith_llm_run_acc,
         used_async_tool_background=used_async_tool_background,
         assistant_source="inner_tick" if inner_tick_turn else "chat",
     )

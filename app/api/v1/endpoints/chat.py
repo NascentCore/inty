@@ -115,9 +115,7 @@ async def _verify_ws_simple_llm_reply(
     if snippet:
         system = f"You are {name}. Character notes: {snippet[:1200]}"
     else:
-        system = (
-            f"You are {name}. Reply concisely in the same language as the user's message."
-        )
+        system = f"You are {name}. Reply concisely in the same language as the user's message."
 
     client = get_chat_openai_client()
 
@@ -587,9 +585,13 @@ async def _build_companion_tool_background_ws_payload(
         "source": "tool_bg",
         "trace_id": ev.trace_id,
         "reply_to_user_msg_uuid": ev.user_msg_uuid,
+        "tool_bg_output_to_user": ev.output_to_user,
+        "tool_bg_generation_deliver": ev.generation_deliver,
     }
     if ev.langsmith_trace_id:
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
+    if ev.langsmith_run_id:
+        meta_data["langsmith_run_id"] = ev.langsmith_run_id
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -784,8 +786,8 @@ async def _agent_chat_completions_impl(
                         chat_route == "websocket"
                         and companion_ws_foreground_pending is not None
                     ):
-                        companion_preset_uid = _require_websocket_companion_message_id_uuid(
-                            request
+                        companion_preset_uid = (
+                            _require_websocket_companion_message_id_uuid(request)
                         )
                         companion_ws_foreground_pending[companion_preset_uid] = {
                             "session_id": session_id,
@@ -829,10 +831,16 @@ async def _agent_chat_completions_impl(
                     if companion_turn.trace_id:
                         companion_ai_meta["trace_id"] = companion_turn.trace_id
                     if companion_turn.user_msg_uuid:
-                        companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+                        companion_ai_meta["user_msg_uuid"] = (
+                            companion_turn.user_msg_uuid
+                        )
                     if companion_turn.langsmith_trace_id:
                         companion_ai_meta["langsmith_trace_id"] = (
                             companion_turn.langsmith_trace_id
+                        )
+                    if companion_turn.langsmith_run_id:
+                        companion_ai_meta["langsmith_run_id"] = (
+                            companion_turn.langsmith_run_id
                         )
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:

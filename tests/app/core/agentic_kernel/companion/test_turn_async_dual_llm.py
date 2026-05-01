@@ -92,6 +92,14 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert out.assistant_text == "foreground ok"
     assert len(client.chat_calls) == 1
     assert client.chat_calls[0].get("tools") is None
+    fg_msgs = client.chat_calls[0]["messages"]
+    fg_system = [m for m in fg_msgs if m.get("role") == "system"]
+    assert len(fg_system) >= 2, "foreground chat should use multiple system messages (not one concatenated block)"
+    assert any("## IDENTITY" in str(m.get("content") or "") for m in fg_system)
+    assert any("## SOUL" in str(m.get("content") or "") for m in fg_system)
     assert len(bg_jobs) == 1
+    bg_msgs = bg_jobs[0]["request_messages"]
+    bg_system = [m for m in bg_msgs if m.get("role") == "system"]
+    assert len(bg_system) >= 2, "background tool path should use multiple system messages"
     assert bg_jobs[0]["tool_model_name"] == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop

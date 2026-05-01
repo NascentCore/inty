@@ -110,6 +110,6 @@ async def tool_update_agent_status_line(root: Path, status_line: str) -> str:
         return "status line cleared"
     preview = normalized
     if len(preview) > _STATUS_LINE_TOOL_PREVIEW_MAX_CHARS:
-        preview = preview[: _STATUS_LINE_TOOL_PREVIEW_MAX_CHARS] + "..."
+        preview = preview[:_STATUS_LINE_TOOL_PREVIEW_MAX_CHARS] + "..."
     inner = _status_line_tool_result_quoted_fragment(preview)
     return f'status line updated to "{inner}"'

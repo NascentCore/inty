@@ -109,18 +109,30 @@ def _repl_tool_contract_image_generation_clause() -> str:
     )
 
 
-def _repl_tool_contract_suffix_after_image_clause() -> str:
-    return (
+def _repl_tool_contract_suffix_after_image_clause(*, tool_side_compact: bool = False) -> str:
+    base = (
         "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/档案中不存在的路径；"
         "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
         "无写入持久化档案需求、无需核对 MemoryStore 中持久化内容、无自察必要、无生图请求时，不要调用工具。"
-        "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
+    )
+    if tool_side_compact:
+        return (
+            base
+            + "**异步工具后台首轮 API**：若服务端为该轮工具路首轮附加了 `response_format`（仅含 `skip` 的机器可读 JSON），"
+            + "则该轮 **`message.content` 只能是该 JSON**，不得写入对用户可见的角色扮演长文；对用户说话由并行 chat 路负责。"
+            + "除该首轮与下文「工具环收尾 JSON 路由」所指收尾消息外，其余 assistant 对外说明仍仅用自然语言，"
+            + "不要主动复述工具名、`skip`/`output_to_user` 等字段名或工程细节。保持简洁有温度。"
+        )
+    return (
+        base
+        + "回复用户时仅用自然语言，不要提工具名、JSON、文件名或技术细节。保持简洁有温度。"
     )
 
 
 def _output_contract_text_with_tools(
     *,
     include_repl_image_generation_contract: bool = True,
+    tool_side_compact: bool = False,
 ) -> str:
     base = (
         "输出与工具："
@@ -152,13 +164,14 @@ def _output_contract_text_with_tools(
     )
     if include_repl_image_generation_contract:
         base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_suffix_after_image_clause()
+    base += _repl_tool_contract_suffix_after_image_clause(tool_side_compact=tool_side_compact)
     return base
 
 
 def _output_contract_text_interactive_bootstrap_tools(
     *,
     include_repl_image_generation_contract: bool = True,
+    tool_side_compact: bool = False,
 ) -> str:
     base = (
         "输出与工具（交互式关系建立阶段）："
@@ -179,7 +192,7 @@ def _output_contract_text_interactive_bootstrap_tools(
     )
     if include_repl_image_generation_contract:
         base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_suffix_after_image_clause()
+    base += _repl_tool_contract_suffix_after_image_clause(tool_side_compact=tool_side_compact)
     return base
 
 
@@ -252,6 +265,35 @@ def _tool_side_compact_directive() -> str:
     )
 
 
+def _tool_background_first_round_skip_contract_text() -> str:
+    return (
+        "## 工具路首轮（机器可读 skip）\n\n"
+        "在**异步工具后台**下，每一用户回合工具路的**第一次** `chat.completions` 调用可能附带 "
+        "`response_format`：此时 **`message.content` 只能是** JSON 对象 "
+        '`{"skip": true}` 或 `{"skip": false}`（不要 markdown 围栏，不要追加自然语言）。\n'
+        "- `skip: true`：本回合工具路判定**不需要**任何工具（对用户可见正文由并行 chat 路负责）。\n"
+        "- `skip: false`：本回合**需要**工具；须在**同一条** assistant 消息里发出至少一条 `tool_calls`。\n"
+        "若同条消息里仍出现了 `tool_calls`，**一律以执行工具为准**（避免漏工具），即使 `skip` 与之不一致。\n"
+        "工具环内后续轮次与**收尾**消息仍遵循上文「工具环收尾：对用户可见性的 JSON 路由」。\n"
+    )
+
+
+def _tool_background_final_json_routing_contract_text() -> str:
+    return (
+        "## 工具环收尾：对用户可见性的 JSON 路由\n\n"
+        "当**所有** tool_calls 已执行完毕、你给出**不再包含 tool_calls** 的最终 assistant 消息时，"
+        "`message.content` 应为 **合法 JSON 对象**（不要 markdown 围栏），字段：\n"
+        "- `output_to_user`（布尔）：用户是否还应收到一条后续气泡，用于总结本轮工具可读结果"
+        "（读档、列目录、联网检索、状态行、runtime_inspect 等）。"
+        "若本轮仅为静默持久化（如 user_profile_record、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
+        "- `user_visible_text`（字符串）：当 `output_to_user` 为 true 时的简短可见正文；"
+        "可为空字符串（例如仅图片路径将由系统附加）。\n"
+        "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
+        "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
+        "若你无法产出合法 JSON，后端可能追加一次补解析请求。\n"
+    )
+
+
 def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
@@ -305,6 +347,9 @@ def build_system_messages(
 
     if tool_side_compact and not heartbeat_turn and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
+        if tools_on:
+            out.append(_system_message(_tool_background_final_json_routing_contract_text()))
+            out.append(_system_message(_tool_background_first_round_skip_contract_text()))
 
     out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
@@ -366,6 +411,7 @@ def build_system_messages(
                     _system_message(
                         _output_contract_text_interactive_bootstrap_tools(
                             include_repl_image_generation_contract=True,
+                            tool_side_compact=tool_side_compact,
                         )
                     )
                 )
@@ -374,6 +420,7 @@ def build_system_messages(
                     _system_message(
                         _output_contract_text_with_tools(
                             include_repl_image_generation_contract=True,
+                            tool_side_compact=tool_side_compact,
                         )
                     )
                 )
