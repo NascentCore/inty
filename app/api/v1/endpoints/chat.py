@@ -646,7 +646,6 @@ async def _build_companion_tool_background_ws_payload(
 
 
 async def _try_fire_companion_ws_proactive_heartbeat(
-    db: AsyncSession,
     *,
     outbound_queue: asyncio.Queue,
     ctx: dict[str, Any],
@@ -659,61 +658,66 @@ async def _try_fire_companion_ws_proactive_heartbeat(
     if not user_id or not agent_id or chat_id_raw is None:
         return
 
-    r_user = await db.execute(select(User).where(User.id == user_id))
-    current_user = r_user.scalar_one_or_none()
-    if current_user is None:
-        return
+    async with AsyncSessionLocal() as pre_db:
+        r_user = await pre_db.execute(select(User).where(User.id == user_id))
+        current_user = r_user.scalar_one_or_none()
+        if current_user is None:
+            return
 
-    chat = await chat_service.get_or_create_chat_by_agent(
-        db=db, user_id=user_id, agent_id=agent_id
-    )
-    if str(chat.id) != str(chat_id_raw):
-        logger.debug(
-            "companion_ws_proactive_hb chat_id mismatch ctx={} db_chat_id={}",
-            chat_id_raw,
-            chat.id,
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=pre_db, user_id=user_id, agent_id=agent_id
         )
-        return
+        if str(chat.id) != str(chat_id_raw):
+            logger.debug(
+                "companion_ws_proactive_hb chat_id mismatch ctx={} db_chat_id={}",
+                chat_id_raw,
+                chat.id,
+            )
+            return
 
-    subscription = await subscription_svc.get_user_current_subscription(db, user_id)
-    is_subscribed = bool(subscription)
-    model_override = select_chat_model(user=current_user, is_subscribed=is_subscribed)
-
-    ws_path = companion_chat_service.companion_workspace_path_if_ready(
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat.id,
-        resolved_chat_model_id=model_override,
-    )
-    if ws_path is None:
-        return
-
-    remain = next_heartbeat_wait_seconds(
-        ws_path,
-        HeartbeatConfig(enabled=True),
-    )
-    if remain > 0:
-        return
-
-    is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
-        db, current_user
-    )
-    if not is_allowed:
-        logger.info(
-            "companion_ws_proactive_hb skipped subscription user={} used={} limit={}",
-            user_id,
-            used_count,
-            daily_limit,
+        subscription = await subscription_svc.get_user_current_subscription(
+            pre_db, user_id
         )
-        return
+        is_subscribed = bool(subscription)
+        model_override = select_chat_model(user=current_user, is_subscribed=is_subscribed)
 
-    session_id = generate_session_id(str(chat.id))
-    preset_uid = str(uuid.uuid4())
+        ws_path = companion_chat_service.companion_workspace_path_if_ready(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+        )
+        if ws_path is None:
+            return
+
+        remain = next_heartbeat_wait_seconds(
+            ws_path,
+            HeartbeatConfig(enabled=True),
+        )
+        if remain > 0:
+            return
+
+        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
+            pre_db, current_user
+        )
+        if not is_allowed:
+            logger.info(
+                "companion_ws_proactive_hb skipped subscription user={} used={} limit={}",
+                user_id,
+                used_count,
+                daily_limit,
+            )
+            return
+
+        chat_row_id = chat.id
+        chat_row_agent_id = chat.agent_id
+        session_id = generate_session_id(str(chat_row_id))
+        preset_uid = str(uuid.uuid4())
 
     companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
         user_id=user_id,
         agent_id=agent_id,
-        chat_id=chat.id,
+        chat_id=chat_row_id,
         user_text=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
         resolved_chat_model_id=model_override,
         defer_memory_update=True,
@@ -762,85 +766,92 @@ async def _try_fire_companion_ws_proactive_heartbeat(
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         companion_reply,
-        agent_id=chat.agent_id,
+        agent_id=chat_row_agent_id,
         meta_data=companion_ai_meta,
     )
 
-    try:
-        await subscription_svc.record_usage(
-            db,
-            user_id,
-            "chat",
-            1,
-            extra_data={
-                "agent_id": agent_id,
-                "message_length": 0,
-                "companion_ws_proactive_heartbeat": True,
-            },
+    async with AsyncSessionLocal() as post_db:
+        try:
+            await subscription_svc.record_usage(
+                post_db,
+                user_id,
+                "chat",
+                1,
+                extra_data={
+                    "agent_id": agent_id,
+                    "message_length": 0,
+                    "companion_ws_proactive_heartbeat": True,
+                },
+            )
+        except Exception as e:
+            logger.warning("companion_ws_proactive_hb record_usage failed: {}", str(e))
+
+        stub_request = ChatCompletionRequest(
+            messages=[
+                ChatMessage(
+                    role="user",
+                    content=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+                )
+            ],
+            message_id=preset_uid,
         )
-    except Exception as e:
-        logger.warning("companion_ws_proactive_hb record_usage failed: {}", str(e))
+        (
+            response_text_content,
+            response_content_parts,
+        ) = _normalize_chat_response_content(companion_reply)
 
-    stub_request = ChatCompletionRequest(
-        messages=[
-            ChatMessage(
-                role="user",
-                content=PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-            )
-        ],
-        message_id=preset_uid,
-    )
-    (
-        response_text_content,
-        response_content_parts,
-    ) = _normalize_chat_response_content(companion_reply)
+        latest_message_info = None
+        try:
+            if ai_message_id is not None:
+                latest_message_info = (
+                    await chat_history_service.get_ai_message_info_by_id(
+                        post_db, ai_message_id
+                    )
+                )
+            if latest_message_info is None:
+                latest_message_info = (
+                    await chat_history_service.get_latest_ai_message_info(
+                        post_db, session_id
+                    )
+                )
+        except Exception as e:
+            logger.warning("companion_ws_proactive_hb latest_message_info failed: {}", e)
 
-    latest_message_info = None
-    try:
-        if ai_message_id is not None:
-            latest_message_info = (
-                await chat_history_service.get_ai_message_info_by_id(db, ai_message_id)
+        user_message_id = None
+        try:
+            user_message_id = await chat_history_service.get_latest_user_message_id(
+                post_db, session_id
             )
-        if latest_message_info is None:
-            latest_message_info = await chat_history_service.get_latest_ai_message_info(
-                db, session_id
+        except Exception as e:
+            logger.warning(
+                "companion_ws_proactive_hb get_latest_user_message_id failed: {}", e
             )
-    except Exception as e:
-        logger.warning("companion_ws_proactive_hb latest_message_info failed: {}", e)
 
-    user_message_id = None
-    try:
-        user_message_id = await chat_history_service.get_latest_user_message_id(
-            db, session_id
+        subscription_actions = [
+            BizAction(action_type=ActionType.NONE, message=""),
+        ]
+        data = _build_chat_response(
+            response_text_content,
+            response_content_parts,
+            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+            latest_message_info,
+            None,
+            stub_request,
+            source_imate_id=None,
+            user_message_id=user_message_id,
+            subscription_actions=subscription_actions,
+            client_local_id=None,
         )
-    except Exception as e:
-        logger.warning("companion_ws_proactive_hb get_latest_user_message_id failed: {}", e)
-
-    subscription_actions = [
-        BizAction(action_type=ActionType.NONE, message=""),
-    ]
-    data = _build_chat_response(
-        response_text_content,
-        response_content_parts,
-        PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-        latest_message_info,
-        None,
-        stub_request,
-        source_imate_id=None,
-        user_message_id=user_message_id,
-        subscription_actions=subscription_actions,
-        client_local_id=None,
-    )
-    payload = schemas.APIResponse.success(data=data)
-    out = payload.model_dump(exclude_none=True)
-    out["agent_id"] = agent_id
-    out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
-    await outbound_queue.put(out)
+        payload = schemas.APIResponse.success(data=data)
+        out = payload.model_dump(exclude_none=True)
+        out["agent_id"] = agent_id
+        out["status_line"] = await _agent_status_line_for_chat_header(post_db, agent_id)
+        await outbound_queue.put(out)
     logger.info(
         "companion_ws_proactive_hb pushed assistant user={} agent={} chat_id={}",
         user_id,
         agent_id,
-        chat.id,
+        chat_row_id,
     )
 
 
@@ -1645,22 +1656,21 @@ async def chat_completions_websocket(
                 pass
             if not feats.companion_ws_proactive_heartbeat_enabled:
                 continue
-            if not companion_hb_ctx.get("user_id"):
-                continue
             async with companion_turn_lock:
-                async with AsyncSessionLocal() as hb_db:
-                    try:
-                        await _try_fire_companion_ws_proactive_heartbeat(
-                            hb_db,
-                            outbound_queue=outbound_queue,
-                            ctx=companion_hb_ctx,
-                            subscription_svc=subscription_svc,
-                        )
-                    except Exception:
-                        logger.exception(
-                            "companion_ws_proactive_hb worker failed user_id={}",
-                            companion_hb_ctx.get("user_id"),
-                        )
+                hb_user_for_log = companion_hb_ctx.get("user_id")
+                if not hb_user_for_log:
+                    continue
+                try:
+                    await _try_fire_companion_ws_proactive_heartbeat(
+                        outbound_queue=outbound_queue,
+                        ctx=companion_hb_ctx,
+                        subscription_svc=subscription_svc,
+                    )
+                except Exception:
+                    logger.exception(
+                        "companion_ws_proactive_hb worker failed user_id={}",
+                        hb_user_for_log,
+                    )
 
     hb_worker_task = asyncio.create_task(
         companion_ws_proactive_hb_worker(),
