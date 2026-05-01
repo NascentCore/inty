@@ -26,10 +26,10 @@ from app.core.agentic_kernel.tools.runtime import (
 )
 
 from .llm_chat_runtime import (
-    companion_turn_langsmith_parent_run_id_str,
     companion_turn_langsmith_parent_trace_id_str,
     create_chat_completion_sync,
     end_companion_turn_root_run_safe,
+    langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
@@ -374,7 +374,10 @@ def _initial_tool_bg_completion_with_fallbacks(
     force_tools: bool,
 ) -> tuple[Any, _InitialToolBgCompletionMeta]:
     """
-    First tool_background completion. May attach strict skip JSON schema when enabled.
+    First tool_background completion. Optionally forces assistant.content to ``{"skip": bool}``
+    (see ``TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT`` in ``tool_bg_routing``): skip=true ends the
+    loop without tools; skip=false should accompany tool_calls on the same message.
+
     Returns (response, meta for last_chat_completion_request snapshot).
     """
     schema_on = tool_bg_first_round_skip_schema_enabled()
@@ -523,7 +526,6 @@ async def _run_background_tool_loop(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
-    langsmith_run_id: str = "",
 ) -> None:
     try:
         if is_tool_background_aborted(user_msg_uuid):
@@ -611,6 +613,8 @@ async def _run_background_tool_loop(
         initial_tool_calls = (
             getattr(initial_response.choices[0].message, "tool_calls", None) or []
         )
+        # No tool_calls on the first reply: either skip=true (expected) or model/schema mismatch.
+        # skip=false with no tool_calls is logged as skip_false_no_tools; we do not retry here.
         if not initial_tool_calls:
             early_text = _assistant_text_from_completion_response(initial_response)
             if initial_meta.used_skip_schema:
@@ -742,6 +746,7 @@ async def _run_background_tool_loop(
 
         raw_final = _assistant_text_from_completion_response(loop_result.response)
         bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
+        bg_ls_llm_run = langsmith_llm_run_id_from_completion(loop_result.response)
         appended_turn_msgs = loop_result.messages[len(working_messages) :]
         tool_call_names = _extract_tool_call_names(appended_turn_msgs)
         image_paths = _local_paths_from_tool_messages(loop_result.messages)
@@ -848,7 +853,7 @@ async def _run_background_tool_loop(
                 elapsed_ms=elapsed_ms,
                 trace_id=trace_id,
                 langsmith_trace_id=bg_ls_trace,
-                langsmith_run_id=langsmith_run_id,
+                langsmith_run_id=bg_ls_llm_run,
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
             )
@@ -887,8 +892,6 @@ def start_tool_background_job(
         _register_thread(threading.current_thread())
         bg_ls_err: str | None = None
 
-        bg_ls_run_id = companion_turn_langsmith_parent_run_id_str(langsmith_parent_run)
-
         def _run_async_tool_loop() -> None:
             asyncio.run(
                 _run_background_tool_loop(
@@ -904,7 +907,6 @@ def start_tool_background_job(
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,
-                    langsmith_run_id=bg_ls_run_id,
                 )
             )
 

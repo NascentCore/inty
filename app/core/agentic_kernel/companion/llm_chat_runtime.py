@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import contextvars
 import json
 import os
 import threading
@@ -20,6 +21,13 @@ from app.utils.config import Environment
 
 _OPENROUTER_JSON_MAX_ATTEMPTS = 3
 _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
+
+# Set inside LangSmith wrap_openai ``process_outputs`` while the LLM run is still current
+# (``get_current_run_tree()`` after ``create`` returns has already reverted to the parent chain).
+_LS_WRAPPED_LLM_RUN_ID: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "inty_ls_wrapped_llm_run_id", default=""
+)
+_LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED = False
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
 # RunTree instances are not hashable; track by id(root) so registration cannot throw after root.post().
@@ -240,6 +248,47 @@ def end_companion_turn_root_run_safe(
     )
 
 
+def _ensure_langsmith_openai_chat_process_outputs_patch() -> None:
+    """Capture wrapped chat completion RunTree id during LangSmith ``process_outputs``."""
+    global _LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED
+    if _LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED:
+        return
+    try:
+        from langsmith import run_helpers as ls_rh
+        from langsmith.wrappers import _openai as ls_openai
+
+        _orig = ls_openai._process_chat_completion
+
+        def _inty_process_chat_completion(outputs: Any):
+            try:
+                rt = ls_rh.get_current_run_tree()
+                if rt is not None:
+                    rid = getattr(rt, "id", None)
+                    if rid is not None:
+                        s = str(rid).strip()
+                        if s:
+                            _LS_WRAPPED_LLM_RUN_ID.set(s)
+            except Exception:
+                pass
+            return _orig(outputs)
+
+        ls_openai._process_chat_completion = _inty_process_chat_completion
+        _LS_OPENAI_CHAT_PROCESS_OUTPUTS_PATCHED = True
+    except Exception as exc:
+        logger.debug("langsmith wrap_openai process_outputs patch skipped: {}", exc)
+
+
+def langsmith_llm_run_id_from_completion(resp: Any) -> str:
+    """LangSmith ``agentic_companion_*`` LLM run uuid (child under companion parent chain)."""
+    try:
+        v = getattr(resp, "langsmith_llm_run_id", None)
+        if v is None:
+            return ""
+        return str(v).strip()
+    except Exception:
+        return ""
+
+
 def langsmith_trace_id_from_completion(resp: Any) -> str:
     """Reads optional ``langsmith_trace_id`` copied onto the ChatCompletion by ``create_chat_completion_sync``."""
     try:
@@ -270,16 +319,27 @@ def _langsmith_trace_id_from_active_run_tree() -> str:
 
 
 def _completion_with_langsmith_trace_id(raw: Any) -> Any:
-    if langsmith_trace_id_from_completion(raw):
-        return raw
-    tid = _langsmith_trace_id_from_active_run_tree()
-    if not tid:
+    existing_tid = langsmith_trace_id_from_completion(raw)
+    tid = existing_tid or _langsmith_trace_id_from_active_run_tree()
+    try:
+        llm_rid = (_LS_WRAPPED_LLM_RUN_ID.get() or "").strip()
+    except LookupError:
+        llm_rid = ""
+
+    if not tid and not llm_rid:
         return raw
     model_copy = getattr(raw, "model_copy", None)
     if model_copy is None:
         return raw
+    updates: dict[str, Any] = {}
+    if tid and not existing_tid:
+        updates["langsmith_trace_id"] = tid
+    if llm_rid:
+        updates["langsmith_llm_run_id"] = llm_rid
+    if not updates:
+        return raw
     try:
-        return model_copy(update={"langsmith_trace_id": tid})
+        return model_copy(update=updates)
     except Exception:
         return raw
 
@@ -315,6 +375,7 @@ def create_chat_completion_sync(
     tool_choice: str | None = None,
     response_format: dict[str, Any] | None = None,
 ) -> Any:
+    _ensure_langsmith_openai_chat_process_outputs_patch()
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
@@ -329,6 +390,7 @@ def create_chat_completion_sync(
             create_kw["tool_choice"] = tool_choice
     for attempt in range(1, _OPENROUTER_JSON_MAX_ATTEMPTS + 1):
         try:
+            _LS_WRAPPED_LLM_RUN_ID.set("")
             raw = client.chat.completions.create(**create_kw)
             return _completion_with_langsmith_trace_id(raw)
         except json.JSONDecodeError as exc:
