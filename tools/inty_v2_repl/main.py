@@ -201,16 +201,15 @@ def _resolve_bearer_token_cli() -> str:
 _BACKEND_WS_SIDEBAND_POLL_SEC = 0.25
 
 
-def _use_posix_tty_duplex_select() -> bool:
-    if sys.platform == "win32":
-        return False
-    if not sys.stdin.isatty():
-        return False
+def _posix_select_module_for_stdin() -> Any | None:
+    """``select`` for TTY stdin multiplexing, or None when unsupported."""
+    if sys.platform == "win32" or not sys.stdin.isatty():
+        return None
     try:
-        import select  # noqa: F401, PLC0415
+        import select as select_mod  # noqa: PLC0415
     except ImportError:
-        return False
-    return True
+        return None
+    return select_mod
 
 
 def _write_pipe1(wfd: int) -> None:
@@ -270,17 +269,14 @@ def _readline_backend_ws_with_sideband(
     bridge: BackendChatWsBridge, prompt: str
 ) -> str:
     """Block for one user line while printing late server-pushed chat frames (POSIX TTY)."""
-    if sys.platform == "win32" or not sys.stdin.isatty():
-        return input(prompt)
-    try:
-        import select as _select
-    except ImportError:
+    sel = _posix_select_module_for_stdin()
+    if sel is None:
         return input(prompt)
     sys.stdout.write(prompt)
     sys.stdout.flush()
     while True:
         try:
-            r, _, _ = _select.select(
+            r, _, _ = sel.select(
                 [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
             )
         except (ValueError, OSError):
@@ -350,16 +346,15 @@ def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str
                     lambda _done_f, wpipe_fd=wpipe: _write_pipe1(wpipe_fd)
                 )
                 try:
-                    if _use_posix_tty_duplex_select():
-                        import select  # noqa: PLC0415
-
+                    sel = _posix_select_module_for_stdin()
+                    if sel is not None:
                         _duplex_inflight_posix_select_wait(
                             fut,
                             rpipe,
                             pending,
                             stdin_fd=sys.stdin.fileno(),
                             readline_fn=sys.stdin.readline,
-                            select_fn=select.select,
+                            select_fn=sel.select,
                         )
                     else:
                         _duplex_inflight_degraded_wait(fut)
