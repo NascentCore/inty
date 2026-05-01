@@ -30,6 +30,7 @@ from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
     INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
 
 # Synthetic Path prefix for workspace_root joining; Postgres MemoryStore keys are
@@ -306,6 +307,7 @@ async def run_companion_chat_turn_for_api(
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> CompanionTurnResult:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
@@ -364,6 +366,7 @@ async def run_companion_chat_turn_for_api(
         defer_memory_update=defer_memory_update,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
     run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
     logger.info(

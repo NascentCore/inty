@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any, Callable, List, Literal, Optional, TypeAlias, Union
 
@@ -44,6 +45,7 @@ from app.schemas.chat import (
     UserTimeContext,
     normalize_websocket_companion_message_id_uuid,
 )
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.schemas.response import (
     BizError,
     BusinessErrorCode,
@@ -796,6 +798,10 @@ async def _agent_chat_completions_impl(
                             "effective_local_id": effective_local_id,
                         }
                     try:
+                        companion_implicit_bundle = ImplicitSignalBundle(
+                            client_time=request.user_time_context,
+                            server_received_at_utc=datetime.now(timezone.utc),
+                        )
                         companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
                             user_id=current_user.id,
                             agent_id=agent_id,
@@ -806,6 +812,7 @@ async def _agent_chat_completions_impl(
                             session_id=session_id,
                             background_output_sink=companion_background_sink,
                             preset_user_msg_uuid=companion_preset_uid,
+                            implicit_signal_bundle=companion_implicit_bundle,
                         )
                         if (
                             companion_preset_uid is not None
