@@ -22,6 +22,8 @@ python -m tools.inty_v2_repl.main repl \
 - **HTTP base**: `INTY_API_BASE_URL` or `--api-base-url` (default `http://127.0.0.1:8000`); WebSocket URL is derived as `ws(s)://.../api/v1/chat/ws`.
 - **Logs**: `--workspace` (default `tools/inty_v2_repl/workspace/`), optional `--log-file`, or `--no-log-file` for stderr only.
 
+Interactive **`repl`** sends each line with **`post_turn`** (upload immediately). Downlink prints as frames arrive; the server still handles chat **in request order** per WebSocket. Override send-thread wait budget with **`INTY_V2_BACKEND_WS_POST_TURN_TIMEOUT_SEC`** (default `180`) if reconnect-heavy environments need more headroom.
+
 ## Layout
 
 | Module | Role |

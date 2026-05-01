@@ -67,6 +67,26 @@ def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, A
     return content, meta
 
 
+def _ws_chat_turn_send_payload(
+    agent_id: str,
+    user_text: str,
+    message_id: str | None,
+) -> tuple[str, str]:
+    mid = (
+        normalize_websocket_companion_message_id_uuid(message_id)
+        if message_id and str(message_id).strip()
+        else str(uuid.uuid4())
+    )
+    req = ChatWebSocketRequest(
+        agent_id=agent_id,
+        request=ChatCompletionRequest(
+            messages=[ChatMessage(role="user", content=user_text)],
+            message_id=mid,
+        ),
+    )
+    return mid, req.model_dump_json(by_alias=True)
+
+
 def default_api_base_url() -> str:
     return os.environ.get("INTY_API_BASE_URL", "http://127.0.0.1:8000").strip()
 
@@ -114,6 +134,18 @@ def default_send_turn_retries() -> int:
     except ValueError:
         return 8
     return max(1, min(v, 50))
+
+
+def default_post_turn_thread_timeout_sec() -> float:
+    """Thread-side timeout for ``post_turn`` ``Future.result`` (send-only, includes reconnect waits)."""
+    raw = os.environ.get("INTY_V2_BACKEND_WS_POST_TURN_TIMEOUT_SEC", "").strip()
+    if raw:
+        try:
+            v = float(raw)
+        except ValueError:
+            return 180.0
+        return max(30.0, min(v, 3600.0))
+    return 180.0
 
 
 def reconnect_delay_sec(attempt_index: int, *, initial: float, cap: float) -> float:
@@ -392,6 +424,61 @@ class BackendChatWsBridge:
                 continue
         raise TimeoutError("wait for chat WebSocket online timed out")
 
+    async def _post_turn_async(
+        self,
+        agent_id: str,
+        user_text: str,
+        *,
+        deadline_monotonic: float,
+        message_id: str | None = None,
+    ) -> str:
+        """Send one user chat JSON frame; return normalized ``message_id``. No recv."""
+        last_transport: BaseException | None = None
+        for attempt in range(self._send_max_retries):
+            await self._wait_online_async(deadline_monotonic=deadline_monotonic)
+            if not self._ws or not self._response_q:
+                last_transport = RuntimeError("websocket not connected")
+                logger.warning("chat ws not connected before post_turn (attempt {})", attempt)
+                continue
+            try:
+                mid, payload = _ws_chat_turn_send_payload(
+                    agent_id, user_text, message_id
+                )
+                await self._ws.send(payload)
+                return mid
+            except ConnectionClosed as e:
+                last_transport = e
+                logger.info(
+                    "chat ws ConnectionClosed during post_turn (attempt {})", attempt
+                )
+                continue
+        if last_transport is not None:
+            raise RuntimeError(
+                f"chat ws post_turn failed after {self._send_max_retries} attempts"
+            ) from last_transport
+        raise RuntimeError(f"chat ws post_turn failed after {self._send_max_retries} attempts")
+
+    def post_turn(
+        self,
+        agent_id: str,
+        user_text: str,
+        message_id: str | None = None,
+    ) -> str:
+        """Send one turn on the wire and return the normalized ``message_id`` (no wait for assistant)."""
+        if not self._loop:
+            raise RuntimeError("bridge not started")
+        send_budget = float(self._send_max_retries) * (self._reconnect_max + 30.0)
+        deadline = time.monotonic() + max(120.0, send_budget)
+        coro = self._post_turn_async(
+            agent_id,
+            user_text,
+            deadline_monotonic=deadline,
+            message_id=message_id,
+        )
+        fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        thread_timeout = max(120.0, send_budget, default_post_turn_thread_timeout_sec())
+        return fut.result(timeout=thread_timeout)
+
     def send_turn(
         self,
         agent_id: str,
@@ -431,19 +518,10 @@ class BackendChatWsBridge:
                 logger.warning("chat ws not connected before send (attempt {})", attempt)
                 continue
             try:
-                mid = (
-                    normalize_websocket_companion_message_id_uuid(message_id)
-                    if message_id and str(message_id).strip()
-                    else str(uuid.uuid4())
+                mid, payload = _ws_chat_turn_send_payload(
+                    agent_id, user_text, message_id
                 )
-                req = ChatWebSocketRequest(
-                    agent_id=agent_id,
-                    request=ChatCompletionRequest(
-                        messages=[ChatMessage(role="user", content=user_text)],
-                        message_id=mid,
-                    ),
-                )
-                await self._ws.send(req.model_dump_json(by_alias=True))
+                await self._ws.send(payload)
                 while True:
                     data = await asyncio.wait_for(
                         self._response_q.get(), timeout=self._recv_timeout
