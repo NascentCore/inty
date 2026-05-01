@@ -154,6 +154,15 @@ def _assistant_text_from_completion_response(resp: Any) -> str:
     msg = resp.choices[0].message
     content = msg.content
     if not isinstance(content, str):
+        preview = repr(content)
+        if len(preview) > 500:
+            preview = preview[:500] + "..."
+        logger.warning(
+            "repl orchestrator completion assistant message.content is not str "
+            "type={} preview={}",
+            type(content).__name__,
+            preview,
+        )
         return ""
     return content.strip()
 

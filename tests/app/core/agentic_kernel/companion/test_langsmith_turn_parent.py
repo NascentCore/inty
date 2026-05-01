@@ -36,19 +36,45 @@ def test_create_companion_turn_root_run_returns_none_when_disabled(_mock: MagicM
     "app.core.agentic_kernel.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
     return_value=True,
 )
+def test_create_companion_turn_root_run_skips_kernel_placeholder_models(
+    _en: MagicMock,
+) -> None:
+    assert (
+        create_companion_turn_root_run(
+            inty_trace_id="t1",
+            user_msg_uuid="u1",
+            chat_model="m/chat",
+            tool_model="m/tool",
+        )
+        is None
+    )
+
+
+@patch(
+    "app.core.agentic_kernel.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
 @patch("langsmith.run_trees.RunTree")
 def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     mock_rt_cls: MagicMock, _en: MagicMock
 ) -> None:
     mock_root = MagicMock()
     mock_rt_cls.return_value = mock_root
-    out = create_companion_turn_root_run(inty_trace_id="t1", user_msg_uuid="u1")
+    out = create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model="stub/chat-route",
+        tool_model="stub/tool-route",
+    )
     assert out is mock_root
     mock_rt_cls.assert_called_once()
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_user_turn"
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
+    assert kwargs["inputs"]["chat_model"] == "stub/chat-route"
+    assert kwargs["inputs"]["tool_model"] == "stub/tool-route"
+    assert kwargs["extra"]["metadata"]["ls_model_name"] == "stub/chat-route | stub/tool-route"
     mock_root.post.assert_called_once()
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
@@ -62,7 +88,6 @@ def test_end_companion_turn_root_run_safe_noop_for_none() -> None:
 
 
 @patch("app.core.agentic_kernel.companion.tool_background.threading.Thread")
-@patch("app.core.agentic_kernel.companion.tool_background._unregister_thread")
 @patch("app.core.agentic_kernel.companion.tool_background.set_tool_background_db_loop")
 @patch("app.core.agentic_kernel.companion.tool_background.clear_tool_background_db_loop")
 @patch("asyncio.run")
@@ -74,7 +99,6 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     mock_asyncio_run: MagicMock,
     mock_clear_loop: MagicMock,
     mock_set_loop: MagicMock,
-    mock_unreg: MagicMock,
     mock_thread: MagicMock,
 ) -> None:
     parent = MagicMock()
@@ -120,7 +144,6 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
 
 
 @patch("app.core.agentic_kernel.companion.tool_background.threading.Thread")
-@patch("app.core.agentic_kernel.companion.tool_background._unregister_thread")
 @patch("app.core.agentic_kernel.companion.tool_background.set_tool_background_db_loop")
 @patch("app.core.agentic_kernel.companion.tool_background.clear_tool_background_db_loop")
 @patch("asyncio.run")
@@ -132,7 +155,6 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     mock_asyncio_run: MagicMock,
     mock_clear_loop: MagicMock,
     mock_set_loop: MagicMock,
-    mock_unreg: MagicMock,
     mock_thread: MagicMock,
 ) -> None:
     with patch("langsmith.run_helpers.set_tracing_parent") as mock_sp:

@@ -81,6 +81,7 @@ from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,
+    langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
 from .workspace import WorkspacePaths
@@ -245,6 +246,7 @@ async def run_turn(
     ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
+    langsmith_llm_run_acc = ""
 
     # Tool loop
     tools = tools_for_turn
@@ -271,6 +273,8 @@ async def run_turn(
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
+            chat_model=llm_client._resolve_model("chat"),
+            tool_model=llm_client._resolve_model("tool"),
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:
@@ -378,6 +382,9 @@ async def run_turn(
                             langsmith_trace_id_from_completion(resp)
                             or langsmith_trace_acc
                         )
+                        ls_lr = langsmith_llm_run_id_from_completion(resp)
+                        if ls_lr:
+                            langsmith_llm_run_acc = ls_lr
                     except asyncio.TimeoutError as exc:
                         raise RuntimeError(
                             f"async chat front timed out after "
@@ -457,6 +464,9 @@ async def run_turn(
                             langsmith_trace_id_from_completion(resp)
                             or langsmith_trace_acc
                         )
+                        ls_lr = langsmith_llm_run_id_from_completion(resp)
+                        if ls_lr:
+                            langsmith_llm_run_acc = ls_lr
                         approx_ctx_chars = sum(
                             len(str(m.get("content") or "")) for m in messages
                         )
@@ -633,6 +643,7 @@ async def run_turn(
         user_msg_uuid=user_msg_uuid,
         trace_id=trace_id,
         langsmith_trace_id=langsmith_trace_acc,
+        langsmith_run_id=langsmith_llm_run_acc,
         used_async_tool_background=used_async_tool_background,
         assistant_source="inner_tick" if inner_tick_turn else "chat",
     )

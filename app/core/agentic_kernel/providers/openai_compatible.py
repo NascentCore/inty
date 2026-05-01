@@ -50,6 +50,13 @@ def create_sync_client(options: OpenAICompatibleSyncOptions) -> Any:
     if not options.wrap_langsmith:
         return base_client
 
+    # ``traceable`` binds ``functools.partial(_handle_container_end, ...)`` at wrap time; patch
+    # ``run_helpers._handle_container_end`` before ``wrap_openai`` so new partials see Inty's wrapper.
+    from app.core.agentic_kernel.companion.llm_chat_runtime import (
+        _ensure_langsmith_handle_container_end_patch,
+    )
+
+    _ensure_langsmith_handle_container_end_patch()
     return wrappers.wrap_openai(
         base_client,
         chat_name=options.chat_name,
