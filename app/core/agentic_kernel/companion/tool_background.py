@@ -893,9 +893,9 @@ def start_tool_background_job(
             )
 
         try:
-            if main_event_loop is not None:
-                set_tool_background_db_loop(main_event_loop)
             try:
+                if main_event_loop is not None:
+                    set_tool_background_db_loop(main_event_loop)
                 if langsmith_parent_run is not None:
                     from langsmith.run_helpers import set_tracing_parent
 

@@ -172,21 +172,34 @@ def end_companion_turn_root_run_safe(
         )
         return
     try:
-        root_run.post()
+        root_run.patch(exclude_inputs=True)
     except Exception as exc:
         logger.warning(
-            "companion_turn_langsmith_parent post after end failed ls_end_source={!r} "
-            "thread={} ls_trace_id={} ls_run_id={} err={}",
+            "companion_turn_langsmith_parent patch after end failed ls_end_source={!r} "
+            "thread={} ls_trace_id={} ls_run_id={} err={}; falling back to post",
             ls_end_source,
             th_name,
             ls_tid,
             ls_rid,
             exc,
         )
-        return
+        try:
+            root_run.post()
+        except Exception as exc2:
+            logger.warning(
+                "companion_turn_langsmith_parent post after patch failure failed "
+                "ls_end_source={!r} thread={} ls_trace_id={} ls_run_id={} err={}",
+                ls_end_source,
+                th_name,
+                ls_tid,
+                ls_rid,
+                exc2,
+            )
+            _unregister_open_langsmith_parent_run(root_run)
+            return
     _unregister_open_langsmith_parent_run(root_run)
     logger.info(
-        "langsmith_companion_parent_run end_posted ls_end_source={!r} thread={} "
+        "langsmith_companion_parent_run end_synced ls_end_source={!r} thread={} "
         "ls_trace_id={} ls_run_id={} has_error={}",
         ls_end_source,
         th_name,
