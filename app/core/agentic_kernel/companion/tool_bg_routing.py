@@ -1,4 +1,10 @@
-"""Structured routing for async tool_background: output_to_user gate (+ optional user_visible_text)."""
+"""Structured routing for async tool_background.
+
+- First LLM call in the tool-path branch may use ``TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT``:
+  ``message.content`` is only ``{"skip": bool}``. See docstring on that constant.
+- After the tool loop finishes, routing uses ``output_to_user`` / ``user_visible_text``
+  (``TOOL_BG_ROUTING_RESPONSE_FORMAT``); that is unrelated to ``skip``.
+"""
 
 from __future__ import annotations
 
@@ -17,6 +23,13 @@ _MARKDOWN_JSON_FENCE_RE = re.compile(
 
 TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME: Final[str] = "tool_bg_first_round_skip"
 
+# When enabled, the tool_background *first* completion sets response_format to this schema so
+# the model cannot fill assistant.content with user-facing roleplay; parallel chat branch owns NL.
+# ``skip`` semantics (also surfaced in LangSmith as the span output):
+#   True  -- tool-path needs no tool_calls this turn; backend exits the background loop early.
+#   False -- model asserts tools are needed; contract requires tool_calls on the *same* message.
+#            If tool_calls are absent anyway, ``tool_background`` logs and returns (model error).
+# If both tool_calls and content exist, tool_calls win (prompts tell the model to stay consistent).
 TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT: Final[dict[str, Any]] = {
     "type": "json_schema",
     "json_schema": {
@@ -41,7 +54,15 @@ TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT: Final[dict[str, Any]] = {
 
 
 class ToolBgFirstRoundEnvelope(BaseModel):
-    skip: bool
+    """Parsed ``{"skip": ...}`` body from the first tool-path completion when skip schema is on."""
+
+    skip: bool = Field(
+        ...,
+        description=(
+            "False means 'run tools this turn'; True means 'skip the tool loop entirely this turn'. "
+            "See TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT comment block."
+        ),
+    )
 
 
 TOOL_BG_ROUTING_RESPONSE_FORMAT: Final[dict[str, Any]] = {
@@ -102,7 +123,7 @@ def tool_bg_first_round_skip_schema_enabled() -> bool:
 
 
 def parse_tool_bg_first_round_skip(raw: str) -> ToolBgFirstRoundEnvelope | None:
-    """Parse first-round tool-path assistant body; None if invalid."""
+    """Parse first-round assistant ``content`` when it must be skip JSON only; None if invalid."""
     body = _strip_json_fence(raw)
     if not body:
         return None
