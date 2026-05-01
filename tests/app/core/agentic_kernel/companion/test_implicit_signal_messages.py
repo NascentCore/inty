@@ -69,7 +69,7 @@ def test_build_system_messages_inserts_implicit_after_security() -> None:
     sec_idx = next(
         i
         for i, m in enumerate(msgs)
-        if m["role"] == "system" and "情感伴侣型助手" in (m.get("content") or "")
+        if m["role"] == "system" and "SOUL 与 USER" in (m.get("content") or "")
     )
     utc_idx = next(
         i
