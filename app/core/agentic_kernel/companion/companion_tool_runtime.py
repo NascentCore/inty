@@ -74,7 +74,6 @@ WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
         "CAPABILITIES.md",
-        "HEARTBEAT.md",
         "IDENTITY.md",
         "MEMORY.md",
         "SIGNIFICANCE_PERCEPTION.md",

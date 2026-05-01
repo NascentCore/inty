@@ -22,7 +22,7 @@ from app.core.agentic_kernel.companion.manager import (
     CompanionManager,
     CompanionSession,
 )
-from app.core.agentic_kernel.companion.models import CompanionTurnResult
+from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
@@ -41,6 +41,24 @@ DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
     "并温和邀请对方说说此刻状态或想聊的事；不要提及系统、连接、初始化、工具名。"
 )
+
+
+def companion_workspace_path_if_ready(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+) -> Path | None:
+    """Return resolved companion workspace path if the session store is initialized; else None."""
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    if not session.is_initialized:
+        return None
+    return session.workspace_path.resolve()
 
 
 def clear_companion_chat_service_caches() -> None:
@@ -308,6 +326,8 @@ async def run_companion_chat_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
 ) -> CompanionTurnResult:
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
@@ -363,6 +383,8 @@ async def run_companion_chat_turn_for_api(
     out = await manager.run_turn(
         session,
         user_text,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=inner_tick_mode,
         defer_memory_update=defer_memory_update,
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,

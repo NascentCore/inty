@@ -54,24 +54,25 @@ Authoritative assembly: `prompts.build_system_prompt`. Sections are joined with 
 2. Fixed security baseline (untrusted user input; respect SOUL/USER boundaries).
 3. **`AGENTS.md`** — if non-empty.
 4. **`TOOLS.md`** — if non-empty.
-5. **`HEARTBEAT.md`** — if non-empty.
-6. **`IDENTITY.md`**
-7. **`SOUL.md`**
-8. Context-mode clause (derived from `context.json`, not a file).
-9. **`USER.md`**
-10. **Only if the experience profile injects private memory** (`intimate`, `emotional_companion`, ...), and file has content (after caps):
+5. **`IDENTITY.md`**
+6. **`SOUL.md`**
+7. Context-mode clause (derived from `context.json`, not a file).
+8. **`USER.md`**
+9. **Only if the experience profile injects private memory** (`intimate`, `emotional_companion`, ...), and file has content (after caps):
    - `memory/daily/YYYY-MM-DD.md` (today’s raw diary)
    - `memory/YYYY-MM-DD.md` (today’s day summary)
    - **`MEMORY.md`** (long-term)
-11. Output / tool contract (REPL adds `user_profile_record`, `schedule_task`, workspace file tools, `companion_set_experience_profile` (persist `context_mode` after explicit user confirmation), optional `google_web_search` (Google Custom Search API; env `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`), optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
+10. Output / tool contract (REPL adds `user_profile_record`, `schedule_task`, workspace file tools, `companion_set_experience_profile` (persist `context_mode` after explicit user confirmation), optional `google_web_search` (Google Custom Search API; env `GOOGLE_CSE_API_KEY`, `GOOGLE_CSE_ID`), optional `generate_image` (text-to-image) with context-inferred `num_images` (default 1), and optional `modify_image` (image-to-image) when editing an existing image).
+
+**陪伴心跳**（`InnerTickMode.PROACTIVE_CHAT`）不在此编号列表里：该轮在 system 中追加 `_heartbeat_clause()`，并用 `HEARTBEAT_SYNTHETIC_USER_TEXT` / transcript 标记驱动调度；**不**读取工作区 `HEARTBEAT.md`。
 
 `generate_image` at runtime uses the **Inty repo-root** `config.yaml` (`fal.api_key`, GCS settings) via `app.core.images.fal`; see [README.md](README.md). Optional env `INTY_V2_PROTO_Z_IMAGE_GCS_BASE` overrides the GCS object prefix; `INTY_V2_PROTO_Z_IMAGE_SKIP_GCS` skips GCS upload for faster local-only images.
 
-Optional docs (3–5) omitted entirely when missing or empty — no placeholder sections.
+Optional docs (3–4) omitted entirely when missing or empty — no placeholder sections.
 
 ## Disk read order in `load_prompt_bundle`
 
-Order differs from final prompt section order: implementation reads long-term **`MEMORY.md`** first and clears its body when private memory is not injected for the profile; then reads **`IDENTITY` / `SOUL` / `USER`**, then optional **`AGENTS` / `TOOLS` / `HEARTBEAT`**, and when private memory injects the two day-scoped memory paths (`memory/daily/…`, `memory/YYYY-MM-DD.md`). This is an implementation detail; **compatibility and semantics are defined by `build_system_prompt`**, not by read order.
+Order differs from final prompt section order: implementation reads long-term **`MEMORY.md`** first and clears its body when private memory is not injected for the profile; then reads **`IDENTITY` / `SOUL` / `USER`**, then optional **`AGENTS` / `TOOLS`**, and when private memory injects the two day-scoped memory paths (`memory/daily/…`, `memory/YYYY-MM-DD.md`). This is an implementation detail; **compatibility and semantics are defined by `build_system_prompt`**, not by read order.
 
 ## Day summary LLM cadence
 
@@ -93,7 +94,7 @@ Initialization checks (`is_workspace_initialized` / `run_turn`) require on disk:
 
 `IDENTITY.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, `transcript.jsonl`.
 
-`AGENTS.md`, `TOOLS.md`, `HEARTBEAT.md`, `context.json` are optional; missing `context.json` falls back to default `ContextMeta`. **`CAPABILITIES.md` is not read by the prototype** (REPL allowlist may still permit writing it as a normal root file if you use it manually).
+`AGENTS.md`, `TOOLS.md`, `context.json` are optional; missing `context.json` falls back to default `ContextMeta`. **`CAPABILITIES.md` is not read by the prototype** (REPL allowlist may still permit writing it as a normal root file if you use it manually).
 
 ## Workspace `AGENTS.md` (human-oriented)
 

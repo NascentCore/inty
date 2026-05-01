@@ -107,7 +107,6 @@ class PromptBundle(BaseModel):
         description="Deprecated: AGENTS.md is not loaded or injected; kept default-empty for callers/tests.",
     )
     tools_md: str = ""
-    heartbeat_md: str = ""
     memory_raw_diary_today_md: str = ""
     memory_day_summary_today_md: str = ""
 
@@ -167,11 +166,6 @@ def load_prompt_bundle(
         tools_md=_read_memory_document_optional(
             store,
             "TOOLS.md",
-            max_chars=_OPTIONAL_DOC_MAX_CHARS,
-        ),
-        heartbeat_md=_read_memory_document_optional(
-            store,
-            "HEARTBEAT.md",
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
         significance_perception_md=(

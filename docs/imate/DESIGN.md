@@ -119,7 +119,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 
 ## 回合内行为（kernel 实现摘要）
 
-- **System**：来自 `PromptBundle`、上下文模式、`TOOLS.md` / `HEARTBEAT.md`（若有）、`IDENTITY` / `SOUL` / `USER`、亲密模式下可选 MEMORY 块、可选 interactive bootstrap 片段、输出契约等；组装函数为 **`build_system_messages`**。
+- **System**：来自 `PromptBundle`、上下文模式、`TOOLS.md`（若非空）、`IDENTITY` / `SOUL` / `USER`、亲密模式下可选 MEMORY 块、可选 interactive bootstrap 片段、输出契约等；**陪伴心跳**轮由 `_heartbeat_clause()` 与 `HEARTBEAT_SYNTHETIC_USER_TEXT`（system）驱动，不读工作区 `HEARTBEAT.md`；组装函数为 **`build_system_messages`**。
 - **Transcript**：窗口由 `transcript_llm_window_max_messages` 与默认上限共同约束；可配置 compaction。
 - **LLM**：OpenAI 兼容 **`CompanionLLMClient.chat_completion`**；无 tools 时用 chat 路由客户端与 chat model，有 tools 时用 tool 路由客户端与 tool model（见 `_resolve_model`）。
 - **Tools**：`tools.py` 暴露 schema；执行在 **`companion_tool_runtime.execute_tool_call`**。

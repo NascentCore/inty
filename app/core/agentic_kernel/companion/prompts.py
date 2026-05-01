@@ -340,12 +340,6 @@ def build_system_messages(
         out.append(
             _system_message("## TOOLS（工具说明切片）\n\n" + bundle.tools_md.strip())
         )
-    if bundle.heartbeat_md.strip():
-        out.append(
-            _system_message(
-                "## HEARTBEAT（检查清单）\n\n" + bundle.heartbeat_md.strip()
-            )
-        )
 
     if tick_proactive:
         out.append(_system_message(_heartbeat_clause()))

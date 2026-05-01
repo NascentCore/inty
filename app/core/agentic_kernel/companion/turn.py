@@ -78,7 +78,10 @@ from .tools import (
     build_openai_repl_tools_inner_tick,
 )
 from .utc import utc_iso_ts
-from .heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+from .heartbeat import (
+    HEARTBEAT_SYNTHETIC_USER_TEXT,
+    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+)
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -149,7 +152,7 @@ async def run_turn(
 
     if inner_tick_turn:
         user_text = (
-            HEARTBEAT_SYNTHETIC_USER_TEXT
+            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
             if tick_proactive
             else INNER_TICK_SYNTHETIC_USER_TEXT
         )

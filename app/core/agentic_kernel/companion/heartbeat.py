@@ -2,7 +2,8 @@
 
 触发模型回合时，请使用 ``run_turn(..., inner_tick_turn=True,
 inner_tick_mode=InnerTickMode.PROACTIVE_CHAT)``（与原 ``heartbeat_turn`` 等价语义：
-``HEARTBEAT_SYNTHETIC_USER_TEXT`` + 无工具）；本模块保留时间与合成文案常量。
+向 API 注入 ``HEARTBEAT_SYNTHETIC_USER_TEXT`` 为 **system** 消息 + 无工具；
+transcript 仍写一条短 ``role=user`` 行（``PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER``）并标 ``heartbeat`` 供调度；本模块保留时间与文案常量。
 """
 
 from __future__ import annotations
@@ -21,6 +22,8 @@ HEARTBEAT_SYNTHETIC_USER_TEXT = (
     "延续当下氛围与节奏，像同一场对话的下一拍；不要突然换风格、换口吻或像新开一局；"
     "不要提系统、心跳、等待或「我以为你走了」；不要调用工具。）"
 )
+
+PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER = "（陪伴心跳）"
 
 _NEVER = 86400.0 * 365.0
 _RHYTHM_CLAMP_SEC = (90.0, 900.0)

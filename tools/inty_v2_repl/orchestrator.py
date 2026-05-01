@@ -40,7 +40,9 @@ from .memory_update import memory_update_after_turn, schedule_memory_update_afte
 from app.core.agentic_kernel.companion.ai_private_prompt import (
     get_ai_private_text_for_prompt,
 )
-from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+from app.core.agentic_kernel.companion.heartbeat import (
+    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+)
 
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
@@ -135,14 +137,13 @@ def _debug_log_prompt_bundle(bundle: PromptBundle, *, context: ContextMeta) -> N
     )
     logger.debug(
         "run_turn.bundle_chars identity={} soul={} user={} memory={} "
-        "agents={} tools={} heartbeat={} diary_today={} day_summary={}",
+        "agents={} tools={} diary_today={} day_summary={}",
         len(bundle.identity),
         len(bundle.soul),
         len(bundle.user_md),
         len(bundle.memory_md),
         len(bundle.agents_md),
         len(bundle.tools_md),
-        len(bundle.heartbeat_md),
         len(bundle.memory_raw_diary_today_md),
         len(bundle.memory_day_summary_today_md),
     )
@@ -767,7 +768,7 @@ async def run_turn(
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
     inner_tick_turn=True：合成用户静默回合；transcript 用户行标 inner_tick。
     inner_tick_mode=maintenance（默认）：内在节拍 + 精简工具集，不走 async_chat_tool_background。
-    inner_tick_mode=proactive_chat：原「陪伴心跳」语义（合成文案 + 禁工具），用户行额外标 heartbeat 以便调度统计。
+    inner_tick_mode=proactive_chat：原「陪伴心跳」语义（合成文案经 **system** 注入 + 禁工具），transcript 短用户行标 heartbeat 以便调度统计。
     repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。
     repl_transcript_ids_out：若传入非空 dict，成功落盘助手行后写入 user_msg_uuid / assistant_msg_uuid /
     trace_id / assistant_source（`chat` 或 `inner_tick`，供 REPL 标注来源）。
@@ -783,7 +784,7 @@ async def run_turn(
     )
     if inner_tick_turn:
         user_text = (
-            HEARTBEAT_SYNTHETIC_USER_TEXT
+            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
             if tick_proactive
             else INNER_TICK_SYNTHETIC_USER_TEXT
         )

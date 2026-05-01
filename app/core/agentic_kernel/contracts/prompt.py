@@ -24,7 +24,6 @@ class PromptContext(BaseModel):
     user_md: str = ""
     memory_md: str = ""
     tools_md: str = ""
-    heartbeat_md: str = ""
 
     @field_validator("context_mode")
     @classmethod

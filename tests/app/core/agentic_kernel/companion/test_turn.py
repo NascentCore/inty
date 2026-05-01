@@ -12,7 +12,10 @@ from app.core.agentic_kernel.companion.llm_client import (
     CompanionLLMConfig,
 )
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
-from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+from app.core.agentic_kernel.companion.heartbeat import (
+    HEARTBEAT_SYNTHETIC_USER_TEXT,
+    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
+)
 from app.core.agentic_kernel.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     InnerTickMode,
@@ -29,7 +32,10 @@ class _FakeLLMClient:
         return f"test/{role}"
 
     def chat_completion(self, **kwargs: Any) -> Any:
-        self.calls.append(dict(kwargs))
+        rec = dict(kwargs)
+        if isinstance(rec.get("messages"), list):
+            rec["messages"] = list(rec["messages"])
+        self.calls.append(rec)
         msg = SimpleNamespace(content="inner reply", tool_calls=[])
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
@@ -93,7 +99,7 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     assert not client.calls[0].get("tools")
     llm_msgs = client.calls[0]["messages"]
     assert llm_msgs[-1]["role"] == "user"
-    assert llm_msgs[-1]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert llm_msgs[-1]["content"] == PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
     assert llm_msgs[-2]["role"] == "system"
     assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
 
@@ -101,6 +107,7 @@ def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
         json.loads(line)
         for line in store.read_document("transcript.jsonl").strip().splitlines()
     ]
-    assert rows[0]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert rows[0]["role"] == "user"
+    assert rows[0]["content"] == PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
     assert rows[0]["inner_tick"] is True
     assert rows[0]["heartbeat"] is True
