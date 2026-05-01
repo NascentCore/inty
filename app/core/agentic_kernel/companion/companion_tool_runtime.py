@@ -597,7 +597,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "Keep it brief (roughly one short sentence). Pass an empty string to clear it. "
                     "Do not mention this tool or raw JSON to the user. "
                     "The tool returns a single line: status line cleared, or "
-                    'status line updated to \"...\"; mirror that in your natural reply when needed.'
+                    'status line updated to "..."; mirror that in your natural reply when needed.'
                 ),
                 "parameters": {
                     "type": "object",

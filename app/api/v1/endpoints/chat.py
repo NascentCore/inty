@@ -115,9 +115,7 @@ async def _verify_ws_simple_llm_reply(
     if snippet:
         system = f"You are {name}. Character notes: {snippet[:1200]}"
     else:
-        system = (
-            f"You are {name}. Reply concisely in the same language as the user's message."
-        )
+        system = f"You are {name}. Reply concisely in the same language as the user's message."
 
     client = get_chat_openai_client()
 
@@ -788,8 +786,8 @@ async def _agent_chat_completions_impl(
                         chat_route == "websocket"
                         and companion_ws_foreground_pending is not None
                     ):
-                        companion_preset_uid = _require_websocket_companion_message_id_uuid(
-                            request
+                        companion_preset_uid = (
+                            _require_websocket_companion_message_id_uuid(request)
                         )
                         companion_ws_foreground_pending[companion_preset_uid] = {
                             "session_id": session_id,
@@ -833,7 +831,9 @@ async def _agent_chat_completions_impl(
                     if companion_turn.trace_id:
                         companion_ai_meta["trace_id"] = companion_turn.trace_id
                     if companion_turn.user_msg_uuid:
-                        companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+                        companion_ai_meta["user_msg_uuid"] = (
+                            companion_turn.user_msg_uuid
+                        )
                     if companion_turn.langsmith_trace_id:
                         companion_ai_meta["langsmith_trace_id"] = (
                             companion_turn.langsmith_trace_id

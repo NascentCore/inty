@@ -122,9 +122,8 @@ export const UserDailyMessagesPage: React.FC = () => {
   const [previewImage, setPreviewImage] =
     useState<UserGeneratedImageItem | null>(null);
   const [characterDetailOpen, setCharacterDetailOpen] = useState(false);
-  const [characterDetailAgent, setCharacterDetailAgent] = useState<Agent | null>(
-    null,
-  );
+  const [characterDetailAgent, setCharacterDetailAgent] =
+    useState<Agent | null>(null);
   const [characterDetailLoading, setCharacterDetailLoading] = useState(false);
   const deepLinkedUserId = useMemo(() => {
     if (typeof window === "undefined") {
