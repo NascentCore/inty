@@ -10,7 +10,13 @@ from app.utils.config import CompanionWorkspaceBootstrapType
 
 from .bootstrap_user_interactive import interactive_bootstrap_active
 from .memory_store import MemoryStore
-from .models import ContextMeta, InnerTickMode, PromptBundle, load_context_meta, load_prompt_bundle
+from .models import (
+    ContextMeta,
+    InnerTickMode,
+    PromptBundle,
+    load_context_meta,
+    load_prompt_bundle,
+)
 from .prompts import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
@@ -51,9 +57,7 @@ def companion_turn_tools_and_system_messages(
         ),
         meta=context,
     )
-    tick_proactive = (
-        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    )
+    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
     tools_for_turn: list[dict[str, Any]] = (
         []

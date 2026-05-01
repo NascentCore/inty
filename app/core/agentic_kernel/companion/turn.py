@@ -141,9 +141,7 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
-    tick_proactive = (
-        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    )
+    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
 
     if inner_tick_turn:
@@ -178,16 +176,18 @@ async def run_turn(
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
-    tools_for_turn, system_messages, route_mode = companion_turn_tools_and_system_messages(
-        bundle=bundle,
-        context=context,
-        workspace_bootstrap_type=workspace_bootstrap_type,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=inner_tick_mode,
-        enable_async_tool_background=llm_client.config.enable_async_tool_background,
-        tool_side_compact_system_prompt=False,
-        include_significance_perception_slice=None,
-        implicit_signal_bundle=implicit_signal_bundle,
+    tools_for_turn, system_messages, route_mode = (
+        companion_turn_tools_and_system_messages(
+            bundle=bundle,
+            context=context,
+            workspace_bootstrap_type=workspace_bootstrap_type,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=inner_tick_mode,
+            enable_async_tool_background=llm_client.config.enable_async_tool_background,
+            tool_side_compact_system_prompt=False,
+            include_significance_perception_slice=None,
+            implicit_signal_bundle=implicit_signal_bundle,
+        )
     )
     use_dual_structured_chat = (
         (not inner_tick_turn)

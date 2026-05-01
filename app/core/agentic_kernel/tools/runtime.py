@@ -175,10 +175,9 @@ async def resolve_official_assistant_tool_loop_async(
     build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
     insert_system_message: Callable[[list[dict[str, Any]], str], None],
     initial_trace_id: str | None = None,
-    after_tool_messages_appended: Callable[
-        [list[dict[str, Any]]], Awaitable[None]
-    ]
-    | None = None,
+    after_tool_messages_appended: (
+        Callable[[list[dict[str, Any]]], Awaitable[None]] | None
+    ) = None,
 ) -> OfficialAssistantToolLoopResult:
     """
     Async variant of official assistant tool-call loop.
