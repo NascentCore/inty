@@ -8,8 +8,10 @@ from app.core.agentic_kernel.experience_profile import (
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
 )
+from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
+from .implicit_signal_messages import implicit_signal_system_messages
 from .models import ContextMeta, PromptBundle
 from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from .workspace import get_imate_axiom_system_text
@@ -310,6 +312,7 @@ def build_system_messages(
     chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
     tools_on = enable_tools or enable_user_profile_tool
     chat_branch_no_tool_api = (
@@ -324,6 +327,7 @@ def build_system_messages(
     if axiom:
         out.append(_system_message(axiom))
     out.append(_system_message(_security_base()))
+    out.extend(implicit_signal_system_messages(implicit_signal_bundle))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
         out.append(
@@ -457,6 +461,7 @@ def build_system_prompt(
     chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> str:
     msgs = build_system_messages(
         bundle,
@@ -472,5 +477,6 @@ def build_system_prompt(
         chat_output_format_prompt=chat_output_format_prompt,
         interactive_bootstrap_active=interactive_bootstrap_active,
         include_significance_perception_slice=include_significance_perception_slice,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
     return SYSTEM_PROMPT_SEP.join(str(m.get("content") or "") for m in msgs)

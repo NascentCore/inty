@@ -12,6 +12,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
 
 from .llm_client import (
@@ -122,6 +123,7 @@ async def run_turn(
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
@@ -210,6 +212,7 @@ async def run_turn(
         inner_tick_turn=inner_tick_turn,
         interactive_bootstrap_active=interactive_bootstrap,
         include_significance_perception_slice=use_dual_structured_chat,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
 
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
@@ -313,6 +316,7 @@ async def run_turn(
                         tool_side_compact=True,
                         interactive_bootstrap_active=interactive_bootstrap,
                         include_significance_perception_slice=False,
+                        implicit_signal_bundle=implicit_signal_bundle,
                     )
                     chat_system_msgs = build_system_messages(
                         bundle,
@@ -325,6 +329,7 @@ async def run_turn(
                         tool_side_compact=False,
                         interactive_bootstrap_active=interactive_bootstrap,
                         include_significance_perception_slice=True,
+                        implicit_signal_bundle=implicit_signal_bundle,
                     )
                     chat_msgs = _replace_leading_system_messages_multi(
                         messages, chat_system_msgs

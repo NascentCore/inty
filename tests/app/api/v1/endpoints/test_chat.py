@@ -1358,6 +1358,57 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_context(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {}
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["bundle"] = kwargs.get("implicit_signal_bundle")
+        return CompanionTurnResult(assistant_text="ok")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-impl",
+        workspace_dir="/tmp/inty_test_companion_ws_impl",
+        chat_id="chat-impl-1",
+        latest_user_message_db_id=90,
+        ai_message_id=901,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-impl",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "message_id": msg_uuid,
+                        "time_context": {
+                            "local_time": "2026-05-01T10:00:00",
+                            "timezone": "Europe/Berlin",
+                            "utc_offset_minutes": 120,
+                        },
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    bundle = captured["bundle"]
+    assert bundle is not None
+    assert bundle.schema_version == 1
+    assert bundle.client_time is not None
+    assert bundle.client_time.local_time == "2026-05-01T10:00:00"
+    assert bundle.client_time.timezone == "Europe/Berlin"
+    assert bundle.client_time.utc_offset_minutes == 120
+    assert bundle.server_received_at_utc is not None
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

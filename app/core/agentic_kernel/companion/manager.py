@@ -10,6 +10,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
 
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
@@ -186,6 +187,7 @@ class CompanionManager:
         defer_memory_update: bool = True,
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
+        implicit_signal_bundle: ImplicitSignalBundle | None = None,
     ) -> CompanionTurnResult:
         """执行一轮对话。"""
         return await run_turn(
@@ -202,6 +204,7 @@ class CompanionManager:
             workspace_bootstrap_type=session.config.workspace_bootstrap_type,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
+            implicit_signal_bundle=implicit_signal_bundle,
         )
 
     def shutdown_session(
