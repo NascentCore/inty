@@ -4,3 +4,4 @@
 - 推理调用通过既有公开入口链：`CompanionManager` / `run_turn`（或 `tools/inty_v2_repl` 对其薄封装），详见根目录 [README.md](README.md)。
 - 新增产物优先：`seeds/`（静态 workspace 模板）、`scorer/`（外部判定）、`scripts/`（批跑与报表）。
 - 仓库根已添加空包 `experimental/__init__.py`，以便 `from experimental.harness_seeding_demo...` 在 `PYTHONPATH=.` 下可用。
+- `scripts/run_trial.py` 与 `run_matrix.py` 在仓库根存在 `.env` 且已安装 `python-dotenv` 时会加载 API Key（与 [experimental/AGENTS.md](../AGENTS.md) 一致）。
