@@ -28,7 +28,6 @@ from .memory_pipeline import (
     schedule_memory_update_after_turn,
 )
 from .memory_store import MemoryStore
-from .bootstrap_user_interactive import interactive_bootstrap_active
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -49,7 +48,10 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompts import build_system_messages
+from .prompt_stack import (
+    companion_turn_tools_and_system_messages,
+    refresh_companion_turn_prompt_stack,
+)
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_content,
@@ -59,7 +61,7 @@ from .tool_background import (
     push_output_event,
     start_tool_background_job,
 )
-from .turn_routes import BackgroundToolEventSink, TurnRouteMode, resolve_turn_route_mode
+from .turn_routes import BackgroundToolEventSink, TurnRouteMode
 from .companion_tool_runtime import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
@@ -72,11 +74,7 @@ from .runtime_inspect_context import (
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
 )
-from .tools import (
-    WRITABLE_RELATIVE_PATHS,
-    build_companion_tools,
-    build_openai_repl_tools_inner_tick,
-)
+from .tools import WRITABLE_RELATIVE_PATHS
 from .utc import utc_iso_ts
 from .heartbeat import (
     HEARTBEAT_SYNTHETIC_USER_TEXT,
@@ -175,13 +173,6 @@ async def run_turn(
     # 加载 context 与 prompt bundle
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
-    interactive_bootstrap = interactive_bootstrap_active(
-        feature_enabled=(
-            workspace_bootstrap_type
-            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
-        ),
-        meta=context,
-    )
     rel_tr = paths.transcript.relative_to(root).as_posix()
     loaded = load_transcript_from_store(store, rel_tr)
     window_cap = transcript_llm_window_max_messages
@@ -189,38 +180,21 @@ async def run_turn(
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
-    tools_for_turn = (
-        []
-        if tick_proactive
-        else (
-            build_openai_repl_tools_inner_tick()
-            if inner_tick_turn
-            else build_companion_tools(
-                interactive_bootstrap_active=interactive_bootstrap
-            )
-        )
-    )
-    route_mode = resolve_turn_route_mode(
+    tools_for_turn, system_messages, route_mode = companion_turn_tools_and_system_messages(
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=workspace_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
-        tools_enabled=bool(tools_for_turn),
+        inner_tick_mode=inner_tick_mode,
         enable_async_tool_background=llm_client.config.enable_async_tool_background,
+        tool_side_compact_system_prompt=False,
+        include_significance_perception_slice=None,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
     use_dual_structured_chat = (
         (not inner_tick_turn)
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    )
-
-    system_messages = build_system_messages(
-        bundle,
-        context,
-        enable_tools=not tick_proactive,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
-        interactive_bootstrap_active=interactive_bootstrap,
-        include_significance_perception_slice=use_dual_structured_chat,
-        implicit_signal_bundle=implicit_signal_bundle,
     )
 
     prior_user_turns = sum(1 for m in loaded if m.role == "user")
@@ -316,27 +290,29 @@ async def run_turn(
             try:
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     used_async_tool_background = True
-                    tool_system_msgs = build_system_messages(
-                        bundle,
-                        context,
-                        enable_tools=True,
-                        enable_user_profile_tool=False,
+                    _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
+                        bundle=bundle,
+                        context=context,
+                        workspace_bootstrap_type=workspace_bootstrap_type,
                         inner_tick_turn=False,
-                        include_repl_image_generation_contract=True,
-                        tool_side_compact=True,
-                        interactive_bootstrap_active=interactive_bootstrap,
+                        inner_tick_mode=InnerTickMode.MAINTENANCE,
+                        enable_async_tool_background=(
+                            llm_client.config.enable_async_tool_background
+                        ),
+                        tool_side_compact_system_prompt=True,
                         include_significance_perception_slice=False,
                         implicit_signal_bundle=implicit_signal_bundle,
                     )
-                    chat_system_msgs = build_system_messages(
-                        bundle,
-                        context,
-                        enable_tools=True,
-                        enable_user_profile_tool=False,
+                    _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
+                        bundle=bundle,
+                        context=context,
+                        workspace_bootstrap_type=workspace_bootstrap_type,
                         inner_tick_turn=False,
-                        include_repl_image_generation_contract=False,
-                        tool_side_compact=False,
-                        interactive_bootstrap_active=interactive_bootstrap,
+                        inner_tick_mode=InnerTickMode.MAINTENANCE,
+                        enable_async_tool_background=(
+                            llm_client.config.enable_async_tool_background
+                        ),
+                        tool_side_compact_system_prompt=False,
                         include_significance_perception_slice=True,
                         implicit_signal_bundle=implicit_signal_bundle,
                     )
@@ -369,6 +345,10 @@ async def run_turn(
                         repository_only_workspace_text=repository_only_workspace_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
+                        workspace_bootstrap_type=workspace_bootstrap_type,
+                        enable_async_tool_background=(
+                            llm_client.config.enable_async_tool_background
+                        ),
                     )
 
                     runtime_inspect_set_last_chat_completion_request(
@@ -542,6 +522,20 @@ async def run_turn(
                                     "content": result,
                                 }
                             )
+                        tools_for_turn = refresh_companion_turn_prompt_stack(
+                            workspace=root,
+                            store=store,
+                            workspace_bootstrap_type=workspace_bootstrap_type,
+                            inner_tick_turn=inner_tick_turn,
+                            inner_tick_mode=inner_tick_mode,
+                            enable_async_tool_background=(
+                                llm_client.config.enable_async_tool_background
+                            ),
+                            messages=messages,
+                            tool_side_compact_system_prompt=False,
+                            implicit_signal_bundle=implicit_signal_bundle,
+                        )
+                        tools = tools_for_turn
                     else:
                         raise RuntimeError(
                             f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}"

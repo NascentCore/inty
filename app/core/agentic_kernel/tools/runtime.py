@@ -175,12 +175,21 @@ async def resolve_official_assistant_tool_loop_async(
     build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
     insert_system_message: Callable[[list[dict[str, Any]], str], None],
     initial_trace_id: str | None = None,
+    after_tool_messages_appended: Callable[
+        [list[dict[str, Any]]], Awaitable[None]
+    ]
+    | None = None,
 ) -> OfficialAssistantToolLoopResult:
     """
     Async variant of official assistant tool-call loop.
 
     Keep semantics aligned with `resolve_official_assistant_tool_loop`, but
     allow async tool execution and async model continuation in the same event loop.
+
+    ``after_tool_messages_appended`` runs once per tool round, after all tool
+    results (and any injected system messages) are appended and before
+    ``continue_chat``. Callers use it to refresh leading system messages or tool
+    definitions when workspace slices change mid-loop (e.g. bootstrap complete).
     """
     messages_with_tool_results = [*openai_messages]
     current_response = response
@@ -217,6 +226,8 @@ async def resolve_official_assistant_tool_loop_async(
                     messages_with_tool_results,
                     injected_system_message,
                 )
+        if after_tool_messages_appended is not None:
+            await after_tool_messages_appended(messages_with_tool_results)
         current_response, last_trace_id = await continue_chat(
             messages_with_tool_results
         )
