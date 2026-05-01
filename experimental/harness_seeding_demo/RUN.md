@@ -8,10 +8,12 @@
 
 - 已克隆本仓库，当前目录为仓库根（下文记为 `$REPO_ROOT`）。
 - Python 3.12 + 仓库根目录 `.venv`（或其它已安装 `requirements.txt` 的环境）。
-- 网络可达 OpenAI 兼容 API（默认 OpenRouter）：设置 **`OPENROUTER_API_KEY`** 或 **`OPENAI_API_KEY`**。
-- 可选：安装 **`python-dotenv`**，并在仓库根放置 **`.env`**；`run_trial.py` / `run_matrix.py` 会自动加载。
+- 网络可达 OpenAI 兼容 API（默认 OpenRouter）。
+- **推荐本地**：将密钥写在 **`devops/config.yaml.local`** 的 **`agent.api_key`**（与后端一致）。`run_trial.py` / `run_matrix.py` 默认读取该文件：若 **`OPENROUTER_API_KEY`** 与 **`OPENAI_API_KEY`** 均未设置，会把 `agent.api_key` 写入进程环境变量 **`OPENAI_API_KEY`**（不打印密钥）。文件不存在则跳过并沿用环境变量。
+- 或直接导出 **`OPENROUTER_API_KEY`** 或 **`OPENAI_API_KEY`**（优先级高于 YAML）。
+- 可选：安装 **`python-dotenv`**，仓库根 **`.env`** 会在读取 YAML 之前加载。
 
-其它可选环境变量见 `CompanionLLMConfig.from_openrouter_env()`（例如 `OPENROUTER_BASE_URL`）。
+- `run_trial` / `run_matrix` 默认设置 **`INTY_V2_PROTO_ASYNC_TOOL_BG=0`**（同步工具环），减少脚本进程内后台线程噪音；若需与默认 companion 行为一致，可在命令前自行 `export INTY_V2_PROTO_ASYNC_TOOL_BG=1`。
 
 ---
 
@@ -23,11 +25,17 @@ source .venv/bin/activate
 export PYTHONPATH=.
 ```
 
-确认密钥已生效（示例）：
+确认密钥来源其一可用：
 
 ```bash
+# 已导出 env
 test -n "${OPENROUTER_API_KEY:-${OPENAI_API_KEY:-}}" && echo "API key set"
+
+# 或依赖 config.yaml.local（默认路径）
+test -f devops/config.yaml.local && echo "config.yaml.local present"
 ```
+
+强制不用 YAML、只用环境变量：`--no-config-yaml`。指定其它配置文件：`--config-yaml /path/to/config.yaml`。
 
 ---
 
@@ -52,6 +60,8 @@ python experimental/harness_seeding_demo/scripts/run_trial.py \
 | `--threshold` | 打分阈值，默认 `0.85`，须在 `[0, 1]` |
 | `--max-turns` | 最多执行用户句数，默认 `50` |
 | `--defer-memory-ms` | 每轮后等待毫秒数，默认 `800`；异步记忆队列场景可用；设为 `0` 取消等待 |
+| `--config-yaml` | 默认 `devops/config.yaml.local`；缺失则跳过 |
+| `--no-config-yaml` | 不从 YAML 注入密钥 |
 
 **产出**
 

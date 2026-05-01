@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,9 @@ try:
     load_dotenv(_REPO_ROOT / ".env")
 except ImportError:
     pass
+
+
+_DEFAULT_CONFIG_YAML = _REPO_ROOT / "devops/config.yaml.local"
 
 
 def _parse_args() -> argparse.Namespace:
@@ -43,10 +47,22 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument("--defer-memory-ms", type=float, default=800.0)
+    p.add_argument(
+        "--config-yaml",
+        type=Path,
+        default=_DEFAULT_CONFIG_YAML,
+        help="Forwarded to run_trial (agent.api_key -> OPENAI_API_KEY when env unset).",
+    )
+    p.add_argument(
+        "--no-config-yaml",
+        action="store_true",
+        help="Forwarded to run_trial.",
+    )
     return p.parse_args()
 
 
 def main() -> None:
+    os.environ.setdefault("INTY_V2_PROTO_ASYNC_TOOL_BG", "0")
     args = _parse_args()
     if not (0.0 <= args.threshold <= 1.0):
         raise SystemExit("--threshold must be between 0 and 1")
@@ -74,6 +90,10 @@ def main() -> None:
             "--defer-memory-ms",
             str(args.defer_memory_ms),
         ]
+        if args.no_config_yaml:
+            cmd.append("--no-config-yaml")
+        else:
+            cmd.extend(["--config-yaml", str(args.config_yaml.resolve())])
         subprocess.run(cmd, check=True, cwd=str(_REPO_ROOT))
         summary_path = run_out / "summary.json"
         summary = json.loads(summary_path.read_text(encoding="utf-8"))

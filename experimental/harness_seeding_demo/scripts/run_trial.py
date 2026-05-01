@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -23,6 +24,21 @@ try:
     load_dotenv(_REPO_ROOT / ".env")
 except ImportError:
     pass
+
+from experimental.harness_seeding_demo.config_yaml_env import apply_llm_env_from_config_yaml
+
+_DEFAULT_CONFIG_YAML = _REPO_ROOT / "devops/config.yaml.local"
+
+
+def _maybe_load_config_yaml(path: Path | None) -> None:
+    if path is None:
+        return
+    p = path.resolve()
+    if not p.is_file():
+        print(f"harness: skip config yaml (not found): {p}", file=sys.stderr)
+        return
+    apply_llm_env_from_config_yaml(p)
+
 
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
@@ -48,6 +64,20 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--output-dir", type=Path, default=None)
     p.add_argument("--workspaces-base", type=Path, default=None)
+    p.add_argument(
+        "--config-yaml",
+        type=Path,
+        default=_DEFAULT_CONFIG_YAML,
+        help=(
+            "YAML with agent.api_key (used as OPENAI_API_KEY when env unset). "
+            f"Default {_DEFAULT_CONFIG_YAML.relative_to(_REPO_ROOT)}; file missing is skipped."
+        ),
+    )
+    p.add_argument(
+        "--no-config-yaml",
+        action="store_true",
+        help="Do not load agent.api_key from YAML (require OPENROUTER_API_KEY / OPENAI_API_KEY).",
+    )
     p.add_argument("--defer-memory-ms", type=float, default=800.0)
     return p.parse_args()
 
@@ -154,6 +184,9 @@ async def _run(args: argparse.Namespace) -> dict:
 
 def main() -> None:
     args = _parse_args()
+    os.environ.setdefault("INTY_V2_PROTO_ASYNC_TOOL_BG", "0")
+    if not args.no_config_yaml:
+        _maybe_load_config_yaml(args.config_yaml)
     summary = asyncio.run(_run(args))
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
