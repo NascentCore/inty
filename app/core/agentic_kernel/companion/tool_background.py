@@ -342,6 +342,15 @@ def background_tasks_count() -> int:
 def _assistant_text_from_completion_response(resp: Any) -> str:
     content = resp.choices[0].message.content
     if not isinstance(content, str):
+        preview = repr(content)
+        if len(preview) > 500:
+            preview = preview[:500] + "..."
+        logger.warning(
+            "tool_background completion assistant message.content is not str "
+            "type={} preview={}",
+            type(content).__name__,
+            preview,
+        )
         return ""
     return content.strip()
 
