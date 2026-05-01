@@ -45,6 +45,7 @@ class CompanionTurnResult(BaseModel):
     user_msg_uuid: str = ""
     trace_id: str = ""
     langsmith_trace_id: str = ""
+    langsmith_run_id: str = ""
     used_async_tool_background: bool = False
     assistant_source: AssistantTurnSource = "chat"
 

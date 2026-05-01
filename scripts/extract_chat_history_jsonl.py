@@ -21,7 +21,9 @@ def role_and_content(record: dict[str, Any]) -> tuple[str | None, str | None]:
     content = data.get("content")
     if content is None:
         return None, None
-    text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
+    text = (
+        content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
+    )
     if mtype == "human":
         return "user", text
     if mtype == "ai":
@@ -44,11 +46,15 @@ def print_schema_sample(path: Path, n: int) -> None:
             preview = (content or "")[:120].replace("\n", " ")
             print(f"--- record {i + 1} id={rid} ---")
             print(f"  role (derived): {role}")
-            print(f"  message_json.type: {mj.get('type') if isinstance(mj, dict) else mj}")
+            print(
+                f"  message_json.type: {mj.get('type') if isinstance(mj, dict) else mj}"
+            )
             if isinstance(mj, dict) and isinstance(mj.get("data"), dict):
                 inner = mj["data"].get("type")
                 print(f"  message_json.data.type (human rows): {inner!r}")
-            print(f"  content preview: {preview!r}{'...' if content and len(content) > 120 else ''}")
+            print(
+                f"  content preview: {preview!r}{'...' if content and len(content) > 120 else ''}"
+            )
             print()
 
 
@@ -61,7 +67,12 @@ def main() -> int:
         type=Path,
         help="Path to .jsonl chat export",
     )
-    ap.add_argument("--sample", type=int, default=3, help="Print first N records structure (default 3)")
+    ap.add_argument(
+        "--sample",
+        type=int,
+        default=3,
+        help="Print first N records structure (default 3)",
+    )
     ap.add_argument(
         "-o",
         "--output",
@@ -69,7 +80,12 @@ def main() -> int:
         default=None,
         help="Write all user/agent lines as text (default: <input>.dialogue.txt)",
     )
-    ap.add_argument("--max-print", type=int, default=40, help="Max dialogue lines to print to stdout")
+    ap.add_argument(
+        "--max-print",
+        type=int,
+        default=40,
+        help="Max dialogue lines to print to stdout",
+    )
     args = ap.parse_args()
 
     path: Path = args.jsonl
@@ -109,7 +125,9 @@ def main() -> int:
             lines_out.append(f"[{role}] {text}")
 
     total_messages = user_n + agent_n
-    print(f"Summary: user={user_n}, agent={agent_n}, skipped_rows={skip_n}, total_turns={total_messages}")
+    print(
+        f"Summary: user={user_n}, agent={agent_n}, skipped_rows={skip_n}, total_turns={total_messages}"
+    )
     print(f"Writing full dialogue to: {out_path}\n")
 
     out_path.write_text("\n\n".join(lines_out) + "\n", encoding="utf-8")
