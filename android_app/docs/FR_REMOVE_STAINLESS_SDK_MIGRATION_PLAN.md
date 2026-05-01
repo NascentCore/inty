@@ -203,7 +203,7 @@
    - 移除 `.gitmodules` 中 `android_app/library/inty_sdk` 条目；
    - 清理 `.prettierignore` 中 `android_app/library/inty_sdk`；
    - 清理 `.github/workflows/ci_android_app.yaml` 中 `android_app/library/inty_sdk` 影响范围映射；
-   - 清理 `scripts/update_inty_sdk_submodule.sh` 中 Android `inty_sdk` 更新逻辑；
+   - 删除已不再需要的 `scripts/update_inty_sdk_submodule.sh`（仓库已不再使用 inty SDK submodule）；
    - 更新 `android_app/README.md` 中 `git submodule update --init --recursive` 的 Android `inty_sdk` 指引。
 
 ### 验收
@@ -221,7 +221,7 @@
 - [x] 清理 `NetServiceMgr` 与其他文档中的“双栈并行/新功能优先 IntyNetworkManager”过时描述。
 - [x] 以 `rg "IntyNetworkManager|com\\.inty\\.api\\." android_app/{app,core}` 作为收尾门禁，确保运行时代码零引用（仅文档残留）。
 - [x] 以 `rg "includeBuild\\(\"library/inty_sdk\"\\)|implementation\\(libs\\.inty\\.kotlin\\)|inty-kotlin\\s*=\\s*\\{\\s*group\\s*=\\s*\"com\\.inty\\.api\"" android_app` 作为构建层收尾门禁，确保依赖零残留（仅迁移文档快照字段）。
-- [x] 以 `rg "android_app/library/inty_sdk|library/inty_sdk" .github/workflows/ci_android_app.yaml scripts/update_inty_sdk_submodule.sh android_app/README.md .gitmodules .prettierignore` 作为仓库治理收尾门禁，确保 submodule 零残留。
+- [x] 以 `rg "android_app/library/inty_sdk|library/inty_sdk" .github/workflows/ci_android_app.yaml android_app/README.md .gitmodules .prettierignore` 作为仓库治理收尾门禁，确保 submodule 零残留。
 
 ---
 
@@ -236,7 +236,7 @@
 
 - `rg "IntyNetworkManager|com\\.inty\\.api\\." android_app/{app,core}`
 - `rg "includeBuild\\(\"library/inty_sdk\"\\)|implementation\\(libs\\.inty\\.kotlin\\)|inty-kotlin\\s*=\\s*\\{\\s*group\\s*=\\s*\"com\\.inty\\.api\"" android_app`
-- `rg "android_app/library/inty_sdk|library/inty_sdk" .github/workflows/ci_android_app.yaml scripts/update_inty_sdk_submodule.sh android_app/README.md .gitmodules .prettierignore`
+- `rg "android_app/library/inty_sdk|library/inty_sdk" .github/workflows/ci_android_app.yaml android_app/README.md .gitmodules .prettierignore`
 
 ## 重点回归（按阶段选择）
 
@@ -318,7 +318,7 @@
 - `.gitmodules` 中 `android_app/library/inty_sdk` 条目已移除（文件已删除）；
 - `.prettierignore` 中 `android_app/library/inty_sdk` 与 `evaluation/inty_sdk` 已移除；
 - `.github/workflows/ci_android_app.yaml` 中 `android_app/library/inty_sdk` 变更触发映射已移除；
-- `scripts/update_inty_sdk_submodule.sh` 已降级为 no-op 并标记为废弃，避免误操作主仓库；
+- `scripts/update_inty_sdk_submodule.sh` 已删除（仓库不再使用 inty SDK submodule，无需占位脚本）；
 - `android_app/README.md` 已移除 Android submodule 初始化指引。
 
 ## 附录 B - Phase 0 迁移映射表（调用点 -> Retrofit / 本地模型）
@@ -336,7 +336,7 @@
 | `ChatRepository/UseCases/RoomImpl` 对 `ChatService.ChatImageGenerationResult` 的类型依赖 | `ChatRemoteDataSource` 直接返回本地 DTO（由 `IChatApi` 结果映射） | 新增/复用 `core/data/api/model` 聊天生图结果 DTO | 已完成（Phase 3） |
 | `NetworkStackCoordinator` / `IntySetting` 调 `IntyNetworkManager.clearClientCache` | 仅保留 `NetServiceMgr.clearCache`（及必要的统一协调入口） | 无 | Phase 4 |
 | `ModelConverters` 中 `IntyAgent/IntyUser` 转换 | 删除（迁移完成后不再需要） | 统一使用 `core/data/api/model` | Phase 4 |
-| `.gitmodules` / `.prettierignore` / `ci_android_app.yaml` / `update_inty_sdk_submodule.sh` / `android_app/README.md` 中 `android_app/library/inty_sdk` 残留 | 移除 submodule 配置与工程侧引用 | 无 | Phase 4 |
+| `.gitmodules` / `.prettierignore` / `ci_android_app.yaml` / `android_app/README.md` 中 `android_app/library/inty_sdk` 残留 | 移除 submodule 配置与工程侧引用 | 无 | Phase 4 |
 
 ---
 
