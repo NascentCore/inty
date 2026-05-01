@@ -57,6 +57,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
+from app.core.user_time_context_prompt import build_user_time_context_markdown
 
 # 圣诞节季节性提示词：放在角色设定（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
@@ -71,17 +72,6 @@ CHRISTMAS_TEMPORAL_CONTEXT_PROMPT = """##Temporal Context – Christmas Week
 - {{char}} may subtly guide the conversation toward Christmas-related themes when it feels organic to the moment, allowing holiday impressions, associations, or gentle references to emerge naturally.
 - Keep references subtle and grounded in the ongoing scene. No sudden scene switching.{{char}} may subtly steer the conversation toward Christmas-related topics, allowing the holiday atmosphere to naturally emerge in the dialogue."""
 
-MINUTES_PER_HOUR = 60
-USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##User Time Context"
-USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
-    "- This time reflects the user's local time, not the assistant's.",
-    "- Use it only as context for the user's situation and daily rhythm.",
-    "- You may softly infer typical human activities from the local hour (for example "
-    "morning routines or breakfast, midday work or lunch, evening wind-down or dinner, "
-    "late night rest) as loose priors, not facts about this user.",
-    "- Treat these as gentle scene context; avoid lecturing or assuming their schedule.",
-    "- Do not claim to need sleep or be offline.",
-]
 CONVERSATION_DATE_SYSTEM_PROMPT_TITLE = "##Conversation Date"
 
 
@@ -225,38 +215,10 @@ def _load_intellimate_change_logs() -> str:
     return _load_prompt_markdown_content(INTELLIMATE_CHANGE_LOGS_PATH)
 
 
-def _format_utc_offset_minutes(offset_minutes: int) -> str:
-    sign = "+" if offset_minutes >= 0 else "-"
-    total_minutes = abs(offset_minutes)
-    hours, minutes = divmod(total_minutes, MINUTES_PER_HOUR)
-    return f"UTC{sign}{hours:02d}:{minutes:02d}"
-
-
 def _build_user_time_context_prompt(
     user_time_context: Optional[UserTimeContext],
 ) -> Optional[str]:
-    if not user_time_context:
-        return None
-
-    lines = [USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE]
-
-    local_time = user_time_context.get("local_time")
-    if local_time:
-        lines.append(f"- User local time: {local_time}")
-
-    timezone = user_time_context.get("timezone")
-    if timezone:
-        lines.append(f"- User timezone: {timezone}")
-
-    utc_offset_minutes = user_time_context.get("utc_offset_minutes")
-    if isinstance(utc_offset_minutes, int):
-        lines.append(f"- UTC offset: {_format_utc_offset_minutes(utc_offset_minutes)}")
-
-    if len(lines) == 1:
-        return None
-
-    lines.extend(USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE)
-    return "\n".join(lines)
+    return build_user_time_context_markdown(user_time_context)
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
