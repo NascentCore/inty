@@ -47,7 +47,7 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompts import build_system_messages, build_system_prompt
+from .prompts import build_system_messages
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_content,
@@ -88,13 +88,14 @@ from .workspace import WorkspacePaths
 _MAX_TOOL_ROUNDS = 24
 
 
-def _replace_leading_system_messages(
-    messages: list[dict[str, Any]], system_content: str
+def _replace_leading_system_messages_multi(
+    messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
+    """Strip initial system role block(s) and prepend structured system messages."""
     i = 0
     while i < len(messages) and messages[i].get("role") == "system":
         i += 1
-    return [{"role": "system", "content": system_content}, *messages[i:]]
+    return [*system_messages, *messages[i:]]
 
 
 def _preview(s: str, max_len: int = 280) -> str:
@@ -295,7 +296,7 @@ async def run_turn(
             try:
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     used_async_tool_background = True
-                    tool_system_text = build_system_prompt(
+                    tool_system_msgs = build_system_messages(
                         bundle,
                         context,
                         enable_tools=True,
@@ -307,7 +308,7 @@ async def run_turn(
                         interactive_bootstrap_active=interactive_bootstrap,
                         include_significance_perception_slice=False,
                     )
-                    chat_system_text = build_system_prompt(
+                    chat_system_msgs = build_system_messages(
                         bundle,
                         context,
                         enable_tools=True,
@@ -319,11 +320,11 @@ async def run_turn(
                         interactive_bootstrap_active=interactive_bootstrap,
                         include_significance_perception_slice=True,
                     )
-                    chat_msgs = _replace_leading_system_messages(
-                        messages, chat_system_text
+                    chat_msgs = _replace_leading_system_messages_multi(
+                        messages, chat_system_msgs
                     )
-                    tool_msgs = _replace_leading_system_messages(
-                        messages, tool_system_text
+                    tool_msgs = _replace_leading_system_messages_multi(
+                        messages, tool_system_msgs
                     )
                     chat_model = llm_client._resolve_model("chat")
                     tool_model = llm_client._resolve_model("tool")
