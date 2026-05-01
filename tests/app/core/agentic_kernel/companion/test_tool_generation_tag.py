@@ -18,6 +18,7 @@ from app.core.agentic_kernel.companion.companion_tool_runtime import (
         ("modify_image", True),
         ("workspace_read_file", False),
         ("google_web_search", False),
+        ("read_web_page", False),
         ("tool_update_agent_status_line", False),
         ("user_profile_record", False),
     ],
