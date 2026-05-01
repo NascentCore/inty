@@ -40,8 +40,11 @@ from .memory_update import memory_update_after_turn, schedule_memory_update_afte
 from app.core.agentic_kernel.companion.ai_private_prompt import (
     get_ai_private_text_for_prompt,
 )
+from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
+    InnerTickMode,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,
@@ -181,6 +184,46 @@ def _invoke_model_result(assistant_text: str, significance: dict[str, Any] | Non
     if significance is not None:
         out["significance_perception"] = significance
     return out
+
+
+async def _run_proactive_inner_tick_chat_only(
+    messages: list[dict[str, Any]],
+    *,
+    trace_id: str | None,
+    supersede_check: Callable[[bool], None],
+) -> dict[str, Any]:
+    supersede_check(False)
+    client = get_client()
+    model = chat_model()
+    payload = _openai_messages_payload(messages)
+    t_api = time.perf_counter()
+    resp = await asyncio.to_thread(
+        create_chat_completion,
+        client,
+        model=model,
+        messages_payload=payload,
+        tools=[],
+        tool_choice=None,
+        response_format=None,
+    )
+    logger.info(
+        "repl.turn proactive_inner_tick trace_id={} chat_completions_ms={:.0f} model={}",
+        trace_id,
+        (time.perf_counter() - t_api) * 1000.0,
+        model,
+    )
+    _log_llm_round_result(
+        round_idx=1,
+        model=model,
+        resp=resp,
+        messages=messages,
+        trace_id=trace_id,
+    )
+    supersede_check(False)
+    return _invoke_model_result(
+        _assistant_text_from_completion_response(resp),
+        None,
+    )
 
 
 def _create_chat_completion_mirrored_tools_no_call(
@@ -412,6 +455,7 @@ async def _run_turn_with_user_profile_tools(
     root: Path,
     *,
     inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
     trace_id: str | None = None,
@@ -472,6 +516,7 @@ async def _run_turn_with_user_profile_tools(
                     context,
                     enable_user_profile_tool=True,
                     inner_tick_turn=inner_tick_turn,
+                    inner_tick_mode=inner_tick_mode,
                     repl_online_ack_turn=repl_online_ack_turn,
                     ai_private_text=ai_private_text,
                     include_repl_image_generation_contract=False,
@@ -712,6 +757,7 @@ async def run_turn(
     user_text: str,
     *,
     inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     debug_print_system: bool = False,
     defer_memory_update: bool = True,
@@ -719,8 +765,9 @@ async def run_turn(
     repl_transcript_ids_out: dict[str, str] | None = None,
 ) -> str:
     """defer_memory_update=True：记忆管线入队后台跑，先返回助手文本（repl 先打印）；False：单轮 CLI 退出前跑完。
-    inner_tick_turn=True：内在节拍合成回合（transcript 标 inner_tick），不跑记忆管线；
-    API 挂载精简工具集（`workspace_init_tools.build_openai_repl_tools_inner_tick`：USER 档案与工作区读写），不走 async_chat_tool_background。
+    inner_tick_turn=True：合成用户静默回合；transcript 用户行标 inner_tick。
+    inner_tick_mode=maintenance（默认）：内在节拍 + 精简工具集，不走 async_chat_tool_background。
+    inner_tick_mode=proactive_chat：原「陪伴心跳」语义（合成文案 + 禁工具），用户行额外标 heartbeat 以便调度统计。
     repl_online_ack_turn=True：REPL 上线后紧随 presence 行的合成回复轮（不视为真实用户键入）。
     repl_transcript_ids_out：若传入非空 dict，成功落盘助手行后写入 user_msg_uuid / assistant_msg_uuid /
     trace_id / assistant_source（`chat` 或 `inner_tick`，供 REPL 标注来源）。
@@ -731,17 +778,25 @@ async def run_turn(
     paths = WorkspacePaths(root=root)
     if repl_online_ack_turn and inner_tick_turn:
         raise ValueError("repl_online_ack_turn and inner_tick_turn cannot both be true")
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
     if inner_tick_turn:
-        user_text = INNER_TICK_SYNTHETIC_USER_TEXT
+        user_text = (
+            HEARTBEAT_SYNTHETIC_USER_TEXT
+            if tick_proactive
+            else INNER_TICK_SYNTHETIC_USER_TEXT
+        )
     elif not repl_online_ack_turn:
         prepare_image_gate_for_turn(root, user_text)
 
     logger.info(
-        "run_turn start path={} user_chars={} inner_tick_turn={} "
+        "run_turn start path={} user_chars={} inner_tick_turn={} inner_tick_mode={} "
         "repl_online_ack_turn={} defer_memory={}",
         root,
         len(user_text),
         inner_tick_turn,
+        inner_tick_mode.value if inner_tick_turn else "-",
         repl_online_ack_turn,
         defer_memory_update,
     )
@@ -758,7 +813,9 @@ async def run_turn(
         _debug_log_prompt_bundle(bundle, context=context)
 
         ai_private_text = (
-            get_ai_private_text_for_prompt(root) if inner_tick_turn else ""
+            get_ai_private_text_for_prompt(root)
+            if inner_tick_turn and not tick_proactive
+            else ""
         )
 
         system = build_system_prompt(
@@ -766,6 +823,7 @@ async def run_turn(
             context,
             enable_user_profile_tool=True,
             inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=inner_tick_mode,
             repl_online_ack_turn=repl_online_ack_turn,
             ai_private_text=ai_private_text,
         )
@@ -798,6 +856,7 @@ async def run_turn(
             user_text=user_text,
             repl_online_ack_turn=repl_online_ack_turn,
             inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=inner_tick_mode,
             ai_private_text=ai_private_text,
             include_significance_perception_slice=significance_slice,
         )
@@ -831,6 +890,12 @@ async def run_turn(
 
         async def _invoke_model(turn_input: TurnInput) -> dict[str, Any]:
             input_messages = message_snapshots_to_dicts(turn_input.history)
+            if tick_proactive:
+                return await _run_proactive_inner_tick_chat_only(
+                    input_messages,
+                    trace_id=turn_trace_id,
+                    supersede_check=supersede_check,
+                )
             async_bg = async_tool_background_enabled()
             dual_on = dual_llm_enabled()
             use_async_fast = async_bg and not inner_tick_turn
@@ -867,6 +932,7 @@ async def run_turn(
                 input_messages,
                 root,
                 inner_tick_turn=inner_tick_turn,
+                inner_tick_mode=inner_tick_mode,
                 repl_online_ack_turn=repl_online_ack_turn,
                 ai_private_text=ai_private_text,
                 trace_id=turn_trace_id,
@@ -912,6 +978,7 @@ async def run_turn(
                 assistant_reply_to=user_msg_uuid,
                 repl_online_ack=repl_online_ack_turn,
                 inner_tick_turn=inner_tick_turn,
+                inner_tick_proactive_chat=tick_proactive,
                 assistant_source=assistant_src,
                 trace_id=turn_trace_id,
                 assistant_extra=assistant_extra,
@@ -926,6 +993,7 @@ async def run_turn(
                 history=messages,
                 metadata={
                     "inner_tick_turn": inner_tick_turn,
+                    "inner_tick_mode": inner_tick_mode.value,
                     "trace_id": turn_trace_id,
                 },
             ),

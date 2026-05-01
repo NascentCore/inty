@@ -12,11 +12,18 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
 from .implicit_signal_messages import implicit_signal_system_messages
-from .models import ContextMeta, PromptBundle
+from .models import ContextMeta, InnerTickMode, PromptBundle
 from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from .workspace import get_imate_axiom_system_text
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
+
+
+def _inner_tick_proactive_chat(
+    inner_tick_turn: bool, inner_tick_mode: InnerTickMode
+) -> bool:
+    return inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+
 
 # 与 workspace_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
 _MEMORYSTORE_PATH_TOOLS_INTRO_ZH = "路径工具（workspace_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
@@ -303,8 +310,8 @@ def build_system_messages(
     *,
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
-    heartbeat_turn: bool = False,
     inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
     include_repl_image_generation_contract: bool = True,
@@ -314,10 +321,10 @@ def build_system_messages(
     include_significance_perception_slice: bool = False,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> list[dict[str, Any]]:
+    tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
     tools_on = enable_tools or enable_user_profile_tool
     chat_branch_no_tool_api = (
         tools_on
-        and not heartbeat_turn
         and not inner_tick_turn
         and not include_repl_image_generation_contract
     )
@@ -340,17 +347,17 @@ def build_system_messages(
             )
         )
 
-    if heartbeat_turn:
+    if tick_proactive:
         out.append(_system_message(_heartbeat_clause()))
 
-    if inner_tick_turn:
+    if inner_tick_turn and not tick_proactive:
         out.append(_system_message(_inner_tick_ai_private_section(ai_private_text)))
         out.append(_system_message(_inner_tick_turn_section()))
 
     if repl_online_ack_turn:
         out.append(_system_message(_repl_online_ack_clause()))
 
-    if tool_side_compact and not heartbeat_turn and not inner_tick_turn:
+    if tool_side_compact and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
         if tools_on:
             out.append(_system_message(_tool_background_final_json_routing_contract_text()))
@@ -361,11 +368,7 @@ def build_system_messages(
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
     out.append(_system_message("## USER\n\n" + bundle.user_md.strip()))
 
-    if (
-        include_significance_perception_slice
-        and not heartbeat_turn
-        and not inner_tick_turn
-    ):
+    if include_significance_perception_slice and not inner_tick_turn:
         out.append(
             _system_message(
                 "## SIGNIFICANCE PERCEPTION\n\n"
@@ -373,9 +376,7 @@ def build_system_messages(
             )
         )
 
-    skip_memory_blocks = (
-        tool_side_compact and not heartbeat_turn and not inner_tick_turn
-    )
+    skip_memory_blocks = tool_side_compact and not inner_tick_turn
     if experience_profile_injects_private_memory(context.context_mode):
         if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
             out.append(
@@ -398,18 +399,16 @@ def build_system_messages(
                 )
             )
 
-    if (
-        interactive_bootstrap_active
-        and tools_on
-        and not heartbeat_turn
-        and not inner_tick_turn
-    ):
+    if interactive_bootstrap_active and tools_on and not inner_tick_turn:
         for block in build_interactive_bootstrap_system_message_parts():
             out.append(_system_message(block))
 
     if inner_tick_turn:
-        out.append(_system_message(_output_contract_text_inner_tick()))
-    elif tools_on and not heartbeat_turn and not inner_tick_turn:
+        if tick_proactive:
+            out.append(_system_message(_output_contract_text()))
+        else:
+            out.append(_system_message(_output_contract_text_inner_tick()))
+    elif tools_on and not inner_tick_turn:
         if include_repl_image_generation_contract:
             if interactive_bootstrap_active:
                 out.append(
@@ -452,8 +451,8 @@ def build_system_prompt(
     *,
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
-    heartbeat_turn: bool = False,
     inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     repl_online_ack_turn: bool = False,
     ai_private_text: str = "",
     include_repl_image_generation_contract: bool = True,
@@ -468,8 +467,8 @@ def build_system_prompt(
         context,
         enable_tools=enable_tools,
         enable_user_profile_tool=enable_user_profile_tool,
-        heartbeat_turn=heartbeat_turn,
         inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=inner_tick_mode,
         repl_online_ack_turn=repl_online_ack_turn,
         ai_private_text=ai_private_text,
         include_repl_image_generation_contract=include_repl_image_generation_contract,

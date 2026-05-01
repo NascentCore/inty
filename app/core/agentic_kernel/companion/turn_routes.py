@@ -5,6 +5,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Callable
 
+from .models import InnerTickMode
+
 if TYPE_CHECKING:
     from .tool_background import ToolOutputEvent
 
@@ -23,12 +25,12 @@ class TurnRouteMode(str, Enum):
 
 def resolve_turn_route_mode(
     *,
-    heartbeat_turn: bool,
     inner_tick_turn: bool,
+    inner_tick_mode: InnerTickMode,
     tools_enabled: bool,
     enable_async_tool_background: bool,
 ) -> TurnRouteMode:
-    if heartbeat_turn:
+    if inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT:
         return TurnRouteMode.HEARTBEAT_SYNC
     if inner_tick_turn:
         return TurnRouteMode.INNER_TICK_SYNC

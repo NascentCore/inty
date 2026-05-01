@@ -7,11 +7,16 @@ from types import SimpleNamespace
 from typing import Any
 
 from app.core.agentic_kernel.companion.llm_client import (
+    LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
     CompanionLLMConfig,
 )
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
-from app.core.agentic_kernel.companion.models import INNER_TICK_SYNTHETIC_USER_TEXT
+from app.core.agentic_kernel.companion.heartbeat import HEARTBEAT_SYNTHETIC_USER_TEXT
+from app.core.agentic_kernel.companion.models import (
+    INNER_TICK_SYNTHETIC_USER_TEXT,
+    InnerTickMode,
+)
 from app.core.agentic_kernel.companion.turn import run_turn
 
 
@@ -63,3 +68,39 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(tmp_path: Path) ->
     assert rows[0]["inner_tick"] is True
     assert rows[1]["role"] == "assistant"
     assert rows[1]["source"] == "inner_tick"
+
+
+def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    _seed_workspace(store)
+    client = _FakeLLMClient()
+
+    out = asyncio.run(
+        run_turn(
+            tmp_path,
+            "caller text ignored",
+            store=store,
+            llm_client=client,  # type: ignore[arg-type]
+            inner_tick_turn=True,
+            inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+        )
+    )
+
+    assert out.assistant_text == "inner reply"
+    assert client.calls[0]["scene"] == LLM_SCENE_CHAT
+    assert not client.calls[0].get("tools")
+    llm_msgs = client.calls[0]["messages"]
+    assert llm_msgs[-1]["role"] == "user"
+    assert llm_msgs[-1]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert llm_msgs[-2]["role"] == "system"
+    assert llm_msgs[-2]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+
+    rows = [
+        json.loads(line)
+        for line in store.read_document("transcript.jsonl").strip().splitlines()
+    ]
+    assert rows[0]["content"] == HEARTBEAT_SYNTHETIC_USER_TEXT
+    assert rows[0]["inner_tick"] is True
+    assert rows[0]["heartbeat"] is True

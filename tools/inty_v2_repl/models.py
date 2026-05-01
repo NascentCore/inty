@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from app.core.agentic_kernel.companion.models import (  # noqa: F401
     AI_PRIVATE_INJECT_MAX_CHARS,
     INNER_TICK_SYNTHETIC_USER_TEXT,
+    InnerTickMode,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,

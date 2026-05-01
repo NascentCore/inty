@@ -1,4 +1,9 @@
-"""陪伴心跳调度：按 transcript 时间间隔估算聊天节奏，决定何时可触发主动开口。"""
+"""陪伴心跳调度：按 transcript 时间间隔估算聊天节奏，决定何时可触发主动开口。
+
+触发模型回合时，请使用 ``run_turn(..., inner_tick_turn=True,
+inner_tick_mode=InnerTickMode.PROACTIVE_CHAT)``（与原 ``heartbeat_turn`` 等价语义：
+``HEARTBEAT_SYNTHETIC_USER_TEXT`` + 无工具）；本模块保留时间与合成文案常量。
+"""
 
 from __future__ import annotations
 

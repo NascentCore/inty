@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
-
-AssistantTurnSource = Literal["chat", "inner_tick"]
 
 from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator
@@ -22,6 +21,16 @@ from .significance_perception import default_significance_perception_markdown
 if TYPE_CHECKING:
     from .memory_store import MemoryStore
     from .workspace import WorkspacePaths
+
+AssistantTurnSource = Literal["chat", "inner_tick"]
+
+
+class InnerTickMode(StrEnum):
+    """Synthetic user-idle turns: maintenance uses restricted tools; proactive_chat is no-tools."""
+
+    MAINTENANCE = "maintenance"
+    PROACTIVE_CHAT = "proactive_chat"
+
 
 PresenceSignal = Literal["repl_online", "repl_offline"]
 

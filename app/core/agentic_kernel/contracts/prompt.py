@@ -41,4 +41,5 @@ class PromptBuildInput(BaseModel):
 
     user_profile: str = ""
     include_output_format_prompt: bool = True
-    heartbeat_turn: bool = False
+    inner_tick_turn: bool = False
+    inner_tick_mode: str = "maintenance"
