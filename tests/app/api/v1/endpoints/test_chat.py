@@ -3,13 +3,14 @@
 import asyncio
 import json
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient as FastAPITestClient
+from starlette.websockets import WebSocketDisconnect
 from jose import jwt
 from loguru import logger
 from sqlalchemy import create_engine
@@ -18,6 +19,7 @@ from sqlalchemy.orm import sessionmaker
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
+from app.core.security import create_access_token
 from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
@@ -82,6 +84,18 @@ def chat_business_error_app() -> FastAPI:
     yield app
 
     app.dependency_overrides.clear()
+
+
+def test_chat_websocket_expired_bearer_closes_4001(chat_business_error_app):
+    token = create_access_token("user-expired-ws", expires_delta=timedelta(hours=-1))
+    with FastAPITestClient(chat_business_error_app) as client:
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            with client.websocket_connect(
+                "/api/v1/chat/ws",
+                headers={"Authorization": f"Bearer {token}"},
+            ) as websocket:
+                websocket.receive_json()
+        assert excinfo.value.code == 4001
 
 
 def _stub_chat_completion_dependencies(monkeypatch: pytest.MonkeyPatch):

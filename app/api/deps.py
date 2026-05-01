@@ -259,7 +259,7 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
         if user_id is None:
             return None
 
-    except JWTError as jwt_error:
+    except (JWTError, ExpiredSignatureError) as jwt_error:
         if isinstance(jwt_error, ExpiredSignatureError):
             logger.warning(
                 f"JWT已过期(WebSocket token): {jwt_error} (类型: {type(jwt_error).__name__})"
