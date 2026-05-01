@@ -68,7 +68,7 @@ def _client_with_user(app: FastAPI, user: User):
 def integration_client():
     base = API_BASE_URL.rstrip("/")
     try:
-        httpx.get(f"{base}/docs", timeout=2.0)
+        httpx.get(f"{base}/", timeout=2.0)
     except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
         pytest.skip(
             f"HTTP API not reachable at {base} ({exc!r}); "

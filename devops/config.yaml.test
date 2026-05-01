@@ -1,5 +1,6 @@
 # Used for running backend server in tests.
 # External services are fakes. LangSmith tracing follows code default (agent.langsmith_tracing_enabled true unless overridden).
+# app.debug true: tolerate missing Firebase JSON in CI; OpenAPI on. Log level comes from logging.level / INTY_* only.
 
 app:
   debug: true
