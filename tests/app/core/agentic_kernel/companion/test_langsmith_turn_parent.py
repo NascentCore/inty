@@ -65,17 +65,46 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
         user_msg_uuid="u1",
         chat_model="stub/chat-route",
         tool_model="stub/tool-route",
+        user_id="u-42",
+        companion_id="c-7",
     )
     assert out is mock_root
     mock_rt_cls.assert_called_once()
     kwargs = mock_rt_cls.call_args.kwargs
-    assert kwargs["name"] == "agentic_companion_user_turn"
+    assert kwargs["name"] == "agentic_companion_user_turn user=u-42 agent=c-7"
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
     assert kwargs["inputs"]["chat_model"] == "stub/chat-route"
     assert kwargs["inputs"]["tool_model"] == "stub/tool-route"
+    assert kwargs["inputs"]["user_id"] == "u-42"
+    assert kwargs["inputs"]["companion_id"] == "c-7"
     assert kwargs["extra"]["metadata"]["ls_model_name"] == "stub/chat-route | stub/tool-route"
+    assert kwargs["extra"]["metadata"]["inty_user_id"] == "u-42"
+    assert kwargs["extra"]["metadata"]["inty_companion_id"] == "c-7"
     mock_root.post.assert_called_once()
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
+
+
+@patch(
+    "app.core.agentic_kernel.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
+@patch("langsmith.run_trees.RunTree")
+def test_create_companion_turn_root_run_name_uses_unknown_when_ids_empty(
+    mock_rt_cls: MagicMock, _en: MagicMock
+) -> None:
+    mock_root = MagicMock()
+    mock_rt_cls.return_value = mock_root
+    create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model="stub/chat-route",
+        tool_model="stub/tool-route",
+    )
+    kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["name"] == "agentic_companion_user_turn user=unknown agent=unknown"
+    assert kwargs["inputs"]["user_id"] == ""
+    assert kwargs["inputs"]["companion_id"] == ""
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 
