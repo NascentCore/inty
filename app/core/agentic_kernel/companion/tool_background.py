@@ -26,6 +26,7 @@ from app.core.agentic_kernel.tools.runtime import (
 )
 
 from .llm_chat_runtime import (
+    companion_turn_langsmith_parent_run_id_str,
     companion_turn_langsmith_parent_trace_id_str,
     create_chat_completion_sync,
     end_companion_turn_root_run_safe,
@@ -280,6 +281,7 @@ class ToolOutputEvent:
     elapsed_ms: int
     trace_id: str = ""  # run_turn turn id; links transcript rows + tool_background_done
     langsmith_trace_id: str = ""
+    langsmith_run_id: str = ""
     output_to_user: bool = False
     generation_deliver: bool = False
 
@@ -521,6 +523,7 @@ async def _run_background_tool_loop(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
+    langsmith_run_id: str = "",
 ) -> None:
     try:
         if is_tool_background_aborted(user_msg_uuid):
@@ -845,6 +848,7 @@ async def _run_background_tool_loop(
                 elapsed_ms=elapsed_ms,
                 trace_id=trace_id,
                 langsmith_trace_id=bg_ls_trace,
+                langsmith_run_id=langsmith_run_id,
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
             )
@@ -883,6 +887,8 @@ def start_tool_background_job(
         _register_thread(threading.current_thread())
         bg_ls_err: str | None = None
 
+        bg_ls_run_id = companion_turn_langsmith_parent_run_id_str(langsmith_parent_run)
+
         def _run_async_tool_loop() -> None:
             asyncio.run(
                 _run_background_tool_loop(
@@ -898,6 +904,7 @@ def start_tool_background_job(
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,
+                    langsmith_run_id=bg_ls_run_id,
                 )
             )
 

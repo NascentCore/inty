@@ -592,6 +592,8 @@ async def _build_companion_tool_background_ws_payload(
     }
     if ev.langsmith_trace_id:
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
+    if ev.langsmith_run_id:
+        meta_data["langsmith_run_id"] = ev.langsmith_run_id
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -835,6 +837,10 @@ async def _agent_chat_completions_impl(
                     if companion_turn.langsmith_trace_id:
                         companion_ai_meta["langsmith_trace_id"] = (
                             companion_turn.langsmith_trace_id
+                        )
+                    if companion_turn.langsmith_run_id:
+                        companion_ai_meta["langsmith_run_id"] = (
+                            companion_turn.langsmith_run_id
                         )
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:
