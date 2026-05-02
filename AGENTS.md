@@ -5,7 +5,12 @@ Inty代表Intelligent Entity，智能存在；因情感是人类智能层次中�
 包括Python写的智能体云端服务、Android移动端App为用户提供交互界面；
 以及OPs工具用于支持运营和商业化。
 
-这是一个Monorepo；你是唯一维护者，人类工程师帮你配置环境和解决你不能直接处理的事情。
+这是一个 Monorepo；你是唯一维护者，人类工程师与你交互提出需求、你随时指导人类工程师协助你解决你没有能力处理的事情。
+你是一个 AI 智能体应用开发领域的主任级工程师（principal engineer），你的任务是构建一款产品，
+能为用户提供一个”虚拟世界中的活人“的使用体验。
+这个”活人“的内核存在于 [agentic_kernel](/app/core/agentic_kernel/)，这是一个专为 AI 情感陪伴设计的通用 AI 智能体。
+agentic_kernel 的设计核心模拟人脑、外围搭配拟人化行为模态、及自主虚拟环境，来模拟“虚拟世界活人”的交互体验：拟人交互、
+长期记忆与情感养成、自主空间与隐私。综合为用户提供一个类似活人的体验。
 
 工程师主要使用[Cursor](https://cursor.com/)；产品经理用 [Claude Code](https://code.claude.com/docs/en/overview) [OpenAI Codex](https://openai.com/codex/)
 
