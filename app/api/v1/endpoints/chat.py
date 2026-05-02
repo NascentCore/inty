@@ -176,8 +176,9 @@ async def _handle_chat_websocket_control_json(
     session's last validated time_context dict (or None). Returns True if the frame was consumed.
 
     **Transport vs logical channel:** control frames (ping/pong, client_context_ack) are answered
-    directly on the WebSocket. Proactive heartbeat arming uses a separate ``user_signed_on`` frame
-    (see ``_try_handle_ws_user_signed_on_frame``). They are independent of the connection-level outbound queue used
+    directly on the WebSocket. Proactive heartbeat coords are set by ``user_signed_on`` (see
+    ``_try_handle_ws_user_signed_on_frame``) and refreshed on each successful WebSocket companion
+    chat turn (``_agent_chat_completions_impl``). They are independent of the connection-level outbound queue used
     for assistant/business JSON. Intentionally so: the WebSocket sits *below* the repl/client
     logical session with the agent; control traffic only confirms link/time-context at the wire layer,
     not the agent dialogue FIFO (which is serialized via ``outbound_queue`` + pump).
@@ -217,7 +218,8 @@ async def _try_handle_ws_user_signed_on_frame(
 
     Product intent: companion should mimic a person who sees the user come online and can
     greet proactively (see ``/docs/FR_USER_SIGN_ON_GREETINGS.md``); this frame is the
-    client-side online signal. Today it also populates proactive heartbeat coords.
+    client-side online signal. It also arms proactive heartbeat coords before the first chat
+    frame; legacy clients that omit it still get coords after any successful companion turn.
 
     ``/ws/verify`` passes ``companion_hb_ctx=None`` and receives ``ok: false`` (not supported).
     """
@@ -267,13 +269,11 @@ async def _try_handle_ws_user_signed_on_frame(
                 }
             )
             return True
-        companion_hb_ctx.clear()
-        companion_hb_ctx.update(
-            {
-                "user_id": current_user.id,
-                "agent_id": agent_id,
-                "chat_id": chat.id,
-            }
+        _companion_ws_store_hb_coords(
+            companion_hb_ctx,
+            user_id=current_user.id,
+            agent_id=agent_id,
+            chat_id=chat.id,
         )
         await websocket.send_json({"type": "user_signed_on_ack", "ok": True})
         recv_msg_uuid = (frame.message_id or "").strip()
@@ -737,6 +737,18 @@ async def _build_companion_tool_background_ws_payload(
     return out
 
 
+def _companion_ws_store_hb_coords(
+    hb_ctx: dict[str, Any],
+    *,
+    user_id: Any,
+    agent_id: str,
+    chat_id: Any,
+) -> None:
+    """Replace in-connection proactive-heartbeat workspace coordinates."""
+    hb_ctx.clear()
+    hb_ctx.update({"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id})
+
+
 def _companion_ws_hb_coords_snapshot(hb_ctx: dict[str, Any]) -> dict[str, Any] | None:
     hb_uid = str(hb_ctx.get("user_id") or "").strip()
     aid = str(hb_ctx.get("agent_id") or "").strip()
@@ -993,6 +1005,7 @@ async def _agent_chat_completions_impl(
     chat_route: Literal["http", "websocket"],
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
+    companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
 ) -> Union[schemas.APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
@@ -1266,6 +1279,16 @@ async def _agent_chat_completions_impl(
                         response_text_content,
                         response_content_parts,
                     ) = _normalize_chat_response_content(response_content)
+                    if (
+                        companion_ws_heartbeat_ctx is not None
+                        and chat_route == "websocket"
+                    ):
+                        _companion_ws_store_hb_coords(
+                            companion_ws_heartbeat_ctx,
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                        )
                 else:
                     chat_result = await agent.chat(
                         user_id=current_user.id,
@@ -1945,6 +1968,7 @@ async def chat_completions_websocket(
                         chat_route="websocket",
                         companion_background_sink=companion_bg_sink,
                         companion_ws_foreground_pending=ws_fg_pending,
+                        companion_ws_heartbeat_ctx=companion_hb_ctx,
                     )
             except HTTPException as e:
                 detail = e.detail
