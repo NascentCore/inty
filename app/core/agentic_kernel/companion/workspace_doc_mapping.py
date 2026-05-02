@@ -42,7 +42,6 @@ class CompanionWorkspaceDocKind(str, Enum):
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON = "inty_v2_context_compaction_state_json"
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
     INTY_V2_IMAGE_GATE_JSON = "inty_v2_image_gate_json"
-    INTY_V2_CHAT_SETTINGS_JSON = "inty_v2_chat_settings_json"
 
 
 _REL_TO_KIND: dict[str, tuple[CompanionWorkspaceDocKind, date | None]] = {
@@ -96,10 +95,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionWorkspaceDocKind, date | None]] = {
     ),
     ".inty_v2_image_gate.json": (
         CompanionWorkspaceDocKind.INTY_V2_IMAGE_GATE_JSON,
-        None,
-    ),
-    ".inty_v2_chat_settings.json": (
-        CompanionWorkspaceDocKind.INTY_V2_CHAT_SETTINGS_JSON,
         None,
     ),
 }

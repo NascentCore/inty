@@ -65,15 +65,6 @@ def _output_contract_text_inner_tick() -> str:
     )
 
 
-def _chat_output_format_contract_text(output_format_prompt: str) -> str:
-    return (
-        "## CHAT 输出格式约束（chat 路）\n\n"
-        "以下是当前 chat LLM 路径必须遵守的输出格式提示词。"
-        "这是格式契约，不是与用户对话正文。"
-        f"\n\n{output_format_prompt}"
-    )
-
-
 def _dual_llm_chat_structured_output_contract_text() -> str:
     return (
         "## Dual-LLM chat branch: structured reply envelope\n\n"
@@ -316,7 +307,6 @@ def build_system_messages(
     ai_private_text: str = "",
     include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
-    chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -432,10 +422,6 @@ def build_system_messages(
     if include_significance_perception_slice and chat_branch_no_tool_api:
         out.append(_system_message(_dual_llm_chat_structured_output_contract_text()))
 
-    chat_output = (chat_output_format_prompt or "").strip()
-    if chat_output:
-        out.append(_system_message(_chat_output_format_contract_text(chat_output)))
-
     return out
 
 
@@ -451,7 +437,6 @@ def build_system_prompt(
     ai_private_text: str = "",
     include_repl_image_generation_contract: bool = True,
     tool_side_compact: bool = False,
-    chat_output_format_prompt: str | None = None,
     interactive_bootstrap_active: bool = False,
     include_significance_perception_slice: bool = False,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -467,7 +452,6 @@ def build_system_prompt(
         ai_private_text=ai_private_text,
         include_repl_image_generation_contract=include_repl_image_generation_contract,
         tool_side_compact=tool_side_compact,
-        chat_output_format_prompt=chat_output_format_prompt,
         interactive_bootstrap_active=interactive_bootstrap_active,
         include_significance_perception_slice=include_significance_perception_slice,
         implicit_signal_bundle=implicit_signal_bundle,
