@@ -3,7 +3,7 @@
 import asyncio
 import json
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -20,6 +20,7 @@ from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
 from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.security import create_access_token
 from app.models.memory import Memory
 from app.models.user import AuthType
 from app.schemas.response import APIResponse, BizError, BusinessErrorCode, UsageLimitExceeded
@@ -56,6 +57,11 @@ def _decode_user_id_from_token(token: str) -> str:
         algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
     )
     return str(payload["sub"])
+
+
+def _chat_ws_test_auth_headers() -> dict[str, str]:
+    tok = create_access_token("user-ws-test", expires_delta=timedelta(hours=1))
+    return {"authorization": f"Bearer {tok}"}
 
 
 @pytest.fixture(scope="function")
@@ -1323,7 +1329,9 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     second_turn_uuid = "01234567-89ab-cdef-0123-456789abcdef"
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-ws",
@@ -1366,6 +1374,20 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_expired_jwt_rejected_before_handshake(
+    chat_business_error_app: FastAPI,
+):
+    """Expired Bearer must fail the WS upgrade without raising ASGI Exception (prod regression)."""
+    expired = create_access_token("user-expired-ws", expires_delta=timedelta(hours=-1))
+    with FastAPITestClient(chat_business_error_app) as client:
+        with pytest.raises(Exception):
+            with client.websocket_connect(
+                "/api/v1/chat/ws",
+                headers={"authorization": f"Bearer {expired}"},
+            ):
+                pass
+
+
 def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_context(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -1387,7 +1409,9 @@ def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_contex
 
     msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-impl",
@@ -1443,7 +1467,9 @@ def test_chat_websocket_companion_implicit_user_signed_on_sets_bundle_and_skips_
 
     msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-signon",
@@ -1483,7 +1509,9 @@ def test_chat_websocket_companion_implicit_user_signed_on_rejects_image_content(
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-signon-img",
@@ -1529,7 +1557,9 @@ def test_chat_websocket_companion_implicit_user_signed_on_rejects_non_empty_user
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-signon-bad",
@@ -1587,7 +1617,9 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-mm",
@@ -1636,7 +1668,9 @@ def test_chat_websocket_companion_rejects_missing_message_id(
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-mid",
@@ -1674,7 +1708,9 @@ def test_chat_websocket_companion_rejects_non_uuid_message_id(
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-mid2",
@@ -1714,7 +1750,9 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     )
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-companion-txtparts",
@@ -1780,7 +1818,9 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
     monkeypatch.setattr(chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions)
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-a",
@@ -1843,7 +1883,9 @@ def test_chat_websocket_idle_timeout_reads_config(
     monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "agent_id": "agent-a",
@@ -1899,7 +1941,8 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect(
-            "/api/v1/chat/ws?assume_user_id=user-other"
+            "/api/v1/chat/ws?assume_user_id=user-other",
+            headers=_chat_ws_test_auth_headers(),
         ) as websocket:
             websocket.send_json(
                 {
@@ -1952,7 +1995,9 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     monkeypatch.setattr(chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions)
 
     with FastAPITestClient(chat_business_error_app) as client:
-        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+        with client.websocket_connect(
+            "/api/v1/chat/ws", headers=_chat_ws_test_auth_headers()
+        ) as websocket:
             websocket.send_json(
                 {
                     "type": "client_context",

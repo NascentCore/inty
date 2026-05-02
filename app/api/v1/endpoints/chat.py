@@ -1772,7 +1772,6 @@ async def chat_completions_websocket(
     subscription_svc: SubscriptionService = Depends(deps.get_subscription_service),
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
-    await websocket.accept()
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -1783,6 +1782,8 @@ async def chat_completions_websocket(
         assume_user_id=websocket.query_params.get("assume_user_id"),
         db=db,
     )
+
+    await websocket.accept()
 
     app_version_code_header = websocket.headers.get("appVersionCode")
     app_version_code = (
@@ -2015,7 +2016,6 @@ async def chat_completions_websocket_verify(
     ``get_chat_openai_client``). No ``Agent`` runtime, no companion pipeline, no chat_history
     persistence. Use to validate transport, queue behavior, and minimal LLM connectivity.
     """
-    await websocket.accept()
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -2026,6 +2026,8 @@ async def chat_completions_websocket_verify(
         assume_user_id=websocket.query_params.get("assume_user_id"),
         db=db,
     )
+
+    await websocket.accept()
 
     outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
     pump_task = asyncio.create_task(
