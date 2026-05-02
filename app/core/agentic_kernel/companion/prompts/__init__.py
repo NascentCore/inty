@@ -10,7 +10,9 @@ from app.core.agentic_kernel.experience_profile import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-from ..bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
+from ..bootstrap_user_interactive import (
+    build_interactive_bootstrap_system_message_parts,
+)
 from ..implicit_signal_messages import implicit_signal_system_messages
 from ..memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
@@ -115,7 +117,9 @@ def _repl_tool_contract_image_generation_clause() -> str:
     )
 
 
-def _repl_tool_contract_suffix_after_image_clause(*, tool_side_compact: bool = False) -> str:
+def _repl_tool_contract_suffix_after_image_clause(
+    *, tool_side_compact: bool = False
+) -> str:
     base = (
         "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/档案中不存在的路径；"
         "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
@@ -170,7 +174,9 @@ def _output_contract_text_with_tools(
     )
     if include_repl_image_generation_contract:
         base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_suffix_after_image_clause(tool_side_compact=tool_side_compact)
+    base += _repl_tool_contract_suffix_after_image_clause(
+        tool_side_compact=tool_side_compact
+    )
     return base
 
 
@@ -199,7 +205,9 @@ def _output_contract_text_interactive_bootstrap_tools(
     )
     if include_repl_image_generation_contract:
         base += _repl_tool_contract_image_generation_clause()
-    base += _repl_tool_contract_suffix_after_image_clause(tool_side_compact=tool_side_compact)
+    base += _repl_tool_contract_suffix_after_image_clause(
+        tool_side_compact=tool_side_compact
+    )
     return base
 
 
@@ -320,9 +328,7 @@ def build_system_messages(
     tick_proactive = _inner_tick_proactive_chat(inner_tick_turn, inner_tick_mode)
     tools_on = enable_tools or enable_user_profile_tool
     chat_branch_no_tool_api = (
-        tools_on
-        and not inner_tick_turn
-        and not include_repl_image_generation_contract
+        tools_on and not inner_tick_turn and not include_repl_image_generation_contract
     )
 
     out: list[dict[str, Any]] = []
@@ -350,8 +356,12 @@ def build_system_messages(
     if tool_side_compact and not inner_tick_turn:
         out.append(_system_message(_tool_side_compact_directive()))
         if tools_on:
-            out.append(_system_message(_tool_background_final_json_routing_contract_text()))
-            out.append(_system_message(_tool_background_first_round_skip_contract_text()))
+            out.append(
+                _system_message(_tool_background_final_json_routing_contract_text())
+            )
+            out.append(
+                _system_message(_tool_background_first_round_skip_contract_text())
+            )
 
     out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))

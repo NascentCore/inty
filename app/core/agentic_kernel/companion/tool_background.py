@@ -184,7 +184,9 @@ def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
     return names
 
 
-def _tool_bg_nl_filler_from_appended_turn(appended_messages: list[dict[str, Any]]) -> str:
+def _tool_bg_nl_filler_from_appended_turn(
+    appended_messages: list[dict[str, Any]],
+) -> str:
     """Concatenate non-error tool string results when NL summary is empty but output_to_user is true."""
     chunks: list[str] = []
     max_chunks = 8

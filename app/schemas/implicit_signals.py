@@ -13,7 +13,9 @@ from app.schemas.chat import UserTimeContext
 class ImplicitSignalBundle(BaseModel):
     """Versioned bundle for telemetry injected alongside user turns (not user-authored text)."""
 
-    schema_version: Literal[1] = Field(default=1, description="Bump when adding breaking fields.")
+    schema_version: Literal[1] = Field(
+        default=1, description="Bump when adding breaking fields."
+    )
     client_time: Optional[UserTimeContext] = None
     user_signed_on: bool = Field(
         default=False,

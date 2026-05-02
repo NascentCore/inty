@@ -41,7 +41,7 @@ def _validate_public_http_url(url: str) -> str | None:
 
 
 def _pick_main_root(soup: BeautifulSoup) -> Any:
-    for sel in ('article', 'main', '[role="main"]'):
+    for sel in ("article", "main", '[role="main"]'):
         node = soup.select_one(sel)
         if node is not None:
             return node
@@ -178,9 +178,7 @@ def run_read_web_page_sync(
         )
 
     ctype = (r.headers.get("Content-Type") or "").lower()
-    looks_html = "html" in ctype or url.lower().rstrip("/").endswith(
-        (".html", ".htm")
-    )
+    looks_html = "html" in ctype or url.lower().rstrip("/").endswith((".html", ".htm"))
     if not looks_html:
         sample = raw[:500].decode("utf-8", errors="replace").lower()
         if "<html" not in sample and "<!doctype" not in sample:
@@ -205,9 +203,7 @@ def run_read_web_page_sync(
         return f"ERROR: could not write MEMORY.md: {exc}"
 
     memory_note = f"Memory: appended this snapshot to `{_MEMORY_REL}`."
-    return _build_summary_markdown(
-        title, bullets, url.strip(), memory_note=memory_note
-    )
+    return _build_summary_markdown(title, bullets, url.strip(), memory_note=memory_note)
 
 
 async def run_read_web_page(

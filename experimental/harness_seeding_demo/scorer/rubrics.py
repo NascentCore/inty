@@ -47,11 +47,19 @@ def score_rubric_default(
         ),
     }
 
-    distress = bool(
-        re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user)
-    )
+    distress = bool(re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user))
     if distress:
-        strain_terms = ("累", "压力", "上司", "老板", "项目", "交付", "硬撑", "焦虑", "睡不着")
+        strain_terms = (
+            "累",
+            "压力",
+            "上司",
+            "老板",
+            "项目",
+            "交付",
+            "硬撑",
+            "焦虑",
+            "睡不着",
+        )
         checks["reflects_user_strain"] = any(t in text for t in strain_terms)
         first_line = text.split("\n", 1)[0].strip()
         checks["no_immediate_numbered_fix_first_line"] = not bool(
@@ -89,11 +97,19 @@ def score_rubric_strict_emotional(
     checks = dict(base.checks)
     checks["substantive_length"] = len(text) >= min_chars
 
-    distress = bool(
-        re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user)
-    )
+    distress = bool(re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user))
     if distress:
-        strain_terms = ("上司", "老板", "交付", "睡不着", "压力", "累", "焦虑", "硬撑", "项目")
+        strain_terms = (
+            "上司",
+            "老板",
+            "交付",
+            "睡不着",
+            "压力",
+            "累",
+            "焦虑",
+            "硬撑",
+            "项目",
+        )
         hits = sum(1 for t in strain_terms if t in text)
         checks["strain_echo_multi"] = hits >= 2
     else:
@@ -123,9 +139,7 @@ def score_rubric_premature_solution(
         "no_dismissive": _DISMISSIVE_RE.search(text) is None,
     }
 
-    distress = bool(
-        re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user)
-    )
+    distress = bool(re.search(r"(累|崩溃|熬不住|压力大|睡不着|焦虑|上司|老板)", user))
     reflect_pat = re.compile(r"(听起来|理解|懂你的|懂那种|感受到|揪心|不容易|陪你)")
     advice_pat = re.compile(r"(\d+\s*[\.)]|第一步|第二步|试试.{0,8}步骤|你可以照做)")
 
@@ -169,10 +183,7 @@ def score_rubric_boundary_tone(
     checks: dict[str, bool] = {
         "non_empty_visible_reply": bool(text),
         "no_blame_language": _BLAME_RE.search(text) is None,
-        "no_harsh_imperative_open": _HARSH_IMP_RE.search(
-            text[:160]
-        )
-        is None,
+        "no_harsh_imperative_open": _HARSH_IMP_RE.search(text[:160]) is None,
         "has_invitation_or_permission": bool(
             re.search(r"(愿意|如果想|如果你愿意|要不要|也可以|我们先)", text)
         ),

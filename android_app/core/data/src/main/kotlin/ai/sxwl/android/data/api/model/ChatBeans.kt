@@ -65,9 +65,9 @@ data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
 // TODO: Run :core:data:compileDebugKotlin (or full app compile) when changing SendMsgReq.
 
 /**
- * Companion WebSocket `messageType` string (request body).
- * The shipped app has never sent `IMPLICIT_USER_SIGNED_ON` chat frames; sign-on is via
- * `user_signed_on` control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
+ * Companion WebSocket `messageType` string (request body). The shipped app has never sent
+ * `IMPLICIT_USER_SIGNED_ON` chat frames; sign-on is via `user_signed_on` control messages only.
+ * Aligns with backend `ChatCompletionRequest.message_type`.
  */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
@@ -105,9 +105,7 @@ data class ChatUserSignedOnWsMessage(
 data class ChatWsControlFrame(@Json(name = "type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" ||
-        this?.type == "client_context_ack" ||
-        this?.type == "user_signed_on_ack"
+    this?.type == "pong" || this?.type == "client_context_ack" || this?.type == "user_signed_on_ack"
 
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(

@@ -33,7 +33,10 @@ object ChatWebSocketSessionManager {
     private val requestMutex = Mutex()
     private var session: DefaultClientWebSocketSession? = null
     private var sessionToken: String? = null
-    /** Last agent_id we sent `user_signed_on` for on this connection; cleared when the socket closes. */
+    /**
+     * Last agent_id we sent `user_signed_on` for on this connection; cleared when the socket
+     * closes.
+     */
     private var userSignedOnAgentIdForSession: String? = null
 
     private val httpClient by lazy {
@@ -60,8 +63,8 @@ object ChatWebSocketSessionManager {
                 if (userSignedOnAgentIdForSession != agentId) {
                     activeSession.send(
                         Frame.Text(
-                            userSignedOnAdapter.toJson(ChatUserSignedOnWsMessage(agentId = agentId)),
-                        ),
+                            userSignedOnAdapter.toJson(ChatUserSignedOnWsMessage(agentId = agentId))
+                        )
                     )
                     userSignedOnAgentIdForSession = agentId
                 }

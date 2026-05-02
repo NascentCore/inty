@@ -455,7 +455,9 @@ class ChatCompletionRequest(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def implicit_user_signed_on_requires_empty_user_text(self) -> "ChatCompletionRequest":
+    def implicit_user_signed_on_requires_empty_user_text(
+        self,
+    ) -> "ChatCompletionRequest":
         if self.message_type != CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON:
             return self
         user_msgs = [m for m in self.messages if m.role == "user"]
