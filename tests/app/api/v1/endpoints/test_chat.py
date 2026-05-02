@@ -817,6 +817,8 @@ def _setup_companion_ws_chat_test_env(
     latest_user_message_db_id: int,
     ai_message_id: int,
     run_companion_chat_turn_for_api,
+    user_message_save_log: list | None = None,
+    ai_message_meta_captures: list | None = None,
 ) -> None:
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
@@ -856,9 +858,15 @@ def _setup_companion_ws_chat_test_env(
         return None
 
     async def fake_add_user_message_async(session_id, message, meta_data=None):
+        if user_message_save_log is not None:
+            user_message_save_log.append((session_id, message, meta_data))
         return None
 
-    async def fake_add_ai_message_sync_async(session_id, message, **_kwargs):
+    async def fake_add_ai_message_sync_async(
+        session_id, message, meta_data=None, **_kwargs
+    ):
+        if ai_message_meta_captures is not None and meta_data is not None:
+            ai_message_meta_captures.append(meta_data)
         return ai_message_id
 
     async def fake_get_ai_message_info_by_id(db, message_id):
@@ -1405,8 +1413,158 @@ def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_contex
     assert bundle.client_time.timezone == "Europe/Berlin"
     assert bundle.client_time.utc_offset_minutes == 120
     assert bundle.server_received_at_utc is not None
+    assert bundle.user_signed_on is False
 
     companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_implicit_user_signed_on_sets_bundle_and_skips_user_row(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {}
+    user_saves: list = []
+    ai_meta: list = []
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["bundle"] = kwargs.get("implicit_signal_bundle")
+        return CompanionTurnResult(assistant_text="greet")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon",
+        workspace_dir="/tmp/inty_test_companion_ws_signon",
+        chat_id="chat-signon-1",
+        latest_user_message_db_id=90,
+        ai_message_id=902,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+        user_message_save_log=user_saves,
+        ai_message_meta_captures=ai_meta,
+    )
+
+    msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-signon",
+                    "request": {
+                        "messages": [{"role": "user", "content": ""}],
+                        "message_id": msg_uuid,
+                        "messageType": "IMPLICIT_USER_SIGNED_ON",
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    bundle = captured["bundle"]
+    assert bundle is not None
+    assert bundle.user_signed_on is True
+    assert user_saves == []
+    assert ai_meta and ai_meta[-1].get("messageType") == "IMPLICIT_USER_SIGNED_ON"
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_implicit_user_signed_on_rejects_image_content(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        return CompanionTurnResult(assistant_text="should-not-run")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-img",
+        workspace_dir="/tmp/inty_test_companion_ws_signon_img",
+        chat_id="chat-signon-img-1",
+        latest_user_message_db_id=90,
+        ai_message_id=904,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-signon-img",
+                    "request": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {"url": "https://example.com/x.png"},
+                                    }
+                                ],
+                            }
+                        ],
+                        "message_id": "dddddddd-dddd-4ddd-dddd-eeeeeeeeeeee",
+                        "messageType": "IMPLICIT_USER_SIGNED_ON",
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 400
+    assert "IMPLICIT_USER_SIGNED_ON" in body["message"]
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_implicit_user_signed_on_rejects_non_empty_user_text(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        return CompanionTurnResult(assistant_text="x")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-bad",
+        workspace_dir="/tmp/inty_test_companion_ws_signon_bad",
+        chat_id="chat-signon-bad-1",
+        latest_user_message_db_id=90,
+        ai_message_id=903,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-signon-bad",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "message_id": "cccccccc-cccc-4ccc-dddd-eeeeeeeeeeee",
+                        "messageType": "IMPLICIT_USER_SIGNED_ON",
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 422
+    assert body["message"] == "Invalid chat WebSocket request"
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_v1_chat_completions_http_rejects_implicit_user_signed_on_message_type(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    _stub_chat_completion_dependencies(monkeypatch)
+    user = _make_user(auth_type=AuthType.GOOGLE)
+    payload = {
+        "messages": [{"role": "user", "content": ""}],
+        "stream": False,
+        "model": "chatbot",
+        "language": "zh",
+        "messageType": "IMPLICIT_USER_SIGNED_ON",
+    }
+    with _client_with_user(chat_business_error_app, user) as client:
+        response = client.post("/api/v1/chat/completions/agent-1", json=payload)
+    assert response.status_code == 400
+    body = response.json()
+    assert body["detail"].startswith("messageType IMPLICIT_USER_SIGNED_ON")
 
 
 def test_chat_websocket_companion_rejects_multimodal_image_user_turn(

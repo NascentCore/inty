@@ -9,6 +9,7 @@ import threading
 import time
 import uuid
 from typing import Any, Literal
+from urllib.parse import parse_qs, urlparse
 
 import websockets
 from websockets.exceptions import ConnectionClosed
@@ -17,6 +18,7 @@ from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
     ChatWebSocketRequest,
+    CompanionChatTurnMessageType,
     normalize_websocket_companion_message_id_uuid,
 )
 from loguru import logger
@@ -67,10 +69,21 @@ def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, A
     return content, meta
 
 
+def _agent_id_from_ws_url(ws_url: str) -> str | None:
+    parsed = urlparse(ws_url.strip())
+    vals = parse_qs(parsed.query).get("agent_id") or []
+    if not vals:
+        return None
+    aid = str(vals[0]).strip()
+    return aid or None
+
+
 def _ws_chat_turn_send_payload(
     agent_id: str,
     user_text: str,
     message_id: str | None,
+    *,
+    companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
 ) -> tuple[str, str]:
     mid = (
         normalize_websocket_companion_message_id_uuid(message_id)
@@ -82,6 +95,7 @@ def _ws_chat_turn_send_payload(
         request=ChatCompletionRequest(
             messages=[ChatMessage(role="user", content=user_text)],
             message_id=mid,
+            message_type=companion_turn_message_type,
         ),
     )
     return mid, req.model_dump_json(by_alias=True)
@@ -177,6 +191,29 @@ class BackendChatWsBridge:
         self._reconnect_max = default_reconnect_max_sec()
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
+        self._successful_transport_connects: int = 0
+
+    async def _maybe_post_implicit_signed_on_after_reconnect(self) -> None:
+        """After transport reconnect, send one IMPLICIT_USER_SIGNED_ON frame when URL pins agent_id."""
+        aid = _agent_id_from_ws_url(self._ws_url)
+        if not aid:
+            return
+        deadline = time.monotonic() + max(120.0, float(self._send_max_retries) * 30.0)
+        try:
+            await self._post_turn_async(
+                aid,
+                "",
+                deadline_monotonic=deadline,
+                message_id=str(uuid.uuid4()),
+                companion_turn_message_type=CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON,
+            )
+            logger.info(
+                "repl sent IMPLICIT_USER_SIGNED_ON after reconnect agent_id={}", aid
+            )
+        except BaseException:
+            logger.exception(
+                "repl IMPLICIT_USER_SIGNED_ON after reconnect failed agent_id={}", aid
+            )
 
     def start(self, *, connect_timeout: float = 30.0) -> None:
         if self._thread is not None:
@@ -299,9 +336,13 @@ class BackendChatWsBridge:
                 self._ws = ws
                 self._response_q = asyncio.Queue()
                 self._online_ev.set()
+                connect_seq = self._successful_transport_connects
+                self._successful_transport_connects += 1
                 if not self._ready.is_set():
                     self._ready.set()
                 reconnect_idx = 0
+                if connect_seq > 0 and _agent_id_from_ws_url(self._ws_url):
+                    asyncio.create_task(self._maybe_post_implicit_signed_on_after_reconnect())
                 reader_task = asyncio.create_task(self._read_loop(ws))
                 pinger = asyncio.create_task(self._pinger_loop(ws, halt))
                 halt_task = asyncio.create_task(halt.wait())
@@ -431,6 +472,7 @@ class BackendChatWsBridge:
         *,
         deadline_monotonic: float,
         message_id: str | None = None,
+        companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
     ) -> str:
         """Send one user chat JSON frame; return normalized ``message_id``. No recv."""
         last_transport: BaseException | None = None
@@ -442,7 +484,10 @@ class BackendChatWsBridge:
                 continue
             try:
                 mid, payload = _ws_chat_turn_send_payload(
-                    agent_id, user_text, message_id
+                    agent_id,
+                    user_text,
+                    message_id,
+                    companion_turn_message_type=companion_turn_message_type,
                 )
                 await self._ws.send(payload)
                 return mid
@@ -463,6 +508,8 @@ class BackendChatWsBridge:
         agent_id: str,
         user_text: str,
         message_id: str | None = None,
+        *,
+        companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
     ) -> str:
         """Send one turn on the wire and return the normalized ``message_id`` (no wait for assistant)."""
         if not self._loop:
@@ -474,6 +521,7 @@ class BackendChatWsBridge:
             user_text,
             deadline_monotonic=deadline,
             message_id=message_id,
+            companion_turn_message_type=companion_turn_message_type,
         )
         fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
         thread_timeout = max(120.0, send_budget, default_post_turn_thread_timeout_sec())
@@ -518,9 +566,7 @@ class BackendChatWsBridge:
                 logger.warning("chat ws not connected before send (attempt {})", attempt)
                 continue
             try:
-                mid, payload = _ws_chat_turn_send_payload(
-                    agent_id, user_text, message_id
-                )
+                mid, payload = _ws_chat_turn_send_payload(agent_id, user_text, message_id)
                 await self._ws.send(payload)
                 while True:
                     data = await asyncio.wait_for(

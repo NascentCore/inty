@@ -27,6 +27,25 @@ def test_implicit_signal_system_messages_skips_all_none_user_time_fields() -> No
     assert implicit_signal_system_messages(b) == []
 
 
+def test_implicit_signal_system_messages_user_signed_on_slice() -> None:
+    b = ImplicitSignalBundle(user_signed_on=True)
+    msgs = implicit_signal_system_messages(b)
+    assert len(msgs) == 1
+    assert msgs[0]["role"] == "system"
+    assert "come online" in (msgs[0]["content"] or "").lower()
+
+
+def test_implicit_signal_system_messages_time_and_sign_on_both() -> None:
+    b = ImplicitSignalBundle(
+        client_time=UserTimeContext(local_time="2026-05-01T12:00:00Z"),
+        user_signed_on=True,
+    )
+    msgs = implicit_signal_system_messages(b)
+    assert len(msgs) == 2
+    assert "##User Time Context" in msgs[0]["content"]
+    assert "Implicit client signal" in msgs[1]["content"]
+
+
 def test_implicit_signal_system_messages_includes_title_and_guidance() -> None:
     b = ImplicitSignalBundle(
         client_time=UserTimeContext(

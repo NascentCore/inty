@@ -4,6 +4,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
+// TODO(implicit-sign-on): Verify :app:compileDebugKotlin with ANDROID_HOME before release when
+// changing WS payloads; see /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+
+/** Companion WebSocket turn kind; aligns with Python ``CompanionChatTurnMessageType``. */
+object CompanionChatTurnMessageType {
+    const val USER_MESSAGE = "USER_MESSAGE"
+    const val IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
+}
+
 @Serializable
 data class AgentInfo(
     val avatar: String = "",
@@ -84,6 +93,8 @@ data class SendMsgReq(
     @SerialName("target_imate_id") val targetImateId: String? = null,
     /** RFC4122; companion WebSocket uses as transcript user_msg_uuid when valid. */
     @SerialName("message_id") val messageId: String? = null,
+    /** Optional; default server-side is USER_MESSAGE. */
+    @SerialName("messageType") val messageType: String? = null,
 )
 
 @Serializable
