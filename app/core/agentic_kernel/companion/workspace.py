@@ -56,10 +56,6 @@ class WorkspacePaths:
         return self.root / "MEMORY.md"
 
     @property
-    def agents_md(self) -> Path:
-        return self.root / "AGENTS.md"
-
-    @property
     def tools_md(self) -> Path:
         return self.root / "TOOLS.md"
 

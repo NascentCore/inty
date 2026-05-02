@@ -102,10 +102,6 @@ class PromptBundle(BaseModel):
     user_md: str
     memory_md: str
     significance_perception_md: str = ""
-    agents_md: str = Field(
-        default="",
-        description="Deprecated: AGENTS.md is not loaded or injected; kept default-empty for callers/tests.",
-    )
     tools_md: str = ""
     memory_raw_diary_today_md: str = ""
     memory_day_summary_today_md: str = ""

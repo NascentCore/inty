@@ -22,7 +22,6 @@ class CompanionWorkspaceDocKind(str, Enum):
     SOUL = "soul"
     USER = "user"
     MEMORY = "memory"
-    AGENTS = "agents"
     HEARTBEAT = "heartbeat"
     TOOLS = "tools"
     SIGNIFICANCE_PERCEPTION = "significance_perception"
@@ -49,7 +48,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionWorkspaceDocKind, date | None]] = {
     "SOUL.md": (CompanionWorkspaceDocKind.SOUL, None),
     "USER.md": (CompanionWorkspaceDocKind.USER, None),
     "MEMORY.md": (CompanionWorkspaceDocKind.MEMORY, None),
-    "AGENTS.md": (CompanionWorkspaceDocKind.AGENTS, None),
     "HEARTBEAT.md": (CompanionWorkspaceDocKind.HEARTBEAT, None),
     "TOOLS.md": (CompanionWorkspaceDocKind.TOOLS, None),
     "SIGNIFICANCE_PERCEPTION.md": (
