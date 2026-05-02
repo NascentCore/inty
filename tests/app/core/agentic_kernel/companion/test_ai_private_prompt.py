@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from app.core.agentic_kernel.companion.ai_private_prompt import (
+    get_ai_private_jsonl_text_for_prompt,
+    get_ai_private_merged_text_for_prompt,
+    get_ai_private_text_for_prompt,
+)
+from app.core.agentic_kernel.companion.memory_registry import (
+    get_memory_store,
+    shutdown_memory_store,
+)
+
+
+def test_get_ai_private_text_md_only(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    store = get_memory_store(root)
+    store.write_document("ai_private.md", "hello md\n")
+    assert get_ai_private_text_for_prompt(root) == "hello md\n"
+    shutdown_memory_store(root)
+
+
+def test_get_ai_private_jsonl_extracts_text_field(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    store = get_memory_store(root)
+    store.write_document(
+        "ai_private.jsonl",
+        '{"text": "first note"}\n{"content": "second"}\n',
+    )
+    out = get_ai_private_jsonl_text_for_prompt(root)
+    assert out == "first note\nsecond"
+    shutdown_memory_store(root)
+
+
+def test_get_ai_private_merged_prefers_md_then_jsonl(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    store = get_memory_store(root)
+    store.write_document("ai_private.md", "from md")
+    store.write_document("ai_private.jsonl", '{"note": "from jl"}\n')
+    out = get_ai_private_merged_text_for_prompt(root)
+    assert "from md" in out
+    assert "from jl" in out
+    assert "ai_private.jsonl" in out
+    shutdown_memory_store(root)
+
+
+def test_get_ai_private_merged_without_jsonl_equals_md(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    store = get_memory_store(root)
+    store.write_document("ai_private.md", "only md\n")
+    assert get_ai_private_merged_text_for_prompt(root) == get_ai_private_text_for_prompt(root)
+    shutdown_memory_store(root)

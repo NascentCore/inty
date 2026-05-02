@@ -179,6 +179,7 @@ async def run_turn(
     transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
 
     tools_for_turn, system_messages, route_mode = companion_turn_tools_and_system_messages(
+        workspace_root=root,
         bundle=bundle,
         context=context,
         workspace_bootstrap_type=workspace_bootstrap_type,
@@ -289,6 +290,7 @@ async def run_turn(
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     used_async_tool_background = True
                     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
+                        workspace_root=root,
                         bundle=bundle,
                         context=context,
                         workspace_bootstrap_type=workspace_bootstrap_type,
@@ -302,6 +304,7 @@ async def run_turn(
                         implicit_signal_bundle=implicit_signal_bundle,
                     )
                     _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
+                        workspace_root=root,
                         bundle=bundle,
                         context=context,
                         workspace_bootstrap_type=workspace_bootstrap_type,
