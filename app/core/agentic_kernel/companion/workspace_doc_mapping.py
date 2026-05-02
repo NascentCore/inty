@@ -32,8 +32,8 @@ class CompanionWorkspaceDocKind(str, Enum):
     AI_PRIVATE_MD = "ai_private_md"
     AI_PRIVATE_JSONL = "ai_private_jsonl"
     GENERATED_IMAGES_INDEX_JSONL = "generated_images_index_jsonl"
-    MEMORY_DAILY_RAW = "memory_daily_raw"
-    MEMORY_DAY_SUMMARY = "memory_day_summary"
+    MEMORY_DAILY_RAW = "memory_daily_raw"  # episodic: memory/daily/<date>.md
+    MEMORY_DAY_SUMMARY = "memory_day_summary"  # gist: memory/<date>.md
     COMPANION_MEMORY_PIPELINE_JSON = "companion_memory_pipeline_json"
     COMPANION_CONTEXT_COMPACTION_STATE_JSON = "companion_context_compaction_state_json"
     COMPANION_SCHEDULE_TASKS_JSON = "companion_schedule_tasks_json"

@@ -5,6 +5,11 @@ from app.core.agentic_kernel.companion.models import (
     InnerTickMode,
     PromptBundle,
 )
+from app.core.agentic_kernel.companion.memory_taxonomy import (
+    MEMORY_SYSTEM_HEADING_EPISODIC,
+    MEMORY_SYSTEM_HEADING_GIST,
+    MEMORY_SYSTEM_HEADING_SEMANTIC,
+)
 from app.core.agentic_kernel.companion.prompts import build_system_prompt
 
 
@@ -75,11 +80,11 @@ def test_build_system_prompt_intimate_memory() -> None:
         memory_day_summary_today_md="summary today",
     )
     text = build_system_prompt(b, ContextMeta(context_mode="intimate"))
-    assert "## MEMORY 日记（今日原始）" in text
+    assert MEMORY_SYSTEM_HEADING_EPISODIC.strip() in text
     assert "raw today" in text
-    assert "## MEMORY 当日总结" in text
+    assert MEMORY_SYSTEM_HEADING_GIST.strip() in text
     assert "summary today" in text
-    assert "## MEMORY（长期记忆定稿）" in text
+    assert MEMORY_SYSTEM_HEADING_SEMANTIC.strip() in text
     assert "long mem" in text
 
 
@@ -93,9 +98,9 @@ def test_build_system_prompt_emotional_companion_memory_same_as_intimate() -> No
         memory_day_summary_today_md="summary today",
     )
     text = build_system_prompt(b, ContextMeta(context_mode="emotional_companion"))
-    assert "## MEMORY 日记（今日原始）" in text
+    assert MEMORY_SYSTEM_HEADING_EPISODIC.strip() in text
     assert "raw today" in text
-    assert "## MEMORY（长期记忆定稿）" in text
+    assert MEMORY_SYSTEM_HEADING_SEMANTIC.strip() in text
     assert "long mem" in text
     assert "情感陪伴" in text
 

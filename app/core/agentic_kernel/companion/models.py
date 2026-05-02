@@ -100,15 +100,24 @@ class PromptBundle(BaseModel):
     identity: str
     soul: str
     user_md: str
-    memory_md: str
+    memory_md: str = Field(
+        ...,
+        description="semantic memory: MEMORY.md body for system injection when private memory is on.",
+    )
     significance_perception_md: str = ""
     agents_md: str = Field(
         default="",
         description="Deprecated: AGENTS.md is not loaded or injected; kept default-empty for callers/tests.",
     )
     tools_md: str = ""
-    memory_raw_diary_today_md: str = ""
-    memory_day_summary_today_md: str = ""
+    memory_raw_diary_today_md: str = Field(
+        default="",
+        description="episodic memory: memory/daily/<date>.md tail for system injection.",
+    )
+    memory_day_summary_today_md: str = Field(
+        default="",
+        description="gist memory: memory/<date>.md for system injection.",
+    )
 
 
 class ContextMeta(BaseModel):
@@ -136,7 +145,11 @@ def load_prompt_bundle(
     *,
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
-    """加载人格与记忆。未启用私人记忆的体验配置不读取长期与日程私人记忆文件。"""
+    """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
+
+    私人记忆三层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` 情景记忆 episodic，
+    ``memory/<日期>.md`` gist 单日摘要，``MEMORY.md`` semantic 语义记忆。
+    未启用私人记忆的体验配置时不读取上述日程路径且将 ``MEMORY.md`` 注入留空。"""
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)

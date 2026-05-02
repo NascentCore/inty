@@ -723,7 +723,7 @@ def build_openai_repl_tools(
                 "description": (
                     "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
                     "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
-                    "and optionally workspace documents from MemoryStore (SOUL, USER, MEMORY, daily memory). "
+                    "and optionally workspace documents from MemoryStore (SOUL, USER, MEMORY.md, episodic/gist day paths). "
                     "Use when the user asks for verifiable facts about the active model, parameters, or injected "
                     "prompt stack. For self-check only: answer the user in natural language without reading "
                     "this JSON aloud verbatim."

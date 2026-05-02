@@ -12,6 +12,11 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
 from .implicit_signal_messages import implicit_signal_system_messages
+from .memory_taxonomy import (
+    MEMORY_SYSTEM_HEADING_EPISODIC,
+    MEMORY_SYSTEM_HEADING_GIST,
+    MEMORY_SYSTEM_HEADING_SEMANTIC,
+)
 from .models import ContextMeta, InnerTickMode, PromptBundle
 from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
 from .workspace import get_imate_axiom_system_text
@@ -365,21 +370,21 @@ def build_system_messages(
         if not skip_memory_blocks and bundle.memory_raw_diary_today_md.strip():
             out.append(
                 _system_message(
-                    "## MEMORY 日记（今日原始）\n\n"
+                    MEMORY_SYSTEM_HEADING_EPISODIC
                     + bundle.memory_raw_diary_today_md.strip()
                 )
             )
         if not skip_memory_blocks and bundle.memory_day_summary_today_md.strip():
             out.append(
                 _system_message(
-                    "## MEMORY 当日总结\n\n"
+                    MEMORY_SYSTEM_HEADING_GIST
                     + bundle.memory_day_summary_today_md.strip()
                 )
             )
         if not skip_memory_blocks and bundle.memory_md.strip():
             out.append(
                 _system_message(
-                    "## MEMORY（长期记忆定稿）\n\n" + bundle.memory_md.strip()
+                    MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
                 )
             )
 
