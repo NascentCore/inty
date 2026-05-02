@@ -5,11 +5,9 @@ Inty代表Intelligent Entity，智能存在；因情感是人类智能层次中�
 包括Python写的智能体云端服务、Android移动端App为用户提供交互界面；
 以及OPs工具用于支持运营和商业化。
 
-这是一个Monorepo
+这是一个Monorepo；你是唯一维护者，人类工程师帮你配置环境和解决你不能直接处理的事情。
 
-工程师主要使用[Cursor](https://cursor.com/)；产品经理用
-1. [Claude Code](https://code.claude.com/docs/en/overview)
-2. [OpenAI Codex](https://openai.com/codex/)
+工程师主要使用[Cursor](https://cursor.com/)；产品经理用 [Claude Code](https://code.claude.com/docs/en/overview) [OpenAI Codex](https://openai.com/codex/)
 
 这些编码智能体通过
 [飞书MCP](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/mcp_integration/mcp_introduction?lang=zh-CN)、
