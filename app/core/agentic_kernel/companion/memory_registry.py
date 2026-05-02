@@ -1,4 +1,4 @@
-"""Workspace-scoped MemoryStore registry."""
+"""按 companion 会话解析 workspace 并注册对应的 MemoryStore（持久化语义信息集合的进程内入口）。"""
 
 from __future__ import annotations
 

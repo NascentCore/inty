@@ -1,4 +1,8 @@
-"""Memory store: DB-authoritative append-only versions; in-memory only when no repository."""
+"""MemoryStore：companion 工作区「持久化语义信息」的存储访问层。
+
+每条文档由逻辑相对路径（POSIX）寻址，正文可以是 Markdown、JSON、jsonl 等；涵盖提示词切片、对话 transcript、
+context、压实与管线状态等，不限于狭义的 episodic 记忆。启用 repository 时以 DB append-only 版本为权威；
+否则仅进程内缓存。从不把用户设备本地路径当作会话档案权威来源。"""
 
 from __future__ import annotations
 
@@ -198,7 +202,7 @@ class MemoryCache:
 
 
 class MemoryStore:
-    """Repository-backed or in-process-only memory store (never reads user workspace files)."""
+    """按逻辑路径读写本会话 MemoryStore 中的持久化语义信息（repository 可选；非用户磁盘权威）。"""
 
     def __init__(
         self,

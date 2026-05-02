@@ -1,4 +1,6 @@
-"""Companion workspace: 路径定义与初始化状态检查。"""
+"""Companion workspace: 逻辑路径约定、初始化与模板种子。
+
+会话正文权威在 MemoryStore（持久化语义信息集合）；此处路径对象多用于解析与种子写入。"""
 
 from __future__ import annotations
 

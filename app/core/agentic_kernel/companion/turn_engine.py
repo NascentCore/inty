@@ -1,4 +1,4 @@
-"""REPL-grade turn helpers: message assembly and transcript rows via MemoryStore."""
+"""REPL-grade turn helpers: message assembly and transcript rows persisted as MemoryStore semantic documents."""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
-"""System prompt 组装。"""
+"""System prompt 组装。
+
+从 MemoryStore 的持久化语义文档（经 PromptBundle 等）与代码内契约拼出多段 system；路径工具指向同一会话内的逻辑路径，非用户本机目录。
+"""
 
 from __future__ import annotations
 
@@ -26,7 +29,10 @@ def _inner_tick_proactive_chat(
 
 
 # 与 workspace_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
-_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = "路径工具（workspace_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
+_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = (
+    "路径工具（workspace_*）访问本会话 MemoryStore 中的持久化语义文档（逻辑路径，类 POSIX），"
+    "并非用户设备上的文件夹。"
+)
 
 
 def _system_message(content: str) -> dict[str, Any]:
@@ -86,7 +92,7 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
         "你与**并行工具路**是同一人格的两种速度：本路优先低延迟外显；工具路负责读档案、联网、生图等须核对或慢步骤。"
         "对用户的事实立场、边界与态度必须一致，禁止「一路拒绝、一路照做」的分裂。\n\n"
-        "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS.md，但你仍须遵守：凡应以持久化档案原文、检索结果或工具返回为准的问题，"
+        "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS.md，但你仍须遵守：凡应以持久化语义文档原文、检索结果或工具返回为准的问题，"
         "不得以「无法读取」「不能向你展示内部文件」等说法抢先否定并行路即将执行的核对；"
         "不要编造档案内容；若并行路会给出依据或原文，本路只用简短自然的承接语（可表示细节马上对齐），"
         "或将 `user_facing_reply` 留空/极短，把可核对正文交给工具路落点。\n\n"
@@ -100,9 +106,9 @@ def _repl_tool_contract_image_generation_clause() -> str:
         "（7）当用户**明确索要新的**图片、画面、肖像照、插图（从零生成）时，必须先调用 generate_image（Fal z-image-turbo 文生图），"
         "再根据工具返回作答；张数由对话判定写入工具参数（默认 1）。"
         "当用户要**修改、重画、换风格、在已有图基础上改**时，须调用 modify_image（Fal z-image-turbo **图生图**），"
-        "并传入持久化档案中的相对路径（如 generated_images/...）或公网 source_image_url；**不要**用 generate_image 做改图。"
+        "并传入持久化语义文档中的相对路径（如 generated_images/...）或公网 source_image_url；**不要**用 generate_image 做改图。"
         "生图若含**生肖像、年节/主题化肖像、风格化头像**等仍须呈现助手**约定外观**时：须以 **IDENTITY.md 中外貌相关小节**"
-        "（常见标题如「外貌与形象」）为**外形蓝本**，在工具 `prompt` 中显式写入该小节已写入持久化档案的**可核对特征**；"
+        "（常见标题如「外貌与形象」）为**外形蓝本**，在工具 `prompt` 中显式写入该小节已写入持久化语义文档的**可核对特征**；"
         "**禁止**擅自改写、弱化或替换已约定的**发型发色、眼型瞳色、五官标志性细节、肤色与体态锚点**等核心特征；"
         "生肖/主题/节日元素仅作**服饰、道具、场景、氛围或装饰性**叠加，不得与上述蓝本冲突。"
         "改图（modify_image）时若涉及主题化或换风格，同样须保持与 IDENTITY 外貌小节一致的关键特征，不得仅用提示词「换脸」或推翻既有约定。"
@@ -114,7 +120,7 @@ def _repl_tool_contract_suffix_after_image_clause(*, tool_side_compact: bool = F
     base = (
         "禁止在未调用相应工具、或未读到工具返回内容时，声称「已调用」「调用失败」「依赖未就绪」或编造 URL/档案中不存在的路径；"
         "仅当工具返回以 ERROR: 开头时，才可用自然语言说明失败并给出文字替代。"
-        "无写入持久化档案需求、无需核对 MemoryStore 中持久化内容、无自察必要、无生图请求时，不要调用工具。"
+        "无写入持久化语义文档需求、无需核对 MemoryStore 语义正文、无自察必要、无生图请求时，不要调用工具。"
     )
     if tool_side_compact:
         return (
@@ -151,8 +157,8 @@ def _output_contract_text_with_tools(
         "**不要**为日常闲聊或无核验目的调用 workspace_list_dir 列举根目录；"
         "仅在即将 read/write 某路径且不确定同层有哪些名称、用户明确询问某路径或目录是否存在、或须核对本回合 system 未给出的全文（含 transcript.jsonl）时"
         "再调用 workspace_list_dir；避免重复读取本回合 system 中已完整给出且未变更的同一文档。"
-        "送入模型的仅为近期对话窗口；若必须核对持久化档案中的完整 transcript.jsonl，应用工具参数限制返回长度。"
-        "（4）凡用户问题涉及**可与持久化档案核对**的事实（例如某文档行数、是否包含某段原文、持久化版本是否与当前认知一致），"
+        "送入模型的仅为近期对话窗口；若必须核对持久化语义文档中的完整 transcript.jsonl，应用工具参数限制返回长度。"
+        "（4）凡用户问题涉及**可与持久化语义文档核对**的事实（例如某文档行数、是否包含某段原文、持久化版本是否与当前认知一致），"
         "必须先调用 workspace_read_file，或在确有列举必要时 workspace_list_dir，取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文档内容。"
         "在尚未完成上述工具调用前，不要声称已检查持久化内容或已与档案同步。"
@@ -187,7 +193,7 @@ def _output_contract_text_interactive_bootstrap_tools(
         "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
         "（2）确有核对持久化约定稿需求时可用 workspace_list_dir / workspace_read_file；勿编造内容。"
         "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
-        "（3）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
+        "（3）凡涉及可与持久化语义文档核对的事实，须先读到持久化正文再作答。"
         "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
         "（5）模型与实现细节类问题须先调用 companion_runtime_inspect。"
     )
@@ -250,7 +256,7 @@ def _inner_tick_turn_section() -> str:
         "- **不要做**与「内在整理」无关的炫技：除非与已悬而未决且对话中已明确需要的任务强相关，"
         "否则本节拍**不要**生图、不要联网检索、不要安排与用户无关的定时提醒。\n\n"
         "**与 ai_private**：内在侧写由进程维护的 `ai_private` 注入下一轮；"
-        "本节拍仅用允许的工具维护持久化档案与 USER 档案一致，勿编造不存在的工具名。"
+        "本节拍仅用允许的工具维护持久化语义文档与 USER 档案一致，勿编造不存在的工具名。"
     )
 
 

@@ -1,4 +1,7 @@
-"""Prompt slice ids (filename stem, no .md) for system injection and companion_update_prompt_slice."""
+"""提示词切片语义名与 MemoryStore 逻辑路径的对应（system 注入与 companion_update_prompt_slice）。
+
+持久化切片默认映射为档案根下 ``{切片名}.md``（``BOOTSTRAP`` 仅包内模板，无对应路径）。
+层级路径（如 ``memory/daily/{date}.md``）同属 MemoryStore 语义文档命名空间，由 ``load_prompt_bundle`` 等另行约定。"""
 
 from __future__ import annotations
 

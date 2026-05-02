@@ -136,7 +136,9 @@ def load_prompt_bundle(
     *,
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
-    """加载人格与记忆。未启用私人记忆的体验配置不读取长期与日程私人记忆文件。"""
+    """从 MemoryStore 读取组装 PromptBundle 所需的语义文档（人设、用户档案、记忆层、工具说明等）。
+
+    未启用私人记忆的体验配置时不读取长期与日程私人记忆路径。"""
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)

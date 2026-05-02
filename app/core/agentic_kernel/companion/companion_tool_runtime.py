@@ -1,7 +1,7 @@
 """Companion tool runtime: schemas, dispatch, and ``execute_tool_call`` for the REPL/agentic kernel.
 
-Persisted companion documents and transcript go through MemoryStore; tool_surface helpers may still use
-workspace-relative paths aligned with ``workspace_doc_mapping``.
+会话的持久化语义信息（切片、transcript、context 等）经 MemoryStore 按逻辑路径读写；工具侧使用与
+``workspace_doc_mapping`` 对齐的 workspace-relative 路径，不是用户设备本地目录权威。
 """
 
 from __future__ import annotations

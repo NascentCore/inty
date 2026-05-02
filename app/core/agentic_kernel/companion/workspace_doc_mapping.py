@@ -1,4 +1,4 @@
-"""Map workspace-relative paths to ORM (document_kind, calendar_date)."""
+"""将 MemoryStore 逻辑相对路径映射到 ORM 的 document_kind（及可选 calendar_date）。"""
 
 from __future__ import annotations
 

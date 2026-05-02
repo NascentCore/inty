@@ -1,5 +1,10 @@
 # Companion kernel 说明
 
+## MemoryStore 与持久化语义信息
+
+- **概念**：`MemoryStore` 承载 **companion 工作区的持久化语义信息集合**：用 **逻辑相对路径**（POSIX）索引的正文，表达人设、边界、用户档案、工具说明、对话与状态、记忆分层等；便于把「概念结构」映射到代码里的路径与 ORM kind。**不等于**仅 episodic 记忆子系统，也**不是**用户手机上的文件夹。
+- **代码映射**：存储实现 `memory_store.py`；按会话获取 `memory_registry.py`；路径与 `document_kind` `workspace_doc_mapping.py`；切片语义名与根目录 `*.md` `prompt_slices.py`；装入 LLM 前 `models.load_prompt_bundle` + `prompts.build_system_messages`。
+
 ## 持久化与数据表
 
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `transcript.jsonl` / `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_workspace_document_versions`**（ORM：`app.models.companion_workspace.CompanionWorkspaceDocumentVersion`）。
