@@ -7,7 +7,7 @@ from typing import Final
 
 
 class PromptSliceId(StrEnum):
-    """Template / workspace slice names. AGENTS is intentionally absent (legacy)."""
+    """Template / workspace slice names for root ``*.md`` prompt documents."""
 
     BOOTSTRAP = "BOOTSTRAP"
     IDENTITY = "IDENTITY"
