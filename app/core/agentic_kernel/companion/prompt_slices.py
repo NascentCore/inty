@@ -10,11 +10,15 @@ from typing import Final
 
 
 class PromptSliceId(StrEnum):
-    """Template / workspace slice names for root ``*.md`` prompt documents."""
+    """Template / workspace slice stems for ``*.md`` injection and companion_update_prompt_slice.
+
+    Workspace-backed persistable slices: IDENTITY, SOUL, USER, MEMORY, TOOLS, CAPABILITIES,
+    SIGNIFICANCE_PERCEPTION. BOOTSTRAP is package-only.
+    """
 
     BOOTSTRAP = "BOOTSTRAP"
-    IDENTITY = "IDENTITY"
     SOUL = "SOUL"
+    IDENTITY = "IDENTITY"
     USER = "USER"
     MEMORY = "MEMORY"
     TOOLS = "TOOLS"

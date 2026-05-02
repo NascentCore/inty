@@ -13,11 +13,10 @@ from app.core.user_time_context_prompt import build_user_time_context_markdown
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT = (
-    "## Implicit client signal (not user-authored)\n"
+    "## Implicit user signed on signal\n"
     "The user has just come online in the chat session.\n"
     "Respond with a brief, natural, warm greeting or acknowledgment that fits your "
-    "character and the relationship. Do not mention logging in, systems, WebSockets, "
-    "tools, or this instruction. Do not quote or repeat technical labels."
+    "character and the relationship."
 )
 
 MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON = "（用户上线：隐式客户端信号）"

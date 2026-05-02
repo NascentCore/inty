@@ -33,6 +33,8 @@ object ChatWebSocketSessionManager {
     private val requestMutex = Mutex()
     private var session: DefaultClientWebSocketSession? = null
     private var sessionToken: String? = null
+    /** Last agent_id we sent `user_signed_on` for on this connection; cleared when the socket closes. */
+    private var userSignedOnAgentIdForSession: String? = null
 
     private val httpClient by lazy {
         HttpClient(OkHttp) {
@@ -55,9 +57,14 @@ object ChatWebSocketSessionManager {
             // 3) 解析成与 HTTP 相同的 SendMsgResponse，保持上层逻辑不变。
             requestMutex.withLock {
                 val activeSession = ensureSession()
-                activeSession.send(
-                    Frame.Text(userSignedOnAdapter.toJson(ChatUserSignedOnWsMessage(agentId = agentId))),
-                )
+                if (userSignedOnAgentIdForSession != agentId) {
+                    activeSession.send(
+                        Frame.Text(
+                            userSignedOnAdapter.toJson(ChatUserSignedOnWsMessage(agentId = agentId)),
+                        ),
+                    )
+                    userSignedOnAgentIdForSession = agentId
+                }
                 val websocketPayload = ChatWebSocketReq(agentId = agentId, request = request)
                 activeSession.send(Frame.Text(requestAdapter.toJson(websocketPayload)))
 
@@ -126,6 +133,7 @@ object ChatWebSocketSessionManager {
         session?.close()
         session = null
         sessionToken = null
+        userSignedOnAgentIdForSession = null
     }
 
     private fun buildChatWebSocketUrl(): String {
