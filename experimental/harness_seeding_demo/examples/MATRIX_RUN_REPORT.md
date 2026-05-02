@@ -2,6 +2,8 @@
 
 **Chinese summary (settings + conclusions)**: [EXPERIMENT_SUMMARY.md](EXPERIMENT_SUMMARY.md)
 
+**One-sentence takeaway**: With a fixed kernel and user script, workspace seeds only separate clearly on first-pass turn once harness noise is removed (e.g. status-line tool without DB), the dialogue arc is long enough, and multiple strict heuristic rubrics are used; short scripts plus a single lenient rubric saturate and make all seeds look the same.
+
 This file contrasts three experiment regimes. Raw JSON for the latest run stays under `results/` (gitignored); this report copies **aggregated numbers only**.
 
 ---
