@@ -1,5 +1,15 @@
 # Companion kernel 说明
 
+## 分层记忆（路径与心理学术语）
+
+| 逻辑路径 | 命名（中 / EN） | 说明 |
+|----------|-----------------|------|
+| `memory/daily/{date}.md` | 情景记忆 / episodic memory | 按轮追加的当日流水，`memory_pipeline._append_diary` |
+| `memory/{date}.md` | 单日摘要 / gist memory | 当日结构化纪要，`memory_pipeline._rewrite_day_summary_md` |
+| `MEMORY.md` | 语义记忆 / semantic memory | 跨日整合定稿，`memory_pipeline._rewrite_memory_md` |
+
+注入 LLM 的 section 标题常量：`memory_taxonomy.py`（与 `prompts.build_system_messages` 一致）。
+
 ## 持久化与数据表
 
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `transcript.jsonl` / `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_workspace_document_versions`**（ORM：`app.models.companion_workspace.CompanionWorkspaceDocumentVersion`）。

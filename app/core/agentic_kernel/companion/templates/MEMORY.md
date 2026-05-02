@@ -2,6 +2,8 @@
 
 *我们的对话与时刻。*
 
+（本文件为 **语义记忆 semantic memory / MEMORY.md**；当日流水见 ``memory/daily/<日期>.md`` episodic，当日摘要见 ``memory/<日期>.md`` gist。）
+
 ## 近期对话摘要
 - 暂无；随对话积累后由记忆策展整理写入。
 

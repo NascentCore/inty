@@ -11,4 +11,4 @@
 1. SOUL.md
 1. IDENTITY.md
 1. USER.md
-1. MEMORY.md
+1. MEMORY.md（语义记忆 semantic；另有两层日程路径：`memory/daily/{date}.md` 情景 episodic，`memory/{date}.md` gist 单日摘要，见 `memory_taxonomy.py`）

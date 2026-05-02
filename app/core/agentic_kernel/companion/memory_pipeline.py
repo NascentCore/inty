@@ -1,4 +1,5 @@
-"""记忆更新管线：日记追加、按间隔的当日总结与 MEMORY/USER/SOUL 策展。"""
+"""记忆更新管线：情景记忆 episodic（``memory/daily/<date>.md`` 追加）、gist 单日摘要（``memory/<date>.md``）、
+语义记忆 semantic（``MEMORY.md``）与 USER/SOUL 策展。"""
 
 from __future__ import annotations
 
@@ -39,7 +40,7 @@ _SOUL_FUNDAMENTAL_SIGNAL_RE = re.compile(
 )
 _SOUL_FUNDAMENTAL_SIGNAL_EN_RE = re.compile(r"\bSOUL\b|\bIDENTITY\b|\bBOUNDARY\b")
 
-_MEMORY_CURATOR_SYSTEM = """You are a memory curator. Given the current MEMORY.md, optional current-day summary, and the latest user/assistant turn, output ONLY the full updated MEMORY.md body (markdown).
+_MEMORY_CURATOR_SYSTEM = """You are a memory curator for semantic long-term memory (MEMORY.md). Given the current MEMORY.md, optional current-day gist summary (memory/<date>.md), and the latest user/assistant turn, output ONLY the full updated MEMORY.md body (markdown).
 
 Rules:
 - Preserve useful prior facts; merge new stable facts; remove clear contradictions.
@@ -71,7 +72,7 @@ Other rules:
 - Output raw markdown only: no preamble, no code fences around the whole document.
 """
 
-_DAY_SUMMARY_SYSTEM = """You are a day memory summarizer. You maintain a single markdown file for the calendar day: structured, human-readable notes (not a raw chat log).
+_DAY_SUMMARY_SYSTEM = """You are a day memory summarizer (gist memory layer: memory/<date>.md). You maintain a single markdown file for the calendar day: structured, human-readable notes (not a raw chat log).
 
 Given the previous version of that file (may be empty), today's raw diary lines, and the latest user/assistant turn, output ONLY the full updated markdown body for that day.
 
@@ -188,6 +189,7 @@ def _append_diary(
     user_text: str,
     assistant_text: str,
 ) -> None:
+    """Append one line to episodic memory (memory/daily/<date>.md)."""
     day = local_date_str()
     rel = f"memory/daily/{day}.md"
     line = (
