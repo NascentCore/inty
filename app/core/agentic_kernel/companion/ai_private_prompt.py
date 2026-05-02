@@ -51,7 +51,12 @@ def _format_ai_private_jsonl_object(obj: dict[str, Any]) -> str:
 def get_ai_private_text_for_prompt(
     workspace_root: Path, *, max_chars: int | None = None
 ) -> str:
-    """Read ``ai_private.md`` only (default injection path for inner-tick)."""
+    """Read ``ai_private.md`` only.
+
+    Kernel **maintenance** inner-tick turns inject ``ai_private.jsonl`` via
+    ``get_ai_private_jsonl_text_for_prompt`` (see ``prompt_stack``). This function
+    stays for tooling, tests, and ``get_ai_private_merged_text_for_prompt``.
+    """
     cap = max_chars if max_chars is not None else _default_max_chars()
     body = get_memory_store(workspace_root).read_document_if_exists(_AI_PRIVATE_MD_REL)
     s = body or ""
