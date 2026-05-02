@@ -25,7 +25,6 @@ class CompanionWorkspaceDocKind(str, Enum):
     HEARTBEAT = "heartbeat"
     TOOLS = "tools"
     SIGNIFICANCE_PERCEPTION = "significance_perception"
-    CAPABILITIES = "capabilities"
     TRANSCRIPT = "transcript"
     CONTEXT_JSON = "context_json"
     AI_PRIVATE_MD = "ai_private_md"
@@ -54,7 +53,6 @@ _REL_TO_KIND: dict[str, tuple[CompanionWorkspaceDocKind, date | None]] = {
         CompanionWorkspaceDocKind.SIGNIFICANCE_PERCEPTION,
         None,
     ),
-    "CAPABILITIES.md": (CompanionWorkspaceDocKind.CAPABILITIES, None),
     "transcript.jsonl": (CompanionWorkspaceDocKind.TRANSCRIPT, None),
     "context.json": (CompanionWorkspaceDocKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionWorkspaceDocKind.AI_PRIVATE_MD, None),

@@ -135,8 +135,14 @@ class SqlAlchemyMemoryRepository:
             pairs = list(session.execute(stmt).all())
         out: list[str] = []
         for kind_val, cal in pairs:
-            kind = CompanionWorkspaceDocKind(kind_val)
-            out.append(relative_path_for_kind(kind, cal))
+            try:
+                kind = CompanionWorkspaceDocKind(kind_val)
+            except ValueError:
+                continue
+            try:
+                out.append(relative_path_for_kind(kind, cal))
+            except ValueError:
+                continue
         return sorted(out)
 
     def append_document(

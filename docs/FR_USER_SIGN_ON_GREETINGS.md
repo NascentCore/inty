@@ -1,13 +1,20 @@
 # FR: Implicit user sign-on greetings (companion WebSocket)
 
+## Product intent
+
+**中文：** 陪伴智能体应尽量模拟真人：**觉察用户进入会话**（客户端发出的上线信号）、**相当于收到一条通知**，然后**主动开口问候**，减轻「人已经在线，对面却毫无反应」的断裂感。  
+**English:** The companion should feel human-like: it *notices* the user showing up in the channel, reacts as if informed, and *speaks first* with a short greeting rather than staying silent until the user types.
+
+**Client note:** Shipped **Android** apps (IntelliMate [`/android_app/`](/android_app/), iMate [`/imate_android_app/`](/imate_android_app/)) have **never** sent `messageType: IMPLICIT_USER_SIGNED_ON` chat frames; they only use the `user_signed_on` **control** frame (and normal `USER_MESSAGE` turns). Removing the IMPLICIT chat-frame path from the backend is therefore **not** a breaking change for those mobile clients.
+
 ## Goal
 
-Reduce awkwardness when the user returns to the chat channel by letting the client send a non-user-authored turn that the backend treats as an implicit signal: inject a system slice so the model briefly greets the user. The first proactive turn on a fresh connection with `?agent_id=` remains the existing USER_INTERACTIVE bootstrap kickoff; subsequent reconnects can use `messageType: IMPLICIT_USER_SIGNED_ON` (see REPL bridge).
+Reduce awkwardness when the user returns to the chat channel by letting the client send a non-user-authored turn that the backend treats as an implicit signal: the companion kernel **appends** a dedicated system line **after the transcript** (not inside the early system prefix) so the model briefly greets the user without a fake empty user message. The first proactive turn on a fresh connection with `?agent_id=` remains the existing USER_INTERACTIVE bootstrap kickoff; the [`inty_v2_repl`](/tools/inty_v2_repl/backend_chat_ws.py) bridge sends one `messageType: IMPLICIT_USER_SIGNED_ON` frame on **repl startup** (first successful WebSocket connect when `agent_id` is in the URL), not on later transport reconnects within the same process.
 
 ## Protocol (summary)
 
 - Optional field on `ChatCompletionRequest`: `messageType` (alias), enum `CompanionChatTurnMessageType`: `USER_MESSAGE` (default), `IMPLICIT_USER_SIGNED_ON`.
-- `IMPLICIT_USER_SIGNED_ON` requires empty user visible text and no image parts in `messages`; WebSocket companion only; maps to `ImplicitSignalBundle.user_signed_on` and skips persisting an empty user row.
+- `IMPLICIT_USER_SIGNED_ON` requires empty user visible text and no image parts in `messages`; WebSocket companion only; maps to `ImplicitSignalBundle.user_signed_on`, ends the model input with a **tail** `system` trigger (and companion transcript JSONL records that system row) instead of an empty `user` line; PostgreSQL `chat_history` still skips a user row for this turn.
 - Usage analytics: successful implicit sign-on turns include `implicit_user_signed_on: true` in `record_usage` `extra_data` (still counts as one chat turn toward limits).
 - HTTP `/api/v1/chat/completions` rejects `IMPLICIT_USER_SIGNED_ON` with 400.
 
@@ -25,7 +32,7 @@ sequenceDiagram
     WS->>API: validate ChatCompletionRequest
     API->>API: ImplicitSignalBundle user_signed_on from message_type
     API->>CCS: run_companion_chat_turn_for_api
-    CCS->>LLM: system includes sign-on greeting slice + user content empty
+    CCS->>LLM: after transcript, tail system = sign-on trigger; no empty user line
     LLM-->>CCS: assistant greeting
     CCS-->>API: CompanionTurnResult
     API-->>REPL: APIResponse choices

@@ -4,13 +4,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-// TODO(implicit-sign-on): Verify :app:compileDebugKotlin with ANDROID_HOME before release when
-// changing WS payloads; see /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+// TODO: Verify :app:compileDebugKotlin with ANDROID_HOME before release when changing WS payloads.
 
-/** Companion WebSocket turn kind; aligns with Python ``CompanionChatTurnMessageType``. */
+/**
+ * Companion WebSocket `messageType` string (request body).
+ * The shipped app has never sent `IMPLICIT_USER_SIGNED_ON` chat frames; sign-on is via
+ * `user_signed_on` control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
+ */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
-    const val IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
 }
 
 @Serializable
@@ -110,10 +112,18 @@ data class ChatClientContextWsMessage(
 )
 
 @Serializable
+data class ChatUserSignedOnWsMessage(
+    val type: String = "user_signed_on",
+    @SerialName("agent_id") val agentId: String,
+)
+
+@Serializable
 data class ChatWsControlFrame(@SerialName("type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" || this?.type == "client_context_ack"
+    this?.type == "pong" ||
+        this?.type == "client_context_ack" ||
+        this?.type == "user_signed_on_ack"
 
 @Serializable
 data class UserTimeContext(

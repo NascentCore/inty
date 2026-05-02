@@ -178,6 +178,8 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
 
     out["notes"] = (
         "For self-check only; reply to the user in natural language without dumping raw JSON. "
-        "include_full_tools_schema is not implemented; use tools_summary in last_chat_completion_request."
+        "include_full_tools_schema is not implemented; use tools_summary in last_chat_completion_request. "
+        "TOOLS / SIGNIFICANCE_PERCEPTION operator guidance are fixed package templates in PromptBundle, "
+        "not authoritative MemoryStore documents here."
     )
     return json.dumps(out, ensure_ascii=False, indent=2) + "\n"

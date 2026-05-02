@@ -3,6 +3,7 @@ package com.inty.imate.chat.data.datasource
 import com.ai.core.http.di.KtorHttpClientSingleton
 import com.ai.core.utils.LogUtils
 import com.inty.imate.chat.data.bean.ChatClientContextWsMessage
+import com.inty.imate.chat.data.bean.ChatUserSignedOnWsMessage
 import com.inty.imate.chat.data.bean.ChatWebSocketReq
 import com.inty.imate.chat.data.bean.ChatWsControlFrame
 import com.inty.imate.chat.data.bean.SendMsgReq
@@ -27,6 +28,8 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 
 private const val CHAT_WEBSOCKET_PATH = "api/v1/chat/ws"
@@ -42,6 +45,8 @@ constructor() {
 
     private val httpClient = KtorHttpClientSingleton.webSocketHttpClient
     private val currentSession = AtomicReference<DefaultClientWebSocketSession?>(null)
+    private val sendMutex = Mutex()
+    private val userSignedOnAgentIdForConnection = AtomicReference<String?>(null)
 
     private val _isSessionActive = MutableStateFlow(false)
     val isSessionActive: StateFlow<Boolean> = _isSessionActive.asStateFlow()
@@ -54,11 +59,24 @@ constructor() {
 
     suspend fun sendMessageFireAndForget(agentId: String, request: SendMsgReq) {
         waitUntilSessionReadyOrThrow()
-        val session =
-            currentSession.get()
-                ?: throw IllegalStateException("Chat WebSocket not connected")
-        val payload = ChatWebSocketReq(agentId = agentId, request = request)
-        session.send(Frame.Text(json.encodeToString(ChatWebSocketReq.serializer(), payload)))
+        sendMutex.withLock {
+            val session =
+                currentSession.get()
+                    ?: throw IllegalStateException("Chat WebSocket not connected")
+            if (userSignedOnAgentIdForConnection.get() != agentId) {
+                session.send(
+                    Frame.Text(
+                        json.encodeToString(
+                            ChatUserSignedOnWsMessage.serializer(),
+                            ChatUserSignedOnWsMessage(agentId = agentId),
+                        ),
+                    ),
+                )
+                userSignedOnAgentIdForConnection.set(agentId)
+            }
+            val payload = ChatWebSocketReq(agentId = agentId, request = request)
+            session.send(Frame.Text(json.encodeToString(ChatWebSocketReq.serializer(), payload)))
+        }
     }
 
     private suspend fun waitUntilSessionReadyOrThrow() {
@@ -80,6 +98,7 @@ constructor() {
                 ) {
                     val session = this
                     currentSession.set(session)
+                    userSignedOnAgentIdForConnection.set(null)
                     _isSessionActive.value = true
                     try {
                         LogUtils.d("Chat WebSocket connected")
@@ -115,6 +134,7 @@ constructor() {
                         }
                     } finally {
                         currentSession.set(null)
+                        userSignedOnAgentIdForConnection.set(null)
                         _isSessionActive.value = false
                     }
                 }

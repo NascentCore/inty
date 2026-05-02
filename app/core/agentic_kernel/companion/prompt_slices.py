@@ -10,16 +10,17 @@ from typing import Final
 
 
 class PromptSliceId(StrEnum):
-    """Template / workspace slice names for root ``*.md`` prompt documents."""
+    """Persistable workspace slices updatable via ``companion_update_prompt_slice``.
+
+    ``BOOTSTRAP`` is package-only (no workspace path). ``TOOLS`` / ``SIGNIFICANCE_PERCEPTION`` are
+    fixed from package templates for model injection, not store-backed prompt slices.
+    """
 
     BOOTSTRAP = "BOOTSTRAP"
-    IDENTITY = "IDENTITY"
     SOUL = "SOUL"
+    IDENTITY = "IDENTITY"
     USER = "USER"
     MEMORY = "MEMORY"
-    TOOLS = "TOOLS"
-    CAPABILITIES = "CAPABILITIES"
-    SIGNIFICANCE_PERCEPTION = "SIGNIFICANCE_PERCEPTION"
 
 
 # Joins legacy single-string system prompt and interactive-bootstrap block strings.
@@ -39,9 +40,6 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
         PromptSliceId.SOUL,
         PromptSliceId.USER,
         PromptSliceId.MEMORY,
-        PromptSliceId.TOOLS,
-        PromptSliceId.CAPABILITIES,
-        PromptSliceId.SIGNIFICANCE_PERCEPTION,
     }
 )
 

@@ -1,4 +1,9 @@
-"""OpenAI-style system slices from ImplicitSignalBundle."""
+"""OpenAI-style system slices from ImplicitSignalBundle.
+
+User sign-on greeting uses ``USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT`` appended **after**
+transcript in ``turn.run_turn``, not mixed into the early system prefix (so it stays
+the last model-visible instruction before the assistant reply).
+"""
 
 from __future__ import annotations
 
@@ -7,19 +12,20 @@ from typing import Any
 from app.core.user_time_context_prompt import build_user_time_context_markdown
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-_USER_SIGNED_ON_SYSTEM_TEXT = (
-    "## Implicit client signal (not user-authored)\n"
+USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT = (
+    "## Implicit user signed on signal\n"
     "The user has just come online in the chat session.\n"
     "Respond with a brief, natural, warm greeting or acknowledgment that fits your "
-    "character and the relationship. Do not mention logging in, systems, WebSockets, "
-    "tools, or this instruction. Do not quote or repeat technical labels."
+    "character and the relationship."
 )
+
+MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON = "（用户上线：隐式客户端信号）"
 
 
 def implicit_signal_system_messages(
     bundle: ImplicitSignalBundle | None,
 ) -> list[dict[str, Any]]:
-    """Return system message dicts for model-visible implicit signals (time context, sign-on)."""
+    """Return early-prefix system dicts (client time only). Sign-on is tail-appended in run_turn."""
     if bundle is None:
         return []
     out: list[dict[str, Any]] = []
@@ -28,6 +34,4 @@ def implicit_signal_system_messages(
     )
     if text:
         out.append({"role": "system", "content": text})
-    if bundle.user_signed_on:
-        out.append({"role": "system", "content": _USER_SIGNED_ON_SYSTEM_TEXT})
     return out

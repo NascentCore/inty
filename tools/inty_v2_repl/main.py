@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import codecs
 import os
+import queue
 import sys
 import time
 import uuid
@@ -261,6 +262,23 @@ def _emit_downlink_item(
         )
 
 
+def _emit_repl_notice_over_prompt(*, prompt: str, buf: str, text: str) -> None:
+    sys.stdout.write("\r\033[2K")
+    sys.stdout.flush()
+    print(text, file=sys.stderr, flush=True)
+    sys.stdout.write(prompt + buf)
+    sys.stdout.flush()
+
+
+def _drain_repl_notice_queue_before_blocking_input(notice_q: queue.Queue[str]) -> None:
+    while True:
+        try:
+            text = notice_q.get_nowait()
+        except queue.Empty:
+            break
+        print(text, file=sys.stderr, flush=True)
+
+
 def _drain_downlink_queue(
     bridge: BackendChatWsBridge,
     outbound_t0: dict[str, float],
@@ -276,14 +294,18 @@ def _readline_backend_ws_with_sideband(
     bridge: BackendChatWsBridge,
     prompt: str,
     outbound_t0: dict[str, float],
+    notice_q: queue.Queue[str],
 ) -> str:
     """Block for one user line while printing late server-pushed chat frames (POSIX TTY).
 
     Uses cbreak + no echo and a local buffer so a sideband assistant frame can clear the
     current input line, print the message, then redraw ``prompt`` and any partial input.
+    ``notice_q`` carries lines from WebSocket thread callbacks (e.g. ``user_signed_on`` ack)
+    so stderr logging does not splice into the same TTY row as the prompt.
     """
     sel = _posix_select_module_for_stdin()
     if sel is None:
+        _drain_repl_notice_queue_before_blocking_input(notice_q)
         line = input(prompt)
         _drain_downlink_queue(bridge, outbound_t0)
         return line
@@ -301,7 +323,16 @@ def _readline_backend_ws_with_sideband(
         attrs[3] &= ~termios.ECHO
         termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
         tty_ready = True
-        sys.stdout.write(prompt + buf)
+        drew_prompt_after_notice = False
+        while True:
+            try:
+                n = notice_q.get_nowait()
+            except queue.Empty:
+                break
+            _emit_repl_notice_over_prompt(prompt=prompt, buf=buf, text=n)
+            drew_prompt_after_notice = True
+        if not drew_prompt_after_notice:
+            sys.stdout.write(prompt + buf)
         sys.stdout.flush()
 
         def redraw_edit_line() -> None:
@@ -322,13 +353,21 @@ def _readline_backend_ws_with_sideband(
                     [sys.stdin], [], [], _BACKEND_WS_SIDEBAND_POLL_SEC
                 )
             except (ValueError, OSError):
+                _drain_repl_notice_queue_before_blocking_input(notice_q)
                 line = input(prompt)
                 _drain_downlink_queue(bridge, outbound_t0)
                 return line
             if not r:
-                item = pop_downlink_item(bridge)
-                if item is not None:
-                    emit_sideband_item(item)
+                while True:
+                    try:
+                        n = notice_q.get_nowait()
+                    except queue.Empty:
+                        item = pop_downlink_item(bridge)
+                        if item is None:
+                            break
+                        emit_sideband_item(item)
+                    else:
+                        _emit_repl_notice_over_prompt(prompt=prompt, buf=buf, text=n)
                 continue
             while True:
                 chunk = os.read(fd, 1)
@@ -364,7 +403,11 @@ def _readline_backend_ws_with_sideband(
             termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
 
 
-def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str) -> None:
+def _repl_interactive_backend_ws_loop(
+    bridge: BackendChatWsBridge,
+    agent_id: str,
+    notice_q: queue.Queue[str],
+) -> None:
     """Each user line is ``post_turn`` (send-only); assistant/error frames drain via ``pop_downlink_item``.
 
     Server still processes chat frames in order; multiple ``post_turn`` calls only queue on the wire.
@@ -377,7 +420,9 @@ def _repl_interactive_backend_ws_loop(bridge: BackendChatWsBridge, agent_id: str
     outbound_t0: dict[str, float] = {}
     while True:
         try:
-            line = _readline_backend_ws_with_sideband(bridge, "> ", outbound_t0)
+            line = _readline_backend_ws_with_sideband(
+                bridge, "> ", outbound_t0, notice_q
+            )
         except EOFError:
             print()
             break
@@ -423,10 +468,31 @@ def _repl_run_backend_ws_branch(
         agent_resolved,
     )
     _init_proto_logging(ws, log_file, no_log_file)
-    bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
+    repl_notice_q: queue.Queue[str] = queue.Queue()
+
+    def _user_signed_on_notice(aid: str, message_id: str) -> None:
+        repl_notice_q.put(
+            f"[{repl_wall_ts_str()}] repl: user_signed_on sent "
+            f"(agent_id={aid} message_id={message_id})"
+        )
+
+    def _user_signed_on_ack_notice(payload: dict[str, Any]) -> None:
+        ok = payload.get("ok")
+        reason = payload.get("reason")
+        extra = f" reason={reason}" if reason else ""
+        repl_notice_q.put(
+            f"[{repl_wall_ts_str()}] repl: user_signed_on_ack ok={ok}{extra}"
+        )
+
+    bridge = BackendChatWsBridge(
+        ws_url=url,
+        bearer_token=token,
+        on_user_signed_on_sent=_user_signed_on_notice,
+        on_user_signed_on_ack=_user_signed_on_ack_notice,
+    )
     bridge.start()
     try:
-        _repl_interactive_backend_ws_loop(bridge, agent_resolved)
+        _repl_interactive_backend_ws_loop(bridge, agent_resolved, repl_notice_q)
     finally:
         bridge.stop()
 

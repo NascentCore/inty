@@ -22,7 +22,7 @@ from .prompt_slices import (
 from .workspace import load_workspace_seed_text
 
 _PKG_DIR = Path(__file__).resolve().parent
-_BOOTSTRAP_SPEC_PATH = _PKG_DIR / "templates" / "BOOTSTRAP.md"
+_BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
 
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "IDENTITY.md",
@@ -150,8 +150,8 @@ def tool_companion_update_prompt_slice(
     ):
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
-            "you may still update IDENTITY / USER / MEMORY and other non-SOUL slices "
-            "via companion_update_prompt_slice or workspace_write_file (where permitted)."
+            "you may still update IDENTITY / USER / MEMORY via companion_update_prompt_slice "
+            "or workspace_write_file (where permitted)."
         )
     prev = st.read_document_if_exists(rel_posix)
     st.write_document(rel_posix, content)
@@ -199,7 +199,8 @@ def tool_companion_bootstrap_user_interactive_complete(
     logger.info("companion_bootstrap_user_interactive_complete ws={}", root_r.name)
     return (
         "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
-        "SOUL rewrites). IDENTITY / USER / MEMORY and other prompt slices may still be updated."
+        "SOUL rewrites). IDENTITY / USER / MEMORY may still be updated via companion_update_prompt_slice "
+        "or workspace_write_file (where permitted)."
     )
 
 

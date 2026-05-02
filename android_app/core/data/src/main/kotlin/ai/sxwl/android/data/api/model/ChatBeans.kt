@@ -62,13 +62,15 @@ data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
     }
 }
 
-// TODO(implicit-sign-on): Run :core:data:compileDebugKotlin (or full app compile) when changing
-// SendMsgReq; release checklist in /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+// TODO: Run :core:data:compileDebugKotlin (or full app compile) when changing SendMsgReq.
 
-/** Companion WebSocket turn kind; aligns with Python ``CompanionChatTurnMessageType``. */
+/**
+ * Companion WebSocket `messageType` string (request body).
+ * The shipped app has never sent `IMPLICIT_USER_SIGNED_ON` chat frames; sign-on is via
+ * `user_signed_on` control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
+ */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
-    const val IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
 }
 
 @JsonClass(generateAdapter = true)
@@ -92,12 +94,20 @@ data class ChatClientContextWsMessage(
     @Json(name = "time_context") val timeContext: UserTimeContext,
 )
 
+@JsonClass(generateAdapter = true)
+data class ChatUserSignedOnWsMessage(
+    val type: String = "user_signed_on",
+    @Json(name = "agent_id") val agentId: String,
+)
+
 /** Chat WebSocket downstream frames that only carry `type` (e.g. pong, client_context_ack). */
 @JsonClass(generateAdapter = true)
 data class ChatWsControlFrame(@Json(name = "type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" || this?.type == "client_context_ack"
+    this?.type == "pong" ||
+        this?.type == "client_context_ack" ||
+        this?.type == "user_signed_on_ack"
 
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(
