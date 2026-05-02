@@ -83,6 +83,36 @@ class TestTagParser(unittest.TestCase):
         self.assertFalse(result.extraction_success)
         self.assertEqual(result.extracted_tags, [])
 
+    def test_extract_tags_python_literal_with_json_null(self):
+        """测试Python字面量中兼容JSON null常量"""
+        personality = """
+        ##Character info:
+        {'name': 'Mike', 'age': null, 'gender': 'MALE', 'tags': 'Calm, Reliable'}
+        """
+
+        result = self.parser.extract_tags_from_personality(
+            personality, "test-agent-json-null", "Test Agent JSON Null"
+        )
+
+        self.assertTrue(result.extraction_success)
+        self.assertEqual(result.extracted_tags, ["Calm", "Reliable"])
+        self.assertIsNotNone(result.character_info)
+        self.assertIsNone(result.character_info.age)
+
+    def test_extract_tags_rejects_non_literal_expression(self):
+        """测试拒绝非字面量表达式，避免执行任意代码"""
+        personality = """
+        ##Character info:
+        {'name': 'Evil', 'tags': __import__('os').system('echo pwned')}
+        """
+
+        result = self.parser.extract_tags_from_personality(
+            personality, "test-agent-expression", "Test Agent Expression"
+        )
+
+        self.assertFalse(result.extraction_success)
+        self.assertEqual(result.extracted_tags, [])
+
     def test_extract_tags_null_personality(self):
         """测试空personality"""
         result = self.parser.extract_tags_from_personality(
