@@ -243,11 +243,12 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
     chat_id: str | int,
     session_id: str,
     resolved_chat_model_id: str,
-) -> str | None:
+) -> CompanionTurnResult | None:
     """
     One-shot assistant turn when USER_INTERACTIVE bootstrap is incomplete and WS kickoff not yet sent.
 
     Uses a fixed internal user line so the model opens the relationship phase without a real user message.
+    Returns the kernel turn result (assistant text plus tracing ids) or None when skipped or empty reply.
     """
     feats = global_config_loaded_from_config_yaml.app.features
     if (
@@ -311,7 +312,7 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
         ws_system_ms,
         run_turn_ms,
     )
-    return reply
+    return turn
 
 
 async def run_companion_chat_turn_for_api(
