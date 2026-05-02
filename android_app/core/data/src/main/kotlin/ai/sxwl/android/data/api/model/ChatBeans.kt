@@ -62,6 +62,9 @@ data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
     }
 }
 
+// TODO(implicit-sign-on): Run :core:data:compileDebugKotlin (or full app compile) when changing
+// SendMsgReq; release checklist in /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+
 /** Companion WebSocket turn kind; aligns with Python ``CompanionChatTurnMessageType``. */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"

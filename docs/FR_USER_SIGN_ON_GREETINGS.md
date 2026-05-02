@@ -31,6 +31,29 @@ sequenceDiagram
     API-->>REPL: APIResponse choices
 ```
 
+## Open TODOs (follow-ups)
+
+Anchor for deep links: `#open-todos-follow-ups`.
+
+Non-blocking items from code review; implement when product or refactor needs them.
+
+### Subscription quota (`record_usage`)
+
+Implicit sign-on turns still call `record_usage(..., "chat", 1)` and consume the same daily limit as a normal user message. Product may later want to **exclude** `IMPLICIT_USER_SIGNED_ON` from the limit or count it separately; that requires changes in subscription / limit checks (not only `extra_data`). Analytics can filter on `extra_data.implicit_user_signed_on` until then.
+
+### `implicit_signed_on_ws` binding scope
+
+The flag is computed once at the start of `_agent_chat_completions_impl` and used deep inside the companion branch. If this function is split into smaller helpers, **pass `implicit_signed_on_ws` explicitly** so companion / persistence paths cannot drift.
+
+### Multimodal rejection paths
+
+- `messageType: USER_MESSAGE` with **image-only** content still hits the generic companion multimodal **400** (`Multimodal user turns with images are not supported...`).
+- `messageType: IMPLICIT_USER_SIGNED_ON` with any image part hits a **distinct** **400** (`...does not support multimodal or image content`). Keep both behaviors documented when changing either branch.
+
+### Client build verification
+
+[`imate_android_app`](/imate_android_app/) full `:app:compileDebugKotlin` was not run in all CI sandboxes (missing `ANDROID_HOME`). **Merge or release checklist:** compile iMate app with a normal Android SDK; IntelliMate [`android_app`](/android_app/) `:core:data:compileDebugKotlin` should be run when touching [`ChatBeans.kt`](/android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model/ChatBeans.kt).
+
 ## References
 
 - Schema: [`/app/schemas/chat.py`](/app/schemas/chat.py) (`CompanionChatTurnMessageType`, `ChatCompletionRequest.message_type`)

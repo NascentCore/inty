@@ -963,6 +963,9 @@ async def _agent_chat_completions_impl(
                 ),
             )
 
+        # TODO(implicit-sign-on): If _agent_chat_completions_impl is split into helpers, pass
+        # implicit_signed_on_ws explicitly into companion / persistence paths. Background:
+        # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
         implicit_signed_on_ws = (
             chat_route == "websocket"
             and request.message_type
@@ -1039,6 +1042,9 @@ async def _agent_chat_completions_impl(
                     is_subscribed,
                     _chat_llm_base,
                 )
+                # TODO(implicit-sign-on): USER_MESSAGE + image-only still uses this generic 400;
+                # IMPLICIT_USER_SIGNED_ON + image is rejected earlier with a different message.
+                # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
                 if use_companion and (not implicit_signed_on_ws) and _companion_rejects_multimodal_user_turn(
                     user_messages[-1]
                 ):
@@ -1314,6 +1320,9 @@ async def _agent_chat_completions_impl(
         # 记录聊天使用情况
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
+                # TODO(implicit-sign-on): Implicit sign-on still increments chat usage like a normal
+                # turn; product may exempt IMPLICIT_USER_SIGNED_ON from limits later. See
+                # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
                 usage_extra: dict[str, Any] = {
                     "agent_id": agent_id,
                     "message_length": len(last_user_text),

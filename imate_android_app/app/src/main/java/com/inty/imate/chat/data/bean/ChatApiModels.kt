@@ -4,6 +4,9 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
+// TODO(implicit-sign-on): Verify :app:compileDebugKotlin with ANDROID_HOME before release when
+// changing WS payloads; see /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+
 /** Companion WebSocket turn kind; aligns with Python ``CompanionChatTurnMessageType``. */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
