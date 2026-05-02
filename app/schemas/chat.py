@@ -362,6 +362,13 @@ ChatMessageContentPart = Annotated[
 ]
 
 
+class CompanionChatTurnMessageType(str, enum.Enum):
+    """Semantic category for this chat completion turn (companion WebSocket; not message content media)."""
+
+    USER_MESSAGE = "USER_MESSAGE"
+    IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
+
+
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str | List[ChatMessageContentPart]
@@ -431,6 +438,11 @@ class ChatCompletionRequest(BaseModel):
         description="Client-generated id for optimistic UI; stored in chat_history.meta_data",
     )
     target_imate_id: Optional[str] = None
+    message_type: CompanionChatTurnMessageType = Field(
+        default=CompanionChatTurnMessageType.USER_MESSAGE,
+        alias="messageType",
+        description="Turn kind: normal user text vs implicit user sign-on (greeting trigger).",
+    )
 
     @model_validator(mode="after")
     def check_deprecated_fields(self) -> "ChatCompletionRequest":
@@ -440,6 +452,17 @@ class ChatCompletionRequest(BaseModel):
             logger.warning("DEPRECATED: 'model' parameter has no use")
         if self.language != "zh":
             logger.warning("DEPRECATED: 'language' parameter has no use")
+        return self
+
+    @model_validator(mode="after")
+    def implicit_user_signed_on_requires_empty_user_text(self) -> "ChatCompletionRequest":
+        if self.message_type != CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON:
+            return self
+        user_msgs = [m for m in self.messages if m.role == "user"]
+        if user_msgs and user_msgs[-1].extract_text_content().strip():
+            raise ValueError(
+                "messageType IMPLICIT_USER_SIGNED_ON requires an empty user message text"
+            )
         return self
 
 

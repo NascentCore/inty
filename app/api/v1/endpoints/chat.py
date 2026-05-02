@@ -48,6 +48,7 @@ from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
     ChatWebSocketRequest,
+    CompanionChatTurnMessageType,
     UserTimeContext,
     normalize_websocket_companion_message_id_uuid,
 )
@@ -948,6 +949,19 @@ async def _agent_chat_completions_impl(
             request.local_id or request.message_id or ""
         ).strip() or None
 
+        if (
+            chat_route != "websocket"
+            and request.message_type
+            == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "messageType IMPLICIT_USER_SIGNED_ON is only supported on "
+                    "WebSocket companion chat"
+                ),
+            )
+
         # 使用高性能的聊天专用Agent获取方法
         with log_time(f"查询 Agent 数据: {chat.agent_id}"):
             agent_data = await agent_service.get_agent_for_chat(
@@ -1038,6 +1052,10 @@ async def _agent_chat_completions_impl(
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
+                            user_signed_on=(
+                                request.message_type
+                                == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
+                            ),
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
                         companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
@@ -1090,7 +1108,17 @@ async def _agent_chat_completions_impl(
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:
                         companion_ai_meta["significance_perception"] = sp
-                    if effective_local_id:
+                    implicit_signed_on = (
+                        request.message_type
+                        == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
+                    )
+                    if implicit_signed_on:
+                        companion_ai_meta["messageType"] = (
+                            CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
+                        )
+                    if implicit_signed_on:
+                        companion_user_row_id = None
+                    elif effective_local_id:
                         companion_user_row_id = (
                             await chat_history_service.add_user_message_async(
                                 session_id,
@@ -1766,7 +1794,28 @@ async def chat_completions_websocket(
                 data = None
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
-            websocket_request = ChatWebSocketRequest.model_validate_json(raw)
+            if not isinstance(data, dict):
+                await outbound_queue.put(
+                    {
+                        "code": 400,
+                        "message": "Chat frame must be a JSON object",
+                        "data": None,
+                        "agent_id": "",
+                    }
+                )
+                continue
+            try:
+                websocket_request = ChatWebSocketRequest.model_validate(data)
+            except ValidationError as exc:
+                await outbound_queue.put(
+                    {
+                        "code": 422,
+                        "message": "Invalid chat WebSocket request",
+                        "data": json.loads(exc.json()),
+                        "agent_id": str(data.get("agent_id") or ""),
+                    }
+                )
+                continue
             merged_request = _chat_request_with_merged_ws_time_context(
                 websocket_request.request,
                 tc_box[0],
