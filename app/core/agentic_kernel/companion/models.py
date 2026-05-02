@@ -179,9 +179,7 @@ def load_prompt_bundle(
         soul=_read_memory_document_required(store, "SOUL.md"),
         user_md=_read_memory_document_required(store, "USER.md"),
         memory_md=memory_long,
-        tools_md=_template_doc_truncated(
-            "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
+        tools_md=_template_doc_truncated("TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS),
         significance_perception_md=_template_doc_truncated(
             "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),

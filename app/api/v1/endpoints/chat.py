@@ -793,7 +793,9 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             pre_db, user_id
         )
         is_subscribed = bool(subscription)
-        model_override = select_chat_model(user=current_user, is_subscribed=is_subscribed)
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=is_subscribed
+        )
 
         ws_path = companion_chat_service.companion_workspace_path_if_ready(
             user_id=user_id,
@@ -938,10 +940,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
 
             user_message_id = None
             try:
-                user_message_id = (
-                    await chat_history_service.get_latest_user_message_id(
-                        post_db, session_id
-                    )
+                user_message_id = await chat_history_service.get_latest_user_message_id(
+                    post_db, session_id
                 )
             except Exception as e:
                 logger.warning(
@@ -1148,8 +1148,10 @@ async def _agent_chat_completions_impl(
                 # TODO(implicit-sign-on): USER_MESSAGE + image-only still uses this generic 400;
                 # IMPLICIT_USER_SIGNED_ON + image is rejected earlier with a different message.
                 # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
-                if use_companion and (not implicit_signed_on_ws) and _companion_rejects_multimodal_user_turn(
-                    user_messages[-1]
+                if (
+                    use_companion
+                    and (not implicit_signed_on_ws)
+                    and _companion_rejects_multimodal_user_turn(user_messages[-1])
                 ):
                     raise HTTPException(
                         status_code=400,
