@@ -209,28 +209,7 @@ def _create_smoke_agent(
     return str(data["id"])
 
 
-async def _turn_simple(
-    *,
-    http_base: str,
-    bearer_token: str,
-    agent_id: str,
-    user_text: str,
-    connect_timeout: float,
-) -> str:
-    _ensure_sys_path()
-    from tools.inty_v2_repl.backend_chat_ws import chat_turn_single_http_base
-
-    return await chat_turn_single_http_base(
-        http_base=http_base,
-        bearer_token=bearer_token,
-        agent_id=agent_id,
-        user_text=user_text,
-        connect_timeout=connect_timeout,
-        proxy=None,
-    )
-
-
-async def _turn_with_connect_kickoff(
+async def _turn_ws_chat_round(
     *,
     http_base: str,
     bearer_token: str,
@@ -261,20 +240,23 @@ async def _turn_with_connect_kickoff(
         ping_interval=None,
         proxy=None,
     ) as ws:
-        # 若服务端会先发 interactive kickoff，先收掉一帧再发用户轮次
-        try:
-            raw0 = await asyncio.wait_for(ws.recv(), timeout=kickoff_drain_sec)
-        except TimeoutError:
-            pass
-        else:
+        # Drain optional kickoff (and leading pongs) within one budget before the user turn.
+        deadline = time.monotonic() + kickoff_drain_sec
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                raw0 = await asyncio.wait_for(ws.recv(), timeout=remaining)
+            except TimeoutError:
+                break
             data0 = json.loads(raw0)
             if data0.get("type") == "pong":
-                pass
-            else:
-                c = data0.get("code")
-                if c is not None and int(c) != 200:
-                    _parse_chat_response_payload(data0)[0]  # raises BackendChatWsError
-                # code 200: 视为 kickoff，丢弃
+                continue
+            c = data0.get("code")
+            if c is not None and int(c) != 200:
+                _parse_chat_response_payload(data0)[0]  # raises BackendChatWsError
+            break
         req = ChatWebSocketRequest(
             agent_id=agent_id,
             request=ChatCompletionRequest(
@@ -343,13 +325,6 @@ async def _run(args: argparse.Namespace) -> int:
     if not user_message:
         user_message = "你好，简单回复即可。"
 
-    use_kickoff: bool
-    if args.connect_kickoff:
-        use_kickoff = True
-    else:
-        bo = _bool_opt(cfg, "connect_kickoff")
-        use_kickoff = bool(bo) if bo is not None else False
-
     token = (
         (args.token or "").strip()
         or os.environ.get("INTY_BEARER_TOKEN", "").strip()
@@ -397,23 +372,14 @@ async def _run(args: argparse.Namespace) -> int:
 
     t0 = time.perf_counter()
     try:
-        if use_kickoff:
-            text = await _turn_with_connect_kickoff(
-                http_base=api_base,
-                bearer_token=token,
-                agent_id=agent_id,
-                user_text=user_message,
-                connect_timeout=connect_timeout,
-                recv_timeout=recv_timeout,
-            )
-        else:
-            text = await _turn_simple(
-                http_base=api_base,
-                bearer_token=token,
-                agent_id=agent_id,
-                user_text=user_message,
-                connect_timeout=connect_timeout,
-            )
+        text = await _turn_ws_chat_round(
+            http_base=api_base,
+            bearer_token=token,
+            agent_id=agent_id,
+            user_text=user_message,
+            connect_timeout=connect_timeout,
+            recv_timeout=recv_timeout,
+        )
     except ConnectionClosed as e:
         if e.code == 4001:
             print(
@@ -480,11 +446,6 @@ def main() -> None:
         help="POST /api/v1/ai/agents to create a PRIVATE agent, then run this smoke test with returned id",
     )
     p.add_argument("--message", "-m", help="User message for one turn")
-    p.add_argument(
-        "--connect-kickoff",
-        action="store_true",
-        help="Pass agent_id in WS URL so server may send kickoff; drain one frame then send",
-    )
     args = p.parse_args()
     raise SystemExit(asyncio.run(_run(args)))
 

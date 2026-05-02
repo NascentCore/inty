@@ -52,8 +52,7 @@ description: >-
 
 ### 行为说明
 
-- **默认**（不带 `--connect-kickoff`）：WebSocket URL **不**带 query `agent_id`，与 [`chat_turn_single_http_base`](../../../tools/inty_v2_repl/backend_chat_ws.py) 一致，单轮发 `ChatWebSocketRequest`。
-- **`--connect-kickoff`**：URL 为 `.../api/v1/chat/ws?agent_id=...`，连接后**最多**先收一帧再发用户轮次，用于覆盖服务端可能下发的 interactive bootstrap kickoff；若该帧为 `code != 200` 会报错退出。
+- WebSocket URL 为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。连接后**最多**先收一帧再发用户轮次，用于排空服务端可能下发的 interactive bootstrap kickoff；若该帧为 `code != 200` 会报错退出。
 
 ### 运行示例
 

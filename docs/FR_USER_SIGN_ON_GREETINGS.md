@@ -9,7 +9,7 @@
 
 ## Goal
 
-Reduce awkwardness when the user returns to the chat channel by letting the client send a non-user-authored turn that the backend treats as an implicit signal: the companion kernel **appends** a dedicated system line **after the transcript** (not inside the early system prefix) so the model briefly greets the user without a fake empty user message. The first proactive turn on a fresh connection with `?agent_id=` remains the existing USER_INTERACTIVE bootstrap kickoff; subsequent reconnects can use `messageType: IMPLICIT_USER_SIGNED_ON` (see REPL bridge).
+Reduce awkwardness when the user returns to the chat channel by letting the client send a non-user-authored turn that the backend treats as an implicit signal: the companion kernel **appends** a dedicated system line **after the transcript** (not inside the early system prefix) so the model briefly greets the user without a fake empty user message. The first proactive turn on a fresh connection with `?agent_id=` remains the existing USER_INTERACTIVE bootstrap kickoff; the [`inty_v2_repl`](/tools/inty_v2_repl/backend_chat_ws.py) bridge sends one `messageType: IMPLICIT_USER_SIGNED_ON` frame on **repl startup** (first successful WebSocket connect when `agent_id` is in the URL), not on later transport reconnects within the same process.
 
 ## Protocol (summary)
 

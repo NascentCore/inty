@@ -9,7 +9,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import websockets
@@ -211,11 +211,12 @@ class BackendChatWsBridge:
         self._reconnect_max = default_reconnect_max_sec()
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
-        self._successful_transport_connects: int = 0
         self._user_signed_on_sent_once: bool = False
+        # One startup IMPLICIT turn per bridge lifetime; not cleared on send failure (restart repl).
+        self._implicit_startup_turn_scheduled: bool = False
 
-    async def _maybe_post_implicit_signed_on_after_reconnect(self) -> None:
-        """After transport reconnect, send one IMPLICIT_USER_SIGNED_ON frame when URL pins agent_id."""
+    async def _post_implicit_user_signed_on_at_startup(self) -> None:
+        """Send one IMPLICIT_USER_SIGNED_ON chat frame after first successful connect (repl startup)."""
         aid = _agent_id_from_ws_url(self._ws_url)
         if not aid:
             return
@@ -229,11 +230,11 @@ class BackendChatWsBridge:
                 companion_turn_message_type=CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON,
             )
             logger.info(
-                "repl sent IMPLICIT_USER_SIGNED_ON after reconnect agent_id={}", aid
+                "repl sent IMPLICIT_USER_SIGNED_ON at startup agent_id={}", aid
             )
         except BaseException:
             logger.exception(
-                "repl IMPLICIT_USER_SIGNED_ON after reconnect failed agent_id={}", aid
+                "repl IMPLICIT_USER_SIGNED_ON at startup failed agent_id={}", aid
             )
 
     def start(self, *, connect_timeout: float = 30.0) -> None:
@@ -383,14 +384,16 @@ class BackendChatWsBridge:
                 self._ws = ws
                 self._response_q = asyncio.Queue()
                 self._online_ev.set()
-                connect_seq = self._successful_transport_connects
-                self._successful_transport_connects += 1
                 reconnect_idx = 0
                 await self._send_user_signed_on_once_after_connect(ws)
                 if not self._ready.is_set():
                     self._ready.set()
-                if connect_seq > 0 and _agent_id_from_ws_url(self._ws_url):
-                    asyncio.create_task(self._maybe_post_implicit_signed_on_after_reconnect())
+                if (
+                    not self._implicit_startup_turn_scheduled
+                    and _agent_id_from_ws_url(self._ws_url)
+                ):
+                    self._implicit_startup_turn_scheduled = True
+                    asyncio.create_task(self._post_implicit_user_signed_on_at_startup())
                 reader_task = asyncio.create_task(self._read_loop(ws))
                 pinger = asyncio.create_task(self._pinger_loop(ws, halt))
                 halt_task = asyncio.create_task(halt.wait())
@@ -642,41 +645,3 @@ class BackendChatWsBridge:
                 f"chat ws send_turn failed after {self._send_max_retries} attempts"
             ) from last_transport
         raise RuntimeError(f"chat ws send_turn failed after {self._send_max_retries} attempts")
-
-
-async def chat_turn_single_http_base(
-    *,
-    http_base: str,
-    bearer_token: str,
-    agent_id: str,
-    user_text: str,
-    connect_timeout: float = 30.0,
-    # websockets 15+ defaults to proxy=True (read env). Use None to connect directly (e.g. localhost
-    # without python-socks when ALL_PROXY is socks5://).
-    proxy: str | Literal[True] | None = True,
-) -> str:
-    url = http_base_to_ws_chat_url(http_base)
-    headers = [("Authorization", f"Bearer {bearer_token.strip()}")]
-    recv_timeout = default_recv_timeout_sec()
-    async with websockets.connect(
-        url,
-        additional_headers=headers,
-        open_timeout=connect_timeout,
-        ping_interval=None,
-        proxy=proxy,
-    ) as ws:
-        req = ChatWebSocketRequest(
-            agent_id=agent_id,
-            request=ChatCompletionRequest(
-                messages=[ChatMessage(role="user", content=user_text)],
-                message_id=str(uuid.uuid4()),
-            ),
-        )
-        await ws.send(req.model_dump_json(by_alias=True))
-        raw = await asyncio.wait_for(ws.recv(), timeout=recv_timeout)
-        data = json.loads(raw)
-        if data.get("type") == "pong":
-            raw2 = await asyncio.wait_for(ws.recv(), timeout=recv_timeout)
-            data = json.loads(raw2)
-        text, _meta = _parse_chat_response_payload(data)
-        return text

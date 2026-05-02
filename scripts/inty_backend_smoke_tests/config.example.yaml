@@ -22,9 +22,6 @@ agent_id: ""
 # 单轮用户消息
 user_message: "你好，简单回复即可。"
 
-# 为 true 时，在 WebSocket URL 上带 ?agent_id=，以触发服务端可能下发的 interactive bootstrap kickoff
-connect_kickoff: false
-
 # 可选：连接与收包的超时（秒），不设则与 tools/inty_v2_repl/backend_chat_ws 默认一致
 # connect_timeout_sec: 30
 # recv_timeout_sec: 600
