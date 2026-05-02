@@ -1,5 +1,7 @@
 # Harness experiment report: historical vs 2026-05-02 run
 
+**Chinese summary (settings + conclusions)**: [EXPERIMENT_SUMMARY.md](EXPERIMENT_SUMMARY.md)
+
 This file contrasts three experiment regimes. Raw JSON for the latest run stays under `results/` (gitignored); this report copies **aggregated numbers only**.
 
 ---
