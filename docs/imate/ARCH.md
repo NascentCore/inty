@@ -16,26 +16,42 @@
 
 **队列中心化下行（inty-ws）**：生产路径 `/api/v1/chat/ws` 使用上述队列与 pump。`**/ws/verify`** 也使用同一套 queue + pump（与 `/ws` 一致的业务 FIFO），但每帧仅做一次最简 `chat.completions`（system + user），不经 Agent runtime / companion；不落 chat_history（详见 `chat_completions_websocket_verify` docstring）。
 
-**逻辑块依赖（理想视图）**：下图只保留 `**repl`**、`**/api/v1/chat/ws**`、`**agentic kernel**` 三块；箭头表示**依赖方向**（调用方依赖被指向方提供的能力）。**用户**在图内与 `**repl`** 对接（打字与阅读终端）；**LLM API provider** 在图内与 `**agentic kernel`** 对接（kernel 发起推理）。陪伴编排仍落在 WS 路由路径上时，依赖关系仍归纳为「WS 块依赖 kernel」。
+**逻辑块依赖（理想视图）**：下图仍以 `**repl`**、`**/api/v1/chat/ws`**、`**agentic kernel**` 为三块；每块内**只展开一级**内部模块；块与块之间用 **`对接 …`** 子图标出边界职责（仍是一层，不展开协议字段或工具细节）。箭头表示**依赖方向**。**用户**对接 `**repl`** 内终端 IO；**LLM API provider** 经 **`对接 kernel - LLM`** 与 kernel 侧衔接。同一条 WebSocket 上业务 JSON 下行与上行方向相反，依赖链按「请求侧」从用户指向 LLM 串联；响应沿同接口返回。
 
 ```mermaid
 flowchart LR
   User["用户"]
-  subgraph repl["repl"]
-    R["客户端会话\n(tools/inty_v2_repl)"]
-  end
-  subgraph ChatWs["/api/v1/chat/ws"]
-    W["WebSocket 路由\n连接级 FIFO / 编排入口"]
-  end
-  subgraph Kernel["agentic kernel"]
-    K["陪伴运行时\nrun_turn / LLM 路径"]
-  end
-  LLM["LLM API provider\n(OpenAI-compatible)"]
 
-  User -->|对接：输入与输出| R
-  R -->|依赖：WS 与帧语义| W
-  W -->|依赖：执行一轮对话| K
-  K -->|对接：推理调用| LLM
+  subgraph repl["repl"]
+    TTY["终端 IO\nstdin / 下行打印"]
+    Bridge["BackendChatWsBridge\npost_turn / _response_q"]
+  end
+
+  subgraph DockRW["对接 repl - WS"]
+    IF_RW["JSON 业务帧\n与连接级顺序"]
+  end
+
+  subgraph ChatWs["/api/v1/chat/ws"]
+    ConnQ["连接级 IO\nWIN + outbound_queue + pump"]
+    SvcGate["编排入口\n_impl / CCS / CM / bg_queue"]
+  end
+
+  subgraph DockWK["对接 WS - kernel"]
+    IF_WK["一轮对话边界\n_impl 调 kernel\n+ companion 注入"]
+  end
+
+  subgraph Kernel["agentic kernel"]
+    Turn["run_turn"]
+    LlmSide["LLM 语义路径\nchat / tool / inner_tick"]
+  end
+
+  subgraph DockKL["对接 kernel - LLM"]
+    IF_KL["chat.completions\nOpenAI-compatible"]
+  end
+
+  LLM["LLM API provider"]
+
+  User --> TTY --> Bridge --> IF_RW --> ConnQ --> SvcGate --> IF_WK --> Turn --> LlmSide --> IF_KL --> LLM
 ```
 
 
