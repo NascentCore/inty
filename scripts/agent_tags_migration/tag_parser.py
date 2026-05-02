@@ -214,8 +214,8 @@ class TagParser:
         if not tags_str:
             return []
 
-        # 按逗号分割
-        tags = [tag.strip() for tag in tags_str.split(",")]
+        # 按常见分隔符分割
+        tags = [tag.strip() for tag in re.split(r"[,;]", tags_str)]
 
         # 过滤和清理
         cleaned_tags = []
