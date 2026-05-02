@@ -8,13 +8,17 @@ from app.utils.config import CompanionWorkspaceBootstrapType
 from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
     tool_companion_bootstrap_user_interactive_complete,
 )
-from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.memory_registry import (
+    get_memory_store,
+    shutdown_memory_store,
+)
 from app.core.agentic_kernel.companion.models import (
     InnerTickMode,
     load_context_meta,
     load_prompt_bundle,
 )
 from app.core.agentic_kernel.companion.prompt_stack import (
+    companion_turn_tools_and_system_messages,
     refresh_companion_turn_prompt_stack,
     replace_leading_system_messages_inplace,
 )
@@ -54,6 +58,51 @@ def _joined_leading_system_contents(messages: list[dict]) -> str:
             break
         parts.append(str(m.get("content") or ""))
     return "\n".join(parts)
+
+
+def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    st = get_memory_store(root)
+    for rel, body in (
+        ("IDENTITY.md", "id\n"),
+        ("SOUL.md", "soul\n"),
+        ("USER.md", "user\n"),
+        ("MEMORY.md", "mem\n"),
+    ):
+        st.write_document(rel, body)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "public",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    st.write_document("ai_private.jsonl", '{"text": "jl seed line"}\n')
+    paths = WorkspacePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    _, systems, _ = companion_turn_tools_and_system_messages(
+        workspace_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        enable_async_tool_background=False,
+        tool_side_compact_system_prompt=False,
+    )
+    joined = "\n".join(
+        str(m.get("content") or "") for m in systems if m.get("role") == "system"
+    )
+    assert "jl seed line" in joined
+    shutdown_memory_store(root.resolve())
 
 
 def test_replace_leading_system_messages_inplace_keeps_tail() -> None:

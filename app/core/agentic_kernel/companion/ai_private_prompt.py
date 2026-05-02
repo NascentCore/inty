@@ -1,7 +1,8 @@
 """Load intrinsic-sidekick text from MemoryStore for inner-tick prompt injection.
 
-Primary surface remains ``ai_private.md`` (``get_ai_private_text_for_prompt``). Optional
-``ai_private.jsonl`` adds append-only structured rows; merge via ``get_ai_private_merged_text_for_prompt``.
+Kernel inner-tick turns load ``ai_private.jsonl`` via ``prompt_stack`` / ``turn_engine``
+(``get_ai_private_jsonl_text_for_prompt``). ``get_ai_private_text_for_prompt`` remains for
+``ai_private.md`` only (tests, tooling, optional merge).
 """
 
 from __future__ import annotations

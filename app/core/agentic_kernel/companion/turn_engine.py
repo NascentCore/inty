@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from .heartbeat import (
     HEARTBEAT_SYNTHETIC_USER_TEXT,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
@@ -20,6 +21,7 @@ from .workspace import WorkspacePaths
 
 def build_repl_turn_base_messages(
     *,
+    workspace_root: Path,
     bundle: PromptBundle,
     context: ContextMeta,
     transcript: list[ChatMessage],
@@ -30,6 +32,18 @@ def build_repl_turn_base_messages(
     ai_private_text: str = "",
     include_significance_perception_slice: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
+    effective_ai_private = ai_private_text
+    tick_proactive = (
+        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
+    )
+    if (
+        inner_tick_turn
+        and not tick_proactive
+        and not (effective_ai_private or "").strip()
+    ):
+        effective_ai_private = get_ai_private_jsonl_text_for_prompt(
+            workspace_root.resolve()
+        )
     system_messages = build_system_messages(
         bundle,
         context,
@@ -37,7 +51,7 @@ def build_repl_turn_base_messages(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=inner_tick_mode,
         repl_online_ack_turn=repl_online_ack_turn,
-        ai_private_text=ai_private_text,
+        ai_private_text=effective_ai_private,
         include_significance_perception_slice=include_significance_perception_slice,
     )
     messages: list[dict[str, Any]] = list(system_messages)

@@ -8,6 +8,7 @@ from typing import Any
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
 
+from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from .bootstrap_user_interactive import interactive_bootstrap_active
 from .memory_store import MemoryStore
 from .models import ContextMeta, InnerTickMode, PromptBundle, load_context_meta, load_prompt_bundle
@@ -29,6 +30,7 @@ def replace_leading_system_messages_inplace(
 
 def companion_turn_tools_and_system_messages(
     *,
+    workspace_root: Path,
     bundle: PromptBundle,
     context: ContextMeta,
     workspace_bootstrap_type: str,
@@ -54,6 +56,9 @@ def companion_turn_tools_and_system_messages(
     tick_proactive = (
         inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     )
+    ai_private_text = ""
+    if inner_tick_turn and not tick_proactive:
+        ai_private_text = get_ai_private_jsonl_text_for_prompt(workspace_root.resolve())
     route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
     tools_for_turn: list[dict[str, Any]] = (
         []
@@ -89,6 +94,7 @@ def companion_turn_tools_and_system_messages(
             enable_tools=True,
             enable_user_profile_tool=False,
             inner_tick_turn=False,
+            ai_private_text="",
             include_repl_image_generation_contract=True,
             tool_side_compact=True,
             interactive_bootstrap_active=interactive_bootstrap,
@@ -102,6 +108,7 @@ def companion_turn_tools_and_system_messages(
             enable_tools=not tick_proactive,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
+            ai_private_text=ai_private_text,
             interactive_bootstrap_active=interactive_bootstrap,
             include_significance_perception_slice=resolved_sig,
             implicit_signal_bundle=implicit_signal_bundle,
@@ -129,6 +136,7 @@ def refresh_companion_turn_prompt_stack(
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
     tools_for_turn, refreshed, _route_mode = companion_turn_tools_and_system_messages(
+        workspace_root=workspace,
         bundle=bundle,
         context=context,
         workspace_bootstrap_type=workspace_bootstrap_type,
