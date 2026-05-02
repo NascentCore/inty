@@ -1,5 +1,6 @@
-# Harness matrix snapshot (legacy path)
+# Harness matrix snapshots
 
-Earlier single-run snapshots lived here. **Protocol has changed**: 12-line script, 4 rubrics, 3 repetitions by default; see [RUN.md](../RUN.md) and [scorer/rubrics.py](../scorer/rubrics.py).
+Historical single-run notes were superseded by multi-rubric / multi-repetition runs.
 
-To record a new run: copy `matrix_summary.json` from your `results/<run>/` into this folder under a dated name if you want versioned records.
+- **Combined analysis (Run A / B / C)**: [MATRIX_RUN_REPORT.md](MATRIX_RUN_REPORT.md)
+- **Latest raw artifacts** (gitignored): `experimental/harness_seeding_demo/results/matrix_exp_20260502/` (`matrix_summary.json`, `matrix_all_repetitions.json`, `rep_*/*/turns.jsonl`)
