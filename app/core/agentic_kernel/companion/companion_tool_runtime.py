@@ -57,8 +57,6 @@ from app.services.agent_status_line import tool_update_agent_status_line
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
-_CHAT_SETTINGS_REL = ".inty_v2_chat_settings.json"
-_CHAT_OUTPUT_FORMAT_PROMPT_KEY = "chat_output_format_prompt"
 # GENERATION: 成功产出应对用户可见的交付物时, async tool_background **必须**下行到客户端;
 # 是否附加 NL 由结构化 ``output_to_user`` 与产物回填共同决定（见 tool_background）。
 TOOL_TAG_GENERATION = "GENERATION"
@@ -139,7 +137,6 @@ _BASE_TOOL_REGISTRY = ToolRegistry(
         "workspace_write_file",
         "workspace_mkdir",
         "user_profile_record",
-        "tool_update_chat_settings",
         "schedule_task",
         "google_web_search",
         "read_web_page",
@@ -360,51 +357,6 @@ def tool_workspace_write_file(
 def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
     _ = root, relative_path
     return "OK mkdir (companion has no workspace directories on disk)"
-
-
-def read_chat_output_format_prompt(root: Path) -> str | None:
-    root_r = root.resolve()
-    store = get_memory_store(root_r)
-    rel = (
-        resolve_under_workspace(root_r, _CHAT_SETTINGS_REL)
-        .relative_to(root_r)
-        .as_posix()
-    )
-    raw_body = store.read_document_if_exists(rel)
-    if raw_body is None or not raw_body.strip():
-        return None
-    raw = raw_body.strip()
-    if not raw:
-        return None
-    parsed = json.loads(raw)
-    if not isinstance(parsed, dict):
-        raise ValueError("chat settings must be a JSON object")
-    value = parsed.get(_CHAT_OUTPUT_FORMAT_PROMPT_KEY)
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValueError(
-            f"{_CHAT_OUTPUT_FORMAT_PROMPT_KEY} must be a string when present"
-        )
-    out = value.strip()
-    return out if out else None
-
-
-def tool_update_chat_settings(root: Path, output_format_prompt: str) -> str:
-    prompt = output_format_prompt.strip()
-    if not prompt:
-        return "ERROR: output_format_prompt must be a non-empty string"
-    payload = {_CHAT_OUTPUT_FORMAT_PROMPT_KEY: prompt}
-    root_r = root.resolve()
-    store = get_memory_store(root_r)
-    rel = (
-        resolve_under_workspace(root_r, _CHAT_SETTINGS_REL)
-        .relative_to(root_r)
-        .as_posix()
-    )
-    body = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-    store.write_document(rel, body)
-    return "OK updated chat output format prompt"
 
 
 def tool_schedule_task(root: Path, exec_time_utc: str, task_text: str) -> str:
@@ -767,33 +719,6 @@ def build_openai_repl_tools(
         {
             "type": "function",
             "function": {
-                "name": "tool_update_chat_settings",
-                "description": (
-                    "Update chat-branch output-format instruction used by the chat LLM route. "
-                    "Use when the user explicitly asks to change the reply format/template. "
-                    "This tool affects future chat-branch turns in the current workspace."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "output_format_prompt": {
-                            "type": "string",
-                            "description": (
-                                "The exact output-format instruction to enforce for chat-branch replies. "
-                                'Example: \'必须输出 JSON: {"reply":"..."}\'.'
-                            ),
-                        }
-                    },
-                    "required": ["output_format_prompt"],
-                    "additionalProperties": False,
-                },
-            },
-        }
-    )
-    out.append(
-        {
-            "type": "function",
-            "function": {
                 "name": "companion_runtime_inspect",
                 "description": (
                     "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
@@ -1079,7 +1004,7 @@ _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
     """
-    内在节拍：仅 USER 档案与工作区读写，不含定时、联网、生图/改图、chat 输出格式工具。
+    内在节拍：仅 USER 档案与工作区读写，不含定时、联网、生图/改图。
     """
     full = build_openai_repl_tools()
     want = set(_INNER_TICK_REPL_TOOL_NAMES)
@@ -1144,14 +1069,6 @@ async def _dispatch(
         if not isinstance(raw_sl, str):
             return "ERROR: status_line must be a string"
         return await tool_update_agent_status_line(root, raw_sl)
-    if name == "tool_update_chat_settings":
-        output_format_prompt = arguments.get("output_format_prompt")
-        if not isinstance(output_format_prompt, str):
-            return "ERROR: output_format_prompt must be a string"
-        return tool_update_chat_settings(
-            root=root,
-            output_format_prompt=output_format_prompt,
-        )
     if name == "schedule_task":
         raw_exec_time = arguments.get("exec_time_utc")
         raw_task_text = arguments.get("task_text")

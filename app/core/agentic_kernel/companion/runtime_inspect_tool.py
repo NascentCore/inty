@@ -11,8 +11,6 @@ from .memory_store import MemoryStore
 from .runtime_inspect_context import runtime_inspect_get_bundle
 from .utc import local_date_str
 
-_CHAT_SETTINGS_REL = ".inty_v2_chat_settings.json"
-
 
 def _parse_optional_int(raw: Any, *, default: int, minimum: int) -> int:
     if raw is None:
@@ -144,9 +142,6 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         out["store_documents"] = {
             "context_json": _read_store_optional(
                 store, "context.json", max_chars=max_chars_per_doc
-            ),
-            "chat_settings": _read_store_optional(
-                store, _CHAT_SETTINGS_REL, max_chars=max_chars_per_doc
             ),
             "IDENTITY.md": _read_store_optional(
                 store, "IDENTITY.md", max_chars=max_chars_per_doc
