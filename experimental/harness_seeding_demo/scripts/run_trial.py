@@ -44,8 +44,10 @@ from app.core.agentic_kernel.companion.manager import CompanionConfig, Companion
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
 
-from experimental.harness_seeding_demo.scorer.emotional_rubric import (
-    score_emotional_understanding_reply,
+from experimental.harness_seeding_demo.scorer.rubrics import (
+    DEFAULT_RUBRIC_THRESHOLDS,
+    RUBRIC_FN,
+    score_all_rubrics,
 )
 from experimental.harness_seeding_demo.user_script import load_user_script
 from experimental.harness_seeding_demo.workspace_setup import seed_memory_store_from_directory
@@ -59,7 +61,20 @@ def _parse_args() -> argparse.Namespace:
         "--threshold",
         type=float,
         default=0.85,
-        help="Score threshold in [0, 1] for emotional_rubric passing.",
+        help="Default threshold for rubric 'default' only; others use built-ins unless --rubric-threshold.",
+    )
+    p.add_argument(
+        "--rubrics",
+        type=str,
+        default="default,strict_emotional,premature_solution,boundary_tone",
+        help="Comma-separated rubric ids (see scorer/rubrics.py).",
+    )
+    p.add_argument(
+        "--rubric-threshold",
+        action="append",
+        default=[],
+        metavar="ID=FLOAT",
+        help="Override threshold for one rubric, e.g. default=0.9 (repeatable).",
     )
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--output-dir", type=Path, default=None)
@@ -82,9 +97,38 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _parse_rubric_threshold_overrides(raw: list[str]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for item in raw:
+        if "=" not in item:
+            raise SystemExit(f"invalid --rubric-threshold {item!r}, expected id=float")
+        k, v = item.split("=", 1)
+        k = k.strip()
+        try:
+            fv = float(v.strip())
+        except ValueError as e:
+            raise SystemExit(f"invalid float in --rubric-threshold {item!r}") from e
+        if not (0.0 <= fv <= 1.0):
+            raise SystemExit(f"threshold for {k} must be in [0, 1]")
+        out[k] = fv
+    return out
+
+
 async def _run(args: argparse.Namespace) -> dict:
     if not (0.0 <= args.threshold <= 1.0):
         raise SystemExit("--threshold must be between 0 and 1")
+    rubric_ids = [x.strip() for x in args.rubrics.split(",") if x.strip()]
+    if not rubric_ids:
+        raise SystemExit("--rubrics must list at least one id")
+    unknown = [r for r in rubric_ids if r not in RUBRIC_FN]
+    if unknown:
+        raise SystemExit(
+            f"unknown rubric ids: {unknown}; known: {sorted(RUBRIC_FN.keys())}"
+        )
+    th_map = dict(DEFAULT_RUBRIC_THRESHOLDS)
+    th_map["default"] = args.threshold
+    th_map.update(_parse_rubric_threshold_overrides(list(args.rubric_threshold)))
+
     script_lines = load_user_script(args.script)
     if not script_lines:
         raise SystemExit("user script is empty")
@@ -143,7 +187,7 @@ async def _run(args: argparse.Namespace) -> dict:
     session = manager.get_or_create_session(user_id, companion_id, chat_id)
 
     turns_out: list[dict] = []
-    first_pass_turn: int | None = None
+    first_pass_turn_by_rubric: dict[str, int | None] = {rid: None for rid in rubric_ids}
 
     try:
         for i, user_text in enumerate(script_lines[: args.max_turns], start=1):
@@ -155,22 +199,30 @@ async def _run(args: argparse.Namespace) -> dict:
             if args.defer_memory_ms > 0:
                 time.sleep(args.defer_memory_ms / 1000.0)
 
-            sr = score_emotional_understanding_reply(
+            rubric_results = score_all_rubrics(
                 result.assistant_text,
-                threshold=args.threshold,
                 user_message_text=user_text,
+                thresholds=th_map,
+                rubric_ids=rubric_ids,
             )
+            rubric_payload = {
+                rid: {
+                    "score": rr.score,
+                    "passed": rr.passed,
+                    "checks": rr.checks,
+                }
+                for rid, rr in rubric_results.items()
+            }
             row = {
                 "turn_index": i,
                 "user_text": user_text,
                 "assistant_text": result.assistant_text,
-                "score": sr.score,
-                "passed": sr.passed,
-                "checks": sr.checks,
+                "rubrics": rubric_payload,
             }
             turns_out.append(row)
-            if sr.passed and first_pass_turn is None:
-                first_pass_turn = i
+            for rid, rr in rubric_results.items():
+                if rr.passed and first_pass_turn_by_rubric[rid] is None:
+                    first_pass_turn_by_rubric[rid] = i
     finally:
         manager.shutdown_session(user_id, companion_id, chat_id)
 
@@ -178,8 +230,11 @@ async def _run(args: argparse.Namespace) -> dict:
         "run_id": run_id,
         "seed_dir": str(args.seed_dir.resolve()),
         "script": str(args.script.resolve()),
+        "rubrics": rubric_ids,
+        "thresholds_by_rubric": {rid: th_map[rid] for rid in rubric_ids},
+        "first_pass_turn_by_rubric": first_pass_turn_by_rubric,
+        "first_pass_turn": first_pass_turn_by_rubric.get("default"),
         "threshold": args.threshold,
-        "first_pass_turn": first_pass_turn,
         "total_script_lines": len(script_lines),
         "turns_executed": len(turns_out),
         "workspace_path": str(ws_path.resolve()),

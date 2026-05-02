@@ -46,7 +46,7 @@ test -f devops/config.yaml.local && echo "config.yaml.local present"
 ```bash
 python experimental/harness_seeding_demo/scripts/run_trial.py \
   --seed-dir experimental/harness_seeding_demo/seeds/empathic \
-  --script experimental/harness_seeding_demo/fixtures/work_stress_script.json \
+  --script experimental/harness_seeding_demo/fixtures/work_stress_script_12.json \
   --output-dir experimental/harness_seeding_demo/results/run01
 ```
 
@@ -55,18 +55,27 @@ python experimental/harness_seeding_demo/scripts/run_trial.py \
 | 参数 | 含义 |
 |------|------|
 | `--seed-dir` | 种子目录（内含 `IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`context.json` 等） |
-| `--script` | 用户台本：`fixtures/work_stress_script.json`（JSON 数组）或 `.txt`（每行一句，`#` 开头为注释） |
+| `--script` | 用户台本：默认推荐 **12 句** `fixtures/work_stress_script_12.json`；另有 3 句 `work_stress_script.json` |
 | `--output-dir` | 结果目录；省略则用系统临时目录 |
-| `--threshold` | 打分阈值，默认 `0.85`，须在 `[0, 1]` |
+| `--threshold` | **仅** rubric `default` 的阈值，默认 `0.85` |
+| `--rubrics` | 逗号分隔：`default,strict_emotional,premature_solution,boundary_tone` |
+| `--rubric-threshold` | 覆盖某一 rubric，如 `strict_emotional=1.0`（可重复） |
 | `--max-turns` | 最多执行用户句数，默认 `50` |
-| `--defer-memory-ms` | 每轮后等待毫秒数，默认 `800`；异步记忆队列场景可用；设为 `0` 取消等待 |
+| `--defer-memory-ms` | 每轮后等待毫秒数，默认 `800`；设为 `0` 取消等待 |
 | `--config-yaml` | 默认 `devops/config.yaml.local`；缺失则跳过 |
 | `--no-config-yaml` | 不从 YAML 注入密钥 |
 
 **产出**
 
-- `summary.json`：`first_pass_turn`（首次达标的用户轮序号，未达标为 `null`）、`turns_executed`、`workspace_path` 等。
-- `turns.jsonl`：每轮 `user_text`、`assistant_text`、`score`、`passed`、`checks`。
+- `summary.json`：`first_pass_turn_by_rubric`（每种 rubric 首次达标轮次）、`thresholds_by_rubric`、`first_pass_turn`（= default rubric 兼容字段）、`llm` 元数据等。
+- `turns.jsonl`：每轮 `rubrics` -> `{ id: { score, passed, checks } }`。
+
+**Rubric 含义（启发式）**
+
+- **default**：承接词 + 痛点复述 + 非空 + 非轻视（阈值默认 0.85）。
+- **strict_emotional**：在 default 基础上要求 **正文长度 >= 120** 且痛苦轮至少 **两类** 痛点词出现在回复中（默认阈值 **1.0**）。
+- **premature_solution**：痛苦轮下禁止 **首行编号清单**，且编号式「怎么做」须出现在 **简短承接** 之后（默认阈值 **1.0**）。
+- **boundary_tone**：禁止指责词、开头强硬命令；需 **邀请/许可式** 措辞；若用户提到边界则禁止开头「你应该…」（默认阈值 **1.0**）。
 
 ---
 
@@ -76,16 +85,18 @@ python experimental/harness_seeding_demo/scripts/run_trial.py \
 
 ```bash
 python experimental/harness_seeding_demo/scripts/run_matrix.py \
-  --output-dir experimental/harness_seeding_demo/results/matrix01
+  --output-dir experimental/harness_seeding_demo/results/matrix01 \
+  --repetitions 3
 ```
 
-**可选参数**：`--seeds-root`、`--script`、`--threshold`、`--max-turns`、`--defer-memory-ms`（与单次试验含义相同）。
+**可选参数**：`--seeds-root`、`--script`（默认 **12 句**）、`--threshold`、`--rubrics`、`--rubric-threshold`、`--max-turns`、`--defer-memory-ms`、`--repetitions`（默认 **3**）。
 
 **产出**
 
-- 每个种子：`results/matrix01/<seed_name>/summary.json` 与 `turns.jsonl`
-- 汇总：`results/matrix01/matrix_summary.json`
-- 若有子进程失败：`results/matrix01/matrix_errors.json`（stderr 尾部）；且 **`run_matrix` 以退出码 1 结束**
+- 每次重复：`results/matrix01/rep_<n>/<seed>/summary.json` 与 `turns.jsonl`
+- 全量明细：`results/matrix01/matrix_all_repetitions.json`
+- 按种子聚合：`results/matrix01/matrix_summary.json`（各 rubric 的 **`median_first_pass_<id>`** 与 **`all_passed_turn1_<id>`**）
+- 失败：`matrix_errors.json`；任意子任务失败则退出码 **1**
 
 内置种子名：`baseline`、`empathic`、`functional`、`teammate_on`、`teammate_off`。
 
@@ -93,8 +104,8 @@ python experimental/harness_seeding_demo/scripts/run_matrix.py \
 
 ## 5. 读懂结果
 
-- **主指标**：`first_pass_turn` 越小越好。`scorer/emotional_rubric.py` 为 **演示用启发式**：含 **`non_empty_visible_reply`**（空正文一律不达标）、轻视用语惩罚、承接词表（含「懂」「揪心」「难熬」等）；**不等于**人工标注的情感理解质量。
-- **对照**：`teammate_on` 与 `teammate_off` 共用相近 `SOUL.md`，差别在是否预填 `USER.md`，用于观察「团队预注」是否减少达标所需轮次（在模型与台本固定时再看）。
+- **按 rubric**：查看 `first_pass_turn_by_rubric` / `median_first_pass_*`。严 rubric（默认阈值 1.0）更容易在较晚轮次才首次达标。
+- **启发式**：所有 rubric 均为规则打分，**不等于**人工情感理解质量。
 
 ---
 

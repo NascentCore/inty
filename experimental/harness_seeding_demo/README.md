@@ -30,7 +30,8 @@ experimental/harness_seeding_demo/
   workspace_setup.py   # 种子写入 MemoryStore（先于 CompanionManager）
   user_script.py       # 读取 fixtures 台本
   fixtures/
-    work_stress_script.json
+    work_stress_script.json       # 3 句（短对照）
+    work_stress_script_12.json    # 12 句（矩阵默认）
   seeds/
     baseline/
     empathic/
@@ -38,10 +39,11 @@ experimental/harness_seeding_demo/
     teammate_on/       # 预填 USER.md
     teammate_off/      # 与 teammate_on 同 SOUL，USER 空白对照
   scripts/
-    run_trial.py       # 单种子跑 full LLM turn + scorer
-    run_matrix.py      # 遍历 seeds/* 写 matrix_summary.json
+    run_trial.py       # 多 rubric；summary.first_pass_turn_by_rubric
+    run_matrix.py      # --repetitions；matrix_all_repetitions + matrix_summary
   scorer/
-    emotional_rubric.py
+    rubrics.py         # default / strict_emotional / premature_solution / boundary_tone
+    emotional_rubric.py  # 兼容别名
   results/             # gitignored；自建输出目录
 ```
 
@@ -54,16 +56,21 @@ cd /path/to/repo && source .venv/bin/activate
 export PYTHONPATH=.
 python experimental/harness_seeding_demo/scripts/run_trial.py \
   --seed-dir experimental/harness_seeding_demo/seeds/empathic \
-  --script experimental/harness_seeding_demo/fixtures/work_stress_script.json \
+  --script experimental/harness_seeding_demo/fixtures/work_stress_script_12.json \
   --output-dir experimental/harness_seeding_demo/results/run01
 ```
+
+可选：`--rubrics default,strict_emotional`、`--rubric-threshold strict_emotional=1.0`（可重复）。
 
 ### Quick run（矩阵）
 
 ```bash
 python experimental/harness_seeding_demo/scripts/run_matrix.py \
-  --output-dir experimental/harness_seeding_demo/results/matrix01
+  --output-dir experimental/harness_seeding_demo/results/matrix01 \
+  --repetitions 3
 ```
+
+默认台本为 **12 句** `work_stress_script_12.json`，四套 rubric；汇总见 `matrix_summary.json`（按种子聚合 **median_first_pass_<rubric>**），明细见 `matrix_all_repetitions.json`。
 
 默认在每轮后短暂 sleep，以便异步记忆管线落盘（脚本仍关闭重量级 USER/SOUL/MEMORY 策展 LLM，仅保留日记追加）；可用 `--defer-memory-ms 0` 关掉等待。
 
@@ -71,6 +78,7 @@ python experimental/harness_seeding_demo/scripts/run_matrix.py \
 
 ```bash
 pytest tests/experimental/test_harness_seeding_demo_scorer.py \
+  tests/experimental/test_harness_seeding_demo_rubrics.py \
   tests/experimental/test_harness_seeding_demo_workspace_setup.py \
   tests/experimental/test_harness_seeding_demo_config_yaml_env.py \
   tests/app/core/agentic_kernel/companion/test_build_openai_repl_tools_status_flag.py \
