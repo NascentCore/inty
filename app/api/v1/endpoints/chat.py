@@ -932,7 +932,8 @@ async def _agent_chat_completions_impl(
             raise HTTPException(status_code=400, detail="No user message found")
 
         last_user_message = user_messages[-1].to_model_content()
-        last_user_text = user_messages[-1].extract_text_content()
+        last_user_chat_message = user_messages[-1]
+        last_user_text = last_user_chat_message.extract_text_content()
         messages = [HumanMessage(content=last_user_message)]
         logger.debug(
             f"聊天请求最后一条用户消息: has_multimodal={isinstance(last_user_message, list)}, text_length={len(last_user_text)}"
@@ -959,6 +960,20 @@ async def _agent_chat_completions_impl(
                 detail=(
                     "messageType IMPLICIT_USER_SIGNED_ON is only supported on "
                     "WebSocket companion chat"
+                ),
+            )
+
+        implicit_signed_on_ws = (
+            chat_route == "websocket"
+            and request.message_type
+            == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
+        )
+        if implicit_signed_on_ws and last_user_chat_message.has_image_content_part():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "messageType IMPLICIT_USER_SIGNED_ON does not support "
+                    "multimodal or image content"
                 ),
             )
 
@@ -1024,7 +1039,7 @@ async def _agent_chat_completions_impl(
                     is_subscribed,
                     _chat_llm_base,
                 )
-                if use_companion and _companion_rejects_multimodal_user_turn(
+                if use_companion and (not implicit_signed_on_ws) and _companion_rejects_multimodal_user_turn(
                     user_messages[-1]
                 ):
                     raise HTTPException(
@@ -1108,15 +1123,10 @@ async def _agent_chat_completions_impl(
                     sp = companion_turn.significance_perception
                     if isinstance(sp, dict) and sp:
                         companion_ai_meta["significance_perception"] = sp
-                    implicit_signed_on = (
-                        request.message_type
-                        == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
-                    )
-                    if implicit_signed_on:
+                    if implicit_signed_on_ws:
                         companion_ai_meta["messageType"] = (
                             CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
                         )
-                    if implicit_signed_on:
                         companion_user_row_id = None
                     elif effective_local_id:
                         companion_user_row_id = (
@@ -1304,15 +1314,22 @@ async def _agent_chat_completions_impl(
         # 记录聊天使用情况
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
+                usage_extra: dict[str, Any] = {
+                    "agent_id": agent_id,
+                    "message_length": len(last_user_text),
+                }
+                if (
+                    chat_route == "websocket"
+                    and request.message_type
+                    == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON
+                ):
+                    usage_extra["implicit_user_signed_on"] = True
                 await subscription_svc.record_usage(
                     db,
                     current_user.id,
                     "chat",
                     1,
-                    extra_data={
-                        "agent_id": agent_id,
-                        "message_length": len(last_user_text),
-                    },
+                    extra_data=usage_extra,
                 )
             logger.debug("聊天使用情况记录成功")
         except Exception as e:

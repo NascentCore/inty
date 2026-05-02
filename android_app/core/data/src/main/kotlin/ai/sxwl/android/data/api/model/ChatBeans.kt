@@ -62,6 +62,12 @@ data class SendMsgReqMessage(val role: String = "", val content: Any = "") {
     }
 }
 
+/** Companion WebSocket turn kind; aligns with Python ``CompanionChatTurnMessageType``. */
+object CompanionChatTurnMessageType {
+    const val USER_MESSAGE = "USER_MESSAGE"
+    const val IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
+}
+
 @JsonClass(generateAdapter = true)
 data class SendMsgReq(
     val messages: List<SendMsgReqMessage> = listOf(),
@@ -69,6 +75,8 @@ data class SendMsgReq(
     val stream: Boolean = false,
     @Json(name = "time_context") val timeContext: UserTimeContext? = null,
     @Json(name = "target_imate_id") val targetImateId: String? = null,
+    /** Optional; default server-side is USER_MESSAGE. */
+    @Json(name = "messageType") val messageType: String? = null,
 )
 
 @JsonClass(generateAdapter = true)

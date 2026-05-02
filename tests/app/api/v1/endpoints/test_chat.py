@@ -1466,6 +1466,52 @@ def test_chat_websocket_companion_implicit_user_signed_on_sets_bundle_and_skips_
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_implicit_user_signed_on_rejects_image_content(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        return CompanionTurnResult(assistant_text="should-not-run")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-img",
+        workspace_dir="/tmp/inty_test_companion_ws_signon_img",
+        chat_id="chat-signon-img-1",
+        latest_user_message_db_id=90,
+        ai_message_id=904,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-signon-img",
+                    "request": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {"url": "https://example.com/x.png"},
+                                    }
+                                ],
+                            }
+                        ],
+                        "message_id": "dddddddd-dddd-4ddd-dddd-eeeeeeeeeeee",
+                        "messageType": "IMPLICIT_USER_SIGNED_ON",
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 400
+    assert "IMPLICIT_USER_SIGNED_ON" in body["message"]
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_implicit_user_signed_on_rejects_non_empty_user_text(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

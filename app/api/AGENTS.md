@@ -6,7 +6,7 @@
 
 ## Chat WebSocket
 
-- **Companion chat frame**（`ChatWebSocketRequest.request` / `ChatCompletionRequest`）：可选 **`messageType`**（camelCase JSON），取值 **`USER_MESSAGE`**（默认）或 **`IMPLICIT_USER_SIGNED_ON`**。后者仅 **WebSocket companion** 支持：用户消息正文须为空，服务端不写用户 history 行，注入隐式 bundle 并在 system 中提示模型简短问候；助手落库 `meta_data.messageType` 可为 `IMPLICIT_USER_SIGNED_ON`。HTTP completions 传入该类型返回 **400**。非法请求体现在上行 JSON 时下行 **`code` 422**，`message` 为 `Invalid chat WebSocket request`。详见 [`/docs/FR_USER_SIGN_ON_GREETINGS.md`](/docs/FR_USER_SIGN_ON_GREETINGS.md)。
+- **Companion chat frame**（`ChatWebSocketRequest.request` / `ChatCompletionRequest`）：可选 **`messageType`**（camelCase JSON），取值 **`USER_MESSAGE`**（默认）或 **`IMPLICIT_USER_SIGNED_ON`**。后者仅 **WebSocket companion** 支持：用户消息正文须为空且不得含图片等多模态 content（否则 **400**），服务端不写用户 history 行，注入隐式 bundle 并在 system 中提示模型简短问候；助手落库 `meta_data.messageType` 可为 `IMPLICIT_USER_SIGNED_ON`。HTTP completions 传入该类型返回 **400**。非法请求体现在上行 JSON 时下行 **`code` 422**，`message` 为 `Invalid chat WebSocket request`。`record_usage` 对该类成功回合附带 **`implicit_user_signed_on: true`**。详见 [`/docs/FR_USER_SIGN_ON_GREETINGS.md`](/docs/FR_USER_SIGN_ON_GREETINGS.md)。
 - `/api/v1/chat/ws`：正式对话 WebSocket，走持久化对话流程（写入 chat 历史）。可选 `app.features.companion_ws_proactive_heartbeat_enabled`：在连接存活期间按 `companion_ws_proactive_heartbeat_poll_seconds` 轮询，满足 `next_heartbeat_wait_seconds` 时服务端主动下行一轮 companion proactive inner_tick（落库用户行带 `companion_proactive_heartbeat` / `heartbeat` / `inner_tick` meta）。默认关闭。
 - `/api/v1/chat/ws/verify`：协议与 `/ws` 一致，业务下行同样经 **outbound queue + pump**；回复由 **单次** `chat.completions`（system + user，不经 Agent / companion 主编排）生成，**不写入 chat_history**。用于校验连接、队列与最简 LLM 连通性。见 `app/api/v1/endpoints/chat.py` 与本目录 `ENDPOINTS.md`。
 

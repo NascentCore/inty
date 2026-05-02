@@ -207,8 +207,13 @@ class BackendChatWsBridge:
                 message_id=str(uuid.uuid4()),
                 companion_turn_message_type=CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON,
             )
+            logger.info(
+                "repl sent IMPLICIT_USER_SIGNED_ON after reconnect agent_id={}", aid
+            )
         except BaseException:
-            logger.exception("repl implicit IMPLICIT_USER_SIGNED_ON after reconnect failed")
+            logger.exception(
+                "repl IMPLICIT_USER_SIGNED_ON after reconnect failed agent_id={}", aid
+            )
 
     def start(self, *, connect_timeout: float = 30.0) -> None:
         if self._thread is not None:

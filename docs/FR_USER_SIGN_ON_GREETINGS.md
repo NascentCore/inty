@@ -7,7 +7,8 @@ Reduce awkwardness when the user returns to the chat channel by letting the clie
 ## Protocol (summary)
 
 - Optional field on `ChatCompletionRequest`: `messageType` (alias), enum `CompanionChatTurnMessageType`: `USER_MESSAGE` (default), `IMPLICIT_USER_SIGNED_ON`.
-- `IMPLICIT_USER_SIGNED_ON` requires empty user message text; WebSocket companion only; maps to `ImplicitSignalBundle.user_signed_on` and skips persisting an empty user row.
+- `IMPLICIT_USER_SIGNED_ON` requires empty user visible text and no image parts in `messages`; WebSocket companion only; maps to `ImplicitSignalBundle.user_signed_on` and skips persisting an empty user row.
+- Usage analytics: successful implicit sign-on turns include `implicit_user_signed_on: true` in `record_usage` `extra_data` (still counts as one chat turn toward limits).
 - HTTP `/api/v1/chat/completions` rejects `IMPLICIT_USER_SIGNED_ON` with 400.
 
 ## Sequence (sign-on turn)
