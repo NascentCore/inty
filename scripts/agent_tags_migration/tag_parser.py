@@ -120,7 +120,7 @@ class TagParser:
         parsing_methods = [
             self._parse_with_json,
             self._parse_with_ast,
-            self._parse_with_eval,
+            self._parse_with_safe_literal_ast,
             self._parse_with_regex,
         ]
 
@@ -152,22 +152,42 @@ class TagParser:
             return None
         return None
 
-    def _parse_with_eval(self, json_str: str) -> Optional[CharacterInfo]:
-        """使用eval解析（限制性）"""
+    def _parse_with_safe_literal_ast(self, json_str: str) -> Optional[CharacterInfo]:
+        """使用安全AST解析兼容JSON常量的Python字面量"""
         try:
-            # 仅允许安全的字符
-            if any(
-                unsafe in json_str
-                for unsafe in ["import", "__", "exec", "eval", "open", "file"]
-            ):
-                return None
-
-            data = eval(json_str, {"__builtins__": {}}, {})
+            parsed = ast.parse(json_str, mode="eval")
+            data = self._convert_literal_node(parsed.body)
             if isinstance(data, dict):
                 return CharacterInfo(**data)
-        except Exception:
+        except (SyntaxError, TypeError, ValueError):
             return None
         return None
+
+    def _convert_literal_node(self, node: ast.AST) -> Any:
+        if isinstance(node, ast.Constant):
+            return node.value
+
+        if isinstance(node, ast.Name):
+            constants = {"null": None, "true": True, "false": False}
+            if node.id in constants:
+                return constants[node.id]
+            raise ValueError(f"unsupported name in literal: {node.id}")
+
+        if isinstance(node, ast.Dict):
+            return {
+                self._convert_literal_node(key): self._convert_literal_node(value)
+                for key, value in zip(node.keys, node.values)
+            }
+
+        if isinstance(node, (ast.List, ast.Tuple)):
+            return [self._convert_literal_node(item) for item in node.elts]
+
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            value = self._convert_literal_node(node.operand)
+            if isinstance(value, (int, float)):
+                return value if isinstance(node.op, ast.UAdd) else -value
+
+        raise ValueError(f"unsupported literal node: {type(node).__name__}")
 
     def _parse_with_regex(self, json_str: str) -> Optional[CharacterInfo]:
         """使用正则表达式直接提取tags"""
@@ -194,8 +214,8 @@ class TagParser:
         if not tags_str:
             return []
 
-        # 按逗号分割
-        tags = [tag.strip() for tag in tags_str.split(",")]
+        # 按常见分隔符分割
+        tags = [tag.strip() for tag in re.split(r"[,;]", tags_str)]
 
         # 过滤和清理
         cleaned_tags = []
