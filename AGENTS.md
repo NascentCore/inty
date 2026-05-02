@@ -72,9 +72,15 @@ User instructions always override this file.
 - Return the simplest working solution. No over-engineering.
 - No abstractions or helpers for single-use operations.
 - No speculative features or future-proofing.
-- No docstrings or comments on code that was not changed.
+- No docstrings or comments on code that was not changed, except Python module-level doc blocks (see **Python module doc blocks** below).
 - Inline comments only where logic is non-obvious.
 - Read the file before modifying it. Never edit blind.
+
+## Python module doc blocks (required)
+
+- Every `.py` source file MUST start with a module-level docstring at the top that explains what the file is designed for and its role or behavior in the system.
+- When adding a new `.py` file: include this doc block before other code.
+- When editing an existing `.py` file that is missing or has an insufficient doc block: add or update it as part of the change.
 
 ## Warnings and Disclaimers
 
