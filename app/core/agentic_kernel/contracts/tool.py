@@ -1,10 +1,19 @@
+"""Provider-agnostic tool calling contracts for agentic kernel.
+
+Covers OpenAI-shaped tool specs and message snapshots (tool_calls on assistant turns),
+normalized ToolCall payloads for dispatch, opaque ToolContext for executors, and ToolResult.
+Chat roles align with ``contracts.turn.MessageRole``.
+"""
+
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ToolRole = Literal["system", "user", "assistant", "tool"]
+from .turn import MessageRole
+
+ToolRole = MessageRole
 
 
 class ToolCallSnapshot(BaseModel):

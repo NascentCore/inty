@@ -71,12 +71,9 @@ WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 # REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
     {
-        "CAPABILITIES.md",
         "IDENTITY.md",
         "MEMORY.md",
-        "SIGNIFICANCE_PERCEPTION.md",
         "SOUL.md",
-        "TOOLS.md",
         "USER.md",
     }
 )
@@ -582,7 +579,8 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "Use during interactive relationship bootstrap instead of workspace_write_file. "
                     "Pass the full updated markdown as content. "
                     "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
-                    "IDENTITY / USER / MEMORY and other listed slices may still be updated."
+                    "IDENTITY / USER / MEMORY may still be updated. "
+                    "TOOLS / significance-perception operator text are fixed package templates, not slices."
                 ),
                 "parameters": {
                     "type": "object",

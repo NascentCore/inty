@@ -10,16 +10,16 @@ from app.core.agentic_kernel.experience_profile import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-from .bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
-from .implicit_signal_messages import implicit_signal_system_messages
-from .memory_taxonomy import (
+from ..bootstrap_user_interactive import build_interactive_bootstrap_system_message_parts
+from ..implicit_signal_messages import implicit_signal_system_messages
+from ..memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
     MEMORY_SYSTEM_HEADING_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
-from .models import ContextMeta, InnerTickMode, PromptBundle
-from .prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
-from .workspace import get_imate_axiom_system_text
+from ..models import ContextMeta, InnerTickMode, PromptBundle
+from ..prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
+from ..workspace import get_imate_axiom_system_text
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 
@@ -91,7 +91,7 @@ def _output_contract_text_chat_branch_mirrored_tools() -> str:
         "## 快思考路径（系统 1）与并行工具路径（系统 2）须一致\n\n"
         "你与**并行工具路**是同一人格的两种速度：本路优先低延迟外显；工具路负责读档案、联网、生图等须核对或慢步骤。"
         "对用户的事实立场、边界与态度必须一致，禁止「一路拒绝、一路照做」的分裂。\n\n"
-        "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS.md，但你仍须遵守：凡应以持久化档案原文、检索结果或工具返回为准的问题，"
+        "本路 **API 不带工具**（禁止在本路发起任何 tool_calls），系统提示里也可能未展开完整 TOOLS 操作说明，但你仍须遵守：凡应以持久化档案原文、检索结果或工具返回为准的问题，"
         "不得以「无法读取」「不能向你展示内部文件」等说法抢先否定并行路即将执行的核对；"
         "不要编造档案内容；若并行路会给出依据或原文，本路只用简短自然的承接语（可表示细节马上对齐），"
         "或将 `user_facing_reply` 留空/极短，把可核对正文交给工具路落点。\n\n"
@@ -182,10 +182,11 @@ def _output_contract_text_interactive_bootstrap_tools(
     base = (
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 等落到可用初稿）；"
-        "须用 **companion_update_prompt_slice** 写入各约定切片；**禁止**使用 workspace_write_file 写入上述根目录约定稿。"
+        + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 落到可用初稿）；"
+        "须用 **companion_update_prompt_slice** 写入上述四份根目录约定稿；**禁止**使用 workspace_write_file 写入它们。"
         "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
-        "IDENTITY / USER / MEMORY 等切片在后续日常轮次仍可用 companion_update_prompt_slice 或 workspace_write_file 按需更新。"
+        "IDENTITY / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 workspace_write_file 按需更新。"
+        "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由本工具写入。）"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
         "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
@@ -248,7 +249,7 @@ def _inner_tick_turn_section() -> str:
         "**工具（允许且鼓励在需要时使用）**：\n"
         "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`user_profile_record`）、"
         "在确有必要时读写持久化约定稿与 `memory/` 下文档（`workspace_read_file` / `workspace_write_file` 等，"
-        "以 TOOLS.md 与路径工具规则为准；路径指向 MemoryStore）。\n"
+        "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
         "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
         "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"
         "**不要**假设存在未在工具列表中出现的 API）。\n"

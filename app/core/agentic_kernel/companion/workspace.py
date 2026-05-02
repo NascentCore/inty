@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Final
 
 from loguru import logger
 
@@ -12,10 +13,20 @@ from .file_store import read_text
 from .memory_store import MemoryStore
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+_PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+_PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
+    {
+        "AXIOM.md",
+        "BOOTSTRAP.md",
+        "TOOLS.md",
+        "SIGNIFICANCE_PERCEPTION.md",
+    }
+)
 
 
 def load_workspace_seed_text(filename: str) -> str:
-    path = _TEMPLATES_DIR / filename
+    base = _PROMPTS_DIR if filename in _PACKAGE_PROMPT_SEED_FILES else _TEMPLATES_DIR
+    path = base / filename
     if not path.is_file():
         raise FileNotFoundError(f"missing companion workspace seed template: {path}")
     return read_text(path).rstrip() + "\n"
@@ -23,7 +34,7 @@ def load_workspace_seed_text(filename: str) -> str:
 
 @lru_cache(maxsize=1)
 def get_imate_axiom_system_text() -> str | None:
-    """Product axiom from templates/AXIOM.md; first system slice for iMate. None if empty."""
+    """Product axiom from prompts/AXIOM.md; first system slice for iMate. None if empty."""
     body = load_workspace_seed_text("AXIOM.md").strip()
     if not body:
         logger.warning("AXIOM.md is empty after strip; skipping axiom system injection")
@@ -150,7 +161,6 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
     "soul",
     "user_md",
     "memory_md",
-    "significance_perception_md",
 )
 
 

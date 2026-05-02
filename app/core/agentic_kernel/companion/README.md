@@ -31,15 +31,16 @@
 - **仍建议保留并写入**：持久化非默认的体验配置 id；在同一张版本表里留下 `(user_id, companion_id, chat_id)` 便于排查与扩展（`load_prompt_bundle` 与 `prompts.build_system_messages` 通过 `experience_profile` 解析是否注入私人记忆层及 system 条款）。
 - **运行时修改**：模型侧使用工具 **`companion_set_experience_profile`**（须 `user_confirmed: true`，禁止静默推断）。不要用 `workspace_write_file` 写 `context.json`。Ops / 网关可对表 **`companion_workspace_document_versions`** 中 `document_kind=context_json` 写入新版本，等价于外部更新。
 
-## 模板目录 `templates/`
+## 包内种子稿：`templates/` 与 `prompts/`
 
-- 多数 `.md` 由 `workspace.load_workspace_seed_text` 等在缺省时写入工作区；`BOOTSTRAP.md` 由交互式 bootstrap 读入，不对应持久化切片名。
-- **`AXIOM.md`**：产品层「根本法则」文案，**不**作为工作区持久化切片；正文由 `workspace.get_imate_axiom_system_text()` 从包内 `templates/AXIOM.md` 读取（`lru_cache`），并在 `prompts.build_system_messages` 中作为**首条** `system` 注入（先于安全基线与 `IDENTITY` / `SOUL` 等）。
+- **`templates/`**：工作区缺省时由 `workspace.load_workspace_seed_text` 写入的持久化约定稿种子（如 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md`）。
+- **`prompts/`**：不作为 MemoryStore 根目录同名文件的默认种子；内含 **`AXIOM.md`**、**`BOOTSTRAP.md`**、**`TOOLS.md`**、**`SIGNIFICANCE_PERCEPTION.md`**（固定注入文案）。`BOOTSTRAP.md` 由交互式 bootstrap 读入。`load_workspace_seed_text` 对上述四字文件名走 `prompts/`，其余仍走 `templates/`。
+- **`AXIOM.md`**：产品层「根本法则」，由 `workspace.get_imate_axiom_system_text()` 从包内 `prompts/AXIOM.md` 读取（`lru_cache`），在 `prompts.build_system_messages` 中作为**首条** `system` 注入。
 
 ## System 与提示词切片
 
-- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`（**首条**为 AXIOM（若非空），其次为安全基线，余下为 TOOLS / IDENTITY / SOUL 等；内在节拍「陪伴心跳」轮次另注入 `_heartbeat_clause()`，不读工作区 `HEARTBEAT.md`），由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
-- **切片枚举**：`prompt_slices.PromptSliceId` 与 `companion_update_prompt_slice` 可写映射 `PROMPT_SLICE_TO_REL` 同源。
+- **多段 system**：`prompts.build_system_messages` 返回若干条 `{"role":"system","content":...}`（**首条**为 AXIOM（若非空），其次为安全基线，余下为包内 TOOLS 模版正文 / IDENTITY / SOUL 等；内在节拍「陪伴心跳」轮次另注入 `_heartbeat_clause()`，不读工作区 `HEARTBEAT.md`），由 `turn.run_turn` 与 `turn_engine.build_repl_turn_base_messages` 置于对话列表前缀；`build_system_prompt` 用 `prompt_slices.SYSTEM_PROMPT_SLICE_SEPARATOR` 将各段 `content` 拼成单字符串，供仅需单串的调用方使用（与交互式 bootstrap 块拼接同一常量）。
+- **切片枚举**：`companion_update_prompt_slice` 仅允许 `PROMPT_SLICE_TO_REL` 中的四字根目录稿（IDENTITY / SOUL / USER / MEMORY）；SIGNIFICANCE / TOOLS 引导为包内固定模版注入。
 
 ### 持久化
 

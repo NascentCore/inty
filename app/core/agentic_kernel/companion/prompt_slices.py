@@ -10,10 +10,10 @@ from typing import Final
 
 
 class PromptSliceId(StrEnum):
-    """Template / workspace slice stems for ``*.md`` injection and companion_update_prompt_slice.
+    """Persistable workspace slices updatable via ``companion_update_prompt_slice``.
 
-    Workspace-backed persistable slices: IDENTITY, SOUL, USER, MEMORY, TOOLS, CAPABILITIES,
-    SIGNIFICANCE_PERCEPTION. BOOTSTRAP is package-only.
+    ``BOOTSTRAP`` is package-only (no workspace path). ``TOOLS`` / ``SIGNIFICANCE_PERCEPTION`` are
+    fixed from package templates for model injection, not store-backed prompt slices.
     """
 
     BOOTSTRAP = "BOOTSTRAP"
@@ -21,9 +21,6 @@ class PromptSliceId(StrEnum):
     IDENTITY = "IDENTITY"
     USER = "USER"
     MEMORY = "MEMORY"
-    TOOLS = "TOOLS"
-    CAPABILITIES = "CAPABILITIES"
-    SIGNIFICANCE_PERCEPTION = "SIGNIFICANCE_PERCEPTION"
 
 
 # Joins legacy single-string system prompt and interactive-bootstrap block strings.
@@ -43,9 +40,6 @@ _PERSISTABLE_SLICE_IDS: Final[frozenset[PromptSliceId]] = frozenset(
         PromptSliceId.SOUL,
         PromptSliceId.USER,
         PromptSliceId.MEMORY,
-        PromptSliceId.TOOLS,
-        PromptSliceId.CAPABILITIES,
-        PromptSliceId.SIGNIFICANCE_PERCEPTION,
     }
 )
 
