@@ -480,6 +480,22 @@ class ChatCompletionResponse(BaseModel):
     usage: dict
 
 
+class ChatWsUserSignedOnFrame(BaseModel):
+    """WebSocket control frame: arms proactive heartbeat coords.
+
+    Product intent: signal that the user is online in this channel so the companion can act
+    human-like (noticed you, then proactive greeting), not only silence until the user types.
+    See ``/docs/FR_USER_SIGN_ON_GREETINGS.md`` (Product intent).
+    """
+
+    type: Literal["user_signed_on"] = "user_signed_on"
+    agent_id: str = Field(..., min_length=1)
+    message_id: Optional[str] = Field(
+        default=None,
+        description="Optional RFC4122 UUID string for client/server log correlation.",
+    )
+
+
 class ChatWebSocketRequest(BaseModel):
     agent_id: str
     request: ChatCompletionRequest

@@ -3,6 +3,7 @@ package com.inty.imate.chat.data.datasource
 import com.ai.core.http.di.KtorHttpClientSingleton
 import com.ai.core.utils.LogUtils
 import com.inty.imate.chat.data.bean.ChatClientContextWsMessage
+import com.inty.imate.chat.data.bean.ChatUserSignedOnWsMessage
 import com.inty.imate.chat.data.bean.ChatWebSocketReq
 import com.inty.imate.chat.data.bean.ChatWsControlFrame
 import com.inty.imate.chat.data.bean.SendMsgReq
@@ -57,6 +58,14 @@ constructor() {
         val session =
             currentSession.get()
                 ?: throw IllegalStateException("Chat WebSocket not connected")
+        session.send(
+            Frame.Text(
+                json.encodeToString(
+                    ChatUserSignedOnWsMessage.serializer(),
+                    ChatUserSignedOnWsMessage(agentId = agentId),
+                ),
+            ),
+        )
         val payload = ChatWebSocketReq(agentId = agentId, request = request)
         session.send(Frame.Text(json.encodeToString(ChatWebSocketReq.serializer(), payload)))
     }

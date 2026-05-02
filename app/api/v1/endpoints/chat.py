@@ -48,6 +48,7 @@ from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
     ChatWebSocketRequest,
+    ChatWsUserSignedOnFrame,
     CompanionChatTurnMessageType,
     UserTimeContext,
     normalize_websocket_companion_message_id_uuid,
@@ -175,7 +176,8 @@ async def _handle_chat_websocket_control_json(
     session's last validated time_context dict (or None). Returns True if the frame was consumed.
 
     **Transport vs logical channel:** control frames (ping/pong, client_context_ack) are answered
-    directly on the WebSocket. They are independent of the connection-level outbound queue used
+    directly on the WebSocket. Proactive heartbeat arming uses a separate ``user_signed_on`` frame
+    (see ``_try_handle_ws_user_signed_on_frame``). They are independent of the connection-level outbound queue used
     for assistant/business JSON. Intentionally so: the WebSocket sits *below* the repl/client
     logical session with the agent; control traffic only confirms link/time-context at the wire layer,
     not the agent dialogue FIFO (which is serialized via ``outbound_queue`` + pump).
@@ -199,6 +201,95 @@ async def _handle_chat_websocket_control_json(
         await websocket.send_json({"type": "client_context_ack", "ok": True})
     except ValidationError:
         await websocket.send_json({"type": "client_context_ack", "ok": False})
+    return True
+
+
+async def _try_handle_ws_user_signed_on_frame(
+    websocket: WebSocket,
+    data: Any,
+    *,
+    db: AsyncSession,
+    current_user: schemas.User,
+    companion_hb_ctx: dict[str, Any] | None,
+) -> bool:
+    """
+    Consume ``{"type":"user_signed_on","agent_id":...}``.
+
+    Product intent: companion should mimic a person who sees the user come online and can
+    greet proactively (see ``/docs/FR_USER_SIGN_ON_GREETINGS.md``); this frame is the
+    client-side online signal. Today it also populates proactive heartbeat coords.
+
+    ``/ws/verify`` passes ``companion_hb_ctx=None`` and receives ``ok: false`` (not supported).
+    """
+    if not isinstance(data, dict) or data.get("type") != "user_signed_on":
+        return False
+    if companion_hb_ctx is None:
+        await websocket.send_json(
+            {
+                "type": "user_signed_on_ack",
+                "ok": False,
+                "reason": "not_supported",
+            }
+        )
+        return True
+    feats = global_config_loaded_from_config_yaml.app.features
+    if not feats.companion_ws_proactive_heartbeat_enabled:
+        await websocket.send_json(
+            {
+                "type": "user_signed_on_ack",
+                "ok": False,
+                "reason": "proactive_heartbeat_disabled",
+            }
+        )
+        return True
+    try:
+        frame = ChatWsUserSignedOnFrame.model_validate(data)
+    except ValidationError:
+        await websocket.send_json(
+            {
+                "type": "user_signed_on_ack",
+                "ok": False,
+                "reason": "invalid_payload",
+            }
+        )
+        return True
+    agent_id = frame.agent_id.strip()
+    try:
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+        if chat.agent_id != agent_id:
+            await websocket.send_json(
+                {
+                    "type": "user_signed_on_ack",
+                    "ok": False,
+                    "reason": "agent_mismatch",
+                }
+            )
+            return True
+        companion_hb_ctx.clear()
+        companion_hb_ctx.update(
+            {
+                "user_id": current_user.id,
+                "agent_id": agent_id,
+                "chat_id": chat.id,
+            }
+        )
+        await websocket.send_json({"type": "user_signed_on_ack", "ok": True})
+        recv_msg_uuid = (frame.message_id or "").strip()
+        logger.info(
+            "chat_ws user_signed_on armed proactive hb user={} agent={} chat_id={} "
+            "received_message_uuid={}",
+            current_user.id,
+            agent_id,
+            chat.id,
+            recv_msg_uuid or "-",
+        )
+    except Exception:
+        logger.exception("chat_ws user_signed_on failed agent_id={}", agent_id)
+        await websocket.send_json(
+            {"type": "user_signed_on_ack", "ok": False, "reason": "server_error"}
+        )
     return True
 
 
@@ -902,7 +993,6 @@ async def _agent_chat_completions_impl(
     chat_route: Literal["http", "websocket"],
     companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
-    companion_ws_heartbeat_ctx: dict[str, Any] | None = None,
 ) -> Union[schemas.APIResponse[dict], dict]:
     try:
         request_handling_timer = Timer("请求处理")
@@ -1176,18 +1266,6 @@ async def _agent_chat_completions_impl(
                         response_text_content,
                         response_content_parts,
                     ) = _normalize_chat_response_content(response_content)
-                    if (
-                        companion_ws_heartbeat_ctx is not None
-                        and chat_route == "websocket"
-                    ):
-                        companion_ws_heartbeat_ctx.clear()
-                        companion_ws_heartbeat_ctx.update(
-                            {
-                                "user_id": current_user.id,
-                                "agent_id": agent_id,
-                                "chat_id": chat.id,
-                            }
-                        )
                 else:
                     chat_result = await agent.chat(
                         user_id=current_user.id,
@@ -1818,6 +1896,14 @@ async def chat_completions_websocket(
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 data = None
+            if await _try_handle_ws_user_signed_on_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_hb_ctx=companion_hb_ctx,
+            ):
+                continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             if not isinstance(data, dict):
@@ -1859,7 +1945,6 @@ async def chat_completions_websocket(
                         chat_route="websocket",
                         companion_background_sink=companion_bg_sink,
                         companion_ws_foreground_pending=ws_fg_pending,
-                        companion_ws_heartbeat_ctx=companion_hb_ctx,
                     )
             except HTTPException as e:
                 detail = e.detail
@@ -1936,6 +2021,14 @@ async def chat_completions_websocket_verify(
                 data = json.loads(raw)
             except json.JSONDecodeError:
                 data = None
+            if await _try_handle_ws_user_signed_on_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_hb_ctx=None,
+            ):
+                continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             websocket_request = ChatWebSocketRequest.model_validate_json(raw)

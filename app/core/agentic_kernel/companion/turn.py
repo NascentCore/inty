@@ -78,6 +78,10 @@ from .heartbeat import (
     HEARTBEAT_SYNTHETIC_USER_TEXT,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
 )
+from .implicit_signal_messages import (
+    MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
+    USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT,
+)
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -225,9 +229,18 @@ async def run_turn(
         for m in transcript:
             messages.append({"role": m.role, "content": m.content})
     user_msg_uuid = preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
+    implicit_sign_on_turn = (
+        bool(implicit_signal_bundle and implicit_signal_bundle.user_signed_on)
+        and not inner_tick_turn
+    )
     if tick_proactive:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
-    messages.append({"role": "user", "content": user_text})
+    if implicit_sign_on_turn:
+        messages.append(
+            {"role": "system", "content": USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT}
+        )
+    else:
+        messages.append({"role": "user", "content": user_text})
 
     ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
@@ -586,18 +599,34 @@ async def run_turn(
 
     # 持久化 transcript
     assistant_msg_uuid = str(uuid.uuid4())
-    user_row: dict[str, Any] = {
-        "role": "user",
-        "content": user_text,
-        "ts": ts_user,
-        "uuid": user_msg_uuid,
-    }
-    if inner_tick_turn:
-        user_row["inner_tick"] = True
-    if tick_proactive:
-        user_row["heartbeat"] = True
-    user_row["trace_id"] = trace_id
-    store.append_jsonl_record(rel_tr, user_row)
+    if implicit_sign_on_turn:
+        sign_on_row: dict[str, Any] = {
+            "role": "system",
+            "content": USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT,
+            "ts": ts_user,
+            "uuid": user_msg_uuid,
+            "trace_id": trace_id,
+            "implicit_user_signed_on": True,
+        }
+        store.append_jsonl_record(rel_tr, sign_on_row)
+    else:
+        user_row: dict[str, Any] = {
+            "role": "user",
+            "content": user_text,
+            "ts": ts_user,
+            "uuid": user_msg_uuid,
+        }
+        if inner_tick_turn:
+            user_row["inner_tick"] = True
+        if tick_proactive:
+            user_row["heartbeat"] = True
+        user_row["trace_id"] = trace_id
+        store.append_jsonl_record(rel_tr, user_row)
+    memory_user_text = (
+        MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON
+        if implicit_sign_on_turn
+        else user_text
+    )
     assistant_row: dict[str, Any] = {
         "role": "assistant",
         "content": last_text,
@@ -625,7 +654,7 @@ async def run_turn(
         schedule_memory_update_after_turn(
             paths,
             store=store,
-            user_text=user_text,
+            user_text=memory_user_text,
             assistant_text=last_text,
             complete_fn=_complete_fn,
             config=mem_cfg,
@@ -638,7 +667,7 @@ async def run_turn(
         memory_update_after_turn(
             paths,
             store=store,
-            user_text=user_text,
+            user_text=memory_user_text,
             assistant_text=last_text,
             complete_fn=_complete_fn_sync,
             config=mem_cfg,

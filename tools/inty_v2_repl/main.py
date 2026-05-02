@@ -423,7 +423,30 @@ def _repl_run_backend_ws_branch(
         agent_resolved,
     )
     _init_proto_logging(ws, log_file, no_log_file)
-    bridge = BackendChatWsBridge(ws_url=url, bearer_token=token)
+    def _user_signed_on_notice(aid: str, message_id: str) -> None:
+        print(
+            f"[{repl_wall_ts_str()}] repl: user_signed_on sent "
+            f"(agent_id={aid} message_id={message_id})",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    def _user_signed_on_ack_notice(payload: dict[str, Any]) -> None:
+        ok = payload.get("ok")
+        reason = payload.get("reason")
+        extra = f" reason={reason}" if reason else ""
+        print(
+            f"[{repl_wall_ts_str()}] repl: user_signed_on_ack ok={ok}{extra}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    bridge = BackendChatWsBridge(
+        ws_url=url,
+        bearer_token=token,
+        on_user_signed_on_sent=_user_signed_on_notice,
+        on_user_signed_on_ack=_user_signed_on_ack_notice,
+    )
     bridge.start()
     try:
         _repl_interactive_backend_ws_loop(bridge, agent_resolved)
