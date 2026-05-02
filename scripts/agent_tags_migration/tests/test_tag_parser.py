@@ -4,14 +4,12 @@
 """
 
 import unittest
-import sys
-import os
 
-# 添加父目录到Python路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from tag_parser import TagParser
-from sample_data import SAMPLE_PERSONALITIES, EXPECTED_RESULTS
+from scripts.agent_tags_migration.tag_parser import TagParser
+from scripts.agent_tags_migration.tests.sample_data import (
+    EXPECTED_RESULTS,
+    SAMPLE_PERSONALITIES,
+)
 
 
 class TestTagParser(unittest.TestCase):
