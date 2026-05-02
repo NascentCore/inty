@@ -36,13 +36,19 @@ export ALEMBIC_CONFIG=alembic/alembic.ini
 python -m alembic -c alembic/alembic.ini <subcommand> ...
 ```
 
-`config.yaml` 提供数据库 URL；`env.py` 会读应用配置。生成迁移前通常：
+默认：`config.yaml` 在仓库根，`alembic/env.py` 通过 `app.core.config` 读库 URL。生成迁移前通常：
 
 ```bash
 cp devops/config.yaml.test config.yaml
 ```
 
 按需改 `database.host` 等为可连的 Postgres（本地多为 `localhost`）。
+
+不换文件名时可用自定义路径（见 `alembic/env.py`）：
+
+```bash
+python -m alembic -c alembic/alembic.ini -x config=/abs/path/to.yaml revision --autogenerate -m "<msg>"
+```
 
 ## 方式 A：根据模型生成（常用）
 
@@ -55,7 +61,7 @@ alembic upgrade head
 alembic revision --autogenerate -m "<short description>"
 ```
 
-生成后**人工检查**新生成的 `versions/*.py`：删多余 op、补索引/约束说明，勿盲提交。
+生成后**人工检查**新生成的 `alembic/versions/*.py`：删多余 op、补索引/约束说明，勿盲提交。
 
 ## 方式 B：空 revision（手写 upgrade/downgrade）
 
@@ -84,7 +90,7 @@ alembic history -v | head
 python -m alembic heads
 ```
 
-CI 要求恰好一个 head；合并前可跑 `/workspace/.cursor/skills/inty-backend-ci-local/SKILL.md` 中的本地检查。
+CI 要求恰好一个 head；合并前可跑 `/.cursor/skills/inty-backend-ci-local/SKILL.md` 中的本地检查。
 
 ## 常用命令速查
 
