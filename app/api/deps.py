@@ -80,6 +80,32 @@ def _get_user_from_auth_snapshot(
         return None
 
 
+def _get_user_from_auth_snapshot_for_websocket_token(user_id: str) -> User | None:
+    """
+    WebSocket token 鉴权用快照：与 HTTP 路径不同，不得在已 accept 的 WS 上抛 HTTPException，
+    否则 Starlette 无法把 401 当作 HTTP 响应写出，会升级为 ASGI 异常（prod 日志已见）。
+    缓存标记已删除时返回 None，由路由层 websocket.close 处理。
+    """
+    cached_snapshot = cache_service.get_user_auth_snapshot(user_id)
+    if cached_snapshot is None:
+        return None
+    if cached_snapshot.get("deleted_at"):
+        logger.warning(
+            "WebSocket token auth: user marked deleted in auth snapshot cache "
+            f"user_id={user_id}"
+        )
+        return None
+    try:
+        return User(**cached_snapshot)
+    except Exception as cache_error:
+        logger.warning(
+            "WebSocket token auth: failed to restore user from snapshot "
+            f"user_id={user_id} error={cache_error}"
+        )
+        cache_service.invalidate_user_auth_snapshot(user_id)
+        return None
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)
 ) -> User:
@@ -243,11 +269,6 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
     鉴权失败返回 None（不抛 HTTPException），避免在 WebSocket 已 accept 后
     触发 Starlette 将 401 当作 HTTP 响应写入 WS 连接而导致 RuntimeError。
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-    )
-
     try:
         payload = jwt.decode(
             token,
@@ -270,10 +291,7 @@ async def get_user_from_token(token: str, db: AsyncSession) -> User | None:
             )
         return None
 
-    try:
-        cached_user = _get_user_from_auth_snapshot(user_id, credentials_exception)
-    except HTTPException:
-        return None
+    cached_user = _get_user_from_auth_snapshot_for_websocket_token(user_id)
     if cached_user is not None:
         return cached_user
 

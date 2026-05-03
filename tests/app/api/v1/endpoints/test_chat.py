@@ -3,9 +3,10 @@
 import asyncio
 import json
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -20,8 +21,10 @@ from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
 from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.security import create_access_token
 from app.models.memory import Memory
 from app.models.user import AuthType
+from app.services.cache_service import cache_service
 from app.schemas.response import APIResponse, BizError, BusinessErrorCode, UsageLimitExceeded
 from app.services.voice_service import (
     VoiceGenerationResult,
@@ -56,6 +59,49 @@ def _decode_user_id_from_token(token: str) -> str:
         algorithms=[global_config_loaded_from_config_yaml.security.algorithm],
     )
     return str(payload["sub"])
+
+
+async def test_get_user_from_token_deleted_snapshot_does_not_raise_for_ws():
+    """
+    Stale user_auth_snapshot with deleted_at must not raise HTTPException from
+    get_user_from_token (prod: ASGI crash after WebSocket accept).
+    """
+    user_id = "user-ws-snapshot-deleted-test"
+    token = create_access_token(user_id, expires_delta=timedelta(minutes=30))
+    cache_service.invalidate_user_auth_snapshot(user_id)
+    cache_service.set_user_auth_snapshot(
+        user_id,
+        {
+            "id": user_id,
+            "readable_id": "rd000000",
+            "auth_type": AuthType.GOOGLE,
+            "is_active": True,
+            "is_superuser": False,
+            "deleted_at": datetime.now(timezone.utc),
+        },
+    )
+
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none = MagicMock(return_value=None)
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    async def fake_get_async_db():
+        yield mock_db
+
+    app = FastAPI()
+    app.include_router(chat_v1.router, prefix="/api/v1")
+    app.dependency_overrides[deps.get_async_db] = fake_get_async_db
+
+    try:
+        with FastAPITestClient(app) as client:
+            with client.websocket_connect(f"/api/v1/chat/ws?token={token}") as ws:
+                ws.close()
+    finally:
+        app.dependency_overrides.clear()
+        cache_service.invalidate_user_auth_snapshot(user_id)
+
+    mock_db.execute.assert_called()
 
 
 @pytest.fixture(scope="function")
