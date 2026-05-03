@@ -33,9 +33,7 @@ def build_repl_turn_base_messages(
     include_significance_perception_slice: bool = False,
 ) -> tuple[list[dict[str, Any]], str]:
     effective_ai_private = ai_private_text
-    tick_proactive = (
-        inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    )
+    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     if (
         inner_tick_turn
         and not tick_proactive

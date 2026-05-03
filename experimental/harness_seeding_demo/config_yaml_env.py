@@ -44,9 +44,10 @@ def apply_llm_env_from_config_yaml(config_path: Path) -> dict[str, str]:
 
     applied: dict[str, str] = {}
     if key:
-        if not (os.getenv("OPENROUTER_API_KEY") or "").strip() and not (
-            os.getenv("OPENAI_API_KEY") or ""
-        ).strip():
+        if (
+            not (os.getenv("OPENROUTER_API_KEY") or "").strip()
+            and not (os.getenv("OPENAI_API_KEY") or "").strip()
+        ):
             os.environ["OPENAI_API_KEY"] = key
             applied["OPENAI_API_KEY"] = "(from yaml)"
 

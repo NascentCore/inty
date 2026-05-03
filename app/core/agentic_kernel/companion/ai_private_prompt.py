@@ -68,7 +68,9 @@ def get_ai_private_jsonl_text_for_prompt(
 ) -> str:
     """Parse ``ai_private.jsonl`` into plain lines for prompt context (optional layer)."""
     cap = max_chars if max_chars is not None else _default_max_chars()
-    raw = get_memory_store(workspace_root).read_document_if_exists(_AI_PRIVATE_JSONL_REL)
+    raw = get_memory_store(workspace_root).read_document_if_exists(
+        _AI_PRIVATE_JSONL_REL
+    )
     if not raw or not raw.strip():
         return ""
 

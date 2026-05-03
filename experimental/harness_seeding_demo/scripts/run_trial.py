@@ -25,7 +25,9 @@ try:
 except ImportError:
     pass
 
-from experimental.harness_seeding_demo.config_yaml_env import apply_llm_env_from_config_yaml
+from experimental.harness_seeding_demo.config_yaml_env import (
+    apply_llm_env_from_config_yaml,
+)
 
 _DEFAULT_CONFIG_YAML = _REPO_ROOT / "devops/config.yaml.local"
 
@@ -50,7 +52,9 @@ from experimental.harness_seeding_demo.scorer.rubrics import (
     score_all_rubrics,
 )
 from experimental.harness_seeding_demo.user_script import load_user_script
-from experimental.harness_seeding_demo.workspace_setup import seed_memory_store_from_directory
+from experimental.harness_seeding_demo.workspace_setup import (
+    seed_memory_store_from_directory,
+)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -241,10 +245,8 @@ async def _run(args: argparse.Namespace) -> dict:
         "llm": {
             "api_base": llm_cfg.api_base,
             "default_model": llm_cfg.default_model,
-            "chat_model": (llm_cfg.chat_model or "").strip()
-            or llm_cfg.default_model,
-            "tool_model": (llm_cfg.tool_model or "").strip()
-            or llm_cfg.default_model,
+            "chat_model": (llm_cfg.chat_model or "").strip() or llm_cfg.default_model,
+            "tool_model": (llm_cfg.tool_model or "").strip() or llm_cfg.default_model,
             "api_key_source": api_key_source,
         },
     }

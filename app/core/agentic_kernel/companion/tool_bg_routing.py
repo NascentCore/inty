@@ -219,7 +219,10 @@ def resolve_tool_bg_routing_sync(
     routing_tail = [
         {"role": "system", "content": _ROUTING_SYSTEM_PROMPT},
     ]
-    payload = [{k: v for k, v in m.items() if not str(k).startswith("_")} for m in conversation_messages]
+    payload = [
+        {k: v for k, v in m.items() if not str(k).startswith("_")}
+        for m in conversation_messages
+    ]
     payload.extend(routing_tail)
     resp = create_completion_sync(
         client,
