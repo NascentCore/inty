@@ -53,6 +53,13 @@ def http_base_to_ws_chat_url(http_base: str, *, agent_id: str | None = None) -> 
     return url
 
 
+def parse_chat_completion_ws_payload(
+    data: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    """Parse one successful ``code==200`` chat completion JSON frame from ``/api/v1/chat/ws``."""
+    return _parse_chat_response_payload(data)
+
+
 def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if data.get("type") == "pong":
         raise ValueError("unexpected pong in response queue")
