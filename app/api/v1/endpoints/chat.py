@@ -40,7 +40,7 @@ from app.core.agentic_kernel.companion.heartbeat import (
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
     next_heartbeat_wait_seconds,
 )
-from app.core.agentic_kernel.companion.models import InnerTickMode
+from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
@@ -758,6 +758,27 @@ def _companion_ws_hb_coords_snapshot(hb_ctx: dict[str, Any]) -> dict[str, Any] |
     return {"user_id": hb_uid, "agent_id": aid, "chat_id": cid}
 
 
+def _companion_ai_meta_from_turn_result(
+    companion_turn: CompanionTurnResult,
+) -> dict[str, Any]:
+    """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
+    companion_ai_meta: dict[str, Any] = {
+        "source": companion_turn.assistant_source,
+    }
+    if companion_turn.trace_id:
+        companion_ai_meta["trace_id"] = companion_turn.trace_id
+    if companion_turn.user_msg_uuid:
+        companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
+    if companion_turn.langsmith_trace_id:
+        companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
+    if companion_turn.langsmith_run_id:
+        companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
+    sp = companion_turn.significance_perception
+    if isinstance(sp, dict) and sp:
+        companion_ai_meta["significance_perception"] = sp
+    return companion_ai_meta
+
+
 async def _try_fire_companion_ws_proactive_heartbeat(
     *,
     outbound_queue: asyncio.Queue,
@@ -865,20 +886,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             meta_data=user_meta,
         )
 
-        companion_ai_meta: dict[str, Any] = {
-            "source": companion_turn.assistant_source,
-        }
-        if companion_turn.trace_id:
-            companion_ai_meta["trace_id"] = companion_turn.trace_id
-        if companion_turn.user_msg_uuid:
-            companion_ai_meta["user_msg_uuid"] = companion_turn.user_msg_uuid
-        if companion_turn.langsmith_trace_id:
-            companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
-        if companion_turn.langsmith_run_id:
-            companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
-        sp = companion_turn.significance_perception
-        if isinstance(sp, dict) and sp:
-            companion_ai_meta["significance_perception"] = sp
+        companion_ai_meta = _companion_ai_meta_from_turn_result(companion_turn)
 
         ai_message_id = await chat_history_service.add_ai_message_sync_async(
             session_id,
@@ -1214,26 +1222,9 @@ async def _agent_chat_completions_impl(
                             )
                         raise
                     companion_reply = companion_turn.assistant_text
-                    companion_ai_meta: dict[str, Any] = {
-                        "source": companion_turn.assistant_source,
-                    }
-                    if companion_turn.trace_id:
-                        companion_ai_meta["trace_id"] = companion_turn.trace_id
-                    if companion_turn.user_msg_uuid:
-                        companion_ai_meta["user_msg_uuid"] = (
-                            companion_turn.user_msg_uuid
-                        )
-                    if companion_turn.langsmith_trace_id:
-                        companion_ai_meta["langsmith_trace_id"] = (
-                            companion_turn.langsmith_trace_id
-                        )
-                    if companion_turn.langsmith_run_id:
-                        companion_ai_meta["langsmith_run_id"] = (
-                            companion_turn.langsmith_run_id
-                        )
-                    sp = companion_turn.significance_perception
-                    if isinstance(sp, dict) and sp:
-                        companion_ai_meta["significance_perception"] = sp
+                    companion_ai_meta = _companion_ai_meta_from_turn_result(
+                        companion_turn
+                    )
                     if implicit_signed_on_ws:
                         companion_ai_meta["messageType"] = (
                             CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
@@ -1693,20 +1684,23 @@ async def _try_send_ws_user_interactive_bootstrap_kickoff(
         model_override = select_chat_model(
             user=current_user, is_subscribed=is_subscribed
         )
-        kick_reply = await companion_chat_service.run_companion_interactive_bootstrap_kickoff_for_ws(
+        kick_turn = await companion_chat_service.run_companion_interactive_bootstrap_kickoff_for_ws(
             user_id=current_user.id,
             agent_id=agent_id,
             chat_id=chat.id,
             session_id=session_id,
             resolved_chat_model_id=model_override,
         )
-        if kick_reply is None:
+        if kick_turn is None:
             return
+        kick_reply = kick_turn.assistant_text
+        kick_meta = _companion_ai_meta_from_turn_result(kick_turn)
+        kick_meta["messageType"] = "companion_ws_interactive_bootstrap_kickoff"
         ai_message_id = await chat_history_service.add_ai_message_sync_async(
             session_id,
             kick_reply,
             agent_id=chat.agent_id,
-            meta_data={"messageType": "companion_ws_interactive_bootstrap_kickoff"},
+            meta_data=kick_meta,
         )
         try:
             await subscription_svc.record_usage(
