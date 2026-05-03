@@ -1,3 +1,9 @@
+"""Google Cloud Storage helpers used by services and tests.
+
+This module centralizes GCS client creation, URL parsing, and common object
+operations so callers can work with both real GCS and the fake test client.
+"""
+
 import asyncio
 import re
 import shutil
@@ -123,17 +129,15 @@ def copy_gcs_file(source_url: str, destination_path: str, bucket_name: str) -> s
     return destination_blob.public_url
 
 
-def get_bucket_and_path_from_gcs_url(url: str) -> str:
-    """从GCS URL中提取文件路径"""
-    assert (
+def get_bucket_and_path_from_gcs_url(url: str) -> tuple[str, str]:
+    """从GCS URL中提取 bucket 和文件路径"""
+    if not (
         url.startswith(GCS_PUBLIC_HTTPS_PREFIX)
         or url.startswith(GCS_GS_PREFIX)
         or url.startswith(GCS_PRIVATE_HTTPS_PREFIX)
-    )
+    ):
+        raise ValueError(f"Invalid GCS URL: {url}")
 
-    # 处理两种URL格式：
-    # 1. https://storage.googleapis.com/bucket/path
-    # 2. gs://bucket/path
     if url.startswith(GCS_GS_PREFIX):
         url = url.removeprefix(GCS_GS_PREFIX)
 
@@ -143,7 +147,10 @@ def get_bucket_and_path_from_gcs_url(url: str) -> str:
     if url.startswith(GCS_PRIVATE_HTTPS_PREFIX):
         url = url.removeprefix(GCS_PRIVATE_HTTPS_PREFIX)
 
-    return url.split("/", 1)
+    bucket_name, separator, gcs_path = url.partition("/")
+    if not bucket_name or not separator or not gcs_path:
+        raise ValueError(f"Invalid GCS URL: {url}")
+    return bucket_name, gcs_path
 
 
 def is_valid_gcs_url(url: str) -> bool:
@@ -154,6 +161,7 @@ def is_valid_gcs_url(url: str) -> bool:
     # 检查是否为GCS URL格式
     gcs_patterns = [
         r"^https://storage\.googleapis\.com/[^/]+/.+",
+        r"^https://storage\.cloud\.google\.com/[^/]+/.+",
         r"^gs://[^/]+/.+",
     ]
 
@@ -206,7 +214,6 @@ def check_gcs_file_exists(bucket_name: str, path: str) -> bool:
 def download_from_gcs(url: str) -> bytes:
     """从GCS下载文件"""
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(url)
-    assert gcs_path
 
     client = get_gcs_client()
     bucket = client.bucket(bucket_name)
