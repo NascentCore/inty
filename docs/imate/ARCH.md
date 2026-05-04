@@ -1,150 +1,135 @@
-# iMate / Agentic Companion：概念架构
+# iMate / Agentic Companion: current architecture
 
-面向 **Android iMate** 与后端 **Agentic Companion Kernel** 对齐的阅读材料：描述客户端经 WebSocket 与 `run_turn`、上游 LLM 之间的**概念关系**（不展开实现细节）。
+iMate 的后端智能体能力由 `/app/core/agentic_kernel/companion` 承载，并通过 `/app/api/v1/endpoints/chat.py` 的 `/api/v1/chat/ws` 暴露给客户端。本文用于把 Android iMate、REPL、WebSocket 路由、Companion kernel、LLM provider、PostgreSQL 工作区文档版本表之间的关系对齐到当前代码状态；如果只需要排查 API 帧形状，先读 `/app/api/ENDPOINTS.md`，如果只需要排查 Companion 工作区文档与持久化，先读 `/app/core/agentic_kernel/companion/README.md`。
 
-- 代码入口：`app/api/v1/endpoints/chat.py`（`/api/v1/chat/ws`）、`app/services/companion_chat_service.py`、`app/core/agentic_kernel/companion/turn.py`
-- API 行为与 WS 约定：`[app/api/ENDPOINTS.md](../../app/api/ENDPOINTS.md)`
+- 生产入口: `/app/api/v1/endpoints/chat.py` (`/api/v1/chat/ws`)
+- API 到 kernel 适配: `/app/services/companion_chat_service.py`
+- 会话生命周期: `/app/core/agentic_kernel/companion/manager.py`
+- 单轮主编排: `/app/core/agentic_kernel/companion/turn.py`
+- 下行业务 FIFO: `/app/services/chat_websocket_session.py`
+- 工作区文档权威源: `companion_workspace_document_versions` via `/app/core/agentic_kernel/companion/memory_store.py`
 
-启用异步双路（Dual-LLM）时，前台 chat 先随一轮 WS 响应返回；后台 tool 侧完成后可能经**同一连接**再推送 assistant 帧；连接级队列与落库规则以前述文档为准。
+## Current state summary
 
-**分层（传输 vs 逻辑）**：WebSocket 在 **repl/client 与 agent 的逻辑会话之下**。同一 TCP/WebSocket 连接上：
+- `/api/v1/chat/ws` 是 iMate companion 的生产对话路径；HTTP completions 仍保留旧 Agent 路径。
+- WebSocket 只负责连接与帧传输；业务下行统一进入连接级 `outbound_queue` 后由 `chat_ws_outbound_pump` 顺序 `send_json`。
+- 控制帧 `ping`、`client_context`、`user_signed_on` 的 ack 直接 `send_json`，不进入 `outbound_queue`。
+- Companion session 以 `(user_id, companion_id, chat_id)` 定位；API 层把 `agent_id` 原样作为 `companion_id`。
+- 生产配置下 `MemoryStore` 使用 PostgreSQL append-only 文档版本表作为工作区权威源，不以磁盘目录为权威状态。
+- `run_turn` 是当前实际主编排；同包下 `runtime/turn_orchestrator.py` 是更通用但尚未接管 companion 生产路径的抽象。
+- 当前一轮推理可能走同步 chat、同步 tool loop、异步 foreground chat + background tool、inner tick、proactive heartbeat 等路由。
 
-- **传输层 / 连接确认**：ping、pong、`client_context_ack` 等由路由 **直接** `send_json`，不入队；仅表示链路存活与时间上下文校验。
-- **逻辑层 / 对话下行**：发往客户端的助手业务 JSON（foreground、tool 异步补帧、kickoff、HTTP 映射错误帧）经 `**asyncio.Queue`** + `**chat_ws_outbound_pump`**（`[app/services/chat_websocket_session.py](../../app/services/chat_websocket_session.py)`）FIFO `send_json`，与 REPL 客户端侧约定的 agent 对话顺序一致。
+## Transport vs logical conversation
 
-**REPL 客户端队列（`tools/inty_v2_repl`）**：上行用户帧 `[post_turn](../../tools/inty_v2_repl/backend_chat_ws.py)` 仅 `ws.send`，在 **WebSocket/TCP 发送侧 FIFO** 排队（服务端仍按连接串行处理对话）；下行助手与错误 JSON 由 recv 协程写入 `**_response_q`**（`asyncio.Queue`），终端经 `[pop_downlink_item](../../tools/inty_v2_repl/repl_message_io.py)` 非阻塞取出。
+同一 TCP/WebSocket 连接上有两类流量:
 
-**队列中心化下行（inty-ws）**：生产路径 `/api/v1/chat/ws` 使用上述队列与 pump。`**/ws/verify`** 也使用同一套 queue + pump（与 `/ws` 一致的业务 FIFO），但每帧仅做一次最简 `chat.completions`（system + user），不经 Agent runtime / companion；不落 chat_history（详见 `chat_completions_websocket_verify` docstring）。
+- 传输层 / 连接确认: `ping` / `pong`、`client_context_ack`、`user_signed_on_ack`。这些帧由路由直接写 WebSocket，用于链路、时间上下文、上线信号坐标确认，不表示 assistant 业务回复顺序。
+- 逻辑层 / 对话下行: 前台 assistant、tool 背景补帧、interactive bootstrap kickoff、proactive heartbeat、HTTP 映射错误帧、`/ws/verify` 最简回复。它们进入 `asyncio.Queue` 后由 `chat_ws_outbound_pump` FIFO 写出。
 
-**逻辑架构（消息路径）**：先约定逻辑名称（与实现符号不必一一同名），再按**消息传递方向**画图。
+`/api/v1/chat/ws/verify` 复用同一套连接级 `outbound_queue` + pump，但每个聊天帧只做一次最简 `chat.completions` 调用，不经 Agent runtime / Companion kernel，也不写 `chat_history`。
 
-
-| 逻辑名                      | 含义                                                                       |
-| ------------------------ | ------------------------------------------------------------------------ |
-| **用户**                   | 人机边界                                                                     |
-| **repl**                 | REPL 会话壳：内含 **repl message-queue** 与两个消费者                                |
-| **repl message-queue**   | 收集并暂存：**用户输入**、**经 WS 下行的 agent 侧消息**                                    |
-| **repl_tui**             | 从 repl message-queue **取出 agent 消息**，驱动 **TUI** 呈现给用户                    |
-| **repl_ws_egress**       | 从 repl message-queue **取出用户消息**，封装为 **上行 WS 帧**                          |
-| **ws_transport**         | **WebSocket 全双工管线**：只做比特/帧级双向搬运，**不含**回合语义                               |
-| **agentic_kernel**       | 编排壳：内含 **kernel message-queue** 与四个方向的适配                                 |
-| **kernel message-queue** | 收集并暂存：**经 WS 来自用户的消息**、**经 llm_runtime 来自 LLM 的消息**（含多轮/异步帧时在逻辑上仍汇总为此队列） |
-| **kernel_ws_ingress**    | 从 ws_transport **接收用户向消息**，**注入** kernel message-queue                   |
-| **kernel_llm_ingress**   | 从 **LLM API** 侧 **接收模型输出**，**注入** kernel message-queue                   |
-| **kernel_llm_egress**    | 从 kernel message-queue **取出**待推理上下文，交给 llm_runtime                       |
-| **kernel_ws_egress**     | 从 kernel message-queue **取出**待发助手帧，送到 ws_transport                       |
-| **llm_runtime**          | **提示词拼接** + **LLM inference 调用**（对 kernel 暴露「一次调用」边界）                    |
-| **LLM API**              | 外部模型服务                                                                   |
-
-
-下图箭头均为**消息**流向（谁写入谁、谁读出谁）；控制帧、鉴权、队列泵等实现细节见上文「分层」与下一张实现细化图。
-
-```mermaid
-flowchart TB
-  User["用户"]
-
-  subgraph repl["repl"]
-    RMQ["repl message-queue"]
-    ReplTui["repl_tui\n(agent 消息 -> TUI)"]
-    ReplWsOut["repl_ws_egress\n(用户消息 -> WS 帧)"]
-    RMQ -->|"取出 agent 消息"| ReplTui
-    RMQ -->|"取出用户消息"| ReplWsOut
-  end
-
-  User -->|"用户输入"| RMQ
-  ReplTui -->|"呈现"| User
-
-  WST["ws_transport\n(WebSocket 全双工管线)"]
-
-  ReplWsOut -->|"上行帧"| WST
-  WST -->|"下行帧"| RMQ
-
-  subgraph kernel["agentic kernel"]
-    KMQ["kernel message-queue"]
-    KwIn["kernel_ws_ingress"]
-    KlIn["kernel_llm_ingress"]
-    KlOut["kernel_llm_egress"]
-    KwOut["kernel_ws_egress"]
-    WST -->|"用户向消息"| KwIn
-    KwIn -->|"注入"| KMQ
-    KlIn -->|"注入"| KMQ
-    KMQ -->|"取出 -> 推理"| KlOut
-    KMQ -->|"取出 -> 助手帧"| KwOut
-    KwOut -->|"下行帧"| WST
-  end
-
-  subgraph llm_rt["llm_runtime"]
-    Prompt["prompt_build\n提示词拼接"]
-    Infer["llm_infer\n推理调用"]
-    Prompt --> Infer
-  end
-
-  KlOut -->|"请求"| Prompt
-  Infer -->|"HTTP/S 等"| LLM["LLM API"]
-  LLM -->|"模型输出"| KlIn
-```
-
-
-
-**小结（逻辑图 vs 实现）**：上图为**理想化**消息路径；下表将图中要素与仓库行为逐条对照（「是否合理」指作为教学抽象是否自洽，「与代码」指是否宜按字面当作逐函数实现）。
-
-
-| 图上要素                            | 是否合理   | 与代码                                              |
-| ------------------------------- | ------ | ------------------------------------------------ |
-| 全双工 WS 管线                       | 是      | 一致                                               |
-| repl 下行：WS -> 队列 -> TUI         | 是      | 与 `_response_q` 与 `pop_downlink_item` 等 drain 一致 |
-| repl 上行：队列 -> WS                | 弱      | 实为 `post_turn` 直连 `ws.send`，非从同一队列出队             |
-| 单一 kernel message-queue         | 教学上可接受 | 实为 recv 路径、`outbound_queue`、`bg_queue`、进程内状态等多结构 |
-| LLM 输出注入同一 kernel message-queue | 概念汇总   | 实为调用链返回与组帧，经 `outbound_queue` 等写出，非独立「先入全局队列」    |
-
-
-**实现细化**：同一链路在仓库中的近似映射（路由、`run_turn`、连接级队列名），可与上表逻辑名对照。
+## Main production path
 
 ```mermaid
 flowchart LR
-  subgraph repl["repl"]
-    RUI["stdin /\n终端输出"]
-    ROUT["message-queue\n上行缓冲\n→ socket"]
-    RIN["message-queue\n下行缓冲\n← socket"]
-  end
+  Client["iMate / REPL client"]
+  WS["/api/v1/chat/ws\nWebSocket route"]
+  OQ["outbound_queue\nbusiness JSON FIFO"]
+  Pump["chat_ws_outbound_pump"]
+  BGQ["bg_queue\nToolOutputEvent"]
+  HB["proactive heartbeat worker"]
+  Service["companion_chat_service"]
+  Manager["CompanionManager\nsession cache"]
+  Store["MemoryStore\nDB-backed append-only docs"]
+  Turn["run_turn"]
+  Prompt["prompt_stack + workspace docs"]
+  Routes["turn route\nchat / tool / async tool / inner tick"]
+  LLM["OpenAI-compatible LLM API"]
+  History["chat_history + usage"]
 
-  subgraph ChatWs["/api/v1/chat/ws"]
-    WS["WebSocket\nchat.py"]
-    subgraph MsgIo["连接级 message-queue"]
-      WIN["message-queue\n服务端入站\n用户 JSON FIFO"]
-      OQ["message-queue\n服务端出站\n业务 JSON FIFO"]
-      PUMP["顺序写出\n连接级 FIFO"]
-    end
-    WSH["_agent_chat_completions_impl\n+ recv 循环编排"]
-    BGQ["message-queue\n后台汇合\ntool 异步"]
-    CCS["companion_chat_service"]
-    CM["CompanionManager"]
-  end
+  Client -->|"chat frame"| WS
+  WS -->|"get/create chat, auth, limits, model select"| Service
+  Service --> Manager
+  Manager --> Store
+  Manager --> Turn
+  Store --> Prompt
+  Prompt --> Turn
+  Turn --> Routes
+  Routes --> LLM
+  LLM --> Routes
+  Routes --> Turn
+  Turn --> Store
+  Turn -->|"foreground result"| Service
+  Service --> History
+  Service -->|"foreground payload"| WS
+  WS --> OQ --> Pump --> Client
 
-  subgraph Kernel["agentic kernel"]
-    RT["run_turn"]
-    subgraph LLMPaths["LLM 语义路径"]
-      CH["chat 路\n前台回复"]
-      TL["tool 路\n工具循环"]
-      IT["inner_tick 路"]
-    end
-    GW["OpenAI-compatible\nchat_llm_base_url"]
-  end
-
-  RUI --> ROUT --> WS --> WIN --> WSH
-  WSH --> CCS --> CM --> RT
-  RT --> CH
-  RT --> TL
-  RT --> IT
-  CH --> GW
-  TL --> GW
-  IT --> GW
-  TL -.->|ToolOutputEvent\ncompanion_bg_sink| BGQ
-  BGQ -.->|wait 先到则组装 payload| WSH
-  WSH -->|foreground /\nkickoff /\nHTTP 异常 /\ntool_bg payload\n一律 put| OQ
-  OQ --> PUMP -->|FIFO send_json| WS --> RIN --> RUI
+  Turn -.->|"background_output_sink"| BGQ
+  BGQ -.->|"tool completion payload"| WS
+  HB -.->|"heartbeat turn payload"| WS
+  WS -.->|"interactive bootstrap kickoff"| Service
 ```
 
+## Session and workspace state
 
+`CompanionManager.get_or_create_session` creates one process-local `CompanionSession` per `(user_id, companion_id, chat_id)`. In API production, `companion_chat_service` passes:
 
-控制帧（ping/pong、client_context_ack）不经 `outbound_queue`，由 `_handle_chat_websocket_control_json` 直连 `send_json`（见上文「分层」）。上图仅描述生产 `/api/v1/chat/ws`；`/ws/verify` 共用**服务端出站 message-queue + 顺序写出**，编排为最简 `chat.completions`，不经 CCS/CM/RT。
+- `user_id`: authenticated user id
+- `companion_id`: `agent_id`
+- `chat_id`: chat row id
+- `resolved_chat_model_id`: result of `select_chat_model`
+
+`CompanionConfig.memory_pg_dsn` is set from `cfg.database.url`, so the session's `MemoryStore` is repository-backed. Important consequences:
+
+- Workspace files such as `IDENTITY.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, `transcript.jsonl`, `context.json`, `ai_private.jsonl`, schedule/image-gate files are logical paths persisted to `companion_workspace_document_versions`.
+- Each write appends a new row; current content is the newest `sequence_id` for the document kind and calendar date.
+- `repository_only_workspace_text=True` means production code should treat the DB-backed store as the source of truth, not a local workspace directory.
+- Local tests and REPL harnesses may still use in-memory `MemoryStore(repository=None)`.
+
+## `run_turn` routes
+
+`companion_turn_tools_and_system_messages` builds tools, system-message stack, and `TurnRouteMode`. `run_turn` then chooses the execution behavior:
+
+| Route | Current behavior |
+| --- | --- |
+| `CHAT_ONLY_SYNC` | No tools; one foreground chat completion. If applicable, structured dual-LLM envelope is parsed into assistant text and significance metadata. |
+| `SYNC_TOOL_LOOP` | Foreground loop with tool calls, up to `_MAX_TOOL_ROUNDS`; after each tool result the prompt stack can be refreshed from workspace state. |
+| `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` | Split path: foreground chat completion returns quickly; a background thread runs the tool path and emits `ToolOutputEvent` back to the WS route. |
+| `INNER_TICK_SYNC` | Synthetic maintenance turn; can read `ai_private` prompt text and skips memory pipeline after transcript persistence. |
+| `HEARTBEAT_SYNC` | Proactive chat heartbeat; represented as an inner-tick mode without tools and surfaced to clients through the WS outbound queue. |
+
+All successful normal chat turns append transcript rows through `MemoryStore`; non-inner-tick turns schedule or run the memory pipeline. `implicit_user_signed_on` does not write an empty user row to the kernel transcript; it appends a tail system trigger and marks the assistant metadata.
+
+## WS downlink producers
+
+The production `/ws` route currently has these business downlink producers:
+
+- Foreground response from `_agent_chat_completions_impl`.
+- Background tool completion from `bg_queue` / `_build_companion_tool_background_ws_payload`.
+- Interactive bootstrap kickoff when the WS query includes `agent_id` and `USER_INTERACTIVE` bootstrap is incomplete.
+- Proactive heartbeat worker when connection-local heartbeat coordinates are known and `next_heartbeat_wait_seconds` says a proactive turn is due.
+- Validation and HTTP-style error payloads for malformed chat frames or route exceptions.
+
+Because all of the above use the same `outbound_queue`, assistant/business JSON is serialized per connection. Control ack frames remain outside this queue by design.
+
+## Architecture critique
+
+- The conceptual layering is strong: transport, route adapter, session manager, workspace store, prompt stack, turn executor, tool runtime, and provider facade are separable enough to reason about independently.
+- The DB-backed append-only workspace is a good fit for long-term companion state: it preserves history, supports audit/debugging, and avoids relying on ephemeral VM disk.
+- The current hot path still concentrates too much orchestration in `chat.py` and `turn.py`: subscription checks, chat_history writes, foreground pending maps, heartbeat worker coordination, background tool payload assembly, and companion turn locking are spread across one large route module.
+- There is a naming gap between the "kernel message-queue" concept and implementation. The implementation has `outbound_queue`, `bg_queue`, MemoryStore/cache, and direct call returns, but no single kernel message queue. Treating the old diagram literally would mislead maintainers.
+- `run_turn` already imports a wide set of concerns: prompt refresh, route selection, LangSmith tracing, transcript compaction, tool execution, background tool startup, memory pipeline scheduling, implicit signals, and heartbeat handling. This makes it difficult to test a route in isolation.
+- The generic `TurnOrchestrator` abstraction exists but production companion turns do not use it, so there are two architectural stories in the tree.
+
+## Identified improvement
+
+Prioritize extracting a `CompanionTurnRouter` boundary from `turn.py` before further feature work in this area.
+
+Target shape:
+
+- Input: immutable turn context containing messages, tools, route mode, LLM client, workspace/store references, tracing ids, and optional background sink.
+- Output: foreground assistant text, significance metadata, route metadata, async/background handles or events.
+- Responsibilities moved out of `run_turn`: route-specific LLM/tool execution for `CHAT_ONLY_SYNC`, `SYNC_TOOL_LOOP`, `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`, `INNER_TICK_SYNC`, and `HEARTBEAT_SYNC`.
+- Responsibilities kept in `run_turn`: loading context/prompt/transcript, transcript persistence, memory pipeline scheduling, final `CompanionTurnResult` assembly.
+
+This is the highest-leverage improvement because it reduces the largest coupling point without changing API behavior, makes route-specific tests smaller, and gives the existing generic `TurnOrchestrator` either a clear integration path or a clear reason to remain outside the companion production path.
