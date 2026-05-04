@@ -1,3 +1,5 @@
+"""Avatar face detection and square-crop helpers used by image workflows."""
+
 import argparse
 from dataclasses import dataclass
 from math import floor
@@ -136,9 +138,8 @@ def _calculate_crop_square_boundaries(
 
     Return the coordinates (x, y, w, h) of the square.
     """
-    assert (
-        max_expansion_ratio >= 1
-    ), "It's not possible to crop a square smaller than the face."
+    if max_expansion_ratio < 1:
+        raise ValueError("It's not possible to crop a square smaller than the face.")
 
     print(f"image shape: {img_shape}")
     x, y, w, h = face_coords

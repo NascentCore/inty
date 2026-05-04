@@ -228,5 +228,4 @@ def append_filename_suffix(gcs_path: str, suffix: str) -> str:
     if DOT not in gcs_path:
         return f"{gcs_path}{suffix}"
     parts = gcs_path.split(".", 1)
-    assert len(parts) == 2
     return f"{parts[0]}{suffix}.{parts[1]}"

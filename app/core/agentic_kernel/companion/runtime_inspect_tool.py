@@ -66,7 +66,8 @@ def _truncate_messages_for_max_chars(
         if best_i >= 0 and best_len > 400:
             new_len = max(400, best_len // 2)
             c0 = m[best_i]["content"]
-            assert isinstance(c0, str)
+            if not isinstance(c0, str):
+                raise TypeError("selected message content must be a string")
             m[best_i]["content"] = c0[:new_len] + "\n...[truncated]"
             m[best_i]["_content_truncated_for_size"] = True
             trunc = True

@@ -1,3 +1,5 @@
+"""Tests for avatar crop boundary helpers and image cropping behavior."""
+
 import os
 import random
 import tempfile
@@ -84,8 +86,7 @@ def test_calculate_crop_square_boundaries():
     img_shape = (100, 100)
     face_coords = (10, 10, 20, 30)
 
-    # assert raise assertion error
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         _calculate_crop_square_boundaries(face_coords, 0.9, img_shape)
 
     # In certain bounary, expansion ration in [3.9, 4/3)
