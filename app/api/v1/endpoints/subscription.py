@@ -1,3 +1,5 @@
+"""HTTP routes for subscription plans, purchase verification, and Google Play webhooks."""
+
 import hashlib
 import hmac
 import json
@@ -31,6 +33,7 @@ from app.schemas.subscription import (
     UserSubscription,
 )
 from app.services.global_services import subscription_service
+from app.services.subscription_service import is_google_play_rtdn_notification
 
 router = APIRouter(prefix="/subscription", route_class=LoggerRoute)
 from loguru import logger
@@ -252,6 +255,13 @@ async def _process_google_play_notification(
 
                 decoded_data = base64.b64decode(notification_data["message"]["data"])
                 notification_json = json.loads(decoded_data.decode("utf-8"))
+
+                if not is_google_play_rtdn_notification(notification_json):
+                    logger.info(
+                        "Skipping Pub/Sub payload without Google Play RTDN fields "
+                        "(subscription endpoint may receive other GCP messages)"
+                    )
+                    return
 
                 # 记录详细的通知信息
                 subscription_notification = notification_json.get(

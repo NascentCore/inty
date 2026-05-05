@@ -45,6 +45,21 @@ from app.services.system_settings_service import system_settings_service
 
 TEST_ENVIRONMENT_LIMIT = 1_000_000
 
+_RTDN_TOP_LEVEL_KEYS = (
+    "subscriptionNotification",
+    "oneTimeProductNotification",
+    "testNotification",
+    "voidedPurchaseNotification",
+)
+
+
+def is_google_play_rtdn_notification(notification_json: Dict[str, Any]) -> bool:
+    """True if JSON matches Google Play Real-time developer notification envelope."""
+
+    if not isinstance(notification_json, dict):
+        return False
+    return any(notification_json.get(k) for k in _RTDN_TOP_LEVEL_KEYS)
+
 
 class SubscriptionService:
     """订阅服务"""

@@ -12,7 +12,10 @@ from app.external_services.google_play_service import GooglePlayService
 from app.models.agent import Agent
 from app.schemas.subscription import SubscriptionStatusResponse
 from app.schemas.user import User
-from app.services.subscription_service import SubscriptionService
+from app.services.subscription_service import (
+    SubscriptionService,
+    is_google_play_rtdn_notification,
+)
 
 
 class TestSubscriptionService:
@@ -556,3 +559,27 @@ class TestRTDNSubscriptionNotification:
         mock_db.add.assert_called_once()
         # 验证 db.commit 被调用
         mock_db.commit.assert_called_once()
+
+
+class TestGooglePlayRtdnDetection:
+    """Regression: Pub/Sub may deliver non-RTDN payloads to the same push endpoint."""
+
+    def test_bigquery_transfer_payload_is_not_rtdn(self):
+        payload = {
+            "dataSourceId": "google_ads",
+            "destinationDatasetId": "Google_Ads",
+            "state": "FAILED",
+        }
+        assert is_google_play_rtdn_notification(payload) is False
+
+    def test_subscription_notification_is_rtdn(self):
+        payload = {
+            "version": "1.0",
+            "packageName": "com.example.app",
+            "eventTimeMillis": "123",
+            "subscriptionNotification": {
+                "notificationType": 4,
+                "purchaseToken": "abc",
+            },
+        }
+        assert is_google_play_rtdn_notification(payload) is True
