@@ -37,6 +37,8 @@
 
 - Agentic kernel companion `run_turn` with **real LLM** on OpenRouter (optional): set `INTY_AGENTIC_KERNEL_REAL_LLM_TEST=1` and `OPENROUTER_API_KEY`; run `pytest tests/real_agents/test_agentic_kernel_run_turn_tool_call.py -m noci`. Model: `nvidia/nemotron-3-super-120b-a12b:free`. Optional `OPENROUTER_API_BASE` (default `https://openrouter.ai/api/v1`).
 
+- Companion WebSocket USER_INTERACTIVE bootstrap kickoff E2E (optional): `INTY_COMPANION_WS_BOOTSTRAP_E2E=1 pytest tests/app/features/test_companion_ws_bootstrap_e2e.py`; subprocess uses `INTY_CONFIG_YAML=devops/config.yaml.test` and PostgreSQL on `127.0.0.1:5432`. Hits OpenRouter via YAML `agent.api_key`.
+
 ## 新功能 / API+客户端联调时的防遗漏
 
 以下适用于「后端 API 与客户端（如 Android）共同参与」的新功能，用于减少契约不一致、漏测、静默失败等问题。

@@ -17,6 +17,8 @@ import httpx
 from tests.support.companion_ws_bootstrap.constants import (
     DEFAULT_PG_HOST,
     DEFAULT_PG_PORT,
+    ENV_E2E_RELAX_SUBSCRIPTION,
+    ENV_SERVER_STDERR_INHERIT,
     POLL_INTERVAL_SEC,
     SERVER_READY_TIMEOUT_SEC,
 )
@@ -94,6 +96,8 @@ def run_inty_backend_subprocess(
     prev_pp = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = repo if not prev_pp else f"{repo}{os.pathsep}{prev_pp}"
     env["INTY_CONFIG_YAML"] = str(cfg.resolve())
+    # Guest limits apply when environment=test and debug=true unless subscription bypass sees this flag.
+    env[ENV_E2E_RELAX_SUBSCRIPTION] = "1"
     cmd = [
         sys.executable,
         "-m",
@@ -104,23 +108,26 @@ def run_inty_backend_subprocess(
         "--port",
         str(bind_port),
     ]
+    inherit_stderr = os.environ.get(ENV_SERVER_STDERR_INHERIT, "").strip() in (
+        "1",
+        "inherit",
+        "yes",
+        "true",
+    )
     proc = subprocess.Popen(
         cmd,
         cwd=str(root),
         env=env,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stderr=None if inherit_stderr else subprocess.DEVNULL,
         text=True,
     )
     try:
         try:
             wait_http_ready(base_url, timeout_sec=SERVER_READY_TIMEOUT_SEC)
         except TimeoutError as exc:
-            tail = ""
-            if proc.stderr is not None:
-                tail = proc.stderr.read()[-8000:]
             raise TimeoutError(
-                f"{exc}; uvicorn stderr tail:\n{tail}"
+                f"{exc}; set {ENV_SERVER_STDERR_INHERIT}=1 to inherit uvicorn stderr for diagnosis."
             ) from exc
         yield IntySubprocessContext(
             base_url=base_url, process=proc, config_path=cfg

@@ -9,7 +9,10 @@ from typing import Any
 
 import websockets
 
-from tests.support.companion_ws_bootstrap.constants import KICKOFF_MESSAGE_TYPE
+from tests.support.companion_ws_bootstrap.constants import (
+    KICKOFF_MESSAGE_TYPE,
+    WS_KEEPALIVE_PING_INTERVAL_SEC,
+)
 from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
     http_base_to_ws_chat_url,
@@ -25,7 +28,7 @@ async def recv_first_chat_completion_frame(
     """Skip transport/control frames; return the first JSON object that carries ``code``."""
     while time.monotonic() < deadline_monotonic:
         remaining = max(0.05, deadline_monotonic - time.monotonic())
-        raw = await asyncio.wait_for(ws.recv(), timeout=min(remaining, 30.0))
+        raw = await asyncio.wait_for(ws.recv(), timeout=remaining)
         if isinstance(raw, bytes):
             raw = raw.decode("utf-8", errors="replace")
         try:
@@ -74,7 +77,33 @@ async def connect_and_expect_bootstrap_kickoff(
         open_timeout=30,
         ping_interval=None,
     ) as ws:
-        frame = await recv_first_chat_completion_frame(
-            ws, deadline_monotonic=deadline
-        )
-        assert_bootstrap_kickoff_payload(frame, agent_id=agent_id)
+        stop_ping = asyncio.Event()
+
+        async def _keepalive_ping_loop() -> None:
+            while not stop_ping.is_set():
+                try:
+                    await asyncio.wait_for(
+                        stop_ping.wait(),
+                        timeout=WS_KEEPALIVE_PING_INTERVAL_SEC,
+                    )
+                    return
+                except asyncio.TimeoutError:
+                    pass
+                try:
+                    await ws.send(json.dumps({"type": "ping"}))
+                except Exception:
+                    return
+
+        ping_task = asyncio.create_task(_keepalive_ping_loop())
+        try:
+            frame = await recv_first_chat_completion_frame(
+                ws, deadline_monotonic=deadline
+            )
+            assert_bootstrap_kickoff_payload(frame, agent_id=agent_id)
+        finally:
+            stop_ping.set()
+            ping_task.cancel()
+            try:
+                await ping_task
+            except asyncio.CancelledError:
+                pass

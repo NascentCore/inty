@@ -8,6 +8,9 @@ app:
   environment: "test"
   # 这是一个非零值，用于测试该配置项等效果
   min_app_version_code_for_festival_memory: 1000
+  features:
+    # E2E / slow LLM: avoid closing WS while client waits for bootstrap kickoff (default 60).
+    chat_ws_idle_timeout_seconds: 180
 
 sentry:
   # 测试当中关闭 sentry 数据采集，避免混杂测试数据与 dev/prod 环境、干扰正常阅读 sentry web ui 上的数据

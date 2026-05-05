@@ -6,6 +6,10 @@ Subprocess loads that YAML via ``INTY_CONFIG_YAML``; the pytest process does not
 
 Enable with ``INTY_COMPANION_WS_BOOTSTRAP_E2E=1``. Calls the real chat model from test config (network).
 
+The subprocess sets ``INTY_E2E_RELAX_SUBSCRIPTION=1`` so guest chat limits do not block kickoff under ``debug: true``.
+
+Optional: ``INTY_COMPANION_WS_BOOTSTRAP_SERVER_STDERR=1`` inherits uvicorn stderr; ``INTY_COMPANION_WS_BOOTSTRAP_RECV_TIMEOUT`` overrides wait seconds.
+
 Marked ``noci`` and gated so default ``pytest`` does not hit OpenRouter.
 """
 

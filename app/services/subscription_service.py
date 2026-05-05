@@ -1,3 +1,6 @@
+"""Subscription limits, purchases, and usage accounting."""
+
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -888,6 +891,9 @@ class SubscriptionService:
             Tuple[bool, int, int]: (是否允许聊天, 已用次数, 限制次数)
         """
         try:
+            # Opt-in for isolated test subprocesses only (see tests/support/companion_ws_bootstrap/server.py).
+            if os.environ.get("INTY_E2E_RELAX_SUBSCRIPTION") == "1":
+                return True, 0, TEST_ENVIRONMENT_LIMIT
             if (
                 global_config_loaded_from_config_yaml.app.environment
                 == Environment.TEST
