@@ -23,8 +23,16 @@ enum LoginConstants {
         static let step3_2 = "One last thing! ✨ Describe how you would imagine my appearance:"
         static let step3_3 = "For example: gentle girl, sunny boy, cute animal 🎨"
         
+        static let step4_1 = "... I love that! 🔮 Generating your vision..."
+        
+        static let step5_1 = ".✨ That is me - "
+        static let step5_2 = "! I can feel myself becoming real now..."
+        static let step5_3 = "I am your companion, shaped by your imagination. Ready to begin our journey together? 💫"
+        
         
         static let stepHintName = "Give me a name..."
         static let stepHintDesc = "Describe my appearance..."
+        static let stepHintGenerate = "Generating your companion..."
+        static let stepHintFinish = "✨ Begin Our Journey"
     }
 }

@@ -162,12 +162,19 @@ enum LoginInitChatWidgets {
                             ChatBubble(message: msg)
                                 .id(msg.id)
                         }
+                        
+                        Color.clear
+                           .frame(height: 1)
+                           .id("BOTTOM") // 👈 底部锚点
                     }
                     .padding()
                 }
                 .onChange(of: messages.count) { _ in
-                    if let last = messages.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
+//                    if let last = messages.last {
+//                        proxy.scrollTo(last.id, anchor: .bottom)
+//                    }
+                    withAnimation{
+                        proxy.scrollTo("BOTTOM", anchor: .bottom)
                     }
                 }
             }
@@ -203,7 +210,7 @@ enum LoginInitChatWidgets {
         
         var body: some View {
             HStack {
-                TextField(hint, text: $inputText, prompt: Text(hint).foregroundColor(.white.opacity(0.8)))
+                TextField(hint, text: $inputText, prompt: Text(hint).foregroundColor(.white.opacity(0.5)))
                     .padding()
                     .background(Color.white.opacity(0.1))
                     .frame(height: 46)
@@ -251,6 +258,29 @@ enum LoginInitChatWidgets {
                 .background(Color.blue)
                 .cornerRadius(20)
                 .foregroundColor(.white)
+            }
+            .padding()
+        }
+    }
+    
+    // 按钮 - Begin Our Journey
+    struct ButtonFinish: View {
+        let onFinish: () -> Void
+        
+        var body: some View {
+            Button(action: onFinish) {
+                Text("✨ Begin Our Journey")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        LinearGradient(
+                            colors: [Color.purple, Color.blue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(30)
+                    .foregroundColor(.white)
             }
             .padding()
         }

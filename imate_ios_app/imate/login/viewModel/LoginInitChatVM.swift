@@ -93,14 +93,17 @@ class LoginInitChatVM: ObservableObject {
     
     func sendMessage() {
         guard !inputText.isEmpty else { return }
-        
+        if steps == .step1 {
+            setName()
+        } else if steps == .step3 {
+            inputAppearance()
+        }
+    }
+    
+    func setName() {
         name = inputText
-        let userMsg = ChatMessage(text: inputText, isUser: true)
-        messages.append(userMsg)
-
+        appendMessage(content: inputText, isSelf: true)
         inputText = ""
-
-        // 模拟 AI 回复
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             // 进入下一步
             self.nextStep()
@@ -109,25 +112,27 @@ class LoginInitChatVM: ObservableObject {
     
     func selectGender(i: Int) {
         gender = i
-        var s = ""
-        switch i {
-        case 0:
-            s = "Male ❤️"
-            break
-            
-        case 1:
-            s = "Female ❤️"
-            break
-            
-        default:
-            s = "No Prof ❤️"
-            break;
-        }
+        let s = ["Male ❤️", "Female ❤️", "No Prof ❤️"][i]
         appendMessage(content: s, isSelf: true)
         appendMessage(content: LoginConstants.InitChatMsg.step3_1, isSelf: false)
         appendMessage(content: LoginConstants.InitChatMsg.step3_2, isSelf: false)
         appendMessage(content: LoginConstants.InitChatMsg.step3_3, isSelf: false)
         nextStep()
+    }
+    
+    func inputAppearance() {
+        appendMessage(content: inputText, isSelf: true)
+        let s = "\(inputText)\(LoginConstants.InitChatMsg.step4_1)"
+        appendMessage(content: s, isSelf: false)
+        inputText = ""
+        
+        nextStep()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            let content = "\(LoginConstants.InitChatMsg.step5_1)\(self.name)! \(LoginConstants.InitChatMsg.step5_2)"
+            self.appendMessage(content: content, isSelf: false)
+            self.appendMessage(content: LoginConstants.InitChatMsg.step5_3, isSelf: false)
+            self.nextStep()
+        }
     }
     
     func nextStep() {

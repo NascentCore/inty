@@ -19,11 +19,12 @@ struct InitChatColors {
 }
 
 struct LoginInitChat: View {
+    @EnvironmentObject var router: Router
     @StateObject var vm = LoginInitChatVM()
     
-    @State private var messages: [String] = ["Hello! I'm your AI companion.", "What's your name?", "fwefwe2"]
-    @State private var inputText: String = ""
-    @State private var progress: Double = 0.3
+//    @State private var messages: [String] = ["Hello! I'm your AI companion.", "What's your name?", "fwefwe2"]
+//    @State private var inputText: String = ""
+//    @State private var progress: Double = 0.3
     
     var body: some View {
         ZStack() {
@@ -45,6 +46,8 @@ struct LoginInitChat: View {
                     LoginInitChatWidgets.GenderSelectBottom(
                         onSelect: vm.selectGender(i:)
                     )
+                } else if vm.steps == .step5 {
+                    LoginInitChatWidgets.ButtonFinish(onFinish: goChat)
                 } else {
                     LoginInitChatWidgets.InputBar(
                         inputText: $vm.inputText,
@@ -59,12 +62,9 @@ struct LoginInitChat: View {
         .background(Color.black.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
     }
-
-    private func sendMessage() {
-        guard !inputText.isEmpty else { return }
-        messages.append(inputText)
-        inputText = ""
-        progress += 0.2 // 模拟进度增加
+    
+    private func goChat() {
+        router.push(.chatPage)
     }
 }
 
