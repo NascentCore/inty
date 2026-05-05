@@ -45,6 +45,14 @@ enum LoginInitStep: Int, CaseIterable {
         case .step5: return 1
         }
     }
+    
+    var inputHint: String {
+        switch self {
+        case .step1: return LoginConstants.InitChatMsg.stepHintName
+        case .step3: return LoginConstants.InitChatMsg.stepHintDesc
+        default: return "input..."
+        }
+    }
 }
 
 
@@ -63,6 +71,9 @@ class LoginInitChatVM: ObservableObject {
     @Published var inputText: String = ""
     @Published var selectedGender: String? = nil
     
+    @Published var name: String = "iMate"
+    @Published var gender: Int = -1  // -1 not set, 0 male, 1 female, 2 no prof
+    
     init() {
      startConversation()
     }
@@ -71,25 +82,19 @@ class LoginInitChatVM: ObservableObject {
         messages.append(.init(text: LoginConstants.InitChatMsg.step1_1, isUser: false))
         messages.append(.init(text: LoginConstants.InitChatMsg.step1_2, isUser: false))
         messages.append(.init(text: LoginConstants.InitChatMsg.step1_3, isUser: false))
-        messages.append(.init(text: LoginConstants.InitChatMsg.step1_4, isUser: false))
+
     }
     
     func afterNameComfirm() {
-        messages.append(.init(text: LoginConstants.InitChatMsg.step2_1, isUser: false))
-        messages.append(.init(text: LoginConstants.InitChatMsg.step2_2, isUser: false))
-        messages.append(.init(text: LoginConstants.InitChatMsg.step2_3, isUser: false))
-    }
-    
-    func afterGenderComfirm() {
-        messages.append(.init(text: LoginConstants.InitChatMsg.step3_1, isUser: false))
-        messages.append(.init(text: LoginConstants.InitChatMsg.step3_2, isUser: false))
-        messages.append(.init(text: LoginConstants.InitChatMsg.step3_3, isUser: false))
-        messages.append(.init(text: LoginConstants.InitChatMsg.step3_4, isUser: false))
+        let content = "\(LoginConstants.InitChatMsg.step2_1) \(name) \(LoginConstants.InitChatMsg.step2_2)"
+        appendMessage(content: content, isSelf: false)
+        appendMessage(content: LoginConstants.InitChatMsg.step2_3, isSelf: false)
     }
     
     func sendMessage() {
         guard !inputText.isEmpty else { return }
-
+        
+        name = inputText
         let userMsg = ChatMessage(text: inputText, isUser: true)
         messages.append(userMsg)
 
@@ -97,31 +102,45 @@ class LoginInitChatVM: ObservableObject {
 
         // 模拟 AI 回复
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-//            self.messages.append(
-//                .init(text: "\(userMsg.text)... I love that! ✨", isUser: false)
-//            )
             // 进入下一步
             self.nextStep()
         }
     }
     
-//    func selectGender(_ gender: String) {
-//        selectedGender = gender
-//        messages.append(.init(text: gender, isUser: true))
-//        messages.append(
-//            .init(text: "That is me! I can feel myself becoming real now...", isUser: false)
-//        )
-//        self.nextStep()
-//    }
+    func selectGender(i: Int) {
+        gender = i
+        var s = ""
+        switch i {
+        case 0:
+            s = "Male ❤️"
+            break
+            
+        case 1:
+            s = "Female ❤️"
+            break
+            
+        default:
+            s = "No Prof ❤️"
+            break;
+        }
+        appendMessage(content: s, isSelf: true)
+        appendMessage(content: LoginConstants.InitChatMsg.step3_1, isSelf: false)
+        appendMessage(content: LoginConstants.InitChatMsg.step3_2, isSelf: false)
+        appendMessage(content: LoginConstants.InitChatMsg.step3_3, isSelf: false)
+        nextStep()
+    }
     
     func nextStep() {
         switch steps {
         case .step1:  // 输入昵称后
             afterNameComfirm()
             steps = .step2
+            break
+            
         case .step2:  // 选择性别后
-            afterGenderComfirm()
             steps = .step3
+            break
+            
         case .step3:
             steps = .step4
             break
@@ -133,5 +152,9 @@ class LoginInitChatVM: ObservableObject {
         case .step5:
             break
         }
+    }
+    
+    func appendMessage(content: String, isSelf: Bool) {
+        messages.append(.init(text: content, isUser: isSelf))
     }
 }

@@ -31,39 +31,27 @@ struct LoginInitChat: View {
             
             VStack(spacing: 0) {
                 // 1. 顶部
-                LoginInitChatWidgets.Header(progress: vm.steps.progress, bgColor: vm.steps.topBgColor)
+                LoginInitChatWidgets.Header(
+                    progress: vm.steps.progress,
+                    bgColor: vm.steps.topBgColor,
+                    name: vm.name
+                )
                 
                 // 2. 聊天列表
                 LoginInitChatWidgets.ChatList(messages: vm.messages)
 
                 // 3. 底部输入栏
-                LoginInitChatWidgets.InputBar(
-                    inputText: $vm.inputText,
-                    onSend: vm.sendMessage
-                )
-//                VStack {
-//                    Divider().background(InitChatColors.divider)
-//                    
-//                    HStack(spacing: 8) {
-//                        TextField("Enter your name...", text: $inputText)
-//                            .padding(.horizontal, 16)
-//                            .frame(height: 46)
-//                            .background(InitChatColors.textFieldBg)
-//                            .cornerRadius(23)
-//                            .foregroundColor(.white)
-//                        
-//                        Button(action: sendMessage) {
-//                            Image(systemName: "paperplane.fill")
-//                                .foregroundColor(.white)
-//                                .frame(width: 46, height: 46)
-//                                .background(InitChatColors.textFieldBg)
-//                                .clipShape(Circle())
-//                        }
-//                    }
-//                    .padding(.horizontal)
-//                    .padding(.vertical, 13)
-//                }
-                
+                if vm.steps == .step2 {
+                    LoginInitChatWidgets.GenderSelectBottom(
+                        onSelect: vm.selectGender(i:)
+                    )
+                } else {
+                    LoginInitChatWidgets.InputBar(
+                        inputText: $vm.inputText,
+                        onSend: vm.sendMessage,
+                        hint: vm.steps.inputHint
+                    )
+                }
             }
             
             

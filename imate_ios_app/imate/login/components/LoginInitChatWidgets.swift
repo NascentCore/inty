@@ -118,6 +118,7 @@ enum LoginInitChatWidgets {
     struct Header: View {
         let progress: Double
         let bgColor: Color
+        let name: String
         
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
@@ -128,11 +129,11 @@ enum LoginInitChatWidgets {
                         .frame(width: 40, height: 40)
 
                     VStack(alignment: .leading) {
-                        Text("Marin")
+                        Text(name)
                             .foregroundColor(.white)
                             .bold()
 
-                        Text("Ready! ✨")
+                        Text("Getting to know you")
                             .foregroundColor(.white.opacity(0.7))
                             .font(.caption)
                     }
@@ -198,19 +199,17 @@ enum LoginInitChatWidgets {
     struct InputBar: View {
         @Binding var inputText: String
         let onSend: () -> Void
+        let hint: String
         
         var body: some View {
             HStack {
-                TextField("Type...", text: $inputText)
+                TextField(hint, text: $inputText, prompt: Text(hint).foregroundColor(.white.opacity(0.8)))
                     .padding()
                     .background(Color.white.opacity(0.1))
                     .frame(height: 46)
                     .cornerRadius(23)
                     .foregroundColor(.white)
-//
-//                Button("Send") {
-//                    onSend()
-//                }
+                
                 Button(action: onSend) {
                     Image(systemName: "paperplane.fill")
                         .foregroundColor(.white)
@@ -218,6 +217,40 @@ enum LoginInitChatWidgets {
                         .background(InitChatColors.textFieldBg)
                         .clipShape(Circle())
                 }
+            }
+            .padding()
+        }
+    }
+    
+    // 性别选择框
+    struct GenderSelectBottom: View {
+        let onSelect: (Int) -> Void
+        
+        var body: some View {
+            HStack {
+                Button("Female ❤️") {
+                    onSelect(0)
+                }
+                .padding()
+                .background(Color.purple)
+                .cornerRadius(20)
+                .foregroundColor(.white)
+
+                Button("Male 💙") {
+                    onSelect(1)
+                }
+                .padding()
+                .background(Color.blue)
+                .cornerRadius(20)
+                .foregroundColor(.white)
+                
+                Button("No Pref 💙") {
+                    onSelect(2)
+                }
+                .padding()
+                .background(Color.blue)
+                .cornerRadius(20)
+                .foregroundColor(.white)
             }
             .padding()
         }
