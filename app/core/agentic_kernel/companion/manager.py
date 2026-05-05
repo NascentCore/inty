@@ -154,7 +154,28 @@ class CompanionManager:
                 context_data["companion_ws_session_system_written"] = False
                 context_data["companion_ws_interactive_kickoff_sent"] = False
             context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
-            if store.read_document_if_exists("context.json") is None:
+            existing_ctx = store.read_document_if_exists("context.json")
+            write_full_context = False
+            if existing_ctx is None:
+                write_full_context = True
+            else:
+                stripped = str(existing_ctx).strip()
+                if not stripped:
+                    write_full_context = True
+                else:
+                    try:
+                        parsed_ctx = json.loads(stripped)
+                    except json.JSONDecodeError:
+                        write_full_context = True
+                    else:
+                        if (
+                            isinstance(parsed_ctx, dict)
+                            and len(parsed_ctx) == 0
+                            and self._config.workspace_bootstrap_type
+                            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+                        ):
+                            write_full_context = True
+            if write_full_context:
                 store.write_document("context.json", context_json)
 
             ensure_minimal_workspace_documents_in_store(ws_path, store)

@@ -255,6 +255,10 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
         feats.companion_workspace_bootstrap_type
         != CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
     ):
+        logger.debug(
+            "companion_ws_kickoff_skip reason=bootstrap_type type={}",
+            feats.companion_workspace_bootstrap_type,
+        )
         return None
     manager = _companion_manager_for_resolved_model(
         resolved_chat_model_id, _companion_runtime_config_fingerprint()
@@ -262,6 +266,12 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
     chat_key = str(chat_id)
     session = manager.get_or_create_session(user_id, agent_id, chat_key)
     if not session.is_initialized:
+        logger.debug(
+            "companion_ws_kickoff_skip reason=session_not_initialized user={} agent={} chat={}",
+            user_id,
+            agent_id,
+            chat_id,
+        )
         return None
     from app.core.agentic_kernel.companion.models import load_context_meta
     from app.core.agentic_kernel.companion.workspace import WorkspacePaths
@@ -269,8 +279,20 @@ async def run_companion_interactive_bootstrap_kickoff_for_ws(
     paths = WorkspacePaths(root=session.workspace_path.resolve())
     meta = load_context_meta(paths.context_json, store=session.store)
     if meta.workspace_bootstrap_user_interactive_completed:
+        logger.debug(
+            "companion_ws_kickoff_skip reason=bootstrap_completed user={} agent={} chat={}",
+            user_id,
+            agent_id,
+            chat_id,
+        )
         return None
     if meta.companion_ws_interactive_kickoff_sent:
+        logger.debug(
+            "companion_ws_kickoff_skip reason=kickoff_already_sent user={} agent={} chat={}",
+            user_id,
+            agent_id,
+            chat_id,
+        )
         return None
 
     t0 = time.perf_counter()
