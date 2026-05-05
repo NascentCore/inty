@@ -38,7 +38,9 @@ from app.utils.config import (
     load_config,
 )
 
-_CONFIG_PATH = (os.environ.get("INTY_CONFIG_YAML") or "config.yaml").strip() or "config.yaml"
+_CONFIG_PATH = (
+    os.environ.get("INTY_CONFIG_YAML") or "config.yaml"
+).strip() or "config.yaml"
 if not os.path.exists(_CONFIG_PATH):
     raise FileNotFoundError(
         f"{_CONFIG_PATH} 不存在，倒入本模块前请先创建配置文件或设置 INTY_CONFIG_YAML"
