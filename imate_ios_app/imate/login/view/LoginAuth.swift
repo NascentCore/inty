@@ -153,7 +153,7 @@ struct LoginAuth: View {
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                router.push(.LoginInitChat)
+                router.push(.loginInitChat)
                 print("on  animation end ------>")
             }
         }

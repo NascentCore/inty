@@ -82,7 +82,6 @@ class LoginInitChatVM: ObservableObject {
         messages.append(.init(text: LoginConstants.InitChatMsg.step1_1, isUser: false))
         messages.append(.init(text: LoginConstants.InitChatMsg.step1_2, isUser: false))
         messages.append(.init(text: LoginConstants.InitChatMsg.step1_3, isUser: false))
-
     }
     
     func afterNameComfirm() {

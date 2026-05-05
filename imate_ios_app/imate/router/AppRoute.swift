@@ -15,7 +15,7 @@ enum AppRoute: Hashable {
     case loginEmail
     case loginEmailPassword
     case loginAuth
-    case LoginInitChat
+    case loginInitChat
     
     case chatPage
 }
