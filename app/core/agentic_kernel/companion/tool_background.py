@@ -111,7 +111,7 @@ _LOCAL_PATH_IN_TOOL = re.compile(r"local_path=(\S+)")
 # so the tool-side model cannot skip structured tool calls on image/edit intents.
 _BG_USER_HINTS_FORCE_TOOLS = re.compile(
     r"(生成图片|生图|文生图|图生图|改图|重画|画一张|来张图|修图|换风格|"
-    r"给我画|画个|画一|肖像照|插图|"
+    r"给我画|画个|画一|肖像照|插图|图画画|画画给我|"
     r"generate\s*image|text-?to-?image|image\s*to\s*image|modify\s*image)",
     re.I,
 )
@@ -390,6 +390,11 @@ def _initial_tool_bg_completion_with_fallbacks(
     (see ``TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT`` in ``tool_bg_routing``): skip=true ends the
     loop without tools; skip=false should accompany tool_calls on the same message.
 
+    Some providers return compliant skip JSON but omit tool_calls anyway; when the skip schema
+    is on and the reply has no tool_calls and ``skip`` is not true, this function retries later
+    attempts (no structured ``response_format``, or ``tool_choice=required``) instead of
+    surfacing that broken contract to the tool loop.
+
     Returns (response, meta for last_chat_completion_request snapshot).
     """
     schema_on = tool_bg_first_round_skip_schema_enabled()
@@ -416,8 +421,37 @@ def _initial_tool_bg_completion_with_fallbacks(
                 tool_choice=tc,
                 response_format=rf,
             )
+            if rf is not None:
+                initial_tool_calls = (
+                    getattr(resp.choices[0].message, "tool_calls", None) or []
+                )
+                if initial_tool_calls:
+                    meta = _InitialToolBgCompletionMeta(
+                        used_skip_schema=True,
+                        tool_choice=tc,
+                    )
+                    return resp, meta
+                early_text = _assistant_text_from_completion_response(resp)
+                parsed, skip_fail_reason = parse_tool_bg_first_round_skip_details(
+                    early_text
+                )
+                if parsed is not None and parsed.skip:
+                    meta = _InitialToolBgCompletionMeta(
+                        used_skip_schema=True,
+                        tool_choice=tc,
+                    )
+                    return resp, meta
+                logger.info(
+                    "repl.turn.bg initial_completion skip_schema_contract_retry "
+                    "tool_choice={} skip_parsed={} parse_reason={} content_preview={}",
+                    tc,
+                    getattr(parsed, "skip", None) if parsed is not None else None,
+                    skip_fail_reason if parsed is None else None,
+                    _single_line_log_preview(early_text),
+                )
+                continue
             meta = _InitialToolBgCompletionMeta(
-                used_skip_schema=rf is not None,
+                used_skip_schema=False,
                 tool_choice=tc,
             )
             return resp, meta
@@ -637,7 +671,8 @@ async def _run_background_tool_loop(
             getattr(initial_response.choices[0].message, "tool_calls", None) or []
         )
         # No tool_calls on the first reply: either skip=true (expected) or model/schema mismatch.
-        # skip=false with no tool_calls is logged as skip_false_no_tools; we do not retry here.
+        # skip=false with no tool_calls after skip-schema attempts should be rare (initial completion
+        # retries without skip schema); still logged as skip_false_no_tools.
         if not initial_tool_calls:
             early_text = _assistant_text_from_completion_response(initial_response)
             finish0 = getattr(initial_response.choices[0], "finish_reason", None) or "?"

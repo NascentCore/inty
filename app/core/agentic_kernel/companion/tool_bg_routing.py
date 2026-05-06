@@ -28,7 +28,8 @@ TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME: Final[str] = "tool_bg_first_round_skip"
 # ``skip`` semantics (also surfaced in LangSmith as the span output):
 #   True  -- tool-path needs no tool_calls this turn; backend exits the background loop early.
 #   False -- model asserts tools are needed; contract requires tool_calls on the *same* message.
-#            If tool_calls are absent anyway, ``tool_background`` logs and returns (model error).
+#            If tool_calls are absent anyway, ``_initial_tool_bg_completion_with_fallbacks`` retries
+#            without this schema; only if no later attempt yields tools does ``tool_background`` exit.
 # If both tool_calls and content exist, tool_calls win (prompts tell the model to stay consistent).
 TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT: Final[dict[str, Any]] = {
     "type": "json_schema",
