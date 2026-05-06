@@ -60,7 +60,7 @@ firebase:
 
 agent:
   # 测试用 API key，每周上限 $1，inty-testing API key，intellimate-dev project
-  api_key: "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"
+  api_key: "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"
   # intellimate-dev project, inty-testing api key, personal access token
   langchain_api_key: "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"
   # 模型本地无法访问，IP 被限制
