@@ -133,7 +133,8 @@ class ContextMeta(BaseModel):
     workspace_bootstrap_user_interactive_completed: bool = True
     # True = skip inserting the one-shot WS companion session system line (default for legacy / non-interactive).
     companion_ws_session_system_written: bool = True
-    # True = skip WebSocket connect-time interactive bootstrap kickoff (default for legacy / non-interactive).
+    # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
+    # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
     companion_ws_interactive_kickoff_sent: bool = True
 
     @field_validator("context_mode")

@@ -68,10 +68,13 @@ agent:
   # sub_user_chat_model: "google/gemini-2.5-flash-lite"
   # free_user_chat_model: "inception/mercury-2"
   # sub_user_chat_model: "inception/mercury-2"
-  # free_user_chat_model: "deepseek/deepseek-v3.2"
-  # sub_user_chat_model: "deepseek/deepseek-v3.2"
-  free_user_chat_model: "deepseek/deepseek-v4-pro"
-  sub_user_chat_model: "deepseek/deepseek-v4-pro"
+  free_user_chat_model: "deepseek/deepseek-v3.2"
+  sub_user_chat_model: "deepseek/deepseek-v3.2"
+  # v4 很不稳定，会出现没有输出的情况，可能是 provider 问题，也可能是模型自身问题：
+  # https://smith.langchain.com/public/93dc20b8-5bfe-48b8-8958-528f853f4146/r
+  # https://smith.langchain.com/public/b71416d1-9b03-4322-8f46-bf3deb134a44/r
+  # free_user_chat_model: "deepseek/deepseek-v4-pro"
+  # sub_user_chat_model: "deepseek/deepseek-v4-pro"
   # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
   free_user_chat_image_model: "Z Image Turbo Image to Image"
   sub_user_chat_image_model: "Z Image Turbo Image to Image"

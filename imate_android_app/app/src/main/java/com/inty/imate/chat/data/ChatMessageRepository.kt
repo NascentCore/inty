@@ -50,6 +50,10 @@ constructor(
             )
             .flow
 
+    suspend fun sendImplicitUserSignedOnIfNeeded(agentId: String) {
+        chatMainRepository.sendImplicitUserSignedOnFireAndForget(agentId)
+    }
+
     suspend fun sendTextViaWebSocket(agentId: String, content: String) {
         val trimmed = content.trimEnd()
         if (trimmed.isEmpty()) return

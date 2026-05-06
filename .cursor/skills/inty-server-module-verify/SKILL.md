@@ -52,7 +52,7 @@ description: >-
 
 ### 行为说明
 
-- WebSocket URL 为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。连接后**最多**先收一帧再发用户轮次，用于排空服务端可能下发的 interactive bootstrap kickoff；若该帧为 `code != 200` 会报错退出。
+- WebSocket URL 可为 `.../api/v1/chat/ws?agent_id=...`（与交互 REPL 一致）。服务端不在连接建立后主动推送开场；若需首轮问候，先发 `messageType: IMPLICIT_USER_SIGNED_ON` 聊天帧（见 `/app/core/agentic_kernel/companion/implicit_signal_messages.py`）。脚本若仍「先收再发」，仅适用于排空 ping 或异步 tool 补帧等场景。
 
 ### 运行示例
 

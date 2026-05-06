@@ -26,9 +26,6 @@ from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerT
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
-from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
-    INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
-)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
@@ -213,128 +210,6 @@ async def _maybe_append_companion_ws_session_system(
         session.companion_id,
         session.chat_id,
     )
-
-
-def _mark_companion_ws_interactive_kickoff_sent_in_store(
-    session: CompanionSession,
-) -> None:
-    from app.core.agentic_kernel.companion.companion_tool_runtime import (
-        resolve_under_workspace,
-    )
-
-    root_r = session.workspace_path.resolve()
-    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
-    raw = session.store.read_document_if_exists(rel)
-    if raw is None or not str(raw).strip():
-        return
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        return
-    data["companion_ws_interactive_kickoff_sent"] = True
-    session.store.write_document(
-        rel, json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    )
-
-
-async def run_companion_interactive_bootstrap_kickoff_for_ws(
-    *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str | int,
-    session_id: str,
-    resolved_chat_model_id: str,
-) -> CompanionTurnResult | None:
-    """
-    One-shot assistant turn when USER_INTERACTIVE bootstrap is incomplete and WS kickoff not yet sent.
-
-    Uses a fixed internal user line so the model opens the relationship phase without a real user message.
-    Returns the kernel turn result (assistant text plus tracing ids) or None when skipped or empty reply.
-    """
-    feats = global_config_loaded_from_config_yaml.app.features
-    if (
-        feats.companion_workspace_bootstrap_type
-        != CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
-    ):
-        logger.debug(
-            "companion_ws_kickoff_skip reason=bootstrap_type type={}",
-            feats.companion_workspace_bootstrap_type,
-        )
-        return None
-    manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id, _companion_runtime_config_fingerprint()
-    )
-    chat_key = str(chat_id)
-    session = manager.get_or_create_session(user_id, agent_id, chat_key)
-    if not session.is_initialized:
-        logger.debug(
-            "companion_ws_kickoff_skip reason=session_not_initialized user={} agent={} chat={}",
-            user_id,
-            agent_id,
-            chat_id,
-        )
-        return None
-    from app.core.agentic_kernel.companion.models import load_context_meta
-    from app.core.agentic_kernel.companion.workspace import WorkspacePaths
-
-    paths = WorkspacePaths(root=session.workspace_path.resolve())
-    meta = load_context_meta(paths.context_json, store=session.store)
-    if meta.workspace_bootstrap_user_interactive_completed:
-        logger.debug(
-            "companion_ws_kickoff_skip reason=bootstrap_completed user={} agent={} chat={}",
-            user_id,
-            agent_id,
-            chat_id,
-        )
-        return None
-    if meta.companion_ws_interactive_kickoff_sent:
-        logger.debug(
-            "companion_ws_kickoff_skip reason=kickoff_already_sent user={} agent={} chat={}",
-            user_id,
-            agent_id,
-            chat_id,
-        )
-        return None
-
-    t0 = time.perf_counter()
-    t_ws0 = time.perf_counter()
-    await _maybe_append_companion_ws_session_system(
-        session=session,
-        session_id=session_id,
-    )
-    ws_system_ms = (time.perf_counter() - t_ws0) * 1000.0
-    t_rt0 = time.perf_counter()
-    turn = await manager.run_turn(
-        session,
-        INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
-        defer_memory_update=True,
-    )
-    reply = turn.assistant_text
-    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
-    total_ms = (time.perf_counter() - t0) * 1000.0
-    if not reply or not str(reply).strip():
-        logger.warning(
-            "companion_ws_interactive_kickoff empty reply user={} agent={} chat={} total_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f}",
-            user_id,
-            agent_id,
-            chat_id,
-            total_ms,
-            ws_system_ms,
-            run_turn_ms,
-        )
-        return None
-    # Mark before chat_history persist so reconnect does not run a second run_turn (transcript already
-    # has this turn). If add_ai_message later fails, operators may see transcript vs chat_history skew.
-    _mark_companion_ws_interactive_kickoff_sent_in_store(session)
-    logger.info(
-        "companion_ws_interactive_kickoff_sent user={} agent={} chat={} total_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f}",
-        user_id,
-        agent_id,
-        chat_id,
-        total_ms,
-        ws_system_ms,
-        run_turn_ms,
-    )
-    return turn
 
 
 async def run_companion_chat_turn_for_api(

@@ -152,7 +152,6 @@ class CompanionManager:
             ):
                 context_data["workspace_bootstrap_user_interactive_completed"] = False
                 context_data["companion_ws_session_system_written"] = False
-                context_data["companion_ws_interactive_kickoff_sent"] = False
             context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
             existing_ctx = store.read_document_if_exists("context.json")
             write_full_context = False
