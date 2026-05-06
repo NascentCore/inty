@@ -18,6 +18,9 @@ from sqlalchemy.orm import sessionmaker
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
+from app.core.agentic_kernel.companion.llm_inference_errors import (
+    CompanionLLMInferenceBackendError,
+)
 from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
@@ -1362,6 +1365,53 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
             "importance_assistant_message": 7,
         },
     }
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_llm_inference_backend_error_frame(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """When the companion kernel reports an upstream LLM API failure, the client gets a tagged error frame."""
+
+    async def fake_run_companion(**_kwargs):
+        raise CompanionLLMInferenceBackendError(
+            client_message_en=(
+                "The AI inference provider rejected this request due to insufficient credits, quota, "
+                "or token limits on the service side. Please try again later."
+            ),
+            provider_http_status=402,
+        )
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-llm-err",
+        workspace_dir="/tmp/inty_test_companion_ws_llm_err",
+        chat_id="chat-llm-err-1",
+        latest_user_message_db_id=57,
+        ai_message_id=904,
+        run_companion_chat_turn_for_api=fake_run_companion,
+    )
+
+    msg_uuid = "22222222-2222-4222-8222-222222222222"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-llm-err",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hello"}],
+                        "message_id": msg_uuid,
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 502
+    assert body["agent_id"] == "agent-companion-llm-err"
+    assert body["error_kind"] == "llm_inference_backend"
+    assert body["llm_provider_http_status"] == 402
+    assert "inference provider" in body["message"].lower()
 
     companion_chat_service.clear_companion_chat_service_caches()
 

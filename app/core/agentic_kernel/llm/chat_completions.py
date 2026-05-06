@@ -1,4 +1,7 @@
-"""Synchronous OpenAI-compatible chat.completions: tool-path kwargs, JSON retry, LangSmith enrich."""
+"""Synchronous OpenAI-compatible chat.completions: tool-path kwargs, JSON retry, LangSmith enrich.
+
+Maps OpenAI SDK failures from ``chat.completions.create`` to companion kernel inference errors.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +12,9 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.agentic_kernel.companion.llm_inference_errors import (
+    log_and_build_inference_error,
+)
 from app.core.agentic_kernel.llm.langsmith_completion_enrich import (
     _ensure_langsmith_handle_container_end_patch,
     completion_with_langsmith_trace_id,
@@ -77,3 +83,5 @@ def create_chat_completion_sync(
                 "OpenRouter returned a non-JSON response body "
                 f"for model={model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
             ) from exc
+        except Exception as exc:
+            raise log_and_build_inference_error(exc) from exc
