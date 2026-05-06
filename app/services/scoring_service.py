@@ -1,8 +1,11 @@
-"""智能体回复评分服务"""
+"""Scores agent responses with an external LLM and parses fallback results.
+
+This service builds scoring prompts, calls the configured evaluation model, and
+normalizes model output into score fields used by evaluation workflows.
+"""
 
 import asyncio
 import json
-import logging
 import re
 from typing import Any, Dict, List, Optional
 
@@ -238,7 +241,7 @@ class ScoringService:
                     "detailed_scores": {},
                     "reason": "Scoring parse failed; using extracted numeric score",
                 }
-            except:
+            except (OverflowError, TypeError, ValueError):
                 pass
 
         # 完全失败时的默认分数
