@@ -9,12 +9,12 @@ from typing import Any, Literal
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
+from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
 from app.core.agentic_kernel.providers.facade import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
-
-from .llm_chat_runtime import create_chat_completion_sync
 
 LLM_SCENE_CHAT = "chat"
 LLM_SCENE_TOOL_CALL = "tool_call"
@@ -116,6 +116,11 @@ class CompanionLLMClient:
     @property
     def config(self) -> CompanionLLMConfig:
         return self._config
+
+    @property
+    def chat_completions_sync(self) -> ChatCompletionsSyncPort:
+        """Same implementation as foreground ``chat_completion``; inject into tool_background."""
+        return create_chat_completion_sync
 
     def _ensure_dual_chat_client(self) -> Any:
         if self._client_dual_chat is None:

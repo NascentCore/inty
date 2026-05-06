@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.turn import run_turn
@@ -47,6 +48,10 @@ class _FakeAsyncDualLLMClient:
 
     def sync_client_for_route(self, route: str) -> object:
         return object()
+
+    @property
+    def chat_completions_sync(self):
+        return create_chat_completion_sync
 
     def complete_text(
         self, messages: list[dict[str, Any]], *, model_role: str = "memory"
@@ -98,6 +103,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert any("## IDENTITY" in str(m.get("content") or "") for m in fg_system)
     assert any("## SOUL" in str(m.get("content") or "") for m in fg_system)
     assert len(bg_jobs) == 1
+    assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
     bg_msgs = bg_jobs[0]["request_messages"]
     bg_system = [m for m in bg_msgs if m.get("role") == "system"]
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
