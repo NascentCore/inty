@@ -1262,6 +1262,9 @@ async def _agent_chat_completions_impl(
                     )
                     response_content = companion_reply
                     if response_content is None or not str(response_content).strip():
+                        # TODO(companion-dual-envelope-reasoning-channel): Root cause is usually upstream:
+                        # structured chat completion has empty ``message.content`` while LangSmith shows
+                        # output under ``reasoning``. Compare trace vs ``deepseek-v4-pro`` vs ``v3.2``.
                         logger.error(
                             f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
                         )

@@ -149,6 +149,8 @@ def envelope_to_assistant_metadata_dict(
 def split_dual_llm_chat_branch_content(
     raw: str,
 ) -> tuple[str, dict[str, Any] | None]:
+    # TODO(companion-dual-envelope-reasoning-channel): Empty ``raw`` here often means the LLM put
+    # the JSON envelope only in ``message.reasoning``; fix extraction before calling this helper.
     env = parse_dual_llm_chat_envelope_json(raw)
     if env is None:
         return ((raw or "").strip(), None)
