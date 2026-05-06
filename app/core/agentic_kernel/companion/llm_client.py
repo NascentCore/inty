@@ -15,6 +15,7 @@ from app.core.agentic_kernel.providers.facade import (
 )
 
 from .llm_chat_runtime import create_chat_completion_sync
+from .llm_inference_errors import log_and_build_inference_error
 
 LLM_SCENE_CHAT = "chat"
 LLM_SCENE_TOOL_CALL = "tool_call"
@@ -235,7 +236,10 @@ class CompanionLLMClient:
         m = self._resolve_model(model_role)
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
         t_api = time.perf_counter()
-        resp = self._client.chat.completions.create(model=m, messages=messages)
+        try:
+            resp = self._client.chat.completions.create(model=m, messages=messages)
+        except Exception as exc:
+            raise log_and_build_inference_error(exc) from exc
         api_ms = (time.perf_counter() - t_api) * 1000.0
         logger.info(
             "companion complete_text model_role={} model={} chat_completions_ms={:.0f} approx_chars={}",

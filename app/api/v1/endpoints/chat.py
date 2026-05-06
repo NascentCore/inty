@@ -40,6 +40,9 @@ from app.core.agentic_kernel.companion.heartbeat import (
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
     next_heartbeat_wait_seconds,
 )
+from app.core.agentic_kernel.companion.llm_inference_errors import (
+    CompanionLLMInferenceBackendError,
+)
 from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.model_selection import select_chat_model
@@ -84,6 +87,37 @@ from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+
+class CompanionInferenceUpstreamHTTPException(HTTPException):
+    """HTTPException with optional fields merged into ``/chat/ws`` error JSON frames."""
+
+    def __init__(
+        self,
+        *,
+        status_code: int,
+        detail: str,
+        ws_extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(status_code=status_code, detail=detail)
+        self.ws_extra = ws_extra or {}
+
+
+def _chat_ws_error_payload_from_http_exception(
+    exc: HTTPException, *, agent_id: str
+) -> dict[str, Any]:
+    detail = exc.detail
+    message = detail if isinstance(detail, str) else str(detail)
+    payload: dict[str, Any] = {
+        "code": exc.status_code,
+        "message": message,
+        "data": None,
+        "agent_id": agent_id,
+    }
+    ws_extra = getattr(exc, "ws_extra", None)
+    if isinstance(ws_extra, dict):
+        payload.update(ws_extra)
+    return payload
 
 # WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
 # Handlers must not pass that session into asyncio.to_thread or other threads; open a new
@@ -1362,6 +1396,8 @@ async def _agent_chat_completions_impl(
 
         except HTTPException:
             raise
+        except CompanionLLMInferenceBackendError:
+            raise
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
@@ -1598,6 +1634,20 @@ async def _agent_chat_completions_impl(
 
     except HTTPException:
         raise
+    except CompanionLLMInferenceBackendError as exc:
+        logger.error(
+            "Companion LLM inference backend error provider_http_status={} message={!r}",
+            exc.provider_http_status,
+            exc.client_message_en,
+        )
+        raise CompanionInferenceUpstreamHTTPException(
+            status_code=502,
+            detail=exc.client_message_en,
+            ws_extra={
+                "error_kind": "llm_inference_backend",
+                "llm_provider_http_status": exc.provider_http_status,
+            },
+        ) from exc
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")
@@ -1967,15 +2017,10 @@ async def chat_completions_websocket(
                         companion_ws_heartbeat_ctx=companion_hb_ctx,
                     )
             except HTTPException as e:
-                detail = e.detail
-                message = detail if isinstance(detail, str) else str(detail)
                 await outbound_queue.put(
-                    {
-                        "code": e.status_code,
-                        "message": message,
-                        "data": None,
-                        "agent_id": websocket_request.agent_id,
-                    }
+                    _chat_ws_error_payload_from_http_exception(
+                        e, agent_id=websocket_request.agent_id
+                    )
                 )
                 continue
             if isinstance(response, dict):
