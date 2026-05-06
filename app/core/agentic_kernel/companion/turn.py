@@ -128,6 +128,7 @@ async def run_turn(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    langsmith_parent_run_enabled: bool | None = None,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
@@ -276,6 +277,7 @@ async def run_turn(
             tool_model=llm_client.resolve_model("tool"),
             user_id=context.user_id,
             companion_id=context.companion_id,
+            parent_run_enabled=langsmith_parent_run_enabled,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:

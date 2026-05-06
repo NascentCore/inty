@@ -8,7 +8,6 @@ companion turn parent ``RunTree`` lifecycle and stable import paths for callers.
 from __future__ import annotations
 
 import atexit
-import os
 import threading
 from typing import Any
 
@@ -25,11 +24,10 @@ from app.core.agentic_kernel.llm.langsmith_completion_enrich import (
 from app.core.agentic_kernel.llm.openrouter_tool_params import (
     tool_path_chat_completion_kwargs,
 )
-from app.core.config import (
-    _langsmith_tracing_v2_enabled,
-    global_config_loaded_from_config_yaml,
+from app.core.agentic_kernel.companion.langsmith_parent_policy import (
+    companion_langsmith_parent_run_allowed,
+    companion_turn_langsmith_parent_enabled_from_app_config,
 )
-from app.utils.config import Environment
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
 _OPEN_LANGSMITH_PARENT_RUNS: dict[int, Any] = {}
@@ -80,15 +78,7 @@ def _langsmith_parent_models_are_kernel_test_placeholders(
 
 
 def companion_turn_langsmith_parent_enabled() -> bool:
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return False
-    if global_config_loaded_from_config_yaml.app.environment == Environment.TEST:
-        return False
-    if not _langsmith_tracing_v2_enabled(global_config_loaded_from_config_yaml):
-        return False
-    if os.environ.get("LANGSMITH_TRACING_V2", "").strip().lower() != "true":
-        return False
-    return True
+    return companion_turn_langsmith_parent_enabled_from_app_config()
 
 
 def _langsmith_parent_run_extra_metadata(
@@ -130,8 +120,14 @@ def create_companion_turn_root_run(
     tool_model: str = "",
     user_id: str = "",
     companion_id: str = "",
+    parent_run_enabled: bool | None = None,
 ) -> Any | None:
-    if not companion_turn_langsmith_parent_enabled():
+    enabled = (
+        companion_turn_langsmith_parent_enabled()
+        if parent_run_enabled is None
+        else parent_run_enabled
+    )
+    if not enabled:
         return None
     cm = (chat_model or "").strip()
     tm = (tool_model or "").strip()
@@ -302,7 +298,9 @@ def end_companion_turn_root_run_safe(
 
 __all__ = [
     "OpenRouterInvalidJsonError",
+    "companion_langsmith_parent_run_allowed",
     "companion_turn_langsmith_parent_enabled",
+    "companion_turn_langsmith_parent_enabled_from_app_config",
     "companion_turn_langsmith_parent_run_id_str",
     "companion_turn_langsmith_parent_trace_id_str",
     "create_chat_completion_sync",
