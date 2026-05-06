@@ -1,3 +1,5 @@
+"""Tests for companion prompt stack assembly (tools list, system messages, refresh)."""
+
 from __future__ import annotations
 
 import json
@@ -23,7 +25,9 @@ from app.core.agentic_kernel.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
 )
 from app.core.agentic_kernel.companion.prompts import build_system_messages
+from app.core.agentic_kernel.companion.turn_routes import TurnRouteMode
 from app.core.agentic_kernel.companion.workspace import WorkspacePaths
+from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
 def _seed_workspace_bootstrap_incomplete(root: Path) -> None:
@@ -102,6 +106,131 @@ def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path: Path) -> None:
         str(m.get("content") or "") for m in systems if m.get("role") == "system"
     )
     assert "jl seed line" in joined
+    shutdown_memory_store(root.resolve())
+
+
+def _seed_minimal_companion_workspace(root: Path) -> None:
+    st = get_memory_store(root)
+    for rel, body in (
+        ("IDENTITY.md", "id\n"),
+        ("SOUL.md", "soul\n"),
+        ("USER.md", "user\n"),
+        ("MEMORY.md", "mem\n"),
+    ):
+        st.write_document(rel, body)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "public",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+
+
+def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "ws_implicit_sign_on"
+    root.mkdir()
+    _seed_minimal_companion_workspace(root)
+    st = get_memory_store(root)
+    paths = WorkspacePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    bundle_sig = ImplicitSignalBundle(user_signed_on=True)
+
+    tools_normal, _, route_normal = companion_turn_tools_and_system_messages(
+        workspace_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=False,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        enable_async_tool_background=True,
+        tool_side_compact_system_prompt=False,
+        implicit_signal_bundle=bundle_sig,
+        implicit_user_signed_on_turn=False,
+    )
+    tools_implicit, _, route_implicit = companion_turn_tools_and_system_messages(
+        workspace_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=False,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        enable_async_tool_background=True,
+        tool_side_compact_system_prompt=False,
+        implicit_signal_bundle=bundle_sig,
+        implicit_user_signed_on_turn=True,
+    )
+    assert len(tools_normal) > 0
+    assert route_normal == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+    assert tools_implicit == []
+    assert route_implicit == TurnRouteMode.CHAT_ONLY_SYNC
+    shutdown_memory_store(root.resolve())
+
+
+def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "ws_inner_tick_implicit_flag"
+    root.mkdir()
+    _seed_minimal_companion_workspace(root)
+    st = get_memory_store(root)
+    paths = WorkspacePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    tools, _, route = companion_turn_tools_and_system_messages(
+        workspace_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        enable_async_tool_background=True,
+        tool_side_compact_system_prompt=False,
+        implicit_user_signed_on_turn=True,
+    )
+    assert len(tools) > 0
+    assert route == TurnRouteMode.INNER_TICK_SYNC
+    shutdown_memory_store(root.resolve())
+
+
+def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path: Path) -> None:
+    root = tmp_path / "ws_refresh_implicit"
+    root.mkdir()
+    _seed_minimal_companion_workspace(root)
+    st = get_memory_store(root)
+    paths = WorkspacePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    systems = build_system_messages(
+        bundle,
+        context,
+        enable_tools=True,
+        inner_tick_turn=False,
+    )
+    messages = [dict(m) for m in systems]
+    messages.append({"role": "user", "content": "hello"})
+    sig = ImplicitSignalBundle(user_signed_on=True)
+    new_tools = refresh_companion_turn_prompt_stack(
+        workspace=root,
+        store=st,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=False,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        enable_async_tool_background=True,
+        messages=messages,
+        tool_side_compact_system_prompt=False,
+        implicit_signal_bundle=sig,
+    )
+    assert new_tools == []
     shutdown_memory_store(root.resolve())
 
 
