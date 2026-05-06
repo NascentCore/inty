@@ -258,8 +258,10 @@ async def run_modify_image_z_image_turbo(
     source_persona_revision_id: str | None = None
     source_rel_for_index: str | None = None
     if has_path:
-        assert source_path is not None
-        source_rel_for_index = relative_path_under_workspace(root, source_path)
+        path = source_path
+        if path is None:
+            raise ValueError("source_path is required when has_path is true")
+        source_rel_for_index = relative_path_under_workspace(root, path)
         source_asset = find_latest_asset_by_local_relative_path(
             root, source_rel_for_index
         )
@@ -268,9 +270,7 @@ async def run_modify_image_z_image_turbo(
             source_persona_revision_id = (
                 str(source_asset.get("persona_revision_id") or "") or None
             )
-        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(
-            source_path, gcs_base
-        )
+        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(path, gcs_base)
     else:
         u = source_image_url.strip()
         if not (u.startswith("https://") or u.startswith("http://")):
