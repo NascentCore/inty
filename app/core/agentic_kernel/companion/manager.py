@@ -13,6 +13,7 @@ from app.core.agentic_kernel.experience_profile import normalize_experience_prof
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
 
+from .langsmith_parent_policy import companion_turn_langsmith_parent_enabled_from_app_config
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
@@ -211,6 +212,7 @@ class CompanionManager:
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
     ) -> CompanionTurnResult:
         """执行一轮对话。"""
+        ls_parent_enabled = companion_turn_langsmith_parent_enabled_from_app_config()
         return await run_turn(
             session.workspace_path,
             user_text,
@@ -227,6 +229,7 @@ class CompanionManager:
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            langsmith_parent_run_enabled=ls_parent_enabled,
         )
 
     def shutdown_session(
