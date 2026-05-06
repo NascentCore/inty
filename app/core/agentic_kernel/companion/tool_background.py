@@ -348,6 +348,8 @@ def background_tasks_count() -> int:
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:
+    # TODO(companion-dual-envelope-reasoning-channel): Tool-background path only reads ``.content``;
+    # same provider quirk as foreground ``turn.py`` when switching reasoning-heavy chat models.
     content = resp.choices[0].message.content
     if not isinstance(content, str):
         preview = repr(content)

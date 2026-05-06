@@ -417,6 +417,10 @@ async def run_turn(
                         LLM_SCENE_CHAT,
                     )
                     msg = resp.choices[0].message
+                    # TODO(companion-dual-envelope-reasoning-channel): If ``msg.content`` is empty
+                    # but the model filled ``reasoning`` / ``reasoning_details``, dual envelope parse
+                    # yields empty assistant text and API returns 500. See
+                    # ``app/core/agentic_kernel/llm/chat_completions.py`` (TODO tag).
                     raw_content = msg.content or ""
                     last_text, significance_meta = split_dual_llm_chat_branch_content(
                         raw_content
@@ -497,6 +501,8 @@ async def run_turn(
                         messages.append(openai_assistant_message_dict(msg))
 
                         if not tool_calls:
+                            # TODO(companion-dual-envelope-reasoning-channel): Same as async foreground
+                            # branch above when ``msg.content`` is null; grep tag for full note.
                             raw_content = msg.content or ""
                             if use_dual_structured_chat:
                                 last_text, significance_meta = (
