@@ -21,6 +21,9 @@ logging:
 
 database:
   host: "localhost"
+  # Small pools: default PG max_connections=100; pytest shares DB with the uvicorn on :8000.
+  pool_size: 16
+  max_overflow: 4
 
 google_oauth:
   client_id: "<your-google-client-id>"
