@@ -81,6 +81,7 @@ from .heartbeat import (
 from .implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
+    implicit_user_signed_on_chat_turn,
 )
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
@@ -148,6 +149,10 @@ async def run_turn(
 
     tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
+    implicit_sign_on_turn = implicit_user_signed_on_chat_turn(
+        implicit_signal_bundle=implicit_signal_bundle,
+        inner_tick_turn=inner_tick_turn,
+    )
 
     if inner_tick_turn:
         user_text = (
@@ -193,6 +198,7 @@ async def run_turn(
             tool_side_compact_system_prompt=False,
             include_significance_perception_slice=None,
             implicit_signal_bundle=implicit_signal_bundle,
+            implicit_user_signed_on_turn=implicit_sign_on_turn,
         )
     )
     use_dual_structured_chat = (
@@ -230,10 +236,6 @@ async def run_turn(
         for m in transcript:
             messages.append({"role": m.role, "content": m.content})
     user_msg_uuid = preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
-    implicit_sign_on_turn = (
-        bool(implicit_signal_bundle and implicit_signal_bundle.user_signed_on)
-        and not inner_tick_turn
-    )
     if tick_proactive:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
     if implicit_sign_on_turn:

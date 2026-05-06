@@ -18,6 +18,7 @@ from .models import (
     load_context_meta,
     load_prompt_bundle,
 )
+from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .prompts import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
@@ -46,11 +47,15 @@ def companion_turn_tools_and_system_messages(
     tool_side_compact_system_prompt: bool,
     include_significance_perception_slice: bool | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    implicit_user_signed_on_turn: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], TurnRouteMode]:
     """
     Single source for companion chat-round tools list and system message stack.
 
     Must stay aligned with ``turn.run_turn`` message assembly (same inputs -> same outputs).
+
+    When ``implicit_user_signed_on_turn`` is True (and not an inner-tick turn), tools are
+    omitted and system prompts skip tool contracts so the model does one chat completion only.
     """
     interactive_bootstrap = interactive_bootstrap_active(
         feature_enabled=(
@@ -75,6 +80,9 @@ def companion_turn_tools_and_system_messages(
             )
         )
     )
+    chat_only_implicit_sign_on = implicit_user_signed_on_turn and not inner_tick_turn
+    if chat_only_implicit_sign_on:
+        tools_for_turn = []
     route_mode = resolve_turn_route_mode(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
@@ -95,7 +103,7 @@ def companion_turn_tools_and_system_messages(
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=True,
+            enable_tools=(not chat_only_implicit_sign_on),
             enable_user_profile_tool=False,
             inner_tick_turn=False,
             ai_private_text="",
@@ -109,7 +117,7 @@ def companion_turn_tools_and_system_messages(
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=not tick_proactive,
+            enable_tools=(not tick_proactive) and not chat_only_implicit_sign_on,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             ai_private_text=ai_private_text,
@@ -139,6 +147,10 @@ def refresh_companion_turn_prompt_stack(
     paths = WorkspacePaths(root=root)
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
+    implicit_user_signed_on_turn = implicit_user_signed_on_chat_turn(
+        implicit_signal_bundle=implicit_signal_bundle,
+        inner_tick_turn=inner_tick_turn,
+    )
     tools_for_turn, refreshed, _route_mode = companion_turn_tools_and_system_messages(
         workspace_root=workspace,
         bundle=bundle,
@@ -150,6 +162,7 @@ def refresh_companion_turn_prompt_stack(
         tool_side_compact_system_prompt=tool_side_compact_system_prompt,
         include_significance_perception_slice=None,
         implicit_signal_bundle=implicit_signal_bundle,
+        implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

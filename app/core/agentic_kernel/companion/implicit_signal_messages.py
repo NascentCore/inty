@@ -29,6 +29,18 @@ USER_SIGNED_ON_TRIGGER_USER_TEXT = (
 MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON = "（用户上线：隐式客户端信号）"
 
 
+def implicit_user_signed_on_chat_turn(
+    *,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+    inner_tick_turn: bool,
+) -> bool:
+    """True when ``run_turn`` uses the tail implicit online user line instead of ``user_text``."""
+    return (
+        bool(implicit_signal_bundle and implicit_signal_bundle.user_signed_on)
+        and not inner_tick_turn
+    )
+
+
 def implicit_signal_system_messages(
     bundle: ImplicitSignalBundle | None,
 ) -> list[dict[str, Any]]:
