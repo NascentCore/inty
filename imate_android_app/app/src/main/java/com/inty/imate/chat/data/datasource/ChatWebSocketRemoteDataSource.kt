@@ -2,6 +2,7 @@ package com.inty.imate.chat.data.datasource
 
 import com.ai.core.http.di.KtorHttpClientSingleton
 import com.ai.core.utils.LogUtils
+import com.inty.imate.chat.data.ChatTextSendRequestFactory
 import com.inty.imate.chat.data.bean.ChatClientContextWsMessage
 import com.inty.imate.chat.data.bean.ChatUserSignedOnWsMessage
 import com.inty.imate.chat.data.bean.ChatWebSocketReq
@@ -16,6 +17,7 @@ import io.ktor.client.request.url
 import io.ktor.websocket.Frame
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Collections
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,6 +49,8 @@ constructor() {
     private val currentSession = AtomicReference<DefaultClientWebSocketSession?>(null)
     private val sendMutex = Mutex()
     private val userSignedOnAgentIdForConnection = AtomicReference<String?>(null)
+    private val implicitSignOnSentAgentIds =
+        Collections.newSetFromMap<String>(java.util.concurrent.ConcurrentHashMap())
 
     private val _isSessionActive = MutableStateFlow(false)
     val isSessionActive: StateFlow<Boolean> = _isSessionActive.asStateFlow()
@@ -56,6 +60,35 @@ constructor() {
             ignoreUnknownKeys = true
             isLenient = true
         }
+
+    suspend fun sendImplicitUserSignedOnFireAndForget(agentId: String) {
+        val aid = agentId.trim()
+        if (aid.isEmpty()) return
+        waitUntilSessionReadyOrThrow()
+        sendMutex.withLock {
+            if (implicitSignOnSentAgentIds.contains(aid)) {
+                return@withLock
+            }
+            val session =
+                currentSession.get()
+                    ?: throw IllegalStateException("Chat WebSocket not connected")
+            if (userSignedOnAgentIdForConnection.get() != aid) {
+                session.send(
+                    Frame.Text(
+                        json.encodeToString(
+                            ChatUserSignedOnWsMessage.serializer(),
+                            ChatUserSignedOnWsMessage(agentId = aid),
+                        ),
+                    ),
+                )
+                userSignedOnAgentIdForConnection.set(aid)
+            }
+            val req = ChatTextSendRequestFactory.buildImplicitUserSignedOnMsgReq(aid)
+            val payload = ChatWebSocketReq(agentId = aid, request = req)
+            session.send(Frame.Text(json.encodeToString(ChatWebSocketReq.serializer(), payload)))
+            implicitSignOnSentAgentIds.add(aid)
+        }
+    }
 
     suspend fun sendMessageFireAndForget(agentId: String, request: SendMsgReq) {
         waitUntilSessionReadyOrThrow()
@@ -99,6 +132,7 @@ constructor() {
                     val session = this
                     currentSession.set(session)
                     userSignedOnAgentIdForConnection.set(null)
+                    implicitSignOnSentAgentIds.clear()
                     _isSessionActive.value = true
                     try {
                         LogUtils.d("Chat WebSocket connected")
@@ -135,6 +169,7 @@ constructor() {
                     } finally {
                         currentSession.set(null)
                         userSignedOnAgentIdForConnection.set(null)
+                        implicitSignOnSentAgentIds.clear()
                         _isSessionActive.value = false
                     }
                 }

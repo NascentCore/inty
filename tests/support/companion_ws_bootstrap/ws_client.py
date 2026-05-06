@@ -1,16 +1,17 @@
-"""WebSocket receive and assertions for companion interactive bootstrap kickoff."""
+"""WebSocket send implicit sign-on and assertions for companion E2E."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import time
+import uuid
 from typing import Any
 
 import websockets
 
 from tests.support.companion_ws_bootstrap.constants import (
-    KICKOFF_MESSAGE_TYPE,
+    IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE,
     WS_KEEPALIVE_PING_INTERVAL_SEC,
 )
 from tools.inty_v2_repl.backend_chat_ws import (
@@ -43,17 +44,17 @@ async def recv_first_chat_completion_frame(
     raise TimeoutError("no chat completion JSON frame before deadline")
 
 
-def assert_bootstrap_kickoff_payload(data: dict[str, Any], *, agent_id: str) -> None:
+def assert_implicit_sign_on_assistant_payload(data: dict[str, Any], *, agent_id: str) -> None:
     try:
         content, meta = parse_chat_completion_ws_payload(data)
     except BackendChatWsError as exc:
         raise AssertionError(
-            f"expected bootstrap kickoff (code 200), got ws error "
+            f"expected implicit sign-on assistant (code 200), got ws error "
             f"code={exc.code} message={exc.agent_message!r} agent_id={exc.agent_id!r}"
         ) from exc
     mt = meta.get("messageType")
-    assert mt == KICKOFF_MESSAGE_TYPE, (
-        f"expected messageType={KICKOFF_MESSAGE_TYPE!r}, got {mt!r}, "
+    assert mt == IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE, (
+        f"expected messageType={IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE!r}, got {mt!r}, "
         f"code={data.get('code')}, meta_keys={sorted(meta.keys())}"
     )
     assert content.strip(), f"empty assistant content: {data!r}"
@@ -61,16 +62,31 @@ def assert_bootstrap_kickoff_payload(data: dict[str, Any], *, agent_id: str) -> 
     assert aid == agent_id, f"agent_id mismatch: expected {agent_id!r}, got {aid!r}"
 
 
-async def connect_and_expect_bootstrap_kickoff(
+async def connect_send_implicit_sign_on_and_expect_assistant(
     *,
     http_base_url: str,
     bearer_token: str,
     agent_id: str,
     recv_timeout_sec: float,
+    query_agent_id: bool = True,
 ) -> None:
-    url = http_base_to_ws_chat_url(http_base_url, agent_id=agent_id)
+    """Connect WS, send IMPLICIT_USER_SIGNED_ON chat frame, assert assistant reply."""
+    url = http_base_to_ws_chat_url(
+        http_base_url, agent_id=agent_id if query_agent_id else None
+    )
     headers = [("Authorization", f"Bearer {bearer_token.strip()}")]
     deadline = time.monotonic() + recv_timeout_sec
+    msg_uuid = str(uuid.uuid4())
+    implicit_payload = json.dumps(
+        {
+            "agent_id": agent_id,
+            "request": {
+                "messages": [{"role": "user", "content": ""}],
+                "message_id": msg_uuid,
+                "messageType": IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE,
+            },
+        }
+    )
     async with websockets.connect(
         url,
         additional_headers=headers,
@@ -96,10 +112,11 @@ async def connect_and_expect_bootstrap_kickoff(
 
         ping_task = asyncio.create_task(_keepalive_ping_loop())
         try:
+            await ws.send(implicit_payload)
             frame = await recv_first_chat_completion_frame(
                 ws, deadline_monotonic=deadline
             )
-            assert_bootstrap_kickoff_payload(frame, agent_id=agent_id)
+            assert_implicit_sign_on_assistant_payload(frame, agent_id=agent_id)
         finally:
             stop_ping.set()
             ping_task.cancel()

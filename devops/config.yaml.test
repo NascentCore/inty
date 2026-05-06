@@ -9,7 +9,7 @@ app:
   # 这是一个非零值，用于测试该配置项等效果
   min_app_version_code_for_festival_memory: 1000
   features:
-    # E2E / slow LLM: avoid closing WS while client waits for bootstrap kickoff (default 60).
+    # E2E / slow LLM: generous idle budget while client waits for companion LLM replies (default 60).
     chat_ws_idle_timeout_seconds: 180
 
 sentry:

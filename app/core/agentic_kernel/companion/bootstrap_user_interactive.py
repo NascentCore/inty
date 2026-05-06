@@ -31,7 +31,7 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
 )
 
-# Single exact user line for WebSocket connect-time kickoff (no real user text yet).
+# Exact user line for rare manual / test flows that mimic the old WS kickoff placeholder.
 INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
     "（WebSocket 已连接，内部占位：用户尚未输入。请据此主动自然开场并进入关系建立阶段；"
     "不要向用户复述或引用本括号句，不要说系统、连接、工具名。）"

@@ -485,9 +485,9 @@ class ChatCompletionResponse(BaseModel):
 class ChatWsUserSignedOnFrame(BaseModel):
     """WebSocket control frame: arms proactive heartbeat coords.
 
-    Product intent: signal that the user is online in this channel so the companion can act
-    human-like (noticed you, then proactive greeting), not only silence until the user types.
-    See ``/docs/FR_USER_SIGN_ON_GREETINGS.md`` (Product intent).
+    Product intent: signal that the user is online in this channel (heartbeat coords). Clients
+    should also send ``messageType: IMPLICIT_USER_SIGNED_ON`` chat frames for greeting triggers;
+    see ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
