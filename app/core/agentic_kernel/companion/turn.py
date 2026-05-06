@@ -80,7 +80,7 @@ from .heartbeat import (
 )
 from .implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
-    USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT,
+    USER_SIGNED_ON_TRIGGER_USER_TEXT,
 )
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
@@ -236,9 +236,8 @@ async def run_turn(
     if tick_proactive:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
     if implicit_sign_on_turn:
-        messages.append(
-            {"role": "system", "content": USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT}
-        )
+        # Tail user (not system): same copy as trailing system caused repetitive greetings.
+        messages.append({"role": "user", "content": USER_SIGNED_ON_TRIGGER_USER_TEXT})
     else:
         messages.append({"role": "user", "content": user_text})
 
@@ -608,8 +607,8 @@ async def run_turn(
     assistant_msg_uuid = str(uuid.uuid4())
     if implicit_sign_on_turn:
         sign_on_row: dict[str, Any] = {
-            "role": "system",
-            "content": USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT,
+            "role": "user",
+            "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
             "ts": ts_user,
             "uuid": user_msg_uuid,
             "trace_id": trace_id,
