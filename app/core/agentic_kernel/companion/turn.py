@@ -355,6 +355,7 @@ async def run_turn(
                         on_event=_kernel_bg_on_event,
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
+                        chat_completions_sync=llm_client.chat_completions_sync,
                         write_allowlist=WRITABLE_RELATIVE_PATHS,
                         repository_only_workspace_text=repository_only_workspace_text,
                         main_event_loop=asyncio.get_running_loop(),
