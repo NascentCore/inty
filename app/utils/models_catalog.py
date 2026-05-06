@@ -6,6 +6,7 @@
 """
 
 from enum import StrEnum
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -213,7 +214,10 @@ DEEPSEEK_V3_2 = GenAIModel(
 
 GEMINI_2_5_FLASH_LITE = GenAIModel(
     nickname="Gemini 2.5 Flash Lite",
-    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE],
+        outputs=[DataModality.TEXT],
+    ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash-lite",
@@ -239,7 +243,10 @@ GEMINI_2_5_FLASH_LITE = GenAIModel(
 
 GEMINI_2_5_FLASH = GenAIModel(
     nickname="Gemini 2.5 Flash",
-    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    modalities=ModelModalities(
+        inputs=[DataModality.TEXT, DataModality.IMAGE],
+        outputs=[DataModality.TEXT],
+    ),
     builder=ModelBuilder.GOOGLE,
     provider=ModelAPIProvider.OPENROUTER,
     id_on_provider="google/gemini-2.5-flash",
@@ -824,6 +831,24 @@ CHAT_TEXT_MODELS = [
     GEMINI_2_5_FLASH_LITE,
     GEMINI_2_5_FLASH,
 ]
+
+# OpenRouter route that accepts chat messages with image_url parts when the configured
+# catalog model is text-only (e.g. DeepSeek).
+VISION_FALLBACK_CHAT_MODEL_ID = GEMINI_2_5_FLASH.id_on_provider
+
+
+def catalog_chat_model_supports_image_input(resolved_model_id: str) -> Optional[bool]:
+    """
+    If resolved_model_id matches CHAT_TEXT_MODELS, return whether IMAGE is listed in
+    modalities.inputs. Otherwise None (custom OpenRouter id: caller does not auto-switch).
+    """
+    norm = (resolved_model_id or "").strip().lower()
+    if not norm:
+        return None
+    for model in CHAT_TEXT_MODELS:
+        if model.id_on_provider.lower() == norm:
+            return DataModality.IMAGE in model.modalities.inputs
+    return None
 
 
 def resolve_chat_model_to_id(value: str) -> str:

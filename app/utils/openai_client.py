@@ -23,7 +23,7 @@ LLM_PROVIDER_LITELLM = "litellm"
 import os
 import threading
 from enum import StrEnum
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.messages import BaseMessage
 from loguru import logger
@@ -280,6 +280,24 @@ def langchain_message_to_openai_message(
     if name:
         res["name"] = name
     return res
+
+
+def openai_messages_include_image_parts(messages: List[Dict[str, Any]]) -> bool:
+    """
+    Return True if any message uses OpenAI multimodal content with an image part
+    (e.g. type image_url), which requires a vision-capable chat model on OpenRouter.
+    """
+    for msg in messages:
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if not isinstance(part, dict):
+                continue
+            ptype = part.get("type")
+            if ptype in ("image_url", "input_image"):
+                return True
+    return False
 
 
 if __name__ == "__main__":

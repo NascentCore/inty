@@ -50,11 +50,17 @@ from app.services.cache_service import cache_service
 from app.services.messages_compaction_service import (
     maybe_compact_and_save_overflow_history,
 )
-from app.utils.models_catalog import is_deepseek_on_openrouter, resolve_chat_model_to_id
+from app.utils.models_catalog import (
+    catalog_chat_model_supports_image_input,
+    is_deepseek_on_openrouter,
+    resolve_chat_model_to_id,
+    VISION_FALLBACK_CHAT_MODEL_ID,
+)
 from app.utils.openai_client import (
     get_chat_llm_provider,
     get_chat_openai_client,
     langchain_message_to_openai_message,
+    openai_messages_include_image_parts,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
 from app.core.user_time_context_prompt import build_user_time_context_markdown
@@ -1210,6 +1216,30 @@ class Agent:
 
         return False
 
+    def _maybe_upgrade_model_for_vision_chat(
+        self,
+        resolved_model_id: str,
+        openai_messages: List[Dict[str, Any]],
+    ) -> str:
+        """
+        OpenRouter returns 404-style errors when messages contain image parts but the
+        routed model has no vision endpoint. If the configured model is a known
+        text-only CHAT_TEXT_MODELS entry, switch to VISION_FALLBACK_CHAT_MODEL_ID.
+        """
+        if not openai_messages_include_image_parts(openai_messages):
+            return resolved_model_id
+        caps = catalog_chat_model_supports_image_input(resolved_model_id)
+        if caps is not False:
+            return resolved_model_id
+        logger.warning(
+            "Vision chat input is present but model {} is catalog text-only; "
+            "using {} for this request (agent_id={})",
+            resolved_model_id,
+            VISION_FALLBACK_CHAT_MODEL_ID,
+            self.agent_id,
+        )
+        return VISION_FALLBACK_CHAT_MODEL_ID
+
     def _call_openai_api_with_retry(
         self,
         client: OpenAI,
@@ -1525,6 +1555,9 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
+                model_name = self._maybe_upgrade_model_for_vision_chat(
+                    model_name, openai_messages
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
@@ -1876,6 +1909,9 @@ class Agent:
                         "模型未配置：角色与订阅层均未指定 model，请在配置或角色设置中指定 model"
                     )
                 model_name = resolve_chat_model_to_id(model_name)
+                model_name = self._maybe_upgrade_model_for_vision_chat(
+                    model_name, openai_messages
+                )
                 temperature = self.model_config.get("temperature", default_temperature)
                 max_tokens = self.model_config.get("max_tokens", default_max_tokens)
                 top_p = self.model_config.get("top_p", default_top_p)
