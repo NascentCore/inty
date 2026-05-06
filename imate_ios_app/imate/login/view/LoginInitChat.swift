@@ -15,16 +15,12 @@ struct InitChatColors {
     static let agentBubbleBorder = Color(white: 0.2)
     static let progressTrack = Color(white: 0.1)
     static let textFieldBg = Color(white: 0.12)
-    static let divider = Color(white: 0.15)
+//    static let divider = Color(white: 0.15)
 }
 
 struct LoginInitChat: View {
     @EnvironmentObject var router: Router
     @StateObject var vm = LoginInitChatVM()
-    
-//    @State private var messages: [String] = ["Hello! I'm your AI companion.", "What's your name?", "fwefwe2"]
-//    @State private var inputText: String = ""
-//    @State private var progress: Double = 0.3
     
     var body: some View {
         ZStack() {
@@ -49,6 +45,7 @@ struct LoginInitChat: View {
                 } else if vm.steps == .step5 {
                     LoginInitChatWidgets.ButtonFinish(onFinish: goChat)
                 } else {
+                    Divider()
                     LoginInitChatWidgets.InputBar(
                         inputText: $vm.inputText,
                         onSend: vm.sendMessage,
@@ -61,6 +58,9 @@ struct LoginInitChat: View {
         }
         .background(Color.black.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
+        .task {
+            vm.startConversation()
+        }
     }
     
     private func goChat() {

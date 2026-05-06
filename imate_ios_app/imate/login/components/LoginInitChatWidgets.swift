@@ -160,6 +160,7 @@ enum LoginInitChatWidgets {
                     VStack(spacing: 12) {
                         ForEach(messages) { msg in
                             ChatBubble(message: msg)
+                                .transition(.chatBubble)
                                 .id(msg.id)
                         }
                         
@@ -173,9 +174,14 @@ enum LoginInitChatWidgets {
 //                    if let last = messages.last {
 //                        proxy.scrollTo(last.id, anchor: .bottom)
 //                    }
-                    withAnimation{
-                        proxy.scrollTo("BOTTOM", anchor: .bottom)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("BOTTOM", anchor: .bottom)
+                        }
                     }
+//                    withAnimation{
+//                        proxy.scrollTo("BOTTOM", anchor: .bottom)
+//                    }
                 }
             }
         }
@@ -195,6 +201,10 @@ enum LoginInitChatWidgets {
                     .background(message.isUser ? Color.purple : Color.gray.opacity(0.3))
                     .foregroundColor(.white)
                     .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color(hex: 0x26C567F5), lineWidth: 2)
+                    )
 
                 if !message.isUser { Spacer() }
             }
