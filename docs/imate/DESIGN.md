@@ -54,7 +54,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 ## WebSocket 入口与是否走 companion
 
 1. `chat_completions_websocket` 接受连接、解析 `current_user`、可选 `assume_user_id`、读取头 `appVersionCode`。
-2. 若 query 带 `agent_id`，可调用 `_try_send_ws_user_interactive_bootstrap_kickoff` 发**最多一条**主动 assistant JSON（仅用于 interactive bootstrap 开屏；受 `app.features.companion_workspace_bootstrap_type` 等配置约束）。
+2. 服务端不在 `accept` 后推送 connect-time kickoff；客户端用 `messageType: IMPLICIT_USER_SIGNED_ON` 聊天帧触发首轮问候（文案见 `/app/core/agentic_kernel/companion/implicit_signal_messages.py`）。Query `agent_id` 仍为 REPL 等场景的 URL 约定。
 3. 主循环：解析 `ChatWebSocketRequest`、合并时间上下文、调用 `_agent_chat_completions_impl(..., chat_route="websocket")`。
 4. 在 `_agent_chat_completions_impl` 中 `use_companion = (chat_route == "websocket")`。为真时，自然语言回复由 `companion_chat_service.run_companion_chat_turn_for_api` 产生，**不**走 `Agent.generate_message...`。
 
@@ -64,8 +64,6 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
   - 从 `global_config_loaded_from_config_yaml` 构建 `CompanionConfig` / `CompanionLLMConfig`（`app.features`、`agent.chat_llm_*`、`agent.api_key`、`database.url` 作为 MemoryStore 的 DSN 等）。
   - 按「解析后的 chat 模型 id + 运行时指纹」LRU 缓存 `CompanionManager`。
   - `run_companion_chat_turn_for_api`：`get_or_create_session`、可选 `_maybe_append_companion_ws_session_system`（仅 **`USER_INTERACTIVE`** bootstrap）、再 `manager.run_turn`。
-  - `run_companion_interactive_bootstrap_kickoff_for_ws`：连接阶段 kickoff，内部用户句来自 `bootstrap_user_interactive.py` 的常量。
-
 - **`app/core/agentic_kernel/companion/manager.py`**
   - `get_or_create_session`：按 workspace 路径注册 `MemoryStore`、写入最小种子文档、`ensure_minimal_workspace_documents_in_store`。
   - `run_turn`：薄封装，调用 `companion.turn.run_turn`。
@@ -91,7 +89,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 | `NONE`（默认） | 最小种子文档入 store | 每条用户消息均为 `run_turn` |
 | `USER_INTERACTIVE` | 同上 + `context.json` 等交互阶段标记 | 仍为 `run_turn`；模型通过 `companion_update_prompt_slice` / `companion_bootstrap_user_interactive_complete`（见 `bootstrap_user_interactive.py`）；SOUL 锁定等与 `memory_pipeline`、`companion_tool_runtime` 协同 |
 
-实现入口：`manager.py`（session）、`companion_chat_service.py`（分支与 WS kickoff）。
+实现入口：`manager.py`（session）、`companion_chat_service.py`（分支与首轮 `run_turn`）。
 
 ## WebSocket companion 路径会用到的共享内核
 
