@@ -950,6 +950,7 @@ def start_tool_background_job(
     enable_async_tool_background: bool = False,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
+
     def _effective_on_event(ev: ToolOutputEvent) -> None:
         if on_event is not None:
             on_event(ev)
