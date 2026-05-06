@@ -516,7 +516,8 @@ _worker_lock = threading.Lock()
 
 
 def _memory_worker_loop() -> None:
-    assert _memory_queue is not None
+    if _memory_queue is None:
+        raise RuntimeError("memory worker started before queue initialization")
     while True:
         paths, store, user_text, assistant_text, complete_fn, config = (
             _memory_queue.get()

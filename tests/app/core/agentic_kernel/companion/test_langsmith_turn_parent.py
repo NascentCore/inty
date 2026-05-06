@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -221,7 +222,7 @@ class _FakeAsyncDualLLMClient:
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def _resolve_model(self, role: str) -> str:
+    def resolve_model(self, role: str) -> str:
         return f"m/{role}"
 
     def chat_completion(self, **kwargs: Any) -> Any:
@@ -240,6 +241,10 @@ class _FakeAsyncDualLLMClient:
 
     def sync_client_for_route(self, route: str) -> object:
         return object()
+
+    @property
+    def chat_completions_sync(self):
+        return create_chat_completion_sync
 
     def complete_text(
         self, messages: list[dict[str, Any]], *, model_role: str = "memory"
@@ -292,3 +297,4 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
 
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["langsmith_parent_run"] is sentinel
+    assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync

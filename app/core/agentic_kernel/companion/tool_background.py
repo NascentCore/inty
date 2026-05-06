@@ -22,13 +22,14 @@ from app.services.agent_status_line import (
 )
 from app.utils.config import CompanionWorkspaceBootstrapType
 
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
+from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
 )
 
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
-    create_chat_completion_sync,
     end_companion_turn_root_run_safe,
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
@@ -347,6 +348,8 @@ def background_tasks_count() -> int:
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:
+    # TODO(companion-dual-envelope-reasoning-channel): Tool-background path only reads ``.content``;
+    # same provider quirk as foreground ``turn.py`` when switching reasoning-heavy chat models.
     content = resp.choices[0].message.content
     if not isinstance(content, str):
         preview = repr(content)
@@ -379,6 +382,7 @@ class _InitialToolBgCompletionMeta:
 
 def _initial_tool_bg_completion_with_fallbacks(
     client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
     *,
     model: str,
     messages_payload: list[dict[str, Any]],
@@ -408,7 +412,7 @@ def _initial_tool_bg_completion_with_fallbacks(
     last_br: BadRequestError | None = None
     for rf, tc in attempts:
         try:
-            resp = create_chat_completion_sync(
+            resp = chat_completion_sync(
                 client,
                 model=model,
                 messages_payload=messages_payload,
@@ -535,6 +539,7 @@ async def _run_background_tool_loop(
     on_event: Callable[[ToolOutputEvent], None],
     execute_tool_call_fn: Callable[..., Any],
     client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
@@ -585,6 +590,7 @@ async def _run_background_tool_loop(
         initial_response, initial_meta = await asyncio.to_thread(
             _initial_tool_bg_completion_with_fallbacks,
             resolved_client,
+            chat_completion_sync,
             model=tool_model_name,
             messages_payload=payload,
             tools=tools,
@@ -738,7 +744,7 @@ async def _run_background_tool_loop(
                 )
             )
             next_resp = await asyncio.to_thread(
-                create_chat_completion_sync,
+                chat_completion_sync,
                 resolved_client,
                 model=tool_model_name,
                 messages_payload=inner_payload,
@@ -818,7 +824,7 @@ async def _run_background_tool_loop(
         routing = resolve_tool_bg_routing_sync(
             client=resolved_client,
             model=tool_model_name,
-            create_completion_sync=create_chat_completion_sync,
+            create_completion_sync=chat_completion_sync,
             conversation_messages=list(loop_result.messages),
             final_assistant_content=raw_final,
             trace_id=trace_id,
@@ -936,6 +942,7 @@ def start_tool_background_job(
     on_event: Callable[[ToolOutputEvent], None] | None = None,
     execute_tool_call_fn: Callable[..., Any] = execute_tool_call,
     client: Any,
+    chat_completions_sync: ChatCompletionsSyncPort | None = None,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
@@ -944,6 +951,7 @@ def start_tool_background_job(
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
     enable_async_tool_background: bool = False,
 ) -> None:
+    sync_port = chat_completions_sync or create_chat_completion_sync
     def _effective_on_event(ev: ToolOutputEvent) -> None:
         if on_event is not None:
             on_event(ev)
@@ -968,6 +976,7 @@ def start_tool_background_job(
                     on_event=_effective_on_event,
                     execute_tool_call_fn=execute_tool_call_fn,
                     client=client,
+                    chat_completion_sync=sync_port,
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,

@@ -80,7 +80,7 @@ from .heartbeat import (
 )
 from .implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
-    USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT,
+    USER_SIGNED_ON_TRIGGER_USER_TEXT,
 )
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
@@ -166,8 +166,8 @@ async def run_turn(
     logger.debug(
         "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
         llm_client.config.api_base,
-        llm_client._resolve_model("chat"),
-        llm_client._resolve_model("tool"),
+        llm_client.resolve_model("chat"),
+        llm_client.resolve_model("tool"),
     )
 
     # 加载 context 与 prompt bundle
@@ -236,9 +236,8 @@ async def run_turn(
     if tick_proactive:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
     if implicit_sign_on_turn:
-        messages.append(
-            {"role": "system", "content": USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT}
-        )
+        # Tail user (not system): same copy as trailing system caused repetitive greetings.
+        messages.append({"role": "user", "content": USER_SIGNED_ON_TRIGGER_USER_TEXT})
     else:
         messages.append({"role": "user", "content": user_text})
 
@@ -273,8 +272,8 @@ async def run_turn(
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
-            chat_model=llm_client._resolve_model("chat"),
-            tool_model=llm_client._resolve_model("tool"),
+            chat_model=llm_client.resolve_model("chat"),
+            tool_model=llm_client.resolve_model("tool"),
             user_id=context.user_id,
             companion_id=context.companion_id,
         )
@@ -336,8 +335,8 @@ async def run_turn(
                     tool_msgs = _replace_leading_system_messages_multi(
                         messages, tool_system_msgs
                     )
-                    chat_model = llm_client._resolve_model("chat")
-                    tool_model = llm_client._resolve_model("tool")
+                    chat_model = llm_client.resolve_model("chat")
+                    tool_model = llm_client.resolve_model("tool")
 
                     def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
                         if background_output_sink is not None:
@@ -355,6 +354,7 @@ async def run_turn(
                         on_event=_kernel_bg_on_event,
                         execute_tool_call_fn=repl_execute_tool_call,
                         client=llm_client.sync_client_for_route("tool"),
+                        chat_completions_sync=llm_client.chat_completions_sync,
                         write_allowlist=WRITABLE_RELATIVE_PATHS,
                         repository_only_workspace_text=repository_only_workspace_text,
                         main_event_loop=asyncio.get_running_loop(),
@@ -416,6 +416,10 @@ async def run_turn(
                         LLM_SCENE_CHAT,
                     )
                     msg = resp.choices[0].message
+                    # TODO(companion-dual-envelope-reasoning-channel): If ``msg.content`` is empty
+                    # but the model filled ``reasoning`` / ``reasoning_details``, dual envelope parse
+                    # yields empty assistant text and API returns 500. See
+                    # ``app/core/agentic_kernel/llm/chat_completions.py`` (TODO tag).
                     raw_content = msg.content or ""
                     last_text, significance_meta = split_dual_llm_chat_branch_content(
                         raw_content
@@ -438,7 +442,7 @@ async def run_turn(
                 else:
                     for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
                         t_api = time.perf_counter()
-                        resolved_model = llm_client._resolve_model(
+                        resolved_model = llm_client.resolve_model(
                             "tool" if tools else "chat"
                         )
                         logger.debug(
@@ -496,6 +500,8 @@ async def run_turn(
                         messages.append(openai_assistant_message_dict(msg))
 
                         if not tool_calls:
+                            # TODO(companion-dual-envelope-reasoning-channel): Same as async foreground
+                            # branch above when ``msg.content`` is null; grep tag for full note.
                             raw_content = msg.content or ""
                             if use_dual_structured_chat:
                                 last_text, significance_meta = (
@@ -601,8 +607,8 @@ async def run_turn(
     assistant_msg_uuid = str(uuid.uuid4())
     if implicit_sign_on_turn:
         sign_on_row: dict[str, Any] = {
-            "role": "system",
-            "content": USER_SIGNED_ON_TRIGGER_SYSTEM_TEXT,
+            "role": "user",
+            "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
             "ts": ts_user,
             "uuid": user_msg_uuid,
             "trace_id": trace_id,

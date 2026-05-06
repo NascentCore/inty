@@ -125,6 +125,12 @@ fun ChatScreen(modifier: Modifier = Modifier) {
         viewModel.refreshAgentFromServer()
     }
 
+    LaunchedEffect(agentId, wsConnected) {
+        if (wsConnected && agentId.isNotBlank()) {
+            viewModel.sendImplicitUserSignedOnIfNeeded(agentId)
+        }
+    }
+
     if (!wsConnected && !hasWsEver) {
         ChatWebSocketLoadingScreen(modifier = modifier.fillMaxSize())
         return

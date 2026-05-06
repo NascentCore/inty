@@ -251,7 +251,8 @@ async def _try_handle_ws_user_signed_on_frame(
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
     Product intent: companion should mimic a person who sees the user come online and can
-    greet proactively (see ``/docs/FR_USER_SIGN_ON_GREETINGS.md``); this frame is the
+    greet proactively when the client also sends ``messageType: IMPLICIT_USER_SIGNED_ON``
+    (trigger copy in ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``); this frame is the
     client-side online signal. It also arms proactive heartbeat coords before the first chat
     frame; legacy clients that omit it still get coords after any successful companion turn.
 
@@ -1109,8 +1110,7 @@ async def _agent_chat_completions_impl(
             )
 
         # TODO(implicit-sign-on): If _agent_chat_completions_impl is split into helpers, pass
-        # implicit_signed_on_ws explicitly into companion / persistence paths. Background:
-        # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+        # implicit_signed_on_ws explicitly into companion / persistence paths.
         implicit_signed_on_ws = (
             chat_route == "websocket"
             and request.message_type
@@ -1189,7 +1189,6 @@ async def _agent_chat_completions_impl(
                 )
                 # TODO(implicit-sign-on): USER_MESSAGE + image-only still uses this generic 400;
                 # IMPLICIT_USER_SIGNED_ON + image is rejected earlier with a different message.
-                # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
                 if (
                     use_companion
                     and (not implicit_signed_on_ws)
@@ -1296,6 +1295,9 @@ async def _agent_chat_completions_impl(
                     )
                     response_content = companion_reply
                     if response_content is None or not str(response_content).strip():
+                        # TODO(companion-dual-envelope-reasoning-channel): Root cause is usually upstream:
+                        # structured chat completion has empty ``message.content`` while LangSmith shows
+                        # output under ``reasoning``. Compare trace vs ``deepseek-v4-pro`` vs ``v3.2``.
                         logger.error(
                             f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
                         )
@@ -1451,8 +1453,7 @@ async def _agent_chat_completions_impl(
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
                 # TODO(implicit-sign-on): Implicit sign-on still increments chat usage like a normal
-                # turn; product may exempt IMPLICIT_USER_SIGNED_ON from limits later. See
-                # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+                # turn; product may exempt IMPLICIT_USER_SIGNED_ON from limits later.
                 usage_extra: dict[str, Any] = {
                     "agent_id": agent_id,
                     "message_length": len(last_user_text),
@@ -1696,119 +1697,6 @@ async def agent_chat_completions(
     )
 
 
-async def _try_send_ws_user_interactive_bootstrap_kickoff(
-    websocket: WebSocket,
-    *,
-    db: AsyncSession,
-    current_user: schemas.User,
-    agent_id: str,
-    subscription_svc: SubscriptionService,
-    outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
-) -> None:
-    """
-    When the client passes ``agent_id`` as a WebSocket query param, send at most one proactive
-    assistant message to start USER_INTERACTIVE bootstrap before the first user chat frame.
-    """
-    try:
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
-        )
-        if chat.agent_id != agent_id:
-            return
-        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
-            db, current_user
-        )
-        if not is_allowed:
-            logger.info(
-                "ws interactive bootstrap kickoff skipped (subscription) user={} used={} limit={}",
-                current_user.id,
-                used_count,
-                daily_limit,
-            )
-            return
-        session_id = generate_session_id(str(chat.id))
-        subscription = await subscription_svc.get_user_current_subscription(
-            db, current_user.id
-        )
-        is_subscribed = bool(subscription)
-        model_override = select_chat_model(
-            user=current_user, is_subscribed=is_subscribed
-        )
-        kick_turn = await companion_chat_service.run_companion_interactive_bootstrap_kickoff_for_ws(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=chat.id,
-            session_id=session_id,
-            resolved_chat_model_id=model_override,
-        )
-        if kick_turn is None:
-            return
-        kick_reply = kick_turn.assistant_text
-        kick_meta = _companion_ai_meta_from_turn_result(kick_turn)
-        kick_meta["messageType"] = "companion_ws_interactive_bootstrap_kickoff"
-        ai_message_id = await chat_history_service.add_ai_message_sync_async(
-            session_id,
-            kick_reply,
-            agent_id=chat.agent_id,
-            meta_data=kick_meta,
-        )
-        try:
-            await subscription_svc.record_usage(
-                db,
-                current_user.id,
-                "chat",
-                1,
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_length": 0,
-                    "ws_interactive_bootstrap_kickoff": True,
-                },
-            )
-        except Exception as e:
-            logger.warning("record_usage ws kickoff failed: {}", str(e))
-
-        latest_message_info = None
-        if ai_message_id is not None:
-            try:
-                latest_message_info = (
-                    await chat_history_service.get_ai_message_info_by_id(
-                        db, ai_message_id
-                    )
-                )
-            except Exception as e:
-                logger.warning(
-                    "ws kickoff get_ai_message_info_by_id failed: {}", str(e)
-                )
-
-        kick_req = ChatCompletionRequest(
-            messages=[ChatMessage(role="user", content="")],
-        )
-        data = _build_chat_response(
-            kick_reply,
-            None,
-            "",
-            latest_message_info,
-            None,
-            kick_req,
-            source_imate_id=None,
-            user_message_id=None,
-            subscription_actions=None,
-            client_local_id=None,
-        )
-        payload = schemas.APIResponse.success(data=data)
-        out = payload.model_dump(exclude_none=True)
-        out["agent_id"] = agent_id
-        out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
-        if outbound_queue is not None:
-            await outbound_queue.put(out)
-        else:
-            await websocket.send_json(out)
-    except Exception:
-        logger.exception(
-            "ws interactive bootstrap kickoff failed agent_id={}", agent_id
-        )
-
-
 @router.websocket("/ws")
 async def chat_completions_websocket(
     websocket: WebSocket,
@@ -1842,17 +1730,6 @@ async def chat_completions_websocket(
         chat_ws_outbound_pump(websocket, outbound_queue),
         name="chat_ws_outbound_pump",
     )
-
-    kick_agent_id = (websocket.query_params.get("agent_id") or "").strip()
-    if kick_agent_id:
-        await _try_send_ws_user_interactive_bootstrap_kickoff(
-            websocket,
-            db=db,
-            current_user=current_user,
-            agent_id=kick_agent_id,
-            subscription_svc=subscription_svc,
-            outbound_queue=outbound_queue,
-        )
 
     tc_box: list[Optional[dict]] = [None]
     ws_fg_pending: dict[str, dict[str, Any]] = {}
