@@ -29,7 +29,7 @@ class _FakeAsyncDualLLMClient:
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def _resolve_model(self, role: str) -> str:
+    def resolve_model(self, role: str) -> str:
         return f"m/{role}"
 
     def chat_completion(self, **kwargs: Any) -> Any:

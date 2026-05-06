@@ -175,7 +175,8 @@ class CompanionLLMClient:
             return self._ensure_inner_tick_client()
         return self._client
 
-    def _resolve_model(self, role: str) -> str:
+    def resolve_model(self, role: str) -> str:
+        """Return model id for a config role (``chat``, ``tool``, ``memory``, ...), else ``default_model``."""
         model = getattr(self._config, f"{role}_model", "") or ""
         return model if model else self._config.default_model
 
@@ -197,14 +198,14 @@ class CompanionLLMClient:
         )
         if resolved_scene == LLM_SCENE_INNER_TICK:
             client = self._ensure_inner_tick_client()
-            m = model or self._resolve_model("tool" if tool_list else "chat")
+            m = model or self.resolve_model("tool" if tool_list else "chat")
         elif resolved_scene == LLM_SCENE_TOOL_CALL:
             client = self._ensure_dual_tool_client()
-            m = model or self._resolve_model("tool")
+            m = model or self.resolve_model("tool")
         else:
             client = self._ensure_dual_chat_client()
-            m = model or self._resolve_model("chat")
-        return create_chat_completion_sync(
+            m = model or self.resolve_model("chat")
+        return self.chat_completions_sync(
             client,
             model=m,
             messages_payload=messages,
@@ -222,8 +223,8 @@ class CompanionLLMClient:
         tool_choice: str | None = None,
     ) -> Any:
         """Single client path (no dual routing), for bootstrap or tests."""
-        m = model or self._resolve_model("tool" if tools else "chat")
-        return create_chat_completion_sync(
+        m = model or self.resolve_model("tool" if tools else "chat")
+        return self.chat_completions_sync(
             self._client,
             model=m,
             messages_payload=messages,
@@ -237,10 +238,15 @@ class CompanionLLMClient:
         *,
         model_role: str = "memory",
     ) -> str:
-        m = self._resolve_model(model_role)
+        m = self.resolve_model(model_role)
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
         t_api = time.perf_counter()
-        resp = self._client.chat.completions.create(model=m, messages=messages)
+        resp = self.chat_completions_sync(
+            self._client,
+            model=m,
+            messages_payload=messages,
+            tools=[],
+        )
         api_ms = (time.perf_counter() - t_api) * 1000.0
         logger.info(
             "companion complete_text model_role={} model={} chat_completions_ms={:.0f} approx_chars={}",
