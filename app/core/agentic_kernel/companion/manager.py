@@ -60,6 +60,11 @@ class CompanionConfig(BaseModel):
     # uses companion.models.TRANSCRIPT_WINDOW_MAX_MESSAGES.
     transcript_llm_window_max_messages: int | None = None
 
+    # None: LangSmith companion parent RunTree follows app-wide policy
+    # (``companion_turn_langsmith_parent_enabled_from_app_config``). True/False: force on or off
+    # for all ``CompanionManager.run_turn`` calls using this config.
+    langsmith_companion_parent_run_enabled: bool | None = None
+
     @field_validator("default_context_mode")
     @classmethod
     def _validate_default_context_mode(cls, v: str) -> str:
@@ -212,7 +217,12 @@ class CompanionManager:
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
     ) -> CompanionTurnResult:
         """执行一轮对话。"""
-        ls_parent_enabled = companion_turn_langsmith_parent_enabled_from_app_config()
+        override = session.config.langsmith_companion_parent_run_enabled
+        ls_parent_enabled = (
+            companion_turn_langsmith_parent_enabled_from_app_config()
+            if override is None
+            else override
+        )
         return await run_turn(
             session.workspace_path,
             user_text,
