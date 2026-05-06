@@ -28,7 +28,7 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
-    def _resolve_model(self, role: str) -> str:
+    def resolve_model(self, role: str) -> str:
         return f"test/{role}"
 
     def chat_completion(self, **kwargs: Any) -> Any:

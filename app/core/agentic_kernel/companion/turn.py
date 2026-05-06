@@ -166,8 +166,8 @@ async def run_turn(
     logger.debug(
         "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
         llm_client.config.api_base,
-        llm_client._resolve_model("chat"),
-        llm_client._resolve_model("tool"),
+        llm_client.resolve_model("chat"),
+        llm_client.resolve_model("tool"),
     )
 
     # 加载 context 与 prompt bundle
@@ -272,8 +272,8 @@ async def run_turn(
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
-            chat_model=llm_client._resolve_model("chat"),
-            tool_model=llm_client._resolve_model("tool"),
+            chat_model=llm_client.resolve_model("chat"),
+            tool_model=llm_client.resolve_model("tool"),
             user_id=context.user_id,
             companion_id=context.companion_id,
         )
@@ -335,8 +335,8 @@ async def run_turn(
                     tool_msgs = _replace_leading_system_messages_multi(
                         messages, tool_system_msgs
                     )
-                    chat_model = llm_client._resolve_model("chat")
-                    tool_model = llm_client._resolve_model("tool")
+                    chat_model = llm_client.resolve_model("chat")
+                    tool_model = llm_client.resolve_model("tool")
 
                     def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
                         if background_output_sink is not None:
@@ -442,7 +442,7 @@ async def run_turn(
                 else:
                     for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
                         t_api = time.perf_counter()
-                        resolved_model = llm_client._resolve_model(
+                        resolved_model = llm_client.resolve_model(
                             "tool" if tools else "chat"
                         )
                         logger.debug(

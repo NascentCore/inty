@@ -140,8 +140,8 @@ def build_turn_runtime_config_dict(
     llm_dump = cfg.model_dump()
     key = (cfg.api_key or "").strip()
     llm_dump["api_key"] = "***" if key else ""
-    rm_chat = llm_client._resolve_model("chat")
-    rm_tool = llm_client._resolve_model("tool")
+    rm_chat = llm_client.resolve_model("chat")
+    rm_tool = llm_client.resolve_model("tool")
     return {
         "source": "run_turn",
         "context_mode": context.context_mode,
