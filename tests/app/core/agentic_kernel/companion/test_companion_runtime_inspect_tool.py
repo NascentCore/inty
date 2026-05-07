@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.core.agentic_kernel.companion import runtime_inspect_context as ric
 from app.core.agentic_kernel.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
@@ -154,7 +156,10 @@ def test_tool_side_compact_mentions_inspect() -> None:
     assert "companion_runtime_inspect" in text
 
 
-def test_run_turn_inspect_snapshot_during_tool_call(tmp_path: Path) -> None:
+def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tools run only in tool_background; foreground ``run_turn`` completes dual-LLM chat."""
     from app.core.agentic_kernel.companion.turn import run_turn
 
     root = tmp_path
@@ -173,59 +178,32 @@ def test_run_turn_inspect_snapshot_during_tool_call(tmp_path: Path) -> None:
         )
     )
 
-    def _mk_msg(content: str, tool_calls: list[Any]) -> MagicMock:
-        msg = MagicMock()
-        msg.content = content
-        msg.tool_calls = tool_calls
-        ch = MagicMock()
-        ch.message = msg
-        r = MagicMock()
-        r.choices = [ch]
-        return r
+    env = {
+        "user_facing_reply": "final assistant",
+        "importance_round": 1,
+        "importance_user_message": 1,
+        "importance_assistant_message": 1,
+    }
+    msg = MagicMock()
+    msg.content = json.dumps(env)
+    msg.tool_calls = []
+    ch = MagicMock()
+    ch.message = msg
+    r = MagicMock()
+    r.choices = [ch]
 
-    fn = MagicMock()
-    fn.name = "companion_runtime_inspect"
-    fn.arguments = "{}"
-    tc = MagicMock()
-    tc.id = "tc-1"
-    tc.function = fn
-    r1 = _mk_msg("", [tc])
-    r2 = _mk_msg("final assistant", [])
+    from app.core.agentic_kernel.companion import turn as turn_mod
 
-    with patch.object(
-        client,
-        "chat_completion",
-        side_effect=[r1, r2],
-    ):
+    monkeypatch.setattr(turn_mod, "start_tool_background_job", lambda **kwargs: None)
 
-        async def _assert_bundle_then_delegated(
-            r: Path, name: str, args: str, **kw: object
-        ) -> str:
-            if name == "companion_runtime_inspect":
-                b = ric.runtime_inspect_get_bundle()
-                assert b is not None
-                assert b["runtime_config"] is not None
-                lr = b["last_chat_completion_request"]
-                assert lr is not None
-                assert lr["model"] == "snap/model"
-                assert any(
-                    m.get("role") == "user" and m.get("content") == "user line"
-                    for m in lr["messages"]
-                    if isinstance(m, dict)
-                )
-                assert "secret-key" not in json.dumps(b["runtime_config"])
-            return await execute_tool_call(r, name, args, **kw)
-
-        with patch(
-            "app.core.agentic_kernel.companion.turn.repl_execute_tool_call",
-            side_effect=_assert_bundle_then_delegated,
-        ):
-            out = asyncio.run(
-                run_turn(
-                    root,
-                    "user line",
-                    store=store,
-                    llm_client=client,
-                )
+    with patch.object(client, "chat_completion", return_value=r):
+        out = asyncio.run(
+            run_turn(
+                root,
+                "user line",
+                store=store,
+                llm_client=client,
             )
+        )
     assert out.assistant_text == "final assistant"
+    assert out.tool_background_started is True

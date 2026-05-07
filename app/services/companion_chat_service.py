@@ -12,10 +12,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from app.core.agentic_kernel.companion.llm_client import (
-    CompanionLLMConfig,
-    async_tool_background_enabled_from_env,
-)
+from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.turn_routes import BackgroundToolEventSink
 from app.core.agentic_kernel.companion.manager import (
     CompanionConfig,
@@ -77,7 +74,6 @@ def _companion_runtime_config_fingerprint() -> str:
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
         "companion_repo_only_ws_v1",
         "companion_db_only_workspace_v3_orm",
-        str(async_tool_background_enabled_from_env()),
         os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600") or "",
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
@@ -108,7 +104,6 @@ def _companion_manager_for_resolved_model(
         day_summary_model=resolved_chat_model_id,
         user_model=resolved_chat_model_id,
         soul_model=resolved_chat_model_id,
-        enable_async_tool_background=async_tool_background_enabled_from_env(),
         async_chat_front_timeout_sec=async_chat_timeout,
     )
     tc_raw = feats.companion_transcript_compaction

@@ -49,6 +49,9 @@ from app.core.agentic_kernel.companion.heartbeat import (
 from app.core.agentic_kernel.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
+from app.core.agentic_kernel.companion.image_gate import (
+    generated_image_meta_from_index_slice,
+)
 from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.model_selection import select_chat_model
@@ -735,6 +738,9 @@ async def _build_companion_tool_background_ws_payload(
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
     if ev.langsmith_run_id:
         meta_data["langsmith_run_id"] = ev.langsmith_run_id
+    gi = generated_image_meta_from_index_slice(ev.workspace, ev.image_asset_baseline)
+    if gi:
+        meta_data["generated_image"] = gi
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -1247,7 +1253,7 @@ async def _agent_chat_completions_impl(
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
-                            and not companion_turn.used_async_tool_background
+                            and not companion_turn.tool_background_started
                         ):
                             companion_ws_foreground_pending.pop(
                                 companion_preset_uid, None

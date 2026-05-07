@@ -35,6 +35,7 @@ from .llm_chat_runtime import (
     langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
+from .image_gate import list_image_asset_records
 from .memory_registry import get_memory_store
 from .models import InnerTickMode
 from .prompt_stack import refresh_companion_turn_prompt_stack
@@ -290,6 +291,7 @@ class ToolOutputEvent:
     langsmith_run_id: str = ""
     output_to_user: bool = False
     generation_deliver: bool = False
+    image_asset_baseline: int = 0
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -544,8 +546,8 @@ async def _run_background_tool_loop(
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
-    enable_async_tool_background: bool = False,
 ) -> None:
+    image_asset_baseline = len(list_image_asset_records(ws_root.resolve()))
     try:
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -775,7 +777,6 @@ async def _run_background_tool_loop(
                 workspace_bootstrap_type=workspace_bootstrap_type,
                 inner_tick_turn=False,
                 inner_tick_mode=InnerTickMode.MAINTENANCE,
-                enable_async_tool_background=enable_async_tool_background,
                 messages=messages_with_tool_results,
                 tool_side_compact_system_prompt=True,
             )
@@ -924,6 +925,7 @@ async def _run_background_tool_loop(
                 langsmith_run_id=bg_ls_llm_run,
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
+                image_asset_baseline=image_asset_baseline,
             )
         )
     finally:
@@ -949,7 +951,6 @@ def start_tool_background_job(
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
-    enable_async_tool_background: bool = False,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -982,7 +983,6 @@ def start_tool_background_job(
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,
                     workspace_bootstrap_type=workspace_bootstrap_type,
-                    enable_async_tool_background=enable_async_tool_background,
                 )
             )
 

@@ -99,7 +99,6 @@ def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path: Path) -> None:
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
         inner_tick_turn=True,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=False,
         tool_side_compact_system_prompt=False,
     )
     joined = "\n".join(
@@ -152,7 +151,6 @@ def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
         inner_tick_turn=False,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=True,
         tool_side_compact_system_prompt=False,
         implicit_signal_bundle=bundle_sig,
         implicit_user_signed_on_turn=False,
@@ -164,7 +162,6 @@ def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
         inner_tick_turn=False,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=True,
         tool_side_compact_system_prompt=False,
         implicit_signal_bundle=bundle_sig,
         implicit_user_signed_on_turn=True,
@@ -193,12 +190,11 @@ def test_implicit_user_signed_on_turn_does_not_strip_tools_for_inner_tick(
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
         inner_tick_turn=True,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=True,
         tool_side_compact_system_prompt=False,
         implicit_user_signed_on_turn=True,
     )
     assert len(tools) > 0
-    assert route == TurnRouteMode.INNER_TICK_SYNC
+    assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     shutdown_memory_store(root.resolve())
 
 
@@ -225,7 +221,6 @@ def test_refresh_implicit_user_signed_on_returns_empty_tools(tmp_path: Path) -> 
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
         inner_tick_turn=False,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=True,
         messages=messages,
         tool_side_compact_system_prompt=False,
         implicit_signal_bundle=sig,
@@ -283,7 +278,6 @@ def test_refresh_drops_interactive_bootstrap_after_complete(tmp_path: Path) -> N
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value,
         inner_tick_turn=False,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=True,
         messages=messages,
         tool_side_compact_system_prompt=False,
     )
@@ -327,7 +321,6 @@ def test_refresh_tool_side_compact_drops_bootstrap_after_complete(tmp_path: Path
         workspace_bootstrap_type=CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value,
         inner_tick_turn=False,
         inner_tick_mode=InnerTickMode.MAINTENANCE,
-        enable_async_tool_background=True,
         messages=messages,
         tool_side_compact_system_prompt=True,
     )

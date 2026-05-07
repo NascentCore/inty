@@ -18,10 +18,8 @@ from app.utils.config import CompanionWorkspaceBootstrapType
 from .llm_client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
-    LLM_SCENE_TOOL_CALL,
     CompanionLLMClient,
 )
-from .message_format import openai_assistant_message_dict
 from .memory_pipeline import (
     MemoryPipelineConfig,
     memory_update_after_turn,
@@ -46,10 +44,7 @@ from .transcript_compaction import (
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
 )
-from .prompt_stack import (
-    companion_turn_tools_and_system_messages,
-    refresh_companion_turn_prompt_stack,
-)
+from .prompt_stack import companion_turn_tools_and_system_messages
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_content,
@@ -91,9 +86,6 @@ from .llm_chat_runtime import (
     langsmith_trace_id_from_completion,
 )
 from .workspace import WorkspacePaths
-
-_MAX_TOOL_ROUNDS = 24
-
 
 def _replace_leading_system_messages_multi(
     messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
@@ -194,7 +186,6 @@ async def run_turn(
             workspace_bootstrap_type=workspace_bootstrap_type,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=inner_tick_mode,
-            enable_async_tool_background=llm_client.config.enable_async_tool_background,
             tool_side_compact_system_prompt=False,
             include_significance_perception_slice=None,
             implicit_signal_bundle=implicit_signal_bundle,
@@ -249,11 +240,9 @@ async def run_turn(
     langsmith_trace_acc = ""
     langsmith_llm_run_acc = ""
 
-    # Tool loop
-    tools = tools_for_turn
     last_text = ""
     significance_meta: dict[str, Any] | None = None
-    used_async_tool_background = False
+    tool_background_started = False
     t_loop = time.perf_counter()
 
     inspect_token = runtime_inspect_begin_turn()
@@ -304,7 +293,7 @@ async def run_turn(
         with _langsmith_cm:
             try:
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
-                    used_async_tool_background = True
+                    tool_background_started = True
                     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
                         workspace_root=root,
                         bundle=bundle,
@@ -312,9 +301,6 @@ async def run_turn(
                         workspace_bootstrap_type=workspace_bootstrap_type,
                         inner_tick_turn=False,
                         inner_tick_mode=InnerTickMode.MAINTENANCE,
-                        enable_async_tool_background=(
-                            llm_client.config.enable_async_tool_background
-                        ),
                         tool_side_compact_system_prompt=True,
                         include_significance_perception_slice=False,
                         implicit_signal_bundle=implicit_signal_bundle,
@@ -326,9 +312,6 @@ async def run_turn(
                         workspace_bootstrap_type=workspace_bootstrap_type,
                         inner_tick_turn=False,
                         inner_tick_mode=InnerTickMode.MAINTENANCE,
-                        enable_async_tool_background=(
-                            llm_client.config.enable_async_tool_background
-                        ),
                         tool_side_compact_system_prompt=False,
                         include_significance_perception_slice=True,
                         implicit_signal_bundle=implicit_signal_bundle,
@@ -364,9 +347,6 @@ async def run_turn(
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
                         workspace_bootstrap_type=workspace_bootstrap_type,
-                        enable_async_tool_background=(
-                            llm_client.config.enable_async_tool_background
-                        ),
                     )
 
                     runtime_inspect_set_last_chat_completion_request(
@@ -444,134 +424,70 @@ async def run_turn(
                         ),
                     )
                 else:
-                    for round_idx in range(1, _MAX_TOOL_ROUNDS + 1):
-                        t_api = time.perf_counter()
-                        resolved_model = llm_client.resolve_model(
-                            "tool" if tools else "chat"
-                        )
-                        logger.debug(
-                            "run_turn llm_request round={} model={} tools_enabled={}",
-                            round_idx,
-                            resolved_model,
-                            bool(tools),
-                        )
-                        runtime_inspect_set_last_chat_completion_request(
-                            build_last_chat_completion_request_payload(
-                                model=resolved_model,
-                                messages=messages,
-                                tools=tools or None,
-                            )
-                        )
-                        llm_scene = (
-                            LLM_SCENE_INNER_TICK
-                            if inner_tick_turn and not tick_proactive
-                            else (LLM_SCENE_TOOL_CALL if tools else LLM_SCENE_CHAT)
-                        )
-                        resp = llm_client.chat_completion(
-                            messages=messages,
+                    t_api = time.perf_counter()
+                    resolved_model = llm_client.resolve_model("chat")
+                    logger.debug(
+                        "run_turn llm_request model={} route={} (no tools; single completion)",
+                        resolved_model,
+                        route_mode.value,
+                    )
+                    runtime_inspect_set_last_chat_completion_request(
+                        build_last_chat_completion_request_payload(
                             model=resolved_model,
-                            tools=tools or None,
-                            response_format=(
-                                DUAL_LLM_CHAT_RESPONSE_FORMAT
-                                if use_dual_structured_chat
-                                else None
-                            ),
-                            scene=llm_scene,
-                        )
-                        langsmith_trace_acc = (
-                            langsmith_trace_id_from_completion(resp)
-                            or langsmith_trace_acc
-                        )
-                        ls_lr = langsmith_llm_run_id_from_completion(resp)
-                        if ls_lr:
-                            langsmith_llm_run_acc = ls_lr
-                        approx_ctx_chars = sum(
-                            len(str(m.get("content") or "")) for m in messages
-                        )
-                        logger.info(
-                            "run_turn llm_round={} model={} chat_completions_ms={:.0f} "
-                            "approx_ctx_chars={} tools={} inner_tick_proactive_chat={}",
-                            round_idx,
-                            resolved_model,
-                            (time.perf_counter() - t_api) * 1000.0,
-                            approx_ctx_chars,
-                            len(tools or []),
-                            tick_proactive,
-                        )
-
-                        msg = resp.choices[0].message
-                        tool_calls = getattr(msg, "tool_calls", None) or []
-                        messages.append(openai_assistant_message_dict(msg))
-
-                        if not tool_calls:
-                            # TODO(companion-dual-envelope-reasoning-channel): Same as async foreground
-                            # branch above when ``msg.content`` is null; grep tag for full note.
-                            raw_content = msg.content or ""
-                            if use_dual_structured_chat:
-                                last_text, significance_meta = (
-                                    split_dual_llm_chat_branch_content(raw_content)
-                                )
-                            else:
-                                last_text = raw_content.strip()
-                            break
-
-                        for tc in tool_calls:
-                            fn = tc.function
-                            name = fn.name
-                            args = fn.arguments if fn.arguments is not None else ""
-                            logger.info(
-                                "run_turn tool_call round={} name={} trace_id={}",
-                                round_idx,
-                                name,
-                                trace_id,
-                            )
-                            result = await repl_execute_tool_call(
-                                root,
-                                name,
-                                args,
-                                write_allowlist=WRITABLE_RELATIVE_PATHS,
-                                repository_only_workspace_text=repository_only_workspace_text,
-                            )
-                            logger.info(
-                                "run_turn tool_done round={} name={} result_chars={} ok={}",
-                                round_idx,
-                                name,
-                                len(result),
-                                not result.startswith("ERROR:"),
-                            )
-                            messages.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": tc.id,
-                                    "content": result,
-                                }
-                            )
-                        tools_for_turn = refresh_companion_turn_prompt_stack(
-                            workspace=root,
-                            store=store,
-                            workspace_bootstrap_type=workspace_bootstrap_type,
-                            inner_tick_turn=inner_tick_turn,
-                            inner_tick_mode=inner_tick_mode,
-                            enable_async_tool_background=(
-                                llm_client.config.enable_async_tool_background
-                            ),
                             messages=messages,
-                            tool_side_compact_system_prompt=False,
-                            implicit_signal_bundle=implicit_signal_bundle,
+                            tools=None,
                         )
-                        tools = tools_for_turn
-                    else:
-                        raise RuntimeError(
-                            f"tool loop exceeded max_rounds={_MAX_TOOL_ROUNDS}"
-                        )
-
+                    )
+                    llm_scene = (
+                        LLM_SCENE_INNER_TICK
+                        if inner_tick_turn and not tick_proactive
+                        else LLM_SCENE_CHAT
+                    )
+                    resp = llm_client.chat_completion(
+                        messages=messages,
+                        model=resolved_model,
+                        tools=None,
+                        response_format=(
+                            DUAL_LLM_CHAT_RESPONSE_FORMAT
+                            if use_dual_structured_chat
+                            else None
+                        ),
+                        scene=llm_scene,
+                    )
+                    langsmith_trace_acc = (
+                        langsmith_trace_id_from_completion(resp) or langsmith_trace_acc
+                    )
+                    ls_lr = langsmith_llm_run_id_from_completion(resp)
+                    if ls_lr:
+                        langsmith_llm_run_acc = ls_lr
+                    approx_ctx_chars = sum(
+                        len(str(m.get("content") or "")) for m in messages
+                    )
                     logger.info(
-                        "run_turn loop_done rounds={} loop_total_ms={:.0f}",
-                        round_idx,
+                        "run_turn llm_round={} model={} chat_completions_ms={:.0f} "
+                        "approx_ctx_chars={} route={} inner_tick_proactive_chat={}",
+                        1,
+                        resolved_model,
+                        (time.perf_counter() - t_api) * 1000.0,
+                        approx_ctx_chars,
+                        route_mode.value,
+                        tick_proactive,
+                    )
+                    msg = resp.choices[0].message
+                    raw_content = msg.content or ""
+                    if use_dual_structured_chat:
+                        last_text, significance_meta = split_dual_llm_chat_branch_content(
+                            raw_content
+                        )
+                    else:
+                        last_text = raw_content.strip()
+                    logger.info(
+                        "run_turn loop_done single_shot route={} loop_total_ms={:.0f}",
+                        route_mode.value,
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
             except BaseException as exc:
-                if not used_async_tool_background:
+                if not tool_background_started:
                     end_companion_turn_root_run_safe(
                         langsmith_parent_run,
                         error=repr(exc),
@@ -590,7 +506,7 @@ async def run_turn(
                     )
                 raise
             else:
-                if not used_async_tool_background:
+                if not tool_background_started:
                     end_companion_turn_root_run_safe(
                         langsmith_parent_run, ls_end_source="run_turn_sync_ok"
                     )
@@ -695,6 +611,6 @@ async def run_turn(
         trace_id=trace_id,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,
-        used_async_tool_background=used_async_tool_background,
+        tool_background_started=tool_background_started,
         assistant_source="inner_tick" if inner_tick_turn else "chat",
     )

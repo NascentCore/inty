@@ -263,7 +263,6 @@ async def _run(args: argparse.Namespace) -> dict:
 
 def main() -> None:
     args = _parse_args()
-    os.environ.setdefault("INTY_V2_PROTO_ASYNC_TOOL_BG", "0")
     os.environ.setdefault("INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", "1")
     applied_yaml: dict[str, str] = {}
     if not args.no_config_yaml:

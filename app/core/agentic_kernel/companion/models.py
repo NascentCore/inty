@@ -55,7 +55,15 @@ class CompanionTurnResult(BaseModel):
     trace_id: str = ""
     langsmith_trace_id: str = ""
     langsmith_run_id: str = ""
-    used_async_tool_background: bool = False
+    tool_background_started: bool = Field(
+        default=False,
+        description=(
+            "True when this turn took the dual-LLM route with tools executed only in "
+            "tool_background (not the single-shot sync completion path). WebSocket "
+            "foreground preset correlation is retained until a tool_bg downstream frame "
+            "is emitted."
+        ),
+    )
     assistant_source: AssistantTurnSource = "chat"
 
 

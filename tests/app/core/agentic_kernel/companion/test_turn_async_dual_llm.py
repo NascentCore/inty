@@ -24,7 +24,6 @@ class _FakeAsyncDualLLMClient:
             default_model="m/default",
             chat_model="m/chat",
             tool_model="m/tool",
-            enable_async_tool_background=True,
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
@@ -93,7 +92,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
         memory_config=None,
     )
 
-    assert out.used_async_tool_background is True
+    assert out.tool_background_started is True
     assert out.assistant_text == "foreground ok"
     assert len(client.chat_calls) == 1
     assert client.chat_calls[0].get("tools") is None

@@ -144,6 +144,7 @@ def _append_one_image_summary(
     if total > 1:
         parts.append(f"#{index}:")
     url = getattr(item, "gcs_http_url", "") or ""
+    gcs_uri = str(getattr(item, "gcs_uri", "") or "").strip()
     parts.append(f"gcs_http_url={url}" if url else "gcs_http_url=(none)")
     w = getattr(getattr(item, "size", None), "width", None)
     h = getattr(getattr(item, "size", None), "height", None)
@@ -167,6 +168,7 @@ def _append_one_image_summary(
             "source_image_url": source_image_url,
             "local_path_relative": local_rel,
             "local_path_absolute": None,
+            "gcs_uri": gcs_uri if gcs_uri else None,
             "gcs_http_url": url if url else None,
             "width": int(w) if w is not None else None,
             "height": int(h) if h is not None else None,

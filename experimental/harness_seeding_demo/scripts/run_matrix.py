@@ -83,7 +83,6 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    os.environ.setdefault("INTY_V2_PROTO_ASYNC_TOOL_BG", "0")
     os.environ.setdefault("INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL", "1")
     args = _parse_args()
     if args.repetitions < 1:

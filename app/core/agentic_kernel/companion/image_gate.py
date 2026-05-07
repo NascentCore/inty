@@ -1,4 +1,4 @@
-"""Profile/image gating and image asset metadata helpers."""
+"""Profile/image gating, generated_images index access, and chat_history generated_image helpers."""
 
 from __future__ import annotations
 
@@ -257,6 +257,43 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
         if isinstance(row, dict):
             out.append(row)
     return out
+
+
+def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any] | None:
+    """Build chat_history ``generated_image``-shaped metadata from one index row (``gs://`` URL)."""
+    from app.services.image_transform_service import image_transform_service
+
+    gcs_uri = str(row.get("gcs_uri") or "").strip()
+    if not gcs_uri.startswith("gs://"):
+        http_u = str(row.get("gcs_http_url") or "").strip()
+        if http_u and image_transform_service.is_gcs_url(http_u):
+            path = image_transform_service.extract_gcs_path(http_u)
+            if path:
+                gcs_uri = f"gs://{path}"
+    if not gcs_uri.startswith("gs://"):
+        return None
+    w = row.get("width")
+    h = row.get("height")
+    return {
+        "image_url": gcs_uri,
+        "width": w,
+        "height": h,
+        "format": "png",
+    }
+
+
+def generated_image_meta_from_index_slice(
+    root: Path, baseline_index: int
+) -> dict[str, Any] | None:
+    """Return metadata for the latest new asset rows since ``baseline_index`` (list length offset)."""
+    records = list_image_asset_records(root)
+    if baseline_index < 0 or baseline_index > len(records):
+        return None
+    for row in reversed(records[baseline_index:]):
+        meta = generated_image_meta_from_asset_record(row)
+        if meta is not None:
+            return meta
+    return None
 
 
 def _normalize_relative_path_for_index(path: str) -> str:

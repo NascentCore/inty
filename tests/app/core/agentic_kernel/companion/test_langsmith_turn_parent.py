@@ -217,7 +217,6 @@ class _FakeAsyncDualLLMClient:
             default_model="m/default",
             chat_model="m/chat",
             tool_model="m/tool",
-            enable_async_tool_background=True,
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
