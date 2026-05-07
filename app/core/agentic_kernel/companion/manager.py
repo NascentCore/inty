@@ -13,7 +13,9 @@ from app.core.agentic_kernel.experience_profile import normalize_experience_prof
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
 
-from .langsmith_parent_policy import companion_turn_langsmith_parent_enabled_from_app_config
+from .langsmith_parent_policy import (
+    companion_turn_langsmith_parent_enabled_from_app_config,
+)
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig

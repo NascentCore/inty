@@ -38,9 +38,7 @@ _MSG_RATE_LIMIT = (
 _MSG_BAD_REQUEST = (
     "The AI inference provider rejected the request parameters. Please try again later."
 )
-_MSG_AUTH = (
-    "The AI inference provider rejected the request due to authentication or permissions."
-)
+_MSG_AUTH = "The AI inference provider rejected the request due to authentication or permissions."
 _MSG_PAYMENT_OR_QUOTA = (
     "The AI inference provider rejected this request due to insufficient credits, quota, "
     "or token limits on the service side. Please try again later."
@@ -66,7 +64,9 @@ def _client_message_for_provider_status(status_code: int) -> str:
     return _MSG_PROVIDER_GENERIC
 
 
-def companion_llm_inference_backend_error_from_openai(exc: Exception) -> CompanionLLMInferenceBackendError:
+def companion_llm_inference_backend_error_from_openai(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
     """Build a kernel-level inference error from an OpenAI SDK exception."""
     from openai import (
         APIConnectionError,
