@@ -1,3 +1,9 @@
+"""Chat completion and WebSocket endpoints for app conversations.
+
+This module exposes HTTP chat completions plus the persistent chat WebSocket used
+by Android clients and companion-agent sessions.
+"""
+
 import asyncio
 import json
 import time
@@ -1796,8 +1802,15 @@ async def chat_completions_websocket(
                     await recv_task
                 except (asyncio.CancelledError, asyncio.TimeoutError):
                     pass
-                except Exception:
-                    pass
+                except WebSocketDisconnect:
+                    logger.debug(
+                        "companion tool_bg receive task disconnected while queue event was ready"
+                    )
+                except RuntimeError as exc:
+                    logger.debug(
+                        "companion tool_bg receive task ended during queue dispatch: {}",
+                        exc,
+                    )
                 try:
                     ev = queue_task.result()
                 except Exception as exc:

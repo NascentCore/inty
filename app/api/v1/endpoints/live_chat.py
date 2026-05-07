@@ -441,8 +441,8 @@ async def live_chat_session(
             finally:
                 try:
                     await live_gen.aclose()
-                except Exception:
-                    pass
+                except RuntimeError as e:
+                    logger.warning(f"关闭 Live chat 生成器失败: {str(e)}")
 
         send_task = asyncio.create_task(send_audio_loop())
 
@@ -494,8 +494,8 @@ async def live_chat_session(
                 message=str(e),
             )
             await websocket.send_json(msg.model_dump())
-        except Exception:
-            pass
+        except (RuntimeError, WebSocketDisconnect) as send_error:
+            logger.debug(f"发送 Live chat 会话错误消息失败: {str(send_error)}")
 
     finally:
         if timeout_task and not timeout_task.done():
@@ -557,12 +557,12 @@ async def live_chat_session(
 
         try:
             await flush_audio_downlink()
-        except Exception:
-            pass
+        except RuntimeError as e:
+            logger.warning(f"刷新 Live chat 下行音频失败: {str(e)}")
         try:
             await websocket.close()
-        except Exception:
-            pass
+        except RuntimeError as e:
+            logger.debug(f"关闭 Live chat WebSocket 失败: {str(e)}")
 
         logger.info(
             f"Live chat 会话结束 - user_id: {current_user.id}, agent_id: {agent_id}, "
