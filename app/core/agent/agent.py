@@ -1,3 +1,5 @@
+"""IntelliMate Agent: chat orchestration, OpenRouter completion calls, prompts, history, and tools."""
+
 import asyncio
 import json
 import random
@@ -1333,6 +1335,20 @@ class Agent:
                     response = client.chat.completions.create(
                         **create_kwargs,
                     )
+                choices = (
+                    getattr(response, "choices", None) if response is not None else None
+                )
+                if not choices:
+                    logger.warning(
+                        f"LLM returned empty choices (retrying) - "
+                        f"Agent: {self.agent_id}, User: {user_id}, Model: {model}, "
+                        f"attempt {attempt + 1}/{max_retries}"
+                    )
+                    if attempt >= max_retries - 1:
+                        raise ValueError("LLM returned no choices")
+                    delay = initial_delay * (2**attempt)
+                    time.sleep(delay)
+                    continue
                 # 成功则返回 (response, trace_id)
                 if attempt > 0:
                     logger.info(
