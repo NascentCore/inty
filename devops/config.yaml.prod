@@ -43,7 +43,6 @@ database:
   pool_pre_ping: true
   connect_timeout: 5
   command_timeout: 30
-  replica_host: "10.41.177.17"
 
 google_oauth:
   client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
