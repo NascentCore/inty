@@ -18,6 +18,7 @@ DataStream 比较麻烦，因为需要从主数据库同步数据、要重启数
 - **数据库**：共用同一 CloudSQL Postgres 实例，dev:inty-dev prod:inty
   - [看板](https://console.cloud.google.com/sql/instances/inty-prod/system-insights?project=alien-paratext-461204-i9)
   - [查询性能分析](https://console.cloud.google.com/sql/instances/inty-prod/insights;duration=P1D;sort_by=TOTAL_EXEC_TIME/executed?project=alien-paratext-461204-i9)
+  - **prod Inty 主库读取**：[/devops/config.yaml.prod](/devops/config.yaml.prod) 故意不配置 `database.replica_host`，因此后端、Ops、push worker 中原本偏向只读副本的读取路径会回退到 `database.host`（当前主库私网 IP）。影响范围仅为使用 prod IntelliMate 配置的服务，不改变 iMate 的 `config.yaml.imate_prod`。回滚方式：在 `/devops/config.yaml.prod` 的 `database` 段重新加入 `replica_host` 并重新部署受影响的 prod backend / prod Ops / prod push worker。
 - **GCE VM**：[dev-instance](https://console.cloud.google.com/compute/instancesDetail/zones/asia-southeast1-a/instances/dev-instance)
 - **反向代理**：nginx（详见 `nginx/README.md`）
 - **API endpoint**：https://app.inty.cc
