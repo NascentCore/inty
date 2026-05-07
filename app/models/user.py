@@ -1,8 +1,9 @@
+"""SQLAlchemy User model: identity, auth (Google/guest/email), profile fields, and relations."""
+
 import enum
 from datetime import UTC, datetime
 
 import sqlalchemy as sa
-from loguru import logger
 from sqlalchemy import (
     Boolean,
     Column,
@@ -63,10 +64,6 @@ class User(Base):
 
     @validates("phone")
     def validate_phone(self, key, value):
-        logger.warning(
-            "The 'phone' is added without a clear plan to be used. Please do not use it. Ask @yaxiong if you need phone.",
-            DeprecationWarning,
-        )
         return value
 
     phone = Column(String, unique=True, comment="手机号码，唯一，用于登录")
