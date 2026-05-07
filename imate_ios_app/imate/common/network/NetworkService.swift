@@ -43,6 +43,11 @@ final class NetworkService {
         
         // 默认 JSON
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(UserManager.shared.token)", forHTTPHeaderField: "Authorization")
+        
+        // 测试用
+//        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Nzg3NTUzMjAsInN1YiI6InVzZXItMDFLUEFITU5XUDYzNUpSWUFXWUdEUzNQUlMifQ.ptxNPNK_Oc7Hs3kUV6ptOmrOnVVgnt7P65colSTvgCc"
+//        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
         // 自定义 Header
         endpoint.headers?.forEach { key, value in
@@ -68,13 +73,6 @@ final class NetworkService {
                 print("✅ Raw Response:\n\(raw)")
             }
             #endif
-            
-            // 5. 解析数据
-//            do {
-//                return try decoder.decode(T.self, from: data)
-//            } catch {
-//                throw SLNetworkError.decodeError
-//            }
             
             // 5️⃣ 解析为通用结构
             let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)

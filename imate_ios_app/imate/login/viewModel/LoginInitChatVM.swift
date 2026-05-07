@@ -68,6 +68,9 @@ class LoginInitChatVM: ObservableObject {
     
     @Published var name: String = "iMate"
     @Published var gender: Int = -1  // -1 not set, 0 male, 1 female, 2 no prof
+    @Published var avatar: String = ""
+    
+    var prompt: String = ""
     
     init() {
 //     startConversation()
@@ -92,7 +95,13 @@ class LoginInitChatVM: ObservableObject {
         if steps == .step1 {
             setName()
         } else if steps == .step3 {
-            inputAppearance()
+            Task.detached(priority: .background) {
+                print("on some on some val ------>")
+                await self.sendAppearance()
+                await MainActor.run {
+                    self.afterAvatarGenerate()
+                }
+            }
         }
     }
     
@@ -116,18 +125,40 @@ class LoginInitChatVM: ObservableObject {
         nextStep()
     }
     
-    func inputAppearance() {
-        appendMessage(content: inputText, isSelf: true)
-        let s = "\(inputText)\(LoginConstants.InitChatMsg.step4_1)"
+    func sendAppearance() async {
+        let appreance = inputText
+        appendMessage(content: appreance, isSelf: true)
+        let s = "\(appreance)\(LoginConstants.InitChatMsg.step4_1)"
         appendMessage(content: s, isSelf: false)
         inputText = ""
-        
         nextStep()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            let content = "\(LoginConstants.InitChatMsg.step5_1)\(self.name)! \(LoginConstants.InitChatMsg.step5_2)"
-            self.appendMessage(content: content, isSelf: false)
-            self.appendMessage(content: LoginConstants.InitChatMsg.step5_3, isSelf: false)
-            self.nextStep()
+        
+        do {
+            prompt = LoginHelper.generateAvatarPrompt(name: name, gender: gender, appearance: appreance)
+            print("on prompt si ------>\(prompt)")
+            let cb: GenerateAvatarResponse = try await NetworkService.shared.request(UserAPI.creatAvatar(prompt: prompt))
+            UserManager.shared.avatar = cb.urls.first;
+            print("on release data val si ------->\(cb.urls)")
+        } catch {
+            print("on create error error si val----->\(error)")
+            ToastManager.shared.show("on login error \(error)", duration: 5, type: .error);
+        }
+    }
+    
+    func afterAvatarGenerate() {
+        let content = "\(LoginConstants.InitChatMsg.step5_1)\(self.name)! \(LoginConstants.InitChatMsg.step5_2)"
+        appendMessage(content: content, isSelf: false)
+        appendMessage(content: LoginConstants.InitChatMsg.step5_3, isSelf: false)
+        nextStep()
+    }
+    
+    func createGender() async {
+        do {
+            let cb: GenerateAvatarResponse = try await NetworkService.shared.request(UserAPI.creatAgent(name: name, gender: "\(gender)", avatar: avatar, intro: prompt))
+            print("on agent release data val si ------->\(cb)")
+        } catch {
+            print("on agent create error error si val----->\(error)")
+//            ToastManager.shared.show("on login error \(error)", duration: 5, type: .error);
         }
     }
     

@@ -19,8 +19,10 @@ struct InitChatColors {
 }
 
 struct LoginInitChat: View {
+    
     @EnvironmentObject var router: Router
     @StateObject var vm = LoginInitChatVM()
+    @StateObject var userManager = UserManager.shared
     
     var body: some View {
         ZStack() {
@@ -31,7 +33,8 @@ struct LoginInitChat: View {
                 LoginInitChatWidgets.Header(
                     progress: vm.steps.progress,
                     bgColor: vm.steps.topBgColor,
-                    name: vm.name
+                    name: vm.name,
+                    avatar: userManager.avatar
                 )
                 
                 // 2. 聊天列表
@@ -42,6 +45,9 @@ struct LoginInitChat: View {
                     LoginInitChatWidgets.GenderSelectBottom(
                         onSelect: vm.selectGender(i:)
                     )
+                } else if vm.steps == .step4 {
+                    Divider()
+                    LoginInitChatWidgets.GenerateAvatarLoading()
                 } else if vm.steps == .step5 {
                     LoginInitChatWidgets.ButtonFinish(onFinish: goChat)
                 } else {
@@ -60,10 +66,16 @@ struct LoginInitChat: View {
         .navigationBarBackButtonHidden(true)
         .task {
             vm.startConversation()
+            
+            // 测试代码
+//            userManager.avatar = "https://images.sxwl.dev/inty-static/backgrounds/user-01KPAHMNWP635JRYAWYGDS3PRS/0359f9d22890466e8ccc0b21823dc98e/1778164707078/sample_0.jpg"
         }
     }
     
     private func goChat() {
+        Task {
+            await vm.createGender()
+        }
         router.push(.chatPage)
     }
 }

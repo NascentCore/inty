@@ -119,14 +119,18 @@ enum LoginInitChatWidgets {
         let progress: Double
         let bgColor: Color
         let name: String
+        let avatar: String?
         
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
 
                 HStack {
-                    Circle()
-                        .fill(Color.gray)
-                        .frame(width: 40, height: 40)
+                    SLImage(
+                        source: .network(avatar ?? ""),
+                        width: 40,
+                        height: 40,
+                    )
+                    .cornerRadius(20)
 
                     VStack(alignment: .leading) {
                         Text(name)
@@ -293,6 +297,47 @@ enum LoginInitChatWidgets {
                     .foregroundColor(.white)
             }
             .padding()
+        }
+    }
+    
+    // 生成图片等待页面
+    struct GenerateAvatarLoading: View {
+        @State private var animate = false
+        
+        var body: some View {
+            ZStack {
+                HStack(spacing: 14) {
+                    // 左侧圆点
+                    Circle()
+                        .fill(Color.purple)
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(animate ? 1.2 : 0.8)
+                        .opacity(animate ? 1 : 0.5)
+
+                    // 中间文字
+                    Text("Generating your companion...")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(Color.purple.opacity(0.9))
+
+                    // 右侧圆点
+                    Circle()
+                        .fill(Color(red: 125/255, green: 118/255, blue: 214/255))
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(animate ? 0.8 : 1.2)
+                        .opacity(animate ? 0.5 : 1)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
+                .frame(height: 80)
+            }
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 1.0)
+                    .repeatForever(autoreverses: true)
+                ) {
+                    animate.toggle()
+                }
+            }
         }
     }
     

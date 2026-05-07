@@ -12,3 +12,8 @@ struct ChatMessage: Identifiable {
     let text: String
     let isUser: Bool
 }
+
+struct GenerateAvatarResponse: Decodable {
+    let urls: [String]
+}
+

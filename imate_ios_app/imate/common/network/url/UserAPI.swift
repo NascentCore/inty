@@ -12,6 +12,9 @@ enum UserAPI: APIEndpoint {
     case login(email: String, password: String)
     case profile
     
+    case creatAvatar(prompt: String)
+    case creatAgent(name: String, gender: String, avatar: String, intro: String)
+    
     var baseURL: String {
         return "https://dev.imate.inty.cc"
     }
@@ -20,6 +23,9 @@ enum UserAPI: APIEndpoint {
         switch self {
         case .login: return "/api/v1/auth/google/login"
         case .profile: return "/profile"
+            
+        case .creatAvatar: return "/api/v1/ai/agents/text-to-image"
+        case .creatAgent: return "/api/v1/ai/agents"
         }
     }
     
@@ -27,6 +33,9 @@ enum UserAPI: APIEndpoint {
         switch self {
         case .login: return .POST
         case .profile: return .GET
+            
+        case .creatAvatar: return .POST
+        case .creatAgent: return .POST
         }
     }
     
@@ -36,6 +45,19 @@ enum UserAPI: APIEndpoint {
             let dict = [
                 "email": email,
                 "password": password
+            ]
+            return try? JSONSerialization.data(withJSONObject: dict)
+        case let .creatAvatar(prompt):
+            let dict = ["prompt": prompt]
+            return try? JSONSerialization.data(withJSONObject: dict)
+        case let .creatAgent(name, gender, avatar, intro):
+            let dict = [
+                "opening": "",
+                "visibility": "PRIVATE",
+                "name": name,
+                "gender": gender,
+                "avatar": avatar,
+                "intro": intro
             ]
             return try? JSONSerialization.data(withJSONObject: dict)
         default:

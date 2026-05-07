@@ -14,6 +14,7 @@ class UserManager: ObservableObject {
     
     @Published var token: String = ""
     
+    @Published var avatar: String?
     @Published var email: String = ""
     @Published var isLoggedIn: Bool = false
     
