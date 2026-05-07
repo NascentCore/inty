@@ -125,6 +125,7 @@ def _chat_ws_error_payload_from_http_exception(
         payload.update(ws_extra)
     return payload
 
+
 # WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
 # Handlers must not pass that session into asyncio.to_thread or other threads; open a new
 # session inside the worker if agentic work runs off the event loop.

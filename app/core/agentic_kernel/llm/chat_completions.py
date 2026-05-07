@@ -20,7 +20,9 @@ from app.core.agentic_kernel.llm.langsmith_completion_enrich import (
     completion_with_langsmith_trace_id,
     reset_wrapped_llm_run_id_for_completion_attempt,
 )
-from app.core.agentic_kernel.llm.openrouter_tool_params import tool_path_chat_completion_kwargs
+from app.core.agentic_kernel.llm.openrouter_tool_params import (
+    tool_path_chat_completion_kwargs,
+)
 
 _OPENROUTER_JSON_MAX_ATTEMPTS = 3
 _OPENROUTER_JSON_BACKOFF_SECONDS = (0.25, 0.75)
