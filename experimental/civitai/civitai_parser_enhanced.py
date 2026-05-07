@@ -1,9 +1,12 @@
-import requests
-from bs4 import BeautifulSoup
+"""Enhanced parser for extracting Civitai model metadata from HTML pages."""
+
 import json
 import re
-from urllib.parse import urljoin
 from typing import Dict, List
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
 
 
 class CivitaiParserEnhanced:
@@ -255,8 +258,8 @@ class CivitaiParserEnhanced:
                 data = json.loads(script.string)
                 if isinstance(data, dict):
                     details.update(data)
-            except:
-                pass
+            except (json.JSONDecodeError, TypeError):
+                continue
 
         return details
 
@@ -394,8 +397,8 @@ class CivitaiParserEnhanced:
                 data = json.loads(script.string)
                 if isinstance(data, dict):
                     structured_data.update(data)
-            except:
-                pass
+            except (json.JSONDecodeError, TypeError):
+                continue
 
         # Also look for any JSON data in script tags
         scripts = soup.find_all("script")
@@ -409,8 +412,8 @@ class CivitaiParserEnhanced:
                         data = json.loads(match)
                         if isinstance(data, dict):
                             structured_data.update(data)
-                    except:
-                        pass
+                    except json.JSONDecodeError:
+                        continue
 
         return structured_data
 
