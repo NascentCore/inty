@@ -61,6 +61,15 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     return " " + " ".join(parts)
 
 
+def _repl_meta_banner_fragment(meta_data: Mapping[str, Any] | None) -> str:
+    """Trailing banner tokens derived from assistant ``meta_data`` (API snake_case keys)."""
+    if not meta_data:
+        return ""
+    if meta_data.get("tool_background_started") is True:
+        return " tool_background_started=true"
+    return ""
+
+
 def _repl_banner_suffix_ids(
     transcript_ids: Mapping[str, str] | None,
     meta_data: Mapping[str, Any] | None,
@@ -130,7 +139,7 @@ def _print_assistant_reply(
 ) -> None:
     ms = elapsed_s * 1000
     merged = _repl_banner_suffix_ids(transcript_ids, meta_data)
-    suffix = _repl_transcript_id_suffix(merged)
+    suffix = _repl_transcript_id_suffix(merged) + _repl_meta_banner_fragment(meta_data)
     label = repl_source_label or _repl_assistant_banner_label(
         transcript_ids, meta_data=meta_data
     )

@@ -873,9 +873,12 @@ def _setup_companion_ws_chat_test_env(
         return ai_message_id
 
     async def fake_get_ai_message_info_by_id(db, message_id):
+        md = {}
+        if ai_message_meta_captures is not None and ai_message_meta_captures:
+            md = dict(ai_message_meta_captures[-1])
         return {
             "id": message_id,
-            "meta_data": {},
+            "meta_data": md,
             "timestamp": 1735689600000,
             "audio_url": None,
         }
@@ -1159,7 +1162,11 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         Path("/tmp/inty_test_companion_ws_ws"),
     )
 
-    captured: dict = {"companion_calls": 0, "preset_user_msg_uuids": []}
+    captured: dict = {
+        "companion_calls": 0,
+        "preset_user_msg_uuids": [],
+        "ai_metas": [],
+    }
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
@@ -1212,12 +1219,17 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         session_id, message, agent_id=None, meta_data=None
     ):
         captured["ai_save"] = (session_id, message, agent_id, meta_data)
+        if meta_data is not None:
+            captured["last_ai_meta"] = dict(meta_data)
+            captured["ai_metas"].append(dict(meta_data))
+        else:
+            captured["last_ai_meta"] = {}
         return 903
 
     async def fake_get_ai_message_info_by_id(db, message_id):
         return {
             "id": message_id,
-            "meta_data": {},
+            "meta_data": dict(captured.get("last_ai_meta") or {}),
             "timestamp": 1735689600000,
             "audio_url": None,
         }
@@ -1365,6 +1377,58 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
             "importance_assistant_message": 7,
         },
     }
+    assert (
+        body["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][0]
+    )
+    assert (
+        body2["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][1]
+    )
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_foreground_tool_background_started_meta(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    ai_meta: list = []
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(
+            assistant_text="tb-reply",
+            tool_background_started=True,
+        )
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-tbgs",
+        workspace_dir="/tmp/inty_test_companion_ws_tbgs",
+        chat_id="chat-tbgs-1",
+        latest_user_message_db_id=91,
+        ai_message_id=905,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+        ai_message_meta_captures=ai_meta,
+    )
+
+    msg_uuid = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-tbgs",
+                    "request": {
+                        "messages": [{"role": "user", "content": "paint"}],
+                        "message_id": msg_uuid,
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    assert ai_meta[-1]["tool_background_started"] is True
+    assert (
+        body["data"]["choices"][0]["message"]["meta_data"]["tool_background_started"]
+        is True
+    )
 
     companion_chat_service.clear_companion_chat_service_caches()
 

@@ -58,10 +58,11 @@ class CompanionTurnResult(BaseModel):
     tool_background_started: bool = Field(
         default=False,
         description=(
-            "True when this turn took the dual-LLM route with tools executed only in "
-            "tool_background (not the single-shot sync completion path). WebSocket "
-            "foreground preset correlation is retained until a tool_bg downstream frame "
-            "is emitted."
+            "True after start_tool_background_job returned for this turn (background "
+            "thread running tool loop). WebSocket foreground preset correlation is "
+            "retained until a tool_bg downstream frame is emitted. Successful companion "
+            "assistant frames mirror this as meta_data.tool_background_started on the "
+            "HTTP/WS payload."
         ),
     )
     assistant_source: AssistantTurnSource = "chat"

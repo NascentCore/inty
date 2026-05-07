@@ -293,7 +293,6 @@ async def run_turn(
         with _langsmith_cm:
             try:
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
-                    tool_background_started = True
                     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
                         workspace_root=root,
                         bundle=bundle,
@@ -348,6 +347,7 @@ async def run_turn(
                         langsmith_parent_run=langsmith_parent_run,
                         workspace_bootstrap_type=workspace_bootstrap_type,
                     )
+                    tool_background_started = True
 
                     runtime_inspect_set_last_chat_completion_request(
                         build_last_chat_completion_request_payload(

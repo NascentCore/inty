@@ -824,6 +824,8 @@ def _companion_ai_meta_from_turn_result(
     sp = companion_turn.significance_perception
     if isinstance(sp, dict) and sp:
         companion_ai_meta["significance_perception"] = sp
+    if companion_turn.tool_background_started:
+        companion_ai_meta["tool_background_started"] = True
     return companion_ai_meta
 
 

@@ -37,6 +37,11 @@ DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
 )
 
 
+def _companion_tool_call_model_yaml(agent: object) -> str:
+    """Stripped ``AgentConfig.companion_tool_call_model``; empty means use chat model id."""
+    return (getattr(agent, "companion_tool_call_model", "") or "").strip()
+
+
 def companion_workspace_path_if_ready(
     *,
     user_id: str,
@@ -61,7 +66,8 @@ def clear_companion_chat_service_caches() -> None:
 
 
 def _companion_runtime_config_fingerprint() -> str:
-    feats = global_config_loaded_from_config_yaml.app.features
+    cfg = global_config_loaded_from_config_yaml
+    feats = cfg.app.features
     raw = feats.companion_transcript_compaction
     raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
     parts = [
@@ -75,6 +81,7 @@ def _companion_runtime_config_fingerprint() -> str:
         "companion_repo_only_ws_v1",
         "companion_db_only_workspace_v3_orm",
         os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600") or "",
+        _companion_tool_call_model_yaml(cfg.agent),
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
@@ -99,7 +106,8 @@ def _companion_manager_for_resolved_model(
         or "https://openrouter.ai/api/v1",
         default_model=resolved_chat_model_id,
         chat_model=resolved_chat_model_id,
-        tool_model=resolved_chat_model_id,
+        tool_model=_companion_tool_call_model_yaml(cfg.agent)
+        or resolved_chat_model_id,
         memory_model=resolved_chat_model_id,
         day_summary_model=resolved_chat_model_id,
         user_model=resolved_chat_model_id,
