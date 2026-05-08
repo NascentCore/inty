@@ -55,6 +55,9 @@ def companion_turn_tools_and_system_messages(
     build system-prefix variants for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` pass
     ``implicit_user_signed_on_turn=False`` on purpose: implicit sign-on greetings strip tools
     earlier and never take that route (short greeting, no background tool loop).
+    When ``tool_side_compact_system_prompt`` is True (background tool LLM stack), interactive
+    bootstrap extra system blocks are omitted; tool availability still follows ``workspace_bootstrap_type``
+    and context.
 
     When ``implicit_user_signed_on_turn`` is True (and not an inner-tick turn), tools are
     omitted and system prompts skip tool contracts so the model does one chat completion only.
@@ -85,6 +88,11 @@ def companion_turn_tools_and_system_messages(
     chat_only_implicit_sign_on = implicit_user_signed_on_turn and not inner_tick_turn
     if chat_only_implicit_sign_on:
         tools_for_turn = []
+    # Compact system stack is only for the background tool LLM path; skip interactive-bootstrap
+    # system blocks there (foreground chat stack still uses ``interactive_bootstrap``).
+    system_prompt_interactive_bootstrap = (
+        interactive_bootstrap if not tool_side_compact_system_prompt else False
+    )
     route_mode = resolve_turn_route_mode(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
@@ -111,7 +119,7 @@ def companion_turn_tools_and_system_messages(
             ai_private_text=ai_private_text,
             include_repl_image_generation_contract=True,
             tool_side_compact=True,
-            interactive_bootstrap_active=interactive_bootstrap,
+            interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=False,
             implicit_signal_bundle=implicit_signal_bundle,
         )
@@ -123,7 +131,7 @@ def companion_turn_tools_and_system_messages(
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             ai_private_text=ai_private_text,
-            interactive_bootstrap_active=interactive_bootstrap,
+            interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=resolved_sig,
             implicit_signal_bundle=implicit_signal_bundle,
         )
