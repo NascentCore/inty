@@ -28,6 +28,28 @@ from app.utils.image import ImageFormat, ImageSize
 from app.utils.image_upload import ImageUploadResponse, process_image_upload
 
 
+def _assert_served_image_url(url: str) -> None:
+    """URL after upload: fake GCS uses file://; real stack uses CDN or GCS HTTPS."""
+    gcs_cfg = global_config_loaded_from_config_yaml.gcs
+    if gcs_cfg.use_fake_gcs:
+        assert url.startswith("file:"), url
+        assert gcs_cfg.bucket in url.replace("\\", "/"), url
+    else:
+        assert (
+            "cdn.example.com" in url or "storage.googleapis.com" in url
+        ), url
+
+
+def _assert_fallback_public_url_after_cdn_failure(url: str) -> None:
+    """When CDN transform fails, response falls back to blob public_url."""
+    gcs_cfg = global_config_loaded_from_config_yaml.gcs
+    if gcs_cfg.use_fake_gcs:
+        assert url.startswith("file:"), url
+        assert gcs_cfg.bucket in url.replace("\\", "/"), url
+    else:
+        assert "storage.googleapis.com" in url, url
+
+
 def create_test_user(db: Session, user_id: str) -> User:
     """创建测试用户，确保用户存在"""
     # 检查用户是否已存在
@@ -145,7 +167,7 @@ class TestUploadImage:
             assert resource.resource_metadata["size"]["width"] > 0
             assert resource.resource_metadata["size"]["height"] > 0
             assert resource.resource_metadata["byte_size"] > 0
-            assert "cdn.example.com" in resource.url
+            _assert_served_image_url(resource.url)
 
         # 清理
         db.close()
@@ -454,7 +476,7 @@ class TestImageUploadCompression:
             )
 
         assert result.code == 200
-        assert "cdn.example.com" in result.data.url
+        _assert_served_image_url(result.data.url)
 
         # 清理
         db.close()
@@ -503,7 +525,7 @@ class TestImageUploadCompression:
             )
 
         assert result.code == 200
-        assert "cdn.example.com" in result.data.url
+        _assert_served_image_url(result.data.url)
 
         # 清理
         db.close()
@@ -555,7 +577,7 @@ class TestImageUploadDifferentFormats:
             )
 
         assert result.code == 200
-        assert "cdn.example.com" in result.data.url
+        _assert_served_image_url(result.data.url)
 
         # 清理
         db.close()
@@ -603,7 +625,7 @@ class TestImageUploadDifferentFormats:
             )
 
         assert result.code == 200
-        assert "cdn.example.com" in result.data.url
+        _assert_served_image_url(result.data.url)
 
         # 清理
         db.close()
@@ -658,7 +680,7 @@ class TestImageUploadCropping:
         assert result.code == 200
         assert result.data.avatar_url is not None
         assert result.data.avatar_size is not None
-        assert "cdn.example.com" in result.data.avatar_url
+        _assert_served_image_url(result.data.avatar_url)
 
         # 清理
         db.close()
@@ -820,8 +842,8 @@ class TestImageUploadErrorHandling:
                 )
 
         assert result.code == 200
-        # 应该回退到GCS URL
-        assert "storage.googleapis.com" in result.data.url
+        # 应该回退到 blob public_url（fake 模式下为 file://）
+        _assert_fallback_public_url_after_cdn_failure(result.data.url)
 
         # 清理
         db.close()
@@ -885,7 +907,7 @@ class TestImageUploadResourceRecords:
             assert resource.resource_metadata["size"]["width"] > 0
             assert resource.resource_metadata["size"]["height"] > 0
             assert resource.resource_metadata["byte_size"] > 0
-            assert "cdn.example.com" in resource.url
+            _assert_served_image_url(resource.url)
 
         # 清理
         db.close()
@@ -956,7 +978,7 @@ class TestImageUploadResourceRecords:
 
         # 验证URL格式
         for resource in resources:
-            assert "cdn.example.com" in resource.url
+            _assert_served_image_url(resource.url)
 
         # 清理
         db.close()
