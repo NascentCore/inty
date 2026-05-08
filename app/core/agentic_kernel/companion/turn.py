@@ -108,6 +108,8 @@ from .llm_chat_runtime import (
 )
 from .workspace import WorkspacePaths
 
+CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
+
 
 def _replace_leading_system_messages_multi(
     messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
@@ -507,7 +509,12 @@ async def run_turn(
                     tool_msgs_for_bg = deepcopy(tool_msgs)
                     if fg_text:
                         tool_msgs_for_bg.append(
-                            {"role": "assistant", "content": fg_text}
+                            {
+                                "role": "user",
+                                "content": (
+                                    f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{fg_text}"
+                                ),
+                            }
                         )
                     force_tools_first_round = not bool(fg_text)
                     start_tool_background_job(
