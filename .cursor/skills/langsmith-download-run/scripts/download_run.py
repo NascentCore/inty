@@ -17,6 +17,9 @@ import yaml
 
 # Mirrors app/core/config.py:set_langsmith_environment_variables (project naming + tracing flag).
 
+# LangSmith POST /runs/query rejects limit above this (observed HTTP 400).
+_LANGSMITH_RUNS_QUERY_MAX_LIMIT = 100
+
 
 def _langsmith_local_username_slug() -> str:
     user = (os.getenv("USER") or os.getenv("USERNAME") or "").strip()
@@ -236,9 +239,12 @@ def main() -> int:
     parser.add_argument(
         "--max-runs",
         type=int,
-        default=5000,
+        default=100,
         metavar="N",
-        help="Trace mode: max runs to list (default 5000).",
+        help=(
+            "Trace mode: requested max runs per LangSmith list_runs query "
+            f"(capped at {_LANGSMITH_RUNS_QUERY_MAX_LIMIT}; default 100)."
+        ),
     )
     parser.add_argument(
         "-o",
@@ -267,6 +273,14 @@ def main() -> int:
     if args.max_runs < 1:
         sys.stderr.write("--max-runs must be >= 1.\n")
         return 2
+
+    trace_list_limit = min(args.max_runs, _LANGSMITH_RUNS_QUERY_MAX_LIMIT)
+    if args.max_runs > _LANGSMITH_RUNS_QUERY_MAX_LIMIT:
+        sys.stderr.write(
+            "Note: LangSmith runs/query allows at most "
+            f"{_LANGSMITH_RUNS_QUERY_MAX_LIMIT} runs per request; "
+            f"using limit={trace_list_limit}.\n"
+        )
 
     cfg = Path(args.config)
     yaml_data: dict[str, Any] | None = None
@@ -332,7 +346,7 @@ def main() -> int:
                 client,
                 trace_id=trace_id_final,
                 project_name=project_for_trace,
-                max_runs=args.max_runs,
+                max_runs=trace_list_limit,
                 seed_run_obj=seed_run_obj,
             )
         except ValueError as exc:

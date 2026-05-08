@@ -51,7 +51,7 @@ python .cursor/skills/langsmith-download-run/scripts/download_run.py \
   -o tmp/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
 ```
 
-Optional: **`--project-name`** overrides `LANGSMITH_PROJECT` for `list_runs`. **`--max-runs N`** caps listing (default 5000). Raise `max-runs` if the trace is larger.
+Optional: **`--project-name`** overrides `LANGSMITH_PROJECT` for `list_runs`. **`--max-runs N`** sets the requested batch size (default **100**). LangSmith **`/runs/query`** rejects `limit` above **100**; the script clamps larger values and prints a note to stderr. Traces with more than **100** spans require pagination (not implemented in this script yet); until then you only get the first batch.
 
 Output JSON shape:
 
@@ -109,4 +109,4 @@ For trace-wide listing in custom code, mirror this script: `Client.list_runs(tra
 - **`read_run` / trace fetch exits 1**: script prints the LangSmith error to stderr (no Python traceback).
 - **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `config.yaml`, or env fallback key does not match the LangSmith workspace for this run.
 - **404**: wrong run id, different workspace/project than the key, or run expired per org retention.
-- **Incomplete trace**: increase **`--max-runs`**; very large traces may need pagination (see current `langsmith` SDK `list_runs` behavior).
+- **Incomplete trace**: LangSmith caps **`limit`** at **100** per query; this script does not page yet. If **`run_count`** equals **`max-runs`** and you expect more spans, the trace was truncated.
