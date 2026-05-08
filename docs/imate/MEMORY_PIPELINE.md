@@ -1,6 +1,6 @@
 # Companion 记忆管线综述（document MemoryStore 路径）
 
-本文描述 **当前已实现** 的 agentic companion 分层记忆：`app/core/agentic_kernel/companion/memory_pipeline.py` 写入，`models.load_prompt_bundle` 读出，`prompts.build_system_messages` 注入 LLM。与 `docs/imate/FR_AGENTIC_MEMORY_STORE.md` 所述 **未来向量 LTM** 正交；本节不涉及 legacy 主站 `memory` 表。
+本文描述 **当前已实现** 的 agentic companion 分层记忆：`app/core/agentic_kernel/companion/memory_pipeline.py` 写入，`models.load_prompt_bundle` 读出，`prompts.build_system_messages` 注入 LLM。与 [`/docs/imate/MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md) 第二节「FR_AGENTIC_MEMORY_STORE（向量长期记忆）」所述 **未来向量 LTM** 正交；本节不涉及 legacy 主站 `memory` 表。
 
 ---
 

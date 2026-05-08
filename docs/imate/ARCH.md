@@ -8,6 +8,7 @@
 - Companion kernel 主执行器: [`/app/core/agentic_kernel/companion/turn.py`](/app/core/agentic_kernel/companion/turn.py)
 - Companion 包内说明: [`/app/core/agentic_kernel/companion/README.md`](/app/core/agentic_kernel/companion/README.md)
 - 分层记忆说明: [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)
+- MemoryStore 与向量 LTM FR: [`/docs/imate/MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)
 
 ## 范围与边界
 
