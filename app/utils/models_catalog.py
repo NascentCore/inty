@@ -240,6 +240,60 @@ DEEPSEEK_V3_2 = GenAIModel(
 )
 
 
+DEEPSEEK_V4_PRO = GenAIModel(
+    nickname="DeepSeek V4 Pro",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.DEEPSEEK,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="deepseek/deepseek-v4-pro",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.435, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.87, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://openrouter.ai/deepseek/deepseek-v4-pro",
+    ),
+    official_url="https://openrouter.ai/deepseek/deepseek-v4-pro",
+    notes="1,048,576 context window. Supports reasoning via `reasoning` parameter.",
+    response_format_with_tools_compatibility=(
+        ResponseFormatWithToolsCompatibility.INCOMPATIBLE
+    ),
+)
+
+
+DEEPSEEK_V4_FLASH = GenAIModel(
+    nickname="DeepSeek V4 Flash",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.DEEPSEEK,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="deepseek/deepseek-v4-flash",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.14, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.28, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://openrouter.ai/deepseek/deepseek-v4-flash",
+    ),
+    official_url="https://openrouter.ai/deepseek/deepseek-v4-flash",
+    notes="1,048,576 context window. Supports reasoning via `reasoning` parameter.",
+    response_format_with_tools_compatibility=(
+        ResponseFormatWithToolsCompatibility.INCOMPATIBLE
+    ),
+)
+
+
 GEMINI_2_5_FLASH_LITE = GenAIModel(
     nickname="Gemini 2.5 Flash Lite",
     modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
@@ -850,6 +904,8 @@ CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
 # Chat text (LLM) models: config may use nickname or id_on_provider; resolve to id before API call.
 CHAT_TEXT_MODELS = [
     DEEPSEEK_V3_2,
+    DEEPSEEK_V4_PRO,
+    DEEPSEEK_V4_FLASH,
     GEMINI_2_5_FLASH_LITE,
     GEMINI_2_5_FLASH,
 ]
