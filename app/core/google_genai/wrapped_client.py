@@ -74,7 +74,7 @@ from app.core.google_genai.predefined_configs import (
     GEN_CONTENT_CONFIG_IMAGE_9_16_1K_MLDEV,
 )
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.gcs import GCS_PUBLIC_HTTPS_PREFIX, upload_to_gcs
+from app.external_services.gcs import upload_to_gcs
 from app.utils.gemini import get_genai_client, get_newapi_gemini_client
 from app.utils.image import ImageFormat, ImageSize
 from app.utils.langsmith import attach_provider_response_to_langsmith_run
@@ -462,14 +462,13 @@ def _process_image_part_to_generated_image(
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     gcs_path = f"{gcs_uri_base}/{timestamp}_{uuid.uuid4().hex[:8]}.{ext}"
     bucket_name = global_config_loaded_from_config_yaml.gcs.bucket
-    upload_to_gcs(
+    gcs_http_url = upload_to_gcs(
         file_data=image_data,
         content_type=content_type,
         bucket_name=bucket_name,
         path=gcs_path,
     )
     gcs_uri = f"gs://{bucket_name}/{gcs_path}"
-    gcs_http_url = f"{GCS_PUBLIC_HTTPS_PREFIX}{bucket_name}/{gcs_path}"
     logger.info("图片已上传到 GCS: {}", gcs_uri)
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)

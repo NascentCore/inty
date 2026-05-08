@@ -28,6 +28,11 @@ from app.utils.models_catalog import IMAGEN_4_FAST, NANO_BANANA
 _GCS_URI_BASE = "test-gcs-uri-base"
 
 
+def _mock_upload_to_gcs_https_return(file_data, content_type, bucket_name, path):  # noqa: ARG001
+    """Patched ``upload_to_gcs`` must return a string URL (production shape in mocked tests)."""
+    return f"https://storage.googleapis.com/{bucket_name}/{path}"
+
+
 def _make_gemini_response_payload_with_inline_data(image_bytes: bytes, mime_type: str) -> dict:
     return {
         "candidates": [
@@ -178,6 +183,7 @@ def test_extract_image_part_treats_image_prohibited_content_as_safety_block():
 @patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_text_only_calls_generate_content_with_text_parts(mock_upload):
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -212,6 +218,7 @@ async def test_generate_image_text_only_calls_generate_content_with_text_parts(m
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_images_count_two_passes_config_and_returns_two_results(mock_upload):
     """count=2 时传入 config.candidate_count=2，且 mock 返回两候选时得到两条 GeneratedImageProcessResult。"""
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(
         return_value=_make_gemini_image_response_two_candidates()
@@ -243,6 +250,7 @@ async def test_generate_images_count_two_passes_config_and_returns_two_results(m
 @patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_jpeg_or_jpg_url_becomes_part_from_uri(mock_upload, url):
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -269,6 +277,7 @@ async def test_generate_image_jpeg_or_jpg_url_becomes_part_from_uri(mock_upload,
 @patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_plain_text_not_treated_as_uri(mock_upload):
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -292,6 +301,7 @@ async def test_generate_image_plain_text_not_treated_as_uri(mock_upload):
 @patch("app.core.google_genai.wrapped_client.global_config_loaded_from_config_yaml", Mock(gcs=Mock(bucket="test-bucket")))
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_mixed_text_and_image_url(mock_upload):
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -320,6 +330,7 @@ async def test_generate_image_mixed_text_and_image_url(mock_upload):
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_with_system_instruction_uses_config_copy(mock_upload):
     """传入 system_instruction 时使用 config 的副本，不污染全局 GEN_CONTENT_CONFIG_IMAGE_9_16_1K。"""
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -350,6 +361,7 @@ async def test_generate_image_attaches_sanitized_provider_response_after_gcs_upl
     mock_attach_provider_response_to_langsmith_run,
     _mock_upload,
 ):
+    _mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -375,6 +387,7 @@ async def test_generate_image_attaches_sanitized_provider_response_after_gcs_upl
 @patch("app.core.google_genai.wrapped_client.upload_to_gcs")
 async def test_generate_image_returns_generated_image_process_result(mock_upload):
     """Gemini 路径返回 GeneratedImageProcessResult（含 size, format, raw_data, gcs_uri, generated_at）。"""
+    mock_upload.side_effect = _mock_upload_to_gcs_https_return
     mock_models = Mock()
     mock_models.generate_content = AsyncMock(return_value=_make_gemini_image_response())
     client = Mock()
@@ -423,6 +436,7 @@ async def test_generate_image_uploads_to_fake_gcs_and_content_matches(
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
     blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
     assert blob.exists()
+    assert result.gcs_http_url == blob.public_url
     assert blob.download_as_bytes() == result.raw_data
 
 
@@ -455,6 +469,7 @@ async def test_generate_image_uploads_png_to_fake_gcs_with_correct_extension(
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
     blob = fake_gcs_for_wrapped_client.bucket(bucket_name).blob(gcs_path)
     assert blob.exists()
+    assert result.gcs_http_url == blob.public_url
     assert blob.download_as_bytes() == result.raw_data
 
 

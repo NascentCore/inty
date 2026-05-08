@@ -261,15 +261,15 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
 
 def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any] | None:
     """Build chat_history ``generated_image``-shaped metadata from one index row (``gs://`` URL)."""
-    from app.services.image_transform_service import image_transform_service
+    from app.external_services.gcs import gs_uri_from_storage_reference_url
 
     gcs_uri = str(row.get("gcs_uri") or "").strip()
     if not gcs_uri.startswith("gs://"):
-        http_u = str(row.get("gcs_http_url") or "").strip()
-        if http_u and image_transform_service.is_gcs_url(http_u):
-            path = image_transform_service.extract_gcs_path(http_u)
-            if path:
-                gcs_uri = f"gs://{path}"
+        ref = str(row.get("gcs_http_url") or "").strip()
+        if ref:
+            mapped = gs_uri_from_storage_reference_url(ref)
+            if mapped:
+                gcs_uri = mapped
     if not gcs_uri.startswith("gs://"):
         return None
     w = row.get("width")

@@ -183,6 +183,7 @@ async def test_seedream_v4_5_edit_uploads_to_fake_gcs_and_content_matches(
     bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
     blob = fake_gcs_fal.bucket(bucket_name).blob(gcs_path)
     assert blob.exists()
+    assert result.gcs_http_url == blob.public_url
     assert blob.download_as_bytes() == result.raw_data
 
 
@@ -234,6 +235,7 @@ async def test_z_image_turbo_uploads_to_fake_gcs_and_content_matches(
         bucket_name, gcs_path = get_bucket_and_path_from_gcs_url(result.gcs_uri)
         blob = fake_gcs_fal.bucket(bucket_name).blob(gcs_path)
         assert blob.exists()
+        assert result.gcs_http_url == blob.public_url
         assert blob.download_as_bytes() == result.raw_data
 
 
