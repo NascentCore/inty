@@ -1,3 +1,5 @@
+"""Agent runtime, prompt assembly, chat execution, and instance cache management."""
+
 import asyncio
 import json
 import random
@@ -2250,10 +2252,11 @@ class AgentManager:
                 }
                 await self.get_agent(agent_data)
 
-            print(f"初始化了 {len(popular_agents)} 个常用Agent")
+            logger.info(f"初始化了 {len(popular_agents)} 个常用Agent")
 
         except Exception as e:
-            print(f"初始化常用Agent失败: {str(e)}")
+            logger.exception(f"初始化常用Agent失败: {str(e)}")
+            raise
 
     def get_agent_count(self) -> int:
         """获取当前Agent实例数量"""
