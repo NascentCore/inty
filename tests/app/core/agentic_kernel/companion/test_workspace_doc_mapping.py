@@ -29,6 +29,7 @@ def test_roundtrip_static_paths() -> None:
         "transcript.jsonl",
         "tool_background.jsonl",
         ".companion_memory_pipeline.json",
+        ".companion_runtime_events.jsonl",
         "generated_images/index.jsonl",
     ):
         kind, cal = parse_workspace_relative_path(rel)

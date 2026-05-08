@@ -14,6 +14,7 @@ from langsmith import traceable
 
 from .memory_registry import get_memory_store
 from .memory_store import MemoryStore
+from .runtime_events import read_runtime_events
 from .runtime_inspect_context import runtime_inspect_get_bundle
 from .utc import local_date_str
 
@@ -145,6 +146,9 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
     include_store_documents = _parse_optional_bool(
         arguments.get("include_store_documents"), default=True
     )
+    max_runtime_events = _parse_optional_int(
+        arguments.get("max_runtime_events"), default=20, minimum=0
+    )
     bundle = runtime_inspect_get_bundle()
     out: dict[str, Any] = {
         "runtime_config": None,
@@ -169,8 +173,10 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         else:
             out["last_chat_completion_request"] = last
 
+    store = get_memory_store(root)
+    out["runtime_events"] = read_runtime_events(store, limit=max_runtime_events)
+
     if include_store_documents:
-        store = get_memory_store(root)
         day = local_date_str()
         out["store_documents"] = {
             "context_json": _read_store_optional(

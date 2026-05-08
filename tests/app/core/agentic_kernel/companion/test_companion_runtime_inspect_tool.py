@@ -22,6 +22,7 @@ from app.core.agentic_kernel.companion.runtime_inspect_context import (
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
 )
+from app.core.agentic_kernel.companion.runtime_events import append_runtime_event
 from app.core.agentic_kernel.companion.companion_tool_runtime import (
     WORKSPACE_READ_FILE_MAX_CHARS_CAP,
     execute_tool_call,
@@ -50,6 +51,10 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
     root = tmp_path
     store = get_memory_store(root)
     store.write_document("SOUL.md", "soul-content-here")
+    append_runtime_event(
+        store,
+        {"ts": "2026-05-08T00:00:00Z", "kind": "tool_timeout", "detail": "slow"},
+    )
     token = runtime_inspect_begin_turn()
     try:
         client = CompanionLLMClient(
@@ -96,6 +101,13 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         )
         assert "SOUL.md" in data["store_documents"]
         assert "soul-content-here" in data["store_documents"]["SOUL.md"]["text"]
+        assert data["runtime_events"] == [
+            {
+                "ts": "2026-05-08T00:00:00Z",
+                "kind": "tool_timeout",
+                "detail": "slow",
+            }
+        ]
     finally:
         runtime_inspect_end_turn(token)
 

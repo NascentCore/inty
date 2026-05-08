@@ -729,7 +729,8 @@ def build_openai_repl_tools(
                 "description": (
                     "Return a JSON snapshot of the current companion runtime: in-process LLM config, "
                     "last chat.completions request (model, messages, tools_summary, OpenRouter extra kwargs), "
-                    "and optionally workspace documents from MemoryStore (SOUL, USER, MEMORY.md, episodic/gist day paths). "
+                    "runtime events, and optionally workspace documents from MemoryStore "
+                    "(SOUL, USER, MEMORY.md, episodic/gist day paths). "
                     "Use when the user asks for verifiable facts about the active model, parameters, or injected "
                     "prompt stack. For self-check only: answer the user in natural language without reading "
                     "this JSON aloud verbatim."
@@ -751,6 +752,10 @@ def build_openai_repl_tools(
                         "include_store_documents": {
                             "type": "boolean",
                             "description": "If false, omit MemoryStore document bodies (default true).",
+                        },
+                        "max_runtime_events": {
+                            "type": "integer",
+                            "description": "Max newest runtime event records to include (default 20, min 0).",
                         },
                     },
                     "required": [],
