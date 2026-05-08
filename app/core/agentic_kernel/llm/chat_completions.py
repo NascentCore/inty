@@ -1,8 +1,9 @@
 """Synchronous OpenAI-compatible chat.completions: tool-path kwargs, JSON retry, LangSmith enrich.
 
 Maps OpenAI SDK failures from ``chat.completions.create`` to companion kernel inference errors.
-Also rejects pseudo-success bodies that parse as ``ChatCompletion`` but carry ``choices: null``
-plus an ``error`` field (OpenRouter may return HTTP 200 wrapping an upstream provider failure).
+Also rejects responses with missing or empty ``choices`` (including OpenRouter HTTP 200 bodies
+with ``choices: null``, optionally plus ``error``), mapping them to kernel inference errors
+instead of crashing on ``choices[0]``.
 """
 
 from __future__ import annotations

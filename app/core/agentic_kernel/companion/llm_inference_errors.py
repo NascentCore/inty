@@ -2,9 +2,12 @@
 
 Maps SDK exceptions from chat.completions into ``CompanionLLMInferenceBackendError``
 so API/WebSocket layers can return stable English messages plus optional provider HTTP status.
-Also detects "HTTP 200 + body ``choices: null`` + ``error`` field" pseudo-success bodies
-(observed from OpenRouter when an upstream provider returns 5xx) and surfaces them as the
-same controlled error type instead of letting downstream code crash on ``resp.choices[0]``.
+Also rejects chat completion responses with missing or empty ``choices`` (invalid for normal
+consumption): converts them to ``CompanionLLMInferenceBackendError`` instead of letting
+downstream crash on ``resp.choices[0]``. When an ``error`` body is present (OpenRouter may
+return HTTP 200 with ``choices: null`` and upstream status in ``error.code``), that status
+maps to the client message; otherwise ``provider_http_status`` is ``None`` and a generic
+provider message is used.
 """
 
 from __future__ import annotations
@@ -143,14 +146,18 @@ def log_and_build_inference_error(exc: Exception) -> CompanionLLMInferenceBacken
 
 
 def raise_if_chat_completion_missing_choices(resp: Any, *, model: str) -> None:
-    """Raise when an OpenAI SDK ``ChatCompletion`` carries empty ``choices`` plus an ``error`` body.
+    """Raise when ``choices`` is missing, null, or an empty list.
 
-    OpenRouter occasionally responds with HTTP 200 but a body of
-    ``{"choices": null, "error": {"code": <upstream_http_status>, "message": "..."}}``
-    when the actual upstream provider failed. Without this guard, downstream code crashes on
-    ``resp.choices[0]`` with ``TypeError: 'NoneType' object is not subscriptable``. Convert to
-    the same ``CompanionLLMInferenceBackendError`` type as a real HTTP failure so the WS layer
-    serves the documented ``code 502 + error_kind=llm_inference_backend`` frame.
+    Normal chat completions must expose at least one choice; otherwise callers cannot read
+    ``resp.choices[0]`` without ``TypeError`` / ``IndexError``. Map every such response to
+    ``CompanionLLMInferenceBackendError`` so HTTP/WS layers return ``code 502`` with
+    ``error_kind=llm_inference_backend``.
+
+    Typical trigger (observed on OpenRouter): HTTP 200 with
+    ``{"choices": null, "error": {"code": <upstream_http_status>, "message": "..."}}`` when
+    the upstream provider failed; ``error.code`` becomes ``provider_http_status`` when it is a
+    valid HTTP status. If there is no usable ``error`` payload, ``provider_http_status`` is
+    ``None`` and the client message is the generic inference-provider failure string.
     """
     choices = getattr(resp, "choices", None)
     if isinstance(choices, list) and len(choices) > 0:
