@@ -14,6 +14,10 @@ from loguru import logger
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionWorkspaceBootstrapType
+from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
+    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+    invocation_extra,
+)
 
 from .llm_client import (
     LLM_SCENE_CHAT,
@@ -88,6 +92,7 @@ from .llm_chat_runtime import (
     langsmith_trace_id_from_completion,
 )
 from .workspace import WorkspacePaths
+
 
 def _replace_leading_system_messages_multi(
     messages: list[dict[str, Any]], system_messages: list[dict[str, Any]]
@@ -412,6 +417,9 @@ async def run_turn(
                                 tools=None,
                                 response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
                                 scene=foreground_scene,
+                                langsmith_extra=invocation_extra(
+                                    source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+                                ),
                             )
 
                         resp = await asyncio.wait_for(
@@ -522,8 +530,8 @@ async def run_turn(
                     msg = resp.choices[0].message
                     raw_content = msg.content or ""
                     if use_dual_structured_chat:
-                        last_text, significance_meta = split_dual_llm_chat_branch_content(
-                            raw_content
+                        last_text, significance_meta = (
+                            split_dual_llm_chat_branch_content(raw_content)
                         )
                     else:
                         last_text = raw_content.strip()

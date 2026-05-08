@@ -43,12 +43,15 @@ def create_chat_completion_sync(
     tools: list[Any],
     tool_choice: str | None = None,
     response_format: dict[str, Any] | None = None,
+    langsmith_extra: dict[str, Any] | None = None,
 ) -> Any:
     _ensure_langsmith_handle_container_end_patch()
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
     }
+    if langsmith_extra:
+        create_kw["langsmith_extra"] = langsmith_extra
     if response_format is not None:
         create_kw["response_format"] = response_format
     # TODO(companion-dual-envelope-reasoning-channel): Switching chat models (e.g. OpenRouter

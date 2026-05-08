@@ -166,6 +166,7 @@ class CompanionLLMClient:
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
         scene: LLMScene | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
     ) -> Any:
         tool_list = list(tools or [])
         resolved_scene: LLMScene = (
@@ -189,6 +190,7 @@ class CompanionLLMClient:
             tools=tool_list,
             tool_choice=tool_choice,
             response_format=response_format,
+            langsmith_extra=langsmith_extra,
         )
 
     def chat_completion_unified(

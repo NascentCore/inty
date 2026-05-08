@@ -14,6 +14,12 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
+from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
+    LANGSMITH_RUN_NAME_TOOL_BG_ROUTING,
+    SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
+    invocation_extra,
+)
+
 _MARKDOWN_JSON_FENCE_RE = re.compile(
     r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
     re.DOTALL | re.IGNORECASE,
@@ -111,6 +117,10 @@ def resolve_tool_bg_routing_sync(
         messages_payload=payload,
         tools=[],
         response_format=None,
+        langsmith_extra=invocation_extra(
+            source=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
+            run_name=LANGSMITH_RUN_NAME_TOOL_BG_ROUTING,
+        ),
     )
     content = getattr(resp.choices[0].message, "content", None)
     if not isinstance(content, str):

@@ -24,6 +24,13 @@ from app.services.agent_status_line import (
 from app.utils.config import CompanionWorkspaceBootstrapType
 
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
+from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
+    INTY_TOOL_BG_ROUND_METADATA_KEY,
+    SOURCE_TOOL_BACKGROUND_CONTINUE,
+    SOURCE_TOOL_BACKGROUND_INITIAL,
+    invocation_extra,
+    tool_choice_attempt_metadata,
+)
 from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
@@ -375,6 +382,10 @@ def _initial_tool_bg_completion_with_fallbacks(
                 tools=tools,
                 tool_choice=tc,
                 response_format=None,
+                langsmith_extra=invocation_extra(
+                    source=SOURCE_TOOL_BACKGROUND_INITIAL,
+                    extra_metadata=tool_choice_attempt_metadata(tc),
+                ),
             )
             meta = _InitialToolBgCompletionMeta(tool_choice=tc)
             return resp, meta
@@ -664,6 +675,12 @@ async def _run_background_tool_loop(
                 model=tool_model_name,
                 messages_payload=inner_payload,
                 tools=tools,
+                langsmith_extra=invocation_extra(
+                    source=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                    extra_metadata={
+                        INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
+                    },
+                ),
             )
             _log_bg_llm_round_result(
                 round_idx=active_round,

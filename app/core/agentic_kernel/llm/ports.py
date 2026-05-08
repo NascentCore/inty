@@ -17,4 +17,5 @@ class ChatCompletionsSyncPort(Protocol):
         tools: list[Any],
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
     ) -> Any: ...
