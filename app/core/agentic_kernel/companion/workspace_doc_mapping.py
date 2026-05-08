@@ -24,6 +24,7 @@ class CompanionWorkspaceDocKind(str, Enum):
     MEMORY = "memory"
     HEARTBEAT = "heartbeat"
     TOOLS = "tools"
+    # Workspace seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
     SIGNIFICANCE_PERCEPTION = "significance_perception"
     TRANSCRIPT = "transcript"
     CONTEXT_JSON = "context_json"

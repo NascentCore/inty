@@ -5,6 +5,11 @@ companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch).
 files via `..workspace.get_imate_axiom_system_text` and prompt slice constants from
 `..prompt_slices`; consumed by `..turn`, `..turn_engine`, `..prompt_stack`.
 
+When ``include_significance_perception_slice`` is true, injects ``SIGNIFICANCE_PERCEPTION.md``
+(body from ``PromptBundle.significance_perception_md``) plus the dual-envelope JSON output contract
+(``_dual_llm_chat_structured_output_contract_text``) so the model fills ``importance_*`` fields;
+downstream usage is documented in ``..significance_perception`` module docstring.
+
 Kept as a sibling module of the MD assets in this package so `prompts/__init__.py` stays
 docstring-only (see `app/AGENTS.md`).
 """
@@ -82,6 +87,7 @@ def _output_contract_text_inner_tick() -> str:
 
 
 def _dual_llm_chat_structured_output_contract_text() -> str:
+    """Prompt text paired with ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` / envelope parsing in ``significance_perception``."""
     return (
         "## Dual-LLM chat branch: structured reply envelope\n\n"
         "Your **entire** assistant `message.content` must be **valid JSON only** "
@@ -92,7 +98,9 @@ def _dual_llm_chat_structured_output_contract_text() -> str:
         "when it runs allowed file tools; keep this branch aligned with that branch as one persona (fast vs slow).\n"
         "- `importance_round` (integer 1-10): importance of this turn overall given transcript and system context.\n"
         "- `importance_user_message` (integer 1-10): importance of the latest user message alone.\n"
-        "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n\n"
+        "- `importance_assistant_message` (integer 1-10): importance of `user_facing_reply` alone.\n"
+        "- `output_to_user` (boolean): **must be true** on this foreground dual-LLM chat branch "
+        "(the parallel tool branch decides silent vs visible follow-ups).\n\n"
         "This branch still must not call tools (`tool_choice=none`).\n"
     )
 
@@ -139,7 +147,7 @@ def _repl_tool_contract_suffix_after_image_clause(
             base
             + "**异步工具后台**：若服务端要求本回合工具路首轮必须发出 `tool_calls`，须在**同一条** assistant 消息里调用工具；"
             + "若首轮未被强制且本轮无 `tool_calls`（例如上游已回退为自动且判定不需工具），勿写对用户可见的长篇角色扮演（并行 chat 路已承担对用户话术）。"
-            + "除下文「工具环收尾 JSON 路由」所指收尾消息外，"
+            + "除下文「工具环收尾：结构化信封」所指收尾消息外，"
             + "其余 assistant 对外说明仍仅用自然语言，不要主动复述工具名、`output_to_user` 等字段名或工程细节。保持简洁有温度。"
         )
     return (
@@ -303,23 +311,24 @@ def _tool_background_first_round_skip_contract_text() -> str:
         "不要输出对用户可读的长篇角色扮演正文（并行 chat 路已把可见话术让给工具路）。\n\n"
         "在**未被强制**出工具的首轮（自动模式）且你判定本回合**不需要**任何工具时："
         "`content` 可留空或极简，仍不要写长篇对用户可见正文。\n"
-        "工具环内后续轮次与**收尾**消息仍遵循上文「工具环收尾：对用户可见性的 JSON 路由」。\n"
+        "工具环内后续轮次与**收尾**消息仍遵循上文「工具环收尾：结构化信封」。\n"
     )
 
 
 def _tool_background_final_json_routing_contract_text() -> str:
     return (
-        "## 工具环收尾：对用户可见性的 JSON 路由\n\n"
+        "## 工具环收尾：结构化信封\n\n"
         "当**所有** tool_calls 已执行完毕、你给出**不再包含 tool_calls** 的最终 assistant 消息时，"
-        "`message.content` 应为 **合法 JSON 对象**（不要 markdown 围栏），字段：\n"
-        "- `output_to_user`（布尔）：用户是否还应收到一条后续气泡，用于总结本轮工具可读结果"
+        "`message.content` 应为 **合法 JSON 对象**（不要 markdown 围栏），且与前台 dual-LLM chat 分支 **同一 schema**：\n"
+        "- `user_facing_reply`（字符串）：对用户可见的简短正文；可为空（例如仅图片等产物由系统附加）。\n"
+        "- `importance_round`、`importance_user_message`、`importance_assistant_message`（整数 1-10）："
+        "按 significance 规则为本轮工具收尾打分。\n"
+        "- `output_to_user`（布尔）：用户是否还应收到一条**额外**后续气泡，用于总结本轮工具可读结果"
         "（读档、列目录、联网检索、状态行、runtime_inspect 等）。"
         "若本轮仅为静默持久化（如 user_profile_record、SOUL/MEMORY 写回）且无需对用户追加说明，设为 false。\n"
-        "- `user_visible_text`（字符串）：当 `output_to_user` 为 true 时的简短可见正文；"
-        "可为空字符串（例如仅图片路径将由系统附加）。\n"
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
-        "若你无法产出合法 JSON，后端可能追加一次无 schema 约束的补解析请求。\n"
+        "若你无法产出合法 JSON，后端会追加一次 **同一 schema**、无 tools 的补解析请求。\n"
     )
 
 

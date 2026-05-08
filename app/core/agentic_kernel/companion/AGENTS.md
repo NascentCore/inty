@@ -64,6 +64,14 @@
 - 读取：`models.load_context_meta(..., store=store)`；`turn.run_turn` 在组装 prompt 前加载。
 - 写入：`manager.CompanionManager.get_or_create_session`（`context.json` 缺失时）。
 
+## Importance scoring（significance perception）
+
+- **含义**：前台 chat 与异步 tool 收尾共用同一 envelope：``user_facing_reply``、三条 ``importance_*``（1-10）、``output_to_user``（前台须为 true；工具收尾可为 false 表示静默）。解析与 schema 真源：[`significance_perception.py`](/app/core/agentic_kernel/companion/significance_perception.py)（模块顶部 docstring 汇总全链路消费点）。
+- **提示词**：包内 [`prompts/SIGNIFICANCE_PERCEPTION.md`](/app/core/agentic_kernel/companion/prompts/SIGNIFICANCE_PERCEPTION.md) 经 ``PromptBundle.significance_perception_md`` 注入；与 JSON 输出契约一同由 ``prompts/system_messages.py`` 在 ``include_significance_perception_slice`` 为真时挂上。
+- **路由**：``prompt_stack.py`` 决定何时注入 significance slice（与 ``turn.run_turn`` 中何时使用结构化 envelope 对齐）；详见该文件内注释。
+- **落库**：``turn.run_turn`` 将解析后的 dict 写入 transcript assistant 行；API 层 ``chat.py`` 可将同一 dict 写入 ``chat_history`` AI 消息的 ``meta_data.significance_perception``。
+- **下游**：``memory_extraction.use_significance_perception_in_extraction`` 为真时，[`memory_extraction_service.py`](/app/services/memory_extraction_service.py) 按 ``importance_round`` 排序并在抽取 prompt 中标注分数（默认关闭）。
+
 ## Async tool_background 与 transcript
 
 - **双 LLM**：前台 envelope 返回后，工具链在后台线程跑完；落盘 `transcript.jsonl` 的 `assistant` 行带 `source=tool_bg`，`content` 为对用户可见 NL（若有）并在其后追加固定 **`--- Tool results ---`** 段，内含本轮工具返回文本摘要（供下一轮 **chat** 与 **tool** 共用同一 transcript 窗口）。

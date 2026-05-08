@@ -467,8 +467,10 @@ class MemoryExtractionConfig:
     trigger_incremental_messages: int = (
         30  # 已提取用户自上次后新增聊天次数阈值（subscription_usage）
     )
-    # When companion writes significance_perception into chat_history.meta_data, use it to
-    # rank turns and annotate the extraction prompt (does not drop messages by default).
+    # When companion kernel fills CompanionTurnResult.significance_perception, chat.py mirrors it
+    # into chat_history AI meta_data. Enabling this sorts extraction input by
+    # meta_data.significance_perception.importance_round and adds bracket hints for the extractor LLM.
+    # Pipeline overview: app/core/agentic_kernel/companion/significance_perception.py module docstring.
     use_significance_perception_in_extraction: bool = False
 
     def __post_init__(self):

@@ -2,6 +2,15 @@
 
 可选 ``tool_bg_idle_event``：在加载 transcript 之前等待上一轮异步 tool_background 线程收尾，
 保证 ``transcript.jsonl`` 含工具摘要后再组装本轮 chat/tool messages。
+
+**Importance scoring (significance perception)**：When the foreground chat call uses
+``response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT``, the assistant JSON envelope includes three
+1-10 scores and ``output_to_user`` beside ``user_facing_reply``. Parsed scores go to ``significance_meta`` and are
+stored on the assistant transcript row and returned on ``CompanionTurnResult.significance_perception``
+(API layer may mirror into ``chat_history.meta_data``). Eligibility: foreground envelope applies to
+async dual-LLM (tools present) always for that chat leg; for the single-completion branch only when
+``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). Full pipeline
+notes: ``significance_perception.py`` module docstring.
 """
 
 from __future__ import annotations
@@ -291,6 +300,9 @@ async def run_turn(
             implicit_user_signed_on_turn=implicit_sign_on_turn,
         )
     )
+    # Structured envelope (+ importance scores) only when this leg is the lone chat completion
+    # without ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL; when tools run, the foreground chat leg still
+    # uses DUAL_LLM_CHAT_RESPONSE_FORMAT inside the async branch (see below).
     use_dual_structured_chat = (
         (not inner_tick_turn)
         and (not tools_for_turn)
@@ -482,9 +494,15 @@ async def run_turn(
                     # yields empty assistant text and API returns 500. See
                     # ``app/core/agentic_kernel/llm/chat_completions.py`` (TODO tag).
                     raw_content = msg.content or ""
-                    last_text, significance_meta = split_dual_llm_chat_branch_content(
-                        raw_content
+                    last_text, significance_meta, fg_output_to_user = (
+                        split_dual_llm_chat_branch_content(raw_content)
                     )
+                    if fg_output_to_user is False:
+                        logger.warning(
+                            "run_turn foreground dual_llm envelope output_to_user=false "
+                            "trace_id={} (expected true for chat branch)",
+                            trace_id,
+                        )
                     fg_text = last_text.strip()
                     tool_msgs_for_bg = deepcopy(tool_msgs)
                     if fg_text:
@@ -584,9 +602,15 @@ async def run_turn(
                     msg = resp.choices[0].message
                     raw_content = msg.content or ""
                     if use_dual_structured_chat:
-                        last_text, significance_meta = (
+                        last_text, significance_meta, fg_output_to_user = (
                             split_dual_llm_chat_branch_content(raw_content)
                         )
+                        if fg_output_to_user is False:
+                            logger.warning(
+                                "run_turn single_shot dual_llm envelope output_to_user=false "
+                                "trace_id={} (expected true for chat branch)",
+                                trace_id,
+                            )
                     else:
                         last_text = raw_content.strip()
                     logger.info(

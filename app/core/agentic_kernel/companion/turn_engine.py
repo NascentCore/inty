@@ -94,6 +94,14 @@ def persist_repl_turn_transcript_rows(
     trace_id: str | None = None,
     assistant_extra: dict[str, Any] | None = None,
 ) -> str:
+    """Persist one user + one assistant row to ``transcript.jsonl``.
+
+    If ``assistant_extra`` is set (typically the parsed envelope metadata dict with
+    ``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``), it is
+    stored under the assistant row key ``significance_perception`` for parity with ``turn.run_turn``.
+    Full importance
+    contract: ``significance_perception`` module docstring.
+    """
     root = workspace_root.resolve()
     paths = WorkspacePaths(root=root)
     rel_tr = paths.transcript.relative_to(root).as_posix()

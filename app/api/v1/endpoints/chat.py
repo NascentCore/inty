@@ -743,6 +743,8 @@ async def _build_companion_tool_background_ws_payload(
         meta_data["generated_image"] = gi
     if ev.local_image_paths:
         meta_data["tool_bg_local_image_paths"] = list(ev.local_image_paths)
+    if ev.significance_perception:
+        meta_data["significance_perception"] = ev.significance_perception
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -823,6 +825,10 @@ def _companion_ai_meta_from_turn_result(
         companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
     if companion_turn.langsmith_run_id:
         companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
+    # Optional 1-10 importance triple from companion JSON envelope; kernel may omit on parse miss.
+    # Downstream: memory extraction can sort/annotate prompts when
+    # memory_extraction.use_significance_perception_in_extraction is true; see
+    # app/services/memory_extraction_service.py and companion significance_perception module docstring.
     sp = companion_turn.significance_perception
     if isinstance(sp, dict) and sp:
         companion_ai_meta["significance_perception"] = sp

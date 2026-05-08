@@ -1,74 +1,50 @@
-"""Structured routing for async tool_background after the tool loop completes.
+"""Resolve async tool_background finish using the unified dual-LLM JSON envelope.
 
-Routing uses ``output_to_user`` / ``user_visible_text`` parsed from the model's
-final assistant message, or from a follow-up completion when that body is not
-valid JSON (no ``response_format`` schema on that request).
+The model's final assistant ``message.content`` must validate as
+``DualLlmChatBranchEnvelope`` (same schema as foreground
+``DUAL_LLM_CHAT_RESPONSE_FORMAT``). If invalid, one extra no-tools completion
+runs with the same ``response_format`` and a short system instruction.
 """
 
 from __future__ import annotations
 
-import json
-import re
 from typing import Any
 
 from loguru import logger
-from pydantic import BaseModel, Field, ValidationError
 
+from app.core.agentic_kernel.companion.significance_perception import (
+    DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    DualLlmChatBranchEnvelope,
+    parse_dual_llm_chat_envelope_json,
+)
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
     SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
     tool_call_langsmith_extra,
 )
 
-_MARKDOWN_JSON_FENCE_RE = re.compile(
-    r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
-    re.DOTALL | re.IGNORECASE,
-)
-
-
-class ToolBgRoutingEnvelope(BaseModel):
-    output_to_user: bool = False
-    user_visible_text: str = Field(default="")
-
-
-_ROUTING_SYSTEM_PROMPT = (
-    "## Tool-loop routing (machine-readable)\n\n"
+_UNIFIED_FALLBACK_SYSTEM_PROMPT = (
+    "## Tool loop finished (machine-readable envelope)\n\n"
     "The tool execution loop has finished. Respond with **JSON only** (no markdown fences, "
-    "no extra prose). Shape:\n"
-    "- `output_to_user` (boolean): set **true** if the user should see a follow-up bubble "
-    "with outcomes from tools such as workspace_read_file, workspace_list_dir, "
-    "google_web_search, companion_runtime_inspect, or tool_update_agent_status_line.\n"
-    "- `user_visible_text` (string): optional concise summary for that bubble; may be empty "
-    "when images or other artifacts alone suffice.\n"
-    "Set `output_to_user` **false** when only silent persistence ran (e.g. USER profile bullets, "
-    "workspace_write_file to SOUL/MEMORY) and no user-visible recap is needed.\n"
+    "no extra prose). Use the **same** shape as the dual-LLM chat envelope:\n"
+    "- `user_facing_reply` (string): concise visible summary for a follow-up bubble when needed; "
+    "may be empty when images or artifacts alone suffice.\n"
+    "- `importance_round`, `importance_user_message`, `importance_assistant_message` "
+    "(integers 1-10): score this tool-finish moment per significance perception rules.\n"
+    "- `output_to_user` (boolean): **true** if the user should see a follow-up bubble with tool "
+    "outcomes (read_file, list_dir, search, runtime_inspect, status line, etc.). **false** when "
+    "only silent persistence ran and no recap is needed.\n"
+    "Successful image generation still delivers the asset; `output_to_user` only gates extra text.\n"
 )
 
 
-def _strip_json_fence(raw: str) -> str:
-    s = (raw or "").strip()
-    if not s:
-        return ""
-    m = _MARKDOWN_JSON_FENCE_RE.match(s)
-    if m:
-        return (m.group(1) or "").strip()
-    return s
-
-
-def parse_tool_bg_routing_content(raw: str) -> ToolBgRoutingEnvelope | None:
-    """Parse assistant message body into routing envelope; None if invalid."""
-    body = _strip_json_fence(raw)
-    if not body:
-        return None
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    try:
-        return ToolBgRoutingEnvelope.model_validate(data)
-    except ValidationError:
-        return None
+def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
+    return DualLlmChatBranchEnvelope(
+        user_facing_reply="",
+        importance_round=5,
+        importance_user_message=5,
+        importance_assistant_message=5,
+        output_to_user=False,
+    )
 
 
 def resolve_tool_bg_routing_sync(
@@ -79,32 +55,30 @@ def resolve_tool_bg_routing_sync(
     conversation_messages: list[dict[str, Any]],
     final_assistant_content: str,
     trace_id: str | None = None,
-) -> ToolBgRoutingEnvelope:
+) -> DualLlmChatBranchEnvelope:
     """
-    Prefer routing JSON from the model's final assistant message; if missing/invalid,
-    run one extra completion (no tools, no response_format).
+    Prefer unified envelope JSON from the model's final assistant message; if missing/invalid,
+    run one extra completion (no tools, same ``response_format`` as foreground chat).
 
     trace_id: optional correlation id for DEBUG logs (tool_bg_routing / repl.turn.bg policy).
     """
     tid = trace_id or "-"
-    parsed = parse_tool_bg_routing_content(final_assistant_content)
+    parsed = parse_dual_llm_chat_envelope_json(final_assistant_content)
     if parsed is not None:
         logger.debug(
             "tool_bg_routing trace_id={} source=final_assistant_message "
-            "output_to_user={} user_visible_text_chars={}",
+            "output_to_user={} user_facing_reply_chars={}",
             tid,
             parsed.output_to_user,
-            len(parsed.user_visible_text or ""),
+            len(parsed.user_facing_reply or ""),
         )
         return parsed
     logger.debug(
         "tool_bg_routing trace_id={} source=extra_completion_request "
-        "(final_assistant_not_valid_routing_json)",
+        "(final_assistant_not_valid_unified_envelope_json)",
         tid,
     )
-    routing_tail = [
-        {"role": "system", "content": _ROUTING_SYSTEM_PROMPT},
-    ]
+    routing_tail = [{"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT}]
     payload = [
         {k: v for k, v in m.items() if not str(k).startswith("_")}
         for m in conversation_messages
@@ -115,7 +89,7 @@ def resolve_tool_bg_routing_sync(
         model=model,
         messages_payload=payload,
         tools=[],
-        response_format=None,
+        response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
         langsmith_extra=tool_call_langsmith_extra(
             phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
         ),
@@ -126,19 +100,19 @@ def resolve_tool_bg_routing_sync(
             "tool_bg_routing trace_id={} source=fallback_conservative_non_string_content",
             tid,
         )
-        return ToolBgRoutingEnvelope(output_to_user=False, user_visible_text="")
-    fallback = parse_tool_bg_routing_content(content)
+        return _conservative_tool_finish_envelope()
+    fallback = parse_dual_llm_chat_envelope_json(content)
     if fallback is not None:
         logger.debug(
             "tool_bg_routing trace_id={} source=extra_completion_response "
-            "output_to_user={} user_visible_text_chars={}",
+            "output_to_user={} user_facing_reply_chars={}",
             tid,
             fallback.output_to_user,
-            len(fallback.user_visible_text or ""),
+            len(fallback.user_facing_reply or ""),
         )
         return fallback
     logger.debug(
         "tool_bg_routing trace_id={} source=fallback_conservative_invalid_json",
         tid,
     )
-    return ToolBgRoutingEnvelope(output_to_user=False, user_visible_text="")
+    return _conservative_tool_finish_envelope()

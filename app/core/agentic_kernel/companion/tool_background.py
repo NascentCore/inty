@@ -52,6 +52,7 @@ from .image_gate import list_image_asset_records
 from .memory_store import MemoryStore
 from .models import InnerTickMode
 from .prompt_stack import refresh_companion_turn_prompt_stack
+from .significance_perception import envelope_to_assistant_metadata_dict
 from .runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     runtime_inspect_set_last_chat_completion_request,
@@ -292,6 +293,8 @@ class ToolOutputEvent:
     # Absolute on-disk paths for images created during this background tool round.
     # Surfaced to REPL via meta_data.tool_bg_local_image_paths; production clients ignore.
     local_image_paths: tuple[str, ...] = ()
+    # Parsed from unified finish envelope; mirrors foreground significance_perception shape.
+    significance_perception: dict[str, Any] | None = None
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -793,7 +796,8 @@ async def _run_background_tool_loop(
         )
         output_to_user_flag = routing.output_to_user
         should_push = generation_deliver or output_to_user_flag
-        base_nl = (routing.user_visible_text or "").strip()
+        base_nl = (routing.user_facing_reply or "").strip()
+        significance_meta = envelope_to_assistant_metadata_dict(routing)
         if output_to_user_flag and not base_nl:
             filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
@@ -927,6 +931,7 @@ async def _run_background_tool_loop(
                 generation_deliver=generation_deliver,
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),
+                significance_perception=significance_meta,
             )
         )
     finally:
