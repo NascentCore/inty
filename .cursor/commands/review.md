@@ -24,4 +24,4 @@ Review the uncommited code changes made in the current conversation, fix/revise/
 - [ ] Confirm that implementation architecture is sound, revise changes if needed
 - [ ] Follows existing coding style and AGENTS.md, revise changes if needed
 - [ ] Changes passed tests, revise changes if needed
-- [ ] Invoke /commit command to commit changes
+- [ ] Invoke cursor command `/commit`
