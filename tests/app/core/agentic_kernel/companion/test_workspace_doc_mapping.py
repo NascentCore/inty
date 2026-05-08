@@ -27,6 +27,7 @@ def test_roundtrip_static_paths() -> None:
     for rel in (
         "SOUL.md",
         "transcript.jsonl",
+        "tool_background.jsonl",
         ".companion_memory_pipeline.json",
         "generated_images/index.jsonl",
     ):

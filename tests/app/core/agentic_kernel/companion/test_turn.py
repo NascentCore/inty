@@ -6,6 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
@@ -28,6 +31,13 @@ class _FakeLLMClient:
         self.config = CompanionLLMConfig(api_base="https://example.invalid/v1")
         self.calls: list[dict[str, Any]] = []
 
+    def sync_client_for_route(self, route: str) -> object:
+        return object()
+
+    @property
+    def chat_completions_sync(self):
+        return create_chat_completion_sync
+
     def resolve_model(self, role: str) -> str:
         return f"test/{role}"
 
@@ -39,6 +49,11 @@ class _FakeLLMClient:
         msg = SimpleNamespace(content="inner reply", tool_calls=[])
         return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
 
+    def complete_text(
+        self, messages: list[dict[str, Any]], *, model_role: str = "memory"
+    ) -> str:
+        return ""
+
 
 def _seed_workspace(store: MemoryStore) -> None:
     store.write_document("IDENTITY.md", "identity")
@@ -47,10 +62,16 @@ def _seed_workspace(store: MemoryStore) -> None:
     store.write_document("MEMORY.md", "memory")
 
 
-def test_run_turn_inner_tick_persists_synthetic_turn_metadata(tmp_path: Path) -> None:
+def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     store = MemoryStore(workspace_root=tmp_path, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
+    monkeypatch.setattr(
+        "app.core.agentic_kernel.companion.turn.start_tool_background_job",
+        lambda **kwargs: None,
+    )
 
     out = asyncio.run(
         run_turn(
@@ -63,6 +84,7 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(tmp_path: Path) ->
     )
 
     assert out.assistant_text == "inner reply"
+    assert out.tool_background_started is True
     assert client.calls[0]["scene"] == LLM_SCENE_INNER_TICK
 
     rows = [

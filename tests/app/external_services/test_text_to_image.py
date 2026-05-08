@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+
 import pytest
 
 from app.external_services.fakes.openai import FakeOpenAI
@@ -74,7 +77,17 @@ class _FakeFalClient:
         }
 
 
-def test_text_to_image_google_prefix_dispatch() -> None:
+def test_text_to_image_google_prefix_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core import config as app_config
+
+    monkeypatch.setattr(
+        app_config,
+        "global_config_loaded_from_config_yaml",
+        SimpleNamespace(gcs=SimpleNamespace(use_fake_gcs=False)),
+    )
+
     fake_client = _FakeGoogleClient()
 
     result = generate_text_to_image(
@@ -196,3 +209,39 @@ def test_text_to_image_falai_prefix_dispatch_z_image_turbo() -> None:
         assert image.width == 1024
         assert image.height == 1365
         assert image.mime_type == "image/png"
+
+
+def test_gcs_uri_to_public_url_fake_filesystem_vs_https(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from app.core import config as app_config
+
+    from app.external_services.text_to_image import _gcs_uri_to_public_url
+
+    base = tmp_path / "fb"
+    base.mkdir()
+    local_file = base / "bk" / "o.jpg"
+    local_file.parent.mkdir(parents=True)
+    local_file.write_bytes(b"x")
+
+    monkeypatch.setattr(
+        app_config,
+        "global_config_loaded_from_config_yaml",
+        SimpleNamespace(
+            gcs=SimpleNamespace(
+                use_fake_gcs=True,
+                fake_gcs_base_dir=str(base.resolve()),
+            )
+        ),
+    )
+    assert _gcs_uri_to_public_url("gs://bk/o.jpg") == local_file.resolve().as_uri()
+
+    monkeypatch.setattr(
+        app_config,
+        "global_config_loaded_from_config_yaml",
+        SimpleNamespace(gcs=SimpleNamespace(use_fake_gcs=False)),
+    )
+    assert (
+        _gcs_uri_to_public_url("gs://bk/o.jpg")
+        == "https://storage.googleapis.com/bk/o.jpg"
+    )

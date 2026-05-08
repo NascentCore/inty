@@ -17,6 +17,7 @@ import base64
 import io
 import os
 import uuid
+from pathlib import Path
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import SimpleNamespace
@@ -420,7 +421,13 @@ def _gcs_uri_to_public_url(gcs_uri: Optional[str]) -> Optional[str]:
     if not gcs_uri:
         return None
     if gcs_uri.startswith("gs://"):
-        return f"https://storage.googleapis.com/{gcs_uri[5:]}"
+        from app.core.config import global_config_loaded_from_config_yaml
+
+        rest = gcs_uri[5:]
+        cfg = global_config_loaded_from_config_yaml.gcs
+        if cfg.use_fake_gcs:
+            return (Path(cfg.fake_gcs_base_dir) / rest).resolve().as_uri()
+        return f"https://storage.googleapis.com/{rest}"
     return gcs_uri
 
 

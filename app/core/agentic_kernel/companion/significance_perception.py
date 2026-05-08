@@ -1,4 +1,40 @@
-"""Dual-LLM chat branch: significance scores (1-10) + user-facing reply in one JSON envelope."""
+"""Dual-LLM chat branch: significance scores (1-10) + user-facing reply in one JSON envelope.
+
+**Where the three importance integers flow (read this when changing the contract):**
+
+- **Produced**: Foreground ``chat.completions`` may set ``response_format`` to
+  ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` (``turn.run_turn``) so the model returns JSON with
+  ``user_facing_reply``, ``output_to_user``, plus ``importance_round`` /
+  ``importance_user_message`` / ``importance_assistant_message``. The same envelope is used
+  for async ``tool_background`` finish (see ``tool_bg_routing``). Operator guidance for scoring lives in
+  ``prompts/SIGNIFICANCE_PERCEPTION.md`` (injected when
+  ``include_significance_perception_slice`` is on; see ``prompts/system_messages.py`` and
+  ``prompt_stack.companion_turn_tools_and_system_messages``).
+- **Parsed / split**: ``split_dual_llm_chat_branch_content`` strips optional markdown fences
+  and returns ``(visible_text, metadata_dict, output_to_user_or_none)``; metadata keys match
+  the three importance JSON field names. The third tuple element is the parsed envelope's
+  ``output_to_user`` when JSON validated, else ``None`` (foreground chat should treat missing
+  as unparsed raw text).
+- **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries
+  the dict for one turn; may be ``None`` if the model returned non-JSON or parse failed
+  (visible text may still be the raw string).
+- **Transcript**: ``turn.run_turn`` appends an assistant JSONL row with optional
+  ``significance_perception``; ``turn_engine.persist_repl_turn_transcript_rows`` can attach
+  the same via ``assistant_extra`` for REPL-style paths.
+- **Product DB / WS**: Foreground turns: ``app/api/v1/endpoints/chat._companion_ai_meta_from_turn_result``
+  copies non-empty ``significance_perception`` into ``chat_history`` AI ``meta_data`` / WS payload.
+  Async ``tool_bg`` follow-up rows: ``ToolOutputEvent.significance_perception`` (from unified finish
+  envelope via ``tool_bg_routing``) is mirrored in ``chat._build_companion_tool_background_ws_payload``.
+- **Memory extraction (optional)**: When ``memory_extraction.use_significance_perception_in_extraction``
+  is true (``app/utils/config.py``), ``app/services/memory_extraction_service.py`` sorts message
+  rows by ``meta_data.significance_perception.importance_round`` and annotates lines in the
+  extraction prompt; see ``_prepare_messages_for_memory_extraction`` and
+  ``_format_chat_for_prompt``.
+
+Design overview: ``/docs/imate/DESIGN.md`` (Significance / memory extraction sections).
+LangSmith tags foreground envelope spans with ``inty_llm_source=foreground_dual_llm_envelope``
+(``llm/langsmith_invocation_extra.py``).
+"""
 
 from __future__ import annotations
 
@@ -52,12 +88,21 @@ DUAL_LLM_CHAT_RESPONSE_FORMAT: Final[dict[str, Any]] = {
                     "minimum": 1,
                     "maximum": 10,
                 },
+                "output_to_user": {
+                    "type": "boolean",
+                    "description": (
+                        "Foreground dual-LLM chat branch: always true. "
+                        "Tool-background finish: false when only silent persistence ran and no "
+                        "user-visible recap is needed."
+                    ),
+                },
             },
             "required": [
                 "user_facing_reply",
                 "importance_round",
                 "importance_user_message",
                 "importance_assistant_message",
+                "output_to_user",
             ],
             "additionalProperties": False,
         },
@@ -70,6 +115,20 @@ class DualLlmChatBranchEnvelope(BaseModel):
     importance_round: int = Field(ge=1, le=10)
     importance_user_message: int = Field(ge=1, le=10)
     importance_assistant_message: int = Field(ge=1, le=10)
+    output_to_user: bool = True
+
+    @field_validator("output_to_user", mode="before")
+    @classmethod
+    def _coerce_output_to_user(cls, v: object) -> bool:
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s in ("true", "1", "yes"):
+                return True
+            if s in ("false", "0", "no"):
+                return False
+        raise ValueError("output_to_user must be boolean")
 
     @field_validator("user_facing_reply", mode="before")
     @classmethod
@@ -148,10 +207,14 @@ def envelope_to_assistant_metadata_dict(
 
 def split_dual_llm_chat_branch_content(
     raw: str,
-) -> tuple[str, dict[str, Any] | None]:
+) -> tuple[str, dict[str, Any] | None, bool | None]:
     # TODO(companion-dual-envelope-reasoning-channel): Empty ``raw`` here often means the LLM put
     # the JSON envelope only in ``message.reasoning``; fix extraction before calling this helper.
     env = parse_dual_llm_chat_envelope_json(raw)
     if env is None:
-        return ((raw or "").strip(), None)
-    return (env.user_facing_reply.strip(), envelope_to_assistant_metadata_dict(env))
+        return ((raw or "").strip(), None, None)
+    return (
+        env.user_facing_reply.strip(),
+        envelope_to_assistant_metadata_dict(env),
+        env.output_to_user,
+    )

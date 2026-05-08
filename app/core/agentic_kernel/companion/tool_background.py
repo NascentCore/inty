@@ -1,4 +1,9 @@
-"""Background tool execution queue for async dual-LLM mode."""
+"""Background tool execution queue for async dual-LLM mode.
+
+Persists tool return strings under a ``--- Tool results ---`` section on ``source=tool_bg``
+transcript rows so the following ``run_turn`` sees them in chat/tool message assembly.
+Optional ``tool_bg_idle_event`` coordinates per-session ordering with ``turn.run_turn``.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +21,7 @@ from typing import Any, Callable, Protocol
 from loguru import logger
 from openai import BadRequestError
 
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agent_status_line import (
     clear_tool_background_db_loop,
     set_tool_background_db_loop,
@@ -23,6 +29,13 @@ from app.services.agent_status_line import (
 from app.utils.config import CompanionWorkspaceBootstrapType
 
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
+from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
+    INTY_TOOL_BG_ROUND_METADATA_KEY,
+    SOURCE_TOOL_BACKGROUND_CONTINUE,
+    SOURCE_TOOL_BACKGROUND_INITIAL,
+    tool_call_langsmith_extra,
+    tool_choice_attempt_metadata,
+)
 from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
 from app.core.agentic_kernel.tools.runtime import (
     resolve_official_assistant_tool_loop_async,
@@ -35,9 +48,11 @@ from .llm_chat_runtime import (
     langsmith_trace_id_from_completion,
     tool_path_chat_completion_kwargs,
 )
-from .memory_registry import get_memory_store
+from .image_gate import list_image_asset_records
+from .memory_store import MemoryStore
 from .models import InnerTickMode
 from .prompt_stack import refresh_companion_turn_prompt_stack
+from .significance_perception import envelope_to_assistant_metadata_dict
 from .runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     runtime_inspect_set_last_chat_completion_request,
@@ -52,13 +67,7 @@ from .companion_tool_runtime import (
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )
-from .tool_bg_routing import (
-    TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME,
-    TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT,
-    parse_tool_bg_first_round_skip_details,
-    resolve_tool_bg_routing_sync,
-    tool_bg_first_round_skip_schema_enabled,
-)
+from .tool_bg_routing import resolve_tool_bg_routing_sync
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 
@@ -69,6 +78,10 @@ _ACTIVE_THREADS_LOCK = threading.Lock()
 _ABORT_TOOL_BG_LOCK = threading.Lock()
 _ABORTED_TOOL_BG_USER_MSG_UUIDS: set[str] = set()
 _BG_TOOL_MAX_ROUNDS = 24
+
+# Persisted on ``source=tool_bg`` transcript rows so the next turn's chat/tool LLMs
+# reliably see raw tool return strings (even when routing NL is non-empty).
+TOOL_RESULTS_TRANSCRIPT_MARKER = "--- Tool results ---"
 
 
 class ToolBackgroundTraceHooks(Protocol):
@@ -108,30 +121,8 @@ class BackgroundToolLoopAborted(Exception):
 
 # Fal `generate_image` / `modify_image` tool summaries include `local_path=/abs/path/...`.
 _LOCAL_PATH_IN_TOOL = re.compile(r"local_path=(\S+)")
-# When the last user message matches, first background completion uses tool_choice=required
-# so the tool-side model cannot skip structured tool calls on image/edit intents.
-_BG_USER_HINTS_FORCE_TOOLS = re.compile(
-    r"(生成图片|生图|文生图|图生图|改图|重画|画一张|来张图|修图|换风格|"
-    r"给我画|画个|画一|肖像照|插图|"
-    r"generate\s*image|text-?to-?image|image\s*to\s*image|modify\s*image)",
-    re.I,
-)
-
-
-def _last_user_message_text(messages: list[dict[str, Any]]) -> str:
-    for m in reversed(messages):
-        if m.get("role") != "user":
-            continue
-        c = m.get("content")
-        if isinstance(c, str):
-            return c.strip()
-    return ""
-
-
-def _background_turn_should_force_tools(user_text: str) -> bool:
-    if not user_text:
-        return False
-    return _BG_USER_HINTS_FORCE_TOOLS.search(user_text) is not None
+# First tool_background completion tries tool_choice=required whenever the OpenAI tools list
+# is non-empty; BadRequest fallbacks omit it (provider auto mode).
 
 
 def _local_paths_from_tool_messages(
@@ -154,17 +145,6 @@ def _local_paths_from_tool_messages(
     return out
 
 
-def _append_local_image_paths_for_display(assistant_text: str, paths: list[str]) -> str:
-    """Append human-readable lines so REPL can show on-disk image paths after async tools."""
-    if not paths:
-        return assistant_text
-    block = "\n".join(paths)
-    suffix = f"\n\n（生成图片本地路径）\n{block}"
-    if not assistant_text:
-        return suffix.strip()
-    return assistant_text.rstrip() + suffix
-
-
 def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
     """Collect tool function names from assistant tool_call messages in order."""
     names: list[str] = []
@@ -183,6 +163,25 @@ def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
                 if n:
                     names.append(n)
     return names
+
+
+def build_tool_background_transcript_body(
+    *,
+    display_text: str,
+    appended_turn_msgs: list[dict[str, Any]],
+    total_tool_calls: int,
+) -> str:
+    """NL visible to user (routing) plus a fixed marker section of tool return strings."""
+    nl = (display_text or "").strip()
+    digest_core = ""
+    if total_tool_calls > 0:
+        digest_core = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs).strip()
+    digest_block = ""
+    if digest_core:
+        digest_block = f"{TOOL_RESULTS_TRANSCRIPT_MARKER}\n{digest_core}"
+    if nl and digest_block:
+        return f"{nl}\n\n{digest_block}"
+    return nl or digest_block
 
 
 def _tool_bg_nl_filler_from_appended_turn(
@@ -290,6 +289,12 @@ class ToolOutputEvent:
     langsmith_run_id: str = ""
     output_to_user: bool = False
     generation_deliver: bool = False
+    image_asset_baseline: int = 0
+    # Absolute on-disk paths for images created during this background tool round.
+    # Surfaced to REPL via meta_data.tool_bg_local_image_paths; production clients ignore.
+    local_image_paths: tuple[str, ...] = ()
+    # Parsed from unified finish envelope; mirrors foreground significance_perception shape.
+    significance_perception: dict[str, Any] | None = None
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -376,7 +381,6 @@ def _single_line_log_preview(text: str, max_chars: int = 280) -> str:
 class _InitialToolBgCompletionMeta:
     """Winning attempt parameters for tool_background first completion (runtime_inspect)."""
 
-    used_skip_schema: bool
     tool_choice: str | None
 
 
@@ -390,27 +394,17 @@ def _initial_tool_bg_completion_with_fallbacks(
     force_tools: bool,
 ) -> tuple[Any, _InitialToolBgCompletionMeta]:
     """
-    First tool_background completion. Optionally forces assistant.content to ``{"skip": bool}``
-    (see ``TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT`` in ``tool_bg_routing``): skip=true ends the
-    loop without tools; skip=false should accompany tool_calls on the same message.
+    First tool_background completion (no response_format; tools may use tool_choice fallbacks).
 
     Returns (response, meta for last_chat_completion_request snapshot).
     """
-    schema_on = tool_bg_first_round_skip_schema_enabled()
-    schema_rf: dict[str, Any] | None = (
-        TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT if schema_on else None
-    )
-    attempts: list[tuple[dict[str, Any] | None, str | None]] = []
-    if schema_rf is not None and force_tools:
-        attempts.append((schema_rf, "required"))
-    if schema_rf is not None:
-        attempts.append((schema_rf, None))
+    attempts: list[str | None] = []
     if force_tools:
-        attempts.append((None, "required"))
-    attempts.append((None, None))
+        attempts.append("required")
+    attempts.append(None)
 
     last_br: BadRequestError | None = None
-    for rf, tc in attempts:
+    for tc in attempts:
         try:
             resp = chat_completion_sync(
                 client,
@@ -418,18 +412,18 @@ def _initial_tool_bg_completion_with_fallbacks(
                 messages_payload=messages_payload,
                 tools=tools,
                 tool_choice=tc,
-                response_format=rf,
+                response_format=None,
+                langsmith_extra=tool_call_langsmith_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
+                    extra_metadata=tool_choice_attempt_metadata(tc),
+                ),
             )
-            meta = _InitialToolBgCompletionMeta(
-                used_skip_schema=rf is not None,
-                tool_choice=tc,
-            )
+            meta = _InitialToolBgCompletionMeta(tool_choice=tc)
             return resp, meta
         except BadRequestError as exc:
             last_br = exc
             logger.warning(
-                "repl.turn.bg initial_completion BadRequest response_format={} tool_choice={} err={}",
-                rf is not None,
+                "repl.turn.bg initial_completion BadRequest tool_choice={} err={}",
                 tc,
                 exc,
             )
@@ -477,6 +471,7 @@ def _log_bg_llm_round_result(
 def _append_background_transcript_assistant(
     ws_root: Path,
     *,
+    store: MemoryStore,
     content: str,
     assistant_msg_uuid: str,
     reply_to: str,
@@ -485,7 +480,7 @@ def _append_background_transcript_assistant(
     root = ws_root.resolve()
     paths = WorkspacePaths(root=root)
     rel_tr = paths.transcript.relative_to(root).as_posix()
-    get_memory_store(root).append_jsonl_record(
+    store.append_jsonl_record(
         rel_tr,
         {
             "role": "assistant",
@@ -500,8 +495,8 @@ def _append_background_transcript_assistant(
 
 
 def _append_background_log(
-    workspace_root: Path,
     *,
+    store: MemoryStore,
     user_msg_uuid: str,
     assistant_msg_uuid: str,
     elapsed_ms: int,
@@ -522,7 +517,7 @@ def _append_background_log(
     }
     if trace_id.strip():
         row["trace_id"] = trace_id
-    get_memory_store(workspace_root).append_jsonl_record(
+    store.append_jsonl_record(
         "tool_background.jsonl",
         row,
     )
@@ -531,6 +526,7 @@ def _append_background_log(
 async def _run_background_tool_loop(
     *,
     ws_root: Path,
+    memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     tool_model_name: str,
     user_msg_uuid: str,
@@ -544,8 +540,12 @@ async def _run_background_tool_loop(
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
-    enable_async_tool_background: bool = False,
+    inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    force_tools_first_round: bool = True,
 ) -> None:
+    image_asset_baseline = len(list_image_asset_records(ws_root.resolve()))
     try:
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -561,7 +561,10 @@ async def _run_background_tool_loop(
                     "source": "tool_background",
                     "tool_model_name": tool_model_name,
                     "trace_id": trace_id,
+                    "inner_tick_turn": inner_tick_turn,
+                    "inner_tick_mode": inner_tick_mode.value,
                     "tools_summary": tools_summary_from_openai_tools(tools),
+                    "force_tools_first_round": force_tools_first_round,
                     "llm_call_notes": (
                         "Foreground CompanionLLMConfig is not copied into this async tool_background "
                         "path; use tool_model_name and last_chat_completion_request. "
@@ -584,9 +587,7 @@ async def _run_background_tool_loop(
 
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
-        force_tools = bool(tools) and _background_turn_should_force_tools(
-            _last_user_message_text(working_messages)
-        )
+        force_tools = bool(tools) and force_tools_first_round
         initial_response, initial_meta = await asyncio.to_thread(
             _initial_tool_bg_completion_with_fallbacks,
             resolved_client,
@@ -602,11 +603,7 @@ async def _run_background_tool_loop(
                 messages=list(payload),
                 tools=tools,
                 tool_choice=initial_meta.tool_choice,
-                response_format_json_schema_name=(
-                    TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME
-                    if initial_meta.used_skip_schema
-                    else None
-                ),
+                response_format_json_schema_name=None,
             )
         )
 
@@ -631,58 +628,20 @@ async def _run_background_tool_loop(
         )
         logger.debug(
             "repl.turn.bg initial_round_meta trace_id={} user_msg_uuid={} force_tools={} "
-            "used_skip_schema={} tool_choice={}",
+            "tool_choice={}",
             trace_id,
             user_msg_uuid,
             force_tools,
-            initial_meta.used_skip_schema,
             initial_meta.tool_choice,
         )
 
         initial_tool_calls = (
             getattr(initial_response.choices[0].message, "tool_calls", None) or []
         )
-        # No tool_calls on the first reply: either skip=true (expected) or model/schema mismatch.
-        # skip=false with no tool_calls is logged as skip_false_no_tools; we do not retry here.
         if not initial_tool_calls:
             early_text = _assistant_text_from_completion_response(initial_response)
             finish0 = getattr(initial_response.choices[0], "finish_reason", None) or "?"
-            if initial_meta.used_skip_schema:
-                parsed, skip_fail_reason = parse_tool_bg_first_round_skip_details(
-                    early_text
-                )
-                if parsed is not None and parsed.skip:
-                    logger.debug(
-                        "repl.turn.bg no_tool_calls skip_schema_true trace_id={} user_msg_uuid={} "
-                        "finish_reason={} content_chars={}",
-                        trace_id,
-                        user_msg_uuid,
-                        finish0,
-                        len(early_text),
-                    )
-                elif parsed is not None and not parsed.skip:
-                    logger.info(
-                        "repl.turn.bg no_tool_calls skip_false_no_tools trace_id={} "
-                        "user_msg_uuid={} content_chars={} finish_reason={} content_preview={}",
-                        trace_id,
-                        user_msg_uuid,
-                        len(early_text),
-                        finish0,
-                        _single_line_log_preview(early_text),
-                    )
-                else:
-                    logger.info(
-                        "repl.turn.bg no_tool_calls skip_json_invalid trace_id={} "
-                        "user_msg_uuid={} content_chars={} finish_reason={} parse_reason={} "
-                        "content_preview={}",
-                        trace_id,
-                        user_msg_uuid,
-                        len(early_text),
-                        finish0,
-                        skip_fail_reason,
-                        _single_line_log_preview(early_text),
-                    )
-            elif early_text.strip():
+            if early_text.strip():
                 logger.info(
                     "repl.turn.bg no_tool_calls skip_output_queue trace_id={} "
                     "user_msg_uuid={} chars={} finish_reason={} content_preview={} "
@@ -749,6 +708,12 @@ async def _run_background_tool_loop(
                 model=tool_model_name,
                 messages_payload=inner_payload,
                 tools=tools,
+                langsmith_extra=tool_call_langsmith_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                    extra_metadata={
+                        INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
+                    },
+                ),
             )
             _log_bg_llm_round_result(
                 round_idx=active_round,
@@ -771,13 +736,13 @@ async def _run_background_tool_loop(
             nonlocal tools
             tools = refresh_companion_turn_prompt_stack(
                 workspace=ws_root,
-                store=get_memory_store(ws_root),
+                store=memory_store,
                 workspace_bootstrap_type=workspace_bootstrap_type,
-                inner_tick_turn=False,
-                inner_tick_mode=InnerTickMode.MAINTENANCE,
-                enable_async_tool_background=enable_async_tool_background,
+                inner_tick_turn=inner_tick_turn,
+                inner_tick_mode=inner_tick_mode,
                 messages=messages_with_tool_results,
                 tool_side_compact_system_prompt=True,
+                implicit_signal_bundle=implicit_signal_bundle,
             )
 
         try:
@@ -831,18 +796,27 @@ async def _run_background_tool_loop(
         )
         output_to_user_flag = routing.output_to_user
         should_push = generation_deliver or output_to_user_flag
-        base_nl = (routing.user_visible_text or "").strip()
+        base_nl = (routing.user_facing_reply or "").strip()
+        significance_meta = envelope_to_assistant_metadata_dict(routing)
         if output_to_user_flag and not base_nl:
             filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
                 base_nl = filler
-        display_text = _append_local_image_paths_for_display(base_nl, image_paths)
+        # Local image paths now travel out-of-band on ToolOutputEvent.local_image_paths
+        # (REPL surfaces them as a banner). Body text stays NL-only for production clients.
+        display_text = base_nl
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+
+        transcript_body = build_tool_background_transcript_body(
+            display_text=display_text,
+            appended_turn_msgs=appended_turn_msgs,
+            total_tool_calls=total_tool_calls,
+        )
 
         logger.debug(
             "repl.turn.bg policy_summary trace_id={} user_msg_uuid={} "
             "generation_deliver={} output_to_user={} should_push={} tools={} "
-            "image_paths_n={} base_nl_chars={} display_chars={}",
+            "image_paths_n={} base_nl_chars={} display_chars={} transcript_body_chars={}",
             trace_id,
             user_msg_uuid,
             generation_deliver,
@@ -852,19 +826,57 @@ async def _run_background_tool_loop(
             len(image_paths),
             len(base_nl),
             len(display_text),
+            len(transcript_body),
         )
 
-        if not should_push:
+        if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
-                "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
-                "reason=should_push_false",
+                "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
                 trace_id,
                 user_msg_uuid,
             )
             return
-        if not display_text.strip() and not generation_deliver:
+
+        if not should_push:
+            if transcript_body.strip():
+                assistant_msg_uuid = str(uuid.uuid4())
+                _append_background_transcript_assistant(
+                    ws_root,
+                    store=memory_store,
+                    content=transcript_body,
+                    assistant_msg_uuid=assistant_msg_uuid,
+                    reply_to=user_msg_uuid,
+                    trace_id=trace_id,
+                )
+                _append_background_log(
+                    store=memory_store,
+                    user_msg_uuid=user_msg_uuid,
+                    assistant_msg_uuid=assistant_msg_uuid,
+                    elapsed_ms=elapsed_ms,
+                    rounds=rounds_used,
+                    tool_calls_count=total_tool_calls,
+                    generated_image_uris=image_paths,
+                    trace_id=trace_id,
+                )
+                logger.debug(
+                    "repl.turn.bg transcript_only trace_id={} user_msg_uuid={} "
+                    "assistant_msg_uuid={} reason=should_push_false",
+                    trace_id,
+                    user_msg_uuid,
+                    assistant_msg_uuid,
+                )
+            else:
+                logger.debug(
+                    "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
+                    "reason=should_push_false_empty_transcript_body",
+                    trace_id,
+                    user_msg_uuid,
+                )
+            return
+
+        if not transcript_body.strip() and not generation_deliver:
             logger.debug(
-                "repl.turn.bg suppress_user_visible_output empty_display trace_id={} "
+                "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
                 "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
                 trace_id,
                 user_msg_uuid,
@@ -873,25 +885,17 @@ async def _run_background_tool_loop(
                 ",".join(tool_call_names),
             )
             return
-        if not display_text.strip() and generation_deliver:
-            display_text = _append_local_image_paths_for_display("", image_paths)
-        if is_tool_background_aborted(user_msg_uuid):
-            logger.debug(
-                "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
-                trace_id,
-                user_msg_uuid,
-            )
-            return
         assistant_msg_uuid = str(uuid.uuid4())
         _append_background_transcript_assistant(
             ws_root,
-            content=display_text,
+            store=memory_store,
+            content=transcript_body,
             assistant_msg_uuid=assistant_msg_uuid,
             reply_to=user_msg_uuid,
             trace_id=trace_id,
         )
         _append_background_log(
-            ws_root,
+            store=memory_store,
             user_msg_uuid=user_msg_uuid,
             assistant_msg_uuid=assistant_msg_uuid,
             elapsed_ms=elapsed_ms,
@@ -902,13 +906,14 @@ async def _run_background_tool_loop(
         )
         logger.debug(
             "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
-            "generation_deliver={} output_to_user={} display_chars={} image_paths_n={}",
+            "generation_deliver={} output_to_user={} nl_chars={} transcript_chars={} image_paths_n={}",
             trace_id,
             user_msg_uuid,
             assistant_msg_uuid,
             generation_deliver,
             output_to_user_flag,
-            len(display_text),
+            len(display_text.strip()),
+            len(transcript_body),
             len(image_paths),
         )
         on_event(
@@ -924,6 +929,9 @@ async def _run_background_tool_loop(
                 langsmith_run_id=bg_ls_llm_run,
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
+                image_asset_baseline=image_asset_baseline,
+                local_image_paths=tuple(image_paths),
+                significance_perception=significance_meta,
             )
         )
     finally:
@@ -934,6 +942,7 @@ async def _run_background_tool_loop(
 def start_tool_background_job(
     *,
     ws_root: Path,
+    memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     tool_model_name: str,
     user_msg_uuid: str,
@@ -949,7 +958,11 @@ def start_tool_background_job(
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
-    enable_async_tool_background: bool = False,
+    inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    tool_bg_idle_event: threading.Event | None = None,
+    force_tools_first_round: bool = True,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -969,6 +982,7 @@ def start_tool_background_job(
             asyncio.run(
                 _run_background_tool_loop(
                     ws_root=ws_root,
+                    memory_store=memory_store,
                     request_messages=request_messages,
                     tool_model_name=tool_model_name,
                     user_msg_uuid=user_msg_uuid,
@@ -982,7 +996,10 @@ def start_tool_background_job(
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,
                     workspace_bootstrap_type=workspace_bootstrap_type,
-                    enable_async_tool_background=enable_async_tool_background,
+                    inner_tick_turn=inner_tick_turn,
+                    inner_tick_mode=inner_tick_mode,
+                    implicit_signal_bundle=implicit_signal_bundle,
+                    force_tools_first_round=force_tools_first_round,
                 )
             )
 
@@ -1008,7 +1025,12 @@ def start_tool_background_job(
                 )
                 clear_tool_background_db_loop()
         finally:
+            if tool_bg_idle_event is not None:
+                tool_bg_idle_event.set()
             _unregister_thread(threading.current_thread())
+
+    if tool_bg_idle_event is not None:
+        tool_bg_idle_event.clear()
 
     t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
     logger.info(

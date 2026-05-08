@@ -7,7 +7,9 @@ from app.core.agentic_kernel.companion.implicit_signal_messages import (
 )
 from app.core.user_time_context_prompt import USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE
 from app.core.agentic_kernel.companion.models import ContextMeta, PromptBundle
-from app.core.agentic_kernel.companion.prompts import build_system_messages
+from app.core.agentic_kernel.companion.prompts.system_messages import (
+    build_system_messages,
+)
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
 

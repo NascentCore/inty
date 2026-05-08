@@ -23,20 +23,6 @@ LLM_SCENE_INNER_TICK = "inner_tick"
 LLMScene = Literal["chat", "tool_call", "inner_tick"]
 
 
-def async_tool_background_enabled_from_env() -> bool:
-    raw = os.environ.get("INTY_V2_PROTO_ASYNC_TOOL_BG")
-    if raw is None or not str(raw).strip():
-        return True
-    s = str(raw).strip().lower()
-    if s in ("0", "false", "no", "off"):
-        return False
-    if s in ("1", "true", "yes", "on"):
-        return True
-    raise ValueError(
-        f"Invalid INTY_V2_PROTO_ASYNC_TOOL_BG={raw!r}; use 1/true or 0/false, or unset for default (on)"
-    )
-
-
 class CompanionLLMConfig(BaseModel):
     """LLM model configuration for companion."""
 
@@ -49,23 +35,15 @@ class CompanionLLMConfig(BaseModel):
     soul_model: str = ""
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
-    enable_async_tool_background: bool = False
     async_chat_front_timeout_sec: float = Field(default=600.0, ge=1.0)
 
     @classmethod
     def from_openrouter_env(
         cls,
-        *,
-        default_async_tool_background: bool | None = None,
     ) -> CompanionLLMConfig:
         key = (
             os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
         ).strip()
-        async_bg = (
-            async_tool_background_enabled_from_env()
-            if default_async_tool_background is None
-            else default_async_tool_background
-        )
         timeout_raw = os.getenv(
             "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
         ).strip()
@@ -91,7 +69,6 @@ class CompanionLLMConfig(BaseModel):
             ).strip(),
             user_model=(os.getenv("INTY_V2_PROTO_USER_MODEL") or "").strip(),
             soul_model=(os.getenv("INTY_V2_PROTO_SOUL_MODEL") or "").strip(),
-            enable_async_tool_background=async_bg,
             async_chat_front_timeout_sec=timeout_sec,
         )
 
@@ -189,6 +166,7 @@ class CompanionLLMClient:
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
         scene: LLMScene | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
     ) -> Any:
         tool_list = list(tools or [])
         resolved_scene: LLMScene = (
@@ -212,6 +190,7 @@ class CompanionLLMClient:
             tools=tool_list,
             tool_choice=tool_choice,
             response_format=response_format,
+            langsmith_extra=langsmith_extra,
         )
 
     def chat_completion_unified(

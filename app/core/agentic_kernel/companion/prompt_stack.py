@@ -19,7 +19,7 @@ from .models import (
     load_prompt_bundle,
 )
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .prompts import build_system_messages
+from .prompts.system_messages import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 from .workspace import WorkspacePaths
@@ -43,7 +43,6 @@ def companion_turn_tools_and_system_messages(
     workspace_bootstrap_type: str,
     inner_tick_turn: bool,
     inner_tick_mode: InnerTickMode,
-    enable_async_tool_background: bool,
     tool_side_compact_system_prompt: bool,
     include_significance_perception_slice: bool | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -52,7 +51,13 @@ def companion_turn_tools_and_system_messages(
     """
     Single source for companion chat-round tools list and system message stack.
 
-    Must stay aligned with ``turn.run_turn`` message assembly (same inputs -> same outputs).
+    Must stay aligned with ``turn.run_turn`` for the same explicit arguments. Callers that only
+    build system-prefix variants for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` pass
+    ``implicit_user_signed_on_turn=False`` on purpose: implicit sign-on greetings strip tools
+    earlier and never take that route (short greeting, no background tool loop).
+    When ``tool_side_compact_system_prompt`` is True (background tool LLM stack), interactive
+    bootstrap extra system blocks are omitted; tool availability still follows ``workspace_bootstrap_type``
+    and context.
 
     When ``implicit_user_signed_on_turn`` is True (and not an inner-tick turn), tools are
     omitted and system prompts skip tool contracts so the model does one chat completion only.
@@ -83,17 +88,26 @@ def companion_turn_tools_and_system_messages(
     chat_only_implicit_sign_on = implicit_user_signed_on_turn and not inner_tick_turn
     if chat_only_implicit_sign_on:
         tools_for_turn = []
+    # Compact system stack is only for the background tool LLM path; skip interactive-bootstrap
+    # system blocks there (foreground chat stack still uses ``interactive_bootstrap``).
+    system_prompt_interactive_bootstrap = (
+        interactive_bootstrap if not tool_side_compact_system_prompt else False
+    )
     route_mode = resolve_turn_route_mode(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
         tools_enabled=bool(tools_for_turn),
-        enable_async_tool_background=enable_async_tool_background,
     )
     use_dual_structured_chat = (
         (not inner_tick_turn)
         and (not tools_for_turn)
         and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
     )
+    # When None: inject SIGNIFICANCE_PERCEPTION.md + dual-envelope output contract for the same
+    # turns that use ``use_dual_structured_chat`` in run_turn, and for the *foreground* chat stack
+    # in ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL (``_async_dual_llm_system_message_variants`` forces
+    # include_significance_perception_slice=True on the chat side). Tells the model how to fill
+    # importance_* fields in the JSON envelope; see ``significance_perception.py`` module docstring.
     resolved_sig = (
         include_significance_perception_slice
         if include_significance_perception_slice is not None
@@ -103,13 +117,14 @@ def companion_turn_tools_and_system_messages(
         system_messages = build_system_messages(
             bundle,
             context,
-            enable_tools=(not chat_only_implicit_sign_on),
+            enable_tools=(not tick_proactive) and not chat_only_implicit_sign_on,
             enable_user_profile_tool=False,
-            inner_tick_turn=False,
-            ai_private_text="",
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=route_inner_mode,
+            ai_private_text=ai_private_text,
             include_repl_image_generation_contract=True,
             tool_side_compact=True,
-            interactive_bootstrap_active=interactive_bootstrap,
+            interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=False,
             implicit_signal_bundle=implicit_signal_bundle,
         )
@@ -121,7 +136,7 @@ def companion_turn_tools_and_system_messages(
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             ai_private_text=ai_private_text,
-            interactive_bootstrap_active=interactive_bootstrap,
+            interactive_bootstrap_active=system_prompt_interactive_bootstrap,
             include_significance_perception_slice=resolved_sig,
             implicit_signal_bundle=implicit_signal_bundle,
         )
@@ -135,7 +150,6 @@ def refresh_companion_turn_prompt_stack(
     workspace_bootstrap_type: str,
     inner_tick_turn: bool,
     inner_tick_mode: InnerTickMode,
-    enable_async_tool_background: bool,
     messages: list[dict[str, Any]],
     tool_side_compact_system_prompt: bool,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -158,7 +172,6 @@ def refresh_companion_turn_prompt_stack(
         workspace_bootstrap_type=workspace_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=inner_tick_mode,
-        enable_async_tool_background=enable_async_tool_background,
         tool_side_compact_system_prompt=tool_side_compact_system_prompt,
         include_significance_perception_slice=None,
         implicit_signal_bundle=implicit_signal_bundle,

@@ -1,4 +1,8 @@
-"""CompanionManager: 管理 companion session 的生命周期。"""
+"""CompanionManager: 管理 companion session 的生命周期。
+
+每个 ``CompanionSession`` 持有 ``tool_bg_idle``（``threading.Event``），用于在下一轮
+``run_turn`` 加载 transcript 之前等待上一轮异步 tool_background 线程结束。
+"""
 
 from __future__ import annotations
 
@@ -99,6 +103,8 @@ class CompanionSession:
         self.store = store
         self.llm_client = llm_client
         self.config = config
+        self.tool_bg_idle = threading.Event()
+        self.tool_bg_idle.set()
 
     @property
     def is_initialized(self) -> bool:
@@ -242,6 +248,7 @@ class CompanionManager:
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
             langsmith_parent_run_enabled=ls_parent_enabled,
+            tool_bg_idle_event=session.tool_bg_idle,
         )
 
     def shutdown_session(

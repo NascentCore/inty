@@ -50,12 +50,29 @@ class CompanionTurnResult(BaseModel):
     """One companion kernel turn: visible assistant text plus optional significance scores."""
 
     assistant_text: str = ""
-    significance_perception: dict[str, Any] | None = None
+    significance_perception: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "When foreground chat used the dual JSON envelope, parsed importance triple "
+            "(importance_round, importance_user_message, importance_assistant_message). "
+            "Propagated to transcript JSONL and API meta_data; optional consumer: memory extraction. "
+            "See significance_perception module docstring."
+        ),
+    )
     user_msg_uuid: str = ""
     trace_id: str = ""
     langsmith_trace_id: str = ""
     langsmith_run_id: str = ""
-    used_async_tool_background: bool = False
+    tool_background_started: bool = Field(
+        default=False,
+        description=(
+            "True after start_tool_background_job returned for this turn (background "
+            "thread running tool loop). WebSocket foreground preset correlation is "
+            "retained until a tool_bg downstream frame is emitted. Successful companion "
+            "assistant frames mirror this as meta_data.tool_background_started on the "
+            "HTTP/WS payload."
+        ),
+    )
     assistant_source: AssistantTurnSource = "chat"
 
 
@@ -111,7 +128,13 @@ class PromptBundle(BaseModel):
         ...,
         description="semantic memory: MEMORY.md body for system injection when private memory is on.",
     )
-    significance_perception_md: str = ""
+    significance_perception_md: str = Field(
+        default="",
+        description=(
+            "Operator guidance for 1-10 importance scoring; injected when "
+            "include_significance_perception_slice is true (package prompts/SIGNIFICANCE_PERCEPTION.md)."
+        ),
+    )
     tools_md: str = ""
     memory_raw_diary_today_md: str = Field(
         default="",

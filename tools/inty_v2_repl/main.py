@@ -1,4 +1,8 @@
-"""Cyclopts entry: Inty backend WebSocket REPL only (no local workspace turn loop)."""
+"""Cyclopts entry: Inty backend WebSocket REPL only (no local workspace turn loop).
+
+Downlink assistant frames also print ``tool_bg`` banners: ``local-path:`` lines and
+``image-url:`` when ``meta_data.generated_image`` carries ``image_url``.
+"""
 
 from __future__ import annotations
 
@@ -59,6 +63,15 @@ def _repl_transcript_id_suffix(ids: Mapping[str, str]) -> str:
     if lsr:
         parts.append(f"langsmith_run_id={lsr}")
     return " " + " ".join(parts)
+
+
+def _repl_meta_banner_fragment(meta_data: Mapping[str, Any] | None) -> str:
+    """Trailing banner tokens derived from assistant ``meta_data`` (API snake_case keys)."""
+    if not meta_data:
+        return ""
+    if meta_data.get("tool_background_started") is True:
+        return " tool_background_started=true"
+    return ""
 
 
 def _repl_banner_suffix_ids(
@@ -130,7 +143,7 @@ def _print_assistant_reply(
 ) -> None:
     ms = elapsed_s * 1000
     merged = _repl_banner_suffix_ids(transcript_ids, meta_data)
-    suffix = _repl_transcript_id_suffix(merged)
+    suffix = _repl_transcript_id_suffix(merged) + _repl_meta_banner_fragment(meta_data)
     label = repl_source_label or _repl_assistant_banner_label(
         transcript_ids, meta_data=meta_data
     )
@@ -240,6 +253,34 @@ def _elapsed_for_downlink_assistant(
     return max(0.0, time.perf_counter() - t0)
 
 
+def _print_tool_bg_local_image_paths_banner(meta: Mapping[str, Any]) -> None:
+    """Emit one ``local-path: /abs/...`` line per server-side image path for REPL copy."""
+    raw = meta.get("tool_bg_local_image_paths")
+    if not isinstance(raw, list) or not raw:
+        return
+    for p in raw:
+        if not isinstance(p, str):
+            continue
+        s = p.strip()
+        if not s:
+            continue
+        print(f"local-path: {s}")
+
+
+def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
+    """Emit ``image-url:`` for ``meta_data.generated_image`` (``gs://``, ``https://``, or local ``file://`` with fake GCS)."""
+    gi = meta.get("generated_image")
+    if not isinstance(gi, dict):
+        return
+    url = gi.get("image_url")
+    if not isinstance(url, str):
+        return
+    s = url.strip()
+    if not s:
+        return
+    print(f"image-url: {s}")
+
+
 def _emit_downlink_item(
     item: Mapping[str, Any],
     outbound_t0: dict[str, float],
@@ -252,6 +293,8 @@ def _emit_downlink_item(
             elapsed,
             meta_data=meta,
         )
+        _print_tool_bg_local_image_paths_banner(meta)
+        _print_generated_image_meta_banner(meta)
     else:
         print(
             format_ws_error_banner(

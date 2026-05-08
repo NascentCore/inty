@@ -53,13 +53,14 @@ from .models import ChatMessage
 from .google_web_search import run_google_web_search
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
+from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .schedule_queue import add_schedule_task
 from app.services.agent_status_line import tool_update_agent_status_line
 
 _USER_MD_REL = "USER.md"
 _USER_PROFILE_SECTION = "## 身份信息"
 # GENERATION: 成功产出应对用户可见的交付物时, async tool_background **必须**下行到客户端;
-# 是否附加 NL 由结构化 ``output_to_user`` 与产物回填共同决定（见 tool_background）。
+# 是否附加 NL 由统一收尾信封中的 ``output_to_user`` 与产物回填共同决定（见 tool_background）。
 TOOL_TAG_GENERATION = "GENERATION"
 _TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
     "generate_image": frozenset({TOOL_TAG_GENERATION}),
@@ -995,7 +996,7 @@ def build_openai_repl_tools(
     )
     if interactive_bootstrap_active:
         out.extend(_openai_interactive_bootstrap_tools())
-    return out
+    return prepare_openai_tools_for_chat_completions(out)
 
 
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (

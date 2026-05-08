@@ -23,7 +23,8 @@ def test_upload_and_public_url_and_download(fake_client: FakeGCSClient):
     blob.upload_from_string(payload, content_type="text/plain")
 
     assert blob.exists() is True
-    assert blob.public_url == "https://storage.googleapis.com/inty-test/folder/a.txt"
+    expected_uri = (fake_client.base_dir / "inty-test" / "folder" / "a.txt").resolve().as_uri()
+    assert blob.public_url == expected_uri
     assert blob.download_as_bytes() == payload
 
 
@@ -57,12 +58,15 @@ def test_rewrite_copy(fake_client: FakeGCSClient):
 
 def test_integration_with_app_external_services_gcs_module(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ):
     # 将 fake client 注入到 app.external_services.gcs.gcs_client 中，验证最常用方法的兼容性
     import importlib
 
     # 保存原始模块以便恢复
     original_config_mod = sys.modules.get("app.core.config")
+
+    fake = FakeGCSClient(base_dir=str(tmp_path / "fake_root"))
 
     # 在导入目标模块前，用最小 stub 替换 app.core.config，避免加载大量依赖
     cfg_mod = types.ModuleType("app.core.config")
@@ -71,15 +75,23 @@ def test_integration_with_app_external_services_gcs_module(
             debug=True, gcp_service_account_key="/non/existent.json"
         ),
         gemini_live=types.SimpleNamespace(enabled=False),
+        gcs=types.SimpleNamespace(
+            use_fake_gcs=True,
+            fake_gcs_base_dir=str(fake.base_dir.resolve()),
+        ),
     )
     sys.modules["app.core.config"] = cfg_mod
 
     try:
-        fake = FakeGCSClient()
-
         # 懒加载目标模块，避免提前初始化
         gcs_module = importlib.import_module("app.external_services.gcs")
 
+        monkeypatch.setattr(
+            gcs_module,
+            "global_config_loaded_from_config_yaml",
+            cfg_mod.global_config_loaded_from_config_yaml,
+            raising=True,
+        )
         # 注入
         monkeypatch.setattr(gcs_module, "gcs_client", fake, raising=True)
 
@@ -91,7 +103,7 @@ def test_integration_with_app_external_services_gcs_module(
         url = gcs_module.upload_to_gcs(
             content, "application/octet-stream", bucket, path
         )
-        assert url == f"https://storage.googleapis.com/{bucket}/{path}"
+        assert url == (fake.base_dir / bucket / path).resolve().as_uri()
 
         assert gcs_module.check_gcs_file_exists(bucket, path) is True
 
@@ -100,10 +112,9 @@ def test_integration_with_app_external_services_gcs_module(
 
         # 复制
         copied_url = gcs_module.copy_gcs_file(url, "unit/test/file-copy.dat", bucket)
-        assert (
-            copied_url
-            == f"https://storage.googleapis.com/{bucket}/unit/test/file-copy.dat"
-        )
+        assert copied_url == (
+            fake.base_dir / bucket / "unit/test/file-copy.dat"
+        ).resolve().as_uri()
 
         # 删除
         assert gcs_module.delete_from_gcs(bucket, path) is True

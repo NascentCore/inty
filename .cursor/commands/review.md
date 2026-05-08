@@ -2,8 +2,7 @@
 
 ## Overview
 
-Review the code in context (current file, selection, or diff) and then propose and apply targeted enhancements.
-Focus on correctness, maintainability, simplicity, and alignment with project conventions.
+Review the uncommited code changes made in the current conversation, fix/revise/enhance the changes, and finally call Cursor /commit command to commit changes.
 
 ## Steps
 
@@ -15,13 +14,15 @@ Focus on correctness, maintainability, simplicity, and alignment with project co
 2. **Enhance**
    - Propose architecture improvement to improve structural clarity
 
-3. **Double review**
+3. **Double check**
    - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
 
 ## Checklist
 
-- [ ] User intention understood
-- [ ] Implementation architecture understood
-- [ ] Architecture revised if needed
-- [ ] Follows project style and AGENTS.md
-- [ ] Tests updated if behavior or contract changed
+- [ ] Intention is understood
+- [ ] Confirm that changes match user intention, revise changes if needed
+- [ ] Confirm that implementation architecture is sound, revise changes if needed
+- [ ] Tests are added if needed
+- [ ] Follows existing coding style and AGENTS.md, revise changes if needed
+- [ ] Changes passed tests, revise changes if needed
+- [ ] Invoke cursor command `/commit`

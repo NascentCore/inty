@@ -1,6 +1,9 @@
 """Synchronous OpenAI-compatible chat.completions: tool-path kwargs, JSON retry, LangSmith enrich.
 
 Maps OpenAI SDK failures from ``chat.completions.create`` to companion kernel inference errors.
+Also rejects responses with missing or empty ``choices`` (including OpenRouter HTTP 200 bodies
+with ``choices: null``, optionally plus ``error``), mapping them to kernel inference errors
+instead of crashing on ``choices[0]``.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from loguru import logger
 
 from app.core.agentic_kernel.companion.llm_inference_errors import (
     log_and_build_inference_error,
+    raise_if_chat_completion_missing_choices,
 )
 from app.core.agentic_kernel.llm.langsmith_completion_enrich import (
     _ensure_langsmith_handle_container_end_patch,
@@ -40,12 +44,15 @@ def create_chat_completion_sync(
     tools: list[Any],
     tool_choice: str | None = None,
     response_format: dict[str, Any] | None = None,
+    langsmith_extra: dict[str, Any] | None = None,
 ) -> Any:
     _ensure_langsmith_handle_container_end_patch()
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
     }
+    if langsmith_extra:
+        create_kw["langsmith_extra"] = langsmith_extra
     if response_format is not None:
         create_kw["response_format"] = response_format
     # TODO(companion-dual-envelope-reasoning-channel): Switching chat models (e.g. OpenRouter
@@ -66,7 +73,9 @@ def create_chat_completion_sync(
         try:
             reset_wrapped_llm_run_id_for_completion_attempt()
             raw = client.chat.completions.create(**create_kw)
-            return completion_with_langsmith_trace_id(raw)
+            enriched = completion_with_langsmith_trace_id(raw)
+            raise_if_chat_completion_missing_choices(enriched, model=model)
+            return enriched
         except json.JSONDecodeError as exc:
             retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
             logger.warning(

@@ -1,13 +1,14 @@
 ---
 name: langsmith-download-run
 description: >-
-  Fetches one LangSmith run (and optionally nested child runs) by run ID and
-  saves JSON locally. Use when the user gives a LangSmith run UUID, asks to
-  download/export/archive a trace run from LangSmith, or debugs companion LLM
-  spans via langsmith_trace_id.
+  Download LangSmith data to JSON: one run by UUID, or an entire trace (every
+  run sharing trace_id; nested structure via parent_run_id). Triggers when the
+  user asks to 下载 langsmith trace、download langsmith trace、export/archive a
+  LangSmith trace/run, or debug companion spans via langsmith_trace_id /
+  langsmith_run_id.
 ---
 
-# LangSmith: download run by ID
+# LangSmith: download run or full trace
 
 ## Prerequisites
 
@@ -29,17 +30,52 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 Run from **repo root** so default `--config config.yaml` resolves.
 
+### Full trace (default for「下载 / download LangSmith trace」)
+
+Trace mode lists **all runs** with the same `trace_id` (every nested span is one row; hierarchy is `parent_run_id` on each row). This is the default interpretation when the user asks to download a **trace**, not a single run.
+
 ```bash
 source .venv/bin/activate
 
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> -o tmp/langsmith_runs/<RUN_ID>.json
-
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> --verbose -o tmp/langsmith_runs/<RUN_ID>.json
-
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> --config /path/to/config.yaml -o tmp/langsmith_runs/<RUN_ID>.json
-
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> --load-child-runs -o tmp/langsmith_runs/<RUN_ID>.json
+python .cursor/skills/langsmith-download-run/scripts/download_run.py \
+  --trace-id "<TRACE_UUID>" \
+  -o tmp/langsmith_traces/<TRACE_UUID>.json
 ```
+
+If the user only has **some run id** from the UI (any span in the trace):
+
+```bash
+python .cursor/skills/langsmith-download-run/scripts/download_run.py \
+  "<ANY_RUN_UUID_IN_TRACE>" \
+  --entire-trace \
+  -o tmp/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
+```
+
+Optional: **`--project-name`** overrides `LANGSMITH_PROJECT` for `list_runs`. **`--max-runs N`** sets the requested batch size (default **100**). LangSmith **`/runs/query`** rejects `limit` above **100**; the script clamps larger values and prints a note to stderr. Traces with more than **100** spans require pagination (not implemented in this script yet); until then you only get the first batch.
+
+Output JSON shape:
+
+- **`download_kind`**: `"langsmith_trace"`
+- **`trace_id`**, **`project_name`**, **`fetched_at`**, **`run_count`**
+- **`runs`**: array of run objects (`model_dump` from LangSmith), same trace
+
+### Single run (one UUID)
+
+```bash
+python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> \
+  -o tmp/langsmith_runs/<RUN_ID>.json
+
+python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> --verbose \
+  -o tmp/langsmith_runs/<RUN_ID>.json
+
+python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> \
+  --config /path/to/config.yaml -o tmp/langsmith_runs/<RUN_ID>.json
+
+python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> \
+  --load-child-runs -o tmp/langsmith_runs/<RUN_ID>.json
+```
+
+**`--load-child-runs`** applies **only** to single-run `read_run`: API returns that run with nested child runs embedded. Do **not** combine with `--trace-id` / `--entire-trace`.
 
 `-o -` prints JSON to stdout. **`--verbose`** logs resolved `LANGSMITH_PROJECT` and `LANGSMITH_TRACING_V2` to stderr (never the API key).
 
@@ -66,12 +102,11 @@ run = client.read_run(run_id, load_child_runs=False)
 print(json.dumps(run.model_dump(mode="json"), indent=2, ensure_ascii=False))
 ```
 
-## Full trace (many runs under one trace_id)
-
-`read_run` returns one row. To pull **all runs sharing the same trace** (offline replay, diff), reuse the logic in [`scripts/replay_chat_to_image_trace.py`](../../../scripts/replay_chat_to_image_trace.py): `Client.read_run(run_id)` to resolve `trace_id`, then `list_runs` filtered by `trace_id`, normalize, and write `TraceRecord` JSON.
+For trace-wide listing in custom code, mirror this script: `Client.list_runs(trace_id=..., limit=..., project_name=...)` with the same fallback as [`scripts/replay_chat_to_image_trace.py`](../../../scripts/replay_chat_to_image_trace.py) when `trace_id` is unsupported.
 
 ## Troubleshooting
 
-- **`read_run` exits 1**: script prints `LangSmith read_run failed for '<uuid>': ...` to stderr (no Python traceback).
+- **`read_run` / trace fetch exits 1**: script prints the LangSmith error to stderr (no Python traceback).
 - **401 / unauthorized**: wrong or empty `agent.langchain_api_key` in `config.yaml`, or env fallback key does not match the LangSmith workspace for this run.
 - **404**: wrong run id, different workspace/project than the key, or run expired per org retention.
+- **Incomplete trace**: LangSmith caps **`limit`** at **100** per query; this script does not page yet. If **`run_count`** equals **`max-runs`** and you expect more spans, the trace was truncated.

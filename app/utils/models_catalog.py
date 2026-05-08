@@ -130,6 +130,16 @@ class ModelAPIBaseURL(StrEnum):
     LOCAL_LITELLM = "http://10.128.0.5:4000/v1"
 
 
+class ResponseFormatWithToolsCompatibility(StrEnum):
+    """
+    OpenAI 兼容 chat.completions 单次请求中：结构化响应格式（response_format json_schema 等）
+    与 tools 列表并存时的兼容性登记（与「函数 strict」单独开启不同）。
+    """
+
+    UNSPECIFIED = "unspecified"
+    INCOMPATIBLE = "incompatible"
+
+
 class GenAIModel(BaseModel):
     """
     用于准确指代一个 AI 模型，包括模型构建者、模型名称。
@@ -186,6 +196,13 @@ class GenAIModel(BaseModel):
         default="",
     )
 
+    response_format_with_tools_compatibility: ResponseFormatWithToolsCompatibility = Field(
+        default=ResponseFormatWithToolsCompatibility.UNSPECIFIED,
+        description="""
+        同一请求内同时使用 response_format（如 json_schema）与 tools 时是否可行；
+        UNSPECIFIED 表示未核实；INCOMPATIBLE 表示已知供应商或网关互斥或会导致无法 tool call。""",
+    )
+
 
 DEEPSEEK_V3_2 = GenAIModel(
     nickname="DeepSeek V3.2",
@@ -208,6 +225,9 @@ DEEPSEEK_V3_2 = GenAIModel(
     ),
     official_url="https://huggingface.co/deepseek-ai/DeepSeek-V3.2",
     notes="163,840 context window. Supports reasoning via `reasoning.enabled` parameter.",
+    response_format_with_tools_compatibility=(
+        ResponseFormatWithToolsCompatibility.INCOMPATIBLE
+    ),
 )
 
 

@@ -1,6 +1,6 @@
 # AGENTS.md · app/（后端服务）
 
-- `__init__.py` 必须为空
+- `__init__.py` 仅可包含模块 docstring，不得包含任何功能性代码（imports/re-exports/常量/函数等都属于功能性代码，应放入兄弟模块）
 - 使用 `app/core/google_genai/wrapped_client.py` 调用 Google 生图模型
 - 使用 `app/core/images/fal.py` 来调用 Fal
 - 禁止直接使用 httpx 等 http 调用任何第三方 API
