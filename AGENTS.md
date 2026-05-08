@@ -25,7 +25,7 @@ Agentic companion模拟的是异地亲密伴侣（不能见面的爱人、其他
 
 ## Guideline files (topic splits)
 
-Detailed instructions from this file are also maintained as topic files under [.agents/guidelines/](.agents/guidelines/README.md) for navigation and updates.
+Detailed instructions from this file are also maintained as topic files under `.agents/guidelines/` for navigation and updates.
 
 | Topic | Path |
 |-------|------|
