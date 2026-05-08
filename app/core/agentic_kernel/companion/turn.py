@@ -209,7 +209,8 @@ async def run_turn(
 
     - 加载 context + prompt bundle + transcript
     - 组装 system prompt + messages
-    - 调用 LLM（有工具时：前台 JSON envelope chat，工具环在 tool_background 线程）
+    - 调用 LLM（有工具时：先 await 前台 JSON envelope chat，再将 ``user_facing_reply`` 注入工具路径
+      后 dispatch ``tool_background`` 线程；见 ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``）
     - 持久化 transcript
     - 调度记忆管线
 
@@ -422,30 +423,6 @@ async def run_turn(
                         else:
                             push_output_event(ev)
 
-                    start_tool_background_job(
-                        ws_root=root,
-                        memory_store=store,
-                        request_messages=deepcopy(tool_msgs),
-                        tool_model_name=tool_model,
-                        user_msg_uuid=user_msg_uuid,
-                        trace_id=trace_id,
-                        tools=tools_for_turn,
-                        on_event=_kernel_bg_on_event,
-                        execute_tool_call_fn=repl_execute_tool_call,
-                        client=llm_client.sync_client_for_route("tool"),
-                        chat_completions_sync=llm_client.chat_completions_sync,
-                        write_allowlist=WRITABLE_RELATIVE_PATHS,
-                        repository_only_workspace_text=repository_only_workspace_text,
-                        main_event_loop=asyncio.get_running_loop(),
-                        langsmith_parent_run=langsmith_parent_run,
-                        workspace_bootstrap_type=workspace_bootstrap_type,
-                        inner_tick_turn=inner_tick_turn,
-                        inner_tick_mode=route_inner_mode,
-                        implicit_signal_bundle=implicit_signal_bundle,
-                        tool_bg_idle_event=tool_bg_idle_event,
-                    )
-                    tool_background_started = True
-
                     runtime_inspect_set_last_chat_completion_request(
                         build_last_chat_completion_request_payload(
                             model=chat_model,
@@ -508,6 +485,37 @@ async def run_turn(
                     last_text, significance_meta = split_dual_llm_chat_branch_content(
                         raw_content
                     )
+                    fg_text = last_text.strip()
+                    tool_msgs_for_bg = deepcopy(tool_msgs)
+                    if fg_text:
+                        tool_msgs_for_bg.append(
+                            {"role": "assistant", "content": fg_text}
+                        )
+                    force_tools_first_round = not bool(fg_text)
+                    start_tool_background_job(
+                        ws_root=root,
+                        memory_store=store,
+                        request_messages=tool_msgs_for_bg,
+                        tool_model_name=tool_model,
+                        user_msg_uuid=user_msg_uuid,
+                        trace_id=trace_id,
+                        tools=tools_for_turn,
+                        on_event=_kernel_bg_on_event,
+                        execute_tool_call_fn=repl_execute_tool_call,
+                        client=llm_client.sync_client_for_route("tool"),
+                        chat_completions_sync=llm_client.chat_completions_sync,
+                        write_allowlist=WRITABLE_RELATIVE_PATHS,
+                        repository_only_workspace_text=repository_only_workspace_text,
+                        main_event_loop=asyncio.get_running_loop(),
+                        langsmith_parent_run=langsmith_parent_run,
+                        workspace_bootstrap_type=workspace_bootstrap_type,
+                        inner_tick_turn=inner_tick_turn,
+                        inner_tick_mode=route_inner_mode,
+                        implicit_signal_bundle=implicit_signal_bundle,
+                        tool_bg_idle_event=tool_bg_idle_event,
+                        force_tools_first_round=force_tools_first_round,
+                    )
+                    tool_background_started = True
                     logger.info(
                         "run_turn loop_done rounds={} loop_total_ms={:.0f} route={}",
                         1,

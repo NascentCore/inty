@@ -840,6 +840,9 @@ async def _persist_companion_user_message_for_bg(
 ) -> Optional[int]:
     """Write user message into ``chat_history`` for one companion turn (success or bg-survives-fg-fail).
 
+    After dual-LLM foreground-before-background dispatch, ``bg-survives-fg-fail`` should not occur;
+    this helper remains as a defensive path for any future or alternate companion wiring.
+
     Mirrors the success-path branching:
     - ``implicit_signed_on_ws`` -> no row written; returns ``None`` (protocol skips user history).
     - ``effective_local_id`` -> row with ``meta_data.localId``.

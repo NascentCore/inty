@@ -110,6 +110,8 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
     assert bg_jobs[0]["tool_model_name"] == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
+    assert bg_jobs[0]["force_tools_first_round"] is False
+    assert bg_msgs[-1] == {"role": "assistant", "content": "foreground ok"}
 
 
 @pytest.mark.asyncio
@@ -158,3 +160,86 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     got = {t["function"]["name"] for t in job["tools"]}
     assert got == expected
     assert "generate_image" not in got
+    bg_msgs = job["request_messages"]
+    assert job["force_tools_first_round"] is False
+    assert bg_msgs[-1] == {"role": "assistant", "content": "foreground ok"}
+
+
+class _FakeAsyncDualLLMClientEmptyFg:
+    def __init__(self) -> None:
+        self.config = CompanionLLMConfig(
+            api_key="k",
+            default_model="m/default",
+            chat_model="m/chat",
+            tool_model="m/tool",
+            async_chat_front_timeout_sec=120.0,
+        )
+        self.chat_calls: list[dict[str, Any]] = []
+
+    def resolve_model(self, role: str) -> str:
+        return f"m/{role}"
+
+    def chat_completion(self, **kwargs: Any) -> Any:
+        self.chat_calls.append(kwargs)
+        env = {
+            "user_facing_reply": "",
+            "importance_round": 5,
+            "importance_user_message": 5,
+            "importance_assistant_message": 5,
+        }
+        msg = SimpleNamespace(
+            content=json.dumps(env),
+            tool_calls=[],
+        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
+
+    def sync_client_for_route(self, route: str) -> object:
+        return object()
+
+    @property
+    def chat_completions_sync(self):
+        return create_chat_completion_sync
+
+    def complete_text(
+        self, messages: list[dict[str, Any]], *, model_role: str = "memory"
+    ) -> str:
+        return ""
+
+
+@pytest.mark.asyncio
+async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_inject(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path
+    store = get_memory_store(root)
+    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document("IDENTITY.md", "id\n")
+    store.write_document("SOUL.md", "s\n")
+    store.write_document("USER.md", "u\n")
+    store.write_document("MEMORY.md", "m\n")
+    store.write_document("transcript.jsonl", "")
+
+    bg_jobs: list[dict[str, Any]] = []
+
+    def _capture_bg(**kwargs: Any) -> None:
+        bg_jobs.append(kwargs)
+
+    monkeypatch.setattr(
+        "app.core.agentic_kernel.companion.turn.start_tool_background_job",
+        _capture_bg,
+    )
+
+    client = _FakeAsyncDualLLMClientEmptyFg()
+    await run_turn(
+        root,
+        "hello empty fg",
+        store=store,
+        llm_client=client,  # type: ignore[arg-type]
+        defer_memory_update=True,
+        memory_config=None,
+    )
+
+    assert len(bg_jobs) == 1
+    bg_msgs = bg_jobs[0]["request_messages"]
+    assert bg_jobs[0]["force_tools_first_round"] is True
+    assert bg_msgs[-1].get("role") != "assistant"

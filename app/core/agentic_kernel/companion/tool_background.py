@@ -540,6 +540,7 @@ async def _run_background_tool_loop(
     inner_tick_turn: bool = False,
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    force_tools_first_round: bool = True,
 ) -> None:
     image_asset_baseline = len(list_image_asset_records(ws_root.resolve()))
     try:
@@ -560,6 +561,7 @@ async def _run_background_tool_loop(
                     "inner_tick_turn": inner_tick_turn,
                     "inner_tick_mode": inner_tick_mode.value,
                     "tools_summary": tools_summary_from_openai_tools(tools),
+                    "force_tools_first_round": force_tools_first_round,
                     "llm_call_notes": (
                         "Foreground CompanionLLMConfig is not copied into this async tool_background "
                         "path; use tool_model_name and last_chat_completion_request. "
@@ -582,7 +584,7 @@ async def _run_background_tool_loop(
 
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
-        force_tools = bool(tools)
+        force_tools = bool(tools) and force_tools_first_round
         initial_response, initial_meta = await asyncio.to_thread(
             _initial_tool_bg_completion_with_fallbacks,
             resolved_client,
@@ -955,6 +957,7 @@ def start_tool_background_job(
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     tool_bg_idle_event: threading.Event | None = None,
+    force_tools_first_round: bool = True,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -991,6 +994,7 @@ def start_tool_background_job(
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_mode=inner_tick_mode,
                     implicit_signal_bundle=implicit_signal_bundle,
+                    force_tools_first_round=force_tools_first_round,
                 )
             )
 
