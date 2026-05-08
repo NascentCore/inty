@@ -2252,10 +2252,10 @@ class AgentManager:
                 }
                 await self.get_agent(agent_data)
 
-            logger.info(f"初始化了 {len(popular_agents)} 个常用Agent")
+            logger.info("初始化了 {} 个常用Agent", len(popular_agents))
 
-        except Exception as e:
-            logger.exception(f"初始化常用Agent失败: {str(e)}")
+        except Exception:
+            logger.exception("初始化常用Agent失败")
             raise
 
     def get_agent_count(self) -> int:
