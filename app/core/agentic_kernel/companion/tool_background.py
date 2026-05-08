@@ -104,30 +104,8 @@ class BackgroundToolLoopAborted(Exception):
 
 # Fal `generate_image` / `modify_image` tool summaries include `local_path=/abs/path/...`.
 _LOCAL_PATH_IN_TOOL = re.compile(r"local_path=(\S+)")
-# When the last user message matches, first background completion uses tool_choice=required
-# so the tool-side model cannot skip structured tool calls on image/edit intents.
-_BG_USER_HINTS_FORCE_TOOLS = re.compile(
-    r"(生成图片|生图|文生图|图生图|改图|重画|画一张|来张图|修图|换风格|"
-    r"给我画|画个|画一|肖像照|插图|"
-    r"generate\s*image|text-?to-?image|image\s*to\s*image|modify\s*image)",
-    re.I,
-)
-
-
-def _last_user_message_text(messages: list[dict[str, Any]]) -> str:
-    for m in reversed(messages):
-        if m.get("role") != "user":
-            continue
-        c = m.get("content")
-        if isinstance(c, str):
-            return c.strip()
-    return ""
-
-
-def _background_turn_should_force_tools(user_text: str) -> bool:
-    if not user_text:
-        return False
-    return _BG_USER_HINTS_FORCE_TOOLS.search(user_text) is not None
+# First tool_background completion tries tool_choice=required whenever the OpenAI tools list
+# is non-empty; BadRequest fallbacks omit it (provider auto mode).
 
 
 def _local_paths_from_tool_messages(
@@ -573,9 +551,7 @@ async def _run_background_tool_loop(
 
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
-        force_tools = bool(tools) and _background_turn_should_force_tools(
-            _last_user_message_text(working_messages)
-        )
+        force_tools = bool(tools)
         initial_response, initial_meta = await asyncio.to_thread(
             _initial_tool_bg_completion_with_fallbacks,
             resolved_client,

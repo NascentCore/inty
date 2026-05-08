@@ -128,8 +128,9 @@ def _repl_tool_contract_suffix_after_image_clause(
     if tool_side_compact:
         return (
             base
-            + "**异步工具后台**：工具路首轮若**未**发出 `tool_calls`，勿写对用户可见的长篇角色扮演（并行 chat 路已承担对用户话术）；"
-            + "若需要工具须在首轮 assistant 中带 `tool_calls`。除下文「工具环收尾 JSON 路由」所指收尾消息外，"
+            + "**异步工具后台**：若服务端要求本回合工具路首轮必须发出 `tool_calls`，须在**同一条** assistant 消息里调用工具；"
+            + "若首轮未被强制且本轮无 `tool_calls`（例如上游已回退为自动且判定不需工具），勿写对用户可见的长篇角色扮演（并行 chat 路已承担对用户话术）。"
+            + "除下文「工具环收尾 JSON 路由」所指收尾消息外，"
             + "其余 assistant 对外说明仍仅用自然语言，不要主动复述工具名、`output_to_user` 等字段名或工程细节。保持简洁有温度。"
         )
     return (
@@ -282,9 +283,12 @@ def _tool_side_compact_directive() -> str:
 def _tool_background_first_round_skip_contract_text() -> str:
     return (
         "## 工具路首轮\n\n"
-        "在**异步工具后台**下，每一用户回合工具路的**第一次** `chat.completions` 调用须优先判断是否调用工具。\n"
-        "- 若本回合**不需要**任何工具：不要输出对用户可读的长篇角色扮演正文（并行 chat 路负责）；`content` 可留空或极简。\n"
-        "- 若**需要**工具：须在**同一条** assistant 消息里发出至少一条 `tool_calls`。\n"
+        "在**异步工具后台**下，本回合工具路的**第一次** `chat.completions` 可能被服务端设为必须返回至少一条 "
+        "`tool_calls`（`tool_choice=required`）。\n"
+        "- **在该约束生效时**：必须在**同一条** assistant 消息里发出至少一条 `tool_calls`；"
+        "不要输出对用户可读的长篇角色扮演正文（并行 chat 路负责话术）。\n"
+        "- **当未被强制**（例如上游拒绝 `required` 已回退为自动）且你判定本回合**不需要**任何工具时："
+        "`content` 可留空或极简，仍不要写长篇对用户可见正文。\n"
         "工具环内后续轮次与**收尾**消息仍遵循上文「工具环收尾：对用户可见性的 JSON 路由」。\n"
     )
 
