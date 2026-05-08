@@ -826,7 +826,7 @@ def _setup_companion_ws_chat_test_env(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         companion_chat_service,
-        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
         Path(workspace_dir),
     )
 
@@ -991,7 +991,7 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         companion_chat_service,
-        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
         Path("/tmp/inty_test_companion_ws"),
     )
 
@@ -1158,7 +1158,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         companion_chat_service,
-        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
         Path("/tmp/inty_test_companion_ws_ws"),
     )
 

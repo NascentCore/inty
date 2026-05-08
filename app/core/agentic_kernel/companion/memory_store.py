@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .utc import utc_iso_ts
-from .workspace_doc_mapping import (
-    CompanionWorkspaceDocKind,
-    parse_workspace_relative_path,
+from .memory_store_document_mapping import (
+    CompanionMemoryDocumentKind,
+    parse_memory_store_relative_path,
     relative_path_for_kind,
 )
 
@@ -47,7 +47,7 @@ class MemoryRepository(Protocol):
 
 
 class SqlAlchemyMemoryRepository:
-    """Append-only companion workspace documents via SQLAlchemy ORM."""
+    """Append-only MemoryStore documents via SQLAlchemy ORM."""
 
     def __init__(
         self,
@@ -65,9 +65,9 @@ class SqlAlchemyMemoryRepository:
         from sqlalchemy import select as sql_select
 
         from app.db.base import SessionLocal
-        from app.models.companion_workspace import CompanionWorkspaceDocumentVersion
+        from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
 
-        return sql_and, sql_select, SessionLocal, CompanionWorkspaceDocumentVersion
+        return sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion
 
     def read_document(
         self,
@@ -75,27 +75,27 @@ class SqlAlchemyMemoryRepository:
         workspace_root: str,
         relative_path: str,
     ) -> MemoryRecord | None:
-        sql_and, sql_select, SessionLocal, CompanionWorkspaceDocumentVersion = (
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
             self._orm()
         )
         _ = workspace_root
-        kind, cal = parse_workspace_relative_path(relative_path)
+        kind, cal = parse_memory_store_relative_path(relative_path)
         filters = [
             sql_and(
-                CompanionWorkspaceDocumentVersion.user_id == self._user_id,
-                CompanionWorkspaceDocumentVersion.companion_id == self._companion_id,
-                CompanionWorkspaceDocumentVersion.chat_id == self._chat_id,
+                CompanionMemoryDocumentVersion.user_id == self._user_id,
+                CompanionMemoryDocumentVersion.companion_id == self._companion_id,
+                CompanionMemoryDocumentVersion.chat_id == self._chat_id,
             ),
-            CompanionWorkspaceDocumentVersion.document_kind == kind.value,
+            CompanionMemoryDocumentVersion.document_kind == kind.value,
         ]
         if cal is None:
-            filters.append(CompanionWorkspaceDocumentVersion.calendar_date.is_(None))
+            filters.append(CompanionMemoryDocumentVersion.calendar_date.is_(None))
         else:
-            filters.append(CompanionWorkspaceDocumentVersion.calendar_date == cal)
+            filters.append(CompanionMemoryDocumentVersion.calendar_date == cal)
         stmt = (
-            sql_select(CompanionWorkspaceDocumentVersion)
+            sql_select(CompanionMemoryDocumentVersion)
             .where(sql_and(*filters))
-            .order_by(CompanionWorkspaceDocumentVersion.sequence_id.desc())
+            .order_by(CompanionMemoryDocumentVersion.sequence_id.desc())
             .limit(1)
         )
         with SessionLocal() as session:
@@ -112,21 +112,21 @@ class SqlAlchemyMemoryRepository:
         )
 
     def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
-        sql_and, sql_select, SessionLocal, CompanionWorkspaceDocumentVersion = (
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
             self._orm()
         )
         _ = workspace_root
         stmt = (
             sql_select(
-                CompanionWorkspaceDocumentVersion.document_kind,
-                CompanionWorkspaceDocumentVersion.calendar_date,
+                CompanionMemoryDocumentVersion.document_kind,
+                CompanionMemoryDocumentVersion.calendar_date,
             )
             .where(
                 sql_and(
-                    CompanionWorkspaceDocumentVersion.user_id == self._user_id,
-                    CompanionWorkspaceDocumentVersion.companion_id
+                    CompanionMemoryDocumentVersion.user_id == self._user_id,
+                    CompanionMemoryDocumentVersion.companion_id
                     == self._companion_id,
-                    CompanionWorkspaceDocumentVersion.chat_id == self._chat_id,
+                    CompanionMemoryDocumentVersion.chat_id == self._chat_id,
                 )
             )
             .distinct()
@@ -136,7 +136,7 @@ class SqlAlchemyMemoryRepository:
         out: list[str] = []
         for kind_val, cal in pairs:
             try:
-                kind = CompanionWorkspaceDocKind(kind_val)
+                kind = CompanionMemoryDocumentKind(kind_val)
             except ValueError:
                 continue
             try:
@@ -153,10 +153,10 @@ class SqlAlchemyMemoryRepository:
         content: str,
         record_uuid: str,
     ) -> MemoryRecord:
-        _, _, SessionLocal, CompanionWorkspaceDocumentVersion = self._orm()
+        _, _, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
         _ = workspace_root
-        kind, cal = parse_workspace_relative_path(relative_path)
-        row = CompanionWorkspaceDocumentVersion(
+        kind, cal = parse_memory_store_relative_path(relative_path)
+        row = CompanionMemoryDocumentVersion(
             record_uuid=record_uuid,
             user_id=self._user_id,
             companion_id=self._companion_id,
@@ -180,7 +180,7 @@ class SqlAlchemyMemoryRepository:
 
 
 class MemoryCache:
-    """Thread-safe in-memory snapshot for one workspace."""
+    """Thread-safe in-memory snapshot for one MemoryStore scope."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -204,7 +204,7 @@ class MemoryCache:
 
 
 class MemoryStore:
-    """Repository-backed or in-process-only memory store (never reads user workspace files)."""
+    """Repository-backed or in-process-only store (never reads host filesystem as authority)."""
 
     def __init__(
         self,
@@ -220,7 +220,7 @@ class MemoryStore:
         _ = flush_batch_size
 
     @property
-    def uses_repository_without_workspace_disk(self) -> bool:
+    def uses_repository_without_scope_disk(self) -> bool:
         return self._repository is not None
 
     def _normalize_relative_path(self, relative_path: str) -> str:
@@ -228,7 +228,7 @@ class MemoryStore:
         if not rel:
             raise ValueError("relative_path must be non-empty")
         if rel.startswith("/"):
-            raise ValueError("relative_path must be workspace-relative")
+            raise ValueError("relative_path must be scope-root-relative")
         abs_path = (self._workspace_root / rel).resolve()
         return abs_path.relative_to(self._workspace_root).as_posix()
 

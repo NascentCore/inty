@@ -18,7 +18,7 @@ app:
     subscribed_user_agent_creation_24h_limit: 2
   features:
     # WS companion bootstrap: NONE | USER_INTERACTIVE
-    companion_workspace_bootstrap_type: USER_INTERACTIVE
+    companion_memory_bootstrap_type: USER_INTERACTIVE
 
 sentry:
   # dev-inty/default

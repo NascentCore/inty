@@ -16,7 +16,7 @@ from loguru import logger
 
 from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 ScheduleTaskStatus = Literal["pending", "fired"]
 
@@ -106,7 +106,7 @@ def _parse_utc_ts(ts: str) -> datetime:
 
 def _schedule_document_rel_path(root: Path) -> str:
     r = root.resolve()
-    return WorkspacePaths(root=r).schedule_queue_json.relative_to(r).as_posix()
+    return MemoryStoreScopePaths(root=r).schedule_queue_json.relative_to(r).as_posix()
 
 
 def _legacy_list_item_to_task(raw: dict[str, Any]) -> ScheduleTask:

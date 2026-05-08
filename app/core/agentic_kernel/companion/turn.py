@@ -36,7 +36,7 @@ from typing import Any
 from loguru import logger
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionWorkspaceBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     invocation_extra,
@@ -85,7 +85,7 @@ from .tool_background import (
 )
 from .turn_routes import BackgroundToolEventSink, TurnRouteMode
 from .companion_tool_runtime import (
-    WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
 )
 from .runtime_inspect_context import (
@@ -95,6 +95,7 @@ from .runtime_inspect_context import (
     runtime_inspect_end_turn,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
+    runtime_inspect_set_scoped_memory_store,
 )
 from .tools import WRITABLE_RELATIVE_PATHS
 from .utc import utc_iso_ts
@@ -114,7 +115,7 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
@@ -131,10 +132,10 @@ def _replace_leading_system_messages_multi(
 
 def _async_dual_llm_system_message_variants(
     *,
-    workspace_root: Path,
+    scope_root: Path,
     bundle: PromptBundle,
     context: ContextMeta,
-    workspace_bootstrap_type: str,
+    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     route_inner_mode: InnerTickMode,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -149,10 +150,10 @@ def _async_dual_llm_system_message_variants(
     loops entirely, like a brief hello to someone familiar).
     """
     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
-        workspace_root=workspace_root,
+        scope_root=scope_root,
         bundle=bundle,
         context=context,
-        workspace_bootstrap_type=workspace_bootstrap_type,
+        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
         tool_side_compact_system_prompt=True,
@@ -161,10 +162,10 @@ def _async_dual_llm_system_message_variants(
         implicit_user_signed_on_turn=False,
     )
     _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
-        workspace_root=workspace_root,
+        scope_root=scope_root,
         bundle=bundle,
         context=context,
-        workspace_bootstrap_type=workspace_bootstrap_type,
+        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
         tool_side_compact_system_prompt=False,
@@ -186,7 +187,7 @@ async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
     *,
     idle_wait_timeout_sec: float,
-    workspace_root: Path,
+    scope_root: Path,
 ) -> None:
     if tool_bg_idle_event is None:
         return
@@ -197,14 +198,14 @@ async def _await_tool_background_idle_if_configured(
     ok = await asyncio.to_thread(_wait)
     if not ok:
         logger.warning(
-            "run_turn tool_bg_idle wait timed out after {:.2f}s workspace={}",
+            "run_turn tool_bg_idle wait timed out after {:.2f}s scope_root={}",
             idle_wait_timeout_sec,
-            workspace_root,
+            scope_root,
         )
 
 
 async def run_turn(
-    workspace: Path,
+    scope_root: Path,
     user_text: str,
     *,
     store: MemoryStore,
@@ -215,8 +216,8 @@ async def run_turn(
     memory_config: MemoryPipelineConfig | None = None,
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
-    repository_only_workspace_text: bool = False,
-    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    repository_only_store_text: bool = False,
+    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -236,8 +237,8 @@ async def run_turn(
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     """
     t0 = time.perf_counter()
-    root = workspace.resolve()
-    paths = WorkspacePaths(root=root)
+    root = scope_root.resolve()
+    paths = MemoryStoreScopePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
     tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
@@ -283,7 +284,7 @@ async def run_turn(
     await _await_tool_background_idle_if_configured(
         tool_bg_idle_event,
         idle_wait_timeout_sec=idle_wait_timeout_sec,
-        workspace_root=root,
+        scope_root=root,
     )
 
     # 加载 context 与 prompt bundle
@@ -298,10 +299,10 @@ async def run_turn(
 
     tools_for_turn, system_messages, route_mode = (
         companion_turn_tools_and_system_messages(
-            workspace_root=root,
+            scope_root=root,
             bundle=bundle,
             context=context,
-            workspace_bootstrap_type=workspace_bootstrap_type,
+            memory_bootstrap_type=memory_bootstrap_type,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             tool_side_compact_system_prompt=False,
@@ -368,6 +369,7 @@ async def run_turn(
 
     inspect_token = runtime_inspect_begin_turn()
     try:
+        runtime_inspect_set_scoped_memory_store(store)
         runtime_inspect_set_runtime_config(
             build_turn_runtime_config_dict(
                 llm_client=llm_client,
@@ -376,9 +378,11 @@ async def run_turn(
                 transcript_llm_window_max_messages=window_cap,
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_mode=route_inner_mode,
-                repository_only_workspace_text=repository_only_workspace_text,
+                repository_only_store_text=repository_only_store_text,
                 transcript_compaction=transcript_compaction,
-                workspace_read_file_max_chars_cap=WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+                memory_store_read_document_max_chars_cap=(
+                    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
+                ),
             )
         )
 
@@ -416,10 +420,10 @@ async def run_turn(
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     tool_system_msgs, chat_system_msgs = (
                         _async_dual_llm_system_message_variants(
-                            workspace_root=root,
+                            scope_root=root,
                             bundle=bundle,
                             context=context,
-                            workspace_bootstrap_type=workspace_bootstrap_type,
+                            memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=inner_tick_turn,
                             route_inner_mode=route_inner_mode,
                             implicit_signal_bundle=implicit_signal_bundle,
@@ -541,10 +545,10 @@ async def run_turn(
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
                         write_allowlist=WRITABLE_RELATIVE_PATHS,
-                        repository_only_workspace_text=repository_only_workspace_text,
+                        repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
-                        workspace_bootstrap_type=workspace_bootstrap_type,
+                        memory_bootstrap_type=memory_bootstrap_type,
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_mode=route_inner_mode,
                         implicit_signal_bundle=implicit_signal_bundle,

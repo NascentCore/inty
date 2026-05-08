@@ -148,8 +148,8 @@ class APIEndpointsConfig:
     use_dummy_api_v1_character_themes_id_get: bool = False
 
 
-class CompanionWorkspaceBootstrapType(StrEnum):
-    """WS companion workspace bootstrap mode (app.features.companion_workspace_bootstrap_type)."""
+class CompanionMemoryBootstrapType(StrEnum):
+    """WS companion MemoryStore bootstrap mode (app.features.companion_memory_bootstrap_type)."""
 
     NONE = "NONE"
     USER_INTERACTIVE = "USER_INTERACTIVE"
@@ -176,8 +176,8 @@ class FeaturesConfig:
     companion_transcript_llm_window_max_messages: Optional[int] = None
     # WS companion: NONE = seed minimal docs only, always run_turn;
     # USER_INTERACTIVE = always run_turn with slice tools until model calls companion_bootstrap_user_interactive_complete.
-    companion_workspace_bootstrap_type: str = (
-        CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+    companion_memory_bootstrap_type: str = (
+        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
@@ -188,14 +188,14 @@ class FeaturesConfig:
     companion_ws_proactive_heartbeat_poll_seconds: float = 45.0
 
     def __post_init__(self) -> None:
-        raw = (self.companion_workspace_bootstrap_type or "").strip().upper()
-        allowed = {m.value for m in CompanionWorkspaceBootstrapType}
+        raw = (self.companion_memory_bootstrap_type or "").strip().upper()
+        allowed = {m.value for m in CompanionMemoryBootstrapType}
         if raw not in allowed:
             raise ValueError(
-                "app.features.companion_workspace_bootstrap_type must be one of "
-                f"{sorted(allowed)}, got {self.companion_workspace_bootstrap_type!r}"
+                "app.features.companion_memory_bootstrap_type must be one of "
+                f"{sorted(allowed)}, got {self.companion_memory_bootstrap_type!r}"
             )
-        self.companion_workspace_bootstrap_type = raw
+        self.companion_memory_bootstrap_type = raw
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )

@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from .companion_tool_runtime import (
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     REPL_WRITABLE_RELATIVE_PATHS,
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
 )
 
-WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
 WRITABLE_RELATIVE_PATHS = REPL_WRITABLE_RELATIVE_PATHS
 
 
@@ -23,7 +23,7 @@ def build_companion_tools(
 
 
 __all__ = [
-    "WORKSPACE_READ_FILE_MAX_CHARS_CAP",
+    "MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP",
     "WRITABLE_RELATIVE_PATHS",
     "build_companion_tools",
     "build_openai_repl_tools_inner_tick",

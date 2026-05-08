@@ -11,7 +11,7 @@ from typing import Any
 
 from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 _CORE_PROFILE_DOCS: frozenset[str] = frozenset({"IDENTITY.md", "SOUL.md", "USER.md"})
 _IMAGE_ASSET_INDEX_REL = "generated_images/index.jsonl"
@@ -42,7 +42,7 @@ _MODE_MODIFY_RE = re.compile(
 
 def _image_gate_document_rel_path(root: Path) -> str:
     r = root.resolve()
-    return WorkspacePaths(root=r).image_gate_json.relative_to(r).as_posix()
+    return MemoryStoreScopePaths(root=r).image_gate_json.relative_to(r).as_posix()
 
 
 def _default_state(root: Path) -> dict[str, Any]:

@@ -29,7 +29,7 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
 from app.models.chat import Chat
 from app.models.chat_history import ChatHistory
-from app.models.companion_workspace import CompanionWorkspaceDocumentVersion
+from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
 from app.services.chat_service import generate_session_id
 
 
@@ -83,11 +83,11 @@ async def _run(
 
         cnt_ws = await db.scalar(
             select(func.count())
-            .select_from(CompanionWorkspaceDocumentVersion)
+            .select_from(CompanionMemoryDocumentVersion)
             .where(
-                CompanionWorkspaceDocumentVersion.user_id == user_id,
-                CompanionWorkspaceDocumentVersion.companion_id == agent_id,
-                CompanionWorkspaceDocumentVersion.chat_id == chat_id_str,
+                CompanionMemoryDocumentVersion.user_id == user_id,
+                CompanionMemoryDocumentVersion.companion_id == agent_id,
+                CompanionMemoryDocumentVersion.chat_id == chat_id_str,
             )
         )
         cnt_hist = await db.scalar(
@@ -104,7 +104,7 @@ async def _run(
             session_id,
         )
         print(
-            f"将删除 companion_workspace_document_versions 约 {cnt_ws} 行，"
+            f"将删除 companion_memory_document_versions 约 {cnt_ws} 行，"
             f"chat_history 约 {cnt_hist} 行（session_id={session_id}）。"
         )
 
@@ -116,10 +116,10 @@ async def _run(
             raise SystemExit("非 dry-run 时必须传入 --yes 以确认")
 
         await db.execute(
-            delete(CompanionWorkspaceDocumentVersion).where(
-                CompanionWorkspaceDocumentVersion.user_id == user_id,
-                CompanionWorkspaceDocumentVersion.companion_id == agent_id,
-                CompanionWorkspaceDocumentVersion.chat_id == chat_id_str,
+            delete(CompanionMemoryDocumentVersion).where(
+                CompanionMemoryDocumentVersion.user_id == user_id,
+                CompanionMemoryDocumentVersion.companion_id == agent_id,
+                CompanionMemoryDocumentVersion.chat_id == chat_id_str,
             )
         )
         await db.execute(

@@ -15,7 +15,7 @@ from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.models import ContextMeta
 from app.core.agentic_kernel.companion.companion_tool_runtime import (
     execute_tool_call,
-    tool_workspace_write_file,
+    tool_memory_store_write_document,
 )
 from app.core.agentic_kernel.companion.tools import build_companion_tools
 
@@ -35,9 +35,9 @@ def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> Non
     )
 
 
-def test_build_companion_tools_interactive_excludes_workspace_write(tmp_path: Path) -> None:
+def test_build_companion_tools_interactive_excludes_memory_store_write(tmp_path: Path) -> None:
     names = [t["function"]["name"] for t in build_companion_tools(interactive_bootstrap_active=True)]
-    assert "workspace_write_file" not in names
+    assert "memory_store_write_document" not in names
     assert "companion_update_prompt_slice" in names
     assert "companion_bootstrap_user_interactive_complete" in names
     assert "companion_set_experience_profile" in names
@@ -214,7 +214,7 @@ def test_soul_slice_rejected_after_interactive_bootstrap_complete(tmp_path: Path
     assert st.read_document("USER.md") == "# ok\n"
 
 
-def test_workspace_write_soul_rejected_after_interactive_bootstrap_complete(
+def test_memory_store_write_soul_rejected_after_interactive_bootstrap_complete(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -230,6 +230,6 @@ def test_workspace_write_soul_rejected_after_interactive_bootstrap_complete(
         )
         + "\n",
     )
-    err = tool_workspace_write_file(root, "SOUL.md", "hacked")
+    err = tool_memory_store_write_document(root, "SOUL.md", "hacked")
     assert err.startswith("ERROR:")
     assert st.read_document("SOUL.md") == "seed"

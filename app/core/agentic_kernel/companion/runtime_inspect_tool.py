@@ -1,4 +1,4 @@
-"""Implementation of companion_runtime_inspect workspace tool.
+"""Implementation of companion_runtime_inspect MemoryStore snapshot tool.
 
 Registers a LangSmith ``@traceable`` span around the tool entrypoint so tool-path
 executions appear in traces; large JSON outputs are summarized via ``process_outputs``.
@@ -15,7 +15,10 @@ from langsmith import traceable
 from .memory_registry import get_memory_store
 from .memory_store import MemoryStore
 from .runtime_events import read_runtime_events
-from .runtime_inspect_context import runtime_inspect_get_bundle
+from .runtime_inspect_context import (
+    runtime_inspect_get_bundle,
+    runtime_inspect_get_scoped_memory_store,
+)
 from .utc import local_date_str
 
 _LANGSMITH_OUTPUT_PREVIEW_CHARS = 6000
@@ -173,7 +176,7 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         else:
             out["last_chat_completion_request"] = last
 
-    store = get_memory_store(root)
+    store = runtime_inspect_get_scoped_memory_store() or get_memory_store(root)
     out["runtime_events"] = read_runtime_events(store, limit=max_runtime_events)
 
     if include_store_documents:

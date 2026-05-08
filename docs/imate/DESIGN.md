@@ -65,7 +65,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
   - 按「解析后的 chat 模型 id + 运行时指纹」LRU 缓存 `CompanionManager`。
   - `run_companion_chat_turn_for_api`：`get_or_create_session`、可选 `_maybe_append_companion_ws_session_system`（仅 **`USER_INTERACTIVE`** bootstrap）、再 `manager.run_turn`。
 - **`app/core/agentic_kernel/companion/manager.py`**
-  - `get_or_create_session`：按 workspace 路径注册 `MemoryStore`、写入最小种子文档、`ensure_minimal_workspace_documents_in_store`。
+  - `get_or_create_session`：按合成 scope 路径注册 `MemoryStore`、写入最小种子文档、`ensure_minimal_documents_in_store`。
   - `run_turn`：薄封装，调用 `companion.turn.run_turn`。
 
 ## 核心一轮：`companion/turn.py` 中 `run_turn`
@@ -77,12 +77,12 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 3. **`prompts.build_system_messages`**（若写「拼 system prompt」，以该函数为准；另存在 `build_system_prompt` 用于拼接字符串场景）。含 interactive bootstrap、`SIGNIFICANCE_PERCEPTION` slice 等分支。
 4. **`tools.build_companion_tools`** → `companion_tool_runtime.build_openai_repl_tools`；interactive bootstrap 激活时工具集合会收窄。
 5. LLM 与 tool：**若 `tools_for_turn` 为空**，单次 `CompanionLLMClient.chat_completion`（chat 路由、`chat_model`）。**若非空**，先 `start_tool_background_job`（后台线程内对 tool 路由连续 `chat_completion` + `execute_tool_call`），再在同一 `run_turn` 内前台 `chat_completion`（chat 路由、`tools=None`、JSON envelope）；详见 `tool_background.py`。
-6. 工具执行：`companion_tool_runtime.execute_tool_call` → **`tools/registry.py`**、`tools/dispatchers/workspace.py`、`tools/dispatchers/media.py` 等与 companion 共用的解析/派发；交互式 bootstrap 专有逻辑在 `companion/` 内（主要在后台 tool 循环中触发）。
+6. 工具执行：`companion_tool_runtime.execute_tool_call` → **`tools/registry.py`**、`tools/dispatchers/memory_store.py`、`tools/dispatchers/media.py` 等与 companion 共用的解析/派发；交互式 bootstrap 专有逻辑在 `companion/` 内（主要在后台 tool 循环中触发）。
 7. 将 user/assistant（及 tool 轨迹）写入 transcript；`schedule_memory_update_after_turn` / `memory_pipeline.py` 做回合后记忆处理。
 
 **`companion/turn_engine.py`**：拼 OpenAI messages 的辅助模块（例如测试或 REPL 风格组装）。生产 **`WS /api/v1/chat/ws`** 不 import 它，而是经 `companion_chat_service` 走 **`turn.run_turn`**。
 
-## Bootstrap：`companion_workspace_bootstrap_type`
+## Bootstrap：`companion_memory_bootstrap_type`
 
 | 取值 | Session 创建 | API 路径上首轮行为 |
 | --- | --- | --- |
@@ -94,7 +94,7 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 ## WebSocket companion 路径会用到的共享内核
 
 - **`providers/facade.py`**（及 `openai_compatible.py`）：`CompanionLLMClient` 的 HTTP 客户端。
-- **`tools/registry.py`**、**`tools/dispatchers/*`**：`companion_tool_runtime` 内注册表与 workspace/media 派发辅助。
+- **`tools/registry.py`**、**`tools/dispatchers/*`**：`companion_tool_runtime` 内注册表与 memory_store/media 派发辅助。
 
 当前 **`build_openai_repl_tools`** 在向模型暴露的工具列表末尾仍包含 **`google_web_search`、`generate_image`、`modify_image`** 等（定义在同文件的 `build_openai_tools()` 拼装结果上）；执行路径在 **`companion_tool_runtime.execute_tool_call`**。
 
@@ -108,10 +108,10 @@ WebSocket 处理函数在 `app/api/v1/endpoints/chat.py`（`router` 前缀为 `/
 
 ## 持久化（概念）
 
-- **Workspace 权威（API companion）**：文档与 transcript 版本经 **`MemoryStore`**（配置好 DSN 时 ORM 落库，如表 **`companion_workspace_document_versions`**），而非进程内以本地磁盘为唯一真相。
+- **MemoryStore 权威（API companion）**：文档与 transcript 版本经 **`MemoryStore`**（配置好 DSN 时 ORM 落库，如表 **`companion_memory_document_versions`**），而非进程内以本地磁盘为唯一真相。
 - **产品聊天记录**：用户/助手消息经 **`chat_history_service`** 在 companion 返回后写入；可选将 `significance_perception` 放入 AI 消息的 `meta_data`。
 
-合成路径：`CompanionManager` 仍使用 `companion_chat_service.COMPANION_API_WORKSPACE_ROOT_PREFIX`（默认 `/var/lib/inty/companion_workspaces`）拼出逻辑 workspace 根路径，供工具内路径解析与 store 注册键使用。
+合成路径：`CompanionManager` 仍使用 `companion_chat_service.COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX`（默认 `/var/lib/inty/companion_memory_scopes`）拼出逻辑 scope 根路径，供工具内路径解析与 store 注册键使用。
 
 ---
 

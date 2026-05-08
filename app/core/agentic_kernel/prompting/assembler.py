@@ -7,7 +7,9 @@ from typing import Any, Callable, Optional
 from langchain_core.messages import SystemMessage
 
 from app.core.agent import prompts
-from app.core.agentic_kernel.companion.workspace import get_imate_axiom_system_text
+from app.core.agentic_kernel.companion.memory_store_scope import (
+    get_imate_axiom_system_text,
+)
 
 RenderPromptFn = Callable[[str, str, Optional[str]], str]
 PromptOverrideLookupFn = Callable[[str, str], Any]

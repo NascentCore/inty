@@ -3,18 +3,18 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
-from app.core.agentic_kernel.companion.workspace import (
-    WorkspacePaths,
-    ensure_minimal_workspace_documents_in_store,
-    is_workspace_initialized,
-    is_workspace_initialized_from_store,
+from app.core.agentic_kernel.companion.memory_store_scope import (
+    MemoryStoreScopePaths,
+    ensure_minimal_documents_in_store,
+    is_scope_initialized_in_store,
+    is_scope_initialized_on_disk,
 )
 
 
-def test_workspace_paths_properties(tmp_path: Path) -> None:
+def test_memory_store_scope_paths_properties(tmp_path: Path) -> None:
     root = tmp_path / "ws"
     root.mkdir()
-    p = WorkspacePaths(root=root)
+    p = MemoryStoreScopePaths(root=root)
     assert p.identity == root / "IDENTITY.md"
     assert p.soul == root / "SOUL.md"
     assert p.user_md == root / "USER.md"
@@ -31,13 +31,13 @@ def test_workspace_paths_properties(tmp_path: Path) -> None:
     assert p.schedule_queue_json == root / ".companion_schedule_tasks.json"
 
 
-def test_is_workspace_initialized_empty(tmp_path: Path) -> None:
+def test_is_scope_initialized_on_disk_empty(tmp_path: Path) -> None:
     d = tmp_path / "empty"
     d.mkdir()
-    assert is_workspace_initialized(d) is False
+    assert is_scope_initialized_on_disk(d) is False
 
 
-def test_is_workspace_initialized_complete(tmp_path: Path) -> None:
+def test_is_scope_initialized_on_disk_complete(tmp_path: Path) -> None:
     d = tmp_path / "full"
     d.mkdir()
     for name in (
@@ -48,21 +48,20 @@ def test_is_workspace_initialized_complete(tmp_path: Path) -> None:
         "transcript.jsonl",
     ):
         (d / name).write_text("x", encoding="utf-8")
-    assert is_workspace_initialized(d) is True
+    assert is_scope_initialized_on_disk(d) is True
 
 
-def test_workspace_paths_custom_state_file_prefix(tmp_path: Path) -> None:
+def test_memory_store_scope_paths_custom_state_file_prefix(tmp_path: Path) -> None:
     root = tmp_path / "ws"
     root.mkdir()
-    p = WorkspacePaths(root=root, state_file_prefix=".inty_v2")
+    p = MemoryStoreScopePaths(root=root, state_file_prefix=".inty_v2")
     assert p.memory_pipeline_state_json == root / ".inty_v2_memory_pipeline.json"
     assert p.schedule_queue_json == root / ".inty_v2_schedule_tasks.json"
-    # other paths unchanged
     assert p.identity == root / "IDENTITY.md"
     assert p.transcript == root / "transcript.jsonl"
 
 
-def test_is_workspace_initialized_from_store_complete(tmp_path: Path) -> None:
+def test_is_scope_initialized_in_store_complete(tmp_path: Path) -> None:
     root = tmp_path / "virt"
     root.mkdir()
     store = MemoryStore(
@@ -77,31 +76,31 @@ def test_is_workspace_initialized_from_store_complete(tmp_path: Path) -> None:
         "transcript.jsonl",
     ):
         store.write_document(name, "ok\n")
-    assert is_workspace_initialized_from_store(root, store) is True
-    assert is_workspace_initialized(root) is False
+    assert is_scope_initialized_in_store(root, store) is True
+    assert is_scope_initialized_on_disk(root) is False
 
 
-def test_is_workspace_initialized_partial(tmp_path: Path) -> None:
+def test_is_scope_initialized_on_disk_partial(tmp_path: Path) -> None:
     d = tmp_path / "partial"
     d.mkdir()
     for name in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
         (d / name).write_text("x", encoding="utf-8")
-    assert is_workspace_initialized(d) is False
+    assert is_scope_initialized_on_disk(d) is False
 
 
-def test_ensure_minimal_workspace_documents_in_store(tmp_path: Path) -> None:
+def test_ensure_minimal_documents_in_store(tmp_path: Path) -> None:
     root = tmp_path / "seed_ws"
     root.mkdir()
     store = MemoryStore(
         workspace_root=root,
         repository=None,
     )
-    assert is_workspace_initialized_from_store(root, store) is False
-    ensure_minimal_workspace_documents_in_store(root, store)
-    assert is_workspace_initialized_from_store(root, store) is True
+    assert is_scope_initialized_in_store(root, store) is False
+    ensure_minimal_documents_in_store(root, store)
+    assert is_scope_initialized_in_store(root, store) is True
     memory = store.read_document("MEMORY.md")
     assert "记忆库" in memory
     assert "42" not in memory
     assert "待对话填充" in store.read_document("USER.md")
-    ensure_minimal_workspace_documents_in_store(root, store)
-    assert is_workspace_initialized_from_store(root, store) is True
+    ensure_minimal_documents_in_store(root, store)
+    assert is_scope_initialized_in_store(root, store) is True

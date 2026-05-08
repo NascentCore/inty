@@ -1,11 +1,11 @@
-"""Prepare a companion workspace from seed files before CompanionManager touches it."""
+"""Prepare a companion MemoryStore scope from seed files before CompanionManager touches it."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
-from app.core.agentic_kernel.companion.workspace import WorkspacePaths
+from app.core.agentic_kernel.companion.memory_store_scope import MemoryStoreScopePaths
 
 TEXT_SUFFIXES = frozenset({".md", ".json", ".jsonl"})
 
@@ -19,7 +19,7 @@ def seed_memory_store_from_directory(seed_dir: Path, workspace_root: Path) -> No
     Write each text file from seed_dir into MemoryStore for workspace_root.
 
     Call this before CompanionManager.get_or_create_session so
-    ensure_minimal_workspace_documents_in_store does not overwrite non-empty seeds.
+    ensure_minimal_documents_in_store does not overwrite non-empty seeds.
     """
     sd = seed_dir.resolve()
     if not sd.is_dir():
@@ -27,7 +27,7 @@ def seed_memory_store_from_directory(seed_dir: Path, workspace_root: Path) -> No
     root = workspace_root.resolve()
     root.mkdir(parents=True, exist_ok=True)
     store = get_memory_store(root, dsn="")
-    paths = WorkspacePaths(root=root)
+    paths = MemoryStoreScopePaths(root=root)
     for src in _iter_seed_files(sd):
         if src.suffix.lower() not in TEXT_SUFFIXES:
             continue

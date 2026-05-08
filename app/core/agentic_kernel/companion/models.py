@@ -16,11 +16,11 @@ from app.core.agentic_kernel.experience_profile import (
 )
 
 from .utc import local_date_str
-from .workspace import load_workspace_seed_text
+from .memory_store_scope import load_template_seed_text
 
 if TYPE_CHECKING:
     from .memory_store import MemoryStore
-    from .workspace import WorkspacePaths
+    from .memory_store_scope import MemoryStoreScopePaths
 
 AssistantTurnSource = Literal["chat", "inner_tick"]
 
@@ -114,7 +114,7 @@ def _read_memory_document_required(store: MemoryStore, relative_path: str) -> st
 
 
 def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
-    text = load_workspace_seed_text(relative_path).strip()
+    text = load_template_seed_text(relative_path).strip()
     if max_chars > 0 and len(text) > max_chars:
         return text[: max_chars - 1] + "..."
     return text
@@ -167,7 +167,7 @@ class ContextMeta(BaseModel):
 
 
 def load_prompt_bundle(
-    paths: WorkspacePaths,
+    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     *,
     meta: ContextMeta | None = None,

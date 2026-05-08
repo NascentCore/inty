@@ -26,7 +26,7 @@ from app.services.agent_status_line import (
     clear_tool_background_db_loop,
     set_tool_background_db_loop,
 )
-from app.utils.config import CompanionWorkspaceBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
@@ -69,7 +69,7 @@ from .companion_tool_runtime import (
 )
 from .tool_bg_routing import resolve_tool_bg_routing_sync
 from .utc import utc_iso_ts
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
@@ -478,7 +478,7 @@ def _append_background_transcript_assistant(
     trace_id: str,
 ) -> None:
     root = ws_root.resolve()
-    paths = WorkspacePaths(root=root)
+    paths = MemoryStoreScopePaths(root=root)
     rel_tr = paths.transcript.relative_to(root).as_posix()
     store.append_jsonl_record(
         rel_tr,
@@ -538,8 +538,8 @@ async def _run_background_tool_loop(
     chat_completion_sync: ChatCompletionsSyncPort,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
-    repository_only_workspace_text: bool = False,
-    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    repository_only_store_text: bool = False,
+    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -575,6 +575,7 @@ async def _run_background_tool_loop(
                     ),
                 },
                 "last_chat_completion_request": None,
+                "scoped_memory_store": memory_store,
             }
         )
 
@@ -677,7 +678,7 @@ async def _run_background_tool_loop(
                 name,
                 raw_arguments,
                 write_allowlist=allow,
-                repository_only_workspace_text=repository_only_workspace_text,
+                repository_only_store_text=repository_only_store_text,
             )
             return result, None
 
@@ -728,16 +729,16 @@ async def _run_background_tool_loop(
             total_tool_calls += len(tool_calls)
             return next_resp, None
 
-        # Keep tool-path system prefix and OpenAI tools list in sync with workspace
+        # Keep tool-path system prefix and OpenAI tools list in sync with MemoryStore scope
         # after each tool round (same idea as sync loop in turn.py after tool replies).
         async def _after_tool_messages_appended(
             messages_with_tool_results: list[dict[str, Any]],
         ) -> None:
             nonlocal tools
             tools = refresh_companion_turn_prompt_stack(
-                workspace=ws_root,
+                scope_root=ws_root,
                 store=memory_store,
-                workspace_bootstrap_type=workspace_bootstrap_type,
+                memory_bootstrap_type=memory_bootstrap_type,
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_mode=inner_tick_mode,
                 messages=messages_with_tool_results,
@@ -954,10 +955,10 @@ def start_tool_background_job(
     chat_completions_sync: ChatCompletionsSyncPort | None = None,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
-    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -994,8 +995,8 @@ def start_tool_background_job(
                     chat_completion_sync=sync_port,
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
-                    repository_only_workspace_text=repository_only_workspace_text,
-                    workspace_bootstrap_type=workspace_bootstrap_type,
+                    repository_only_store_text=repository_only_store_text,
+                    memory_bootstrap_type=memory_bootstrap_type,
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_mode=inner_tick_mode,
                     implicit_signal_bundle=implicit_signal_bundle,

@@ -1,7 +1,7 @@
 """Companion tool runtime: schemas, dispatch, and ``execute_tool_call`` for the REPL/agentic kernel.
 
-Persisted companion documents and transcript go through MemoryStore; tool_surface helpers may still use
-workspace-relative paths aligned with ``workspace_doc_mapping``.
+Persisted companion documents and transcript go through MemoryStore; tool paths align with
+``memory_store_document_mapping``.
 """
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ from app.core.agentic_kernel.tools.dispatchers.media import (
     parse_optional_positive_int,
     parse_optional_strength,
 )
-from app.core.agentic_kernel.tools.dispatchers.workspace import (
-    dispatch_workspace_tool,
+from app.core.agentic_kernel.tools.dispatchers.memory_store import (
+    dispatch_memory_store_tool,
 )
 
 from .fal_z_image_tool import (
@@ -40,6 +40,7 @@ from .image_gate import (
     register_profile_write,
 )
 from .memory_registry import get_memory_store
+from .memory_store_scope import resolve_under_scope_root
 from .bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
     soul_prompt_is_locked_after_interactive_bootstrap,
@@ -48,7 +49,7 @@ from .bootstrap_user_interactive import (
     tool_companion_update_prompt_slice,
 )
 from .message_format import openai_assistant_message_dict
-from .workspace_doc_mapping import parse_workspace_relative_path
+from .memory_store_document_mapping import parse_memory_store_relative_path
 from .models import ChatMessage
 from .google_web_search import run_google_web_search
 from .read_web_page import run_read_web_page
@@ -67,8 +68,8 @@ _TOOL_TAGS_BY_NAME: dict[str, frozenset[str]] = {
     "modify_image": frozenset({TOOL_TAG_GENERATION}),
 }
 
-# workspace_read_file：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
-WORKSPACE_READ_FILE_MAX_CHARS_CAP: int = 120_000
+# memory_store_read_document：可选 max_chars 上限，避免单次 tool 返回撑爆上下文。
+MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
 # REPL 对话轮允许整文件覆盖写入的相对路径（根目录约定文档；不含 transcript/context 等）
 REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
@@ -89,10 +90,10 @@ def _latest_generated_image_http_url_from_index(root: Path) -> str | None:
     return None
 
 
-def _is_orm_mapped_workspace_relative_path(relative_path: str) -> bool:
+def _is_orm_mapped_store_relative_path(relative_path: str) -> bool:
     rel = (relative_path or "").strip().replace("\\", "/")
     try:
-        parse_workspace_relative_path(rel)
+        parse_memory_store_relative_path(rel)
     except ValueError:
         return False
     return True
@@ -131,10 +132,10 @@ def _list_dir_extra_names_from_store(root: Path, rel_dir: str) -> set[str]:
 
 _BASE_TOOL_REGISTRY = ToolRegistry(
     (
-        "workspace_list_dir",
-        "workspace_read_file",
-        "workspace_write_file",
-        "workspace_mkdir",
+        "memory_store_list_paths",
+        "memory_store_read_document",
+        "memory_store_write_document",
+        "memory_store_mkdir",
         "user_profile_record",
         "schedule_task",
         "google_web_search",
@@ -191,7 +192,7 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
     将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。
     """
-    p = resolve_under_workspace(root, _USER_MD_REL)
+    p = resolve_under_scope_root(root, _USER_MD_REL)
     rel = p.relative_to(root.resolve()).as_posix()
     store = get_memory_store(root)
     prev = store.read_document_if_exists(rel)
@@ -220,33 +221,16 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
 
 
-def resolve_under_workspace(root: Path, relative_path: str) -> Path:
-    """
-    将相对路径解析为绝对路径；禁止逃出 workspace。
-    空字符串表示 workspace 根目录。
-    """
-    root = root.resolve()
-    rel = (relative_path or "").strip().replace("\\", "/")
-    if rel.startswith("/"):
-        raise ValueError("path must be relative to workspace root")
-    candidate = (root / rel).resolve()
-    try:
-        candidate.relative_to(root)
-    except ValueError as exc:
-        raise ValueError("path escapes workspace root") from exc
-    return candidate
-
-
-def tool_workspace_list_dir(
+def tool_memory_store_list_paths(
     root: Path,
     relative_path: str,
     *,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
     """列出目录下的直接子项（文件与目录名）；目录名以 / 结尾；仅来自 MemoryStore。"""
-    _ = repository_only_workspace_text
+    _ = repository_only_store_text
     root = root.resolve()
-    d = resolve_under_workspace(root, relative_path)
+    d = resolve_under_scope_root(root, relative_path)
     rel_dir_raw = d.relative_to(root).as_posix()
     list_prefix = _list_dir_prefix_for_store_query(rel_dir_raw)
     lines = _list_dir_extra_names_from_store(root, list_prefix)
@@ -268,25 +252,25 @@ def _parse_optional_max_chars(raw: Any) -> int | None:
         raise ValueError("max_chars must be a positive integer or omitted")
     if n < 1:
         raise ValueError("max_chars must be at least 1")
-    if n > WORKSPACE_READ_FILE_MAX_CHARS_CAP:
+    if n > MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP:
         raise ValueError(
-            f"max_chars must be at most {WORKSPACE_READ_FILE_MAX_CHARS_CAP}"
+            f"max_chars must be at most {MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP}"
         )
     return n
 
 
-def tool_workspace_read_file(
+def tool_memory_store_read_document(
     root: Path,
     relative_path: str,
     max_chars: int | None = None,
     *,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
-    _ = repository_only_workspace_text
-    p = resolve_under_workspace(root, relative_path)
+    _ = repository_only_store_text
+    p = resolve_under_scope_root(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
     st = get_memory_store(root)
-    if not _is_orm_mapped_workspace_relative_path(rel):
+    if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: path is not a persisted companion document: {relative_path!r}"
     body = st.read_document_if_exists(rel)
     if body is None:
@@ -324,18 +308,18 @@ def _transcript_jsonl_validate_for_tool_write(content: str) -> str | None:
     return None
 
 
-def tool_workspace_write_file(
+def tool_memory_store_write_document(
     root: Path,
     relative_path: str,
     content: str,
     *,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
-    _ = repository_only_workspace_text
-    p = resolve_under_workspace(root, relative_path)
+    _ = repository_only_store_text
+    p = resolve_under_scope_root(root, relative_path)
     rel = p.relative_to(root.resolve()).as_posix()
     st = get_memory_store(root)
-    if not _is_orm_mapped_workspace_relative_path(rel):
+    if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
     if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
         return (
@@ -353,9 +337,9 @@ def tool_workspace_write_file(
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 
-def tool_workspace_mkdir(root: Path, relative_path: str) -> str:
+def tool_memory_store_mkdir(root: Path, relative_path: str) -> str:
     _ = root, relative_path
-    return "OK mkdir (companion has no workspace directories on disk)"
+    return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
 
 
 def tool_schedule_task(root: Path, exec_time_utc: str, task_text: str) -> str:
@@ -376,10 +360,10 @@ def build_openai_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "workspace_list_dir",
+                "name": "memory_store_list_paths",
                 "description": (
-                    "List immediate children of a directory under the workspace root. "
-                    "Use empty relative_path for the workspace root. "
+                    "List immediate children under the synthetic MemoryStore scope root. "
+                    "Use empty relative_path for the scope root. "
                     "Directory names are shown with a trailing slash. "
                     "Backing store is MemoryStore; listing is derived from stored paths, not a host filesystem scan."
                 ),
@@ -388,7 +372,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "properties": {
                         "relative_path": {
                             "type": "string",
-                            "description": "Directory relative to workspace; use '' for root.",
+                            "description": "Directory relative to scope root; use '' for root.",
                         },
                     },
                     "required": ["relative_path"],
@@ -399,25 +383,25 @@ def build_openai_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "workspace_read_file",
+                "name": "memory_store_read_document",
                 "description": (
-                    "Read a UTF-8 text file under the workspace. "
-                    "Optional max_chars returns only the beginning of the file (prefix), "
-                    f"up to {WORKSPACE_READ_FILE_MAX_CHARS_CAP}, to limit tool output size. "
-                    "Backing store is MemoryStore for persisted companion documents."
+                    "Read a UTF-8 logical document from MemoryStore. "
+                    "Optional max_chars returns only the beginning of the document (prefix), "
+                    f"up to {MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP}, to limit tool output size. "
+                    "Paths are scope-relative (e.g. IDENTITY.md, memory/daily/YYYY-MM-DD.md)."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "relative_path": {
                             "type": "string",
-                            "description": "File path relative to workspace root.",
+                            "description": "Document path relative to MemoryStore scope root.",
                         },
                         "max_chars": {
                             "type": "integer",
                             "description": (
-                                "If set, return at most this many characters from the start of the file "
-                                f"(1..{WORKSPACE_READ_FILE_MAX_CHARS_CAP}). Omit to read the full file."
+                                "If set, return at most this many characters from the start of the document "
+                                f"(1..{MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP}). Omit to read the full document."
                             ),
                         },
                     },
@@ -429,17 +413,17 @@ def build_openai_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "workspace_write_file",
+                "name": "memory_store_write_document",
                 "description": (
-                    "Create or overwrite a UTF-8 text file under the workspace. "
-                    "Creates parent directories as needed."
+                    "Create or overwrite a UTF-8 logical document in MemoryStore. "
+                    "Paths are scope-relative; no host mkdir is required."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "relative_path": {
                             "type": "string",
-                            "description": "File path relative to workspace root.",
+                            "description": "Document path relative to MemoryStore scope root.",
                         },
                         "content": {
                             "type": "string",
@@ -454,14 +438,17 @@ def build_openai_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "workspace_mkdir",
-                "description": "Create a directory under the workspace (mkdir -p).",
+                "name": "memory_store_mkdir",
+                "description": (
+                    "No-op compatibility hook: MemoryStore has no host directories; "
+                    "logical prefixes are implied by relative paths."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "relative_path": {
                             "type": "string",
-                            "description": "Directory path relative to workspace root.",
+                            "description": "Ignored logical prefix (scope-relative path convention).",
                         },
                     },
                     "required": ["relative_path"],
@@ -578,7 +565,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                 "name": "companion_update_prompt_slice",
                 "description": (
                     "Overwrite one workspace prompt slice (root markdown) in MemoryStore. "
-                    "Use during interactive relationship bootstrap instead of workspace_write_file. "
+                    "Use during interactive relationship bootstrap instead of memory_store_write_document. "
                     "Pass the full updated markdown as content. "
                     "After companion_bootstrap_user_interactive_complete, SOUL is locked; "
                     "IDENTITY / USER / MEMORY may still be updated. "
@@ -649,17 +636,17 @@ def build_openai_repl_tools(
             "user_profile_record",
             "schedule_task",
             "tool_update_agent_status_line",
-            "workspace_list_dir",
-            "workspace_read_file",
+            "memory_store_list_paths",
+            "memory_store_read_document",
         )
     else:
         names = (
             "user_profile_record",
             "schedule_task",
             "tool_update_agent_status_line",
-            "workspace_list_dir",
-            "workspace_read_file",
-            "workspace_write_file",
+            "memory_store_list_paths",
+            "memory_store_read_document",
+            "memory_store_write_document",
         )
     if disable_status:
         names = tuple(n for n in names if n != "tool_update_agent_status_line")
@@ -668,38 +655,37 @@ def build_openai_repl_tools(
         t = by_name.get(n)
         if not t:
             raise KeyError(f"missing tool definition: {n!r}")
-        if n == "workspace_list_dir":
+        if n == "memory_store_list_paths":
             w = dict(t)
             wfn = dict(w["function"])
             wfn["description"] = (
-                "List immediate children under the workspace root. "
-                "Use empty relative_path for the workspace root. "
+                "List immediate children under the MemoryStore scope root. "
+                "Use empty relative_path for the scope root. "
                 "Directory names end with /. Backing store is MemoryStore; listing is derived from stored paths, "
-                "not a host filesystem scan. Prefer workspace_read_file when the path is known; list mainly "
+                "not a host filesystem scan. Prefer memory_store_read_document when the path is known; list mainly "
                 "when you need sibling names or layout before reading."
             )
             w["function"] = wfn
             out.append(w)
-        elif n == "workspace_read_file":
+        elif n == "memory_store_read_document":
             w = dict(t)
             wfn = dict(w["function"])
             wfn["description"] = (
-                "Read a UTF-8 file under the workspace for self-orientation (workspace docs, "
+                "Read a UTF-8 document from MemoryStore for self-orientation (profile docs, "
                 "context.json, memory/*) or before editing allowed root markdown files. "
-                "Backing store is MemoryStore for persisted companion documents. "
                 "Optional max_chars (1.."
-                + str(WORKSPACE_READ_FILE_MAX_CHARS_CAP)
+                + str(MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP)
                 + ") returns only a prefix of the file to avoid huge tool results; omit for full file. "
                 "transcript.jsonl can be very large—prefer the conversation already in the message "
                 "history; if you must read it via this tool from the persisted store, always pass max_chars."
             )
             w["function"] = wfn
             out.append(w)
-        elif n == "workspace_write_file":
+        elif n == "memory_store_write_document":
             w = dict(t)
             wfn = dict(w["function"])
             wfn["description"] = (
-                "Create or overwrite a UTF-8 text file under the workspace. "
+                "Create or overwrite a UTF-8 logical document in MemoryStore. "
                 "In REPL, only these root files are writable: "
                 + ", ".join(sorted(REPL_WRITABLE_RELATIVE_PATHS))
                 + ". When the user explicitly asks to change how you relate, boundaries, or "
@@ -774,7 +760,7 @@ def build_openai_repl_tools(
                     "(normalized lowercase). Call only after the user explicitly agrees to switch "
                     "(e.g. roleplay vs emotional companion). Requires user_confirmed=true; never "
                     "infer silently. Takes effect on the next companion turn; do not use "
-                    "workspace_write_file on context.json."
+                    "memory_store_write_document on context.json."
                 ),
                 "parameters": {
                     "type": "object",
@@ -1007,9 +993,9 @@ def build_openai_repl_tools(
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (
     "user_profile_record",
     "tool_update_agent_status_line",
-    "workspace_list_dir",
-    "workspace_read_file",
-    "workspace_write_file",
+    "memory_store_list_paths",
+    "memory_store_read_document",
+    "memory_store_write_document",
 )
 
 
@@ -1037,11 +1023,11 @@ def _repl_write_allowed(
     root: Path, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:
     """若不允许写入则返回错误信息字符串，否则 None。"""
-    p = resolve_under_workspace(root, relative_path)
+    p = resolve_under_scope_root(root, relative_path)
     rel_posix = p.relative_to(root.resolve()).as_posix()
     if rel_posix not in write_allowlist:
         return (
-            "ERROR: REPL workspace_write_file only allows: "
+            "ERROR: REPL memory_store_write_document only allows: "
             + ", ".join(sorted(write_allowlist))
             + f"; got {rel_posix!r}"
         )
@@ -1054,27 +1040,27 @@ async def _dispatch(
     arguments: dict[str, Any],
     *,
     write_allowlist: frozenset[str] | None = None,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
-    _ = repository_only_workspace_text
+    _ = repository_only_store_text
     if not _BASE_TOOL_REGISTRY.is_allowed(name):
         return f"ERROR: unknown tool {name!r}"
 
-    workspace_dispatch_result = dispatch_workspace_tool(
+    memory_store_dispatch_result = dispatch_memory_store_tool(
         root=root,
         name=name,
         arguments=arguments,
         write_allowlist=write_allowlist,
-        tool_workspace_list_dir=tool_workspace_list_dir,
-        tool_workspace_read_file=tool_workspace_read_file,
-        tool_workspace_write_file=tool_workspace_write_file,
-        tool_workspace_mkdir=tool_workspace_mkdir,
+        tool_memory_store_list_paths=tool_memory_store_list_paths,
+        tool_memory_store_read_document=tool_memory_store_read_document,
+        tool_memory_store_write_document=tool_memory_store_write_document,
+        tool_memory_store_mkdir=tool_memory_store_mkdir,
         tool_user_profile_record=tool_user_profile_record,
         parse_optional_max_chars=_parse_optional_max_chars,
         repl_write_allowed=_repl_write_allowed,
     )
-    if workspace_dispatch_result is not None:
-        return workspace_dispatch_result
+    if memory_store_dispatch_result is not None:
+        return memory_store_dispatch_result
     if name == "tool_update_agent_status_line":
         raw_sl = arguments.get("status_line")
         if not isinstance(raw_sl, str):
@@ -1219,7 +1205,7 @@ async def _dispatch(
         src_path: Path | None = None
         if path_s:
             try:
-                src_path = resolve_under_workspace(root, path_s)
+                src_path = resolve_under_scope_root(root, path_s)
             except ValueError as exc:
                 return f"ERROR: {exc}"
             asset = find_latest_asset_by_local_relative_path(root, path_s)
@@ -1298,7 +1284,7 @@ async def execute_tool_call(
     arguments_json: str,
     *,
     write_allowlist: frozenset[str] | None = None,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
     from loguru import logger
 
@@ -1319,7 +1305,7 @@ async def execute_tool_call(
             name,
             parsed,
             write_allowlist=write_allowlist,
-            repository_only_workspace_text=repository_only_workspace_text,
+            repository_only_store_text=repository_only_store_text,
         )
     except (OSError, ValueError) as exc:
         err = f"ERROR: {exc}"
@@ -1338,7 +1324,7 @@ async def _execute_tool_call_blocking_impl(
     arguments_json: str,
     *,
     write_allowlist: frozenset[str] | None = None,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
     """`asyncio.run` 结束前释放 fal 全局 client，避免连续多次 blocking 调用踩 closed loop。"""
     try:
@@ -1347,7 +1333,7 @@ async def _execute_tool_call_blocking_impl(
             name,
             arguments_json,
             write_allowlist=write_allowlist,
-            repository_only_workspace_text=repository_only_workspace_text,
+            repository_only_store_text=repository_only_store_text,
         )
     finally:
         await reset_fal_async_client_after_short_lived_loop()
@@ -1359,7 +1345,7 @@ def execute_tool_call_blocking(
     arguments_json: str,
     *,
     write_allowlist: frozenset[str] | None = None,
-    repository_only_workspace_text: bool = False,
+    repository_only_store_text: bool = False,
 ) -> str:
     """Sync entry: safe from async contexts via a fresh event loop in a worker thread."""
 
@@ -1370,7 +1356,7 @@ def execute_tool_call_blocking(
                 name,
                 arguments_json,
                 write_allowlist=write_allowlist,
-                repository_only_workspace_text=repository_only_workspace_text,
+                repository_only_store_text=repository_only_store_text,
             )
         )
 

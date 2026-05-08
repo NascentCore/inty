@@ -906,7 +906,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             user=current_user, is_subscribed=is_subscribed
         )
 
-        ws_path = companion_chat_service.companion_workspace_path_if_ready(
+        ws_path = companion_chat_service.companion_memory_store_scope_path_if_ready(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,

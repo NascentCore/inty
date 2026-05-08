@@ -2,7 +2,7 @@
 
 Builds the ordered list of `{"role":"system","content":...}` slices injected before each
 companion LLM round (chat / tool-side / inner-tick / dual-LLM chat-only branch). Reads MD seed
-files via `..workspace.get_imate_axiom_system_text` and prompt slice constants from
+files via `..memory_store_scope.get_imate_axiom_system_text` and prompt slice constants from
 `..prompt_slices`; consumed by `..turn`, `..turn_engine`, `..prompt_stack`.
 
 When ``include_significance_perception_slice`` is true, injects ``SIGNIFICANCE_PERCEPTION.md``
@@ -35,7 +35,7 @@ from ..memory_taxonomy import (
 )
 from ..models import ContextMeta, InnerTickMode, PromptBundle
 from ..prompt_slices import SYSTEM_PROMPT_SLICE_SEPARATOR
-from ..workspace import get_imate_axiom_system_text
+from ..memory_store_scope import get_imate_axiom_system_text
 
 SYSTEM_PROMPT_SEP = SYSTEM_PROMPT_SLICE_SEPARATOR
 
@@ -46,8 +46,10 @@ def _inner_tick_proactive_chat(
     return inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
 
 
-# 与 workspace_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
-_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = "路径工具（workspace_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
+# 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
+_MEMORYSTORE_PATH_TOOLS_INTRO_ZH = (
+    "路径工具（memory_store_*）访问本会话持久化档案（MemoryStore），类 POSIX 路径，并非用户设备上的文件夹。"
+)
 
 
 def _system_message(content: str) -> dict[str, Any]:
@@ -130,7 +132,7 @@ def _repl_tool_contract_image_generation_clause() -> str:
         "**禁止**擅自改写、弱化或替换已约定的**发型发色、眼型瞳色、五官标志性细节、肤色与体态锚点**等核心特征；"
         "生肖/主题/节日元素仅作**服饰、道具、场景、氛围或装饰性**叠加，不得与上述蓝本冲突。"
         "改图（modify_image）时若涉及主题化或换风格，同样须保持与 IDENTITY 外貌小节一致的关键特征，不得仅用提示词「换脸」或推翻既有约定。"
-        "若外貌小节缺失或过于笼统，应先 workspace_read_file IDENTITY.md 再组织 prompt，避免凭对话臆造长相。"
+        "若外貌小节缺失或过于笼统，应先 memory_store_read_document IDENTITY.md 再组织 prompt，避免凭对话臆造长相。"
     )
 
 
@@ -168,18 +170,18 @@ def _output_contract_text_with_tools(
         "（1.1）当用户明确提出未来提醒（如「两小时后提醒我」「明早八点叫我」），"
         "必须先调用 schedule_task 写入定时队列；exec_time_utc 需给绝对时间（ISO8601，带时区），"
         "task_text 写提醒内容；禁止只口头答应而不写入定时队列。"
-        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 workspace_read_file "
-        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 workspace_write_file 写入更新后的全文，"
+        "（2）当用户**明确要求**改变相处方式、角色设定、边界或持久偏好时，应先用 memory_store_read_document "
+        "读当前 SOUL.md / USER.md / IDENTITY.md 等，再用 memory_store_write_document 写入更新后的全文，"
         "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 约定文档中已持久化的边界与约束一致，避免自相矛盾；"
-        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 workspace_read_file 读全文再 workspace_write_file 覆盖。"
+        "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 memory_store_read_document 读全文再 memory_store_write_document 覆盖。"
         "REPL 仅允许覆盖会话档案根路径（路径工具所指根）下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
-        "（3）核对持久化约定、记忆规则或控制面设置时，优先使用 workspace_read_file；"
-        "**不要**为日常闲聊或无核验目的调用 workspace_list_dir 列举根目录；"
+        "（3）核对持久化约定、记忆规则或控制面设置时，优先使用 memory_store_read_document；"
+        "**不要**为日常闲聊或无核验目的调用 memory_store_list_paths 列举根目录；"
         "仅在即将 read/write 某路径且不确定同层有哪些名称、用户明确询问某路径或目录是否存在、或须核对本回合 system 未给出的全文（含 transcript.jsonl）时"
-        "再调用 workspace_list_dir；避免重复读取本回合 system 中已完整给出且未变更的同一文档。"
+        "再调用 memory_store_list_paths；避免重复读取本回合 system 中已完整给出且未变更的同一文档。"
         "送入模型的仅为近期对话窗口；若必须核对持久化档案中的完整 transcript.jsonl，应用工具参数限制返回长度。"
         "（4）凡用户问题涉及**可与持久化档案核对**的事实（例如某文档行数、是否包含某段原文、持久化版本是否与当前认知一致），"
-        "必须先调用 workspace_read_file，或在确有列举必要时 workspace_list_dir，取得依据后再作答；**禁止**仅凭对话记忆、"
+        "必须先调用 memory_store_read_document，或在确有列举必要时 memory_store_list_paths，取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文档内容。"
         "在尚未完成上述工具调用前，不要声称已检查持久化内容或已与档案同步。"
         "（5）当用户需要**实时或可核验的公开信息**（新闻、股价、赛事、政策法规、可引用的公开资料等），"
@@ -206,15 +208,15 @@ def _output_contract_text_interactive_bootstrap_tools(
         "输出与工具（交互式关系建立阶段）："
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
         + "（0）本阶段核心是**初始化 SOUL 切片**（并同时把 IDENTITY / USER / MEMORY 落到可用初稿）；"
-        "须用 **companion_update_prompt_slice** 写入上述四份根目录约定稿；**禁止**使用 workspace_write_file 写入它们。"
+        "须用 **companion_update_prompt_slice** 写入上述四份根目录约定稿；**禁止**使用 memory_store_write_document 写入它们。"
         "调用 **companion_bootstrap_user_interactive_complete** 后，**SOUL 即锁定**（不可再改）；"
-        "IDENTITY / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 workspace_write_file 按需更新。"
+        "IDENTITY / USER / MEMORY 在后续日常轮次仍可用 companion_update_prompt_slice 或 memory_store_write_document 按需更新。"
         "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由本工具写入。）"
         "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须**调用 "
         "**companion_bootstrap_user_interactive_complete**（可选短 note）；未调用该工具前不要声称阶段已结束。"
         "（1）用户自愿透露、适合长期保存的基本事实，可调用 user_profile_record 写入 USER 档案；"
         "（1.1）当用户明确提出未来提醒，必须先调用 schedule_task；exec_time_utc 须为带时区的 ISO8601。"
-        "（2）确有核对持久化约定稿需求时可用 workspace_list_dir / workspace_read_file；勿编造内容。"
+        "（2）确有核对持久化约定稿需求时可用 memory_store_list_paths / memory_store_read_document；勿编造内容。"
         "列表目录约束与上文「输出与工具」一致：勿为闲聊列根目录。"
         "（3）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
         "（4）需要公开可核验信息且持久化文档无依据时，须先调用 google_web_search。"
@@ -273,7 +275,7 @@ def _inner_tick_turn_section() -> str:
         "不要元叙述（不要提「我在想」「系统让我」等）。\n\n"
         "**工具（允许且鼓励在需要时使用）**：\n"
         "- 为维护**记忆与档案一致性**：例如将此刻值得长期保留的事实写入 USER 档案（`user_profile_record`）、"
-        "在确有必要时读写持久化约定稿与 `memory/` 下文档（`workspace_read_file` / `workspace_write_file` 等，"
+        "在确有必要时读写持久化约定稿与 `memory/` 下文档（`memory_store_read_document` / `memory_store_write_document` 等，"
         "以包内 TOOLS 模版与路径工具规则为准；路径指向 MemoryStore）。\n"
         "- 为**缓解上下文压力**：若判断对话窗口与持久化记忆已出现冗余或漂移，可通过**读全文再写回**等方式做摘要、"
         "合并重复、删掉不再需要的草稿段落（具体可操作路径以当前路径工具能力为界；"

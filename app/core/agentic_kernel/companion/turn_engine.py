@@ -16,7 +16,7 @@ from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import ChatMessage, ContextMeta, InnerTickMode, PromptBundle
 from .prompts.system_messages import build_system_messages
 from .utc import utc_iso_ts
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 
 def build_repl_turn_base_messages(
@@ -103,7 +103,7 @@ def persist_repl_turn_transcript_rows(
     contract: ``significance_perception`` module docstring.
     """
     root = workspace_root.resolve()
-    paths = WorkspacePaths(root=root)
+    paths = MemoryStoreScopePaths(root=root)
     rel_tr = paths.transcript.relative_to(root).as_posix()
     store = get_memory_store(root)
     user_row: dict[str, Any] = {

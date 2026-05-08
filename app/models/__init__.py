@@ -19,8 +19,8 @@ Base = declarative_base()
 from app.models.agent import Agent as Agent
 from app.models.character_theme import CharacterTheme as CharacterTheme
 from app.models.character_theme import CharacterThemeAgent as CharacterThemeAgent
-from app.models.companion_workspace import (
-    CompanionWorkspaceDocumentVersion as CompanionWorkspaceDocumentVersion,
+from app.models.companion_memory_documents import (
+    CompanionMemoryDocumentVersion as CompanionMemoryDocumentVersion,
 )
 from app.models.chat import Chat as Chat
 from app.models.chat_history import ChatHistory as ChatHistory

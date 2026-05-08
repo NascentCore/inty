@@ -24,11 +24,11 @@
 
 ## 持久化与数据表
 
-- **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_workspace_document_versions`**（ORM：`app.models.companion_workspace.CompanionWorkspaceDocumentVersion`）。
-- **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`workspace_doc_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。
+- **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_memory_document_versions`**（ORM：`app.models.companion_memory_documents.CompanionMemoryDocumentVersion`）。
+- **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`memory_store_document_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。
 - **`companion_id` 与 API**：`app.services.companion_chat_service.run_companion_chat_turn_for_api` 把 HTTP/API 里的 **`agent_id` 原样作为 `companion_id`** 传入 `CompanionManager.get_or_create_session`，因此查库时用 **`companion_id = <agent 的 id>`** 即可对齐一次 companion 会话。
 - **与旧聊天路径的区别**：旧路径主要消费 **`agents`** 表里的 `main_prompt` / `mode_prompt` / `personality` 等字段做 system 拼装；**agentic companion 内核代码路径（`app/core/agentic_kernel`）不读 `Agent` ORM**。人设与对话状态以 **版本表里的 `content`**（及模板种子）为准，而不是 `agents` 上的人设列。
-- **路由层补充**：WebSocket 聊天入口在调用 companion 之前仍会 **`get_agent_for_chat` 查 `agents`**（例如校验角色存在、会话侧仍构造 `Agent` 实例）；**真正一轮 companion 推理用的工作区文档**仍来自 **`companion_workspace_document_versions`**。排查「这段对话对应的设定」时，应优先按 **`user_id` + `companion_id`(=agent_id) + `chat_id`** 查各 `document_kind` 的最新 `content`。
+- **路由层补充**：WebSocket 聊天入口在调用 companion 之前仍会 **`get_agent_for_chat` 查 `agents`**（例如校验角色存在、会话侧仍构造 `Agent` 实例）；**真正一轮 companion 推理用的工作区文档**仍来自 **`companion_memory_document_versions`**。排查「这段对话对应的设定」时，应优先按 **`user_id` + `companion_id`(=agent_id) + `chat_id`** 查各 `document_kind` 的最新 `content`。
 
 ## context.json
 
@@ -41,13 +41,13 @@
 
 - **跑通 `run_turn` 不是硬性必需**：`load_context_meta` 在 store 中无文件或内容为空时返回默认 `ContextMeta()`（`context_mode` 默认为 `intimate`，三个 id 为空字符串）。
 - **仍建议保留并写入**：持久化非默认的体验配置 id；在同一张版本表里留下 `(user_id, companion_id, chat_id)` 便于排查与扩展（`load_prompt_bundle` 与 `prompts.build_system_messages` 通过 `experience_profile` 解析是否注入私人记忆层及 system 条款）。
-- **运行时修改**：模型侧使用工具 **`companion_set_experience_profile`**（须 `user_confirmed: true`，禁止静默推断）。不要用 `workspace_write_file` 写 `context.json`。Ops / 网关可对表 **`companion_workspace_document_versions`** 中 `document_kind=context_json` 写入新版本，等价于外部更新。
+- **运行时修改**：模型侧使用工具 **`companion_set_experience_profile`**（须 `user_confirmed: true`，禁止静默推断）。不要用 `memory_store_write_document` 写 `context.json`。Ops / 网关可对表 **`companion_memory_document_versions`** 中 `document_kind=context_json` 写入新版本，等价于外部更新。
 
 ## 包内种子稿：`templates/` 与 `prompts/`
 
-- **`templates/`**：工作区缺省时由 `workspace.load_workspace_seed_text` 写入的持久化约定稿种子（如 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md`）。
-- **`prompts/`**：不作为 MemoryStore 根目录同名文件的默认种子；内含 **`AXIOM.md`**、**`BOOTSTRAP.md`**、**`TOOLS.md`**、**`SIGNIFICANCE_PERCEPTION.md`**（固定注入文案）。`BOOTSTRAP.md` 由交互式 bootstrap 读入。`load_workspace_seed_text` 对上述四字文件名走 `prompts/`，其余仍走 `templates/`。
-- **`AXIOM.md`**：产品层「根本法则」，由 `workspace.get_imate_axiom_system_text()` 从包内 `prompts/AXIOM.md` 读取（`lru_cache`），在 `prompts.build_system_messages` 中作为**首条** `system` 注入。
+- **`templates/`**：工作区缺省时由 `memory_store_scope.load_template_seed_text` 写入的持久化约定稿种子（如 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md`）。
+- **`prompts/`**：不作为 MemoryStore 根目录同名文件的默认种子；内含 **`AXIOM.md`**、**`BOOTSTRAP.md`**、**`TOOLS.md`**、**`SIGNIFICANCE_PERCEPTION.md`**（固定注入文案）。`BOOTSTRAP.md` 由交互式 bootstrap 读入。`load_template_seed_text` 对上述四字文件名走 `prompts/`，其余仍走 `templates/`。
+- **`AXIOM.md`**：产品层「根本法则」，由 `memory_store_scope.get_imate_axiom_system_text()` 从包内 `prompts/AXIOM.md` 读取（`lru_cache`），在 `prompts.build_system_messages` 中作为**首条** `system` 注入。
 
 ## System 与提示词切片
 
@@ -56,8 +56,8 @@
 
 ### 持久化
 
-- **可以且在生产 API 路径下默认已入库**：`context.json` 映射为 `CompanionWorkspaceDocKind.CONTEXT_JSON`（`workspace_doc_mapping.py`），经 `MemoryStore.write_document` 走与 `IDENTITY.md` 等相同的 append-only 版本表 `companion_workspace_document_versions`（`document_kind = context_json`），读最新一条即当前正文。
-- 在 `repository_only_workspace_text` 为 true 时，通过 `store.write_document("context.json", ...)` 写入，不落盘为工作区权威来源。
+- **可以且在生产 API 路径下默认已入库**：`context.json` 映射为 `CompanionMemoryDocumentKind.CONTEXT_JSON`（`memory_store_document_mapping.py`），经 `MemoryStore.write_document` 走与 `IDENTITY.md` 等相同的 append-only 版本表 `companion_memory_document_versions`（`document_kind = context_json`），读最新一条即当前正文。
+- 在 `repository_only_store_text` 为 true 时，通过 `store.write_document("context.json", ...)` 写入，不落盘为工作区权威来源。
 
 ### 相关代码入口
 

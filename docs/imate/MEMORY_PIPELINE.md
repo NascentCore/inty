@@ -18,7 +18,7 @@ Companion 在 MemoryStore 里维护三层 Markdown：**情景 episodic**（`memo
 
 ## Bullet 要点
 
-- **存储语义**：路径均在 **MemoryStore**（companion 工作区持久化语义信息集合），逻辑 POSIX 相对路径；生产环境下权威往往在 PostgreSQL `companion_workspace_document_versions`，不是用户设备文件夹。
+- **存储语义**：路径均在 **MemoryStore**（companion 工作区持久化语义信息集合），逻辑 POSIX 相对路径；生产环境下权威往往在 PostgreSQL `companion_memory_document_versions`，不是用户设备文件夹。
 - **L1 情景记忆 episodic**：`memory/daily/{date}.md`；`_append_diary` 每轮追加。
 - **L2 gist 单日摘要**：`memory/{date}.md`；`_rewrite_day_summary_md`；受 `MemoryPipelineConfig.day_summary_every_n_turns`、`day_summary_disabled` 控制。
 - **L3 语义记忆 semantic**：`MEMORY.md`；`_rewrite_memory_md`；受 `memory_update_every_n_turns` 等控制；策展 system prompt 约束事件日志 / 稳定事实等（见 `memory_pipeline.py`）。
@@ -36,6 +36,6 @@ Companion 在 MemoryStore 里维护三层 Markdown：**情景 episodic**（`memo
 | 管线实现 | `app/core/agentic_kernel/companion/memory_pipeline.py` |
 | 读出与 bundle | `app/core/agentic_kernel/companion/models.py` (`load_prompt_bundle`) |
 | System 注入标题 | `app/core/agentic_kernel/companion/memory_taxonomy.py` |
-| System 组装 | `app/core/agentic_kernel/companion/prompts.py` (`build_system_messages`) |
-| 路径 kind 映射 | `app/core/agentic_kernel/companion/workspace_doc_mapping.py` |
+| System 组装 | `app/core/agentic_kernel/companion/prompts/system_messages.py` (`build_system_messages`) |
+| 路径 kind 映射 | `app/core/agentic_kernel/companion/memory_store_document_mapping.py` |
 | 概述文档 | `app/core/agentic_kernel/companion/README.md` |
