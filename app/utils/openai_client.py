@@ -1,5 +1,5 @@
 """
-OpenAI API client helpers and shared client singleton.
+OpenAI API client helpers backed by the agentic kernel provider cache.
 
 Chat LLM (e.g. google/gemini-2.5-flash-lite) is invoked via this client against the
 OpenRouter endpoint (agent.base_url, agent.api_key). Do not use Vertex/genai client
@@ -21,7 +21,6 @@ LLM_PROVIDER_LITELLM = "litellm"
 # 之前尝试：https://github.com/NascentCore/inty/pull/2310 没有完成
 
 import os
-import threading
 from enum import StrEnum
 from typing import Any, Optional, Tuple
 
@@ -76,17 +75,6 @@ _warn_env_var("LANGCHAIN_API_KEY")
 _warn_env_var("LANGSMITH_PROJECT")
 
 
-# 全局单例基础客户端，用于复用HTTP连接
-_base_client: Optional[OpenAI] = None
-_client_lock = threading.Lock()
-
-_async_client: Optional[AsyncOpenAI] = None
-_async_client_lock = threading.Lock()
-
-_chat_client: Optional[OpenAI] = None
-_chat_client_lock = threading.Lock()
-
-
 def _create_openai_client():
     """创建基础OpenAI客户端实例（不含LangSmith包装）"""
     use_fake_openai = (
@@ -109,18 +97,11 @@ def _create_openai_client():
 
 def get_base_openai_client() -> OpenAI:
     """
-    获取全局单例的基础OpenAI客户端（不含LangSmith包装）
+    获取基础OpenAI客户端（不含LangSmith包装）。
 
-    使用双重检查锁定模式确保线程安全的单例创建。
-    复用HTTP连接池以提升性能。
+    实例复用由 agentic kernel provider 的 option-key cache 负责。
     """
-    global _base_client
-    if _base_client is None:
-        with _client_lock:
-            if _base_client is None:
-                logger.debug("创建全局基础OpenAI客户端")
-                _base_client = _create_openai_client()
-    return _base_client
+    return _create_openai_client()
 
 
 def _create_chat_openai_client() -> OpenAI:
@@ -147,16 +128,11 @@ def _create_chat_openai_client() -> OpenAI:
 
 def get_chat_openai_client() -> OpenAI:
     """
-    获取 Agent 聊天专用 OpenAI 客户端单例。
+    获取 Agent 聊天专用 OpenAI 客户端。
+
     当配置了 agent.chat_llm_base_url 与 agent.chat_llm_api_key 时使用该端点（如 LiteLLM），否则与 get_base_openai_client() 相同。
     """
-    global _chat_client
-    if _chat_client is None:
-        with _chat_client_lock:
-            if _chat_client is None:
-                logger.debug("创建 Agent 聊天专用 OpenAI 客户端")
-                _chat_client = _create_chat_openai_client()
-    return _chat_client
+    return _create_chat_openai_client()
 
 
 def get_chat_llm_provider() -> str:
@@ -184,16 +160,11 @@ def _create_async_openai_client() -> AsyncOpenAI:
 
 def get_async_openai_client() -> AsyncOpenAI:
     """
-    获取全局单例的 AsyncOpenAI 客户端。
+    获取 AsyncOpenAI 客户端。
+
     用于记忆抽取等异步调用，与 get_base_openai_client() 配置一致。
     """
-    global _async_client
-    if _async_client is None:
-        with _async_client_lock:
-            if _async_client is None:
-                logger.debug("创建全局 AsyncOpenAI 客户端")
-                _async_client = _create_async_openai_client()
-    return _async_client
+    return _create_async_openai_client()
 
 
 def _default_extraction_llm_config() -> LLMConfig:
