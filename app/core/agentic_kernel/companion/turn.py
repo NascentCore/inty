@@ -9,8 +9,16 @@
 stored on the assistant transcript row and returned on ``CompanionTurnResult.significance_perception``
 (API layer may mirror into ``chat_history.meta_data``). Eligibility: foreground envelope applies to
 async dual-LLM (tools present) always for that chat leg; for the single-completion branch only when
-``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). Full pipeline
-notes: ``significance_perception.py`` module docstring.
+``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). If the parsed
+envelope has ``output_to_user=false`` on either foreground chat path, ``run_turn`` logs WARNING with
+``trace_id``: the prompt/schema contract requires true on chat branches (false is for tool_background
+routing); the model may still drift. Full pipeline notes: ``significance_perception.py`` module docstring.
+
+**``output_to_user`` warning**: The dual-LLM JSON envelope is shared with ``tool_background`` finish,
+where ``output_to_user`` may be false (silent recap). On **foreground** chat completions it must be
+true. If the model returns false anyway (schema allows any boolean; prompts say true here), we log
+``run_turn ... output_to_user=false (expected true for chat branch)`` so traces can flag
+prompt/model confusion, not a parser bug.
 """
 
 from __future__ import annotations
@@ -499,6 +507,9 @@ async def run_turn(
                     last_text, significance_meta, fg_output_to_user = (
                         split_dual_llm_chat_branch_content(raw_content)
                     )
+                    # Async foreground chat leg (tools present): same dual-LLM envelope contract as
+                    # single-shot structured chat; ``output_to_user`` must be true here. False is for
+                    # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
                     if fg_output_to_user is False:
                         logger.warning(
                             "run_turn foreground dual_llm envelope output_to_user=false "
@@ -612,6 +623,10 @@ async def run_turn(
                         last_text, significance_meta, fg_output_to_user = (
                             split_dual_llm_chat_branch_content(raw_content)
                         )
+                        # Single-shot path: one completion, no tool loop, structured dual-LLM envelope.
+                        # Contract (see ``prompts/system_messages._dual_llm_chat_structured_output_contract_text``):
+                        # ``output_to_user`` must be true on foreground chat; false is for tool_background
+                        # finish envelopes only. Non-fatal model drift; WARNING ties to ``trace_id``.
                         if fg_output_to_user is False:
                             logger.warning(
                                 "run_turn single_shot dual_llm envelope output_to_user=false "
