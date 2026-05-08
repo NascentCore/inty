@@ -4,6 +4,7 @@ from __future__ import annotations
 
 _PRIVATE_MEMORY_PROFILE_IDS = frozenset(
     {
+        "unspecific",
         "intimate",
         "emotional_companion",
     }
