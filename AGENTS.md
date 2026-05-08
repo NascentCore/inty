@@ -16,16 +16,22 @@ agentic_kernel 的设计核心模拟人脑、外围搭配拟人化行为模态�
 
 工程师主要使用[Cursor](https://cursor.com/)；产品经理用 [Claude Code](https://code.claude.com/docs/en/overview) [OpenAI Codex](https://openai.com/codex/)
 
-这些编码智能体通过
-[飞书MCP](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/mcp_integration/mcp_introduction?lang=zh-CN)、
-或[飞书CLI](https://www.feishu.cn/feishu-cli)与飞书（我们使用的OA系统）打通。
-
 [IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，
 基于后端[chat completions](/app/core/chat.py)对话机制；
 [iMate Android App](imate_android_app/)是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，
 基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
 
 Agentic companion模拟的是异地亲密伴侣（不能见面的爱人、其他跟活人一样）。
+
+## General Rules
+
+- The ground truth is in code
+- Docs describe abstract ideas,
+  never repeating information that can be directly derived from the code files:
+  - higher-logical-level design of multiple code files
+  - engineers' intended states of the code files
+  - future directions
+- Create skills, commands to abstract and automate repeated actions
 
 ## Override Rule
 
