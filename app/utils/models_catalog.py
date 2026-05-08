@@ -3,6 +3,9 @@
 
 对各类模型进行管理和综合分析；任何新进模型都需要在这里定义。
 这些模型与常见的 Model Cards 对应。
+
+OpenRouter 角色扮演 / agentic 榜单（选型参考）：
+https://openrouter.ai/rankings?category=roleplay&benchmark=agentic#categories
 """
 
 from enum import StrEnum
@@ -128,6 +131,12 @@ class ModelAPIBaseURL(StrEnum):
 
     OPENROUTER = "https://openrouter.ai/api/v1"
     LOCAL_LITELLM = "http://10.128.0.5:4000/v1"
+
+
+# OpenRouter 公开榜单：roleplay 类目 + agentic benchmark（与 OPENROUTER API 选型对照用）。
+OPENROUTER_RANKINGS_ROLEPLAY_AGENTIC_URL = (
+    "https://openrouter.ai/rankings?category=roleplay&benchmark=agentic#categories"
+)
 
 
 class ResponseFormatWithToolsCompatibility(StrEnum):
