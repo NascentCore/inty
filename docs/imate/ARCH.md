@@ -17,6 +17,7 @@
 | IntelliMate Android | 仍可保持主 WebSocket 连接; release 发送聊天仍以 HTTP completions 为主, debug 可走 WebSocket。具体见 [`/app/api/ENDPOINTS.md`](/app/api/ENDPOINTS.md)。 |
 | 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `app.core.agentic_kernel.companion`。HTTP completions 仍是 legacy agent 路径。 |
 | `/api/v1/chat/ws/verify` | 共用 WebSocket 出站队列和 pump, 但只做单次 `chat.completions`; 不经过 `CompanionManager` / `run_turn`, 不写 chat_history。 |
+| WebSocket companion 连接 | 每个连接用 `companion_turn_lock` 串行化普通用户回合、proactive heartbeat 和 async tool background 补帧落库; assistant 业务帧仍经 outbound queue。 |
 | `runtime/TurnOrchestrator` | 是通用 turn 合同和实验桥使用的并行管线, 当前生产 companion 主链路不经过它。 |
 
 ## 生产消息路径
@@ -56,11 +57,23 @@ flowchart LR
 - assistant 业务 JSON、LLM 错误映射帧、异步 tool 可见补帧经 `asyncio.Queue` 和 [`chat_ws_outbound_pump`](/app/services/chat_websocket_session.py) FIFO 写回客户端。
 - REPL 的上行 `post_turn` 直接 `ws.send`; 下行由 `_response_q` 和 [`pop_downlink_item`](/tools/inty_v2_repl/repl_message_io.py) 消费。它不是和服务端共用一个端到端消息队列, 只是传输侧各自维护 FIFO。
 
+### WebSocket 序列化与后台 tool 汇合
+
+[`chat_completions_websocket`](/app/api/v1/endpoints/chat.py) 在单个连接内维护四类 companion 协调状态:
+
+- `companion_turn_lock`: 串行化 `_agent_chat_completions_impl`、proactive heartbeat 和 async tool background 补帧的 chat_history / transcript 相关副作用。
+- `bg_queue`: `companion_bg_sink` 从后台 tool 线程用 `loop.call_soon_threadsafe` 投递 `ToolOutputEvent`, WebSocket 主循环与 `receive_text()` 竞争消费。
+- `ws_fg_pending`: 保存前台 assistant 帧对应的 user message 上下文, 后台可见 tool 结果到达后用同一个 `user_msg_uuid` 关联补帧。
+- `companion_hb_ctx`: 记录 `user_signed_on` 或成功聊天后的 heartbeat 坐标, 供连接内 proactive heartbeat worker 触发 synthetic inner tick。
+
+proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_companion_ws_proactive_heartbeat`](/app/api/v1/endpoints/chat.py) 直接调用 `run_companion_chat_turn_for_api`, 传入 `inner_tick_turn=True` 和 `background_output_sink=None`, 然后由 API 层写 `chat_history` 并把 assistant 业务帧放入 outbound queue。
+
 ## `app/core/agentic_kernel` 包结构
 
 | 路径 | 职责 |
 | --- | --- |
 | [`companion/`](/app/core/agentic_kernel/companion) | 生产 companion 内核。包含 `CompanionManager`, `run_turn`, prompt stack, workspace 文档, MemoryStore, tool runtime, memory pipeline, inner tick, async tool background。 |
+| [`companion/turn_engine.py`](/app/core/agentic_kernel/companion/turn_engine.py) | REPL-grade 消息组装与 transcript 写入辅助; 复用部分 prompt / transcript 约定, 但不是生产 WebSocket 主执行器。 |
 | [`contracts/turn.py`](/app/core/agentic_kernel/contracts/turn.py) | `TurnInput` / `TurnOutput` / `MessageSnapshot` 通用合同。 |
 | [`runtime/turn_orchestrator.py`](/app/core/agentic_kernel/runtime/turn_orchestrator.py) | `prepare_turn -> invoke_model -> handle_response -> persist` 的薄编排器。当前不承载生产 companion 回合。 |
 | [`bridges/experimental_bridge.py`](/app/core/agentic_kernel/bridges/experimental_bridge.py) | 把通用 `TurnOrchestrator` 暴露成实验入口。 |
@@ -72,6 +85,8 @@ flowchart LR
 ## Companion 回合执行
 
 `run_companion_chat_turn_for_api` 先用 `user_id + agent_id + chat_id` 取 `CompanionSession`; 其中 API 的 `agent_id` 原样作为 companion 层的 `companion_id`。`CompanionManager` 初始化 `MemoryStore`, 写入 `context.json`, 并确保 `IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`transcript.jsonl` 五件套存在。
+
+`USER_INTERACTIVE` bootstrap 下, API 适配层在调用 `run_turn` 前可能执行 `_maybe_append_companion_ws_session_system`: 对当前 WebSocket session 写一条 `companion_ws_session_system` system message 到 PostgreSQL `chat_history` 和 companion `transcript.jsonl`, 并在 `context.json` 中标记 `companion_ws_session_system_written=true`, 避免同一 session 重复注入。
 
 `run_turn` 一轮执行包含以下阶段:
 
@@ -134,10 +149,30 @@ flowchart LR
 | 同步 tool loop、async foreground/background tool loop、official assistant tool loop 三套机制并存。 | 工具协议和 prompt 刷新规则需要人工保持一致; 背景线程和全局 queue 增加竞态、取消和可观测性复杂度。 |
 | MemoryStore 已经是生产权威, 但大量概念仍叫 workspace/path/file。 | 对线上排障不友好; 容易把合成路径误解为磁盘状态, 或漏查 append-only 版本表。 |
 | `chat.py` 的 WebSocket 适配层同时承担鉴权、订阅、chat_history、companion 调用、错误映射和背景补帧汇合。 | 传输协议、业务落库和 agent runtime 的边界偏厚; WebSocket 相关回归测试成本上升。 |
+| 连接内 `companion_turn_lock`、`bg_queue`、`ws_fg_pending`、heartbeat worker 分散在 WebSocket endpoint 局部闭包中。 | 当前并发约束只能靠读长函数理解; 新增控制帧、后台事件或主动消息时容易破坏同一连接内的顺序和落库一致性。 |
 
 ## 改进方向
 
-优先改进点: **把生产 companion 回合拆成显式阶段合同, 但不立即替换现有行为**。
+优先改进点: **抽出生产 WebSocket companion 协调器, 先固定连接边界, 再拆 `run_turn` 阶段**。
+
+建议新增一个面向 `/api/v1/chat/ws` 的 `CompanionWebSocketCoordinator` 或等价结构, 将当前 endpoint 局部状态显式化:
+
+```text
+receive_frame/control_frame
+  -> serialize_companion_turn
+  -> dispatch_foreground_turn | dispatch_proactive_heartbeat
+  -> correlate_background_tool_event
+  -> enqueue_business_payload
+```
+
+收益:
+
+- 把 `companion_turn_lock`、`bg_queue`、`ws_fg_pending`、`companion_hb_ctx`、heartbeat worker 的职责收拢到一个可测试边界。
+- 让 endpoint 保持鉴权、依赖注入和帧解析职责, companion 协调器负责连接内顺序、后台事件关联和业务下行。
+- 更容易补 WebSocket 级回归测试: 普通前台回合、后台 tool 补帧、proactive heartbeat 三类路径可共享同一协调器夹具。
+- 为后续拆分 `run_turn` 阶段提供稳定入口, 避免同时改 transport 边界和 kernel 内部阶段。
+
+后续改进点: **把生产 companion 回合拆成显式阶段合同, 但不立即替换现有行为**。
 
 建议新增一个面向生产的 `CompanionTurnPipeline` 或等价结构, 将 `run_turn` 当前隐含阶段显式化:
 
