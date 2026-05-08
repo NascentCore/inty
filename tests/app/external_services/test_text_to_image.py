@@ -77,7 +77,17 @@ class _FakeFalClient:
         }
 
 
-def test_text_to_image_google_prefix_dispatch() -> None:
+def test_text_to_image_google_prefix_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.core import config as app_config
+
+    monkeypatch.setattr(
+        app_config,
+        "global_config_loaded_from_config_yaml",
+        SimpleNamespace(gcs=SimpleNamespace(use_fake_gcs=False)),
+    )
+
     fake_client = _FakeGoogleClient()
 
     result = generate_text_to_image(

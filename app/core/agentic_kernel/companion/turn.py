@@ -176,7 +176,7 @@ async def run_turn(
 
     - 加载 context + prompt bundle + transcript
     - 组装 system prompt + messages
-    - 调用 LLM (带 tool loop)
+    - 调用 LLM（有工具时：前台 JSON envelope chat，工具环在 tool_background 线程）
     - 持久化 transcript
     - 调度记忆管线
 
