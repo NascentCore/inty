@@ -61,6 +61,22 @@ def test_generated_image_meta_omits_when_no_gs_uri(tmp_path: Path) -> None:
     assert generated_image_meta_from_index_slice(root, 0) is None
 
 
+def test_generated_image_meta_accepts_https_when_no_gs_uri() -> None:
+    url = "https://cdn.example.invalid/fal/out.png"
+    meta = generated_image_meta_from_asset_record(
+        {
+            "gcs_uri": url,
+            "gcs_http_url": url,
+            "width": 512,
+            "height": 768,
+        }
+    )
+    assert meta is not None
+    assert meta["image_url"] == url
+    assert meta["width"] == 512
+    assert meta["height"] == 768
+
+
 def test_generated_image_meta_maps_fake_file_http_url(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

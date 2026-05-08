@@ -260,7 +260,11 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
 
 
 def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any] | None:
-    """Build chat_history ``generated_image``-shaped metadata from one index row (``gs://`` URL)."""
+    """Build chat_history ``generated_image`` metadata from one ``generated_images`` index row.
+
+    Prefers a canonical ``gs://`` URI when present or derivable from ``gcs_http_url``.
+    If no ``gs://`` is available, accepts absolute ``http(s)://`` URLs (e.g. Fal CDN stored in the row).
+    """
     from app.external_services.gcs import gs_uri_from_storage_reference_url
 
     gcs_uri = str(row.get("gcs_uri") or "").strip()
@@ -270,16 +274,24 @@ def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any
             mapped = gs_uri_from_storage_reference_url(ref)
             if mapped:
                 gcs_uri = mapped
-    if not gcs_uri.startswith("gs://"):
-        return None
+
     w = row.get("width")
     h = row.get("height")
-    return {
-        "image_url": gcs_uri,
+    base = {
         "width": w,
         "height": h,
         "format": "png",
     }
+    if gcs_uri.startswith("gs://"):
+        return {"image_url": gcs_uri, **base}
+
+    for candidate in (
+        str(row.get("gcs_uri") or "").strip(),
+        str(row.get("gcs_http_url") or "").strip(),
+    ):
+        if candidate.startswith("http://") or candidate.startswith("https://"):
+            return {"image_url": candidate, **base}
+    return None
 
 
 def generated_image_meta_from_index_slice(

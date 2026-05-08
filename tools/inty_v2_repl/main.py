@@ -1,4 +1,8 @@
-"""Cyclopts entry: Inty backend WebSocket REPL only (no local workspace turn loop)."""
+"""Cyclopts entry: Inty backend WebSocket REPL only (no local workspace turn loop).
+
+Downlink assistant frames also print ``tool_bg`` banners: ``local-path:`` lines and
+``image-url:`` when ``meta_data.generated_image`` carries ``image_url``.
+"""
 
 from __future__ import annotations
 
@@ -263,6 +267,20 @@ def _print_tool_bg_local_image_paths_banner(meta: Mapping[str, Any]) -> None:
         print(f"local-path: {s}")
 
 
+def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
+    """Emit ``image-url:`` for ``meta_data.generated_image`` (``gs://`` or ``https://``)."""
+    gi = meta.get("generated_image")
+    if not isinstance(gi, dict):
+        return
+    url = gi.get("image_url")
+    if not isinstance(url, str):
+        return
+    s = url.strip()
+    if not s:
+        return
+    print(f"image-url: {s}")
+
+
 def _emit_downlink_item(
     item: Mapping[str, Any],
     outbound_t0: dict[str, float],
@@ -276,6 +294,7 @@ def _emit_downlink_item(
             meta_data=meta,
         )
         _print_tool_bg_local_image_paths_banner(meta)
+        _print_generated_image_meta_banner(meta)
     else:
         print(
             format_ws_error_banner(
