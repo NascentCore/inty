@@ -22,6 +22,7 @@ Review the uncommited code changes made in the current conversation, fix/revise/
 - [ ] Intention is understood
 - [ ] Confirm that changes match user intention, revise changes if needed
 - [ ] Confirm that implementation architecture is sound, revise changes if needed
+- [ ] Tests are added if needed
 - [ ] Follows existing coding style and AGENTS.md, revise changes if needed
 - [ ] Changes passed tests, revise changes if needed
 - [ ] Invoke cursor command `/commit`
