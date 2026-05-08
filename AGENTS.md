@@ -111,26 +111,6 @@ User instructions always override this file.
 - Do not refactor surrounding code when fixing a bug.
 - Do not create new files unless strictly necessary.
 
-## Cursor Cloud Agent 执行契约（强制）
-
-> 适用于在 Cursor Cloud 中运行的自动化 Agent。
-
-1. **分支约束**
-   - 仅在任务指定分支开发，不切换到其他分支。
-   - 本地缺失该分支时先创建同名分支，再开始改动。
-2. **提交粒度**
-   - 每次逻辑变更尽量独立成一个 commit，避免“大杂烩提交”。
-   - commit message 必须包含：一句话总结 + 详细描述。
-3. **推送规则**
-   - 使用 `git push -u origin <branch-name>` 推送当前分支。
-   - 非用户明确要求，禁止 force push、禁止 amend 已推送提交。
-4. **PR 规则**
-   - 每轮实现-测试循环后，同步更新远端并创建/更新 PR。
-   - 在 PR 描述中补充测试证据（关键命令输出、截图/录屏、日志片段）。
-5. **交付前自检**
-   - 回看 diff，确认无无关改动、无临时调试代码、无敏感信息。
-   - 若变更影响目录规范，同时更新对应目录的 `AGENTS.md` / `README.md` / `TODOS.md`。
-
 ## General background
 
 - Components
