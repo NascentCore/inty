@@ -24,7 +24,9 @@ from app.core.agentic_kernel.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
     replace_leading_system_messages_inplace,
 )
-from app.core.agentic_kernel.companion.prompts import build_system_messages
+from app.core.agentic_kernel.companion.prompts.system_messages import (
+    build_system_messages,
+)
 from app.core.agentic_kernel.companion.tools import build_openai_repl_tools_inner_tick
 from app.core.agentic_kernel.companion.turn_routes import TurnRouteMode
 from app.core.agentic_kernel.companion.workspace import WorkspacePaths

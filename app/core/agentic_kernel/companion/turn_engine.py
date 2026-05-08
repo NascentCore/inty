@@ -14,7 +14,7 @@ from .heartbeat import (
 from .memory_registry import get_memory_store
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import ChatMessage, ContextMeta, InnerTickMode, PromptBundle
-from .prompts import build_system_messages
+from .prompts.system_messages import build_system_messages
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 

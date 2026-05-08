@@ -19,7 +19,7 @@ from .models import (
     load_prompt_bundle,
 )
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from .prompts import build_system_messages
+from .prompts.system_messages import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 from .workspace import WorkspacePaths

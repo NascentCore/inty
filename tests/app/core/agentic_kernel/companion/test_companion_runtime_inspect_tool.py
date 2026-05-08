@@ -27,7 +27,9 @@ from app.core.agentic_kernel.companion.companion_tool_runtime import (
     execute_tool_call,
 )
 from app.core.agentic_kernel.companion.runtime_inspect_tool import tool_companion_runtime_inspect
-from app.core.agentic_kernel.companion.prompts import build_system_prompt
+from app.core.agentic_kernel.companion.prompts.system_messages import (
+    build_system_prompt,
+)
 
 
 def _run_tool(root: Path, name: str, args: str) -> str:
