@@ -128,10 +128,9 @@ def _repl_tool_contract_suffix_after_image_clause(
     if tool_side_compact:
         return (
             base
-            + "**异步工具后台首轮 API**：若服务端为该轮工具路首轮附加了 `response_format`（仅含 `skip` 的机器可读 JSON），"
-            + "则该轮 **`message.content` 只能是该 JSON**，不得写入对用户可见的角色扮演长文；对用户说话由并行 chat 路负责。"
-            + "除该首轮与下文「工具环收尾 JSON 路由」所指收尾消息外，其余 assistant 对外说明仍仅用自然语言，"
-            + "不要主动复述工具名、`skip`/`output_to_user` 等字段名或工程细节。保持简洁有温度。"
+            + "**异步工具后台**：工具路首轮若**未**发出 `tool_calls`，勿写对用户可见的长篇角色扮演（并行 chat 路已承担对用户话术）；"
+            + "若需要工具须在首轮 assistant 中带 `tool_calls`。除下文「工具环收尾 JSON 路由」所指收尾消息外，"
+            + "其余 assistant 对外说明仍仅用自然语言，不要主动复述工具名、`output_to_user` 等字段名或工程细节。保持简洁有温度。"
         )
     return (
         base
@@ -282,13 +281,10 @@ def _tool_side_compact_directive() -> str:
 
 def _tool_background_first_round_skip_contract_text() -> str:
     return (
-        "## 工具路首轮（机器可读 skip）\n\n"
-        "在**异步工具后台**下，每一用户回合工具路的**第一次** `chat.completions` 调用可能附带 "
-        "`response_format`：此时 **`message.content` 只能是** JSON 对象 "
-        '`{"skip": true}` 或 `{"skip": false}`（不要 markdown 围栏，不要追加自然语言）。\n'
-        "- `skip: true`：本回合工具路判定**不需要**任何工具（对用户可见正文由并行 chat 路负责）。\n"
-        "- `skip: false`：本回合**需要**工具；须在**同一条** assistant 消息里发出至少一条 `tool_calls`。\n"
-        "若同条消息里仍出现了 `tool_calls`，**一律以执行工具为准**（避免漏工具），即使 `skip` 与之不一致。\n"
+        "## 工具路首轮\n\n"
+        "在**异步工具后台**下，每一用户回合工具路的**第一次** `chat.completions` 调用须优先判断是否调用工具。\n"
+        "- 若本回合**不需要**任何工具：不要输出对用户可读的长篇角色扮演正文（并行 chat 路负责）；`content` 可留空或极简。\n"
+        "- 若**需要**工具：须在**同一条** assistant 消息里发出至少一条 `tool_calls`。\n"
         "工具环内后续轮次与**收尾**消息仍遵循上文「工具环收尾：对用户可见性的 JSON 路由」。\n"
     )
 
@@ -305,7 +301,7 @@ def _tool_background_final_json_routing_contract_text() -> str:
         "可为空字符串（例如仅图片路径将由系统附加）。\n"
         "**生图 / 改图**：若 `generate_image` 或 `modify_image` **成功**产出路径，系统仍会向用户投递产物；"
         "`output_to_user` 不能否决成功产物投递，只控制是否额外附文字。\n"
-        "若你无法产出合法 JSON，后端可能追加一次补解析请求。\n"
+        "若你无法产出合法 JSON，后端可能追加一次无 schema 约束的补解析请求。\n"
     )
 
 

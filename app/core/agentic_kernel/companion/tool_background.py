@@ -37,7 +37,7 @@ from .llm_chat_runtime import (
     tool_path_chat_completion_kwargs,
 )
 from .image_gate import list_image_asset_records
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .models import InnerTickMode
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from .runtime_inspect_context import (
@@ -54,13 +54,7 @@ from .companion_tool_runtime import (
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )
-from .tool_bg_routing import (
-    TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME,
-    TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT,
-    parse_tool_bg_first_round_skip_details,
-    resolve_tool_bg_routing_sync,
-    tool_bg_first_round_skip_schema_enabled,
-)
+from .tool_bg_routing import resolve_tool_bg_routing_sync
 from .utc import utc_iso_ts
 from .workspace import WorkspacePaths
 
@@ -379,7 +373,6 @@ def _single_line_log_preview(text: str, max_chars: int = 280) -> str:
 class _InitialToolBgCompletionMeta:
     """Winning attempt parameters for tool_background first completion (runtime_inspect)."""
 
-    used_skip_schema: bool
     tool_choice: str | None
 
 
@@ -393,27 +386,17 @@ def _initial_tool_bg_completion_with_fallbacks(
     force_tools: bool,
 ) -> tuple[Any, _InitialToolBgCompletionMeta]:
     """
-    First tool_background completion. Optionally forces assistant.content to ``{"skip": bool}``
-    (see ``TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT`` in ``tool_bg_routing``): skip=true ends the
-    loop without tools; skip=false should accompany tool_calls on the same message.
+    First tool_background completion (no response_format; tools may use tool_choice fallbacks).
 
     Returns (response, meta for last_chat_completion_request snapshot).
     """
-    schema_on = tool_bg_first_round_skip_schema_enabled()
-    schema_rf: dict[str, Any] | None = (
-        TOOL_BG_FIRST_ROUND_RESPONSE_FORMAT if schema_on else None
-    )
-    attempts: list[tuple[dict[str, Any] | None, str | None]] = []
-    if schema_rf is not None and force_tools:
-        attempts.append((schema_rf, "required"))
-    if schema_rf is not None:
-        attempts.append((schema_rf, None))
+    attempts: list[str | None] = []
     if force_tools:
-        attempts.append((None, "required"))
-    attempts.append((None, None))
+        attempts.append("required")
+    attempts.append(None)
 
     last_br: BadRequestError | None = None
-    for rf, tc in attempts:
+    for tc in attempts:
         try:
             resp = chat_completion_sync(
                 client,
@@ -421,18 +404,14 @@ def _initial_tool_bg_completion_with_fallbacks(
                 messages_payload=messages_payload,
                 tools=tools,
                 tool_choice=tc,
-                response_format=rf,
+                response_format=None,
             )
-            meta = _InitialToolBgCompletionMeta(
-                used_skip_schema=rf is not None,
-                tool_choice=tc,
-            )
+            meta = _InitialToolBgCompletionMeta(tool_choice=tc)
             return resp, meta
         except BadRequestError as exc:
             last_br = exc
             logger.warning(
-                "repl.turn.bg initial_completion BadRequest response_format={} tool_choice={} err={}",
-                rf is not None,
+                "repl.turn.bg initial_completion BadRequest tool_choice={} err={}",
                 tc,
                 exc,
             )
@@ -480,6 +459,7 @@ def _log_bg_llm_round_result(
 def _append_background_transcript_assistant(
     ws_root: Path,
     *,
+    store: MemoryStore,
     content: str,
     assistant_msg_uuid: str,
     reply_to: str,
@@ -488,7 +468,7 @@ def _append_background_transcript_assistant(
     root = ws_root.resolve()
     paths = WorkspacePaths(root=root)
     rel_tr = paths.transcript.relative_to(root).as_posix()
-    get_memory_store(root).append_jsonl_record(
+    store.append_jsonl_record(
         rel_tr,
         {
             "role": "assistant",
@@ -503,8 +483,8 @@ def _append_background_transcript_assistant(
 
 
 def _append_background_log(
-    workspace_root: Path,
     *,
+    store: MemoryStore,
     user_msg_uuid: str,
     assistant_msg_uuid: str,
     elapsed_ms: int,
@@ -525,7 +505,7 @@ def _append_background_log(
     }
     if trace_id.strip():
         row["trace_id"] = trace_id
-    get_memory_store(workspace_root).append_jsonl_record(
+    store.append_jsonl_record(
         "tool_background.jsonl",
         row,
     )
@@ -534,6 +514,7 @@ def _append_background_log(
 async def _run_background_tool_loop(
     *,
     ws_root: Path,
+    memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     tool_model_name: str,
     user_msg_uuid: str,
@@ -610,11 +591,7 @@ async def _run_background_tool_loop(
                 messages=list(payload),
                 tools=tools,
                 tool_choice=initial_meta.tool_choice,
-                response_format_json_schema_name=(
-                    TOOL_BG_FIRST_ROUND_JSON_SCHEMA_NAME
-                    if initial_meta.used_skip_schema
-                    else None
-                ),
+                response_format_json_schema_name=None,
             )
         )
 
@@ -639,58 +616,20 @@ async def _run_background_tool_loop(
         )
         logger.debug(
             "repl.turn.bg initial_round_meta trace_id={} user_msg_uuid={} force_tools={} "
-            "used_skip_schema={} tool_choice={}",
+            "tool_choice={}",
             trace_id,
             user_msg_uuid,
             force_tools,
-            initial_meta.used_skip_schema,
             initial_meta.tool_choice,
         )
 
         initial_tool_calls = (
             getattr(initial_response.choices[0].message, "tool_calls", None) or []
         )
-        # No tool_calls on the first reply: either skip=true (expected) or model/schema mismatch.
-        # skip=false with no tool_calls is logged as skip_false_no_tools; we do not retry here.
         if not initial_tool_calls:
             early_text = _assistant_text_from_completion_response(initial_response)
             finish0 = getattr(initial_response.choices[0], "finish_reason", None) or "?"
-            if initial_meta.used_skip_schema:
-                parsed, skip_fail_reason = parse_tool_bg_first_round_skip_details(
-                    early_text
-                )
-                if parsed is not None and parsed.skip:
-                    logger.debug(
-                        "repl.turn.bg no_tool_calls skip_schema_true trace_id={} user_msg_uuid={} "
-                        "finish_reason={} content_chars={}",
-                        trace_id,
-                        user_msg_uuid,
-                        finish0,
-                        len(early_text),
-                    )
-                elif parsed is not None and not parsed.skip:
-                    logger.info(
-                        "repl.turn.bg no_tool_calls skip_false_no_tools trace_id={} "
-                        "user_msg_uuid={} content_chars={} finish_reason={} content_preview={}",
-                        trace_id,
-                        user_msg_uuid,
-                        len(early_text),
-                        finish0,
-                        _single_line_log_preview(early_text),
-                    )
-                else:
-                    logger.info(
-                        "repl.turn.bg no_tool_calls skip_json_invalid trace_id={} "
-                        "user_msg_uuid={} content_chars={} finish_reason={} parse_reason={} "
-                        "content_preview={}",
-                        trace_id,
-                        user_msg_uuid,
-                        len(early_text),
-                        finish0,
-                        skip_fail_reason,
-                        _single_line_log_preview(early_text),
-                    )
-            elif early_text.strip():
+            if early_text.strip():
                 logger.info(
                     "repl.turn.bg no_tool_calls skip_output_queue trace_id={} "
                     "user_msg_uuid={} chars={} finish_reason={} content_preview={} "
@@ -779,7 +718,7 @@ async def _run_background_tool_loop(
             nonlocal tools
             tools = refresh_companion_turn_prompt_stack(
                 workspace=ws_root,
-                store=get_memory_store(ws_root),
+                store=memory_store,
                 workspace_bootstrap_type=workspace_bootstrap_type,
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_mode=inner_tick_mode,
@@ -893,13 +832,14 @@ async def _run_background_tool_loop(
         assistant_msg_uuid = str(uuid.uuid4())
         _append_background_transcript_assistant(
             ws_root,
+            store=memory_store,
             content=display_text,
             assistant_msg_uuid=assistant_msg_uuid,
             reply_to=user_msg_uuid,
             trace_id=trace_id,
         )
         _append_background_log(
-            ws_root,
+            store=memory_store,
             user_msg_uuid=user_msg_uuid,
             assistant_msg_uuid=assistant_msg_uuid,
             elapsed_ms=elapsed_ms,
@@ -943,6 +883,7 @@ async def _run_background_tool_loop(
 def start_tool_background_job(
     *,
     ws_root: Path,
+    memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     tool_model_name: str,
     user_msg_uuid: str,
@@ -980,6 +921,7 @@ def start_tool_background_job(
             asyncio.run(
                 _run_background_tool_loop(
                     ws_root=ws_root,
+                    memory_store=memory_store,
                     request_messages=request_messages,
                     tool_model_name=tool_model_name,
                     user_msg_uuid=user_msg_uuid,

@@ -359,6 +359,7 @@ async def run_turn(
 
                     start_tool_background_job(
                         ws_root=root,
+                        memory_store=store,
                         request_messages=deepcopy(tool_msgs),
                         tool_model_name=tool_model,
                         user_msg_uuid=user_msg_uuid,

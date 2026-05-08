@@ -19,6 +19,7 @@ from app.core.agentic_kernel.companion.llm_chat_runtime import (
 )
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.tool_background import start_tool_background_job
 from app.core.agentic_kernel.companion.turn import run_turn
 
@@ -151,8 +152,10 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     ):
         mock_t = MagicMock()
         mock_thread.return_value = mock_t
+        ws = Path("/tmp/inty_ws")
         start_tool_background_job(
-            ws_root=Path("/tmp/inty_ws"),
+            ws_root=ws,
+            memory_store=MemoryStore(workspace_root=ws, repository=None),
             request_messages=[{"role": "user", "content": "hi"}],
             tool_model_name="m",
             user_msg_uuid="uuid",
@@ -190,8 +193,10 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     with patch("langsmith.run_helpers.set_tracing_parent") as mock_sp:
         mock_t = MagicMock()
         mock_thread.return_value = mock_t
+        ws = Path("/tmp/inty_ws")
         start_tool_background_job(
-            ws_root=Path("/tmp/inty_ws"),
+            ws_root=ws,
+            memory_store=MemoryStore(workspace_root=ws, repository=None),
             request_messages=[{"role": "user", "content": "hi"}],
             tool_model_name="m",
             user_msg_uuid="uuid",
