@@ -51,7 +51,10 @@ def companion_turn_tools_and_system_messages(
     """
     Single source for companion chat-round tools list and system message stack.
 
-    Must stay aligned with ``turn.run_turn`` message assembly (same inputs -> same outputs).
+    Must stay aligned with ``turn.run_turn`` for the same explicit arguments. Callers that only
+    build system-prefix variants for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` pass
+    ``implicit_user_signed_on_turn=False`` on purpose: implicit sign-on greetings strip tools
+    earlier and never take that route (short greeting, no background tool loop).
 
     When ``implicit_user_signed_on_turn`` is True (and not an inner-tick turn), tools are
     omitted and system prompts skip tool contracts so the model does one chat completion only.

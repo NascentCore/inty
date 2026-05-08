@@ -109,7 +109,15 @@ def _async_dual_llm_system_message_variants(
     route_inner_mode: InnerTickMode,
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Compact tool-path stack vs full chat-path stack; shares inner_tick routing with refresh/tool_bg."""
+    """Compact tool-path stack vs full chat-path stack; shares inner_tick routing with refresh/tool_bg.
+
+    Implicit ``IMPLICIT_USER_SIGNED_ON`` rounds strip tools in the main ``run_turn`` prefix pass
+    (``implicit_user_signed_on_turn``), so routing is chat-only sync, not this async dual branch.
+    We intentionally omit that flag here (equivalent to ``False``): this helper only runs when
+    ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` already won, i.e. tool-backed rounds
+    where the model should not reuse the sign-on ``chat_only`` contract (greeting turns skip tool
+    loops entirely, like a brief hello to someone familiar).
+    """
     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
         workspace_root=workspace_root,
         bundle=bundle,
@@ -120,6 +128,7 @@ def _async_dual_llm_system_message_variants(
         tool_side_compact_system_prompt=True,
         include_significance_perception_slice=False,
         implicit_signal_bundle=implicit_signal_bundle,
+        implicit_user_signed_on_turn=False,
     )
     _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
         workspace_root=workspace_root,
@@ -131,6 +140,7 @@ def _async_dual_llm_system_message_variants(
         tool_side_compact_system_prompt=False,
         include_significance_perception_slice=True,
         implicit_signal_bundle=implicit_signal_bundle,
+        implicit_user_signed_on_turn=False,
     )
     return tool_system_msgs, chat_system_msgs
 
