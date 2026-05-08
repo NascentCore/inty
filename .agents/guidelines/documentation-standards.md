@@ -10,7 +10,7 @@
 
 ## 工程文档维护
 
-- Markdown 引用本仓库内文件时，使用从仓库根目录起的绝对路径（以 `/` 开头），例如 `/app/api/ENDPOINTS.md`、`/AGENTS.md`；不要使用 `../../app/api/ENDPOINTS.md` 这类相对路径。
-- In markdown, reference in-repo files with repo-root absolute paths (leading `/`), e.g. `/app/api/ENDPOINTS.md`; do not use `../../...` relative paths.
+- Markdown 引用本仓库内文件时，使用从仓库根目录起的绝对路径（以 `/` 开头），例如 `/app/api/AGENTS.md`、`/AGENTS.md`；不要使用 `../../app/api/AGENTS.md` 这类相对路径。
+- In markdown, reference in-repo files with repo-root absolute paths (leading `/`), e.g. `/app/api/AGENTS.md`; do not use `../../...` relative paths.
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
