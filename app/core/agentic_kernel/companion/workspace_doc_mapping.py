@@ -29,6 +29,7 @@ class CompanionWorkspaceDocKind(str, Enum):
     CONTEXT_JSON = "context_json"
     AI_PRIVATE_MD = "ai_private_md"
     AI_PRIVATE_JSONL = "ai_private_jsonl"
+    TOOL_BACKGROUND_JSONL = "tool_background_jsonl"
     GENERATED_IMAGES_INDEX_JSONL = "generated_images_index_jsonl"
     MEMORY_DAILY_RAW = "memory_daily_raw"  # episodic: memory/daily/<date>.md
     MEMORY_DAY_SUMMARY = "memory_day_summary"  # gist: memory/<date>.md
@@ -57,6 +58,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionWorkspaceDocKind, date | None]] = {
     "context.json": (CompanionWorkspaceDocKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionWorkspaceDocKind.AI_PRIVATE_MD, None),
     "ai_private.jsonl": (CompanionWorkspaceDocKind.AI_PRIVATE_JSONL, None),
+    "tool_background.jsonl": (CompanionWorkspaceDocKind.TOOL_BACKGROUND_JSONL, None),
     "generated_images/index.jsonl": (
         CompanionWorkspaceDocKind.GENERATED_IMAGES_INDEX_JSONL,
         None,
