@@ -5,10 +5,9 @@
 这些约束是大模型用来理解“用户与智能体”这一交互对中，对双方交互模式的整体性理解，并不能完全作为智能体本身的描述。
 这也是为何，这些提示词被称为system-hierarchy（而非智能体描述之类的说法）。
 
-- **AXIOM.md**：[prompts/AXIOM.md](/app/core/agentic_kernel/companion/prompts/AXIOM.md)（非 Workspace 根目录稿）
-- 下列为 [templates](/app/core/agentic_kernel/companion/templates/) 下 Workspace 种子稿：
-
-1. SOUL.md
-1. IDENTITY.md
-1. USER.md
-1. MEMORY.md（语义记忆 semantic；另有两层日程路径：`memory/daily/{date}.md` 情景 episodic，`memory/{date}.md` gist 单日摘要，见 `memory_taxonomy.py`）
+1. **AXIOM.md**：[prompts/AXIOM.md](/app/core/agentic_kernel/companion/prompts/AXIOM.md)（非 Workspace 根目录稿）
+2. 下列为 [templates](/app/core/agentic_kernel/companion/templates/) 下 Workspace 初始模板，会随着用户与智能体交互更新。
+   越靠前的部分更新越慢：
+   1. SOUL.md
+   2. IDENTITY.md/USER.md
+   3. MEMORY.md
