@@ -1,15 +1,8 @@
-# 计划模式增强（固定项）
+# Enhance the plan created in the current conversation
 
-## 概述
+## Overview
 
-在计划模式下，对当前已创建的计划施加固定的增强约束。若不在计划模式中，则什么都不做，退出。
+Do nothing if not in in plan mode; enhance plan according to the following instructions.
 
-## 固定增强
-
-调用 `/review_plan` 审查当前计划。
-
-对计划中的 TODO 列表做如下修改（若已有等价项则不要重复添加）：
-
-- 在计划 TODOs **末尾**追加一项：**Invoke `/review`**
-
-完成追加后，按计划继续执行；`/review` 应在实现与测试循环的合适节点由执行方显式触发（见 `/review` 命令）。
+1. /review_plan invoke this command first
+2. Append to the plan's TODOs: **Invoke `/review`**
