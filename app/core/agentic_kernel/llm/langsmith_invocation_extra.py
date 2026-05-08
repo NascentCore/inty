@@ -1,8 +1,9 @@
-"""Stable LangSmith ``langsmith_extra`` payloads for Inty LLM call sites.
+"""LangSmith ``langsmith_extra`` builders for Inty OpenAI-wrapped chat completions.
 
-Maps companion dual-LLM and tool_background phases to ``metadata`` keys so traces
-can be filtered without relying on run order. Optional per-invocation ``name``
-overrides the wrapped span title when clarity matters (e.g. routing fallback).
+Foreground dual-LLM uses ``invocation_extra`` (``inty_llm_source`` in metadata). Background
+tool paths use ``tool_call_langsmith_extra``: run **name**
+``agentic_companion_tool_call-<phase>`` plus optional auxiliary metadata (no
+``inty_llm_source`` on those spans).
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK = "tool_background_routing_fallback"
 TOOL_CHOICE_ATTEMPT_REQUIRED = "required"
 TOOL_CHOICE_ATTEMPT_AUTO = "auto"
 
-LANGSMITH_RUN_NAME_TOOL_BG_ROUTING = "agentic_companion_tool_bg_routing"
+LANGSMITH_RUN_NAME_TOOL_CALL_BASE = "agentic_companion_tool_call"
 
 
 def invocation_extra(
@@ -30,7 +31,7 @@ def invocation_extra(
     run_name: str | None = None,
     extra_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a ``langsmith_extra`` dict for ``chat.completions.create`` (wrapped client)."""
+    """Build ``langsmith_extra`` for foreground envelope (sets ``inty_llm_source``)."""
     meta: dict[str, Any] = {INTY_LLM_SOURCE_METADATA_KEY: source}
     if extra_metadata:
         meta.update(extra_metadata)
@@ -38,6 +39,19 @@ def invocation_extra(
     if run_name:
         out["name"] = run_name
     return out
+
+
+def tool_call_langsmith_extra(
+    *,
+    phase_suffix: str,
+    extra_metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """LangSmith extra for tool-model client: suffixed run name, optional metadata only."""
+    merged: dict[str, Any] = dict(extra_metadata) if extra_metadata else {}
+    return {
+        "name": f"{LANGSMITH_RUN_NAME_TOOL_CALL_BASE}-{phase_suffix}",
+        "metadata": merged,
+    }
 
 
 def tool_choice_attempt_metadata(tool_choice: str | None) -> dict[str, Any]:

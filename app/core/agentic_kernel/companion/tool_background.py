@@ -28,7 +28,7 @@ from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
     INTY_TOOL_BG_ROUND_METADATA_KEY,
     SOURCE_TOOL_BACKGROUND_CONTINUE,
     SOURCE_TOOL_BACKGROUND_INITIAL,
-    invocation_extra,
+    tool_call_langsmith_extra,
     tool_choice_attempt_metadata,
 )
 from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
@@ -382,8 +382,8 @@ def _initial_tool_bg_completion_with_fallbacks(
                 tools=tools,
                 tool_choice=tc,
                 response_format=None,
-                langsmith_extra=invocation_extra(
-                    source=SOURCE_TOOL_BACKGROUND_INITIAL,
+                langsmith_extra=tool_call_langsmith_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
                     extra_metadata=tool_choice_attempt_metadata(tc),
                 ),
             )
@@ -675,8 +675,8 @@ async def _run_background_tool_loop(
                 model=tool_model_name,
                 messages_payload=inner_payload,
                 tools=tools,
-                langsmith_extra=invocation_extra(
-                    source=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                langsmith_extra=tool_call_langsmith_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
                     extra_metadata={
                         INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
                     },

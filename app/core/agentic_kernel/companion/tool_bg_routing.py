@@ -15,9 +15,8 @@ from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
-    LANGSMITH_RUN_NAME_TOOL_BG_ROUTING,
     SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
-    invocation_extra,
+    tool_call_langsmith_extra,
 )
 
 _MARKDOWN_JSON_FENCE_RE = re.compile(
@@ -117,9 +116,8 @@ def resolve_tool_bg_routing_sync(
         messages_payload=payload,
         tools=[],
         response_format=None,
-        langsmith_extra=invocation_extra(
-            source=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
-            run_name=LANGSMITH_RUN_NAME_TOOL_BG_ROUTING,
+        langsmith_extra=tool_call_langsmith_extra(
+            phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
         ),
     )
     content = getattr(resp.choices[0].message, "content", None)
