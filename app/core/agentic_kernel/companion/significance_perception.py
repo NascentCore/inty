@@ -21,9 +21,10 @@
 - **Transcript**: ``turn.run_turn`` appends an assistant JSONL row with optional
   ``significance_perception``; ``turn_engine.persist_repl_turn_transcript_rows`` can attach
   the same via ``assistant_extra`` for REPL-style paths.
-- **Product DB / WS**: ``app/api/v1/endpoints/chat._companion_ai_meta_from_turn_result`` copies
-  non-empty ``significance_perception`` into ``chat_history`` AI row ``meta_data`` and WebSocket
-  ``message.meta_data`` (companion path only when the kernel populated it).
+- **Product DB / WS**: Foreground turns: ``app/api/v1/endpoints/chat._companion_ai_meta_from_turn_result``
+  copies non-empty ``significance_perception`` into ``chat_history`` AI ``meta_data`` / WS payload.
+  Async ``tool_bg`` follow-up rows: ``ToolOutputEvent.significance_perception`` (from unified finish
+  envelope via ``tool_bg_routing``) is mirrored in ``chat._build_companion_tool_background_ws_payload``.
 - **Memory extraction (optional)**: When ``memory_extraction.use_significance_perception_in_extraction``
   is true (``app/utils/config.py``), ``app/services/memory_extraction_service.py`` sorts message
   rows by ``meta_data.significance_perception.importance_round`` and annotates lines in the
