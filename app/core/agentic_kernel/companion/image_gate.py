@@ -262,10 +262,29 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
 def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any] | None:
     """Build chat_history ``generated_image`` metadata from one ``generated_images`` index row.
 
-    Prefers a canonical ``gs://`` URI when present or derivable from ``gcs_http_url``.
-    If no ``gs://`` is available, accepts absolute ``http(s)://`` URLs (e.g. Fal CDN stored in the row).
+    With **real** GCS, prefers a canonical ``gs://`` URI when present or derivable from
+    ``gcs_http_url``. If no ``gs://`` is available, accepts absolute ``http(s)://`` URLs
+    (e.g. Fal CDN stored in the row).
+
+    With **fake** GCS (``use_fake_gcs``), ``gcs_uri`` may still look like ``gs://`` but only
+    maps to the local fake layout; the fetchable URL is ``gcs_http_url`` (typically
+    ``file://...`` from ``Blob.public_url``), which we use as ``image_url`` when set.
     """
+    from app.core.config import global_config_loaded_from_config_yaml
     from app.external_services.gcs import gs_uri_from_storage_reference_url
+
+    w = row.get("width")
+    h = row.get("height")
+    base = {
+        "width": w,
+        "height": h,
+        "format": "png",
+    }
+
+    if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+        http_u = str(row.get("gcs_http_url") or "").strip()
+        if http_u:
+            return {"image_url": http_u, **base}
 
     gcs_uri = str(row.get("gcs_uri") or "").strip()
     if not gcs_uri.startswith("gs://"):
@@ -275,13 +294,6 @@ def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any
             if mapped:
                 gcs_uri = mapped
 
-    w = row.get("width")
-    h = row.get("height")
-    base = {
-        "width": w,
-        "height": h,
-        "format": "png",
-    }
     if gcs_uri.startswith("gs://"):
         return {"image_url": gcs_uri, **base}
 

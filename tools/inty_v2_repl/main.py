@@ -268,7 +268,7 @@ def _print_tool_bg_local_image_paths_banner(meta: Mapping[str, Any]) -> None:
 
 
 def _print_generated_image_meta_banner(meta: Mapping[str, Any]) -> None:
-    """Emit ``image-url:`` for ``meta_data.generated_image`` (``gs://`` or ``https://``)."""
+    """Emit ``image-url:`` for ``meta_data.generated_image`` (``gs://``, ``https://``, or local ``file://`` with fake GCS)."""
     gi = meta.get("generated_image")
     if not isinstance(gi, dict):
         return

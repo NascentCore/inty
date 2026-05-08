@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-import app.external_services.gcs as gcs_mod
+import app.core.config as config_mod
 import pytest
 
 from app.core.agentic_kernel.companion.image_gate import (
@@ -16,7 +16,16 @@ from app.core.agentic_kernel.companion.image_gate import (
 )
 
 
-def test_generated_image_meta_from_slice_prefers_gs_uri(tmp_path: Path) -> None:
+def test_generated_image_meta_from_slice_prefers_gs_uri(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        config_mod,
+        "global_config_loaded_from_config_yaml",
+        SimpleNamespace(
+            gcs=SimpleNamespace(use_fake_gcs=False, fake_gcs_base_dir=""),
+        ),
+    )
     root = tmp_path / "ws"
     root.mkdir()
     append_image_asset_record(
@@ -87,7 +96,7 @@ def test_generated_image_meta_maps_fake_file_http_url(
     obj_path.write_bytes(b"\x89PNG")
     file_uri = obj_path.resolve().as_uri()
     monkeypatch.setattr(
-        gcs_mod,
+        config_mod,
         "global_config_loaded_from_config_yaml",
         SimpleNamespace(
             gcs=SimpleNamespace(
@@ -100,4 +109,4 @@ def test_generated_image_meta_maps_fake_file_http_url(
         {"gcs_uri": "", "gcs_http_url": file_uri, "width": 3, "height": 4}
     )
     assert meta is not None
-    assert meta["image_url"] == "gs://mybucket/gen/out.png"
+    assert meta["image_url"] == file_uri
