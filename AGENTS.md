@@ -38,6 +38,7 @@ Detailed instructions from this file are also maintained as topic files under `.
 
 ## General Rules
 
+- Always have an 1 sentence summary at the end of your response
 - The ground truth is in code
 - Docs describe abstract ideas,
   never repeating information that can be directly derived from the code files:
