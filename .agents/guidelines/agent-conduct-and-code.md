@@ -1,6 +1,6 @@
 # 智能体行为、输出与代码规范
 
-摘自 [`/AGENTS.md`](/AGENTS.md) 中 General Rules 至 Scope Control、Code Output、Python module doc blocks 等条款。
+摘自 [`/AGENTS.md`](/AGENTS.md) 中 General Rules 至 Scope Control、Code Output、Python package doc blocks 等条款。
 
 ## General Rules
 
@@ -68,10 +68,10 @@ User instructions always override this file.
 
 ## Python package doc blocks (required)
 
-- Every Python package SHOULD carry its package/module-level docstring in the package's `__init__.py`.
-- The `__init__.py` docstring should explain what that package is designed for and its role or behavior in the system.
+- Put Python package/module-level documentation in the package's `__init__.py` docstring.
+- The docstring must explain what that package is designed for and its role or behavior in the system.
 - Do not add top-of-file docstrings to every `.py` source file solely to satisfy this rule; individual modules may still have docstrings when they need local API or behavior context.
-- When adding or editing a Python package whose `__init__.py` is missing or has an insufficient docstring, add or update the `__init__.py` docstring as part of the change.
+- When adding or editing a Python package, update its `__init__.py` docstring if missing or insufficient.
 
 ## Warnings and Disclaimers
 
