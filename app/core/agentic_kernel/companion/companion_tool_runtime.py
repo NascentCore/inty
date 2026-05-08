@@ -393,6 +393,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -423,6 +424,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -448,6 +450,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path", "content"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -466,6 +469,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -505,6 +509,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["items"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -536,6 +541,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["exec_time_utc", "task_text"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -563,6 +569,7 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["status_line"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
     ]
@@ -599,6 +606,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "required": ["slice", "content"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
         {
@@ -622,6 +630,7 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "required": [],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         },
     ]
@@ -755,6 +764,7 @@ def build_openai_repl_tools(
                     "required": [],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
     )
@@ -795,6 +805,7 @@ def build_openai_repl_tools(
                     "required": ["context_mode", "user_confirmed"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
     )
@@ -825,6 +836,7 @@ def build_openai_repl_tools(
                     "required": ["query"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
     )
@@ -861,6 +873,7 @@ def build_openai_repl_tools(
                     "required": ["url"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
     )
@@ -921,6 +934,7 @@ def build_openai_repl_tools(
                     "required": ["prompt"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
     )
@@ -990,6 +1004,7 @@ def build_openai_repl_tools(
                     "required": ["prompt"],
                     "additionalProperties": False,
                 },
+                "strict": True,
             },
         }
     )
