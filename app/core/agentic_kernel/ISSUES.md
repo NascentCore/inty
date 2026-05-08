@@ -1,6 +1,6 @@
 # Issues
 
-- [ ] Sometime the LLM returns no outputs
+- [ ] Sometime the LLM returns no outputs, see `Langsmith run of no output LLM calls` in the References section.
 
 ## References
 
