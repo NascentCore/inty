@@ -35,7 +35,8 @@ Agentic companion模拟的是异地亲密伴侣（不能见面的爱人、其他
 
 ## Override Rule
 
-User instructions always override this file.
+- User instructions always override this file.
+- Do not create README.md, create AGENTS.md.
 
 ## Output
 
