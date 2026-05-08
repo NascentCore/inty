@@ -22,12 +22,12 @@ from langsmith import Client as LangSmithClient
 from langsmith import wrappers
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.core.google_genai.create import create_genai_client
+from app.utils.gemini import create_google_genai_client
 from tests.langsmith import find_run_contains_random_string
 
 
 def get_wrapped_genai_client():
-    gemini_client = create_genai_client()
+    gemini_client = create_google_genai_client()
 
     return wrappers.wrap_gemini(
         gemini_client,

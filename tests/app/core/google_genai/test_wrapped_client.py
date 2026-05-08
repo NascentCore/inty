@@ -9,11 +9,11 @@ import pytest
 from google.genai import types
 from PIL import Image
 
-from app.core.google_genai.create import create_genai_client
 from app.core.google_genai.predefined_configs import GEN_CONTENT_CONFIG_IMAGE_9_16_1K
 from app.core.images.types import GeneratedImageProcessResult
-from app.external_services.fakes.gcs import FakeGCSClient
 from app.external_services.gcs import get_bucket_and_path_from_gcs_url
+from app.external_services.fakes.gcs import FakeGCSClient
+from app.utils.gemini import create_google_genai_client
 from app.core.google_genai.wrapped_client import (
     LangSmithTraceRunType,
     WrappedClient,
@@ -566,7 +566,7 @@ async def test_generate_image_imagen_raises_unsupported_model():
 @pytest.mark.asyncio
 async def test_generate_image_failure_with_nano_banana_trace_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
-    client = create_genai_client()
+    client = create_google_genai_client()
     wrapper = WrappedClient(client=client)
     results = await wrapper.async_generate_images(
         model=NANO_BANANA.id_on_provider,
@@ -581,7 +581,7 @@ async def test_generate_image_failure_with_nano_banana_trace_with_real_langsmith
 @pytest.mark.asyncio
 async def test_generate_image_trace_nano_banana_with_real_langsmith():
     """使用实际的 LangSmith 项目与 GCP 凭证测试 generate_image 的 tracing。"""
-    client = create_genai_client()
+    client = create_google_genai_client()
     wrapper = WrappedClient(client=client)
     results = await wrapper.async_generate_images(model=NANO_BANANA.id_on_provider, gcs_uri_base="test-gcs-uri-base", system_instructions=["you are a movie director"], contents=["a cat on the beach"])
     assert results and results[0] is not None
