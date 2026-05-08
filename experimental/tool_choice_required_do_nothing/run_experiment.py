@@ -74,7 +74,10 @@ TOOLS: list[dict[str, Any]] = [
                 "type": "object",
                 "properties": {
                     "city": {"type": "string"},
-                    "when": {"type": "string", "description": "e.g. tomorrow, 2026-02-20"},
+                    "when": {
+                        "type": "string",
+                        "description": "e.g. tomorrow, 2026-02-20",
+                    },
                 },
                 "required": ["city"],
             },
@@ -212,9 +215,7 @@ def load_openrouter_from_config(config_path: Path) -> tuple[str, str]:
     if not isinstance(agent_cfg, dict):
         raise ValueError("config missing 'agent' mapping")
     key_from_file = str(agent_cfg.get("api_key", "")).strip()
-    base_url = str(
-        agent_cfg.get("base_url", "https://openrouter.ai/api/v1")
-    ).strip()
+    base_url = str(agent_cfg.get("base_url", "https://openrouter.ai/api/v1")).strip()
     api_key = env_key or key_from_file
     if not api_key:
         raise ValueError("No API key in env or config agent.api_key")
@@ -422,7 +423,9 @@ def main() -> int:
         "summary": summary,
         "rows": all_rows,
     }
-    results_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    results_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     print(f"\nWrote {results_path}")
     return 0

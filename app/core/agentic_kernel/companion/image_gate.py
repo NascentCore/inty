@@ -259,7 +259,9 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
     return out
 
 
-def generated_image_meta_from_asset_record(row: dict[str, Any]) -> dict[str, Any] | None:
+def generated_image_meta_from_asset_record(
+    row: dict[str, Any],
+) -> dict[str, Any] | None:
     """Build chat_history ``generated_image`` metadata from one ``generated_images`` index row.
 
     With **real** GCS, prefers a canonical ``gs://`` URI when present or derivable from

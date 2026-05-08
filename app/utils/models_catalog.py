@@ -205,11 +205,13 @@ class GenAIModel(BaseModel):
         default="",
     )
 
-    response_format_with_tools_compatibility: ResponseFormatWithToolsCompatibility = Field(
-        default=ResponseFormatWithToolsCompatibility.UNSPECIFIED,
-        description="""
+    response_format_with_tools_compatibility: ResponseFormatWithToolsCompatibility = (
+        Field(
+            default=ResponseFormatWithToolsCompatibility.UNSPECIFIED,
+            description="""
         同一请求内同时使用 response_format（如 json_schema）与 tools 时是否可行；
         UNSPECIFIED 表示未核实；INCOMPATIBLE 表示已知供应商或网关互斥或会导致无法 tool call。""",
+        )
     )
 
 

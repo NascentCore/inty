@@ -35,7 +35,12 @@ def path_from_file_uri(uri: str) -> Path:
     if parsed.scheme != "file":
         raise ValueError(f"Expected file URI, got {uri!r}")
     path = unquote(parsed.path or "")
-    if sys.platform == "win32" and path.startswith("/") and len(path) >= 3 and path[2] == ":":
+    if (
+        sys.platform == "win32"
+        and path.startswith("/")
+        and len(path) >= 3
+        and path[2] == ":"
+    ):
         path = path.lstrip("/")
     return Path(path)
 
@@ -49,7 +54,9 @@ def _bucket_and_path_from_fake_local_file_uri(url: str) -> tuple[str, str]:
     try:
         rel = full.relative_to(base)
     except ValueError as e:
-        raise ValueError(f"file URL is not under fake_gcs_base_dir ({base}): {url}") from e
+        raise ValueError(
+            f"file URL is not under fake_gcs_base_dir ({base}): {url}"
+        ) from e
     parts = rel.parts
     if len(parts) < 2:
         raise ValueError(f"Invalid fake storage path (need bucket/object): {url}")
@@ -202,9 +209,13 @@ def is_valid_gcs_url(url: str) -> bool:
     if not url:
         return False
 
-    if global_config_loaded_from_config_yaml.gcs.use_fake_gcs and url.startswith("file:"):
+    if global_config_loaded_from_config_yaml.gcs.use_fake_gcs and url.startswith(
+        "file:"
+    ):
         try:
-            base = Path(global_config_loaded_from_config_yaml.gcs.fake_gcs_base_dir).resolve()
+            base = Path(
+                global_config_loaded_from_config_yaml.gcs.fake_gcs_base_dir
+            ).resolve()
             path_from_file_uri(url).resolve().relative_to(base)
             return True
         except ValueError:
