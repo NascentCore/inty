@@ -1,4 +1,9 @@
-"""Background tool execution queue for async dual-LLM mode."""
+"""Background tool execution queue for async dual-LLM mode.
+
+Persists tool return strings under a ``--- Tool results ---`` section on ``source=tool_bg``
+transcript rows so the following ``run_turn`` sees them in chat/tool message assembly.
+Optional ``tool_bg_idle_event`` coordinates per-session ordering with ``turn.run_turn``.
+"""
 
 from __future__ import annotations
 
@@ -72,6 +77,10 @@ _ACTIVE_THREADS_LOCK = threading.Lock()
 _ABORT_TOOL_BG_LOCK = threading.Lock()
 _ABORTED_TOOL_BG_USER_MSG_UUIDS: set[str] = set()
 _BG_TOOL_MAX_ROUNDS = 24
+
+# Persisted on ``source=tool_bg`` transcript rows so the next turn's chat/tool LLMs
+# reliably see raw tool return strings (even when routing NL is non-empty).
+TOOL_RESULTS_TRANSCRIPT_MARKER = "--- Tool results ---"
 
 
 class ToolBackgroundTraceHooks(Protocol):
@@ -153,6 +162,25 @@ def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
                 if n:
                     names.append(n)
     return names
+
+
+def build_tool_background_transcript_body(
+    *,
+    display_text: str,
+    appended_turn_msgs: list[dict[str, Any]],
+    total_tool_calls: int,
+) -> str:
+    """NL visible to user (routing) plus a fixed marker section of tool return strings."""
+    nl = (display_text or "").strip()
+    digest_core = ""
+    if total_tool_calls > 0:
+        digest_core = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs).strip()
+    digest_block = ""
+    if digest_core:
+        digest_block = f"{TOOL_RESULTS_TRANSCRIPT_MARKER}\n{digest_core}"
+    if nl and digest_block:
+        return f"{nl}\n\n{digest_block}"
+    return nl or digest_block
 
 
 def _tool_bg_nl_filler_from_appended_turn(
@@ -773,10 +801,16 @@ async def _run_background_tool_loop(
         display_text = base_nl
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
 
+        transcript_body = build_tool_background_transcript_body(
+            display_text=display_text,
+            appended_turn_msgs=appended_turn_msgs,
+            total_tool_calls=total_tool_calls,
+        )
+
         logger.debug(
             "repl.turn.bg policy_summary trace_id={} user_msg_uuid={} "
             "generation_deliver={} output_to_user={} should_push={} tools={} "
-            "image_paths_n={} base_nl_chars={} display_chars={}",
+            "image_paths_n={} base_nl_chars={} display_chars={} transcript_body_chars={}",
             trace_id,
             user_msg_uuid,
             generation_deliver,
@@ -786,19 +820,57 @@ async def _run_background_tool_loop(
             len(image_paths),
             len(base_nl),
             len(display_text),
+            len(transcript_body),
         )
 
-        if not should_push:
+        if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
-                "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
-                "reason=should_push_false",
+                "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
                 trace_id,
                 user_msg_uuid,
             )
             return
-        if not display_text.strip() and not generation_deliver:
+
+        if not should_push:
+            if transcript_body.strip():
+                assistant_msg_uuid = str(uuid.uuid4())
+                _append_background_transcript_assistant(
+                    ws_root,
+                    store=memory_store,
+                    content=transcript_body,
+                    assistant_msg_uuid=assistant_msg_uuid,
+                    reply_to=user_msg_uuid,
+                    trace_id=trace_id,
+                )
+                _append_background_log(
+                    store=memory_store,
+                    user_msg_uuid=user_msg_uuid,
+                    assistant_msg_uuid=assistant_msg_uuid,
+                    elapsed_ms=elapsed_ms,
+                    rounds=rounds_used,
+                    tool_calls_count=total_tool_calls,
+                    generated_image_uris=image_paths,
+                    trace_id=trace_id,
+                )
+                logger.debug(
+                    "repl.turn.bg transcript_only trace_id={} user_msg_uuid={} "
+                    "assistant_msg_uuid={} reason=should_push_false",
+                    trace_id,
+                    user_msg_uuid,
+                    assistant_msg_uuid,
+                )
+            else:
+                logger.debug(
+                    "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
+                    "reason=should_push_false_empty_transcript_body",
+                    trace_id,
+                    user_msg_uuid,
+                )
+            return
+
+        if not transcript_body.strip() and not generation_deliver:
             logger.debug(
-                "repl.turn.bg suppress_user_visible_output empty_display trace_id={} "
+                "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
                 "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
                 trace_id,
                 user_msg_uuid,
@@ -807,18 +879,11 @@ async def _run_background_tool_loop(
                 ",".join(tool_call_names),
             )
             return
-        if is_tool_background_aborted(user_msg_uuid):
-            logger.debug(
-                "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
-                trace_id,
-                user_msg_uuid,
-            )
-            return
         assistant_msg_uuid = str(uuid.uuid4())
         _append_background_transcript_assistant(
             ws_root,
             store=memory_store,
-            content=display_text,
+            content=transcript_body,
             assistant_msg_uuid=assistant_msg_uuid,
             reply_to=user_msg_uuid,
             trace_id=trace_id,
@@ -835,13 +900,14 @@ async def _run_background_tool_loop(
         )
         logger.debug(
             "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
-            "generation_deliver={} output_to_user={} display_chars={} image_paths_n={}",
+            "generation_deliver={} output_to_user={} nl_chars={} transcript_chars={} image_paths_n={}",
             trace_id,
             user_msg_uuid,
             assistant_msg_uuid,
             generation_deliver,
             output_to_user_flag,
-            len(display_text),
+            len(display_text.strip()),
+            len(transcript_body),
             len(image_paths),
         )
         on_event(
@@ -888,6 +954,7 @@ def start_tool_background_job(
     inner_tick_turn: bool = False,
     inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
+    tool_bg_idle_event: threading.Event | None = None,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -949,7 +1016,12 @@ def start_tool_background_job(
                 )
                 clear_tool_background_db_loop()
         finally:
+            if tool_bg_idle_event is not None:
+                tool_bg_idle_event.set()
             _unregister_thread(threading.current_thread())
+
+    if tool_bg_idle_event is not None:
+        tool_bg_idle_event.clear()
 
     t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
     logger.info(

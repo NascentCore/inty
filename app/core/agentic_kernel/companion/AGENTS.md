@@ -63,3 +63,8 @@
 
 - 读取：`models.load_context_meta(..., store=store)`；`turn.run_turn` 在组装 prompt 前加载。
 - 写入：`manager.CompanionManager.get_or_create_session`（`context.json` 缺失时）。
+
+## Async tool_background 与 transcript
+
+- **双 LLM**：前台 envelope 返回后，工具链在后台线程跑完；落盘 `transcript.jsonl` 的 `assistant` 行带 `source=tool_bg`，`content` 为对用户可见 NL（若有）并在其后追加固定 **`--- Tool results ---`** 段，内含本轮工具返回文本摘要（供下一轮 **chat** 与 **tool** 共用同一 transcript 窗口）。
+- **顺序**：`CompanionSession.tool_bg_idle`（`threading.Event`）在 `run_turn` 加载 transcript **之前** wait，确保上一轮后台线程已 `set()`（超时则告警并降级继续，环境变量 **`INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC`** 可覆盖秒数，默认与前台 HTTP 超时一致）。

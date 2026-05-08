@@ -1,8 +1,14 @@
-"""Companion turn executor: 单轮对话的完整执行流程。"""
+"""Companion turn executor: 单轮对话的完整执行流程。
+
+可选 ``tool_bg_idle_event``：在加载 transcript 之前等待上一轮异步 tool_background 线程收尾，
+保证 ``transcript.jsonl`` 含工具摘要后再组装本轮 chat/tool messages。
+"""
 
 from __future__ import annotations
 
 import asyncio
+import os
+import threading
 import time
 import uuid
 from contextlib import nullcontext
@@ -157,6 +163,27 @@ def _preview(s: str, max_len: int = 280) -> str:
     return one[: max_len - 1] + "..."
 
 
+async def _await_tool_background_idle_if_configured(
+    tool_bg_idle_event: threading.Event | None,
+    *,
+    idle_wait_timeout_sec: float,
+    workspace_root: Path,
+) -> None:
+    if tool_bg_idle_event is None:
+        return
+
+    def _wait() -> bool:
+        return tool_bg_idle_event.wait(timeout=idle_wait_timeout_sec)
+
+    ok = await asyncio.to_thread(_wait)
+    if not ok:
+        logger.warning(
+            "run_turn tool_bg_idle wait timed out after {:.2f}s workspace={}",
+            idle_wait_timeout_sec,
+            workspace_root,
+        )
+
+
 async def run_turn(
     workspace: Path,
     user_text: str,
@@ -175,6 +202,7 @@ async def run_turn(
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     langsmith_parent_run_enabled: bool | None = None,
+    tool_bg_idle_event: threading.Event | None = None,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
@@ -219,6 +247,23 @@ async def run_turn(
         llm_client.config.api_base,
         llm_client.resolve_model("chat"),
         llm_client.resolve_model("tool"),
+    )
+
+    raw_idle_timeout = (
+        os.environ.get("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "").strip() or ""
+    )
+    try:
+        idle_wait_timeout_sec = (
+            float(raw_idle_timeout)
+            if raw_idle_timeout
+            else float(llm_client.config.async_chat_front_timeout_sec)
+        )
+    except ValueError:
+        idle_wait_timeout_sec = float(llm_client.config.async_chat_front_timeout_sec)
+    await _await_tool_background_idle_if_configured(
+        tool_bg_idle_event,
+        idle_wait_timeout_sec=idle_wait_timeout_sec,
+        workspace_root=root,
     )
 
     # 加载 context 与 prompt bundle
@@ -397,6 +442,7 @@ async def run_turn(
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_mode=route_inner_mode,
                         implicit_signal_bundle=implicit_signal_bundle,
+                        tool_bg_idle_event=tool_bg_idle_event,
                     )
                     tool_background_started = True
 
