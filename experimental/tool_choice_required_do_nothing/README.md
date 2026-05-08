@@ -1,5 +1,26 @@
 # Tool-choice required：noop 工具被选概率
 
+## 原始需求备忘
+
+以下为发起本试验时的两段说明，便于日后回看时理解**当初想验证什么**（实现细节与模型名以正文后续章节为准）。
+
+**指示一**
+
+> 在 `experimental/` 中添加一个测试 do-nothing 工具在多个工具调用中被调用的几率的试验，试验设计：  
+> 打开 `tool-call = required`，强制必须调用一个工具，测试不同 user message 触发不同工具调用的概率  
+>  
+> 你要：  
+> 1. 给出额外的几个工具定义，及其对应的触发的 user-message  
+> 2. 给出几个与上述（do-nothing 以外的）工具定义无关的 user-message，意图是测试是否能出发 do-nothing 工具调用  
+
+**指示二（补充）**
+
+> 补充：  
+> 设计试验，编码，运行试验、记录结果，然后总结结果，给出一句话结论  
+>  
+> 运行试验时读取 `devops/config.yaml.local` 那里有可用的 openrouter API key  
+> 试验时模型使用 `google/gemini-3.1-preview` `deepseek/deepseek-v4-flash`  
+
 ## 试验目的
 
 在 OpenRouter `chat.completions` 中设置 **`tool_choice="required"`**（强制至少调用一个工具），注册多个工具（含 **noop / do-nothing**）后，统计：
