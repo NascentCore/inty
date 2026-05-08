@@ -16,7 +16,18 @@ from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.models import InnerTickMode
 from app.core.agentic_kernel.companion.tools import build_openai_repl_tools_inner_tick
-from app.core.agentic_kernel.companion.turn import run_turn
+from app.core.agentic_kernel.companion.turn import (
+    CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
+    run_turn,
+)
+
+
+def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
+    roles = [m.get("role") for m in messages]
+    for i in range(len(roles) - 1):
+        assert not (
+            roles[i] == "user" and roles[i + 1] == "user"
+        ), f"adjacent user roles at index {i}"
 
 
 class _FakeAsyncDualLLMClient:
@@ -111,7 +122,11 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert bg_jobs[0]["tool_model_name"] == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
     assert bg_jobs[0]["force_tools_first_round"] is False
-    assert bg_msgs[-1] == {"role": "assistant", "content": "foreground ok"}
+    _assert_no_adjacent_user_roles(bg_msgs)
+    assert bg_msgs[-1] == {
+        "role": "assistant",
+        "content": f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\nforeground ok",
+    }
 
 
 @pytest.mark.asyncio
@@ -162,7 +177,11 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     assert "generate_image" not in got
     bg_msgs = job["request_messages"]
     assert job["force_tools_first_round"] is False
-    assert bg_msgs[-1] == {"role": "assistant", "content": "foreground ok"}
+    _assert_no_adjacent_user_roles(bg_msgs)
+    assert bg_msgs[-1] == {
+        "role": "assistant",
+        "content": f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\nforeground ok",
+    }
 
 
 class _FakeAsyncDualLLMClientEmptyFg:

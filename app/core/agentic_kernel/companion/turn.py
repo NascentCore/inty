@@ -510,7 +510,7 @@ async def run_turn(
                     if fg_text:
                         tool_msgs_for_bg.append(
                             {
-                                "role": "user",
+                                "role": "assistant",
                                 "content": (
                                     f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{fg_text}"
                                 ),
