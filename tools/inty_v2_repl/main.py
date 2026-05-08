@@ -249,6 +249,20 @@ def _elapsed_for_downlink_assistant(
     return max(0.0, time.perf_counter() - t0)
 
 
+def _print_tool_bg_local_image_paths_banner(meta: Mapping[str, Any]) -> None:
+    """Emit one ``local-path: /abs/...`` line per server-side image path for REPL copy."""
+    raw = meta.get("tool_bg_local_image_paths")
+    if not isinstance(raw, list) or not raw:
+        return
+    for p in raw:
+        if not isinstance(p, str):
+            continue
+        s = p.strip()
+        if not s:
+            continue
+        print(f"local-path: {s}")
+
+
 def _emit_downlink_item(
     item: Mapping[str, Any],
     outbound_t0: dict[str, float],
@@ -261,6 +275,7 @@ def _emit_downlink_item(
             elapsed,
             meta_data=meta,
         )
+        _print_tool_bg_local_image_paths_banner(meta)
     else:
         print(
             format_ws_error_banner(

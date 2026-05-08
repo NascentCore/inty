@@ -741,6 +741,8 @@ async def _build_companion_tool_background_ws_payload(
     gi = generated_image_meta_from_index_slice(ev.workspace, ev.image_asset_baseline)
     if gi:
         meta_data["generated_image"] = gi
+    if ev.local_image_paths:
+        meta_data["tool_bg_local_image_paths"] = list(ev.local_image_paths)
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -827,6 +829,33 @@ def _companion_ai_meta_from_turn_result(
     if companion_turn.tool_background_started:
         companion_ai_meta["tool_background_started"] = True
     return companion_ai_meta
+
+
+async def _persist_companion_user_message_for_bg(
+    *,
+    session_id: str,
+    last_user_message: ChatMessage,
+    effective_local_id: Optional[str],
+    implicit_signed_on_ws: bool,
+) -> Optional[int]:
+    """Write user message into ``chat_history`` for one companion turn (success or bg-survives-fg-fail).
+
+    Mirrors the success-path branching:
+    - ``implicit_signed_on_ws`` -> no row written; returns ``None`` (protocol skips user history).
+    - ``effective_local_id`` -> row with ``meta_data.localId``.
+    - else -> plain row.
+    """
+    if implicit_signed_on_ws:
+        return None
+    if effective_local_id:
+        return await chat_history_service.add_user_message_async(
+            session_id,
+            last_user_message,
+            meta_data={"localId": effective_local_id},
+        )
+    return await chat_history_service.add_user_message_async(
+        session_id, last_user_message
+    )
 
 
 async def _try_fire_companion_ws_proactive_heartbeat(
@@ -1260,14 +1289,43 @@ async def _agent_chat_completions_impl(
                             companion_ws_foreground_pending.pop(
                                 companion_preset_uid, None
                             )
-                    except Exception:
+                    except Exception as exc:
+                        bg_started_on_exc = bool(
+                            getattr(exc, "companion_tool_background_started", False)
+                        )
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
+                            and not bg_started_on_exc
                         ):
                             companion_ws_foreground_pending.pop(
                                 companion_preset_uid, None
                             )
+                        if bg_started_on_exc:
+                            try:
+                                bg_user_row_id = (
+                                    await _persist_companion_user_message_for_bg(
+                                        session_id=session_id,
+                                        last_user_message=last_user_message,
+                                        effective_local_id=effective_local_id,
+                                        implicit_signed_on_ws=implicit_signed_on_ws,
+                                    )
+                                )
+                            except Exception as persist_exc:
+                                logger.warning(
+                                    "companion bg-survives-fg-fail user message persist failed: {}",
+                                    persist_exc,
+                                )
+                                bg_user_row_id = None
+                            if (
+                                companion_preset_uid is not None
+                                and companion_ws_foreground_pending is not None
+                                and companion_preset_uid
+                                in companion_ws_foreground_pending
+                            ):
+                                companion_ws_foreground_pending[
+                                    companion_preset_uid
+                                ]["foreground_user_message_id"] = bg_user_row_id
                         raise
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
@@ -1277,21 +1335,12 @@ async def _agent_chat_completions_impl(
                         companion_ai_meta["messageType"] = (
                             CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
                         )
-                        companion_user_row_id = None
-                    elif effective_local_id:
-                        companion_user_row_id = (
-                            await chat_history_service.add_user_message_async(
-                                session_id,
-                                last_user_message,
-                                meta_data={"localId": effective_local_id},
-                            )
-                        )
-                    else:
-                        companion_user_row_id = (
-                            await chat_history_service.add_user_message_async(
-                                session_id, last_user_message
-                            )
-                        )
+                    companion_user_row_id = await _persist_companion_user_message_for_bg(
+                        session_id=session_id,
+                        last_user_message=last_user_message,
+                        effective_local_id=effective_local_id,
+                        implicit_signed_on_ws=implicit_signed_on_ws,
+                    )
                     if (
                         companion_preset_uid is not None
                         and companion_ws_foreground_pending is not None

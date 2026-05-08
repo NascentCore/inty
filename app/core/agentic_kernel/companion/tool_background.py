@@ -128,17 +128,6 @@ def _local_paths_from_tool_messages(
     return out
 
 
-def _append_local_image_paths_for_display(assistant_text: str, paths: list[str]) -> str:
-    """Append human-readable lines so REPL can show on-disk image paths after async tools."""
-    if not paths:
-        return assistant_text
-    block = "\n".join(paths)
-    suffix = f"\n\n（生成图片本地路径）\n{block}"
-    if not assistant_text:
-        return suffix.strip()
-    return assistant_text.rstrip() + suffix
-
-
 def _extract_tool_call_names(messages: list[dict[str, Any]]) -> list[str]:
     """Collect tool function names from assistant tool_call messages in order."""
     names: list[str] = []
@@ -265,6 +254,9 @@ class ToolOutputEvent:
     output_to_user: bool = False
     generation_deliver: bool = False
     image_asset_baseline: int = 0
+    # Absolute on-disk paths for images created during this background tool round.
+    # Surfaced to REPL via meta_data.tool_bg_local_image_paths; production clients ignore.
+    local_image_paths: tuple[str, ...] = ()
 
 
 def output_queue() -> queue.Queue[ToolOutputEvent]:
@@ -759,7 +751,9 @@ async def _run_background_tool_loop(
             filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
             if filler:
                 base_nl = filler
-        display_text = _append_local_image_paths_for_display(base_nl, image_paths)
+        # Local image paths now travel out-of-band on ToolOutputEvent.local_image_paths
+        # (REPL surfaces them as a banner). Body text stays NL-only for production clients.
+        display_text = base_nl
         elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
 
         logger.debug(
@@ -796,8 +790,6 @@ async def _run_background_tool_loop(
                 ",".join(tool_call_names),
             )
             return
-        if not display_text.strip() and generation_deliver:
-            display_text = _append_local_image_paths_for_display("", image_paths)
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
                 "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
@@ -849,6 +841,7 @@ async def _run_background_tool_loop(
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
                 image_asset_baseline=image_asset_baseline,
+                local_image_paths=tuple(image_paths),
             )
         )
     finally:

@@ -533,6 +533,11 @@ async def run_turn(
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
             except BaseException as exc:
+                if tool_background_started and isinstance(exc, Exception):
+                    try:
+                        exc.companion_tool_background_started = True
+                    except Exception:
+                        pass
                 if not tool_background_started:
                     end_companion_turn_root_run_safe(
                         langsmith_parent_run,
