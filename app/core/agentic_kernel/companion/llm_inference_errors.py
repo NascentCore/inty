@@ -2,9 +2,14 @@
 
 Maps SDK exceptions from chat.completions into ``CompanionLLMInferenceBackendError``
 so API/WebSocket layers can return stable English messages plus optional provider HTTP status.
+Also detects "HTTP 200 + body ``choices: null`` + ``error`` field" pseudo-success bodies
+(observed from OpenRouter when an upstream provider returns 5xx) and surfaces them as the
+same controlled error type instead of letting downstream code crash on ``resp.choices[0]``.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from loguru import logger
 
@@ -135,3 +140,52 @@ def log_and_build_inference_error(exc: Exception) -> CompanionLLMInferenceBacken
     if isinstance(exc, CompanionLLMInferenceBackendError):
         return exc
     return companion_llm_inference_backend_error_from_openai(exc)
+
+
+def raise_if_chat_completion_missing_choices(resp: Any, *, model: str) -> None:
+    """Raise when an OpenAI SDK ``ChatCompletion`` carries empty ``choices`` plus an ``error`` body.
+
+    OpenRouter occasionally responds with HTTP 200 but a body of
+    ``{"choices": null, "error": {"code": <upstream_http_status>, "message": "..."}}``
+    when the actual upstream provider failed. Without this guard, downstream code crashes on
+    ``resp.choices[0]`` with ``TypeError: 'NoneType' object is not subscriptable``. Convert to
+    the same ``CompanionLLMInferenceBackendError`` type as a real HTTP failure so the WS layer
+    serves the documented ``code 502 + error_kind=llm_inference_backend`` frame.
+    """
+    choices = getattr(resp, "choices", None)
+    if isinstance(choices, list) and len(choices) > 0:
+        return
+
+    err_raw = getattr(resp, "error", None)
+    code: int | None = None
+    msg_tail = ""
+    if isinstance(err_raw, dict):
+        c = err_raw.get("code")
+        if isinstance(c, int):
+            code = c
+        elif isinstance(c, str) and c.strip().isdigit():
+            code = int(c.strip())
+        msg_tail = str(err_raw.get("message") or "").strip()
+    elif err_raw is not None:
+        c = getattr(err_raw, "code", None)
+        if isinstance(c, int):
+            code = c
+        msg_tail = str(getattr(err_raw, "message", "") or "").strip()
+
+    logger.warning(
+        "companion chat.completions missing choices model={} raw_error_code={} error_message={!r}",
+        model,
+        code,
+        msg_tail,
+    )
+
+    http_status = code if isinstance(code, int) and 100 <= code <= 599 else None
+    msg_en = (
+        _client_message_for_provider_status(http_status)
+        if http_status is not None
+        else _MSG_PROVIDER_GENERIC
+    )
+    raise CompanionLLMInferenceBackendError(
+        client_message_en=msg_en,
+        provider_http_status=http_status,
+    )
