@@ -62,15 +62,16 @@ User instructions always override this file.
 - Return the simplest working solution. No over-engineering.
 - No abstractions or helpers for single-use operations.
 - No speculative features or future-proofing.
-- No docstrings or comments on code that was not changed, except Python module-level doc blocks (see **Python module doc blocks** below).
+- No docstrings or comments on code that was not changed, except Python package-level doc blocks in `__init__.py` (see **Python package doc blocks** below).
 - Inline comments only where logic is non-obvious.
 - Read the file before modifying it. Never edit blind.
 
-## Python module doc blocks (required)
+## Python package doc blocks (required)
 
-- Every `.py` source file MUST start with a module-level docstring at the top that explains what the file is designed for and its role or behavior in the system.
-- When adding a new `.py` file: include this doc block before other code.
-- When editing an existing `.py` file that is missing or has an insufficient doc block: add or update it as part of the change.
+- Every Python package SHOULD carry its package/module-level docstring in the package's `__init__.py`.
+- The `__init__.py` docstring should explain what that package is designed for and its role or behavior in the system.
+- Do not add top-of-file docstrings to every `.py` source file solely to satisfy this rule; individual modules may still have docstrings when they need local API or behavior context.
+- When adding or editing a Python package whose `__init__.py` is missing or has an insufficient docstring, add or update the `__init__.py` docstring as part of the change.
 
 ## Warnings and Disclaimers
 
