@@ -11,6 +11,7 @@ import pytest
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_client import (
     LLM_SCENE_CHAT,
+    LLM_SCENE_INNER_TICK,
     CompanionLLMConfig,
 )
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
@@ -84,7 +85,7 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
 
     assert out.assistant_text == "inner reply"
     assert out.tool_background_started is True
-    assert client.calls[0]["scene"] == LLM_SCENE_CHAT
+    assert client.calls[0]["scene"] == LLM_SCENE_INNER_TICK
 
     rows = [
         json.loads(line)

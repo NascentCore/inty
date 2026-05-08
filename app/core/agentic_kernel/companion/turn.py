@@ -360,6 +360,11 @@ async def run_turn(
                     )
                     chat_model = llm_client.resolve_model("chat")
                     tool_model = llm_client.resolve_model("tool")
+                    foreground_scene = (
+                        LLM_SCENE_INNER_TICK
+                        if inner_tick_turn and not tick_proactive
+                        else LLM_SCENE_CHAT
+                    )
 
                     def _kernel_bg_on_event(ev: ToolOutputEvent) -> None:
                         if background_output_sink is not None:
@@ -406,7 +411,7 @@ async def run_turn(
                                 model=chat_model,
                                 tools=None,
                                 response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-                                scene=LLM_SCENE_CHAT,
+                                scene=foreground_scene,
                             )
 
                         resp = await asyncio.wait_for(
@@ -438,7 +443,7 @@ async def run_turn(
                         chat_model,
                         (time.perf_counter() - t_api) * 1000.0,
                         approx_ctx_chars,
-                        LLM_SCENE_CHAT,
+                        foreground_scene,
                     )
                     msg = resp.choices[0].message
                     # TODO(companion-dual-envelope-reasoning-channel): If ``msg.content`` is empty
