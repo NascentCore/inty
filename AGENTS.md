@@ -23,6 +23,19 @@ agentic_kernel 的设计核心模拟人脑、外围搭配拟人化行为模态�
 
 Agentic companion模拟的是异地亲密伴侣（不能见面的爱人、其他跟活人一样）。
 
+## Guideline files (topic splits)
+
+Detailed instructions from this file are also maintained as topic files under [.agents/guidelines/](.agents/guidelines/README.md) for navigation and updates.
+
+| Topic | Path |
+|-------|------|
+| Repository context, deployment, Android tips, API sync | [.agents/guidelines/repository-context.md](.agents/guidelines/repository-context.md) |
+| Agent conduct, output, code, Python docstrings | [.agents/guidelines/agent-conduct-and-code.md](.agents/guidelines/agent-conduct-and-code.md) |
+| Documentation layers and markdown conventions | [.agents/guidelines/documentation-standards.md](.agents/guidelines/documentation-standards.md) |
+| Cursor Cloud VM: services, tests, emulator, gotchas | [.agents/guidelines/cursor-cloud-environment.md](.agents/guidelines/cursor-cloud-environment.md) |
+| Local clone, quickstart, badges, external links | [.agents/guidelines/local-developer-setup.md](.agents/guidelines/local-developer-setup.md) |
+| Cloud Agent git and PR contract | [.agents/guidelines/CLOUD_AGENTS.md](.agents/guidelines/CLOUD_AGENTS.md) |
+
 ## General Rules
 
 - The ground truth is in code
