@@ -53,6 +53,7 @@ from .models import ChatMessage
 from .google_web_search import run_google_web_search
 from .read_web_page import run_read_web_page
 from .runtime_inspect_tool import tool_companion_runtime_inspect
+from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .schedule_queue import add_schedule_task
 from app.services.agent_status_line import tool_update_agent_status_line
 
@@ -393,7 +394,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -424,7 +424,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -450,7 +449,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path", "content"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -469,7 +467,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["relative_path"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -509,7 +506,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["items"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -541,7 +537,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["exec_time_utc", "task_text"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -569,7 +564,6 @@ def build_openai_tools() -> list[dict[str, Any]]:
                     "required": ["status_line"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
     ]
@@ -606,7 +600,6 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "required": ["slice", "content"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
         {
@@ -630,7 +623,6 @@ def _openai_interactive_bootstrap_tools() -> list[dict[str, Any]]:
                     "required": [],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         },
     ]
@@ -764,7 +756,6 @@ def build_openai_repl_tools(
                     "required": [],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         }
     )
@@ -805,7 +796,6 @@ def build_openai_repl_tools(
                     "required": ["context_mode", "user_confirmed"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         }
     )
@@ -836,7 +826,6 @@ def build_openai_repl_tools(
                     "required": ["query"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         }
     )
@@ -873,7 +862,6 @@ def build_openai_repl_tools(
                     "required": ["url"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         }
     )
@@ -934,7 +922,6 @@ def build_openai_repl_tools(
                     "required": ["prompt"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         }
     )
@@ -1004,13 +991,12 @@ def build_openai_repl_tools(
                     "required": ["prompt"],
                     "additionalProperties": False,
                 },
-                "strict": True,
             },
         }
     )
     if interactive_bootstrap_active:
         out.extend(_openai_interactive_bootstrap_tools())
-    return out
+    return prepare_openai_tools_for_chat_completions(out)
 
 
 _INNER_TICK_REPL_TOOL_NAMES: tuple[str, ...] = (

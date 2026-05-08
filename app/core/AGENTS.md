@@ -5,6 +5,7 @@
 ## Companion REPL tools
 
 - Optional env **`INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL`**: when set to `1` / `true` / `yes` / `on`, `build_openai_repl_tools` omits **`tool_update_agent_status_line`** (avoids Postgres for local harness scripts). When unset, behavior unchanged for production-style runs.
+- OpenAI Chat Completions **`tools`** payloads: `build_openai_repl_tools` returns lists normalized by **`prepare_openai_tools_for_chat_completions`** in [`app/core/agentic_kernel/companion/openai_tools_prepare.py`](app/core/agentic_kernel/companion/openai_tools_prepare.py), which sets each function tool's **`strict`** (default **True**) so SDK structured parsing / vendor strict-schema paths stay consistent. Optional env **`INTY_OPENAI_TOOLS_STRICT`**: unset or `1`/`true`/`yes`/`on` keeps strict on; `0`/`false`/`no`/`off`/`none` sets **`strict`: false** on every function tool (for gateways that reject strict tool schemas).
 
 ## Companion tool-call model
 
