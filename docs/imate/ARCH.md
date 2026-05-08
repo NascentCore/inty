@@ -151,7 +151,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | `chat.py` 的 WebSocket 适配层同时承担鉴权、订阅、chat_history、companion 调用、错误映射和背景补帧汇合。 | 传输协议、业务落库和 agent runtime 的边界偏厚; WebSocket 相关回归测试成本上升。 |
 | 连接内 `companion_turn_lock`、`bg_queue`、`ws_fg_pending`、heartbeat worker 分散在 WebSocket endpoint 局部闭包中。 | 当前并发约束只能靠读长函数理解; 新增控制帧、后台事件或主动消息时容易破坏同一连接内的顺序和落库一致性。 |
 
-## 改进方向
+## Enhancements
 
 优先改进点: **抽出生产 WebSocket companion 协调器, 先固定连接边界, 再拆 `run_turn` 阶段**。
 
