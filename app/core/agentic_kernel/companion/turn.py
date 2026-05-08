@@ -31,7 +31,9 @@ from .models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     CompanionTurnResult,
+    ContextMeta,
     InnerTickMode,
+    PromptBundle,
     load_context_meta,
     load_prompt_bundle,
     load_transcript_from_store,
@@ -95,6 +97,42 @@ def _replace_leading_system_messages_multi(
     while i < len(messages) and messages[i].get("role") == "system":
         i += 1
     return [*system_messages, *messages[i:]]
+
+
+def _async_dual_llm_system_message_variants(
+    *,
+    workspace_root: Path,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    workspace_bootstrap_type: str,
+    inner_tick_turn: bool,
+    route_inner_mode: InnerTickMode,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Compact tool-path stack vs full chat-path stack; shares inner_tick routing with refresh/tool_bg."""
+    _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
+        workspace_root=workspace_root,
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=workspace_bootstrap_type,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=route_inner_mode,
+        tool_side_compact_system_prompt=True,
+        include_significance_perception_slice=False,
+        implicit_signal_bundle=implicit_signal_bundle,
+    )
+    _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
+        workspace_root=workspace_root,
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=workspace_bootstrap_type,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=route_inner_mode,
+        tool_side_compact_system_prompt=False,
+        include_significance_perception_slice=True,
+        implicit_signal_bundle=implicit_signal_bundle,
+    )
+    return tool_system_msgs, chat_system_msgs
 
 
 def _preview(s: str, max_len: int = 280) -> str:
@@ -185,7 +223,7 @@ async def run_turn(
             context=context,
             workspace_bootstrap_type=workspace_bootstrap_type,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=inner_tick_mode,
+            inner_tick_mode=route_inner_mode,
             tool_side_compact_system_prompt=False,
             include_significance_perception_slice=None,
             implicit_signal_bundle=implicit_signal_bundle,
@@ -293,27 +331,16 @@ async def run_turn(
         with _langsmith_cm:
             try:
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
-                    _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
-                        workspace_root=root,
-                        bundle=bundle,
-                        context=context,
-                        workspace_bootstrap_type=workspace_bootstrap_type,
-                        inner_tick_turn=False,
-                        inner_tick_mode=InnerTickMode.MAINTENANCE,
-                        tool_side_compact_system_prompt=True,
-                        include_significance_perception_slice=False,
-                        implicit_signal_bundle=implicit_signal_bundle,
-                    )
-                    _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
-                        workspace_root=root,
-                        bundle=bundle,
-                        context=context,
-                        workspace_bootstrap_type=workspace_bootstrap_type,
-                        inner_tick_turn=False,
-                        inner_tick_mode=InnerTickMode.MAINTENANCE,
-                        tool_side_compact_system_prompt=False,
-                        include_significance_perception_slice=True,
-                        implicit_signal_bundle=implicit_signal_bundle,
+                    tool_system_msgs, chat_system_msgs = (
+                        _async_dual_llm_system_message_variants(
+                            workspace_root=root,
+                            bundle=bundle,
+                            context=context,
+                            workspace_bootstrap_type=workspace_bootstrap_type,
+                            inner_tick_turn=inner_tick_turn,
+                            route_inner_mode=route_inner_mode,
+                            implicit_signal_bundle=implicit_signal_bundle,
+                        )
                     )
                     chat_msgs = _replace_leading_system_messages_multi(
                         messages, chat_system_msgs
@@ -346,6 +373,9 @@ async def run_turn(
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
                         workspace_bootstrap_type=workspace_bootstrap_type,
+                        inner_tick_turn=inner_tick_turn,
+                        inner_tick_mode=route_inner_mode,
+                        implicit_signal_bundle=implicit_signal_bundle,
                     )
                     tool_background_started = True
 

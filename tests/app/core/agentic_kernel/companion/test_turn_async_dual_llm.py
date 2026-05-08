@@ -14,6 +14,8 @@ import pytest
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.models import InnerTickMode
+from app.core.agentic_kernel.companion.tools import build_openai_repl_tools_inner_tick
 from app.core.agentic_kernel.companion.turn import run_turn
 
 
@@ -108,3 +110,51 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     assert len(bg_system) >= 2, "background tool path should use multiple system messages"
     assert bg_jobs[0]["tool_model_name"] == "m/tool"
     assert bg_jobs[0]["main_event_loop"] is loop
+
+
+@pytest.mark.asyncio
+async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    loop = asyncio.get_running_loop()
+    root = tmp_path
+    store = get_memory_store(root)
+    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document("IDENTITY.md", "id\n")
+    store.write_document("SOUL.md", "s\n")
+    store.write_document("USER.md", "u\n")
+    store.write_document("MEMORY.md", "m\n")
+    store.write_document("transcript.jsonl", "")
+
+    bg_jobs: list[dict[str, Any]] = []
+
+    def _capture_bg(**kwargs: Any) -> None:
+        bg_jobs.append(kwargs)
+
+    monkeypatch.setattr(
+        "app.core.agentic_kernel.companion.turn.start_tool_background_job",
+        _capture_bg,
+    )
+
+    client = _FakeAsyncDualLLMClient()
+    await run_turn(
+        root,
+        "ignored for inner tick",
+        store=store,
+        llm_client=client,  # type: ignore[arg-type]
+        defer_memory_update=True,
+        memory_config=None,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+    )
+
+    assert len(bg_jobs) == 1
+    job = bg_jobs[0]
+    assert job["inner_tick_turn"] is True
+    assert job["inner_tick_mode"] == InnerTickMode.MAINTENANCE
+    assert job["implicit_signal_bundle"] is None
+    assert job["main_event_loop"] is loop
+    expected = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
+    got = {t["function"]["name"] for t in job["tools"]}
+    assert got == expected
+    assert "generate_image" not in got

@@ -16,6 +16,7 @@ from typing import Any, Callable, Protocol
 from loguru import logger
 from openai import BadRequestError
 
+from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agent_status_line import (
     clear_tool_background_db_loop,
     set_tool_background_db_loop,
@@ -546,6 +547,9 @@ async def _run_background_tool_loop(
     write_allowlist: frozenset[str] | None = None,
     repository_only_workspace_text: bool = False,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> None:
     image_asset_baseline = len(list_image_asset_records(ws_root.resolve()))
     try:
@@ -563,6 +567,8 @@ async def _run_background_tool_loop(
                     "source": "tool_background",
                     "tool_model_name": tool_model_name,
                     "trace_id": trace_id,
+                    "inner_tick_turn": inner_tick_turn,
+                    "inner_tick_mode": inner_tick_mode.value,
                     "tools_summary": tools_summary_from_openai_tools(tools),
                     "llm_call_notes": (
                         "Foreground CompanionLLMConfig is not copied into this async tool_background "
@@ -775,10 +781,11 @@ async def _run_background_tool_loop(
                 workspace=ws_root,
                 store=get_memory_store(ws_root),
                 workspace_bootstrap_type=workspace_bootstrap_type,
-                inner_tick_turn=False,
-                inner_tick_mode=InnerTickMode.MAINTENANCE,
+                inner_tick_turn=inner_tick_turn,
+                inner_tick_mode=inner_tick_mode,
                 messages=messages_with_tool_results,
                 tool_side_compact_system_prompt=True,
+                implicit_signal_bundle=implicit_signal_bundle,
             )
 
         try:
@@ -951,6 +958,9 @@ def start_tool_background_job(
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
     workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode = InnerTickMode.MAINTENANCE,
+    implicit_signal_bundle: ImplicitSignalBundle | None = None,
 ) -> None:
     sync_port = chat_completions_sync or create_chat_completion_sync
 
@@ -983,6 +993,9 @@ def start_tool_background_job(
                     write_allowlist=write_allowlist,
                     repository_only_workspace_text=repository_only_workspace_text,
                     workspace_bootstrap_type=workspace_bootstrap_type,
+                    inner_tick_turn=inner_tick_turn,
+                    inner_tick_mode=inner_tick_mode,
+                    implicit_signal_bundle=implicit_signal_bundle,
                 )
             )
 

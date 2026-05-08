@@ -3,7 +3,7 @@
 ## Overview
 
 Review the code in context (current file, selection, or diff) and then propose and apply targeted enhancements.
-Focus on correctness, maintainability, simplicity, and alignment with project conventions.
+Focus on correctness, architecture soundness (maintainability, simplicity, clarity etc.), and alignment with project conventions.
 
 ## Steps
 
@@ -15,13 +15,13 @@ Focus on correctness, maintainability, simplicity, and alignment with project co
 2. **Enhance**
    - Propose architecture improvement to improve structural clarity
 
-3. **Double review**
+3. **Double check**
    - After edits: re-read the diff, run relevant tests, and fix any new broken tests.
 
 ## Checklist
 
 - [ ] User intention understood
-- [ ] Implementation architecture understood
+- [ ] Implementation architecture reviewed
 - [ ] Architecture revised if needed
-- [ ] Follows project style and AGENTS.md
+- [ ] Follows existing coding style and AGENTS.md
 - [ ] Tests updated if behavior or contract changed

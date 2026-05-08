@@ -1,4 +1,4 @@
-"""Turn routing for companion kernel: chat vs tool_call vs inner_tick."""
+"""Turn routing for companion kernel: sync dialogue vs async foreground chat + background tools."""
 
 from __future__ import annotations
 

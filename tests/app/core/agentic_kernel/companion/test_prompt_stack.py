@@ -25,6 +25,7 @@ from app.core.agentic_kernel.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
 )
 from app.core.agentic_kernel.companion.prompts import build_system_messages
+from app.core.agentic_kernel.companion.tools import build_openai_repl_tools_inner_tick
 from app.core.agentic_kernel.companion.turn_routes import TurnRouteMode
 from app.core.agentic_kernel.companion.workspace import WorkspacePaths
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -105,6 +106,85 @@ def test_inner_tick_loads_ai_private_jsonl_into_system(tmp_path: Path) -> None:
         str(m.get("content") or "") for m in systems if m.get("role") == "system"
     )
     assert "jl seed line" in joined
+    shutdown_memory_store(root.resolve())
+
+
+def test_inner_tick_compact_tool_side_forwards_ai_private(tmp_path: Path) -> None:
+    root = tmp_path / "ws_compact_tick"
+    root.mkdir()
+    st = get_memory_store(root)
+    for rel, body in (
+        ("IDENTITY.md", "id\n"),
+        ("SOUL.md", "soul\n"),
+        ("USER.md", "user\n"),
+        ("MEMORY.md", "mem\n"),
+    ):
+        st.write_document(rel, body)
+    st.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "public",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    st.write_document("ai_private.jsonl", '{"text": "jl seed line compact"}\n')
+    paths = WorkspacePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    _, systems, _ = companion_turn_tools_and_system_messages(
+        workspace_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        tool_side_compact_system_prompt=True,
+    )
+    joined = "\n".join(
+        str(m.get("content") or "") for m in systems if m.get("role") == "system"
+    )
+    assert "jl seed line compact" in joined
+    shutdown_memory_store(root.resolve())
+
+
+def test_refresh_inner_tick_compact_keeps_inner_tick_tools(tmp_path: Path) -> None:
+    root = tmp_path / "ws_refresh_inner_tick"
+    root.mkdir()
+    _seed_minimal_companion_workspace(root)
+    st = get_memory_store(root)
+    paths = WorkspacePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    tools_before, systems, _ = companion_turn_tools_and_system_messages(
+        workspace_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        tool_side_compact_system_prompt=True,
+    )
+    expected_names = {t["function"]["name"] for t in build_openai_repl_tools_inner_tick()}
+    assert {t["function"]["name"] for t in tools_before} == expected_names
+
+    messages = [dict(m) for m in systems]
+    messages.append({"role": "user", "content": "tick"})
+    new_tools = refresh_companion_turn_prompt_stack(
+        workspace=root,
+        store=st,
+        workspace_bootstrap_type=CompanionWorkspaceBootstrapType.NONE.value,
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        messages=messages,
+        tool_side_compact_system_prompt=True,
+    )
+    assert {t["function"]["name"] for t in new_tools} == expected_names
     shutdown_memory_store(root.resolve())
 
 
