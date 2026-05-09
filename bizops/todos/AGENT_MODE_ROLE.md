@@ -31,7 +31,7 @@ CREATED_BY_AGENT: gpt-5.2-codex-high
 
 3. **工具支持（第一阶段）**
    - **图片生成工具**：基于角色参考图生成图片并返回给用户。
-   - 复用现有消息生图服务与提示词模板（详见 `app/docs/CHAT_MESSAGE_IMAGE_GENERATION.md`）。
+   - 复用现有消息生图服务与提示词模板（入口见 `app/services/image_generation_service.py`、`app/core/agent/prompts.py`）。
 
 4. **用户体验**
    - 在聊天中显示“智能体执行中”状态。
