@@ -8,6 +8,7 @@
 - Companion kernel 主执行器: [`/app/core/agentic_kernel/companion/turn.py`](/app/core/agentic_kernel/companion/turn.py)
 - Companion 包内说明: [`/app/core/agentic_kernel/companion/README.md`](/app/core/agentic_kernel/companion/README.md)
 - 分层记忆说明: [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)
+- MemoryStore 与向量 LTM FR: [`/docs/imate/MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)
 
 ## 范围与边界
 
@@ -127,7 +128,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | `context.json` | `ContextMeta`, 包括 `context_mode`、`user_id`、`companion_id`、`chat_id` 和 bootstrap 标志。 |
 | `.companion_*` JSON | memory pipeline 状态、context compaction 状态、schedule queue、image gate 等运行状态。 |
 
-启用 PostgreSQL DSN 时, `MemoryStore` 通过 `SqlAlchemyMemoryRepository` 写入 `companion_workspace_document_versions`。同一 `(user_id, companion_id, chat_id, document_kind, calendar_date)` 下 append-only 追加版本, 读取时取最新 `sequence_id`。生产配置 `repository_only_workspace_text=True`, 因此 `/var/lib/inty/companion_workspaces/...` 是用于路径归一化的合成根, 不是权威磁盘工作区。
+启用 PostgreSQL DSN 时, `MemoryStore` 通过 `SqlAlchemyMemoryRepository` 写入 `companion_memory_document_versions`。同一 `(user_id, companion_id, chat_id, document_kind, calendar_date)` 下 append-only 追加版本, 读取时取最新 `sequence_id`。生产配置 `repository_only_store_text=True`, 因此 `/var/lib/inty/companion_memory_scopes/...` 是用于路径归一化的合成根, 不是权威磁盘工作区。
 
 ## 记忆管线
 

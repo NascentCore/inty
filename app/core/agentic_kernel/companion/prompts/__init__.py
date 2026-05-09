@@ -1,7 +1,7 @@
 """Companion prompt assets package.
 
 Holds the canonical prompt MD seed files (`AXIOM.md`, `BOOTSTRAP.md`, `TOOLS.md`,
-`SIGNIFICANCE_PERCEPTION.md`) used by `..workspace.load_workspace_seed_text`, plus the
+`SIGNIFICANCE_PERCEPTION.md`) used by `..memory_store_scope.load_template_seed_text`, plus the
 `system_messages` submodule that builds the system-message stack injected before each
 companion LLM round.
 

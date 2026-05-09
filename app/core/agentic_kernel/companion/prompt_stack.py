@@ -1,4 +1,4 @@
-"""Reload companion system prefix after workspace / context.json changes mid-turn."""
+"""Reload companion system prefix after MemoryStore scope / context.json changes mid-turn."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionWorkspaceBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType
 
 from .ai_private_prompt import get_ai_private_jsonl_text_for_prompt
 from .bootstrap_user_interactive import interactive_bootstrap_active
@@ -22,7 +22,7 @@ from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .prompts.system_messages import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 
 def replace_leading_system_messages_inplace(
@@ -37,10 +37,10 @@ def replace_leading_system_messages_inplace(
 
 def companion_turn_tools_and_system_messages(
     *,
-    workspace_root: Path,
+    scope_root: Path,
     bundle: PromptBundle,
     context: ContextMeta,
-    workspace_bootstrap_type: str,
+    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     inner_tick_mode: InnerTickMode,
     tool_side_compact_system_prompt: bool,
@@ -56,7 +56,7 @@ def companion_turn_tools_and_system_messages(
     ``implicit_user_signed_on_turn=False`` on purpose: implicit sign-on greetings strip tools
     earlier and never take that route (short greeting, no background tool loop).
     When ``tool_side_compact_system_prompt`` is True (background tool LLM stack), interactive
-    bootstrap extra system blocks are omitted; tool availability still follows ``workspace_bootstrap_type``
+    bootstrap extra system blocks are omitted; tool availability still follows ``memory_bootstrap_type``
     and context.
 
     When ``implicit_user_signed_on_turn`` is True (and not an inner-tick turn), tools are
@@ -64,15 +64,15 @@ def companion_turn_tools_and_system_messages(
     """
     interactive_bootstrap = interactive_bootstrap_active(
         feature_enabled=(
-            workspace_bootstrap_type
-            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+            memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ),
         meta=context,
     )
     tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     ai_private_text = ""
     if inner_tick_turn and not tick_proactive:
-        ai_private_text = get_ai_private_jsonl_text_for_prompt(workspace_root.resolve())
+        ai_private_text = get_ai_private_jsonl_text_for_prompt(scope_root.resolve())
     route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
     tools_for_turn: list[dict[str, Any]] = (
         []
@@ -145,9 +145,9 @@ def companion_turn_tools_and_system_messages(
 
 def refresh_companion_turn_prompt_stack(
     *,
-    workspace: Path,
+    scope_root: Path,
     store: MemoryStore,
-    workspace_bootstrap_type: str,
+    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     inner_tick_mode: InnerTickMode,
     messages: list[dict[str, Any]],
@@ -157,8 +157,8 @@ def refresh_companion_turn_prompt_stack(
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
     """
-    root = workspace.resolve()
-    paths = WorkspacePaths(root=root)
+    root = scope_root.resolve()
+    paths = MemoryStoreScopePaths(root=root)
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
     implicit_user_signed_on_turn = implicit_user_signed_on_chat_turn(
@@ -166,10 +166,10 @@ def refresh_companion_turn_prompt_stack(
         inner_tick_turn=inner_tick_turn,
     )
     tools_for_turn, refreshed, _route_mode = companion_turn_tools_and_system_messages(
-        workspace_root=workspace,
+        scope_root=scope_root,
         bundle=bundle,
         context=context,
-        workspace_bootstrap_type=workspace_bootstrap_type,
+        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=inner_tick_mode,
         tool_side_compact_system_prompt=tool_side_compact_system_prompt,

@@ -57,7 +57,7 @@ def test_build_system_prompt_tools() -> None:
         enable_tools=True,
     )
     assert "user_profile_record" in text
-    assert "workspace_read_file" in text
+    assert "memory_store_read_document" in text
 
 
 def test_build_system_prompt_interactive_bootstrap_injects_spec() -> None:

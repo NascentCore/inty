@@ -20,7 +20,7 @@ from .bootstrap_user_interactive import (
 )
 from .memory_store import MemoryStore
 from .utc import local_date_str, local_iso_ts
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 _DIARY_USER_MAX = 240
 _DIARY_ASSISTANT_MAX = 320
@@ -35,7 +35,7 @@ _SOUL_FUNDAMENTAL_SIGNAL_RE = re.compile(
     r"IDENTITY\.md|SOUL\.md|USER\.md|"
     r"无法满足|不舒服|拒绝|不能满足|"
     r"创造者模式|亲密模式|正经做事|重启|"
-    r"workspace_write_file|workspace_read_file",
+    r"memory_store_write_document|memory_store_read_document",
     re.IGNORECASE,
 )
 _SOUL_FUNDAMENTAL_SIGNAL_EN_RE = re.compile(r"\bSOUL\b|\bIDENTITY\b|\bBOUNDARY\b")
@@ -111,7 +111,7 @@ class MemoryPipelineConfig(BaseModel):
     soul_require_fundamental_signal: bool = True
 
 
-def _bump_memory_pipeline_turn(paths: WorkspacePaths, store: MemoryStore) -> int:
+def _bump_memory_pipeline_turn(paths: MemoryStoreScopePaths, store: MemoryStore) -> int:
     rel = paths.memory_pipeline_state_json.relative_to(paths.root).as_posix()
     data: dict[str, object] = {}
     raw = store.read_document_if_exists(rel)
@@ -183,7 +183,7 @@ def _raw_for_summary_prompt(raw: str) -> str:
 
 
 def _append_diary(
-    paths: WorkspacePaths,
+    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     *,
     user_text: str,
@@ -318,7 +318,7 @@ def _rewrite_soul_md(
 
 
 def memory_update_after_turn(
-    paths: WorkspacePaths,
+    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     user_text: str,
     assistant_text: str,
@@ -502,7 +502,7 @@ _MEMORY_WORKER_ERRORS: tuple[type[BaseException], ...] = (
 _memory_queue: (
     queue.Queue[
         tuple[
-            WorkspacePaths,
+            MemoryStoreScopePaths,
             MemoryStore,
             str,
             str,
@@ -550,7 +550,7 @@ def _memory_worker_loop() -> None:
 
 
 def schedule_memory_update_after_turn(
-    paths: WorkspacePaths,
+    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     user_text: str,
     assistant_text: str,

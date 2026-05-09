@@ -12,7 +12,10 @@ from app.core.agentic_kernel.companion import runtime_inspect_context as ric
 from app.core.agentic_kernel.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
-from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.memory_registry import (
+    get_memory_store,
+    shutdown_memory_store,
+)
 from app.core.agentic_kernel.companion.models import ContextMeta, InnerTickMode
 from app.core.agentic_kernel.companion.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
@@ -21,9 +24,11 @@ from app.core.agentic_kernel.companion.runtime_inspect_context import (
     runtime_inspect_end_turn,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
+    runtime_inspect_set_scoped_memory_store,
 )
+from app.core.agentic_kernel.companion.runtime_events import append_runtime_event
 from app.core.agentic_kernel.companion.companion_tool_runtime import (
-    WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call,
 )
 from app.core.agentic_kernel.companion.runtime_inspect_tool import tool_companion_runtime_inspect
@@ -50,8 +55,13 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
     root = tmp_path
     store = get_memory_store(root)
     store.write_document("SOUL.md", "soul-content-here")
+    append_runtime_event(
+        store,
+        {"ts": "2026-05-08T00:00:00Z", "kind": "tool_timeout", "detail": "slow"},
+    )
     token = runtime_inspect_begin_turn()
     try:
+        runtime_inspect_set_scoped_memory_store(store)
         client = CompanionLLMClient(
             CompanionLLMConfig(
                 api_key="super-secret-key",
@@ -67,9 +77,11 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 transcript_llm_window_max_messages=12,
                 inner_tick_turn=False,
                 inner_tick_mode=InnerTickMode.MAINTENANCE,
-                repository_only_workspace_text=True,
+                repository_only_store_text=True,
                 transcript_compaction=None,
-                workspace_read_file_max_chars_cap=WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+                memory_store_read_document_max_chars_cap=(
+                    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
+                ),
             )
         )
         runtime_inspect_set_last_chat_completion_request(
@@ -82,6 +94,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 tools=None,
             )
         )
+        json.dumps(ric.runtime_inspect_get_bundle())
         out = _run_tool(root, "companion_runtime_inspect", "{}")
         data = json.loads(out)
         assert data["runtime_config"]["llm"]["api_key"] == "***"
@@ -96,15 +109,24 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         )
         assert "SOUL.md" in data["store_documents"]
         assert "soul-content-here" in data["store_documents"]["SOUL.md"]["text"]
+        assert data["runtime_events"] == [
+            {
+                "ts": "2026-05-08T00:00:00Z",
+                "kind": "tool_timeout",
+                "detail": "slow",
+            }
+        ]
     finally:
         runtime_inspect_end_turn(token)
 
 
 def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
+    scoped = get_memory_store(tmp_path)
     ric.runtime_inspect_thread_overlay_begin(
         {
             "runtime_config": {"source": "tool_background", "tool_model_name": "bg/model"},
             "last_chat_completion_request": None,
+            "scoped_memory_store": scoped,
         }
     )
     try:
@@ -122,6 +144,30 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
         assert "store_documents" not in data
     finally:
         ric.runtime_inspect_thread_overlay_end()
+
+
+def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -> None:
+    root_flat = tmp_path
+    store_scoped = get_memory_store(
+        root_flat,
+        dsn="",
+        user_id="u",
+        companion_id="a",
+        chat_id="c",
+    )
+    store_scoped.write_document("SOUL.md", "scoped-soul-body")
+    store_default = get_memory_store(root_flat)
+    assert store_default is not store_scoped
+    token = runtime_inspect_begin_turn()
+    try:
+        runtime_inspect_set_scoped_memory_store(store_scoped)
+        out = tool_companion_runtime_inspect(root_flat, {})
+        data = json.loads(out)
+        assert "scoped-soul-body" in data["store_documents"]["SOUL.md"]["text"]
+    finally:
+        runtime_inspect_end_turn(token)
+    shutdown_memory_store(root_flat, user_id="u", companion_id="a", chat_id="c")
+    shutdown_memory_store(root_flat)
 
 
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:

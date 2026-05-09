@@ -16,7 +16,7 @@ from app.core.agentic_kernel.companion.companion_tool_runtime import (
     [
         ("generate_image", True),
         ("modify_image", True),
-        ("workspace_read_file", False),
+        ("memory_store_read_document", False),
         ("google_web_search", False),
         ("read_web_page", False),
         ("tool_update_agent_status_line", False),
@@ -28,7 +28,9 @@ def test_tool_requires_client_delivery_on_success(name: str, expected: bool) -> 
 
 
 def test_round_includes_generation_tool() -> None:
-    assert round_includes_generation_tool(["workspace_read_file", "generate_image"]) is True
+    assert round_includes_generation_tool(
+        ["memory_store_read_document", "generate_image"]
+    ) is True
     assert round_includes_generation_tool(["user_profile_record"]) is False
 
 

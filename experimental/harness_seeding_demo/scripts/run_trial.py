@@ -182,7 +182,7 @@ async def _run(args: argparse.Namespace) -> dict:
     )
 
     cfg = CompanionConfig(
-        workspaces_base_dir=str(base.resolve()),
+        memory_store_scope_base_dir=str(base.resolve()),
         llm=llm_cfg,
         memory=mem_cfg,
         memory_pg_dsn="",

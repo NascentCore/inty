@@ -9,8 +9,16 @@
 stored on the assistant transcript row and returned on ``CompanionTurnResult.significance_perception``
 (API layer may mirror into ``chat_history.meta_data``). Eligibility: foreground envelope applies to
 async dual-LLM (tools present) always for that chat leg; for the single-completion branch only when
-``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). Full pipeline
-notes: ``significance_perception.py`` module docstring.
+``use_dual_structured_chat`` is true (no tools, not inner-tick async background route). If the parsed
+envelope has ``output_to_user=false`` on either foreground chat path, ``run_turn`` logs WARNING with
+``trace_id``: the prompt/schema contract requires true on chat branches (false is for tool_background
+routing); the model may still drift. Full pipeline notes: ``significance_perception.py`` module docstring.
+
+**``output_to_user`` warning**: The dual-LLM JSON envelope is shared with ``tool_background`` finish,
+where ``output_to_user`` may be false (silent recap). On **foreground** chat completions it must be
+true. If the model returns false anyway (schema allows any boolean; prompts say true here), we log
+``run_turn ... output_to_user=false (expected true for chat branch)`` so traces can flag
+prompt/model confusion, not a parser bug.
 """
 
 from __future__ import annotations
@@ -28,7 +36,7 @@ from typing import Any
 from loguru import logger
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionWorkspaceBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     invocation_extra,
@@ -77,7 +85,7 @@ from .tool_background import (
 )
 from .turn_routes import BackgroundToolEventSink, TurnRouteMode
 from .companion_tool_runtime import (
-    WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call as repl_execute_tool_call,
 )
 from .runtime_inspect_context import (
@@ -87,6 +95,7 @@ from .runtime_inspect_context import (
     runtime_inspect_end_turn,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
+    runtime_inspect_set_scoped_memory_store,
 )
 from .tools import WRITABLE_RELATIVE_PATHS
 from .utc import utc_iso_ts
@@ -106,7 +115,9 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
+
+CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
 
 def _replace_leading_system_messages_multi(
@@ -121,10 +132,10 @@ def _replace_leading_system_messages_multi(
 
 def _async_dual_llm_system_message_variants(
     *,
-    workspace_root: Path,
+    scope_root: Path,
     bundle: PromptBundle,
     context: ContextMeta,
-    workspace_bootstrap_type: str,
+    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     route_inner_mode: InnerTickMode,
     implicit_signal_bundle: ImplicitSignalBundle | None,
@@ -139,10 +150,10 @@ def _async_dual_llm_system_message_variants(
     loops entirely, like a brief hello to someone familiar).
     """
     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
-        workspace_root=workspace_root,
+        scope_root=scope_root,
         bundle=bundle,
         context=context,
-        workspace_bootstrap_type=workspace_bootstrap_type,
+        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
         tool_side_compact_system_prompt=True,
@@ -151,10 +162,10 @@ def _async_dual_llm_system_message_variants(
         implicit_user_signed_on_turn=False,
     )
     _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
-        workspace_root=workspace_root,
+        scope_root=scope_root,
         bundle=bundle,
         context=context,
-        workspace_bootstrap_type=workspace_bootstrap_type,
+        memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=route_inner_mode,
         tool_side_compact_system_prompt=False,
@@ -176,7 +187,7 @@ async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
     *,
     idle_wait_timeout_sec: float,
-    workspace_root: Path,
+    scope_root: Path,
 ) -> None:
     if tool_bg_idle_event is None:
         return
@@ -187,14 +198,14 @@ async def _await_tool_background_idle_if_configured(
     ok = await asyncio.to_thread(_wait)
     if not ok:
         logger.warning(
-            "run_turn tool_bg_idle wait timed out after {:.2f}s workspace={}",
+            "run_turn tool_bg_idle wait timed out after {:.2f}s scope_root={}",
             idle_wait_timeout_sec,
-            workspace_root,
+            scope_root,
         )
 
 
 async def run_turn(
-    workspace: Path,
+    scope_root: Path,
     user_text: str,
     *,
     store: MemoryStore,
@@ -205,8 +216,8 @@ async def run_turn(
     memory_config: MemoryPipelineConfig | None = None,
     transcript_compaction: TranscriptCompactionConfig | None = None,
     transcript_llm_window_max_messages: int | None = None,
-    repository_only_workspace_text: bool = False,
-    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value,
+    repository_only_store_text: bool = False,
+    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
@@ -226,8 +237,8 @@ async def run_turn(
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     """
     t0 = time.perf_counter()
-    root = workspace.resolve()
-    paths = WorkspacePaths(root=root)
+    root = scope_root.resolve()
+    paths = MemoryStoreScopePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
     tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
@@ -273,7 +284,7 @@ async def run_turn(
     await _await_tool_background_idle_if_configured(
         tool_bg_idle_event,
         idle_wait_timeout_sec=idle_wait_timeout_sec,
-        workspace_root=root,
+        scope_root=root,
     )
 
     # 加载 context 与 prompt bundle
@@ -288,10 +299,10 @@ async def run_turn(
 
     tools_for_turn, system_messages, route_mode = (
         companion_turn_tools_and_system_messages(
-            workspace_root=root,
+            scope_root=root,
             bundle=bundle,
             context=context,
-            workspace_bootstrap_type=workspace_bootstrap_type,
+            memory_bootstrap_type=memory_bootstrap_type,
             inner_tick_turn=inner_tick_turn,
             inner_tick_mode=route_inner_mode,
             tool_side_compact_system_prompt=False,
@@ -358,6 +369,7 @@ async def run_turn(
 
     inspect_token = runtime_inspect_begin_turn()
     try:
+        runtime_inspect_set_scoped_memory_store(store)
         runtime_inspect_set_runtime_config(
             build_turn_runtime_config_dict(
                 llm_client=llm_client,
@@ -366,9 +378,11 @@ async def run_turn(
                 transcript_llm_window_max_messages=window_cap,
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_mode=route_inner_mode,
-                repository_only_workspace_text=repository_only_workspace_text,
+                repository_only_store_text=repository_only_store_text,
                 transcript_compaction=transcript_compaction,
-                workspace_read_file_max_chars_cap=WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+                memory_store_read_document_max_chars_cap=(
+                    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
+                ),
             )
         )
 
@@ -385,7 +399,7 @@ async def run_turn(
         if _ls_tid:
             langsmith_trace_acc = _ls_tid
         if langsmith_parent_run is not None:
-            logger.info(
+            logger.debug(
                 "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
                 "user_msg_uuid={} ls_trace_id={} route_mode={} defer_end_to_bg={}",
                 trace_id,
@@ -406,10 +420,10 @@ async def run_turn(
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     tool_system_msgs, chat_system_msgs = (
                         _async_dual_llm_system_message_variants(
-                            workspace_root=root,
+                            scope_root=root,
                             bundle=bundle,
                             context=context,
-                            workspace_bootstrap_type=workspace_bootstrap_type,
+                            memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=inner_tick_turn,
                             route_inner_mode=route_inner_mode,
                             implicit_signal_bundle=implicit_signal_bundle,
@@ -497,6 +511,9 @@ async def run_turn(
                     last_text, significance_meta, fg_output_to_user = (
                         split_dual_llm_chat_branch_content(raw_content)
                     )
+                    # Async foreground chat leg (tools present): same dual-LLM envelope contract as
+                    # single-shot structured chat; ``output_to_user`` must be true here. False is for
+                    # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
                     if fg_output_to_user is False:
                         logger.warning(
                             "run_turn foreground dual_llm envelope output_to_user=false "
@@ -507,7 +524,12 @@ async def run_turn(
                     tool_msgs_for_bg = deepcopy(tool_msgs)
                     if fg_text:
                         tool_msgs_for_bg.append(
-                            {"role": "assistant", "content": fg_text}
+                            {
+                                "role": "assistant",
+                                "content": (
+                                    f"{CHAT_TRACK_RESPONSE_MESSAGE_TITLE}\n\n{fg_text}"
+                                ),
+                            }
                         )
                     force_tools_first_round = not bool(fg_text)
                     start_tool_background_job(
@@ -523,10 +545,10 @@ async def run_turn(
                         client=llm_client.sync_client_for_route("tool"),
                         chat_completions_sync=llm_client.chat_completions_sync,
                         write_allowlist=WRITABLE_RELATIVE_PATHS,
-                        repository_only_workspace_text=repository_only_workspace_text,
+                        repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
-                        workspace_bootstrap_type=workspace_bootstrap_type,
+                        memory_bootstrap_type=memory_bootstrap_type,
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_mode=route_inner_mode,
                         implicit_signal_bundle=implicit_signal_bundle,
@@ -540,7 +562,7 @@ async def run_turn(
                         (time.perf_counter() - t_loop) * 1000.0,
                         route_mode.value,
                     )
-                    logger.info(
+                    logger.debug(
                         "langsmith_companion_parent_run run_turn_fg_done inty_trace_id={} "
                         "user_msg_uuid={} ls_trace_id={} defer_parent_end_to_tool_bg_thread=1",
                         trace_id,
@@ -605,6 +627,10 @@ async def run_turn(
                         last_text, significance_meta, fg_output_to_user = (
                             split_dual_llm_chat_branch_content(raw_content)
                         )
+                        # Single-shot path: one completion, no tool loop, structured dual-LLM envelope.
+                        # Contract (see ``prompts/system_messages._dual_llm_chat_structured_output_contract_text``):
+                        # ``output_to_user`` must be true on foreground chat; false is for tool_background
+                        # finish envelopes only. Non-fatal model drift; WARNING ties to ``trace_id``.
                         if fg_output_to_user is False:
                             logger.warning(
                                 "run_turn single_shot dual_llm envelope output_to_user=false "
@@ -631,7 +657,7 @@ async def run_turn(
                         ls_end_source="run_turn_sync_exc",
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         "langsmith_companion_parent_run run_turn_exc_skip_main_end "
                         "inty_trace_id={} user_msg_uuid={} ls_trace_id={} exc_type={}",
                         trace_id,
@@ -648,7 +674,7 @@ async def run_turn(
                         langsmith_parent_run, ls_end_source="run_turn_sync_ok"
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         "langsmith_companion_parent_run run_turn_exit_skip_main_end "
                         "inty_trace_id={} user_msg_uuid={} ls_trace_id={}",
                         trace_id,
@@ -737,9 +763,14 @@ async def run_turn(
         )
 
     logger.info(
-        "run_turn done assistant_chars={} ms={:.0f}",
+        "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
+        "langsmith_trace_id={} langsmith_run_id={}",
         len(last_text),
         (time.perf_counter() - t0) * 1000.0,
+        trace_id,
+        user_msg_uuid,
+        langsmith_trace_acc or "",
+        langsmith_llm_run_acc or "",
     )
     return CompanionTurnResult(
         assistant_text=last_text,

@@ -1,4 +1,4 @@
-"""Companion agentic workspace document versions (append-only, ORM-backed)."""
+"""Companion MemoryStore document versions (append-only, ORM-backed Postgres)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from app.models import Base
 
 
-class CompanionWorkspaceDocumentVersion(Base):
+class CompanionMemoryDocumentVersion(Base):
     """
     One row per append of a logical document for (user, companion, chat).
 
@@ -16,7 +16,7 @@ class CompanionWorkspaceDocumentVersion(Base):
     calendar_date) with max(sequence_id).
     """
 
-    __tablename__ = "companion_workspace_document_versions"
+    __tablename__ = "companion_memory_document_versions"
 
     sequence_id = Column(BigInteger, primary_key=True, autoincrement=True)
     record_uuid = Column(String(64), nullable=False, unique=True)
@@ -32,7 +32,7 @@ class CompanionWorkspaceDocumentVersion(Base):
 
     __table_args__ = (
         Index(
-            "ix_companion_ws_doc_scope_kind_date_seq",
+            "ix_companion_memory_doc_scope_kind_date_seq",
             "user_id",
             "companion_id",
             "chat_id",
