@@ -140,7 +140,9 @@ def _mark_companion_ws_session_system_written_in_store(
     )
 
     root_r = session.workspace_path.resolve()
-    rel = resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    rel = (
+        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    )
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
         return
@@ -167,7 +169,9 @@ async def _maybe_append_companion_ws_session_system(
         return
     from app.core.agentic_kernel.companion.models import load_context_meta
     from app.core.agentic_kernel.companion.utc import utc_iso_ts
-    from app.core.agentic_kernel.companion.memory_store_scope import MemoryStoreScopePaths
+    from app.core.agentic_kernel.companion.memory_store_scope import (
+        MemoryStoreScopePaths,
+    )
     from app.services import chat_history_service
 
     paths = MemoryStoreScopePaths(root=session.workspace_path.resolve())

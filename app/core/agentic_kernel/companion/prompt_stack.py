@@ -64,8 +64,7 @@ def companion_turn_tools_and_system_messages(
     """
     interactive_bootstrap = interactive_bootstrap_active(
         feature_enabled=(
-            memory_bootstrap_type
-            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+            memory_bootstrap_type == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ),
         meta=context,
     )

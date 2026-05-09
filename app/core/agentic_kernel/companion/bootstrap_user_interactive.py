@@ -174,8 +174,11 @@ def tool_companion_bootstrap_user_interactive_complete(
     note: str | None = None,
 ) -> str:
     from .memory_registry import get_memory_store
+
     root_r = root.resolve()
-    rel = resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    rel = (
+        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    )
     st = get_memory_store(root_r)
     raw_body = st.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
@@ -209,6 +212,7 @@ def tool_companion_set_experience_profile(
     note: str | None = None,
 ) -> str:
     from .memory_registry import get_memory_store
+
     if user_confirmed is not True:
         return (
             "ERROR: user_confirmed must be true only after the user explicitly agrees "
@@ -220,7 +224,9 @@ def tool_companion_set_experience_profile(
         return f"ERROR: {exc}"
 
     root_r = root.resolve()
-    rel_ctx = resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    rel_ctx = (
+        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    )
     st = get_memory_store(root_r)
     raw_body = st.read_document_if_exists(rel_ctx)
     if raw_body is None or not str(raw_body).strip():
