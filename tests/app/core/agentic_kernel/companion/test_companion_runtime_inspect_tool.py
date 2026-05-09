@@ -235,6 +235,10 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
     msg = MagicMock()
     msg.content = json.dumps(env)
     msg.tool_calls = []
+    # Avoid MagicMock auto-attrs for reasoning*: significance parsing walks them via
+    # model_dump recursion and becomes extremely slow (looks like a hang).
+    msg.reasoning = None
+    msg.reasoning_details = None
     ch = MagicMock()
     ch.message = msg
     r = MagicMock()
@@ -242,7 +246,12 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
 
     from app.core.agentic_kernel.companion import turn as turn_mod
 
-    monkeypatch.setattr(turn_mod, "start_tool_background_job", lambda **kwargs: None)
+    monkeypatch.setattr(
+        turn_mod, "start_tool_background_job", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        turn_mod, "schedule_memory_update_after_turn", lambda *args, **kwargs: None
+    )
 
     with patch.object(client, "chat_completion", return_value=r):
         out = asyncio.run(
@@ -251,6 +260,7 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
                 "user line",
                 store=store,
                 llm_client=client,
+                langsmith_parent_run_enabled=False,
             )
         )
     assert out.assistant_text == "final assistant"
