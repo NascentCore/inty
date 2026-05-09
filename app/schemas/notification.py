@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.response import PagedResponse
 
@@ -70,5 +70,5 @@ class NotificationSendRequest(BaseModel):
     template_id: int
     all_users: bool = False
     user_ids: Optional[List[str]] = None
-    params: Optional[dict] = {}
+    params: dict[str, Any] = Field(default_factory=dict)
     request_id: Optional[str] = None
