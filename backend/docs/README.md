@@ -154,7 +154,6 @@
 
 - [ ] `alembic/README.md`
 - [ ] `alembic/AGENTS.md`
-- [ ] `alembic/versions/README.md`
 - [ ] `experimental/README.md`
 - [ ] `experimental/AGENTS.md`
 - [ ] `experimental/aigc/README.md`
