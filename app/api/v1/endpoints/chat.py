@@ -74,6 +74,7 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
+from app.services.chat_assistant_voice import synthesize_chat_assistant_audio
 from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
 from app.services.memory_service import (
@@ -88,11 +89,7 @@ from app.services.surprise_snap_service import (
     try_trigger_surprise_snap,
 )
 from app.services.push_notification_service import mark_user_push_notifications_as_read
-from app.services.voice_service import (
-    VoiceService,
-    get_voice_message_narration_mode_from_agent_settings,
-    voice_service as default_voice_service,
-)
+from app.services.voice_service import VoiceService, voice_service as default_voice_service
 from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 
@@ -613,81 +610,6 @@ def _build_chat_response(
     return response
 
 
-async def _synthesize_chat_assistant_audio(
-    *,
-    db: AsyncSession,
-    session_id: str,
-    ai_message_id: Optional[int],
-    voice_enabled: bool,
-    chat_voice_id: Optional[str],
-    agent_voice_id: Optional[str],
-    agent_gender: Optional[str],
-    agent_settings: Any,
-    language: str,
-    current_user: Any,
-    voice_svc: VoiceService,
-    response_text_content: str,
-    use_companion: bool,
-    companion_reply_modality: str,
-    companion_voice_script: str,
-) -> tuple[Optional[str], Optional[float]]:
-    """Return (audio_url, duration_sec) and persist to chat_history when generation succeeds."""
-    audio_url: Optional[str] = None
-    audio_duration: Optional[float] = None
-    if not voice_enabled:
-        return audio_url, audio_duration
-    if (
-        use_companion
-        and str(companion_reply_modality or "").strip() == "voice_message"
-    ):
-        tts_text = (companion_voice_script or "").strip() or (
-            response_text_content or ""
-        ).strip()
-    else:
-        tts_text = (response_text_content or "").strip()
-    if not tts_text:
-        return audio_url, audio_duration
-    resolved_voice_id = chat_voice_id or agent_voice_id
-    voice_message_narration_mode = get_voice_message_narration_mode_from_agent_settings(
-        agent_settings
-    )
-    try:
-        with log_time(
-            f"语音生成: voice_id={resolved_voice_id}, text_length={len(tts_text)}, language={language}"
-        ):
-            voice_result = await voice_svc.generate_voice(
-                text=tts_text,
-                voice_id=resolved_voice_id,
-                language=language,
-                db=db,
-                agent_gender=agent_gender,
-                user=current_user,
-                voice_message_narration_mode=voice_message_narration_mode,
-            )
-        if voice_result:
-            audio_url, audio_duration = voice_result
-        else:
-            logger.warning(
-                "用户 {} 语音生成失败或达到限制，聊天文本正常返回",
-                current_user.id,
-            )
-    except Exception as e:
-        logger.error(f"语音生成失败: {str(e)}")
-        logger.exception("语音生成异常详细信息:")
-    if audio_url and ai_message_id is not None:
-        try:
-            await chat_history_service.update_message_audio_url(
-                db,
-                session_id,
-                str(ai_message_id),
-                audio_url,
-                audio_duration,
-            )
-        except Exception as e:
-            logger.warning(f"持久化 assistant audio_url 失败: {e}")
-    return audio_url, audio_duration
-
-
 def _should_trigger_premium_preview(
     *,
     is_subscribed: bool,
@@ -848,7 +770,7 @@ async def _build_companion_tool_background_ws_payload(
                 logger.warning(f"tool_bg load user for voice failed: {e}")
                 voice_user_row = None
             if voice_user_row is not None:
-                audio_url, _ = await _synthesize_chat_assistant_audio(
+                audio_url, _ = await synthesize_chat_assistant_audio(
                     db=db,
                     session_id=session_id,
                     ai_message_id=ai_message_id,
@@ -1145,7 +1067,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             hb_voice_user = r_hb_voice_user.scalar_one_or_none()
             proactive_audio_url: Optional[str] = None
             if hb_voice_user is not None:
-                proactive_audio_url, _ = await _synthesize_chat_assistant_audio(
+                proactive_audio_url, _ = await synthesize_chat_assistant_audio(
                     db=post_db,
                     session_id=session_id,
                     ai_message_id=ai_message_id,
@@ -1640,7 +1562,7 @@ async def _agent_chat_completions_impl(
         audio_url = None
         audio_duration = None
         try:
-            audio_url, audio_duration = await _synthesize_chat_assistant_audio(
+            audio_url, audio_duration = await synthesize_chat_assistant_audio(
                 db=db,
                 session_id=session_id,
                 ai_message_id=ai_message_id,
