@@ -15,8 +15,23 @@ class ChatPageVM: ObservableObject {
     @Published var inputText: String = ""
     
     @Published var showSettings: Bool = false
+    
+    @Published var isConnected = false
+    
+    private let repository = ChatRepository()
+    
     init() {
-     startConversation()
+//     startConversation()
+        repository.service.onReceiveMessage = { message in
+//            self?.messages.append(message)
+            print("on receive message s i----->\(message)")
+        }
+        repository.service.onConnectionChanged = { connected in
+            print("on connected change si -------->\(connected)")
+//            Task { @MainActor
+//                self?.isConnected = connected
+//            }
+        }
     }
     
     func startConversation() {
@@ -25,6 +40,7 @@ class ChatPageVM: ObservableObject {
     
     func sendMessage() {
         appendMessage(content: inputText, isSelf: true)
+        send(text: inputText)
         inputText = ""
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             // 进入下一步
@@ -35,5 +51,19 @@ class ChatPageVM: ObservableObject {
     
     func appendMessage(content: String, isSelf: Bool) {
         messages.append(.init(text: content, isUser: isSelf))
+    }
+    
+    // websocket about
+    func connect() {
+        repository.connect()
+    }
+
+    func disconnect() {
+        repository.disconnect()
+    }
+
+    func send(text: String) {
+        let req = SendMsgReq(content: text)
+        repository.send(message: req)
     }
 }

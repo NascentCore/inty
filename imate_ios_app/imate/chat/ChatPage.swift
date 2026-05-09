@@ -27,6 +27,7 @@ struct ChatPage: View {
 
                 // 3. 底部输入栏
                 Divider()
+                    .frame(width: 2)
                 LoginInitChatWidgets.InputBar(
                     inputText: $vm.inputText,
                     onSend: vm.sendMessage,
@@ -51,6 +52,12 @@ struct ChatPage: View {
         }
         .background(ChatPageWidgets.ChatColors.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            vm.connect()
+        }
+        .onDisappear {
+            vm.disconnect()
+        }
     }
 }
 
