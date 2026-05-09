@@ -75,9 +75,7 @@ class SqlAlchemyMemoryRepository:
         workspace_root: str,
         relative_path: str,
     ) -> MemoryRecord | None:
-        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
-            self._orm()
-        )
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
         _ = workspace_root
         kind, cal = parse_memory_store_relative_path(relative_path)
         filters = [
@@ -112,9 +110,7 @@ class SqlAlchemyMemoryRepository:
         )
 
     def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
-        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
-            self._orm()
-        )
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
         _ = workspace_root
         stmt = (
             sql_select(
@@ -124,8 +120,7 @@ class SqlAlchemyMemoryRepository:
             .where(
                 sql_and(
                     CompanionMemoryDocumentVersion.user_id == self._user_id,
-                    CompanionMemoryDocumentVersion.companion_id
-                    == self._companion_id,
+                    CompanionMemoryDocumentVersion.companion_id == self._companion_id,
                     CompanionMemoryDocumentVersion.chat_id == self._chat_id,
                 )
             )
