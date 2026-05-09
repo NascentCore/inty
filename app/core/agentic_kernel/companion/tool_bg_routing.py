@@ -1,9 +1,10 @@
 """Resolve async tool_background finish using the unified dual-LLM JSON envelope.
 
-The model's final assistant ``message.content`` must validate as
-``DualLlmChatBranchEnvelope`` (same schema as foreground
-``DUAL_LLM_CHAT_RESPONSE_FORMAT``). If invalid, one extra no-tools completion
-runs with the same ``response_format`` and a short system instruction.
+The model's final assistant message must validate as ``DualLlmChatBranchEnvelope``
+(same schema as foreground ``DUAL_LLM_CHAT_RESPONSE_FORMAT``). If invalid, one
+extra no-tools completion runs with the same ``response_format`` and a short
+system instruction. The fallback completion accepts validated envelopes from
+``message.content`` or provider reasoning side channels.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from loguru import logger
 from app.core.agentic_kernel.companion.significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     DualLlmChatBranchEnvelope,
+    parse_dual_llm_chat_envelope_from_message,
     parse_dual_llm_chat_envelope_json,
 )
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
@@ -100,14 +102,7 @@ def resolve_tool_bg_routing_sync(
             phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
         ),
     )
-    content = getattr(resp.choices[0].message, "content", None)
-    if not isinstance(content, str):
-        logger.debug(
-            "tool_bg_routing trace_id={} source=fallback_conservative_non_string_content",
-            tid,
-        )
-        return _conservative_tool_finish_envelope()
-    fallback = parse_dual_llm_chat_envelope_json(content)
+    fallback = parse_dual_llm_chat_envelope_from_message(resp.choices[0].message)
     if fallback is not None:
         logger.debug(
             "tool_bg_routing trace_id={} source=extra_completion_response "

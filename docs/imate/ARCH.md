@@ -1,6 +1,6 @@
 # iMate / Agentic Companion: 当前架构
 
-本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师。它描述仓库当前实现, 重点回答三件事: 客户端消息如何进入 `/api/v1/chat/ws`, 生产 companion 回合如何由 `run_turn` 执行, 以及长期记忆和工作区文档如何成为一个虚拟伴侣的状态来源。本文不是未来设计稿, 也不把 legacy HTTP chat completions 路径描述为 agentic companion 主路径。
+本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师。它描述仓库当前实现, 重点回答四件事: 客户端消息如何进入 `/api/v1/chat/ws`, 生产 companion 回合如何由 `run_turn` 执行, dual-LLM structured envelope 如何成为前台回复与重要性评分的统一合同, 以及长期记忆和工作区文档如何成为一个虚拟伴侣的状态来源。本文不是未来设计稿, 也不把 legacy HTTP chat completions 路径描述为 agentic companion 主路径。
 
 - 生产 WebSocket 入口: [`/app/api/v1/endpoints/chat.py`](/app/api/v1/endpoints/chat.py) 的 `_agent_chat_completions_impl`
 - API 与帧约定: [`/app/api/AGENTS.md`](/app/api/AGENTS.md)
@@ -95,7 +95,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 2. **组装 prompt**: [`prompt_stack.companion_turn_tools_and_system_messages`](/app/core/agentic_kernel/companion/prompt_stack.py) 读取 `ContextMeta`、prompt bundle、inner tick 状态和 implicit signal, 生成多段 system messages 和本轮 tools。
 3. **选择路由**: [`turn_routes.resolve_turn_route_mode`](/app/core/agentic_kernel/companion/turn_routes.py) 给本轮标记执行策略。
 4. **调用模型**: `CompanionLLMClient` 走 `chat_llm_base_url` 的 OpenAI-compatible `chat.completions`。
-5. **执行工具**: 同步 tool loop 最多 24 轮; 每轮 tool 结果后重新刷新 prompt stack 和 tools。异步双路模式则前台 chat 先返回, 后台 tool thread 独立跑工具链。
+5. **执行路由**: 无工具路由执行单次 chat completion。工具非空时进入异步双路: 前台先用 dual-LLM envelope 返回用户可见回复和重要性评分, 后台 tool thread 独立执行工具链, 最多 24 轮。
 6. **落 transcript**: 用户行和助手行 append 到 `transcript.jsonl`; tool background 可额外 append `source=tool_bg` 助手行和 `tool_background.jsonl`。
 7. **更新记忆**: 普通用户回合调度 `memory_update_after_turn`; inner tick 不走记忆管线。
 8. **观测**: runtime inspect 与 LangSmith parent run 贯穿前台和 tool background。
@@ -105,12 +105,21 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | `TurnRouteMode` | 触发条件 | 行为 |
 | --- | --- | --- |
 | `CHAT_ONLY_SYNC` | 非 inner tick, 本轮无 tools | 单次 chat completion; 可使用 dual structured response 解析 `significance_perception`。 |
-| `SYNC_TOOL_LOOP` | 本轮有 tools 且未启用 async tool background | 同步多轮 tool loop, 最多 24 轮。 |
-| `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` | 本轮有 tools 且启用 async tool background | 前台 chat 分支无 tools 先回复; tool 分支在后台线程执行, 有用户可见结果时经同一 WebSocket 连接补 assistant 帧。 |
+| `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` | 本轮有 tools | 前台 chat 分支无 tools 先回复; tool 分支在后台线程执行, 最多 24 轮, 有用户可见结果时经同一 WebSocket 连接补 assistant 帧。 |
 | `INNER_TICK_SYNC` | `inner_tick_turn=True`, maintenance | 合成用户文本驱动内在维护; 可使用 inner tick tools; 跳过普通记忆更新管线。 |
 | `HEARTBEAT_SYNC` | `inner_tick_turn=True`, proactive chat | 合成 proactive heartbeat 用户标记; 不启用 tools。 |
 
 特殊上行 `messageType=IMPLICIT_USER_SIGNED_ON` 由 WebSocket companion 支持: API 层不写该用户行到 PostgreSQL `chat_history`, companion transcript 会写 synthetic user 行; prompt stack 会去掉 tools, 使模型做 chat-only 问候。
+
+### Dual-LLM envelope 解析边界
+
+前台双路 chat 和无工具 single-shot 可使用 [`DUAL_LLM_CHAT_RESPONSE_FORMAT`](/app/core/agentic_kernel/companion/significance_perception.py), 让模型输出同一 envelope: `user_facing_reply`、`output_to_user` 和三项 1-10 重要性评分。`run_turn` 不直接读取 `message.content` 后手写解析, 而是通过 `split_dual_llm_chat_branch_message` 统一处理:
+
+- 先解析 `message.content` 中的 envelope。
+- 当 OpenAI-compatible provider 把 structured JSON 放到 `message.reasoning` 或 `message.reasoning_details` 且 `content` 为空时, 只接受能通过 `DualLlmChatBranchEnvelope` 校验的 JSON。
+- 非 JSON reasoning 文本不会作为用户可见回复透出, 避免把 provider 的推理侧通道误写入 transcript 或 WebSocket payload。
+
+后台 tool finish 的额外 no-tools routing completion 复用同一 message-level 解析 helper; 原始 tool loop assistant 文本仍以 `content` 为主, 无有效 envelope 时走保守静默 fallback。
 
 ## 状态与持久化
 
@@ -147,14 +156,31 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | --- | --- |
 | 生产 companion 主链路在 `companion.turn.run_turn`, 但包内另有 `runtime/TurnOrchestrator` 和实验桥。 | 新维护者容易误以为 `TurnOrchestrator` 是生产内核入口, 文档和代码命名需要持续澄清。 |
 | `run_turn` 同时负责状态加载、prompt 组装、路由、LLM 调用、tool loop、持久化、记忆调度和观测。 | 单函数语义负载高; 修改路由或持久化时容易误伤其他阶段, 单元测试也难以只覆盖一个阶段。 |
-| 同步 tool loop、async foreground/background tool loop、official assistant tool loop 三套机制并存。 | 工具协议和 prompt 刷新规则需要人工保持一致; 背景线程和全局 queue 增加竞态、取消和可观测性复杂度。 |
+| 生产 companion 工具路由已统一为 async foreground/background, 但 official assistant tool loop 仍与 companion tool runtime 并存。 | 工具协议和 prompt 刷新规则仍需要人工保持一致; 背景线程和全局 queue 增加竞态、取消和可观测性复杂度。 |
 | MemoryStore 已经是生产权威, 但大量概念仍叫 workspace/path/file。 | 对线上排障不友好; 容易把合成路径误解为磁盘状态, 或漏查 append-only 版本表。 |
 | `chat.py` 的 WebSocket 适配层同时承担鉴权、订阅、chat_history、companion 调用、错误映射和背景补帧汇合。 | 传输协议、业务落库和 agent runtime 的边界偏厚; WebSocket 相关回归测试成本上升。 |
 | 连接内 `companion_turn_lock`、`bg_queue`、`ws_fg_pending`、heartbeat worker 分散在 WebSocket endpoint 局部闭包中。 | 当前并发约束只能靠读长函数理解; 新增控制帧、后台事件或主动消息时容易破坏同一连接内的顺序和落库一致性。 |
 
 ## Enhancements
 
-优先改进点: **抽出生产 WebSocket companion 协调器, 先固定连接边界, 再拆 `run_turn` 阶段**。
+已落地改进点: **抽出 dual-LLM envelope 解析边界, 先固定模型响应合同, 再拆 `run_turn` 阶段**。
+
+本次把结构化前台回复与重要性评分的解析集中到 [`significance_perception.py`](/app/core/agentic_kernel/companion/significance_perception.py):
+
+```text
+message.content
+  -> message.reasoning | message.reasoning_details (validated envelope only)
+  -> visible reply + significance metadata + output_to_user
+```
+
+收益:
+
+- `run_turn` 不再关心 provider 把 structured envelope 放在哪个 assistant message 字段, 只消费已校验的 companion 语义结果。
+- foreground dual chat 与 tool-finish fallback 共享同一 envelope reader, 降低工具后台与前台评分合同漂移。
+- 非 JSON reasoning 不会进入 transcript 或 WS payload, 保持用户可见文本和模型推理侧通道隔离。
+- 为后续 `CompanionTurnPipeline` 拆阶段提供更清晰的 `execute_route -> parse_model_output -> persist_turn` 边界。
+
+后续优先改进点: **抽出生产 WebSocket companion 协调器, 先固定连接边界, 再拆 `run_turn` 阶段**。
 
 建议新增一个面向 `/api/v1/chat/ws` 的 `CompanionWebSocketCoordinator` 或等价结构, 将当前 endpoint 局部状态显式化:
 
@@ -184,7 +210,7 @@ load_state -> assemble_prompt -> resolve_route -> execute_route -> persist_turn 
 收益:
 
 - 让生产主链路拥有比通用 `TurnOrchestrator` 更贴近 companion 语义的阶段边界。
-- 同步 tool loop 与 async tool background 可共享 `assemble_prompt`、`refresh_prompt_stack`、`persist_turn` 合同, 降低并行机制漂移。
+- foreground chat 与 async tool background 可共享 `assemble_prompt`、`refresh_prompt_stack`、`parse_model_output`、`persist_turn` 合同, 降低并行机制漂移。
 - `MemoryStore`、transcript、chat_history、ToolOutputEvent 的写入边界更清楚, 便于为每个阶段增加窄测试。
 - 后续若要把 `TurnOrchestrator` 合同用于生产, 可以通过 adapter 渐进迁移, 而不是一次性重写 `run_turn`。
 
