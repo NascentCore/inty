@@ -399,7 +399,7 @@ async def run_turn(
         if _ls_tid:
             langsmith_trace_acc = _ls_tid
         if langsmith_parent_run is not None:
-            logger.info(
+            logger.debug(
                 "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
                 "user_msg_uuid={} ls_trace_id={} route_mode={} defer_end_to_bg={}",
                 trace_id,
@@ -562,7 +562,7 @@ async def run_turn(
                         (time.perf_counter() - t_loop) * 1000.0,
                         route_mode.value,
                     )
-                    logger.info(
+                    logger.debug(
                         "langsmith_companion_parent_run run_turn_fg_done inty_trace_id={} "
                         "user_msg_uuid={} ls_trace_id={} defer_parent_end_to_tool_bg_thread=1",
                         trace_id,
@@ -657,7 +657,7 @@ async def run_turn(
                         ls_end_source="run_turn_sync_exc",
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         "langsmith_companion_parent_run run_turn_exc_skip_main_end "
                         "inty_trace_id={} user_msg_uuid={} ls_trace_id={} exc_type={}",
                         trace_id,
@@ -674,7 +674,7 @@ async def run_turn(
                         langsmith_parent_run, ls_end_source="run_turn_sync_ok"
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         "langsmith_companion_parent_run run_turn_exit_skip_main_end "
                         "inty_trace_id={} user_msg_uuid={} ls_trace_id={}",
                         trace_id,

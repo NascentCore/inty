@@ -1034,7 +1034,7 @@ def start_tool_background_job(
         tool_bg_idle_event.clear()
 
     t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
-    logger.info(
+    logger.debug(
         "langsmith_companion_parent_run tool_bg_thread_start inty_trace_id={} "
         "user_msg_uuid={} ls_trace_id={} thread_name={} daemon={}",
         trace_id,

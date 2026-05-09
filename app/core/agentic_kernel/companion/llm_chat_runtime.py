@@ -175,7 +175,7 @@ def create_companion_turn_root_run(
             logger.debug(
                 "companion_turn_langsmith_parent initial post skipped: {}", exc
             )
-        logger.info(
+        logger.debug(
             "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
             "user_id={} companion_id={} ls_trace_id={} ls_run_id={} "
             "initial_post_ok={} initial_post_err={!r}",
@@ -231,7 +231,7 @@ def end_companion_turn_root_run_safe(
     ls_tid = companion_turn_langsmith_parent_trace_id_str(root_run)
     ls_rid = companion_turn_langsmith_parent_run_id_str(root_run)
     th_name = threading.current_thread().name
-    logger.info(
+    logger.debug(
         "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
         "ls_trace_id={} ls_run_id={} has_error={}",
         ls_end_source,
@@ -285,7 +285,7 @@ def end_companion_turn_root_run_safe(
             _unregister_open_langsmith_parent_run(root_run)
             return
     _unregister_open_langsmith_parent_run(root_run)
-    logger.info(
+    logger.debug(
         "langsmith_companion_parent_run end_synced ls_end_source={!r} thread={} "
         "ls_trace_id={} ls_run_id={} has_error={}",
         ls_end_source,
