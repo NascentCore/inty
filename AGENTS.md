@@ -1,4 +1,4 @@
-# Inty：长期AI情感陪伴
+# Inty：长期 AI 智能体情感陪伴
 
 Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次中最等级、Inty 的内涵是有情感的 AI。
 
@@ -36,11 +36,15 @@ Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次�
 目的是形成长期记忆与情感养成、自主空间与隐私，达到类似真人为用户提供亲密关系体验的效果，但只是这个真人永远不能进入物理空间。
 但是可以无限拟真，比如可以跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 
-## 一般工程信息
+## 代码库结构
 
 - [IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，基于后端[chat completions](/app/core/chat.py)对话机制；
 - [iMate Android App](/imate_android_app/)是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
 - [app](/app/) 是用 Python 写的智能体系统及后端 API 服务器，提供 websocket 等。
+
+## 沟通方式
+
+- Always start with 1 sentence summary, then layout critical details
 
 ## Guideline files (topic splits)
 
