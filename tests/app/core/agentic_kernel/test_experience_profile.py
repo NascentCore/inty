@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.agentic_kernel.experience_profile import (
-    _EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING,
+    EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING,
     experience_profile_injects_private_memory,
     experience_profile_system_clause,
     normalize_experience_profile_id,
@@ -11,7 +11,7 @@ from app.core.agentic_kernel.experience_profile import (
 
 
 def _assert_clause_heading(out: str) -> None:
-    assert out.startswith(f"{_EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING}\n\n"), out[:80]
+    assert out.startswith(f"{EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING}\n\n"), out[:80]
 
 
 def test_experience_profile_system_clause_intimate_heading_and_body() -> None:
