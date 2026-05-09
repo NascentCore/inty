@@ -86,12 +86,8 @@ def _bundle_payload_with_store(bundle: dict[str, Any]) -> dict[str, Any] | None:
         or bundle.get("scoped_memory_store") is not None
     ):
         return None
-    scoped = bundle.get("scoped_memory_store")
     serializable = {k: v for k, v in bundle.items() if k != "scoped_memory_store"}
-    out = copy.deepcopy(serializable)
-    if scoped is not None:
-        out["scoped_memory_store"] = scoped
-    return out
+    return copy.deepcopy(serializable)
 
 
 def runtime_inspect_get_bundle() -> dict[str, Any] | None:

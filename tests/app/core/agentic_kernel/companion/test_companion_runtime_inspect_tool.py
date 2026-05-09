@@ -94,6 +94,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 tools=None,
             )
         )
+        json.dumps(ric.runtime_inspect_get_bundle())
         out = _run_tool(root, "companion_runtime_inspect", "{}")
         data = json.loads(out)
         assert data["runtime_config"]["llm"]["api_key"] == "***"
