@@ -20,12 +20,7 @@
 ## P1 关键服务：后端（`app/`）
 
 - [ ] `app/README.md`
-- [ ] `app/AGENTS.md`
-- [ ] `docs/completed/FR_BACKEND_ARCH_IMPROVEMENT_PLAN.md`
-- [ ] `app/STAINLESS.md`
-- [ ] `app/docs/AGENTS.md`
-- [ ] `app/docs/CHAT_MESSAGE_IMAGE_GENERATION.md`
-- [ ] `app/docs/LOGIN_SUBSCRIPTION_DEPENDENCY_ANALYSIS.md`
+- [ ] `app/AGENTS.md`、`app/docs/AGENTS.md`
 - [ ] `app/core/README.md`
 - [ ] `app/core/agent/README.md`
 - [ ] `app/core/prompting/README.md`

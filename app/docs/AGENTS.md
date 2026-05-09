@@ -1,4 +1,5 @@
-# Docs（后端服务文档）
+# Docs（`app/docs/`）
 
-实现复杂功能，超过 500 行有效功能代码（不考虑 imports、注释等与实际功能无关的代码）
-都应该在本目录下写入一个以功能命名的 .md 文件描述该功能的目的、实现架构、核心技术细节。
+本目录仅保留必要时增补的专题说明；维护约定见上一级 `AGENTS.md`（仓库内路径 `app/AGENTS.md`）。
+
+消息生图（聊天配图）：路由 `app/api/v1/endpoints/chat.py`，服务 `app/services/chat_service.py` / `app/services/image_generation_service.py`，允许模型列表 `app/utils/models_catalog.py` 中 `CHAT_IMAGE_GEN_MODELS`。
