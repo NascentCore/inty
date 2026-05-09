@@ -3,6 +3,9 @@
 
 对各类模型进行管理和综合分析；任何新进模型都需要在这里定义。
 这些模型与常见的 Model Cards 对应。
+
+OpenRouter 模型排行榜（roleplay / agentic benchmark）：
+https://openrouter.ai/rankings?category=roleplay&benchmark=agentic#categories
 """
 
 from enum import StrEnum
@@ -130,6 +133,12 @@ class ModelAPIBaseURL(StrEnum):
     LOCAL_LITELLM = "http://10.128.0.5:4000/v1"
 
 
+# OpenRouter public rankings: roleplay category, agentic benchmark (same host as ModelAPIBaseURL.OPENROUTER).
+OPENROUTER_RANKINGS_AGENTIC_ROLEPLAY_URL = (
+    "https://openrouter.ai/rankings?category=roleplay&benchmark=agentic#categories"
+)
+
+
 class ResponseFormatWithToolsCompatibility(StrEnum):
     """
     OpenAI 兼容 chat.completions 单次请求中：结构化响应格式（response_format json_schema 等）
@@ -196,11 +205,13 @@ class GenAIModel(BaseModel):
         default="",
     )
 
-    response_format_with_tools_compatibility: ResponseFormatWithToolsCompatibility = Field(
-        default=ResponseFormatWithToolsCompatibility.UNSPECIFIED,
-        description="""
+    response_format_with_tools_compatibility: ResponseFormatWithToolsCompatibility = (
+        Field(
+            default=ResponseFormatWithToolsCompatibility.UNSPECIFIED,
+            description="""
         同一请求内同时使用 response_format（如 json_schema）与 tools 时是否可行；
         UNSPECIFIED 表示未核实；INCOMPATIBLE 表示已知供应商或网关互斥或会导致无法 tool call。""",
+        )
     )
 
 
@@ -225,6 +236,60 @@ DEEPSEEK_V3_2 = GenAIModel(
     ),
     official_url="https://huggingface.co/deepseek-ai/DeepSeek-V3.2",
     notes="163,840 context window. Supports reasoning via `reasoning.enabled` parameter.",
+    response_format_with_tools_compatibility=(
+        ResponseFormatWithToolsCompatibility.INCOMPATIBLE
+    ),
+)
+
+
+DEEPSEEK_V4_PRO = GenAIModel(
+    nickname="DeepSeek V4 Pro",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.DEEPSEEK,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="deepseek/deepseek-v4-pro",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.435, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.87, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://openrouter.ai/deepseek/deepseek-v4-pro",
+    ),
+    official_url="https://openrouter.ai/deepseek/deepseek-v4-pro",
+    notes="1,048,576 context window. Supports reasoning via `reasoning` parameter.",
+    response_format_with_tools_compatibility=(
+        ResponseFormatWithToolsCompatibility.INCOMPATIBLE
+    ),
+)
+
+
+DEEPSEEK_V4_FLASH = GenAIModel(
+    nickname="DeepSeek V4 Flash",
+    modalities=ModelModalities(inputs=[DataModality.TEXT], outputs=[DataModality.TEXT]),
+    builder=ModelBuilder.DEEPSEEK,
+    provider=ModelAPIProvider.OPENROUTER,
+    id_on_provider="deepseek/deepseek-v4-flash",
+    pricing=Pricing(
+        inputs=[
+            PriceInfo(
+                price=0.14, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        outputs=[
+            PriceInfo(
+                price=0.28, model=PricingModel.BY_1M_TOKEN, modality=DataModality.TEXT
+            ),
+        ],
+        official_url="https://openrouter.ai/deepseek/deepseek-v4-flash",
+    ),
+    official_url="https://openrouter.ai/deepseek/deepseek-v4-flash",
+    notes="1,048,576 context window. Supports reasoning via `reasoning` parameter.",
     response_format_with_tools_compatibility=(
         ResponseFormatWithToolsCompatibility.INCOMPATIBLE
     ),
@@ -841,6 +906,8 @@ CHAT_IMAGE_FAL_IDS = tuple(m.id_on_provider for m in CHAT_IMAGE_FAL_MODELS)
 # Chat text (LLM) models: config may use nickname or id_on_provider; resolve to id before API call.
 CHAT_TEXT_MODELS = [
     DEEPSEEK_V3_2,
+    DEEPSEEK_V4_PRO,
+    DEEPSEEK_V4_FLASH,
     GEMINI_2_5_FLASH_LITE,
     GEMINI_2_5_FLASH,
 ]

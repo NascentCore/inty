@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 from app.models.user import AuthType, Gender
 
@@ -147,7 +147,7 @@ class User(UserInDBBase):
     total_public_agents_follows: Optional[int] = 0
     followers_count: Optional[int] = 0
     connector_count: Optional[int] = 0
-    actions: list[UserAction] = []
+    actions: list[UserAction] = Field(default_factory=list)
 
 
 class Token(BaseModel):

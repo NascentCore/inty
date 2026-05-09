@@ -106,8 +106,7 @@ def _companion_manager_for_resolved_model(
         or "https://openrouter.ai/api/v1",
         default_model=resolved_chat_model_id,
         chat_model=resolved_chat_model_id,
-        tool_model=_companion_tool_call_model_yaml(cfg.agent)
-        or resolved_chat_model_id,
+        tool_model=_companion_tool_call_model_yaml(cfg.agent) or resolved_chat_model_id,
         memory_model=resolved_chat_model_id,
         day_summary_model=resolved_chat_model_id,
         user_model=resolved_chat_model_id,

@@ -129,8 +129,8 @@ class EvaluationInteractionResponse(BaseModel):
 class EvaluationSessionDetail(EvaluationSessionResponse):
     """评测会话详细信息（包含结果）"""
 
-    results: List[EvaluationResultResponse] = []
-    interactions: List[EvaluationInteractionResponse] = []
+    results: List[EvaluationResultResponse] = Field(default_factory=list)
+    interactions: List[EvaluationInteractionResponse] = Field(default_factory=list)
 
 
 class EvaluationTemplateCreate(BaseModel):
@@ -176,7 +176,7 @@ class QuestionFileUpload(BaseModel):
     total_count: int
     valid_count: int
     duplicates_removed: int
-    warnings: List[str] = []
+    warnings: List[str] = Field(default_factory=list)
 
 
 class ScoringModelInfo(BaseModel):

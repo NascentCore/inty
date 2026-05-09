@@ -1332,9 +1332,9 @@ async def _agent_chat_completions_impl(
                                 and companion_preset_uid
                                 in companion_ws_foreground_pending
                             ):
-                                companion_ws_foreground_pending[
-                                    companion_preset_uid
-                                ]["foreground_user_message_id"] = bg_user_row_id
+                                companion_ws_foreground_pending[companion_preset_uid][
+                                    "foreground_user_message_id"
+                                ] = bg_user_row_id
                         raise
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
@@ -1344,11 +1344,13 @@ async def _agent_chat_completions_impl(
                         companion_ai_meta["messageType"] = (
                             CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
                         )
-                    companion_user_row_id = await _persist_companion_user_message_for_bg(
-                        session_id=session_id,
-                        last_user_message=last_user_message,
-                        effective_local_id=effective_local_id,
-                        implicit_signed_on_ws=implicit_signed_on_ws,
+                    companion_user_row_id = (
+                        await _persist_companion_user_message_for_bg(
+                            session_id=session_id,
+                            last_user_message=last_user_message,
+                            effective_local_id=effective_local_id,
+                            implicit_signed_on_ws=implicit_signed_on_ws,
+                        )
                     )
                     if (
                         companion_preset_uid is not None

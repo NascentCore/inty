@@ -42,7 +42,9 @@ def openai_function_tool(
     if extra_function_keys:
         for k, v in extra_function_keys.items():
             if k in ("name", "description", "parameters", "strict"):
-                raise ValueError(f"extra_function_keys must not override reserved key {k!r}")
+                raise ValueError(
+                    f"extra_function_keys must not override reserved key {k!r}"
+                )
             fn[k] = v
     return {"type": "function", "function": fn}
 
