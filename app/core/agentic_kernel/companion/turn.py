@@ -364,6 +364,8 @@ async def run_turn(
 
     last_text = ""
     significance_meta: dict[str, Any] | None = None
+    reply_modality: str = "text"
+    voice_message_script = ""
     tool_background_started = False
     t_loop = time.perf_counter()
 
@@ -508,9 +510,12 @@ async def run_turn(
                     # yields empty assistant text and API returns 500. See
                     # ``app/core/agentic_kernel/llm/chat_completions.py`` (TODO tag).
                     raw_content = msg.content or ""
-                    last_text, significance_meta, fg_output_to_user = (
-                        split_dual_llm_chat_branch_content(raw_content)
-                    )
+                    _dual_split = split_dual_llm_chat_branch_content(raw_content)
+                    last_text = _dual_split.visible_text
+                    significance_meta = _dual_split.significance_meta
+                    fg_output_to_user = _dual_split.output_to_user
+                    reply_modality = _dual_split.reply_modality
+                    voice_message_script = _dual_split.voice_message_script
                     # Async foreground chat leg (tools present): same dual-LLM envelope contract as
                     # single-shot structured chat; ``output_to_user`` must be true here. False is for
                     # tool_background routing only; non-fatal drift -> WARNING with ``trace_id``.
@@ -624,9 +629,12 @@ async def run_turn(
                     msg = resp.choices[0].message
                     raw_content = msg.content or ""
                     if use_dual_structured_chat:
-                        last_text, significance_meta, fg_output_to_user = (
-                            split_dual_llm_chat_branch_content(raw_content)
-                        )
+                        _dual_split = split_dual_llm_chat_branch_content(raw_content)
+                        last_text = _dual_split.visible_text
+                        significance_meta = _dual_split.significance_meta
+                        fg_output_to_user = _dual_split.output_to_user
+                        reply_modality = _dual_split.reply_modality
+                        voice_message_script = _dual_split.voice_message_script
                         # Single-shot path: one completion, no tool loop, structured dual-LLM envelope.
                         # Contract (see ``prompts/system_messages._dual_llm_chat_structured_output_contract_text``):
                         # ``output_to_user`` must be true on foreground chat; false is for tool_background
@@ -639,6 +647,8 @@ async def run_turn(
                             )
                     else:
                         last_text = raw_content.strip()
+                        reply_modality = "text"
+                        voice_message_script = ""
                     logger.info(
                         "run_turn loop_done single_shot route={} loop_total_ms={:.0f}",
                         route_mode.value,
@@ -727,6 +737,10 @@ async def run_turn(
     }
     if significance_meta:
         assistant_row["significance_perception"] = significance_meta
+    if reply_modality == "voice_message":
+        assistant_row["reply_modality"] = reply_modality
+        if voice_message_script:
+            assistant_row["voice_message_script"] = voice_message_script
     store.append_jsonl_record(rel_tr, assistant_row)
 
     # 记忆管线
@@ -774,6 +788,8 @@ async def run_turn(
     )
     return CompanionTurnResult(
         assistant_text=last_text,
+        reply_modality=reply_modality,  # type: ignore[arg-type]
+        voice_message_script=voice_message_script,
         significance_perception=significance_meta,
         user_msg_uuid=user_msg_uuid,
         trace_id=trace_id,

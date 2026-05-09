@@ -160,6 +160,9 @@ data class MsgInfo(
         @SerialName("voice_session_id") val voice_session_id: String? = null,
         @SerialName("generated_image") val generatedImage: GeneratedImage? = null,
         @SerialName("tool_background_started") val toolBackgroundStarted: Boolean = false,
+        @SerialName("reply_modality") val replyModality: String? = null,
+        @SerialName("voice_message_script") val voiceMessageScript: String? = null,
+        @SerialName("audioDuration") val audioDuration: Double? = null,
     ) {
         @Serializable
         data class GeneratedImage(

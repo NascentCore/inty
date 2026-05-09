@@ -242,6 +242,9 @@ data class MsgInfo(
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
         @Json(name = "generated_music") val generatedMusic: GeneratedMusic? = null,
         @Json(name = "tool_background_started") val toolBackgroundStarted: Boolean = false,
+        @Json(name = "reply_modality") val replyModality: String? = null,
+        @Json(name = "voice_message_script") val voiceMessageScript: String? = null,
+        @Json(name = "audioDuration") val audioDuration: Double? = null,
     ) {
         @Serializable
         @JsonClass(generateAdapter = true)
