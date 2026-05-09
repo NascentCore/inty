@@ -45,6 +45,30 @@ Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次�
 ## 沟通方式
 
 - Always start with 1 sentence summary, then layout critical details
+- Do not create README.md, create AGENTS.md.
+- Answer in Mandarin（简体中文）、使用中文回答，以下指令为英文方便你理解
+
+## Output
+
+- No preamble. No "Great question!", "Sure!", "Of course!", "Certainly!", "Absolutely!".
+- No hollow closings. No "I hope this helps!", "Let me know if you need anything!".
+- No restating the prompt. If the task is clear, execute immediately.
+- No explaining what you are about to do. Just do it.
+- No unsolicited suggestions. Do exactly what was asked, nothing more.
+- Structured output only: bullets, tables, code blocks. Prose only when explicitly requested.
+
+## Token Efficiency
+
+- Compress responses. Every sentence must earn its place.
+- No redundant context. Do not repeat information already established in the session.
+- No long intros or transitions between sections.
+- Short responses are correct unless depth is explicitly requested.
+
+## Session Memory
+
+- Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
+- Apply them silently. Do not re-announce learned behavior.
+- If the user corrects a mistake: fix it, remember it, move on.
 
 ## Guideline files (topic splits)
 
@@ -61,7 +85,6 @@ Detailed instructions from this file are also maintained as topic files under `.
 
 ## General Rules
 
-- Always have an 1 sentence summary at the end of your response
 - The ground truth is in code
 - Docs describe abstract ideas,
   never repeating information that can be directly derived from the code files:
@@ -73,40 +96,6 @@ Detailed instructions from this file are also maintained as topic files under `.
 ## Override Rule
 
 - User instructions always override this file.
-- Do not create README.md, create AGENTS.md.
-
-## Output
-
-- Answer in Mandarin（简体中文）、使用中文回答，以下指令为英文方便你理解
-- Answer is always line 1. Reasoning comes after, never before.
-- No preamble. No "Great question!", "Sure!", "Of course!", "Certainly!", "Absolutely!".
-- No hollow closings. No "I hope this helps!", "Let me know if you need anything!".
-- No restating the prompt. If the task is clear, execute immediately.
-- No explaining what you are about to do. Just do it.
-- No unsolicited suggestions. Do exactly what was asked, nothing more.
-- Structured output only: bullets, tables, code blocks. Prose only when explicitly requested.
-
-## Token Efficiency
-
-- Compress responses. Every sentence must earn its place.
-- No redundant context. Do not repeat information already established in the session.
-- No long intros or transitions between sections.
-- Short responses are correct unless depth is explicitly requested.
-
-## Typography - ASCII Only
-
-- No em dashes (-) - use hyphens (-)
-- No smart/curly quotes - use straight quotes (" ')
-- No ellipsis character - use three dots (...)
-- No Unicode bullets - use hyphens (-) or asterisks (*)
-- No non-breaking spaces
-
-## Sycophancy - Zero Tolerance
-
-- Never validate the user before answering.
-- Never say "You're absolutely right!" unless the user made a verifiable correct statement.
-- Disagree when wrong. State the correction directly.
-- Do not change a correct answer because the user pushes back.
 
 ## Accuracy and Speculation Control
 
@@ -131,18 +120,6 @@ Detailed instructions from this file are also maintained as topic files under `.
 - The docstring must explain what that package is designed for and its role or behavior in the system.
 - Do not add top-of-file docstrings to every `.py` source file solely to satisfy this rule; individual modules may still have docstrings when they need local API or behavior context.
 - When adding or editing a Python package, update its `__init__.py` docstring if missing or insufficient.
-
-## Warnings and Disclaimers
-
-- No safety disclaimers unless there is a genuine life-safety or legal risk.
-- No "Note that...", "Keep in mind that...", "It's worth mentioning..." soft warnings.
-- No "As an AI, I..." framing.
-
-## Session Memory
-
-- Learn user corrections and preferences within the session.
-- Apply them silently. Do not re-announce learned behavior.
-- If the user corrects a mistake: fix it, remember it, move on.
 
 ## Scope Control
 
