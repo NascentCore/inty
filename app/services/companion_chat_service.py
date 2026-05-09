@@ -293,7 +293,10 @@ async def run_companion_chat_turn_for_api(
     )
     run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
     logger.info(
-        "companion_chat_turn finished path=kernel user={} agent={} chat={} model={} total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} user_chars={} defer_memory={}",
+        "companion_chat_turn finished path=kernel user={} agent={} chat={} model={} "
+        "total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} "
+        "user_chars={} defer_memory={} inty_trace_id={} user_msg_uuid={} "
+        "langsmith_trace_id={} langsmith_run_id={}",
         user_id,
         agent_id,
         chat_id,
@@ -304,5 +307,9 @@ async def run_companion_chat_turn_for_api(
         run_turn_ms,
         len(user_text),
         defer_memory_update,
+        out.trace_id,
+        out.user_msg_uuid,
+        out.langsmith_trace_id or "",
+        out.langsmith_run_id or "",
     )
     return out

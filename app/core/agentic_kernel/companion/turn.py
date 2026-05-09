@@ -763,9 +763,14 @@ async def run_turn(
         )
 
     logger.info(
-        "run_turn done assistant_chars={} ms={:.0f}",
+        "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
+        "langsmith_trace_id={} langsmith_run_id={}",
         len(last_text),
         (time.perf_counter() - t0) * 1000.0,
+        trace_id,
+        user_msg_uuid,
+        langsmith_trace_acc or "",
+        langsmith_llm_run_acc or "",
     )
     return CompanionTurnResult(
         assistant_text=last_text,
