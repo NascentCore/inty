@@ -19,6 +19,9 @@ from app.core.agentic_kernel.companion.llm_inference_errors import (
     log_and_build_inference_error,
     raise_if_chat_completion_missing_choices,
 )
+from app.core.agentic_kernel.companion.llm_runtime_events import (
+    record_llm_inference_failure,
+)
 from app.core.agentic_kernel.llm.langsmith_completion_enrich import (
     _ensure_langsmith_handle_container_end_patch,
     completion_with_langsmith_trace_id,
@@ -85,9 +88,13 @@ def create_chat_completion_sync(
                 delay = _OPENROUTER_JSON_BACKOFF_SECONDS[min(attempt - 1, 1)]
                 time.sleep(delay)
                 continue
-            raise OpenRouterInvalidJsonError(
+            invalid_json_exc = OpenRouterInvalidJsonError(
                 "OpenRouter returned a non-JSON response body "
                 f"for model={model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
-            ) from exc
+            )
+            record_llm_inference_failure(model=model, exc=invalid_json_exc)
+            raise invalid_json_exc from exc
         except Exception as exc:
-            raise log_and_build_inference_error(exc) from exc
+            inf = log_and_build_inference_error(exc)
+            record_llm_inference_failure(model=model, exc=inf)
+            raise inf from exc

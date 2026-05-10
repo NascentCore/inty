@@ -49,6 +49,12 @@ from .llm_chat_runtime import (
     tool_path_chat_completion_kwargs,
 )
 from .image_gate import list_image_asset_records
+from .llm_client import LLM_SCENE_TOOL_CALL
+from .llm_runtime_events import (
+    LlmRuntimeEventBind,
+    companion_llm_runtime_event_bind_ctx,
+    exc_chain_includes_llm_inference_failure_root_causes,
+)
 from .memory_store import MemoryStore
 from .models import InnerTickMode, transcript_relative_path_for_turn_persistence
 from .prompt_stack import refresh_companion_turn_prompt_stack
@@ -991,6 +997,16 @@ def start_tool_background_job(
         # Register here with current_thread(), not the Thread instance from threading.Thread(...).
         # Unit tests patch threading.Thread with MagicMock; pre-start register would leak mocks.
         _register_thread(threading.current_thread())
+        _tb_phase = "inner_tick" if inner_tick_turn else "tool_background"
+        llm_bg_bind_token = companion_llm_runtime_event_bind_ctx.set(
+            LlmRuntimeEventBind(
+                memory_store=memory_store,
+                trace_id=trace_id,
+                user_msg_uuid=user_msg_uuid,
+                phase=_tb_phase,
+                scene=LLM_SCENE_TOOL_CALL,
+            )
+        )
         bg_ls_err: str | None = None
 
         def _run_async_tool_loop() -> None:
@@ -1032,28 +1048,29 @@ def start_tool_background_job(
             except Exception as exc:
                 bg_ls_err = repr(exc)
                 logger.exception("repl.turn.bg job failed")
-                ev: dict[str, Any] = {
-                    "ts": utc_iso_ts(),
-                    "kind": "tool_background_failure",
-                    "trace_id": trace_id,
-                    "user_msg_uuid": user_msg_uuid,
-                    "tool_model_name": tool_model_name,
-                    "inner_tick_turn": inner_tick_turn,
-                    "inner_tick_mode": inner_tick_mode.value,
-                    "error_type": type(exc).__name__,
-                    "detail": str(exc),
-                }
-                ph = getattr(exc, "provider_http_status", None)
-                if isinstance(ph, int):
-                    ev["provider_http_status"] = ph
-                try:
-                    append_runtime_event(memory_store, ev)
-                except Exception:
-                    logger.warning(
-                        "repl.turn.bg append_runtime_event failed trace_id={}",
-                        trace_id,
-                        exc_info=True,
-                    )
+                if not exc_chain_includes_llm_inference_failure_root_causes(exc):
+                    ev: dict[str, Any] = {
+                        "ts": utc_iso_ts(),
+                        "kind": "tool_background_failure",
+                        "trace_id": trace_id,
+                        "user_msg_uuid": user_msg_uuid,
+                        "tool_model_name": tool_model_name,
+                        "inner_tick_turn": inner_tick_turn,
+                        "inner_tick_mode": inner_tick_mode.value,
+                        "error_type": type(exc).__name__,
+                        "detail": str(exc),
+                    }
+                    ph = getattr(exc, "provider_http_status", None)
+                    if isinstance(ph, int):
+                        ev["provider_http_status"] = ph
+                    try:
+                        append_runtime_event(memory_store, ev)
+                    except Exception:
+                        logger.warning(
+                            "repl.turn.bg append_runtime_event failed trace_id={}",
+                            trace_id,
+                            exc_info=True,
+                        )
             finally:
                 end_companion_turn_root_run_safe(
                     langsmith_parent_run,
@@ -1062,6 +1079,7 @@ def start_tool_background_job(
                 )
                 clear_tool_background_db_loop()
         finally:
+            companion_llm_runtime_event_bind_ctx.reset(llm_bg_bind_token)
             if tool_bg_idle_event is not None:
                 tool_bg_idle_event.set()
             _unregister_thread(threading.current_thread())

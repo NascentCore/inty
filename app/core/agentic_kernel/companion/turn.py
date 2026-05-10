@@ -24,6 +24,7 @@ prompt/model confusion, not a parser bug.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import os
 import threading
 import time
@@ -46,6 +47,11 @@ from .llm_client import (
     LLM_SCENE_CHAT,
     LLM_SCENE_INNER_TICK,
     CompanionLLMClient,
+)
+from .llm_runtime_events import (
+    LlmRuntimeEventBind,
+    companion_llm_runtime_event_bind_ctx,
+    record_llm_inference_failure,
 )
 from .memory_pipeline import (
     MemoryPipelineConfig,
@@ -378,7 +384,18 @@ async def run_turn(
     t_loop = time.perf_counter()
 
     inspect_token = runtime_inspect_begin_turn()
+    llm_runtime_bind_token: contextvars.Token[LlmRuntimeEventBind | None] | None = None
     try:
+        _llm_ev_phase = "inner_tick" if inner_tick_turn else "foreground_chat"
+        llm_runtime_bind_token = companion_llm_runtime_event_bind_ctx.set(
+            LlmRuntimeEventBind(
+                memory_store=store,
+                trace_id=trace_id,
+                user_msg_uuid=user_msg_uuid,
+                phase=_llm_ev_phase,
+                scene=None,
+            )
+        )
         runtime_inspect_set_scoped_memory_store(store)
         runtime_inspect_set_runtime_config(
             build_turn_runtime_config_dict(
@@ -499,6 +516,11 @@ async def run_turn(
                         if ls_lr:
                             langsmith_llm_run_acc = ls_lr
                     except asyncio.TimeoutError as exc:
+                        record_llm_inference_failure(
+                            model=chat_model,
+                            exc=exc,
+                            foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
+                        )
                         raise RuntimeError(
                             f"async chat front timed out after "
                             f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
@@ -703,6 +725,8 @@ async def run_turn(
                         ),
                     )
     finally:
+        if llm_runtime_bind_token is not None:
+            companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
         runtime_inspect_end_turn(inspect_token)
 
     # 持久化 transcript
@@ -780,18 +804,30 @@ async def run_turn(
             config=mem_cfg,
         )
     else:
-
-        def _complete_fn_sync(msgs: list[dict[str, Any]], model_role: str) -> str:
-            return llm_client.complete_text(msgs, model_role=model_role)
-
-        memory_update_after_turn(
-            paths,
-            store=store,
-            user_text=memory_user_text,
-            assistant_text=last_text,
-            complete_fn=_complete_fn_sync,
-            config=mem_cfg,
+        _mem_sync_tok = companion_llm_runtime_event_bind_ctx.set(
+            LlmRuntimeEventBind(
+                memory_store=store,
+                trace_id=trace_id,
+                user_msg_uuid=user_msg_uuid,
+                phase="memory_pipeline",
+                scene=None,
+            )
         )
+        try:
+
+            def _complete_fn_sync(msgs: list[dict[str, Any]], model_role: str) -> str:
+                return llm_client.complete_text(msgs, model_role=model_role)
+
+            memory_update_after_turn(
+                paths,
+                store=store,
+                user_text=memory_user_text,
+                assistant_text=last_text,
+                complete_fn=_complete_fn_sync,
+                config=mem_cfg,
+            )
+        finally:
+            companion_llm_runtime_event_bind_ctx.reset(_mem_sync_tok)
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
