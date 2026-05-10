@@ -35,7 +35,9 @@
 ### 内容
 
 - JSON，对应 Pydantic 模型 `ContextMeta`（见 `models.py`）。字段名仍为 **`context_mode`**，语义为 **Experience Profile id**（规范化小写），与 `app/core/agentic_kernel/experience_profile.py` 单一真源一致；另有 `user_id`、`companion_id`、`chat_id`。
-- 建 session 时由 `CompanionManager.get_or_create_session` 写入体验配置及当前 `user_id` / `companion_id` / `chat_id`：`companion_memory_bootstrap_type` 为 `USER_INTERACTIVE` 时初始 `context_mode` 为保留 id **`bootstrap`**（见 `experience_profile.EXPERIENCE_PROFILE_ID_BOOTSTRAP`），否则为 `app.features.companion_default_context_mode`。交互式 bootstrap 调用 **`companion_bootstrap_user_interactive_complete`** 且当前仍为 `bootstrap` 时，`context_mode` 提升为 `companion_default_context_mode`。
+- **`bootstrap`**：`ExperienceContextMode.BOOTSTRAP`，仅在 **`companion_memory_bootstrap_type=USER_INTERACTIVE`** 且 **`workspace_bootstrap_user_interactive_completed`** 为 false 时由内核写入 `context_mode`；用于 system「当前体验配置」与 Trace 对齐交互式引导阶段，**不可**作为 `app.features.companion_default_context_mode` 或 **`companion_set_experience_profile`** 的用户自选目标。
+- **`post_bootstrap_context_mode`**（可选）：USER_INTERACTIVE 种子写入，表示引导结束后应恢复的常规体验 profile（规范化小写，**不得**为 `bootstrap`）。模型调用 **`companion_bootstrap_user_interactive_complete`** 后：若当前仍为 `bootstrap`，将 `context_mode` 恢复为该字段（缺省回退 `intimate`），并删除此键；若引导期内已通过 **`companion_set_experience_profile`** 切换为非 `bootstrap`，则保留当前 `context_mode`。
+- 建 session 时由 `CompanionManager.get_or_create_session` 写入默认体验配置（非 USER_INTERACTIVE 时为 `app.features.companion_default_context_mode`；USER_INTERACTIVE 新种子为 `context_mode=bootstrap` + `post_bootstrap_context_mode=<默认>`）及当前 `user_id` / `companion_id` / `chat_id`。
 
 ### 是否必需
 

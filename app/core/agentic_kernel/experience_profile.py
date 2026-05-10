@@ -12,6 +12,7 @@ class ExperienceContextMode(StrEnum):
     UNSPECIFIC = "unspecific"
     INTIMATE = "intimate"
     EMOTIONAL_COMPANION = "emotional_companion"
+    BOOTSTRAP = "bootstrap"
     ROLEPLAY = "roleplay"
     INTERACTIVE_FICTION = "interactive_fiction"
     PUBLIC = "public"
@@ -22,6 +23,7 @@ _PRIVATE_MEMORY_PROFILE_IDS = frozenset(
         ExperienceContextMode.UNSPECIFIC,
         ExperienceContextMode.INTIMATE,
         ExperienceContextMode.EMOTIONAL_COMPANION,
+        ExperienceContextMode.BOOTSTRAP,
     }
 )
 
@@ -53,6 +55,13 @@ def experience_profile_system_clause(context_mode: str) -> str:
     if not raw:
         raise ValueError("context_mode must be non-empty")
     n = normalize_experience_profile_id(raw)
+    if n == ExperienceContextMode.BOOTSTRAP:
+        return _experience_profile_clause(
+            "交互式关系建立（bootstrap）。本阶段以初始化 SOUL 等与用户的最底层约定为主；"
+            "仍可加载私人记忆与日程记忆层以承接已有档案与会话上下文；"
+            "语气与边界仍须遵守安全与同意条款。"
+            "完成引导后将恢复到常规体验配置（由会话快照或产品默认决定）。"
+        )
     if n in _PRIVATE_MEMORY_PROFILE_IDS:
         if n == ExperienceContextMode.INTIMATE:
             return _experience_profile_clause(

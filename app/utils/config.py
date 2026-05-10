@@ -14,7 +14,10 @@ from pydantic import AnyHttpUrl
 from loguru import logger
 
 from app.utils import models_catalog
-from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
+from app.core.agentic_kernel.experience_profile import (
+    ExperienceContextMode,
+    normalize_experience_profile_id,
+)
 from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
@@ -199,6 +202,10 @@ class FeaturesConfig:
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )
+        if self.companion_default_context_mode == ExperienceContextMode.BOOTSTRAP:
+            raise ValueError(
+                "app.features.companion_default_context_mode cannot be 'bootstrap'"
+            )
 
 
 @dataclass

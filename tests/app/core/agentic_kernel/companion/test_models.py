@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -45,6 +47,7 @@ def test_prompt_bundle_defaults() -> None:
 def test_context_meta_defaults() -> None:
     c = ContextMeta()
     assert c.context_mode == "intimate"
+    assert c.post_bootstrap_context_mode is None
     assert c.workspace_bootstrap_user_interactive_completed is True
     assert c.companion_ws_session_system_written is True
     assert c.companion_ws_interactive_kickoff_sent is True
@@ -53,6 +56,23 @@ def test_context_meta_defaults() -> None:
 def test_context_meta_normalizes_experience_profile_id() -> None:
     c = ContextMeta(context_mode="  PUBLIC ")
     assert c.context_mode == "public"
+
+
+def test_context_meta_post_bootstrap_context_mode_rejects_bootstrap_value() -> None:
+    with pytest.raises(ValueError, match="post_bootstrap_context_mode"):
+        ContextMeta(
+            context_mode="intimate",
+            post_bootstrap_context_mode="bootstrap",
+        )
+
+
+def test_context_meta_accepts_bootstrap_context_mode_with_post_target() -> None:
+    c = ContextMeta(
+        context_mode="bootstrap",
+        post_bootstrap_context_mode="roleplay",
+    )
+    assert c.context_mode == "bootstrap"
+    assert c.post_bootstrap_context_mode == "roleplay"
 
 
 def test_transcript_for_llm_turn_short() -> None:
