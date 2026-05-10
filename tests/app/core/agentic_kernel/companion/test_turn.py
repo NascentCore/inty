@@ -89,7 +89,9 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
 
     rows = [
         json.loads(line)
-        for line in store.read_document("transcript.jsonl").strip().splitlines()
+        for line in store.read_document("transcript_inner_tick.jsonl")
+        .strip()
+        .splitlines()
     ]
     assert rows[0]["role"] == "user"
     assert rows[0]["content"] == INNER_TICK_SYNTHETIC_USER_TEXT

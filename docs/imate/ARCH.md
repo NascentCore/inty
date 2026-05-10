@@ -109,7 +109,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | `INNER_TICK_SYNC` | `inner_tick_turn=True`, maintenance | 合成用户文本驱动内在维护; 可使用 inner tick tools; 跳过普通记忆更新管线。 |
 | `HEARTBEAT_SYNC` | `inner_tick_turn=True`, proactive chat | 合成 proactive heartbeat 用户标记; 不启用 tools。 |
 
-特殊上行 `messageType=IMPLICIT_USER_SIGNED_ON` 由 WebSocket companion 支持: API 层不写该用户行到 PostgreSQL `chat_history`, companion transcript 会写 synthetic user 行; prompt stack 会去掉 tools, 使模型做 chat-only 问候。
+隐式上线问候 **产品侧** 由 **`user_signed_on`** + **`implicit_greeting`** 触发；载荷上与 **`messageType: IMPLICIT_USER_SIGNED_ON`** 聊天帧（及内部 synthetic）一致: API 层不写合成用户行到 PostgreSQL `chat_history`, companion transcript 写 synthetic user 行; prompt stack 去掉 tools, 模型走 chat-only 问候。
 
 ### Dual-LLM envelope 解析边界
 
@@ -123,7 +123,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 
 ## 状态与持久化
 
-当前 companion 的世界不是独立 world engine, 而是 `MemoryStore` 中的一组版本化文档加工具副作用:
+当前 companion 的世界不是独立 world engine, 而是 `MemoryStore` 中的一组版本化文档加工具副作用。artifact、持久化表与向量 LTM（FR）汇总见 [`MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)。
 
 | 文档或状态 | 作用 |
 | --- | --- |
@@ -141,7 +141,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 
 ## 记忆管线
 
-普通用户回合结束后, `schedule_memory_update_after_turn` 默认异步执行:
+分层 episodic / gist / semantic 写入与 prompt 注入综述见 [`MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)。普通用户回合结束后, `schedule_memory_update_after_turn` 默认异步执行:
 
 1. 追加情景记忆: `memory/daily/{date}.md`
 2. 按节拍重写单日摘要: `memory/{date}.md`

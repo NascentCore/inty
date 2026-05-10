@@ -1,7 +1,7 @@
 """Companion turn executor: 单轮对话的完整执行流程。
 
 可选 ``tool_bg_idle_event``：在加载 transcript 之前等待上一轮异步 tool_background 线程收尾，
-保证 ``transcript.jsonl`` 含工具摘要后再组装本轮 chat/tool messages。
+保证主 ``transcript.jsonl``（或维护内在节拍用的 ``transcript_inner_tick.jsonl``）已含工具摘要后再组装本轮 chat/tool messages。
 
 **Importance scoring (significance perception)**：When the foreground chat call uses
 ``response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT``, the assistant JSON envelope includes three
@@ -56,15 +56,15 @@ from .memory_store import MemoryStore
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
-    ChatMessage,
     CompanionTurnResult,
     ContextMeta,
     InnerTickMode,
     PromptBundle,
+    companion_turn_transcript_loaded_messages,
     load_context_meta,
     load_prompt_bundle,
-    load_transcript_from_store,
     transcript_for_llm_turn,
+    transcript_relative_path_for_turn_persistence,
 )
 from .transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -143,7 +143,7 @@ def _async_dual_llm_system_message_variants(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Compact tool-path stack vs full chat-path stack; shares inner_tick routing with refresh/tool_bg.
 
-    Implicit ``IMPLICIT_USER_SIGNED_ON`` rounds strip tools in the main ``run_turn`` prefix pass
+    Implicit sign-on (internal ``implicit_user_signed_on_turn``) rounds strip tools in the main ``run_turn`` prefix pass
     (``implicit_user_signed_on_turn``), so routing is chat-only sync, not this async dual branch.
     We intentionally omit that flag here (equivalent to ``False``): this helper only runs when
     ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` already won, i.e. tool-backed rounds
@@ -291,8 +291,15 @@ async def run_turn(
     # 加载 context 与 prompt bundle
     context = load_context_meta(paths.context_json, store=store)
     bundle = load_prompt_bundle(paths, store, meta=context)
-    rel_tr = paths.transcript.relative_to(root).as_posix()
-    loaded = load_transcript_from_store(store, rel_tr)
+    rel_main_tr = paths.transcript.relative_to(root).as_posix()
+    rel_inner_tr = paths.transcript_inner_tick.relative_to(root).as_posix()
+    loaded = companion_turn_transcript_loaded_messages(
+        store,
+        rel_main_transcript=rel_main_tr,
+        rel_inner_tick_transcript=rel_inner_tr,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=route_inner_mode,
+    )
     window_cap = transcript_llm_window_max_messages
     if window_cap is None:
         window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
@@ -400,6 +407,9 @@ async def run_turn(
             user_id=context.user_id,
             companion_id=context.companion_id,
             parent_run_enabled=langsmith_parent_run_enabled,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=route_inner_mode if inner_tick_turn else None,
+            implicit_user_signed_on=implicit_sign_on_turn,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:
@@ -696,6 +706,14 @@ async def run_turn(
         runtime_inspect_end_turn(inspect_token)
 
     # 持久化 transcript
+    rel_tr = (
+        paths.transcript.relative_to(root).as_posix()
+        if implicit_sign_on_turn
+        else transcript_relative_path_for_turn_persistence(
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=route_inner_mode,
+        )
+    )
     assistant_msg_uuid = str(uuid.uuid4())
     if implicit_sign_on_turn:
         sign_on_row: dict[str, Any] = {

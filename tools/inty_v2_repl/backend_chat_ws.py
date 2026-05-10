@@ -33,14 +33,20 @@ class BackendChatWsError(RuntimeError):
         super().__init__(f"chat ws error code={code} message={message!r}")
 
 
-def _ws_user_signed_on_json(agent_id: str, *, message_id: str) -> str:
-    return json.dumps(
-        {
-            "type": "user_signed_on",
-            "agent_id": agent_id.strip(),
-            "message_id": message_id,
-        }
-    )
+def _ws_user_signed_on_json(
+    agent_id: str,
+    *,
+    message_id: str,
+    implicit_greeting: bool = False,
+) -> str:
+    payload: dict[str, Any] = {
+        "type": "user_signed_on",
+        "agent_id": agent_id.strip(),
+        "message_id": message_id,
+    }
+    if implicit_greeting:
+        payload["implicit_greeting"] = True
+    return json.dumps(payload)
 
 
 def http_base_to_ws_chat_url(http_base: str, *, agent_id: str | None = None) -> str:
@@ -219,30 +225,6 @@ class BackendChatWsBridge:
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
         self._user_signed_on_sent_once: bool = False
-        # One startup IMPLICIT turn per bridge lifetime; not cleared on send failure (restart repl).
-        self._implicit_startup_turn_scheduled: bool = False
-
-    async def _post_implicit_user_signed_on_at_startup(self) -> None:
-        """Send one IMPLICIT_USER_SIGNED_ON chat frame after first successful connect (repl startup)."""
-        aid = _agent_id_from_ws_url(self._ws_url)
-        if not aid:
-            return
-        deadline = time.monotonic() + max(120.0, float(self._send_max_retries) * 30.0)
-        try:
-            await self._post_turn_async(
-                aid,
-                "",
-                deadline_monotonic=deadline,
-                message_id=str(uuid.uuid4()),
-                companion_turn_message_type=CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON,
-            )
-            logger.info(
-                "repl sent IMPLICIT_USER_SIGNED_ON at startup agent_id={}", aid
-            )
-        except BaseException:
-            logger.exception(
-                "repl IMPLICIT_USER_SIGNED_ON at startup failed agent_id={}", aid
-            )
 
     def start(self, *, connect_timeout: float = 30.0) -> None:
         if self._thread is not None:
@@ -295,7 +277,8 @@ class BackendChatWsBridge:
         """Non-blocking: pop one queued chat JSON if present (runs on the bridge event loop).
 
         Returns ``(assistant_text, None, meta_data)`` on success, ``(None, (code, message), {})`` on API error
-        frames, ``(None, None, {})`` if the queue was empty or the frame was not a chat completion.
+        frames or on **local parse failure** (so the REPL does not silently drop odd ``code==200`` payloads),
+        ``(None, None, {})`` if the queue was empty.
         """
         if not self._loop or not self._response_q:
             return None, None, {}
@@ -321,9 +304,16 @@ class BackendChatWsBridge:
             return text, None, meta
         except BackendChatWsError as exc:
             return None, (int(exc.code), str(exc.agent_message)), {}
-        except ValueError:
+        except ValueError as exc:
             logger.warning("chat ws queued frame dropped: {}", raw)
-            return None, None, {}
+            return (
+                None,
+                (
+                    422,
+                    f"Downlink chat JSON parse failed ({exc}). Check logs for raw frame.",
+                ),
+                {},
+            )
 
     async def _sleep_backoff(self, attempt_index: int, halt: asyncio.Event) -> None:
         delay = reconnect_delay_sec(
@@ -345,10 +335,14 @@ class BackendChatWsBridge:
             return
         try:
             frame_mid = str(uuid.uuid4())
-            await ws.send(_ws_user_signed_on_json(aid, message_id=frame_mid))
+            await ws.send(
+                _ws_user_signed_on_json(
+                    aid, message_id=frame_mid, implicit_greeting=True
+                )
+            )
             self._user_signed_on_sent_once = True
             logger.info(
-                "chat ws user_signed_on sent once (repl) agent_id={} message_id={}",
+                "chat ws user_signed_on+implicit_greeting sent once (repl) agent_id={} message_id={}",
                 aid,
                 frame_mid,
             )
@@ -395,12 +389,6 @@ class BackendChatWsBridge:
                 await self._send_user_signed_on_once_after_connect(ws)
                 if not self._ready.is_set():
                     self._ready.set()
-                if (
-                    not self._implicit_startup_turn_scheduled
-                    and _agent_id_from_ws_url(self._ws_url)
-                ):
-                    self._implicit_startup_turn_scheduled = True
-                    asyncio.create_task(self._post_implicit_user_signed_on_at_startup())
                 reader_task = asyncio.create_task(self._read_loop(ws))
                 pinger = asyncio.create_task(self._pinger_loop(ws, halt))
                 halt_task = asyncio.create_task(halt.wait())

@@ -1,4 +1,4 @@
-"""WebSocket send implicit sign-on and assertions for companion E2E."""
+"""WebSocket implicit sign-on (user_signed_on + implicit_greeting) E2E helpers."""
 
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
     query_agent_id: bool = True,
     expected_context_mode: str | None = None,
 ) -> None:
-    """Connect WS, send IMPLICIT_USER_SIGNED_ON chat frame, assert assistant reply."""
+    """Connect WS, send ``user_signed_on`` with implicit_greeting, assert assistant reply."""
     url = http_base_to_ws_chat_url(
         http_base_url, agent_id=agent_id if query_agent_id else None
     )
@@ -92,12 +92,10 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
     msg_uuid = str(uuid.uuid4())
     implicit_payload = json.dumps(
         {
+            "type": "user_signed_on",
             "agent_id": agent_id,
-            "request": {
-                "messages": [{"role": "user", "content": ""}],
-                "message_id": msg_uuid,
-                "messageType": IMPLICIT_USER_SIGNED_ON_MESSAGE_TYPE,
-            },
+            "message_id": msg_uuid,
+            "implicit_greeting": True,
         }
     )
     async with websockets.connect(

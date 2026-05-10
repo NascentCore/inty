@@ -363,7 +363,12 @@ ChatMessageContentPart = Annotated[
 
 
 class CompanionChatTurnMessageType(str, enum.Enum):
-    """Semantic category for this chat completion turn (companion WebSocket; not message content media)."""
+    """Turn category for companion plumbing.
+
+    ``IMPLICIT_USER_SIGNED_ON`` marks implicit sign-on rounds (server synthetic from ``user_signed_on``
+    + ``implicit_greeting``, or the same shape on a WebSocket chat frame). **Product** clients prefer
+    the control frame; HTTP completions do not use ``IMPLICIT_USER_SIGNED_ON``.
+    """
 
     USER_MESSAGE = "USER_MESSAGE"
     IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
@@ -441,7 +446,11 @@ class ChatCompletionRequest(BaseModel):
     message_type: CompanionChatTurnMessageType = Field(
         default=CompanionChatTurnMessageType.USER_MESSAGE,
         alias="messageType",
-        description="Turn kind: normal user text vs implicit user sign-on (greeting trigger).",
+        description=(
+            "Turn kind: USER_MESSAGE for normal chat; IMPLICIT_USER_SIGNED_ON for implicit sign-on "
+            "(product: user_signed_on + implicit_greeting; wire may use the same message_type on "
+            "chat frames). Not supported on HTTP completions."
+        ),
     )
 
     @model_validator(mode="after")
@@ -485,16 +494,22 @@ class ChatCompletionResponse(BaseModel):
 class ChatWsUserSignedOnFrame(BaseModel):
     """WebSocket control frame: arms proactive heartbeat coords.
 
-    Product intent: signal that the user is online in this channel (heartbeat coords). Clients
-    should also send ``messageType: IMPLICIT_USER_SIGNED_ON`` chat frames for greeting triggers;
-    see ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``.
+    Product intent: signal that the user is online in this channel (heartbeat coords).
+    When ``implicit_greeting`` is true, the server runs an internal implicit sign-on companion
+    turn after a successful ``user_signed_on_ack`` (same semantics as the former IMPLICIT chat
+    frame); see ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
     agent_id: str = Field(..., min_length=1)
     message_id: Optional[str] = Field(
         default=None,
-        description="Optional RFC4122 UUID string for client/server log correlation.",
+        description="Optional RFC4122 UUID string for client/server log correlation; "
+        "required when implicit_greeting is true (also used as companion transcript user_msg_uuid).",
+    )
+    implicit_greeting: bool = Field(
+        default=False,
+        description="When true, run implicit sign-on greeting companion turn after coords arm.",
     )
 
 

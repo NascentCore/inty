@@ -294,12 +294,12 @@ def _transcript_jsonl_validate_for_tool_write(content: str) -> str | None:
         try:
             raw = json.loads(line)
         except json.JSONDecodeError as e:
-            return f"ERROR: transcript.jsonl line {i} is not valid JSON: {e}"
+            return f"ERROR: transcript JSONL line {i} is not valid JSON: {e}"
         try:
             ChatMessage.model_validate(raw)
         except ValidationError as e:
             return (
-                f"ERROR: transcript.jsonl line {i} must be JSON with "
+                f"ERROR: transcript JSONL line {i} must be JSON with "
                 f'role ("user"|"assistant"|"system"), content (string), '
                 f"ts (ISO8601 UTC, e.g. ...Z). Example: "
                 f'{{"role":"system","content":"marker","ts":"2026-01-01T00:00:00Z"}}. '
@@ -327,7 +327,7 @@ def tool_memory_store_write_document(
             "you may still update IDENTITY.md, USER.md, MEMORY.md, and other allowed paths."
         )
     prev_body = st.read_document_if_exists(rel)
-    if rel == "transcript.jsonl":
+    if rel in ("transcript.jsonl", "transcript_inner_tick.jsonl"):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
             return v_err

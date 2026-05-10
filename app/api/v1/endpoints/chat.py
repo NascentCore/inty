@@ -218,6 +218,57 @@ def _chat_request_with_merged_ws_time_context(
     return request.model_copy(update={"user_time_context": utc})
 
 
+async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
+    *,
+    db: AsyncSession,
+    agent_id: str,
+    preset_message_id: str,
+    current_user: schemas.User,
+    app_version_code: Optional[int],
+    subscription_svc: SubscriptionService,
+    voice_svc: VoiceService,
+    companion_bg_sink: Callable[[ToolOutputEvent], None],
+    ws_fg_pending: dict[str, dict[str, Any]],
+    companion_hb_ctx: dict[str, Any],
+    tc_box: list[Optional[dict]],
+    outbound_queue: asyncio.Queue[WsOutboundPayload],
+    companion_turn_lock: asyncio.Lock,
+) -> None:
+    """Run one IMPLICIT_USER_SIGNED_ON companion turn after successful ``user_signed_on_ack``."""
+    base = ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="")],
+        message_id=preset_message_id,
+        message_type=CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON,
+    )
+    merged = _chat_request_with_merged_ws_time_context(base, tc_box[0])
+    try:
+        async with companion_turn_lock:
+            response = await _agent_chat_completions_impl(
+                db=db,
+                agent_id=agent_id,
+                request=merged,
+                current_user=current_user,
+                app_version_code=app_version_code,
+                subscription_svc=subscription_svc,
+                voice_svc=voice_svc,
+                chat_route="websocket",
+                companion_background_sink=companion_bg_sink,
+                companion_ws_foreground_pending=ws_fg_pending,
+                companion_ws_heartbeat_ctx=companion_hb_ctx,
+            )
+    except HTTPException as e:
+        await outbound_queue.put(
+            _chat_ws_error_payload_from_http_exception(e, agent_id=agent_id)
+        )
+        return
+    if isinstance(response, dict):
+        response_data = dict(response)
+    else:
+        response_data = response.model_dump(exclude_none=True)
+    response_data["agent_id"] = agent_id
+    await outbound_queue.put(response_data)
+
+
 async def _handle_chat_websocket_control_json(
     websocket: WebSocket,
     data: Any,
@@ -264,15 +315,20 @@ async def _try_handle_ws_user_signed_on_frame(
     db: AsyncSession,
     current_user: schemas.User,
     companion_hb_ctx: dict[str, Any] | None,
+    outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
+    companion_turn_lock: asyncio.Lock | None = None,
+    ws_fg_pending: dict[str, dict[str, Any]] | None = None,
+    tc_box: list[Optional[dict]] | None = None,
+    companion_bg_sink: Callable[[ToolOutputEvent], None] | None = None,
+    subscription_svc: SubscriptionService | None = None,
+    voice_svc: VoiceService | None = None,
+    app_version_code: Optional[int] = None,
 ) -> bool:
     """
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
-    Product intent: companion should mimic a person who sees the user come online and can
-    greet proactively when the client also sends ``messageType: IMPLICIT_USER_SIGNED_ON``
-    (trigger copy in ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``); this frame is the
-    client-side online signal. It also arms proactive heartbeat coords before the first chat
-    frame; legacy clients that omit it still get coords after any successful companion turn.
+    Product intent: arms proactive heartbeat coords and optionally runs the implicit sign-on greeting
+    companion turn when ``implicit_greeting: true`` (after ``user_signed_on_ack``).
 
     ``/ws/verify`` passes ``companion_hb_ctx=None`` and receives ``ok: false`` (not supported).
     """
@@ -312,6 +368,29 @@ async def _try_handle_ws_user_signed_on_frame(
         )
         return True
     agent_id = frame.agent_id.strip()
+    preset_mid: str | None = None
+    if frame.implicit_greeting:
+        raw_mid = (frame.message_id or "").strip()
+        if not raw_mid:
+            await websocket.send_json(
+                {
+                    "type": "user_signed_on_ack",
+                    "ok": False,
+                    "reason": "missing_message_id",
+                }
+            )
+            return True
+        try:
+            preset_mid = normalize_websocket_companion_message_id_uuid(raw_mid)
+        except ValueError:
+            await websocket.send_json(
+                {
+                    "type": "user_signed_on_ack",
+                    "ok": False,
+                    "reason": "invalid_message_id",
+                }
+            )
+            return True
     try:
         chat = await chat_service.get_or_create_chat_by_agent(
             db=db, user_id=current_user.id, agent_id=agent_id
@@ -335,12 +414,49 @@ async def _try_handle_ws_user_signed_on_frame(
         recv_msg_uuid = (frame.message_id or "").strip()
         logger.info(
             "chat_ws user_signed_on armed inner_tick coords user={} agent={} chat_id={} "
-            "received_message_uuid={}",
+            "received_message_uuid={} implicit_greeting={}",
             current_user.id,
             agent_id,
             chat.id,
             recv_msg_uuid or "-",
+            frame.implicit_greeting,
         )
+        if frame.implicit_greeting and preset_mid is not None:
+            if (
+                outbound_queue is None
+                or companion_turn_lock is None
+                or ws_fg_pending is None
+                or tc_box is None
+                or companion_bg_sink is None
+                or subscription_svc is None
+                or voice_svc is None
+            ):
+                logger.error(
+                    "chat_ws implicit_greeting missing ws deps agent_id={}",
+                    agent_id,
+                )
+            else:
+                try:
+                    await _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
+                        db=db,
+                        agent_id=agent_id,
+                        preset_message_id=preset_mid,
+                        current_user=current_user,
+                        app_version_code=app_version_code,
+                        subscription_svc=subscription_svc,
+                        voice_svc=voice_svc,
+                        companion_bg_sink=companion_bg_sink,
+                        ws_fg_pending=ws_fg_pending,
+                        companion_hb_ctx=companion_hb_ctx,
+                        tc_box=tc_box,
+                        outbound_queue=outbound_queue,
+                        companion_turn_lock=companion_turn_lock,
+                    )
+                except Exception:
+                    logger.exception(
+                        "chat_ws implicit_greeting companion enqueue failed agent_id={}",
+                        agent_id,
+                    )
     except Exception:
         logger.exception("chat_ws user_signed_on failed agent_id={}", agent_id)
         await websocket.send_json(
@@ -1585,10 +1701,7 @@ async def _agent_chat_completions_impl(
         ):
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    "messageType IMPLICIT_USER_SIGNED_ON is only supported on "
-                    "WebSocket companion chat"
-                ),
+                detail="messageType IMPLICIT_USER_SIGNED_ON is not supported",
             )
 
         # TODO(implicit-sign-on): If _agent_chat_completions_impl is split into helpers, pass
@@ -2364,6 +2477,14 @@ async def chat_completions_websocket(
                 db=db,
                 current_user=current_user,
                 companion_hb_ctx=companion_hb_ctx,
+                outbound_queue=outbound_queue,
+                companion_turn_lock=companion_turn_lock,
+                ws_fg_pending=ws_fg_pending,
+                tc_box=tc_box,
+                companion_bg_sink=companion_bg_sink,
+                subscription_svc=subscription_svc,
+                voice_svc=voice_svc,
+                app_version_code=app_version_code,
             ):
                 continue
             if await _try_handle_ws_user_signed_out_frame(
@@ -2507,7 +2628,28 @@ async def chat_completions_websocket_verify(
                 continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
-            websocket_request = ChatWebSocketRequest.model_validate_json(raw)
+            if not isinstance(data, dict):
+                await outbound_queue.put(
+                    {
+                        "code": 400,
+                        "message": "Chat frame must be a JSON object",
+                        "data": None,
+                        "agent_id": "",
+                    }
+                )
+                continue
+            try:
+                websocket_request = ChatWebSocketRequest.model_validate(data)
+            except ValidationError as exc:
+                await outbound_queue.put(
+                    {
+                        "code": 422,
+                        "message": "Invalid chat WebSocket request",
+                        "data": json.loads(exc.json()),
+                        "agent_id": str(data.get("agent_id") or ""),
+                    }
+                )
+                continue
             agent_id = websocket_request.agent_id
             request = _chat_request_with_merged_ws_time_context(
                 websocket_request.request,
