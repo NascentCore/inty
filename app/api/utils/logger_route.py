@@ -126,32 +126,32 @@ class LoggerRoute(APIRoute):
                     return response
                 except Exception as e:
                     duration = time.time() - start_time
-                    # 401 鉴权失败（含 JWT 过期、未带 token）为预期情况，降级为 WARNING 减少 error 日志噪音
-                    is_401 = (
+                    # 4xx HTTPException 是预期的客户端错误，降级为 WARNING 减少测试/CI error 日志噪音。
+                    is_client_error = (
                         isinstance(e, HTTPException)
-                        and getattr(e, "status_code", None) == 401
+                        and 400 <= getattr(e, "status_code", 0) < 500
                     )
                     if use_json_format:
                         error_log_data = {
                             "request_id": request_id,
-                            "type": "error" if not is_401 else "warning",
+                            "type": "warning" if is_client_error else "error",
                             "method": request.method,
                             "path": request.url.path,
                             "error": str(e),
                             "duration": round(duration, 3),
                             "timestamp": datetime.utcnow().isoformat() + "Z",
                         }
-                        if is_401:
+                        if is_client_error:
                             logger.warning(
                                 json.dumps(error_log_data, ensure_ascii=False)
                             )
                         else:
                             logger.error(json.dumps(error_log_data, ensure_ascii=False))
                     else:
-                        if is_401:
+                        if is_client_error:
                             logger.warning(
                                 f"\n{'='*80}\n"
-                                f"⚠️ 401 [{request_id}]\n"
+                                f"⚠️ {getattr(e, 'status_code', '4xx')} [{request_id}]\n"
                                 f"{'='*80}\n"
                                 f"Method:      {request.method}\n"
                                 f"Path:        {request.url.path}\n"
