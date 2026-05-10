@@ -2103,6 +2103,90 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     assert utc.utc_offset_minutes == 480
 
 
+def test_chat_websocket_user_signed_out_appends_chat_logs_line(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict[str, object] = {}
+
+    def fake_append(**kwargs):
+        captured["kwargs"] = kwargs
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id=42, agent_id=agent_id)
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "append_companion_chat_logs_line_for_ws_control",
+        fake_append,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+
+    user = _make_user(user_id="user-so-1", auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_out",
+                    "agent_id": "agent-so-1",
+                    "message_id": msg_uuid,
+                }
+            )
+            ack = websocket.receive_json()
+
+    assert ack == {"type": "user_signed_out_ack", "ok": True}
+    kw = captured["kwargs"]
+    assert kw["user_id"] == "user-so-1"
+    assert kw["agent_id"] == "agent-so-1"
+    assert kw["chat_id"] == 42
+    assert isinstance(kw["resolved_chat_model_id"], str)
+    assert kw["resolved_chat_model_id"]
+    line = kw["line"]
+    assert isinstance(line, str)
+    assert "**user_signed_out**" in line
+    assert f"`received_message_uuid={msg_uuid}`" in line
+
+
+def test_chat_websocket_verify_user_signed_out_not_supported(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws/verify") as websocket:
+            websocket.send_json({"type": "user_signed_out", "agent_id": "agent-v"})
+            ack = websocket.receive_json()
+
+    assert ack == {
+        "type": "user_signed_out_ack",
+        "ok": False,
+        "reason": "not_supported",
+    }
+
+
 def test_v1_chat_completions_prefers_chat_settings_voice_id_for_autoplay(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

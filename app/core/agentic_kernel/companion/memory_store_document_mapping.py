@@ -43,6 +43,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON = "inty_v2_context_compaction_state_json"
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
     INTY_V2_IMAGE_GATE_JSON = "inty_v2_image_gate_json"
+    CHAT_LOGS_MD = "chat_logs_md"
 
 
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
@@ -52,6 +53,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "MEMORY.md": (CompanionMemoryDocumentKind.MEMORY, None),
     "HEARTBEAT.md": (CompanionMemoryDocumentKind.HEARTBEAT, None),
     "TOOLS.md": (CompanionMemoryDocumentKind.TOOLS, None),
+    "CHAT_LOGS.md": (CompanionMemoryDocumentKind.CHAT_LOGS_MD, None),
     "SIGNIFICANCE_PERCEPTION.md": (
         CompanionMemoryDocumentKind.SIGNIFICANCE_PERCEPTION,
         None,

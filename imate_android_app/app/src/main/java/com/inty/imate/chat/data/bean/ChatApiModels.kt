@@ -125,7 +125,8 @@ data class ChatWsControlFrame(@SerialName("type") val type: String?)
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
     this?.type == "pong" ||
         this?.type == "client_context_ack" ||
-        this?.type == "user_signed_on_ack"
+        this?.type == "user_signed_on_ack" ||
+        this?.type == "user_signed_out_ack"
 
 @Serializable
 data class UserTimeContext(
