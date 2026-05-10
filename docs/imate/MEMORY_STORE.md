@@ -2,6 +2,52 @@
 
 本文汇总 agentic companion 与工作区 **MemoryStore** 相关的两类说明：(1) **已实现** 的运行时与控制面 artifact（context、transcript、状态 JSON、生图索引等）；(2) **规划中** 的命名向量长期记忆（FR：`FR_AGENTIC_MEMORY_STORE`，PostgreSQL + pgvector）。Markdown 分层记忆管线（episodic / gist / semantic 策展）见 [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)。
 
+## 期望设计方向（不绑定具体排期，仅架构目标）
+
+以下面向「长期关系型 agentic companion」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [`/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md`](/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md)。
+
+1. **分层存储模型（逻辑上拆分，不必一次改完表）**  
+   - **事件流（append-only delta）**：transcript、runtime events、工具轨迹等用 **行级事件** 或 **对象存储 + 游标**，避免每行 JSONL 都整文件快照。  
+   - **可编辑文档（snapshot / CRDT 可选）**：`IDENTITY` / `USER` / `MEMORY` 等保留「当前版本 + 可选历史」；写入可选 **内容寻址** 或 **显式 revision** 元数据（作者、turn_id、模型 id）。  
+   - **检索层（vector / keyword）**：从事件与文档派生 **chunk + embedding**，与正文表引用同一 `revision` 或 `event_id`，供 RAG / 归档压缩。
+
+2. **单一 scope 真理源**  
+   - 弱化「从路径拆解三元组」；以显式 **`session_id` / `scope_id`（UUID）** 作为主外键，`path` 仅作 LLM 侧视图。
+
+3. **跨会话记忆**  
+   - 引入 **user-scoped 或与 companion 绑定的人格层** vs **chat-scoped 对话层**；用 **projection job** 把 chat 层稳定事实合并到上层（带冲突策略）。
+
+4. **并发与一致性**  
+   - 对「读-改-写」类文档：**乐观锁（expected revision）或 DB 单行 current + 异步归档**，避免 lost update；或对 JSONL **只追加物理行**而非重复存全文件。
+
+5. **保留现有优点**  
+   - 继续暴露 **POSIX 路径式工具接口**（对模型友好）；底层实现替换为分段 repository，不必推翻 API。
+
+```mermaid
+flowchart LR
+  subgraph llmFacing [LLM_facing_API]
+    PathTools[memory_store_paths]
+  end
+  subgraph svc [CompanionMemoryService]
+    Router[path_to_logical_key]
+    DocSnap[document_snapshot_store]
+    EventLog[event_append_log]
+    Index[search_index_projection]
+  end
+  subgraph stores [storage]
+    PG[(Postgres)]
+    Obj[(optional_object_storage)]
+  end
+  PathTools --> Router
+  Router --> DocSnap
+  Router --> EventLog
+  DocSnap --> PG
+  EventLog --> PG
+  EventLog --> Obj
+  DocSnap --> Index
+  EventLog --> Index
+```
+
 ## 工作区 MemoryStore（运行时与控制面）
 
 本文与分层记忆稿（[`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)）正交：记录 **context / transcript / ai_private / 状态 JSON / 生图索引** 在 MemoryStore 中的角色。人设根稿（`IDENTITY.md` / `SOUL.md` / `USER.md`）随交互由工具与记忆管线策展更新。规划中的向量 LTM 见下文「FR_AGENTIC_MEMORY_STORE（向量长期记忆）」。
