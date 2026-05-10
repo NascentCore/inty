@@ -62,6 +62,7 @@ from app.core.agentic_kernel.companion.models import (
     MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
+from app.core.agentic_kernel.companion.utc import utc_iso_ts
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
 from app.schemas.chat import (
@@ -69,6 +70,7 @@ from app.schemas.chat import (
     ChatMessage,
     ChatWebSocketRequest,
     ChatWsUserSignedOnFrame,
+    ChatWsUserSignedOutFrame,
     CompanionChatTurnMessageType,
     UserTimeContext,
     normalize_websocket_companion_message_id_uuid,
@@ -343,6 +345,95 @@ async def _try_handle_ws_user_signed_on_frame(
         logger.exception("chat_ws user_signed_on failed agent_id={}", agent_id)
         await websocket.send_json(
             {"type": "user_signed_on_ack", "ok": False, "reason": "server_error"}
+        )
+    return True
+
+
+async def _try_handle_ws_user_signed_out_frame(
+    websocket: WebSocket,
+    data: Any,
+    *,
+    db: AsyncSession,
+    current_user: schemas.User,
+    companion_hb_ctx: dict[str, Any] | None,
+    subscription_svc: SubscriptionService,
+) -> bool:
+    """
+    Consume ``{"type":"user_signed_out","agent_id":...}``.
+
+    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
+    inner-tick coords or transcript.
+
+    ``/ws/verify`` passes ``companion_hb_ctx=None`` and receives ``ok: false`` (not supported).
+    """
+    if not isinstance(data, dict) or data.get("type") != "user_signed_out":
+        return False
+    if companion_hb_ctx is None:
+        await websocket.send_json(
+            {
+                "type": "user_signed_out_ack",
+                "ok": False,
+                "reason": "not_supported",
+            }
+        )
+        return True
+    try:
+        frame = ChatWsUserSignedOutFrame.model_validate(data)
+    except ValidationError:
+        await websocket.send_json(
+            {
+                "type": "user_signed_out_ack",
+                "ok": False,
+                "reason": "invalid_payload",
+            }
+        )
+        return True
+    agent_id = frame.agent_id.strip()
+    try:
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+        if chat.agent_id != agent_id:
+            await websocket.send_json(
+                {
+                    "type": "user_signed_out_ack",
+                    "ok": False,
+                    "reason": "agent_mismatch",
+                }
+            )
+            return True
+        subscription = await subscription_svc.get_user_current_subscription(
+            db, current_user.id
+        )
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=bool(subscription)
+        )
+        recv_msg_uuid = (frame.message_id or "").strip()
+        uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
+        log_line = (
+            f"- **user_signed_out** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
+            f"`chat_id={chat.id}` `agent_id={agent_id}` `received_message_uuid={uuid_part}`"
+        )
+        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+            user_id=current_user.id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+            line=log_line,
+        )
+        await websocket.send_json({"type": "user_signed_out_ack", "ok": True})
+        logger.info(
+            "chat_ws user_signed_out logged CHAT_LOGS.md user={} agent={} chat_id={} "
+            "received_message_uuid={}",
+            current_user.id,
+            agent_id,
+            chat.id,
+            recv_msg_uuid or "-",
+        )
+    except Exception:
+        logger.exception("chat_ws user_signed_out failed agent_id={}", agent_id)
+        await websocket.send_json(
+            {"type": "user_signed_out_ack", "ok": False, "reason": "server_error"}
         )
     return True
 
@@ -2275,6 +2366,15 @@ async def chat_completions_websocket(
                 companion_hb_ctx=companion_hb_ctx,
             ):
                 continue
+            if await _try_handle_ws_user_signed_out_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_hb_ctx=companion_hb_ctx,
+                subscription_svc=subscription_svc,
+            ):
+                continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             if not isinstance(data, dict):
@@ -2394,6 +2494,15 @@ async def chat_completions_websocket_verify(
                 db=db,
                 current_user=current_user,
                 companion_hb_ctx=None,
+            ):
+                continue
+            if await _try_handle_ws_user_signed_out_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_hb_ctx=None,
+                subscription_svc=subscription_svc,
             ):
                 continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):

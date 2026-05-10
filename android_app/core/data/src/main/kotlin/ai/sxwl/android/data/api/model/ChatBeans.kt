@@ -105,7 +105,10 @@ data class ChatUserSignedOnWsMessage(
 data class ChatWsControlFrame(@Json(name = "type") val type: String?)
 
 fun ChatWsControlFrame?.shouldDeferChatResponseParsing(): Boolean =
-    this?.type == "pong" || this?.type == "client_context_ack" || this?.type == "user_signed_on_ack"
+    this?.type == "pong" ||
+        this?.type == "client_context_ack" ||
+        this?.type == "user_signed_on_ack" ||
+        this?.type == "user_signed_out_ack"
 
 @JsonClass(generateAdapter = true)
 data class UserTimeContext(
