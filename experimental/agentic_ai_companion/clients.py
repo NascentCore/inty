@@ -6,7 +6,7 @@ import os
 from typing import Any
 from openai import OpenAI
 
-from app.core.agentic_kernel.providers.facade import (
+from app.core.agentic_kernel.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
