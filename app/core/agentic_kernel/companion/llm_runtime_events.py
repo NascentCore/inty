@@ -37,9 +37,9 @@ class LlmRuntimeEventBind:
     scene: str | None = None
 
 
-companion_llm_runtime_event_bind_ctx: contextvars.ContextVar[LlmRuntimeEventBind | None] = (
-    contextvars.ContextVar("companion_llm_runtime_event_bind_ctx", default=None)
-)
+companion_llm_runtime_event_bind_ctx: contextvars.ContextVar[
+    LlmRuntimeEventBind | None
+] = contextvars.ContextVar("companion_llm_runtime_event_bind_ctx", default=None)
 
 
 def _is_openrouter_invalid_json_error(exc: BaseException) -> bool:

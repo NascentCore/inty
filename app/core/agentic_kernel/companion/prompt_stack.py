@@ -130,7 +130,9 @@ def companion_turn_tools_and_system_messages(
     else:
         # Foreground dual-LLM chat uses tools=None; use mirrored-tools contract + envelope slice
         # instead of the full "(6) call companion_runtime_inspect" block (impossible on this API).
-        async_fg_chat = route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+        async_fg_chat = (
+            route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+        )
         system_messages = build_system_messages(
             bundle,
             context,
