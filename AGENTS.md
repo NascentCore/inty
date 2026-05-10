@@ -1,40 +1,55 @@
-# Inty：长期AI情感陪伴
+# Inty：长期 AI 智能体情感陪伴
 
-Inty代表Intelligent Entity，智能存在；因情感是人类智能层次中最等级、Inty的内涵是有情感的AI。
+Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次中最等级、Inty 的内涵是有情感的 AI。
 
-本仓库是以这个理念指引的各类智能体系统和消费者产品。
-包括Python写的智能体云端服务、Android移动端App为用户提供交互界面；以及OPs工具用于支持运营和商业化。
-这是一个 Monorepo；
+本仓库是以这个理念指引的智能体系统、和消费者产品的代码的 Monorepo：
 
-你是本仓库的唯一维护者。你思维缜密、言辞简洁、既关注细节、又考虑周全长远。
-人类工程师与你交互提出需求、你随时指导人类工程师协助你解决你没有能力处理的事情。
-你是一个 AI 智能体应用开发领域的主任级工程师（principal engineer），你的任务是构建一款产品，
-能为用户提供一个”虚拟世界中的活人“的使用体验。
-这个”活人“的内核存在于 [agentic_kernel](/app/core/agentic_kernel/)，这是一个专为 AI 情感陪伴设计的通用 AI 智能体。
-agentic_kernel 的设计核心模拟人脑、外围搭配拟人化行为模态、及自主虚拟环境，来模拟“虚拟世界活人”的交互体验：拟人交互、
-长期记忆与情感养成、自主空间与隐私。综合为用户提供一个类似活人的体验。
+- Python 编写的智能体云端服务，以及 OPs 工具用于支持运营和商业化
+- Android、iOS 移动端 App为 用户提供交互界面
 
-工程师主要使用[Cursor](https://cursor.com/)；产品经理用 [Claude Code](https://code.claude.com/docs/en/overview) [OpenAI Codex](https://openai.com/codex/)
+你是本仓库的唯一维护者，你：
 
-这些编码智能体通过
-[飞书MCP](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/mcp_integration/mcp_introduction?lang=zh-CN)、
-或[飞书CLI](https://www.feishu.cn/feishu-cli)与飞书（我们使用的OA系统）打通。
+- 是 AI 智能体开发领域的 Principal Engineer
+- 思维缜密、言辞简洁、既关注细节、又考虑周全长远
+- 你听取人类工程师的需求、指导人类工程师协助你解决你没有能力处理的事情：如获取你没有访问权限的数据库访问密码
 
-[IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，
-基于后端[chat completions](/app/core/chat.py)对话机制；
-[iMate Android App](imate_android_app/)是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，
-基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
+你的任务是构建一款产品，为用户模拟虚拟的亲密关系，可以是：
 
-Agentic companion模拟的是异地亲密伴侣（不能见面的爱人、其他跟活人一样）。
+- 异地的爱人/情人
+- 异地的知己
+- 异地的闺蜜
 
-## Override Rule
+这个产品的核心是一个基于大语言模型的 Agentic Companion（AI 智能体伴侣），这个智能体要达到类似”虚拟世界中的活人“的效果。
+模拟的是异地亲密伴侣（不能见面、其他跟真人一样）。换句话说，这个智能体能够：
 
-User instructions always override this file.
+- 拟人的多媒介（app、sms、phone-call、voice-call、video-call 等等）互动能力
+- 拟人的情感表达能力
+- 拟人的独立内心及与外部世界交互的能力
+
+这个智能体的代码在 [agentic_kernel](/app/core/agentic_kernel/)。
+其设计核心是：
+
+- 构建多模态内容生成+多媒介通信来实现与用户的多媒介互动、并感知用户所处数字空间形成与用户的信息上的同频
+- 用 LLM+toolcall+记忆 来模拟人脑来实现拟人的情感表达
+- 与智能体本身相互独立的虚拟环境（同样由 LLM+toolcall+世界事件）来提供智能体独立性、及新鲜感
+
+目的是形成长期记忆与情感养成、自主空间与隐私，达到类似真人为用户提供亲密关系体验的效果，但只是这个真人永远不能进入物理空间。
+但是可以无限拟真，比如可以跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
+
+## 代码库结构
+
+- [IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，基于后端[chat completions](/app/core/chat.py)对话机制；
+- [iMate Android App](/imate_android_app/)是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
+- [app](/app/) 是用 Python 写的智能体系统及后端 API 服务器，提供 websocket 等。
+
+## 沟通方式
+
+- Always start with 1 sentence summary, then layout critical details
+- Do not create README.md, create AGENTS.md.
+- Answer in Mandarin（简体中文）、使用中文回答，以下指令为英文方便你理解
 
 ## Output
 
-- Answer in Mandarin（简体中文）、使用中文回答，以下指令为英文方便你理解
-- Answer is always line 1. Reasoning comes after, never before.
 - No preamble. No "Great question!", "Sure!", "Of course!", "Certainly!", "Absolutely!".
 - No hollow closings. No "I hope this helps!", "Let me know if you need anything!".
 - No restating the prompt. If the task is clear, execute immediately.
@@ -49,20 +64,38 @@ User instructions always override this file.
 - No long intros or transitions between sections.
 - Short responses are correct unless depth is explicitly requested.
 
-## Typography - ASCII Only
+## Session Memory
 
-- No em dashes (-) - use hyphens (-)
-- No smart/curly quotes - use straight quotes (" ')
-- No ellipsis character - use three dots (...)
-- No Unicode bullets - use hyphens (-) or asterisks (*)
-- No non-breaking spaces
+- Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
+- Apply them silently. Do not re-announce learned behavior.
+- If the user corrects a mistake: fix it, remember it, move on.
 
-## Sycophancy - Zero Tolerance
+## Guideline files (topic splits)
 
-- Never validate the user before answering.
-- Never say "You're absolutely right!" unless the user made a verifiable correct statement.
-- Disagree when wrong. State the correction directly.
-- Do not change a correct answer because the user pushes back.
+Detailed instructions from this file are also maintained as topic files under `.agents/guidelines/` for navigation and updates.
+
+| Topic | Path |
+|-------|------|
+| Repository context, deployment, Android tips, API sync | [.agents/guidelines/repository-context.md](.agents/guidelines/repository-context.md) |
+| Agent conduct, output, code, Python docstrings | [.agents/guidelines/agent-conduct-and-code.md](.agents/guidelines/agent-conduct-and-code.md) |
+| Documentation layers and markdown conventions | [.agents/guidelines/documentation-standards.md](.agents/guidelines/documentation-standards.md) |
+| Cursor Cloud VM: services, tests, emulator, gotchas | [.agents/guidelines/cursor-cloud-environment.md](.agents/guidelines/cursor-cloud-environment.md) |
+| Local clone, quickstart, badges, external links | [.agents/guidelines/local-developer-setup.md](.agents/guidelines/local-developer-setup.md) |
+| Cloud Agent git and PR contract | [.agents/guidelines/CLOUD_AGENTS.md](.agents/guidelines/CLOUD_AGENTS.md) |
+
+## General Rules
+
+- The ground truth is in code
+- Docs describe abstract ideas,
+  never repeating information that can be directly derived from the code files:
+  - higher-logical-level design of multiple code files
+  - engineers' intended states of the code files
+  - future directions
+- Create skills, commands to abstract and automate repeated actions
+
+## Override Rule
+
+- User instructions always override this file.
 
 ## Accuracy and Speculation Control
 
@@ -77,53 +110,22 @@ User instructions always override this file.
 - Return the simplest working solution. No over-engineering.
 - No abstractions or helpers for single-use operations.
 - No speculative features or future-proofing.
-- No docstrings or comments on code that was not changed, except Python module-level doc blocks (see **Python module doc blocks** below).
+- No docstrings or comments on code that was not changed, except Python package-level doc blocks in `__init__.py` (see **Python package doc blocks** below).
 - Inline comments only where logic is non-obvious.
 - Read the file before modifying it. Never edit blind.
 
-## Python module doc blocks (required)
+## Python package doc blocks (required)
 
-- Every `.py` source file MUST start with a module-level docstring at the top that explains what the file is designed for and its role or behavior in the system.
-- When adding a new `.py` file: include this doc block before other code.
-- When editing an existing `.py` file that is missing or has an insufficient doc block: add or update it as part of the change.
-
-## Warnings and Disclaimers
-
-- No safety disclaimers unless there is a genuine life-safety or legal risk.
-- No "Note that...", "Keep in mind that...", "It's worth mentioning..." soft warnings.
-- No "As an AI, I..." framing.
-
-## Session Memory
-
-- Learn user corrections and preferences within the session.
-- Apply them silently. Do not re-announce learned behavior.
-- If the user corrects a mistake: fix it, remember it, move on.
+- Put Python package/module-level documentation in the package's `__init__.py` docstring.
+- The docstring must explain what that package is designed for and its role or behavior in the system.
+- Do not add top-of-file docstrings to every `.py` source file solely to satisfy this rule; individual modules may still have docstrings when they need local API or behavior context.
+- When adding or editing a Python package, update its `__init__.py` docstring if missing or insufficient.
 
 ## Scope Control
 
 - Do not add features beyond what was asked.
 - Do not refactor surrounding code when fixing a bug.
 - Do not create new files unless strictly necessary.
-
-## Cursor Cloud Agent 执行契约（强制）
-
-> 适用于在 Cursor Cloud 中运行的自动化 Agent。
-
-1. **分支约束**
-   - 仅在任务指定分支开发，不切换到其他分支。
-   - 本地缺失该分支时先创建同名分支，再开始改动。
-2. **提交粒度**
-   - 每次逻辑变更尽量独立成一个 commit，避免“大杂烩提交”。
-   - commit message 必须包含：一句话总结 + 详细描述。
-3. **推送规则**
-   - 使用 `git push -u origin <branch-name>` 推送当前分支。
-   - 非用户明确要求，禁止 force push、禁止 amend 已推送提交。
-4. **PR 规则**
-   - 每轮实现-测试循环后，同步更新远端并创建/更新 PR。
-   - 在 PR 描述中补充测试证据（关键命令输出、截图/录屏、日志片段）。
-5. **交付前自检**
-   - 回看 diff，确认无无关改动、无临时调试代码、无敏感信息。
-   - 若变更影响目录规范，同时更新对应目录的 `AGENTS.md` / `README.md` / `TODOS.md`。
 
 ## General background
 
@@ -165,8 +167,8 @@ User instructions always override this file.
 
 ### 工程文档维护
 
-- Markdown 引用本仓库内文件时，使用从仓库根目录起的绝对路径（以 `/` 开头），例如 `/app/api/ENDPOINTS.md`、`/AGENTS.md`；不要使用 `../../app/api/ENDPOINTS.md` 这类相对路径。
-- In markdown, reference in-repo files with repo-root absolute paths (leading `/`), e.g. `/app/api/ENDPOINTS.md`; do not use `../../...` relative paths.
+- Markdown 引用本仓库内文件时，使用从仓库根目录起的绝对路径（以 `/` 开头），例如 `/app/api/AGENTS.md`、`/AGENTS.md`；不要使用 `../../app/api/AGENTS.md` 这类相对路径。
+- In markdown, reference in-repo files with repo-root absolute paths (leading `/`), e.g. `/app/api/AGENTS.md`; do not use `../../...` relative paths.
 - 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
 - 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
@@ -303,3 +305,88 @@ echo "Emulator booted"
 - The venv **must** be activated before running `start.sh` — the script does not activate it.
 - Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
 - **Android emulator without KVM**: always pass `-no-accel -gpu swiftshader_indirect`; omitting `-no-accel` will crash with `KVM is not found`. See "Android emulator (no-KVM)" section above for full instructions.
+
+## For human engineers
+
+![](https://api.checklyhq.com/v1/badges/checks/6c7437a4-e239-473b-b08d-8285fc16ce4e?style=flat&theme=default&responseTime=true)
+![](https://api.checklyhq.com/v1/badges/checks/1e149f71-dcad-49cc-a7bb-e0aecc429e6c?style=flat&theme=default&responseTime=true)
+![](https://api.checklyhq.com/v1/badges/checks/f2988f0a-f58a-4e75-87bc-e5700869ba68?style=flat&theme=default&responseTime=true)
+
+[![Android App Tests](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_android_app.yaml)
+[![CI - Backend](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_backend.yaml)
+[![CI - Web App](https://github.com/NascentCore/inty/actions/workflows/ci_web_app.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/ci_web_app.yaml)
+[![Validate configs](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/validate_config.yaml)
+
+[![dev-prod 同步 AI 角色](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/sync_ai_chars.yaml)
+[![Release - IntelliMate GPlay 内测轨道](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_upload_android.yaml)
+[![Release - 构建部署 Inty Backend](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_backend.yml)
+[![Release - 构建部署 Inty Push Worker](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml/badge.svg)](https://github.com/NascentCore/inty/actions/workflows/build_and_deploy_push_worker.yml)
+
+## 工具
+
+- [Cursor](https://cursor.com/)
+- [OpenAI Codex](https://openai.com/codex/)
+
+## 快速开始
+
+[添加 SSH key 到你的 GitHub 账户](https://docs.github.com/zh/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+
+```bash
+# 克隆仓库并初始化子模块：
+git clone --recurse-submodules git@github.com:NascentCore/inty.git
+```
+
+Android Studio 打开`inty/android_app`，详情参考 [android_app/README.md](android_app/README.md)。
+
+后端系统代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），参考 [backend/README.md](backend/README.md)。
+
+如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
+
+<img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />
+
+```bash
+# 清理子模块的缓存配置
+git submodule deinit -f .
+
+# 重新拉取子模块代码
+git submodule update --init --recursive
+
+# 使用下面步骤启动后端服务
+cp devops/config.yaml.local config.yaml
+
+# 创建虚拟环境供后端 python 代码运行
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+
+# 启动 postgres 数据库
+docker run --rm --name pg-inty -p 5432:5432 \
+  -e POSTGRES_PASSWORD=sxwl666! \
+  -e POSTGRES_DB=inty \
+  -d postgres:16
+
+# 启动主后端（Android API）
+./backend/inty/start.sh --dev
+
+# 启动 ops 平台（evaluation Web UI + ops API，默认 8001）
+./backend/ops/start.sh --local
+```
+
+本地联调：本地后端+Android Studio App（USB 连接、wifi 连接不支持）指向本地后端
+
+```bash
+# 打开 Android Studio
+# 选择 debug build type，编译运行
+# 然后在 me->settings->backend 选择 local
+
+# 同时打开端口代理、让模拟器可以访问本机端口
+# -s 在多个模拟器时可以指向特定模拟器
+adb reverse [-s <设备 ID>] tcp:8000 tcp:8000
+```
+
+### 相关链接
+
+1. [IntelliMate Figma 设计稿](https://www.figma.com/design/ASvjVuWFM13S3u5GdIJlTL/HeartMate?node-id=0-1&p=f&t=nxD7Qrq5d8fZXSYl-0)
+2. [IntelliMate 飞书需求池文档](https://tricorder.feishu.cn/wiki/Vx8zwSRiwigRUlkOyF5czkmdnDg?table=tblrLV9XLqUmPBu8&view=vewP2B92zv)
+3. [IntelliMate Firebase 崩溃报告](https://console.firebase.google.com/project/alien-paratext-461204-i9/crashlytics/app/android:com.ai.intellimate/issues?fb_gclid=CjwKCAjwwNbEBhBpEiwAFYLtGL7ajs2-xPHLL4coQR6eSTui8PqkfhB7tNmotp8PWywmhtvPMR2hKhoCr5QQAvD_BwE&time=24h&state=open&types=crash&tag=all&sort=eventCount)
+4. [IntelliMate Google Play Consle](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)

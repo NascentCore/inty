@@ -20,7 +20,7 @@ data class SendMsgResponse(
     val code: Int? = null,
     val message: String? = null,
     val data: SentMsgRspData? = null,
-    /** 下行顶层 agent_id，多角色时区分（与后端 `app/api/ENDPOINTS.md` WebSocket 约定一致）。 */
+    /** 下行顶层 agent_id，多角色时区分（与后端 `app/api/AGENTS.md` WebSocket 约定一致）。 */
     @Json(name = "agent_id") val agentId: String? = null,
 ) {
     @Serializable
@@ -241,6 +241,7 @@ data class MsgInfo(
         val voice_session_id: String? = null,
         @Json(name = "generated_image") val generatedImage: GeneratedImage? = null,
         @Json(name = "generated_music") val generatedMusic: GeneratedMusic? = null,
+        @Json(name = "tool_background_started") val toolBackgroundStarted: Boolean = false,
     ) {
         @Serializable
         @JsonClass(generateAdapter = true)

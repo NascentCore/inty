@@ -1,6 +1,7 @@
 import io
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
@@ -108,7 +109,16 @@ async def test_crop_avatar_from_background():
         f"https://storage.cloud.google.com/yx-test/{random_filename}.png",
     )
     cropped_avatar_url = crop_avatar_result.avatar_url
-    assert cropped_avatar_url == expected_avatar_url
+    gcs_cfg = global_config_loaded_from_config_yaml.gcs
+    if gcs_cfg.use_fake_gcs:
+        expected_file_uri = (
+            Path(gcs_cfg.fake_gcs_base_dir).resolve()
+            / "yx-test"
+            / f"{random_filename}-cropped-avatar.png"
+        ).resolve().as_uri()
+        assert cropped_avatar_url == expected_file_uri
+    else:
+        assert cropped_avatar_url == expected_avatar_url
     logger.info(f"Cropped avatar URL: {cropped_avatar_url}")
     # 本地运行时，可以打开图片查看
     # jpe_data = download_from_gcs(cropped_avatar_url)

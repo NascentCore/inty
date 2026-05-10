@@ -6,11 +6,16 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.core.agentic_kernel.companion import runtime_inspect_context as ric
 from app.core.agentic_kernel.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
-from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.memory_registry import (
+    get_memory_store,
+    shutdown_memory_store,
+)
 from app.core.agentic_kernel.companion.models import ContextMeta, InnerTickMode
 from app.core.agentic_kernel.companion.runtime_inspect_context import (
     build_last_chat_completion_request_payload,
@@ -19,13 +24,17 @@ from app.core.agentic_kernel.companion.runtime_inspect_context import (
     runtime_inspect_end_turn,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
+    runtime_inspect_set_scoped_memory_store,
 )
+from app.core.agentic_kernel.companion.runtime_events import append_runtime_event
 from app.core.agentic_kernel.companion.companion_tool_runtime import (
-    WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
     execute_tool_call,
 )
 from app.core.agentic_kernel.companion.runtime_inspect_tool import tool_companion_runtime_inspect
-from app.core.agentic_kernel.companion.prompts import build_system_prompt
+from app.core.agentic_kernel.companion.prompts.system_messages import (
+    build_system_prompt,
+)
 
 
 def _run_tool(root: Path, name: str, args: str) -> str:
@@ -46,8 +55,13 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
     root = tmp_path
     store = get_memory_store(root)
     store.write_document("SOUL.md", "soul-content-here")
+    append_runtime_event(
+        store,
+        {"ts": "2026-05-08T00:00:00Z", "kind": "tool_timeout", "detail": "slow"},
+    )
     token = runtime_inspect_begin_turn()
     try:
+        runtime_inspect_set_scoped_memory_store(store)
         client = CompanionLLMClient(
             CompanionLLMConfig(
                 api_key="super-secret-key",
@@ -63,9 +77,11 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 transcript_llm_window_max_messages=12,
                 inner_tick_turn=False,
                 inner_tick_mode=InnerTickMode.MAINTENANCE,
-                repository_only_workspace_text=True,
+                repository_only_store_text=True,
                 transcript_compaction=None,
-                workspace_read_file_max_chars_cap=WORKSPACE_READ_FILE_MAX_CHARS_CAP,
+                memory_store_read_document_max_chars_cap=(
+                    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
+                ),
             )
         )
         runtime_inspect_set_last_chat_completion_request(
@@ -78,6 +94,7 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 tools=None,
             )
         )
+        json.dumps(ric.runtime_inspect_get_bundle())
         out = _run_tool(root, "companion_runtime_inspect", "{}")
         data = json.loads(out)
         assert data["runtime_config"]["llm"]["api_key"] == "***"
@@ -92,15 +109,24 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
         )
         assert "SOUL.md" in data["store_documents"]
         assert "soul-content-here" in data["store_documents"]["SOUL.md"]["text"]
+        assert data["runtime_events"] == [
+            {
+                "ts": "2026-05-08T00:00:00Z",
+                "kind": "tool_timeout",
+                "detail": "slow",
+            }
+        ]
     finally:
         runtime_inspect_end_turn(token)
 
 
 def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
+    scoped = get_memory_store(tmp_path)
     ric.runtime_inspect_thread_overlay_begin(
         {
             "runtime_config": {"source": "tool_background", "tool_model_name": "bg/model"},
             "last_chat_completion_request": None,
+            "scoped_memory_store": scoped,
         }
     )
     try:
@@ -118,6 +144,30 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
         assert "store_documents" not in data
     finally:
         ric.runtime_inspect_thread_overlay_end()
+
+
+def test_companion_runtime_inspect_prefers_scoped_memory_store(tmp_path: Path) -> None:
+    root_flat = tmp_path
+    store_scoped = get_memory_store(
+        root_flat,
+        dsn="",
+        user_id="u",
+        companion_id="a",
+        chat_id="c",
+    )
+    store_scoped.write_document("SOUL.md", "scoped-soul-body")
+    store_default = get_memory_store(root_flat)
+    assert store_default is not store_scoped
+    token = runtime_inspect_begin_turn()
+    try:
+        runtime_inspect_set_scoped_memory_store(store_scoped)
+        out = tool_companion_runtime_inspect(root_flat, {})
+        data = json.loads(out)
+        assert "scoped-soul-body" in data["store_documents"]["SOUL.md"]["text"]
+    finally:
+        runtime_inspect_end_turn(token)
+    shutdown_memory_store(root_flat, user_id="u", companion_id="a", chat_id="c")
+    shutdown_memory_store(root_flat)
 
 
 def test_build_system_prompt_tools_contract_mentions_inspect() -> None:
@@ -154,7 +204,10 @@ def test_tool_side_compact_mentions_inspect() -> None:
     assert "companion_runtime_inspect" in text
 
 
-def test_run_turn_inspect_snapshot_during_tool_call(tmp_path: Path) -> None:
+def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tools run only in tool_background; foreground ``run_turn`` completes dual-LLM chat."""
     from app.core.agentic_kernel.companion.turn import run_turn
 
     root = tmp_path
@@ -173,59 +226,32 @@ def test_run_turn_inspect_snapshot_during_tool_call(tmp_path: Path) -> None:
         )
     )
 
-    def _mk_msg(content: str, tool_calls: list[Any]) -> MagicMock:
-        msg = MagicMock()
-        msg.content = content
-        msg.tool_calls = tool_calls
-        ch = MagicMock()
-        ch.message = msg
-        r = MagicMock()
-        r.choices = [ch]
-        return r
+    env = {
+        "user_facing_reply": "final assistant",
+        "importance_round": 1,
+        "importance_user_message": 1,
+        "importance_assistant_message": 1,
+    }
+    msg = MagicMock()
+    msg.content = json.dumps(env)
+    msg.tool_calls = []
+    ch = MagicMock()
+    ch.message = msg
+    r = MagicMock()
+    r.choices = [ch]
 
-    fn = MagicMock()
-    fn.name = "companion_runtime_inspect"
-    fn.arguments = "{}"
-    tc = MagicMock()
-    tc.id = "tc-1"
-    tc.function = fn
-    r1 = _mk_msg("", [tc])
-    r2 = _mk_msg("final assistant", [])
+    from app.core.agentic_kernel.companion import turn as turn_mod
 
-    with patch.object(
-        client,
-        "chat_completion",
-        side_effect=[r1, r2],
-    ):
+    monkeypatch.setattr(turn_mod, "start_tool_background_job", lambda **kwargs: None)
 
-        async def _assert_bundle_then_delegated(
-            r: Path, name: str, args: str, **kw: object
-        ) -> str:
-            if name == "companion_runtime_inspect":
-                b = ric.runtime_inspect_get_bundle()
-                assert b is not None
-                assert b["runtime_config"] is not None
-                lr = b["last_chat_completion_request"]
-                assert lr is not None
-                assert lr["model"] == "snap/model"
-                assert any(
-                    m.get("role") == "user" and m.get("content") == "user line"
-                    for m in lr["messages"]
-                    if isinstance(m, dict)
-                )
-                assert "secret-key" not in json.dumps(b["runtime_config"])
-            return await execute_tool_call(r, name, args, **kw)
-
-        with patch(
-            "app.core.agentic_kernel.companion.turn.repl_execute_tool_call",
-            side_effect=_assert_bundle_then_delegated,
-        ):
-            out = asyncio.run(
-                run_turn(
-                    root,
-                    "user line",
-                    store=store,
-                    llm_client=client,
-                )
+    with patch.object(client, "chat_completion", return_value=r):
+        out = asyncio.run(
+            run_turn(
+                root,
+                "user line",
+                store=store,
+                llm_client=client,
             )
+        )
     assert out.assistant_text == "final assistant"
+    assert out.tool_background_started is True

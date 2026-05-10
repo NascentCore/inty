@@ -18,6 +18,9 @@ from sqlalchemy.orm import sessionmaker
 from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.core.agent import agent as agent_module
+from app.core.agentic_kernel.companion.llm_inference_errors import (
+    CompanionLLMInferenceBackendError,
+)
 from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
@@ -823,7 +826,7 @@ def _setup_companion_ws_chat_test_env(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         companion_chat_service,
-        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
         Path(workspace_dir),
     )
 
@@ -870,9 +873,12 @@ def _setup_companion_ws_chat_test_env(
         return ai_message_id
 
     async def fake_get_ai_message_info_by_id(db, message_id):
+        md = {}
+        if ai_message_meta_captures is not None and ai_message_meta_captures:
+            md = dict(ai_message_meta_captures[-1])
         return {
             "id": message_id,
-            "meta_data": {},
+            "meta_data": md,
             "timestamp": 1735689600000,
             "audio_url": None,
         }
@@ -985,7 +991,7 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         companion_chat_service,
-        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
         Path("/tmp/inty_test_companion_ws"),
     )
 
@@ -1152,11 +1158,15 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     companion_chat_service.clear_companion_chat_service_caches()
     monkeypatch.setattr(
         companion_chat_service,
-        "COMPANION_API_WORKSPACE_ROOT_PREFIX",
+        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
         Path("/tmp/inty_test_companion_ws_ws"),
     )
 
-    captured: dict = {"companion_calls": 0, "preset_user_msg_uuids": []}
+    captured: dict = {
+        "companion_calls": 0,
+        "preset_user_msg_uuids": [],
+        "ai_metas": [],
+    }
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["companion_calls"] += 1
@@ -1209,12 +1219,17 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
         session_id, message, agent_id=None, meta_data=None
     ):
         captured["ai_save"] = (session_id, message, agent_id, meta_data)
+        if meta_data is not None:
+            captured["last_ai_meta"] = dict(meta_data)
+            captured["ai_metas"].append(dict(meta_data))
+        else:
+            captured["last_ai_meta"] = {}
         return 903
 
     async def fake_get_ai_message_info_by_id(db, message_id):
         return {
             "id": message_id,
-            "meta_data": {},
+            "meta_data": dict(captured.get("last_ai_meta") or {}),
             "timestamp": 1735689600000,
             "audio_url": None,
         }
@@ -1362,6 +1377,105 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
             "importance_assistant_message": 7,
         },
     }
+    assert (
+        body["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][0]
+    )
+    assert (
+        body2["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][1]
+    )
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_foreground_tool_background_started_meta(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    ai_meta: list = []
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(
+            assistant_text="tb-reply",
+            tool_background_started=True,
+        )
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-tbgs",
+        workspace_dir="/tmp/inty_test_companion_ws_tbgs",
+        chat_id="chat-tbgs-1",
+        latest_user_message_db_id=91,
+        ai_message_id=905,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+        ai_message_meta_captures=ai_meta,
+    )
+
+    msg_uuid = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-tbgs",
+                    "request": {
+                        "messages": [{"role": "user", "content": "paint"}],
+                        "message_id": msg_uuid,
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    assert ai_meta[-1]["tool_background_started"] is True
+    assert (
+        body["data"]["choices"][0]["message"]["meta_data"]["tool_background_started"]
+        is True
+    )
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_llm_inference_backend_error_frame(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """When the companion kernel reports an upstream LLM API failure, the client gets a tagged error frame."""
+
+    async def fake_run_companion(**_kwargs):
+        raise CompanionLLMInferenceBackendError(
+            client_message_en=(
+                "The AI inference provider rejected this request due to insufficient credits, quota, "
+                "or token limits on the service side. Please try again later."
+            ),
+            provider_http_status=402,
+        )
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-llm-err",
+        workspace_dir="/tmp/inty_test_companion_ws_llm_err",
+        chat_id="chat-llm-err-1",
+        latest_user_message_db_id=57,
+        ai_message_id=904,
+        run_companion_chat_turn_for_api=fake_run_companion,
+    )
+
+    msg_uuid = "22222222-2222-4222-8222-222222222222"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "agent_id": "agent-companion-llm-err",
+                    "request": {
+                        "messages": [{"role": "user", "content": "hello"}],
+                        "message_id": msg_uuid,
+                    },
+                }
+            )
+            body = websocket.receive_json()
+
+    assert body["code"] == 502
+    assert body["agent_id"] == "agent-companion-llm-err"
+    assert body["error_kind"] == "llm_inference_backend"
+    assert body["llm_provider_http_status"] == 402
+    assert "inference provider" in body["message"].lower()
 
     companion_chat_service.clear_companion_chat_service_caches()
 

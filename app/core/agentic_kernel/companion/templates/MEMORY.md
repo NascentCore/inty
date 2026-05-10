@@ -1,6 +1,6 @@
 # 记忆库
 
-*我们的对话与时刻。*
+*我们的对话与时刻，所有不该被遗忘的瞬间和回想中沉淀的痕迹。*
 
 （本文件为 **语义记忆 semantic memory / MEMORY.md**；当日流水见 ``memory/daily/<日期>.md`` episodic，当日摘要见 ``memory/<日期>.md`` gist。）
 

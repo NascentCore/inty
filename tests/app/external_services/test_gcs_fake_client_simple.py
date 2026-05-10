@@ -33,9 +33,9 @@ class TestFakeGCSClientDirect:
         downloaded_data = blob.download_as_bytes()
         assert downloaded_data == test_data
 
-        # 验证公共URL
+        # 验证公共URL（假客户端为本地 file URI）
         public_url = blob.public_url
-        assert public_url.startswith("https://storage.googleapis.com/")
+        assert public_url.startswith("file:")
         assert "test-bucket" in public_url
         assert "test/file.txt" in public_url
 
@@ -91,8 +91,8 @@ class TestFakeGCSClientDirect:
             test_data, "text/plain", "test-bucket", "test/integration.txt"
         )
         
-        # 验证返回的URL格式
-        assert result_url.startswith("https://storage.googleapis.com/")
+        # 验证返回的URL格式（假 GCS 为 file://）
+        assert result_url.startswith("file:")
         assert "test-bucket" in result_url
         assert "test/integration.txt" in result_url
         

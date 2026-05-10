@@ -13,7 +13,7 @@
 - 或直接导出 **`OPENROUTER_API_KEY`** 或 **`OPENAI_API_KEY`**（优先级高于 YAML）。
 - 可选：安装 **`python-dotenv`**，仓库根 **`.env`** 会在读取 YAML 之前加载。
 
-- `run_trial` / `run_matrix` 默认设置 **`INTY_V2_PROTO_ASYNC_TOOL_BG=0`**（同步工具环），以及 **`INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=1`**，从而在无本地 Postgres 时避免 `tool_update_agent_status_line` 失败导致空可见回复。生产 companion 未设置该变量时行为不变。若需与默认 REPL 工具表完全一致：`export INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=0`（通常需 Postgres 可用）。
+- `run_trial` / `run_matrix` 默认设置 **`INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=1`**，从而在无本地 Postgres 时避免 `tool_update_agent_status_line` 失败导致空可见回复。若需与默认 REPL 工具表完全一致：`export INTY_COMPANION_DISABLE_AGENT_STATUS_LINE_TOOL=0`（通常需 Postgres 可用）。
 
 ---
 

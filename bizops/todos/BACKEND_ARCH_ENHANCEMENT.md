@@ -45,7 +45,7 @@ CREATED_BY_AGENT: gpt-5.2-codex-high
 
 **0.1 架构现状盘点**
 - 任务：整理核心链路（登录、聊天、语音、订阅、评测）调用图。
-- 产出：`app/docs/ARCH_BASELINE.md`（若超 500 行功能改动，需遵循 app/docs/AGENTS.md）
+- 产出：`app/docs/ARCH_BASELINE.md`（若超 500 行功能改动，需遵循 `app/AGENTS.md`）
 - 验收：每条核心链路包含路由、服务、外部调用、DB 模型与缓存说明。
 
 **0.2 风险清单**

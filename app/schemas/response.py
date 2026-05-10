@@ -50,7 +50,7 @@ class MatchedAgentImageItem(BaseModel):
 class PaginationData(BaseModel, Generic[T]):
     """分页数据结构"""
 
-    list: List[T] = []  # 数据列表
+    list: List[T] = Field(default_factory=list)  # 数据列表
     total: int = 0  # 总记录数
     page: int = 1  # 当前页码
     page_size: int = 10  # 每页数量
@@ -67,7 +67,7 @@ class PaginationData(BaseModel, Generic[T]):
 class PagedResponse(BaseModel, Generic[T]):
     """分页数据结构"""
 
-    items: List[T] = []
+    items: List[T] = Field(default_factory=list)
     total: int = 0
     page: int = 1
     page_size: int = 10

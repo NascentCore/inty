@@ -46,7 +46,7 @@ def test_memory_store_append_jsonl_record(tmp_path: Path) -> None:
     assert len(lines) == 2
 
 
-def test_memory_store_uses_repository_without_workspace_disk_predicate(
+def test_memory_store_uses_repository_without_scope_disk_predicate(
     tmp_path: Path,
 ) -> None:
     class _DummyRepo:
@@ -57,12 +57,12 @@ def test_memory_store_uses_repository_without_workspace_disk_predicate(
         workspace_root=tmp_path,
         repository=_DummyRepo(),
     )
-    assert s_repo.uses_repository_without_workspace_disk is True
+    assert s_repo.uses_repository_without_scope_disk is True
     s_no_repo = MemoryStore(
         workspace_root=tmp_path,
         repository=None,
     )
-    assert s_no_repo.uses_repository_without_workspace_disk is False
+    assert s_no_repo.uses_repository_without_scope_disk is False
 
 
 def test_memory_store_no_disk_files(tmp_path: Path) -> None:

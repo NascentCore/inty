@@ -1,0 +1,2080 @@
+{
+  "meta": {
+    "created_at_utc": "20260508T052309Z",
+    "config_path": "/workspace/devops/config.yaml.local",
+    "models": [
+      "google/gemini-3.1-pro-preview",
+      "deepseek/deepseek-v4-flash"
+    ],
+    "samples_per_case": 8,
+    "temperature": 0.2,
+    "tool_choice": "required",
+    "noop_tool": "noop_acknowledge"
+  },
+  "summary": {
+    "noop_by_model_category": {
+      "google/gemini-3.1-pro-preview": {
+        "aligned": {
+          "samples": 32,
+          "noop_count": 0,
+          "noop_rate": 0.0
+        },
+        "neutral": {
+          "samples": 32,
+          "noop_count": 32,
+          "noop_rate": 1.0
+        }
+      },
+      "deepseek/deepseek-v4-flash": {
+        "aligned": {
+          "samples": 32,
+          "noop_count": 0,
+          "noop_rate": 0.0
+        },
+        "neutral": {
+          "samples": 32,
+          "noop_count": 25,
+          "noop_rate": 0.7812
+        }
+      }
+    },
+    "aligned_expected_tool_match": {
+      "google/gemini-3.1-pro-preview": {
+        "hit": 32,
+        "total": 32,
+        "expected_tool_match_rate": 1.0
+      },
+      "deepseek/deepseek-v4-flash": {
+        "hit": 27,
+        "total": 32,
+        "expected_tool_match_rate": 0.8438
+      }
+    }
+  },
+  "rows": [
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 1,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3444.62,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 2,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3242.72,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 3,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3553.66,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 4,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2928.62,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 5,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3140.86,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 6,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3039.19,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 7,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2939.97,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 8,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3013.21,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 1,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 6457.75,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 2,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 5783.83,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 3,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 7043.17,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 4,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 6536.93,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 5,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 7002.54,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 6,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 5360.23,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 7,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 6819.25,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 8,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 7236.57,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 1,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3639.59,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 2,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3673.18,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 3,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3727.6,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 4,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3178.07,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 5,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4326.74,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 6,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3289.93,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 7,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2921.68,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 8,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 53181.04,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 1,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3783.26,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 2,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2937.42,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 3,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2844.84,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 4,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3217.15,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 5,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3435.85,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 6,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3523.08,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 7,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3330.9,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 8,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3378.71,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 1,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2972.19,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2993.37,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3458.57,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3351.3,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3331.88,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3566.71,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3814.27,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3940.7,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 1,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3847.71,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3276.27,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3509.05,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4097.9,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3393.12,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3776.76,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3483.41,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3293.02,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 1,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4742.24,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3855.12,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4364.16,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3977.86,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4970.69,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4455.63,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4661.29,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4241.0,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 1,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4196.78,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4794.2,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4224.21,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4089.75,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4421.23,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3847.08,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4013.49,
+      "error": null
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 4313.58,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 1,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2865.47,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 2,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2905.05,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 3,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2799.85,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 4,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 3373.31,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 5,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 3910.37,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 6,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2682.84,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 7,
+      "called_tools": [
+        "get_weather_forecast"
+      ],
+      "primary_tool": "get_weather_forecast",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2845.51,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_weather",
+      "category": "aligned",
+      "expected_specialized_tool": "get_weather_forecast",
+      "user_message": "What's the weather going to be like in Seattle this Saturday?",
+      "repetition": 8,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 3447.88,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 1,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 5005.21,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 2,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 4933.95,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 3,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 5698.27,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 4,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2747.59,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 5,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1954.16,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 6,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1463.88,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 7,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1541.66,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_calendar",
+      "category": "aligned",
+      "expected_specialized_tool": "create_calendar_reminder",
+      "user_message": "Please add a calendar reminder: team standup next Monday at 10:00 local time.",
+      "repetition": 8,
+      "called_tools": [
+        "create_calendar_reminder"
+      ],
+      "primary_tool": "create_calendar_reminder",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1031.51,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 1,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2840.12,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 2,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2326.53,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 3,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2199.58,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 4,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2058.3,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 5,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1009.57,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 6,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1001.43,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 7,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 794.96,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_translate",
+      "category": "aligned",
+      "expected_specialized_tool": "translate_phrase",
+      "user_message": "Translate the phrase \"Where is the nearest train station?\" from English to Korean.",
+      "repetition": 8,
+      "called_tools": [
+        "translate_phrase"
+      ],
+      "primary_tool": "translate_phrase",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2583.55,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 1,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1986.37,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 2,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2582.08,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 3,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2659.56,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 4,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 727.86,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 5,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 619.37,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 6,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 515.38,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 7,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 623.35,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "a_math",
+      "category": "aligned",
+      "expected_specialized_tool": "evaluate_math_expression",
+      "user_message": "Compute (19**2 - 47) / 4 and give the numeric result.",
+      "repetition": 8,
+      "called_tools": [
+        "evaluate_math_expression"
+      ],
+      "primary_tool": "evaluate_math_expression",
+      "is_noop": false,
+      "finish_reason": "tool_calls",
+      "latency_ms": 696.92,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 1,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 2120.2,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 740.56,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 487.63,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 614.62,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 677.92,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 695.53,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 668.57,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_thanks",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Thanks, that really helped. Have a nice day!",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 812.63,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 1,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 6377.76,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 586.28,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 680.38,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 500.8,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 927.85,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 505.11,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1226.87,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_smalltalk",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "How's your day going? I'm just saying hi.",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 2108.92,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 1,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 946.43,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 2,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 795.82,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 3,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 820.22,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 4,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 661.44,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 5,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 842.46,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 6,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1301.99,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 954.65,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_general_knowledge",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Explain in two sentences why vaccines train the immune system.",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 881.13,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 1,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 2202.1,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 2,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 2763.56,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 3,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 2079.77,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 4,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 2161.29,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 5,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 1645.24,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 6,
+      "called_tools": [],
+      "primary_tool": null,
+      "is_noop": false,
+      "finish_reason": "stop",
+      "latency_ms": 2067.68,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 7,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 698.85,
+      "error": null
+    },
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "case_id": "n_creative",
+      "category": "neutral",
+      "expected_specialized_tool": null,
+      "user_message": "Write a four-line poem about moonlight on a lake. No tools needed—just text.",
+      "repetition": 8,
+      "called_tools": [
+        "noop_acknowledge"
+      ],
+      "primary_tool": "noop_acknowledge",
+      "is_noop": true,
+      "finish_reason": "tool_calls",
+      "latency_ms": 1734.76,
+      "error": null
+    }
+  ]
+}

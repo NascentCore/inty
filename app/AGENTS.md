@@ -1,6 +1,6 @@
 # AGENTS.md · app/（后端服务）
 
-- `__init__.py` 必须为空
+- `__init__.py` 仅可包含模块 docstring，不得包含任何功能性代码（imports/re-exports/常量/函数等都属于功能性代码，应放入兄弟模块）
 - 使用 `app/core/google_genai/wrapped_client.py` 调用 Google 生图模型
 - 使用 `app/core/images/fal.py` 来调用 Fal
 - 禁止直接使用 httpx 等 http 调用任何第三方 API
@@ -29,3 +29,8 @@
 - 任何跨环境数据交换，如从数据库读出、写入数据类型，从客户端获取、返回数据，等等，都需要定义 Pydantic model 来描述该数据；
 - Pydantic model 定义的数据可以经过转换变成 JSON 字符串或者其他结构；
 - 在代码中要严格使用 Pydantic model 数据来进行处理；
+
+## `app/docs/` 专题文档
+
+- 实现复杂功能且有效功能代码明显超过约 500 行（不计 imports、注释等）时，可在 `app/docs/` 增加以功能命名的 `.md`，写清目的、架构与关键设计取舍；细节仍以源码为准。
+- 统一文生图封装（未接入主业务链路）见 `app/external_services/text_to_image.py` 模块说明；Fal 调用见 `app/core/images/fal.py`。

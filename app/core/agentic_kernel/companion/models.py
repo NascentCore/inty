@@ -16,11 +16,11 @@ from app.core.agentic_kernel.experience_profile import (
 )
 
 from .utc import local_date_str
-from .workspace import load_workspace_seed_text
+from .memory_store_scope import load_template_seed_text
 
 if TYPE_CHECKING:
     from .memory_store import MemoryStore
-    from .workspace import WorkspacePaths
+    from .memory_store_scope import MemoryStoreScopePaths
 
 AssistantTurnSource = Literal["chat", "inner_tick"]
 
@@ -50,12 +50,29 @@ class CompanionTurnResult(BaseModel):
     """One companion kernel turn: visible assistant text plus optional significance scores."""
 
     assistant_text: str = ""
-    significance_perception: dict[str, Any] | None = None
+    significance_perception: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "When foreground chat used the dual JSON envelope, parsed importance triple "
+            "(importance_round, importance_user_message, importance_assistant_message). "
+            "Propagated to transcript JSONL and API meta_data; optional consumer: memory extraction. "
+            "See significance_perception module docstring."
+        ),
+    )
     user_msg_uuid: str = ""
     trace_id: str = ""
     langsmith_trace_id: str = ""
     langsmith_run_id: str = ""
-    used_async_tool_background: bool = False
+    tool_background_started: bool = Field(
+        default=False,
+        description=(
+            "True after start_tool_background_job returned for this turn (background "
+            "thread running tool loop). WebSocket foreground preset correlation is "
+            "retained until a tool_bg downstream frame is emitted. Successful companion "
+            "assistant frames mirror this as meta_data.tool_background_started on the "
+            "HTTP/WS payload."
+        ),
+    )
     assistant_source: AssistantTurnSource = "chat"
 
 
@@ -97,7 +114,7 @@ def _read_memory_document_required(store: MemoryStore, relative_path: str) -> st
 
 
 def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
-    text = load_workspace_seed_text(relative_path).strip()
+    text = load_template_seed_text(relative_path).strip()
     if max_chars > 0 and len(text) > max_chars:
         return text[: max_chars - 1] + "..."
     return text
@@ -111,7 +128,13 @@ class PromptBundle(BaseModel):
         ...,
         description="semantic memory: MEMORY.md body for system injection when private memory is on.",
     )
-    significance_perception_md: str = ""
+    significance_perception_md: str = Field(
+        default="",
+        description=(
+            "Operator guidance for 1-10 importance scoring; injected when "
+            "include_significance_perception_slice is true (package prompts/SIGNIFICANCE_PERCEPTION.md)."
+        ),
+    )
     tools_md: str = ""
     memory_raw_diary_today_md: str = Field(
         default="",
@@ -133,7 +156,8 @@ class ContextMeta(BaseModel):
     workspace_bootstrap_user_interactive_completed: bool = True
     # True = skip inserting the one-shot WS companion session system line (default for legacy / non-interactive).
     companion_ws_session_system_written: bool = True
-    # True = skip WebSocket connect-time interactive bootstrap kickoff (default for legacy / non-interactive).
+    # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
+    # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
     companion_ws_interactive_kickoff_sent: bool = True
 
     @field_validator("context_mode")
@@ -143,7 +167,7 @@ class ContextMeta(BaseModel):
 
 
 def load_prompt_bundle(
-    paths: WorkspacePaths,
+    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     *,
     meta: ContextMeta | None = None,

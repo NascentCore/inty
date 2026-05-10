@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
@@ -18,6 +19,7 @@ from app.core.agentic_kernel.companion.llm_chat_runtime import (
 )
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.tool_background import start_tool_background_job
 from app.core.agentic_kernel.companion.turn import run_turn
 
@@ -150,8 +152,10 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     ):
         mock_t = MagicMock()
         mock_thread.return_value = mock_t
+        ws = Path("/tmp/inty_ws")
         start_tool_background_job(
-            ws_root=Path("/tmp/inty_ws"),
+            ws_root=ws,
+            memory_store=MemoryStore(workspace_root=ws, repository=None),
             request_messages=[{"role": "user", "content": "hi"}],
             tool_model_name="m",
             user_msg_uuid="uuid",
@@ -189,8 +193,10 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     with patch("langsmith.run_helpers.set_tracing_parent") as mock_sp:
         mock_t = MagicMock()
         mock_thread.return_value = mock_t
+        ws = Path("/tmp/inty_ws")
         start_tool_background_job(
-            ws_root=Path("/tmp/inty_ws"),
+            ws_root=ws,
+            memory_store=MemoryStore(workspace_root=ws, repository=None),
             request_messages=[{"role": "user", "content": "hi"}],
             tool_model_name="m",
             user_msg_uuid="uuid",
@@ -216,12 +222,11 @@ class _FakeAsyncDualLLMClient:
             default_model="m/default",
             chat_model="m/chat",
             tool_model="m/tool",
-            enable_async_tool_background=True,
             async_chat_front_timeout_sec=120.0,
         )
         self.chat_calls: list[dict[str, Any]] = []
 
-    def _resolve_model(self, role: str) -> str:
+    def resolve_model(self, role: str) -> str:
         return f"m/{role}"
 
     def chat_completion(self, **kwargs: Any) -> Any:
@@ -240,6 +245,10 @@ class _FakeAsyncDualLLMClient:
 
     def sync_client_for_route(self, route: str) -> object:
         return object()
+
+    @property
+    def chat_completions_sync(self):
+        return create_chat_completion_sync
 
     def complete_text(
         self, messages: list[dict[str, Any]], *, model_role: str = "memory"
@@ -292,3 +301,4 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
 
     assert len(bg_jobs) == 1
     assert bg_jobs[0]["langsmith_parent_run"] is sentinel
+    assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync

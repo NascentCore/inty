@@ -1,4 +1,4 @@
-"""Profile/image gating and image asset metadata helpers."""
+"""Profile/image gating, generated_images index access, and chat_history generated_image helpers."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any
 
 from .memory_registry import get_memory_store
 from .utc import utc_iso_ts
-from .workspace import WorkspacePaths
+from .memory_store_scope import MemoryStoreScopePaths
 
 _CORE_PROFILE_DOCS: frozenset[str] = frozenset({"IDENTITY.md", "SOUL.md", "USER.md"})
 _IMAGE_ASSET_INDEX_REL = "generated_images/index.jsonl"
@@ -42,7 +42,7 @@ _MODE_MODIFY_RE = re.compile(
 
 def _image_gate_document_rel_path(root: Path) -> str:
     r = root.resolve()
-    return WorkspacePaths(root=r).image_gate_json.relative_to(r).as_posix()
+    return MemoryStoreScopePaths(root=r).image_gate_json.relative_to(r).as_posix()
 
 
 def _default_state(root: Path) -> dict[str, Any]:
@@ -257,6 +257,69 @@ def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
         if isinstance(row, dict):
             out.append(row)
     return out
+
+
+def generated_image_meta_from_asset_record(
+    row: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Build chat_history ``generated_image`` metadata from one ``generated_images`` index row.
+
+    With **real** GCS, prefers a canonical ``gs://`` URI when present or derivable from
+    ``gcs_http_url``. If no ``gs://`` is available, accepts absolute ``http(s)://`` URLs
+    (e.g. Fal CDN stored in the row).
+
+    With **fake** GCS (``use_fake_gcs``), ``gcs_uri`` may still look like ``gs://`` but only
+    maps to the local fake layout; the fetchable URL is ``gcs_http_url`` (typically
+    ``file://...`` from ``Blob.public_url``), which we use as ``image_url`` when set.
+    """
+    from app.core.config import global_config_loaded_from_config_yaml
+    from app.external_services.gcs import gs_uri_from_storage_reference_url
+
+    w = row.get("width")
+    h = row.get("height")
+    base = {
+        "width": w,
+        "height": h,
+        "format": "png",
+    }
+
+    if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
+        http_u = str(row.get("gcs_http_url") or "").strip()
+        if http_u:
+            return {"image_url": http_u, **base}
+
+    gcs_uri = str(row.get("gcs_uri") or "").strip()
+    if not gcs_uri.startswith("gs://"):
+        ref = str(row.get("gcs_http_url") or "").strip()
+        if ref:
+            mapped = gs_uri_from_storage_reference_url(ref)
+            if mapped:
+                gcs_uri = mapped
+
+    if gcs_uri.startswith("gs://"):
+        return {"image_url": gcs_uri, **base}
+
+    for candidate in (
+        str(row.get("gcs_uri") or "").strip(),
+        str(row.get("gcs_http_url") or "").strip(),
+    ):
+        if candidate.startswith("http://") or candidate.startswith("https://"):
+            return {"image_url": candidate, **base}
+    return None
+
+
+def generated_image_meta_from_index_slice(
+    root: Path, baseline_index: int
+) -> dict[str, Any] | None:
+    """Return metadata for the latest new asset rows since ``baseline_index`` (list length offset)."""
+    records = list_image_asset_records(root)
+    if baseline_index < 0 or baseline_index > len(records):
+        return None
+    for row in reversed(records[baseline_index:]):
+        meta = generated_image_meta_from_asset_record(row)
+        if meta is not None:
+            return meta
+    return None
 
 
 def _normalize_relative_path_for_index(path: str) -> str:

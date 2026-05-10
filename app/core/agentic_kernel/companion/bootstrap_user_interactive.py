@@ -1,4 +1,4 @@
-"""User-interactive companion workspace bootstrap (tool-driven phase in run_turn)."""
+"""User-interactive companion MemoryStore bootstrap (tool-driven phase in run_turn)."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from .prompt_slices import (
     parse_persistable_prompt_slice_id,
     persistable_slice_names_csv,
 )
-from .workspace import load_workspace_seed_text
+from .memory_store_scope import load_template_seed_text, resolve_under_scope_root
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
@@ -31,7 +31,7 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = (
     "MEMORY.md",
 )
 
-# Single exact user line for WebSocket connect-time kickoff (no real user text yet).
+# Exact user line for rare manual / test flows that mimic the old WS kickoff placeholder.
 INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT: Final[str] = (
     "（WebSocket 已连接，内部占位：用户尚未输入。请据此主动自然开场并进入关系建立阶段；"
     "不要向用户复述或引用本括号句，不要说系统、连接、工具名。）"
@@ -101,7 +101,7 @@ def build_interactive_bootstrap_system_message_parts(
     ]
     for rel in _INTERACTIVE_TEMPLATE_RELS:
         try:
-            seed = load_workspace_seed_text(rel)
+            seed = load_template_seed_text(rel)
         except FileNotFoundError:
             seed = ""
         body = seed.strip()
@@ -130,18 +130,17 @@ def tool_companion_update_prompt_slice(
 ) -> str:
     from .image_gate import register_profile_write
     from .memory_registry import get_memory_store
-    from .companion_tool_runtime import resolve_under_workspace
-    from .workspace_doc_mapping import parse_workspace_relative_path
+    from .memory_store_document_mapping import parse_memory_store_relative_path
 
     sid = parse_persistable_prompt_slice_id(slice_name)
     if sid is None:
         return f"ERROR: unknown slice {slice_name!r}; use one of: {persistable_slice_names_csv()}"
     rel = PROMPT_SLICE_TO_REL[sid]
     root_r = root.resolve()
-    p = resolve_under_workspace(root_r, rel)
+    p = resolve_under_scope_root(root_r, rel)
     rel_posix = p.relative_to(root_r).as_posix()
     try:
-        parse_workspace_relative_path(rel_posix)
+        parse_memory_store_relative_path(rel_posix)
     except ValueError as exc:
         return f"ERROR: {exc}"
     st = get_memory_store(root_r)
@@ -151,7 +150,7 @@ def tool_companion_update_prompt_slice(
         return (
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
             "you may still update IDENTITY / USER / MEMORY via companion_update_prompt_slice "
-            "or workspace_write_file (where permitted)."
+            "or memory_store_write_document (where permitted)."
         )
     prev = st.read_document_if_exists(rel_posix)
     st.write_document(rel_posix, content)
@@ -175,10 +174,11 @@ def tool_companion_bootstrap_user_interactive_complete(
     note: str | None = None,
 ) -> str:
     from .memory_registry import get_memory_store
-    from .companion_tool_runtime import resolve_under_workspace
 
     root_r = root.resolve()
-    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
+    rel = (
+        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    )
     st = get_memory_store(root_r)
     raw_body = st.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
@@ -200,7 +200,7 @@ def tool_companion_bootstrap_user_interactive_complete(
     return (
         "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
         "SOUL rewrites). IDENTITY / USER / MEMORY may still be updated via companion_update_prompt_slice "
-        "or workspace_write_file (where permitted)."
+        "or memory_store_write_document (where permitted)."
     )
 
 
@@ -212,7 +212,6 @@ def tool_companion_set_experience_profile(
     note: str | None = None,
 ) -> str:
     from .memory_registry import get_memory_store
-    from .companion_tool_runtime import resolve_under_workspace
 
     if user_confirmed is not True:
         return (
@@ -225,9 +224,11 @@ def tool_companion_set_experience_profile(
         return f"ERROR: {exc}"
 
     root_r = root.resolve()
-    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
+    rel_ctx = (
+        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    )
     st = get_memory_store(root_r)
-    raw_body = st.read_document_if_exists(rel)
+    raw_body = st.read_document_if_exists(rel_ctx)
     if raw_body is None or not str(raw_body).strip():
         return "ERROR: missing context.json"
     try:
@@ -241,7 +242,7 @@ def tool_companion_set_experience_profile(
     if note is not None and str(note).strip():
         data["experience_profile_change_note"] = str(note).strip()[:2000]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    st.write_document(rel, out)
+    st.write_document(rel_ctx, out)
     logger.info(
         "companion_set_experience_profile ws={} {} -> {}",
         root_r.name,

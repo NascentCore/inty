@@ -1,3 +1,8 @@
+"""Load Inty YAML config at process import time.
+
+Path: ``INTY_CONFIG_YAML`` when set, otherwise ``config.yaml`` in the current working directory.
+"""
+
 import getpass
 import os
 
@@ -33,14 +38,18 @@ from app.utils.config import (
     load_config,
 )
 
-DEFAULT_CONFIG_PATH = "config.yaml"
-if not os.path.exists(DEFAULT_CONFIG_PATH):
+_CONFIG_PATH = (
+    os.environ.get("INTY_CONFIG_YAML") or "config.yaml"
+).strip() or "config.yaml"
+if not os.path.exists(_CONFIG_PATH):
     raise FileNotFoundError(
-        f"{DEFAULT_CONFIG_PATH} 不存在，倒入本模块前请先创建配置文件"
+        f"{_CONFIG_PATH} 不存在，倒入本模块前请先创建配置文件或设置 INTY_CONFIG_YAML"
     )
-global_config_loaded_from_config_yaml = load_config(DEFAULT_CONFIG_PATH)
+global_config_loaded_from_config_yaml = load_config(_CONFIG_PATH)
 logger.debug(
-    f"[CONFIG] Database URL: {global_config_loaded_from_config_yaml.database.url}"
+    "[CONFIG] path={} database URL: {}",
+    _CONFIG_PATH,
+    global_config_loaded_from_config_yaml.database.url,
 )
 _validate_config(global_config_loaded_from_config_yaml)
 

@@ -10,7 +10,9 @@ from app.core.agentic_kernel.companion.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
-from app.core.agentic_kernel.companion.prompts import build_system_prompt
+from app.core.agentic_kernel.companion.prompts.system_messages import (
+    build_system_prompt,
+)
 
 
 def _minimal_bundle() -> PromptBundle:
@@ -55,7 +57,7 @@ def test_build_system_prompt_tools() -> None:
         enable_tools=True,
     )
     assert "user_profile_record" in text
-    assert "workspace_read_file" in text
+    assert "memory_store_read_document" in text
 
 
 def test_build_system_prompt_interactive_bootstrap_injects_spec() -> None:

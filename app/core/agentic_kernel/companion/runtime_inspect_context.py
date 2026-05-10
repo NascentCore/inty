@@ -24,6 +24,7 @@ from .models import (
     _OPTIONAL_DOC_MAX_CHARS,
 )
 from .llm_client import CompanionLLMClient
+from .memory_store import MemoryStore
 from .transcript_compaction import CompactionConfig as TranscriptCompactionConfig
 
 _MAX_TOOL_ROUNDS_SNAPSHOT = 24
@@ -37,7 +38,11 @@ _thread_overlay: threading.local = threading.local()
 
 def runtime_inspect_begin_turn() -> Token[dict[str, Any] | None]:
     return _inspect_var.set(
-        {"runtime_config": None, "last_chat_completion_request": None}
+        {
+            "runtime_config": None,
+            "last_chat_completion_request": None,
+            "scoped_memory_store": None,
+        }
     )
 
 
@@ -49,6 +54,12 @@ def runtime_inspect_set_runtime_config(cfg: dict[str, Any]) -> None:
     d = _inspect_var.get()
     if d is not None:
         d["runtime_config"] = cfg
+
+
+def runtime_inspect_set_scoped_memory_store(store: MemoryStore | None) -> None:
+    d = _inspect_var.get()
+    if d is not None:
+        d["scoped_memory_store"] = store
 
 
 def runtime_inspect_set_last_chat_completion_request(payload: dict[str, Any]) -> None:
@@ -68,16 +79,41 @@ def runtime_inspect_thread_overlay_end() -> None:
     _thread_overlay.bundle = None
 
 
+def _bundle_payload_with_store(bundle: dict[str, Any]) -> dict[str, Any] | None:
+    if not (
+        bundle.get("runtime_config") is not None
+        or bundle.get("last_chat_completion_request") is not None
+        or bundle.get("scoped_memory_store") is not None
+    ):
+        return None
+    serializable = {k: v for k, v in bundle.items() if k != "scoped_memory_store"}
+    return copy.deepcopy(serializable)
+
+
 def runtime_inspect_get_bundle() -> dict[str, Any] | None:
     d = _inspect_var.get(None)
-    if d is not None and (
-        d.get("runtime_config") is not None
-        or d.get("last_chat_completion_request") is not None
-    ):
-        return copy.deepcopy(d)
+    if d is not None:
+        merged = _bundle_payload_with_store(d)
+        if merged is not None:
+            return merged
     td = getattr(_thread_overlay, "bundle", None)
     if td is not None:
-        return copy.deepcopy(td)
+        return _bundle_payload_with_store(td)
+    return None
+
+
+def runtime_inspect_get_scoped_memory_store() -> MemoryStore | None:
+    """Prefer tool_background thread overlay, then the main run_turn ContextVar bundle."""
+    td = getattr(_thread_overlay, "bundle", None)
+    if td is not None:
+        s = td.get("scoped_memory_store")
+        if isinstance(s, MemoryStore):
+            return s
+    d = _inspect_var.get(None)
+    if d is not None:
+        s2 = d.get("scoped_memory_store")
+        if isinstance(s2, MemoryStore):
+            return s2
     return None
 
 
@@ -132,16 +168,16 @@ def build_turn_runtime_config_dict(
     transcript_llm_window_max_messages: int,
     inner_tick_turn: bool,
     inner_tick_mode: InnerTickMode,
-    repository_only_workspace_text: bool,
+    repository_only_store_text: bool,
     transcript_compaction: TranscriptCompactionConfig | None,
-    workspace_read_file_max_chars_cap: int,
+    memory_store_read_document_max_chars_cap: int,
 ) -> dict[str, Any]:
     cfg = llm_client.config
     llm_dump = cfg.model_dump()
     key = (cfg.api_key or "").strip()
     llm_dump["api_key"] = "***" if key else ""
-    rm_chat = llm_client._resolve_model("chat")
-    rm_tool = llm_client._resolve_model("tool")
+    rm_chat = llm_client.resolve_model("chat")
+    rm_tool = llm_client.resolve_model("tool")
     return {
         "source": "run_turn",
         "context_mode": context.context_mode,
@@ -165,7 +201,7 @@ def build_turn_runtime_config_dict(
         "memory_pipeline": mem_cfg.model_dump(),
         "inner_tick_turn": inner_tick_turn,
         "inner_tick_mode": inner_tick_mode.value,
-        "repository_only_workspace_text": repository_only_workspace_text,
+        "repository_only_store_text": repository_only_store_text,
         "transcript_compaction": (
             transcript_compaction.model_dump()
             if transcript_compaction is not None
@@ -175,7 +211,9 @@ def build_turn_runtime_config_dict(
             "transcript_llm_window_max_messages": transcript_llm_window_max_messages,
             "transcript_window_default": TRANSCRIPT_WINDOW_MAX_MESSAGES,
             "max_tool_rounds": _MAX_TOOL_ROUNDS_SNAPSHOT,
-            "workspace_read_file_max_chars_cap": workspace_read_file_max_chars_cap,
+            "memory_store_read_document_max_chars_cap": (
+                memory_store_read_document_max_chars_cap
+            ),
             "ai_private_inject_max_chars": AI_PRIVATE_INJECT_MAX_CHARS,
             "memory_raw_inject_max_chars": _MEMORY_RAW_INJECT_MAX_CHARS,
             "memory_day_summary_inject_max_chars": _MEMORY_DAY_SUMMARY_INJECT_MAX_CHARS,

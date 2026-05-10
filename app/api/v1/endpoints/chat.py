@@ -1,3 +1,9 @@
+"""Chat completion and WebSocket endpoints for app conversations.
+
+This module exposes HTTP chat completions plus the persistent chat WebSocket used
+by Android clients and companion-agent sessions.
+"""
+
 import asyncio
 import json
 import time
@@ -39,6 +45,12 @@ from app.core.agentic_kernel.companion.heartbeat import (
     HeartbeatConfig,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
     next_heartbeat_wait_seconds,
+)
+from app.core.agentic_kernel.companion.llm_inference_errors import (
+    CompanionLLMInferenceBackendError,
+)
+from app.core.agentic_kernel.companion.image_gate import (
+    generated_image_meta_from_index_slice,
 )
 from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
@@ -84,6 +96,38 @@ from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
+
+
+class CompanionInferenceUpstreamHTTPException(HTTPException):
+    """HTTPException with optional fields merged into ``/chat/ws`` error JSON frames."""
+
+    def __init__(
+        self,
+        *,
+        status_code: int,
+        detail: str,
+        ws_extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(status_code=status_code, detail=detail)
+        self.ws_extra = ws_extra or {}
+
+
+def _chat_ws_error_payload_from_http_exception(
+    exc: HTTPException, *, agent_id: str
+) -> dict[str, Any]:
+    detail = exc.detail
+    message = detail if isinstance(detail, str) else str(detail)
+    payload: dict[str, Any] = {
+        "code": exc.status_code,
+        "message": message,
+        "data": None,
+        "agent_id": agent_id,
+    }
+    ws_extra = getattr(exc, "ws_extra", None)
+    if isinstance(ws_extra, dict):
+        payload.update(ws_extra)
+    return payload
+
 
 # WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
 # Handlers must not pass that session into asyncio.to_thread or other threads; open a new
@@ -217,7 +261,8 @@ async def _try_handle_ws_user_signed_on_frame(
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
     Product intent: companion should mimic a person who sees the user come online and can
-    greet proactively (see ``/docs/FR_USER_SIGN_ON_GREETINGS.md``); this frame is the
+    greet proactively when the client also sends ``messageType: IMPLICIT_USER_SIGNED_ON``
+    (trigger copy in ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``); this frame is the
     client-side online signal. It also arms proactive heartbeat coords before the first chat
     frame; legacy clients that omit it still get coords after any successful companion turn.
 
@@ -693,6 +738,13 @@ async def _build_companion_tool_background_ws_payload(
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
     if ev.langsmith_run_id:
         meta_data["langsmith_run_id"] = ev.langsmith_run_id
+    gi = generated_image_meta_from_index_slice(ev.workspace, ev.image_asset_baseline)
+    if gi:
+        meta_data["generated_image"] = gi
+    if ev.local_image_paths:
+        meta_data["tool_bg_local_image_paths"] = list(ev.local_image_paths)
+    if ev.significance_perception:
+        meta_data["significance_perception"] = ev.significance_perception
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
         session_id,
         ev.text,
@@ -773,10 +825,46 @@ def _companion_ai_meta_from_turn_result(
         companion_ai_meta["langsmith_trace_id"] = companion_turn.langsmith_trace_id
     if companion_turn.langsmith_run_id:
         companion_ai_meta["langsmith_run_id"] = companion_turn.langsmith_run_id
+    # Optional 1-10 importance triple from companion JSON envelope; kernel may omit on parse miss.
+    # Downstream: memory extraction can sort/annotate prompts when
+    # memory_extraction.use_significance_perception_in_extraction is true; see
+    # app/services/memory_extraction_service.py and companion significance_perception module docstring.
     sp = companion_turn.significance_perception
     if isinstance(sp, dict) and sp:
         companion_ai_meta["significance_perception"] = sp
+    if companion_turn.tool_background_started:
+        companion_ai_meta["tool_background_started"] = True
     return companion_ai_meta
+
+
+async def _persist_companion_user_message_for_bg(
+    *,
+    session_id: str,
+    last_user_message: ChatMessage,
+    effective_local_id: Optional[str],
+    implicit_signed_on_ws: bool,
+) -> Optional[int]:
+    """Write user message into ``chat_history`` for one companion turn (success or bg-survives-fg-fail).
+
+    After dual-LLM foreground-before-background dispatch, ``bg-survives-fg-fail`` should not occur;
+    this helper remains as a defensive path for any future or alternate companion wiring.
+
+    Mirrors the success-path branching:
+    - ``implicit_signed_on_ws`` -> no row written; returns ``None`` (protocol skips user history).
+    - ``effective_local_id`` -> row with ``meta_data.localId``.
+    - else -> plain row.
+    """
+    if implicit_signed_on_ws:
+        return None
+    if effective_local_id:
+        return await chat_history_service.add_user_message_async(
+            session_id,
+            last_user_message,
+            meta_data={"localId": effective_local_id},
+        )
+    return await chat_history_service.add_user_message_async(
+        session_id, last_user_message
+    )
 
 
 async def _try_fire_companion_ws_proactive_heartbeat(
@@ -818,7 +906,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             user=current_user, is_subscribed=is_subscribed
         )
 
-        ws_path = companion_chat_service.companion_workspace_path_if_ready(
+        ws_path = companion_chat_service.companion_memory_store_scope_path_if_ready(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
@@ -1075,8 +1163,7 @@ async def _agent_chat_completions_impl(
             )
 
         # TODO(implicit-sign-on): If _agent_chat_completions_impl is split into helpers, pass
-        # implicit_signed_on_ws explicitly into companion / persistence paths. Background:
-        # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+        # implicit_signed_on_ws explicitly into companion / persistence paths.
         implicit_signed_on_ws = (
             chat_route == "websocket"
             and request.message_type
@@ -1155,7 +1242,6 @@ async def _agent_chat_completions_impl(
                 )
                 # TODO(implicit-sign-on): USER_MESSAGE + image-only still uses this generic 400;
                 # IMPLICIT_USER_SIGNED_ON + image is rejected earlier with a different message.
-                # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
                 if (
                     use_companion
                     and (not implicit_signed_on_ws)
@@ -1207,19 +1293,48 @@ async def _agent_chat_completions_impl(
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
-                            and not companion_turn.used_async_tool_background
+                            and not companion_turn.tool_background_started
                         ):
                             companion_ws_foreground_pending.pop(
                                 companion_preset_uid, None
                             )
-                    except Exception:
+                    except Exception as exc:
+                        bg_started_on_exc = bool(
+                            getattr(exc, "companion_tool_background_started", False)
+                        )
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
+                            and not bg_started_on_exc
                         ):
                             companion_ws_foreground_pending.pop(
                                 companion_preset_uid, None
                             )
+                        if bg_started_on_exc:
+                            try:
+                                bg_user_row_id = (
+                                    await _persist_companion_user_message_for_bg(
+                                        session_id=session_id,
+                                        last_user_message=last_user_message,
+                                        effective_local_id=effective_local_id,
+                                        implicit_signed_on_ws=implicit_signed_on_ws,
+                                    )
+                                )
+                            except Exception as persist_exc:
+                                logger.warning(
+                                    "companion bg-survives-fg-fail user message persist failed: {}",
+                                    persist_exc,
+                                )
+                                bg_user_row_id = None
+                            if (
+                                companion_preset_uid is not None
+                                and companion_ws_foreground_pending is not None
+                                and companion_preset_uid
+                                in companion_ws_foreground_pending
+                            ):
+                                companion_ws_foreground_pending[companion_preset_uid][
+                                    "foreground_user_message_id"
+                                ] = bg_user_row_id
                         raise
                     companion_reply = companion_turn.assistant_text
                     companion_ai_meta = _companion_ai_meta_from_turn_result(
@@ -1229,21 +1344,14 @@ async def _agent_chat_completions_impl(
                         companion_ai_meta["messageType"] = (
                             CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
                         )
-                        companion_user_row_id = None
-                    elif effective_local_id:
-                        companion_user_row_id = (
-                            await chat_history_service.add_user_message_async(
-                                session_id,
-                                last_user_message,
-                                meta_data={"localId": effective_local_id},
-                            )
+                    companion_user_row_id = (
+                        await _persist_companion_user_message_for_bg(
+                            session_id=session_id,
+                            last_user_message=last_user_message,
+                            effective_local_id=effective_local_id,
+                            implicit_signed_on_ws=implicit_signed_on_ws,
                         )
-                    else:
-                        companion_user_row_id = (
-                            await chat_history_service.add_user_message_async(
-                                session_id, last_user_message
-                            )
-                        )
+                    )
                     if (
                         companion_preset_uid is not None
                         and companion_ws_foreground_pending is not None
@@ -1262,6 +1370,9 @@ async def _agent_chat_completions_impl(
                     )
                     response_content = companion_reply
                     if response_content is None or not str(response_content).strip():
+                        # TODO(companion-dual-envelope-reasoning-channel): Root cause is usually upstream:
+                        # structured chat completion has empty ``message.content`` while LangSmith shows
+                        # output under ``reasoning``. Compare trace vs ``deepseek-v4-pro`` vs ``v3.2``.
                         logger.error(
                             f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
                         )
@@ -1362,6 +1473,8 @@ async def _agent_chat_completions_impl(
 
         except HTTPException:
             raise
+        except CompanionLLMInferenceBackendError:
+            raise
         except Exception as e:
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
@@ -1415,8 +1528,7 @@ async def _agent_chat_completions_impl(
         try:
             with log_time(f"记录使用情况: user_id={current_user.id}"):
                 # TODO(implicit-sign-on): Implicit sign-on still increments chat usage like a normal
-                # turn; product may exempt IMPLICIT_USER_SIGNED_ON from limits later. See
-                # /docs/FR_USER_SIGN_ON_GREETINGS.md#open-todos-follow-ups
+                # turn; product may exempt IMPLICIT_USER_SIGNED_ON from limits later.
                 usage_extra: dict[str, Any] = {
                     "agent_id": agent_id,
                     "message_length": len(last_user_text),
@@ -1598,6 +1710,20 @@ async def _agent_chat_completions_impl(
 
     except HTTPException:
         raise
+    except CompanionLLMInferenceBackendError as exc:
+        logger.error(
+            "Companion LLM inference backend error provider_http_status={} message={!r}",
+            exc.provider_http_status,
+            exc.client_message_en,
+        )
+        raise CompanionInferenceUpstreamHTTPException(
+            status_code=502,
+            detail=exc.client_message_en,
+            ws_extra={
+                "error_kind": "llm_inference_backend",
+                "llm_provider_http_status": exc.provider_http_status,
+            },
+        ) from exc
     except Exception as e:
         logger.error(f"聊天请求处理失败: {str(e)}")
         logger.exception("聊天请求异常详细信息:")
@@ -1646,119 +1772,6 @@ async def agent_chat_completions(
     )
 
 
-async def _try_send_ws_user_interactive_bootstrap_kickoff(
-    websocket: WebSocket,
-    *,
-    db: AsyncSession,
-    current_user: schemas.User,
-    agent_id: str,
-    subscription_svc: SubscriptionService,
-    outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
-) -> None:
-    """
-    When the client passes ``agent_id`` as a WebSocket query param, send at most one proactive
-    assistant message to start USER_INTERACTIVE bootstrap before the first user chat frame.
-    """
-    try:
-        chat = await chat_service.get_or_create_chat_by_agent(
-            db=db, user_id=current_user.id, agent_id=agent_id
-        )
-        if chat.agent_id != agent_id:
-            return
-        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
-            db, current_user
-        )
-        if not is_allowed:
-            logger.info(
-                "ws interactive bootstrap kickoff skipped (subscription) user={} used={} limit={}",
-                current_user.id,
-                used_count,
-                daily_limit,
-            )
-            return
-        session_id = generate_session_id(str(chat.id))
-        subscription = await subscription_svc.get_user_current_subscription(
-            db, current_user.id
-        )
-        is_subscribed = bool(subscription)
-        model_override = select_chat_model(
-            user=current_user, is_subscribed=is_subscribed
-        )
-        kick_turn = await companion_chat_service.run_companion_interactive_bootstrap_kickoff_for_ws(
-            user_id=current_user.id,
-            agent_id=agent_id,
-            chat_id=chat.id,
-            session_id=session_id,
-            resolved_chat_model_id=model_override,
-        )
-        if kick_turn is None:
-            return
-        kick_reply = kick_turn.assistant_text
-        kick_meta = _companion_ai_meta_from_turn_result(kick_turn)
-        kick_meta["messageType"] = "companion_ws_interactive_bootstrap_kickoff"
-        ai_message_id = await chat_history_service.add_ai_message_sync_async(
-            session_id,
-            kick_reply,
-            agent_id=chat.agent_id,
-            meta_data=kick_meta,
-        )
-        try:
-            await subscription_svc.record_usage(
-                db,
-                current_user.id,
-                "chat",
-                1,
-                extra_data={
-                    "agent_id": agent_id,
-                    "message_length": 0,
-                    "ws_interactive_bootstrap_kickoff": True,
-                },
-            )
-        except Exception as e:
-            logger.warning("record_usage ws kickoff failed: {}", str(e))
-
-        latest_message_info = None
-        if ai_message_id is not None:
-            try:
-                latest_message_info = (
-                    await chat_history_service.get_ai_message_info_by_id(
-                        db, ai_message_id
-                    )
-                )
-            except Exception as e:
-                logger.warning(
-                    "ws kickoff get_ai_message_info_by_id failed: {}", str(e)
-                )
-
-        kick_req = ChatCompletionRequest(
-            messages=[ChatMessage(role="user", content="")],
-        )
-        data = _build_chat_response(
-            kick_reply,
-            None,
-            "",
-            latest_message_info,
-            None,
-            kick_req,
-            source_imate_id=None,
-            user_message_id=None,
-            subscription_actions=None,
-            client_local_id=None,
-        )
-        payload = schemas.APIResponse.success(data=data)
-        out = payload.model_dump(exclude_none=True)
-        out["agent_id"] = agent_id
-        out["status_line"] = await _agent_status_line_for_chat_header(db, agent_id)
-        if outbound_queue is not None:
-            await outbound_queue.put(out)
-        else:
-            await websocket.send_json(out)
-    except Exception:
-        logger.exception(
-            "ws interactive bootstrap kickoff failed agent_id={}", agent_id
-        )
-
-
 @router.websocket("/ws")
 async def chat_completions_websocket(
     websocket: WebSocket,
@@ -1792,17 +1805,6 @@ async def chat_completions_websocket(
         chat_ws_outbound_pump(websocket, outbound_queue),
         name="chat_ws_outbound_pump",
     )
-
-    kick_agent_id = (websocket.query_params.get("agent_id") or "").strip()
-    if kick_agent_id:
-        await _try_send_ws_user_interactive_bootstrap_kickoff(
-            websocket,
-            db=db,
-            current_user=current_user,
-            agent_id=kick_agent_id,
-            subscription_svc=subscription_svc,
-            outbound_queue=outbound_queue,
-        )
 
     tc_box: list[Optional[dict]] = [None]
     ws_fg_pending: dict[str, dict[str, Any]] = {}
@@ -1869,8 +1871,15 @@ async def chat_completions_websocket(
                     await recv_task
                 except (asyncio.CancelledError, asyncio.TimeoutError):
                     pass
-                except Exception:
-                    pass
+                except WebSocketDisconnect:
+                    logger.debug(
+                        "companion tool_bg receive task disconnected while queue event was ready"
+                    )
+                except RuntimeError as exc:
+                    logger.debug(
+                        "companion tool_bg receive task ended during queue dispatch: {}",
+                        exc,
+                    )
                 try:
                     ev = queue_task.result()
                 except Exception as exc:
@@ -1967,15 +1976,10 @@ async def chat_completions_websocket(
                         companion_ws_heartbeat_ctx=companion_hb_ctx,
                     )
             except HTTPException as e:
-                detail = e.detail
-                message = detail if isinstance(detail, str) else str(detail)
                 await outbound_queue.put(
-                    {
-                        "code": e.status_code,
-                        "message": message,
-                        "data": None,
-                        "agent_id": websocket_request.agent_id,
-                    }
+                    _chat_ws_error_payload_from_http_exception(
+                        e, agent_id=websocket_request.agent_id
+                    )
                 )
                 continue
             if isinstance(response, dict):

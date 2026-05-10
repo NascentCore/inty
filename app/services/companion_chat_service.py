@@ -12,10 +12,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from app.core.agentic_kernel.companion.llm_client import (
-    CompanionLLMConfig,
-    async_tool_background_enabled_from_env,
-)
+from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.turn_routes import BackgroundToolEventSink
 from app.core.agentic_kernel.companion.manager import (
     CompanionConfig,
@@ -26,16 +23,13 @@ from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerT
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
-from app.core.agentic_kernel.companion.bootstrap_user_interactive import (
-    INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
-)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionWorkspaceBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType
 
-# Synthetic Path prefix for workspace_root joining; Postgres MemoryStore keys are
+# Synthetic Path prefix for scope-root joining; Postgres MemoryStore keys are
 # user_id + companion_id + chat_id only (see SqlAlchemyMemoryRepository).
-COMPANION_API_WORKSPACE_ROOT_PREFIX = Path("/var/lib/inty/companion_workspaces")
+COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX = Path("/var/lib/inty/companion_memory_scopes")
 
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
@@ -43,14 +37,19 @@ DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
 )
 
 
-def companion_workspace_path_if_ready(
+def _companion_tool_call_model_yaml(agent: object) -> str:
+    """Stripped ``AgentConfig.companion_tool_call_model``; empty means use chat model id."""
+    return (getattr(agent, "companion_tool_call_model", "") or "").strip()
+
+
+def companion_memory_store_scope_path_if_ready(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model_id: str,
 ) -> Path | None:
-    """Return resolved companion workspace path if the session store is initialized; else None."""
+    """Return resolved synthetic MemoryStore scope path if the session store is initialized."""
     manager = _companion_manager_for_resolved_model(
         resolved_chat_model_id,
         _companion_runtime_config_fingerprint(),
@@ -67,21 +66,22 @@ def clear_companion_chat_service_caches() -> None:
 
 
 def _companion_runtime_config_fingerprint() -> str:
-    feats = global_config_loaded_from_config_yaml.app.features
+    cfg = global_config_loaded_from_config_yaml
+    feats = cfg.app.features
     raw = feats.companion_transcript_compaction
     raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
     parts = [
-        str(COMPANION_API_WORKSPACE_ROOT_PREFIX),
+        str(COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX),
         str(feats.companion_default_context_mode),
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
-        str(feats.companion_workspace_bootstrap_type),
+        str(feats.companion_memory_bootstrap_type),
         str(feats.companion_ws_session_system_text or ""),
-        # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_workspace_text).
-        "companion_repo_only_ws_v1",
-        "companion_db_only_workspace_v3_orm",
-        str(async_tool_background_enabled_from_env()),
+        # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_store_text).
+        "companion_repo_only_store_v2",
+        "companion_db_memory_documents_v4_orm",
         os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600") or "",
+        _companion_tool_call_model_yaml(cfg.agent),
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
@@ -93,7 +93,7 @@ def _companion_manager_for_resolved_model(
     _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
-    base = COMPANION_API_WORKSPACE_ROOT_PREFIX.expanduser()
+    base = COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX.expanduser()
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
     timeout_raw = os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600").strip()
     try:
@@ -106,12 +106,11 @@ def _companion_manager_for_resolved_model(
         or "https://openrouter.ai/api/v1",
         default_model=resolved_chat_model_id,
         chat_model=resolved_chat_model_id,
-        tool_model=resolved_chat_model_id,
+        tool_model=_companion_tool_call_model_yaml(cfg.agent) or resolved_chat_model_id,
         memory_model=resolved_chat_model_id,
         day_summary_model=resolved_chat_model_id,
         user_model=resolved_chat_model_id,
         soul_model=resolved_chat_model_id,
-        enable_async_tool_background=async_tool_background_enabled_from_env(),
         async_chat_front_timeout_sec=async_chat_timeout,
     )
     tc_raw = feats.companion_transcript_compaction
@@ -121,14 +120,14 @@ def _companion_manager_for_resolved_model(
         else None
     )
     companion_cfg = CompanionConfig(
-        workspaces_base_dir=str(base),
+        memory_store_scope_base_dir=str(base),
         memory_pg_dsn=cfg.database.url,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
-        repository_only_workspace_text=True,
-        workspace_bootstrap_type=feats.companion_workspace_bootstrap_type,
+        repository_only_store_text=True,
+        memory_bootstrap_type=feats.companion_memory_bootstrap_type,
     )
     return CompanionManager(companion_cfg)
 
@@ -136,12 +135,14 @@ def _companion_manager_for_resolved_model(
 def _mark_companion_ws_session_system_written_in_store(
     session: CompanionSession,
 ) -> None:
-    from app.core.agentic_kernel.companion.companion_tool_runtime import (
-        resolve_under_workspace,
+    from app.core.agentic_kernel.companion.memory_store_scope import (
+        resolve_under_scope_root,
     )
 
     root_r = session.workspace_path.resolve()
-    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
+    rel = (
+        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
+    )
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
         return
@@ -162,16 +163,18 @@ async def _maybe_append_companion_ws_session_system(
     if not session_id or not str(session_id).strip():
         return
     if (
-        session.config.workspace_bootstrap_type
-        != CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+        session.config.memory_bootstrap_type
+        != CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     ):
         return
     from app.core.agentic_kernel.companion.models import load_context_meta
     from app.core.agentic_kernel.companion.utc import utc_iso_ts
-    from app.core.agentic_kernel.companion.workspace import WorkspacePaths
+    from app.core.agentic_kernel.companion.memory_store_scope import (
+        MemoryStoreScopePaths,
+    )
     from app.services import chat_history_service
 
-    paths = WorkspacePaths(root=session.workspace_path.resolve())
+    paths = MemoryStoreScopePaths(root=session.workspace_path.resolve())
     meta = load_context_meta(paths.context_json, store=session.store)
     if meta.workspace_bootstrap_user_interactive_completed:
         return
@@ -215,106 +218,6 @@ async def _maybe_append_companion_ws_session_system(
     )
 
 
-def _mark_companion_ws_interactive_kickoff_sent_in_store(
-    session: CompanionSession,
-) -> None:
-    from app.core.agentic_kernel.companion.companion_tool_runtime import (
-        resolve_under_workspace,
-    )
-
-    root_r = session.workspace_path.resolve()
-    rel = resolve_under_workspace(root_r, "context.json").relative_to(root_r).as_posix()
-    raw = session.store.read_document_if_exists(rel)
-    if raw is None or not str(raw).strip():
-        return
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        return
-    data["companion_ws_interactive_kickoff_sent"] = True
-    session.store.write_document(
-        rel, json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    )
-
-
-async def run_companion_interactive_bootstrap_kickoff_for_ws(
-    *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str | int,
-    session_id: str,
-    resolved_chat_model_id: str,
-) -> CompanionTurnResult | None:
-    """
-    One-shot assistant turn when USER_INTERACTIVE bootstrap is incomplete and WS kickoff not yet sent.
-
-    Uses a fixed internal user line so the model opens the relationship phase without a real user message.
-    Returns the kernel turn result (assistant text plus tracing ids) or None when skipped or empty reply.
-    """
-    feats = global_config_loaded_from_config_yaml.app.features
-    if (
-        feats.companion_workspace_bootstrap_type
-        != CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
-    ):
-        return None
-    manager = _companion_manager_for_resolved_model(
-        resolved_chat_model_id, _companion_runtime_config_fingerprint()
-    )
-    chat_key = str(chat_id)
-    session = manager.get_or_create_session(user_id, agent_id, chat_key)
-    if not session.is_initialized:
-        return None
-    from app.core.agentic_kernel.companion.models import load_context_meta
-    from app.core.agentic_kernel.companion.workspace import WorkspacePaths
-
-    paths = WorkspacePaths(root=session.workspace_path.resolve())
-    meta = load_context_meta(paths.context_json, store=session.store)
-    if meta.workspace_bootstrap_user_interactive_completed:
-        return None
-    if meta.companion_ws_interactive_kickoff_sent:
-        return None
-
-    t0 = time.perf_counter()
-    t_ws0 = time.perf_counter()
-    await _maybe_append_companion_ws_session_system(
-        session=session,
-        session_id=session_id,
-    )
-    ws_system_ms = (time.perf_counter() - t_ws0) * 1000.0
-    t_rt0 = time.perf_counter()
-    turn = await manager.run_turn(
-        session,
-        INTERACTIVE_BOOTSTRAP_WS_KICKOFF_USER_TEXT,
-        defer_memory_update=True,
-    )
-    reply = turn.assistant_text
-    run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
-    total_ms = (time.perf_counter() - t0) * 1000.0
-    if not reply or not str(reply).strip():
-        logger.warning(
-            "companion_ws_interactive_kickoff empty reply user={} agent={} chat={} total_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f}",
-            user_id,
-            agent_id,
-            chat_id,
-            total_ms,
-            ws_system_ms,
-            run_turn_ms,
-        )
-        return None
-    # Mark before chat_history persist so reconnect does not run a second run_turn (transcript already
-    # has this turn). If add_ai_message later fails, operators may see transcript vs chat_history skew.
-    _mark_companion_ws_interactive_kickoff_sent_in_store(session)
-    logger.info(
-        "companion_ws_interactive_kickoff_sent user={} agent={} chat={} total_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f}",
-        user_id,
-        agent_id,
-        chat_id,
-        total_ms,
-        ws_system_ms,
-        run_turn_ms,
-    )
-    return turn
-
-
 async def run_companion_chat_turn_for_api(
     *,
     user_id: str,
@@ -333,7 +236,7 @@ async def run_companion_chat_turn_for_api(
     """
     Run one companion kernel turn for (user_id, agent_id, chat_id).
 
-    ``app.features.companion_workspace_bootstrap_type`` (default ``USER_INTERACTIVE``) controls
+    ``app.features.companion_memory_bootstrap_type`` (default ``USER_INTERACTIVE``) controls
     companion bootstrap: ``NONE`` seeds minimal documents at session create and every message uses
     ``run_turn`` only; ``USER_INTERACTIVE`` seeds minimal docs and every message uses ``run_turn`` with
     interactive bootstrap tools until the model calls ``companion_bootstrap_user_interactive_complete``.
@@ -365,14 +268,14 @@ async def run_companion_chat_turn_for_api(
     manager_session_ms = (time.perf_counter() - t_mgr0) * 1000.0
     if not session.is_initialized:
         if (
-            session.config.workspace_bootstrap_type
-            == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+            session.config.memory_bootstrap_type
+            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ):
             raise RuntimeError(
-                "Companion workspace not seeded (interactive bootstrap requires minimal documents in store)"
+                "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
             )
         raise RuntimeError(
-            "Companion workspace not initialized (expected minimal seed at session create)"
+            "Companion MemoryStore not initialized (expected minimal seed at session create)"
         )
     t_ws0 = time.perf_counter()
     await _maybe_append_companion_ws_session_system(
@@ -393,7 +296,10 @@ async def run_companion_chat_turn_for_api(
     )
     run_turn_ms = (time.perf_counter() - t_rt0) * 1000.0
     logger.info(
-        "companion_chat_turn finished path=kernel user={} agent={} chat={} model={} total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} user_chars={} defer_memory={}",
+        "companion_chat_turn finished path=kernel user={} agent={} chat={} model={} "
+        "total_ms={:.0f} manager_session_ms={:.0f} ws_session_system_ms={:.0f} kernel_run_turn_ms={:.0f} "
+        "user_chars={} defer_memory={} inty_trace_id={} user_msg_uuid={} "
+        "langsmith_trace_id={} langsmith_run_id={}",
         user_id,
         agent_id,
         chat_id,
@@ -404,5 +310,9 @@ async def run_companion_chat_turn_for_api(
         run_turn_ms,
         len(user_text),
         defer_memory_update,
+        out.trace_id,
+        out.user_msg_uuid,
+        out.langsmith_trace_id or "",
+        out.langsmith_run_id or "",
     )
     return out

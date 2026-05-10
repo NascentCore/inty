@@ -1,5 +1,5 @@
 """
-Real LLM: companion run_turn must call workspace_list_dir then answer.
+Real LLM: companion run_turn must call memory_store_list_paths then answer.
 
 Enable: INTY_AGENTIC_KERNEL_REAL_LLM_TEST=1 and OPENROUTER_API_KEY.
 Uses OpenRouter model nvidia/nemotron-3-super-120b-a12b:free.
@@ -17,7 +17,7 @@ from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, Com
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.turn import run_turn
-from app.core.agentic_kernel.companion.workspace import WorkspacePaths
+from app.core.agentic_kernel.companion.memory_store_scope import MemoryStoreScopePaths
 
 _OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
@@ -66,12 +66,12 @@ class _InstrumentedCompanionLLMClient(CompanionLLMClient):
 @pytest.mark.noci
 @pytest.mark.slow
 @pytest.mark.asyncio
-async def test_run_turn_real_llm_lists_workspace_then_names_hello_file(tmp_path) -> None:
+async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> None:
     _require_real_agentic_kernel_llm_test()
 
     root = tmp_path
     store = MemoryStore(workspace_root=root, repository=None)
-    paths = WorkspacePaths(root=root)
+    paths = MemoryStoreScopePaths(root=root)
     store.write_document(
         paths.identity.relative_to(root).as_posix(),
         "# ID\nidentity doc",
@@ -110,8 +110,8 @@ async def test_run_turn_real_llm_lists_workspace_then_names_hello_file(tmp_path)
         soul_update_disabled=True,
     )
     user_prompt = (
-        "You MUST call the workspace_list_dir tool first with relative_path \"\" (empty string) "
-        "to list the workspace root. Do not guess. After you receive the tool output, reply in one "
+        "You MUST call the memory_store_list_paths tool first with relative_path \"\" (empty string) "
+        "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
     out = await run_turn(

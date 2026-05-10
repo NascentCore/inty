@@ -1,4 +1,9 @@
-"""Fal z-image-turbo text-to-image and image-to-image via app.core.images.fal."""
+"""Fal z-image-turbo text-to-image and image-to-image via app.core.images.fal.
+
+Tool return strings: failures start with ``ERROR:``; successful runs start with
+``SUCCESS:`` (then the existing ``OK`` line and image fields) so the model can
+distinguish success from failure without misreading dev URLs (e.g. ``file://``).
+"""
 
 from __future__ import annotations
 
@@ -20,6 +25,15 @@ from .utc import utc_iso_ts
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
 MAX_NUM_IMAGES_PER_CALL = 4
+
+
+def _success_tool_banner(tool_name: str) -> str:
+    """One-line lead-in for successful tool output (symmetric with ``ERROR:`` failures)."""
+    return (
+        f"SUCCESS: {tool_name} completed successfully; this is not an ERROR. "
+        f"Do not call {tool_name} again for the same user request unless the user "
+        f"wants a new or different image."
+    )
 
 
 def _load_dotenv_if_present() -> None:
@@ -144,6 +158,7 @@ def _append_one_image_summary(
     if total > 1:
         parts.append(f"#{index}:")
     url = getattr(item, "gcs_http_url", "") or ""
+    gcs_uri = str(getattr(item, "gcs_uri", "") or "").strip()
     parts.append(f"gcs_http_url={url}" if url else "gcs_http_url=(none)")
     w = getattr(getattr(item, "size", None), "width", None)
     h = getattr(getattr(item, "size", None), "height", None)
@@ -167,6 +182,7 @@ def _append_one_image_summary(
             "source_image_url": source_image_url,
             "local_path_relative": local_rel,
             "local_path_absolute": None,
+            "gcs_uri": gcs_uri if gcs_uri else None,
             "gcs_http_url": url if url else None,
             "width": int(w) if w is not None else None,
             "height": int(h) if h is not None else None,
@@ -209,6 +225,7 @@ async def run_generate_image_z_image_turbo(
 
     n = len(results)
     parts: list[str] = [
+        _success_tool_banner("generate_image"),
         "generate_image: OK (fal z-image-turbo).",
         f"requested={num_images if num_images is not None else 1}",
         f"returned={n}",
@@ -258,8 +275,10 @@ async def run_modify_image_z_image_turbo(
     source_persona_revision_id: str | None = None
     source_rel_for_index: str | None = None
     if has_path:
-        assert source_path is not None
-        source_rel_for_index = relative_path_under_workspace(root, source_path)
+        path = source_path
+        if path is None:
+            raise ValueError("source_path is required when has_path is true")
+        source_rel_for_index = relative_path_under_workspace(root, path)
         source_asset = find_latest_asset_by_local_relative_path(
             root, source_rel_for_index
         )
@@ -268,9 +287,7 @@ async def run_modify_image_z_image_turbo(
             source_persona_revision_id = (
                 str(source_asset.get("persona_revision_id") or "") or None
             )
-        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(
-            source_path, gcs_base
-        )
+        image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(path, gcs_base)
     else:
         u = source_image_url.strip()
         if not (u.startswith("https://") or u.startswith("http://")):
@@ -303,6 +320,7 @@ async def run_modify_image_z_image_turbo(
         result = maybe_result
 
     parts: list[str] = [
+        _success_tool_banner("modify_image"),
         "modify_image: OK (fal z-image-turbo image-to-image).",
         "returned=1",
         f"persona_revision_id={persona_revision_id}",

@@ -1,3 +1,5 @@
+"""Tool-call runtime helpers shared by agentic kernel chat flows."""
+
 from __future__ import annotations
 
 import json
@@ -46,10 +48,10 @@ def process_single_tool_call(
     - return done/content based on tool terminality
     """
     raw_tool_calls = getattr(message, "tool_calls", None) or []
-    assert (
-        len(raw_tool_calls) >= 1
-    ), "process_single_tool_call requires at least one tool_call"
-    assert len(raw_tool_calls) <= 1, "parallel_tool_calls are not supported"
+    if not raw_tool_calls:
+        raise ValueError("process_single_tool_call requires at least one tool_call")
+    if len(raw_tool_calls) > 1:
+        raise ValueError("parallel_tool_calls are not supported")
 
     tool_call = raw_tool_calls[0]
     assistant_text = (message.content or "").strip()

@@ -1,6 +1,12 @@
 # CREATED_BY_AGENT
 """
 记忆抽取服务：筛选待抽取用户、拉取全量消息、调用 LLM 抽取并写入 memory、memory_extraction_log。
+
+**Companion importance scores**（可选）：当配置 ``memory_extraction.use_significance_perception_in_extraction``
+为真时，从 PostgreSQL ``chat_history.meta_data.significance_perception`` 读取内核写入的重要性三元组
+（``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``），按
+``importance_round`` 对消息排序并在拼装给抽取模型的文本中附加简短标注（见 ``_prepare_messages_for_memory_extraction``、
+``_format_chat_for_prompt``）。数据来源与契约说明见 ``app/core/agentic_kernel/companion/significance_perception.py`` 模块 docstring。
 """
 
 import asyncio
@@ -260,6 +266,7 @@ def _build_incremental_update_prompt(
 
 
 def _importance_round_from_meta(meta: dict[str, Any] | None) -> int:
+    """Extract ``importance_round`` from ``chat_history.meta_data`` for significance-aware ordering."""
     if not meta:
         return 0
     sp = meta.get("significance_perception")

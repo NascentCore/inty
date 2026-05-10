@@ -23,50 +23,50 @@ def _run_tool(
     return asyncio.run(execute_tool_call(root, name, args))
 
 
-def test_tool_workspace_list_dir(tmp_path: Path) -> None:
+def test_tool_memory_store_list_paths(tmp_path: Path) -> None:
     root = tmp_path
     st = get_memory_store(root)
     st.write_document("USER.md", "u")
     st.write_document("memory/daily/2099-01-01.md", "d")
     out = _run_tool(
         root,
-        "workspace_list_dir",
+        "memory_store_list_paths",
         json.dumps({"relative_path": "."}),
     )
     assert "USER.md" in out
     assert "memory/" in out
     out_mem = _run_tool(
         root,
-        "workspace_list_dir",
+        "memory_store_list_paths",
         json.dumps({"relative_path": "memory"}),
     )
     assert "daily/" in out_mem
 
 
-def test_tool_workspace_read_write(tmp_path: Path) -> None:
+def test_tool_memory_store_read_write(tmp_path: Path) -> None:
     root = tmp_path
     get_memory_store(root)
     w = _run_tool(
         root,
-        "workspace_write_file",
+        "memory_store_write_document",
         json.dumps({"relative_path": "USER.md", "content": "full text"}),
         write_allowlist=WRITABLE_RELATIVE_PATHS,
     )
     assert w.startswith("OK ")
     r = _run_tool(
         root,
-        "workspace_read_file",
+        "memory_store_read_document",
         json.dumps({"relative_path": "USER.md"}),
     )
     assert r == "full text"
 
 
-def test_tool_workspace_write_not_in_allowlist(tmp_path: Path) -> None:
+def test_tool_memory_store_write_not_in_allowlist(tmp_path: Path) -> None:
     root = tmp_path
     get_memory_store(root)
     out = _run_tool(
         root,
-        "workspace_write_file",
+        "memory_store_write_document",
         json.dumps({"relative_path": "secret.txt", "content": "nope"}),
         write_allowlist=WRITABLE_RELATIVE_PATHS,
     )

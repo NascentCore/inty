@@ -31,8 +31,8 @@ def _tool_background_db_loop() -> asyncio.AbstractEventLoop | None:
     return getattr(_tls, "persist_bridge_loop", None)
 
 
-def agent_id_from_companion_workspace_root(root: Path) -> str:
-    """Workspace root is ``.../<user_id>/<agent_id>/<chat_id>``; agent id is parent of chat folder."""
+def agent_id_from_companion_scope_root(root: Path) -> str:
+    """Synthetic scope root is ``.../<user_id>/<agent_id>/<chat_id>``; agent id is parent of chat folder."""
     return root.resolve().parent.name
 
 
@@ -103,7 +103,7 @@ def _status_line_tool_result_quoted_fragment(text: str) -> str:
 
 async def tool_update_agent_status_line(root: Path, status_line: str) -> str:
     """Companion tool: set short chat-header status line for this agent."""
-    agent_id = agent_id_from_companion_workspace_root(root)
+    agent_id = agent_id_from_companion_scope_root(root)
     await persist_agent_status_line(agent_id, status_line)
     normalized = (status_line or "").strip()
     if not normalized:

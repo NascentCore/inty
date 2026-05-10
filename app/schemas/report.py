@@ -1,3 +1,5 @@
+"""Defines request and response schemas for report and feedback APIs."""
+
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -69,7 +71,7 @@ class ReportCreate(BaseModel):
         description="举报或者反馈的原因代码列表。如果未提供且提供了 reason_ids，将从 reason_ids 自动转换",
     )
     image_urls: Optional[List[str]] = Field(
-        [],
+        default_factory=list,
         description="举报或者反馈附图的链接，该链接来自 /api/v1/images 端点上传图片返回的 gcs URL（可能是 cdn 链接）",
     )
     description: Optional[str] = Field(

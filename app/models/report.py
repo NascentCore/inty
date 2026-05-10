@@ -1,3 +1,5 @@
+"""Defines report and feedback persistence models used by moderation flows."""
+
 import enum
 
 import sqlalchemy as sa
@@ -71,7 +73,7 @@ class Report(Base):
         nullable=True,
         comment="举报原因代码列表，用来替代 reason_ids，因为 id 很难维护",
     )
-    image_urls = Column(ARRAY(String), default=[], comment="举报图片URL列表")
+    image_urls = Column(ARRAY(String), default=list, comment="举报图片URL列表")
     description = Column(Text, nullable=True, comment="举报描述")
     github_issue = Column(String(500), nullable=True, comment="关联的 GitHub issue URL")
     status = Column(

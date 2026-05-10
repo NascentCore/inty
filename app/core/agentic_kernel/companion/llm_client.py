@@ -9,32 +9,18 @@ from typing import Any, Literal
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
+from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
 from app.core.agentic_kernel.providers.facade import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )
-
-from .llm_chat_runtime import create_chat_completion_sync
 
 LLM_SCENE_CHAT = "chat"
 LLM_SCENE_TOOL_CALL = "tool_call"
 LLM_SCENE_INNER_TICK = "inner_tick"
 
 LLMScene = Literal["chat", "tool_call", "inner_tick"]
-
-
-def async_tool_background_enabled_from_env() -> bool:
-    raw = os.environ.get("INTY_V2_PROTO_ASYNC_TOOL_BG")
-    if raw is None or not str(raw).strip():
-        return True
-    s = str(raw).strip().lower()
-    if s in ("0", "false", "no", "off"):
-        return False
-    if s in ("1", "true", "yes", "on"):
-        return True
-    raise ValueError(
-        f"Invalid INTY_V2_PROTO_ASYNC_TOOL_BG={raw!r}; use 1/true or 0/false, or unset for default (on)"
-    )
 
 
 class CompanionLLMConfig(BaseModel):
@@ -49,23 +35,15 @@ class CompanionLLMConfig(BaseModel):
     soul_model: str = ""
     api_base: str = "https://openrouter.ai/api/v1"
     api_key: str = ""
-    enable_async_tool_background: bool = False
     async_chat_front_timeout_sec: float = Field(default=600.0, ge=1.0)
 
     @classmethod
     def from_openrouter_env(
         cls,
-        *,
-        default_async_tool_background: bool | None = None,
     ) -> CompanionLLMConfig:
         key = (
             os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
         ).strip()
-        async_bg = (
-            async_tool_background_enabled_from_env()
-            if default_async_tool_background is None
-            else default_async_tool_background
-        )
         timeout_raw = os.getenv(
             "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600"
         ).strip()
@@ -91,7 +69,6 @@ class CompanionLLMConfig(BaseModel):
             ).strip(),
             user_model=(os.getenv("INTY_V2_PROTO_USER_MODEL") or "").strip(),
             soul_model=(os.getenv("INTY_V2_PROTO_SOUL_MODEL") or "").strip(),
-            enable_async_tool_background=async_bg,
             async_chat_front_timeout_sec=timeout_sec,
         )
 
@@ -116,6 +93,11 @@ class CompanionLLMClient:
     @property
     def config(self) -> CompanionLLMConfig:
         return self._config
+
+    @property
+    def chat_completions_sync(self) -> ChatCompletionsSyncPort:
+        """Same implementation as foreground ``chat_completion``; inject into tool_background."""
+        return create_chat_completion_sync
 
     def _ensure_dual_chat_client(self) -> Any:
         if self._client_dual_chat is None:
@@ -170,7 +152,8 @@ class CompanionLLMClient:
             return self._ensure_inner_tick_client()
         return self._client
 
-    def _resolve_model(self, role: str) -> str:
+    def resolve_model(self, role: str) -> str:
+        """Return model id for a config role (``chat``, ``tool``, ``memory``, ...), else ``default_model``."""
         model = getattr(self._config, f"{role}_model", "") or ""
         return model if model else self._config.default_model
 
@@ -183,6 +166,7 @@ class CompanionLLMClient:
         tool_choice: str | None = None,
         response_format: dict[str, Any] | None = None,
         scene: LLMScene | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
     ) -> Any:
         tool_list = list(tools or [])
         resolved_scene: LLMScene = (
@@ -192,20 +176,21 @@ class CompanionLLMClient:
         )
         if resolved_scene == LLM_SCENE_INNER_TICK:
             client = self._ensure_inner_tick_client()
-            m = model or self._resolve_model("tool" if tool_list else "chat")
+            m = model or self.resolve_model("tool" if tool_list else "chat")
         elif resolved_scene == LLM_SCENE_TOOL_CALL:
             client = self._ensure_dual_tool_client()
-            m = model or self._resolve_model("tool")
+            m = model or self.resolve_model("tool")
         else:
             client = self._ensure_dual_chat_client()
-            m = model or self._resolve_model("chat")
-        return create_chat_completion_sync(
+            m = model or self.resolve_model("chat")
+        return self.chat_completions_sync(
             client,
             model=m,
             messages_payload=messages,
             tools=tool_list,
             tool_choice=tool_choice,
             response_format=response_format,
+            langsmith_extra=langsmith_extra,
         )
 
     def chat_completion_unified(
@@ -217,8 +202,8 @@ class CompanionLLMClient:
         tool_choice: str | None = None,
     ) -> Any:
         """Single client path (no dual routing), for bootstrap or tests."""
-        m = model or self._resolve_model("tool" if tools else "chat")
-        return create_chat_completion_sync(
+        m = model or self.resolve_model("tool" if tools else "chat")
+        return self.chat_completions_sync(
             self._client,
             model=m,
             messages_payload=messages,
@@ -232,10 +217,15 @@ class CompanionLLMClient:
         *,
         model_role: str = "memory",
     ) -> str:
-        m = self._resolve_model(model_role)
+        m = self.resolve_model(model_role)
         approx_chars = sum(len(str(x.get("content") or "")) for x in messages)
         t_api = time.perf_counter()
-        resp = self._client.chat.completions.create(model=m, messages=messages)
+        resp = self.chat_completions_sync(
+            self._client,
+            model=m,
+            messages_payload=messages,
+            tools=[],
+        )
         api_ms = (time.perf_counter() - t_api) * 1000.0
         logger.info(
             "companion complete_text model_role={} model={} chat_completions_ms={:.0f} approx_chars={}",

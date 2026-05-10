@@ -1,3 +1,5 @@
+"""Used only in /experimental/agentic_ai_companion"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

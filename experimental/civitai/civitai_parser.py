@@ -1,9 +1,16 @@
-import requests
-from bs4 import BeautifulSoup
+"""Parse Civitai model pages for prototype metadata extraction.
+
+This experimental scraper pulls model details, creator metadata, stats, and
+download links from Civitai HTML pages for local exploration.
+"""
+
 import json
 import re
-from urllib.parse import urljoin
 from typing import Dict, List
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
 
 
 class CivitaiParser:
@@ -235,8 +242,8 @@ class CivitaiParser:
                 data = json.loads(script.string)
                 if isinstance(data, dict):
                     details.update(data)
-            except:
-                pass
+            except (json.JSONDecodeError, TypeError):
+                continue
 
         return details
 

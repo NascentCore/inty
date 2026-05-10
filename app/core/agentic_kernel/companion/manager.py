@@ -1,4 +1,8 @@
-"""CompanionManager: 管理 companion session 的生命周期。"""
+"""CompanionManager: 管理 companion session 的生命周期。
+
+每个 ``CompanionSession`` 持有 ``tool_bg_idle``（``threading.Event``），用于在下一轮
+``run_turn`` 加载 transcript 之前等待上一轮异步 tool_background 线程结束。
+"""
 
 from __future__ import annotations
 
@@ -11,8 +15,11 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionWorkspaceBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType
 
+from .langsmith_parent_policy import (
+    companion_turn_langsmith_parent_enabled_from_app_config,
+)
 from .llm_client import CompanionLLMClient, CompanionLLMConfig
 from .memory_pipeline import MemoryPipelineConfig
 from .transcript_compaction import CompactionConfig
@@ -21,9 +28,9 @@ from .memory_store import MemoryStore
 from .models import CompanionTurnResult, InnerTickMode
 from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
-from .workspace import (
-    ensure_minimal_workspace_documents_in_store,
-    is_workspace_initialized_from_store,
+from .memory_store_scope import (
+    ensure_minimal_documents_in_store,
+    is_scope_initialized_in_store,
     needs_startup_profile_inquiry,
 )
 
@@ -31,8 +38,8 @@ from .workspace import (
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
 
-    # workspace 根目录基路径；每个 session 在其下创建子目录
-    workspaces_base_dir: str = "/tmp/companion_workspaces"
+    # Synthetic scope root base path; each session is base/user_id/companion_id/chat_id.
+    memory_store_scope_base_dir: str = "/tmp/companion_memory_scopes"
 
     # LLM 配置
     llm: CompanionLLMConfig = Field(default_factory=CompanionLLMConfig)
@@ -40,14 +47,14 @@ class CompanionConfig(BaseModel):
     # 记忆管线配置
     memory: MemoryPipelineConfig = Field(default_factory=MemoryPipelineConfig)
 
-    # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (app.models.companion_workspace).
+    # PostgreSQL: non-empty DSN enables ORM-backed MemoryStore (companion_memory_document_versions).
     memory_pg_dsn: str = ""
 
     # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 companion_tool_runtime）
-    repository_only_workspace_text: bool = True
+    repository_only_store_text: bool = True
 
-    # Bootstrap: app.features.companion_workspace_bootstrap_type (NONE | USER_INTERACTIVE).
-    workspace_bootstrap_type: str = CompanionWorkspaceBootstrapType.NONE.value
+    # Bootstrap: app.features.companion_memory_bootstrap_type (NONE | USER_INTERACTIVE).
+    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value
 
     # Context: default experience profile id written to new sessions (context.json context_mode).
     default_context_mode: str = "intimate"
@@ -59,14 +66,19 @@ class CompanionConfig(BaseModel):
     # uses companion.models.TRANSCRIPT_WINDOW_MAX_MESSAGES.
     transcript_llm_window_max_messages: int | None = None
 
+    # None: LangSmith companion parent RunTree follows app-wide policy
+    # (``companion_turn_langsmith_parent_enabled_from_app_config``). True/False: force on or off
+    # for all ``CompanionManager.run_turn`` calls using this config.
+    langsmith_companion_parent_run_enabled: bool | None = None
+
     @field_validator("default_context_mode")
     @classmethod
     def _validate_default_context_mode(cls, v: str) -> str:
         return normalize_experience_profile_id(v)
 
     @property
-    def skip_workspace_directory_creation(self) -> bool:
-        """Session state does not require a directory under workspaces_base_dir."""
+    def skip_scope_directory_creation(self) -> bool:
+        """Session state does not require a real directory under memory_store_scope_base_dir."""
         return True
 
 
@@ -91,10 +103,12 @@ class CompanionSession:
         self.store = store
         self.llm_client = llm_client
         self.config = config
+        self.tool_bg_idle = threading.Event()
+        self.tool_bg_idle.set()
 
     @property
     def is_initialized(self) -> bool:
-        return is_workspace_initialized_from_store(self.workspace_path, self.store)
+        return is_scope_initialized_in_store(self.workspace_path, self.store)
 
     @property
     def needs_profile_inquiry(self) -> bool:
@@ -115,7 +129,7 @@ class CompanionManager:
         return f"{user_id}:{companion_id}:{chat_id}"
 
     def _workspace_path(self, user_id: str, companion_id: str, chat_id: str) -> Path:
-        base = Path(self._config.workspaces_base_dir)
+        base = Path(self._config.memory_store_scope_base_dir)
         return base / user_id / companion_id / chat_id
 
     def get_or_create_session(
@@ -147,17 +161,37 @@ class CompanionManager:
                 "chat_id": chat_id,
             }
             if (
-                self._config.workspace_bootstrap_type
-                == CompanionWorkspaceBootstrapType.USER_INTERACTIVE.value
+                self._config.memory_bootstrap_type
+                == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
             ):
                 context_data["workspace_bootstrap_user_interactive_completed"] = False
                 context_data["companion_ws_session_system_written"] = False
-                context_data["companion_ws_interactive_kickoff_sent"] = False
             context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
-            if store.read_document_if_exists("context.json") is None:
+            existing_ctx = store.read_document_if_exists("context.json")
+            write_full_context = False
+            if existing_ctx is None:
+                write_full_context = True
+            else:
+                stripped = str(existing_ctx).strip()
+                if not stripped:
+                    write_full_context = True
+                else:
+                    try:
+                        parsed_ctx = json.loads(stripped)
+                    except json.JSONDecodeError:
+                        write_full_context = True
+                    else:
+                        if (
+                            isinstance(parsed_ctx, dict)
+                            and len(parsed_ctx) == 0
+                            and self._config.memory_bootstrap_type
+                            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+                        ):
+                            write_full_context = True
+            if write_full_context:
                 store.write_document("context.json", context_json)
 
-            ensure_minimal_workspace_documents_in_store(ws_path, store)
+            ensure_minimal_documents_in_store(ws_path, store)
 
             session = CompanionSession(
                 user_id=user_id,
@@ -191,6 +225,12 @@ class CompanionManager:
         implicit_signal_bundle: ImplicitSignalBundle | None = None,
     ) -> CompanionTurnResult:
         """执行一轮对话。"""
+        override = session.config.langsmith_companion_parent_run_enabled
+        ls_parent_enabled = (
+            companion_turn_langsmith_parent_enabled_from_app_config()
+            if override is None
+            else override
+        )
         return await run_turn(
             session.workspace_path,
             user_text,
@@ -202,11 +242,13 @@ class CompanionManager:
             memory_config=session.config.memory,
             transcript_compaction=session.config.transcript_compaction,
             transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
-            repository_only_workspace_text=session.config.repository_only_workspace_text,
-            workspace_bootstrap_type=session.config.workspace_bootstrap_type,
+            repository_only_store_text=session.config.repository_only_store_text,
+            memory_bootstrap_type=session.config.memory_bootstrap_type,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             implicit_signal_bundle=implicit_signal_bundle,
+            langsmith_parent_run_enabled=ls_parent_enabled,
+            tool_bg_idle_event=session.tool_bg_idle,
         )
 
     def shutdown_session(

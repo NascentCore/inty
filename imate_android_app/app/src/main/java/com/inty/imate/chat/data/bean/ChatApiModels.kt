@@ -8,11 +8,13 @@ import kotlinx.serialization.json.JsonElement
 
 /**
  * Companion WebSocket `messageType` string (request body).
- * The shipped app has never sent `IMPLICIT_USER_SIGNED_ON` chat frames; sign-on is via
- * `user_signed_on` control messages only. Aligns with backend `ChatCompletionRequest.message_type`.
+ * Aligns with backend `ChatCompletionRequest.message_type`. Proactive greeting uses
+ * [IMPLICIT_USER_SIGNED_ON] once per agent per WebSocket connection after chat attach;
+ * [USER_MESSAGE] is normal typed sends. Control frame `user_signed_on` still arms heartbeat coords.
  */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
+    const val IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
 }
 
 @Serializable
@@ -157,6 +159,7 @@ data class MsgInfo(
         val isOpening: Boolean = false,
         @SerialName("voice_session_id") val voice_session_id: String? = null,
         @SerialName("generated_image") val generatedImage: GeneratedImage? = null,
+        @SerialName("tool_background_started") val toolBackgroundStarted: Boolean = false,
     ) {
         @Serializable
         data class GeneratedImage(

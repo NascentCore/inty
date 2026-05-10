@@ -217,7 +217,7 @@ async def _turn_ws_chat_round(
     user_text: str,
     connect_timeout: float,
     recv_timeout: float,
-    kickoff_drain_sec: float = 5.0,
+    kickoff_drain_sec: float = 0.0,
 ) -> str:
     _ensure_sys_path()
     from app.schemas.chat import (
@@ -240,23 +240,24 @@ async def _turn_ws_chat_round(
         ping_interval=None,
         proxy=None,
     ) as ws:
-        # Drain optional kickoff (and leading pongs) within one budget before the user turn.
-        deadline = time.monotonic() + kickoff_drain_sec
-        while time.monotonic() < deadline:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
+        # Optional: drain unexpected early assistant frames (legacy servers); default 0 skips.
+        if kickoff_drain_sec > 0:
+            deadline = time.monotonic() + kickoff_drain_sec
+            while time.monotonic() < deadline:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    raw0 = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                except TimeoutError:
+                    break
+                data0 = json.loads(raw0)
+                if data0.get("type") == "pong":
+                    continue
+                c = data0.get("code")
+                if c is not None and int(c) != 200:
+                    _parse_chat_response_payload(data0)[0]  # raises BackendChatWsError
                 break
-            try:
-                raw0 = await asyncio.wait_for(ws.recv(), timeout=remaining)
-            except TimeoutError:
-                break
-            data0 = json.loads(raw0)
-            if data0.get("type") == "pong":
-                continue
-            c = data0.get("code")
-            if c is not None and int(c) != 200:
-                _parse_chat_response_payload(data0)[0]  # raises BackendChatWsError
-            break
         req = ChatWebSocketRequest(
             agent_id=agent_id,
             request=ChatCompletionRequest(

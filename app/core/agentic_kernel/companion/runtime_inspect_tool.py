@@ -1,4 +1,8 @@
-"""Implementation of companion_runtime_inspect workspace tool."""
+"""Implementation of companion_runtime_inspect MemoryStore snapshot tool.
+
+Registers a LangSmith ``@traceable`` span around the tool entrypoint so tool-path
+executions appear in traces; large JSON outputs are summarized via ``process_outputs``.
+"""
 
 from __future__ import annotations
 
@@ -6,10 +10,37 @@ import json
 from pathlib import Path
 from typing import Any
 
+from langsmith import traceable
+
 from .memory_registry import get_memory_store
 from .memory_store import MemoryStore
-from .runtime_inspect_context import runtime_inspect_get_bundle
+from .runtime_events import read_runtime_events
+from .runtime_inspect_context import (
+    runtime_inspect_get_bundle,
+    runtime_inspect_get_scoped_memory_store,
+)
 from .utc import local_date_str
+
+_LANGSMITH_OUTPUT_PREVIEW_CHARS = 6000
+
+
+def _langsmith_process_outputs_runtime_inspect(result: str) -> dict[str, Any]:
+    """Shrink traced outputs: full inspect JSON can reach ``max_chars_llm_messages``."""
+    if not isinstance(result, str):
+        return {
+            "char_count": None,
+            "preview": repr(result)[:500],
+            "truncated": True,
+        }
+    n = len(result)
+    cap = _LANGSMITH_OUTPUT_PREVIEW_CHARS
+    if n <= cap:
+        return {"char_count": n, "preview": result, "truncated": False}
+    return {
+        "char_count": n,
+        "preview": result[:cap] + "\n...[truncated for langsmith]",
+        "truncated": True,
+    }
 
 
 def _parse_optional_int(raw: Any, *, default: int, minimum: int) -> int:
@@ -66,7 +97,8 @@ def _truncate_messages_for_max_chars(
         if best_i >= 0 and best_len > 400:
             new_len = max(400, best_len // 2)
             c0 = m[best_i]["content"]
-            assert isinstance(c0, str)
+            if not isinstance(c0, str):
+                raise TypeError("selected message content must be a string")
             m[best_i]["content"] = c0[:new_len] + "\n...[truncated]"
             m[best_i]["_content_truncated_for_size"] = True
             trunc = True
@@ -102,6 +134,11 @@ def _read_store_optional(
     }
 
 
+@traceable(
+    name="companion_runtime_inspect",
+    run_type="tool",
+    process_outputs=_langsmith_process_outputs_runtime_inspect,
+)
 def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str:
     max_chars_per_doc = _parse_optional_int(
         arguments.get("max_chars_per_doc"), default=8000, minimum=100
@@ -111,6 +148,9 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
     )
     include_store_documents = _parse_optional_bool(
         arguments.get("include_store_documents"), default=True
+    )
+    max_runtime_events = _parse_optional_int(
+        arguments.get("max_runtime_events"), default=20, minimum=0
     )
     bundle = runtime_inspect_get_bundle()
     out: dict[str, Any] = {
@@ -136,8 +176,10 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         else:
             out["last_chat_completion_request"] = last
 
+    store = runtime_inspect_get_scoped_memory_store() or get_memory_store(root)
+    out["runtime_events"] = read_runtime_events(store, limit=max_runtime_events)
+
     if include_store_documents:
-        store = get_memory_store(root)
         day = local_date_str()
         out["store_documents"] = {
             "context_json": _read_store_optional(
@@ -180,6 +222,7 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         "For self-check only; reply to the user in natural language without dumping raw JSON. "
         "include_full_tools_schema is not implemented; use tools_summary in last_chat_completion_request. "
         "TOOLS / SIGNIFICANCE_PERCEPTION operator guidance are fixed package templates in PromptBundle, "
-        "not authoritative MemoryStore documents here."
+        "not authoritative MemoryStore documents here; importance scoring contract and consumers are "
+        "documented in significance_perception.py module docstring."
     )
     return json.dumps(out, ensure_ascii=False, indent=2) + "\n"
