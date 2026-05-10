@@ -312,7 +312,9 @@ def _string_candidates_from_value(value: Any) -> list[str]:
 
 
 def _dual_llm_message_candidate_texts(message: Any) -> list[str]:
-    content_candidates = _string_candidates_from_value(_message_field(message, "content"))
+    content_candidates = _string_candidates_from_value(
+        _message_field(message, "content")
+    )
     reasoning_candidates = [
         *_string_candidates_from_value(_message_field(message, "reasoning")),
         *_string_candidates_from_value(_message_field(message, "reasoning_details")),

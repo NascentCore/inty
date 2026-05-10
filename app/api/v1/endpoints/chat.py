@@ -99,7 +99,10 @@ from app.services.surprise_snap_service import (
     try_trigger_surprise_snap,
 )
 from app.services.push_notification_service import mark_user_push_notifications_as_read
-from app.services.voice_service import VoiceService, voice_service as default_voice_service
+from app.services.voice_service import (
+    VoiceService,
+    voice_service as default_voice_service,
+)
 from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 
@@ -1483,18 +1486,20 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             "effective_local_id": None,
         }
         try:
-            companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
-                user_id=user_id,
-                agent_id=agent_id,
-                chat_id=chat_row_id,
-                user_text="",
-                resolved_chat_model_id=model_override,
-                defer_memory_update=True,
-                session_id=session_id,
-                background_output_sink=companion_bg_sink,
-                preset_user_msg_uuid=preset_uid,
-                inner_tick_turn=True,
-                inner_tick_mode=InnerTickMode.MAINTENANCE,
+            companion_turn = (
+                await companion_chat_service.run_companion_chat_turn_for_api(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    chat_id=chat_row_id,
+                    user_text="",
+                    resolved_chat_model_id=model_override,
+                    defer_memory_update=True,
+                    session_id=session_id,
+                    background_output_sink=companion_bg_sink,
+                    preset_user_msg_uuid=preset_uid,
+                    inner_tick_turn=True,
+                    inner_tick_mode=InnerTickMode.MAINTENANCE,
+                )
             )
         except Exception as exc:
             if not getattr(exc, "companion_tool_background_started", False):
@@ -1845,7 +1850,9 @@ async def _agent_chat_completions_impl(
                             implicit_signal_bundle=companion_implicit_bundle,
                         )
                         companion_reply_modality = companion_turn.reply_modality
-                        companion_voice_script = companion_turn.voice_message_script or ""
+                        companion_voice_script = (
+                            companion_turn.voice_message_script or ""
+                        )
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None

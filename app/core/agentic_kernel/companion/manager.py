@@ -236,13 +236,15 @@ class CompanionManager:
                     context_data["post_bootstrap_context_mode"] = (
                         self._config.default_context_mode
                     )
-                    context_data["workspace_bootstrap_user_interactive_completed"] = False
+                    context_data["workspace_bootstrap_user_interactive_completed"] = (
+                        False
+                    )
                     context_data["companion_ws_session_system_written"] = False
                 else:
                     context_data["context_mode"] = self._config.default_context_mode
-                context_json = json.dumps(
-                    context_data, indent=2, ensure_ascii=False
-                ) + "\n"
+                context_json = (
+                    json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
+                )
                 store.write_document("context.json", context_json)
             elif user_interactive and isinstance(parsed_ctx, dict):
                 _migrate_interactive_bootstrap_context_if_needed(

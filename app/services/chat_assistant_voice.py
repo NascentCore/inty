@@ -35,10 +35,7 @@ async def synthesize_chat_assistant_audio(
     audio_duration: Optional[float] = None
     if not voice_enabled:
         return audio_url, audio_duration
-    if (
-        use_companion
-        and str(companion_reply_modality or "").strip() == "voice_message"
-    ):
+    if use_companion and str(companion_reply_modality or "").strip() == "voice_message":
         tts_text = (companion_voice_script or "").strip() or (
             response_text_content or ""
         ).strip()
