@@ -50,7 +50,7 @@ from .llm_chat_runtime import (
 )
 from .image_gate import list_image_asset_records
 from .memory_store import MemoryStore
-from .models import InnerTickMode
+from .models import InnerTickMode, transcript_relative_path_for_turn_persistence
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from .significance_perception import envelope_to_assistant_metadata_dict
 from .runtime_events import append_runtime_event
@@ -70,7 +70,6 @@ from .companion_tool_runtime import (
 )
 from .tool_bg_routing import resolve_tool_bg_routing_sync
 from .utc import utc_iso_ts
-from .memory_store_scope import MemoryStoreScopePaths
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
@@ -480,12 +479,11 @@ def _append_background_transcript_assistant(
     assistant_msg_uuid: str,
     reply_to: str,
     trace_id: str,
+    transcript_relative_path: str,
 ) -> None:
-    root = ws_root.resolve()
-    paths = MemoryStoreScopePaths(root=root)
-    rel_tr = paths.transcript.relative_to(root).as_posix()
+    _ = ws_root
     store.append_jsonl_record(
-        rel_tr,
+        transcript_relative_path,
         {
             "role": "assistant",
             "content": content,
@@ -550,6 +548,10 @@ async def _run_background_tool_loop(
     force_tools_first_round: bool = True,
 ) -> None:
     image_asset_baseline = len(list_image_asset_records(ws_root.resolve()))
+    transcript_append_rel = transcript_relative_path_for_turn_persistence(
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=inner_tick_mode,
+    )
     try:
         if is_tool_background_aborted(user_msg_uuid):
             logger.debug(
@@ -856,6 +858,7 @@ async def _run_background_tool_loop(
                     assistant_msg_uuid=assistant_msg_uuid,
                     reply_to=user_msg_uuid,
                     trace_id=trace_id,
+                    transcript_relative_path=transcript_append_rel,
                 )
                 _append_background_log(
                     store=memory_store,
@@ -902,6 +905,7 @@ async def _run_background_tool_loop(
             assistant_msg_uuid=assistant_msg_uuid,
             reply_to=user_msg_uuid,
             trace_id=trace_id,
+            transcript_relative_path=transcript_append_rel,
         )
         _append_background_log(
             store=memory_store,

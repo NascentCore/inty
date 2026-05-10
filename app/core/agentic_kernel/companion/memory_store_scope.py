@@ -79,6 +79,10 @@ class MemoryStoreScopePaths:
         return self.root / "transcript.jsonl"
 
     @property
+    def transcript_inner_tick(self) -> Path:
+        return self.root / "transcript_inner_tick.jsonl"
+
+    @property
     def ai_private_md(self) -> Path:
         return self.root / "ai_private.md"
 

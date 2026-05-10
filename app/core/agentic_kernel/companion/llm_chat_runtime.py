@@ -115,7 +115,11 @@ def _companion_turn_langsmith_root_descriptor(
     inner_tick_mode: InnerTickMode | None,
     implicit_user_signed_on: bool,
 ) -> tuple[str, list[str], str, dict[str, Any]]:
-    """Return (run name, tags, inty_turn_lane, extra_inputs_for_run_tree)."""
+    """Return (run name, tags, inty_turn_lane, extra_inputs_for_run_tree).
+
+    Implicit branch: umbrella lane ``implicit_turn`` (隐式信号：当前可为隐式上线，日后追加其它信号时在
+    ``extra_in["implicit_signal"]`` 与 tags 上扩展，例如额外 tag ``implicit_<signal>``）。
+    """
     uid = (user_id or "").strip() or "unknown"
     cid = (companion_id or "").strip() or "unknown"
     extra_in: dict[str, Any] = {}
@@ -127,9 +131,14 @@ def _companion_turn_langsmith_root_descriptor(
         tags = ["agentic_companion", "inner_tick"]
         return name, tags, lane, extra_in
     if implicit_user_signed_on:
-        lane = "implicit_user_signed_on"
+        lane = "implicit_turn"
+        extra_in["implicit_signal"] = "implicit_user_signed_on"
         name = f"agentic_companion_implicit_turn user={uid} agent={cid}"
-        tags = ["agentic_companion", "user_turn", "implicit_user_signed_on"]
+        tags = [
+            "agentic_companion",
+            "implicit_turn",
+            "implicit_user_signed_on",
+        ]
         return name, tags, lane, extra_in
     lane = "explicit_user_message"
     name = f"agentic_companion_user_turn user={uid} agent={cid}"
@@ -190,6 +199,8 @@ def create_companion_turn_root_run(
         meta["inty_turn_lane"] = turn_lane
         if inner_tick_turn:
             meta["inner_tick_mode"] = lane_inputs["inner_tick_mode"]
+        if implicit_user_signed_on:
+            meta["implicit_signal"] = lane_inputs["implicit_signal"]
         root_inputs: dict[str, Any] = {
             "inty_trace_id": inty_trace_id,
             "user_msg_uuid": user_msg_uuid,

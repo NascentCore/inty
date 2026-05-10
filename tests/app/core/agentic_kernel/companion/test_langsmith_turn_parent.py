@@ -144,11 +144,13 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
     assert kwargs["name"] == "agentic_companion_implicit_turn user=u1 agent=a1"
     assert kwargs["tags"] == [
         "agentic_companion",
-        "user_turn",
+        "implicit_turn",
         "implicit_user_signed_on",
     ]
-    assert kwargs["inputs"]["inty_turn_lane"] == "implicit_user_signed_on"
-    assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "implicit_user_signed_on"
+    assert kwargs["inputs"]["inty_turn_lane"] == "implicit_turn"
+    assert kwargs["inputs"]["implicit_signal"] == "implicit_user_signed_on"
+    assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "implicit_turn"
+    assert kwargs["extra"]["metadata"]["implicit_signal"] == "implicit_user_signed_on"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 

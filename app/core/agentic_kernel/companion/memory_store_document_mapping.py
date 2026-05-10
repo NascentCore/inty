@@ -27,6 +27,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
     SIGNIFICANCE_PERCEPTION = "significance_perception"
     TRANSCRIPT = "transcript"
+    TRANSCRIPT_INNER_TICK = "transcript_inner_tick"
     CONTEXT_JSON = "context_json"
     AI_PRIVATE_MD = "ai_private_md"
     AI_PRIVATE_JSONL = "ai_private_jsonl"
@@ -59,6 +60,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     "transcript.jsonl": (CompanionMemoryDocumentKind.TRANSCRIPT, None),
+    "transcript_inner_tick.jsonl": (
+        CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
+        None,
+    ),
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     "ai_private.jsonl": (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),

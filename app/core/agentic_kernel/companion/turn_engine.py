@@ -13,10 +13,15 @@ from .heartbeat import (
 )
 from .memory_registry import get_memory_store
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
-from .models import ChatMessage, ContextMeta, InnerTickMode, PromptBundle
+from .models import (
+    ChatMessage,
+    ContextMeta,
+    InnerTickMode,
+    PromptBundle,
+    transcript_relative_path_for_turn_persistence,
+)
 from .prompts.system_messages import build_system_messages
 from .utc import utc_iso_ts
-from .memory_store_scope import MemoryStoreScopePaths
 
 
 def build_repl_turn_base_messages(
@@ -94,7 +99,7 @@ def persist_repl_turn_transcript_rows(
     trace_id: str | None = None,
     assistant_extra: dict[str, Any] | None = None,
 ) -> str:
-    """Persist one user + one assistant row to ``transcript.jsonl``.
+    """Persist one user + one assistant row to the main or inner-tick JSONL transcript.
 
     If ``assistant_extra`` is set (typically the parsed envelope metadata dict with
     ``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``), it is
@@ -103,8 +108,14 @@ def persist_repl_turn_transcript_rows(
     contract: ``significance_perception`` module docstring.
     """
     root = workspace_root.resolve()
-    paths = MemoryStoreScopePaths(root=root)
-    rel_tr = paths.transcript.relative_to(root).as_posix()
+    rel_tr = transcript_relative_path_for_turn_persistence(
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=(
+            InnerTickMode.PROACTIVE_CHAT
+            if inner_tick_proactive_chat
+            else InnerTickMode.MAINTENANCE
+        ),
+    )
     store = get_memory_store(root)
     user_row: dict[str, Any] = {
         "role": "user",
