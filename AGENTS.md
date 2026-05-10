@@ -38,31 +38,13 @@ Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次�
 
 ## 代码库结构
 
-- [IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，基于后端[chat completions](/app/core/chat.py)对话机制；
-- [iMate Android App](/imate_android_app/)是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
-- [app](/app/) 是用 Python 写的智能体系统及后端 API 服务器，提供 websocket 等。
 
 ## 沟通方式
 
 - Always start with 1 sentence summary, then layout critical details
-- Do not create README.md, create AGENTS.md.
-- Answer in Mandarin（简体中文）、使用中文回答，以下指令为英文方便你理解
-
-## Output
-
-- No preamble. No "Great question!", "Sure!", "Of course!", "Certainly!", "Absolutely!".
-- No hollow closings. No "I hope this helps!", "Let me know if you need anything!".
-- No restating the prompt. If the task is clear, execute immediately.
-- No explaining what you are about to do. Just do it.
-- No unsolicited suggestions. Do exactly what was asked, nothing more.
-- Structured output only: bullets, tables, code blocks. Prose only when explicitly requested.
-
-## Token Efficiency
-
-- Compress responses. Every sentence must earn its place.
-- No redundant context. Do not repeat information already established in the session.
-- No long intros or transitions between sections.
-- Short responses are correct unless depth is explicitly requested.
+- Do not create README.md, create AGENTS.md
+- Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
+- User instructions always override this file.
 
 ## Session Memory
 
@@ -86,6 +68,7 @@ Detailed instructions from this file are also maintained as topic files under `.
 ## General Rules
 
 - The ground truth is in code
+- Never speculate about code, files, or APIs you have not read.
 - Docs describe abstract ideas,
   never repeating information that can be directly derived from the code files:
   - higher-logical-level design of multiple code files
@@ -93,84 +76,43 @@ Detailed instructions from this file are also maintained as topic files under `.
   - future directions
 - Create skills, commands to abstract and automate repeated actions
 
-## Override Rule
-
-- User instructions always override this file.
-
-## Accuracy and Speculation Control
-
-- Never speculate about code, files, or APIs you have not read.
-- If referencing a file or function: read it first, then answer.
-- If unsure: say "I don't know." Never guess confidently.
-- Never invent file paths, function names, or API signatures.
-- If a user corrects a factual claim: accept it as ground truth for the entire session. Never re-assert the original claim.
-
 ## Code Output
 
 - Return the simplest working solution. No over-engineering.
 - No abstractions or helpers for single-use operations.
 - No speculative features or future-proofing.
-- No docstrings or comments on code that was not changed, except Python package-level doc blocks in `__init__.py` (see **Python package doc blocks** below).
 - Inline comments only where logic is non-obvious.
-- Read the file before modifying it. Never edit blind.
+- Do not refactor surrounding code when fixing a bug.
 
 ## Python package doc blocks (required)
 
-- Put Python package/module-level documentation in the package's `__init__.py` docstring.
-- The docstring must explain what that package is designed for and its role or behavior in the system.
-- Do not add top-of-file docstrings to every `.py` source file solely to satisfy this rule; individual modules may still have docstrings when they need local API or behavior context.
-- When adding or editing a Python package, update its `__init__.py` docstring if missing or insufficient.
-
-## Scope Control
-
-- Do not add features beyond what was asked.
-- Do not refactor surrounding code when fixing a bug.
-- Do not create new files unless strictly necessary.
+- Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
+- The docstring must explain what that package is designed for and its role or behavior in the broader system.
 
 ## General background
 
 - Components
   - IntelliMate app
-    - [IntelliMate: the user-facing Android App](/android_app)
-    - [Inty backend: IntelliMate Android APP's backend](/backend/inty/)
+    - [IntelliMate Android App](/android_app/)是传统角色扮演类17+成人内容AI陪伴产品，基于后端[chat completions](/app/core/chat.py)对话机制；
     - [Push worker: offline scheduled tasks processor](/backend/push_worker/)
-    - [Ops: Inty operational web app](/web_app) and [corresponding Ops backend](/backend/ops)
+    - [Inty operational service](/backend/ops/)
+    - [IntelliMate Web App (no-longer maintained)](/web_app/)
       - Extract memory from user and AI chat messages
+  - [iMate Android App](/imate_android_app/) 是在IntelliMate经验教训上聚焦35+男性的智能体陪伴产品，基于[agentic compaion](/app/core/agentic_kernel/)智能体陪伴。
+  - [app](/app/): Python agentic system core and API endpoints (including websocket endpoint)
+  - [Inty backend](/backend/inty/): iMate & IntelliMate Android APPs' shared backend service, deployed separately, built on top of [app](/app/)
 - Deployment
   - IntelliMate is published on Google Play
   - Inty backend, push worker, ops backend, are all deployed on 1 same GCE VM
-    - TODO: Add service account key or SSH key for accessing the VM
+    - Deployed with GitHub workflows
   - All backend services have 2 stages `dev` `prod`
     - IntelliMate `debug` build type talks to `dev` backend, `release` build type talks to `prod` backend
 
-## Android App Tips
-
-- Do not try to run android app in kvm for testing, as the agent cloud environment has no kvm
-- Use standard components: <https://developer.android.com/develop/ui/compose/components>
-
-## Backend
-
-- Backend services
-  - Inty backend: `backend/inty` 支持 Android App 的主 API 后端，提供对话、生图、语音播报、语音通话等功能
-  - Operational app:
-    - `backend/ops` backend`evaluation/` operational app, creating iMates, view user behavior data etc.
-  - Serving
-  - 部署在一台 GCP VM
-  - 后端所有应用都有 2 个环境：dev prod
-    - .secrets/alien-paratext-461204-i9-cursor-log-viewer.json 可以用来访问
-
-### 文档层次结构
+### 工程文档层次结构
 
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；详略由编写者按上下文自行判断，不以「人类扫读一整 repo」为第一约束。
-
-### 工程文档维护
-
-- Markdown 引用本仓库内文件时，使用从仓库根目录起的绝对路径（以 `/` 开头），例如 `/app/api/AGENTS.md`、`/AGENTS.md`；不要使用 `../../app/api/AGENTS.md` 这类相对路径。
-- In markdown, reference in-repo files with repo-root absolute paths (leading `/`), e.g. `/app/api/AGENTS.md`; do not use `../../...` relative paths.
-- 当进行改动时，如变更足够重要且会影响相应目录的 `AGENTS.md` 指南、及其他 markdown 文件，请同步更新该目录下的 `AGENTS.md`、及其他 markdown 文件。
-- 新功能/需求开发对应的文档应该添加 FR_ 前缀，如 docs/FR_CHAR_BOOSTING.md
 
 ## Python-Kotlin HTTP APIs 数据类型定义
 
