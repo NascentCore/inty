@@ -109,7 +109,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | `INNER_TICK_SYNC` | `inner_tick_turn=True`, maintenance | 合成用户文本驱动内在维护; 可使用 inner tick tools; 跳过普通记忆更新管线。 |
 | `HEARTBEAT_SYNC` | `inner_tick_turn=True`, proactive chat | 合成 proactive heartbeat 用户标记; 不启用 tools。 |
 
-特殊上行 `messageType=IMPLICIT_USER_SIGNED_ON` 由 WebSocket companion 支持: API 层不写该用户行到 PostgreSQL `chat_history`, companion transcript 会写 synthetic user 行; prompt stack 会去掉 tools, 使模型做 chat-only 问候。
+隐式上线问候由 **`user_signed_on`** 控制帧 **`implicit_greeting`** 触发（不再经由聊天帧 `messageType`）: API 层不写合成用户行到 PostgreSQL `chat_history`, companion transcript 写 synthetic user 行; prompt stack 去掉 tools, 模型走 chat-only 问候。
 
 ### Dual-LLM envelope 解析边界
 

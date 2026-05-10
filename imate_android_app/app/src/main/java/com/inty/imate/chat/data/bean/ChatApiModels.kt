@@ -7,10 +7,10 @@ import kotlinx.serialization.json.JsonElement
 // TODO: Verify :app:compileDebugKotlin with ANDROID_HOME before release when changing WS payloads.
 
 /**
- * Companion WebSocket `messageType` string (request body).
- * Aligns with backend `ChatCompletionRequest.message_type`. Proactive greeting uses control frame
- * `user_signed_on` with `implicit_greeting: true` and `message_id` (once per agent per connection);
- * legacy `IMPLICIT_USER_SIGNED_ON` chat frames remain supported server-side. [USER_MESSAGE] is normal typed sends.
+ * Companion WebSocket `messageType` string (chat frame request body).
+ * Aligns with backend `ChatCompletionRequest.message_type`: chat frames use [USER_MESSAGE] only.
+ * Implicit greeting uses control frame `user_signed_on` with `implicit_greeting` + `message_id`.
+ * [IMPLICIT_USER_SIGNED_ON] may still appear on assistant `meta_data` for that turn (wire echo).
  */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"

@@ -143,7 +143,7 @@ def _async_dual_llm_system_message_variants(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Compact tool-path stack vs full chat-path stack; shares inner_tick routing with refresh/tool_bg.
 
-    Implicit ``IMPLICIT_USER_SIGNED_ON`` rounds strip tools in the main ``run_turn`` prefix pass
+    Implicit sign-on (internal ``implicit_user_signed_on_turn``) rounds strip tools in the main ``run_turn`` prefix pass
     (``implicit_user_signed_on_turn``), so routing is chat-only sync, not this async dual branch.
     We intentionally omit that flag here (equivalent to ``False``): this helper only runs when
     ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` already won, i.e. tool-backed rounds

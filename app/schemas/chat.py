@@ -363,7 +363,11 @@ ChatMessageContentPart = Annotated[
 
 
 class CompanionChatTurnMessageType(str, enum.Enum):
-    """Semantic category for this chat completion turn (companion WebSocket; not message content media)."""
+    """Turn category for companion plumbing.
+
+    ``IMPLICIT_USER_SIGNED_ON`` is for server-internal synthetic turns only (e.g. ``user_signed_on``
+    + ``implicit_greeting``); WebSocket **chat** frames must use ``USER_MESSAGE``.
+    """
 
     USER_MESSAGE = "USER_MESSAGE"
     IMPLICIT_USER_SIGNED_ON = "IMPLICIT_USER_SIGNED_ON"
@@ -441,7 +445,10 @@ class ChatCompletionRequest(BaseModel):
     message_type: CompanionChatTurnMessageType = Field(
         default=CompanionChatTurnMessageType.USER_MESSAGE,
         alias="messageType",
-        description="Turn kind: normal user text vs implicit user sign-on (greeting trigger).",
+        description=(
+            "Turn kind for HTTP or internal companion plumbing; WebSocket chat frames must use "
+            "USER_MESSAGE only (implicit sign-on greeting: user_signed_on + implicit_greeting)."
+        ),
     )
 
     @model_validator(mode="after")
@@ -486,10 +493,9 @@ class ChatWsUserSignedOnFrame(BaseModel):
     """WebSocket control frame: arms proactive heartbeat coords.
 
     Product intent: signal that the user is online in this channel (heartbeat coords).
-    When ``implicit_greeting`` is true, the server runs the same companion turn as a chat frame
-    with ``messageType: IMPLICIT_USER_SIGNED_ON`` (after a successful ``user_signed_on_ack``); see
-    ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``. Clients may still send that
-    chat frame instead during migration.
+    When ``implicit_greeting`` is true, the server runs an internal implicit sign-on companion
+    turn after a successful ``user_signed_on_ack`` (same semantics as the former IMPLICIT chat
+    frame); see ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
