@@ -7,33 +7,7 @@
 
 下列内容列出当前代码中注册的 HTTP 与 WebSocket 路径及实现文件。表格中的路径除 `{...}` 占位段外为字面量。
 
-## 双应用说明
-
-| 应用 | 入口模块 | 典型部署 | `/api/v1` 来源 |
-|------|----------|----------|----------------|
-| **Inty**（主后端，Android） | `backend/inty/main.py` | App 对应后端 | `app.api.v1.router.api_router` |
-| **Ops**（运营 / evaluation） | `backend/ops/main.py` | ops.inty.cc、dev.ops.inty.cc | `shared_router`（`backend/ops/api/v1/shared.py`）+ `backend/ops/api/v1/evaluation.py` + `backend/ops/api/v1/festival_memory.py` |
-
 WebSocket 在 OpenAPI 中不可见；下表方法列写 `WS`。
-
-## 根路径与其它非 `/api/v1`
-
-### Inty（`backend/inty/main.py`）
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/` | GET | `backend/inty/main.py`（`build_health_check_data(ops=False)`） |
-| `/metrics` | GET | `backend/inty/main.py`（`app.debug` 为 true 或 `environment` 为 `TEST` 时可用；否则 404） |
-
-### Ops（`backend/ops/main.py` + `app/api/evaluation_web.py`）
-
-| 路径 | 方法 | 实现文件 |
-|------|------|----------|
-| `/` | GET | `app/api/evaluation_web.py`（评测静态入口；`INTY_API_ONLY` 开启时不注册） |
-| `/evaluation` | GET | `app/api/evaluation_web.py` |
-| `/evaluation/{path:path}` | GET | `app/api/evaluation_web.py` |
-| `/health` | GET | `backend/ops/main.py`（`build_health_check_data(ops=True)`） |
-| `/static` | mount | `app/api/evaluation_web.py`（存在 `app/static` 时挂载 `StaticFiles`） |
 
 Inty 不提供 `/health`；Ops 根路径 `/` 在关闭 API-only 时为评测页，与 Inty 的 JSON 健康根路径不同。
 
