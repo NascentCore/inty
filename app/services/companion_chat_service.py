@@ -31,6 +31,8 @@ from app.utils.config import CompanionMemoryBootstrapType
 # user_id + companion_id + chat_id only (see SqlAlchemyMemoryRepository).
 COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX = Path("/var/lib/inty/companion_memory_scopes")
 
+COMPANION_CHAT_LOGS_RELATIVE_PATH = "CHAT_LOGS.md"
+
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
     "（会话入线，内部指令）用户已进入本聊天。请在本轮及之后延续自然陪伴：可先简短问候，"
     "并温和邀请对方说说此刻状态或想聊的事；不要提及系统、连接、初始化、工具名。"
@@ -58,6 +60,23 @@ def companion_memory_store_scope_path_if_ready(
     if not session.is_initialized:
         return None
     return session.workspace_path.resolve()
+
+
+def append_companion_chat_logs_line_for_ws_control(
+    *,
+    user_id: str,
+    agent_id: str,
+    chat_id: str | int,
+    resolved_chat_model_id: str,
+    line: str,
+) -> None:
+    """Append one line to ``CHAT_LOGS.md`` for the companion MemoryStore scope (DB-backed)."""
+    manager = _companion_manager_for_resolved_model(
+        resolved_chat_model_id,
+        _companion_runtime_config_fingerprint(),
+    )
+    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
+    session.store.append_line(COMPANION_CHAT_LOGS_RELATIVE_PATH, line)
 
 
 def clear_companion_chat_service_caches() -> None:

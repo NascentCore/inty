@@ -498,6 +498,17 @@ class ChatWsUserSignedOnFrame(BaseModel):
     )
 
 
+class ChatWsUserSignedOutFrame(BaseModel):
+    """WebSocket control frame: records user leaving the chat channel for companion CHAT_LOGS.md."""
+
+    type: Literal["user_signed_out"] = "user_signed_out"
+    agent_id: str = Field(..., min_length=1)
+    message_id: Optional[str] = Field(
+        default=None,
+        description="Optional RFC4122 UUID string for client/server log correlation.",
+    )
+
+
 class ChatWebSocketRequest(BaseModel):
     agent_id: str
     request: ChatCompletionRequest
