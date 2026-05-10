@@ -44,6 +44,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Final, Literal
+from unittest.mock import Base as _UnittestMockBase
 
 _MARKDOWN_JSON_FENCE_RE = re.compile(
     r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
@@ -272,6 +273,8 @@ def _message_field(message: Any, field_name: str) -> Any:
 
 
 def _string_candidates_from_value(value: Any) -> list[str]:
+    if isinstance(value, _UnittestMockBase):
+        return []
     if isinstance(value, str):
         return [value] if value.strip() else []
     if isinstance(value, Mapping):

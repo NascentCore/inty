@@ -45,6 +45,8 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
     "请结合上文与「内在活动（ai_private）」行事；不要向用户解释本机制，不要提系统、节拍、等待。）"
 )
 
+MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
+
 AI_PRIVATE_INJECT_MAX_CHARS = 12_000
 
 
