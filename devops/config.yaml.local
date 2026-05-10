@@ -71,8 +71,8 @@ agent:
   # sub_user_chat_model: "inception/mercury-2"
   # free_user_chat_model: "deepseek/deepseek-v3.2"
   # sub_user_chat_model: "deepseek/deepseek-v3.2"
-  free_user_chat_model: "deepseek/deepseek-v4-pro"
-  sub_user_chat_model: "deepseek/deepseek-v4-pro"
+  free_user_chat_model: "deepseek/deepseek-v4-flash"
+  sub_user_chat_model: "deepseek/deepseek-v4-flash"
   # companion_tool_call_model: "deepseek/deepseek-v4-flash"
   # 2026/05/08 openrouter agentic leaderboard https://openrouter.ai/rankings?benchmark=agentic
   # 最好的可用模型，其他排名更高模型都无法在中国使用
