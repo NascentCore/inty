@@ -20,7 +20,7 @@ from app.core.build_info import build_time_utc, vcs_dirty, vcs_revision
 from app.core.config import global_config_loaded_from_config_yaml
 from app.api.deps import get_async_db
 from app.api.utils.health_check_payload import build_health_check_data
-from app.api.evaluation_web import configure_evaluation_web_routes
+from backend.ops.api.evaluation_web import configure_evaluation_web_routes
 from app.core.agent.agent import agent_manager
 from app.core.logging import init_logger
 from app.external_services.firebase import init_firebase

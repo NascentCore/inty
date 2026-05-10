@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.evaluation_web import (
+from backend.ops.api.evaluation_web import (
     API_ONLY_ENV_NAME,
     configure_evaluation_web_routes,
     is_api_only_mode_enabled,

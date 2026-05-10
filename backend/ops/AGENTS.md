@@ -5,12 +5,12 @@
 - 本地端到端 smoke（例如 WebSocket `/api/v1/chat/ws`）：在仓库根执行 `scripts/inty_backend_smoke_tests/test_chat_ws.py`，设置 `INTY_API_BASE_URL=http://127.0.0.1:8001`（或 `--api-base`）；Bearer 一般不必手写 export，脚本会读 `.inty_ops_bearer_token`。说明见仓库 [.cursor/skills/inty-server-module-verify/SKILL.md](../../.cursor/skills/inty-server-module-verify/SKILL.md)。
 - 部署域名：ops.inty.cc（prod）、dev.ops.inty.cc（dev）；部署方式见计划与 [backend/README.md](../README.md)。
 
-## APIs（`backend/ops/main.py` + `app/api/evaluation_web.py`）
+## APIs（`backend/ops/main.py` + `backend/ops/api/evaluation_web.py`）
 
 | 路径 | 方法 | 实现文件 |
 |------|------|----------|
-| `/` | GET | `app/api/evaluation_web.py`（评测静态入口；`INTY_API_ONLY` 开启时不注册） |
-| `/evaluation` | GET | `app/api/evaluation_web.py` |
-| `/evaluation/{path:path}` | GET | `app/api/evaluation_web.py` |
+| `/` | GET | `backend/ops/api/evaluation_web.py`（评测静态入口；`INTY_API_ONLY` 开启时不注册） |
+| `/evaluation` | GET | `backend/ops/api/evaluation_web.py` |
+| `/evaluation/{path:path}` | GET | `backend/ops/api/evaluation_web.py` |
 | `/health` | GET | `backend/ops/main.py`（`build_health_check_data(ops=True)`） |
-| `/static` | mount | `app/api/evaluation_web.py`（存在 `app/static` 时挂载 `StaticFiles`） |
+| `/static` | mount | `backend/ops/api/evaluation_web.py`（存在 `app/static` 时挂载 `StaticFiles`） |
