@@ -18,6 +18,7 @@ import io.ktor.websocket.Frame
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Collections
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,20 +73,20 @@ constructor() {
             val session =
                 currentSession.get()
                     ?: throw IllegalStateException("Chat WebSocket not connected")
-            if (userSignedOnAgentIdForConnection.get() != aid) {
-                session.send(
-                    Frame.Text(
-                        json.encodeToString(
-                            ChatUserSignedOnWsMessage.serializer(),
-                            ChatUserSignedOnWsMessage(agentId = aid),
+            val implicitMsgId = UUID.randomUUID().toString()
+            session.send(
+                Frame.Text(
+                    json.encodeToString(
+                        ChatUserSignedOnWsMessage.serializer(),
+                        ChatUserSignedOnWsMessage(
+                            agentId = aid,
+                            messageId = implicitMsgId,
+                            implicitGreeting = true,
                         ),
                     ),
-                )
-                userSignedOnAgentIdForConnection.set(aid)
-            }
-            val req = ChatTextSendRequestFactory.buildImplicitUserSignedOnMsgReq(aid)
-            val payload = ChatWebSocketReq(agentId = aid, request = req)
-            session.send(Frame.Text(json.encodeToString(ChatWebSocketReq.serializer(), payload)))
+                ),
+            )
+            userSignedOnAgentIdForConnection.set(aid)
             implicitSignOnSentAgentIds.add(aid)
         }
     }

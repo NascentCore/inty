@@ -485,16 +485,23 @@ class ChatCompletionResponse(BaseModel):
 class ChatWsUserSignedOnFrame(BaseModel):
     """WebSocket control frame: arms proactive heartbeat coords.
 
-    Product intent: signal that the user is online in this channel (heartbeat coords). Clients
-    should also send ``messageType: IMPLICIT_USER_SIGNED_ON`` chat frames for greeting triggers;
-    see ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``.
+    Product intent: signal that the user is online in this channel (heartbeat coords).
+    When ``implicit_greeting`` is true, the server runs the same companion turn as a chat frame
+    with ``messageType: IMPLICIT_USER_SIGNED_ON`` (after a successful ``user_signed_on_ack``); see
+    ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``. Clients may still send that
+    chat frame instead during migration.
     """
 
     type: Literal["user_signed_on"] = "user_signed_on"
     agent_id: str = Field(..., min_length=1)
     message_id: Optional[str] = Field(
         default=None,
-        description="Optional RFC4122 UUID string for client/server log correlation.",
+        description="Optional RFC4122 UUID string for client/server log correlation; "
+        "required when implicit_greeting is true (also used as companion transcript user_msg_uuid).",
+    )
+    implicit_greeting: bool = Field(
+        default=False,
+        description="When true, run implicit sign-on greeting companion turn after coords arm.",
     )
 
 

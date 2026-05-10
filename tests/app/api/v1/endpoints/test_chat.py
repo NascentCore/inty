@@ -1588,6 +1588,121 @@ def test_chat_websocket_companion_implicit_user_signed_on_sets_bundle_and_skips_
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict = {}
+    user_saves: list = []
+
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        captured["bundle"] = kwargs.get("implicit_signal_bundle")
+        return CompanionTurnResult(assistant_text="greet-cf")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-cf",
+        workspace_dir="/tmp/inty_test_companion_ws_signon_cf",
+        chat_id="chat-signon-cf-1",
+        latest_user_message_db_id=90,
+        ai_message_id=910,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+        user_message_save_log=user_saves,
+    )
+
+    msg_uuid = "aaaaaaaa-bbbb-4ccc-dddd-999999999999"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-cf",
+                    "message_id": msg_uuid,
+                    "implicit_greeting": True,
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            body = websocket.receive_json()
+
+    assert body["code"] == 200
+    bundle = captured["bundle"]
+    assert bundle is not None
+    assert bundle.user_signed_on is True
+    assert user_saves == []
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_message_id(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        raise AssertionError("companion should not run without message_id")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-cf-mid",
+        workspace_dir="/tmp/inty_test_companion_ws_signon_cf_mid",
+        chat_id="chat-signon-cf-mid-1",
+        latest_user_message_db_id=90,
+        ai_message_id=911,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-cf-mid",
+                    "implicit_greeting": True,
+                }
+            )
+            ack = websocket.receive_json()
+
+    assert ack["type"] == "user_signed_on_ack"
+    assert ack["ok"] is False
+    assert ack["reason"] == "missing_message_id"
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_message_id(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        raise AssertionError("companion should not run with bad message_id")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-signon-cf-badmid",
+        workspace_dir="/tmp/inty_test_companion_ws_signon_cf_badmid",
+        chat_id="chat-signon-cf-badmid-1",
+        latest_user_message_db_id=90,
+        ai_message_id=912,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-signon-cf-badmid",
+                    "message_id": "not-a-uuid",
+                    "implicit_greeting": True,
+                }
+            )
+            ack = websocket.receive_json()
+
+    assert ack["type"] == "user_signed_on_ack"
+    assert ack["ok"] is False
+    assert ack["reason"] == "invalid_message_id"
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_implicit_user_signed_on_rejects_image_content(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):

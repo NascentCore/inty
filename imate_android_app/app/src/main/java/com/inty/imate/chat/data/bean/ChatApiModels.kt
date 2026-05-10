@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonElement
 
 /**
  * Companion WebSocket `messageType` string (request body).
- * Aligns with backend `ChatCompletionRequest.message_type`. Proactive greeting uses
- * [IMPLICIT_USER_SIGNED_ON] once per agent per WebSocket connection after chat attach;
- * [USER_MESSAGE] is normal typed sends. Control frame `user_signed_on` still arms heartbeat coords.
+ * Aligns with backend `ChatCompletionRequest.message_type`. Proactive greeting uses control frame
+ * `user_signed_on` with `implicit_greeting: true` and `message_id` (once per agent per connection);
+ * legacy `IMPLICIT_USER_SIGNED_ON` chat frames remain supported server-side. [USER_MESSAGE] is normal typed sends.
  */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
@@ -117,6 +117,8 @@ data class ChatClientContextWsMessage(
 data class ChatUserSignedOnWsMessage(
     val type: String = "user_signed_on",
     @SerialName("agent_id") val agentId: String,
+    @SerialName("message_id") val messageId: String? = null,
+    @SerialName("implicit_greeting") val implicitGreeting: Boolean = false,
 )
 
 @Serializable
