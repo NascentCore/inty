@@ -1,4 +1,4 @@
-"""Provider facade for OpenAI-compatible and Gemini clients."""
+"""Cached OpenAI-compatible sync and async HTTP clients (shared by option key)."""
 
 from __future__ import annotations
 
