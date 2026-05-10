@@ -74,6 +74,7 @@ from app.schemas.response import (
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
+from app.services.chat_assistant_voice import synthesize_chat_assistant_audio
 from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
 from app.services.memory_service import (
@@ -88,10 +89,7 @@ from app.services.surprise_snap_service import (
     try_trigger_surprise_snap,
 )
 from app.services.push_notification_service import mark_user_push_notifications_as_read
-from app.services.voice_service import (
-    VoiceService,
-    get_voice_message_narration_mode_from_agent_settings,
-)
+from app.services.voice_service import VoiceService, voice_service as default_voice_service
 from app.utils.openai_client import get_chat_openai_client
 from app.utils.timing import Timer, log_time
 
@@ -726,6 +724,8 @@ async def _build_companion_tool_background_ws_payload(
     request: ChatCompletionRequest,
     effective_local_id: Optional[str],
     foreground_user_message_id: Optional[int] = None,
+    foreground_voice_ctx: dict[str, Any] | None = None,
+    voice_svc: VoiceService | None = None,
 ) -> WsOutboundPayload:
     meta_data = {
         "source": "tool_bg",
@@ -733,7 +733,11 @@ async def _build_companion_tool_background_ws_payload(
         "reply_to_user_msg_uuid": ev.user_msg_uuid,
         "tool_bg_output_to_user": ev.output_to_user,
         "tool_bg_generation_deliver": ev.generation_deliver,
+        "reply_modality": ev.reply_modality,
+        "voice_message_script": (ev.voice_message_script or "").strip(),
     }
+    if str(ev.reply_modality or "") == "voice_message":
+        meta_data["is_voice"] = True
     if ev.langsmith_trace_id:
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
     if ev.langsmith_run_id:
@@ -751,6 +755,38 @@ async def _build_companion_tool_background_ws_payload(
         agent_id=agent_id,
         meta_data=meta_data,
     )
+    audio_url: Optional[str] = None
+    if (
+        voice_svc is not None
+        and foreground_voice_ctx is not None
+        and foreground_voice_ctx.get("voice_enabled")
+    ):
+        uid = str(foreground_voice_ctx.get("user_id") or "").strip()
+        if uid:
+            try:
+                r_voice_user = await db.execute(select(User).where(User.id == uid))
+                voice_user_row = r_voice_user.scalar_one_or_none()
+            except Exception as e:
+                logger.warning(f"tool_bg load user for voice failed: {e}")
+                voice_user_row = None
+            if voice_user_row is not None:
+                audio_url, _ = await synthesize_chat_assistant_audio(
+                    db=db,
+                    session_id=session_id,
+                    ai_message_id=ai_message_id,
+                    voice_enabled=True,
+                    chat_voice_id=foreground_voice_ctx.get("chat_voice_id"),
+                    agent_voice_id=foreground_voice_ctx.get("agent_voice_id"),
+                    agent_gender=foreground_voice_ctx.get("agent_gender"),
+                    agent_settings=foreground_voice_ctx.get("agent_settings"),
+                    language=request.language,
+                    current_user=voice_user_row,
+                    voice_svc=voice_svc,
+                    response_text_content=ev.text,
+                    use_companion=True,
+                    companion_reply_modality=str(ev.reply_modality or "text"),
+                    companion_voice_script=ev.voice_message_script or "",
+                )
     latest_message_info = None
     try:
         if ai_message_id is not None:
@@ -775,7 +811,7 @@ async def _build_companion_tool_background_ws_payload(
         None,
         "",
         latest_message_info,
-        None,
+        audio_url,
         request,
         source_imate_id=request.target_imate_id,
         user_message_id=user_message_id,
@@ -816,7 +852,11 @@ def _companion_ai_meta_from_turn_result(
     """Build assistant ``meta_data`` for chat_history / WS from one companion kernel turn."""
     companion_ai_meta: dict[str, Any] = {
         "source": companion_turn.assistant_source,
+        "reply_modality": companion_turn.reply_modality,
+        "voice_message_script": companion_turn.voice_message_script or "",
     }
+    if str(companion_turn.reply_modality or "") == "voice_message":
+        companion_ai_meta["is_voice"] = True
     if companion_turn.trace_id:
         companion_ai_meta["trace_id"] = companion_turn.trace_id
     if companion_turn.user_msg_uuid:
@@ -1017,6 +1057,36 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 response_content_parts,
             ) = _normalize_chat_response_content(companion_reply)
 
+            chat_settings_hb = await chat_service.get_or_create_chat_settings(
+                post_db, chat_row_id, user_id, agent_id
+            )
+            agent_for_voice = await agent_service.get_agent_for_chat(
+                post_db, agent_id=agent_id
+            )
+            r_hb_voice_user = await post_db.execute(
+                select(User).where(User.id == user_id)
+            )
+            hb_voice_user = r_hb_voice_user.scalar_one_or_none()
+            proactive_audio_url: Optional[str] = None
+            if hb_voice_user is not None:
+                proactive_audio_url, _ = await synthesize_chat_assistant_audio(
+                    db=post_db,
+                    session_id=session_id,
+                    ai_message_id=ai_message_id,
+                    voice_enabled=chat_settings_hb.voice_enabled,
+                    chat_voice_id=chat_settings_hb.voice_id,
+                    agent_voice_id=(agent_for_voice or {}).get("voice_id"),
+                    agent_gender=(agent_for_voice or {}).get("gender"),
+                    agent_settings=(agent_for_voice or {}).get("settings"),
+                    language=stub_request.language,
+                    current_user=hb_voice_user,
+                    voice_svc=default_voice_service,
+                    response_text_content=response_text_content,
+                    use_companion=True,
+                    companion_reply_modality=companion_turn.reply_modality,
+                    companion_voice_script=companion_turn.voice_message_script or "",
+                )
+
             latest_message_info = None
             try:
                 if ai_message_id is not None:
@@ -1055,7 +1125,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 response_content_parts,
                 PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
                 latest_message_info,
-                None,
+                proactive_audio_url,
                 stub_request,
                 source_imate_id=None,
                 user_message_id=user_message_id,
@@ -1212,6 +1282,8 @@ async def _agent_chat_completions_impl(
 
         # 获取聊天设置和AI回复
         use_companion = False
+        companion_reply_modality = "text"
+        companion_voice_script = ""
         try:
             with log_time(f"获取聊天设置: chat_id={chat.id}"):
                 chat_settings = await chat_service.get_or_create_chat_settings(
@@ -1270,6 +1342,12 @@ async def _agent_chat_completions_impl(
                             "agent_id": agent_id,
                             "request": request,
                             "effective_local_id": effective_local_id,
+                            "user_id": str(current_user.id),
+                            "voice_enabled": chat_settings.voice_enabled,
+                            "chat_voice_id": chat_settings.voice_id,
+                            "agent_voice_id": agent_data.get("voice_id"),
+                            "agent_gender": agent_data.get("gender"),
+                            "agent_settings": agent_data.get("settings"),
                         }
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
@@ -1292,6 +1370,8 @@ async def _agent_chat_completions_impl(
                             preset_user_msg_uuid=companion_preset_uid,
                             implicit_signal_bundle=companion_implicit_bundle,
                         )
+                        companion_reply_modality = companion_turn.reply_modality
+                        companion_voice_script = companion_turn.voice_message_script or ""
                         if (
                             companion_preset_uid is not None
                             and companion_ws_foreground_pending is not None
@@ -1481,50 +1561,29 @@ async def _agent_chat_completions_impl(
             logger.error(f"Agent聊天处理失败: {str(e)}")
             raise
 
-        # 语音生成逻辑 - 根据chat_settings.voice_enabled决定是否自动播放
         audio_url = None
         audio_duration = None
         try:
-            # 语音自动播放逻辑：chat_settings.voice_enabled = true 时自动生成语音
-            if chat_settings.voice_enabled and response_text_content.strip():
-                selected_chat_voice_id = chat_settings.voice_id
-                agent_voice_id = agent_data.get("voice_id")
-                # Voice resolution order for MVP:
-                # 1) per-chat selected voice_id, 2) agent default voice_id, 3) service fallback.
-                resolved_voice_id = selected_chat_voice_id or agent_voice_id
-                voice_message_narration_mode = (
-                    get_voice_message_narration_mode_from_agent_settings(
-                        agent_data.get("settings")
-                    )
-                )
-
-                with log_time(
-                    f"语音生成: voice_id={resolved_voice_id}, text_length={len(response_text_content)}, language={request.language}"
-                ):
-                    voice_result = await voice_svc.generate_voice(
-                        text=response_text_content,
-                        voice_id=resolved_voice_id,
-                        language=request.language,
-                        db=db,
-                        agent_gender=agent_data.get("gender"),
-                        user=current_user,
-                        voice_message_narration_mode=voice_message_narration_mode,
-                    )
-                if voice_result:
-                    audio_url, audio_duration = voice_result
-                else:
-                    logger.warning(
-                        f"用户 {current_user.id} 语音生成失败或达到限制，聊天文本正常返回"
-                    )
-            elif chat_settings.voice_enabled:
-                logger.debug("聊天响应仅包含图片内容，跳过语音生成")
-            else:
-                logger.debug("语音未启用，跳过语音生成")
-
+            audio_url, audio_duration = await synthesize_chat_assistant_audio(
+                db=db,
+                session_id=session_id,
+                ai_message_id=ai_message_id,
+                voice_enabled=chat_settings.voice_enabled,
+                chat_voice_id=chat_settings.voice_id,
+                agent_voice_id=agent_data.get("voice_id"),
+                agent_gender=agent_data.get("gender"),
+                agent_settings=agent_data.get("settings"),
+                language=request.language,
+                current_user=current_user,
+                voice_svc=voice_svc,
+                response_text_content=response_text_content,
+                use_companion=use_companion,
+                companion_reply_modality=companion_reply_modality,
+                companion_voice_script=companion_voice_script,
+            )
         except Exception as e:
             logger.error(f"语音生成失败: {str(e)}")
             logger.exception("语音生成异常详细信息:")
-            # 语音生成失败不影响聊天功能
 
         # 记录聊天使用情况
         try:
@@ -1906,6 +1965,8 @@ async def chat_completions_websocket(
                             foreground_user_message_id=ctx.get(
                                 "foreground_user_message_id"
                             ),
+                            foreground_voice_ctx=ctx,
+                            voice_svc=voice_svc,
                         )
                         await outbound_queue.put(bg_payload)
                 except Exception:

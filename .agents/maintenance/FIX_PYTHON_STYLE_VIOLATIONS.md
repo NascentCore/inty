@@ -21,12 +21,40 @@ maintenance agents can fix the highest-impact item first.
     `EvaluationSessionDetail.interactions`, and `QuestionFileUpload.warnings`
     used `[]`.
 
+## 2026-05-10 scan
+
+### Fixed in `cursor/worst-python-style-violation-b827`
+
+- [x] Google 2.4 "Exceptions": `/app/core/agentic_kernel/companion/tool_background.py`
+  caught `BaseException` at the background thread boundary and swallowed failures.
+  This was the worst open violation because it could hide process-level control
+  exceptions from the agentic companion async tool path while still marking the
+  background job idle.
+
+### Newly discovered open violations
+
+- [ ] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py`
+  catches `BaseException` in ten WebSocket bridge startup, reconnect, cleanup,
+  and callback paths. Preserve thread/session isolation with narrower exception
+  handling and re-raise process-level control exceptions.
+- [ ] Google 2.4 "Exceptions": `/tools/llm.py` silently swallows multiple
+  `Exception` blocks while loading LLM configuration and environment state.
+  Log the suppressed failures or narrow the expected exception types.
+- [ ] Google 2.4 "Exceptions": `/app/schemas/chat.py` has broad
+  `except Exception` blocks that silently return original agent background
+  values during URL transformation. Add structured logging and narrow expected
+  exception types.
+- [ ] Google 2.4 "Exceptions": `/app/services/user_analytics_service.py`
+  suppresses analytics query failures with `except Exception: pass`; report
+  skipped metric groups in logs so operational dashboards do not silently lose
+  fields.
+- [ ] Google 2.14 "True/False Evaluations":
+  `/scripts/create_email_password_user.py` uses SQLAlchemy
+  `User.deleted_at == None`. Prefer `User.deleted_at.is_(None)` for explicit
+  SQL `IS NULL` semantics.
+
 ### Open violations
 
-- [ ] Google 2.4 "Exceptions": `/app/core/agentic_kernel/companion/tool_background.py`
-  catches `BaseException` in the background tool runner and does not propagate
-  failures to the foreground control path. Replace with a narrower exception
-  boundary and an explicit failure event or future.
 - [ ] Google 2.4 "Exceptions": `/app/core/agentic_kernel/llm/langsmith_completion_enrich.py`
   uses multiple `except Exception: pass` blocks around LangSmith enrichment
   monkey-patch code. Log suppressed failures and move import-time patching to

@@ -289,6 +289,9 @@ class ToolOutputEvent:
     langsmith_run_id: str = ""
     output_to_user: bool = False
     generation_deliver: bool = False
+    # Same dual-LLM envelope fields as foreground CompanionTurnResult (routing layer runs TTS).
+    reply_modality: str = "text"
+    voice_message_script: str = ""
     image_asset_baseline: int = 0
     # Absolute on-disk paths for images created during this background tool round.
     # Surfaced to REPL via meta_data.tool_bg_local_image_paths; production clients ignore.
@@ -930,6 +933,8 @@ async def _run_background_tool_loop(
                 langsmith_run_id=bg_ls_llm_run,
                 output_to_user=output_to_user_flag,
                 generation_deliver=generation_deliver,
+                reply_modality=routing.reply_modality,
+                voice_message_script=(routing.voice_message_script or "").strip(),
                 image_asset_baseline=image_asset_baseline,
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
@@ -1015,7 +1020,7 @@ def start_tool_background_job(
                         _run_async_tool_loop()
                 else:
                     _run_async_tool_loop()
-            except BaseException as exc:
+            except Exception as exc:
                 bg_ls_err = repr(exc)
                 logger.exception("repl.turn.bg job failed")
             finally:

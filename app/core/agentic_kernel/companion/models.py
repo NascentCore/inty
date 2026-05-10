@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .memory_store_scope import MemoryStoreScopePaths
 
 AssistantTurnSource = Literal["chat", "inner_tick"]
+CompanionReplyModality = Literal["text", "voice_message"]
 
 
 class InnerTickMode(StrEnum):
@@ -50,6 +51,20 @@ class CompanionTurnResult(BaseModel):
     """One companion kernel turn: visible assistant text plus optional significance scores."""
 
     assistant_text: str = ""
+    reply_modality: CompanionReplyModality = Field(
+        default="text",
+        description=(
+            "Structured envelope intent from dual-LLM chat: normal text bubble vs voice-note "
+            "delivery (see significance_perception.DUAL_LLM_CHAT_RESPONSE_FORMAT)."
+        ),
+    )
+    voice_message_script: str = Field(
+        default="",
+        description=(
+            "When reply_modality is voice_message, wording synthesized into the voice clip "
+            "(routing layer calls VoiceService); empty for text modality."
+        ),
+    )
     significance_perception: dict[str, Any] | None = Field(
         default=None,
         description=(

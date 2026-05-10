@@ -214,6 +214,7 @@ def _stub_success_chat_completion_with_premium_preview(
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(
             voice_enabled=False,
+            voice_id=None,
             style_prompt=None,
             premium_mode=False,
             language="en",
@@ -339,6 +340,7 @@ def _stub_success_chat_completion_with_multimodal(
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(
             voice_enabled=False,
+            voice_id=None,
             style_prompt=None,
             premium_mode=False,
             language="en",
@@ -444,6 +446,7 @@ def _stub_success_chat_completion_with_multimodal_response(
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(
             voice_enabled=False,
+            voice_id=None,
             style_prompt=None,
             premium_mode=False,
             language="en",
@@ -852,6 +855,7 @@ def _setup_companion_ws_chat_test_env(
     async def fake_get_or_create_chat_settings(db, cid, user_id, aid):
         return SimpleNamespace(
             voice_enabled=False,
+            voice_id=None,
             style_prompt=None,
             premium_mode=False,
             language="en",
@@ -1024,6 +1028,7 @@ def test_chat_completions_companion_kernel_branch_writes_history(
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(
             voice_enabled=False,
+            voice_id=None,
             style_prompt=None,
             premium_mode=False,
             language="en",
@@ -1203,6 +1208,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     async def fake_get_or_create_chat_settings(db, chat_id, user_id, agent_id):
         return SimpleNamespace(
             voice_enabled=False,
+            voice_id=None,
             style_prompt=None,
             premium_mode=False,
             language="en",
@@ -1371,6 +1377,8 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["ai_save"][1] == "companion-ws-reply"
     assert captured["ai_save"][3] == {
         "source": "chat",
+        "reply_modality": "text",
+        "voice_message_script": "",
         "significance_perception": {
             "importance_round": 9,
             "importance_user_message": 8,
