@@ -5,18 +5,9 @@ import {
   countUserAgentConversationMessages,
   countUserAgentConversationSessions,
   filterSessionsWithMessages,
-  isUserMessageType,
 } from "../utils/userAgentConversations";
 
 describe("userAgentConversations", () => {
-  it("detects user message type", () => {
-    expect(isUserMessageType("human")).toBe(true);
-    expect(isUserMessageType("HumanMessage")).toBe(true);
-    expect(isUserMessageType("USER")).toBe(true);
-    expect(isUserMessageType("ai")).toBe(false);
-    expect(isUserMessageType(undefined)).toBe(false);
-  });
-
   it("counts sessions and messages for one page", () => {
     const items: UserAgentConversationItem[] = [
       {
@@ -55,6 +46,7 @@ describe("userAgentConversations", () => {
     const sessions: UserSessionItem[] = [
       {
         chat_id: "c1",
+        agent_id: "agent-1",
         agent_name: "A",
         created_at: "2025-01-01T00:00:00Z",
         updated_at: "2025-01-01T00:00:00Z",
@@ -62,6 +54,7 @@ describe("userAgentConversations", () => {
       },
       {
         chat_id: "c2",
+        agent_id: "agent-2",
         agent_name: "B",
         created_at: "2025-01-01T00:00:00Z",
         updated_at: "2025-01-01T00:00:00Z",

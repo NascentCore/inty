@@ -2,8 +2,9 @@ import type {
   ChatMessageResponse,
   ConversationsDetailResponse,
 } from "../types";
+import { isUserMessageType } from "./messageTypes";
 
-const USER_MESSAGE_TYPES = new Set(["human", "HumanMessage", "user", "USER"]);
+export { isUserMessageType } from "./messageTypes";
 
 export interface AllUsersMessageRow {
   key: string;
@@ -17,15 +18,6 @@ export interface AllUsersMessageRow {
   content: string;
   created_at: string | null;
 }
-
-export const isUserMessageType = (
-  messageType: string | null | undefined,
-): boolean => {
-  if (!messageType) {
-    return false;
-  }
-  return USER_MESSAGE_TYPES.has(messageType);
-};
 
 const buildMessageKey = (
   userId: string,

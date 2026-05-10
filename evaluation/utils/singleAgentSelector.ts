@@ -1,21 +1,9 @@
-import type { Agent } from "../types";
+import { filterAgentsByName } from "./agentFilters";
 
 const normalizeSearchText = (value: string): string =>
   value.trim().toLowerCase();
 
-export const filterAgentsForSingleSelector = (
-  agents: Agent[],
-  query: string,
-): Agent[] => {
-  const normalizedQuery = normalizeSearchText(query);
-  if (!normalizedQuery) {
-    return agents;
-  }
-
-  return agents.filter((agent) =>
-    (agent.name ?? "").toLowerCase().includes(normalizedQuery),
-  );
-};
+export const filterAgentsForSingleSelector = filterAgentsByName;
 
 export const shouldShowSingleSelectorEmptySearch = (
   allAgentsCount: number,
