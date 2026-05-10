@@ -18,6 +18,7 @@ from app.core.voice.tts_api import (
     TTSResult,
     VoiceMessageNarrationMode,
 )
+from app.external_services.fakes.tts import FakeTextToSpeechAPI
 from app.services.voice_service import (
     VoiceService,
     get_voice_message_narration_mode_from_agent_settings,
@@ -26,9 +27,14 @@ from app.services.voice_service import (
 
 @pytest.fixture
 def voice_service() -> VoiceService:
-    service = VoiceService()
-    service.config.enabled = True
-    return service
+    previous = global_config.tts.use_fake_tts
+    global_config.tts.use_fake_tts = False
+    try:
+        service = VoiceService()
+        service.config.enabled = True
+        yield service
+    finally:
+        global_config.tts.use_fake_tts = previous
 
 
 @pytest.mark.asyncio
@@ -151,6 +157,30 @@ async def test_call_tts_api_rejects_gemini_model_on_elevenlabs_path(
         )
 
     assert mock_elevenlabs_synthesize.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_call_tts_api_uses_fake_tts_when_test_config_enables_it():
+    previous = global_config.tts.use_fake_tts
+    global_config.tts.use_fake_tts = True
+    try:
+        service = VoiceService()
+
+        result = await service._call_tts_api(
+            text="hello",
+            voice_id="11labs/JBFqnCBsd6RMkjVDRZzb",
+            model=service.config.model,
+            language="en",
+            agent_gender=None,
+            gemini_source_model=None,
+        )
+    finally:
+        global_config.tts.use_fake_tts = previous
+
+    assert isinstance(service.tts_api, FakeTextToSpeechAPI)
+    assert result is not None
+    assert result[2] == "audio/wav"
+    assert result[3] == TTS_PROVIDER_ELEVENLABS
 
 
 @pytest.mark.asyncio

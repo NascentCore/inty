@@ -59,6 +59,9 @@ google_play:
 elevenlabs:
   api_key: "<your-elevenlabs-api-key>"
 
+tts:
+  use_fake_tts: true
+
 cloudflare:
   enabled: true
   domain: "cdn.example.com"

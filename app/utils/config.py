@@ -608,6 +608,8 @@ class GeminiLiveConfig:
 class TTSConfig:
     """语音播报配置"""
 
+    # 测试环境启用 fake provider，避免 CI/本地测试依赖真实 TTS API。
+    use_fake_tts: bool = False
     # Gemini tts 还不稳定，经常出现措辞失误：把括号里面内容讲出来、重复对话内容
     use_gemini_prompted_tts: bool = True
     # iMate 语音播报模式：
