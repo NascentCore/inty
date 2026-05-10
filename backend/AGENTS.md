@@ -1,6 +1,11 @@
-# Inty: long term AI companionship starting with intimacy roleplay for young adults
+# Inty backend servers
 
-Based on [AGENTS.md](https://agents.md/)
+## 双应用说明
+
+| 应用 | 入口模块 | 典型部署 | `/api/v1` 来源 |
+|------|----------|----------|----------------|
+| **Inty**（主后端，Android） | `backend/inty/main.py` | App 对应后端 | `app.api.v1.router.api_router` |
+| **Ops**（运营 / evaluation） | `backend/ops/main.py` | ops.inty.cc、dev.ops.inty.cc | `shared_router`（`backend/ops/api/v1/shared.py`）+ `backend/ops/api/v1/evaluation.py` + `backend/ops/api/v1/festival_memory.py` |
 
 ## 本地服务启动
 
