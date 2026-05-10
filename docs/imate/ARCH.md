@@ -123,7 +123,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 
 ## 状态与持久化
 
-当前 companion 的世界不是独立 world engine, 而是 `MemoryStore` 中的一组版本化文档加工具副作用:
+当前 companion 的世界不是独立 world engine, 而是 `MemoryStore` 中的一组版本化文档加工具副作用。artifact、持久化表与向量 LTM（FR）汇总见 [`MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)。
 
 | 文档或状态 | 作用 |
 | --- | --- |
@@ -141,7 +141,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 
 ## 记忆管线
 
-普通用户回合结束后, `schedule_memory_update_after_turn` 默认异步执行:
+分层 episodic / gist / semantic 写入与 prompt 注入综述见 [`MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)。普通用户回合结束后, `schedule_memory_update_after_turn` 默认异步执行:
 
 1. 追加情景记忆: `memory/daily/{date}.md`
 2. 按节拍重写单日摘要: `memory/{date}.md`
