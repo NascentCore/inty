@@ -44,7 +44,12 @@ async def recv_first_chat_completion_frame(
     raise TimeoutError("no chat completion JSON frame before deadline")
 
 
-def assert_implicit_sign_on_assistant_payload(data: dict[str, Any], *, agent_id: str) -> None:
+def assert_implicit_sign_on_assistant_payload(
+    data: dict[str, Any],
+    *,
+    agent_id: str,
+    expected_context_mode: str | None = None,
+) -> None:
     try:
         content, meta = parse_chat_completion_ws_payload(data)
     except BackendChatWsError as exc:
@@ -60,6 +65,13 @@ def assert_implicit_sign_on_assistant_payload(data: dict[str, Any], *, agent_id:
     assert content.strip(), f"empty assistant content: {data!r}"
     aid = data.get("agent_id")
     assert aid == agent_id, f"agent_id mismatch: expected {agent_id!r}, got {aid!r}"
+    if expected_context_mode is not None:
+        exp = expected_context_mode.strip().lower()
+        got = str(meta.get("context_mode") or "").strip().lower()
+        assert got == exp, (
+            f"context_mode mismatch: expected {exp!r}, got {got!r}; "
+            f"meta_keys={sorted(meta.keys())}"
+        )
 
 
 async def connect_send_implicit_sign_on_and_expect_assistant(
@@ -69,6 +81,7 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
     agent_id: str,
     recv_timeout_sec: float,
     query_agent_id: bool = True,
+    expected_context_mode: str | None = None,
 ) -> None:
     """Connect WS, send IMPLICIT_USER_SIGNED_ON chat frame, assert assistant reply."""
     url = http_base_to_ws_chat_url(
@@ -116,7 +129,11 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
             frame = await recv_first_chat_completion_frame(
                 ws, deadline_monotonic=deadline
             )
-            assert_implicit_sign_on_assistant_payload(frame, agent_id=agent_id)
+            assert_implicit_sign_on_assistant_payload(
+                frame,
+                agent_id=agent_id,
+                expected_context_mode=expected_context_mode,
+            )
         finally:
             stop_ping.set()
             ping_task.cancel()
