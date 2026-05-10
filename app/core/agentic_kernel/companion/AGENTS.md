@@ -24,6 +24,7 @@
 
 ## 持久化与数据表
 
+- **架构说明（ASCII 数据流、设计批判、演进方向）**：[/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md](/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md)
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_memory_document_versions`**（ORM：`app.models.companion_memory_documents.CompanionMemoryDocumentVersion`）。
 - **进程内 registry**：带 repository 的 `MemoryStore` 在 [`memory_registry.py`](/app/core/agentic_kernel/companion/memory_registry.py) 中同时注册 **scope 键**（`user_id:companion_id:chat_id`）与 **`workspace_root` 解析路径字符串**，以便工具侧仅持有 `Path` 时 `get_memory_store(root)` 与会话 store 为同一实例并写入 Postgres。
 - **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`memory_store_document_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。
