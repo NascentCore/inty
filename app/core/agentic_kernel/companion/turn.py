@@ -93,6 +93,7 @@ from .runtime_inspect_context import (
     build_turn_runtime_config_dict,
     runtime_inspect_begin_turn,
     runtime_inspect_end_turn,
+    runtime_inspect_set_correlation,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
     runtime_inspect_set_scoped_memory_store,
@@ -386,6 +387,9 @@ async def run_turn(
                     MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
                 ),
             )
+        )
+        runtime_inspect_set_correlation(
+            {"trace_id": trace_id, "user_msg_uuid": user_msg_uuid}
         )
 
         langsmith_parent_run = create_companion_turn_root_run(

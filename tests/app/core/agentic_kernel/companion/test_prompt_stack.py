@@ -214,6 +214,34 @@ def _seed_minimal_companion_workspace(root: Path) -> None:
     )
 
 
+def test_async_foreground_chat_system_stack_mirrors_tools_contract(tmp_path: Path) -> None:
+    """Non-compact stack on ASYNC route skips full tool-output (6) clause; injects dual envelope."""
+    root = tmp_path / "ws_async_fg_mirror"
+    root.mkdir()
+    _seed_minimal_companion_workspace(root)
+    st = get_memory_store(root)
+    paths = MemoryStoreScopePaths(root=root.resolve())
+    context = load_context_meta(paths.context_json, store=st)
+    bundle = load_prompt_bundle(paths, st, meta=context)
+    _, systems, route = companion_turn_tools_and_system_messages(
+        scope_root=root.resolve(),
+        bundle=bundle,
+        context=context,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        inner_tick_turn=False,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+        tool_side_compact_system_prompt=False,
+        include_significance_perception_slice=True,
+        implicit_user_signed_on_turn=False,
+    )
+    assert route == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+    joined = _joined_leading_system_contents(systems)
+    assert "快思考路径（系统 1）" in joined
+    assert "（6）当用户询问**当前所用模型" not in joined
+    assert "Dual-LLM chat branch" in joined
+    shutdown_memory_store(root.resolve())
+
+
 def test_implicit_user_signed_on_chat_turn_forces_chat_only_route_and_no_tools(
     tmp_path: Path,
 ) -> None:

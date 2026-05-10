@@ -24,6 +24,10 @@ def _registry_key(
     return str(workspace_root.resolve())
 
 
+def _path_registry_alias(workspace_root: Path) -> str:
+    return str(workspace_root.resolve())
+
+
 def _scope_from_workspace_path(workspace_root: Path) -> tuple[str, str, str]:
     p = workspace_root.resolve()
     parts = p.parts
@@ -73,7 +77,38 @@ def get_memory_store(
             repository=repository,
         )
         _MEMORY_STORES[key] = store
+        if repository is not None:
+            path_alias = _path_registry_alias(root)
+            if path_alias != key:
+                _MEMORY_STORES[path_alias] = store
         return store
+
+
+def _registry_keys_to_evict_for_shutdown(
+    workspace_root: Path,
+    *,
+    user_id: str | None,
+    companion_id: str | None,
+    chat_id: str | None,
+) -> set[str]:
+    """All in-process registry keys that may reference the same MemoryStore for this scope."""
+    root_r = workspace_root.resolve()
+    keys: set[str] = {
+        _registry_key(
+            root_r,
+            user_id=user_id,
+            companion_id=companion_id,
+            chat_id=chat_id,
+        ),
+        _path_registry_alias(root_r),
+    }
+    if len(root_r.parts) >= 3:
+        try:
+            u, c, ck = _scope_from_workspace_path(root_r)
+            keys.add(CompanionScope(u, c, ck).registry_key())
+        except ValueError:
+            pass
+    return keys
 
 
 def shutdown_memory_store(
@@ -85,11 +120,18 @@ def shutdown_memory_store(
     timeout_s: float = 5.0,
 ) -> None:
     root = workspace_root.resolve()
-    key = _registry_key(
-        root, user_id=user_id, companion_id=companion_id, chat_id=chat_id
+    keys = _registry_keys_to_evict_for_shutdown(
+        root,
+        user_id=user_id,
+        companion_id=companion_id,
+        chat_id=chat_id,
     )
+    store: MemoryStore | None = None
     with _REGISTRY_LOCK:
-        store = _MEMORY_STORES.pop(key, None)
+        for k in keys:
+            got = _MEMORY_STORES.pop(k, None)
+            if got is not None:
+                store = store or got
     if store is None:
         return
     store.shutdown(timeout_s=timeout_s)

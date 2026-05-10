@@ -25,6 +25,7 @@
 ## 持久化与数据表
 
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_memory_document_versions`**（ORM：`app.models.companion_memory_documents.CompanionMemoryDocumentVersion`）。
+- **进程内 registry**：带 repository 的 `MemoryStore` 在 [`memory_registry.py`](/app/core/agentic_kernel/companion/memory_registry.py) 中同时注册 **scope 键**（`user_id:companion_id:chat_id`）与 **`workspace_root` 解析路径字符串**，以便工具侧仅持有 `Path` 时 `get_memory_store(root)` 与会话 store 为同一实例并写入 Postgres。
 - **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`memory_store_document_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。
 - **`companion_id` 与 API**：`app.services.companion_chat_service.run_companion_chat_turn_for_api` 把 HTTP/API 里的 **`agent_id` 原样作为 `companion_id`** 传入 `CompanionManager.get_or_create_session`，因此查库时用 **`companion_id = <agent 的 id>`** 即可对齐一次 companion 会话。
 - **与旧聊天路径的区别**：旧路径主要消费 **`agents`** 表里的 `main_prompt` / `mode_prompt` / `personality` 等字段做 system 拼装；**agentic companion 内核代码路径（`app/core/agentic_kernel`）不读 `Agent` ORM**。人设与对话状态以 **版本表里的 `content`**（及模板种子）为准，而不是 `agents` 上的人设列。
@@ -78,3 +79,6 @@
 
 - **双 LLM**：前台 envelope 返回后，工具链在后台线程跑完；落盘 `transcript.jsonl` 的 `assistant` 行带 `source=tool_bg`，`content` 为对用户可见 NL（若有）并在其后追加固定 **`--- Tool results ---`** 段，内含本轮工具返回文本摘要（供下一轮 **chat** 与 **tool** 共用同一 transcript 窗口）。
 - **顺序**：`CompanionSession.tool_bg_idle`（`threading.Event`）在 `run_turn` 加载 transcript **之前** wait，确保上一轮后台线程已 `set()`（超时则告警并降级继续，环境变量 **`INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC`** 可覆盖秒数，默认与前台 HTTP 超时一致）。
+- **快轨 / 慢轨（提示词）**：前台 chat completion **不带 tools**（低延迟「系统 1」）；可核验事实（含运行时自省）由并行 **tool_background**（「系统 2」）自愿调用工具完成。内核**不用代码**改写 `tool_choice` 来强逼首轮工具；契约见 ``prompts/system_messages.py``（mirrored chat 合约 + 工具侧紧凑指令 + 工具路首轮说明）。
+- **前台 system 组装**：当路由为 ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`` 且构建非 compact 的前台 stack 时，``prompt_stack.companion_turn_tools_and_system_messages`` 设 ``include_repl_image_generation_contract=False``，使前台走「快思考路径与并行工具路径须一致」块并挂上 dual-LLM envelope 说明，而**不**注入含「（6）须先调用 companion_runtime_inspect」的完整工具输出条款（该条款对无工具的 API 会造成矛盾）。
+- **自省调试**：``run_turn`` 写入 ``runtime_inspect_set_correlation``（``trace_id``、``user_msg_uuid``）；``tool_background`` 线程 overlay 同步写入同一 ``correlation``。工具 ``companion_runtime_inspect`` 在 JSON 顶层输出 ``correlation``（若可得），与 ``runtime_events``（含 ``tool_background_failure`` 等）一并便于对齐日志与 LangSmith。

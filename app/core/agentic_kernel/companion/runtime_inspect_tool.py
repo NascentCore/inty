@@ -17,6 +17,7 @@ from .memory_store import MemoryStore
 from .runtime_events import read_runtime_events
 from .runtime_inspect_context import (
     runtime_inspect_get_bundle,
+    runtime_inspect_get_correlation_snapshot,
     runtime_inspect_get_scoped_memory_store,
 )
 from .utc import local_date_str
@@ -153,10 +154,13 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         arguments.get("max_runtime_events"), default=20, minimum=0
     )
     bundle = runtime_inspect_get_bundle()
+    corr = runtime_inspect_get_correlation_snapshot()
     out: dict[str, Any] = {
         "runtime_config": None,
         "last_chat_completion_request": None,
     }
+    if corr is not None:
+        out["correlation"] = corr
     if bundle is None:
         out["runtime_unavailable_reason"] = (
             "No runtime inspect bundle (outside run_turn/tool_background or inspect scope not set)."

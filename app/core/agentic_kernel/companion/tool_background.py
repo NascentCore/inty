@@ -580,6 +580,10 @@ async def _run_background_tool_loop(
                 },
                 "last_chat_completion_request": None,
                 "scoped_memory_store": memory_store,
+                "correlation": {
+                    "trace_id": trace_id,
+                    "user_msg_uuid": user_msg_uuid,
+                },
             }
         )
 

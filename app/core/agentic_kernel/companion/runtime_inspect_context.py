@@ -79,6 +79,31 @@ def runtime_inspect_thread_overlay_end() -> None:
     _thread_overlay.bundle = None
 
 
+def runtime_inspect_set_correlation(correlation: dict[str, Any]) -> None:
+    """Debug IDs for companion_runtime_inspect output (main turn + tool_background thread)."""
+    d = _inspect_var.get()
+    if d is not None:
+        d["correlation"] = correlation
+    td = getattr(_thread_overlay, "bundle", None)
+    if td is not None:
+        td["correlation"] = correlation
+
+
+def runtime_inspect_get_correlation_snapshot() -> dict[str, Any] | None:
+    """Prefer tool_background overlay, then ContextVar bundle."""
+    td = getattr(_thread_overlay, "bundle", None)
+    if td is not None:
+        c = td.get("correlation")
+        if isinstance(c, dict) and c:
+            return copy.deepcopy(c)
+    d = _inspect_var.get(None)
+    if d is not None:
+        c2 = d.get("correlation")
+        if isinstance(c2, dict) and c2:
+            return copy.deepcopy(c2)
+    return None
+
+
 def _bundle_payload_with_store(bundle: dict[str, Any]) -> dict[str, Any] | None:
     if not (
         bundle.get("runtime_config") is not None

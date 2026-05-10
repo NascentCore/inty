@@ -22,6 +22,7 @@ from app.core.agentic_kernel.companion.runtime_inspect_context import (
     build_turn_runtime_config_dict,
     runtime_inspect_begin_turn,
     runtime_inspect_end_turn,
+    runtime_inspect_set_correlation,
     runtime_inspect_set_last_chat_completion_request,
     runtime_inspect_set_runtime_config,
     runtime_inspect_set_scoped_memory_store,
@@ -77,6 +78,7 @@ def test_companion_runtime_inspect_outside_scope(tmp_path: Path) -> None:
     assert "runtime_unavailable_reason" in data
     assert data["runtime_config"] is None
     assert data["last_chat_completion_request"] is None
+    assert "correlation" not in data
 
 
 def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
@@ -122,6 +124,9 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 tools=None,
             )
         )
+        runtime_inspect_set_correlation(
+            {"trace_id": "trace-test-1", "user_msg_uuid": "user-msg-test-1"}
+        )
         json.dumps(ric.runtime_inspect_get_bundle())
         out = _run_tool(root, "companion_runtime_inspect", "{}")
         data = json.loads(out)
@@ -144,6 +149,10 @@ def test_companion_runtime_inspect_with_contextvar(tmp_path: Path) -> None:
                 "detail": "slow",
             }
         ]
+        assert data["correlation"] == {
+            "trace_id": "trace-test-1",
+            "user_msg_uuid": "user-msg-test-1",
+        }
     finally:
         runtime_inspect_end_turn(token)
 
@@ -155,6 +164,10 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
             "runtime_config": {"source": "tool_background", "tool_model_name": "bg/model"},
             "last_chat_completion_request": None,
             "scoped_memory_store": scoped,
+            "correlation": {
+                "trace_id": "bg-trace",
+                "user_msg_uuid": "bg-user-uuid",
+            },
         }
     )
     try:
@@ -169,6 +182,10 @@ def test_companion_runtime_inspect_thread_overlay(tmp_path: Path) -> None:
         data = json.loads(out)
         assert data["runtime_config"]["source"] == "tool_background"
         assert data["last_chat_completion_request"]["messages"][-1]["content"] == "bg-user"
+        assert data["correlation"] == {
+            "trace_id": "bg-trace",
+            "user_msg_uuid": "bg-user-uuid",
+        }
         assert "store_documents" not in data
     finally:
         ric.runtime_inspect_thread_overlay_end()
