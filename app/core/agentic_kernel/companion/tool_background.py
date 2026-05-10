@@ -1015,7 +1015,7 @@ def start_tool_background_job(
                         _run_async_tool_loop()
                 else:
                     _run_async_tool_loop()
-            except BaseException as exc:
+            except Exception as exc:
                 bg_ls_err = repr(exc)
                 logger.exception("repl.turn.bg job failed")
             finally:
