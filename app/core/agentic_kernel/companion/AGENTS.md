@@ -24,6 +24,7 @@
 
 ## 持久化与数据表
 
+- **目标架构（范式）**：MemoryStore 与 ARCH 命名对齐后的合并说明（SessionBinding / SessionCorpus、现状与目标态、kernel LTM 边界）见 [/docs/imate/MEMORY_STORE_TARGET_DESIGN.md](/docs/imate/MEMORY_STORE_TARGET_DESIGN.md)。
 - **权威存储**：工作区正文（含 `IDENTITY.md` / `SOUL.md` / `USER.md` / `MEMORY.md` / `CHAT_LOGS.md`（WebSocket `user_signed_out` 等运维追加流水，`document_kind=chat_logs_md`，默认不参与 LLM prompt；后续是否接入产品/分析管线另行设计）/ `transcript.jsonl` / `.companion_runtime_events.jsonl`（运行时异常事件 JSONL，`runtime_events.py` 仅经 MemoryStore 读写）/ `context.json` 等逻辑路径）在启用 PostgreSQL DSN 时写入表 **`companion_memory_document_versions`**（ORM：`app.models.companion_memory_documents.CompanionMemoryDocumentVersion`）。
 - **进程内 registry**：带 repository 的 `MemoryStore` 在 [`memory_registry.py`](/app/core/agentic_kernel/companion/memory_registry.py) 中同时注册 **scope 键**（`user_id:companion_id:chat_id`）与 **`workspace_root` 解析路径字符串**，以便工具侧仅持有 `Path` 时 `get_memory_store(root)` 与会话 store 为同一实例并写入 Postgres。
 - **作用域**：`(user_id, companion_id, chat_id, document_kind[, calendar_date])`；同一键下 **append-only**，当前正文取 **`sequence_id` 最大** 的一行。`document_kind` 与相对路径的对应关系见 **`memory_store_document_mapping.py`**（例如 `IDENTITY.md` -> `identity`，`context.json` -> `context_json`）。

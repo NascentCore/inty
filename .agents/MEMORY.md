@@ -8,7 +8,7 @@ When companion `context_mode` / experience profiles use StrEnum, derive overlapp
 
 ### Session state naming paradigm (Binding / Corpus / Sidecar)
 
-Full spec: [/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md](/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md). Summary: replace overloaded `workspace` with **`SessionBinding`** + **`SessionCorpus`** (`corpus_rel_key`) + **`DurableSidecar`** / **`ProcessPrivate`** by durability contract; **no `data_mount` in the core paradigm** when corpus authority is repository/DB and REPL is not a companion runtime.
+Full spec: [/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md](/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md). Merged MemoryStore target design (binding / corpus / LTM boundary, implementation gaps): [/docs/imate/MEMORY_STORE_TARGET_DESIGN.md](/docs/imate/MEMORY_STORE_TARGET_DESIGN.md). Summary: replace overloaded `workspace` with **`SessionBinding`** + **`SessionCorpus`** (`corpus_rel_key`) + **`DurableSidecar`** / **`ProcessPrivate`** by durability contract; **no `data_mount` in the core paradigm** when corpus authority is repository/DB and REPL is not a companion runtime.
 
 ### Pytest looked stuck: LangSmith plugin + `MagicMock` in dual-LLM message parsing
 

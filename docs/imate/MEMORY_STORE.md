@@ -2,6 +2,8 @@
 
 本文汇总 agentic companion 与工作区 **MemoryStore** 相关的两类说明：(1) **已实现** 的运行时与控制面 artifact（context、transcript、状态 JSON、生图索引等）；(2) **规划中** 的命名向量长期记忆（FR：`FR_AGENTIC_MEMORY_STORE`，PostgreSQL + pgvector）。Markdown 分层记忆管线（episodic / gist / semantic 策展）见 [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)。
 
+ARCH 命名范式（SessionBinding / SessionCorpus 等）与本文件「期望设计方向」合并后的目标架构全文见 [`/docs/imate/MEMORY_STORE_TARGET_DESIGN.md`](/docs/imate/MEMORY_STORE_TARGET_DESIGN.md)。
+
 ## 期望设计方向（不绑定具体排期，仅架构目标）
 
 以下面向「长期关系型 agentic companion」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [`/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md`](/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md)。
