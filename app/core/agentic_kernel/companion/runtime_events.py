@@ -1,5 +1,8 @@
 """Append-only runtime exceptional events surfaced via companion_runtime_inspect.
 
+Known ``kind`` values include ``tool_background_failure`` (async tool loop thread in
+``tool_background``) and ad-hoc operator/test entries such as ``tool_timeout``.
+
 Events are stored as JSON lines at workspace-relative path ``.companion_runtime_events.jsonl``
 through :class:`~app.core.agentic_kernel.companion.memory_store.MemoryStore` only (never raw
 ``Path.write_text``). With a repository-backed store this persists like ``transcript.jsonl``;

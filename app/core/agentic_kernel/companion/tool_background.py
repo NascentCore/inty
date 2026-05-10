@@ -53,6 +53,7 @@ from .memory_store import MemoryStore
 from .models import InnerTickMode
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from .significance_perception import envelope_to_assistant_metadata_dict
+from .runtime_events import append_runtime_event
 from .runtime_inspect_context import (
     build_last_chat_completion_request_payload,
     runtime_inspect_set_last_chat_completion_request,
@@ -1023,6 +1024,28 @@ def start_tool_background_job(
             except Exception as exc:
                 bg_ls_err = repr(exc)
                 logger.exception("repl.turn.bg job failed")
+                ev: dict[str, Any] = {
+                    "ts": utc_iso_ts(),
+                    "kind": "tool_background_failure",
+                    "trace_id": trace_id,
+                    "user_msg_uuid": user_msg_uuid,
+                    "tool_model_name": tool_model_name,
+                    "inner_tick_turn": inner_tick_turn,
+                    "inner_tick_mode": inner_tick_mode.value,
+                    "error_type": type(exc).__name__,
+                    "detail": str(exc),
+                }
+                ph = getattr(exc, "provider_http_status", None)
+                if isinstance(ph, int):
+                    ev["provider_http_status"] = ph
+                try:
+                    append_runtime_event(memory_store, ev)
+                except Exception:
+                    logger.warning(
+                        "repl.turn.bg append_runtime_event failed trace_id={}",
+                        trace_id,
+                        exc_info=True,
+                    )
             finally:
                 end_companion_turn_root_run_safe(
                     langsmith_parent_run,
