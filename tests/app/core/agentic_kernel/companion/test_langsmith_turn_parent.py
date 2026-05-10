@@ -18,6 +18,7 @@ from app.core.agentic_kernel.companion.llm_chat_runtime import (
     end_companion_turn_root_run_safe,
 )
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
+from app.core.agentic_kernel.companion.models import InnerTickMode
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.tool_background import start_tool_background_job
@@ -74,15 +75,24 @@ def test_create_companion_turn_root_run_builds_and_posts_run_tree(
     mock_rt_cls.assert_called_once()
     kwargs = mock_rt_cls.call_args.kwargs
     assert kwargs["name"] == "agentic_companion_user_turn user=u-42 agent=c-7"
+    assert kwargs["tags"] == [
+        "agentic_companion",
+        "user_turn",
+        "explicit_user_message",
+    ]
     assert kwargs["inputs"]["inty_trace_id"] == "t1"
     assert kwargs["inputs"]["user_msg_uuid"] == "u1"
     assert kwargs["inputs"]["chat_model"] == "stub/chat-route"
     assert kwargs["inputs"]["tool_model"] == "stub/tool-route"
     assert kwargs["inputs"]["user_id"] == "u-42"
     assert kwargs["inputs"]["companion_id"] == "c-7"
+    assert kwargs["inputs"]["inty_turn_lane"] == "explicit_user_message"
+    assert "inner_tick_mode" not in kwargs["inputs"]
     assert kwargs["extra"]["metadata"]["ls_model_name"] == "stub/chat-route | stub/tool-route"
     assert kwargs["extra"]["metadata"]["inty_user_id"] == "u-42"
     assert kwargs["extra"]["metadata"]["inty_companion_id"] == "c-7"
+    assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "explicit_user_message"
+    assert "inner_tick_mode" not in kwargs["extra"]["metadata"]
     mock_root.post.assert_called_once()
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
@@ -107,6 +117,94 @@ def test_create_companion_turn_root_run_name_uses_unknown_when_ids_empty(
     assert kwargs["name"] == "agentic_companion_user_turn user=unknown agent=unknown"
     assert kwargs["inputs"]["user_id"] == ""
     assert kwargs["inputs"]["companion_id"] == ""
+    assert kwargs["inputs"]["inty_turn_lane"] == "explicit_user_message"
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
+
+
+@patch(
+    "app.core.agentic_kernel.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
+@patch("langsmith.run_trees.RunTree")
+def test_create_companion_turn_root_run_implicit_signed_on_lane(
+    mock_rt_cls: MagicMock, _en: MagicMock
+) -> None:
+    mock_root = MagicMock()
+    mock_rt_cls.return_value = mock_root
+    create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model="stub/chat-route",
+        tool_model="stub/tool-route",
+        user_id="u1",
+        companion_id="a1",
+        implicit_user_signed_on=True,
+    )
+    kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["name"] == "agentic_companion_implicit_turn user=u1 agent=a1"
+    assert kwargs["tags"] == [
+        "agentic_companion",
+        "user_turn",
+        "implicit_user_signed_on",
+    ]
+    assert kwargs["inputs"]["inty_turn_lane"] == "implicit_user_signed_on"
+    assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "implicit_user_signed_on"
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
+
+
+@patch(
+    "app.core.agentic_kernel.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
+@patch("langsmith.run_trees.RunTree")
+def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
+    mock_rt_cls: MagicMock, _en: MagicMock
+) -> None:
+    mock_root = MagicMock()
+    mock_rt_cls.return_value = mock_root
+    create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model="stub/chat-route",
+        tool_model="stub/tool-route",
+        user_id="u1",
+        companion_id="a1",
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.MAINTENANCE,
+    )
+    kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["name"] == "agentic_companion_inner_tick user=u1 agent=a1"
+    assert kwargs["tags"] == ["agentic_companion", "inner_tick"]
+    assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
+    assert kwargs["inputs"]["inner_tick_mode"] == "maintenance"
+    assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "inner_tick"
+    assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "maintenance"
+    end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
+
+
+@patch(
+    "app.core.agentic_kernel.companion.llm_chat_runtime.companion_turn_langsmith_parent_enabled",
+    return_value=True,
+)
+@patch("langsmith.run_trees.RunTree")
+def test_create_companion_turn_root_run_inner_tick_proactive_lane(
+    mock_rt_cls: MagicMock, _en: MagicMock
+) -> None:
+    mock_root = MagicMock()
+    mock_rt_cls.return_value = mock_root
+    create_companion_turn_root_run(
+        inty_trace_id="t1",
+        user_msg_uuid="u1",
+        chat_model="stub/chat-route",
+        tool_model="stub/tool-route",
+        user_id="u1",
+        companion_id="a1",
+        inner_tick_turn=True,
+        inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+    )
+    kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["inputs"]["inner_tick_mode"] == "proactive_chat"
+    assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "proactive_chat"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
 
 

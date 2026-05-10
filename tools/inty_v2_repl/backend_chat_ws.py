@@ -295,7 +295,8 @@ class BackendChatWsBridge:
         """Non-blocking: pop one queued chat JSON if present (runs on the bridge event loop).
 
         Returns ``(assistant_text, None, meta_data)`` on success, ``(None, (code, message), {})`` on API error
-        frames, ``(None, None, {})`` if the queue was empty or the frame was not a chat completion.
+        frames or on **local parse failure** (so the REPL does not silently drop odd ``code==200`` payloads),
+        ``(None, None, {})`` if the queue was empty.
         """
         if not self._loop or not self._response_q:
             return None, None, {}
@@ -321,9 +322,16 @@ class BackendChatWsBridge:
             return text, None, meta
         except BackendChatWsError as exc:
             return None, (int(exc.code), str(exc.agent_message)), {}
-        except ValueError:
+        except ValueError as exc:
             logger.warning("chat ws queued frame dropped: {}", raw)
-            return None, None, {}
+            return (
+                None,
+                (
+                    422,
+                    f"Downlink chat JSON parse failed ({exc}). Check logs for raw frame.",
+                ),
+                {},
+            )
 
     async def _sleep_backoff(self, attempt_index: int, halt: asyncio.Event) -> None:
         delay = reconnect_delay_sec(

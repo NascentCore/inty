@@ -28,6 +28,7 @@ from app.core.agentic_kernel.companion.langsmith_parent_policy import (
     companion_langsmith_parent_run_allowed,
     companion_turn_langsmith_parent_enabled_from_app_config,
 )
+from app.core.agentic_kernel.companion.models import InnerTickMode
 
 _OPEN_LANGSMITH_PARENT_LOCK = threading.Lock()
 _OPEN_LANGSMITH_PARENT_RUNS: dict[int, Any] = {}
@@ -106,10 +107,34 @@ def _langsmith_parent_run_extra_metadata(
     return meta
 
 
-def _companion_turn_root_run_name(*, user_id: str, companion_id: str) -> str:
+def _companion_turn_langsmith_root_descriptor(
+    *,
+    user_id: str,
+    companion_id: str,
+    inner_tick_turn: bool,
+    inner_tick_mode: InnerTickMode | None,
+    implicit_user_signed_on: bool,
+) -> tuple[str, list[str], str, dict[str, Any]]:
+    """Return (run name, tags, inty_turn_lane, extra_inputs_for_run_tree)."""
     uid = (user_id or "").strip() or "unknown"
     cid = (companion_id or "").strip() or "unknown"
-    return f"agentic_companion_user_turn user={uid} agent={cid}"
+    extra_in: dict[str, Any] = {}
+    if inner_tick_turn:
+        mode = inner_tick_mode or InnerTickMode.MAINTENANCE
+        lane = "inner_tick"
+        extra_in["inner_tick_mode"] = mode.value
+        name = f"agentic_companion_inner_tick user={uid} agent={cid}"
+        tags = ["agentic_companion", "inner_tick"]
+        return name, tags, lane, extra_in
+    if implicit_user_signed_on:
+        lane = "implicit_user_signed_on"
+        name = f"agentic_companion_implicit_turn user={uid} agent={cid}"
+        tags = ["agentic_companion", "user_turn", "implicit_user_signed_on"]
+        return name, tags, lane, extra_in
+    lane = "explicit_user_message"
+    name = f"agentic_companion_user_turn user={uid} agent={cid}"
+    tags = ["agentic_companion", "user_turn", "explicit_user_message"]
+    return name, tags, lane, extra_in
 
 
 def create_companion_turn_root_run(
@@ -121,6 +146,9 @@ def create_companion_turn_root_run(
     user_id: str = "",
     companion_id: str = "",
     parent_run_enabled: bool | None = None,
+    inner_tick_turn: bool = False,
+    inner_tick_mode: InnerTickMode | None = None,
+    implicit_user_signed_on: bool = False,
 ) -> Any | None:
     enabled = (
         companion_turn_langsmith_parent_enabled()
@@ -144,26 +172,40 @@ def create_companion_turn_root_run(
 
         uid = (user_id or "").strip()
         cid = (companion_id or "").strip()
+        run_name, run_tags, turn_lane, lane_inputs = (
+            _companion_turn_langsmith_root_descriptor(
+                user_id=uid,
+                companion_id=cid,
+                inner_tick_turn=inner_tick_turn,
+                inner_tick_mode=inner_tick_mode,
+                implicit_user_signed_on=implicit_user_signed_on,
+            )
+        )
+        meta = _langsmith_parent_run_extra_metadata(
+            chat_model=cm,
+            tool_model=tm,
+            user_id=uid,
+            companion_id=cid,
+        )
+        meta["inty_turn_lane"] = turn_lane
+        if inner_tick_turn:
+            meta["inner_tick_mode"] = lane_inputs["inner_tick_mode"]
+        root_inputs: dict[str, Any] = {
+            "inty_trace_id": inty_trace_id,
+            "user_msg_uuid": user_msg_uuid,
+            "chat_model": cm,
+            "tool_model": tm,
+            "user_id": uid,
+            "companion_id": cid,
+            "inty_turn_lane": turn_lane,
+            **lane_inputs,
+        }
         root = RunTree(
-            name=_companion_turn_root_run_name(user_id=uid, companion_id=cid),
+            name=run_name,
             run_type="chain",
-            inputs={
-                "inty_trace_id": inty_trace_id,
-                "user_msg_uuid": user_msg_uuid,
-                "chat_model": cm,
-                "tool_model": tm,
-                "user_id": uid,
-                "companion_id": cid,
-            },
-            extra={
-                "metadata": _langsmith_parent_run_extra_metadata(
-                    chat_model=cm,
-                    tool_model=tm,
-                    user_id=uid,
-                    companion_id=cid,
-                )
-            },
-            tags=["agentic_companion", "user_turn"],
+            inputs=root_inputs,
+            extra={"metadata": meta},
+            tags=run_tags,
         )
         initial_post_ok = True
         initial_post_err = ""

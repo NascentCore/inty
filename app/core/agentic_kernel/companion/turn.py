@@ -400,6 +400,9 @@ async def run_turn(
             user_id=context.user_id,
             companion_id=context.companion_id,
             parent_run_enabled=langsmith_parent_run_enabled,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_mode=route_inner_mode if inner_tick_turn else None,
+            implicit_user_signed_on=implicit_sign_on_turn,
         )
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
         if _ls_tid:
