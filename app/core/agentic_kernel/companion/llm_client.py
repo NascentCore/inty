@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.llm.ports import ChatCompletionsSyncPort
-from app.core.agentic_kernel.providers.facade import (
+from app.core.agentic_kernel.providers.openai_compatible_clients import (
     OpenAICompatibleClientOptions,
     get_openai_compatible_sync_client,
 )

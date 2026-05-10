@@ -9,7 +9,7 @@ from app.core.agentic_kernel.companion.llm_client import (
     CompanionLLMClient,
     CompanionLLMConfig,
 )
-from app.core.agentic_kernel.providers.facade import OpenAICompatibleClientOptions
+from app.core.agentic_kernel.providers.openai_compatible_clients import OpenAICompatibleClientOptions
 
 
 def test_companion_llm_clients_use_distinct_langsmith_chat_names(

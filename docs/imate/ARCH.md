@@ -79,7 +79,7 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 | [`runtime/turn_orchestrator.py`](/app/core/agentic_kernel/runtime/turn_orchestrator.py) | `prepare_turn -> invoke_model -> handle_response -> persist` 的薄编排器。当前不承载生产 companion 回合。 |
 | [`bridges/experimental_bridge.py`](/app/core/agentic_kernel/bridges/experimental_bridge.py) | 把通用 `TurnOrchestrator` 暴露成实验入口。 |
 | [`llm/`](/app/core/agentic_kernel/llm) | OpenAI-compatible `chat.completions` 端口、OpenRouter tool 参数、LangSmith completion enrichment。 |
-| [`providers/`](/app/core/agentic_kernel/providers) | OpenAI-compatible 与 Gemini provider facade。 |
+| [`providers/`](/app/core/agentic_kernel/providers) | OpenAI-compatible 缓存客户端 [`openai_compatible_clients.py`](/app/core/agentic_kernel/providers/openai_compatible_clients.py)、[`openai_compatible.py`](/app/core/agentic_kernel/providers/openai_compatible.py)；Gemini [`gemini.py`](/app/core/agentic_kernel/providers/gemini.py)。 |
 | [`tools/`](/app/core/agentic_kernel/tools) | 通用 tool registry 和 official assistant 风格 tool loop; 与 companion 自己的 tool runtime 并存。 |
 | [`prompting/assembler.py`](/app/core/agentic_kernel/prompting/assembler.py) | LangChain 风格提示拼装线, 不是生产 companion 的主要 prompt stack。 |
 
