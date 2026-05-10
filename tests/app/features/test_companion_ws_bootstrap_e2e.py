@@ -10,6 +10,8 @@ The subprocess sets ``INTY_E2E_RELAX_SUBSCRIPTION=1`` so guest chat limits do no
 
 Optional: ``INTY_COMPANION_WS_BOOTSTRAP_SERVER_STDERR=1`` inherits uvicorn stderr; ``INTY_COMPANION_WS_BOOTSTRAP_RECV_TIMEOUT`` overrides wait seconds.
 
+``test_ws_new_agent_first_implicit_sign_on_context_mode_bootstrap`` asserts ``meta_data.context_mode`` is ``bootstrap`` for a newly created agent on the first implicit sign-on turn.
+
 Marked ``noci`` and gated so default ``pytest`` does not hit OpenRouter.
 """
 
@@ -27,6 +29,8 @@ from tests.support.companion_ws_bootstrap.server import (
     postgres_tcp_reachable,
     run_inty_backend_subprocess,
 )
+from app.core.agentic_kernel.experience_profile import EXPERIENCE_PROFILE_ID_BOOTSTRAP
+
 from tests.support.companion_ws_bootstrap.ws_client import (
     connect_send_implicit_sign_on_and_expect_assistant,
 )
@@ -77,4 +81,24 @@ async def test_ws_implicit_user_signed_on_returns_assistant(bootstrap_e2e_client
         agent_id=agent_id,
         recv_timeout_sec=_recv_timeout_sec(),
         query_agent_id=True,
+    )
+
+
+@pytest.mark.noci
+@pytest.mark.slow
+@pytest.mark.asyncio
+async def test_ws_new_agent_first_implicit_sign_on_context_mode_bootstrap(
+    bootstrap_e2e_client,
+):
+    """Fresh POST /ai/agents id + first WS implicit sign-on sees bootstrap context_mode in meta."""
+    agent_id = bootstrap_e2e_client.create_agent()
+    token = bootstrap_e2e_client.token
+    assert token
+    await connect_send_implicit_sign_on_and_expect_assistant(
+        http_base_url=bootstrap_e2e_client.base_url,
+        bearer_token=token,
+        agent_id=agent_id,
+        recv_timeout_sec=_recv_timeout_sec(),
+        query_agent_id=True,
+        expected_context_mode=EXPERIENCE_PROFILE_ID_BOOTSTRAP,
     )

@@ -74,6 +74,13 @@ class CompanionTurnResult(BaseModel):
         ),
     )
     assistant_source: AssistantTurnSource = "chat"
+    turn_start_context_mode: str = Field(
+        default="",
+        description=(
+            "context.json experience profile id at the start of this turn "
+            "(before tool mutations); mirrored to WS/HTTP assistant meta_data.context_mode."
+        ),
+    )
 
 
 class ChatMessage(BaseModel):

@@ -834,6 +834,8 @@ def _companion_ai_meta_from_turn_result(
         companion_ai_meta["significance_perception"] = sp
     if companion_turn.tool_background_started:
         companion_ai_meta["tool_background_started"] = True
+    if companion_turn.turn_start_context_mode:
+        companion_ai_meta["context_mode"] = companion_turn.turn_start_context_mode
     return companion_ai_meta
 
 

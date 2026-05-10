@@ -35,7 +35,7 @@
 ### 内容
 
 - JSON，对应 Pydantic 模型 `ContextMeta`（见 `models.py`）。字段名仍为 **`context_mode`**，语义为 **Experience Profile id**（规范化小写），与 `app/core/agentic_kernel/experience_profile.py` 单一真源一致；另有 `user_id`、`companion_id`、`chat_id`。
-- 建 session 时由 `CompanionManager.get_or_create_session` 写入默认体验配置（`app.features.companion_default_context_mode`）及当前 `user_id` / `companion_id` / `chat_id`。
+- 建 session 时由 `CompanionManager.get_or_create_session` 写入体验配置及当前 `user_id` / `companion_id` / `chat_id`：`companion_memory_bootstrap_type` 为 `USER_INTERACTIVE` 时初始 `context_mode` 为保留 id **`bootstrap`**（见 `experience_profile.EXPERIENCE_PROFILE_ID_BOOTSTRAP`），否则为 `app.features.companion_default_context_mode`。交互式 bootstrap 调用 **`companion_bootstrap_user_interactive_complete`** 且当前仍为 `bootstrap` 时，`context_mode` 提升为 `companion_default_context_mode`。
 
 ### 是否必需
 

@@ -8,7 +8,11 @@ from typing import Any, Final
 
 from loguru import logger
 
-from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
+from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agentic_kernel.experience_profile import (
+    EXPERIENCE_PROFILE_ID_BOOTSTRAP,
+    normalize_experience_profile_id,
+)
 
 from .memory_store import MemoryStore
 from .models import ContextMeta
@@ -189,6 +193,11 @@ def tool_companion_bootstrap_user_interactive_complete(
         return f"ERROR: invalid context.json: {exc}"
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
+    cm = str(data.get("context_mode", "")).strip().lower()
+    if cm == EXPERIENCE_PROFILE_ID_BOOTSTRAP:
+        data["context_mode"] = (
+            global_config_loaded_from_config_yaml.app.features.companion_default_context_mode
+        )
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
         data["workspace_bootstrap_user_interactive_complete_note"] = str(note).strip()[

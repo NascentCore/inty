@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Reserved profile for interactive bootstrap before the user-facing experience id is chosen.
+EXPERIENCE_PROFILE_ID_BOOTSTRAP = "bootstrap"
+
 _PRIVATE_MEMORY_PROFILE_IDS = frozenset(
     {
         "unspecific",
@@ -49,6 +52,11 @@ def experience_profile_system_clause(context_mode: str) -> str:
         )
     if n == "public":
         return "当前体验配置（context_mode）：public。不注入私人记忆层；根据场景保持得体与安全的表达。"
+    if n == EXPERIENCE_PROFILE_ID_BOOTSTRAP:
+        return (
+            "当前体验配置（context_mode）：bootstrap（交互式关系建立阶段）。"
+            "不注入长期私人记忆与当日日记类材料；专注关系初始化与 SOUL 共建；仍须遵守安全与同意边界。"
+        )
     return (
         f"当前体验配置（context_mode）：{raw}。不注入私人记忆层；"
         "请根据该体验适度调节记忆引用深度与表达强度，在需要克制的场景中保持得体与安全。"

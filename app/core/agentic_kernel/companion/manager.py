@@ -13,7 +13,10 @@ from pathlib import Path
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
+from app.core.agentic_kernel.experience_profile import (
+    EXPERIENCE_PROFILE_ID_BOOTSTRAP,
+    normalize_experience_profile_id,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
 
@@ -154,8 +157,14 @@ class CompanionManager:
                 chat_id=chat_id,
             )
 
+            initial_context_mode = self._config.default_context_mode
+            if (
+                self._config.memory_bootstrap_type
+                == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+            ):
+                initial_context_mode = EXPERIENCE_PROFILE_ID_BOOTSTRAP
             context_data = {
-                "context_mode": self._config.default_context_mode,
+                "context_mode": initial_context_mode,
                 "user_id": user_id,
                 "companion_id": companion_id,
                 "chat_id": chat_id,
