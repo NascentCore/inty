@@ -1,5 +1,5 @@
 # Used for running backend server in tests.
-# External services are fakes. LangSmith tracing follows code default (agent.langsmith_tracing_enabled true unless overridden).
+# External services and tracing are disabled or faked so CI does not depend on third-party APIs.
 # app.debug true: tolerate missing Firebase JSON in CI; OpenAPI on. Log level comes from logging.level / INTY_* only.
 
 app:
@@ -35,6 +35,7 @@ agent:
   api_key: "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"
   # inty-testing API key
   langchain_api_key: "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"
+  langsmith_tracing_enabled: false
   # 测试环境使用 Gemini 模型，避免调用真实 FAL API（需要 FAL_KEY）
   free_user_text_to_image_model: "imagen-3.0-generate-002"
   sub_user_text_to_image_model: "imagen-3.0-generate-002"
