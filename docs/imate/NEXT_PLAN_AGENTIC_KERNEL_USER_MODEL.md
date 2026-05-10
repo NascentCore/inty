@@ -1,20 +1,57 @@
 # 下一步计划：agentic kernel 差距与伴侣用户模型
 
-本文档由 2026-05-09 相关讨论整理，供 iMate / agentic companion 方向排期用。
+本文档由 2026-05-09 相关讨论整理，供 iMate / agentic companion 方向排期用。设计目标真源见仓库根目录 `/AGENTS.md` 中 Agentic Companion 小节；实现真源见 `/app/core/agentic_kernel/`。
+
+## 术语
+
+### 概念内涵
+
+- **用户模型**：智能体对「用户」这一交互对象的内部表征；该表征支撑智能体选择与用户互动的方式（内容、节奏、边界、记忆引用等）。不是「互联网空间拓扑」或「用户在哪些 App 里」alone，核心是 **对人的可交互建模**。
+- **伴侣用户模型**：当「用户模型」可能与账号表 User、营销含义的「用户画像」或通用画像字段混淆时使用的全称，强调 **陪伴场景下、agentic companion 内核所维护** 的那一份用户表征。
+
+### 对内文档与代码常量约定
+
+| 中文（优先） | English | 使用场景 |
+|--------------|---------|----------|
+| 用户模型 | User Model | 默认用语；注释、设计文档、非歧义代码命名 |
+| 伴侣用户模型 | Companion User Model | 与 ORM User、画像产品概念并存时需消歧 |
+
+- 默认采用：**用户模型** / **User Model**。
+- 需消歧时采用：**伴侣用户模型** / **Companion User Model**。
+- **不建议** 再以「用户数字空间建模」作为该概念的主标签（易被理解为虚拟空间、终端列表等，而非「对用户的建模」）。
+
+## 相对设计目标仍缺或明显偏薄
+
+对照 `/AGENTS.md` 中 companion 设计意图（多媒介与同频、LLM+工具+记忆、独立虚拟环境与新鲜感），相对 `/app/core/agentic_kernel/` 当前实现：
+
+### 多模态内容生成与多媒介通信
+
+- **已有**：会话型文本主链路；工具链侧图像生成与编辑（如 `generate_image` / `modify_image`）；Web 检索与读网页等。
+- **仍缺或偏薄**：短信、电话、语音通话、视频通话等 **渠道** 在本包内的一等公民抽象（路由、会话绑定、与 transcript / 工具的契约）；用户侧 **多模态输入**（如用户上传音视频）若在 API 层存在，尚未与内核消息模型统一对齐。
+
+### 与用户侧信息同频（伴侣用户模型）
+
+- **已有**：隐式客户端信号与时间上下文（如 `/app/schemas/implicit_signals.py`、`implicit_signal_messages.py`）；工作区 `USER.md` 等人格化档案与记忆注入。
+- **仍缺或偏薄**：结构化的 **伴侣用户模型**（字段、版本、置信度、更新策略）；对用户实体状态（偏好演变、关系约定、情境线索）的 **显式契约**，而非仅靠散文档案与片段信号拼接。
+
+### LLM + 工具调用 + 记忆
+
+- **已有**：分层记忆（情景 / 摘要 / 语义）、`transcript.jsonl`、异步工具线程、双模型路由、重要性打分（significance perception）等（详见 `/app/core/agentic_kernel/companion/AGENTS.md`）。
+- **仍缺或偏薄**：工具后台路径对部分供应商 **仅把结构化 envelope 放在 `reasoning` / `reasoning_details`**、而 `content` 为空时的统一读取（`/app/core/agentic_kernel/companion/tool_background.py` 内 TODO）；`/app/core/agentic_kernel/ISSUES.md` 记载的 **偶发 LLM 无输出** 尚未闭环（复现、降级、观测）。
+
+### 独立虚拟环境与「世界」事件（智能体自主性与新鲜感）
+
+- **已有**：定时提醒队列（`schedule_queue.py`）、陪伴心跳与 inner tick（`heartbeat.py`、`inner_tick_schedule.py`）等 **弱自主 / 节奏层** 机制。
+- **仍缺或偏薄**：与主会话 **解耦** 的持续 **世界状态** 与 **环境事件引擎**（LLM + 工具驱动的独立演进，而非仅合成 user 行的提醒与接话）。
+
+### 工程与边界
+
+- **仍缺或偏薄**：生产主链路集中在 `companion/turn.py` 等，与 `runtime/TurnOrchestrator`、`bridges/experimental_bridge.py` 的通用编排 **叙事未收敛**；`/app/core/agentic_kernel/__init__.py` 缺少包级 docstring（与仓库 Python 包约定不一致）。
 
 ## 谈话结论（事实摘记）
 
-- 已对照仓库根目录 `/AGENTS.md` 中 Agentic Companion 设计主轴，通读 `/app/core/agentic_kernel/` 实现与 `/app/core/agentic_kernel/AGENTS.md`、`/app/core/agentic_kernel/companion/AGENTS.md`、`/app/core/agentic_kernel/ISSUES.md`。
-- 当前内核强项：`/app/core/agentic_kernel/companion/` 上的会话回合、分层记忆、异步工具链、图像类工具、陪伴心跳与定时提醒等；生产主入口在 `turn.py` 等 companion 模块，与 `runtime/TurnOrchestrator`、`bridges/experimental_bridge.py` 的通用骨架并存。
-- 与产品愿景相比仍缺或偏薄：多媒介（短信/电话/语音/视频等）在本包内的一等公民抽象；**对「用户这一实体」的可交互建模**（原称「用户数字空间」易误解为空间拓扑而非对人的建模）；独立于主会话的「世界/环境」持续状态与事件引擎；用户侧多模态输入若存在需在契约层与内核对齐。
-- 已记录技术债：部分模型将结构化输出放在 `reasoning` / `reasoning_details` 而非 `message.content`，工具后台路径仅读 `content`（见 `/app/core/agentic_kernel/companion/tool_background.py` 内 TODO）；`/app/core/agentic_kernel/ISSUES.md` 中偶发 LLM 无输出问题待闭环。
-- 工程约定：`/app/core/agentic_kernel/__init__.py` 当前为空，与仓库「Python 包 `__init__.py` 宜有包级 docstring」的惯例不一致。
-
-## 术语（对内文档与代码常量）
-
-- 默认使用：**用户模型**（英：User Model）。
-- 需与账号表 User、泛化「用户画像」区分时：**伴侣用户模型**（英：Companion User Model）。
-- 避免继续使用易误解的「用户数字空间建模」作为该概念主名称。
+- 审阅范围：`/app/core/agentic_kernel/` 源码与 `/app/core/agentic_kernel/AGENTS.md`、`/app/core/agentic_kernel/companion/AGENTS.md`、`/app/core/agentic_kernel/ISSUES.md`。
+- 上文「术语」「相对设计目标仍缺或明显偏薄」已覆盖主要结论；细节以代码与 AGENTS 为准。
 
 ## 下一步任务目标
 
