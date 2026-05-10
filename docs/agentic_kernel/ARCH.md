@@ -81,7 +81,7 @@
 | IntelliMate Android | 仍可保持主 WebSocket 连接；release 发送聊天仍以 HTTP completions 为主，debug 可走 WebSocket。见 [`app/api/AGENTS.md`](/app/api/AGENTS.md)。 |
 | 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `app.core.agentic_kernel.companion`。HTTP completions 仍是 legacy agent 路径。 |
 | `/api/v1/chat/ws/verify` | 共用 WebSocket 出站队列和 pump, 但只做单次 `chat.completions`; 不经过 `CompanionManager` / `run_turn`, 不写 chat_history。 |
-| WebSocket companion 连接 | 每个连接用 `CompanionWebSocketCoordinator.turn_lock` 串行化普通用户回合、proactive heartbeat 和 async tool background 补帧落库; assistant 业务帧仍经 outbound queue。 |
+| WebSocket companion 连接 | 每个连接用 `CompanionWebSocketCoordinator.turn_lock` 串行化普通用户回合、proactive heartbeat、maintenance inner tick 和 async tool background 补帧落库; assistant 业务帧仍经 outbound queue。 |
 | `runtime/TurnOrchestrator` | 是通用 turn 合同和实验桥使用的并行管线, 当前生产 companion 主链路不经过它。 |
 
 ## WebSocket Protocol
