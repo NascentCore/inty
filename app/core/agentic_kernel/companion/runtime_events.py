@@ -1,7 +1,10 @@
 """Append-only runtime exceptional events surfaced via companion_runtime_inspect.
 
-Known ``kind`` values include ``tool_background_failure`` (async tool loop thread in
-``tool_background``) and ad-hoc operator/test entries such as ``tool_timeout``.
+Known ``kind`` values include ``llm_inference_failure`` (every failed companion
+``chat.completions`` via ``llm.chat_completions.create_chat_completion_sync`` plus structured-chat
+foreground timeouts when correlation ContextVar is bound), ``tool_background_failure`` (async tool
+loop thread in ``tool_background`` when the error is not already logged as an LLM inference failure),
+and ad-hoc operator/test entries such as ``tool_timeout``.
 
 Events are stored as JSON lines at workspace-relative path ``.companion_runtime_events.jsonl``
 through :class:`~app.core.agentic_kernel.companion.memory_store.MemoryStore` only (never raw
