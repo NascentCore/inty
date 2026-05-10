@@ -365,8 +365,9 @@ ChatMessageContentPart = Annotated[
 class CompanionChatTurnMessageType(str, enum.Enum):
     """Turn category for companion plumbing.
 
-    ``IMPLICIT_USER_SIGNED_ON`` is for server-internal synthetic turns only (e.g. ``user_signed_on``
-    + ``implicit_greeting``); WebSocket **chat** frames must use ``USER_MESSAGE``.
+    ``IMPLICIT_USER_SIGNED_ON`` marks implicit sign-on rounds (server synthetic from ``user_signed_on``
+    + ``implicit_greeting``, or the same shape on a WebSocket chat frame). **Product** clients prefer
+    the control frame; HTTP completions do not use ``IMPLICIT_USER_SIGNED_ON``.
     """
 
     USER_MESSAGE = "USER_MESSAGE"
@@ -446,8 +447,9 @@ class ChatCompletionRequest(BaseModel):
         default=CompanionChatTurnMessageType.USER_MESSAGE,
         alias="messageType",
         description=(
-            "Turn kind for HTTP or internal companion plumbing; WebSocket chat frames must use "
-            "USER_MESSAGE only (implicit sign-on greeting: user_signed_on + implicit_greeting)."
+            "Turn kind: USER_MESSAGE for normal chat; IMPLICIT_USER_SIGNED_ON for implicit sign-on "
+            "(product: user_signed_on + implicit_greeting; wire may use the same message_type on "
+            "chat frames). Not supported on HTTP completions."
         ),
     )
 

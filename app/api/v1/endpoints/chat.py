@@ -218,31 +218,6 @@ def _chat_request_with_merged_ws_time_context(
     return request.model_copy(update={"user_time_context": utc})
 
 
-_IMPLICIT_SIGNON_CHAT_FRAME_REMOVED_MESSAGE = (
-    "messageType IMPLICIT_USER_SIGNED_ON is not accepted on WebSocket chat frames; "
-    "send user_signed_on with implicit_greeting and message_id"
-)
-
-
-def _ws_chat_payload_requests_implicit_user_signed_on_chat_frame(data: Any) -> bool:
-    if not isinstance(data, dict):
-        return False
-    req = data.get("request")
-    if not isinstance(req, dict):
-        return False
-    mt = req.get("messageType") or req.get("message_type")
-    return mt == CompanionChatTurnMessageType.IMPLICIT_USER_SIGNED_ON.value
-
-
-def _ws_implicit_chat_frame_removed_error(agent_id: str) -> dict[str, Any]:
-    return {
-        "code": 400,
-        "message": _IMPLICIT_SIGNON_CHAT_FRAME_REMOVED_MESSAGE,
-        "data": None,
-        "agent_id": agent_id,
-    }
-
-
 async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
     *,
     db: AsyncSession,
@@ -2533,13 +2508,6 @@ async def chat_completions_websocket(
                     }
                 )
                 continue
-            if _ws_chat_payload_requests_implicit_user_signed_on_chat_frame(data):
-                await outbound_queue.put(
-                    _ws_implicit_chat_frame_removed_error(
-                        str(data.get("agent_id") or "")
-                    )
-                )
-                continue
             try:
                 websocket_request = ChatWebSocketRequest.model_validate(data)
             except ValidationError as exc:
@@ -2668,13 +2636,6 @@ async def chat_completions_websocket_verify(
                         "data": None,
                         "agent_id": "",
                     }
-                )
-                continue
-            if _ws_chat_payload_requests_implicit_user_signed_on_chat_frame(data):
-                await outbound_queue.put(
-                    _ws_implicit_chat_frame_removed_error(
-                        str(data.get("agent_id") or "")
-                    )
                 )
                 continue
             try:

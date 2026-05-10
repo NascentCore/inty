@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonElement
 
 /**
  * Companion WebSocket `messageType` string (chat frame request body).
- * Aligns with backend `ChatCompletionRequest.message_type`: chat frames use [USER_MESSAGE] only.
- * Implicit greeting uses control frame `user_signed_on` with `implicit_greeting` + `message_id`.
- * [IMPLICIT_USER_SIGNED_ON] may still appear on assistant `meta_data` for that turn (wire echo).
+ * Aligns with backend `ChatCompletionRequest.message_type`: [USER_MESSAGE] or [IMPLICIT_USER_SIGNED_ON]
+ * where schema allows (product greeting uses `user_signed_on` + `implicit_greeting` + `message_id`).
+ * [IMPLICIT_USER_SIGNED_ON] may appear on assistant `meta_data` for implicit-sign-on turns.
  */
 object CompanionChatTurnMessageType {
     const val USER_MESSAGE = "USER_MESSAGE"
