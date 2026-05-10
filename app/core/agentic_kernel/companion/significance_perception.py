@@ -40,7 +40,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Final
+from dataclasses import dataclass
+from typing import Any, Final, Literal
 
 _MARKDOWN_JSON_FENCE_RE = re.compile(
     r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
@@ -96,6 +97,27 @@ DUAL_LLM_CHAT_RESPONSE_FORMAT: Final[dict[str, Any]] = {
                         "user-visible recap is needed."
                     ),
                 },
+                "reply_modality": {
+                    "type": "string",
+                    "description": (
+                        "How this turn is primarily delivered. "
+                        "`text`: normal chat bubble (optional spoken playback may mirror "
+                        "`user_facing_reply`). "
+                        "`voice_message`: you are sending a short voice note as a person would; "
+                        "then fill `voice_message_script` with natural spoken words for synthesis "
+                        "(not stage directions). "
+                        "`user_facing_reply` may carry an optional caption or transcript preview."
+                    ),
+                    "enum": ["text", "voice_message"],
+                },
+                "voice_message_script": {
+                    "type": "string",
+                    "description": (
+                        "When `reply_modality` is `voice_message`, the exact wording to speak "
+                        "for the voice clip (first-person, conversational). "
+                        "Use empty string when `reply_modality` is `text`."
+                    ),
+                },
             },
             "required": [
                 "user_facing_reply",
@@ -103,6 +125,8 @@ DUAL_LLM_CHAT_RESPONSE_FORMAT: Final[dict[str, Any]] = {
                 "importance_user_message",
                 "importance_assistant_message",
                 "output_to_user",
+                "reply_modality",
+                "voice_message_script",
             ],
             "additionalProperties": False,
         },
@@ -116,6 +140,29 @@ class DualLlmChatBranchEnvelope(BaseModel):
     importance_user_message: int = Field(ge=1, le=10)
     importance_assistant_message: int = Field(ge=1, le=10)
     output_to_user: bool = True
+    reply_modality: Literal["text", "voice_message"] = "text"
+    voice_message_script: str = ""
+
+    @field_validator("reply_modality", mode="before")
+    @classmethod
+    def _coerce_reply_modality(cls, v: object) -> str:
+        if v is None:
+            return "text"
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s == "voice_message":
+                return "voice_message"
+            return "text"
+        return "text"
+
+    @field_validator("voice_message_script", mode="before")
+    @classmethod
+    def _coerce_voice_script(cls, v: object) -> str:
+        if v is None:
+            return ""
+        if isinstance(v, str):
+            return v
+        return str(v)
 
     @field_validator("output_to_user", mode="before")
     @classmethod
@@ -205,16 +252,33 @@ def envelope_to_assistant_metadata_dict(
     }
 
 
-def split_dual_llm_chat_branch_content(
-    raw: str,
-) -> tuple[str, dict[str, Any] | None, bool | None]:
+@dataclass(frozen=True)
+class DualLlmChatBranchSplit:
+    """Parsed foreground / single-shot dual-LLM envelope fields for one assistant turn."""
+
+    visible_text: str
+    significance_meta: dict[str, Any] | None
+    output_to_user: bool | None
+    reply_modality: Literal["text", "voice_message"]
+    voice_message_script: str
+
+
+def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
     # TODO(companion-dual-envelope-reasoning-channel): Empty ``raw`` here often means the LLM put
     # the JSON envelope only in ``message.reasoning``; fix extraction before calling this helper.
     env = parse_dual_llm_chat_envelope_json(raw)
     if env is None:
-        return ((raw or "").strip(), None, None)
-    return (
-        env.user_facing_reply.strip(),
-        envelope_to_assistant_metadata_dict(env),
-        env.output_to_user,
+        return DualLlmChatBranchSplit(
+            visible_text=(raw or "").strip(),
+            significance_meta=None,
+            output_to_user=None,
+            reply_modality="text",
+            voice_message_script="",
+        )
+    return DualLlmChatBranchSplit(
+        visible_text=env.user_facing_reply.strip(),
+        significance_meta=envelope_to_assistant_metadata_dict(env),
+        output_to_user=env.output_to_user,
+        reply_modality=env.reply_modality,
+        voice_message_script=(env.voice_message_script or "").strip(),
     )
