@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -39,6 +39,34 @@ from app.core.agentic_kernel.companion.prompts.system_messages import (
 
 def _run_tool(root: Path, name: str, args: str) -> str:
     return asyncio.run(execute_tool_call(root, name, args))
+
+
+class _DualLlmForegroundStubCompanionLLMClient(CompanionLLMClient):
+    """Returns a fixed dual-LLM envelope without HTTP or MagicMock."""
+
+    def __init__(self, envelope_json: str, config: CompanionLLMConfig) -> None:
+        super().__init__(config)
+        self._envelope_json = envelope_json
+
+    def chat_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        tools: list[Any] | None = None,
+        tool_choice: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        scene: Any | None = None,
+        langsmith_extra: dict[str, Any] | None = None,
+    ) -> Any:
+        message = SimpleNamespace(
+            content=self._envelope_json,
+            tool_calls=[],
+            reasoning=None,
+            reasoning_details=None,
+        )
+        choice = SimpleNamespace(message=message)
+        return SimpleNamespace(choices=[choice])
 
 
 def test_companion_runtime_inspect_outside_scope(tmp_path: Path) -> None:
@@ -219,39 +247,38 @@ def test_run_turn_foreground_dual_llm_sets_runtime_inspect(
     store.write_document("MEMORY.md", "m\n")
     store.write_document("transcript.jsonl", "")
 
-    client = CompanionLLMClient(
-        CompanionLLMConfig(
-            api_key="secret-key",
-            default_model="snap/model",
-        )
-    )
-
-    env = {
+    envelope = {
         "user_facing_reply": "final assistant",
         "importance_round": 1,
         "importance_user_message": 1,
         "importance_assistant_message": 1,
+        "output_to_user": True,
     }
-    msg = MagicMock()
-    msg.content = json.dumps(env)
-    msg.tool_calls = []
-    ch = MagicMock()
-    ch.message = msg
-    r = MagicMock()
-    r.choices = [ch]
+    client = _DualLlmForegroundStubCompanionLLMClient(
+        json.dumps(envelope),
+        CompanionLLMConfig(
+            api_key="secret-key",
+            default_model="snap/model",
+        ),
+    )
 
     from app.core.agentic_kernel.companion import turn as turn_mod
 
-    monkeypatch.setattr(turn_mod, "start_tool_background_job", lambda **kwargs: None)
+    monkeypatch.setattr(
+        turn_mod, "start_tool_background_job", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        turn_mod, "schedule_memory_update_after_turn", lambda *args, **kwargs: None
+    )
 
-    with patch.object(client, "chat_completion", return_value=r):
-        out = asyncio.run(
-            run_turn(
-                root,
-                "user line",
-                store=store,
-                llm_client=client,
-            )
+    out = asyncio.run(
+        run_turn(
+            root,
+            "user line",
+            store=store,
+            llm_client=client,
+            langsmith_parent_run_enabled=False,
         )
+    )
     assert out.assistant_text == "final assistant"
     assert out.tool_background_started is True

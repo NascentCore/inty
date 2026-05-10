@@ -76,7 +76,7 @@ from .transcript_compaction import (
 from .prompt_stack import companion_turn_tools_and_system_messages
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
-    split_dual_llm_chat_branch_content,
+    split_dual_llm_chat_branch_message,
 )
 from .tool_background import (
     ToolOutputEvent,
@@ -505,12 +505,7 @@ async def run_turn(
                         foreground_scene,
                     )
                     msg = resp.choices[0].message
-                    # TODO(companion-dual-envelope-reasoning-channel): If ``msg.content`` is empty
-                    # but the model filled ``reasoning`` / ``reasoning_details``, dual envelope parse
-                    # yields empty assistant text and API returns 500. See
-                    # ``app/core/agentic_kernel/llm/chat_completions.py`` (TODO tag).
-                    raw_content = msg.content or ""
-                    _dual_split = split_dual_llm_chat_branch_content(raw_content)
+                    _dual_split = split_dual_llm_chat_branch_message(msg)
                     last_text = _dual_split.visible_text
                     significance_meta = _dual_split.significance_meta
                     fg_output_to_user = _dual_split.output_to_user
@@ -627,9 +622,8 @@ async def run_turn(
                         tick_proactive,
                     )
                     msg = resp.choices[0].message
-                    raw_content = msg.content or ""
                     if use_dual_structured_chat:
-                        _dual_split = split_dual_llm_chat_branch_content(raw_content)
+                        _dual_split = split_dual_llm_chat_branch_message(msg)
                         last_text = _dual_split.visible_text
                         significance_meta = _dual_split.significance_meta
                         fg_output_to_user = _dual_split.output_to_user
@@ -646,6 +640,7 @@ async def run_turn(
                                 trace_id,
                             )
                     else:
+                        raw_content = msg.content or ""
                         last_text = raw_content.strip()
                         reply_modality = "text"
                         voice_message_script = ""

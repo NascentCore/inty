@@ -10,9 +10,14 @@ from app.core.agentic_kernel.companion.tool_bg_routing import (
 )
 
 
-def _completion_response(content: str | None) -> MagicMock:
+def _completion_response(
+    content: str | None,
+    *,
+    reasoning: str | None = None,
+) -> MagicMock:
     msg = MagicMock()
     msg.content = content
+    msg.reasoning = reasoning
     ch = MagicMock()
     ch.message = msg
     resp = MagicMock()
@@ -91,3 +96,23 @@ def test_resolve_tool_bg_routing_fallback_returns_parsed_envelope() -> None:
     )
     assert out.user_facing_reply == "done"
     assert out.output_to_user is False
+
+
+def test_resolve_tool_bg_routing_fallback_reads_reasoning_envelope() -> None:
+    fb = _valid_envelope_dict()
+    fb["user_facing_reply"] = "done from reasoning"
+    create_sync = MagicMock(
+        return_value=_completion_response(
+            None,
+            reasoning=json.dumps(fb, ensure_ascii=False),
+        )
+    )
+    out = resolve_tool_bg_routing_sync(
+        client=None,
+        model="m",
+        create_completion_sync=create_sync,
+        conversation_messages=[],
+        final_assistant_content="{",
+    )
+    assert out.user_facing_reply == "done from reasoning"
+    assert out.output_to_user is True

@@ -14,7 +14,10 @@ from pydantic import AnyHttpUrl
 from loguru import logger
 
 from app.utils import models_catalog
-from app.core.agentic_kernel.experience_profile import normalize_experience_profile_id
+from app.core.agentic_kernel.experience_profile import (
+    ExperienceContextMode,
+    normalize_experience_profile_id,
+)
 from app.utils.companion_feature_defaults import (
     DEFAULT_COMPANION_FEATURE_COMPACTION,
 )
@@ -181,11 +184,15 @@ class FeaturesConfig:
     )
     # Optional: overrides default text for the one-shot ``type: system`` row on first USER_INTERACTIVE WS turn.
     companion_ws_session_system_text: Optional[str] = None
-    # When True, ``/api/v1/chat/ws`` runs a background task that may emit proactive companion
-    # turns (``InnerTickMode.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
+    # When True, ``/api/v1/chat/ws`` unified inner-tick worker may emit proactive companion turns
+    # (``InnerTickMode.PROACTIVE_CHAT``) when ``next_heartbeat_wait_seconds`` says ready.
     companion_ws_proactive_heartbeat_enabled: bool = True
-    # Seconds between eligibility checks for proactive heartbeat (lower = more responsive, more CPU).
-    companion_ws_proactive_heartbeat_poll_seconds: float = 45.0
+    # Seconds between unified inner-tick worker wakeups (proactive + maintenance eligibility checks).
+    companion_ws_proactive_heartbeat_poll_seconds: float = 60.0
+    # When True, the same worker may emit maintenance inner-tick turns (``InnerTickMode.MAINTENANCE``).
+    companion_ws_maintenance_inner_tick_enabled: bool = True
+    # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
+    companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -199,6 +206,10 @@ class FeaturesConfig:
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )
+        if self.companion_default_context_mode == ExperienceContextMode.BOOTSTRAP:
+            raise ValueError(
+                "app.features.companion_default_context_mode cannot be 'bootstrap'"
+            )
 
 
 @dataclass

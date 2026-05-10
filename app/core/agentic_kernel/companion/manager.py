@@ -14,7 +14,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.agentic_kernel.experience_profile import (
-    EXPERIENCE_PROFILE_ID_BOOTSTRAP,
+    ExperienceContextMode,
     normalize_experience_profile_id,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -36,6 +36,42 @@ from .memory_store_scope import (
     is_scope_initialized_in_store,
     needs_startup_profile_inquiry,
 )
+
+
+def _migrate_interactive_bootstrap_context_if_needed(
+    store: MemoryStore,
+    parsed_ctx: dict[str, object],
+    *,
+    default_context_mode: str,
+) -> None:
+    if parsed_ctx.get("workspace_bootstrap_user_interactive_completed") is not False:
+        return
+    fixed = dict(parsed_ctx)
+    bootstrap_id = ExperienceContextMode.BOOTSTRAP.value
+    try:
+        cm = normalize_experience_profile_id(str(fixed.get("context_mode", "")))
+    except ValueError:
+        cm = ""
+    if cm != bootstrap_id:
+        fixed["context_mode"] = bootstrap_id
+    pb_raw = str(fixed.get("post_bootstrap_context_mode", "")).strip()
+    if not pb_raw:
+        fixed["post_bootstrap_context_mode"] = default_context_mode
+    else:
+        try:
+            pbn = normalize_experience_profile_id(pb_raw)
+        except ValueError:
+            fixed["post_bootstrap_context_mode"] = default_context_mode
+        else:
+            if pbn == bootstrap_id:
+                fixed["post_bootstrap_context_mode"] = default_context_mode
+            else:
+                fixed["post_bootstrap_context_mode"] = pbn
+    if json.dumps(fixed, sort_keys=True) != json.dumps(parsed_ctx, sort_keys=True):
+        store.write_document(
+            "context.json",
+            json.dumps(fixed, indent=2, ensure_ascii=False) + "\n",
+        )
 
 
 class CompanionConfig(BaseModel):
@@ -77,7 +113,10 @@ class CompanionConfig(BaseModel):
     @field_validator("default_context_mode")
     @classmethod
     def _validate_default_context_mode(cls, v: str) -> str:
-        return normalize_experience_profile_id(v)
+        n = normalize_experience_profile_id(v)
+        if n == ExperienceContextMode.BOOTSTRAP:
+            raise ValueError("default_context_mode cannot be 'bootstrap'")
+        return n
 
     @property
     def skip_scope_directory_creation(self) -> bool:
@@ -157,26 +196,12 @@ class CompanionManager:
                 chat_id=chat_id,
             )
 
-            initial_context_mode = self._config.default_context_mode
-            if (
+            user_interactive = (
                 self._config.memory_bootstrap_type
                 == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-            ):
-                initial_context_mode = EXPERIENCE_PROFILE_ID_BOOTSTRAP
-            context_data = {
-                "context_mode": initial_context_mode,
-                "user_id": user_id,
-                "companion_id": companion_id,
-                "chat_id": chat_id,
-            }
-            if (
-                self._config.memory_bootstrap_type
-                == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-            ):
-                context_data["workspace_bootstrap_user_interactive_completed"] = False
-                context_data["companion_ws_session_system_written"] = False
-            context_json = json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
+            )
             existing_ctx = store.read_document_if_exists("context.json")
+            parsed_ctx: dict[str, object] | None = None
             write_full_context = False
             if existing_ctx is None:
                 write_full_context = True
@@ -186,19 +211,45 @@ class CompanionManager:
                     write_full_context = True
                 else:
                     try:
-                        parsed_ctx = json.loads(stripped)
+                        loaded = json.loads(stripped)
                     except json.JSONDecodeError:
                         write_full_context = True
                     else:
+                        if isinstance(loaded, dict):
+                            parsed_ctx = loaded
+                        else:
+                            write_full_context = True
                         if (
                             isinstance(parsed_ctx, dict)
                             and len(parsed_ctx) == 0
-                            and self._config.memory_bootstrap_type
-                            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+                            and user_interactive
                         ):
                             write_full_context = True
             if write_full_context:
+                context_data: dict[str, object] = {
+                    "user_id": user_id,
+                    "companion_id": companion_id,
+                    "chat_id": chat_id,
+                }
+                if user_interactive:
+                    context_data["context_mode"] = ExperienceContextMode.BOOTSTRAP.value
+                    context_data["post_bootstrap_context_mode"] = (
+                        self._config.default_context_mode
+                    )
+                    context_data["workspace_bootstrap_user_interactive_completed"] = False
+                    context_data["companion_ws_session_system_written"] = False
+                else:
+                    context_data["context_mode"] = self._config.default_context_mode
+                context_json = json.dumps(
+                    context_data, indent=2, ensure_ascii=False
+                ) + "\n"
                 store.write_document("context.json", context_json)
+            elif user_interactive and isinstance(parsed_ctx, dict):
+                _migrate_interactive_bootstrap_context_if_needed(
+                    store,
+                    parsed_ctx,
+                    default_context_mode=self._config.default_context_mode,
+                )
 
             ensure_minimal_documents_in_store(ws_path, store)
 

@@ -8,9 +8,8 @@ from typing import Any, Final
 
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.core.agentic_kernel.experience_profile import (
-    EXPERIENCE_PROFILE_ID_BOOTSTRAP,
+    ExperienceContextMode,
     normalize_experience_profile_id,
 )
 
@@ -193,11 +192,24 @@ def tool_companion_bootstrap_user_interactive_complete(
         return f"ERROR: invalid context.json: {exc}"
     if not isinstance(data, dict):
         return "ERROR: context.json must be a JSON object"
-    cm = str(data.get("context_mode", "")).strip().lower()
-    if cm == EXPERIENCE_PROFILE_ID_BOOTSTRAP:
-        data["context_mode"] = (
-            global_config_loaded_from_config_yaml.app.features.companion_default_context_mode
-        )
+    bootstrap_id = ExperienceContextMode.BOOTSTRAP.value
+    try:
+        cm = normalize_experience_profile_id(str(data.get("context_mode", "")))
+    except ValueError:
+        cm = ""
+    if cm == bootstrap_id:
+        pb_raw = data.get("post_bootstrap_context_mode")
+        next_mode = "intimate"
+        if pb_raw is not None and str(pb_raw).strip():
+            try:
+                next_mode = normalize_experience_profile_id(str(pb_raw))
+            except ValueError:
+                next_mode = "intimate"
+            if next_mode == bootstrap_id:
+                next_mode = "intimate"
+        data["context_mode"] = next_mode
+    if "post_bootstrap_context_mode" in data:
+        del data["post_bootstrap_context_mode"]
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
         data["workspace_bootstrap_user_interactive_complete_note"] = str(note).strip()[
@@ -231,6 +243,11 @@ def tool_companion_set_experience_profile(
         normalized = normalize_experience_profile_id(context_mode)
     except ValueError as exc:
         return f"ERROR: {exc}"
+    if normalized == ExperienceContextMode.BOOTSTRAP:
+        return (
+            "ERROR: context_mode 'bootstrap' is reserved for the interactive workspace "
+            "bootstrap phase (not user-selectable via companion_set_experience_profile)"
+        )
 
     root_r = root.resolve()
     rel_ctx = (

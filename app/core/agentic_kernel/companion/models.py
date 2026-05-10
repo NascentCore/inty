@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator
 
 from app.core.agentic_kernel.experience_profile import (
+    ExperienceContextMode,
     experience_profile_injects_private_memory,
     normalize_experience_profile_id,
 )
@@ -43,6 +44,8 @@ INNER_TICK_SYNTHETIC_USER_TEXT = (
     "若上文已自然收束或明显该换景，可**软转场**进入下一情境，避免生硬重开一局。"
     "请结合上文与「内在活动（ai_private）」行事；不要向用户解释本机制，不要提系统、节拍、等待。）"
 )
+
+MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER = "（内在节拍）"
 
 AI_PRIVATE_INJECT_MAX_CHARS = 12_000
 
@@ -181,11 +184,23 @@ class ContextMeta(BaseModel):
     # Legacy JSON flag from older workspaces; WebSocket connect-time kickoff was removed. Default True
     # means "nothing to do"; omit key in new USER_INTERACTIVE seeds.
     companion_ws_interactive_kickoff_sent: bool = True
+    # USER_INTERACTIVE seeds only: experience profile to apply after bootstrap completes.
+    post_bootstrap_context_mode: str | None = None
 
     @field_validator("context_mode")
     @classmethod
     def _validate_context_mode(cls, v: str) -> str:
         return normalize_experience_profile_id(v)
+
+    @field_validator("post_bootstrap_context_mode")
+    @classmethod
+    def _validate_post_bootstrap_context_mode(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        n = normalize_experience_profile_id(v)
+        if n == ExperienceContextMode.BOOTSTRAP:
+            raise ValueError("post_bootstrap_context_mode cannot be 'bootstrap'")
+        return n
 
 
 def load_prompt_bundle(

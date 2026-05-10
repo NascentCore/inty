@@ -46,13 +46,21 @@ from app.core.agentic_kernel.companion.heartbeat import (
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
     next_heartbeat_wait_seconds,
 )
+from app.core.agentic_kernel.companion.inner_tick_schedule import (
+    InnerTickScheduleOverrides,
+    next_inner_tick_wait_seconds,
+)
 from app.core.agentic_kernel.companion.llm_inference_errors import (
     CompanionLLMInferenceBackendError,
 )
 from app.core.agentic_kernel.companion.image_gate import (
     generated_image_meta_from_index_slice,
 )
-from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
+from app.core.agentic_kernel.companion.models import (
+    CompanionTurnResult,
+    InnerTickMode,
+    MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+)
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
@@ -278,7 +286,10 @@ async def _try_handle_ws_user_signed_on_frame(
         )
         return True
     feats = global_config_loaded_from_config_yaml.app.features
-    if not feats.companion_ws_proactive_heartbeat_enabled:
+    if (
+        not feats.companion_ws_proactive_heartbeat_enabled
+        and not feats.companion_ws_maintenance_inner_tick_enabled
+    ):
         await websocket.send_json(
             {
                 "type": "user_signed_on_ack",
@@ -321,7 +332,7 @@ async def _try_handle_ws_user_signed_on_frame(
         await websocket.send_json({"type": "user_signed_on_ack", "ok": True})
         recv_msg_uuid = (frame.message_id or "").strip()
         logger.info(
-            "chat_ws user_signed_on armed proactive hb user={} agent={} chat_id={} "
+            "chat_ws user_signed_on armed inner_tick coords user={} agent={} chat_id={} "
             "received_message_uuid={}",
             current_user.id,
             agent_id,
@@ -832,9 +843,20 @@ def _companion_ws_store_hb_coords(
     agent_id: str,
     chat_id: Any,
 ) -> None:
-    """Replace in-connection proactive-heartbeat workspace coordinates."""
+    """Replace in-connection inner-tick workspace coordinates (proactive + maintenance)."""
+    prev_user = hb_ctx.get("user_id")
+    prev_agent = hb_ctx.get("agent_id")
+    prev_chat = hb_ctx.get("chat_id")
+    prev_mono = hb_ctx.get("_last_maintenance_inner_tick_monotonic")
     hb_ctx.clear()
     hb_ctx.update({"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id})
+    same_coords = (
+        str(prev_user or "") == str(user_id or "")
+        and str(prev_agent or "") == str(agent_id or "")
+        and str(prev_chat or "") == str(chat_id or "")
+    )
+    if same_coords and prev_mono is not None:
+        hb_ctx["_last_maintenance_inner_tick_monotonic"] = prev_mono
 
 
 def _companion_ws_hb_coords_snapshot(hb_ctx: dict[str, Any]) -> dict[str, Any] | None:
@@ -1141,6 +1163,250 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             await outbound_queue.put(out)
     logger.info(
         "companion_ws_proactive_hb pushed assistant user={} agent={} chat_id={}",
+        user_id,
+        agent_id,
+        chat_row_id,
+    )
+
+
+async def _try_fire_companion_ws_maintenance_inner_tick(
+    *,
+    outbound_queue: asyncio.Queue,
+    ctx: dict[str, Any],
+    hb_ctx: dict[str, Any],
+    subscription_svc: SubscriptionService,
+    companion_turn_lock: asyncio.Lock,
+    companion_bg_sink: Callable[[ToolOutputEvent], None],
+    ws_fg_pending: dict[str, dict[str, Any]],
+) -> None:
+    """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
+    feats = global_config_loaded_from_config_yaml.app.features
+    user_id = str(ctx.get("user_id") or "").strip()
+    agent_id = str(ctx.get("agent_id") or "").strip()
+    chat_id_raw = ctx.get("chat_id")
+    if not user_id or not agent_id or chat_id_raw is None:
+        return
+
+    async with AsyncSessionLocal() as pre_db:
+        r_user = await pre_db.execute(select(User).where(User.id == user_id))
+        current_user = r_user.scalar_one_or_none()
+        if current_user is None:
+            return
+
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=pre_db, user_id=user_id, agent_id=agent_id
+        )
+        if str(chat.id) != str(chat_id_raw):
+            logger.debug(
+                "companion_ws_maintenance_inner_tick chat_id mismatch ctx={} db_chat_id={}",
+                chat_id_raw,
+                chat.id,
+            )
+            return
+
+        subscription = await subscription_svc.get_user_current_subscription(
+            pre_db, user_id
+        )
+        is_subscribed = bool(subscription)
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=is_subscribed
+        )
+
+        ws_path = companion_chat_service.companion_memory_store_scope_path_if_ready(
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+        )
+        if ws_path is None:
+            return
+
+        remain = next_inner_tick_wait_seconds(
+            ws_path,
+            last_inner_fire_monotonic=hb_ctx.get(
+                "_last_maintenance_inner_tick_monotonic"
+            ),
+            overrides=InnerTickScheduleOverrides(
+                enabled=True,
+                min_gap_seconds=float(
+                    feats.companion_ws_maintenance_inner_tick_min_gap_seconds
+                ),
+                poll_seconds=float(feats.companion_ws_proactive_heartbeat_poll_seconds),
+            ),
+        )
+        if remain > 0:
+            return
+
+        is_allowed, used_count, daily_limit = await subscription_svc.check_chat_limit(
+            pre_db, current_user
+        )
+        if not is_allowed:
+            logger.info(
+                "companion_ws_maintenance_inner_tick skipped subscription user={} used={} limit={}",
+                user_id,
+                used_count,
+                daily_limit,
+            )
+            return
+
+        chat_row_id = chat.id
+        chat_row_agent_id = chat.agent_id
+        session_id = generate_session_id(str(chat_row_id))
+
+    preset_uid = str(uuid.uuid4())
+    stub_request = ChatCompletionRequest(
+        messages=[
+            ChatMessage(
+                role="user",
+                content=MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+            )
+        ],
+        message_id=preset_uid,
+    )
+
+    async with companion_turn_lock:
+        ws_fg_pending[preset_uid] = {
+            "session_id": session_id,
+            "agent_id": agent_id,
+            "request": stub_request,
+            "effective_local_id": None,
+        }
+        try:
+            companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_row_id,
+                user_text="",
+                resolved_chat_model_id=model_override,
+                defer_memory_update=True,
+                session_id=session_id,
+                background_output_sink=companion_bg_sink,
+                preset_user_msg_uuid=preset_uid,
+                inner_tick_turn=True,
+                inner_tick_mode=InnerTickMode.MAINTENANCE,
+            )
+        except Exception as exc:
+            if not getattr(exc, "companion_tool_background_started", False):
+                ws_fg_pending.pop(preset_uid, None)
+            raise
+
+        companion_reply = companion_turn.assistant_text
+        if companion_reply is None or not str(companion_reply).strip():
+            ws_fg_pending.pop(preset_uid, None)
+            logger.warning(
+                "companion_ws_maintenance_inner_tick empty reply user={} agent={}",
+                user_id,
+                agent_id,
+            )
+            return
+
+        if not companion_turn.tool_background_started:
+            ws_fg_pending.pop(preset_uid, None)
+
+        user_meta = {
+            "inner_tick": True,
+            "companion_maintenance_inner_tick": True,
+        }
+        user_row_id = await chat_history_service.add_user_message_async(
+            session_id,
+            MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+            meta_data=user_meta,
+        )
+
+        if companion_turn.tool_background_started and preset_uid in ws_fg_pending:
+            ws_fg_pending[preset_uid]["foreground_user_message_id"] = user_row_id
+
+        companion_ai_meta = _companion_ai_meta_from_turn_result(companion_turn)
+
+        ai_message_id = await chat_history_service.add_ai_message_sync_async(
+            session_id,
+            companion_reply,
+            agent_id=chat_row_agent_id,
+            meta_data=companion_ai_meta,
+        )
+
+        async with AsyncSessionLocal() as post_db:
+            try:
+                await subscription_svc.record_usage(
+                    post_db,
+                    user_id,
+                    "chat",
+                    1,
+                    extra_data={
+                        "agent_id": agent_id,
+                        "message_length": 0,
+                        "companion_ws_maintenance_inner_tick": True,
+                    },
+                )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_maintenance_inner_tick record_usage failed: {}",
+                    str(e),
+                )
+
+            (
+                response_text_content,
+                response_content_parts,
+            ) = _normalize_chat_response_content(companion_reply)
+
+            latest_message_info = None
+            try:
+                if ai_message_id is not None:
+                    latest_message_info = (
+                        await chat_history_service.get_ai_message_info_by_id(
+                            post_db, ai_message_id
+                        )
+                    )
+                if latest_message_info is None:
+                    latest_message_info = (
+                        await chat_history_service.get_latest_ai_message_info(
+                            post_db, session_id
+                        )
+                    )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_maintenance_inner_tick latest_message_info failed: {}",
+                    e,
+                )
+
+            user_message_id = None
+            try:
+                user_message_id = await chat_history_service.get_latest_user_message_id(
+                    post_db, session_id
+                )
+            except Exception as e:
+                logger.warning(
+                    "companion_ws_maintenance_inner_tick get_latest_user_message_id failed: {}",
+                    e,
+                )
+
+            subscription_actions = [
+                BizAction(action_type=ActionType.NONE, message=""),
+            ]
+            data = _build_chat_response(
+                response_text_content,
+                response_content_parts,
+                MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+                latest_message_info,
+                None,
+                stub_request,
+                source_imate_id=None,
+                user_message_id=user_message_id,
+                subscription_actions=subscription_actions,
+                client_local_id=None,
+            )
+            payload = schemas.APIResponse.success(data=data)
+            out = payload.model_dump(exclude_none=True)
+            out["agent_id"] = agent_id
+            out["status_line"] = await _agent_status_line_for_chat_header(
+                post_db, agent_id
+            )
+            await outbound_queue.put(out)
+
+        hb_ctx["_last_maintenance_inner_tick_monotonic"] = time.monotonic()
+
+    logger.info(
+        "companion_ws_maintenance_inner_tick pushed assistant user={} agent={} chat_id={}",
         user_id,
         agent_id,
         chat_row_id,
@@ -1879,7 +2145,7 @@ async def chat_completions_websocket(
     companion_turn_lock = asyncio.Lock()
     hb_worker_stop = asyncio.Event()
 
-    async def companion_ws_proactive_hb_worker() -> None:
+    async def companion_ws_inner_tick_worker() -> None:
         while not hb_worker_stop.is_set():
             feats = global_config_loaded_from_config_yaml.app.features
             poll = max(5.0, float(feats.companion_ws_proactive_heartbeat_poll_seconds))
@@ -1888,7 +2154,10 @@ async def chat_completions_websocket(
                 break
             except asyncio.TimeoutError:
                 pass
-            if not feats.companion_ws_proactive_heartbeat_enabled:
+            if (
+                not feats.companion_ws_proactive_heartbeat_enabled
+                and not feats.companion_ws_maintenance_inner_tick_enabled
+            ):
                 continue
             hb_snapshot: dict[str, Any] | None = None
             async with companion_turn_lock:
@@ -1897,21 +2166,32 @@ async def chat_completions_websocket(
                 continue
             hb_user_for_log = hb_snapshot["user_id"]
             try:
-                await _try_fire_companion_ws_proactive_heartbeat(
-                    outbound_queue=outbound_queue,
-                    ctx=hb_snapshot,
-                    subscription_svc=subscription_svc,
-                    companion_turn_lock=companion_turn_lock,
-                )
+                if feats.companion_ws_proactive_heartbeat_enabled:
+                    await _try_fire_companion_ws_proactive_heartbeat(
+                        outbound_queue=outbound_queue,
+                        ctx=hb_snapshot,
+                        subscription_svc=subscription_svc,
+                        companion_turn_lock=companion_turn_lock,
+                    )
+                if feats.companion_ws_maintenance_inner_tick_enabled:
+                    await _try_fire_companion_ws_maintenance_inner_tick(
+                        outbound_queue=outbound_queue,
+                        ctx=hb_snapshot,
+                        hb_ctx=companion_hb_ctx,
+                        subscription_svc=subscription_svc,
+                        companion_turn_lock=companion_turn_lock,
+                        companion_bg_sink=companion_bg_sink,
+                        ws_fg_pending=ws_fg_pending,
+                    )
             except Exception:
                 logger.exception(
-                    "companion_ws_proactive_hb worker failed user_id={}",
+                    "companion_ws_inner_tick worker failed user_id={}",
                     hb_user_for_log,
                 )
 
     hb_worker_task = asyncio.create_task(
-        companion_ws_proactive_hb_worker(),
-        name="companion_ws_proactive_heartbeat",
+        companion_ws_inner_tick_worker(),
+        name="companion_ws_inner_tick",
     )
 
     idle = _chat_ws_idle_timeout_seconds()

@@ -55,14 +55,9 @@ def create_chat_completion_sync(
         create_kw["langsmith_extra"] = langsmith_extra
     if response_format is not None:
         create_kw["response_format"] = response_format
-    # TODO(companion-dual-envelope-reasoning-channel): Switching chat models (e.g. OpenRouter
-    # DeepSeek) can surface HTTP 500 ``Chat returned no content`` while LangSmith still shows text:
-    # ``choices[0].message.content`` is null but ``reasoning`` / ``reasoning_details`` holds the
-    # visible reply or JSON envelope. Observed with ``deepseek/deepseek-v4-pro``; ``deepseek-v3.2``
-    # often returned proper ``content``. Mitigation: when ``response_format`` is set and ``tools``
-    # is empty, still ``create_kw.update(tool_path_chat_completion_kwargs(model))`` so structured
-    # chat gets the same DeepSeek ``reasoning.exclude`` profile as the tool path; optionally parse
-    # fallback text from ``reasoning`` in ``turn.py`` / ``tool_background.py``.
+    # Some gateways place structured ``response_format`` JSON under ``reasoning`` /
+    # ``reasoning_details`` while leaving ``message.content`` empty. Companion parsing validates
+    # those side channels before using them; raw non-JSON reasoning is never surfaced.
     if tools:
         create_kw.update(tool_path_chat_completion_kwargs(model))
         create_kw["tools"] = tools

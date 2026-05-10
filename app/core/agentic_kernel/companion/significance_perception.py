@@ -10,11 +10,12 @@
   ``prompts/SIGNIFICANCE_PERCEPTION.md`` (injected when
   ``include_significance_perception_slice`` is on; see ``prompts/system_messages.py`` and
   ``prompt_stack.companion_turn_tools_and_system_messages``).
-- **Parsed / split**: ``split_dual_llm_chat_branch_content`` strips optional markdown fences
-  and returns ``(visible_text, metadata_dict, output_to_user_or_none)``; metadata keys match
-  the three importance JSON field names. The third tuple element is the parsed envelope's
-  ``output_to_user`` when JSON validated, else ``None`` (foreground chat should treat missing
-  as unparsed raw text).
+- **Parsed / split**: ``split_dual_llm_chat_branch_message`` reads ``message.content`` first and
+  then validated provider side-channel envelopes from ``message.reasoning`` /
+  ``message.reasoning_details``. ``split_dual_llm_chat_branch_content`` handles raw string callers.
+  Both return ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict whose keys
+  match the three importance JSON field names, optional ``output_to_user``, ``reply_modality``,
+  ``voice_message_script``). ``output_to_user`` is present only when JSON validated, else ``None``.
 - **Kernel return**: ``CompanionTurnResult.significance_perception`` (``models.py``) carries
   the dict for one turn; may be ``None`` if the model returned non-JSON or parse failed
   (visible text may still be the raw string).
@@ -40,8 +41,10 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Final, Literal
+from unittest.mock import Base as _UnittestMockBase
 
 _MARKDOWN_JSON_FENCE_RE = re.compile(
     r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
@@ -263,9 +266,65 @@ class DualLlmChatBranchSplit:
     voice_message_script: str
 
 
+def _message_field(message: Any, field_name: str) -> Any:
+    if isinstance(message, Mapping):
+        return message.get(field_name)
+    return getattr(message, field_name, None)
+
+
+def _string_candidates_from_value(value: Any) -> list[str]:
+    if isinstance(value, _UnittestMockBase):
+        return []
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    if isinstance(value, Mapping):
+        out: list[str] = []
+        for key in ("content", "text", "summary"):
+            out.extend(_string_candidates_from_value(value.get(key)))
+        return out
+    if isinstance(value, (list, tuple)):
+        out: list[str] = []
+        for item in value:
+            out.extend(_string_candidates_from_value(item))
+        return out
+    dump = getattr(value, "model_dump", None)
+    if callable(dump):
+        try:
+            return _string_candidates_from_value(dump())
+        except Exception:
+            return []
+    out: list[str] = []
+    for key in ("content", "text", "summary"):
+        attr = getattr(value, key, None)
+        if isinstance(attr, str):
+            out.extend(_string_candidates_from_value(attr))
+    if out:
+        return out
+    return []
+
+
+def _dual_llm_message_candidate_texts(message: Any) -> list[str]:
+    content_candidates = _string_candidates_from_value(_message_field(message, "content"))
+    reasoning_candidates = [
+        *_string_candidates_from_value(_message_field(message, "reasoning")),
+        *_string_candidates_from_value(_message_field(message, "reasoning_details")),
+    ]
+    return [*content_candidates, *reasoning_candidates]
+
+
+def parse_dual_llm_chat_envelope_from_message(
+    message: Any,
+) -> DualLlmChatBranchEnvelope | None:
+    """Parse the envelope from content first, then provider reasoning side channels."""
+
+    for raw in _dual_llm_message_candidate_texts(message):
+        env = parse_dual_llm_chat_envelope_json(raw)
+        if env is not None:
+            return env
+    return None
+
+
 def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
-    # TODO(companion-dual-envelope-reasoning-channel): Empty ``raw`` here often means the LLM put
-    # the JSON envelope only in ``message.reasoning``; fix extraction before calling this helper.
     env = parse_dual_llm_chat_envelope_json(raw)
     if env is None:
         return DualLlmChatBranchSplit(
@@ -281,4 +340,34 @@ def split_dual_llm_chat_branch_content(raw: str) -> DualLlmChatBranchSplit:
         output_to_user=env.output_to_user,
         reply_modality=env.reply_modality,
         voice_message_script=(env.voice_message_script or "").strip(),
+    )
+
+
+def split_dual_llm_chat_branch_message(message: Any) -> DualLlmChatBranchSplit:
+    """
+    Split a structured chat response message.
+
+    Some OpenAI-compatible providers return ``response_format`` JSON under
+    ``reasoning`` or ``reasoning_details`` while leaving ``content`` empty. Only
+    validated envelopes are accepted from side channels, so chain-of-thought
+    text is never surfaced as user-visible content.
+    """
+
+    env = parse_dual_llm_chat_envelope_from_message(message)
+    if env is not None:
+        return DualLlmChatBranchSplit(
+            visible_text=env.user_facing_reply.strip(),
+            significance_meta=envelope_to_assistant_metadata_dict(env),
+            output_to_user=env.output_to_user,
+            reply_modality=env.reply_modality,
+            voice_message_script=(env.voice_message_script or "").strip(),
+        )
+    content = _message_field(message, "content")
+    raw = content if isinstance(content, str) else ""
+    return DualLlmChatBranchSplit(
+        visible_text=(raw or "").strip(),
+        significance_meta=None,
+        output_to_user=None,
+        reply_modality="text",
+        voice_message_script="",
     )
