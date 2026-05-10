@@ -24,6 +24,8 @@
   the same via ``assistant_extra`` for REPL-style paths.
 - **Product DB / WS**: Foreground turns: ``app/api/v1/endpoints/chat._companion_ai_meta_from_turn_result``
   copies non-empty ``significance_perception`` into ``chat_history`` AI ``meta_data`` / WS payload.
+  ``voice_message_script`` is written only when ``reply_modality`` is ``voice_message`` and the script
+  is non-empty (aligned with transcript assistant rows in ``turn.run_turn``).
   Async ``tool_bg`` follow-up rows: ``ToolOutputEvent.significance_perception`` (from unified finish
   envelope via ``tool_bg_routing``) is mirrored in ``chat._build_companion_tool_background_ws_payload``.
 - **Memory extraction (optional)**: When ``memory_extraction.use_significance_perception_in_extraction``
@@ -51,7 +53,7 @@ _MARKDOWN_JSON_FENCE_RE = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 SIGNIFICANCE_PERCEPTION_REL: Final[str] = "SIGNIFICANCE_PERCEPTION.md"
 
@@ -206,6 +208,12 @@ class DualLlmChatBranchEnvelope(BaseModel):
         if isinstance(v, str) and v.strip().isdigit():
             return int(v.strip())
         raise ValueError("score must be integer 1-10")
+
+    @model_validator(mode="after")
+    def _clear_voice_script_when_text_modality(self) -> DualLlmChatBranchEnvelope:
+        if self.reply_modality == "text":
+            self.voice_message_script = ""
+        return self
 
 
 def default_significance_perception_markdown() -> str:

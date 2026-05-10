@@ -952,10 +952,12 @@ async def _build_companion_tool_background_ws_payload(
         "tool_bg_output_to_user": ev.output_to_user,
         "tool_bg_generation_deliver": ev.generation_deliver,
         "reply_modality": ev.reply_modality,
-        "voice_message_script": (ev.voice_message_script or "").strip(),
     }
+    _tb_script = (ev.voice_message_script or "").strip()
     if str(ev.reply_modality or "") == "voice_message":
         meta_data["is_voice"] = True
+        if _tb_script:
+            meta_data["voice_message_script"] = _tb_script
     if ev.langsmith_trace_id:
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
     if ev.langsmith_run_id:
@@ -1082,10 +1084,12 @@ def _companion_ai_meta_from_turn_result(
     companion_ai_meta: dict[str, Any] = {
         "source": companion_turn.assistant_source,
         "reply_modality": companion_turn.reply_modality,
-        "voice_message_script": companion_turn.voice_message_script or "",
     }
+    _fg_script = (companion_turn.voice_message_script or "").strip()
     if str(companion_turn.reply_modality or "") == "voice_message":
         companion_ai_meta["is_voice"] = True
+        if _fg_script:
+            companion_ai_meta["voice_message_script"] = _fg_script
     if companion_turn.trace_id:
         companion_ai_meta["trace_id"] = companion_turn.trace_id
     if companion_turn.user_msg_uuid:

@@ -1378,7 +1378,6 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
     assert captured["ai_save"][3] == {
         "source": "chat",
         "reply_modality": "text",
-        "voice_message_script": "",
         "significance_perception": {
             "importance_round": 9,
             "importance_user_message": 8,
