@@ -25,14 +25,21 @@ from app.core.agentic_kernel.companion.models import CompanionTurnResult
 from app.core.config import global_config_loaded_from_config_yaml
 from app.models.memory import Memory
 from app.models.user import AuthType
-from app.schemas.response import APIResponse, BizError, BusinessErrorCode, UsageLimitExceeded
+from app.schemas.response import (
+    APIResponse,
+    BizError,
+    BusinessErrorCode,
+    UsageLimitExceeded,
+)
 from app.services.voice_service import (
     VoiceGenerationResult,
     voice_service as global_voice_service,
 )
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
-from app.services.global_services import subscription_service as global_subscription_service
+from app.services.global_services import (
+    subscription_service as global_subscription_service,
+)
 from tests.app.api.test_client import TestClient
 from tests.app.api.v1.endpoints.conftest import (
     _client_with_user,
@@ -323,9 +330,7 @@ def _stub_success_chat_completion_with_multimodal(
     class DummyAgent:
         async def chat(self, *args, **kwargs):
             captured["messages"] = kwargs.get("messages")
-            captured["client_local_message_id"] = kwargs.get(
-                "client_local_message_id"
-            )
+            captured["client_local_message_id"] = kwargs.get("client_local_message_id")
             return ("multimodal response", 301)
 
     async def fake_get_agent(agent_data):
@@ -683,9 +688,7 @@ def test_v1_chat_completions_adds_premium_preview_and_popup_action(
 
     choices = data["choices"]
     premium_preview_choices = [
-        c
-        for c in choices
-        if c.get("message", {}).get("type") == "premium_preview"
+        c for c in choices if c.get("message", {}).get("type") == "premium_preview"
     ]
     assert len(premium_preview_choices) == 1
     premium_content = premium_preview_choices[0]["message"]["content"]
@@ -1384,9 +1387,7 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
             "importance_assistant_message": 7,
         },
     }
-    assert (
-        body["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][0]
-    )
+    assert body["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][0]
     assert (
         body2["data"]["choices"][0]["message"]["meta_data"] == captured["ai_metas"][1]
     )
@@ -1753,7 +1754,9 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
                                     {"type": "text", "text": "caption"},
                                     {
                                         "type": "image_url",
-                                        "image_url": {"url": "https://example.com/x.png"},
+                                        "image_url": {
+                                            "url": "https://example.com/x.png"
+                                        },
                                     },
                                 ],
                             }
@@ -1922,7 +1925,10 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                 "choices": [
                     {
                         "index": 0,
-                        "message": {"role": "assistant", "content": f"reply:{agent_id}"},
+                        "message": {
+                            "role": "assistant",
+                            "content": f"reply:{agent_id}",
+                        },
                         "finish_reason": "stop",
                     }
                 ],
@@ -1931,7 +1937,9 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         )
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
-    monkeypatch.setattr(chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions)
+    monkeypatch.setattr(
+        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+    )
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -1999,7 +2007,9 @@ def test_chat_websocket_idle_timeout_reads_config(
         raise asyncio.TimeoutError()
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
-    monkeypatch.setattr(chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions)
+    monkeypatch.setattr(
+        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+    )
     monkeypatch.setattr(chat_v1.asyncio, "wait_for", fake_wait_for)
 
     with FastAPITestClient(chat_business_error_app) as client:
@@ -2055,7 +2065,9 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         )
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
-    monkeypatch.setattr(chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions)
+    monkeypatch.setattr(
+        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+    )
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect(
@@ -2109,7 +2121,9 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         )
 
     monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
-    monkeypatch.setattr(chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions)
+    monkeypatch.setattr(
+        chat_v1, "_agent_chat_completions_impl", fake_agent_chat_completions
+    )
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -2123,7 +2137,10 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
                     },
                 }
             )
-            assert websocket.receive_json() == {"type": "client_context_ack", "ok": True}
+            assert websocket.receive_json() == {
+                "type": "client_context_ack",
+                "ok": True,
+            }
             websocket.send_json(
                 {
                     "agent_id": "agent-a",
@@ -2220,6 +2237,103 @@ def test_chat_websocket_verify_user_signed_out_not_supported(
 
     assert ack == {
         "type": "user_signed_out_ack",
+        "ok": False,
+        "reason": "not_supported",
+    }
+
+
+def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    captured: dict[str, object] = {}
+
+    def fake_append(**kwargs):
+        captured["kwargs"] = kwargs
+
+    async def fake_get_or_create_chat_by_agent(db, user_id, agent_id):
+        return SimpleNamespace(id=42, agent_id=agent_id)
+
+    async def fake_get_user_current_subscription(db, user_id):
+        return None
+
+    monkeypatch.setattr(
+        companion_chat_service,
+        "append_companion_chat_logs_line_for_ws_control",
+        fake_append,
+    )
+    monkeypatch.setattr(
+        chat_service,
+        "get_or_create_chat_by_agent",
+        fake_get_or_create_chat_by_agent,
+    )
+    monkeypatch.setattr(
+        global_subscription_service,
+        "get_user_current_subscription",
+        fake_get_user_current_subscription,
+    )
+
+    user = _make_user(user_id="user-wd-1", auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    msg_uuid = "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    dropped_at = "2026-05-11T12:00:00+00:00"
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "ws_conn_dropped",
+                    "agent_id": "agent-wd-1",
+                    "dropped_at_utc": dropped_at,
+                    "message_id": msg_uuid,
+                    "ws_close_code": 1006,
+                    "ws_close_reason": "connection reset",
+                }
+            )
+            ack = websocket.receive_json()
+
+    assert ack == {"type": "ws_conn_dropped_ack", "ok": True}
+    kw = captured["kwargs"]
+    assert kw["user_id"] == "user-wd-1"
+    assert kw["agent_id"] == "agent-wd-1"
+    assert kw["chat_id"] == 42
+    assert isinstance(kw["resolved_chat_model_id"], str)
+    assert kw["resolved_chat_model_id"]
+    line = kw["line"]
+    assert isinstance(line, str)
+    assert "**ws_conn_dropped**" in line
+    assert f"`client_dropped_at_utc={dropped_at}`" in line
+    assert "`ws_close_code=1006`" in line
+    assert "`ws_close_reason=connection reset`" in line
+    assert f"`received_message_uuid={msg_uuid}`" in line
+
+
+def test_chat_websocket_verify_ws_conn_dropped_not_supported(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws/verify") as websocket:
+            websocket.send_json(
+                {
+                    "type": "ws_conn_dropped",
+                    "agent_id": "agent-v",
+                    "dropped_at_utc": "2026-05-11T12:00:00+00:00",
+                }
+            )
+            ack = websocket.receive_json()
+
+    assert ack == {
+        "type": "ws_conn_dropped_ack",
         "ok": False,
         "reason": "not_supported",
     }
@@ -2359,12 +2473,13 @@ def test_v1_chat_generate_image_biz_error_matches_response_model(
         body["data"]["error_code"]
         == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["error_code"]
     )
-    assert body["data"]["message"] == BusinessErrorCode.IMAGE_GENERATION_BLOCKED[
-        "message"
-    ]
-    assert body["data"]["description"] == BusinessErrorCode.IMAGE_GENERATION_BLOCKED[
-        "message"
-    ]
+    assert (
+        body["data"]["message"] == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+    )
+    assert (
+        body["data"]["description"]
+        == BusinessErrorCode.IMAGE_GENERATION_BLOCKED["message"]
+    )
     assert body["data"]["suggestion"] == "Please modify your prompt and try again."
 
 
@@ -2453,10 +2568,12 @@ def test_agent_chat_completions_with_sdk(
     business_actions = data.get("business_actions")
     assert isinstance(business_actions, list) and len(business_actions) > 0
     for action in business_actions:
-        assert isinstance(action, dict), f"Each business_actions item must be a dict: {action}"
-        assert "action_type" in action and "message" in action, (
-            f"Each business_actions item must have action_type and message: {action}"
-        )
+        assert isinstance(
+            action, dict
+        ), f"Each business_actions item must be a dict: {action}"
+        assert (
+            "action_type" in action and "message" in action
+        ), f"Each business_actions item must have action_type and message: {action}"
 
 
 @pytest.mark.noci
@@ -2549,11 +2666,17 @@ def test_festival_memory_delivered_via_chat_completions(
             len(festival_prompts) >= 1
         ), f"Expected at least one choice with type=festival_memory_prompt and festival_memory_id={memory_id}, got choices={choices}"
         msg = festival_prompts[0].get("message", {})
-        assert "id" in msg, f"Festival memory prompt message must have id, got message={msg}"
-        assert isinstance(msg["id"], int), f"Festival memory prompt message id must be int, got {type(msg['id']).__name__}"
+        assert (
+            "id" in msg
+        ), f"Festival memory prompt message must have id, got message={msg}"
+        assert isinstance(
+            msg["id"], int
+        ), f"Festival memory prompt message id must be int, got {type(msg['id']).__name__}"
         # 断言：投递后 memory.delivery_at 已更新
         db_session.refresh(memory)
-        assert memory.delivery_at is not None, "memory.delivery_at should be set after delivery"
+        assert (
+            memory.delivery_at is not None
+        ), "memory.delivery_at should be set after delivery"
     finally:
         db_session.delete(memory)
         db_session.commit()
@@ -2618,9 +2741,9 @@ def test_festival_memory_chat_completions_gated_by_app_version(
         ), f"Expected no festival_memory_prompt when appVersionCode < min_ver, got {festival_prompts}"
         # 旧版不投递，delivery_at 保持 null（与 FR 一致）
         db_session.refresh(memory)
-        assert memory.delivery_at is None, (
-            "When app version is too old, delivery must be skipped and delivery_at must remain null"
-        )
+        assert (
+            memory.delivery_at is None
+        ), "When app version is too old, delivery must be skipped and delivery_at must remain null"
     finally:
         db_session.delete(memory)
         db_session.commit()

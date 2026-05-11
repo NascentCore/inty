@@ -84,6 +84,7 @@ from app.schemas.chat_websocket import (
     ChatWsUserSignedOnFrame,
     ChatWsUserSignedOutAckFrame,
     ChatWsUserSignedOutFrame,
+    ChatWsWsConnDroppedFrame,
     chat_ws_queued_error_dict,
     normalize_websocket_companion_message_id_uuid,
 )
@@ -556,6 +557,102 @@ async def _try_handle_ws_user_signed_out_frame(
                 ok=False,
                 reason="server_error",
             ).model_dump(exclude_none=True)
+        )
+    return True
+
+
+async def _try_handle_ws_ws_conn_dropped_frame(
+    websocket: WebSocket,
+    data: Any,
+    *,
+    db: AsyncSession,
+    current_user: schemas.User,
+    companion_ws: CompanionWebSocketCoordinator | None,
+    subscription_svc: SubscriptionService,
+) -> bool:
+    """
+    Consume ``{"type":"ws_conn_dropped","agent_id":...,"dropped_at_utc":...}``.
+
+    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
+    inner-tick coords or transcript.
+
+    ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
+    """
+    if not isinstance(data, dict) or data.get("type") != "ws_conn_dropped":
+        return False
+    if companion_ws is None:
+        await websocket.send_json(
+            {
+                "type": "ws_conn_dropped_ack",
+                "ok": False,
+                "reason": "not_supported",
+            }
+        )
+        return True
+    try:
+        frame = ChatWsWsConnDroppedFrame.model_validate(data)
+    except ValidationError:
+        await websocket.send_json(
+            {
+                "type": "ws_conn_dropped_ack",
+                "ok": False,
+                "reason": "invalid_payload",
+            }
+        )
+        return True
+    agent_id = frame.agent_id.strip()
+    try:
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+        if chat.agent_id != agent_id:
+            await websocket.send_json(
+                {
+                    "type": "ws_conn_dropped_ack",
+                    "ok": False,
+                    "reason": "agent_mismatch",
+                }
+            )
+            return True
+        subscription = await subscription_svc.get_user_current_subscription(
+            db, current_user.id
+        )
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=bool(subscription)
+        )
+        recv_msg_uuid = (frame.message_id or "").strip()
+        uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
+        code_part = frame.ws_close_code if frame.ws_close_code is not None else "-"
+        reason_raw = (frame.ws_close_reason or "").strip()
+        reason_part = reason_raw if reason_raw else "-"
+        log_line = (
+            f"- **ws_conn_dropped** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
+            f"`chat_id={chat.id}` `agent_id={agent_id}` "
+            f"`client_dropped_at_utc={frame.dropped_at_utc}` "
+            f"`ws_close_code={code_part}` `ws_close_reason={reason_part}` "
+            f"`received_message_uuid={uuid_part}`"
+        )
+        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+            user_id=current_user.id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+            line=log_line,
+        )
+        await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
+        logger.info(
+            "chat_ws ws_conn_dropped logged CHAT_LOGS.md user={} agent={} chat_id={} "
+            "client_dropped_at_utc={} received_message_uuid={}",
+            current_user.id,
+            agent_id,
+            chat.id,
+            frame.dropped_at_utc,
+            recv_msg_uuid or "-",
+        )
+    except Exception:
+        logger.exception("chat_ws ws_conn_dropped failed agent_id={}", agent_id)
+        await websocket.send_json(
+            {"type": "ws_conn_dropped_ack", "ok": False, "reason": "server_error"}
         )
     return True
 
@@ -1500,8 +1597,9 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             meta_data=user_meta,
         )
 
-        if companion_turn.tool_background_started and companion_ws.has_foreground_pending(
-            preset_uid
+        if (
+            companion_turn.tool_background_started
+            and companion_ws.has_foreground_pending(preset_uid)
         ):
             companion_ws.update_foreground_pending(
                 preset_uid,
@@ -2469,6 +2567,15 @@ async def chat_completions_websocket(
                 subscription_svc=subscription_svc,
             ):
                 continue
+            if await _try_handle_ws_ws_conn_dropped_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_ws=companion_ws,
+                subscription_svc=subscription_svc,
+            ):
+                continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
                 continue
             if not isinstance(data, dict):
@@ -2591,6 +2698,15 @@ async def chat_completions_websocket_verify(
             ):
                 continue
             if await _try_handle_ws_user_signed_out_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_ws=None,
+                subscription_svc=subscription_svc,
+            ):
+                continue
+            if await _try_handle_ws_ws_conn_dropped_frame(
                 websocket,
                 data,
                 db=db,

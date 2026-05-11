@@ -120,6 +120,42 @@ class ChatWsUserSignedOutAckFrame(BaseModel):
     reason: Optional[str] = None
 
 
+class ChatWsWsConnDroppedFrame(BaseModel):
+    """**Client → server** control frame: prior transport disconnect context for companion CHAT_LOGS.md."""
+
+    type: Literal["ws_conn_dropped"] = "ws_conn_dropped"
+    agent_id: str = Field(..., min_length=1)
+    dropped_at_utc: str = Field(
+        ...,
+        min_length=1,
+        description="ISO8601 UTC timestamp when the client observed the disconnect.",
+    )
+    message_id: Optional[str] = Field(
+        default=None,
+        description="Optional RFC4122 UUID string for client/server log correlation.",
+    )
+    ws_close_code: Optional[int] = Field(
+        default=None,
+        description="WebSocket close code from the client stack, if available.",
+    )
+    ws_close_reason: Optional[str] = Field(
+        default=None,
+        description="WebSocket close reason from the client stack, if available.",
+    )
+
+
+class ChatWsWsConnDroppedAckFrame(BaseModel):
+    """**Server → client (immediate)** result of ``ws_conn_dropped`` handling.
+
+    Known ``reason`` values include ``not_supported``, ``invalid_payload``, ``agent_mismatch``,
+    ``server_error``; the wire may carry other strings for forward compatibility.
+    """
+
+    type: Literal["ws_conn_dropped_ack"] = "ws_conn_dropped_ack"
+    ok: bool
+    reason: Optional[str] = None
+
+
 class ChatWebSocketRequest(BaseModel):
     """**Client → server** chat turn: ``agent_id`` plus embedded HTTP-shaped completion request."""
 
