@@ -1,6 +1,6 @@
 # iMate / Agentic Companion: 当前架构
 
-本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师。
+本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师；产品级入口见 [`/docs/imate/ARCH.md`](/docs/imate/ARCH.md)。
 
 - 实现链条: [`chat.py`](/app/api/v1/endpoints/chat.py) `_agent_chat_completions_impl` · [`companion_chat_service`](/app/services/companion_chat_service.py) · [`turn.run_turn`](/app/core/agentic_kernel/companion/turn.py) · 帧与契约 [`app/api/AGENTS.md`](/app/api/AGENTS.md) · 包内细节 [`companion/AGENTS.md`](/app/core/agentic_kernel/companion/AGENTS.md)
 - 分层记忆说明: [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)
@@ -169,6 +169,7 @@ proactive heartbeat 和 maintenance inner tick 都不是客户端上行聊天帧
 | [`companion/manager.py`](/app/core/agentic_kernel/companion/manager.py) | `CompanionManager` / `CompanionSession`; 建立 `user_id + companion_id + chat_id` 会话, 写入 `context.json`, 委派 `run_turn`。 |
 | [`companion/memory_store.py`](/app/core/agentic_kernel/companion/memory_store.py), [`companion/memory_registry.py`](/app/core/agentic_kernel/companion/memory_registry.py) | 版本化文档读写和进程内 scope/path 双键注册。 |
 | [`companion/tool_background.py`](/app/core/agentic_kernel/companion/tool_background.py), [`companion/companion_tool_runtime.py`](/app/core/agentic_kernel/companion/companion_tool_runtime.py), [`companion/tool_bg_routing.py`](/app/core/agentic_kernel/companion/tool_bg_routing.py) | async tool 线程、工具执行和工具收尾 envelope 路由。 |
+| [`companion/turn_pipeline.py`](/app/core/agentic_kernel/companion/turn_pipeline.py) | 生产 `run_turn` 前半段的阶段合同: 输入归一化、MemoryStore 状态加载、prompt/route 计划；当前不替换执行与持久化行为。 |
 | [`companion/turn_engine.py`](/app/core/agentic_kernel/companion/turn_engine.py) | REPL-grade 消息组装与 transcript 写入辅助; 复用部分 prompt / transcript 约定, 但不是生产 WebSocket 主执行器。 |
 | [`companion/significance_perception.py`](/app/core/agentic_kernel/companion/significance_perception.py) | 前台 chat 与部分 fallback 的 dual-LLM envelope schema、解析和重要性评分元数据转换。 |
 | [`companion/memory_pipeline.py`](/app/core/agentic_kernel/companion/memory_pipeline.py) | episodic / gist / semantic / USER / SOUL 分层记忆更新管线。 |
@@ -291,19 +292,19 @@ receive_frame/control_frame
 - 更容易补 WebSocket 级回归测试: 普通前台回合、后台 tool 补帧、proactive heartbeat 三类路径可共享同一协调器夹具。
 - 为后续拆分 `run_turn` 阶段提供稳定入口, 避免同时改 transport 边界和 kernel 内部阶段。
 
-后续优先改进点: **把生产 companion 回合拆成显式阶段合同, 但不立即替换现有行为**。
+已落地改进点: **把生产 companion 回合前半段拆成显式阶段合同, 但不立即替换现有行为**。
 
-建议新增一个面向生产的 `CompanionTurnPipeline` 或等价结构, 将 `run_turn` 当前隐含阶段显式化:
+本次新增 [`turn_pipeline.py`](/app/core/agentic_kernel/companion/turn_pipeline.py), 先将 `run_turn` 的准备阶段从局部变量集合收束为三个窄合同:
 
 ```text
-load_state -> assemble_prompt -> resolve_route -> execute_route -> persist_turn -> schedule_memory -> build_result
+normalize_input -> load_state -> assemble_prompt/resolve_route
 ```
 
 收益:
 
-- 让生产主链路拥有比通用 `TurnOrchestrator` 更贴近 companion 语义的阶段边界。
-- foreground chat 与 async tool background 可共享 `assemble_prompt`、`refresh_prompt_stack`、`parse_model_output`、`persist_turn` 合同, 降低并行机制漂移。
-- `MemoryStore`、transcript、chat_history、ToolOutputEvent 的写入边界更清楚, 便于为每个阶段增加窄测试。
-- 后续若要把 `TurnOrchestrator` 合同用于生产, 可以通过 adapter 渐进迁移, 而不是一次性重写 `run_turn`。
+- `CompanionTurnRuntimeFlags` 固定 inner tick / proactive heartbeat / implicit sign-on 的输入归一化边界。
+- `CompanionTurnLoadedState` 固定 `ContextMeta`、`PromptBundle`、transcript 窗口和 compaction 轮次这些 MemoryStore 读取结果。
+- `CompanionTurnPromptPlan` 固定 tools、system messages、route mode、最终 LLM messages 和 dual structured chat 开关。
+- `run_turn` 的执行、transcript 持久化、记忆调度行为未变; 后续可以继续拆 `execute_route -> persist_turn -> schedule_memory -> build_result`, 而不是一次性重写生产路径。
 
 不建议的改进顺序: 先抽象一个全局 kernel message queue。当前实现没有单一 kernel queue; 强行引入会掩盖 API 入站、出站 business queue、background tool queue、transcript store 之间的真实边界。
