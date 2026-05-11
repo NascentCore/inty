@@ -2,6 +2,8 @@
 
 Terminal client for Inty **`/api/v1/chat/ws`**. Conversation and companion bootstrap run on the server; this process only holds a WebSocket, prints assistant text, and writes local logs.
 
+**Dependencies**: This package may import **types/models** from **`app/schemas/chat`** (WebSocket payload contract). Do **not** import `app/core/agentic_kernel` or other companion implementation modules here. **`app/schemas`** holds types only; parsing of downlink JSON frames lives in [`backend_chat_ws.py`](backend_chat_ws.py).
+
 ## Setup
 
 - Shell cwd: **repository root** (so `app` and `config.yaml` resolve like other Inty tools).

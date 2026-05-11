@@ -25,6 +25,10 @@ backend/ops/start.sh --local --debug --no-build-frontend --log-file ./tmp/inty-o
 
 若用户要求终止通过本 skill 拉起的 inty 后端，只终止 Ops 后端进程组（`backend/ops/start.sh` 与对应 `uvicorn :8001`）；不要默认杀 REPL，除非用户明确要求。
 
+**首选**：在运行 `backend/ops/start.sh` 的那个前台终端按 **Ctrl+C**（会连带停 uvicorn）。
+
+后台或失联时再查 PID：
+
 ```bash
 pgrep -af 'backend/ops/start\.sh|uvicorn .*--port 8001'
 kill -TERM <uvicorn_pid> <start_sh_pid> <launcher_pid>

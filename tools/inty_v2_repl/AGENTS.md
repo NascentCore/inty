@@ -2,6 +2,8 @@
 
 This package is **WebSocket REPL only**: `python -m tools.inty_v2_repl.main repl` connects to `/api/v1/chat/ws`. Companion logic lives in [`app/core/agentic_kernel/companion/`](../../app/core/agentic_kernel/companion/).
 
+**Imports**: Allowed from **`app/schemas/chat`** — wire **types/models** only. **Forbidden**: `app/core/agentic_kernel` (and other server companion implementation). **`app/schemas`** does not host downlink frame parsers; those stay in [`backend_chat_ws.py`](backend_chat_ws.py).
+
 Full usage: [README.md](README.md).
 
 ## Transport vs REPL behavior
@@ -13,4 +15,3 @@ Full usage: [README.md](README.md).
 - **Multi-frame replies**: `tool_bg`, proactive heartbeat, etc. each produce separate JSON payloads; all drain through the same queue. For `tool_bg` frames carrying `meta_data.tool_bg_local_image_paths` (server-side absolute paths for images created in the background tool round), [`main._print_tool_bg_local_image_paths_banner`](main.py) prints one `local-path: /abs/...` line per path **after** the assistant body. When `meta_data.generated_image.image_url` is present (`gs://` or `https://`), [`main._print_generated_image_meta_banner`](main.py) prints `image-url: ...`. Production Android clients ignore `tool_bg_local_image_paths` by default.
 - **Foreground-fail + background-survives**: if the foreground LLM raises (e.g. provider HTTP 5xx, or 200 with `choices: null` + `error.code=...`) while the background tool loop has already started, the REPL sees a `code` 502 `error_kind=llm_inference_backend` error frame followed by an independent `tool_bg` assistant frame (with `meta_data.generated_image` and optional `tool_bg_local_image_paths`).
 - **Latency banner**: Wall elapsed for an assistant line uses `meta_data.user_msg_uuid` or `reply_to_user_msg_uuid` to match the matching `post_turn` timestamp when possible; otherwise `0ms`. When `meta_data.tool_background_started` is true, the same banner line appends `tool_background_started=true` (companion foreground frame while the background tool loop runs).
-- **Sync API**: [`BackendChatWsBridge.send_turn`](backend_chat_ws.py) still blocks until one parsable assistant payload (subject to `INTY_V2_BACKEND_WS_RECV_TIMEOUT_SEC`); reserved for scripts, not used by interactive `repl`.

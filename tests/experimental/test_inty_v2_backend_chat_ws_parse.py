@@ -6,8 +6,8 @@ import pytest
 
 from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
-    _parse_chat_response_payload,
     http_base_to_ws_chat_url,
+    parse_chat_completion_ws_payload,
 )
 
 
@@ -38,14 +38,14 @@ def test_parse_chat_response_payload_success() -> None:
         },
         "agent_id": "agent-1",
     }
-    text, meta = _parse_chat_response_payload(data)
+    text, meta = parse_chat_completion_ws_payload(data)
     assert text == "hello"
     assert meta == {"source": "chat"}
 
 
 def test_parse_chat_response_payload_error() -> None:
     with pytest.raises(BackendChatWsError) as exc_info:
-        _parse_chat_response_payload(
+        parse_chat_completion_ws_payload(
             {"code": 400, "message": "No user message found", "agent_id": "a"}
         )
     assert exc_info.value.code == 400
