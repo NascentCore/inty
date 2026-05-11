@@ -8,6 +8,8 @@
 import Foundation
 
 struct SendMsgResponse: Codable, Identifiable {
+//    var id = UUID()
+//    let message: String
     var id = UUID()
-    let message: String
+    let msg: String?
 }

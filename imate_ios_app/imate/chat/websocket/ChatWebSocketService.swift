@@ -87,14 +87,41 @@ final class ChatWebSocketService {
             return
         }
         print("on response data val si ------->\(text)")
+        
+        
         do {
-            let response = try JSONDecoder().decode(
-                SendMsgResponse.self,
-                from: data
-            )
-            DispatchQueue.main.async {
-                self.onReceiveMessage?(response)
+//            let decoder = JSONDecoder()
+//            let apiResponse = try decoder.decode(APIResponse<WebSocketMsg>.self, from: data)
+            let response = try JSONDecoder().decode(WSResponse.self, from: data)
+            print("on response si --------->\(response.code)----->\(response.message)")
+            
+            if response.code != 200 {
+                ToastManager.shared.show(response.message)
             }
+            
+            // 业务状态判断
+//            if apiResponse.code != 200 {
+//                ToastManager.shared.show(apiResponse.message)
+//                throw SLNetworkError.serverError(apiResponse.message)
+//            }
+//            
+//            // 取 data
+//            guard let result = apiResponse.data else {
+//                throw SLNetworkError.emptyData
+//            }
+            
+            DispatchQueue.main.async {
+//                self.onReceiveMessage?(result)
+            }
+//            return result
+            
+//            let response = try JSONDecoder().decode(
+//                SendMsgResponse.self,
+//                from: data
+//            )
+//            DispatchQueue.main.async {
+//                self.onReceiveMessage?(response)
+//            }
 
         } catch {
             print("Decode Error:", error)
