@@ -1488,8 +1488,9 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             meta_data=user_meta,
         )
 
-        if companion_turn.tool_background_started and companion_ws.has_foreground_pending(
-            preset_uid
+        if (
+            companion_turn.tool_background_started
+            and companion_ws.has_foreground_pending(preset_uid)
         ):
             companion_ws.update_foreground_pending(
                 preset_uid,
