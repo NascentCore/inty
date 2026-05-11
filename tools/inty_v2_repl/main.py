@@ -173,7 +173,7 @@ def _format_cli_exc(exc: BaseException) -> str:
 
 
 def _print_send_turn_exception(exc: BaseException) -> None:
-    """Log and print a failure from ``bridge.send_turn`` / ``bridge.post_turn`` / ``fut.result()``."""
+    """Log and print a failure from ``bridge.post_turn`` / ``fut.result()``."""
     if isinstance(exc, BackendChatWsError):
         print(
             f"[{repl_wall_ts_str()}] chat-ws-error code={exc.code} "

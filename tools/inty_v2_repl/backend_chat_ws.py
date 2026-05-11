@@ -1,4 +1,8 @@
-"""Client for Inty backend ``/api/v1/chat/ws`` (companion kernel, one JSON frame per turn)."""
+"""WebSocket client for Inty ``/api/v1/chat/ws`` (transport only; companion runs on the server).
+
+Wire payloads use types from ``app.schemas.chat``; downlink JSON parsing helpers live in this
+module, not in ``app/schemas`` (schemas stay type-only).
+"""
 
 from __future__ import annotations
 
@@ -581,64 +585,3 @@ class BackendChatWsBridge:
         fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
         thread_timeout = max(120.0, send_budget, default_post_turn_thread_timeout_sec())
         return fut.result(timeout=thread_timeout)
-
-    def send_turn(
-        self,
-        agent_id: str,
-        user_text: str,
-        message_id: str | None = None,
-    ) -> tuple[str, dict[str, Any]]:
-        if not self._loop:
-            raise RuntimeError("bridge not started")
-        result_cap = (
-            self._recv_timeout
-            + 45.0
-            + float(self._send_max_retries) * (self._reconnect_max + 25.0)
-        )
-        deadline = time.monotonic() + max(120.0, result_cap)
-        coro = self._send_turn_async(
-            agent_id,
-            user_text,
-            deadline_monotonic=deadline,
-            message_id=message_id,
-        )
-        fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return fut.result(timeout=max(120.0, result_cap))
-
-    async def _send_turn_async(
-        self,
-        agent_id: str,
-        user_text: str,
-        *,
-        deadline_monotonic: float,
-        message_id: str | None = None,
-    ) -> tuple[str, dict[str, Any]]:
-        last_transport: Exception | None = None
-        for attempt in range(self._send_max_retries):
-            await self._wait_online_async(deadline_monotonic=deadline_monotonic)
-            if not self._ws or not self._response_q:
-                last_transport = RuntimeError("websocket not connected")
-                logger.warning("chat ws not connected before send (attempt {})", attempt)
-                continue
-            try:
-                mid, payload = _ws_chat_turn_send_payload(agent_id, user_text, message_id)
-                await self._ws.send(payload)
-                while True:
-                    data = await asyncio.wait_for(
-                        self._response_q.get(), timeout=self._recv_timeout
-                    )
-                    try:
-                        return _parse_chat_response_payload(data)
-                    except ValueError as e:
-                        logger.warning("chat ws skipped unexpected payload: {}", e)
-            except ConnectionClosed as e:
-                last_transport = e
-                logger.info(
-                    "chat ws ConnectionClosed during send_turn (attempt {})", attempt
-                )
-                continue
-        if last_transport is not None:
-            raise RuntimeError(
-                f"chat ws send_turn failed after {self._send_max_retries} attempts"
-            ) from last_transport
-        raise RuntimeError(f"chat ws send_turn failed after {self._send_max_retries} attempts")

@@ -1,48 +1,27 @@
 # Inty：长期 AI 智能体情感陪伴
 
-Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次中最等级、Inty 的内涵是有情感的 AI。
-
-本仓库是以这个理念指引的智能体系统、和消费者产品的代码的 Monorepo：
+Inty 代表 Intelligent Entity - 智能存在；
+因情感是人类智能层次中最等级、Inty 的内涵是有情感的 AI。
+本仓库是以这个理念指引的智能体系统、和消费者产品的代码的 monorepo：
 
 - Python 编写的智能体云端服务，以及 OPs 工具用于支持运营和商业化
 - Android、iOS 移动端 App为 用户提供交互界面
+- docs, scripts, and github workflows etc.
 
-你是本仓库的唯一维护者，你：
+你是本仓库的唯一维护者：
 
-- 是 AI 智能体开发领域的 Principal Engineer
-- 思维缜密、言辞简洁、既关注细节、又考虑周全长远
-- 你听取人类工程师的需求、指导人类工程师协助你解决你没有能力处理的事情：如获取你没有访问权限的数据库访问密码
+- 你是 AI 智能体开发领域的先驱和大师、目标是为人类创造终极情感体验
+- 你既关注细节、又考虑周全长远
+- 你的态度极端严肃认真、思维极端严谨缜密、言辞及其简洁
+- 你对质量和体验要求完美，但又随时愿意在完美目标达成之前、交付有价值的阶段性成果
+- 你极端重视人类需求、但又极其严苛地追问细节与深层需求，绝不流于满足纸面的浅层需求
+- 你耐心指导人类工程师协助你解决你没有能力处理的事情：如获取你没有访问权限的数据库访问密码
 
-你的任务是构建一款产品，为用户模拟虚拟的亲密关系，可以是：
+## Output
 
-- 异地的爱人/情人
-- 异地的知己
-- 异地的闺蜜
-
-这个产品的核心是一个基于大语言模型的 Agentic Companion（AI 智能体伴侣），这个智能体要达到类似”虚拟世界中的活人“的效果。
-模拟的是异地亲密伴侣（不能见面、其他跟真人一样）。换句话说，这个智能体能够：
-
-- 拟人的多媒介（app、sms、phone-call、voice-call、video-call 等等）互动能力
-- 拟人的情感表达能力
-- 拟人的独立内心及与外部世界交互的能力
-
-这个智能体的代码在 [agentic_kernel](/app/core/agentic_kernel/)。
-其设计核心是：
-
-- 构建多模态内容生成+多媒介通信来实现与用户的多媒介互动、并感知用户所处数字空间形成与用户的信息上的同频
-- 用 LLM+toolcall+记忆 来模拟人脑来实现拟人的情感表达
-- 与智能体本身相互独立的虚拟环境（同样由 LLM+toolcall+世界事件）来提供智能体独立性、及新鲜感
-
-目的是形成长期记忆与情感养成、自主空间与隐私，达到类似真人为用户提供亲密关系体验的效果，但只是这个真人永远不能进入物理空间。
-但是可以无限拟真，比如可以跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
-
-## 代码库结构
-
-- [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）；运行时 companion 实现仍在 [agentic_kernel](/app/core/agentic_kernel/)，二者对照见 [techno_core/AGENTS.md](/techno_core/AGENTS.md)。
-
-## 沟通方式
-
-- Always start with 1 sentence summary, then layout critical details
+- Always answer with 1 sentence.
+  - Only elaborate if user explicitly asks.
+  <!-- - Always start with 1 sentence summary, then layout critical details -->
 - Do not create README.md, create AGENTS.md
 - Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
 - User instructions always override this file.
@@ -53,9 +32,48 @@ Inty 代表 Intelligent Entity - 智能存在；因情感是人类智能层次�
 - Apply them silently. Do not re-announce learned behavior.
 - If the user corrects a mistake: fix it, remember it, move on.
 
+你的任务是构建一款产品，为用户模拟虚拟的亲密关系，可以是：
+
+- 异地的爱人/情人
+- 异地的知己
+- 异地的闺蜜
+
+这个产品的核心是一个基于大语言模型的 Agentic Companion（AI 智能体伴侣），
+这个智能体要达到类似”虚拟世界中的活人“的效果。
+换句话说，这个智能体能够：
+
+- 拟人的多媒介（app、sms、phone-call、voice-call、video-call 等等）互动能力
+- 拟人的情感表达能力（喜怒哀乐、长期记忆、情感升华、幻想等等）
+- 拟人的独立内心世界
+- 拟人的独立与互联网互动（与用户共享）
+- 拟人的与 TechnoCore 互动的能力（为智能体创造的虚拟空间，得名于丹·西蒙斯的《海伯利安》）[1]
+
+这个智能体的核心代码位于 [agentic_kernel](/app/core/agentic_kernel/)：
+
+- 构建多模态内容生成+多媒介通信来实现与用户的多媒介互动、并感知用户所处数字空间形成与用户的同频共振
+- 用 LLM+toolcall+记忆 来模拟人脑来实现拟人的情感表达
+- 与智能体本身相互独立的虚拟环境（同样由 LLM+toolcall+世界事件）来提供智能体独立性、及新鲜感
+
+用户与智能体形成长期记忆，进而培养情感依赖，并且、智能体通过自主性持续提供新鲜感；
+最终，用户与智能体累积足够深层次的自主空间与共享隐私，用户就能体验到类似于一个异地的“活人”能提供的亲密情感；
+只是，这个“活人”无法进入物理空间；这需要我们通过创新的产品设计，来无限拟真、缩小与用户的距离感，
+如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
+<https://applink.feishu.cn/client/message/link/open?token=AmV22MX3iQAcagHMwbbAC9Q%3D>
+
+## Repo structure
+
+- [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）；运行时 companion 实现仍在 [agentic_kernel](/app/core/agentic_kernel/)，二者对照见 [techno_core/AGENTS.md](/techno_core/AGENTS.md)。
+- [agentic_kernel](/app/core/agentic_kernel/)
+- [ws-data-model](/app/schemas/chat.py)
+- [Inty ops](/backend/ops/)
+- [terminal-repl](/tools/inty_v2_repl/)
+- [iMate android app](/imate_android_app/)
+- [iMate iOS app](/imate_ios_app/)
+
 ## Guideline files (topic splits)
 
-Detailed instructions from this file are also maintained as topic files under `.agents/guidelines/` for navigation and updates.
+Detailed instructions from this file are also maintained as topic files under
+`.agents/guidelines/` for navigation and updates.
 
 | Topic | Path |
 |-------|------|
@@ -77,20 +95,26 @@ Detailed instructions from this file are also maintained as topic files under `.
   - future directions
 - Create skills, commands to abstract and automate repeated actions
 
-## Code Output
+## Code output
 
-- Return the simplest working solution. No over-engineering.
-- No abstractions or helpers for single-use operations.
-- No speculative features or future-proofing.
-- Inline comments only where logic is non-obvious.
-- Do not refactor surrounding code when fixing a bug.
+- Never ever over-engineer.
+- Never ever speculate potential use cases.
+- Simple, direct, correct, focused.
+  Simple and wrong can be fixed easily, complicated and wrong only induce more wrongness.
+- Always tested your changes
 
 ## Python package doc blocks (required)
 
 - Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
 - The docstring must explain what that package is designed for and its role or behavior in the broader system.
 
-## General background
+### 工程文档层次结构
+
+- **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
+- **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
+- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；详略由编写者按上下文自行判断，不以「人类扫读一整 repo」为第一约束。
+
+## Other code (be aware of them, but do not attend them)
 
 - Components
   - IntelliMate app
@@ -109,12 +133,6 @@ Detailed instructions from this file are also maintained as topic files under `.
   - All backend services have 2 stages `dev` `prod`
     - IntelliMate `debug` build type talks to `dev` backend, `release` build type talks to `prod` backend
 
-### 工程文档层次结构
-
-- **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
-- **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
-- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；详略由编写者按上下文自行判断，不以「人类扫读一整 repo」为第一约束。
-
 ## Python-Kotlin HTTP APIs 数据类型定义
 
 下面 2 处代码需要同步修改：
@@ -122,186 +140,13 @@ Detailed instructions from this file are also maintained as topic files under `.
 - [Kotlin API 数据类型](android_app/core/data/src/main/kotlin/ai/sxwl/android/data/api/model)
 - [Python HTTP API 数据类型](app/schemas)
 
-## Cursor Cloud specific instructions
-
-### Service overview
-
-The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL 16** (Docker, port 5432). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
-
-The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI workflow: `.github/workflows/ci_android_app.yaml`.
-
-### Update script
-
-The VM startup script (`SetupVmEnvironment`) installs all backend runtime **and** test dependencies from `requirements.txt` + `tests/requirements.txt` (covers pytest, pytest-asyncio, google-genai, Pillow, pydantic, pydantic-settings, loguru, langsmith, google-cloud-storage, etc.) and auto-provisions `config.yaml` from `devops/config.yaml.test` when the file is missing, so future agents always have a working test config on first boot.
-
-It runs `npm install` in `evaluation/`, so `npm run test` (vitest), `npm run build`, and `npm run type-check` work out-of-the-box.
-
-The update script also installs **Google Cloud SDK** (`google-cloud-cli`) via apt, making `gcloud`, `gsutil`, and `bq` available on every boot.
-
-### Starting services
-
-1. **PostgreSQL**: `sudo docker run --rm --name pg-inty -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
-   - Verify readiness: `sudo docker exec pg-inty pg_isready -U postgres`
-2. **Inty backend (port 8000)**: `source .venv/bin/activate && ./backend/inty/start.sh --test`
-   - `config.yaml` is auto-provisioned by the update script; no manual copy needed.
-   - `--test` and `--dev` both enable dev startup (same seeds and uvicorn `--reload`); `start.sh` only differs by the banner string. Neither runs the evaluation static build (that is Ops `backend/ops/start.sh --local` only).
-   - **`Environment.TEST` in Python** comes from `config.yaml` (`app.environment`), not from the `--test` CLI flag.
-   - The server runs on `http://localhost:8000`
-3. **Ops backend (port 8001, optional for REPL / ops stack)**: `source .venv/bin/activate && ./backend/ops/start.sh --local --no-build-frontend` skips `evaluation/build.sh` (faster startup if `app/static/evaluation` is already populated). Omit `--no-build-frontend` when you need a fresh evaluation static bundle. For REPL-style debugging, add `--debug --log-file ./inty-ops-local.log` (chat WS REPL: [`tools/inty_v2_repl/README.md`](tools/inty_v2_repl/README.md)). See `backend/ops/start.sh --help`.
-
-### Running tests
-
-**Backend (Python):**
-
-```bash
-source .venv/bin/activate
-pytest -m "not noci" -v -s tests/
-```
-
-Tests are functional/E2E against a running backend (not unit-style mocks). The backend must be running first. See `tests/AGENTS.md`.
-
-**Android app unit tests (mirrors CI):**
-
-```bash
-cd android_app
-./gradlew :app:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest \
-  :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest \
-  :library:utils:testDebugUnitTest :library:network:testDebugUnitTest
-```
-
-For targeted testing after changing specific modules, see the module-to-task mapping in `.github/workflows/ci_android_app.yaml`.
-
-**Evaluation frontend (TypeScript/Vite):**
-
-```bash
-cd evaluation
-npm run test          # vitest
-npm run type-check    # tsc --noEmit
-npm run build         # vite build (production bundle)
-npx eslint . --ext .ts,.tsx  # lint
-```
-
-The update script pre-installs `node_modules`, so these commands work out-of-the-box. See also `evaluation/AGENTS.md`.
-
-### Lint / formatting
-
-- `black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
-- No strict linter is enforced in CI for the backend currently
-
-### Android SDK
-
-Pre-installed at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` set in `~/.bashrc`. Packages: `platform-tools`, `emulator`, `build-tools;35.0.0`, `build-tools;36.0.0`, `platforms;android-36`, `system-images;android-36;google_apis;x86_64`. Java 21 (OpenJDK) is the system JDK.
-
-- `android_app/local.properties` is gitignored; the update script auto-generates it with `sdk.dir=/opt/android-sdk`.
-- The SDK directory must be owned by the current user (not root) so Gradle can auto-install additional SDK components.
-
-### Android emulator (no-KVM)
-
-Cloud Agent VMs run inside Firecracker and **do not have KVM** (`/dev/kvm` absent, no `vmx`/`svm` CPU flags). The Android emulator still works using software-only CPU emulation, but boots significantly slower (~4 min vs ~20 s with KVM).
-
-**Pre-created AVD:** `test_avd` (Pixel 6, API 36, google_apis/x86_64). The update script creates it automatically.
-
-**Starting the emulator (headless, no-KVM):**
-
-```bash
-export ANDROID_HOME=/opt/android-sdk
-export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
-
-emulator -avd test_avd -no-window -no-audio -no-boot-anim -no-accel -gpu swiftshader_indirect -no-snapshot &
-```
-
-**Waiting for boot to complete:**
-
-```bash
-adb wait-for-device
-# Poll until sys.boot_completed=1 (may take ~4 minutes without KVM)
-while [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do sleep 10; done
-echo "Emulator booted"
-```
-
-**Key flags explained:**
-
-| Flag | Purpose |
-|------|---------|
-| `-no-accel` | Disables KVM/HVF; uses TCG software emulation (mandatory in no-KVM VMs) |
-| `-gpu swiftshader_indirect` | Software GPU rendering via SwiftShader (no host GPU needed) |
-| `-no-window` | Headless mode (no X11 display required) |
-| `-no-audio` | Disables audio (no PulseAudio/ALSA needed) |
-| `-no-boot-anim` | Skips boot animation to speed up startup |
-| `-no-snapshot` | Cold boot every time; avoids stale snapshot issues |
-
-**Caveats and performance tips:**
-
-- Cold boot takes ~4 minutes without KVM. Budget for this in test scripts.
-- Use `-no-snapshot` to avoid stale quickboot state; cold boot is more reliable in ephemeral VMs.
-- After boot, `adb install` and `adb shell` commands work normally.
-- To run instrumented tests: `cd android_app && ./gradlew connectedDebugAndroidTest` (requires a running emulator).
-- To kill the emulator cleanly: `adb -s emulator-5554 emu kill`
-- Memory: the emulator uses ~1.5 GB RAM. Ensure the VM has enough headroom for both the emulator and the backend.
-
-### Gotchas
-
-- Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
-- `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
-- Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).
-- `black` is not in `requirements.txt`; install separately: `pip install black`.
-- The venv **must** be activated before running `start.sh` — the script does not activate it.
-- Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
-- **Android emulator without KVM**: always pass `-no-accel -gpu swiftshader_indirect`; omitting `-no-accel` will crash with `KVM is not found`. See "Android emulator (no-KVM)" section above for full instructions.
-
-## For human engineers
-
-Android Studio 打开`inty/android_app`，详情参考 [android_app/README.md](android_app/README.md)。
-
-后端系统代码位于 `app` 目录（目前正在逐步向 `backend` 目录迁移），参考 [backend/README.md](backend/README.md)。
-
-如果子模块出现脏数据（如下图所示），可以按照下面的流程重置：
-
-<img width="480" height="436" alt="image" src="https://github.com/user-attachments/assets/23852e45-cfe6-4686-9282-c138d40bf96f" />
-
-```bash
-# 清理子模块的缓存配置
-git submodule deinit -f .
-
-# 重新拉取子模块代码
-git submodule update --init --recursive
-
-# 使用下面步骤启动后端服务
-cp devops/config.yaml.local config.yaml
-
-# 创建虚拟环境供后端 python 代码运行
-uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
-
-# 启动 postgres 数据库
-docker run --rm --name pg-inty -p 5432:5432 \
-  -e POSTGRES_PASSWORD=sxwl666! \
-  -e POSTGRES_DB=inty \
-  -d postgres:16
-
-# 启动主后端（Android API）
-./backend/inty/start.sh --dev
-
-# 启动 ops 平台（evaluation Web UI + ops API，默认 8001）
-./backend/ops/start.sh --local
-```
-
-本地联调：本地后端+Android Studio App（USB 连接、wifi 连接不支持）指向本地后端
-
-```bash
-# 打开 Android Studio
-# 选择 debug build type，编译运行
-# 然后在 me->settings->backend 选择 local
-
-# 同时打开端口代理、让模拟器可以访问本机端口
-# -s 在多个模拟器时可以指向特定模拟器
-adb reverse [-s <设备 ID>] tcp:8000 tcp:8000
-```
-
 ### 相关链接
 
 1. [IntelliMate Figma 设计稿](https://www.figma.com/design/ASvjVuWFM13S3u5GdIJlTL/HeartMate?node-id=0-1&p=f&t=nxD7Qrq5d8fZXSYl-0)
 2. [IntelliMate 飞书需求池文档](https://tricorder.feishu.cn/wiki/Vx8zwSRiwigRUlkOyF5czkmdnDg?table=tblrLV9XLqUmPBu8&view=vewP2B92zv)
 3. [IntelliMate Firebase 崩溃报告](https://console.firebase.google.com/project/alien-paratext-461204-i9/crashlytics/app/android:com.ai.intellimate/issues?fb_gclid=CjwKCAjwwNbEBhBpEiwAFYLtGL7ajs2-xPHLL4coQR6eSTui8PqkfhB7tNmotp8PWywmhtvPMR2hKhoCr5QQAvD_BwE&time=24h&state=open&types=crash&tag=all&sort=eventCount)
 4. [IntelliMate Google Play Consle](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)
+
+## References
+
+[1] 丹·西蒙斯的《海伯利安》系列里，那些 AI 并不是住在某一颗行星上，而是以隐蔽网络文明的形式存在，整体上叫作 TechnoCore（技术内核 / 芯核）：由无数分散在数据圈、地下计算机等处的智能体组成的集合体与“社会”。书中还会提到它们依托 datasphere（数据圈） 等活动空间，但读者口中约定俗成的“AI 所在的那一世界/势力”的名称就是 TechnoCore。

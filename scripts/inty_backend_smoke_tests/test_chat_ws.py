@@ -226,8 +226,8 @@ async def _turn_ws_chat_round(
         ChatWebSocketRequest,
     )
     from tools.inty_v2_repl.backend_chat_ws import (
-        _parse_chat_response_payload,
         http_base_to_ws_chat_url,
+        parse_chat_completion_ws_payload,
     )
 
     url = http_base_to_ws_chat_url(http_base, agent_id=agent_id)
@@ -256,7 +256,7 @@ async def _turn_ws_chat_round(
                     continue
                 c = data0.get("code")
                 if c is not None and int(c) != 200:
-                    _parse_chat_response_payload(data0)[0]  # raises BackendChatWsError
+                    parse_chat_completion_ws_payload(data0)[0]  # raises BackendChatWsError
                 break
         req = ChatWebSocketRequest(
             agent_id=agent_id,
@@ -271,7 +271,7 @@ async def _turn_ws_chat_round(
             data = json.loads(raw)
             if data.get("type") == "pong":
                 continue
-            return _parse_chat_response_payload(data)[0]
+            return parse_chat_completion_ws_payload(data)[0]
 
 
 def _default_recv_timeout() -> float:
