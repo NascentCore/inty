@@ -100,7 +100,7 @@ inty-firebase-key.json
 # 敏感文件
 /.secrets/
 
-# OpenAPI 生成脚本临时输出（generate_kotlin_models_from_openapi.sh）
+# OpenAPI Kotlin 生成临时输出（历史脚本已移除；路径仍可用于本地生成物）
 .openapi_generated.json
 
 # stainless output sdks
