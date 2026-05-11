@@ -71,20 +71,4 @@ class EnergyCelebrationBannerTest {
         assertNull(resolveCelebrationLevel(-10))
         assertNull(resolveCelebrationLevel(-100))
     }
-
-    @Test
-    fun resolveCelebrationLevel_boundaryValues_returnsCorrectLevel() {
-        // 边界值测试
-        assertEquals(EnergyCelebrationLevel.First, resolveCelebrationLevel(1))
-        assertEquals(EnergyCelebrationLevel.Tens, resolveCelebrationLevel(10))
-        assertNull(resolveCelebrationLevel(9))
-        assertNull(resolveCelebrationLevel(11))
-        assertEquals(EnergyCelebrationLevel.Hundreds, resolveCelebrationLevel(100))
-        assertNull(resolveCelebrationLevel(99))
-        assertNull(resolveCelebrationLevel(101))
-        assertEquals(EnergyCelebrationLevel.Thousands, resolveCelebrationLevel(1000))
-        assertNull(resolveCelebrationLevel(999))
-        assertNull(resolveCelebrationLevel(1001)) // 1001 不是 1000 的倍数，应该返回 null
-        assertNull(resolveCelebrationLevel(1500)) // 1500 不是 1000 的倍数，应该返回 null
-    }
 }

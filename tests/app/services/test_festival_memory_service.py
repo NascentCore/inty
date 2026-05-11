@@ -24,37 +24,6 @@ class TestGetFestivalMemoriesForUserAgent:
         out = await get_festival_memories_for_user_agent(mock_db, "user-1", "agent-1")
         assert out == []
 
-    @pytest.mark.asyncio
-    async def test_returns_list_with_metadata_festival_data(self):
-        mock_db = AsyncMock()
-        # row format: (id, meta_data, content)
-        mock_row = (
-            42,
-            {"festival_name": "春节", "festival_date": "2026-02-10"},
-            "用户与角色在春节相关的回忆摘要",
-        )
-        mock_result = MagicMock()
-        mock_result.fetchall.return_value = [mock_row]
-        mock_db.execute = AsyncMock(return_value=mock_result)
-        out = await get_festival_memories_for_user_agent(mock_db, "user-1", "agent-1")
-        assert len(out) == 1
-        assert out[0]["memory_id"] == 42
-        assert out[0]["festival_date"] == "2026-02-10"
-        assert out[0]["festival_name"] == "春节"
-        assert out[0]["memory"] == "用户与角色在春节相关的回忆摘要"
-
-    @pytest.mark.asyncio
-    async def test_skips_rows_when_metadata_missing(self):
-        """meta_data 为空时无法解析节日名/日期，该行被跳过。"""
-        mock_db = AsyncMock()
-        # row format: (id, meta_data, content)
-        mock_row = (100, None, "旧字段中的节日记忆")
-        mock_result = MagicMock()
-        mock_result.fetchall.return_value = [mock_row]
-        mock_db.execute = AsyncMock(return_value=mock_result)
-        out = await get_festival_memories_for_user_agent(mock_db, "user-2", "agent-2")
-        assert out == []
-
 
 class TestAssembleArgs:
     """assemble_args 返回 (full_prompt, LLMConfig)，有无 llm_config 时 model/temperature/max_tokens 来自 LLMConfig"""

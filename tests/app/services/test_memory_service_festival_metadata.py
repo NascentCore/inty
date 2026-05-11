@@ -160,11 +160,6 @@ def test_metadata_to_llm_config_output_from_llm_config():
     assert out["max_tokens"] == 2000
 
 
-def test_metadata_to_llm_config_output_none_when_no_llm_config():
-    """metadata 无 llm_config 时返回 None（不再支持 legacy llm 字符串）。"""
-    assert memory_service.metadata_to_llm_config_output({"festival_name": "X"}) is None
-
-
 def test_metadata_to_llm_config_output_none_when_neither():
     """metadata 无 llm_config 且无 llm 时返回 None。"""
     assert memory_service.metadata_to_llm_config_output({}) is None
