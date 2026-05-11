@@ -1595,9 +1595,9 @@ async def delete_agent(db: AsyncSession, db_agent: models.Agent) -> models.Agent
         # 这个 agent 关联的所有数据都标记成 deleted_at 不为空
         # TODO: query 要过滤掉 deleted_at 不为空的记录
 
-        # 提交更改
+        # 提交更改。AsyncSession 已设置 expire_on_commit=False；这里不 refresh，
+        # 避免刷新后关系字段过期，响应序列化时触发异步懒加载 MissingGreenlet。
         await db.commit()
-        await db.refresh(db_agent)
 
         logger.info(f"成功逻辑删除agent {agent_id}")
         return db_agent

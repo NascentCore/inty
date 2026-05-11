@@ -106,10 +106,14 @@ def test_delete_agent_e2e(integration_client: TestClient):
         f"{integration_client.base_url}/api/v1/ai/agents/{agent_id}"
     )
 
-    assert response.status_code == 200, response.text
+    assert response.status_code == 200, (
+        f"DELETE /api/v1/ai/agents/{agent_id} should soft-delete the agent: "
+        f"{response.text}"
+    )
     payload = response.json()
-    assert payload["code"] == 200
-    assert payload["data"]["id"] == agent_id
+    assert payload["code"] == 200, f"Expected API success envelope: {payload}"
+    assert payload["data"]["id"] == agent_id, f"Deleted agent id mismatch: {payload}"
+    assert payload["data"]["deleted_at"], f"Deleted agent should include deleted_at: {payload}"
 
     integration_client.untrack_agent(agent_id)
 

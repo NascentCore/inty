@@ -172,7 +172,7 @@ async def verify_purchase(
             db, current_user.id, google_play_request
         )
 
-        logger.error(f"购买验证结果: {result}")
+        logger.info(f"购买验证结果: {result}")
 
         if result.is_verified:
             return APIResponse.success(
