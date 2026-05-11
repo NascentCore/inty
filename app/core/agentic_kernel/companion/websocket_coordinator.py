@@ -15,6 +15,33 @@ from typing import Any
 from .tool_background import ToolOutputEvent
 
 
+def apply_companion_ws_heartbeat_coords(
+    hb_ctx: dict[str, Any],
+    *,
+    user_id: Any,
+    agent_id: str,
+    chat_id: Any,
+) -> None:
+    """Replace inner-tick coordinates while preserving same-session maintenance throttle.
+
+    Shared by :class:`CompanionWebSocketCoordinator` and chat endpoints that hold the same
+    logical dict (``companion_ws_heartbeat_ctx`` references ``heartbeat_context``).
+    """
+    prev_user = hb_ctx.get("user_id")
+    prev_agent = hb_ctx.get("agent_id")
+    prev_chat = hb_ctx.get("chat_id")
+    prev_mono = hb_ctx.get("_last_maintenance_inner_tick_monotonic")
+    hb_ctx.clear()
+    hb_ctx.update({"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id})
+    same_coords = (
+        str(prev_user or "") == str(user_id or "")
+        and str(prev_agent or "") == str(agent_id or "")
+        and str(prev_chat or "") == str(chat_id or "")
+    )
+    if same_coords and prev_mono is not None:
+        hb_ctx["_last_maintenance_inner_tick_monotonic"] = prev_mono
+
+
 @dataclass
 class CompanionWebSocketCoordinator:
     """State capsule for one ``/api/v1/chat/ws`` companion connection."""
@@ -60,22 +87,12 @@ class CompanionWebSocketCoordinator:
         agent_id: str,
         chat_id: Any,
     ) -> None:
-        """Replace inner-tick coordinates while preserving same-session maintenance throttle."""
-        prev_user = self.heartbeat_context.get("user_id")
-        prev_agent = self.heartbeat_context.get("agent_id")
-        prev_chat = self.heartbeat_context.get("chat_id")
-        prev_mono = self.heartbeat_context.get("_last_maintenance_inner_tick_monotonic")
-        self.heartbeat_context.clear()
-        self.heartbeat_context.update(
-            {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
+        apply_companion_ws_heartbeat_coords(
+            self.heartbeat_context,
+            user_id=user_id,
+            agent_id=agent_id,
+            chat_id=chat_id,
         )
-        same_coords = (
-            str(prev_user or "") == str(user_id or "")
-            and str(prev_agent or "") == str(agent_id or "")
-            and str(prev_chat or "") == str(chat_id or "")
-        )
-        if same_coords and prev_mono is not None:
-            self.heartbeat_context["_last_maintenance_inner_tick_monotonic"] = prev_mono
 
     def snapshot_heartbeat_coords(self) -> dict[str, Any] | None:
         user_id = str(self.heartbeat_context.get("user_id") or "").strip()
