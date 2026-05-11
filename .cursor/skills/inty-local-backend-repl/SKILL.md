@@ -85,7 +85,7 @@ Ops 就绪后，对用户依次给出下面 **三样**（不要默认展开 JWT�
 
 1. 一行：`后端日志：<repo-root>/tmp/inty-ops-local.log`（与上文 `--log-file` 一致时）。
 2. **本节「获取 agent-id」中的 `python3 <<'PY'` 整块**（让用户粘贴一行 `id` 给下一步）。
-3. **仅** 下列 REPL 块（必须用 `-m`，勿 `python tools/inty_v2_repl/main.py`）；把 `YOUR_AGENT_ID` 换成上一步输出的 UUID。
+3. **仅** 下列 REPL 块；把 `YOUR_AGENT_ID` 换成上一步输出的 UUID。
 
 ```bash
 source .venv/bin/activate && python -m tools.inty_v2_repl.main repl \
