@@ -19,8 +19,9 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ## Output
 
-- Always start with 1 sentence summary, then layout critical details
-- Do not create README.md, create AGENTS.md
+- Always answer with 1 sentence.
+  - Only elaborate if user explicitly asks.
+  <!-- - Always start with 1 sentence summary, then layout critical details -->
 - Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
 - User instructions always override this file.
 
