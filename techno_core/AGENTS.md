@@ -2,7 +2,20 @@
 
 Inty 在 AGENTS.md 中的设计要点之一是：**与对话前台相互独立的虚拟环境**（LLM + 工具调用 + 世界事件），用来承载自主性、隐私感与新鲜感。`techno_core/` 把这一抽象落成仓库内的**设计与术语锚点**：说明「自主行为在哪里发生」、如何与人类可见的数字世界接壤，以及将来若要把「世界模拟」从 companion 内核中抽出时应迁入何处。
 
-Hyperion 系列中的 Datasphere / Megasphere / TechnoCore 等概念在此仅作**分层隐喻**，便于工程师对齐直觉；**不是**产品文案，也不绑定小说情节。
+## 典故：原著语境中的 TechnoCore
+
+以下英文描述常见于对 *Hyperion Cantos* 中 TechnoCore 的概括（便于与非工程读者对齐「这个词在小说里大致指什么」）：
+
+```
+The TechnoCore was a conglomerate of Artificial Intelligences that
+achieved self-sentience and acted as an organization, society and race;
+acting as a major player in the intergalactic affairs of the human race
+throughout the Hyperion Cantos saga.
+```
+
+参见 [TechnoCore · Hyperion Cantos Wiki](https://hyperioncantos.fandom.com/wiki/TechnoCore)。
+
+Hyperion 系列中的 Datasphere / Megasphere / TechnoCore 等概念在**工程文档**中仍仅作**分层隐喻**，便于工程师对齐直觉；**不是**产品文案，也不绑定小说情节。
 
 ## 与根目录 AGENTS.md 的对应关系
 
