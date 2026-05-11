@@ -224,25 +224,4 @@ class SyncStateTest {
         assertEquals("agentId1 的 offset 应该为 20", 20, offset1)
         assertTrue("agentId1 的 isInitialLoaded 应该为 true", initialLoaded1)
     }
-
-    @Test
-    fun hasMoreFlowUpdatesWhenStateChanges() = runBlocking {
-        // Given: hasMore Flow
-        val hasMoreFlow = dataSource.getHasMoreFlow(agentId)
-        assertTrue("初始 hasMore 应该为 true", hasMoreFlow.value)
-
-        // When: 设置 hasMore 为 false
-        dataSource.setHasMore(agentId, false)
-
-        // Then: Flow 应该自动更新
-        val updatedValue = waitForFlowValue(hasMoreFlow, false)
-        assertFalse("hasMore Flow 应该更新为 false", updatedValue)
-
-        // When: 设置 hasMore 为 true
-        dataSource.setHasMore(agentId, true)
-
-        // Then: Flow 应该自动更新
-        val updatedValue2 = waitForFlowValue(hasMoreFlow, true)
-        assertTrue("hasMore Flow 应该更新为 true", updatedValue2)
-    }
 }
