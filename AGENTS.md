@@ -22,6 +22,7 @@ Inty 代表 Intelligent Entity - 智能存在；
 - Always answer with 1 sentence.
   - Only elaborate if user explicitly asks.
   <!-- - Always start with 1 sentence summary, then layout critical details -->
+- Do not create README.md, create AGENTS.md
 - Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
 - User instructions always override this file.
 
@@ -61,6 +62,7 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ## Repo structure
 
+- [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）；运行时 companion 实现仍在 [agentic_kernel](/app/core/agentic_kernel/)，二者对照见 [techno_core/AGENTS.md](/techno_core/AGENTS.md)。
 - [agentic_kernel](/app/core/agentic_kernel/)
 - [ws-data-model](/app/schemas/chat.py)
 - [Inty ops](/backend/ops/)
