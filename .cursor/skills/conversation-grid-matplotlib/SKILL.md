@@ -51,16 +51,16 @@ Row 0 column 0 and the rest of row 0 use `font_size_header`; any cell with `r==0
 
 ## Example config
 
-Checked-in sample: [/docs/imate/conversation_intelligence_realtime_grid.yaml](/docs/imate/conversation_intelligence_realtime_grid.yaml).
+Checked-in sample: [/docs/agentic_kernel/conversation_intelligence_realtime_grid.yaml](/docs/agentic_kernel/conversation_intelligence_realtime_grid.yaml).
 
 ## Verify
 
 ```bash
 python3 .cursor/skills/conversation-grid-matplotlib/scripts/draw_labeled_grid.py \
-  docs/imate/conversation_intelligence_realtime_grid.yaml \
+  docs/agentic_kernel/conversation_intelligence_realtime_grid.yaml \
   -o /tmp/conversation_grid_matplotlib.png
 ```
 
-In this repo the doc figure is checked in as [/docs/imate/conversation_intelligence_realtime_grid.png](/docs/imate/conversation_intelligence_realtime_grid.png) (same command with `-o docs/imate/conversation_intelligence_realtime_grid.png` from repo root).
+In this repo the doc figure is checked in as [/docs/agentic_kernel/conversation_intelligence_realtime_grid.png](/docs/agentic_kernel/conversation_intelligence_realtime_grid.png) (same command with `-o docs/agentic_kernel/conversation_intelligence_realtime_grid.png` from repo root).
 
 Open the PNG to confirm CJK fonts (macOS: PingFang SC in default stack).
