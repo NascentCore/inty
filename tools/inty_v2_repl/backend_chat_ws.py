@@ -217,7 +217,7 @@ class BackendChatWsBridge:
         self._response_q: asyncio.Queue[dict[str, Any]] | None = None
         self._halt: asyncio.Event | None = None
         self._ready = threading.Event()
-        self._start_error: BaseException | None = None
+        self._start_error: Exception | None = None
         self._ping_interval = default_ping_interval_sec()
         self._recv_timeout = default_recv_timeout_sec()
         self._reconnect_initial = default_reconnect_initial_sec()
@@ -239,7 +239,7 @@ class BackendChatWsBridge:
                 asyncio.set_event_loop(loop)
                 self._loop = loop
                 loop.run_until_complete(self._run_session(connect_timeout=connect_timeout))
-            except BaseException as exc:
+            except Exception as exc:
                 self._start_error = exc
                 logger.exception("backend chat ws thread failed: {}", exc)
             finally:
@@ -252,8 +252,8 @@ class BackendChatWsBridge:
                             loop.run_until_complete(
                                 asyncio.gather(*pending, return_exceptions=True)
                             )
-                    except BaseException:
-                        pass
+                    except Exception:
+                        logger.exception("backend chat ws thread cleanup failed")
                     loop.close()
                 self._loop = None
                 self._ws = None
@@ -353,8 +353,8 @@ class BackendChatWsBridge:
                     logger.exception("on_user_signed_on_sent callback failed")
         except ConnectionClosed:
             logger.debug("chat ws user_signed_on skipped (connection closed)")
-        except BaseException:
-            logger.warning("chat ws user_signed_on send failed agent_id={}", aid)
+        except Exception:
+            logger.exception("chat ws user_signed_on send failed agent_id={}", aid)
 
     async def _run_session(self, *, connect_timeout: float) -> None:
         headers = [("Authorization", f"Bearer {self._bearer_token}")]
@@ -375,7 +375,7 @@ class BackendChatWsBridge:
                         open_timeout=connect_timeout,
                         ping_interval=None,
                     )
-                except BaseException as exc:
+                except Exception as exc:
                     if not self._ready.is_set():
                         raise RuntimeError(f"initial WebSocket connect failed: {exc}") from exc
                     logger.warning("chat ws reconnect connect failed: {}", exc)
@@ -406,7 +406,7 @@ class BackendChatWsBridge:
                         await pinger
                     except asyncio.CancelledError:
                         pass
-                    except BaseException:
+                    except Exception:
                         logger.exception("pinger task exit")
                 if halt.is_set():
                     reader_task.cancel()
@@ -414,12 +414,12 @@ class BackendChatWsBridge:
                         await reader_task
                     except asyncio.CancelledError:
                         pass
-                    except BaseException:
+                    except Exception:
                         logger.exception("reader task exit")
                     try:
                         await ws.close()
-                    except BaseException:
-                        pass
+                    except Exception:
+                        logger.exception("chat ws close failed during halt")
                     self._ws = None
                     self._online_ev.clear()
                     break
@@ -431,13 +431,13 @@ class BackendChatWsBridge:
                         await reader_task
                     except asyncio.CancelledError:
                         pass
-                    except BaseException:
+                    except Exception:
                         logger.exception("reader task exit")
                 logger.info("chat ws read loop ended; reconnecting")
                 try:
                     await ws.close()
-                except BaseException:
-                    pass
+                except Exception:
+                    logger.exception("chat ws close failed before reconnect")
                 self._ws = None
                 self._response_q = None
                 self._online_ev.clear()
@@ -450,7 +450,8 @@ class BackendChatWsBridge:
             self._halt = None
 
     async def _read_loop(self, ws: Any) -> None:
-        assert self._response_q is not None
+        if self._response_q is None:
+            raise RuntimeError("response queue not initialized")
         try:
             async for raw in ws:
                 try:
@@ -528,7 +529,7 @@ class BackendChatWsBridge:
         companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
     ) -> str:
         """Send one user chat JSON frame; return normalized ``message_id``. No recv."""
-        last_transport: BaseException | None = None
+        last_transport: Exception | None = None
         for attempt in range(self._send_max_retries):
             await self._wait_online_async(deadline_monotonic=deadline_monotonic)
             if not self._ws or not self._response_q:
@@ -611,7 +612,7 @@ class BackendChatWsBridge:
         deadline_monotonic: float,
         message_id: str | None = None,
     ) -> tuple[str, dict[str, Any]]:
-        last_transport: BaseException | None = None
+        last_transport: Exception | None = None
         for attempt in range(self._send_max_retries):
             await self._wait_online_async(deadline_monotonic=deadline_monotonic)
             if not self._ws or not self._response_q:

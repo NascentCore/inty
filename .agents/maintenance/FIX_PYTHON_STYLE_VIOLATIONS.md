@@ -21,6 +21,40 @@ maintenance agents can fix the highest-impact item first.
     `EvaluationSessionDetail.interactions`, and `QuestionFileUpload.warnings`
     used `[]`.
 
+## 2026-05-11 scan
+
+### Fixed in `cursor/worst-python-style-violation-cd9b`
+
+- [x] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py`
+  caught `BaseException` around the REPL WebSocket thread, reconnect,
+  user-signed-on send, task shutdown, and socket close paths. This was the
+  worst open violation because it formed the outer transport isolation layer
+  for the companion REPL and could intercept process-level control exceptions
+  such as `KeyboardInterrupt`, `SystemExit`, or coroutine cancellation instead
+  of letting them propagate through the runtime.
+- [x] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py`
+  used `assert self._response_q is not None` as a runtime precondition in the
+  reader loop. The bridge now raises an explicit `RuntimeError` because
+  optimized Python can remove asserts.
+
+### Newly discovered open violations
+
+- [ ] Google 2.4 "Exceptions":
+  `/app/core/agentic_kernel/companion/significance_perception.py` catches broad
+  `Exception` while parsing and extracting dual-LLM envelope candidates, then
+  silently returns `None` or `[]`. Narrow to JSON/Pydantic/model-dump failures
+  or log unexpected parser failures so malformed companion envelopes do not
+  hide implementation bugs.
+- [ ] Google 2.4 "Exceptions":
+  `/app/core/agentic_kernel/companion/llm_chat_runtime.py` catches broad
+  `Exception` while reading LangSmith trace/run identifiers and silently
+  returns empty strings. Log unexpected metadata extraction failures or narrow
+  the expected attribute/key errors so trace-parent linkage is debuggable.
+- [ ] Google 2.4 "Exceptions": `/app/services/subscription_service.py`
+  suppresses rollback failures with `except Exception: pass` while recording
+  subscription usage errors. Log rollback failure context so billing/accounting
+  failures do not lose secondary database error evidence.
+
 ## 2026-05-10 scan
 
 ### Fixed in `cursor/worst-python-style-violation-b827`
@@ -33,10 +67,11 @@ maintenance agents can fix the highest-impact item first.
 
 ### Newly discovered open violations
 
-- [ ] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py`
+- [x] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py`
   catches `BaseException` in ten WebSocket bridge startup, reconnect, cleanup,
   and callback paths. Preserve thread/session isolation with narrower exception
-  handling and re-raise process-level control exceptions.
+  handling and re-raise process-level control exceptions. Fixed in
+  `cursor/worst-python-style-violation-cd9b`.
 - [ ] Google 2.4 "Exceptions": `/tools/llm.py` silently swallows multiple
   `Exception` blocks while loading LLM configuration and environment state.
   Log the suppressed failures or narrow the expected exception types.
@@ -67,9 +102,10 @@ maintenance agents can fix the highest-impact item first.
   catches `BaseException`, mutates the exception object, then suppresses
   metadata tagging errors. Avoid dynamic mutation of arbitrary exceptions and
   log secondary failures.
-- [ ] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py` uses
+- [x] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py` uses
   `assert self._response_q is not None` as a runtime precondition. Replace it
   with an explicit `RuntimeError` because optimized Python removes asserts.
+  Fixed in `cursor/worst-python-style-violation-cd9b`.
 - [ ] Google 2.5 "Mutable Global State": `/scripts/migrate_generated_images.py`
   keeps `_session_id_to_chat_cache` as mutable module-level state without an
   explicit invalidation path. Prefer caller-owned cache state or a force-reload
