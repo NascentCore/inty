@@ -7,7 +7,7 @@ description: >-
   (venv, repo-root config.yaml, tools/inty_v2_repl/.env).
 ---
 
-# Local backend + inty_v2 REPL
+# Launching local backend for running terminal REPL
 
 ## When to use
 
@@ -21,16 +21,16 @@ description: >-
 
 ## Ops 后端写文件日志（勿漏）
 
-联调时推荐 **always** 带上 **`--debug`** 与 **`--log-file`**：
+**always** 带上 **`--debug`** 与 **`--log-file`**：
 
 ```bash
 # 仓库根 cwd
-backend/ops/start.sh --local --debug --log-file ./inty-ops-local.log --no-build-frontend
+backend/ops/start.sh --local --debug --no-build-frontend --log-file ./tmp/inty-ops-local.log
 ```
 
 - **`--log-file PATH`**：由 `start.sh` 设置 `INTY_LOG_FILE`；Loguru 追加 UTF-8 文件 sink（与控制台并行）。
-- **路径规则**：`PATH` 为相对路径时相对于 **启动进程的 shell 当前目录**。上例在仓库根启动则日志文件为 **`<repo-root>/inty-ops-local.log`**（可用绝对路径避免歧义）。
-- **Agent 契约**：完成拉起 Ops 后，向用户 **一句话说明日志文件完整路径**（若用 `./inty-ops-local.log` 且在仓库根启动，即仓库根下的 `inty-ops-local.log`）。
+- **路径规则**：`PATH` 为相对路径时相对于 **启动进程的 shell 当前目录**。上例在仓库根启动则日志文件为 **`<repo-root>/tmp/inty-ops-local.log`**（可用绝对路径避免歧义）。
+- **Agent 契约**：完成拉起 Ops 后，向用户 **一句话说明日志文件完整路径**（若用 `./tmp/inty-ops-local.log` 且在仓库根启动，即仓库根下 `tmp/inty-ops-local.log`；`tmp/` 已在 `.gitignore`）。
 
 不经 `start.sh` 封装时（例如仅 `uvicorn`）：在仓库根 `.env` 或 `export` 设置 `INTY_LOG_FILE`（及可选 `INTY_LOGGING_LEVEL` / `INTY_CONSOLE_LOGGING_LEVEL`）。
 
@@ -47,3 +47,10 @@ python -m tools.inty_v2_repl.main repl ...
 ## 其它参考
 
 - 包内索引：[tools/inty_v2_repl/AGENTS.md](../../../tools/inty_v2_repl/AGENTS.md)
+
+## Final actions
+
+Report the following to the user:
+
+1. Where is the backend logs, this is for debugging
+2. How to launch terminal REPL

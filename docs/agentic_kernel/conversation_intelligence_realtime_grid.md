@@ -13,3 +13,8 @@ python3 .cursor/skills/conversation-grid-matplotlib/scripts/draw_labeled_grid.py
 Source data: [conversation_intelligence_realtime_grid.yaml](/docs/imate/conversation_intelligence_realtime_grid.yaml). Skill: [.cursor/skills/conversation-grid-matplotlib/SKILL.md](/.cursor/skills/conversation-grid-matplotlib/SKILL.md).
 
 ![conversation intelligence realtime grid](conversation_intelligence_realtime_grid.png)
+
+## See also
+
+- [IDEAS.md](IDEAS.md)：记忆管线、实验目录收口等条目与网格轴上的能力选型相关。
+- [ARCH.md](ARCH.md)：伴侣 `/api/v1/chat/ws`、`MemoryStore`、`run_turn` 等当前实现边界。
