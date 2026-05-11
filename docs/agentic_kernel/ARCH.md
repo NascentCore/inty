@@ -11,6 +11,76 @@
 - MemoryStore 与向量 LTM FR: [`/docs/imate/MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)
 - `/api/v1/chat/ws` 传输与帧约定 (English): 下文 [**WebSocket Protocol**](#websocket-protocol) 小节.
 
+## 交互式伴侣内核：结构化摘要
+
+以下为基于已读代码的结构化说明（未展开阅读的实现细节标为「未在已读代码中确认」）。
+
+### 1. 一句话
+
+交互式伴侣内核是在 App 通过 **`/api/v1/chat/ws` 长连接**与后端对话时启用的路径：以 **`MemoryStore` 持久化工作区文档与 transcript**、由 **`CompanionManager`/`run_turn`** 驱动前台结构化回复与可选的后台工具链，并通过 **出站队列 + pump** 把多帧业务 JSON（含前台回复、`tool_bg`、错误码）顺序推回客户端。
+
+### 2. 一段话（紧扣代码）
+
+会话逻辑文档（`IDENTITY.md`、`context.json`、`transcript.jsonl` 等）经 **`MemoryStore`**（启用 Postgres DSN 时写入 `companion_memory_document_versions`）读写；一轮推理由 **`app/core/agentic_kernel/companion/turn.py` 的 `run_turn`** 组装 system/transcript、可走 **双 LLM 前台 envelope + 异步 `tool_background` 线程**（`CompanionSession.tool_bg_idle` 协调顺序）。**WebSocket** 侧 `chat_completions_websocket`（`app/api/v1/endpoints/chat.py`）为每条业务下行使用 **`outbound_queue` + `chat_ws_outbound_pump`**，控制类帧（如 `ping`/`pong`、`user_signed_on_ack`）文档说明为不走该队列；前台回合在 **`companion_turn_lock`** 内调用 **`_agent_chat_completions_impl`**（`chat_route="websocket"`），其中 **`companion_chat_service.run_companion_chat_turn_for_api`** 接入 **`CompanionManager`**；后台工具完成时通过 **`companion_background_sink` → `bg_queue`** 再组装 **`_build_companion_tool_background_ws_payload`** 入队。**`tools/inty_v2_repl`** 用 **`BackendChatWsBridge`** 在独立线程里维护 WebSocket，上行 **`ChatWebSocketRequest` JSON**（`post_turn`/`send_turn`），下行 **`code` 业务帧**进入队列并在终端打印——只做传输与日志，**不实现伴侣推理**（README 写明 companion 代码在 `app/core/agentic_kernel/companion/`）。
+
+### 3. 要点列表（产品向）
+
+- **长连接文本对话（伴侣内核）**：仅 WebSocket 路径启用 companion；HTTP 同路由走旧 **`agent.chat`**。
+- **上线 / 隐式问候**：控制帧 **`user_signed_on`**、聊天帧 **`messageType: IMPLICIT_USER_SIGNED_ON`**（及 REPL 首次连接组合行为）。
+- **分层持久「档案」与 transcript**：工作区逻辑路径 + **日记/摘要/语义记忆管线**（文档见 `companion/AGENTS.md`）。
+- **工具调用、后台工具与生图元数据**：前台一帧后可跟 **`tool_bg`** 等额外下行；`meta_data` 可含 **`generated_image`**、significance 等。
+- **语音回复**：按聊天设置与 companion 的 **`reply_modality` / `voice_message_script`** 走 **`synthesize_chat_assistant_audio`**。
+- **主动心跳与维护性内在节拍（inner tick）**：配置项开启时由 **`companion_ws_inner_tick_worker`** 周期尝试触发。
+- **订阅用量、聊天入库、运营类投递**：用量记录、**`chat_history`** 持久化；满足版本门控时 **节日/日常记忆提示** 投递；以及推送已读、Surprise Snap 等（与 HTTP 路径共用大量 `_agent_chat_completions_impl` 尾部逻辑）。
+
+### 4. 各功能 ↔ 架构要点
+
+#### 长连接文本对话（伴侣内核）
+
+- **`app/api/v1/endpoints/chat.py`**：`@router.websocket("/ws")` → **`chat_completions_websocket`**；鉴权 **`_get_current_user_from_websocket`**（含 **`assume_user_id`** 扮演用户）；业务响应 **`outbound_queue.put`**。
+- **`_agent_chat_completions_impl`**：`chat_route == "websocket"` 时 **`use_companion = True`**，调用 **`companion_chat_service.run_companion_chat_turn_for_api`**；WebSocket 要求 **`message_id` 可解析为 UUID**（**`_require_websocket_companion_message_id_uuid`**）。
+- **`app/core/agentic_kernel/companion/manager.py`**：**`CompanionManager.run_turn`** → **`turn.run_turn`**；**`get_memory_store`** 绑定会话 scope。
+- **并发**：**`companion_turn_lock`** 包裹整轮 `_agent_chat_completions_impl` 中的 companion 调用；与 **`bg_queue`** 并行接收（`asyncio.wait` 二选一）。
+
+#### 上线 / 隐式问候
+
+- **`chat.py`**：**`_handle_chat_websocket_control_json`**（`ping`/`pong`、`client_context`）、**`_try_handle_ws_user_signed_on_frame`** / **`_try_handle_ws_user_signed_out_frame`**；**`ImplicitSignalBundle`** + **`IMPLICIT_USER_SIGNED_ON`** 分支。
+- **`tools/inty_v2_repl/backend_chat_ws.py`**：首次连接 **`_ws_user_signed_on_json`**（含 **`implicit_greeting`**）；**`AGENTS.md`** 描述随后 **`IMPLICIT_USER_SIGNED_ON`** 聊天帧。
+- **`app/core/agentic_kernel/companion/implicit_signal_messages.py`**：隐式信号作为 transcript 中的用户线处理（细节以该模块为准）。
+
+#### 分层持久档案与 transcript
+
+- **`memory_store.py`** / **`memory_registry.py`**：进程内 registry + **append-only** 文档版本。
+- **`memory_pipeline.py`**、**`memory_taxonomy.py`**：分层记忆路径与写入（见 **`companion/AGENTS.md`** 表格）。
+- **API**：**`run_companion_chat_turn_for_api`** 使用 **`defer_memory_update=True`**（记忆管线更新时机以 **`companion_chat_service`** 内实现为准；未在此逐行读完则不作细节断言）。
+
+#### 工具调用、后台工具、图像元数据
+
+- **`app/core/agentic_kernel`**：**`tool_background.py`**、**`tool_bg_routing.py`**、**`AGENTS.md`** 所述 **双 LLM envelope** 与 **`TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`** 顺序。
+- **`chat.py`**：前台异常若 **`companion_tool_background_started`** 仍为 true，可保留 **`ws_fg_pending`** 项并补 persist user 消息 id；**`companion_bg_sink`** 把 **`ToolOutputEvent`** 投递到 **`bg_queue`**，再 **`_build_companion_tool_background_ws_payload`**。
+- **前台模型 vs 工具模型**：**`app/services/companion_chat_service`** + 配置 **`companion_tool_call_model`**（见 **`app/core/agentic_kernel/AGENTS.md`** 引用链）；具体默认值以 **`global_config_loaded_from_config_yaml`** 为准。
+
+#### 语音回复
+
+- **`chat.py`**：companion 分支得到 **`companion_reply_modality`**、**`companion_voice_script`** 后调用 **`synthesize_chat_assistant_audio`**（**`use_companion=True`**）。
+- **`VoiceService`** 依赖注入与 **`chat_settings.voice_enabled`** / **`voice_id`** 等一同传入。
+
+#### 主动心跳与维护性 inner tick
+
+- **`chat.py`**：**`companion_ws_inner_tick_worker`** 轮询配置 **`companion_ws_proactive_heartbeat_poll_seconds`**；分别调用 **`_try_fire_companion_ws_proactive_heartbeat`**、**`_try_fire_companion_ws_maintenance_inner_tick`**（需 **`companion_hb_ctx`** 已由 **`user_signed_on` 等路径填充**——具体填充函数未在本次完整通读）。
+- **`companion/heartbeat.py`**、**`inner_tick_schedule.py`**：节拍与时间间隔辅助（与 WS worker 的配合细节未在本次全部展开）。
+
+#### 订阅用量、历史、节日/日常记忆、推送已读、Surprise Snap
+
+- **用量**：**`subscription_svc.check_chat_limit`** / **`record_usage`**（隐式上线回合同样计入 usage，代码注释 **TODO** 说明产品日后或可豁免）。
+- **历史**：**`chat_history_service.add_ai_message_sync_async`**，**`meta_data`** 来自 **`_companion_ai_meta_from_turn_result`**。
+- **节日/日常记忆**：**`is_festival_memory_enabled`** / **`is_daily_memory_enabled`**（依赖 **`appVersionCode`**）→ **`deliver_festival_memories_for_user_agent`** / **`deliver_daily_memories_for_user_agent`**。
+- **推送已读**：**`mark_user_push_notifications_as_read`**。
+- **Surprise Snap**：**`try_trigger_surprise_snap`**。
+- **说明**：**付费预览（premium preview）** 在 **`not use_companion`** 条件下触发（**`_agent_chat_completions_impl`**），故 **伴侣 WebSocket 路径未走该块**。
+
+**未在已读代码中确认**：`_try_fire_companion_ws_proactive_heartbeat` / `_companion_ws_store_hb_coords` 的完整字段与触发条件；`_build_companion_tool_background_ws_payload` 内字段全集；`run_companion_chat_turn_for_api` 在 **`defer_memory_update=True`** 下记忆管线何时 flush 的精确时序。
+
 ## 范围与边界
 
 | 区域 | 当前事实 |
