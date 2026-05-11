@@ -9,6 +9,7 @@
 - Companion 包内说明: [`/app/core/agentic_kernel/companion/README.md`](/app/core/agentic_kernel/companion/README.md)
 - 分层记忆说明: [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)
 - MemoryStore 与向量 LTM FR: [`/docs/imate/MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)
+- `/api/v1/chat/ws` 传输与帧约定 (English): 下文 [**WebSocket Protocol**](#websocket-protocol) 小节.
 
 ## 范围与边界
 
@@ -20,6 +21,31 @@
 | `/api/v1/chat/ws/verify` | 共用 WebSocket 出站队列和 pump, 但只做单次 `chat.completions`; 不经过 `CompanionManager` / `run_turn`, 不写 chat_history。 |
 | WebSocket companion 连接 | 每个连接用 `companion_turn_lock` 串行化普通用户回合、proactive heartbeat 和 async tool background 补帧落库; assistant 业务帧仍经 outbound queue。 |
 | `runtime/TurnOrchestrator` | 是通用 turn 合同和实验桥使用的并行管线, 当前生产 companion 主链路不经过它。 |
+
+## WebSocket Protocol
+
+English summary of **`/api/v1/chat/ws`** transport and framing (implementation: [`chat.py`](/app/api/v1/endpoints/chat.py); schema: [`ChatWebSocketRequest`](/app/schemas/chat.py)). This does **not** describe `/api/v1/live-chat/{agent_id}` (Gemini Live audio).
+
+**Handshake and auth.** After `websocket.accept()`, the server resolves the user from `Authorization: Bearer <token>` or query `token`. On failure the socket closes with code **4001**. Optional query **`assume_user_id`** applies only when the bearer user is a **superuser** (same idea as HTTP `X-Assume-User-Id` for evaluation).
+
+**Outbound (two paths).**
+
+- **Business JSON** — Assistant payloads, error envelopes mapped from HTTP semantics, and optional async **tool background** (`tool_bg`) assistant frames are pushed to a per-connection **`asyncio.Queue`**. [`chat_ws_outbound_pump`](/app/services/chat_websocket_session.py) drains it and calls `send_json` in **strict FIFO** order.
+- **Wire control** — Frames that only acknowledge transport or session metadata **bypass** that queue and are sent directly (e.g. `pong`, `client_context_ack`, `user_signed_on_ack`, `user_signed_out_ack`). This separates link/time-context handling from the dialogue FIFO.
+
+**Inbound text frames.** JSON is parsed and dispatched in this order:
+
+1. **`user_signed_on`** / **`user_signed_out`** — Companion session control (heartbeat coordinates, optional implicit greeting after sign-on, sign-out line in MemoryStore). May respond `ok: false` with `reason` when unsupported.
+2. **Light control** — `ping` → `pong`; `client_context` with `time_context` (`UserTimeContext`) → `client_context_ack`; last successful context is reused if later chat frames omit `time_context`.
+3. **Chat** — Must validate as **`ChatWebSocketRequest`**: top-level `agent_id` plus embedded **`ChatCompletionRequest`** as `request`. Handed to **`_agent_chat_completions_impl(..., chat_route="websocket")`** for persisted companion turns.
+
+**Companion-specific rules.** Production expects **`request.message_id`** as an **RFC4122 UUID** (transcript / correlation). Optional **`request.messageType`**: `USER_MESSAGE` (default) or `IMPLICIT_USER_SIGNED_ON` (implicit open-chat signal; validation and PostgreSQL user-row rules per schema). Optional header **`appVersionCode`** for version gating.
+
+**Receive loop.** The route **`asyncio.wait`**s on **`receive_text()`** (subject to configurable **idle timeout** — connection closes on timeout; **`ping` counts as uplink activity**) and **`bg_queue`**, where the background tool thread posts **`ToolOutputEvent`** via **`companion_bg_sink`**. Tool completion correlates with **`ws_fg_pending`** by `user_msg_uuid`, builds a normal assistant-shaped payload, then **enqueues** it (never bypassing the business FIFO).
+
+**Background tasks.** A connection-scoped worker may run **proactive heartbeat** and **maintenance inner tick** when feature flags allow; eligible turns enqueue assistant frames through the **same outbound queue**.
+
+**`/api/v1/chat/ws/verify`.** Same queue + pump and frame shapes for connectivity checks; uses a **minimal** completion path and **does not** write `chat_history`. **`user_signed_on`** returns `not_supported` when heartbeat context is not wired.
 
 ## 生产消息路径
 
