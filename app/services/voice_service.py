@@ -45,6 +45,7 @@ from app.external_services.gcs import (
     GCS_PUBLIC_HTTPS_PREFIX,
     get_bucket_and_path_from_gcs_url,
 )
+from app.external_services.fakes.tts import FakeTextToSpeechAPI
 from app.services.gcs_service import GCSService
 
 # 性别到音色ID的映射
@@ -140,10 +141,14 @@ class VoiceService:
     def __init__(self):
         self.config = global_config_loaded_from_config_yaml.elevenlabs
         self.gcs_service = GCSService()
-        # 语音元数据（音色列表/详情）来自 ElevenLabs 和 Gemini 预置音色；
-        # 语音生成根据 voice_id 自动选择对应的 TTS 服务（Gemini 或 ElevenLabs）。
-        self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
-        self.gemini_tts_api = GeminiTTSAPI()
+        if global_config_loaded_from_config_yaml.tts.use_fake_tts:
+            self.tts_api = FakeTextToSpeechAPI()
+            self.gemini_tts_api = FakeTextToSpeechAPI()
+        else:
+            # 语音元数据（音色列表/详情）来自 ElevenLabs 和 Gemini 预置音色；
+            # 语音生成根据 voice_id 自动选择对应的 TTS 服务（Gemini 或 ElevenLabs）。
+            self.tts_api = ElevenLabsTTSAPI(api_key=self.config.api_key)
+            self.gemini_tts_api = GeminiTTSAPI()
 
     async def _resolve_model_and_source(
         self,

@@ -63,10 +63,11 @@ class User(Base):
 
     @validates("phone")
     def validate_phone(self, key, value):
-        logger.warning(
-            "The 'phone' is added without a clear plan to be used. Please do not use it. Ask @yaxiong if you need phone.",
-            DeprecationWarning,
-        )
+        if value:
+            logger.warning(
+                "The 'phone' is added without a clear plan to be used. Please do not use it. Ask @yaxiong if you need phone.",
+                DeprecationWarning,
+            )
         return value
 
     phone = Column(String, unique=True, comment="手机号码，唯一，用于登录")
