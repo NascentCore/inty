@@ -36,6 +36,10 @@ maintenance agents can fix the highest-impact item first.
   used `assert self._response_q is not None` as a runtime precondition in the
   reader loop. The bridge now raises an explicit `RuntimeError` because
   optimized Python can remove asserts.
+- [x] Google 2.4 "Exceptions": `/tools/inty_v2_repl/backend_chat_ws.py`
+  silently treated thread-safe queued pop failures as "no message" with a broad
+  `except Exception`. The non-blocking REPL isolation point still suppresses
+  the failure but now records it in logs.
 
 ### Newly discovered open violations
 

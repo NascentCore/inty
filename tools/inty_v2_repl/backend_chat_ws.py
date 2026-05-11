@@ -296,6 +296,7 @@ class BackendChatWsBridge:
         try:
             raw = fut.result(timeout=3.0)
         except Exception:
+            logger.exception("chat ws queued pop failed")
             return None, None, {}
         if raw is None:
             return None, None, {}
