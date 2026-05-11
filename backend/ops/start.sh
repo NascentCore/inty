@@ -39,14 +39,20 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       echo "Usage: $0 [--local|--dev] [--debug] [--log-file PATH] [--build-frontend|--no-build-frontend]"
-      echo "  With --local|--dev only (ignored otherwise):"
+      echo ""
+      echo "  Always (before uvicorn): alembic upgrade head (see ALEMBIC_CONFIG / repo alembic/alembic.ini)."
+      echo "  Listen port: \${PORT:-8001}."
+      echo ""
+      echo "  Flags (any mode):"
+      echo "  --debug         Loguru + uvicorn DEBUG (INTY_LOGGING_LEVEL)"
+      echo "  --log-file PATH Append UTF-8 logs to PATH (INTY_LOG_FILE). With --debug: console INFO"
+      echo "                  (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
+      echo ""
+      echo "  Flags (--local|--dev only):"
       echo "  --build-frontend     Run evaluation/build.sh before uvicorn (default: on)"
       echo "  --no-build-frontend  Skip that step; use existing app/static/evaluation"
-      echo "  --local|--dev   Dev/local mode: seed admin + report fixtures, uvicorn --reload"
-      echo "                  JWT for user-testing -> \${INTY_OPS_BEARER_TOKEN_FILE:-<repo>/.inty_ops_bearer_token}"
-      echo "  --debug         Loguru + uvicorn log level DEBUG (via INTY_LOGGING_LEVEL)"
-      echo "  --log-file PATH Also write logs to PATH (via INTY_LOG_FILE; UTF-8 append)."
-      echo "                  With --debug: stderr INFO (INTY_CONSOLE_LOGGING_LEVEL), file DEBUG."
+      echo "  --local|--dev        Seed admin + report fixtures, uvicorn --reload;"
+      echo "                       JWT for user-testing -> \${INTY_OPS_BEARER_TOKEN_FILE:-<repo>/.inty_ops_bearer_token}"
       exit 0
       ;;
     *)
@@ -89,7 +95,9 @@ if [ "$LOCAL" = true ]; then
   OPS_BEARER_TOKEN_FILE="${INTY_OPS_BEARER_TOKEN_FILE:-$REPO_ROOT/.inty_ops_bearer_token}"
   echo "创建测试用管理员账户用于在 ops 平台登陆访问"
   python scripts/init_admin_user.py --user-id user-testing --is-superuser=true --token-file "$OPS_BEARER_TOKEN_FILE"
-  chmod 600 "$OPS_BEARER_TOKEN_FILE" 2>/dev/null || true
+  if ! chmod 600 "$OPS_BEARER_TOKEN_FILE" 2>/dev/null; then
+    echo "warning: could not chmod 600 $OPS_BEARER_TOKEN_FILE" >&2
+  fi
   echo "本地测试 JWT 已写入: $OPS_BEARER_TOKEN_FILE（可与 INTY_BEARER_TOKEN / INTY_ACCESS_TOKEN 互换使用）"
 
   echo "Seeding report test data..."

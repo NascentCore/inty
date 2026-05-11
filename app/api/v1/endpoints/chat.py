@@ -65,6 +65,7 @@ from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.agentic_kernel.companion.utc import utc_iso_ts
 from app.core.agentic_kernel.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,
+    apply_companion_ws_heartbeat_coords,
 )
 from app.core.model_selection import select_chat_model
 from app.models.user import AuthType, User
@@ -1038,29 +1039,6 @@ async def _build_companion_tool_background_ws_payload(
     return out
 
 
-def _companion_ws_store_hb_coords(
-    hb_ctx: dict[str, Any],
-    *,
-    user_id: Any,
-    agent_id: str,
-    chat_id: Any,
-) -> None:
-    """Replace in-connection inner-tick workspace coordinates (proactive + maintenance)."""
-    prev_user = hb_ctx.get("user_id")
-    prev_agent = hb_ctx.get("agent_id")
-    prev_chat = hb_ctx.get("chat_id")
-    prev_mono = hb_ctx.get("_last_maintenance_inner_tick_monotonic")
-    hb_ctx.clear()
-    hb_ctx.update({"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id})
-    same_coords = (
-        str(prev_user or "") == str(user_id or "")
-        and str(prev_agent or "") == str(agent_id or "")
-        and str(prev_chat or "") == str(chat_id or "")
-    )
-    if same_coords and prev_mono is not None:
-        hb_ctx["_last_maintenance_inner_tick_monotonic"] = prev_mono
-
-
 def _companion_ai_meta_from_turn_result(
     companion_turn: CompanionTurnResult,
 ) -> dict[str, Any]:
@@ -1936,7 +1914,7 @@ async def _agent_chat_completions_impl(
                         companion_ws_heartbeat_ctx is not None
                         and chat_route == "websocket"
                     ):
-                        _companion_ws_store_hb_coords(
+                        apply_companion_ws_heartbeat_coords(
                             companion_ws_heartbeat_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,

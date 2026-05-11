@@ -24,10 +24,3 @@ class ReplDownlinkWsError(TypedDict):
 
 
 ReplDownlinkItem = ReplDownlinkAssistant | ReplDownlinkWsError
-
-
-class ReplInboundUserLine(TypedDict):
-    """One logical user line from stdin (duplex queue or direct read)."""
-
-    kind: Literal["user_line"]
-    text: str
