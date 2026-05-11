@@ -284,7 +284,7 @@ async def run_turn(
         paths=paths,
         store=store,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
+        route_inner_mode=route_inner_mode,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
     )
     context = loaded_state.context
