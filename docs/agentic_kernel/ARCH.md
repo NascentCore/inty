@@ -1,31 +1,23 @@
 # iMate / Agentic Companion: 当前架构
 
-本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师。它描述仓库当前实现, 重点回答四件事: 客户端消息如何进入 `/api/v1/chat/ws`, 生产 companion 回合如何由 `run_turn` 执行, dual-LLM structured envelope 如何成为前台回复与重要性评分的统一合同, 以及长期记忆和工作区文档如何成为一个虚拟伴侣的状态来源。本文不是未来设计稿, 也不把 legacy HTTP chat completions 路径描述为 agentic companion 主路径。
+本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师。
 
-- 生产 WebSocket 入口: [`/app/api/v1/endpoints/chat.py`](/app/api/v1/endpoints/chat.py) 的 `_agent_chat_completions_impl`
-- API 与帧约定: [`/app/api/AGENTS.md`](/app/api/AGENTS.md)
-- Companion API 适配层: [`/app/services/companion_chat_service.py`](/app/services/companion_chat_service.py)
-- Companion kernel 主执行器: [`/app/core/agentic_kernel/companion/turn.py`](/app/core/agentic_kernel/companion/turn.py)
-- Companion 包内说明: [`/app/core/agentic_kernel/companion/README.md`](/app/core/agentic_kernel/companion/README.md)
-- 分层记忆说明: [`/docs/imate/MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)
-- MemoryStore 与向量 LTM FR: [`/docs/imate/MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)
+- 实现链条: [`chat.py`](/app/api/v1/endpoints/chat.py) `_agent_chat_completions_impl` · [`companion_chat_service`](/app/services/companion_chat_service.py) · [`turn.run_turn`](/app/core/agentic_kernel/companion/turn.py) · 帧与契约 [`app/api/AGENTS.md`](/app/api/AGENTS.md)
+- 分层记忆说明: [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)
+- MemoryStore 与向量 LTM: [`MEMORY_STORE.md`](/docs/agentic_kernel/MEMORY_STORE.md)
 - `/api/v1/chat/ws` 传输与帧约定 (English): 下文 [**WebSocket Protocol**](#websocket-protocol) 小节.
 
-## 交互式伴侣内核：结构化摘要
-
-以下为基于已读代码的结构化说明（未展开阅读的实现细节标为「未在已读代码中确认」）。
-
-### 1. 一句话
+## 一句话总结
 
 交互式伴侣内核是在 App 通过 **`/api/v1/chat/ws` 长连接**与后端对话时启用的路径：以 **`MemoryStore` 持久化工作区文档与 transcript**、由 **`CompanionManager`/`run_turn`** 驱动前台结构化回复与可选的后台工具链，并通过 **出站队列 + pump** 把多帧业务 JSON（含前台回复、`tool_bg`、错误码）顺序推回客户端。
 
-### 2. 一段话（紧扣代码）
+## 一段话描述
 
 会话逻辑文档（`IDENTITY.md`、`context.json`、`transcript.jsonl` 等）经 **`MemoryStore`**（启用 Postgres DSN 时写入 `companion_memory_document_versions`）读写；一轮推理由 **`app/core/agentic_kernel/companion/turn.py` 的 `run_turn`** 组装 system/transcript、可走 **双 LLM 前台 envelope + 异步 `tool_background` 线程**（`CompanionSession.tool_bg_idle` 协调顺序）。**WebSocket** 侧 `chat_completions_websocket`（`app/api/v1/endpoints/chat.py`）为每条业务下行使用 **`outbound_queue` + `chat_ws_outbound_pump`**，控制类帧（如 `ping`/`pong`、`user_signed_on_ack`）文档说明为不走该队列；前台回合在 **`companion_turn_lock`** 内调用 **`_agent_chat_completions_impl`**（`chat_route="websocket"`），其中 **`companion_chat_service.run_companion_chat_turn_for_api`** 接入 **`CompanionManager`**；后台工具完成时通过 **`companion_background_sink` → `bg_queue`** 再组装 **`_build_companion_tool_background_ws_payload`** 入队。**`tools/inty_v2_repl`** 用 **`BackendChatWsBridge`** 在独立线程里维护 WebSocket，上行 **`ChatWebSocketRequest` JSON**（`post_turn`/`send_turn`），下行 **`code` 业务帧**进入队列并在终端打印——只做传输与日志，**不实现伴侣推理**（README 写明 companion 代码在 `app/core/agentic_kernel/companion/`）。
 
-### 3. 要点列表（产品向）
+## 产品要点功能列表
 
-- **长连接文本对话（伴侣内核）**：仅 WebSocket 路径启用 companion；HTTP 同路由走旧 **`agent.chat`**。
+- **长连接文本对话（伴侣内核）**：仅 WebSocket 路径启用 companion；**`POST /api/v1/chat/completions/{agent_id}`** 走 legacy **`Agent`** 栈（非 companion 内核）。
 - **上线 / 隐式问候**：控制帧 **`user_signed_on`**、聊天帧 **`messageType: IMPLICIT_USER_SIGNED_ON`**（及 REPL 首次连接组合行为）。
 - **分层持久「档案」与 transcript**：工作区逻辑路径 + **日记/摘要/语义记忆管线**（文档见 `companion/AGENTS.md`）。
 - **工具调用、后台工具与生图元数据**：前台一帧后可跟 **`tool_bg`** 等额外下行；`meta_data` 可含 **`generated_image`**、significance 等。
@@ -33,44 +25,44 @@
 - **主动心跳与维护性内在节拍（inner tick）**：配置项开启时由 **`companion_ws_inner_tick_worker`** 周期尝试触发。
 - **订阅用量、聊天入库、运营类投递**：用量记录、**`chat_history`** 持久化；满足版本门控时 **节日/日常记忆提示** 投递；以及推送已读、Surprise Snap 等（与 HTTP 路径共用大量 `_agent_chat_completions_impl` 尾部逻辑）。
 
-### 4. 各功能 ↔ 架构要点
+## 各功能 ↔ 架构要点
 
-#### 长连接文本对话（伴侣内核）
+### 长连接文本对话（伴侣内核）
 
 - **`app/api/v1/endpoints/chat.py`**：`@router.websocket("/ws")` → **`chat_completions_websocket`**；鉴权 **`_get_current_user_from_websocket`**（含 **`assume_user_id`** 扮演用户）；业务响应 **`outbound_queue.put`**。
 - **`_agent_chat_completions_impl`**：`chat_route == "websocket"` 时 **`use_companion = True`**，调用 **`companion_chat_service.run_companion_chat_turn_for_api`**；WebSocket 要求 **`message_id` 可解析为 UUID**（**`_require_websocket_companion_message_id_uuid`**）。
 - **`app/core/agentic_kernel/companion/manager.py`**：**`CompanionManager.run_turn`** → **`turn.run_turn`**；**`get_memory_store`** 绑定会话 scope。
 - **并发**：**`companion_turn_lock`** 包裹整轮 `_agent_chat_completions_impl` 中的 companion 调用；与 **`bg_queue`** 并行接收（`asyncio.wait` 二选一）。
 
-#### 上线 / 隐式问候
+### 上线 / 隐式问候
 
 - **`chat.py`**：**`_handle_chat_websocket_control_json`**（`ping`/`pong`、`client_context`）、**`_try_handle_ws_user_signed_on_frame`** / **`_try_handle_ws_user_signed_out_frame`**；**`ImplicitSignalBundle`** + **`IMPLICIT_USER_SIGNED_ON`** 分支。
 - **`tools/inty_v2_repl/backend_chat_ws.py`**：首次连接 **`_ws_user_signed_on_json`**（含 **`implicit_greeting`**）；**`AGENTS.md`** 描述随后 **`IMPLICIT_USER_SIGNED_ON`** 聊天帧。
 - **`app/core/agentic_kernel/companion/implicit_signal_messages.py`**：隐式信号作为 transcript 中的用户线处理（细节以该模块为准）。
 
-#### 分层持久档案与 transcript
+### 分层持久档案与 transcript
 
 - **`memory_store.py`** / **`memory_registry.py`**：进程内 registry + **append-only** 文档版本。
 - **`memory_pipeline.py`**、**`memory_taxonomy.py`**：分层记忆路径与写入（见 **`companion/AGENTS.md`** 表格）。
 - **API**：**`run_companion_chat_turn_for_api`** 使用 **`defer_memory_update=True`**（记忆管线更新时机以 **`companion_chat_service`** 内实现为准；未在此逐行读完则不作细节断言）。
 
-#### 工具调用、后台工具、图像元数据
+### 工具调用、后台工具、图像元数据
 
 - **`app/core/agentic_kernel`**：**`tool_background.py`**、**`tool_bg_routing.py`**、**`AGENTS.md`** 所述 **双 LLM envelope** 与 **`TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`** 顺序。
 - **`chat.py`**：前台异常若 **`companion_tool_background_started`** 仍为 true，可保留 **`ws_fg_pending`** 项并补 persist user 消息 id；**`companion_bg_sink`** 把 **`ToolOutputEvent`** 投递到 **`bg_queue`**，再 **`_build_companion_tool_background_ws_payload`**。
 - **前台模型 vs 工具模型**：**`app/services/companion_chat_service`** + 配置 **`companion_tool_call_model`**（见 **`app/core/agentic_kernel/AGENTS.md`** 引用链）；具体默认值以 **`global_config_loaded_from_config_yaml`** 为准。
 
-#### 语音回复
+### 语音回复
 
 - **`chat.py`**：companion 分支得到 **`companion_reply_modality`**、**`companion_voice_script`** 后调用 **`synthesize_chat_assistant_audio`**（**`use_companion=True`**）。
 - **`VoiceService`** 依赖注入与 **`chat_settings.voice_enabled`** / **`voice_id`** 等一同传入。
 
-#### 主动心跳与维护性 inner tick
+### 主动心跳与维护性 inner tick
 
 - **`chat.py`**：**`companion_ws_inner_tick_worker`** 轮询配置 **`companion_ws_proactive_heartbeat_poll_seconds`**；分别调用 **`_try_fire_companion_ws_proactive_heartbeat`**、**`_try_fire_companion_ws_maintenance_inner_tick`**（需 **`companion_hb_ctx`** 已由 **`user_signed_on` 等路径填充**——具体填充函数未在本次完整通读）。
 - **`companion/heartbeat.py`**、**`inner_tick_schedule.py`**：节拍与时间间隔辅助（与 WS worker 的配合细节未在本次全部展开）。
 
-#### 订阅用量、历史、节日/日常记忆、推送已读、Surprise Snap
+### 订阅用量、历史、节日/日常记忆、推送已读、Surprise Snap
 
 - **用量**：**`subscription_svc.check_chat_limit`** / **`record_usage`**（隐式上线回合同样计入 usage，代码注释 **TODO** 说明产品日后或可豁免）。
 - **历史**：**`chat_history_service.add_ai_message_sync_async`**，**`meta_data`** 来自 **`_companion_ai_meta_from_turn_result`**。
@@ -86,7 +78,7 @@
 | 区域 | 当前事实 |
 | --- | --- |
 | iMate Android | [`ChatWebSocketRemoteDataSource`](/imate_android_app/app/src/main/java/com/inty/imate/chat/data/datasource/ChatWebSocketRemoteDataSource.kt) 连接 `api/v1/chat/ws`, 上行聊天帧和 `user_signed_on` 控制帧, 下行由 [`ChatMainRepository`](/imate_android_app/app/src/main/java/com/inty/imate/chat/data/ChatMainRepository.kt) 写入本地消息流。 |
-| IntelliMate Android | 仍可保持主 WebSocket 连接; release 发送聊天仍以 HTTP completions 为主, debug 可走 WebSocket。具体见 [`/app/api/AGENTS.md`](/app/api/AGENTS.md)。 |
+| IntelliMate Android | 仍可保持主 WebSocket 连接；release 发送聊天仍以 HTTP completions 为主，debug 可走 WebSocket。见 [`app/api/AGENTS.md`](/app/api/AGENTS.md)。 |
 | 生产 companion 后端 | 只有 WebSocket chat route 会把一轮聊天交给 `app.core.agentic_kernel.companion`。HTTP completions 仍是 legacy agent 路径。 |
 | `/api/v1/chat/ws/verify` | 共用 WebSocket 出站队列和 pump, 但只做单次 `chat.completions`; 不经过 `CompanionManager` / `run_turn`, 不写 chat_history。 |
 | WebSocket companion 连接 | 每个连接用 `companion_turn_lock` 串行化普通用户回合、proactive heartbeat 和 async tool background 补帧落库; assistant 业务帧仍经 outbound queue。 |
@@ -165,20 +157,6 @@ flowchart LR
 
 proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_companion_ws_proactive_heartbeat`](/app/api/v1/endpoints/chat.py) 直接调用 `run_companion_chat_turn_for_api`, 传入 `inner_tick_turn=True` 和 `background_output_sink=None`, 然后由 API 层写 `chat_history` 并把 assistant 业务帧放入 outbound queue。
 
-## `app/core/agentic_kernel` 包结构
-
-| 路径 | 职责 |
-| --- | --- |
-| [`companion/`](/app/core/agentic_kernel/companion) | 生产 companion 内核。包含 `CompanionManager`, `run_turn`, prompt stack, workspace 文档, MemoryStore, tool runtime, memory pipeline, inner tick, async tool background。 |
-| [`companion/turn_engine.py`](/app/core/agentic_kernel/companion/turn_engine.py) | REPL-grade 消息组装与 transcript 写入辅助; 复用部分 prompt / transcript 约定, 但不是生产 WebSocket 主执行器。 |
-| [`contracts/turn.py`](/app/core/agentic_kernel/contracts/turn.py) | `TurnInput` / `TurnOutput` / `MessageSnapshot` 通用合同。 |
-| [`runtime/turn_orchestrator.py`](/app/core/agentic_kernel/runtime/turn_orchestrator.py) | `prepare_turn -> invoke_model -> handle_response -> persist` 的薄编排器。当前不承载生产 companion 回合。 |
-| [`bridges/experimental_bridge.py`](/app/core/agentic_kernel/bridges/experimental_bridge.py) | 把通用 `TurnOrchestrator` 暴露成实验入口。 |
-| [`llm/`](/app/core/agentic_kernel/llm) | OpenAI-compatible `chat.completions` 端口、OpenRouter tool 参数、LangSmith completion enrichment。 |
-| [`providers/`](/app/core/agentic_kernel/providers) | OpenAI-compatible 缓存客户端 [`openai_compatible_clients.py`](/app/core/agentic_kernel/providers/openai_compatible_clients.py)、[`openai_compatible.py`](/app/core/agentic_kernel/providers/openai_compatible.py)；Gemini [`gemini.py`](/app/core/agentic_kernel/providers/gemini.py)。 |
-| [`tools/`](/app/core/agentic_kernel/tools) | 通用 tool registry 和 official assistant 风格 tool loop; 与 companion 自己的 tool runtime 并存。 |
-| [`prompting/assembler.py`](/app/core/agentic_kernel/prompting/assembler.py) | LangChain 风格提示拼装线, 不是生产 companion 的主要 prompt stack。 |
-
 ## Companion 回合执行
 
 `run_companion_chat_turn_for_api` 先用 `user_id + agent_id + chat_id` 取 `CompanionSession`; 其中 API 的 `agent_id` 原样作为 companion 层的 `companion_id`。`CompanionManager` 初始化 `MemoryStore`, 写入 `context.json`, 并确保 `IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`transcript.jsonl` 五件套存在。
@@ -217,34 +195,13 @@ proactive heartbeat 不是客户端上行聊天帧: worker 通过 [`_try_fire_co
 
 后台 tool finish 的额外 no-tools routing completion 复用同一 message-level 解析 helper; 原始 tool loop assistant 文本仍以 `content` 为主, 无有效 envelope 时走保守静默 fallback。
 
-## 状态与持久化
+## Memory 状态与持久化
 
-当前 companion 的世界不是独立 world engine, 而是 `MemoryStore` 中的一组版本化文档加工具副作用。artifact、持久化表与向量 LTM（FR）汇总见 [`MEMORY_STORE.md`](/docs/imate/MEMORY_STORE.md)。
-
-| 文档或状态 | 作用 |
-| --- | --- |
-| `IDENTITY.md` | companion 身份和角色定位。 |
-| `SOUL.md` | 稳定价值观、边界、互动承诺。 |
-| `USER.md` | 对用户的长期理解。 |
-| `MEMORY.md` | 跨日语义记忆。 |
-| `memory/daily/{date}.md` | 当日逐轮情景记忆。 |
-| `memory/{date}.md` | 当日 gist 摘要。 |
-| `transcript.jsonl` | 权威对话轨迹, 也是下一轮上下文来源。 |
-| `context.json` | `ContextMeta`, 包括 `context_mode`、`user_id`、`companion_id`、`chat_id` 和 bootstrap 标志。 |
-| `.companion_*` JSON | memory pipeline 状态、context compaction 状态、schedule queue、image gate 等运行状态。 |
-
-启用 PostgreSQL DSN 时, `MemoryStore` 通过 `SqlAlchemyMemoryRepository` 写入 `companion_memory_document_versions`。同一 `(user_id, companion_id, chat_id, document_kind, calendar_date)` 下 append-only 追加版本, 读取时取最新 `sequence_id`。生产配置 `repository_only_store_text=True`, 因此 `/var/lib/inty/companion_memory_scopes/...` 是用于路径归一化的合成根, 不是权威磁盘工作区。
+详细的状态持久化机制见 [`MEMORY_STORE.md`](/docs/agentic_kernel/MEMORY_STORE.md)。
 
 ## 记忆管线
 
-分层 episodic / gist / semantic 写入与 prompt 注入综述见 [`MEMORY_PIPELINE.md`](/docs/imate/MEMORY_PIPELINE.md)。普通用户回合结束后, `schedule_memory_update_after_turn` 默认异步执行:
-
-1. 追加情景记忆: `memory/daily/{date}.md`
-2. 按节拍重写单日摘要: `memory/{date}.md`
-3. 按节拍重写语义记忆: `MEMORY.md`
-4. 按节拍策展 `USER.md` 和 `SOUL.md`
-
-`context_mode` 由 [`experience_profile.py`](/app/core/agentic_kernel/experience_profile.py) 规范化, 并决定是否把私人记忆层注入 system prompt。内在节拍回合用于维护和主动心跳, 不触发普通记忆管线。
+分层 episodic / gist / semantic 写入与 prompt 注入综述见 [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)。
 
 ## 架构批判
 
