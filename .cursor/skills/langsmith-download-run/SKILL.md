@@ -28,7 +28,7 @@ Inty YAML does **not** define LangSmith API host; for EU / self-hosted, set **`L
 
 ## Preferred: repo helper script
 
-Run from **repo root** so default `--config config.yaml` resolves.
+Helper: [`scripts/download_run.py`](../../../scripts/download_run.py). Run from **repo root** so default `--config config.yaml` resolves.
 
 ### Full trace (default for「下载 / download LangSmith trace」)
 
@@ -37,7 +37,7 @@ Trace mode lists **all runs** with the same `trace_id` (every nested span is one
 ```bash
 source .venv/bin/activate
 
-python .cursor/skills/langsmith-download-run/scripts/download_run.py \
+python scripts/download_run.py \
   --trace-id "<TRACE_UUID>" \
   -o tmp/langsmith_traces/<TRACE_UUID>.json
 ```
@@ -45,7 +45,7 @@ python .cursor/skills/langsmith-download-run/scripts/download_run.py \
 If the user only has **some run id** from the UI (any span in the trace):
 
 ```bash
-python .cursor/skills/langsmith-download-run/scripts/download_run.py \
+python scripts/download_run.py \
   "<ANY_RUN_UUID_IN_TRACE>" \
   --entire-trace \
   -o tmp/langsmith_traces/from_run_<ANY_RUN_UUID_IN_TRACE>.json
@@ -62,16 +62,16 @@ Output JSON shape:
 ### Single run (one UUID)
 
 ```bash
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> \
+python scripts/download_run.py <RUN_ID> \
   -o tmp/langsmith_runs/<RUN_ID>.json
 
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> --verbose \
+python scripts/download_run.py <RUN_ID> --verbose \
   -o tmp/langsmith_runs/<RUN_ID>.json
 
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> \
+python scripts/download_run.py <RUN_ID> \
   --config /path/to/config.yaml -o tmp/langsmith_runs/<RUN_ID>.json
 
-python .cursor/skills/langsmith-download-run/scripts/download_run.py <RUN_ID> \
+python scripts/download_run.py <RUN_ID> \
   --load-child-runs -o tmp/langsmith_runs/<RUN_ID>.json
 ```
 
