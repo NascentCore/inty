@@ -5,7 +5,7 @@ Axes: x = 弱智能 / 适中 / 强智能 (columns); y = 慢实时 / 适中实时
 **Figure (matplotlib + YAML):** regenerate with
 
 ```bash
-python3 .cursor/skills/conversation-grid-matplotlib/scripts/draw_labeled_grid.py \
+python3 scripts/draw_labeled_grid.py \
   docs/agentic_kernel/conversation_intelligence_realtime_grid.yaml \
   -o docs/agentic_kernel/conversation_intelligence_realtime_grid.png
 ```
