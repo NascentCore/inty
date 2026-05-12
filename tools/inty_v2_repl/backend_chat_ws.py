@@ -13,17 +13,22 @@ import os
 import threading
 import time
 import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from collections.abc import Callable
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
+from zoneinfo import ZoneInfo
 
 import websockets
 from websockets.exceptions import ConnectionClosed
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
     CompanionChatTurnMessageType,
+    UserTimeContext,
 )
 from app.schemas.chat_websocket import (
     ChatWebSocketRequest,
@@ -38,6 +43,20 @@ class BackendChatWsError(RuntimeError):
         self.agent_message = message
         self.agent_id = agent_id
         super().__init__(f"chat ws error code={code} message={message!r}")
+
+
+def default_ws_conn_dropped_ack_timeout_sec() -> float:
+    return float(
+        global_config_loaded_from_config_yaml.inty_v2_repl.ws_conn_dropped_ack_timeout_sec
+    )
+
+
+def _ws_close_reason_text(reason: object | None) -> str:
+    if reason is None:
+        return ""
+    if isinstance(reason, bytes):
+        return reason.decode("utf-8", errors="replace")
+    return str(reason)
 
 
 def _ws_user_signed_on_json(
@@ -56,13 +75,45 @@ def _ws_user_signed_on_json(
     return json.dumps(payload)
 
 
-def http_base_to_ws_chat_url(http_base: str, *, agent_id: str | None = None) -> str:
+def _ws_conn_dropped_json(
+    agent_id: str,
+    *,
+    dropped_at_utc: str,
+    message_id: str,
+    ws_close_code: int | None,
+    ws_close_reason: str,
+) -> str:
+    payload: dict[str, Any] = {
+        "type": "ws_conn_dropped",
+        "agent_id": agent_id.strip(),
+        "dropped_at_utc": dropped_at_utc,
+        "message_id": message_id,
+    }
+    if ws_close_code is not None:
+        payload["ws_close_code"] = ws_close_code
+    if ws_close_reason.strip():
+        payload["ws_close_reason"] = ws_close_reason.strip()
+    return json.dumps(payload)
+
+
+def http_base_to_ws_chat_url(
+    http_base: str,
+    *,
+    agent_id: str | None = None,
+    ws_conn_id: str | None = None,
+) -> str:
     base = http_base.strip().rstrip("/")
     ws_base = base.replace("http://", "ws://").replace("https://", "wss://")
     url = f"{ws_base}/api/v1/chat/ws"
+    params: list[tuple[str, str]] = []
     aid = (agent_id or "").strip()
     if aid:
-        url = f"{url}?agent_id={aid}"
+        params.append(("agent_id", aid))
+    wcid = (ws_conn_id or "").strip()
+    if wcid:
+        params.append(("ws_conn_id", wcid))
+    if params:
+        url = f"{url}?{urlencode(params)}"
     return url
 
 
@@ -84,7 +135,9 @@ def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, A
         if not isinstance(msg, str):
             msg = str(msg)
         aid = data.get("agent_id")
-        raise BackendChatWsError(int(code), msg, agent_id=str(aid) if aid is not None else None)
+        raise BackendChatWsError(
+            int(code), msg, agent_id=str(aid) if aid is not None else None
+        )
     inner = data.get("data") or {}
     choices = inner.get("choices") or []
     if not choices:
@@ -109,6 +162,47 @@ def _agent_id_from_ws_url(ws_url: str) -> str | None:
     return aid or None
 
 
+def _iana_tz_name_best_effort(now: datetime) -> str | None:
+    """Resolve an IANA zone name when possible; macOS may lack a zoneinfo symlink."""
+    tz_env = os.environ.get("TZ", "").strip()
+    if tz_env:
+        return tz_env
+    zi = now.tzinfo
+    if isinstance(zi, ZoneInfo):
+        return zi.key
+    try:
+        localtime = Path("/etc/localtime")
+        if localtime.is_symlink():
+            parts = localtime.resolve().parts
+            if "zoneinfo" in parts:
+                i = parts.index("zoneinfo")
+                tail = parts[i + 1 :]
+                if tail:
+                    return "/".join(tail)
+    except OSError:
+        pass
+    return None
+
+
+def build_ws_user_time_context_now() -> UserTimeContext:
+    """Wall-clock context for ``time_context`` / ``client_context`` (local offset + optional IANA name)."""
+    now = datetime.now().astimezone()
+    off = now.utcoffset()
+    utc_mins = int(off.total_seconds() // 60) if off is not None else None
+    tz_name = _iana_tz_name_best_effort(now)
+    return UserTimeContext(
+        local_time=now.isoformat(timespec="milliseconds"),
+        timezone=tz_name,
+        utc_offset_minutes=utc_mins,
+    )
+
+
+def _ws_client_context_json() -> str:
+    tc = build_ws_user_time_context_now()
+    blob = tc.model_dump(by_alias=True, exclude_none=True)
+    return json.dumps({"type": "client_context", "time_context": blob})
+
+
 def _ws_chat_turn_send_payload(
     agent_id: str,
     user_text: str,
@@ -127,6 +221,7 @@ def _ws_chat_turn_send_payload(
             messages=[ChatMessage(role="user", content=user_text)],
             message_id=mid,
             message_type=companion_turn_message_type,
+            user_time_context=build_ws_user_time_context_now(),
         ),
     )
     return mid, req.model_dump_json(by_alias=True)
@@ -231,7 +326,11 @@ class BackendChatWsBridge:
         self._reconnect_max = default_reconnect_max_sec()
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
-        self._user_signed_on_sent_once: bool = False
+        self._implicit_greeting_sent: bool = False
+        self._pending_ws_drop: dict[str, Any] | None = None
+        self._pending_ws_conn_dropped_ack_fut: asyncio.Future[dict[str, Any]] | None = (
+            None
+        )
 
     def start(self, *, connect_timeout: float = 30.0) -> None:
         if self._thread is not None:
@@ -245,7 +344,9 @@ class BackendChatWsBridge:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 self._loop = loop
-                loop.run_until_complete(self._run_session(connect_timeout=connect_timeout))
+                loop.run_until_complete(
+                    self._run_session(connect_timeout=connect_timeout)
+                )
             except Exception as exc:
                 self._start_error = exc
                 logger.exception("backend chat ws thread failed: {}", exc)
@@ -266,7 +367,9 @@ class BackendChatWsBridge:
                 self._ws = None
                 self._ready.set()
 
-        self._thread = threading.Thread(target=thread_main, name="inty-v2-chat-ws", daemon=True)
+        self._thread = threading.Thread(
+            target=thread_main, name="inty-v2-chat-ws", daemon=True
+        )
         self._thread.start()
         if not self._ready.wait(timeout=connect_timeout + 15.0):
             self.stop()
@@ -334,25 +437,97 @@ class BackendChatWsBridge:
                 return
             await asyncio.sleep(min(0.2, max(0.0, end - time.monotonic())))
 
-    async def _send_user_signed_on_once_after_connect(self, ws: Any) -> None:
-        """Send ``user_signed_on`` once per REPL bridge lifetime (first successful connect only)."""
-        if self._user_signed_on_sent_once:
+    def _note_transport_drop(
+        self,
+        *,
+        halt: asyncio.Event,
+        code: int | None,
+        reason: str,
+    ) -> None:
+        if halt.is_set():
             return
+        self._pending_ws_drop = {
+            "dropped_at_utc": datetime.now(timezone.utc).isoformat(),
+            "ws_close_code": code,
+            "ws_close_reason": reason,
+        }
+
+    async def _send_post_connect_control_frames(self, ws: Any) -> None:
+        """After each successful connect: ``client_context``, optional ``ws_conn_dropped``, ``user_signed_on``."""
         aid = _agent_id_from_ws_url(self._ws_url)
         if not aid:
             return
+
+        try:
+            await ws.send(_ws_client_context_json())
+        except ConnectionClosed:
+            logger.debug("chat ws client_context skipped (connection closed) agent_id={}", aid)
+            return
+        except Exception:
+            logger.exception("chat ws client_context send failed agent_id={}", aid)
+
+        pending_snapshot = self._pending_ws_drop
+        self._pending_ws_drop = None
+
+        if pending_snapshot:
+            fut = asyncio.get_running_loop().create_future()
+            self._pending_ws_conn_dropped_ack_fut = fut
+            drop_mid = str(uuid.uuid4())
+            try:
+                await ws.send(
+                    _ws_conn_dropped_json(
+                        aid,
+                        dropped_at_utc=str(pending_snapshot["dropped_at_utc"]),
+                        message_id=drop_mid,
+                        ws_close_code=pending_snapshot.get("ws_close_code"),
+                        ws_close_reason=str(
+                            pending_snapshot.get("ws_close_reason") or ""
+                        ),
+                    )
+                )
+                try:
+                    ack = await asyncio.wait_for(
+                        fut, timeout=default_ws_conn_dropped_ack_timeout_sec()
+                    )
+                except TimeoutError:
+                    logger.warning(
+                        "chat ws ws_conn_dropped_ack timed out agent_id={}",
+                        aid,
+                    )
+                else:
+                    if isinstance(ack, dict) and ack.get("ok") is False:
+                        logger.warning(
+                            "chat ws ws_conn_dropped_ack ok=false agent_id={} ack={}",
+                            aid,
+                            ack,
+                        )
+            except ConnectionClosed:
+                logger.debug(
+                    "chat ws ws_conn_dropped skipped (connection closed) agent_id={}",
+                    aid,
+                )
+                self._pending_ws_conn_dropped_ack_fut = None
+                return
+            finally:
+                self._pending_ws_conn_dropped_ack_fut = None
+
+        use_implicit = not self._implicit_greeting_sent
         try:
             frame_mid = str(uuid.uuid4())
             await ws.send(
                 _ws_user_signed_on_json(
-                    aid, message_id=frame_mid, implicit_greeting=True
+                    aid,
+                    message_id=frame_mid,
+                    implicit_greeting=use_implicit,
                 )
             )
-            self._user_signed_on_sent_once = True
+            if use_implicit:
+                self._implicit_greeting_sent = True
             logger.info(
-                "chat ws user_signed_on+implicit_greeting sent once (repl) agent_id={} message_id={}",
+                "chat ws user_signed_on sent (repl) agent_id={} message_id={} implicit_greeting={}",
                 aid,
                 frame_mid,
+                use_implicit,
             )
             if self._on_user_signed_on_sent is not None:
                 try:
@@ -385,7 +560,9 @@ class BackendChatWsBridge:
                     )
                 except Exception as exc:
                     if not self._ready.is_set():
-                        raise RuntimeError(f"initial WebSocket connect failed: {exc}") from exc
+                        raise RuntimeError(
+                            f"initial WebSocket connect failed: {exc}"
+                        ) from exc
                     logger.warning("chat ws reconnect connect failed: {}", exc)
                     await self._sleep_backoff(reconnect_idx, halt)
                     reconnect_idx += 1
@@ -394,10 +571,11 @@ class BackendChatWsBridge:
                 self._response_q = asyncio.Queue()
                 self._online_ev.set()
                 reconnect_idx = 0
-                await self._send_user_signed_on_once_after_connect(ws)
+                reader_task = asyncio.create_task(self._read_loop(ws, halt))
+                await asyncio.sleep(0)
+                await self._send_post_connect_control_frames(ws)
                 if not self._ready.is_set():
                     self._ready.set()
-                reader_task = asyncio.create_task(self._read_loop(ws))
                 pinger = asyncio.create_task(self._pinger_loop(ws, halt))
                 halt_task = asyncio.create_task(halt.wait())
                 try:
@@ -457,7 +635,7 @@ class BackendChatWsBridge:
             self._response_q = None
             self._halt = None
 
-    async def _read_loop(self, ws: Any) -> None:
+    async def _read_loop(self, ws: Any, halt: asyncio.Event) -> None:
         if self._response_q is None:
             raise RuntimeError("response queue not initialized")
         try:
@@ -471,6 +649,11 @@ class BackendChatWsBridge:
                     continue
                 if data.get("type") == "client_context_ack":
                     continue
+                if data.get("type") == "ws_conn_dropped_ack":
+                    fut = self._pending_ws_conn_dropped_ack_fut
+                    if fut is not None and not fut.done():
+                        fut.set_result(data)
+                    continue
                 if data.get("type") == "user_signed_on_ack":
                     if self._on_user_signed_on_ack is not None:
                         try:
@@ -481,11 +664,22 @@ class BackendChatWsBridge:
                 if "code" in data:
                     await self._response_q.put(data)
                     continue
-                logger.warning("chat ws unexpected json keys={}", list(data.keys())[:12])
+                logger.warning(
+                    "chat ws unexpected json keys={}", list(data.keys())[:12]
+                )
         except ConnectionClosed as e:
             logger.info("chat ws read loop closed: {}", e)
+            rcvd = e.rcvd
+            self._note_transport_drop(
+                halt=halt,
+                code=rcvd.code if rcvd is not None else None,
+                reason=_ws_close_reason_text(rcvd.reason if rcvd is not None else None),
+            )
         except asyncio.CancelledError:
             raise
+        else:
+            if not halt.is_set():
+                self._note_transport_drop(halt=halt, code=None, reason="")
 
     async def _pinger_loop(self, ws: Any, halt: asyncio.Event) -> None:
         try:
@@ -505,7 +699,11 @@ class BackendChatWsBridge:
             raise
 
     def stop(self) -> None:
-        if self._loop is not None and self._loop.is_running() and self._halt is not None:
+        if (
+            self._loop is not None
+            and self._loop.is_running()
+            and self._halt is not None
+        ):
             if not self._halt.is_set():
                 self._loop.call_soon_threadsafe(self._halt.set)
         if self._thread is not None:
@@ -542,7 +740,9 @@ class BackendChatWsBridge:
             await self._wait_online_async(deadline_monotonic=deadline_monotonic)
             if not self._ws or not self._response_q:
                 last_transport = RuntimeError("websocket not connected")
-                logger.warning("chat ws not connected before post_turn (attempt {})", attempt)
+                logger.warning(
+                    "chat ws not connected before post_turn (attempt {})", attempt
+                )
                 continue
             try:
                 mid, payload = _ws_chat_turn_send_payload(
@@ -563,7 +763,9 @@ class BackendChatWsBridge:
             raise RuntimeError(
                 f"chat ws post_turn failed after {self._send_max_retries} attempts"
             ) from last_transport
-        raise RuntimeError(f"chat ws post_turn failed after {self._send_max_retries} attempts")
+        raise RuntimeError(
+            f"chat ws post_turn failed after {self._send_max_retries} attempts"
+        )
 
     def post_turn(
         self,

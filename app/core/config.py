@@ -27,6 +27,7 @@ from app.utils.config import (
     GeminiLiveConfig,
     GoogleOAuthConfig,
     GooglePlayConfig,
+    IntyV2ReplConfig,
     LoggingConfig,
     MemoryExtractionConfig,
     PushNotificationConfig,

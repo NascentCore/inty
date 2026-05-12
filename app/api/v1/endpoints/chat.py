@@ -84,6 +84,7 @@ from app.schemas.chat_websocket import (
     ChatWsUserSignedOnFrame,
     ChatWsUserSignedOutAckFrame,
     ChatWsUserSignedOutFrame,
+    ChatWsWsConnDroppedFrame,
     chat_ws_queued_error_dict,
     normalize_websocket_companion_message_id_uuid,
 )
@@ -230,6 +231,30 @@ def _chat_request_with_merged_ws_time_context(
     return request.model_copy(update={"user_time_context": utc})
 
 
+def _implicit_signal_bundle_from_ws_tc_box(
+    tc_box: list[Optional[dict]],
+) -> Optional[ImplicitSignalBundle]:
+    """Build companion ``ImplicitSignalBundle`` from WebSocket ``client_context`` cache (``tc_box[0]``)."""
+    if not tc_box:
+        return None
+    raw = tc_box[0]
+    if not raw:
+        return None
+    try:
+        utc = UserTimeContext.model_validate(raw)
+    except ValidationError as exc:
+        logger.warning(
+            "chat_ws tc_box time_context invalid error={}",
+            str(exc)[:500],
+        )
+        return None
+    return ImplicitSignalBundle(
+        client_time=utc,
+        user_signed_on=False,
+        server_received_at_utc=datetime.now(timezone.utc),
+    )
+
+
 async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
     *,
     db: AsyncSession,
@@ -330,6 +355,7 @@ async def _try_handle_ws_user_signed_on_frame(
     db: AsyncSession,
     current_user: schemas.User,
     companion_ws: CompanionWebSocketCoordinator | None,
+    ws_conn_id: str,
     outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
     tc_box: list[Optional[dict]] | None = None,
     subscription_svc: SubscriptionService | None = None,
@@ -420,8 +446,9 @@ async def _try_handle_ws_user_signed_on_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         logger.info(
-            "chat_ws user_signed_on armed inner_tick coords user={} agent={} chat_id={} "
-            "received_message_uuid={} implicit_greeting={}",
+            "chat_ws user_signed_on armed inner_tick coords ws_conn_id={} user={} agent={} "
+            "chat_id={} received_message_uuid={} implicit_greeting={}",
+            ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
@@ -436,7 +463,8 @@ async def _try_handle_ws_user_signed_on_frame(
                 or voice_svc is None
             ):
                 logger.error(
-                    "chat_ws implicit_greeting missing ws deps agent_id={}",
+                    "chat_ws implicit_greeting missing ws deps ws_conn_id={} agent_id={}",
+                    ws_conn_id,
                     agent_id,
                 )
             else:
@@ -455,11 +483,16 @@ async def _try_handle_ws_user_signed_on_frame(
                     )
                 except Exception:
                     logger.exception(
-                        "chat_ws implicit_greeting companion enqueue failed agent_id={}",
+                        "chat_ws implicit_greeting companion enqueue failed ws_conn_id={} agent_id={}",
+                        ws_conn_id,
                         agent_id,
                     )
     except Exception:
-        logger.exception("chat_ws user_signed_on failed agent_id={}", agent_id)
+        logger.exception(
+            "chat_ws user_signed_on failed ws_conn_id={} agent_id={}",
+            ws_conn_id,
+            agent_id,
+        )
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(
                 ok=False,
@@ -477,6 +510,7 @@ async def _try_handle_ws_user_signed_out_frame(
     current_user: schemas.User,
     companion_ws: CompanionWebSocketCoordinator | None,
     subscription_svc: SubscriptionService,
+    ws_conn_id: str,
 ) -> bool:
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
@@ -542,15 +576,20 @@ async def _try_handle_ws_user_signed_out_frame(
             ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
-            "chat_ws user_signed_out logged CHAT_LOGS.md user={} agent={} chat_id={} "
+            "chat_ws user_signed_out logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
             "received_message_uuid={}",
+            ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
             recv_msg_uuid or "-",
         )
     except Exception:
-        logger.exception("chat_ws user_signed_out failed agent_id={}", agent_id)
+        logger.exception(
+            "chat_ws user_signed_out failed ws_conn_id={} agent_id={}",
+            ws_conn_id,
+            agent_id,
+        )
         await websocket.send_json(
             ChatWsUserSignedOutAckFrame(
                 ok=False,
@@ -558,6 +597,125 @@ async def _try_handle_ws_user_signed_out_frame(
             ).model_dump(exclude_none=True)
         )
     return True
+
+
+async def _try_handle_ws_ws_conn_dropped_frame(
+    websocket: WebSocket,
+    data: Any,
+    *,
+    db: AsyncSession,
+    current_user: schemas.User,
+    companion_ws: CompanionWebSocketCoordinator | None,
+    subscription_svc: SubscriptionService,
+    ws_conn_id: str,
+) -> bool:
+    """
+    Consume ``{"type":"ws_conn_dropped","agent_id":...,"dropped_at_utc":...}``.
+
+    Appends one English markdown line to companion ``CHAT_LOGS.md`` (MemoryStore). Does not alter
+    inner-tick coords or transcript.
+
+    ``/ws/verify`` passes ``companion_ws=None`` and receives ``ok: false`` (not supported).
+    """
+    if not isinstance(data, dict) or data.get("type") != "ws_conn_dropped":
+        return False
+    if companion_ws is None:
+        await websocket.send_json(
+            {
+                "type": "ws_conn_dropped_ack",
+                "ok": False,
+                "reason": "not_supported",
+            }
+        )
+        return True
+    try:
+        frame = ChatWsWsConnDroppedFrame.model_validate(data)
+    except ValidationError:
+        await websocket.send_json(
+            {
+                "type": "ws_conn_dropped_ack",
+                "ok": False,
+                "reason": "invalid_payload",
+            }
+        )
+        return True
+    agent_id = frame.agent_id.strip()
+    try:
+        chat = await chat_service.get_or_create_chat_by_agent(
+            db=db, user_id=current_user.id, agent_id=agent_id
+        )
+        if chat.agent_id != agent_id:
+            await websocket.send_json(
+                {
+                    "type": "ws_conn_dropped_ack",
+                    "ok": False,
+                    "reason": "agent_mismatch",
+                }
+            )
+            return True
+        subscription = await subscription_svc.get_user_current_subscription(
+            db, current_user.id
+        )
+        model_override = select_chat_model(
+            user=current_user, is_subscribed=bool(subscription)
+        )
+        recv_msg_uuid = (frame.message_id or "").strip()
+        uuid_part = recv_msg_uuid if recv_msg_uuid else "-"
+        code_part = frame.ws_close_code if frame.ws_close_code is not None else "-"
+        reason_raw = (frame.ws_close_reason or "").strip()
+        reason_part = reason_raw if reason_raw else "-"
+        log_line = (
+            f"- **ws_conn_dropped** `utc_ts={utc_iso_ts()}` `user_id={current_user.id}` "
+            f"`chat_id={chat.id}` `agent_id={agent_id}` "
+            f"`client_dropped_at_utc={frame.dropped_at_utc}` "
+            f"`ws_close_code={code_part}` `ws_close_reason={reason_part}` "
+            f"`received_message_uuid={uuid_part}`"
+        )
+        companion_chat_service.append_companion_chat_logs_line_for_ws_control(
+            user_id=current_user.id,
+            agent_id=agent_id,
+            chat_id=chat.id,
+            resolved_chat_model_id=model_override,
+            line=log_line,
+        )
+        await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
+        logger.info(
+            "chat_ws ws_conn_dropped logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
+            "client_dropped_at_utc={} received_message_uuid={}",
+            ws_conn_id,
+            current_user.id,
+            agent_id,
+            chat.id,
+            frame.dropped_at_utc,
+            recv_msg_uuid or "-",
+        )
+    except Exception:
+        logger.exception(
+            "chat_ws ws_conn_dropped failed ws_conn_id={} agent_id={}",
+            ws_conn_id,
+            agent_id,
+        )
+        await websocket.send_json(
+            {"type": "ws_conn_dropped_ack", "ok": False, "reason": "server_error"}
+        )
+    return True
+
+
+def _resolve_ws_conn_id_from_websocket(websocket: WebSocket) -> str:
+    """Prefer client ``ws_conn_id`` query (RFC4122 UUID); else server-generated; invalid query falls back."""
+    raw = (websocket.query_params.get("ws_conn_id") or "").strip()
+    if not raw:
+        return str(uuid.uuid4())
+    try:
+        return str(uuid.UUID(raw))
+    except ValueError:
+        generated = str(uuid.uuid4())
+        logger.info(
+            "chat_ws ws_conn_id_query_invalid using_generated ws_conn_id={} rejected_query={!r}",
+            generated,
+            raw[:200],
+        )
+        return generated
 
 
 async def _get_current_user_from_websocket(
@@ -1122,6 +1280,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
     ctx: dict[str, Any],
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
+    ws_conn_id: str,
+    tc_box: list[Optional[dict]],
 ) -> None:
     """If companion transcript says proactive heartbeat is due, run one turn and queue WS payload."""
     user_id = str(ctx.get("user_id") or "").strip()
@@ -1141,7 +1301,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         if str(chat.id) != str(chat_id_raw):
             logger.debug(
-                "companion_ws_proactive_hb chat_id mismatch ctx={} db_chat_id={}",
+                "companion_ws_proactive_hb chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                ws_conn_id,
                 chat_id_raw,
                 chat.id,
             )
@@ -1176,7 +1337,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         if not is_allowed:
             logger.info(
-                "companion_ws_proactive_hb skipped subscription user={} used={} limit={}",
+                "companion_ws_proactive_hb skipped subscription ws_conn_id={} user={} used={} limit={}",
+                ws_conn_id,
                 user_id,
                 used_count,
                 daily_limit,
@@ -1188,6 +1350,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         session_id = generate_session_id(str(chat_row_id))
         preset_uid = str(uuid.uuid4())
 
+    ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
     async with companion_ws.turn_lock:
         companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
             user_id=user_id,
@@ -1201,12 +1364,14 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             preset_user_msg_uuid=preset_uid,
             inner_tick_turn=True,
             inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+            implicit_signal_bundle=ws_implicit,
         )
 
         companion_reply = companion_turn.assistant_text
         if companion_reply is None or not str(companion_reply).strip():
             logger.warning(
-                "companion_ws_proactive_hb empty reply user={} agent={}",
+                "companion_ws_proactive_hb empty reply ws_conn_id={} user={} agent={}",
+                ws_conn_id,
                 user_id,
                 agent_id,
             )
@@ -1247,9 +1412,12 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb record_usage failed: {}", str(e)
+                    "companion_ws_proactive_hb record_usage failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    str(e),
                 )
 
+            stub_utc = ws_implicit.client_time if ws_implicit else None
             stub_request = ChatCompletionRequest(
                 messages=[
                     ChatMessage(
@@ -1258,6 +1426,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     )
                 ],
                 message_id=preset_uid,
+                user_time_context=stub_utc,
             )
             (
                 response_text_content,
@@ -1310,7 +1479,9 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb latest_message_info failed: {}", e
+                    "companion_ws_proactive_hb latest_message_info failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    e,
                 )
 
             user_message_id = None
@@ -1320,7 +1491,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb get_latest_user_message_id failed: {}",
+                    "companion_ws_proactive_hb get_latest_user_message_id failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     e,
                 )
 
@@ -1347,7 +1519,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             )
             await outbound_queue.put(out)
     logger.info(
-        "companion_ws_proactive_hb pushed assistant user={} agent={} chat_id={}",
+        "companion_ws_proactive_hb pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
+        ws_conn_id,
         user_id,
         agent_id,
         chat_row_id,
@@ -1360,6 +1533,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     ctx: dict[str, Any],
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
+    ws_conn_id: str,
+    tc_box: list[Optional[dict]],
 ) -> None:
     """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
     feats = global_config_loaded_from_config_yaml.app.features
@@ -1380,7 +1555,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         )
         if str(chat.id) != str(chat_id_raw):
             logger.debug(
-                "companion_ws_maintenance_inner_tick chat_id mismatch ctx={} db_chat_id={}",
+                "companion_ws_maintenance_inner_tick chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                ws_conn_id,
                 chat_id_raw,
                 chat.id,
             )
@@ -1424,7 +1600,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         )
         if not is_allowed:
             logger.info(
-                "companion_ws_maintenance_inner_tick skipped subscription user={} used={} limit={}",
+                "companion_ws_maintenance_inner_tick skipped subscription ws_conn_id={} user={} used={} limit={}",
+                ws_conn_id,
                 user_id,
                 used_count,
                 daily_limit,
@@ -1435,6 +1612,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         chat_row_agent_id = chat.agent_id
         session_id = generate_session_id(str(chat_row_id))
 
+    ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
+    stub_utc = ws_implicit.client_time if ws_implicit else None
     preset_uid = str(uuid.uuid4())
     stub_request = ChatCompletionRequest(
         messages=[
@@ -1444,6 +1623,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             )
         ],
         message_id=preset_uid,
+        user_time_context=stub_utc,
     )
 
     async with companion_ws.turn_lock:
@@ -1470,6 +1650,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     preset_user_msg_uuid=preset_uid,
                     inner_tick_turn=True,
                     inner_tick_mode=InnerTickMode.MAINTENANCE,
+                    implicit_signal_bundle=ws_implicit,
                 )
             )
         except Exception as exc:
@@ -1481,7 +1662,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if companion_reply is None or not str(companion_reply).strip():
             companion_ws.remove_foreground_pending(preset_uid)
             logger.warning(
-                "companion_ws_maintenance_inner_tick empty reply user={} agent={}",
+                "companion_ws_maintenance_inner_tick empty reply ws_conn_id={} user={} agent={}",
+                ws_conn_id,
                 user_id,
                 agent_id,
             )
@@ -1500,8 +1682,9 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             meta_data=user_meta,
         )
 
-        if companion_turn.tool_background_started and companion_ws.has_foreground_pending(
-            preset_uid
+        if (
+            companion_turn.tool_background_started
+            and companion_ws.has_foreground_pending(preset_uid)
         ):
             companion_ws.update_foreground_pending(
                 preset_uid,
@@ -1532,7 +1715,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_maintenance_inner_tick record_usage failed: {}",
+                    "companion_ws_maintenance_inner_tick record_usage failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     str(e),
                 )
 
@@ -1557,7 +1741,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_maintenance_inner_tick latest_message_info failed: {}",
+                    "companion_ws_maintenance_inner_tick latest_message_info failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     e,
                 )
 
@@ -1568,7 +1753,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_maintenance_inner_tick get_latest_user_message_id failed: {}",
+                    "companion_ws_maintenance_inner_tick get_latest_user_message_id failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     e,
                 )
 
@@ -1598,7 +1784,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())
 
     logger.info(
-        "companion_ws_maintenance_inner_tick pushed assistant user={} agent={} chat_id={}",
+        "companion_ws_maintenance_inner_tick pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
+        ws_conn_id,
         user_id,
         agent_id,
         chat_row_id,
@@ -2298,6 +2485,7 @@ async def chat_completions_websocket(
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     await websocket.accept()
+    ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -2314,6 +2502,13 @@ async def chat_completions_websocket(
         int(app_version_code_header)
         if app_version_code_header is not None and app_version_code_header.isdigit()
         else None
+    )
+
+    logger.info(
+        "chat_ws session_open ws_conn_id={} user={} path={}",
+        ws_conn_id,
+        current_user.id,
+        websocket.url.path,
     )
 
     # Business / assistant JSON uses a per-connection queue + pump; control frames bypass the queue
@@ -2346,7 +2541,18 @@ async def chat_completions_websocket(
             async with companion_ws.turn_lock:
                 hb_snapshot = companion_ws.snapshot_heartbeat_coords()
             if hb_snapshot is None:
+                logger.debug(
+                    "companion_ws_inner_tick_poll no_heartbeat_coords ws_conn_id={}",
+                    ws_conn_id,
+                )
                 continue
+            logger.debug(
+                "companion_ws_inner_tick_poll heartbeat_coords ws_conn_id={} user={} agent={} chat_id={}",
+                ws_conn_id,
+                hb_snapshot.get("user_id"),
+                hb_snapshot.get("agent_id"),
+                hb_snapshot.get("chat_id"),
+            )
             hb_user_for_log = hb_snapshot["user_id"]
             try:
                 if feats.companion_ws_proactive_heartbeat_enabled:
@@ -2355,6 +2561,8 @@ async def chat_completions_websocket(
                         ctx=hb_snapshot,
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
+                        ws_conn_id=ws_conn_id,
+                        tc_box=tc_box,
                     )
                 if feats.companion_ws_maintenance_inner_tick_enabled:
                     await _try_fire_companion_ws_maintenance_inner_tick(
@@ -2362,10 +2570,13 @@ async def chat_completions_websocket(
                         ctx=hb_snapshot,
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
+                        ws_conn_id=ws_conn_id,
+                        tc_box=tc_box,
                     )
             except Exception:
                 logger.exception(
-                    "companion_ws_inner_tick worker failed user_id={}",
+                    "companion_ws_inner_tick worker failed ws_conn_id={} user_id={}",
+                    ws_conn_id,
                     hb_user_for_log,
                 )
 
@@ -2453,6 +2664,7 @@ async def chat_completions_websocket(
                 db=db,
                 current_user=current_user,
                 companion_ws=companion_ws,
+                ws_conn_id=ws_conn_id,
                 outbound_queue=outbound_queue,
                 tc_box=tc_box,
                 subscription_svc=subscription_svc,
@@ -2467,6 +2679,17 @@ async def chat_completions_websocket(
                 current_user=current_user,
                 companion_ws=companion_ws,
                 subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
+            ):
+                continue
+            if await _try_handle_ws_ws_conn_dropped_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_ws=companion_ws,
+                subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
@@ -2528,6 +2751,11 @@ async def chat_completions_websocket(
     except WebSocketDisconnect:
         return
     finally:
+        logger.info(
+            "chat_ws session_end ws_conn_id={} user={}",
+            ws_conn_id,
+            current_user.id,
+        )
         hb_worker_stop.set()
         hb_worker_task.cancel()
         try:
@@ -2551,6 +2779,7 @@ async def chat_completions_websocket_verify(
     persistence. Use to validate transport, queue behavior, and minimal LLM connectivity.
     """
     await websocket.accept()
+    ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -2560,6 +2789,13 @@ async def chat_completions_websocket_verify(
         operator=current_user,
         assume_user_id=websocket.query_params.get("assume_user_id"),
         db=db,
+    )
+
+    logger.info(
+        "chat_ws_verify session_open ws_conn_id={} user={} path={}",
+        ws_conn_id,
+        current_user.id,
+        websocket.url.path,
     )
 
     outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
@@ -2588,6 +2824,7 @@ async def chat_completions_websocket_verify(
                 db=db,
                 current_user=current_user,
                 companion_ws=None,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _try_handle_ws_user_signed_out_frame(
@@ -2597,6 +2834,17 @@ async def chat_completions_websocket_verify(
                 current_user=current_user,
                 companion_ws=None,
                 subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
+            ):
+                continue
+            if await _try_handle_ws_ws_conn_dropped_frame(
+                websocket,
+                data,
+                db=db,
+                current_user=current_user,
+                companion_ws=None,
+                subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
@@ -2710,6 +2958,11 @@ async def chat_completions_websocket_verify(
     except WebSocketDisconnect:
         return
     finally:
+        logger.info(
+            "chat_ws_verify session_end ws_conn_id={} user={}",
+            ws_conn_id,
+            current_user.id,
+        )
         await _shutdown_chat_ws_outbound_pump(pump_task)
 
 

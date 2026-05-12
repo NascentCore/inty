@@ -20,6 +20,7 @@ import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.websocket.Frame
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -126,6 +127,7 @@ object MainRemoteDataSource {
             if (DebugBackendEndpointStore.getChatWebSocketUseVerifyPath())
                 CHAT_WEBSOCKET_VERIFY_PATH
             else CHAT_WEBSOCKET_PATH
-        return "$websocketBase/$path"
+        val wsConnId = UUID.randomUUID().toString()
+        return "$websocketBase/$path?ws_conn_id=$wsConnId"
     }
 }

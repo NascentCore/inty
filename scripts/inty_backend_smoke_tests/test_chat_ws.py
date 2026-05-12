@@ -230,7 +230,9 @@ async def _turn_ws_chat_round(
         parse_chat_completion_ws_payload,
     )
 
-    url = http_base_to_ws_chat_url(http_base, agent_id=agent_id)
+    url = http_base_to_ws_chat_url(
+        http_base, agent_id=agent_id, ws_conn_id=str(uuid.uuid4())
+    )
     headers = [("Authorization", f"Bearer {bearer_token.strip()}")]
 
     async with websockets.connect(

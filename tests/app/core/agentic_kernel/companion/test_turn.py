@@ -24,6 +24,8 @@ from app.core.agentic_kernel.companion.models import (
     InnerTickMode,
 )
 from app.core.agentic_kernel.companion.turn import run_turn
+from app.schemas.chat import UserTimeContext
+from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
 class _FakeLLMClient:
@@ -98,6 +100,43 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     assert rows[0]["inner_tick"] is True
     assert rows[1]["role"] == "assistant"
     assert rows[1]["source"] == "inner_tick"
+
+
+def test_run_turn_inner_tick_maintenance_includes_user_time_context_system_slice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``ImplicitSignalBundle.client_time`` injects User Time Context into inner-tick LLM messages."""
+    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    _seed_workspace(store)
+    client = _FakeLLMClient()
+    monkeypatch.setattr(
+        "app.core.agentic_kernel.companion.turn.start_tool_background_job",
+        lambda **kwargs: None,
+    )
+    bundle = ImplicitSignalBundle(
+        client_time=UserTimeContext(
+            local_time="2026-05-01T08:00:00+08:00",
+            timezone="Asia/Shanghai",
+            utc_offset_minutes=480,
+        ),
+    )
+    out = asyncio.run(
+        run_turn(
+            tmp_path,
+            "ignored",
+            store=store,
+            llm_client=client,  # type: ignore[arg-type]
+            inner_tick_turn=True,
+            inner_tick_mode=InnerTickMode.MAINTENANCE,
+            implicit_signal_bundle=bundle,
+        )
+    )
+    assert out.assistant_text == "inner reply"
+    llm_msgs = client.calls[0]["messages"]
+    joined = "\n".join(
+        (m.get("content") or "") for m in llm_msgs if m.get("role") == "system"
+    )
+    assert "##User Time Context" in joined
 
 
 def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
