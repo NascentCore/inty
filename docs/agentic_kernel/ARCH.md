@@ -1,6 +1,6 @@
 # iMate / Agentic Companion: 当前架构
 
-本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师；产品级入口见 [`/docs/imate/ARCH.md`](/docs/imate/ARCH.md)。
+本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师；**产品级骨架与术语**与 [`/docs/imate/ARCH.md`](/docs/imate/ARCH.md) 一致，下文在该骨架上展开实现细节、链路与协议。
 
 - 实现链条: [`chat.py`](/app/api/v1/endpoints/chat.py) `_agent_chat_completions_impl` · [`companion_chat_service`](/app/services/companion_chat_service.py) · [`turn.run_turn`](/app/core/agentic_kernel/companion/turn.py) · 帧与契约 [`app/api/AGENTS.md`](/app/api/AGENTS.md) · 包内细节 [`companion/AGENTS.md`](/app/core/agentic_kernel/companion/AGENTS.md)
 - 分层记忆说明: [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)
@@ -9,19 +9,65 @@
 - 架构演进点子池: [`IDEAS.md`](/docs/agentic_kernel/IDEAS.md)
 - `/api/v1/chat/ws` 传输与帧约定 (English): 下文 [**WebSocket Protocol**](#websocket-protocol) 小节.
 
+## 当前生产链路
+
+iMate App 的长期伴侣对话只在 **`/api/v1/chat/ws` WebSocket** 路径启用 agentic companion：`app/api/v1/endpoints/chat.py` 解析鉴权、控制帧和聊天帧后，以 `chat_route="websocket"` 调用 `app/services/companion_chat_service.py`，再进入 `CompanionManager` 与 `app/core/agentic_kernel/companion/turn.py::run_turn`。
+
+生产内核的权威状态不是磁盘 workspace，而是 **SessionBinding** `(user_id, companion_id, chat_id)` 下的 **SessionCorpus**：`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`context.json`、`transcript.jsonl`、运行时事件等逻辑文档经 `MemoryStore` 读写；启用 PostgreSQL repository 时写入 `companion_memory_document_versions` 的 append-only 版本表，读取当前 head。
+
+一轮回合被拆成三个边界：
+
+1. **Transport / API adapter**：WebSocket 负责鉴权、订阅用量、`chat_history`、错误映射、业务下行 FIFO、后台 tool 事件汇合；连接内状态收敛在 `CompanionWebSocketCoordinator`。
+2. **Companion turn kernel**：`run_turn` 负责加载 SessionCorpus、组装 prompt、选择路由、调用 LLM、启动可选后台 tool、写 transcript、调度记忆管线。
+3. **Durable memory / side effects**：`MemoryStore`、memory pipeline、runtime events、tool outputs 和 `chat_history` 分别承担可重启恢复或运营排障所需的持久化。
+
+## 回合架构
+
+`run_turn` 的目标阶段合同是：
+
+```text
+normalize_input
+  -> load_state
+  -> assemble_prompt
+  -> resolve_route
+  -> execute_route
+  -> persist_turn
+  -> schedule_memory
+  -> build_result
+```
+
+当前已新增 [`turn_pipeline.py`](/app/core/agentic_kernel/companion/turn_pipeline.py) 固化前三个阶段的窄合同：
+
+- `CompanionTurnRuntimeFlags`：归一化 inner tick、proactive heartbeat、implicit sign-on 等输入标签。
+- `CompanionTurnLoadedState`：一次回合从 MemoryStore 读取的 `ContextMeta`、`PromptBundle`、transcript 窗口和 compaction 轮次。
+- `CompanionTurnPromptPlan`：本轮 tools、system messages、route mode、最终 LLM messages、是否使用 dual structured chat。
+
+这一步不改变行为；它把 `run_turn` 前半段从隐式局部变量集合收束成可测试、可迁移的阶段快照，为后续拆 `execute_route`、`persist_turn` 和 `schedule_memory` 留出稳定接口。
+
+## 路由与实时性
+
+| 路由 | 触发 | 行为 |
+| --- | --- | --- |
+| `CHAT_ONLY_SYNC` | 普通聊天且本轮无 tools | 单次 chat completion；可用 dual structured envelope 解析用户可见回复与重要性评分。 |
+| `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` | 本轮有 tools | 前台无 tools 先返回 envelope；后台 tool 线程随后执行工具链，并通过 WebSocket 同一业务 FIFO 补 `tool_bg` assistant 帧。 |
+| `HEARTBEAT_SYNC` | proactive heartbeat inner tick | 合成用户标记驱动主动轻触达，不启用 tools。 |
+| `INNER_TICK_SYNC` | maintenance inner tick | 合成内在维护轮，可使用受限 inner-tick tools，不走普通记忆更新管线。 |
+
+前台 chat 与后台 tool finish 共用 dual-LLM JSON envelope（`user_facing_reply`、`output_to_user`、三项 `importance_*` 分数）；解析边界集中在 `significance_perception.py` 与 `tool_bg_routing.py`，避免 provider reasoning 通道泄漏成用户可见文本。
+
 ## 一句话总结
 
-交互式伴侣内核是在 App 通过 **`/api/v1/chat/ws` 长连接**与后端对话时启用的路径：以 **`MemoryStore` 持久化工作区文档与 transcript**、由 **`CompanionManager`/`run_turn`** 驱动前台结构化回复与可选的后台工具链，并通过 **出站队列 + pump** 把多帧业务 JSON（含前台回复、`tool_bg`、错误码）顺序推回客户端。
+交互式伴侣内核是在 App 通过 **`/api/v1/chat/ws` 长连接**与后端对话时启用的路径：在 **SessionBinding** 下以 **`MemoryStore` 持久化 SessionCorpus（逻辑文档与 transcript）**、由 **`CompanionManager`/`run_turn`** 驱动前台结构化回复与可选的后台工具链，并通过 **出站队列 + pump** 把多帧业务 JSON（含前台回复、`tool_bg`、错误码）顺序推回客户端。
 
 ## 一段话描述
 
-会话逻辑文档（`IDENTITY.md`、`context.json`、`transcript.jsonl` 等）经 **`MemoryStore`**（启用 Postgres DSN 时写入 `companion_memory_document_versions`）读写；一轮推理由 **`app/core/agentic_kernel/companion/turn.py` 的 `run_turn`** 组装 system/transcript、可走 **双 LLM 前台 envelope + 异步 `tool_background` 线程**（`CompanionSession.tool_bg_idle` 协调顺序）。**WebSocket** 侧 `chat_completions_websocket`（`app/api/v1/endpoints/chat.py`）为每条业务下行使用 **`outbound_queue` + `chat_ws_outbound_pump`**，控制类帧（如 `ping`/`pong`、`user_signed_on_ack`）文档说明为不走该队列；前台回合在 **`CompanionWebSocketCoordinator.turn_lock`** 内调用 **`_agent_chat_completions_impl`**（`chat_route="websocket"`），其中 **`companion_chat_service.run_companion_chat_turn_for_api`** 接入 **`CompanionManager`**；后台工具完成时通过 **`background_sink` → `background_events`** 队列再组装 **`_build_companion_tool_background_ws_payload`** 入队。**`tools/inty_v2_repl`** 用 **`BackendChatWsBridge`** 在独立线程里维护 WebSocket，上行 **`ChatWebSocketRequest` JSON**（**`post_turn`**：`ws.send` 即发不等待助手帧），下行 **`code` 业务帧**进入队列并在终端打印——只做传输与日志，**不实现伴侣推理**（README 写明 companion 代码在 `app/core/agentic_kernel/companion/`）。
+**SessionCorpus** 中的逻辑文档（`IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`context.json`、`transcript.jsonl`、运行时事件等）经 **`MemoryStore`**（启用 Postgres DSN 时写入 `companion_memory_document_versions`）读写；一轮推理由 **`app/core/agentic_kernel/companion/turn.py` 的 `run_turn`** 组装 system/transcript、可走 **双 LLM 前台 envelope + 异步 `tool_background` 线程**（`CompanionSession.tool_bg_idle` 协调顺序）。**WebSocket** 侧 `chat_completions_websocket`（`app/api/v1/endpoints/chat.py`）为每条业务下行使用 **`outbound_queue` + `chat_ws_outbound_pump`**，控制类帧（如 `ping`/`pong`、`user_signed_on_ack`）文档说明为不走该队列；前台回合在 **`CompanionWebSocketCoordinator.turn_lock`** 内调用 **`_agent_chat_completions_impl`**（`chat_route="websocket"`），其中 **`companion_chat_service.run_companion_chat_turn_for_api`** 接入 **`CompanionManager`**；后台工具完成时通过 **`background_sink` → `background_events`** 队列再组装 **`_build_companion_tool_background_ws_payload`** 入队。**`tools/inty_v2_repl`** 用 **`BackendChatWsBridge`** 在独立线程里维护 WebSocket，上行 **`ChatWebSocketRequest` JSON**（**`post_turn`**：`ws.send` 即发不等待助手帧），下行 **`code` 业务帧**进入队列并在终端打印——只做传输与日志，**不实现伴侣推理**（README 写明 companion 代码在 `app/core/agentic_kernel/companion/`）。
 
 ## 产品要点功能列表
 
 - **长连接文本对话（伴侣内核）**：仅 WebSocket 路径启用 companion；**`POST /api/v1/chat/completions/{agent_id}`** 走 legacy **`Agent`** 栈（非 companion 内核）。
 - **上线 / 隐式问候**：控制帧 **`user_signed_on`**、聊天帧 **`messageType: IMPLICIT_USER_SIGNED_ON`**（及 REPL 首次连接组合行为）。
-- **分层持久「档案」与 transcript**：工作区逻辑路径 + **日记/摘要/语义记忆管线**（文档见 `companion/AGENTS.md`）。
+- **分层持久「档案」与 transcript**：SessionCorpus 逻辑路径 + **日记/摘要/语义记忆管线**（文档见 `companion/AGENTS.md`）。
 - **工具调用、后台工具与生图元数据**：前台一帧后可跟 **`tool_bg`** 等额外下行；`meta_data` 可含 **`generated_image`**、significance 等。
 - **语音回复**：按聊天设置与 companion 的 **`reply_modality` / `voice_message_script`** 走 **`synthesize_chat_assistant_audio`**。
 - **主动心跳与维护性内在节拍（inner tick）**：配置项开启时由 **`companion_ws_inner_tick_worker`** 周期尝试触发。
@@ -183,6 +229,8 @@ proactive heartbeat 和 maintenance inner tick 都不是客户端上行聊天帧
 
 ## Companion 回合执行
 
+目标阶段合同与 `turn_pipeline` 窄合同见上文 [**回合架构**](#回合架构)；路由摘要见 [**路由与实时性**](#路由与实时性)。本节按实现顺序展开 `run_turn` 内的加载、路由与落库细节。
+
 `run_companion_chat_turn_for_api` 先用 `user_id + agent_id + chat_id` 取 `CompanionSession`; 其中 API 的 `agent_id` 原样作为 companion 层的 `companion_id`。`CompanionManager` 初始化 `MemoryStore`, 在缺失时写入 `context.json`, 并通过 `memory_store_scope.ensure_minimal_documents_in_store` 确保 `IDENTITY.md`、`SOUL.md`、`USER.md`、`MEMORY.md`、`transcript.jsonl` 五个最小文档存在。`context.json` 是会话元数据文档, 不属于这五个模板/轨迹种子。
 
 `USER_INTERACTIVE` bootstrap 下, API 适配层在调用 `run_turn` 前可能执行 `_maybe_append_companion_ws_session_system`: 对当前 WebSocket session 写一条 `companion_ws_session_system` system message 到 PostgreSQL `chat_history` 和 companion `transcript.jsonl`, 并在 `context.json` 中标记 `companion_ws_session_system_written=true`, 避免同一 session 重复注入。
@@ -200,12 +248,14 @@ proactive heartbeat 和 maintenance inner tick 都不是客户端上行聊天帧
 
 ### 路由模式
 
-| `TurnRouteMode` | 触发条件 | 行为 |
+与上文 [**路由与实时性**](#路由与实时性) 表一致；下列为代码枚举名与实现侧触发条件的对应。
+
+| `TurnRouteMode` | 触发 | 行为 |
 | --- | --- | --- |
-| `CHAT_ONLY_SYNC` | 非 inner tick, 本轮无 tools | 单次 chat completion; 可使用 dual structured response 解析 `significance_perception`。 |
-| `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` | 本轮有 tools | 前台 chat 分支无 tools 先回复; tool 分支在后台线程执行, 最多 24 轮, 有用户可见结果时经同一 WebSocket 连接补 assistant 帧。 |
-| `INNER_TICK_SYNC` | `inner_tick_turn=True`, maintenance | 合成用户文本驱动内在维护; 可使用受限 inner-tick tools; 跳过普通记忆更新管线。 |
-| `HEARTBEAT_SYNC` | `inner_tick_turn=True`, proactive chat | 合成 proactive heartbeat 用户标记; 不启用 tools。 |
+| `CHAT_ONLY_SYNC` | 普通聊天且本轮无 tools | 单次 chat completion；可用 dual structured envelope 解析用户可见回复与重要性评分（`significance_perception`）。 |
+| `ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL` | 本轮有 tools | 前台无 tools 先返回 envelope；后台 tool 线程随后执行工具链，最多 24 轮，有用户可见结果时经同一 WebSocket 连接补 assistant 帧。 |
+| `HEARTBEAT_SYNC` | proactive heartbeat inner tick | 合成用户标记驱动主动轻触达，不启用 tools。 |
+| `INNER_TICK_SYNC` | maintenance inner tick | 合成内在维护轮，可使用受限 inner-tick tools，不走普通记忆更新管线。 |
 
 隐式上线问候 **产品侧** 由 **`user_signed_on`** + **`implicit_greeting`** 触发；载荷上与 **`messageType: IMPLICIT_USER_SIGNED_ON`** 聊天帧（及内部 synthetic）一致: API 层不写合成用户行到 PostgreSQL `chat_history`, companion transcript 写 synthetic user 行; prompt stack 去掉 tools, 模型走 chat-only 问候。
 
@@ -221,7 +271,7 @@ proactive heartbeat 和 maintenance inner tick 都不是客户端上行聊天帧
 
 ## Memory 状态与持久化
 
-当前 companion 的世界不是独立 world engine, 而是 `MemoryStore` 中的一组版本化文档加工具副作用。artifact、持久化表与向量 LTM（FR）的详细说明见 [`MEMORY_STORE.md`](/docs/agentic_kernel/MEMORY_STORE.md)。
+当前 companion 的世界不是独立 world engine, 而是 **SessionBinding** 下 **SessionCorpus**：`MemoryStore` 中的一组版本化逻辑文档加工具副作用（与 [`/docs/imate/ARCH.md`](/docs/imate/ARCH.md) 用语一致；代码里仍常见 workspace/path 适配命名）。artifact、持久化表与向量 LTM（FR）的详细说明见 [`MEMORY_STORE.md`](/docs/agentic_kernel/MEMORY_STORE.md)。
 
 | 文档或状态 | 作用 |
 | --- | --- |
@@ -242,6 +292,12 @@ proactive heartbeat 和 maintenance inner tick 都不是客户端上行聊天帧
 ## 记忆管线
 
 分层 episodic / gist / semantic 写入与 prompt 注入综述见 [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)。
+
+## 架构判断
+
+- **正确边界**：agentic companion 不是 legacy HTTP completions，也不是通用 `runtime/TurnOrchestrator`；生产入口以 WebSocket companion path 为准。
+- **当前主要风险**：`run_turn` 仍承担执行、持久化和记忆调度，后续应继续按阶段合同向 `execute_route` / `persist_turn` / `schedule_memory` 收敛，而不是引入一个虚构的全局 kernel queue。
+- **术语方向**：对外架构使用 SessionBinding / SessionCorpus / DurableSidecar / ProcessPrivate；代码中残留的 workspace/path/file 是适配层或历史命名，不应继续作为范式中心。
 
 ## 架构批判
 
