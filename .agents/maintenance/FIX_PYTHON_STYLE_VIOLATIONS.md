@@ -3,28 +3,6 @@
 This file tracks discovered violations of Google's Python Style Guide so
 maintenance agents can fix the highest-impact item first.
 
-## 2026-05-12 scan
-
-### Fixed in `cursor/worst-python-style-violation-9b63`
-
-- [x] Google 2.4 "Exceptions": `/app/api/utils/logger_route.py` silently
-  swallowed request-body read/decode failures and `JSONResponse._content`
-  extraction failures with broad `except Exception: pass`. This was the worst
-  current violation because `LoggerRoute` is shared by most HTTP API routers;
-  silent failures there weaken request/response observability across production
-  incident triage, security review, and API debugging.
-
-### Newly discovered open violations
-
-- [ ] Google 2.4 "Exceptions": `/app/services/voice_cache_service.py`
-  suppresses rollback failures with `except Exception: pass` while saving voice
-  cache entries and updating access stats. Log rollback failure context so cache
-  write errors do not hide secondary database/session damage.
-- [ ] Google 2.4 "Exceptions": `/app/services/push_notification_service.py`
-  silently returns the raw avatar URL when fallback avatar transformation fails.
-  Log the fallback transform failure so push notification image regressions are
-  diagnosable instead of surfacing only as degraded product output.
-
 ## 2026-05-09 scan
 
 ### Fixed in `cursor/worst-python-style-violation-4605`
