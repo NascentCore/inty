@@ -6,12 +6,12 @@ import hashlib
 import json
 import re
 import uuid
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .utc import utc_iso_ts
-from .memory_store_scope import MemoryStoreScopePaths
+from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 _CORE_PROFILE_DOCS: frozenset[str] = frozenset({"IDENTITY.md", "SOUL.md", "USER.md"})
 _IMAGE_ASSET_INDEX_REL = "generated_images/index.jsonl"
@@ -40,14 +40,13 @@ _MODE_MODIFY_RE = re.compile(
 )
 
 
-def _image_gate_document_rel_path(root: Path) -> str:
-    r = root.resolve()
-    return MemoryStoreScopePaths(root=r).image_gate_json.relative_to(r).as_posix()
+def _image_gate_rel() -> str:
+    return DEFAULT_MEMORY_STORE_SCOPE_PATHS.image_gate_json
 
 
-def _default_state(root: Path) -> dict[str, Any]:
+def _default_state(store: MemoryStore) -> dict[str, Any]:
     return {
-        "persona_revision_id": compute_persona_revision_id(root),
+        "persona_revision_id": compute_persona_revision_id(store),
         "pending_confirmation": None,
         "turn_guard": {
             "turn_id": "",
@@ -57,54 +56,51 @@ def _default_state(root: Path) -> dict[str, Any]:
     }
 
 
-def _load_state(root: Path) -> dict[str, Any]:
-    store = get_memory_store(root)
-    rel = _image_gate_document_rel_path(root)
+def _load_state(store: MemoryStore) -> dict[str, Any]:
+    rel = _image_gate_rel()
     raw_body = store.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
-        return _default_state(root)
+        return _default_state(store)
     raw = json.loads(raw_body)
     if not isinstance(raw, dict):
         raise ValueError("image_gate document must contain a JSON object")
-    out = _default_state(root)
+    out = _default_state(store)
     out.update(raw)
     return out
 
 
-def _save_state(root: Path, state: dict[str, Any]) -> None:
+def _save_state(store: MemoryStore, state: dict[str, Any]) -> None:
     payload = json.dumps(state, ensure_ascii=False, indent=2) + "\n"
-    store = get_memory_store(root)
-    rel = _image_gate_document_rel_path(root)
+    rel = _image_gate_rel()
     store.write_document(rel, payload)
 
 
-def _read_profile_doc(root: Path, relative_path: str) -> str:
-    store = get_memory_store(root)
+def _read_profile_doc(store: MemoryStore, relative_path: str) -> str:
     body = store.read_document_if_exists(relative_path)
     if body is not None:
         return body
     return ""
 
 
-def _core_profile_payload(root: Path) -> dict[str, str]:
+def _core_profile_payload(store: MemoryStore) -> dict[str, str]:
     return {
-        "IDENTITY.md": _read_profile_doc(root, "IDENTITY.md"),
-        "SOUL.md": _read_profile_doc(root, "SOUL.md"),
-        "USER.md": _read_profile_doc(root, "USER.md"),
+        "IDENTITY.md": _read_profile_doc(store, "IDENTITY.md"),
+        "SOUL.md": _read_profile_doc(store, "SOUL.md"),
+        "USER.md": _read_profile_doc(store, "USER.md"),
     }
 
 
-def compute_persona_revision_id(root: Path) -> str:
-    payload = _core_profile_payload(root)
+def compute_persona_revision_id(store: MemoryStore) -> str:
+    payload = _core_profile_payload(store)
     canonical = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
-def prepare_image_gate_for_turn(root: Path, user_text: str) -> None:
-    state = _load_state(root)
-    state["persona_revision_id"] = compute_persona_revision_id(root)
+def prepare_image_gate_for_turn(store: MemoryStore, user_text: str) -> None:
+    state = _load_state(store)
+    state["persona_revision_id"] = compute_persona_revision_id(store)
 
     txt = (user_text or "").strip()
     mode: str | None = None
@@ -127,11 +123,11 @@ def prepare_image_gate_for_turn(root: Path, user_text: str) -> None:
         "requires_profile_persist_before_image": requires_persist,
         "profile_persisted_in_turn": False,
     }
-    _save_state(root, state)
+    _save_state(store, state)
 
 
 def register_profile_write(
-    root: Path,
+    store: MemoryStore,
     relative_path: str,
     *,
     changed: bool,
@@ -142,19 +138,19 @@ def register_profile_write(
         return
     if not changed:
         return
-    state = _load_state(root)
+    state = _load_state(store)
     before_revision = str(state.get("persona_revision_id") or "")
     if not before_revision:
-        before_revision = compute_persona_revision_id(root)
+        before_revision = compute_persona_revision_id(store)
     if new_content is not None:
-        payload = _core_profile_payload(root)
+        payload = _core_profile_payload(store)
         payload[rel] = new_content
         canonical = json.dumps(
             payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
         )
         after_revision = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
     else:
-        after_revision = compute_persona_revision_id(root)
+        after_revision = compute_persona_revision_id(store)
     if before_revision == after_revision:
         return
 
@@ -180,13 +176,13 @@ def register_profile_write(
         turn_guard["profile_persisted_in_turn"] = True
         turn_guard["requires_profile_persist_before_image"] = False
         state["turn_guard"] = turn_guard
-    _save_state(root, state)
+    _save_state(store, state)
 
 
-def check_image_tool_allowed(root: Path, *, tool_name: str) -> str | None:
+def check_image_tool_allowed(store: MemoryStore, *, tool_name: str) -> str | None:
     if tool_name not in {"generate_image", "modify_image"}:
         raise ValueError(f"unsupported tool for image gate: {tool_name}")
-    state = _load_state(root)
+    state = _load_state(store)
     turn_guard = state.get("turn_guard")
     if isinstance(turn_guard, dict):
         req = bool(turn_guard.get("requires_profile_persist_before_image"))
@@ -220,10 +216,10 @@ def check_image_tool_allowed(root: Path, *, tool_name: str) -> str | None:
     return None
 
 
-def mark_image_tool_completed(root: Path, *, tool_name: str) -> None:
+def mark_image_tool_completed(store: MemoryStore, *, tool_name: str) -> None:
     if tool_name not in {"generate_image", "modify_image"}:
         raise ValueError(f"unsupported tool for image gate: {tool_name}")
-    state = _load_state(root)
+    state = _load_state(store)
     pending = state.get("pending_confirmation")
     if isinstance(pending, dict):
         selected_mode = str(pending.get("selected_mode") or "").strip().lower()
@@ -231,20 +227,19 @@ def mark_image_tool_completed(root: Path, *, tool_name: str) -> None:
             selected_mode == "modify" and tool_name == "modify_image"
         ):
             state["pending_confirmation"] = None
-    state["persona_revision_id"] = compute_persona_revision_id(root)
-    _save_state(root, state)
+    state["persona_revision_id"] = compute_persona_revision_id(store)
+    _save_state(store, state)
 
 
-def current_persona_revision_id(root: Path) -> str:
-    return compute_persona_revision_id(root)
+def current_persona_revision_id(store: MemoryStore) -> str:
+    return compute_persona_revision_id(store)
 
 
-def append_image_asset_record(root: Path, record: dict[str, Any]) -> None:
-    get_memory_store(root).append_jsonl_record(_IMAGE_ASSET_INDEX_REL, record)
+def append_image_asset_record(store: MemoryStore, record: dict[str, Any]) -> None:
+    store.append_jsonl_record(_IMAGE_ASSET_INDEX_REL, record)
 
 
-def list_image_asset_records(root: Path) -> list[dict[str, Any]]:
-    store = get_memory_store(root)
+def list_image_asset_records(store: MemoryStore) -> list[dict[str, Any]]:
     body = store.read_document_if_exists(_IMAGE_ASSET_INDEX_REL)
     if body is None or not body.strip():
         return []
@@ -309,10 +304,10 @@ def generated_image_meta_from_asset_record(
 
 
 def generated_image_meta_from_index_slice(
-    root: Path, baseline_index: int
+    store: MemoryStore, baseline_index: int
 ) -> dict[str, Any] | None:
     """Return metadata for the latest new asset rows since ``baseline_index`` (list length offset)."""
-    records = list_image_asset_records(root)
+    records = list_image_asset_records(store)
     if baseline_index < 0 or baseline_index > len(records):
         return None
     for row in reversed(records[baseline_index:]):
@@ -327,12 +322,12 @@ def _normalize_relative_path_for_index(path: str) -> str:
 
 
 def find_latest_asset_by_local_relative_path(
-    root: Path, relative_path: str
+    store: MemoryStore, relative_path: str
 ) -> dict[str, Any] | None:
     target = _normalize_relative_path_for_index(relative_path)
     if not target:
         return None
-    for row in reversed(list_image_asset_records(root)):
+    for row in reversed(list_image_asset_records(store)):
         if (
             _normalize_relative_path_for_index(
                 str(row.get("local_path_relative") or "")
@@ -343,5 +338,6 @@ def find_latest_asset_by_local_relative_path(
     return None
 
 
-def relative_path_under_workspace(root: Path, absolute_path: Path) -> str:
-    return absolute_path.resolve().relative_to(root.resolve()).as_posix()
+def relative_path_under_workspace(store: MemoryStore, absolute_path: Path) -> str:
+    """Map a local absolute path to a scope-relative key segment (basename when not under synthetic root)."""
+    return PurePosixPath(absolute_path.resolve().as_posix()).name

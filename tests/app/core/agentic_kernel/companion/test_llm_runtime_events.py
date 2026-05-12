@@ -15,6 +15,7 @@ from app.core.agentic_kernel.companion.llm_runtime_events import (
 )
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.runtime_events import read_runtime_events
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.llm.chat_completions import (
     OpenRouterInvalidJsonError,
     create_chat_completion_sync,
@@ -22,7 +23,8 @@ from app.core.agentic_kernel.llm.chat_completions import (
 
 
 def test_record_llm_inference_failure_skips_without_bind(tmp_path) -> None:
-    store = get_memory_store(tmp_path)
+    scope = CompanionScope("lr", "a", tmp_path.name)
+    store = get_memory_store(scope, dsn="")
     record_llm_inference_failure(
         model="m/a",
         exc=CompanionLLMInferenceBackendError(
@@ -33,7 +35,8 @@ def test_record_llm_inference_failure_skips_without_bind(tmp_path) -> None:
 
 
 def test_create_chat_completion_sync_writes_llm_inference_failure(tmp_path) -> None:
-    store = get_memory_store(tmp_path)
+    scope = CompanionScope("lr", "a", f"{tmp_path.name}-ev")
+    store = get_memory_store(scope, dsn="")
     bind = LlmRuntimeEventBind(
         memory_store=store,
         trace_id="tr-ev-1",

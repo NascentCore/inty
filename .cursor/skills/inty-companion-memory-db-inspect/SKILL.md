@@ -85,7 +85,7 @@ ORDER BY sequence_id DESC LIMIT 1;
 
 ## 进程内 MemoryStore 与 DB 的关系（排错）
 
-- 生产路径下，带 repository 的 `MemoryStore` 由 **`/app/core/agentic_kernel/companion/memory_registry.py`** 注册：**scope 键**（`user_id:companion_id:chat_id`）与 **`workspace_root` 解析路径字符串** 指向**同一实例**，工具侧 `get_memory_store(root)` 的写入才会进 Postgres。
+- 生产路径下，带 repository 的 `MemoryStore` 由 **`/app/core/agentic_kernel/companion/memory_registry.py`** 注册：键为 **`CompanionScope.registry_key()`**（`user_id:companion_id:chat_id`）；`get_memory_store(scope, dsn=...)` 返回的实例与 `CompanionManager` 会话内 `session.store` 为同一 ORM 面，工具线程通过 `MemoryStore` 引用或 runtime inspect overlay 对齐写入。
 - 若 DB 无新行但工具返回 OK：先确认 **后端已加载含该改动的代码** 且 **会话已用 DSN 创建 store**；再用上文 SQL 核对。
 
 ## 可选交叉验证

@@ -16,8 +16,8 @@ import pytest
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMClient, CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.turn import run_turn
-from app.core.agentic_kernel.companion.memory_store_scope import MemoryStoreScopePaths
 
 _OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
@@ -70,30 +70,15 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
     _require_real_agentic_kernel_llm_test()
 
     root = tmp_path
-    store = MemoryStore(workspace_root=root, repository=None)
-    paths = MemoryStoreScopePaths(root=root)
-    store.write_document(
-        paths.identity.relative_to(root).as_posix(),
-        "# ID\nidentity doc",
-    )
-    store.write_document(
-        paths.soul.relative_to(root).as_posix(),
-        "# SOUL\nsoul doc",
-    )
-    store.write_document(
-        paths.user_md.relative_to(root).as_posix(),
-        "# USER\nInitial profile.",
-    )
-    store.write_document(
-        paths.memory_md.relative_to(root).as_posix(),
-        "# MEM\nmemory doc",
-    )
-    store.write_document(
-        paths.transcript.relative_to(root).as_posix(),
-        "",
-    )
-    (root / "context.json").write_text("{}", encoding="utf-8")
-    (root / "hello.txt").write_text("hi", encoding="utf-8")
+    scope = CompanionScope("real-llm", "agent", root.name)
+    store = MemoryStore(scope=scope, repository=None)
+    store.write_document("IDENTITY.md", "# ID\nidentity doc")
+    store.write_document("SOUL.md", "# SOUL\nsoul doc")
+    store.write_document("USER.md", "# USER\nInitial profile.")
+    store.write_document("MEMORY.md", "# MEM\nmemory doc")
+    store.write_document("transcript.jsonl", "")
+    store.write_document("context.json", "{}\n")
+    store.write_document("hello.txt", "hi")
 
     cfg = CompanionLLMConfig(
         api_key=os.environ["OPENROUTER_API_KEY"].strip(),
@@ -115,7 +100,6 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(tmp_path) -> 
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
     out = await run_turn(
-        root,
         user_prompt,
         store=store,
         llm_client=client,
