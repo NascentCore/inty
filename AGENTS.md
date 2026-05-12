@@ -65,6 +65,7 @@ they are in development mode.
 
 ## Your response style
 
+- For yes/no questions, reply with 1 sentence answer, no elaboration
 - Respond with information from most to least importance
 - Always answer with 1 sentence summary.
   - Only elaborate if user explicitly asks.
