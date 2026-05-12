@@ -155,9 +155,6 @@ def _agent_id_from_ws_url(ws_url: str) -> str | None:
 
 def _iana_tz_name_best_effort(now: datetime) -> str | None:
     """Resolve an IANA zone name when possible; macOS may lack a zoneinfo symlink."""
-    override = os.environ.get("INTY_V2_REPL_TIMEZONE", "").strip()
-    if override:
-        return override
     tz_env = os.environ.get("TZ", "").strip()
     if tz_env:
         return tz_env

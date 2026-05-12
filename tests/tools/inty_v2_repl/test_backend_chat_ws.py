@@ -64,7 +64,6 @@ def test_build_ws_user_time_context_now_shape() -> None:
 
 def test_build_ws_user_time_context_now_tz_utc(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TZ", "UTC")
-    monkeypatch.delenv("INTY_V2_REPL_TIMEZONE", raising=False)
     ctx = build_ws_user_time_context_now()
     assert ctx.timezone == "UTC"
     assert ctx.utc_offset_minutes == 0
