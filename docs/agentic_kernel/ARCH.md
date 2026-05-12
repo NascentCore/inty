@@ -62,6 +62,7 @@
 ### 主动心跳与维护性 inner tick
 
 - **`chat.py`**：**`companion_ws_inner_tick_worker`** 轮询配置 **`companion_ws_proactive_heartbeat_poll_seconds`**；分别调用 **`_try_fire_companion_ws_proactive_heartbeat`**、**`_try_fire_companion_ws_maintenance_inner_tick`**（需 **`CompanionWebSocketCoordinator.heartbeat_context`** 已由 **`user_signed_on` 等路径经 `store_heartbeat_coords` 填充**）。
+- **可观测性 `ws_conn_id`：** 每条已鉴权的 **`/api/v1/chat/ws`** 连接在服务端生成 UUID，仅写入 **loguru** 文案（`session_open` / 控制帧 / inner-tick 轮询与触发等），**不下发 JSON**、**非 LangSmith 字段**；与 REPL 或「独立 agentic_kernel 进程」**无跨进程契约**——companion 与 WS 在同 **API worker** 进程内执行；跨回合追踪仍以 **`user_msg_uuid` / `inty_trace_id` / LangSmith** 为准（见 [`app/schemas/AGENTS.md`](/app/schemas/AGENTS.md) 同条说明）。
 - **`companion/heartbeat.py`**、**`inner_tick_schedule.py`**：节拍与时间间隔辅助（与 WS worker 的配合细节未在本次全部展开）。
 
 ### 订阅用量、历史、节日/日常记忆、推送已读、Surprise Snap

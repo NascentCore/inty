@@ -79,3 +79,8 @@ gemini_live:
 surprise_snap:
   enabled_since: "2020-01-01T00:00:00"
   trigger_rounds: [1]
+
+# tools/inty_v2_repl（可选）：根 config / 部署 YAML 可写顶层 inty_v2_repl；省略时
+# ws_conn_dropped_ack_timeout_sec 默认 5（秒，范围 0.5–60，见 app.utils.config.IntyV2ReplConfig）。
+# inty_v2_repl:
+#   ws_conn_dropped_ack_timeout_sec: 5

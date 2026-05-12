@@ -1,8 +1,9 @@
 ---
 name: inty-local-backend-repl
 description: >-
-  Repo root + venv: Ops :8001 (`backend/ops/start.sh`); list agent UUIDs via admin/list script below;
-  then `python -m tools.inty_v2_repl.main repl`. Terminate Ops notes included. Full env: tools/inty_v2_repl/README.md
+  Repo root + venv: Ops :8001 (`backend/ops/start.sh`); list agent UUIDs via
+  `scripts/list_inty_ops_agents_admin.py`; then `python -m tools.inty_v2_repl.main repl`.
+  Terminate Ops notes included. Full env: tools/inty_v2_repl/README.md
 ---
 
 # Launching local backend for terminal REPL
@@ -44,48 +45,27 @@ pgrep -af 'python -m tools\.inty_v2_repl' || true
 
 Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`--local` 启动已写入）。API 基址默认 **`http://127.0.0.1:8001`**；若使用环境变量 **`PORT`** 覆盖监听端口，请同步改 **`INTY_API_BASE_URL`**（例如 `export INTY_API_BASE_URL=http://127.0.0.1:9001`）。
 
-下列脚本仅依赖 **stdlib**（无需 `jq`），打印 **`id<TAB>name`**：
+下列命令仅依赖 **stdlib**（无需 `jq`），打印 **`id<TAB>name`**（仓库根 cwd）：
 
 ```bash
-INTY_API_BASE_URL="${INTY_API_BASE_URL:-http://127.0.0.1:8001}" python3 <<'PY'
-import json, os, urllib.error, urllib.request
-
-base = os.environ["INTY_API_BASE_URL"].rstrip("/")
-path = os.environ.get("INTY_OPS_BEARER_TOKEN_FILE", ".inty_ops_bearer_token")
-with open(path, encoding="utf-8") as f:
-    tok = f.read().strip()
-req = urllib.request.Request(
-    f"{base}/api/v1/ai/agents/admin/list?limit=50",
-    headers={"Authorization": f"Bearer {tok}"},
-)
-try:
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        body = json.load(resp)
-except urllib.error.HTTPError as e:
-    raise SystemExit(f"HTTP {e.code}: {e.read().decode('utf-8', errors='replace')[:800]}") from e
-rows = body.get("data") or []
-if not rows:
-    print(
-        "admin/list returned no agents. Create one, then re-run:",
-        "python3 scripts/inty_backend_smoke_tests/test_chat_ws.py \\",
-        f"  --api-base {base} --create-agent",
-        sep="\n",
-    )
-else:
-    for a in rows:
-        print(str(a.get("id", "")), str(a.get("name", "")), sep="\t")
-PY
+python3 scripts/list_inty_ops_agents_admin.py
 ```
 
-仅需 **第一条** UUID 时可：`… | awk -F'\t' 'NR==1 {print $1}'`。
+可选：`--api-base`、`--token-file`、`--limit`；环境变量 **`INTY_API_BASE_URL`**、**`INTY_OPS_BEARER_TOKEN_FILE`** 与 CLI 默认值同上节。
+
+仅需 **第一条** UUID 时：
+
+```bash
+python3 scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}'
+```
 
 ## Final reply to user（默认）
 
 Ops 就绪后，对用户依次给出下面 **三样**（不要默认展开 JWT、`ImportError`、`README` 等；用户追问再指路）：
 
 1. 一行：`后端日志：<repo-root>/tmp/inty-ops-local.log`（与上文 `--log-file` 一致时）。
-2. **本节「获取 agent-id」中的 `python3 <<'PY'` 整块**（让用户粘贴一行 `id` 给下一步）。
-3. **仅** 下列 REPL 块；把 `YOUR_AGENT_ID` 换成上一步输出的 UUID。
+2. **`python3 scripts/list_inty_ops_agents_admin.py`**（让用户复制一行 `id` 给下一步）。
+3. **仅** 下列 REPL 块（勿 `python tools/inty_v2_repl/main.py`）；把 `YOUR_AGENT_ID` 换成上一步输出的 UUID。
 
 ```bash
 source .venv/bin/activate && python -m tools.inty_v2_repl.main repl \

@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 import websockets
 from websockets.exceptions import ConnectionClosed
 
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
@@ -45,12 +46,9 @@ class BackendChatWsError(RuntimeError):
 
 
 def default_ws_conn_dropped_ack_timeout_sec() -> float:
-    raw = os.environ.get("INTY_V2_BACKEND_WS_CONN_DROPPED_ACK_TIMEOUT_SEC", "5").strip()
-    try:
-        v = float(raw)
-    except ValueError:
-        return 5.0
-    return max(0.5, min(v, 60.0))
+    return float(
+        global_config_loaded_from_config_yaml.inty_v2_repl.ws_conn_dropped_ack_timeout_sec
+    )
 
 
 def _ws_close_reason_text(reason: object | None) -> str:

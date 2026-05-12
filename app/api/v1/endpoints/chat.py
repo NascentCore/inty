@@ -1259,7 +1259,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         if str(chat.id) != str(chat_id_raw):
             logger.debug(
-                "companion_ws_proactive_hb chat_id mismatch ctx={} db_chat_id={}",
+                "companion_ws_proactive_hb chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                ws_conn_id,
                 chat_id_raw,
                 chat.id,
             )
@@ -1294,7 +1295,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         )
         if not is_allowed:
             logger.info(
-                "companion_ws_proactive_hb skipped subscription user={} used={} limit={}",
+                "companion_ws_proactive_hb skipped subscription ws_conn_id={} user={} used={} limit={}",
+                ws_conn_id,
                 user_id,
                 used_count,
                 daily_limit,
@@ -1324,7 +1326,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         companion_reply = companion_turn.assistant_text
         if companion_reply is None or not str(companion_reply).strip():
             logger.warning(
-                "companion_ws_proactive_hb empty reply user={} agent={}",
+                "companion_ws_proactive_hb empty reply ws_conn_id={} user={} agent={}",
+                ws_conn_id,
                 user_id,
                 agent_id,
             )
@@ -1365,7 +1368,9 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb record_usage failed: {}", str(e)
+                    "companion_ws_proactive_hb record_usage failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    str(e),
                 )
 
             stub_request = ChatCompletionRequest(
@@ -1428,7 +1433,9 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb latest_message_info failed: {}", e
+                    "companion_ws_proactive_hb latest_message_info failed ws_conn_id={}: {}",
+                    ws_conn_id,
+                    e,
                 )
 
             user_message_id = None
@@ -1438,7 +1445,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_proactive_hb get_latest_user_message_id failed: {}",
+                    "companion_ws_proactive_hb get_latest_user_message_id failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     e,
                 )
 
@@ -1465,7 +1473,8 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             )
             await outbound_queue.put(out)
     logger.info(
-        "companion_ws_proactive_hb pushed assistant user={} agent={} chat_id={}",
+        "companion_ws_proactive_hb pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
+        ws_conn_id,
         user_id,
         agent_id,
         chat_row_id,
@@ -1478,6 +1487,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     ctx: dict[str, Any],
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
+    ws_conn_id: str,
 ) -> None:
     """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
     feats = global_config_loaded_from_config_yaml.app.features
@@ -1498,7 +1508,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         )
         if str(chat.id) != str(chat_id_raw):
             logger.debug(
-                "companion_ws_maintenance_inner_tick chat_id mismatch ctx={} db_chat_id={}",
+                "companion_ws_maintenance_inner_tick chat_id mismatch ws_conn_id={} ctx={} db_chat_id={}",
+                ws_conn_id,
                 chat_id_raw,
                 chat.id,
             )
@@ -1542,7 +1553,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         )
         if not is_allowed:
             logger.info(
-                "companion_ws_maintenance_inner_tick skipped subscription user={} used={} limit={}",
+                "companion_ws_maintenance_inner_tick skipped subscription ws_conn_id={} user={} used={} limit={}",
+                ws_conn_id,
                 user_id,
                 used_count,
                 daily_limit,
@@ -1599,7 +1611,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         if companion_reply is None or not str(companion_reply).strip():
             companion_ws.remove_foreground_pending(preset_uid)
             logger.warning(
-                "companion_ws_maintenance_inner_tick empty reply user={} agent={}",
+                "companion_ws_maintenance_inner_tick empty reply ws_conn_id={} user={} agent={}",
+                ws_conn_id,
                 user_id,
                 agent_id,
             )
@@ -1651,7 +1664,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_maintenance_inner_tick record_usage failed: {}",
+                    "companion_ws_maintenance_inner_tick record_usage failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     str(e),
                 )
 
@@ -1676,7 +1690,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_maintenance_inner_tick latest_message_info failed: {}",
+                    "companion_ws_maintenance_inner_tick latest_message_info failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     e,
                 )
 
@@ -1687,7 +1702,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 )
             except Exception as e:
                 logger.warning(
-                    "companion_ws_maintenance_inner_tick get_latest_user_message_id failed: {}",
+                    "companion_ws_maintenance_inner_tick get_latest_user_message_id failed ws_conn_id={}: {}",
+                    ws_conn_id,
                     e,
                 )
 
@@ -1717,7 +1733,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())
 
     logger.info(
-        "companion_ws_maintenance_inner_tick pushed assistant user={} agent={} chat_id={}",
+        "companion_ws_maintenance_inner_tick pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
+        ws_conn_id,
         user_id,
         agent_id,
         chat_row_id,
@@ -2436,6 +2453,13 @@ async def chat_completions_websocket(
         else None
     )
 
+    logger.info(
+        "chat_ws session_open ws_conn_id={} user={} path={}",
+        ws_conn_id,
+        current_user.id,
+        websocket.url.path,
+    )
+
     # Business / assistant JSON uses a per-connection queue + pump; control frames bypass the queue
     # (see _handle_chat_websocket_control_json docstring: transport vs logical layer).
     outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
@@ -2466,7 +2490,18 @@ async def chat_completions_websocket(
             async with companion_ws.turn_lock:
                 hb_snapshot = companion_ws.snapshot_heartbeat_coords()
             if hb_snapshot is None:
+                logger.debug(
+                    "companion_ws_inner_tick_poll no_heartbeat_coords ws_conn_id={}",
+                    ws_conn_id,
+                )
                 continue
+            logger.debug(
+                "companion_ws_inner_tick_poll heartbeat_coords ws_conn_id={} user={} agent={} chat_id={}",
+                ws_conn_id,
+                hb_snapshot.get("user_id"),
+                hb_snapshot.get("agent_id"),
+                hb_snapshot.get("chat_id"),
+            )
             hb_user_for_log = hb_snapshot["user_id"]
             try:
                 if feats.companion_ws_proactive_heartbeat_enabled:
@@ -2483,10 +2518,12 @@ async def chat_completions_websocket(
                         ctx=hb_snapshot,
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
+                        ws_conn_id=ws_conn_id,
                     )
             except Exception:
                 logger.exception(
-                    "companion_ws_inner_tick worker failed user_id={}",
+                    "companion_ws_inner_tick worker failed ws_conn_id={} user_id={}",
+                    ws_conn_id,
                     hb_user_for_log,
                 )
 
@@ -2661,6 +2698,11 @@ async def chat_completions_websocket(
     except WebSocketDisconnect:
         return
     finally:
+        logger.info(
+            "chat_ws session_end ws_conn_id={} user={}",
+            ws_conn_id,
+            current_user.id,
+        )
         hb_worker_stop.set()
         hb_worker_task.cancel()
         try:
@@ -2694,6 +2736,13 @@ async def chat_completions_websocket_verify(
         operator=current_user,
         assume_user_id=websocket.query_params.get("assume_user_id"),
         db=db,
+    )
+
+    logger.info(
+        "chat_ws_verify session_open ws_conn_id={} user={} path={}",
+        ws_conn_id,
+        current_user.id,
+        websocket.url.path,
     )
 
     outbound_queue: asyncio.Queue[WsOutboundPayload] = asyncio.Queue()
@@ -2856,6 +2905,11 @@ async def chat_completions_websocket_verify(
     except WebSocketDisconnect:
         return
     finally:
+        logger.info(
+            "chat_ws_verify session_end ws_conn_id={} user={}",
+            ws_conn_id,
+            current_user.id,
+        )
         await _shutdown_chat_ws_outbound_pump(pump_task)
 
 
