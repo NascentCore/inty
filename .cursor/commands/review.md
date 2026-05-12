@@ -38,4 +38,5 @@ Agents often stop after tests; **review is not done until `/commit` runs** (or t
 - [ ] Tests are added if needed
 - [ ] Follows existing coding style and AGENTS.md, revise changes if needed
 - [ ] Changes passed tests, revise changes if needed
-- [ ] **Invoked `/commit`** (or documented why skipped: user opt-out / no diff)
+- [ ] **Invoked `/commit`**
+- [ ] **git push to remote**
