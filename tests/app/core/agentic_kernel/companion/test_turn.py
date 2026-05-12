@@ -102,10 +102,17 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     assert rows[1]["source"] == "inner_tick"
 
 
-def test_run_turn_inner_tick_maintenance_includes_user_time_context_system_slice(
+def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``ImplicitSignalBundle.client_time`` injects User Time Context into inner-tick LLM messages."""
+    """``ImplicitSignalBundle.client_time`` is reflected on the tail user line for inner-tick LLM."""
+    from app.core.agentic_kernel.companion import turn_pipeline as turn_pipeline_mod
+
+    monkeypatch.setattr(
+        turn_pipeline_mod._global_config.app.features,
+        "experimental_enable_chat_with_user_time_context",
+        True,
+    )
     store = MemoryStore(workspace_root=tmp_path, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
@@ -133,10 +140,14 @@ def test_run_turn_inner_tick_maintenance_includes_user_time_context_system_slice
     )
     assert out.assistant_text == "inner reply"
     llm_msgs = client.calls[0]["messages"]
-    joined = "\n".join(
+    assert llm_msgs[-1]["role"] == "user"
+    content = llm_msgs[-1]["content"] or ""
+    assert "user-time: 2026-05-01T08:00:00+08:00" in content
+    assert "user-time-zone: Asia/Shanghai" in content
+    assert "user-time-utc-offset: UTC+08:00" in content
+    assert "##User Time Context" not in "\n".join(
         (m.get("content") or "") for m in llm_msgs if m.get("role") == "system"
     )
-    assert "##User Time Context" in joined
 
 
 def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(

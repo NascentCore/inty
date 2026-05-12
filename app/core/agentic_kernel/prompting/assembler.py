@@ -13,16 +13,13 @@ from app.core.agentic_kernel.companion.memory_store_scope import (
 
 RenderPromptFn = Callable[[str, str, Optional[str]], str]
 PromptOverrideLookupFn = Callable[[str, str], Any]
-BuildUserTimeContextPromptFn = Callable[[dict[str, Any]], Optional[str]]
 
 
 @dataclass(frozen=True)
 class PromptAssemblerDeps:
     render_prompt: RenderPromptFn
     lookup_prompt_override: PromptOverrideLookupFn
-    is_user_time_context_enabled: Callable[[], bool]
     is_christmas_prompt_enabled: Callable[[], bool]
-    build_user_time_context_prompt: BuildUserTimeContextPromptFn
 
 
 @dataclass(frozen=True)
@@ -202,13 +199,6 @@ def build_system_messages(
     if request.user_profile:
         system_messages.append(SystemMessage(content=request.user_profile))
 
-    if request.user_time_context and deps.is_user_time_context_enabled():
-        prompt = deps.build_user_time_context_prompt(
-            request.user_time_context.to_runtime_dict()
-        )
-        if prompt:
-            system_messages.append(SystemMessage(content=prompt))
-
     if deps.is_christmas_prompt_enabled():
         rendered_temporal_prompt = deps.render_prompt(
             config.christmas_temporal_context_prompt,
@@ -260,13 +250,6 @@ def build_system_messages_for_official_assistant(
         )
     if request.user_profile:
         system_messages.append(SystemMessage(content=request.user_profile))
-
-    if request.user_time_context and deps.is_user_time_context_enabled():
-        prompt = deps.build_user_time_context_prompt(
-            request.user_time_context.to_runtime_dict()
-        )
-        if prompt:
-            system_messages.append(SystemMessage(content=prompt))
 
     if deps.is_christmas_prompt_enabled():
         rendered_temporal_prompt = deps.render_prompt(
