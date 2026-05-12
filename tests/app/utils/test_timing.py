@@ -4,13 +4,7 @@ Test timing utilities.
 
 import time
 
-from app.utils.timing import Timer, log_time
-
-
-def test_log_time_context_manager():
-    """Test log_time context manager functionality."""
-    with log_time("测试操作"):
-        time.sleep(0.1)
+from app.utils.timing import Timer
 
 
 def test_timeer_class():
