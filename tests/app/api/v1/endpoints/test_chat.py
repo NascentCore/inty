@@ -1987,6 +1987,12 @@ def test_chat_websocket_idle_timeout_reads_config(
     async def fake_wait_for(aw, timeout):
         if float(timeout) != expected_idle:
             return await real_wait_for(aw, timeout)
+        # Only count idle waits wrapping ``WebSocket.receive_text``; the companion
+        # inner-tick worker also uses ``asyncio.wait_for`` with the same poll
+        # interval when both YAML values match ``chat_ws_idle_timeout_seconds``.
+        code = getattr(aw, "cr_code", None)
+        if code is None or code.co_name != "receive_text":
+            return await real_wait_for(aw, timeout)
         captured["timeouts"].append(timeout)
         if len(captured["timeouts"]) == 1:
             return await aw

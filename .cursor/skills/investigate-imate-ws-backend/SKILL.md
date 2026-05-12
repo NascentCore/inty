@@ -57,7 +57,7 @@ description: >-
 
 **时区**：REPL 横幅常为 **`+0800`**；LangSmith `start_time` 多为 **UTC**。先把「事发本地时间」换成 **UTC** 再设查询窗口，避免搜错区间。
 
-**查询限制**：`list_runs` 单次 **`limit` 不得超过 100**（LangSmith API 限制）；宽窗可能截断，需收窄 `start_time` 或分段查询。全 trace 下载脚本同样受单批上限约束，见 [`langsmith-download-run/scripts/download_run.py`](../langsmith-download-run/scripts/download_run.py)。
+**查询限制**：`list_runs` 单次 **`limit` 不得超过 100**（LangSmith API 限制）；宽窗可能截断，需收窄 `start_time` 或分段查询。全 trace 下载脚本同样受单批上限约束，见 [`scripts/download_run.py`](../../../scripts/download_run.py)。
 
 **勿单靠 metadata filter**：对 `user_msg_uuid` 的 structured filter 在实践中可能 **0 命中**。优先：**UTC 时间窗** + 关注 **`agentic_companion_user_turn`** + 将 run `model_dump` 序列化后 **子串匹配 UUID**。
 
@@ -69,7 +69,7 @@ description: >-
 **归档 trace**：在仓库根执行（venv 已激活）：
 
 ```bash
-python .cursor/skills/langsmith-download-run/scripts/download_run.py \
+python scripts/download_run.py \
   --trace-id "<TRACE_ID_FROM_REPL_OR_PARENT_RUN>" \
   -o tmp/langsmith_traces/<TRACE_ID>.json
 ```

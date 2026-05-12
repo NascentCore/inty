@@ -2,7 +2,7 @@
 
 This package is **WebSocket REPL only**: `python -m tools.inty_v2_repl.main repl` connects to `/api/v1/chat/ws`. Companion logic lives in [`app/core/agentic_kernel/companion/`](../../app/core/agentic_kernel/companion/).
 
-**Imports**: Allowed from **`app/schemas/chat`** — wire **types/models** only. **Forbidden**: `app/core/agentic_kernel` (and other server companion implementation). **`app/schemas`** does not host downlink frame parsers; those stay in [`backend_chat_ws.py`](backend_chat_ws.py).
+**Imports**: Allowed from **`app/schemas/chat`** (completion body) and **`app/schemas/chat_websocket`** (WebSocket request envelope) — wire **types/models** only. **Forbidden**: `app/core/agentic_kernel` (and other server companion implementation). **`app/schemas`** does not host downlink frame parsers; those stay in [`backend_chat_ws.py`](backend_chat_ws.py).
 
 Full usage: [README.md](README.md).
 
