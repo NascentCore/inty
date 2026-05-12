@@ -1,4 +1,11 @@
 //
+//  HomeRoute.swift
+//  imate
+//
+//  Created by 天之行 on 2026/5/12.
+//
+
+//
 //  AppRoute.swift
 //  imate
 //
@@ -9,19 +16,11 @@ import SwiftUI
 import Combine
 
 
-enum AppRoute: Hashable {
-    case login
-    
-    case loginEmail
-    case loginEmailPassword
-    case loginAuth
-    case loginInitChat
-    
+enum HomeRoute: Hashable {
     case chatPage
 }
 
-
-class Router: ObservableObject {
+class RouterHome: ObservableObject {
     @Published var path = NavigationPath() // 存储导航栈数据
     
     // 返回上一级
@@ -31,7 +30,7 @@ class Router: ObservableObject {
         }
     }
     
-    func push(_ route: AppRoute) {
+    func push(_ route: HomeRoute) {
         path.append(route)
     }
     

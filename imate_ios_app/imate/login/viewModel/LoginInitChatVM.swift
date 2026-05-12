@@ -152,10 +152,11 @@ class LoginInitChatVM: ObservableObject {
         nextStep()
     }
     
-    func createGender() async {
+    func createAgent() async {
         do {
-            let cb: GenerateAvatarResponse = try await NetworkService.shared.request(UserAPI.creatAgent(name: name, gender: "\(gender)", avatar: avatar, intro: prompt))
-            print("on agent release data val si ------->\(cb)")
+            let cb: AgentModel = try await NetworkService.shared.request(UserAPI.creatAgent(name: name, gender: "\(gender)", avatar: avatar, intro: prompt))
+            UserManager.shared.setAgentId(s: cb.id)
+            print("on agent release data val si ------->\(cb.id)")
         } catch {
             print("on agent create error error si val----->\(error)")
 //            ToastManager.shared.show("on login error \(error)", duration: 5, type: .error);

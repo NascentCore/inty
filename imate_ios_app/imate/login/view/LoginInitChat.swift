@@ -74,7 +74,7 @@ struct LoginInitChat: View {
     
     private func goChat() {
         Task {
-            await vm.createGender()
+            await vm.createAgent()
         }
         router.push(.chatPage)
     }

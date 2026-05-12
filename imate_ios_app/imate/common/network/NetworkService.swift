@@ -43,11 +43,12 @@ final class NetworkService {
         
         // 默认 JSON
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(UserManager.shared.token)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(UserManager.shared.token ?? "")", forHTTPHeaderField: "Authorization")
         
         // 测试用
 //        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Nzg3NTUzMjAsInN1YiI6InVzZXItMDFLUEFITU5XUDYzNUpSWUFXWUdEUzNQUlMifQ.ptxNPNK_Oc7Hs3kUV6ptOmrOnVVgnt7P65colSTvgCc"
 //        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+//        print("on token val si ------->\(UserManager.shared.token)")
         
         // 自定义 Header
         endpoint.headers?.forEach { key, value in
