@@ -59,10 +59,10 @@
 - **`chat.py`**：companion 分支得到 **`companion_reply_modality`**、**`companion_voice_script`** 后调用 **`synthesize_chat_assistant_audio`**（**`use_companion=True`**）。
 - **`VoiceService`** 依赖注入与 **`chat_settings.voice_enabled`** / **`voice_id`** 等一同传入。
 
-### 主动心跳与维护性 inner tick
+<!-- ### 主动心跳与维护性 inner tick -->
 
 - **`chat.py`**：**`companion_ws_inner_tick_worker`** 轮询配置 **`companion_ws_proactive_heartbeat_poll_seconds`**；分别调用 **`_try_fire_companion_ws_proactive_heartbeat`**、**`_try_fire_companion_ws_maintenance_inner_tick`**（需 **`CompanionWebSocketCoordinator.heartbeat_context`** 已由 **`user_signed_on` 等路径经 `store_heartbeat_coords` 填充**）。
-- **可观测性 `ws_conn_id`：** 每条已鉴权的 **`/api/v1/chat/ws`** 连接在服务端生成 UUID，仅写入 **loguru** 文案（`session_open` / 控制帧 / inner-tick 轮询与触发等），**不下发 JSON**、**非 LangSmith 字段**；与 REPL 或「独立 agentic_kernel 进程」**无跨进程契约**——companion 与 WS 在同 **API worker** 进程内执行；跨回合追踪仍以 **`user_msg_uuid` / `inty_trace_id` / LangSmith** 为准（见 [`app/schemas/AGENTS.md`](/app/schemas/AGENTS.md) 同条说明）。
+- **可观测性 `ws_conn_id`：** 客户端宜在握手 URL 上带 **`ws_conn_id=<UUID>`**；服务端解析（非法或缺失则生成并打 **`chat_ws ws_conn_id_query_invalid`**），仅用于 **loguru** 串联 `session_open` / 控制帧 / inner-tick 等；**非 LangSmith 字段**。与 REPL 无单独进程契约——companion 与 WS 在同 **API worker** 内；跨回合仍以 **`user_msg_uuid` / `inty_trace_id` / LangSmith** 为准（见 [`app/schemas/AGENTS.md`](/app/schemas/AGENTS.md)）。
 - **`companion/heartbeat.py`**、**`inner_tick_schedule.py`**：节拍与时间间隔辅助（与 WS worker 的配合细节未在本次全部展开）。
 
 ### 订阅用量、历史、节日/日常记忆、推送已读、Surprise Snap
@@ -91,7 +91,7 @@
 
 English summary of **`/api/v1/chat/ws`** transport and framing (implementation: [`chat.py`](/app/api/v1/endpoints/chat.py); schema: [`ChatWebSocketRequest`](/app/schemas/chat_websocket.py)). This does **not** describe `/api/v1/live-chat/{agent_id}` (Gemini Live audio).
 
-**Handshake and auth.** After `websocket.accept()`, the server resolves the user from `Authorization: Bearer <token>` or query `token`. On failure the socket closes with code **4001**. Optional query **`assume_user_id`** applies only when the bearer user is a **superuser** (same idea as HTTP `X-Assume-User-Id` for evaluation).
+**Handshake and auth.** After `websocket.accept()`, the server resolves **`ws_conn_id`** from optional query **`ws_conn_id`** (RFC4122 UUID; if missing or invalid, a new UUID is generated server-side). Then the server resolves the user from `Authorization: Bearer <token>` or query `token`. On failure the socket closes with code **4001**. Optional query **`assume_user_id`** applies only when the bearer user is a **superuser** (same idea as HTTP `X-Assume-User-Id` for evaluation).
 
 **Outbound (two paths).**
 

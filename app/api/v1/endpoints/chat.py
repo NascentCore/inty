@@ -677,6 +677,23 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     return True
 
 
+def _resolve_ws_conn_id_from_websocket(websocket: WebSocket) -> str:
+    """Prefer client ``ws_conn_id`` query (RFC4122 UUID); else server-generated; invalid query falls back."""
+    raw = (websocket.query_params.get("ws_conn_id") or "").strip()
+    if not raw:
+        return str(uuid.uuid4())
+    try:
+        return str(uuid.UUID(raw))
+    except ValueError:
+        generated = str(uuid.uuid4())
+        logger.info(
+            "chat_ws ws_conn_id_query_invalid using_generated ws_conn_id={} rejected_query={!r}",
+            generated,
+            raw[:200],
+        )
+        return generated
+
+
 async def _get_current_user_from_websocket(
     websocket: WebSocket, db: AsyncSession
 ) -> Optional[User]:
@@ -2434,7 +2451,7 @@ async def chat_completions_websocket(
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     await websocket.accept()
-    ws_conn_id = str(uuid.uuid4())
+    ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -2726,7 +2743,7 @@ async def chat_completions_websocket_verify(
     persistence. Use to validate transport, queue behavior, and minimal LLM connectivity.
     """
     await websocket.accept()
-    ws_conn_id = str(uuid.uuid4())
+    ws_conn_id = _resolve_ws_conn_id_from_websocket(websocket)
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")

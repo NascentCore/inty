@@ -22,6 +22,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.url
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
+import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -147,6 +148,7 @@ object ChatWebSocketSessionManager {
                 httpBase.startsWith("http://") -> "ws://${httpBase.removePrefix("http://")}"
                 else -> httpBase
             }
-        return "$websocketBase/$CHAT_WEBSOCKET_PATH"
+        val wsConnId = UUID.randomUUID().toString()
+        return "$websocketBase/$CHAT_WEBSOCKET_PATH?ws_conn_id=$wsConnId"
     }
 }

@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from collections.abc import Callable
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 from zoneinfo import ZoneInfo
 
 import websockets
@@ -96,13 +96,24 @@ def _ws_conn_dropped_json(
     return json.dumps(payload)
 
 
-def http_base_to_ws_chat_url(http_base: str, *, agent_id: str | None = None) -> str:
+def http_base_to_ws_chat_url(
+    http_base: str,
+    *,
+    agent_id: str | None = None,
+    ws_conn_id: str | None = None,
+) -> str:
     base = http_base.strip().rstrip("/")
     ws_base = base.replace("http://", "ws://").replace("https://", "wss://")
     url = f"{ws_base}/api/v1/chat/ws"
+    params: list[tuple[str, str]] = []
     aid = (agent_id or "").strip()
     if aid:
-        url = f"{url}?agent_id={aid}"
+        params.append(("agent_id", aid))
+    wcid = (ws_conn_id or "").strip()
+    if wcid:
+        params.append(("ws_conn_id", wcid))
+    if params:
+        url = f"{url}?{urlencode(params)}"
     return url
 
 

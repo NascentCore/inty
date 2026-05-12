@@ -85,7 +85,9 @@ async def connect_send_implicit_sign_on_and_expect_assistant(
 ) -> None:
     """Connect WS, send ``user_signed_on`` with implicit_greeting, assert assistant reply."""
     url = http_base_to_ws_chat_url(
-        http_base_url, agent_id=agent_id if query_agent_id else None
+        http_base_url,
+        agent_id=agent_id if query_agent_id else None,
+        ws_conn_id=str(uuid.uuid4()),
     )
     headers = [("Authorization", f"Bearer {bearer_token.strip()}")]
     deadline = time.monotonic() + recv_timeout_sec

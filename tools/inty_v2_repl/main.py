@@ -503,12 +503,16 @@ def _repl_run_backend_ws_branch(
     agent_resolved = _resolve_chat_agent_id_cli(agent_id)
     base = (api_base_url or default_api_base_url()).strip()
     token = _resolve_bearer_token_cli()
-    url = http_base_to_ws_chat_url(base, agent_id=agent_resolved)
+    repl_ws_conn_id = str(uuid.uuid4())
+    url = http_base_to_ws_chat_url(
+        base, agent_id=agent_resolved, ws_conn_id=repl_ws_conn_id
+    )
     logger.info(
-        "repl backend-ws api_base={} ws_url={} agent_id={}",
+        "repl backend-ws api_base={} ws_url={} agent_id={} ws_conn_id={}",
         base,
         url,
         agent_resolved,
+        repl_ws_conn_id,
     )
     _init_proto_logging(ws, log_file, no_log_file)
     repl_notice_q: queue.Queue[str] = queue.Queue()

@@ -27,6 +27,15 @@ def test_http_base_to_ws_chat_url() -> None:
         http_base_to_ws_chat_url("https://example.com")
         == "wss://example.com/api/v1/chat/ws"
     )
+    cid = "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    assert (
+        http_base_to_ws_chat_url("http://127.0.0.1:8000/", ws_conn_id=cid)
+        == f"ws://127.0.0.1:8000/api/v1/chat/ws?ws_conn_id={cid}"
+    )
+    assert (
+        http_base_to_ws_chat_url("http://127.0.0.1:8000/", agent_id="a1", ws_conn_id=cid)
+        == "ws://127.0.0.1:8000/api/v1/chat/ws?agent_id=a1&ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    )
 
 
 def test_parse_chat_response_payload_success() -> None:

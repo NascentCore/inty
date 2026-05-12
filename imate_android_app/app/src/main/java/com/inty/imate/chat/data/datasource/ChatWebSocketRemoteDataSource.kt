@@ -189,7 +189,8 @@ constructor() {
                 httpBase.startsWith("http://") -> "ws://${httpBase.removePrefix("http://")}"
                 else -> httpBase
             }
-        return "$websocketBase/$CHAT_WEBSOCKET_PATH"
+        val wsConnId = UUID.randomUUID().toString()
+        return "$websocketBase/$CHAT_WEBSOCKET_PATH?ws_conn_id=$wsConnId"
     }
 
     companion object {

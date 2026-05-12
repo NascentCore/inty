@@ -2242,6 +2242,76 @@ def test_chat_websocket_verify_user_signed_out_not_supported(
     }
 
 
+def test_chat_websocket_session_open_uses_client_ws_conn_id_query(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    client_ws = "11111111-2222-4333-8444-555555555555"
+    expected_norm = str(uuid.UUID(client_ws))
+    session_open_msgs: list[str] = []
+
+    def _sink(message):
+        rec = message.record
+        msg = rec["message"]
+        if "chat_ws session_open" in msg:
+            session_open_msgs.append(msg)
+
+    hid = logger.add(_sink, level="INFO")
+    try:
+        user = _make_user(user_id="user-ws-cid-1", auth_type=AuthType.GOOGLE)
+
+        async def fake_ws_user(websocket, db):
+            return user
+
+        monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+        with FastAPITestClient(chat_business_error_app) as client:
+            path = f"/api/v1/chat/ws?ws_conn_id={client_ws}"
+            with client.websocket_connect(path) as websocket:
+                websocket.send_json({"type": "ping"})
+                assert websocket.receive_json() == {"type": "pong"}
+    finally:
+        logger.remove(hid)
+
+    assert session_open_msgs
+    assert any(expected_norm in m for m in session_open_msgs), session_open_msgs
+
+
+def test_chat_websocket_invalid_ws_conn_id_query_logs_fallback(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    invalid_msgs: list[str] = []
+    session_open_msgs: list[str] = []
+
+    def _sink(message):
+        rec = message.record
+        msg = rec["message"]
+        if "ws_conn_id_query_invalid" in msg:
+            invalid_msgs.append(msg)
+        if "chat_ws session_open" in msg:
+            session_open_msgs.append(msg)
+
+    hid = logger.add(_sink, level="INFO")
+    try:
+        user = _make_user(user_id="user-ws-cid-2", auth_type=AuthType.GOOGLE)
+
+        async def fake_ws_user(websocket, db):
+            return user
+
+        monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+        with FastAPITestClient(chat_business_error_app) as client:
+            with client.websocket_connect(
+                "/api/v1/chat/ws?ws_conn_id=not-a-valid-uuid"
+            ) as websocket:
+                websocket.send_json({"type": "ping"})
+                assert websocket.receive_json() == {"type": "pong"}
+    finally:
+        logger.remove(hid)
+
+    assert invalid_msgs
+    assert any("not-a-valid-uuid" in m for m in invalid_msgs), invalid_msgs
+    assert session_open_msgs
+    assert not any("not-a-valid-uuid" in m for m in session_open_msgs), session_open_msgs
+
+
 def test_chat_websocket_ws_conn_dropped_appends_chat_logs_line(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
