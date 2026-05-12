@@ -19,7 +19,7 @@ final class ChatRepository {
         service.disconnect()
     }
 
-    func send(message: SendMsgReq) {
+    func send(message: ChatWebSocketReq) {
         service.send(message: message)
     }
 }

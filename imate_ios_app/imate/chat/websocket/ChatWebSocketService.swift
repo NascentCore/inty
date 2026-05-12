@@ -34,7 +34,6 @@ final class ChatWebSocketService {
     }
 
     // MARK: - Disconnect
-
     func disconnect() {
         pingTimer?.invalidate()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
@@ -42,7 +41,7 @@ final class ChatWebSocketService {
     }
 
     // MARK: - Send
-    func send(message: SendMsgReq) {
+    func send(message: ChatWebSocketReq) {
         guard let task = webSocketTask else {
             return
         }
@@ -96,7 +95,9 @@ final class ChatWebSocketService {
             print("on response si --------->\(response.code)----->\(response.message)")
             
             if response.code != 200 {
-                ToastManager.shared.show(response.message)
+                DispatchQueue.main.async {
+                    ToastManager.shared.show(response.message)
+                }
             }
             
             // 业务状态判断

@@ -131,6 +131,7 @@ struct LoginEmailPassword: View {
         do {
             let cb: LoginResponse = try await NetworkService.shared.request(UserAPI.login(email: userManager.email, password: password));
             UserManager.shared.token = cb.token
+            KeychainManager.shared.save(key: SaveKeys.token.key, value: cb.token)
             ToastManager.shared.show("Login success", type: .success);
             router.push(.loginAuth)
         } catch {

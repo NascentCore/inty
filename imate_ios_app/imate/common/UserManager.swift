@@ -18,6 +18,8 @@ class UserManager: ObservableObject {
     @Published var email: String = ""
     @Published var isLoggedIn: Bool = false
     
+    var agentId: String = ""
+    
     func login(name: String) {
         isLoggedIn = true
     }

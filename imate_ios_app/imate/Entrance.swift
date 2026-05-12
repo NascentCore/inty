@@ -39,5 +39,10 @@ struct Entrance: View {
         // 注入环境对象，子页面通过 @EnvironmentObject 获取
         .environmentObject(router)
         .environmentObject(userManager)
+        .onAppear {
+            let token = KeychainManager.shared.read(key: "user_token")
+            let agentId = KeychainManager.shared.read(key: "agent_id")
+            // print("on token --------->\(token)-----\(agentId)")
+        }
     }
 }

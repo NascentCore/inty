@@ -18,10 +18,10 @@ class ChatPageVM: ObservableObject {
     
     @Published var isConnected = false
     
+    var agentId: String = ""
     private let repository = ChatRepository()
     
     init() {
-//     startConversation()
         repository.service.onReceiveMessage = { message in
 //            self?.messages.append(message)
             print("on receive message s i----->\(message)")
@@ -63,7 +63,15 @@ class ChatPageVM: ObservableObject {
     }
 
     func send(text: String) {
-        let req = SendMsgReq(content: text)
+        agentId = "agentId"
+        guard !agentId.isEmpty else {
+//            DispatchQueue.main.async {
+//                ToastManager.shared.show("ChatPageVM: agentId is empty!")
+//            }
+            return;
+        }
+        
+        let req = ChatWebSocketReq.userMessage(agentId: agentId, text: text)
         repository.send(message: req)
     }
 }
