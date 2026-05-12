@@ -105,6 +105,11 @@ from app.services.memory_service import (
     deliver_festival_memories_for_user_agent,
 )
 from app.db.session import AsyncSessionLocal
+from app.services.phone_call_service import (
+    PhoneCallConfigError,
+    PhoneCallLimitError,
+    phone_call_service,
+)
 from app.services.chat_service import generate_session_id
 from app.services.subscription_service import SubscriptionService
 from app.services.surprise_snap_service import (
@@ -1992,7 +1997,79 @@ async def _agent_chat_completions_impl(
                             "companion kernel on WebSocket yet. Send text-only content."
                         ),
                     )
-                if use_companion:
+                phone_call_trigger_number = (
+                    None
+                    if implicit_signed_on_ws
+                    else phone_call_service.extract_call_me_at_number(last_user_text)
+                )
+                if phone_call_trigger_number:
+                    try:
+                        phone_result = await phone_call_service.start_outbound_call(
+                            db=db,
+                            current_user=current_user,
+                            agent_id=agent_id,
+                            phone_number=phone_call_trigger_number,
+                            subscription_svc=subscription_svc,
+                            reason="chat_message_call_me_at",
+                        )
+                        response_text_content = (
+                            "I'm calling you now at "
+                            f"{phone_result.to_number_masked}."
+                        )
+                        response_content_parts = None
+                        phone_meta = {
+                            "agentId": agent_id,
+                            "phone_call": {
+                                "trigger": "chat_message_call_me_at",
+                                "call_sid": phone_result.call_sid,
+                                "status": phone_result.status,
+                                "to_number_masked": phone_result.to_number_masked,
+                            },
+                        }
+                    except PhoneCallLimitError as exc:
+                        out = dict(exc.error_response)
+                        out["agent_id"] = agent_id
+                        return out
+                    except (PhoneCallConfigError, ValueError) as exc:
+                        response_text_content = (
+                            "I can't place the phone call yet: " f"{str(exc)}."
+                        )
+                        response_content_parts = None
+                        phone_meta = {
+                            "agentId": agent_id,
+                            "phone_call": {
+                                "trigger": "chat_message_call_me_at",
+                                "status": "failed",
+                                "reason": str(exc),
+                            },
+                        }
+
+                    companion_user_row_id = (
+                        await _persist_companion_user_message_for_bg(
+                            session_id=session_id,
+                            last_user_message=last_user_message,
+                            effective_local_id=effective_local_id,
+                            implicit_signed_on_ws=implicit_signed_on_ws,
+                        )
+                    )
+                    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                        session_id,
+                        response_text_content,
+                        agent_id=chat.agent_id,
+                        meta_data=phone_meta,
+                    )
+                    if (
+                        companion_ws_heartbeat_ctx is not None
+                        and chat_route == "websocket"
+                    ):
+                        apply_companion_ws_heartbeat_coords(
+                            companion_ws_heartbeat_ctx,
+                            user_id=current_user.id,
+                            agent_id=agent_id,
+                            chat_id=chat.id,
+                        )
+                    _ = companion_user_row_id
+                elif use_companion:
                     companion_preset_uid: str | None = None
                     if (
                         chat_route == "websocket"

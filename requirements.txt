@@ -133,6 +133,7 @@ prometheus-client==0.24.1
 animeface==2.0.3
 elevenlabs>=2.15.0
 mutagen
+twilio
 # 视频处理依赖（ffmpeg 需要系统级安装，支持 libavif 编码器）
 # 注意：ffmpeg 需要系统级安装，不在 requirements.txt 中
 # 确保系统已安装 ffmpeg 且支持 libavif: ffmpeg -encoders | grep avif

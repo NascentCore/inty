@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     images,
     live_chat,
     notification,
+    phone_call,
     report,
     settings,
     subscription,
@@ -45,3 +46,4 @@ api_router.include_router(version.router, tags=["version"])
 api_router.include_router(text_to_speech.router, tags=["text_to_speech"])
 api_router.include_router(character_themes.router, tags=["character-themes"])
 api_router.include_router(live_chat.router, tags=["live-chat"])
+api_router.include_router(phone_call.router, tags=["phone-calls"])

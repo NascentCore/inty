@@ -630,6 +630,30 @@ class GeminiLiveConfig:
 
 
 @dataclass
+class PhoneCallConfig:
+    """PSTN phone-call bridge configuration.
+
+    The feature flag defaults to on so product surfaces may show the capability,
+    while runtime availability is still gated by Twilio/Gemini/public-WSS config.
+    Secrets should be supplied by environment variables in deployments.
+    """
+
+    enabled: bool = True
+    default_country_code: str = "+1"
+    twilio_from_number: str = ""
+    twilio_media_stream_base_url: str = ""
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    inbound_number_agent_map: dict = None
+    default_inbound_agent_id: str = ""
+    media_stream_token_ttl_seconds: int = 300
+
+    def __post_init__(self):
+        if self.inbound_number_agent_map is None:
+            self.inbound_number_agent_map = {}
+
+
+@dataclass
 class TTSConfig:
     """语音播报配置"""
 
@@ -671,6 +695,7 @@ class Config:
     )
     fal: FalConfig = field(default_factory=FalConfig)
     gemini_live: GeminiLiveConfig = field(default_factory=GeminiLiveConfig)
+    phone_call: PhoneCallConfig = field(default_factory=PhoneCallConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
     surprise_snap: SurpriseSnapConfig = field(
         default_factory=lambda: SurpriseSnapConfig()
@@ -728,6 +753,7 @@ def load_config(path: str) -> Config:
         ),
         fal=FalConfig(**data.get("fal", {})),
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
+        phone_call=PhoneCallConfig(**(data.get("phone_call") or {})),
         tts=TTSConfig(**data.get("tts", {})),
         surprise_snap=_parse_surprise_snap_config(data),
     )
@@ -815,6 +841,19 @@ def _validate_config(config: Config):
         raise ValueError(
             "app.features.chat_ws_idle_timeout_seconds must be between 10 and 3600"
         )
+
+    pc = config.phone_call
+    if pc.enabled:
+        if pc.media_stream_token_ttl_seconds < 60 or pc.media_stream_token_ttl_seconds > 3600:
+            raise ValueError(
+                "phone_call.media_stream_token_ttl_seconds must be between 60 and 3600"
+            )
+        if pc.twilio_media_stream_base_url and not pc.twilio_media_stream_base_url.startswith(
+            "wss://"
+        ):
+            raise ValueError("phone_call.twilio_media_stream_base_url must start with wss://")
+        if pc.default_country_code and not pc.default_country_code.startswith("+"):
+            raise ValueError("phone_call.default_country_code must start with '+'")
 
     from app.core.agentic_kernel.companion.transcript_compaction import (
         CompactionConfig as CompanionTranscriptCompactionConfig,
