@@ -231,6 +231,30 @@ def _chat_request_with_merged_ws_time_context(
     return request.model_copy(update={"user_time_context": utc})
 
 
+def _implicit_signal_bundle_from_ws_tc_box(
+    tc_box: list[Optional[dict]],
+) -> Optional[ImplicitSignalBundle]:
+    """Build companion ``ImplicitSignalBundle`` from WebSocket ``client_context`` cache (``tc_box[0]``)."""
+    if not tc_box:
+        return None
+    raw = tc_box[0]
+    if not raw:
+        return None
+    try:
+        utc = UserTimeContext.model_validate(raw)
+    except ValidationError as exc:
+        logger.warning(
+            "chat_ws tc_box time_context invalid error={}",
+            str(exc)[:500],
+        )
+        return None
+    return ImplicitSignalBundle(
+        client_time=utc,
+        user_signed_on=False,
+        server_received_at_utc=datetime.now(timezone.utc),
+    )
+
+
 async def _enqueue_companion_implicit_greeting_ws_turn_after_signed_on(
     *,
     db: AsyncSession,
@@ -1257,6 +1281,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
     ws_conn_id: str,
+    tc_box: list[Optional[dict]],
 ) -> None:
     """If companion transcript says proactive heartbeat is due, run one turn and queue WS payload."""
     user_id = str(ctx.get("user_id") or "").strip()
@@ -1325,6 +1350,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
         session_id = generate_session_id(str(chat_row_id))
         preset_uid = str(uuid.uuid4())
 
+    ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
     async with companion_ws.turn_lock:
         companion_turn = await companion_chat_service.run_companion_chat_turn_for_api(
             user_id=user_id,
@@ -1338,6 +1364,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             preset_user_msg_uuid=preset_uid,
             inner_tick_turn=True,
             inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
+            implicit_signal_bundle=ws_implicit,
         )
 
         companion_reply = companion_turn.assistant_text
@@ -1390,6 +1417,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     str(e),
                 )
 
+            stub_utc = ws_implicit.client_time if ws_implicit else None
             stub_request = ChatCompletionRequest(
                 messages=[
                     ChatMessage(
@@ -1398,6 +1426,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
                     )
                 ],
                 message_id=preset_uid,
+                user_time_context=stub_utc,
             )
             (
                 response_text_content,
@@ -1505,6 +1534,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
     ws_conn_id: str,
+    tc_box: list[Optional[dict]],
 ) -> None:
     """If companion transcript says maintenance inner-tick is due, run one MAINTENANCE turn and queue WS."""
     feats = global_config_loaded_from_config_yaml.app.features
@@ -1582,6 +1612,8 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
         chat_row_agent_id = chat.agent_id
         session_id = generate_session_id(str(chat_row_id))
 
+    ws_implicit = _implicit_signal_bundle_from_ws_tc_box(tc_box)
+    stub_utc = ws_implicit.client_time if ws_implicit else None
     preset_uid = str(uuid.uuid4())
     stub_request = ChatCompletionRequest(
         messages=[
@@ -1591,6 +1623,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             )
         ],
         message_id=preset_uid,
+        user_time_context=stub_utc,
     )
 
     async with companion_ws.turn_lock:
@@ -1617,6 +1650,7 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     preset_user_msg_uuid=preset_uid,
                     inner_tick_turn=True,
                     inner_tick_mode=InnerTickMode.MAINTENANCE,
+                    implicit_signal_bundle=ws_implicit,
                 )
             )
         except Exception as exc:
@@ -2528,6 +2562,7 @@ async def chat_completions_websocket(
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
                         ws_conn_id=ws_conn_id,
+                        tc_box=tc_box,
                     )
                 if feats.companion_ws_maintenance_inner_tick_enabled:
                     await _try_fire_companion_ws_maintenance_inner_tick(
@@ -2536,6 +2571,7 @@ async def chat_completions_websocket(
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
                         ws_conn_id=ws_conn_id,
+                        tc_box=tc_box,
                     )
             except Exception:
                 logger.exception(
