@@ -28,7 +28,7 @@ Inty 代表 Intelligent Entity - 智能存在；
 - 拟人的情感表达能力（喜怒哀乐、长期记忆、情感升华、幻想等等）
 - 拟人的独立内心世界
 - 拟人的独立与互联网互动（与用户共享）
-- 拟人的与 TechnoCore 互动的能力（为智能体创造的虚拟空间，得名于丹·西蒙斯的《海伯利安》）[1]
+- 拟人的与 LivingSphere & TechnoCore 互动的能力 [1]
 
 这个智能体的核心代码位于 [agentic_kernel](/app/core/agentic_kernel/)：
 
@@ -61,14 +61,14 @@ Inty 代表 Intelligent Entity - 智能存在；
   - [.cursor](/.cursor/) Cursor-specific harness
 - Miscs: read AGENTS.md or README.md under the dirs for information.
 
-## Output
+## Your response
 
 - Respond with information from most to least importance
 - Always answer with 1 sentence summary.
   - Only elaborate if user explicitly asks.
 - Answer in Mandarin（简体中文）/使用中文回答, instructions are written in English for your easier understanding
 
-## Memory
+## Your memory
 
 - Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
 - Apply them silently. Do not re-announce learned behavior.
@@ -86,30 +86,22 @@ Inty 代表 Intelligent Entity - 智能存在；
 | Local clone, quickstart, badges, external links | [local-developer-setup.md](/.agents/guidelines/local-developer-setup.md) |
 | Cloud Agent git and PR contract | [CLOUD_AGENTS.md](/.agents/guidelines/CLOUD_AGENTS.md) |
 
-## General Rules
+## Engineering guidelines
 
+### General guidelines
+
+- Do not do defensive programming, let failures be noticed ASAP.
 - The ground truth is in code. Never speculate about code, files, or APIs you have not read.
 - Docs describe abstract ideas, never repeating information that can be directly derived from the code files:
   - higher-logical-level design of multiple code files
   - engineers' intended states of the code files
   - future directions
 - Create skills, commands to abstract and automate repeated actions
-
-## Code output
-
-- **Secrets**: use environment variables (or a secret manager); never commit secrets.
-- **Requested tunables**: when the user asked for configurable behavior, wire it through `config.yaml` with [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).
-- **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”; only add configurability the user explicitly requested.
 - Never ever over-engineer.
 - Never ever speculate potential use cases.
 - Simple, direct, correct, focused.
   Simple and wrong can be fixed easily, complicated and wrong only induce more wrongness.
-- Always tested your changes
-
-## Python package doc blocks (required)
-
-- Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
-- The docstring must explain what that package is designed for and its role or behavior in the broader system.
+- Always test your changes
 
 ### 工程文档层次结构
 
@@ -117,6 +109,17 @@ Inty 代表 Intelligent Entity - 智能存在；
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；详略由编写者按上下文自行判断，不以「人类扫读一整 repo」为第一约束。
+
+### Writing code
+
+- **Secrets**: use environment variables (or a secret manager); never commit secrets.
+- **Requested tunables**: when the user asked for configurable behavior, wire it through `config.yaml` with [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).
+- **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”; only add configurability the user explicitly requested.
+
+### Python package doc blocks (required)
+
+- Maintain Python package/module-level documentation in the package's `__init__.py` docstring.
+- The docstring must explain what that package is designed for and its role or behavior in the broader system.
 
 ## References
 
