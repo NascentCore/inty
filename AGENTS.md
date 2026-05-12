@@ -60,6 +60,9 @@ Inty 代表 Intelligent Entity - 智能存在；
   - [.cursor](/.cursor/) Cursor-specific harness
 - Miscs: read AGENTS.md or README.md under the dirs for information.
 
+IMPORTANT: feel free to break backward compatibility when changing agentic_kernel & repl,
+they are in development mode.
+
 ## Your response style
 
 - Respond with information from most to least importance
