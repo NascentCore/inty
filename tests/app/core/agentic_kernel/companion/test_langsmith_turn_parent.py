@@ -175,7 +175,7 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         inner_tick_mode=InnerTickMode.MAINTENANCE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
-    assert kwargs["name"] == "agentic_companion_inner_tick user=u1 agent=a1"
+    assert kwargs["name"] == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
     assert kwargs["tags"] == ["agentic_companion", "inner_tick"]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
     assert kwargs["inputs"]["inner_tick_mode"] == "maintenance"
@@ -205,6 +205,7 @@ def test_create_companion_turn_root_run_inner_tick_proactive_lane(
         inner_tick_mode=InnerTickMode.PROACTIVE_CHAT,
     )
     kwargs = mock_rt_cls.call_args.kwargs
+    assert kwargs["name"] == "agentic_companion_inner_tick proactive_chat user=u1 agent=a1"
     assert kwargs["inputs"]["inner_tick_mode"] == "proactive_chat"
     assert kwargs["extra"]["metadata"]["inner_tick_mode"] == "proactive_chat"
     end_companion_turn_root_run_safe(mock_root, ls_end_source="test_teardown")
