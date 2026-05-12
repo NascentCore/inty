@@ -48,12 +48,14 @@ from dataclasses import dataclass
 from typing import Any, Final, Literal
 from unittest.mock import Base as _UnittestMockBase
 
+from loguru import logger
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic_core import PydanticSerializationError
+
 _MARKDOWN_JSON_FENCE_RE = re.compile(
     r"^\s*```(?:json)?\s*\r?\n?(.*?)\r?\n?```\s*$",
     re.DOTALL | re.IGNORECASE,
 )
-
-from pydantic import BaseModel, Field, field_validator, model_validator
 
 SIGNIFICANCE_PERCEPTION_REL: Final[str] = "SIGNIFICANCE_PERCEPTION.md"
 
@@ -249,7 +251,7 @@ def parse_dual_llm_chat_envelope_json(raw: str) -> DualLlmChatBranchEnvelope | N
         return None
     try:
         return DualLlmChatBranchEnvelope.model_validate(obj)
-    except Exception:
+    except ValidationError:
         return None
 
 
@@ -299,7 +301,12 @@ def _string_candidates_from_value(value: Any) -> list[str]:
     if callable(dump):
         try:
             return _string_candidates_from_value(dump())
-        except Exception:
+        except (PydanticSerializationError, TypeError, ValueError) as exc:
+            logger.warning(
+                "dual_llm_envelope_candidate_model_dump_failed value_type={} err={}",
+                type(value).__name__,
+                exc,
+            )
             return []
     out: list[str] = []
     for key in ("content", "text", "summary"):
