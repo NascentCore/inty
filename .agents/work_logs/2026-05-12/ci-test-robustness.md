@@ -1,0 +1,11 @@
+- Summary: Hardened backend CI against hidden runtime errors and removed one Assertion Roulette test smell.
+- Actions:
+  - Reviewed recent backend CI failures and adjacent successful runs.
+  - Serialized agent update/delete responses before FastAPI response-model validation.
+  - Downgraded successful subscription verification logging from ERROR to INFO.
+  - Added backend CI server log capture and unexpected ERROR/Traceback scanning.
+  - Removed duplicate pytest config from pyproject.toml.
+  - Refactored telegram promotion E2E assertions into named, documented checks.
+  - Verified targeted E2E tests against a local backend and scanned backend logs.
+- Follow-ups:
+  - Auto-merge could not be enabled from this environment because only PR creation is exposed for GitHub writes.
