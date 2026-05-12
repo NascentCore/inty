@@ -3,6 +3,9 @@
 Wire payloads use types from ``app.schemas.chat`` (completion body) and
 ``app.schemas.chat_websocket`` (WebSocket envelope); downlink JSON parsing helpers live in this
 module, not in ``app/schemas`` (schemas stay type-only).
+
+Transport-only tunables (e.g. ``ws_conn_dropped`` ack wait) use package-level defaults here so the
+REPL does not import server ``config.yaml`` / ``app.core.config``.
 """
 
 from __future__ import annotations
@@ -23,7 +26,6 @@ from zoneinfo import ZoneInfo
 import websockets
 from websockets.exceptions import ConnectionClosed
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
@@ -36,6 +38,9 @@ from app.schemas.chat_websocket import (
 )
 from loguru import logger
 
+# Seconds to wait for ``ws_conn_dropped_ack`` after sending ``ws_conn_dropped`` on reconnect.
+_WS_CONN_DROPPED_ACK_TIMEOUT_SEC: float = 5.0
+
 
 class BackendChatWsError(RuntimeError):
     def __init__(self, code: int, message: str, agent_id: str | None = None):
@@ -46,9 +51,7 @@ class BackendChatWsError(RuntimeError):
 
 
 def default_ws_conn_dropped_ack_timeout_sec() -> float:
-    return float(
-        global_config_loaded_from_config_yaml.inty_v2_repl.ws_conn_dropped_ack_timeout_sec
-    )
+    return float(_WS_CONN_DROPPED_ACK_TIMEOUT_SEC)
 
 
 def _ws_close_reason_text(reason: object | None) -> str:

@@ -50,18 +50,10 @@ pgrep -af 'python -m tools\.inty_v2_repl' || true
 
 Bearer 默认读 **`${INTY_OPS_BEARER_TOKEN_FILE:-.inty_ops_bearer_token}`**（`--local` 启动已写入）。API 基址默认 **`http://127.0.0.1:8001`**；若使用环境变量 **`PORT`** 覆盖监听端口，请同步改 **`INTY_API_BASE_URL`**（例如 `export INTY_API_BASE_URL=http://127.0.0.1:9001`）。
 
-下列命令仅依赖 **stdlib**（无需 `jq`），打印 **`id<TAB>name`**（仓库根 cwd）：
+Run the command below to get the agent ID for launching the repl:
 
 ```bash
-python3 scripts/list_inty_ops_agents_admin.py
-```
-
-可选：`--api-base`、`--token-file`、`--limit`；环境变量 **`INTY_API_BASE_URL`**、**`INTY_OPS_BEARER_TOKEN_FILE`** 与 CLI 默认值同上节。
-
-仅需 **第一条** UUID 时：
-
-```bash
-python3 scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}'
+AGENT_ID=$(python3 scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}')
 ```
 
 ## Final reply to user（默认）
@@ -69,15 +61,13 @@ python3 scripts/list_inty_ops_agents_admin.py | awk -F'\t' 'NR==1 {print $1}'
 Ops 就绪后，对用户依次给出下面 **三样**（不要默认展开 JWT、`ImportError`、`README` 等；用户追问再指路）：
 
 1. 一行：`后端日志：<repo-root>/tmp/inty-ops-local.log`（与上文 `--log-file` 一致时）。
-2. **`python3 scripts/list_inty_ops_agents_admin.py`**（让用户复制一行 `id` 给下一步）。
-3. **仅** 下列 REPL 块（勿 `python tools/inty_v2_repl/main.py`）；把 `YOUR_AGENT_ID` 换成上一步输出的 UUID。
+2. repl launch command, use the AGENT_ID obtained before:
 
 ```bash
 source .venv/bin/activate
-export INTY_CONFIG_YAML=devops/config.yaml.local
 python -m tools.inty_v2_repl.main repl \
   --api-base-url http://127.0.0.1:8001 \
-  --agent-id YOUR_AGENT_ID
+  --agent-id ${AGENT_ID}
 ```
 
 （若实际 **`PORT`≠8001**，将两处 URL 中的端口改成一致。）

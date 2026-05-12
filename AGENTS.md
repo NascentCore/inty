@@ -46,7 +46,7 @@ Inty 代表 Intelligent Entity - 智能存在；
 - Agentic core
   - [agentic_kernel](/app/core/agentic_kernel/): Inty's core agentic harness
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user, and inferred from the user's actual living space.
-  - [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
+  - [techno_core](/techno_core/)：collective virtual world of living spheres and shared spaces; Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
 - Applications
   - Backend
     - [ws-data-model](/app/schemas/chat.py): communication protocols
