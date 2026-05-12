@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 from fastapi import FastAPI
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import sessionmaker
 
 from app.api import deps
@@ -26,7 +26,7 @@ from tests.app.api.v1.endpoints.conftest import (
 
 
 def test_chat_completions_endpoint(integration_client: TestClient):
-    agent_id = integration_client.create_agent()
+    agent_id = integration_client.create_agent(opening="")
 
     response = integration_client.chat_completions(
         agent_id,
@@ -228,7 +228,7 @@ def test_create_agent_with_empty_background(
         "personality": "一个友好的测试角色",
         "scenario": "用于测试空背景字段的场景",
         "intro": "这是一个测试角色",
-        "opening": "你好！我是用来测试空背景的角色。",
+        "opening": "",
         "background": background,
     }
 
@@ -278,31 +278,54 @@ def db_session():
     session.close()
 
 
+def _update_agent_columns(db_session, agent_id: str, **values) -> None:
+    """Set test fixture fields without holding a versioned Agent instance."""
+    result = db_session.execute(
+        update(Agent)
+        .where(Agent.id == agent_id, Agent.deleted_at.is_(None))
+        .values(**values)
+    )
+    assert result.rowcount == 1, f"Agent {agent_id} not found in database"
+    db_session.commit()
+    db_session.expire_all()
+
+
 def test_recommend_agents_energy_points_sorting(
     integration_client: TestClient, db_session
 ):
     """测试按 energy_points 排序推荐角色列表"""
     agent_ids = []
-    points_values = [100, 50, 200, 0, 150]  # 降序应该是: 200, 150, 100, 50, 0
+    # Use high values so these fresh fixture agents appear on the first shared
+    # integration DB page even when older public agents already exist.
+    points_values = [10_000_100, 10_000_050, 10_000_200, 10_000_000, 10_000_150]
 
-    for i, points in enumerate(points_values):
-        agent_id = integration_client.create_agent(
-            name=f"Test Agent Points {points}",
-            visibility="PUBLIC",
-        )
-        agent_ids.append(agent_id)
-
-        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
-        assert agent is not None, f"Agent {agent_id} not found in database"
-        agent.points = points
-        db_session.commit()
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+    db_user = db_session.query(User).filter(User.id == user_id).first()
+    assert db_user is not None
+    was_super = db_user.is_superuser
+    db_user.is_superuser = True
+    db_session.commit()
 
     try:
+        for points in points_values:
+            agent_id = integration_client.create_agent(
+                name=f"Test Agent Points {points}",
+                visibility="PUBLIC",
+                opening="",
+            )
+            agent_ids.append(agent_id)
+
+            _update_agent_columns(db_session, agent_id, points=points)
+
         response = integration_client.client.get(
             f"{integration_client.base_url}/api/v1/ai/agents/recommend",
             params={
                 "page": 1,
-                "page_size": 10,
+                "page_size": 100,
                 "sort": "energy_points",
             },
         )
@@ -321,6 +344,7 @@ def test_recommend_agents_energy_points_sorting(
         assert all("energy_points" in item for item in items)
 
         our_agents = [item for item in items if item["id"] in agent_ids]
+        assert {agent["id"] for agent in our_agents} == set(agent_ids)
         expected_points_map = dict(zip(agent_ids, points_values))
 
         for agent in our_agents:
@@ -360,6 +384,8 @@ def test_recommend_agents_energy_points_sorting(
     finally:
         for agent_id in agent_ids:
             integration_client.delete_agent(agent_id)
+        db_user.is_superuser = was_super
+        db_session.commit()
 
 
 def test_recommend_agents_text_match_requires_match_description(
@@ -396,18 +422,20 @@ def test_recommend_agents_text_match_ranks_exclusive_caption(
     agent_id = integration_client.create_agent(
         name=f"Text Match Agent {uuid.uuid4().hex[:6]}",
         visibility="PUBLIC",
+        opening="",
     )
     try:
-        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
-        assert agent is not None
-        agent.exclusive_photos = [
-            {
-                "image_url": "https://example.com/exclusive-placeholder.jpg",
-                "caption": unique_caption,
-                "credits_required": 0,
-            }
-        ]
-        db_session.commit()
+        _update_agent_columns(
+            db_session,
+            agent_id,
+            exclusive_photos=[
+                {
+                    "image_url": "https://example.com/exclusive-placeholder.jpg",
+                    "caption": unique_caption,
+                    "credits_required": 0,
+                }
+            ],
+        )
 
         response = integration_client.client.get(
             f"{integration_client.base_url}/api/v1/ai/agents/recommend",
@@ -460,11 +488,10 @@ def test_recommend_agents_text_match_finds_prompt_when_agent_url_differs_from_re
     agent_id = integration_client.create_agent(
         name=f"GCS Align Agent {suffix}",
         visibility="PUBLIC",
+        opening="",
     )
     try:
-        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
-        assert agent is not None
-        agent.background = gcs_url
+        _update_agent_columns(db_session, agent_id, background=gcs_url)
         db_session.add(
             Resource(
                 url=cdn_url,
@@ -533,17 +560,20 @@ def test_recommend_agents_text_match_exclusive_empty_caption_falls_back_to_resou
     agent_id = integration_client.create_agent(
         name=f"Excl Fallback {suffix}",
         visibility="PUBLIC",
+        opening="",
     )
     try:
-        agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
-        assert agent is not None
-        agent.exclusive_photos = [
-            {
-                "image_url": img_url,
-                "caption": "",
-                "credits_required": 0,
-            }
-        ]
+        _update_agent_columns(
+            db_session,
+            agent_id,
+            exclusive_photos=[
+                {
+                    "image_url": img_url,
+                    "caption": "",
+                    "credits_required": 0,
+                }
+            ],
+        )
         db_session.add(
             Resource(
                 url=img_url,
@@ -595,13 +625,26 @@ def test_recommend_agents_never_returns_private_even_for_superuser(
     private_agent_id = integration_client.create_agent(
         name=f"Private Agent {uuid.uuid4().hex[:6]}",
         visibility="PRIVATE",
+        opening="",
     )
     public_agent_id = integration_client.create_agent(
         name=f"Public Agent {uuid.uuid4().hex[:6]}",
         visibility="PUBLIC",
+        opening="",
     )
+    db_user = None
+    was_super = None
 
     try:
+        me_resp = integration_client.client.get(
+            f"{integration_client.base_url}/api/v1/users/me",
+        )
+        assert me_resp.status_code == 200, me_resp.text
+        user_id = me_resp.json()["data"]["id"]
+        db_user = db_session.query(User).filter(User.id == user_id).first()
+        assert db_user is not None
+        was_super = db_user.is_superuser
+
         guest_resp = integration_client.client.get(
             f"{integration_client.base_url}/api/v1/ai/agents/recommend",
             params={"page": 1, "page_size": 50, "sort": "created_desc"},
@@ -612,13 +655,6 @@ def test_recommend_agents_never_returns_private_even_for_superuser(
         guest_ids = [item["id"] for item in guest_payload["data"]["list"]]
         assert private_agent_id not in guest_ids
 
-        me_resp = integration_client.client.get(
-            f"{integration_client.base_url}/api/v1/users/me",
-        )
-        assert me_resp.status_code == 200, me_resp.text
-        user_id = me_resp.json()["data"]["id"]
-        db_user = db_session.query(User).filter(User.id == user_id).first()
-        assert db_user is not None
         db_user.is_superuser = True
         db_session.commit()
 
@@ -635,15 +671,9 @@ def test_recommend_agents_never_returns_private_even_for_superuser(
     finally:
         # 恢复用户权限，避免影响后续测试
         try:
-            me_resp = integration_client.client.get(
-                f"{integration_client.base_url}/api/v1/users/me",
-            )
-            if me_resp.status_code == 200:
-                user_id = me_resp.json()["data"]["id"]
-                db_user = db_session.query(User).filter(User.id == user_id).first()
-                if db_user is not None:
-                    db_user.is_superuser = False
-                    db_session.commit()
+            if db_user is not None and was_super is not None:
+                db_user.is_superuser = was_super
+                db_session.commit()
         finally:
             integration_client.delete_agent(private_agent_id)
             integration_client.delete_agent(public_agent_id)
@@ -654,7 +684,7 @@ def test_update_agent_adds_energy_points(
 ):
     """验证用户可以通过更新接口为任意角色累计能量点数"""
     agent_id = integration_client.create_agent(
-        name="Energy Points Test Agent", visibility="PUBLIC"
+        name="Energy Points Test Agent", visibility="PUBLIC", opening=""
     )
 
     try:
@@ -697,7 +727,7 @@ def test_update_agent_adds_energy_points(
 
 def test_agent_status_line_put_and_get_roundtrip(integration_client):
     integration_client.create_user()
-    agent_id = integration_client.create_agent(name="Status Line Agent")
+    agent_id = integration_client.create_agent(name="Status Line Agent", opening="")
 
     try:
         tag = "Mood line for chat header test"

@@ -74,6 +74,7 @@ class TestClient:
         visibility: str = "PRIVATE",
         personality: str = "A caring and empathetic companion",
         scenario: str = "Acts as a supportive friend during testing",
+        opening: str = "Hi there, I'm here to help with testing!",
     ) -> str:
         if not self.token:
             raise RuntimeError("call create_user() before creating agents")
@@ -86,7 +87,7 @@ class TestClient:
             "personality": personality,
             "scenario": scenario,
             "intro": "Integration test agent",
-            "opening": "Hi there, I'm here to help with testing!",
+            "opening": opening,
         }
 
         response = self.client.post(
