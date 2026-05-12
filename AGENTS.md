@@ -60,7 +60,7 @@ Inty 代表 Intelligent Entity - 智能存在；
   - [.cursor](/.cursor/) Cursor-specific harness
 - Miscs: read AGENTS.md or README.md under the dirs for information.
 
-## Your response
+## Your response style
 
 - Respond with information from most to least importance
 - Always answer with 1 sentence summary.
@@ -89,8 +89,9 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ### General guidelines
 
+- Optimize for structural simplicity and architecture soundness.
 - Do not do defensive programming, let failures be noticed ASAP.
-- The ground truth is in code. Never speculate about code, files, or APIs you have not read.
+- Never speculate about code, files, or APIs you have not read.
 - Docs describe abstract ideas, never repeating information that can be directly derived from the code files:
   - higher-logical-level design of multiple code files
   - engineers' intended states of the code files
@@ -98,8 +99,6 @@ Inty 代表 Intelligent Entity - 智能存在；
 - Create skills, commands to abstract and automate repeated actions
 - Never ever over-engineer.
 - Never ever speculate potential use cases.
-- Simple, direct, correct, focused.
-  Simple and wrong can be fixed easily, complicated and wrong only induce more wrongness.
 - Always test your changes
 
 ### 工程文档层次结构
