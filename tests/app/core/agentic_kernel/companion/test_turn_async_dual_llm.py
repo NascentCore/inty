@@ -15,12 +15,17 @@ from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.models import InnerTickMode
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.tools import build_openai_repl_tools_inner_tick
 from app.core.agentic_kernel.companion.turn import (
     CHAT_TRACK_RESPONSE_MESSAGE_TITLE,
     run_turn,
 )
 from app.utils.config import InnerTickMechanism
+
+
+def _store(p: Path):
+    return get_memory_store(CompanionScope("adllm", "a", str(p.resolve())), dsn="")
 
 
 def _assert_no_adjacent_user_roles(messages: list[dict[str, Any]]) -> None:
@@ -77,8 +82,7 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     loop = asyncio.get_running_loop()
-    root = tmp_path
-    store = get_memory_store(root)
+    store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -98,7 +102,6 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
 
     client = _FakeAsyncDualLLMClient()
     out = await run_turn(
-        root,
         "hello async dual",
         store=store,
         llm_client=client,  # type: ignore[arg-type]
@@ -135,8 +138,7 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     loop = asyncio.get_running_loop()
-    root = tmp_path
-    store = get_memory_store(root)
+    store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -156,7 +158,6 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
 
     client = _FakeAsyncDualLLMClient()
     await run_turn(
-        root,
         "ignored for inner tick",
         store=store,
         llm_client=client,  # type: ignore[arg-type]
@@ -190,8 +191,7 @@ async def test_maintenance_tool_solo_inner_tick_skips_foreground_envelope(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     loop = asyncio.get_running_loop()
-    root = tmp_path
-    store = get_memory_store(root)
+    store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -211,7 +211,6 @@ async def test_maintenance_tool_solo_inner_tick_skips_foreground_envelope(
 
     client = _FakeAsyncDualLLMClient()
     await run_turn(
-        root,
         "ignored for inner tick",
         store=store,
         llm_client=client,  # type: ignore[arg-type]
@@ -238,8 +237,7 @@ async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm_with_mechanis
     tmp_path: Path,
 ) -> None:
     """PROACTIVE inner tick is HEARTBEAT_SYNC (no async dual branch); solo must not apply."""
-    root = tmp_path
-    store = get_memory_store(root)
+    store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -249,7 +247,6 @@ async def test_proactive_inner_tick_heartbeat_sync_still_calls_llm_with_mechanis
 
     client = _FakeAsyncDualLLMClient()
     await run_turn(
-        root,
         "ignored",
         store=store,
         llm_client=client,  # type: ignore[arg-type]
@@ -308,8 +305,7 @@ class _FakeAsyncDualLLMClientEmptyFg:
 async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_inject(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    root = tmp_path
-    store = get_memory_store(root)
+    store = _store(tmp_path)
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -329,7 +325,6 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
 
     client = _FakeAsyncDualLLMClientEmptyFg()
     await run_turn(
-        root,
         "hello empty fg",
         store=store,
         llm_client=client,  # type: ignore[arg-type]

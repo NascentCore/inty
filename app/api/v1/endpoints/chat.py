@@ -1148,7 +1148,7 @@ async def _build_companion_tool_background_ws_payload(
         meta_data["langsmith_trace_id"] = ev.langsmith_trace_id
     if ev.langsmith_run_id:
         meta_data["langsmith_run_id"] = ev.langsmith_run_id
-    gi = generated_image_meta_from_index_slice(ev.workspace, ev.image_asset_baseline)
+    gi = generated_image_meta_from_index_slice(ev.memory_store, ev.image_asset_baseline)
     if gi:
         meta_data["generated_image"] = gi
     if ev.local_image_paths:
@@ -1338,17 +1338,17 @@ async def _try_fire_companion_ws_proactive_heartbeat(
             user=current_user, is_subscribed=is_subscribed
         )
 
-        ws_path = companion_chat_service.companion_memory_store_scope_path_if_ready(
+        mem_store = companion_chat_service.companion_memory_store_if_ready(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
             resolved_chat_model_id=model_override,
         )
-        if ws_path is None:
+        if mem_store is None:
             return
 
         remain = next_heartbeat_wait_seconds(
-            ws_path,
+            mem_store,
             HeartbeatConfig(enabled=True),
         )
         if remain > 0:
@@ -1592,17 +1592,17 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             user=current_user, is_subscribed=is_subscribed
         )
 
-        ws_path = companion_chat_service.companion_memory_store_scope_path_if_ready(
+        mem_store = companion_chat_service.companion_memory_store_if_ready(
             user_id=user_id,
             agent_id=agent_id,
             chat_id=chat.id,
             resolved_chat_model_id=model_override,
         )
-        if ws_path is None:
+        if mem_store is None:
             return
 
         remain = next_inner_tick_wait_seconds(
-            ws_path,
+            mem_store,
             last_inner_fire_monotonic=(
                 companion_ws.last_maintenance_inner_tick_monotonic()
             ),

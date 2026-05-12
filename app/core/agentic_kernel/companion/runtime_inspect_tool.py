@@ -7,12 +7,10 @@ executions appear in traces; large JSON outputs are summarized via ``process_out
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 from langsmith import traceable
 
-from .memory_registry import get_memory_store
 from .memory_store import MemoryStore
 from .runtime_events import read_runtime_events
 from .runtime_inspect_context import (
@@ -140,7 +138,7 @@ def _read_store_optional(
     run_type="tool",
     process_outputs=_langsmith_process_outputs_runtime_inspect,
 )
-def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str:
+def tool_companion_runtime_inspect(store: MemoryStore, arguments: dict[str, Any]) -> str:
     max_chars_per_doc = _parse_optional_int(
         arguments.get("max_chars_per_doc"), default=8000, minimum=100
     )
@@ -180,44 +178,44 @@ def tool_companion_runtime_inspect(root: Path, arguments: dict[str, Any]) -> str
         else:
             out["last_chat_completion_request"] = last
 
-    store = runtime_inspect_get_scoped_memory_store() or get_memory_store(root)
-    out["runtime_events"] = read_runtime_events(store, limit=max_runtime_events)
+    eff_store = runtime_inspect_get_scoped_memory_store() or store
+    out["runtime_events"] = read_runtime_events(eff_store, limit=max_runtime_events)
 
     if include_store_documents:
         day = local_date_str()
         out["store_documents"] = {
             "context_json": _read_store_optional(
-                store, "context.json", max_chars=max_chars_per_doc
+                eff_store, "context.json", max_chars=max_chars_per_doc
             ),
             "IDENTITY.md": _read_store_optional(
-                store, "IDENTITY.md", max_chars=max_chars_per_doc
+                eff_store, "IDENTITY.md", max_chars=max_chars_per_doc
             ),
             "SOUL.md": _read_store_optional(
-                store, "SOUL.md", max_chars=max_chars_per_doc
+                eff_store, "SOUL.md", max_chars=max_chars_per_doc
             ),
             "USER.md": _read_store_optional(
-                store, "USER.md", max_chars=max_chars_per_doc
+                eff_store, "USER.md", max_chars=max_chars_per_doc
             ),
             "MEMORY.md": _read_store_optional(
-                store, "MEMORY.md", max_chars=max_chars_per_doc
+                eff_store, "MEMORY.md", max_chars=max_chars_per_doc
             ),
             f"memory/daily/{day}.md": _read_store_optional(
-                store, f"memory/daily/{day}.md", max_chars=max_chars_per_doc
+                eff_store, f"memory/daily/{day}.md", max_chars=max_chars_per_doc
             ),
             f"memory/{day}.md": _read_store_optional(
-                store, f"memory/{day}.md", max_chars=max_chars_per_doc
+                eff_store, f"memory/{day}.md", max_chars=max_chars_per_doc
             ),
         }
         state: dict[str, Any] = {}
         for prefix in (".companion", ".inty_v2"):
             mp = f"{prefix}_memory_pipeline.json"
             cc = f"{prefix}_context_compaction_state.json"
-            if store.read_document_if_exists(mp) is not None:
-                raw = store.read_document_if_exists(mp)
+            if eff_store.read_document_if_exists(mp) is not None:
+                raw = eff_store.read_document_if_exists(mp)
                 if raw is not None:
                     state[mp] = raw[:max_chars_per_doc]
-            if store.read_document_if_exists(cc) is not None:
-                raw2 = store.read_document_if_exists(cc)
+            if eff_store.read_document_if_exists(cc) is not None:
+                raw2 = eff_store.read_document_if_exists(cc)
                 if raw2 is not None:
                     state[cc] = raw2[:max_chars_per_doc]
         out["store_state_json"] = state

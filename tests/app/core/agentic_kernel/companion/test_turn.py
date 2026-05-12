@@ -23,6 +23,7 @@ from app.core.agentic_kernel.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     InnerTickMode,
 )
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.turn import run_turn
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -67,7 +68,8 @@ def _seed_workspace(store: MemoryStore) -> None:
 def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    scope = CompanionScope("turn-t", "a", f"it-meta-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
     monkeypatch.setattr(
@@ -77,7 +79,6 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
 
     out = asyncio.run(
         run_turn(
-            tmp_path,
             "caller text should be replaced",
             store=store,
             llm_client=client,  # type: ignore[arg-type]
@@ -113,7 +114,8 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
         "experimental_enable_chat_with_user_time_context",
         True,
     )
-    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    scope = CompanionScope("turn-t", "a", f"it-time-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
     monkeypatch.setattr(
@@ -129,7 +131,6 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
     )
     out = asyncio.run(
         run_turn(
-            tmp_path,
             "ignored",
             store=store,
             llm_client=client,  # type: ignore[arg-type]
@@ -153,13 +154,13 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
 def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     tmp_path: Path,
 ) -> None:
-    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    scope = CompanionScope("turn-t", "a", f"it-pro-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
 
     out = asyncio.run(
         run_turn(
-            tmp_path,
             "caller text ignored",
             store=store,
             llm_client=client,  # type: ignore[arg-type]

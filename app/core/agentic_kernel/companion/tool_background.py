@@ -15,7 +15,6 @@ import time
 import uuid
 from copy import deepcopy
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Callable, Protocol
 
 from loguru import logger
@@ -100,7 +99,7 @@ class ToolBackgroundTraceHooks(Protocol):
         model: str,
         request_messages: list[dict[str, Any]],
         response: Any,
-        ws_root: Path,
+        scope_registry_key: str,
         trace_id: str | None,
     ) -> None: ...
 
@@ -284,7 +283,8 @@ def _insert_system_message(
 
 @dataclass(frozen=True)
 class ToolOutputEvent:
-    workspace: Path
+    scope_registry_key: str
+    memory_store: MemoryStore
     user_msg_uuid: str
     assistant_msg_uuid: str
     text: str
@@ -327,8 +327,8 @@ def push_output_event(event: ToolOutputEvent) -> None:
     output_queue().put(event)
 
 
-def pop_output_events_nowait(*, workspace: Path) -> list[ToolOutputEvent]:
-    root = workspace.resolve()
+def pop_output_events_nowait(*, scope_registry_key: str) -> list[ToolOutputEvent]:
+    want = scope_registry_key.strip()
     out: list[ToolOutputEvent] = []
     q = output_queue()
     parked: list[ToolOutputEvent] = []
@@ -337,7 +337,7 @@ def pop_output_events_nowait(*, workspace: Path) -> list[ToolOutputEvent]:
             ev = q.get_nowait()
         except queue.Empty:
             break
-        if ev.workspace.resolve() == root:
+        if ev.scope_registry_key == want:
             out.append(ev)
         else:
             parked.append(ev)
@@ -452,7 +452,7 @@ def _log_bg_llm_round_result(
     model: str,
     resp: Any,
     request_messages: list[dict[str, Any]],
-    ws_root: Path,
+    scope_registry_key: str,
     trace_id: str | None = None,
     trace_hooks: ToolBackgroundTraceHooks | None = None,
 ) -> None:
@@ -472,13 +472,12 @@ def _log_bg_llm_round_result(
             model=model,
             request_messages=request_messages,
             response=resp,
-            ws_root=ws_root,
+            scope_registry_key=scope_registry_key,
             trace_id=trace_id,
         )
 
 
 def _append_background_transcript_assistant(
-    ws_root: Path,
     *,
     store: MemoryStore,
     content: str,
@@ -487,7 +486,6 @@ def _append_background_transcript_assistant(
     trace_id: str,
     transcript_relative_path: str,
 ) -> None:
-    _ = ws_root
     store.append_jsonl_record(
         transcript_relative_path,
         {
@@ -533,7 +531,6 @@ def _append_background_log(
 
 async def _run_background_tool_loop(
     *,
-    ws_root: Path,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     tool_model_name: str,
@@ -553,7 +550,8 @@ async def _run_background_tool_loop(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     force_tools_first_round: bool = True,
 ) -> None:
-    image_asset_baseline = len(list_image_asset_records(ws_root.resolve()))
+    scope_registry_key = memory_store.scope.registry_key()
+    image_asset_baseline = len(list_image_asset_records(memory_store))
     transcript_append_rel = transcript_relative_path_for_turn_persistence(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=inner_tick_mode,
@@ -639,7 +637,7 @@ async def _run_background_tool_loop(
             model=tool_model_name,
             resp=initial_response,
             request_messages=request_snapshot,
-            ws_root=ws_root,
+            scope_registry_key=scope_registry_key,
             trace_id=trace_id,
             trace_hooks=trace_hooks,
         )
@@ -690,7 +688,7 @@ async def _run_background_tool_loop(
             name: str, raw_arguments: str
         ) -> tuple[str, str | None]:
             result = await execute_tool_call_fn(
-                ws_root,
+                memory_store,
                 name,
                 raw_arguments,
                 write_allowlist=allow,
@@ -737,7 +735,7 @@ async def _run_background_tool_loop(
                 model=tool_model_name,
                 resp=next_resp,
                 request_messages=request_snapshot_inner,
-                ws_root=ws_root,
+                scope_registry_key=scope_registry_key,
                 trace_id=trace_id,
                 trace_hooks=trace_hooks,
             )
@@ -752,7 +750,6 @@ async def _run_background_tool_loop(
         ) -> None:
             nonlocal tools
             tools = refresh_companion_turn_prompt_stack(
-                scope_root=ws_root,
                 store=memory_store,
                 memory_bootstrap_type=memory_bootstrap_type,
                 inner_tick_turn=inner_tick_turn,
@@ -858,7 +855,6 @@ async def _run_background_tool_loop(
             if transcript_body.strip():
                 assistant_msg_uuid = str(uuid.uuid4())
                 _append_background_transcript_assistant(
-                    ws_root,
                     store=memory_store,
                     content=transcript_body,
                     assistant_msg_uuid=assistant_msg_uuid,
@@ -905,7 +901,6 @@ async def _run_background_tool_loop(
             return
         assistant_msg_uuid = str(uuid.uuid4())
         _append_background_transcript_assistant(
-            ws_root,
             store=memory_store,
             content=transcript_body,
             assistant_msg_uuid=assistant_msg_uuid,
@@ -937,7 +932,8 @@ async def _run_background_tool_loop(
         )
         on_event(
             ToolOutputEvent(
-                workspace=ws_root,
+                scope_registry_key=scope_registry_key,
+                memory_store=memory_store,
                 user_msg_uuid=user_msg_uuid,
                 assistant_msg_uuid=assistant_msg_uuid,
                 text=display_text,
@@ -962,7 +958,6 @@ async def _run_background_tool_loop(
 
 def start_tool_background_job(
     *,
-    ws_root: Path,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     tool_model_name: str,
@@ -1012,7 +1007,6 @@ def start_tool_background_job(
         def _run_async_tool_loop() -> None:
             asyncio.run(
                 _run_background_tool_loop(
-                    ws_root=ws_root,
                     memory_store=memory_store,
                     request_messages=request_messages,
                     tool_model_name=tool_model_name,

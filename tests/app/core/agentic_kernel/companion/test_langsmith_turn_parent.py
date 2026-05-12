@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -21,6 +20,7 @@ from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.models import InnerTickMode
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.tool_background import start_tool_background_job
 from app.core.agentic_kernel.companion.turn import run_turn
 
@@ -252,10 +252,9 @@ def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
     ):
         mock_t = MagicMock()
         mock_thread.return_value = mock_t
-        ws = Path("/tmp/inty_ws")
+        st = MemoryStore(scope=CompanionScope("u", "a", "c"), repository=None)
         start_tool_background_job(
-            ws_root=ws,
-            memory_store=MemoryStore(workspace_root=ws, repository=None),
+            memory_store=st,
             request_messages=[{"role": "user", "content": "hi"}],
             tool_model_name="m",
             user_msg_uuid="uuid",
@@ -293,10 +292,9 @@ def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
     with patch("langsmith.run_helpers.set_tracing_parent") as mock_sp:
         mock_t = MagicMock()
         mock_thread.return_value = mock_t
-        ws = Path("/tmp/inty_ws")
+        st = MemoryStore(scope=CompanionScope("u", "a", "c"), repository=None)
         start_tool_background_job(
-            ws_root=ws,
-            memory_store=MemoryStore(workspace_root=ws, repository=None),
+            memory_store=st,
             request_messages=[{"role": "user", "content": "hi"}],
             tool_model_name="m",
             user_msg_uuid="uuid",
@@ -360,8 +358,10 @@ class _FakeAsyncDualLLMClient:
 async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    root = tmp_path
-    store = get_memory_store(root)
+    store = get_memory_store(
+        CompanionScope("ls", "agent", str(tmp_path.resolve())),
+        dsn="",
+    )
     store.write_document("context.json", '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
@@ -391,7 +391,6 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
 
     client = _FakeAsyncDualLLMClient()
     await run_turn(
-        root,
         "hello async dual langsmith",
         store=store,
         llm_client=client,  # type: ignore[arg-type]

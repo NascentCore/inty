@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.inner_tick_schedule import (
     InnerTickScheduleOverrides,
     inner_tick_enabled_from_env,
@@ -13,9 +14,9 @@ from app.core.agentic_kernel.companion.inner_tick_schedule import (
 )
 
 
-def _write_transcript_store(root: Path, rows: list[dict[str, object]]) -> None:
+def _write_transcript_store(scope: CompanionScope, rows: list[dict[str, object]]) -> None:
     body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
-    get_memory_store(root).write_document("transcript.jsonl", body)
+    get_memory_store(scope, dsn="").write_document("transcript.jsonl", body)
 
 
 def test_inner_tick_env_unset_defaults_enabled() -> None:
@@ -24,9 +25,9 @@ def test_inner_tick_env_unset_defaults_enabled() -> None:
 
 
 def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> None:
-    root = tmp_path
+    sc = CompanionScope("it", "a", f"short-{tmp_path.name}")
     _write_transcript_store(
-        root,
+        sc,
         [
             {
                 "role": "user",
@@ -36,15 +37,16 @@ def test_next_inner_tick_short_transcript_returns_poll_chunk(tmp_path: Path) -> 
             },
         ],
     )
+    store = get_memory_store(sc, dsn="")
     with patch.dict(os.environ, {}, clear=True):
-        w = next_inner_tick_wait_seconds(root, last_inner_fire_monotonic=None)
+        w = next_inner_tick_wait_seconds(store, last_inner_fire_monotonic=None)
     assert 0.0 < w < 86400.0 * 10
 
 
 def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> None:
-    root = tmp_path
+    sc = CompanionScope("it", "a", f"ov-{tmp_path.name}")
     _write_transcript_store(
-        root,
+        sc,
         [
             {
                 "role": "user",
@@ -60,8 +62,9 @@ def test_next_inner_tick_overrides_enabled_false_disables(tmp_path: Path) -> Non
             },
         ],
     )
+    store = get_memory_store(sc, dsn="")
     w = next_inner_tick_wait_seconds(
-        root,
+        store,
         last_inner_fire_monotonic=None,
         overrides=InnerTickScheduleOverrides(enabled=False),
     )

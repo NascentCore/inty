@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.tool_background import ToolOutputEvent
 from app.core.agentic_kernel.companion.websocket_coordinator import (
     CompanionWebSocketCoordinator,
@@ -11,12 +11,12 @@ from app.core.agentic_kernel.companion.websocket_coordinator import (
 
 
 @pytest.mark.asyncio
-async def test_companion_websocket_coordinator_background_sink_queues_event(
-    tmp_path: Path,
-) -> None:
+async def test_companion_websocket_coordinator_background_sink_queues_event() -> None:
     coordinator = CompanionWebSocketCoordinator.for_current_loop()
+    st = MemoryStore(scope=CompanionScope("u", "a", "c-ws-coord"), repository=None)
     event = ToolOutputEvent(
-        workspace=tmp_path,
+        scope_registry_key=st.scope.registry_key(),
+        memory_store=st,
         user_msg_uuid="user-msg-1",
         assistant_msg_uuid="assistant-msg-1",
         text="visible tool result",

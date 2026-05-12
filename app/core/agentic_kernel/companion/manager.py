@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import threading
-from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
@@ -29,6 +28,7 @@ from .transcript_compaction import CompactionConfig
 from .memory_registry import get_memory_store, shutdown_memory_store
 from .memory_store import MemoryStore
 from .models import CompanionTurnResult, InnerTickMode
+from .scope import CompanionScope
 from .turn import run_turn
 from .turn_routes import BackgroundToolEventSink
 from .memory_store_scope import (
@@ -76,9 +76,6 @@ def _migrate_interactive_bootstrap_context_if_needed(
 
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
-
-    # Synthetic scope root base path; each session is base/user_id/companion_id/chat_id.
-    memory_store_scope_base_dir: str = "/tmp/companion_memory_scopes"
 
     # LLM 配置
     llm: CompanionLLMConfig = Field(default_factory=CompanionLLMConfig)
@@ -133,11 +130,6 @@ class CompanionConfig(BaseModel):
             )
         return raw
 
-    @property
-    def skip_scope_directory_creation(self) -> bool:
-        """Session state does not require a real directory under memory_store_scope_base_dir."""
-        return True
-
 
 class CompanionSession:
     """封装单个 user+companion 会话的 runtime state。"""
@@ -145,18 +137,15 @@ class CompanionSession:
     def __init__(
         self,
         *,
-        user_id: str,
-        companion_id: str,
-        chat_id: str,
-        workspace_path: Path,
+        scope: CompanionScope,
         store: MemoryStore,
         llm_client: CompanionLLMClient,
         config: CompanionConfig,
     ) -> None:
-        self.user_id = user_id
-        self.companion_id = companion_id
-        self.chat_id = chat_id
-        self.workspace_path = workspace_path
+        self.scope = scope
+        self.user_id = scope.user_id
+        self.companion_id = scope.companion_id
+        self.chat_id = scope.chat_id
         self.store = store
         self.llm_client = llm_client
         self.config = config
@@ -165,11 +154,11 @@ class CompanionSession:
 
     @property
     def is_initialized(self) -> bool:
-        return is_scope_initialized_in_store(self.workspace_path, self.store)
+        return is_scope_initialized_in_store(self.store)
 
     @property
     def needs_profile_inquiry(self) -> bool:
-        return needs_startup_profile_inquiry(self.workspace_path, self.store)
+        return needs_startup_profile_inquiry(self.store)
 
 
 class CompanionManager:
@@ -185,10 +174,6 @@ class CompanionManager:
     def _session_key(user_id: str, companion_id: str, chat_id: str) -> str:
         return f"{user_id}:{companion_id}:{chat_id}"
 
-    def _workspace_path(self, user_id: str, companion_id: str, chat_id: str) -> Path:
-        base = Path(self._config.memory_store_scope_base_dir)
-        return base / user_id / companion_id / chat_id
-
     def get_or_create_session(
         self,
         user_id: str,
@@ -201,15 +186,8 @@ class CompanionManager:
             if existing is not None:
                 return existing
 
-            ws_path = self._workspace_path(user_id, companion_id, chat_id)
-
-            store = get_memory_store(
-                ws_path,
-                dsn=self._config.memory_pg_dsn,
-                user_id=user_id,
-                companion_id=companion_id,
-                chat_id=chat_id,
-            )
+            scope = CompanionScope(user_id, companion_id, chat_id)
+            store = get_memory_store(scope, dsn=self._config.memory_pg_dsn)
 
             user_interactive = (
                 self._config.memory_bootstrap_type
@@ -268,24 +246,21 @@ class CompanionManager:
                     default_context_mode=self._config.default_context_mode,
                 )
 
-            ensure_minimal_documents_in_store(ws_path, store)
+            ensure_minimal_documents_in_store(store)
 
             session = CompanionSession(
-                user_id=user_id,
-                companion_id=companion_id,
-                chat_id=chat_id,
-                workspace_path=ws_path,
+                scope=scope,
                 store=store,
                 llm_client=self._llm_client,
                 config=self._config,
             )
             self._sessions[key] = session
             logger.info(
-                "companion_manager session_created user={} companion={} chat={} ws={}",
+                "companion_manager session_created user={} companion={} chat={} scope={}",
                 user_id,
                 companion_id,
                 chat_id,
-                ws_path,
+                scope.registry_key(),
             )
             return session
 
@@ -309,7 +284,6 @@ class CompanionManager:
             else override
         )
         return await run_turn(
-            session.workspace_path,
             user_text,
             store=session.store,
             llm_client=session.llm_client,
@@ -340,12 +314,7 @@ class CompanionManager:
             session = self._sessions.pop(key, None)
         if session is None:
             return
-        shutdown_memory_store(
-            session.workspace_path,
-            user_id=session.user_id,
-            companion_id=session.companion_id,
-            chat_id=session.chat_id,
-        )
+        shutdown_memory_store(session.scope)
         logger.info(
             "companion_manager session_shutdown user={} companion={} chat={}",
             user_id,
@@ -358,10 +327,5 @@ class CompanionManager:
             sessions = list(self._sessions.values())
             self._sessions.clear()
         for session in sessions:
-            shutdown_memory_store(
-                session.workspace_path,
-                user_id=session.user_id,
-                companion_id=session.companion_id,
-                chat_id=session.chat_id,
-            )
+            shutdown_memory_store(session.scope)
         logger.info("companion_manager all_sessions_shutdown count={}", len(sessions))

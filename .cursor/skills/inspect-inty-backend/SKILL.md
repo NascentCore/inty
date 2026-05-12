@@ -1,5 +1,5 @@
 ---
-name: investigate-inty-backend
+name: inspect-inty-backend
 description: >-
   General Inty backend investigation: correlate local Ops logs, LangSmith traces, and Postgres
   (DSN from repo config.yaml) using ws_conn_id, trace/run IDs, user_msg_uuid, inty_trace_id.

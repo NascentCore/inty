@@ -17,7 +17,15 @@ from app.core.agentic_kernel.companion.companion_tool_runtime import (
     execute_tool_call,
     tool_memory_store_write_document,
 )
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.tools import build_companion_tools
+
+
+def _store(root: Path):
+    return get_memory_store(
+        CompanionScope("bootstrap", "agent", str(root.resolve())),
+        dsn="",
+    )
 
 
 def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> None:
@@ -45,13 +53,13 @@ def test_build_companion_tools_interactive_excludes_memory_store_write(tmp_path:
 
 def test_tool_companion_set_experience_profile_requires_confirm(tmp_path: Path) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
     )
     err = tool_companion_set_experience_profile(
-        root, "roleplay", user_confirmed=False
+        st, "roleplay", user_confirmed=False
     )
     assert err.startswith("ERROR:")
     assert json.loads(st.read_document("context.json"))["context_mode"] == "intimate"
@@ -59,13 +67,13 @@ def test_tool_companion_set_experience_profile_requires_confirm(tmp_path: Path) 
 
 def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
     )
     ok = tool_companion_set_experience_profile(
-        root, " ROLEPLAY ", user_confirmed=True, note="user asked"
+        st, " ROLEPLAY ", user_confirmed=True, note="user asked"
     )
     assert ok.startswith("OK ")
     data = json.loads(st.read_document("context.json"))
@@ -75,14 +83,14 @@ def test_tool_companion_set_experience_profile_updates_context(tmp_path: Path) -
 
 def test_execute_tool_call_dispatch_set_experience_profile(tmp_path: Path) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps({"context_mode": "public"}, ensure_ascii=False) + "\n",
     )
     r = asyncio.run(
         execute_tool_call(
-            root,
+            st,
             "companion_set_experience_profile",
             json.dumps({"context_mode": "emotional_companion", "user_confirmed": True}),
         )
@@ -93,10 +101,9 @@ def test_execute_tool_call_dispatch_set_experience_profile(tmp_path: Path) -> No
 
 def test_tool_companion_update_prompt_slice_writes_user_md(tmp_path: Path) -> None:
     root = tmp_path
-    get_memory_store(root)
-    out = tool_companion_update_prompt_slice(root, "USER", "# user\n")
+    st = _store(root)
+    out = tool_companion_update_prompt_slice(st, "USER", "# user\n")
     assert out.startswith("OK ")
-    st = get_memory_store(root)
     assert st.read_document("USER.md") == "# user\n"
 
 
@@ -104,7 +111,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     ctx = {
         "context_mode": "bootstrap",
         "post_bootstrap_context_mode": "roleplay",
@@ -114,7 +121,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
         "workspace_bootstrap_user_interactive_completed": False,
     }
     st.write_document("context.json", json.dumps(ctx, ensure_ascii=False) + "\n")
-    out = tool_companion_bootstrap_user_interactive_complete(root, "done")
+    out = tool_companion_bootstrap_user_interactive_complete(st, "done")
     assert out.startswith("OK ")
     data = json.loads(st.read_document("context.json"))
     assert data["workspace_bootstrap_user_interactive_completed"] is True
@@ -127,7 +134,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_fallback_intimate_wi
     tmp_path: Path,
 ) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps(
@@ -140,7 +147,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_fallback_intimate_wi
         )
         + "\n",
     )
-    tool_companion_bootstrap_user_interactive_complete(root, None)
+    tool_companion_bootstrap_user_interactive_complete(st, None)
     data = json.loads(st.read_document("context.json"))
     assert data["context_mode"] == "intimate"
     assert "post_bootstrap_context_mode" not in data
@@ -150,7 +157,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
     tmp_path: Path,
 ) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps(
@@ -164,7 +171,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
         )
         + "\n",
     )
-    tool_companion_bootstrap_user_interactive_complete(root, None)
+    tool_companion_bootstrap_user_interactive_complete(st, None)
     data = json.loads(st.read_document("context.json"))
     assert data["context_mode"] == "roleplay"
     assert "post_bootstrap_context_mode" not in data
@@ -172,13 +179,13 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
 
 def test_tool_companion_set_experience_profile_rejects_bootstrap(tmp_path: Path) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps({"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False) + "\n",
     )
     err = tool_companion_set_experience_profile(
-        root, "bootstrap", user_confirmed=True
+        st, "bootstrap", user_confirmed=True
     )
     assert err.startswith("ERROR:")
     assert json.loads(st.read_document("context.json"))["context_mode"] == "intimate"
@@ -186,7 +193,7 @@ def test_tool_companion_set_experience_profile_rejects_bootstrap(tmp_path: Path)
 
 def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document(
         "context.json",
         json.dumps(
@@ -204,7 +211,7 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
     st.write_document("SOUL.md", "old")
     r1 = asyncio.run(
         execute_tool_call(
-            root,
+            st,
             "companion_update_prompt_slice",
             json.dumps({"slice": "SOUL", "content": "new soul"}),
         )
@@ -213,7 +220,7 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
     assert st.read_document("SOUL.md") == "new soul"
     r2 = asyncio.run(
         execute_tool_call(
-            root,
+            st,
             "companion_bootstrap_user_interactive_complete",
             json.dumps({}),
         )
@@ -225,7 +232,7 @@ def test_execute_tool_call_dispatch_slice_and_complete(tmp_path: Path) -> None:
 
 
 def test_soul_lock_helper_requires_explicit_context_key(tmp_path: Path) -> None:
-    st = get_memory_store(tmp_path)
+    st = _store(tmp_path)
     assert not soul_prompt_is_locked_after_interactive_bootstrap(store=st)
     st.write_document(
         "context.json",
@@ -254,7 +261,7 @@ def test_soul_lock_helper_requires_explicit_context_key(tmp_path: Path) -> None:
 
 def test_soul_slice_rejected_after_interactive_bootstrap_complete(tmp_path: Path) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document("SOUL.md", "seed")
     st.write_document(
         "context.json",
@@ -270,10 +277,10 @@ def test_soul_slice_rejected_after_interactive_bootstrap_complete(tmp_path: Path
         )
         + "\n",
     )
-    err = tool_companion_update_prompt_slice(root, "SOUL", "nope")
+    err = tool_companion_update_prompt_slice(st, "SOUL", "nope")
     assert err.startswith("ERROR:")
     assert st.read_document("SOUL.md") == "seed"
-    ok = tool_companion_update_prompt_slice(root, "USER", "# ok\n")
+    ok = tool_companion_update_prompt_slice(st, "USER", "# ok\n")
     assert ok.startswith("OK ")
     assert st.read_document("USER.md") == "# ok\n"
 
@@ -282,7 +289,7 @@ def test_memory_store_write_soul_rejected_after_interactive_bootstrap_complete(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
-    st = get_memory_store(root)
+    st = _store(root)
     st.write_document("SOUL.md", "seed")
     st.write_document(
         "context.json",
@@ -294,6 +301,6 @@ def test_memory_store_write_soul_rejected_after_interactive_bootstrap_complete(
         )
         + "\n",
     )
-    err = tool_memory_store_write_document(root, "SOUL.md", "hacked")
+    err = tool_memory_store_write_document(st, "SOUL.md", "hacked")
     assert err.startswith("ERROR:")
     assert st.read_document("SOUL.md") == "seed"

@@ -19,25 +19,24 @@
 ## ASCII：数据流与组件
 
 ```
-  CompanionManager.get_or_create_session
+  CompanionManager.get_or_create_session(user_id, companion_id, chat_id)
        |
        v
-  workspace_path = base / user_id / companion_id / chat_id   (合成根，见 CompanionManager)
+  scope = CompanionScope(user_id, companion_id, chat_id)
        |
        v
-  get_memory_store(path, dsn?, user_id?, companion_id?, chat_id?)  [/app/core/agentic_kernel/companion/memory_registry.py]
+  get_memory_store(scope, dsn=...)  [/app/core/agentic_kernel/companion/memory_registry.py]
        |
        +-- 若 dsn 非空: new SqlAlchemyMemoryRepository(user, companion, chat)
        |                    |
        |                    v
-       |              MemoryStore(workspace_root=path, repository=repo)
+       |              MemoryStore(scope=scope, repository=repo)
        |
-       +-- 若 dsn 空: MemoryStore(repository=None)  -> 仅进程内 MemoryCache（无跨进程持久化）
+       +-- 若 dsn 空: MemoryStore(scope=scope, repository=None)  -> 仅进程内 MemoryCache（无跨进程持久化）
 
   进程内 _MEMORY_STORES:
-       key_scope = CompanionScope.registry_key()     # user_id:companion_id:chat_id
-       key_path  = str(resolve(path))
-       => 两处登记同一 MemoryStore（工具侧只持 Path 时也能与会话 store 为同一实例）
+       key = scope.registry_key()   # user_id:companion_id:chat_id
+       => 单键单例；工具与前台回合共享同一 MemoryStore 实例引用（无 Path 别名）
 
   调用方（turn / models / tools / memory_pipeline）
        |
@@ -88,8 +87,8 @@
 | **scope** | 权威键为 `(user_id, companion_id, chat_id)` | 跨会话共享人格/用户画像需 **显式上层 scope 或 projection**；当前单表未建模 |
 | **路径与 ORM** | 仅 `memory_store_document_mapping` 支持的相对路径可入库 | 新增逻辑路径须同步维护映射，否则会 `ValueError` |
 | **进程与缓存** | `MemoryCache` 进程内；`flush_now`/`shutdown` 为空实现 | 多 worker 下缓存不共享；多写入方下存在 **基于陈旧缓存 merge** 的理论风险 |
-| **Synthetic path** | 无显式参数时需从 `workspace_root` 末三段解析 user/companion/chat | 路径与三元组 **双通道**，约定必须严格，避免不一致 |
-| **优点** | append-only + `sequence_id` | 可审计、易按时间追溯；路径工具对模型友好；registry 双键解决 Path/scope 实例一致 |
+| **Path-free scope** | 进程内仅以 `CompanionScope` 注册/复用 `MemoryStore`；逻辑路径为 **POSIX 段规范化** 的 store 键，无合成磁盘根 | 消除 Path 与 `(user, companion, chat)` 漂移；工具线程须与会话对齐同一 `MemoryStore`（见 `tool_background` / runtime inspect overlay） |
+| **优点** | append-only + `sequence_id` | 可审计、易按时间追溯；`memory_store_*` 工具仍以相对路径为 LLM 视图 |
 
 ---
 
@@ -142,10 +141,10 @@ flowchart LR
 | 说明 | 路径 |
 |------|------|
 | MemoryStore / Repository / Cache | [/app/core/agentic_kernel/companion/memory_store.py](/app/core/agentic_kernel/companion/memory_store.py) |
-| `get_memory_store` 双键 registry | [/app/core/agentic_kernel/companion/memory_registry.py](/app/core/agentic_kernel/companion/memory_registry.py) |
+| `get_memory_store`（`CompanionScope` 单键 registry） | [/app/core/agentic_kernel/companion/memory_registry.py](/app/core/agentic_kernel/companion/memory_registry.py) |
 | ORM 表 | [/app/models/companion_memory_documents.py](/app/models/companion_memory_documents.py) |
 | 路径到 document_kind | [/app/core/agentic_kernel/companion/memory_store_document_mapping.py](/app/core/agentic_kernel/companion/memory_store_document_mapping.py) |
-| DSN 接线与会话 workspace | [/app/core/agentic_kernel/companion/manager.py](/app/core/agentic_kernel/companion/manager.py) |
+| DSN 接线与会话装配 | [/app/core/agentic_kernel/companion/manager.py](/app/core/agentic_kernel/companion/manager.py) |
 | Kernel 运维说明 | [/app/core/agentic_kernel/companion/AGENTS.md](/app/core/agentic_kernel/companion/AGENTS.md) |
 
 落地迁移应配合 Alembic 与新 FR，分阶段替换 repository 实现，而非一次性大改工具契约。
