@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -76,6 +77,7 @@ import com.inty.imate.chat.local.db.MessageEntity
 import com.inty.imate.chat.local.db.createAgentOpeningMessageEntity
 import com.inty.imate.system.SystemReportEntry
 import com.inty.imate.system.report.SystemReportPage
+import com.inty.imate.voicecall.VoiceCallScreen
 import kotlinx.serialization.Serializable
 
 private const val ASSISTANT_LOADING_PLACEHOLDER = "loading_animation"
@@ -91,6 +93,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
     var systemReportEntry by remember { mutableStateOf<SystemReportEntry?>(null) }
     var logoutConfirmVisible by remember { mutableStateOf(false) }
     var deleteAccountConfirmVisible by remember { mutableStateOf(false) }
+    var voiceCallVisible by remember { mutableStateOf(false) }
     val agent by viewModel.agent.collectAsStateWithLifecycle()
     val inputText by viewModel.inputText.collectAsStateWithLifecycle()
     val settingsVisible by viewModel.settingsVisible.collectAsStateWithLifecycle()
@@ -147,6 +150,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                 agentName = companion.name.ifBlank { stringResource(R.string.app_name) },
                 avatarUrl = companion.avatar.takeIf { it.isNotBlank() }?.let { getCdnImageUrl(it) },
                 statusLine = companion.statusLine.trim(),
+                onStartVoiceCall = { voiceCallVisible = true },
                 onOpenSettings = { viewModel.setSettingsVisible(true) },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -338,6 +342,15 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                 onBack = { systemReportEntry = null },
             )
         }
+
+        if (voiceCallVisible) {
+            VoiceCallScreen(
+                agentId = companion.id,
+                agentName = companion.name.ifBlank { stringResource(R.string.app_name) },
+                onDismiss = { voiceCallVisible = false },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 
@@ -346,6 +359,7 @@ private fun ChatTopBar(
     agentName: String,
     avatarUrl: String?,
     statusLine: String,
+    onStartVoiceCall: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -409,23 +423,43 @@ private fun ChatTopBar(
             }
         }
 
-        IconButton(
-            onClick = onOpenSettings,
-            modifier =
-                Modifier
-                    .size(38.dp)
-                    .background(
-                        InitChatColors.TextFieldBackground,
-                        CircleShape,
-                    )
-                    .border(1.dp, Color(0x2EC567F5), CircleShape),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Settings,
-                contentDescription = stringResource(R.string.content_desc_settings),
-                tint = Color.White,
-                modifier = Modifier.size(17.dp),
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            IconButton(
+                onClick = onStartVoiceCall,
+                modifier =
+                    Modifier
+                        .size(38.dp)
+                        .background(
+                            InitChatColors.TextFieldBackground,
+                            CircleShape,
+                        )
+                        .border(1.dp, Color(0x2EC567F5), CircleShape),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Call,
+                    contentDescription = stringResource(R.string.content_desc_voice_call),
+                    tint = Color.White,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
+            IconButton(
+                onClick = onOpenSettings,
+                modifier =
+                    Modifier
+                        .size(38.dp)
+                        .background(
+                            InitChatColors.TextFieldBackground,
+                            CircleShape,
+                        )
+                        .border(1.dp, Color(0x2EC567F5), CircleShape),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.content_desc_settings),
+                    tint = Color.White,
+                    modifier = Modifier.size(17.dp),
+                )
+            }
         }
     }
 }

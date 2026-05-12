@@ -64,6 +64,7 @@
 - 提供商：以 ElevenLabs 为主（可扩展）；创建/更新 Agent 后异步生成 `opening` 的语音并写入 `opening_audio_url`。
 - 文本清洗：生成前移除心理/动作描写；支持缓存命中、GCS 存储与用量记录。
 - 默认音色：可基于 Agent 性别选择默认 `voice_id`，也可在 Agent 层显式指定。
+- 电话通话：`/api/v1/phone-calls/*` 用 Twilio PSTN + Media Streams 桥接现有 Gemini Live；聊天中当前轮显式 `Call me at ...` 可触发外呼，直接来电用 HMAC caller binding 识别用户，不写入 `users.phone`。
 
 ## 推荐与排序
 

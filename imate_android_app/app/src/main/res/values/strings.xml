@@ -61,6 +61,7 @@
     <string name="init_chat_cta_begin">✨ Begin Our Journey</string>
 
     <string name="content_desc_send">Send</string>
+    <string name="content_desc_voice_call">Start voice call</string>
     <string name="content_desc_select_gender">Select gender</string>
     <string name="content_desc_begin_journey">Begin our journey</string>
 
@@ -91,6 +92,14 @@
     <string name="chat_agent_missing">Companion not ready. Please finish onboarding.</string>
     <string name="content_desc_settings">Open settings</string>
     <string name="content_desc_close_settings">Close settings</string>
+
+    <string name="voice_call_connecting">Connecting voice call…</string>
+    <string name="voice_call_connected">Connected — speak naturally.</string>
+    <string name="voice_call_error">Voice call failed.</string>
+    <string name="voice_call_ended">Voice call ended.</string>
+    <string name="voice_call_end">End call</string>
+    <string name="voice_call_close">Close</string>
+    <string name="voice_call_remaining_seconds">%1$d seconds remaining</string>
     <string name="content_desc_agent_avatar">Companion avatar</string>
     <string name="chat_ws_connecting_tagline">connecting to your companion...</string>
 

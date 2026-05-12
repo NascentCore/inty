@@ -11,6 +11,10 @@
 
 <!-- TODO(follow-up): Backfill notable shipped releases once there is a stable Play track history for `com.inty.imate`. -->
 
+## 2026-05-12
+
+- Voice call: chat now has a call button that opens a realtime in-app voice call with the current iMate.
+
 ## 2026-04-20
 
 - Google sign-in: when Play services hits a connectivity-style failure during account sign-in, the toast explains checking network/VPN and Play services instead of showing only a cryptic `[16]` message.
