@@ -1,9 +1,10 @@
 ---
 name: inty-local-backend-repl
 description: >-
-  Repo root + venv: Ops :8001 (`backend/ops/start.sh`); list agent UUIDs via
-  `scripts/list_inty_ops_agents_admin.py`; then `python -m tools.inty_v2_repl.main repl`.
-  Terminate Ops notes included. Full env: tools/inty_v2_repl/README.md
+  Repo root + venv: `export INTY_CONFIG_YAML=devops/config.yaml.local`; Ops :8001
+  (`backend/ops/start.sh`); list agent UUIDs via `scripts/list_inty_ops_agents_admin.py`;
+  then `python -m tools.inty_v2_repl.main repl`. Terminate Ops notes included.
+  Full env: tools/inty_v2_repl/README.md
 ---
 
 # Launching local backend for terminal REPL
@@ -15,10 +16,14 @@ description: >-
 
 ## Ops（仓库根 cwd）
 
+后端读配置见 [`app/core/config.py`](../../../app/core/config.py)：`INTY_CONFIG_YAML` 优先，否则 cwd 下 `config.yaml`。本地联调在**同一 shell** 里先导出再启 Ops：
+
 ```bash
+export INTY_CONFIG_YAML=devops/config.yaml.local
 backend/ops/start.sh --local --debug --no-build-frontend --log-file ./tmp/inty-ops-local.log
 ```
 
+- `INTY_CONFIG_YAML` 可为相对路径（相对**启动进程时的 cwd**，上例为仓库根）。
 - `--log-file` 相对路径相对 shell cwd；上例在仓库根启动则为 `<repo-root>/tmp/inty-ops-local.log`（`tmp/` 在 `.gitignore`）。
 - 不经 `start.sh` 时可在仓库根 `export INTY_LOG_FILE=...`（见 `app/core/logging.py`）。
 
@@ -68,7 +73,9 @@ Ops 就绪后，对用户依次给出下面 **三样**（不要默认展开 JWT�
 3. **仅** 下列 REPL 块（勿 `python tools/inty_v2_repl/main.py`）；把 `YOUR_AGENT_ID` 换成上一步输出的 UUID。
 
 ```bash
-source .venv/bin/activate && python -m tools.inty_v2_repl.main repl \
+source .venv/bin/activate
+export INTY_CONFIG_YAML=devops/config.yaml.local
+python -m tools.inty_v2_repl.main repl \
   --api-base-url http://127.0.0.1:8001 \
   --agent-id YOUR_AGENT_ID
 ```
