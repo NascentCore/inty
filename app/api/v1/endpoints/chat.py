@@ -331,6 +331,7 @@ async def _try_handle_ws_user_signed_on_frame(
     db: AsyncSession,
     current_user: schemas.User,
     companion_ws: CompanionWebSocketCoordinator | None,
+    ws_conn_id: str,
     outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
     tc_box: list[Optional[dict]] | None = None,
     subscription_svc: SubscriptionService | None = None,
@@ -421,8 +422,9 @@ async def _try_handle_ws_user_signed_on_frame(
         )
         recv_msg_uuid = (frame.message_id or "").strip()
         logger.info(
-            "chat_ws user_signed_on armed inner_tick coords user={} agent={} chat_id={} "
-            "received_message_uuid={} implicit_greeting={}",
+            "chat_ws user_signed_on armed inner_tick coords ws_conn_id={} user={} agent={} "
+            "chat_id={} received_message_uuid={} implicit_greeting={}",
+            ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
@@ -437,7 +439,8 @@ async def _try_handle_ws_user_signed_on_frame(
                 or voice_svc is None
             ):
                 logger.error(
-                    "chat_ws implicit_greeting missing ws deps agent_id={}",
+                    "chat_ws implicit_greeting missing ws deps ws_conn_id={} agent_id={}",
+                    ws_conn_id,
                     agent_id,
                 )
             else:
@@ -456,11 +459,16 @@ async def _try_handle_ws_user_signed_on_frame(
                     )
                 except Exception:
                     logger.exception(
-                        "chat_ws implicit_greeting companion enqueue failed agent_id={}",
+                        "chat_ws implicit_greeting companion enqueue failed ws_conn_id={} agent_id={}",
+                        ws_conn_id,
                         agent_id,
                     )
     except Exception:
-        logger.exception("chat_ws user_signed_on failed agent_id={}", agent_id)
+        logger.exception(
+            "chat_ws user_signed_on failed ws_conn_id={} agent_id={}",
+            ws_conn_id,
+            agent_id,
+        )
         await websocket.send_json(
             ChatWsUserSignedOnAckFrame(
                 ok=False,
@@ -478,6 +486,7 @@ async def _try_handle_ws_user_signed_out_frame(
     current_user: schemas.User,
     companion_ws: CompanionWebSocketCoordinator | None,
     subscription_svc: SubscriptionService,
+    ws_conn_id: str,
 ) -> bool:
     """
     Consume ``{"type":"user_signed_out","agent_id":...}``.
@@ -543,15 +552,20 @@ async def _try_handle_ws_user_signed_out_frame(
             ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
         )
         logger.info(
-            "chat_ws user_signed_out logged CHAT_LOGS.md user={} agent={} chat_id={} "
+            "chat_ws user_signed_out logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
             "received_message_uuid={}",
+            ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
             recv_msg_uuid or "-",
         )
     except Exception:
-        logger.exception("chat_ws user_signed_out failed agent_id={}", agent_id)
+        logger.exception(
+            "chat_ws user_signed_out failed ws_conn_id={} agent_id={}",
+            ws_conn_id,
+            agent_id,
+        )
         await websocket.send_json(
             ChatWsUserSignedOutAckFrame(
                 ok=False,
@@ -569,6 +583,7 @@ async def _try_handle_ws_ws_conn_dropped_frame(
     current_user: schemas.User,
     companion_ws: CompanionWebSocketCoordinator | None,
     subscription_svc: SubscriptionService,
+    ws_conn_id: str,
 ) -> bool:
     """
     Consume ``{"type":"ws_conn_dropped","agent_id":...,"dropped_at_utc":...}``.
@@ -641,8 +656,9 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         )
         await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
         logger.info(
-            "chat_ws ws_conn_dropped logged CHAT_LOGS.md user={} agent={} chat_id={} "
+            "chat_ws ws_conn_dropped logged CHAT_LOGS.md ws_conn_id={} user={} agent={} chat_id={} "
             "client_dropped_at_utc={} received_message_uuid={}",
+            ws_conn_id,
             current_user.id,
             agent_id,
             chat.id,
@@ -650,7 +666,11 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             recv_msg_uuid or "-",
         )
     except Exception:
-        logger.exception("chat_ws ws_conn_dropped failed agent_id={}", agent_id)
+        logger.exception(
+            "chat_ws ws_conn_dropped failed ws_conn_id={} agent_id={}",
+            ws_conn_id,
+            agent_id,
+        )
         await websocket.send_json(
             {"type": "ws_conn_dropped_ack", "ok": False, "reason": "server_error"}
         )
@@ -1219,6 +1239,7 @@ async def _try_fire_companion_ws_proactive_heartbeat(
     ctx: dict[str, Any],
     subscription_svc: SubscriptionService,
     companion_ws: CompanionWebSocketCoordinator,
+    ws_conn_id: str,
 ) -> None:
     """If companion transcript says proactive heartbeat is due, run one turn and queue WS payload."""
     user_id = str(ctx.get("user_id") or "").strip()
@@ -2396,6 +2417,7 @@ async def chat_completions_websocket(
     voice_svc: VoiceService = Depends(deps.get_voice_service),
 ):
     await websocket.accept()
+    ws_conn_id = str(uuid.uuid4())
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -2453,6 +2475,7 @@ async def chat_completions_websocket(
                         ctx=hb_snapshot,
                         subscription_svc=subscription_svc,
                         companion_ws=companion_ws,
+                        ws_conn_id=ws_conn_id,
                     )
                 if feats.companion_ws_maintenance_inner_tick_enabled:
                     await _try_fire_companion_ws_maintenance_inner_tick(
@@ -2551,6 +2574,7 @@ async def chat_completions_websocket(
                 db=db,
                 current_user=current_user,
                 companion_ws=companion_ws,
+                ws_conn_id=ws_conn_id,
                 outbound_queue=outbound_queue,
                 tc_box=tc_box,
                 subscription_svc=subscription_svc,
@@ -2565,6 +2589,7 @@ async def chat_completions_websocket(
                 current_user=current_user,
                 companion_ws=companion_ws,
                 subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _try_handle_ws_ws_conn_dropped_frame(
@@ -2574,6 +2599,7 @@ async def chat_completions_websocket(
                 current_user=current_user,
                 companion_ws=companion_ws,
                 subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):
@@ -2658,6 +2684,7 @@ async def chat_completions_websocket_verify(
     persistence. Use to validate transport, queue behavior, and minimal LLM connectivity.
     """
     await websocket.accept()
+    ws_conn_id = str(uuid.uuid4())
     current_user = await _get_current_user_from_websocket(websocket, db)
     if current_user is None:
         await websocket.close(code=4001, reason="Unauthorized")
@@ -2695,6 +2722,7 @@ async def chat_completions_websocket_verify(
                 db=db,
                 current_user=current_user,
                 companion_ws=None,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _try_handle_ws_user_signed_out_frame(
@@ -2704,6 +2732,7 @@ async def chat_completions_websocket_verify(
                 current_user=current_user,
                 companion_ws=None,
                 subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _try_handle_ws_ws_conn_dropped_frame(
@@ -2713,6 +2742,7 @@ async def chat_completions_websocket_verify(
                 current_user=current_user,
                 companion_ws=None,
                 subscription_svc=subscription_svc,
+                ws_conn_id=ws_conn_id,
             ):
                 continue
             if await _handle_chat_websocket_control_json(websocket, data, tc_box):

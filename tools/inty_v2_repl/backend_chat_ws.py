@@ -14,9 +14,11 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+from zoneinfo import ZoneInfo
 
 import websockets
 from websockets.exceptions import ConnectionClosed
@@ -25,6 +27,7 @@ from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
     CompanionChatTurnMessageType,
+    UserTimeContext,
 )
 from app.schemas.chat_websocket import (
     ChatWebSocketRequest,
@@ -150,6 +153,50 @@ def _agent_id_from_ws_url(ws_url: str) -> str | None:
     return aid or None
 
 
+def _iana_tz_name_best_effort(now: datetime) -> str | None:
+    """Resolve an IANA zone name when possible; macOS may lack a zoneinfo symlink."""
+    override = os.environ.get("INTY_V2_REPL_TIMEZONE", "").strip()
+    if override:
+        return override
+    tz_env = os.environ.get("TZ", "").strip()
+    if tz_env:
+        return tz_env
+    zi = now.tzinfo
+    if isinstance(zi, ZoneInfo):
+        return zi.key
+    try:
+        localtime = Path("/etc/localtime")
+        if localtime.is_symlink():
+            parts = localtime.resolve().parts
+            if "zoneinfo" in parts:
+                i = parts.index("zoneinfo")
+                tail = parts[i + 1 :]
+                if tail:
+                    return "/".join(tail)
+    except OSError:
+        pass
+    return None
+
+
+def build_ws_user_time_context_now() -> UserTimeContext:
+    """Wall-clock context for ``time_context`` / ``client_context`` (local offset + optional IANA name)."""
+    now = datetime.now().astimezone()
+    off = now.utcoffset()
+    utc_mins = int(off.total_seconds() // 60) if off is not None else None
+    tz_name = _iana_tz_name_best_effort(now)
+    return UserTimeContext(
+        local_time=now.isoformat(timespec="milliseconds"),
+        timezone=tz_name,
+        utc_offset_minutes=utc_mins,
+    )
+
+
+def _ws_client_context_json() -> str:
+    tc = build_ws_user_time_context_now()
+    blob = tc.model_dump(by_alias=True, exclude_none=True)
+    return json.dumps({"type": "client_context", "time_context": blob})
+
+
 def _ws_chat_turn_send_payload(
     agent_id: str,
     user_text: str,
@@ -168,6 +215,7 @@ def _ws_chat_turn_send_payload(
             messages=[ChatMessage(role="user", content=user_text)],
             message_id=mid,
             message_type=companion_turn_message_type,
+            user_time_context=build_ws_user_time_context_now(),
         ),
     )
     return mid, req.model_dump_json(by_alias=True)
@@ -399,10 +447,18 @@ class BackendChatWsBridge:
         }
 
     async def _send_post_connect_control_frames(self, ws: Any) -> None:
-        """After each successful connect: optional ``ws_conn_dropped`` then ``user_signed_on``."""
+        """After each successful connect: ``client_context``, optional ``ws_conn_dropped``, ``user_signed_on``."""
         aid = _agent_id_from_ws_url(self._ws_url)
         if not aid:
             return
+
+        try:
+            await ws.send(_ws_client_context_json())
+        except ConnectionClosed:
+            logger.debug("chat ws client_context skipped (connection closed) agent_id={}", aid)
+            return
+        except Exception:
+            logger.exception("chat ws client_context send failed agent_id={}", aid)
 
         pending_snapshot = self._pending_ws_drop
         self._pending_ws_drop = None

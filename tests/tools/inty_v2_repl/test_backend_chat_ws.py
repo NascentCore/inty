@@ -1,13 +1,17 @@
-"""Contract helpers for inty v2 prototype backend WebSocket client."""
+"""Narrow contract tests for ``tools.inty_v2_repl.backend_chat_ws`` (uplink/downlink helpers)."""
 
 from __future__ import annotations
+
+import json
 
 import pytest
 
 from tools.inty_v2_repl.backend_chat_ws import (
     BackendChatWsError,
+    build_ws_user_time_context_now,
     http_base_to_ws_chat_url,
     parse_chat_completion_ws_payload,
+    _ws_chat_turn_send_payload,
 )
 
 
@@ -50,3 +54,30 @@ def test_parse_chat_response_payload_error() -> None:
         )
     assert exc_info.value.code == 400
     assert "user" in exc_info.value.agent_message.lower()
+
+
+def test_build_ws_user_time_context_now_shape() -> None:
+    ctx = build_ws_user_time_context_now()
+    assert ctx.local_time and str(ctx.local_time).strip()
+    assert isinstance(ctx.utc_offset_minutes, int)
+
+
+def test_build_ws_user_time_context_now_tz_utc(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TZ", "UTC")
+    monkeypatch.delenv("INTY_V2_REPL_TIMEZONE", raising=False)
+    ctx = build_ws_user_time_context_now()
+    assert ctx.timezone == "UTC"
+    assert ctx.utc_offset_minutes == 0
+
+
+def test_ws_chat_turn_send_payload_includes_time_context() -> None:
+    mid, raw = _ws_chat_turn_send_payload(
+        "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
+        "hello",
+        "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee",
+    )
+    assert mid == "bbbbbbbb-bbbb-4ccc-dddd-eeeeeeeeeeee"
+    outer = json.loads(raw)
+    tc = outer["request"]["time_context"]
+    assert isinstance(tc["local_time"], str) and tc["local_time"]
+    assert isinstance(tc["utc_offset_minutes"], int)
