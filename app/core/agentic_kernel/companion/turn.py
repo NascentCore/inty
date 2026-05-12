@@ -36,7 +36,7 @@ from typing import Any
 from loguru import logger
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionMemoryBootstrapType, InnerTickMechanism
+from app.utils.config import CompanionMemoryBootstrapType
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     invocation_extra,
@@ -216,17 +216,16 @@ async def run_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     langsmith_parent_run_enabled: bool | None = None,
     tool_bg_idle_event: threading.Event | None = None,
-    inner_tick_mechanism: str = InnerTickMechanism.DUPLEX_ASYNC.value,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
 
     - 加载 context + prompt bundle + transcript
     - 组装 system prompt + messages
-    - 调用 LLM（有工具时：先 await 前台 JSON envelope chat，再将 ``user_facing_reply`` 注入工具路径
-      后 dispatch ``tool_background`` 线程；见 ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``）。
-      ``inner_tick_mechanism=maintenance_tool_solo`` 时仅对维护性 inner tick 跳过该前台 completion，
-      ``tool_background`` 不变。
+    - 调用 LLM（有工具时：对 ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``，普通用户轮先 await
+      前台 JSON envelope chat，再将 ``user_facing_reply`` 注入工具路径后 dispatch ``tool_background``；
+      **维护性 inner tick**（``inner_tick_turn`` 且非 proactive）在该路由下**始终**跳过前台 envelope，
+      直接 ``start_tool_background_job``（``force_tools_first_round=True``））。
     - 持久化 transcript
     - 调度记忆管线
 
@@ -416,17 +415,12 @@ async def run_turn(
                         else:
                             push_output_event(ev)
 
-                    skip_foreground_envelope = (
-                        inner_tick_mechanism
-                        == InnerTickMechanism.MAINTENANCE_TOOL_SOLO.value
-                        and inner_tick_turn
-                        and not tick_proactive
-                    )
+                    skip_foreground_envelope = inner_tick_turn and not tick_proactive
                     if skip_foreground_envelope:
                         logger.info(
                             "run_turn inner_tick skip foreground envelope "
-                            "inner_tick_mechanism={} model_chat={}",
-                            inner_tick_mechanism,
+                            "inner_tick_mode={} model_chat={}",
+                            inner_tick_mode.value,
                             chat_model,
                         )
                         last_text = ""

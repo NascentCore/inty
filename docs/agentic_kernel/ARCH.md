@@ -128,12 +128,14 @@ flowchart TD
 1. **绑定关系上下文**：确定用户、companion、chat、experience profile 和 bootstrap 状态。
 2. **读取可用状态**：加载工作区文档、transcript、压实快照、运行状态和必要的 inner tick 上下文。
 3. **组装模型上下文**：按固定顺序注入 axiom、安全基线、角色/关系文档、记忆、工具策略和近期对话。
-4. **选择执行路由**：普通 chat、异步前台加后台工具、maintenance inner tick、proactive heartbeat。
+4. **选择执行路由**：普通 chat、异步前台加后台工具、维护 inner tick（**带工具时**仅 `tool_background`、无前台 envelope；无工具时单次 chat）、proactive heartbeat。
 5. **生成用户可见结果**：解析统一 envelope，避免把 provider reasoning 通道误当成回复。
 6. **提交状态变化**：写 transcript、工作区文档、runtime events、工具结果和 chat_history。
 7. **发布下行事件**：把用户可见 assistant 帧、可见 tool_bg 补帧或错误帧交给 transport adapter。
 
 这个顺序是架构合同。具体函数可以变化，但不能让状态提交、用户可见事件和下一轮上下文彼此失配。
+
+**配置**：`app.features.inner_tick_mechanism` 已从代码与默认 schema 中移除；若运维私有 `config.yaml` 仍含该键，`FeaturesConfig(**features)` 会在加载时失败，须删除该字段。
 
 ## 记忆模型
 

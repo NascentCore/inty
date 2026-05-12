@@ -1681,7 +1681,11 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
             raise
 
         companion_reply = companion_turn.assistant_text
-        if companion_reply is None or not str(companion_reply).strip():
+        reply_stripped = (
+            str(companion_reply).strip() if companion_reply is not None else ""
+        )
+
+        if not reply_stripped and not companion_turn.tool_background_started:
             companion_ws.remove_foreground_pending(preset_uid)
             logger.warning(
                 "companion_ws_maintenance_inner_tick empty reply ws_conn_id={} user={} agent={}",
@@ -1713,14 +1717,16 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                 {"foreground_user_message_id": user_row_id},
             )
 
-        companion_ai_meta = _companion_ai_meta_from_turn_result(companion_turn)
+        ai_message_id = None
+        if reply_stripped:
+            companion_ai_meta = _companion_ai_meta_from_turn_result(companion_turn)
 
-        ai_message_id = await chat_history_service.add_ai_message_sync_async(
-            session_id,
-            companion_reply,
-            agent_id=chat_row_agent_id,
-            meta_data=companion_ai_meta,
-        )
+            ai_message_id = await chat_history_service.add_ai_message_sync_async(
+                session_id,
+                companion_reply,
+                agent_id=chat_row_agent_id,
+                meta_data=companion_ai_meta,
+            )
 
         async with AsyncSessionLocal() as post_db:
             try:
@@ -1742,76 +1748,86 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
                     str(e),
                 )
 
-            (
-                response_text_content,
-                response_content_parts,
-            ) = _normalize_chat_response_content(companion_reply)
+            if reply_stripped:
+                (
+                    response_text_content,
+                    response_content_parts,
+                ) = _normalize_chat_response_content(companion_reply)
 
-            latest_message_info = None
-            try:
-                if ai_message_id is not None:
-                    latest_message_info = (
-                        await chat_history_service.get_ai_message_info_by_id(
-                            post_db, ai_message_id
+                latest_message_info = None
+                try:
+                    if ai_message_id is not None:
+                        latest_message_info = (
+                            await chat_history_service.get_ai_message_info_by_id(
+                                post_db, ai_message_id
+                            )
                         )
-                    )
-                if latest_message_info is None:
-                    latest_message_info = (
-                        await chat_history_service.get_latest_ai_message_info(
-                            post_db, session_id
+                    if latest_message_info is None:
+                        latest_message_info = (
+                            await chat_history_service.get_latest_ai_message_info(
+                                post_db, session_id
+                            )
                         )
+                except Exception as e:
+                    logger.warning(
+                        "companion_ws_maintenance_inner_tick latest_message_info failed ws_conn_id={}: {}",
+                        ws_conn_id,
+                        e,
                     )
-            except Exception as e:
-                logger.warning(
-                    "companion_ws_maintenance_inner_tick latest_message_info failed ws_conn_id={}: {}",
-                    ws_conn_id,
-                    e,
-                )
 
-            user_message_id = None
-            try:
-                user_message_id = await chat_history_service.get_latest_user_message_id(
-                    post_db, session_id
-                )
-            except Exception as e:
-                logger.warning(
-                    "companion_ws_maintenance_inner_tick get_latest_user_message_id failed ws_conn_id={}: {}",
-                    ws_conn_id,
-                    e,
-                )
+                user_message_id = None
+                try:
+                    user_message_id = await chat_history_service.get_latest_user_message_id(
+                        post_db, session_id
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "companion_ws_maintenance_inner_tick get_latest_user_message_id failed ws_conn_id={}: {}",
+                        ws_conn_id,
+                        e,
+                    )
 
-            subscription_actions = [
-                BizAction(action_type=ActionType.NONE, message=""),
-            ]
-            data = _build_chat_response(
-                response_text_content,
-                response_content_parts,
-                MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
-                latest_message_info,
-                None,
-                stub_request,
-                source_imate_id=None,
-                user_message_id=user_message_id,
-                subscription_actions=subscription_actions,
-                client_local_id=None,
-            )
-            payload = schemas.APIResponse.success(data=data)
-            out = payload.model_dump(exclude_none=True)
-            out["agent_id"] = agent_id
-            out["status_line"] = await _agent_status_line_for_chat_header(
-                post_db, agent_id
-            )
-            await outbound_queue.put(out)
+                subscription_actions = [
+                    BizAction(action_type=ActionType.NONE, message=""),
+                ]
+                data = _build_chat_response(
+                    response_text_content,
+                    response_content_parts,
+                    MAINTENANCE_INNER_TICK_CHAT_HISTORY_USER_MARKER,
+                    latest_message_info,
+                    None,
+                    stub_request,
+                    source_imate_id=None,
+                    user_message_id=user_message_id,
+                    subscription_actions=subscription_actions,
+                    client_local_id=None,
+                )
+                payload = schemas.APIResponse.success(data=data)
+                out = payload.model_dump(exclude_none=True)
+                out["agent_id"] = agent_id
+                out["status_line"] = await _agent_status_line_for_chat_header(
+                    post_db, agent_id
+                )
+                await outbound_queue.put(out)
 
         companion_ws.mark_maintenance_inner_tick_fired(time.monotonic())
 
-    logger.info(
-        "companion_ws_maintenance_inner_tick pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
-        ws_conn_id,
-        user_id,
-        agent_id,
-        chat_row_id,
-    )
+    if reply_stripped:
+        logger.info(
+            "companion_ws_maintenance_inner_tick pushed assistant ws_conn_id={} user={} agent={} chat_id={}",
+            ws_conn_id,
+            user_id,
+            agent_id,
+            chat_row_id,
+        )
+    else:
+        logger.info(
+            "companion_ws_maintenance_inner_tick tool_bg_only ws_conn_id={} user={} agent={} chat_id={}",
+            ws_conn_id,
+            user_id,
+            agent_id,
+            chat_row_id,
+        )
 
 
 async def _agent_status_line_for_chat_header(
