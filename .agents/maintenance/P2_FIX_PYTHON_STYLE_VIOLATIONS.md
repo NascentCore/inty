@@ -43,12 +43,12 @@ maintenance agents can fix the highest-impact item first.
 
 ### Newly discovered open violations
 
-- [ ] Google 2.4 "Exceptions":
+- [x] Google 2.4 "Exceptions":
   `/app/core/agentic_kernel/companion/significance_perception.py` catches broad
   `Exception` while parsing and extracting dual-LLM envelope candidates, then
   silently returns `None` or `[]`. Narrow to JSON/Pydantic/model-dump failures
   or log unexpected parser failures so malformed companion envelopes do not
-  hide implementation bugs.
+  hide implementation bugs. Fixed in `cursor/agent-maintenance-task-e5ce`.
 - [ ] Google 2.4 "Exceptions":
   `/app/core/agentic_kernel/companion/llm_chat_runtime.py` catches broad
   `Exception` while reading LangSmith trace/run identifiers and silently

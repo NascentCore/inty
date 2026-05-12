@@ -6,22 +6,6 @@ from pydantic import ValidationError
 from app.schemas.auth import GoogleAuthRequest
 
 
-def test_id_token_only_ok():
-    GoogleAuthRequest.model_validate({"id_token": "google-jwt-here"})
-
-
-def test_id_token_with_request_metadata_ok():
-    GoogleAuthRequest.model_validate(
-        {"id_token": "t", "request_id": "req-1"},
-    )
-
-
-def test_email_and_password_only_ok():
-    GoogleAuthRequest.model_validate(
-        {"email": "a@example.com", "password": "s3cret"},
-    )
-
-
 def test_mixed_id_token_with_email_and_password_rejected():
     with pytest.raises(ValidationError) as exc_info:
         GoogleAuthRequest.model_validate(

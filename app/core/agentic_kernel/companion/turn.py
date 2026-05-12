@@ -60,29 +60,22 @@ from .memory_pipeline import (
 )
 from .memory_store import MemoryStore
 from .models import (
-    INNER_TICK_SYNTHETIC_USER_TEXT,
-    TRANSCRIPT_WINDOW_MAX_MESSAGES,
     CompanionTurnResult,
     ContextMeta,
     InnerTickMode,
     PromptBundle,
-    companion_turn_transcript_loaded_messages,
-    load_context_meta,
-    load_prompt_bundle,
-    transcript_for_llm_turn,
     transcript_relative_path_for_turn_persistence,
-)
-from .transcript_compaction import (
-    CompactionConfig as TranscriptCompactionConfig,
-    ConversationCompactor,
-    load_compaction_state_from_store,
-    save_compaction_state_to_store,
-    transcript_rows_to_openai_dialogue,
 )
 from .prompt_stack import companion_turn_tools_and_system_messages
 from .significance_perception import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
+)
+from .transcript_compaction import CompactionConfig as TranscriptCompactionConfig
+from .turn_pipeline import (
+    build_companion_turn_prompt_plan,
+    load_companion_turn_state,
+    resolve_turn_runtime_flags,
 )
 from .tool_background import (
     ToolOutputEvent,
@@ -106,14 +99,9 @@ from .runtime_inspect_context import (
 )
 from .tools import WRITABLE_RELATIVE_PATHS
 from .utc import utc_iso_ts
-from .heartbeat import (
-    HEARTBEAT_SYNTHETIC_USER_TEXT,
-    PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
-)
 from .implicit_signal_messages import (
     MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON,
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
-    implicit_user_signed_on_chat_turn,
 )
 from .llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
@@ -251,19 +239,16 @@ async def run_turn(
     paths = MemoryStoreScopePaths(root=root)
     mem_cfg = memory_config or MemoryPipelineConfig()
 
-    tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
-    route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
-    implicit_sign_on_turn = implicit_user_signed_on_chat_turn(
-        implicit_signal_bundle=implicit_signal_bundle,
+    runtime_flags = resolve_turn_runtime_flags(
+        user_text=user_text,
         inner_tick_turn=inner_tick_turn,
+        inner_tick_mode=inner_tick_mode,
+        implicit_signal_bundle=implicit_signal_bundle,
     )
-
-    if inner_tick_turn:
-        user_text = (
-            PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER
-            if tick_proactive
-            else INNER_TICK_SYNTHETIC_USER_TEXT
-        )
+    user_text = runtime_flags.effective_user_text
+    tick_proactive = runtime_flags.tick_proactive
+    route_inner_mode = runtime_flags.route_inner_mode
+    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
     logger.info(
         "run_turn start path={} user_chars={} inner_tick_turn={} inner_tick_mode={} defer_memory={}",
@@ -297,82 +282,35 @@ async def run_turn(
         scope_root=root,
     )
 
-    # 加载 context 与 prompt bundle
-    context = load_context_meta(paths.context_json, store=store)
-    bundle = load_prompt_bundle(paths, store, meta=context)
-    rel_main_tr = paths.transcript.relative_to(root).as_posix()
-    rel_inner_tr = paths.transcript_inner_tick.relative_to(root).as_posix()
-    loaded = companion_turn_transcript_loaded_messages(
-        store,
-        rel_main_transcript=rel_main_tr,
-        rel_inner_tick_transcript=rel_inner_tr,
+    loaded_state = load_companion_turn_state(
+        root=root,
+        paths=paths,
+        store=store,
         inner_tick_turn=inner_tick_turn,
-        inner_tick_mode=route_inner_mode,
+        route_inner_mode=route_inner_mode,
+        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
     )
-    window_cap = transcript_llm_window_max_messages
-    if window_cap is None:
-        window_cap = TRANSCRIPT_WINDOW_MAX_MESSAGES
-    transcript = transcript_for_llm_turn(loaded, max_messages=window_cap)
-
-    tools_for_turn, system_messages, route_mode = (
-        companion_turn_tools_and_system_messages(
-            scope_root=root,
-            bundle=bundle,
-            context=context,
-            memory_bootstrap_type=memory_bootstrap_type,
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_mode=route_inner_mode,
-            tool_side_compact_system_prompt=False,
-            include_significance_perception_slice=None,
-            implicit_signal_bundle=implicit_signal_bundle,
-            implicit_user_signed_on_turn=implicit_sign_on_turn,
-        )
+    context = loaded_state.context
+    bundle = loaded_state.bundle
+    prompt_plan = build_companion_turn_prompt_plan(
+        root=root,
+        paths=paths,
+        store=store,
+        loaded_state=loaded_state,
+        user_text=user_text,
+        memory_bootstrap_type=memory_bootstrap_type,
+        inner_tick_turn=inner_tick_turn,
+        route_inner_mode=route_inner_mode,
+        tick_proactive=tick_proactive,
+        implicit_signal_bundle=implicit_signal_bundle,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+        transcript_compaction=transcript_compaction,
     )
-    # Structured envelope (+ importance scores) only when this leg is the lone chat completion
-    # without ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL; when tools run, the foreground chat leg still
-    # uses DUAL_LLM_CHAT_RESPONSE_FORMAT inside the async branch (see below).
-    use_dual_structured_chat = (
-        (not inner_tick_turn)
-        and (not tools_for_turn)
-        and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    )
-
-    prior_user_turns = sum(1 for m in loaded if m.role == "user")
-    compaction_turn_idx = prior_user_turns + 1
-
-    if transcript_compaction is not None and not inner_tick_turn:
-        rel_compact = paths.context_compaction_state_json.relative_to(root).as_posix()
-        prior_state = load_compaction_state_from_store(store, rel_compact)
-        compactor = ConversationCompactor(
-            transcript_compaction,
-            initial_state=prior_state,
-        )
-        pre_user: list[dict[str, Any]] = [
-            *system_messages,
-            *transcript_rows_to_openai_dialogue(transcript),
-        ]
-        outcome = compactor.maybe_compact(messages=pre_user, turn=compaction_turn_idx)
-        messages = list(outcome.messages)
-        if outcome.did_compact:
-            save_compaction_state_to_store(store, rel_compact, outcome.state)
-            logger.info(
-                "run_turn transcript_compaction did_compact=true reason={} before={} after={}",
-                outcome.reason,
-                outcome.approx_chars_before,
-                outcome.approx_chars_after,
-            )
-    else:
-        messages = list(system_messages)
-        for m in transcript:
-            messages.append({"role": m.role, "content": m.content})
+    tools_for_turn = prompt_plan.tools_for_turn
+    route_mode = prompt_plan.route_mode
+    messages = prompt_plan.messages
+    use_dual_structured_chat = prompt_plan.use_dual_structured_chat
     user_msg_uuid = preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
-    if tick_proactive:
-        messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
-    if implicit_sign_on_turn:
-        # Tail user (not system): same copy as trailing system caused repetitive greetings.
-        messages.append({"role": "user", "content": USER_SIGNED_ON_TRIGGER_USER_TEXT})
-    else:
-        messages.append({"role": "user", "content": user_text})
 
     ts_user = utc_iso_ts()
     trace_id = str(uuid.uuid4())
@@ -405,7 +343,7 @@ async def run_turn(
                 llm_client=llm_client,
                 mem_cfg=mem_cfg,
                 context=context,
-                transcript_llm_window_max_messages=window_cap,
+                transcript_llm_window_max_messages=loaded_state.window_cap,
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_mode=route_inner_mode,
                 repository_only_store_text=repository_only_store_text,

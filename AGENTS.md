@@ -19,10 +19,10 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ## Output
 
-- Always answer with 1 sentence.
+- Must answer from most to least importance
+- Always answer with 1 sentence summary.
   - Only elaborate if user explicitly asks.
   <!-- - Always start with 1 sentence summary, then layout critical details -->
-- Do not create README.md, create AGENTS.md
 - Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
 - User instructions always override this file.
 
@@ -63,27 +63,33 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ## Repo structure
 
-- [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）；运行时 companion 实现仍在 [agentic_kernel](/app/core/agentic_kernel/)，二者对照见 [techno_core/AGENTS.md](/techno_core/AGENTS.md)。
-- [agentic_kernel](/app/core/agentic_kernel/)
-- [ws-data-model](/app/schemas/chat.py)
-- [Inty ops](/backend/ops/)
-- [terminal-repl](/tools/inty_v2_repl/)
-- [iMate android app](/imate_android_app/)
-- [iMate iOS app](/imate_ios_app/)
+- Agentic core
+  - [agentic_kernel](/app/core/agentic_kernel/): Inty's core agentic harness
+  - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
+  - [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
+- Applications
+  - Backend
+    - [ws-data-model](/app/schemas/chat.py): communication protocols
+    - [Inty ops](/backend/ops/): backend application (including APIs, operational management components)
+    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
+  - Clients
+    - [iMate android app](/imate_android_app/)
+    - [iMate iOS app](/imate_ios_app/)
+- Repo agentic harness
+  - [.agents](/.agents/) general coding agents instructions & harness contextual information.
+  - [.cursor](/.cursor/) Cursor-specific harness
+- Miscs: read AGENTS.md or README.md under the dirs for information.
 
-## Guideline files (topic splits)
-
-Detailed instructions from this file are also maintained as topic files under
-`.agents/guidelines/` for navigation and updates.
+### /.agents/guidelines
 
 | Topic | Path |
 |-------|------|
-| Repository context, deployment, Android tips, API sync | [.agents/guidelines/repository-context.md](.agents/guidelines/repository-context.md) |
-| Agent conduct, output, code, Python docstrings | [.agents/guidelines/agent-conduct-and-code.md](.agents/guidelines/agent-conduct-and-code.md) |
-| Documentation layers and markdown conventions | [.agents/guidelines/documentation-standards.md](.agents/guidelines/documentation-standards.md) |
-| Cursor Cloud VM: services, tests, emulator, gotchas | [.agents/guidelines/cursor-cloud-environment.md](.agents/guidelines/cursor-cloud-environment.md) |
-| Local clone, quickstart, badges, external links | [.agents/guidelines/local-developer-setup.md](.agents/guidelines/local-developer-setup.md) |
-| Cloud Agent git and PR contract | [.agents/guidelines/CLOUD_AGENTS.md](.agents/guidelines/CLOUD_AGENTS.md) |
+| Repository context, deployment, Android tips, API sync | [repository-context.md](/.agents/guidelines/repository-context.md) |
+| Agent conduct, output, code, Python docstrings | [agent-conduct-and-code.md](/.agents/guidelines/agent-conduct-and-code.md) |
+| Documentation layers and markdown conventions | [documentation-standards.md](/.agents/guidelines/documentation-standards.md) |
+| Cursor Cloud VM: services, tests, emulator, gotchas | [cursor-cloud-environment.md](/.agents/guidelines/cursor-cloud-environment.md) |
+| Local clone, quickstart, badges, external links | [local-developer-setup.md](/.agents/guidelines/local-developer-setup.md) |
+| Cloud Agent git and PR contract | [CLOUD_AGENTS.md](/.agents/guidelines/CLOUD_AGENTS.md) |
 
 ## General Rules
 
@@ -111,6 +117,7 @@ Detailed instructions from this file are also maintained as topic files under
 
 ### 工程文档层次结构
 
+- **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
 - **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；详略由编写者按上下文自行判断，不以「人类扫读一整 repo」为第一约束。
