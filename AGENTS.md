@@ -75,7 +75,7 @@ they are in development mode.
 - Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
 - Apply them silently. Do not re-announce learned behavior.
 - If the user corrects your mistake: remember it and record it if necessary.
-- Follow `/.agents/agents_mds/WORK_LOGS.md` to log siganificant work items.
+- Follow `/.agents/guidelines/WORK_LOGS.md` to log siganificant work items.
 
 ### /.agents/guidelines
 

@@ -535,7 +535,7 @@ def _repl_run_backend_ws_branch(
         code_part = code if code is not None else "-"
         repl_notice_q.put(
             f"[{repl_wall_ts_str()}] repl: websocket connection lost "
-            f"ws_close_code={code_part} reason={reason!r}"
+            f"ws_conn_id={repl_ws_conn_id} ws_close_code={code_part} reason={reason!r}"
         )
 
     def _transport_ready_notice(reconnect: bool) -> None:
@@ -543,7 +543,9 @@ def _repl_run_backend_ws_branch(
             msg = "websocket connection restored"
         else:
             msg = "websocket connected"
-        repl_notice_q.put(f"[{repl_wall_ts_str()}] repl: {msg}")
+        repl_notice_q.put(
+            f"[{repl_wall_ts_str()}] repl: {msg} ws_conn_id={repl_ws_conn_id}"
+        )
 
     bridge = BackendChatWsBridge(
         ws_url=url,

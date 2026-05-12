@@ -121,6 +121,10 @@ from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
+# Floors ``companion_ws_proactive_heartbeat_poll_seconds`` inside ``companion_ws_inner_tick_worker``.
+# Tests may monkeypatch this module attribute to shorten poll intervals.
+_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS: float = 5.0
+
 
 class CompanionInferenceUpstreamHTTPException(HTTPException):
     """HTTPException with optional fields merged into ``/chat/ws`` error JSON frames."""
@@ -2526,7 +2530,10 @@ async def chat_completions_websocket(
     async def companion_ws_inner_tick_worker() -> None:
         while not hb_worker_stop.is_set():
             feats = global_config_loaded_from_config_yaml.app.features
-            poll = max(5.0, float(feats.companion_ws_proactive_heartbeat_poll_seconds))
+            poll = max(
+                _COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS,
+                float(feats.companion_ws_proactive_heartbeat_poll_seconds),
+            )
             try:
                 await asyncio.wait_for(hb_worker_stop.wait(), timeout=poll)
                 break

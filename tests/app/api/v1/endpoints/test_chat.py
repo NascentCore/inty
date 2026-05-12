@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -1630,6 +1631,73 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
     assert bundle is not None
     assert bundle.user_signed_on is True
     assert user_saves == []
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
+def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Regression: ``companion_ws_inner_tick`` task is cancelled in ``finally``; no further polls."""
+    ticks: dict[str, int] = {"proactive": 0, "maintenance": 0}
+
+    async def spy_proactive(**_kwargs):
+        ticks["proactive"] += 1
+
+    async def spy_maintenance(**_kwargs):
+        ticks["maintenance"] += 1
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(assistant_text="unused")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-inner-tick-stop",
+        workspace_dir="/tmp/inty_test_companion_ws_inner_tick_stop",
+        chat_id="chat-inner-tick-stop-1",
+        latest_user_message_db_id=501,
+        ai_message_id=9501,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    # ``poll = max(floor, features.companion_ws_proactive_heartbeat_poll_seconds)``:
+    # lowering only the floor is not enough when YAML sets a large poll interval.
+    monkeypatch.setattr(
+        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_proactive_heartbeat_poll_seconds",
+        0.05,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_proactive_heartbeat",
+        spy_proactive,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_maintenance_inner_tick",
+        spy_maintenance,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-inner-tick-stop",
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            time.sleep(0.2)
+            assert ticks["proactive"] + ticks["maintenance"] >= 1
+
+    n_at_close = ticks["proactive"] + ticks["maintenance"]
+    time.sleep(0.35)
+    assert ticks["proactive"] + ticks["maintenance"] == n_at_close
 
     companion_chat_service.clear_companion_chat_service_caches()
 
