@@ -9,11 +9,11 @@ import uuid
 from datetime import datetime
 from typing import Any, Callable
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from fastapi import HTTPException
 from loguru import logger
+from starlette.requests import ClientDisconnect
 
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -61,12 +61,28 @@ class LoggerRoute(APIRoute):
                     try:
                         body = await request.body()
                         if body:
+                            decoded_body = body.decode()
                             try:
-                                request_body = json.loads(body.decode())
-                            except Exception:
-                                request_body = body.decode()
-                    except Exception:
-                        pass
+                                request_body = json.loads(decoded_body)
+                            except json.JSONDecodeError:
+                                request_body = decoded_body
+                    except UnicodeDecodeError as e:
+                        request_body = f"<non-utf8 request body: {len(body)} bytes>"
+                        logger.warning(
+                            "[{}] Failed to decode request body: {}, method={}, path={}",
+                            request_id,
+                            e,
+                            request.method,
+                            request.url.path,
+                        )
+                    except (ClientDisconnect, RuntimeError) as e:
+                        logger.warning(
+                            "[{}] Failed to read request body: {}, method={}, path={}",
+                            request_id,
+                            e,
+                            request.method,
+                            request.url.path,
+                        )
 
                 # Log request
                 client = request.client.host if request.client else "unknown"
@@ -188,26 +204,24 @@ class LoggerRoute(APIRoute):
                 try:
                     # JSONResponse may store content in different attributes
                     # Try _content first (internal attribute used by Starlette)
-                    if hasattr(response, "_content") and response._content is not None:
-                        try:
-                            if isinstance(response._content, (dict, list)):
-                                response_body = response._content
-                                return response_body
-                        except Exception:
-                            pass
+                    response_content = getattr(response, "_content", None)
+                    if isinstance(response_content, (dict, list)):
+                        response_body = response_content
+                        return response_body
 
                     # Try content attribute (some versions of Starlette/FastAPI)
-                    if hasattr(response, "content") and response.content is not None:
+                    response_content = getattr(response, "content", None)
+                    if response_content is not None:
                         try:
                             # content might be a dict, list, or already serialized string
-                            if isinstance(response.content, (dict, list)):
-                                response_body = response.content
+                            if isinstance(response_content, (dict, list)):
+                                response_body = response_content
                                 return response_body
-                            elif isinstance(response.content, str):
+                            elif isinstance(response_content, str):
                                 try:
-                                    response_body = json.loads(response.content)
+                                    response_body = json.loads(response_content)
                                 except (json.JSONDecodeError, ValueError):
-                                    response_body = response.content
+                                    response_body = response_content
                                 return response_body
                         except Exception as e:
                             extraction_error = (
