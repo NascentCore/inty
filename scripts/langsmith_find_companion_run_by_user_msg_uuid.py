@@ -2,7 +2,7 @@
 """List LangSmith runs in a UTC window and find companion turns matching user_msg_uuid.
 
 Used when debugging ``/api/v1/chat/ws`` + ``tools.inty_v2_repl`` (see
-``.cursor/skills/investigate-imate-ws-backend/SKILL.md``). Project name and API key
+``.cursor/skills/investigate-inty-backend/SKILL.md``). Project name and API key
 resolution mirror ``app/core/config.py`` LangSmith env behavior and
 ``scripts/download_run.py``.
 """
