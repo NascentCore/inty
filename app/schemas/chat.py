@@ -1,5 +1,4 @@
 import enum
-import uuid
 from datetime import datetime
 from typing import Annotated, Any, Dict, List, Literal, Optional
 
@@ -409,16 +408,6 @@ class UserTimeContext(BaseModel):
     utc_offset_minutes: Optional[int] = None  # UTC 偏移分钟数，如 480 表示 UTC+8
 
 
-def normalize_websocket_companion_message_id_uuid(raw: Optional[str]) -> str:
-    """Canonical RFC4122 UUID string for WebSocket companion ``message_id`` / transcript user row."""
-    if raw is None or not str(raw).strip():
-        raise ValueError("message_id is required and must be a UUID")
-    try:
-        return str(uuid.UUID(str(raw).strip()))
-    except ValueError as exc:
-        raise ValueError("message_id must be a valid UUID") from exc
-
-
 class ChatCompletionRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -489,51 +478,6 @@ class ChatCompletionResponse(BaseModel):
     source_imate_id: Optional[str] = None
     choices: List[dict]
     usage: dict
-
-
-class ChatWsUserSignedOnFrame(BaseModel):
-    """WebSocket control frame: arms proactive heartbeat coords.
-
-    Product intent: signal that the user is online in this channel (heartbeat coords).
-    When ``implicit_greeting`` is true, the server runs an internal implicit sign-on companion
-    turn after a successful ``user_signed_on_ack`` (same semantics as the former IMPLICIT chat
-    frame); see ``/app/core/agentic_kernel/companion/implicit_signal_messages.py``.
-    """
-
-    type: Literal["user_signed_on"] = "user_signed_on"
-    agent_id: str = Field(..., min_length=1)
-    message_id: Optional[str] = Field(
-        default=None,
-        description="Optional RFC4122 UUID string for client/server log correlation; "
-        "required when implicit_greeting is true (also used as companion transcript user_msg_uuid).",
-    )
-    implicit_greeting: bool = Field(
-        default=False,
-        description="When true, run implicit sign-on greeting companion turn after coords arm.",
-    )
-
-
-class ChatWsUserSignedOutFrame(BaseModel):
-    """WebSocket control frame: records user leaving the chat channel for companion CHAT_LOGS.md."""
-
-    type: Literal["user_signed_out"] = "user_signed_out"
-    agent_id: str = Field(..., min_length=1)
-    message_id: Optional[str] = Field(
-        default=None,
-        description="Optional RFC4122 UUID string for client/server log correlation.",
-    )
-
-
-class ChatWebSocketRequest(BaseModel):
-    agent_id: str
-    request: ChatCompletionRequest
-
-
-class ChatWebSocketResponse(BaseModel):
-    code: int = 200
-    message: str = "success"
-    data: Optional[dict] = None
-    agent_id: str
 
 
 class ChatDeletionSummary(BaseModel):

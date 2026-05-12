@@ -223,8 +223,8 @@ async def _turn_ws_chat_round(
     from app.schemas.chat import (
         ChatCompletionRequest,
         ChatMessage,
-        ChatWebSocketRequest,
     )
+    from app.schemas.chat_websocket import ChatWebSocketRequest
     from tools.inty_v2_repl.backend_chat_ws import (
         http_base_to_ws_chat_url,
         parse_chat_completion_ws_payload,
