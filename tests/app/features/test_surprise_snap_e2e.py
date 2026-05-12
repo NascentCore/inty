@@ -6,7 +6,7 @@ Surprise Snap 端到端测试：聊天 choice、消息列表、解锁接口及�
 """
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import global_config_loaded_from_config_yaml
@@ -30,9 +30,12 @@ def _surprise_snap_enabled():
 
 def _set_agent_exclusive_photos(db_session, agent_id: str, photos: list):
     """在 DB 中设置 agent 的 exclusive_photos（App API 不暴露该字段）。"""
-    agent = db_session.query(Agent).filter(Agent.id == agent_id).first()
-    assert agent is not None, f"Agent {agent_id} not found"
-    agent.exclusive_photos = photos
+    # Core update：create_agent 等请求已在服务端更新过 Agent.version，ORM flush 会带旧
+    # version 条件导致 StaleDataError。
+    result = db_session.execute(
+        update(Agent).where(Agent.id == agent_id).values(exclusive_photos=photos)
+    )
+    assert result.rowcount == 1, f"Agent {agent_id} not found"
     db_session.commit()
 
 

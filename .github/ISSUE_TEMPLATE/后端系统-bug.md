@@ -2,7 +2,7 @@
 name: 后端系统 Bug
 about: 关于后端系统的 bug 描述
 title: "【后端系统 Bug】"
-labels: 后端系统
+labels: ''
 assignees: yxzhao6
 
 ---

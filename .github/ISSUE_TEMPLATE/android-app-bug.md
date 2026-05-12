@@ -2,7 +2,7 @@
 name: Android App Bug
 about: 记录说明 Android App 中的 bug
 title: "【Android App BUG】"
-labels: android, bug, p0
+labels: android, p0
 assignees: yxzhao6
 
 ---

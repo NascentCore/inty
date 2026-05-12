@@ -1,5 +1,20 @@
-# Agentic Kernel aka. iMate backend agentic core
+# Inty's core agentic runtime
 
-- **Importance scoring (significance perception)**: Foreground companion chat may use [`significance_perception.py`](/app/core/agentic_kernel/companion/significance_perception.py) ``DUAL_LLM_CHAT_RESPONSE_FORMAT`` so the model returns ``user_facing_reply`` plus three 1-10 scores. The module docstring there lists every consumer (transcript JSONL, ``CompanionTurnResult``, ``chat_history.meta_data``, optional memory extraction sorting). Operator-facing guidance text is ``prompts/SIGNIFICANCE_PERCEPTION.md`` injected via ``prompts/system_messages.build_system_messages`` when the significance slice is enabled (see ``prompt_stack.companion_turn_tools_and_system_messages``).
-- **Tool loop finish + LangSmith**: After tools finish, the model must emit the **same** unified dual-LLM JSON envelope as foreground chat (`user_facing_reply`, three `importance_*` scores, `output_to_user`) in **`message.content`** per [`/app/core/agentic_kernel/companion/prompts/system_messages.py`](/app/core/agentic_kernel/companion/prompts/system_messages.py); [`tool_bg_routing.py`](/app/core/agentic_kernel/companion/tool_bg_routing.py) parses it with `parse_dual_llm_chat_envelope_json` and otherwise runs **one extra** no-tools completion with the same `response_format`, so traces often show a final structured round that is **envelope finish**, not another tool call. Foreground dual chat and the tool-finish fallback validate envelopes from `message.content` first, then `message.reasoning` / `message.reasoning_details`; raw non-JSON reasoning is not surfaced.
-- **Async dual-LLM ordering (`run_turn`)**: For `TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL`, the foreground envelope chat completes **before** `start_tool_background_job`; non-empty `user_facing_reply` is appended as an **`assistant`** message to the tool-path `request_messages`, and `force_tools_first_round` is **False** so the first tool-path completion does not use `tool_choice=required`. Empty `user_facing_reply` skips that injection and keeps `force_tools_first_round` **True** (envelope defers visible text to the tool branch).
+- Implements the core agentic runtime that powers the Inty's "living human like" experience
+- This is the logical entity that responds to users through multiple communication channels
+- Also respond to sythetic stimulus from LivingSphere & TechnoCore
+
+## Architecture
+
+- Dual LLM call loops to simulate fast & slow thinking in response to user message,
+  and an inner-tick to simulate mental autonomy, running regularly (not requiring user messages to trigger)
+  - Fast thinking: a single round of LLM chat completion
+  - Slow thinking: a single tool-call agentic loop
+  - Inner tick: a multi-tool-call agentic loop
+- MemoryStore: python data structure recording working memory of the agentic "brain"
+  - Data is persisted in real-time into a postgres database
+  - Data is updated by slow thinking and inner tick, and takes effect immediately
+- Context mode: phases and mode companionship
+  - bootstrap: first-encountering, agentic taking the lead to guide the user to define the comapnionship
+  - intimate: engaging in intimacy
+  - companion: general emotional compaionship
