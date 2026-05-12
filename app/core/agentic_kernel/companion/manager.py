@@ -19,6 +19,7 @@ from app.core.agentic_kernel.experience_profile import (
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType, InnerTickMechanism
+from living_sphere.seeding import ensure_living_sphere_seeded
 
 from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
@@ -269,6 +270,7 @@ class CompanionManager:
                 )
 
             ensure_minimal_documents_in_store(ws_path, store)
+            ensure_living_sphere_seeded(store)
 
             session = CompanionSession(
                 user_id=user_id,

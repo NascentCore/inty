@@ -19,6 +19,7 @@ def test_memory_store_scope_paths_properties(tmp_path: Path) -> None:
     assert p.soul == root / "SOUL.md"
     assert p.user_md == root / "USER.md"
     assert p.memory_md == root / "MEMORY.md"
+    assert p.living_sphere_md == root / "LIVING_SPHERE.md"
     assert p.tools_md == root / "TOOLS.md"
     assert p.transcript == root / "transcript.jsonl"
     assert p.context_json == root / "context.json"

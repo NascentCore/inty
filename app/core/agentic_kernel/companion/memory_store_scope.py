@@ -67,6 +67,10 @@ class MemoryStoreScopePaths:
         return self.root / "MEMORY.md"
 
     @property
+    def living_sphere_md(self) -> Path:
+        return self.root / "LIVING_SPHERE.md"
+
+    @property
     def tools_md(self) -> Path:
         return self.root / "TOOLS.md"
 

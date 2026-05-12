@@ -1,4 +1,5 @@
-"""Living space is a text description of the user's living environment.
+"""LivingSphere describes an Inty's private virtual home inside TechnoCore.
 
-Can changes between times. In home, office, or a random place outside.
+The first runtime version seeds one stable Markdown anchor per companion session so
+the agent can answer where it is without pretending to occupy the physical world.
 """
