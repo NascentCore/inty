@@ -19,10 +19,10 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ## Output
 
-- Always answer with 1 sentence.
+- Must answer from most to least importance
+- Always answer with 1 sentence summary.
   - Only elaborate if user explicitly asks.
   <!-- - Always start with 1 sentence summary, then layout critical details -->
-- Do not create README.md, create AGENTS.md
 - Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
 - User instructions always override this file.
 
