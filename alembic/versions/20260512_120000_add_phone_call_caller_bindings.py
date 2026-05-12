@@ -1,6 +1,6 @@
 """Add phone-call caller bindings.
 
-Revision ID: 20260512_120000_phone_call_bindings
+Revision ID: 20260512_phone_call_bindings
 Revises: 20260508_120000_rename_ws_docs
 """
 
@@ -9,7 +9,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "20260512_120000_phone_call_bindings"
+revision: str = "20260512_phone_call_bindings"
 down_revision: Union[str, None] = "20260508_120000_rename_ws_docs"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
