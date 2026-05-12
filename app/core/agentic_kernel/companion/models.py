@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from enum import StrEnum
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from loguru import logger
@@ -21,7 +20,6 @@ from .memory_store_scope import load_template_seed_text
 
 if TYPE_CHECKING:
     from .memory_store import MemoryStore
-    from .memory_store_scope import MemoryStoreScopePaths
 
 AssistantTurnSource = Literal["chat", "inner_tick"]
 CompanionReplyModality = Literal["text", "voice_message"]
@@ -204,7 +202,6 @@ class ContextMeta(BaseModel):
 
 
 def load_prompt_bundle(
-    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     *,
     meta: ContextMeta | None = None,
@@ -249,15 +246,7 @@ def load_prompt_bundle(
     )
 
 
-def load_context_meta(
-    path: Path,
-    *,
-    store: "MemoryStore | None" = None,
-) -> ContextMeta:
-    if store is None:
-        from .memory_registry import get_memory_store
-
-        store = get_memory_store(path.parent.resolve())
+def load_context_meta(*, store: MemoryStore) -> ContextMeta:
     body = store.read_document_if_exists("context.json")
     if body is not None and body.strip():
         try:
@@ -303,15 +292,6 @@ def transcript_without_trailing_presence_signals(
     while i > 0 and msgs[i - 1].role == "user" and msgs[i - 1].presence is not None:
         i -= 1
     return msgs[:i]
-
-
-def load_transcript(path: Path) -> list[ChatMessage]:
-    from .memory_registry import get_memory_store
-
-    root = path.parent.resolve()
-    store = get_memory_store(root)
-    rel = path.resolve().relative_to(root).as_posix()
-    return load_transcript_from_store(store, rel)
 
 
 def load_transcript_from_store(

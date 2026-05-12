@@ -6,15 +6,41 @@ import json
 import threading
 import uuid as uuid_mod
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any, Protocol
 
+from .scope import CompanionScope
 from .utc import utc_iso_ts
 from .memory_store_document_mapping import (
     CompanionMemoryDocumentKind,
     parse_memory_store_relative_path,
     relative_path_for_kind,
 )
+
+
+def normalize_memory_store_relative_path(relative_path: str) -> str:
+    """Normalize a scope-relative posix path without touching the host filesystem.
+
+    Rejects empty paths, absolute paths, and ``..`` segments that would escape the root.
+    """
+    rel = (relative_path or "").strip().replace("\\", "/")
+    if not rel:
+        raise ValueError("relative_path must be non-empty")
+    if rel.startswith("/"):
+        raise ValueError("relative_path must be scope-root-relative")
+    parts: list[str] = []
+    for part in PurePosixPath(rel).parts:
+        if part == "..":
+            if not parts:
+                raise ValueError("relative_path escapes scope root")
+            parts.pop()
+        elif part in (".", ""):
+            continue
+        else:
+            parts.append(part)
+    if not parts:
+        raise ValueError("relative_path must be non-empty")
+    return "/".join(parts)
 
 
 @dataclass(frozen=True)
@@ -27,23 +53,17 @@ class MemoryRecord:
 
 
 class MemoryRepository(Protocol):
-    def read_document(
-        self,
-        *,
-        workspace_root: str,
-        relative_path: str,
-    ) -> MemoryRecord | None: ...
+    def read_document(self, *, relative_path: str) -> MemoryRecord | None: ...
 
     def append_document(
         self,
         *,
-        workspace_root: str,
         relative_path: str,
         content: str,
         record_uuid: str,
     ) -> MemoryRecord: ...
 
-    def list_all_relative_paths(self, *, workspace_root: str) -> list[str]: ...
+    def list_all_relative_paths(self) -> list[str]: ...
 
 
 class SqlAlchemyMemoryRepository:
@@ -69,14 +89,8 @@ class SqlAlchemyMemoryRepository:
 
         return sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion
 
-    def read_document(
-        self,
-        *,
-        workspace_root: str,
-        relative_path: str,
-    ) -> MemoryRecord | None:
+    def read_document(self, *, relative_path: str) -> MemoryRecord | None:
         sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
-        _ = workspace_root
         kind, cal = parse_memory_store_relative_path(relative_path)
         filters = [
             sql_and(
@@ -109,9 +123,8 @@ class SqlAlchemyMemoryRepository:
             created_at=created_at,
         )
 
-    def list_all_relative_paths(self, *, workspace_root: str) -> list[str]:
+    def list_all_relative_paths(self) -> list[str]:
         sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
-        _ = workspace_root
         stmt = (
             sql_select(
                 CompanionMemoryDocumentVersion.document_kind,
@@ -143,13 +156,11 @@ class SqlAlchemyMemoryRepository:
     def append_document(
         self,
         *,
-        workspace_root: str,
         relative_path: str,
         content: str,
         record_uuid: str,
     ) -> MemoryRecord:
         _, _, SessionLocal, CompanionMemoryDocumentVersion = self._orm()
-        _ = workspace_root
         kind, cal = parse_memory_store_relative_path(relative_path)
         row = CompanionMemoryDocumentVersion(
             record_uuid=record_uuid,
@@ -204,28 +215,25 @@ class MemoryStore:
     def __init__(
         self,
         *,
-        workspace_root: Path,
+        scope: CompanionScope,
         repository: MemoryRepository | None,
         flush_batch_size: int = 64,
     ) -> None:
-        self._workspace_root = workspace_root.resolve()
-        self._workspace_root_str = str(self._workspace_root)
+        self._scope = scope
         self._cache = MemoryCache()
         self._repository = repository
         _ = flush_batch_size
+
+    @property
+    def scope(self) -> CompanionScope:
+        return self._scope
 
     @property
     def uses_repository_without_scope_disk(self) -> bool:
         return self._repository is not None
 
     def _normalize_relative_path(self, relative_path: str) -> str:
-        rel = (relative_path or "").strip().replace("\\", "/")
-        if not rel:
-            raise ValueError("relative_path must be non-empty")
-        if rel.startswith("/"):
-            raise ValueError("relative_path must be scope-root-relative")
-        abs_path = (self._workspace_root / rel).resolve()
-        return abs_path.relative_to(self._workspace_root).as_posix()
+        return normalize_memory_store_relative_path(relative_path)
 
     def _next_local_sequence(self, relative_path: str) -> int:
         cur = self._cache.get(relative_path)
@@ -238,7 +246,7 @@ class MemoryStore:
         if repo is not None:
             list_fn = getattr(repo, "list_all_relative_paths", None)
             if callable(list_fn):
-                return list(list_fn(workspace_root=self._workspace_root_str))
+                return list(list_fn())
         return self._cache.relative_paths()
 
     def read_document_if_exists(self, relative_path: str) -> str | None:
@@ -248,10 +256,7 @@ class MemoryStore:
             return cached.content
 
         if self._repository is not None:
-            rec = self._repository.read_document(
-                workspace_root=self._workspace_root_str,
-                relative_path=rel,
-            )
+            rec = self._repository.read_document(relative_path=rel)
             if rec is not None:
                 loaded = self._cache.put_committed(rec)
                 return loaded.content
@@ -260,8 +265,9 @@ class MemoryStore:
     def read_document(self, relative_path: str) -> str:
         body = self.read_document_if_exists(relative_path)
         if body is None:
+            rel = self._normalize_relative_path(relative_path)
             raise FileNotFoundError(
-                f"memory document not found: {self._workspace_root / relative_path}"
+                f"memory document not found: scope={self._scope.registry_key()} path={rel!r}"
             )
         return body
 
@@ -270,7 +276,6 @@ class MemoryStore:
         new_record_uuid = str(uuid_mod.uuid4())
         if self._repository is not None:
             committed = self._repository.append_document(
-                workspace_root=self._workspace_root_str,
                 relative_path=rel,
                 content=content,
                 record_uuid=new_record_uuid,

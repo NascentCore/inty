@@ -31,13 +31,12 @@ import time
 import uuid
 from contextlib import nullcontext
 from copy import deepcopy
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionMemoryBootstrapType, InnerTickMechanism
+from app.utils.config import CompanionMemoryBootstrapType
 from app.core.agentic_kernel.llm.langsmith_invocation_extra import (
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
     invocation_extra,
@@ -110,7 +109,7 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from .memory_store_scope import MemoryStoreScopePaths
+from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
@@ -127,7 +126,7 @@ def _replace_leading_system_messages_multi(
 
 def _async_dual_llm_system_message_variants(
     *,
-    scope_root: Path,
+    store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
@@ -145,7 +144,7 @@ def _async_dual_llm_system_message_variants(
     loops entirely, like a brief hello to someone familiar).
     """
     _, tool_system_msgs, _ = companion_turn_tools_and_system_messages(
-        scope_root=scope_root,
+        store=store,
         bundle=bundle,
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
@@ -157,7 +156,7 @@ def _async_dual_llm_system_message_variants(
         implicit_user_signed_on_turn=False,
     )
     _, chat_system_msgs, _ = companion_turn_tools_and_system_messages(
-        scope_root=scope_root,
+        store=store,
         bundle=bundle,
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
@@ -182,7 +181,7 @@ async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
     *,
     idle_wait_timeout_sec: float,
-    scope_root: Path,
+    scope_registry_key: str,
 ) -> None:
     if tool_bg_idle_event is None:
         return
@@ -193,14 +192,13 @@ async def _await_tool_background_idle_if_configured(
     ok = await asyncio.to_thread(_wait)
     if not ok:
         logger.warning(
-            "run_turn tool_bg_idle wait timed out after {:.2f}s scope_root={}",
+            "run_turn tool_bg_idle wait timed out after {:.2f}s scope={}",
             idle_wait_timeout_sec,
-            scope_root,
+            scope_registry_key,
         )
 
 
 async def run_turn(
-    scope_root: Path,
     user_text: str,
     *,
     store: MemoryStore,
@@ -218,25 +216,23 @@ async def run_turn(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     langsmith_parent_run_enabled: bool | None = None,
     tool_bg_idle_event: threading.Event | None = None,
-    inner_tick_mechanism: str = InnerTickMechanism.DUPLEX_ASYNC.value,
 ) -> CompanionTurnResult:
     """
     执行一轮完整对话。
 
     - 加载 context + prompt bundle + transcript
     - 组装 system prompt + messages
-    - 调用 LLM（有工具时：先 await 前台 JSON envelope chat，再将 ``user_facing_reply`` 注入工具路径
-      后 dispatch ``tool_background`` 线程；见 ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``）。
-      ``inner_tick_mechanism=maintenance_tool_solo`` 时仅对维护性 inner tick 跳过该前台 completion，
-      ``tool_background`` 不变。
+    - 调用 LLM（有工具时：对 ``TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``，普通用户轮先 await
+      前台 JSON envelope chat，再将 ``user_facing_reply`` 注入工具路径后 dispatch ``tool_background``；
+      **维护性 inner tick**（``inner_tick_turn`` 且非 proactive）在该路由下**始终**跳过前台 envelope，
+      直接 ``start_tool_background_job``（``force_tools_first_round=True``））。
     - 持久化 transcript
     - 调度记忆管线
 
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     """
     t0 = time.perf_counter()
-    root = scope_root.resolve()
-    paths = MemoryStoreScopePaths(root=root)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     mem_cfg = memory_config or MemoryPipelineConfig()
 
     runtime_flags = resolve_turn_runtime_flags(
@@ -251,8 +247,8 @@ async def run_turn(
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
     logger.info(
-        "run_turn start path={} user_chars={} inner_tick_turn={} inner_tick_mode={} defer_memory={}",
-        root,
+        "run_turn start scope={} user_chars={} inner_tick_turn={} inner_tick_mode={} defer_memory={}",
+        store.scope.registry_key(),
         len(user_text),
         inner_tick_turn,
         inner_tick_mode.value if inner_tick_turn else "-",
@@ -279,12 +275,10 @@ async def run_turn(
     await _await_tool_background_idle_if_configured(
         tool_bg_idle_event,
         idle_wait_timeout_sec=idle_wait_timeout_sec,
-        scope_root=root,
+        scope_registry_key=store.scope.registry_key(),
     )
 
     loaded_state = load_companion_turn_state(
-        root=root,
-        paths=paths,
         store=store,
         inner_tick_turn=inner_tick_turn,
         route_inner_mode=route_inner_mode,
@@ -293,8 +287,6 @@ async def run_turn(
     context = loaded_state.context
     bundle = loaded_state.bundle
     prompt_plan = build_companion_turn_prompt_plan(
-        root=root,
-        paths=paths,
         store=store,
         loaded_state=loaded_state,
         user_text=user_text,
@@ -394,7 +386,7 @@ async def run_turn(
                 if route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
                     tool_system_msgs, chat_system_msgs = (
                         _async_dual_llm_system_message_variants(
-                            scope_root=root,
+                            store=store,
                             bundle=bundle,
                             context=context,
                             memory_bootstrap_type=memory_bootstrap_type,
@@ -423,17 +415,12 @@ async def run_turn(
                         else:
                             push_output_event(ev)
 
-                    skip_foreground_envelope = (
-                        inner_tick_mechanism
-                        == InnerTickMechanism.MAINTENANCE_TOOL_SOLO.value
-                        and inner_tick_turn
-                        and not tick_proactive
-                    )
+                    skip_foreground_envelope = inner_tick_turn and not tick_proactive
                     if skip_foreground_envelope:
                         logger.info(
                             "run_turn inner_tick skip foreground envelope "
-                            "inner_tick_mechanism={} model_chat={}",
-                            inner_tick_mechanism,
+                            "inner_tick_mode={} model_chat={}",
+                            inner_tick_mode.value,
                             chat_model,
                         )
                         last_text = ""
@@ -530,7 +517,6 @@ async def run_turn(
                             )
                         force_tools_first_round = not bool(fg_text)
                     start_tool_background_job(
-                        ws_root=root,
                         memory_store=store,
                         request_messages=tool_msgs_for_bg,
                         tool_model_name=tool_model,
@@ -692,7 +678,7 @@ async def run_turn(
 
     # 持久化 transcript
     rel_tr = (
-        paths.transcript.relative_to(root).as_posix()
+        paths.transcript
         if implicit_sign_on_turn
         else transcript_relative_path_for_turn_persistence(
             inner_tick_turn=inner_tick_turn,
@@ -757,8 +743,7 @@ async def run_turn(
             return llm_client.complete_text(msgs, model_role=model_role)
 
         schedule_memory_update_after_turn(
-            paths,
-            store=store,
+            store,
             user_text=memory_user_text,
             assistant_text=last_text,
             complete_fn=_complete_fn,
@@ -780,8 +765,7 @@ async def run_turn(
                 return llm_client.complete_text(msgs, model_role=model_role)
 
             memory_update_after_turn(
-                paths,
-                store=store,
+                store,
                 user_text=memory_user_text,
                 assistant_text=last_text,
                 complete_fn=_complete_fn_sync,

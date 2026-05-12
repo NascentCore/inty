@@ -822,7 +822,6 @@ def _setup_companion_ws_chat_test_env(
     monkeypatch: pytest.MonkeyPatch,
     *,
     agent_id: str,
-    workspace_dir: str,
     chat_id: str,
     latest_user_message_db_id: int,
     ai_message_id: int,
@@ -831,11 +830,6 @@ def _setup_companion_ws_chat_test_env(
     ai_message_meta_captures: list | None = None,
 ) -> None:
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        companion_chat_service,
-        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
-        Path(workspace_dir),
-    )
 
     async def fake_get_or_create_chat_by_agent(db, user_id, agent_id, **_kwargs):
         return SimpleNamespace(id=chat_id, agent_id=agent_id)
@@ -997,11 +991,6 @@ def test_chat_completions_companion_kernel_branch_writes_history(
 ):
     """POST completions always uses legacy Agent (companion kernel is WebSocket-only)."""
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        companion_chat_service,
-        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
-        Path("/tmp/inty_test_companion_ws"),
-    )
 
     captured: dict = {"companion_calls": 0}
 
@@ -1165,11 +1154,6 @@ def test_chat_websocket_companion_kernel_branch_writes_history(
 ):
     """WebSocket /api/v1/chat/ws always uses companion kernel (same stubs as HTTP path)."""
     companion_chat_service.clear_companion_chat_service_caches()
-    monkeypatch.setattr(
-        companion_chat_service,
-        "COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX",
-        Path("/tmp/inty_test_companion_ws_ws"),
-    )
 
     captured: dict = {
         "companion_calls": 0,
@@ -1410,7 +1394,6 @@ def test_chat_websocket_companion_foreground_tool_background_started_meta(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-tbgs",
-        workspace_dir="/tmp/inty_test_companion_ws_tbgs",
         chat_id="chat-tbgs-1",
         latest_user_message_db_id=91,
         ai_message_id=905,
@@ -1459,7 +1442,6 @@ def test_chat_websocket_companion_llm_inference_backend_error_frame(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-llm-err",
-        workspace_dir="/tmp/inty_test_companion_ws_llm_err",
         chat_id="chat-llm-err-1",
         latest_user_message_db_id=57,
         ai_message_id=904,
@@ -1501,7 +1483,6 @@ def test_chat_websocket_companion_passes_implicit_signal_bundle_with_time_contex
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-impl",
-        workspace_dir="/tmp/inty_test_companion_ws_impl",
         chat_id="chat-impl-1",
         latest_user_message_db_id=90,
         ai_message_id=901,
@@ -1555,7 +1536,6 @@ def test_chat_websocket_companion_implicit_user_signed_on_chat_frame_sets_bundle
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-signon-chatframe",
-        workspace_dir="/tmp/inty_test_companion_ws_signon_chatframe",
         chat_id="chat-signon-chatframe-1",
         latest_user_message_db_id=90,
         ai_message_id=902,
@@ -1602,7 +1582,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-signon-cf",
-        workspace_dir="/tmp/inty_test_companion_ws_signon_cf",
         chat_id="chat-signon-cf-1",
         latest_user_message_db_id=90,
         ai_message_id=910,
@@ -1653,7 +1632,6 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-inner-tick-stop",
-        workspace_dir="/tmp/inty_test_companion_ws_inner_tick_stop",
         chat_id="chat-inner-tick-stop-1",
         latest_user_message_db_id=501,
         ai_message_id=9501,
@@ -1711,7 +1689,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_messa
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-signon-cf-mid",
-        workspace_dir="/tmp/inty_test_companion_ws_signon_cf_mid",
         chat_id="chat-signon-cf-mid-1",
         latest_user_message_db_id=90,
         ai_message_id=911,
@@ -1745,7 +1722,6 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_invalid_messa
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-signon-cf-badmid",
-        workspace_dir="/tmp/inty_test_companion_ws_signon_cf_badmid",
         chat_id="chat-signon-cf-badmid-1",
         latest_user_message_db_id=90,
         ai_message_id=912,
@@ -1802,7 +1778,6 @@ def test_chat_websocket_companion_rejects_multimodal_image_user_turn(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-mm",
-        workspace_dir="/tmp/inty_test_companion_ws_mm",
         chat_id="chat-mm-1",
         latest_user_message_db_id=57,
         ai_message_id=1,
@@ -1853,7 +1828,6 @@ def test_chat_websocket_companion_rejects_missing_message_id(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-mid",
-        workspace_dir="/tmp/inty_test_companion_ws_mid",
         chat_id="chat-mid-1",
         latest_user_message_db_id=59,
         ai_message_id=1,
@@ -1891,7 +1865,6 @@ def test_chat_websocket_companion_rejects_non_uuid_message_id(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-mid2",
-        workspace_dir="/tmp/inty_test_companion_ws_mid2",
         chat_id="chat-mid-2",
         latest_user_message_db_id=60,
         ai_message_id=1,
@@ -1931,7 +1904,6 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
     _setup_companion_ws_chat_test_env(
         monkeypatch,
         agent_id="agent-companion-txtparts",
-        workspace_dir="/tmp/inty_test_companion_ws_txtparts",
         chat_id="chat-txtparts-1",
         latest_user_message_db_id=58,
         ai_message_id=904,

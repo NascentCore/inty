@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
 
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .models import AI_PRIVATE_INJECT_MAX_CHARS
 
 _AI_PRIVATE_MD_REL = "ai_private.md"
@@ -49,7 +48,7 @@ def _format_ai_private_jsonl_object(obj: dict[str, Any]) -> str:
 
 
 def get_ai_private_text_for_prompt(
-    workspace_root: Path, *, max_chars: int | None = None
+    store: MemoryStore, *, max_chars: int | None = None
 ) -> str:
     """Read ``ai_private.md`` only.
 
@@ -58,19 +57,17 @@ def get_ai_private_text_for_prompt(
     stays for tooling, tests, and ``get_ai_private_merged_text_for_prompt``.
     """
     cap = max_chars if max_chars is not None else _default_max_chars()
-    body = get_memory_store(workspace_root).read_document_if_exists(_AI_PRIVATE_MD_REL)
+    body = store.read_document_if_exists(_AI_PRIVATE_MD_REL)
     s = body or ""
     return _clip_chars(s, cap)
 
 
 def get_ai_private_jsonl_text_for_prompt(
-    workspace_root: Path, *, max_chars: int | None = None
+    store: MemoryStore, *, max_chars: int | None = None
 ) -> str:
     """Parse ``ai_private.jsonl`` into plain lines for prompt context (optional layer)."""
     cap = max_chars if max_chars is not None else _default_max_chars()
-    raw = get_memory_store(workspace_root).read_document_if_exists(
-        _AI_PRIVATE_JSONL_REL
-    )
+    raw = store.read_document_if_exists(_AI_PRIVATE_JSONL_REL)
     if not raw or not raw.strip():
         return ""
 
@@ -94,12 +91,12 @@ def get_ai_private_jsonl_text_for_prompt(
 
 
 def get_ai_private_merged_text_for_prompt(
-    workspace_root: Path, *, max_chars: int | None = None
+    store: MemoryStore, *, max_chars: int | None = None
 ) -> str:
     """Concatenate ``ai_private.md`` then ``ai_private.jsonl`` under one character budget."""
     cap = max_chars if max_chars is not None else _default_max_chars()
-    md = get_ai_private_text_for_prompt(workspace_root, max_chars=cap)
-    jl = get_ai_private_jsonl_text_for_prompt(workspace_root, max_chars=cap)
+    md = get_ai_private_text_for_prompt(store, max_chars=cap)
+    jl = get_ai_private_jsonl_text_for_prompt(store, max_chars=cap)
     if not jl.strip():
         return md
     sep = "\n\n---\n\n（ai_private.jsonl）\n\n"

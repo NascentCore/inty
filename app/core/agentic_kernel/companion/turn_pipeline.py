@@ -8,7 +8,6 @@ be split without changing WebSocket, MemoryStore, or tool-background behavior.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
@@ -27,7 +26,7 @@ from .implicit_signal_messages import (
 )
 from .memory_pipeline import MemoryPipelineConfig
 from .memory_store import MemoryStore
-from .memory_store_scope import MemoryStoreScopePaths
+from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -138,18 +137,17 @@ def _companion_tail_user_body_for_llm(
 
 def load_companion_turn_state(
     *,
-    root: Path,
-    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     inner_tick_turn: bool,
     route_inner_mode: InnerTickMode,
     transcript_llm_window_max_messages: int | None,
 ) -> CompanionTurnLoadedState:
     """Load context, prompt bundle, and transcript head for one turn."""
-    context = load_context_meta(paths.context_json, store=store)
-    bundle = load_prompt_bundle(paths, store, meta=context)
-    rel_main_tr = paths.transcript.relative_to(root).as_posix()
-    rel_inner_tr = paths.transcript_inner_tick.relative_to(root).as_posix()
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    context = load_context_meta(store=store)
+    bundle = load_prompt_bundle(store, meta=context)
+    rel_main_tr = paths.transcript
+    rel_inner_tr = paths.transcript_inner_tick
     loaded = companion_turn_transcript_loaded_messages(
         store,
         rel_main_transcript=rel_main_tr,
@@ -178,8 +176,6 @@ def load_companion_turn_state(
 
 def build_companion_turn_prompt_plan(
     *,
-    root: Path,
-    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
     user_text: str,
@@ -192,9 +188,10 @@ def build_companion_turn_prompt_plan(
     transcript_compaction: TranscriptCompactionConfig | None,
 ) -> CompanionTurnPromptPlan:
     """Assemble system messages, route, and final request messages."""
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     tools_for_turn, system_messages, route_mode = (
         companion_turn_tools_and_system_messages(
-            scope_root=root,
+            store=store,
             bundle=loaded_state.bundle,
             context=loaded_state.context,
             memory_bootstrap_type=memory_bootstrap_type,
@@ -213,7 +210,7 @@ def build_companion_turn_prompt_plan(
     )
 
     if transcript_compaction is not None and not inner_tick_turn:
-        rel_compact = paths.context_compaction_state_json.relative_to(root).as_posix()
+        rel_compact = paths.context_compaction_state_json
         prior_state = load_compaction_state_from_store(store, rel_compact)
         compactor = ConversationCompactor(
             transcript_compaction,

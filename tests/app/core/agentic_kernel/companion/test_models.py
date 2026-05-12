@@ -6,12 +6,13 @@ from pathlib import Path
 import pytest
 
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
+from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     ChatMessage,
     ContextMeta,
     PromptBundle,
-    load_transcript,
     load_transcript_from_store,
     load_transcript_text,
     transcript_for_llm_turn,
@@ -103,9 +104,12 @@ def test_transcript_for_llm_turn_custom_window() -> None:
     assert out[0].content == str(15 - 8)
 
 
-def test_load_transcript_empty_file(tmp_path: Path) -> None:
-    missing = tmp_path / "missing.jsonl"
-    assert load_transcript(missing) == []
+def test_load_transcript_empty_store(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", tmp_path.name),
+        repository=None,
+    )
+    assert load_transcript_from_store(store, "transcript.jsonl") == []
 
 
 def test_load_transcript_text() -> None:
@@ -117,9 +121,9 @@ def test_load_transcript_text() -> None:
     assert len(msgs) == 2
 
 
-def test_load_transcript_from_store(tmp_path: Path) -> None:
+def test_load_transcript_from_store_roundtrip(tmp_path: Path) -> None:
     store = MemoryStore(
-        workspace_root=tmp_path,
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-rt"),
         repository=None,
     )
     row = {"role": "user", "content": "x", "ts": "2026-01-01T00:00:00Z"}
@@ -153,10 +157,10 @@ def test_transcript_without_trailing_presence_signals_strips_trailing_presence_u
 
 
 def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
-    from app.core.agentic_kernel.companion.memory_registry import get_memory_store
-
-    root = tmp_path
-    store = get_memory_store(root)
+    store = get_memory_store(
+        CompanionScope("models", "a", f"{tmp_path.name}-vj"),
+        dsn="",
+    )
     rows = [
         {"role": "user", "content": "a", "ts": "2026-01-01T00:00:00Z"},
         {"role": "assistant", "content": "b", "timestamp": "2026-01-01T00:01:00Z"},
@@ -164,7 +168,7 @@ def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
     store.write_document(
         "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
     )
-    msgs = load_transcript(root / "transcript.jsonl")
+    msgs = load_transcript_from_store(store, "transcript.jsonl")
     assert len(msgs) == 2
     assert msgs[0].role == "user" and msgs[0].content == "a"
     assert msgs[1].role == "assistant" and msgs[1].content == "b"

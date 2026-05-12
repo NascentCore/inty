@@ -8,7 +8,6 @@ import os
 import time
 import uuid
 from functools import lru_cache
-from pathlib import Path
 
 from loguru import logger
 
@@ -19,6 +18,7 @@ from app.core.agentic_kernel.companion.manager import (
     CompanionManager,
     CompanionSession,
 )
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.core.agentic_kernel.companion.models import CompanionTurnResult, InnerTickMode
 from app.core.agentic_kernel.companion.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -26,10 +26,6 @@ from app.core.agentic_kernel.companion.transcript_compaction import (
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.config import CompanionMemoryBootstrapType
-
-# Synthetic Path prefix for scope-root joining; Postgres MemoryStore keys are
-# user_id + companion_id + chat_id only (see SqlAlchemyMemoryRepository).
-COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX = Path("/var/lib/inty/companion_memory_scopes")
 
 COMPANION_CHAT_LOGS_RELATIVE_PATH = "CHAT_LOGS.md"
 
@@ -44,14 +40,14 @@ def _companion_tool_call_model_yaml(agent: object) -> str:
     return (getattr(agent, "companion_tool_call_model", "") or "").strip()
 
 
-def companion_memory_store_scope_path_if_ready(
+def companion_memory_store_if_ready(
     *,
     user_id: str,
     agent_id: str,
     chat_id: str | int,
     resolved_chat_model_id: str,
-) -> Path | None:
-    """Return resolved synthetic MemoryStore scope path if the session store is initialized."""
+) -> MemoryStore | None:
+    """Return the session MemoryStore when minimal companion documents are initialized."""
     manager = _companion_manager_for_resolved_model(
         resolved_chat_model_id,
         _companion_runtime_config_fingerprint(),
@@ -59,7 +55,7 @@ def companion_memory_store_scope_path_if_ready(
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     if not session.is_initialized:
         return None
-    return session.workspace_path.resolve()
+    return session.store
 
 
 def append_companion_chat_logs_line_for_ws_control(
@@ -90,12 +86,11 @@ def _companion_runtime_config_fingerprint() -> str:
     raw = feats.companion_transcript_compaction
     raw_json = json.dumps(raw, sort_keys=True) if raw is not None else ""
     parts = [
-        str(COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX),
+        "companion_scope_path_free_v1",
         str(feats.companion_default_context_mode),
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
         str(feats.companion_memory_bootstrap_type),
-        str(feats.inner_tick_mechanism),
         str(feats.companion_ws_session_system_text or ""),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_store_text).
         "companion_repo_only_store_v2",
@@ -113,7 +108,6 @@ def _companion_manager_for_resolved_model(
     _ = runtime_fingerprint
     cfg = global_config_loaded_from_config_yaml
     feats = cfg.app.features
-    base = COMPANION_MEMORY_STORE_SCOPE_ROOT_PREFIX.expanduser()
     api_key = (cfg.agent.chat_llm_api_key or "").strip() or cfg.agent.api_key
     timeout_raw = os.getenv("INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC", "600").strip()
     try:
@@ -140,7 +134,6 @@ def _companion_manager_for_resolved_model(
         else None
     )
     companion_cfg = CompanionConfig(
-        memory_store_scope_base_dir=str(base),
         memory_pg_dsn=cfg.database.url,
         llm=llm,
         default_context_mode=feats.companion_default_context_mode,
@@ -148,7 +141,6 @@ def _companion_manager_for_resolved_model(
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
         repository_only_store_text=True,
         memory_bootstrap_type=feats.companion_memory_bootstrap_type,
-        inner_tick_mechanism=feats.inner_tick_mechanism,
     )
     return CompanionManager(companion_cfg)
 
@@ -156,14 +148,7 @@ def _companion_manager_for_resolved_model(
 def _mark_companion_ws_session_system_written_in_store(
     session: CompanionSession,
 ) -> None:
-    from app.core.agentic_kernel.companion.memory_store_scope import (
-        resolve_under_scope_root,
-    )
-
-    root_r = session.workspace_path.resolve()
-    rel = (
-        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
-    )
+    rel = "context.json"
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
         return
@@ -191,12 +176,12 @@ async def _maybe_append_companion_ws_session_system(
     from app.core.agentic_kernel.companion.models import load_context_meta
     from app.core.agentic_kernel.companion.utc import utc_iso_ts
     from app.core.agentic_kernel.companion.memory_store_scope import (
-        MemoryStoreScopePaths,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     )
     from app.services import chat_history_service
 
-    paths = MemoryStoreScopePaths(root=session.workspace_path.resolve())
-    meta = load_context_meta(paths.context_json, store=session.store)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    meta = load_context_meta(store=session.store)
     if meta.workspace_bootstrap_user_interactive_completed:
         return
     if meta.companion_ws_session_system_written:
@@ -216,8 +201,7 @@ async def _maybe_append_companion_ws_session_system(
         meta_data=meta_row,
     )
 
-    root_r = session.workspace_path.resolve()
-    rel_tr = paths.transcript.relative_to(root_r).as_posix()
+    rel_tr = paths.transcript
     session.store.append_jsonl_record(
         rel_tr,
         {

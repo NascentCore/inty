@@ -11,7 +11,6 @@ import pytest
 from app.core.agentic_kernel.llm.chat_completions import create_chat_completion_sync
 from app.core.agentic_kernel.companion.llm_client import (
     LLM_SCENE_CHAT,
-    LLM_SCENE_INNER_TICK,
     CompanionLLMConfig,
 )
 from app.core.agentic_kernel.companion.memory_store import MemoryStore
@@ -23,6 +22,7 @@ from app.core.agentic_kernel.companion.models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     InnerTickMode,
 )
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.turn import run_turn
 from app.schemas.chat import UserTimeContext
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -67,7 +67,8 @@ def _seed_workspace(store: MemoryStore) -> None:
 def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    scope = CompanionScope("turn-t", "a", f"it-meta-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
     monkeypatch.setattr(
@@ -77,7 +78,6 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
 
     out = asyncio.run(
         run_turn(
-            tmp_path,
             "caller text should be replaced",
             store=store,
             llm_client=client,  # type: ignore[arg-type]
@@ -85,9 +85,10 @@ def test_run_turn_inner_tick_persists_synthetic_turn_metadata(
         )
     )
 
-    assert out.assistant_text == "inner reply"
+    # Maintenance inner tick on tool-backed route skips foreground envelope; LLM runs in tool_bg only.
+    assert out.assistant_text == ""
     assert out.tool_background_started is True
-    assert client.calls[0]["scene"] == LLM_SCENE_INNER_TICK
+    assert not client.calls
 
     rows = [
         json.loads(line)
@@ -113,12 +114,18 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
         "experimental_enable_chat_with_user_time_context",
         True,
     )
-    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    scope = CompanionScope("turn-t", "a", f"it-time-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
+    bg_jobs: list[dict[str, Any]] = []
+
+    def _capture_bg(**kwargs: Any) -> None:
+        bg_jobs.append(kwargs)
+
     monkeypatch.setattr(
         "app.core.agentic_kernel.companion.turn.start_tool_background_job",
-        lambda **kwargs: None,
+        _capture_bg,
     )
     bundle = ImplicitSignalBundle(
         client_time=UserTimeContext(
@@ -129,7 +136,6 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
     )
     out = asyncio.run(
         run_turn(
-            tmp_path,
             "ignored",
             store=store,
             llm_client=client,  # type: ignore[arg-type]
@@ -138,8 +144,9 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
             implicit_signal_bundle=bundle,
         )
     )
-    assert out.assistant_text == "inner reply"
-    llm_msgs = client.calls[0]["messages"]
+    assert out.assistant_text == ""
+    assert len(bg_jobs) == 1
+    llm_msgs = bg_jobs[0]["request_messages"]
     assert llm_msgs[-1]["role"] == "user"
     content = llm_msgs[-1]["content"] or ""
     assert "user-time: 2026-05-01T08:00:00+08:00" in content
@@ -153,13 +160,13 @@ def test_run_turn_inner_tick_maintenance_appends_user_time_suffix_on_tail_user(
 def test_run_turn_inner_tick_proactive_chat_matches_legacy_heartbeat_semantics(
     tmp_path: Path,
 ) -> None:
-    store = MemoryStore(workspace_root=tmp_path, repository=None)
+    scope = CompanionScope("turn-t", "a", f"it-pro-{tmp_path.name}")
+    store = MemoryStore(scope=scope, repository=None)
     _seed_workspace(store)
     client = _FakeLLMClient()
 
     out = asyncio.run(
         run_turn(
-            tmp_path,
             "caller text ignored",
             store=store,
             llm_client=client,  # type: ignore[arg-type]

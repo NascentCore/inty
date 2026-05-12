@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import re
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .utc import utc_iso_ts
 
 _MEMORY_REL = "MEMORY.md"
@@ -123,13 +122,12 @@ def _build_summary_markdown(
 
 
 def _append_memory_block(
-    root: Path,
+    store: MemoryStore,
     *,
     url: str,
     title: str,
     bullets: list[str],
 ) -> None:
-    store = get_memory_store(root)
     prev = store.read_document_if_exists(_MEMORY_REL) or ""
     ts = utc_iso_ts()
     block_lines = [
@@ -147,7 +145,7 @@ def _append_memory_block(
 
 
 def run_read_web_page_sync(
-    root: Path,
+    store: MemoryStore,
     *,
     url: str,
     max_bullets: int | None = None,
@@ -198,7 +196,7 @@ def run_read_web_page_sync(
         ]
 
     try:
-        _append_memory_block(root, url=url.strip(), title=title, bullets=bullets)
+        _append_memory_block(store, url=url.strip(), title=title, bullets=bullets)
     except OSError as exc:
         return f"ERROR: could not write MEMORY.md: {exc}"
 
@@ -207,11 +205,11 @@ def run_read_web_page_sync(
 
 
 async def run_read_web_page(
-    root: Path,
+    store: MemoryStore,
     *,
     url: str,
     max_bullets: int | None = None,
 ) -> str:
     return await asyncio.to_thread(
-        run_read_web_page_sync, root, url=url, max_bullets=max_bullets
+        run_read_web_page_sync, store, url=url, max_bullets=max_bullets
     )

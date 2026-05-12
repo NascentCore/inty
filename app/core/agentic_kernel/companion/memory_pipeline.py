@@ -24,7 +24,7 @@ from .llm_runtime_events import (
 )
 from .memory_store import MemoryStore
 from .utc import local_date_str, local_iso_ts
-from .memory_store_scope import MemoryStoreScopePaths
+from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 _DIARY_USER_MAX = 240
 _DIARY_ASSISTANT_MAX = 320
@@ -115,8 +115,8 @@ class MemoryPipelineConfig(BaseModel):
     soul_require_fundamental_signal: bool = True
 
 
-def _bump_memory_pipeline_turn(paths: MemoryStoreScopePaths, store: MemoryStore) -> int:
-    rel = paths.memory_pipeline_state_json.relative_to(paths.root).as_posix()
+def _bump_memory_pipeline_turn(store: MemoryStore) -> int:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_pipeline_state_json
     data: dict[str, object] = {}
     raw = store.read_document_if_exists(rel)
     if raw is not None and raw.strip():
@@ -187,7 +187,6 @@ def _raw_for_summary_prompt(raw: str) -> str:
 
 
 def _append_diary(
-    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     *,
     user_text: str,
@@ -322,7 +321,6 @@ def _rewrite_soul_md(
 
 
 def memory_update_after_turn(
-    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     user_text: str,
     assistant_text: str,
@@ -330,8 +328,8 @@ def memory_update_after_turn(
     config: MemoryPipelineConfig,
 ) -> None:
     t_all = time.perf_counter()
-    ws = paths.root.name
-    turn_n = _bump_memory_pipeline_turn(paths, store)
+    ws = store.scope.registry_key()
+    turn_n = _bump_memory_pipeline_turn(store)
     every_n = config.day_summary_every_n_turns
     user_every_n = config.user_update_every_n_turns
     memory_every_n = config.memory_update_every_n_turns
@@ -359,7 +357,7 @@ def memory_update_after_turn(
     )
 
     t = time.perf_counter()
-    _append_diary(paths, store, user_text=user_text, assistant_text=assistant_text)
+    _append_diary(store, user_text=user_text, assistant_text=assistant_text)
     logger.info(
         "memory_pipeline step=append_diary ms={:.0f} ws={}",
         (time.perf_counter() - t) * 1000.0,
@@ -506,7 +504,6 @@ _MEMORY_WORKER_ERRORS: tuple[type[BaseException], ...] = (
 _memory_queue: (
     queue.Queue[
         tuple[
-            MemoryStoreScopePaths,
             MemoryStore,
             str,
             str,
@@ -523,13 +520,11 @@ def _memory_worker_loop() -> None:
     if _memory_queue is None:
         raise RuntimeError("memory worker started before queue initialization")
     while True:
-        paths, store, user_text, assistant_text, complete_fn, config = (
-            _memory_queue.get()
-        )
+        store, user_text, assistant_text, complete_fn, config = _memory_queue.get()
         t_job = time.perf_counter()
         logger.debug(
-            "memory_pipeline worker_job_start ws={} user_chars={} assistant_chars={}",
-            paths.root.name,
+            "memory_pipeline worker_job_start scope={} user_chars={} assistant_chars={}",
+            store.scope.registry_key(),
             len(user_text),
             len(assistant_text),
         )
@@ -545,7 +540,6 @@ def _memory_worker_loop() -> None:
         try:
             try:
                 memory_update_after_turn(
-                    paths,
                     store,
                     user_text,
                     assistant_text,
@@ -557,15 +551,14 @@ def _memory_worker_loop() -> None:
         finally:
             companion_llm_runtime_event_bind_ctx.reset(mem_bind_tok)
             logger.info(
-                "memory_pipeline worker_job wall_ms={:.0f} ws={}",
+                "memory_pipeline worker_job wall_ms={:.0f} scope={}",
                 (time.perf_counter() - t_job) * 1000.0,
-                paths.root.name,
+                store.scope.registry_key(),
             )
             _memory_queue.task_done()
 
 
 def schedule_memory_update_after_turn(
-    paths: MemoryStoreScopePaths,
     store: MemoryStore,
     user_text: str,
     assistant_text: str,
@@ -582,16 +575,16 @@ def schedule_memory_update_after_turn(
                 daemon=True,
             ).start()
     _memory_queue.put(
-        (paths, store, user_text, assistant_text, complete_fn, config),
+        (store, user_text, assistant_text, complete_fn, config),
     )
     logger.info(
-        "memory_pipeline enqueued ws={} pending_jobs={}",
-        paths.root.name,
+        "memory_pipeline enqueued scope={} pending_jobs={}",
+        store.scope.registry_key(),
         _memory_queue.qsize(),
     )
     logger.debug(
-        "memory_pipeline enqueue_preview ws={} user={} assistant={}",
-        paths.root.name,
+        "memory_pipeline enqueue_preview scope={} user={} assistant={}",
+        store.scope.registry_key(),
         _clip(user_text, 120),
         _clip(assistant_text, 120),
     )

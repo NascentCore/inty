@@ -21,6 +21,7 @@ from .image_gate import (
     find_latest_asset_by_local_relative_path,
     relative_path_under_workspace,
 )
+from .memory_store import MemoryStore
 from .utc import utc_iso_ts
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
@@ -77,8 +78,8 @@ async def reset_fal_async_client_after_short_lived_loop() -> None:
         await old.aclose()
 
 
-def _gcs_uri_base_for_workspace(root: Path) -> str:
-    return f"inty_v2_proto_chat_images/{root.resolve().name}"
+def _gcs_uri_base_for_store(store: MemoryStore) -> str:
+    return f"inty_v2_proto_chat_images/{store.scope.chat_id}"
 
 
 _SOURCE_IMAGE_EXT_TO_UPLOAD: dict[str, tuple[str, str]] = {
@@ -143,7 +144,7 @@ def _build_image_to_image_input(kwargs: dict[str, Any]) -> Any:
 
 def _append_one_image_summary(
     parts: list[str],
-    root: Path,
+    store: MemoryStore,
     item: Any,
     *,
     index: int,
@@ -170,7 +171,7 @@ def _append_one_image_summary(
     parts.append(f"asset_id={asset_id}")
     parts.append(f"persona_revision_id={persona_revision_id}")
     append_image_asset_record(
-        root,
+        store,
         {
             "asset_id": asset_id,
             "tool_name": tool_name,
@@ -196,7 +197,7 @@ def _append_one_image_summary(
 
 
 async def run_generate_image_z_image_turbo(
-    root: Path,
+    store: MemoryStore,
     *,
     prompt: str,
     image_size: str | None = None,
@@ -212,7 +213,7 @@ async def run_generate_image_z_image_turbo(
         num_inference_steps=num_inference_steps,
         num_images=num_images,
     )
-    gcs_base = _gcs_uri_base_for_workspace(root)
+    gcs_base = _gcs_uri_base_for_store(store)
     skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
     maybe_results = _z_image_turbo_call(z_in, gcs_base, skip_gcs_upload=skip_gcs)
     if asyncio.iscoroutine(maybe_results):
@@ -234,7 +235,7 @@ async def run_generate_image_z_image_turbo(
     for i, item in enumerate(results):
         _append_one_image_summary(
             parts,
-            root,
+            store,
             item,
             index=i + 1,
             total=n,
@@ -246,7 +247,7 @@ async def run_generate_image_z_image_turbo(
 
 
 async def run_modify_image_z_image_turbo(
-    root: Path,
+    store: MemoryStore,
     *,
     prompt: str,
     source_path: Path | None,
@@ -270,7 +271,7 @@ async def run_modify_image_z_image_turbo(
             "or source_image_url (https)"
         )
 
-    gcs_base = _gcs_uri_base_for_workspace(root)
+    gcs_base = _gcs_uri_base_for_store(store)
     source_asset_id: str | None = None
     source_persona_revision_id: str | None = None
     source_rel_for_index: str | None = None
@@ -278,9 +279,9 @@ async def run_modify_image_z_image_turbo(
         path = source_path
         if path is None:
             raise ValueError("source_path is required when has_path is true")
-        source_rel_for_index = relative_path_under_workspace(root, path)
+        source_rel_for_index = relative_path_under_workspace(store, path)
         source_asset = find_latest_asset_by_local_relative_path(
-            root, source_rel_for_index
+            store, source_rel_for_index
         )
         if source_asset is not None:
             source_asset_id = str(source_asset.get("asset_id") or "") or None
@@ -327,7 +328,7 @@ async def run_modify_image_z_image_turbo(
     ]
     _append_one_image_summary(
         parts,
-        root,
+        store,
         result,
         index=1,
         total=1,

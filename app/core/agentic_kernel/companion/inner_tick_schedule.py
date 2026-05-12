@@ -5,9 +5,8 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from pathlib import Path
 
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .models import (
     load_transcript_from_store,
     transcript_without_trailing_presence_signals,
@@ -67,7 +66,7 @@ def inner_tick_min_gap_seconds() -> float:
 
 
 def next_inner_tick_wait_seconds(
-    workspace: Path,
+    store: MemoryStore,
     *,
     last_inner_fire_monotonic: float | None,
     now_monotonic: float | None = None,
@@ -80,8 +79,6 @@ def next_inner_tick_wait_seconds(
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     now = now_monotonic if now_monotonic is not None else time.monotonic()
-    root = workspace.resolve()
-    store = get_memory_store(root)
     msgs = transcript_without_trailing_presence_signals(
         load_transcript_from_store(store, "transcript.jsonl")
     )

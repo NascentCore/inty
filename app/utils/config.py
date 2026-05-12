@@ -159,18 +159,6 @@ class CompanionMemoryBootstrapType(StrEnum):
     USER_INTERACTIVE = "USER_INTERACTIVE"
 
 
-class InnerTickMechanism(StrEnum):
-    """Maintenance inner-tick + tools scheduling (app.features.inner_tick_mechanism).
-
-    ``duplex_async`` matches production: foreground dual-LLM envelope (no tools) then
-    ``tool_background`` with the full tools list. ``maintenance_tool_solo`` skips only
-    that foreground completion for ``InnerTickMode.MAINTENANCE``; the tool thread is unchanged.
-    """
-
-    DUPLEX_ASYNC = "duplex_async"
-    MAINTENANCE_TOOL_SOLO = "maintenance_tool_solo"
-
-
 @dataclass
 class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = True
@@ -206,10 +194,6 @@ class FeaturesConfig:
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
-    # ``duplex_async`` (default): foreground envelope LLM then async tool_background.
-    # ``maintenance_tool_solo``: skip foreground envelope for maintenance inner tick only;
-    # tool_background and full ``tools[]`` list unchanged.
-    inner_tick_mechanism: str = InnerTickMechanism.DUPLEX_ASYNC.value
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -220,14 +204,6 @@ class FeaturesConfig:
                 f"{sorted(allowed)}, got {self.companion_memory_bootstrap_type!r}"
             )
         self.companion_memory_bootstrap_type = raw
-        it_raw = (self.inner_tick_mechanism or "").strip().lower()
-        it_allowed = {m.value for m in InnerTickMechanism}
-        if it_raw not in it_allowed:
-            raise ValueError(
-                "app.features.inner_tick_mechanism must be one of "
-                f"{sorted(it_allowed)}, got {self.inner_tick_mechanism!r}"
-            )
-        self.inner_tick_mechanism = it_raw
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )

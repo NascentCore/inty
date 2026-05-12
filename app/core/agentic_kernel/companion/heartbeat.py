@@ -11,11 +11,9 @@ from __future__ import annotations
 
 import statistics
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-
 from pydantic import BaseModel, Field
 
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .models import ChatMessage, load_transcript_from_store
 
 HEARTBEAT_SYNTHETIC_USER_TEXT = (
@@ -111,7 +109,7 @@ def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
 
 
 def next_heartbeat_wait_seconds(
-    workspace: Path,
+    store: MemoryStore,
     config: HeartbeatConfig,
     *,
     now: datetime | None = None,
@@ -123,8 +121,6 @@ def next_heartbeat_wait_seconds(
     if not config.enabled:
         return _NEVER
 
-    root = workspace.resolve()
-    store = get_memory_store(root)
     msgs = load_transcript_from_store(store, "transcript.jsonl")
     if len(msgs) < config.min_transcript_lines:
         return _NEVER

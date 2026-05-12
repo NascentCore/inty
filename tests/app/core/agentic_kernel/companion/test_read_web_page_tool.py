@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from app.core.agentic_kernel.companion.memory_registry import get_memory_store
+from app.core.agentic_kernel.companion.scope import CompanionScope
 from app.core.agentic_kernel.companion.read_web_page import run_read_web_page_sync
 
 _HTML = """<!DOCTYPE html>
@@ -17,8 +18,8 @@ _HTML = """<!DOCTYPE html>
 
 
 def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) -> None:
-    root = tmp_path
-    get_memory_store(root)
+    sc = CompanionScope("rwp", "a", tmp_path.name)
+    store = get_memory_store(sc, dsn="")
 
     mock_resp = MagicMock()
     mock_resp.content = _HTML.encode("utf-8")
@@ -31,7 +32,7 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) ->
         return_value=mock_resp,
     ):
         out = run_read_web_page_sync(
-            root,
+            store,
             url="https://example.com/page",
             max_bullets=5,
         )
@@ -41,7 +42,7 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) ->
     assert "- " in out
     assert "MEMORY.md" in out
 
-    mem = get_memory_store(root).read_document_if_exists("MEMORY.md")
+    mem = store.read_document_if_exists("MEMORY.md")
     assert mem is not None
     assert "read_web_page" in mem
     assert "https://example.com/page" in mem
@@ -49,8 +50,8 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(tmp_path: Path) ->
 
 
 def test_run_read_web_page_rejects_localhost(tmp_path: Path) -> None:
-    root = tmp_path
-    get_memory_store(root)
-    out = run_read_web_page_sync(root, url="http://127.0.0.1:8080/secret")
+    sc = CompanionScope("rwp", "a", f"{tmp_path.name}-loc")
+    store = get_memory_store(sc, dsn="")
+    out = run_read_web_page_sync(store, url="http://127.0.0.1:8080/secret")
     assert out.startswith("ERROR:")
     assert "local" in out.lower()

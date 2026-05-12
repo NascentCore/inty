@@ -1,16 +1,16 @@
-"""MemoryStore scope: synthetic root Path layout, template seeds, and initialization checks."""
+"""MemoryStore logical paths: template seeds and initialization checks (no filesystem scope root)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Final
 
 from loguru import logger
 
 from .file_store import read_text
-from .memory_store import MemoryStore
+from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 _PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
@@ -44,109 +44,110 @@ def get_imate_axiom_system_text() -> str | None:
 
 @dataclass(frozen=True)
 class MemoryStoreScopePaths:
-    """Standard document paths under one synthetic MemoryStore scope root."""
+    """Standard document paths as scope-relative posix strings (MemoryStore keys)."""
 
-    root: Path
-    # State file prefix; prototype uses ".inty_v2" for legacy compatibility.
     state_file_prefix: str = ".companion"
 
     @property
-    def identity(self) -> Path:
-        return self.root / "IDENTITY.md"
+    def identity(self) -> str:
+        return "IDENTITY.md"
 
     @property
-    def soul(self) -> Path:
-        return self.root / "SOUL.md"
+    def soul(self) -> str:
+        return "SOUL.md"
 
     @property
-    def user_md(self) -> Path:
-        return self.root / "USER.md"
+    def user_md(self) -> str:
+        return "USER.md"
 
     @property
-    def memory_md(self) -> Path:
-        return self.root / "MEMORY.md"
+    def memory_md(self) -> str:
+        return "MEMORY.md"
 
     @property
-    def tools_md(self) -> Path:
-        return self.root / "TOOLS.md"
+    def tools_md(self) -> str:
+        return "TOOLS.md"
 
     @property
-    def significance_perception_md(self) -> Path:
-        return self.root / "SIGNIFICANCE_PERCEPTION.md"
+    def significance_perception_md(self) -> str:
+        return "SIGNIFICANCE_PERCEPTION.md"
 
     @property
-    def transcript(self) -> Path:
-        return self.root / "transcript.jsonl"
+    def transcript(self) -> str:
+        return "transcript.jsonl"
 
     @property
-    def transcript_inner_tick(self) -> Path:
-        return self.root / "transcript_inner_tick.jsonl"
+    def transcript_inner_tick(self) -> str:
+        return "transcript_inner_tick.jsonl"
 
     @property
-    def ai_private_md(self) -> Path:
-        return self.root / "ai_private.md"
+    def ai_private_md(self) -> str:
+        return "ai_private.md"
 
     @property
-    def ai_private_jsonl(self) -> Path:
-        return self.root / "ai_private.jsonl"
+    def ai_private_jsonl(self) -> str:
+        return "ai_private.jsonl"
 
     @property
-    def context_json(self) -> Path:
-        return self.root / "context.json"
+    def context_json(self) -> str:
+        return "context.json"
 
     @property
-    def memory_dir(self) -> Path:
-        return self.root / "memory"
+    def memory_dir(self) -> str:
+        return "memory"
 
     @property
-    def memory_daily_dir(self) -> Path:
-        return self.memory_dir / "daily"
+    def memory_daily_dir(self) -> str:
+        return "memory/daily"
 
-    def memory_raw_diary(self, day: str) -> Path:
-        return self.memory_daily_dir / f"{day}.md"
+    def memory_raw_diary(self, day: str) -> str:
+        return f"memory/daily/{day}.md"
 
-    def memory_day_summary(self, day: str) -> Path:
-        return self.memory_dir / f"{day}.md"
-
-    @property
-    def memory_pipeline_state_json(self) -> Path:
-        return self.root / f"{self.state_file_prefix}_memory_pipeline.json"
+    def memory_day_summary(self, day: str) -> str:
+        return f"memory/{day}.md"
 
     @property
-    def context_compaction_state_json(self) -> Path:
-        return self.root / f"{self.state_file_prefix}_context_compaction_state.json"
+    def memory_pipeline_state_json(self) -> str:
+        return f"{self.state_file_prefix}_memory_pipeline.json"
 
     @property
-    def schedule_queue_json(self) -> Path:
-        return self.root / f"{self.state_file_prefix}_schedule_tasks.json"
+    def context_compaction_state_json(self) -> str:
+        return f"{self.state_file_prefix}_context_compaction_state.json"
 
     @property
-    def image_gate_json(self) -> Path:
-        return self.root / f"{self.state_file_prefix}_image_gate.json"
+    def schedule_queue_json(self) -> str:
+        return f"{self.state_file_prefix}_schedule_tasks.json"
 
+    @property
+    def image_gate_json(self) -> str:
+        return f"{self.state_file_prefix}_image_gate.json"
+
+
+DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
 _REQUIRED_FILES_ATTR = ("identity", "soul", "user_md", "memory_md", "transcript")
 
 
-def _required_scope_file_paths(paths: MemoryStoreScopePaths) -> tuple[Path, ...]:
+def _required_scope_file_relpaths(paths: MemoryStoreScopePaths) -> tuple[str, ...]:
     return tuple(getattr(paths, attr) for attr in _REQUIRED_FILES_ATTR)
 
 
 def is_scope_initialized_on_disk(scope_root: Path) -> bool:
     """True when the five-piece exists on disk (prototype REPL only)."""
-    paths = MemoryStoreScopePaths(root=scope_root.resolve())
-    for p in _required_scope_file_paths(paths):
+    root = scope_root.resolve()
+    paths = MemoryStoreScopePaths()
+    for rel in _required_scope_file_relpaths(paths):
+        p = root / rel
         if not p.is_file():
             return False
     return True
 
 
-def is_scope_initialized_in_store(scope_root: Path, store: MemoryStore) -> bool:
+def is_scope_initialized_in_store(store: MemoryStore) -> bool:
     """True when the five-piece exists in MemoryStore (production: DB-backed)."""
-    root = scope_root.resolve()
-    paths = MemoryStoreScopePaths(root=root)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for attr in _REQUIRED_FILES_ATTR:
-        rel = getattr(paths, attr).relative_to(root).as_posix()
+        rel = getattr(paths, attr)
         body = store.read_document_if_exists(rel)
         if attr == "transcript":
             if body is None:
@@ -167,37 +168,29 @@ _CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
 )
 
 
-def ensure_template_seeded_core_documents_in_store(
-    scope_root: Path,
-    store: MemoryStore,
-) -> None:
+def ensure_template_seeded_core_documents_in_store(store: MemoryStore) -> None:
     """
     Persist package templates for IDENTITY / SOUL / USER / MEMORY when the store has no usable
     body (None or whitespace). Uses MemoryStore.write_document (repository append + cache).
     Does not touch transcript.jsonl; ``ensure_minimal_documents_in_store`` creates an
     empty transcript when the five-piece is not yet satisfied.
     """
-    root = scope_root.resolve()
-    paths = MemoryStoreScopePaths(root=root)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for attr in _CORE_COMPANION_TEMPLATE_ATTRS:
-        rel = getattr(paths, attr).relative_to(root).as_posix()
+        rel = getattr(paths, attr)
         body = store.read_document_if_exists(rel)
         if body is None or not body.strip():
             store.write_document(rel, load_template_seed_text(rel))
 
 
-def ensure_minimal_documents_in_store(
-    scope_root: Path,
-    store: MemoryStore,
-) -> None:
+def ensure_minimal_documents_in_store(store: MemoryStore) -> None:
     """Write seed content for required paths into MemoryStore only (no disk authority)."""
-    ensure_template_seeded_core_documents_in_store(scope_root, store)
-    root = scope_root.resolve()
-    if is_scope_initialized_in_store(root, store):
+    ensure_template_seeded_core_documents_in_store(store)
+    if is_scope_initialized_in_store(store):
         return
-    paths = MemoryStoreScopePaths(root=root)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for attr in _REQUIRED_FILES_ATTR:
-        rel = getattr(paths, attr).relative_to(root).as_posix()
+        rel = getattr(paths, attr)
         body = store.read_document_if_exists(rel)
         if body is not None and body.strip():
             continue
@@ -230,21 +223,17 @@ def _text_matches_any_marker(text: str, markers: tuple[str, ...]) -> bool:
     return any(m in s for m in markers)
 
 
-def needs_startup_profile_inquiry(
-    scope_root: Path,
-    store: MemoryStore,
-) -> bool:
+def needs_startup_profile_inquiry(store: MemoryStore) -> bool:
     """
     When initialized and transcript has no user/assistant rows yet: if IDENTITY or USER still
     looks like placeholders, the assistant should open the conversation with profile questions.
     """
     from .models import load_transcript_from_store
 
-    root = scope_root.resolve()
-    if not is_scope_initialized_in_store(root, store):
+    if not is_scope_initialized_in_store(store):
         return False
-    paths = MemoryStoreScopePaths(root=root)
-    rel_tr = paths.transcript.relative_to(root).as_posix()
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    rel_tr = paths.transcript
     for m in load_transcript_from_store(store, rel_tr):
         if m.role in ("user", "assistant"):
             return False
@@ -255,7 +244,7 @@ def needs_startup_profile_inquiry(
     out = id_stub or user_stub
     logger.debug(
         "needs_startup_profile_inquiry scope={} id_stub={} user_stub={} -> {}",
-        root.name,
+        store.scope.registry_key(),
         id_stub,
         user_stub,
         out,
@@ -263,18 +252,6 @@ def needs_startup_profile_inquiry(
     return out
 
 
-def resolve_under_scope_root(scope_root: Path, relative_path: str) -> Path:
-    """
-    Resolve a path relative to the synthetic scope root; traversal outside the root is forbidden.
-    Empty string means the scope root directory.
-    """
-    root = scope_root.resolve()
-    rel = (relative_path or "").strip().replace("\\", "/")
-    if rel.startswith("/"):
-        raise ValueError("path must be relative to MemoryStore scope root")
-    candidate = (root / rel).resolve()
-    try:
-        candidate.relative_to(root)
-    except ValueError as exc:
-        raise ValueError("path escapes MemoryStore scope root") from exc
-    return candidate
+def companion_scope_pure_relative(relative_path: str) -> PurePosixPath:
+    """Return a ``PurePosixPath`` for the normalized scope-relative path (suffix, stem, etc.)."""
+    return PurePosixPath(normalize_memory_store_relative_path(relative_path))
