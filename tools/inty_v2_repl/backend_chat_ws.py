@@ -1,6 +1,7 @@
 """WebSocket client for Inty ``/api/v1/chat/ws`` (transport only; companion runs on the server).
 
-Wire payloads use types from ``app.schemas.chat``; downlink JSON parsing helpers live in this
+Wire payloads use types from ``app.schemas.chat`` (completion body) and
+``app.schemas.chat_websocket`` (WebSocket envelope); downlink JSON parsing helpers live in this
 module, not in ``app/schemas`` (schemas stay type-only).
 """
 
@@ -22,8 +23,10 @@ from websockets.exceptions import ConnectionClosed
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
-    ChatWebSocketRequest,
     CompanionChatTurnMessageType,
+)
+from app.schemas.chat_websocket import (
+    ChatWebSocketRequest,
     normalize_websocket_companion_message_id_uuid,
 )
 from loguru import logger

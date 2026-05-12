@@ -72,11 +72,19 @@ from app.models.user import AuthType, User
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
-    ChatWebSocketRequest,
-    ChatWsUserSignedOnFrame,
-    ChatWsUserSignedOutFrame,
     CompanionChatTurnMessageType,
     UserTimeContext,
+)
+from app.schemas.chat_websocket import (
+    ChatWebSocketQueuedPlainError,
+    ChatWebSocketRequest,
+    ChatWsClientContextAckFrame,
+    ChatWsPongFrame,
+    ChatWsUserSignedOnAckFrame,
+    ChatWsUserSignedOnFrame,
+    ChatWsUserSignedOutAckFrame,
+    ChatWsUserSignedOutFrame,
+    chat_ws_queued_error_dict,
     normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -132,16 +140,13 @@ def _chat_ws_error_payload_from_http_exception(
 ) -> dict[str, Any]:
     detail = exc.detail
     message = detail if isinstance(detail, str) else str(detail)
-    payload: dict[str, Any] = {
-        "code": exc.status_code,
-        "message": message,
-        "data": None,
-        "agent_id": agent_id,
-    }
     ws_extra = getattr(exc, "ws_extra", None)
-    if isinstance(ws_extra, dict):
-        payload.update(ws_extra)
-    return payload
+    return chat_ws_queued_error_dict(
+        status_code=exc.status_code,
+        message=message,
+        agent_id=agent_id,
+        ws_extra=ws_extra if isinstance(ws_extra, dict) else None,
+    )
 
 
 # WebSocket: one AsyncSession is bound for the whole connection (Depends(get_async_db)).
@@ -294,21 +299,27 @@ async def _handle_chat_websocket_control_json(
         return False
     msg_type = data.get("type")
     if msg_type == "ping":
-        await websocket.send_json({"type": "pong"})
+        await websocket.send_json(ChatWsPongFrame().model_dump())
         return True
     if msg_type != "client_context":
         return False
     tc_raw = data.get("time_context")
     if not isinstance(tc_raw, dict):
-        await websocket.send_json({"type": "client_context_ack", "ok": False})
+        await websocket.send_json(
+            ChatWsClientContextAckFrame(ok=False).model_dump()
+        )
         return True
     try:
         validated = UserTimeContext.model_validate(tc_raw)
         dumped = validated.model_dump(exclude_none=True)
         tc_box[0] = dumped if dumped else None
-        await websocket.send_json({"type": "client_context_ack", "ok": True})
+        await websocket.send_json(
+            ChatWsClientContextAckFrame(ok=True).model_dump()
+        )
     except ValidationError:
-        await websocket.send_json({"type": "client_context_ack", "ok": False})
+        await websocket.send_json(
+            ChatWsClientContextAckFrame(ok=False).model_dump()
+        )
     return True
 
 
@@ -337,11 +348,10 @@ async def _try_handle_ws_user_signed_on_frame(
         return False
     if companion_ws is None:
         await websocket.send_json(
-            {
-                "type": "user_signed_on_ack",
-                "ok": False,
-                "reason": "not_supported",
-            }
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="not_supported",
+            ).model_dump(exclude_none=True)
         )
         return True
     feats = global_config_loaded_from_config_yaml.app.features
@@ -350,22 +360,20 @@ async def _try_handle_ws_user_signed_on_frame(
         and not feats.companion_ws_maintenance_inner_tick_enabled
     ):
         await websocket.send_json(
-            {
-                "type": "user_signed_on_ack",
-                "ok": False,
-                "reason": "proactive_heartbeat_disabled",
-            }
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="proactive_heartbeat_disabled",
+            ).model_dump(exclude_none=True)
         )
         return True
     try:
         frame = ChatWsUserSignedOnFrame.model_validate(data)
     except ValidationError:
         await websocket.send_json(
-            {
-                "type": "user_signed_on_ack",
-                "ok": False,
-                "reason": "invalid_payload",
-            }
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="invalid_payload",
+            ).model_dump(exclude_none=True)
         )
         return True
     agent_id = frame.agent_id.strip()
@@ -374,22 +382,20 @@ async def _try_handle_ws_user_signed_on_frame(
         raw_mid = (frame.message_id or "").strip()
         if not raw_mid:
             await websocket.send_json(
-                {
-                    "type": "user_signed_on_ack",
-                    "ok": False,
-                    "reason": "missing_message_id",
-                }
+                ChatWsUserSignedOnAckFrame(
+                    ok=False,
+                    reason="missing_message_id",
+                ).model_dump(exclude_none=True)
             )
             return True
         try:
             preset_mid = normalize_websocket_companion_message_id_uuid(raw_mid)
         except ValueError:
             await websocket.send_json(
-                {
-                    "type": "user_signed_on_ack",
-                    "ok": False,
-                    "reason": "invalid_message_id",
-                }
+                ChatWsUserSignedOnAckFrame(
+                    ok=False,
+                    reason="invalid_message_id",
+                ).model_dump(exclude_none=True)
             )
             return True
     try:
@@ -398,11 +404,10 @@ async def _try_handle_ws_user_signed_on_frame(
         )
         if chat.agent_id != agent_id:
             await websocket.send_json(
-                {
-                    "type": "user_signed_on_ack",
-                    "ok": False,
-                    "reason": "agent_mismatch",
-                }
+                ChatWsUserSignedOnAckFrame(
+                    ok=False,
+                    reason="agent_mismatch",
+                ).model_dump(exclude_none=True)
             )
             return True
         companion_ws.store_heartbeat_coords(
@@ -410,7 +415,9 @@ async def _try_handle_ws_user_signed_on_frame(
             agent_id=agent_id,
             chat_id=chat.id,
         )
-        await websocket.send_json({"type": "user_signed_on_ack", "ok": True})
+        await websocket.send_json(
+            ChatWsUserSignedOnAckFrame(ok=True).model_dump(exclude_none=True)
+        )
         recv_msg_uuid = (frame.message_id or "").strip()
         logger.info(
             "chat_ws user_signed_on armed inner_tick coords user={} agent={} chat_id={} "
@@ -454,7 +461,10 @@ async def _try_handle_ws_user_signed_on_frame(
     except Exception:
         logger.exception("chat_ws user_signed_on failed agent_id={}", agent_id)
         await websocket.send_json(
-            {"type": "user_signed_on_ack", "ok": False, "reason": "server_error"}
+            ChatWsUserSignedOnAckFrame(
+                ok=False,
+                reason="server_error",
+            ).model_dump(exclude_none=True)
         )
     return True
 
@@ -480,22 +490,20 @@ async def _try_handle_ws_user_signed_out_frame(
         return False
     if companion_ws is None:
         await websocket.send_json(
-            {
-                "type": "user_signed_out_ack",
-                "ok": False,
-                "reason": "not_supported",
-            }
+            ChatWsUserSignedOutAckFrame(
+                ok=False,
+                reason="not_supported",
+            ).model_dump(exclude_none=True)
         )
         return True
     try:
         frame = ChatWsUserSignedOutFrame.model_validate(data)
     except ValidationError:
         await websocket.send_json(
-            {
-                "type": "user_signed_out_ack",
-                "ok": False,
-                "reason": "invalid_payload",
-            }
+            ChatWsUserSignedOutAckFrame(
+                ok=False,
+                reason="invalid_payload",
+            ).model_dump(exclude_none=True)
         )
         return True
     agent_id = frame.agent_id.strip()
@@ -505,11 +513,10 @@ async def _try_handle_ws_user_signed_out_frame(
         )
         if chat.agent_id != agent_id:
             await websocket.send_json(
-                {
-                    "type": "user_signed_out_ack",
-                    "ok": False,
-                    "reason": "agent_mismatch",
-                }
+                ChatWsUserSignedOutAckFrame(
+                    ok=False,
+                    reason="agent_mismatch",
+                ).model_dump(exclude_none=True)
             )
             return True
         subscription = await subscription_svc.get_user_current_subscription(
@@ -531,7 +538,9 @@ async def _try_handle_ws_user_signed_out_frame(
             resolved_chat_model_id=model_override,
             line=log_line,
         )
-        await websocket.send_json({"type": "user_signed_out_ack", "ok": True})
+        await websocket.send_json(
+            ChatWsUserSignedOutAckFrame(ok=True).model_dump(exclude_none=True)
+        )
         logger.info(
             "chat_ws user_signed_out logged CHAT_LOGS.md user={} agent={} chat_id={} "
             "received_message_uuid={}",
@@ -543,7 +552,10 @@ async def _try_handle_ws_user_signed_out_frame(
     except Exception:
         logger.exception("chat_ws user_signed_out failed agent_id={}", agent_id)
         await websocket.send_json(
-            {"type": "user_signed_out_ack", "ok": False, "reason": "server_error"}
+            ChatWsUserSignedOutAckFrame(
+                ok=False,
+                reason="server_error",
+            ).model_dump(exclude_none=True)
         )
     return True
 
@@ -2461,24 +2473,24 @@ async def chat_completions_websocket(
                 continue
             if not isinstance(data, dict):
                 await outbound_queue.put(
-                    {
-                        "code": 400,
-                        "message": "Chat frame must be a JSON object",
-                        "data": None,
-                        "agent_id": "",
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=400,
+                        message="Chat frame must be a JSON object",
+                        data=None,
+                        agent_id="",
+                    ).model_dump()
                 )
                 continue
             try:
                 websocket_request = ChatWebSocketRequest.model_validate(data)
             except ValidationError as exc:
                 await outbound_queue.put(
-                    {
-                        "code": 422,
-                        "message": "Invalid chat WebSocket request",
-                        "data": json.loads(exc.json()),
-                        "agent_id": str(data.get("agent_id") or ""),
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=422,
+                        message="Invalid chat WebSocket request",
+                        data=json.loads(exc.json()),
+                        agent_id=str(data.get("agent_id") or ""),
+                    ).model_dump()
                 )
                 continue
             merged_request = _chat_request_with_merged_ws_time_context(
@@ -2591,24 +2603,24 @@ async def chat_completions_websocket_verify(
                 continue
             if not isinstance(data, dict):
                 await outbound_queue.put(
-                    {
-                        "code": 400,
-                        "message": "Chat frame must be a JSON object",
-                        "data": None,
-                        "agent_id": "",
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=400,
+                        message="Chat frame must be a JSON object",
+                        data=None,
+                        agent_id="",
+                    ).model_dump()
                 )
                 continue
             try:
                 websocket_request = ChatWebSocketRequest.model_validate(data)
             except ValidationError as exc:
                 await outbound_queue.put(
-                    {
-                        "code": 422,
-                        "message": "Invalid chat WebSocket request",
-                        "data": json.loads(exc.json()),
-                        "agent_id": str(data.get("agent_id") or ""),
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=422,
+                        message="Invalid chat WebSocket request",
+                        data=json.loads(exc.json()),
+                        agent_id=str(data.get("agent_id") or ""),
+                    ).model_dump()
                 )
                 continue
             agent_id = websocket_request.agent_id
@@ -2620,12 +2632,12 @@ async def chat_completions_websocket_verify(
             user_messages = [msg for msg in request.messages if msg.role == "user"]
             if not user_messages:
                 await outbound_queue.put(
-                    {
-                        "code": 400,
-                        "message": "No user message found",
-                        "data": None,
-                        "agent_id": agent_id,
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=400,
+                        message="No user message found",
+                        data=None,
+                        agent_id=agent_id,
+                    ).model_dump()
                 )
                 continue
 
@@ -2634,12 +2646,12 @@ async def chat_completions_websocket_verify(
             agent_row = await agent_service.get_agent_for_chat(db, agent_id=agent_id)
             if not agent_row:
                 await outbound_queue.put(
-                    {
-                        "code": 404,
-                        "message": "Agent not found",
-                        "data": None,
-                        "agent_id": agent_id,
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=404,
+                        message="Agent not found",
+                        data=None,
+                        agent_id=agent_id,
+                    ).model_dump()
                 )
                 continue
 
@@ -2664,12 +2676,12 @@ async def chat_completions_websocket_verify(
             except Exception as e:
                 logger.exception("ws/verify simple chat.completions failed")
                 await outbound_queue.put(
-                    {
-                        "code": 500,
-                        "message": str(e),
-                        "data": None,
-                        "agent_id": agent_id,
-                    }
+                    ChatWebSocketQueuedPlainError(
+                        code=500,
+                        message=str(e),
+                        data=None,
+                        agent_id=agent_id,
+                    ).model_dump()
                 )
                 continue
 
