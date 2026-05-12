@@ -172,7 +172,9 @@ _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
 
 
 def _is_ws_receive_text_not_connected_runtime_error(exc: BaseException) -> bool:
-    return isinstance(exc, RuntimeError) and str(exc) == _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG
+    return (
+        isinstance(exc, RuntimeError) and str(exc) == _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG
+    )
 
 
 async def _shutdown_chat_ws_outbound_pump(pump_task: asyncio.Task) -> None:
@@ -352,21 +354,15 @@ async def _handle_chat_websocket_control_json(
         return False
     tc_raw = data.get("time_context")
     if not isinstance(tc_raw, dict):
-        await websocket.send_json(
-            ChatWsClientContextAckFrame(ok=False).model_dump()
-        )
+        await websocket.send_json(ChatWsClientContextAckFrame(ok=False).model_dump())
         return True
     try:
         validated = UserTimeContext.model_validate(tc_raw)
         dumped = validated.model_dump(exclude_none=True)
         tc_box[0] = dumped if dumped else None
-        await websocket.send_json(
-            ChatWsClientContextAckFrame(ok=True).model_dump()
-        )
+        await websocket.send_json(ChatWsClientContextAckFrame(ok=True).model_dump())
     except ValidationError:
-        await websocket.send_json(
-            ChatWsClientContextAckFrame(ok=False).model_dump()
-        )
+        await websocket.send_json(ChatWsClientContextAckFrame(ok=False).model_dump())
     return True
 
 
@@ -1777,8 +1773,10 @@ async def _try_fire_companion_ws_maintenance_inner_tick(
 
                 user_message_id = None
                 try:
-                    user_message_id = await chat_history_service.get_latest_user_message_id(
-                        post_db, session_id
+                    user_message_id = (
+                        await chat_history_service.get_latest_user_message_id(
+                            post_db, session_id
+                        )
                     )
                 except Exception as e:
                     logger.warning(

@@ -48,7 +48,9 @@ class CompanionWebSocketCoordinator:
 
     loop: asyncio.AbstractEventLoop
     turn_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    background_events: asyncio.Queue[ToolOutputEvent] = field(default_factory=asyncio.Queue)
+    background_events: asyncio.Queue[ToolOutputEvent] = field(
+        default_factory=asyncio.Queue
+    )
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     heartbeat_context: dict[str, Any] = field(default_factory=dict)
 
@@ -106,4 +108,6 @@ class CompanionWebSocketCoordinator:
         return self.heartbeat_context.get("_last_maintenance_inner_tick_monotonic")
 
     def mark_maintenance_inner_tick_fired(self, monotonic_time: float) -> None:
-        self.heartbeat_context["_last_maintenance_inner_tick_monotonic"] = monotonic_time
+        self.heartbeat_context["_last_maintenance_inner_tick_monotonic"] = (
+            monotonic_time
+        )

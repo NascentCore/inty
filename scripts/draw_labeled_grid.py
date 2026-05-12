@@ -28,7 +28,13 @@ def _default_font_family() -> list[str]:
     import platform
 
     if platform.system() == "Darwin":
-        return ["PingFang SC", "Heiti SC", "Songti SC", "Arial Unicode MS", "DejaVu Sans"]
+        return [
+            "PingFang SC",
+            "Heiti SC",
+            "Songti SC",
+            "Arial Unicode MS",
+            "DejaVu Sans",
+        ]
     return ["Noto Sans CJK SC", "WenQuanYi Zen Hei", "SimHei", "DejaVu Sans"]
 
 
@@ -38,7 +44,9 @@ def load_config(path: Path) -> dict:
     if not isinstance(data, dict):
         raise ValueError("YAML root must be a mapping")
     if "rows" not in data:
-        raise ValueError("YAML must contain key 'rows': list of rows (each row is a list of cell strings)")
+        raise ValueError(
+            "YAML must contain key 'rows': list of rows (each row is a list of cell strings)"
+        )
     rows = data["rows"]
     if not rows or not isinstance(rows, list):
         raise ValueError("'rows' must be a non-empty list")

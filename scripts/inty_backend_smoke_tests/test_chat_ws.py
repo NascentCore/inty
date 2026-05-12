@@ -258,7 +258,9 @@ async def _turn_ws_chat_round(
                     continue
                 c = data0.get("code")
                 if c is not None and int(c) != 200:
-                    parse_chat_completion_ws_payload(data0)[0]  # raises BackendChatWsError
+                    parse_chat_completion_ws_payload(data0)[
+                        0
+                    ]  # raises BackendChatWsError
                 break
         req = ChatWebSocketRequest(
             agent_id=agent_id,

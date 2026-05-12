@@ -22,6 +22,7 @@ from .prompts.system_messages import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 
+
 def replace_leading_system_messages_inplace(
     messages: list[dict[str, Any]],
     system_messages: list[dict[str, Any]],
