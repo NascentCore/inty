@@ -6,6 +6,7 @@
   - Added backend CI server log capture and unexpected ERROR/Traceback scanning.
   - Removed duplicate pytest config from pyproject.toml.
   - Refactored telegram promotion E2E assertions into named, documented checks.
+  - Completed fake TTS voice metadata APIs so list-voices E2E no longer passes via exception fallback.
   - Verified targeted E2E tests against a local backend and scanned backend logs.
 - Follow-ups:
   - Auto-merge could not be enabled from this environment because only PR creation is exposed for GitHub writes.
