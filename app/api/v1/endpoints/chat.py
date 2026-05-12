@@ -165,14 +165,32 @@ def _chat_ws_idle_timeout_seconds() -> float:
     )
 
 
+# Starlette ``WebSocket.receive_text`` when ``application_state != CONNECTED`` (race after drop).
+_WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
+    'WebSocket is not connected. Need to call "accept" first.'
+)
+
+
+def _is_ws_receive_text_not_connected_runtime_error(exc: BaseException) -> bool:
+    return isinstance(exc, RuntimeError) and str(exc) == _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG
+
+
 async def _shutdown_chat_ws_outbound_pump(pump_task: asyncio.Task) -> None:
-    """Join ``chat_ws_outbound_pump``; distinguish normal cancellation from send failures."""
+    """Join ``chat_ws_outbound_pump``; cancel if still running.
+
+    ``WebSocketDisconnect`` after the client has gone is expected during teardown and is logged
+    at debug. Other exceptions are logged at error (distinct from normal ``CancelledError``).
+    """
     if not pump_task.done():
         pump_task.cancel()
     try:
         await pump_task
     except asyncio.CancelledError:
         pass
+    except WebSocketDisconnect:
+        logger.debug(
+            "chat_ws_outbound_pump task ended: client disconnected during pump teardown"
+        )
     except Exception:
         logger.exception(
             "chat_ws_outbound_pump failed (e.g. WebSocket send_json); "
@@ -2615,10 +2633,13 @@ async def chat_completions_websocket(
                         "companion tool_bg receive task disconnected while queue event was ready"
                     )
                 except RuntimeError as exc:
-                    logger.debug(
-                        "companion tool_bg receive task ended during queue dispatch: {}",
-                        exc,
-                    )
+                    if _is_ws_receive_text_not_connected_runtime_error(exc):
+                        logger.debug(
+                            "companion tool_bg receive task ended during queue dispatch: {}",
+                            exc,
+                        )
+                    else:
+                        raise
                 try:
                     ev = queue_task.result()
                 except Exception as exc:
@@ -2661,6 +2682,12 @@ async def chat_completions_websocket(
             except asyncio.TimeoutError:
                 await websocket.close()
                 return
+            except WebSocketDisconnect:
+                return
+            except RuntimeError as exc:
+                if _is_ws_receive_text_not_connected_runtime_error(exc):
+                    return
+                raise
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
@@ -2821,6 +2848,12 @@ async def chat_completions_websocket_verify(
             except asyncio.TimeoutError:
                 await websocket.close()
                 return
+            except WebSocketDisconnect:
+                return
+            except RuntimeError as exc:
+                if _is_ws_receive_text_not_connected_runtime_error(exc):
+                    return
+                raise
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
