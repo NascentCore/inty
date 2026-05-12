@@ -95,6 +95,7 @@ def _companion_runtime_config_fingerprint() -> str:
         raw_json,
         str(feats.companion_transcript_llm_window_max_messages or ""),
         str(feats.companion_memory_bootstrap_type),
+        str(feats.inner_tick_mechanism),
         str(feats.companion_ws_session_system_text or ""),
         # Bumps LRU when companion persistence semantics change (see CompanionConfig.repository_only_store_text).
         "companion_repo_only_store_v2",
@@ -147,6 +148,7 @@ def _companion_manager_for_resolved_model(
         transcript_llm_window_max_messages=feats.companion_transcript_llm_window_max_messages,
         repository_only_store_text=True,
         memory_bootstrap_type=feats.companion_memory_bootstrap_type,
+        inner_tick_mechanism=feats.inner_tick_mechanism,
     )
     return CompanionManager(companion_cfg)
 

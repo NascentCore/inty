@@ -11,6 +11,7 @@ from app.utils.config import (
     AppConfig,
     CompanionMemoryBootstrapType,
     FeaturesConfig,
+    InnerTickMechanism,
     CloudflareConfig,
     Config,
     DatabaseSettings,
@@ -405,6 +406,29 @@ def test_features_config_companion_memory_bootstrap_type_normalizes_case():
 def test_features_config_companion_memory_bootstrap_type_invalid_raises():
     with pytest.raises(ValueError, match="companion_memory_bootstrap_type"):
         FeaturesConfig(companion_memory_bootstrap_type="BOGUS")
+
+
+def test_features_config_inner_tick_mechanism_default():
+    f = FeaturesConfig()
+    assert f.inner_tick_mechanism == InnerTickMechanism.DUPLEX_ASYNC.value
+
+
+def test_features_config_inner_tick_mechanism_invalid_raises():
+    with pytest.raises(ValueError, match="inner_tick_mechanism"):
+        FeaturesConfig(inner_tick_mechanism="bogus")
+
+
+def test_load_config_explicit_inner_tick_mechanism():
+    yaml_text = _minimal_yaml_for_load_config(
+        "    inner_tick_mechanism: maintenance_tool_solo\n",
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.app.features.inner_tick_mechanism == (
+        InnerTickMechanism.MAINTENANCE_TOOL_SOLO.value
+    )
 
 
 def _minimal_yaml_for_load_config(extra_features: str) -> str:
