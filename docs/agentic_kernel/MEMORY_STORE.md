@@ -6,7 +6,7 @@ ARCH 命名范式（SessionBinding / SessionCorpus 等）与本文件「期望�
 
 ## 期望设计方向（不绑定具体排期，仅架构目标）
 
-以下面向「长期关系型 agentic companion」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [`/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md`](/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md)。
+以下面向「长期关系型 agentic companion」常见的四类记忆需求：**情景事件、语义摘要、结构化事实、可追溯治理**。与当前 Postgres 版本表实现的关系性说明见 [app/core/agentic_kernel/companion/AGENTS.md](/app/core/agentic_kernel/companion/AGENTS.md)「持久化与数据表」及 [memory_store_document_mapping.py](/app/core/agentic_kernel/companion/memory_store_document_mapping.py)。
 
 1. **分层存储模型（逻辑上拆分，不必一次改完表）**  
    - **事件流（append-only delta）**：transcript、runtime events、工具轨迹等用 **行级事件** 或 **对象存储 + 游标**，避免每行 JSONL 都整文件快照。  

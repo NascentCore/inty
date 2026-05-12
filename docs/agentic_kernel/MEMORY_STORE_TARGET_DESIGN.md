@@ -1,6 +1,6 @@
 # MemoryStore 体系：合并后的目标设计
 
-依据 [/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md](/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md)、[/docs/imate/MEMORY_STORE.md](/docs/imate/MEMORY_STORE.md)（含「期望设计方向」与 FR 向量 LTM）、持久化事实汇总 [/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md](/docs/FR_COMPANION_MEMORYSTORE_PERSISTENCE.md)，将 **MemoryStore** 定位为：**在稳定会话分区键之下，对外暴露稳定的逻辑键（含别名）式工具契约，对内按「事件流 / 文档快照 / 检索投影」分层实现，并与耐久契约一致地区分语料、耐久侧车与进程私有态**。向量长期记忆（**FR_AGENTIC_MEMORY_STORE**，kernel LTM）与此 **正交**：同属租户隔离语义，但 **不得混进 MemoryStore 的读写语义**。
+依据 [/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md](/.agents/maintenance/AGENTIC_KERNEL_ARCH_ENHANCEMENT.md)、[/docs/imate/MEMORY_STORE.md](/docs/imate/MEMORY_STORE.md)（含「期望设计方向」与 FR 向量 LTM）、companion 侧持久化与表约定见 [app/core/agentic_kernel/companion/AGENTS.md](/app/core/agentic_kernel/companion/AGENTS.md)，将 **MemoryStore** 定位为：**在稳定会话分区键之下，对外暴露稳定的逻辑键（含别名）式工具契约，对内按「事件流 / 文档快照 / 检索投影」分层实现，并与耐久契约一致地区分语料、耐久侧车与进程私有态**。向量长期记忆（**FR_AGENTIC_MEMORY_STORE**，kernel LTM）与此 **正交**：同属租户隔离语义，但 **不得混进 MemoryStore 的读写语义**。
 
 ## 现状与目标态（避免误读）
 
