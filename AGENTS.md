@@ -63,27 +63,33 @@ Inty 代表 Intelligent Entity - 智能存在；
 
 ## Repo structure
 
-- [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）；运行时 companion 实现仍在 [agentic_kernel](/app/core/agentic_kernel/)，二者对照见 [techno_core/AGENTS.md](/techno_core/AGENTS.md)。
-- [agentic_kernel](/app/core/agentic_kernel/)
-- [ws-data-model](/app/schemas/chat.py)
-- [Inty ops](/backend/ops/)
-- [terminal-repl](/tools/inty_v2_repl/)
-- [iMate android app](/imate_android_app/)
-- [iMate iOS app](/imate_ios_app/)
+- Agentic core
+  - [agentic_kernel](/app/core/agentic_kernel/): Inty's core agentic harness
+  - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
+  - [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
+- Applications
+  - Backend
+    - [ws-data-model](/app/schemas/chat.py): communication protocols
+    - [Inty ops](/backend/ops/): backend application (including APIs, operational management components)
+    - [terminal-repl](/tools/inty_v2_repl/): local terminal tool for local development
+  - Clients
+    - [iMate android app](/imate_android_app/)
+    - [iMate iOS app](/imate_ios_app/)
+- Repo agentic harness
+  - [.agents](/.agents/) general coding agents instructions & harness contextual information.
+  - [.cursor](/.cursor/) Cursor-specific harness
+- Miscs: read AGENTS.md or README.md under the dirs for information.
 
-## Guideline files (topic splits)
-
-Detailed instructions from this file are also maintained as topic files under
-`.agents/guidelines/` for navigation and updates.
+### /.agents/guidelines
 
 | Topic | Path |
 |-------|------|
-| Repository context, deployment, Android tips, API sync | [.agents/guidelines/repository-context.md](.agents/guidelines/repository-context.md) |
-| Agent conduct, output, code, Python docstrings | [.agents/guidelines/agent-conduct-and-code.md](.agents/guidelines/agent-conduct-and-code.md) |
-| Documentation layers and markdown conventions | [.agents/guidelines/documentation-standards.md](.agents/guidelines/documentation-standards.md) |
-| Cursor Cloud VM: services, tests, emulator, gotchas | [.agents/guidelines/cursor-cloud-environment.md](.agents/guidelines/cursor-cloud-environment.md) |
-| Local clone, quickstart, badges, external links | [.agents/guidelines/local-developer-setup.md](.agents/guidelines/local-developer-setup.md) |
-| Cloud Agent git and PR contract | [.agents/guidelines/CLOUD_AGENTS.md](.agents/guidelines/CLOUD_AGENTS.md) |
+| Repository context, deployment, Android tips, API sync | [repository-context.md](/.agents/guidelines/repository-context.md) |
+| Agent conduct, output, code, Python docstrings | [agent-conduct-and-code.md](/.agents/guidelines/agent-conduct-and-code.md) |
+| Documentation layers and markdown conventions | [documentation-standards.md](/.agents/guidelines/documentation-standards.md) |
+| Cursor Cloud VM: services, tests, emulator, gotchas | [cursor-cloud-environment.md](/.agents/guidelines/cursor-cloud-environment.md) |
+| Local clone, quickstart, badges, external links | [local-developer-setup.md](/.agents/guidelines/local-developer-setup.md) |
+| Cloud Agent git and PR contract | [CLOUD_AGENTS.md](/.agents/guidelines/CLOUD_AGENTS.md) |
 
 ## General Rules
 
