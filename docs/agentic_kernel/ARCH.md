@@ -88,7 +88,7 @@
 
 ## WebSocket Protocol
 
-English summary of **`/api/v1/chat/ws`** transport and framing (implementation: [`chat.py`](/app/api/v1/endpoints/chat.py); schema: [`ChatWebSocketRequest`](/app/schemas/chat.py)). This does **not** describe `/api/v1/live-chat/{agent_id}` (Gemini Live audio).
+English summary of **`/api/v1/chat/ws`** transport and framing (implementation: [`chat.py`](/app/api/v1/endpoints/chat.py); schema: [`ChatWebSocketRequest`](/app/schemas/chat_websocket.py)). This does **not** describe `/api/v1/live-chat/{agent_id}` (Gemini Live audio).
 
 **Handshake and auth.** After `websocket.accept()`, the server resolves the user from `Authorization: Bearer <token>` or query `token`. On failure the socket closes with code **4001**. Optional query **`assume_user_id`** applies only when the bearer user is a **superuser** (same idea as HTTP `X-Assume-User-Id` for evaluation).
 

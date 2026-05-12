@@ -1,3 +1,3 @@
-# Agents-specific working directory
+# Contexts and instructions for coding agents
 
-For agents-specific data items.
+- [MEMORY](/.agents/MEMORY.md) records important events to enhance agents understanding of the user.
