@@ -138,7 +138,9 @@ def _read_store_optional(
     run_type="tool",
     process_outputs=_langsmith_process_outputs_runtime_inspect,
 )
-def tool_companion_runtime_inspect(store: MemoryStore, arguments: dict[str, Any]) -> str:
+def tool_companion_runtime_inspect(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
     max_chars_per_doc = _parse_optional_int(
         arguments.get("max_chars_per_doc"), default=8000, minimum=100
     )

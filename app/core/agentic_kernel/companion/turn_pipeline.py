@@ -121,11 +121,7 @@ def _companion_tail_user_body_for_llm(
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> str:
     """Tail user text for the LLM, with optional ``user-time:`` facts from ``client_time``."""
-    base = (
-        USER_SIGNED_ON_TRIGGER_USER_TEXT
-        if implicit_sign_on_turn
-        else user_text
-    )
+    base = USER_SIGNED_ON_TRIGGER_USER_TEXT if implicit_sign_on_turn else user_text
     enabled = bool(
         _global_config.app.features.experimental_enable_chat_with_user_time_context
     )

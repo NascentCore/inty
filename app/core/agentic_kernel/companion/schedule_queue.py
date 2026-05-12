@@ -434,9 +434,7 @@ def _reconcile_invalid_warned(store: MemoryStore, tasks: list[ScheduleTask]) -> 
     live_ids = {t.id for t in tasks}
     with _INVALID_TASK_WARNED_KEYS_LOCK:
         stale = [
-            k
-            for k in _INVALID_TASK_WARNED_KEYS
-            if k[0] == sk and k[1] not in live_ids
+            k for k in _INVALID_TASK_WARNED_KEYS if k[0] == sk and k[1] not in live_ids
         ]
         for k in stale:
             _INVALID_TASK_WARNED_KEYS.discard(k)
