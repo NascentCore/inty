@@ -11,7 +11,7 @@ import os
 import uuid
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -75,13 +75,11 @@ async def test_user_with_password(db_session: AsyncSession):
         "password": test_password,
     }
 
-    # 清理：先删除用户创建的所有 agent，避免外键约束问题
-    stmt = select(Agent).where(Agent.creator_id == user.id)
-    result = await db_session.execute(stmt)
-    agents = result.scalars().all()
-    for agent in agents:
-        await db_session.delete(agent)
-    
+    # 清理：先删除用户创建的所有 agent，避免外键约束问题。
+    # 使用 Core delete：Agent 有 version 乐观锁，HTTP 测试已在服务端改过 version，
+    # ORM delete 会带旧 version 条件导致 StaleDataError。
+    await db_session.execute(delete(Agent).where(Agent.creator_id == user.id))
+
     # 然后删除测试用户
     user.deleted_at = None  # 确保可以查询到
     await db_session.delete(user)
