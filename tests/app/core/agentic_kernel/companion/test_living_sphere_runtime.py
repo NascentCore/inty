@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
 from app.core.agentic_kernel.companion.memory_store_scope import MemoryStoreScopePaths
 from app.core.agentic_kernel.companion.models import load_context_meta, load_prompt_bundle
@@ -18,7 +19,10 @@ def test_companion_session_seeds_living_sphere_and_injects_prompt(
     tmp_path: Path,
 ) -> None:
     manager = CompanionManager(
-        CompanionConfig(memory_store_scope_base_dir=str(tmp_path / "scopes"))
+        CompanionConfig(
+            memory_store_scope_base_dir=str(tmp_path / "scopes"),
+            llm=CompanionLLMConfig(api_key="test-key"),
+        )
     )
     session = manager.get_or_create_session("user-ls", "companion-ls", "chat-ls")
 
