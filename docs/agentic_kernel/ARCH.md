@@ -1,13 +1,9 @@
 # iMate / Agentic Companion: 当前架构
 
-本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师；产品级入口见 [`/docs/imate/ARCH.md`](/docs/imate/ARCH.md)。
+IMPORTANT:
 
-- 实现链条: [`chat.py`](/app/api/v1/endpoints/chat.py) `_agent_chat_completions_impl` · [`companion_chat_service`](/app/services/companion_chat_service.py) · [`turn.run_turn`](/app/core/agentic_kernel/companion/turn.py) · 帧与契约 [`app/api/AGENTS.md`](/app/api/AGENTS.md) · 包内细节 [`companion/AGENTS.md`](/app/core/agentic_kernel/companion/AGENTS.md)
-- 分层记忆说明: [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)
-- MemoryStore 与向量 LTM: [`MEMORY_STORE.md`](/docs/agentic_kernel/MEMORY_STORE.md)
-- 会话智能 × 实时性（对照网格）: [`conversation_intelligence_realtime_grid.md`](/docs/agentic_kernel/conversation_intelligence_realtime_grid.md)
-- 架构演进点子池: [`IDEAS.md`](/docs/agentic_kernel/IDEAS.md)
-- `/api/v1/chat/ws` 传输与帧约定 (English): 下文 [**WebSocket Protocol**](#websocket-protocol) 小节.
+- This describes the current logical architecture of the code under this dir.
+- This does not reflect the desired state.
 
 ## 一句话总结
 
@@ -243,69 +239,3 @@ proactive heartbeat 和 maintenance inner tick 都不是客户端上行聊天帧
 ## 记忆管线
 
 分层 episodic / gist / semantic 写入与 prompt 注入综述见 [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)。
-
-## 架构批判
-
-| 观察 | 风险 |
-| --- | --- |
-| 生产 companion 主链路在 `companion.turn.run_turn`, 但包内另有 `runtime/TurnOrchestrator` 和实验桥。 | 新维护者容易误以为 `TurnOrchestrator` 是生产内核入口, 文档和代码命名需要持续澄清。 |
-| `run_turn` 同时负责状态加载、prompt 组装、路由、LLM 调用、tool loop、持久化、记忆调度和观测。 | 单函数语义负载高; 修改路由或持久化时容易误伤其他阶段, 单元测试也难以只覆盖一个阶段。 |
-| 生产 companion 工具路由已统一为 async foreground/background, 但 official assistant tool loop 仍与 companion tool runtime 并存。 | 工具协议和 prompt 刷新规则仍需要人工保持一致; 背景线程和全局 queue 增加竞态、取消和可观测性复杂度。 |
-| MemoryStore 已经是生产权威, 但大量概念仍叫 workspace/path/file。 | 对线上排障不友好; 容易把合成路径误解为磁盘状态, 或漏查 append-only 版本表。 |
-| `chat.py` 的 WebSocket 适配层同时承担鉴权、订阅、chat_history、companion 调用、错误映射和背景补帧汇合。 | 传输协议、业务落库和 agent runtime 的边界偏厚; WebSocket 相关回归测试成本上升。 |
-| 连接内 companion 状态已收敛到 `CompanionWebSocketCoordinator`, 但 heartbeat worker、业务 payload 构造和 DB 落库仍在 WebSocket endpoint。 | 连接状态边界比以前清晰, 但 endpoint 仍偏厚; 后续迁移要避免把 FastAPI / SQLAlchemy 依赖反向带入 kernel 模块。 |
-
-## Enhancements
-
-已落地改进点: **抽出 dual-LLM envelope 解析边界, 先固定模型响应合同, 再拆 `run_turn` 阶段**。
-
-本次把结构化前台回复与重要性评分的解析集中到 [`significance_perception.py`](/app/core/agentic_kernel/companion/significance_perception.py):
-
-```text
-message.content
-  -> message.reasoning | message.reasoning_details (validated envelope only)
-  -> visible reply + significance metadata + output_to_user
-```
-
-收益:
-
-- `run_turn` 不再关心 provider 把 structured envelope 放在哪个 assistant message 字段, 只消费已校验的 companion 语义结果。
-- foreground dual chat 与 tool-finish fallback 共享同一 envelope reader, 降低工具后台与前台评分合同漂移。
-- 非 JSON reasoning 不会进入 transcript 或 WS payload, 保持用户可见文本和模型推理侧通道隔离。
-- 为后续 `CompanionTurnPipeline` 拆阶段提供更清晰的 `execute_route -> parse_model_output -> persist_turn` 边界。
-
-已落地改进点: **抽出生产 WebSocket companion 协调器, 先固定连接边界, 再拆 `run_turn` 阶段**。
-
-本次新增一个面向 `/api/v1/chat/ws` 的 [`CompanionWebSocketCoordinator`](/app/core/agentic_kernel/companion/websocket_coordinator.py), 将 endpoint 局部状态显式化:
-
-```text
-receive_frame/control_frame
-  -> serialize_companion_turn
-  -> dispatch_foreground_turn | dispatch_proactive_heartbeat
-  -> correlate_background_tool_event
-  -> enqueue_business_payload
-```
-
-收益:
-
-- 把 `turn_lock`、`background_events`、`foreground_pending`、`heartbeat_context`（`CompanionWebSocketCoordinator`）的状态职责收拢到一个可测试边界。
-- 让 endpoint 保持鉴权、依赖注入和帧解析职责, companion 协调器负责连接内顺序、后台事件关联和业务下行。
-- 更容易补 WebSocket 级回归测试: 普通前台回合、后台 tool 补帧、proactive heartbeat 三类路径可共享同一协调器夹具。
-- 为后续拆分 `run_turn` 阶段提供稳定入口, 避免同时改 transport 边界和 kernel 内部阶段。
-
-已落地改进点: **把生产 companion 回合前半段拆成显式阶段合同, 但不立即替换现有行为**。
-
-本次新增 [`turn_pipeline.py`](/app/core/agentic_kernel/companion/turn_pipeline.py), 先将 `run_turn` 的准备阶段从局部变量集合收束为三个窄合同:
-
-```text
-normalize_input -> load_state -> assemble_prompt/resolve_route
-```
-
-收益:
-
-- `CompanionTurnRuntimeFlags` 固定 inner tick / proactive heartbeat / implicit sign-on 的输入归一化边界。
-- `CompanionTurnLoadedState` 固定 `ContextMeta`、`PromptBundle`、transcript 窗口和 compaction 轮次这些 MemoryStore 读取结果。
-- `CompanionTurnPromptPlan` 固定 tools、system messages、route mode、最终 LLM messages 和 dual structured chat 开关。
-- `run_turn` 的执行、transcript 持久化、记忆调度行为未变; 后续可以继续拆 `execute_route -> persist_turn -> schedule_memory -> build_result`, 而不是一次性重写生产路径。
-
-不建议的改进顺序: 先抽象一个全局 kernel message queue。当前实现没有单一 kernel queue; 强行引入会掩盖 API 入站、出站 business queue、background tool queue、transcript store 之间的真实边界。

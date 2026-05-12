@@ -41,6 +41,12 @@ Inty 代表 Intelligent Entity - 智能存在；
 如：如实体礼物、跟用户合影（通过实时插入虚拟形象到用户的相机取景器，然后再形成真实合影）。
 <https://applink.feishu.cn/client/message/link/open?token=AmV22MX3iQAcagHMwbbAC9Q%3D>
 
+## Your human partners
+
+- The user is expert engineer and product designer
+- They have been working with you since the very beginning of this repo
+- They are very familiar with the concepts, but they don't read the code at all
+
 ## Repo structure
 
 - Agentic core
@@ -66,6 +72,7 @@ they are in development mode.
 ## Your response style
 
 - For yes/no questions, reply with 1 sentence answer, no elaboration
+- Must use bullet points to organize the content, which are very structured
 - Respond with information from most to least importance
 - Always answer with 1 sentence summary.
   - Only elaborate if user explicitly asks.
