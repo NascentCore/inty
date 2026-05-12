@@ -18,7 +18,7 @@ from app.core.agentic_kernel.experience_profile import (
     normalize_experience_profile_id,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType, InnerTickMechanism
 
 from .langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
@@ -110,6 +110,9 @@ class CompanionConfig(BaseModel):
     # for all ``CompanionManager.run_turn`` calls using this config.
     langsmith_companion_parent_run_enabled: bool | None = None
 
+    # Mirrors ``app.features.inner_tick_mechanism`` (duplex_async vs maintenance_tool_solo).
+    inner_tick_mechanism: str = InnerTickMechanism.DUPLEX_ASYNC.value
+
     @field_validator("default_context_mode")
     @classmethod
     def _validate_default_context_mode(cls, v: str) -> str:
@@ -117,6 +120,18 @@ class CompanionConfig(BaseModel):
         if n == ExperienceContextMode.BOOTSTRAP:
             raise ValueError("default_context_mode cannot be 'bootstrap'")
         return n
+
+    @field_validator("inner_tick_mechanism")
+    @classmethod
+    def _validate_inner_tick_mechanism(cls, v: str) -> str:
+        raw = (v or "").strip().lower()
+        allowed = {m.value for m in InnerTickMechanism}
+        if raw not in allowed:
+            raise ValueError(
+                "inner_tick_mechanism must be one of "
+                f"{sorted(allowed)}, got {v!r}"
+            )
+        return raw
 
     @property
     def skip_scope_directory_creation(self) -> bool:
@@ -311,6 +326,7 @@ class CompanionManager:
             implicit_signal_bundle=implicit_signal_bundle,
             langsmith_parent_run_enabled=ls_parent_enabled,
             tool_bg_idle_event=session.tool_bg_idle,
+            inner_tick_mechanism=session.config.inner_tick_mechanism,
         )
 
     def shutdown_session(
