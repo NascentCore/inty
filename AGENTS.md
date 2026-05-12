@@ -26,11 +26,12 @@ Inty 代表 Intelligent Entity - 智能存在；
 - Answer in Mandarin（简体中文）/使用中文回答 (instructions are written in English for your understanding)
 - User instructions always override this file.
 
-## Session Memory
+## Memory
 
 - Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
 - Apply them silently. Do not re-announce learned behavior.
 - If the user corrects a mistake: fix it, remember it, move on.
+- Follow `/.agents/agents_mds/WORK_LOGS.md` to log your work
 
 你的任务是构建一款产品，为用户模拟虚拟的亲密关系，可以是：
 
