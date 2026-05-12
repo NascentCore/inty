@@ -306,6 +306,8 @@ class BackendChatWsBridge:
         bearer_token: str,
         on_user_signed_on_sent: Callable[[str, str], None] | None = None,
         on_user_signed_on_ack: Callable[[dict[str, Any]], None] | None = None,
+        on_transport_lost: Callable[[int | None, str], None] | None = None,
+        on_transport_ready: Callable[[bool], None] | None = None,
     ) -> None:
         self._ws_url = ws_url
         self._bearer_token = bearer_token.strip()
@@ -313,6 +315,8 @@ class BackendChatWsBridge:
             raise ValueError("bearer_token is empty")
         self._on_user_signed_on_sent = on_user_signed_on_sent
         self._on_user_signed_on_ack = on_user_signed_on_ack
+        self._on_transport_lost = on_transport_lost
+        self._on_transport_ready = on_transport_ready
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._ws: Any = None
@@ -327,6 +331,7 @@ class BackendChatWsBridge:
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
         self._implicit_greeting_sent: bool = False
+        self._had_transport_drop: bool = False
         self._pending_ws_drop: dict[str, Any] | None = None
         self._pending_ws_conn_dropped_ack_fut: asyncio.Future[dict[str, Any]] | None = (
             None
@@ -451,9 +456,25 @@ class BackendChatWsBridge:
             "ws_close_code": code,
             "ws_close_reason": reason,
         }
+        self._had_transport_drop = True
+        if self._on_transport_lost is not None:
+            reason_note = reason if len(reason) <= 200 else reason[:200] + "…"
+            try:
+                self._on_transport_lost(code, reason_note)
+            except Exception:
+                logger.exception("on_transport_lost callback failed")
 
     async def _send_post_connect_control_frames(self, ws: Any) -> None:
         """After each successful connect: ``client_context``, optional ``ws_conn_dropped``, ``user_signed_on``."""
+        reconnect = self._had_transport_drop
+        if self._on_transport_ready is not None:
+            try:
+                self._on_transport_ready(reconnect)
+            except Exception:
+                logger.exception("on_transport_ready callback failed")
+        if reconnect:
+            self._had_transport_drop = False
+
         aid = _agent_id_from_ws_url(self._ws_url)
         if not aid:
             return
