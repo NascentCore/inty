@@ -8,6 +8,14 @@ Agentic Companion 是关系型智能体的后端内核：以会话上下文、�
 
 本文用于判断 agentic companion 当前架构的职责边界、已确认约束、关键取舍和演进方向；它不是逐函数代码索引，也不是目标态已经完成的声明。代码真相仍以 `/app/core/agentic_kernel/`、`/app/services/companion_chat_service.py`、`/app/api/v1/endpoints/chat.py` 和 schema 为准；本文只记录跨文件后仍成立的设计事实。
 
+## 设计审查结论（2026-05-12）
+
+当前设计方向总体 sound：生产 companion 的真边界应是“关系上下文 + MemoryStore + 回合执行 + 事件输出”，而不是 WebSocket endpoint 或实验通用 orchestrator。但文档原先对三个风险写得不够硬：
+
+- **生产语义真源必须固定**：当前生产真源是 `CompanionManager` / `CompanionSession` 绑定状态后调用 `companion/turn.py::run_turn`，输出 `CompanionTurnResult`。`runtime/TurnOrchestrator` 与 `contracts/turn.py` 仍是实验桥的极简合同，不能直接升格为生产 companion 合同。
+- **边界仍偏胖**：`chat.py` 与 `companion_chat_service.py` 仍承载 WebSocket session system、chat_history 镜像、heartbeat / maintenance inner tick、tool background 汇合等跨层协调；这解释了为什么目标架构不能继续让 transport 层自然生长。
+- **事件一致性还不是类型合同**：前台 assistant、后台 tool_bg、MemoryStore transcript、chat_history 与 WS FIFO 之间已有实践顺序，但仍缺少可测试的事件合同；这是当前最主要的架构未闭环点。
+
 ## 目标态
 
 Agentic Companion 的目标是为用户提供长期关系中的“虚拟活人”体验。后端内核必须把以下能力视为一套连续系统，而不是聊天接口的附属功能：
@@ -61,6 +69,8 @@ flowchart TD
 
 当前生产入口仍是 `/api/v1/chat/ws`。API 层负责鉴权、schema、用量、chat history 和 transport framing；companion 内核负责 session、MemoryStore、prompt、模型路由、工具链和 transcript。这个分层是现状，不是目标完成态：API 层仍承载过多 companion 相关协调逻辑。
 
+`/app/services/companion_chat_service.py` 是当前 API 到内核的实际服务边界，但它还不是纯 adapter：它缓存 `CompanionManager`、按运行时配置生成 companion config、写入交互式 bootstrap 的 WebSocket session system，并把同一系统事件镜像到 `chat_history` 与 MemoryStore transcript。目标架构应把这些 session bootstrap / 事件镜像语义下沉到 companion session facade，而不是继续留在 API-adjacent 服务层。
+
 ## 核心层次
 
 | 层次 | 当前职责 | 设计判断 |
@@ -72,6 +82,17 @@ flowchart TD
 | MemoryStore | 版本化文档、transcript、context、runtime events、状态 JSON。 | 当前是有效过渡层；长期应拆成事件流、可编辑文档和检索层。 |
 | Async effects | tool background、proactive heartbeat、maintenance inner tick、图像等副作用。 | 必须与 turn / transcript / chat_history 保持一致，不应只表现为额外下行帧。 |
 | Observability | `user_msg_uuid`、`inty_trace_id`、LangSmith、runtime events、log correlation。 | 是架构约束，不是排障附属品。 |
+
+## 职责边界（指定架构）
+
+| 区域 | 应拥有 | 不应拥有 | 当前偏差 |
+| --- | --- | --- | --- |
+| `/app/api/v1/endpoints/chat.py` | WebSocket 连接、鉴权、payload 校验、版本门控、transport FIFO、错误映射。 | companion 人格状态、turn 语义、后台事件持久化顺序、inner tick 决策。 | 仍承载 proactive / maintenance inner tick、tool_bg drain、chat_history 写入与 coordinator 调度。 |
+| `CompanionWebSocketCoordinator` | 单连接内的 turn serialization、foreground/background correlation、后台事件队列、heartbeat 坐标。 | 长期状态、模型 prompt、MemoryStore 写入规则。 | 是合理 capsule，但还被 endpoint 大量手动驱动。 |
+| `/app/services/companion_chat_service.py` | API 配置注入、模型解析后的 manager/session 获取、调用 companion turn。 | WebSocket 专属 session system、chat_history 与 MemoryStore 的跨存储镜像规则。 | `_maybe_append_companion_ws_session_system` 是当前跨层协调点。 |
+| `CompanionManager` / `CompanionSession` | `user_id + companion_id + chat_id` scope、MemoryStore 绑定、session 初始化、per-session tool_bg idle。 | transport frame、客户端 payload、chat_history schema。 | 是当前最接近 session facade 的边界。 |
+| `companion/turn.py::run_turn` | 生产 companion turn 的语义真源：状态读取、prompt、route、LLM、tool_bg 启动、transcript 与记忆调度。 | WebSocket frame、API 用量、客户端兼容字段。 | 函数仍过大，`turn_pipeline.py` 只拆出前半段阶段合同。 |
+| `runtime/TurnOrchestrator` | 实验 bridge 的极简 prepare / invoke / handle / persist 容器。 | 直接定义生产 companion turn 合同。 | `TurnInput` 缺少 MemoryStore、route、tool_bg、implicit signal、inner tick 等生产维度。 |
 
 ## 关键取舍
 
@@ -93,11 +114,11 @@ flowchart TD
 
 **判断**：这个取舍可以保留，但必须把“后台结果何时进入 transcript、何时影响下一轮、何时可见补帧”提升为明确合同。
 
-### 4. 当前 `run_turn` 承载生产复杂度，而非通用 TurnOrchestrator
+### 4. 当前 `run_turn` 是生产真源，而非通用 TurnOrchestrator
 
-`runtime/TurnOrchestrator` 是通用 turn 合同和实验桥使用的并行抽象，生产 companion 主链路仍主要在 companion session、service、`run_turn` 和 API shell 之间完成。
+`runtime/TurnOrchestrator` 只在 `bridges/experimental_bridge.py` 的实验路径中使用；`contracts/turn.py::TurnInput` 是 `user_id / session_id / agent_id / user_text / history` 的极简模型，无法表达生产 companion 的 MemoryStore scope、implicit signal、inner tick、route mode、dual-LLM envelope、tool_background 与 `CompanionTurnResult`。
 
-**判断**：短期不强行迁移；中期必须收敛为一个生产编排抽象，否则 prompt、持久化、工具、副作用会继续分散。
+**判断**：指定架构以 `CompanionTurnResult + run_turn` 为生产语义真源；`TurnOrchestrator` 若继续存在，只能作为实验 adapter 或在扩展出 companion 专用 turn contract 后包装生产真源，不能要求 production companion 反向削足适履。
 
 ## 淘汰路径
 
@@ -134,6 +155,19 @@ flowchart TD
 7. **发布下行事件**：把用户可见 assistant 帧、可见 tool_bg 补帧或错误帧交给 transport adapter。
 
 这个顺序是架构合同。具体函数可以变化，但不能让状态提交、用户可见事件和下一轮上下文彼此失配。
+
+### 回合事件一致性合同
+
+同一用户触发轮次必须用 `user_msg_uuid` 与 `inty_trace_id` 贯穿 transcript、chat_history、LangSmith、runtime events 和 transport frame。生产允许“前台先答、后台后补”，但只允许以下顺序：
+
+| 阶段 | MemoryStore transcript | chat_history | WebSocket FIFO | 下一轮上下文 |
+| --- | --- | --- | --- | --- |
+| 用户输入 | `run_turn` 在模型调用后追加 user 行；implicit sign-on 写内部 user 标记。 | API shell 写用户消息；proactive / maintenance 由 worker 写 synthetic user。 | 用户输入本身不回显为 assistant。 | 本轮 prompt 使用写入前的 transcript window。 |
+| 前台 assistant | `run_turn` 追加 `source=chat` 或 `source=inner_tick` assistant 行。 | API shell 镜像 AI message 与 metadata。 | foreground assistant frame 先出队。 | 已写入后，后续轮次可读到前台回复。 |
+| 后台 tool_bg | `tool_background` 追加 `source=tool_bg` assistant 行，正文含可见 NL 与固定 `--- Tool results ---` 段。 | 仅当 `output_to_user` 或生成物需要交付时，transport 层镜像 AI message。 | background event 在同连接队列中迟到补帧。 | 下一轮 `run_turn` 加载 transcript 前等待 `CompanionSession.tool_bg_idle`；超时只能可观测降级，不能静默伪装为严格全序。 |
+| 后台失败/超时 | 写 runtime event；不得伪造成功工具结果。 | 只在用户可见失败需要交付时写错误或补帧。 | 可发错误帧或保持静默，但必须可由 trace 定位。 | 下一轮必须能通过 runtime events / logs 解释缺失工具结果。 |
+
+因此，目标代码不追求“所有副作用同步阻塞完成”，而追求“每个用户可见事件、后台副作用和下一轮上下文都有同一 trace 下的可审计归属”。
 
 **配置**：`app.features.inner_tick_mechanism` 已从代码与默认 schema 中移除；若运维私有 `config.yaml` 仍含该键，`FeaturesConfig(**features)` 会在加载时失败，须删除该字段。
 
@@ -180,9 +214,12 @@ flowchart TD
 | dual-LLM envelope | `/app/core/agentic_kernel/companion/significance_perception.py` |
 | 通用 turn 合同 | `/app/core/agentic_kernel/contracts/turn.py` |
 | 实验编排器 | `/app/core/agentic_kernel/runtime/turn_orchestrator.py` |
+| 实验 bridge | `/app/core/agentic_kernel/bridges/experimental_bridge.py` |
+| REPL-grade turn helper（非生产真源） | `/app/core/agentic_kernel/companion/turn_engine.py` |
 | WebSocket schema | `/app/schemas/chat_websocket.py` |
 | MemoryStore 目标说明 | `/docs/agentic_kernel/MEMORY_STORE.md` |
 | 记忆管线说明 | `/docs/agentic_kernel/MEMORY_PIPELINE.md` |
+| 代码对齐 TODO | `/docs/agentic_kernel/todos/AGENTIC_KERNEL_ARCH_CODE_ALIGNMENT.md` |
 
 ## 维护规则
 
