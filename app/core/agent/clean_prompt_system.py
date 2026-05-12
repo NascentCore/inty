@@ -30,7 +30,6 @@ from app.core.agent.agent import (
     OFFICIAL_ASSISTANT_READ_CHANGE_LOGS_TOOL_NAME,
     OFFICIAL_ASSISTANT_READ_USER_MANUAL_TOOL_NAME,
     OFFICIAL_ASSISTANT_SAVE_USER_MBTI_TOOL_NAME,
-    _build_user_time_context_prompt,
     _load_intellimate_change_logs,
     _load_intellimate_user_manual,
 )
@@ -51,12 +50,6 @@ from app.schemas.user import UserMetadata
 def _render_prompt(*, tmpl: str, char: str, user: Optional[str]) -> str:
     return prompt_template.render_prompt_jinja2_template(
         tmpl=tmpl, char=char, user=user
-    )
-
-
-def _is_user_time_context_enabled() -> bool:
-    return bool(
-        global_config.app.features.experimental_enable_chat_with_user_time_context
     )
 
 
@@ -165,7 +158,6 @@ class PromptAssemblyDeps:
         tmpl=tmpl, char=char, user=user
     )
     lookup_prompt_override: PromptOverrideLookupFn = get_agent_prompt_override
-    is_user_time_context_enabled: Callable[[], bool] = _is_user_time_context_enabled
     is_christmas_prompt_enabled: Callable[[], bool] = _is_christmas_prompt_enabled
 
 
@@ -187,9 +179,7 @@ def _to_assembler_deps(deps: PromptAssemblyDeps) -> PromptAssemblerDeps:
     return PromptAssemblerDeps(
         render_prompt=deps.render_prompt,
         lookup_prompt_override=deps.lookup_prompt_override,
-        is_user_time_context_enabled=deps.is_user_time_context_enabled,
         is_christmas_prompt_enabled=deps.is_christmas_prompt_enabled,
-        build_user_time_context_prompt=_build_user_time_context_prompt,
     )
 
 

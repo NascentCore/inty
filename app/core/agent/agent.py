@@ -59,7 +59,7 @@ from app.utils.openai_client import (
     langchain_message_to_openai_message,
 )
 from app.utils.langsmith_metadata import normalize_langsmith_metadata
-from app.core.user_time_context_prompt import build_user_time_context_markdown
+from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
 
 # 圣诞节季节性提示词：放在角色设定（personality/scenario/message_example）最后
 CHRISTMAS_SEASONAL_BEHAVIOR_PROMPT = """##Seasonal Behavior (Christmas Week – Dec 20–26)
@@ -114,6 +114,48 @@ class UserTimeContext(TypedDict, total=False):
     local_time: str
     timezone: str
     utc_offset_minutes: int
+
+
+def _openai_messages_from_lc_messages_with_tail_user_time(
+    messages: List[BaseMessage],
+    *,
+    user_name: Optional[str],
+    agent_name: str,
+    user_time_context: Optional[UserTimeContext],
+) -> List[Dict[str, Any]]:
+    """Convert LangChain messages to OpenAI dicts; suffix last string HumanMessage with client time."""
+    enabled = bool(
+        global_config.app.features.experimental_enable_chat_with_user_time_context
+    )
+    ctx: dict[str, Any] | None = (
+        dict(user_time_context) if user_time_context is not None else None
+    )
+    last_human_idx: Optional[int] = None
+    for i in range(len(messages) - 1, -1, -1):
+        if isinstance(messages[i], HumanMessage):
+            last_human_idx = i
+            break
+    out: List[Dict[str, Any]] = []
+    for i, message in enumerate(messages):
+        to_convert = message
+        if (
+            last_human_idx is not None
+            and i == last_human_idx
+            and isinstance(message, HumanMessage)
+            and isinstance(message.content, str)
+        ):
+            suffixed = suffix_user_text_with_time_context_lines(
+                message.content, ctx, enabled=enabled
+            )
+            if suffixed != message.content:
+                to_convert = HumanMessage(
+                    content=suffixed,
+                    additional_kwargs=message.additional_kwargs,
+                )
+        out.append(
+            langchain_message_to_openai_message(to_convert, user_name, agent_name)
+        )
+    return out
 
 
 INTELLIMATE_USER_MANUAL_SYSTEM_MESSAGE_PREFIX = "##IntelliMate User Manual\n"
@@ -215,12 +257,6 @@ def _load_intellimate_user_manual() -> str:
 @lru_cache(maxsize=1)
 def _load_intellimate_change_logs() -> str:
     return _load_prompt_markdown_content(INTELLIMATE_CHANGE_LOGS_PATH)
-
-
-def _build_user_time_context_prompt(
-    user_time_context: Optional[UserTimeContext],
-) -> Optional[str]:
-    return build_user_time_context_markdown(user_time_context)
 
 
 def get_agent_model_config(agent_data: dict) -> dict:
@@ -1495,10 +1531,12 @@ class Agent:
 
                 messages: list[BaseMessage] = system_messages + all_messages
 
-                openai_messages = [
-                    langchain_message_to_openai_message(message, user_name, self.name)
-                    for message in messages
-                ]
+                openai_messages = _openai_messages_from_lc_messages_with_tail_user_time(
+                    messages,
+                    user_name=user_name,
+                    agent_name=self.name,
+                    user_time_context=user_time_context,
+                )
                 logger.debug(f"openai_messages: {openai_messages}")
 
                 input_build_time = time.time() - input_build_start
@@ -1846,10 +1884,12 @@ class Agent:
 
                 messages_list: list[BaseMessage] = system_messages + all_messages
 
-                openai_messages = [
-                    langchain_message_to_openai_message(message, user_name, self.name)
-                    for message in messages_list
-                ]
+                openai_messages = _openai_messages_from_lc_messages_with_tail_user_time(
+                    messages_list,
+                    user_name=user_name,
+                    agent_name=self.name,
+                    user_time_context=user_time_context,
+                )
                 logger.debug(f"openai_messages: {openai_messages}")
 
                 input_build_time = time.time() - input_build_start

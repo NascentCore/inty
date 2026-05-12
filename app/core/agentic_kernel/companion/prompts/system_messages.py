@@ -27,7 +27,6 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from ..bootstrap_user_interactive import (
     build_interactive_bootstrap_system_message_parts,
 )
-from ..implicit_signal_messages import implicit_signal_system_messages
 from ..memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
     MEMORY_SYSTEM_HEADING_GIST,
@@ -377,7 +376,6 @@ def build_system_messages(
     if axiom:
         out.append(_system_message(axiom))
     out.append(_system_message(_security_base()))
-    out.extend(implicit_signal_system_messages(implicit_signal_bundle))
 
     if bundle.tools_md.strip() and not chat_branch_no_tool_api:
         out.append(

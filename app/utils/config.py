@@ -648,42 +648,6 @@ class TTSConfig:
 
 
 @dataclass
-class IntyV2ReplConfig:
-    """Terminal REPL (``tools/inty_v2_repl``) tunables loaded from ``config.yaml`` key ``inty_v2_repl``."""
-
-    # Seconds to wait for ``ws_conn_dropped_ack`` after sending ``ws_conn_dropped`` on reconnect.
-    ws_conn_dropped_ack_timeout_sec: float = 5.0
-
-    def __post_init__(self) -> None:
-        raw = self.ws_conn_dropped_ack_timeout_sec
-        try:
-            v = float(raw)
-        except (TypeError, ValueError):
-            logger.warning(
-                "inty_v2_repl.ws_conn_dropped_ack_timeout_sec invalid {!r}; using 5.0",
-                raw,
-            )
-            v = 5.0
-        if not math.isfinite(v):
-            logger.warning(
-                "inty_v2_repl.ws_conn_dropped_ack_timeout_sec non-finite {}; using 5.0",
-                v,
-            )
-            v = 5.0
-        lo, hi = 0.5, 60.0
-        clamped = max(lo, min(v, hi))
-        if clamped != v:
-            logger.warning(
-                "inty_v2_repl.ws_conn_dropped_ack_timeout_sec {} out of range [{}, {}]; clamped to {}",
-                v,
-                lo,
-                hi,
-                clamped,
-            )
-        self.ws_conn_dropped_ack_timeout_sec = clamped
-
-
-@dataclass
 class Config:
     app: AppConfig
     security: SecurityConfig
@@ -711,7 +675,6 @@ class Config:
     surprise_snap: SurpriseSnapConfig = field(
         default_factory=lambda: SurpriseSnapConfig()
     )
-    inty_v2_repl: IntyV2ReplConfig = field(default_factory=IntyV2ReplConfig)
 
 
 def load_config(path: str) -> Config:
@@ -767,7 +730,6 @@ def load_config(path: str) -> Config:
         gemini_live=GeminiLiveConfig(**data.get("gemini_live", {})),
         tts=TTSConfig(**data.get("tts", {})),
         surprise_snap=_parse_surprise_snap_config(data),
-        inty_v2_repl=IntyV2ReplConfig(**(data.get("inty_v2_repl") or {})),
     )
 
 

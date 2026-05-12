@@ -2,13 +2,14 @@
 
 import asyncio
 import json
+import time
 import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.testclient import TestClient as FastAPITestClient
 from jose import jwt
 from loguru import logger
@@ -1634,6 +1635,73 @@ def test_chat_websocket_companion_user_signed_on_implicit_greeting_sets_bundle(
     companion_chat_service.clear_companion_chat_service_caches()
 
 
+def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+):
+    """Regression: ``companion_ws_inner_tick`` task is cancelled in ``finally``; no further polls."""
+    ticks: dict[str, int] = {"proactive": 0, "maintenance": 0}
+
+    async def spy_proactive(**_kwargs):
+        ticks["proactive"] += 1
+
+    async def spy_maintenance(**_kwargs):
+        ticks["maintenance"] += 1
+
+    async def fake_run_companion_chat_turn_for_api(**_kwargs):
+        return CompanionTurnResult(assistant_text="unused")
+
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-companion-inner-tick-stop",
+        workspace_dir="/tmp/inty_test_companion_ws_inner_tick_stop",
+        chat_id="chat-inner-tick-stop-1",
+        latest_user_message_db_id=501,
+        ai_message_id=9501,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
+    )
+
+    # ``poll = max(floor, features.companion_ws_proactive_heartbeat_poll_seconds)``:
+    # lowering only the floor is not enough when YAML sets a large poll interval.
+    monkeypatch.setattr(
+        chat_v1, "_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS", 0.05
+    )
+    monkeypatch.setattr(
+        global_config_loaded_from_config_yaml.app.features,
+        "companion_ws_proactive_heartbeat_poll_seconds",
+        0.05,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_proactive_heartbeat",
+        spy_proactive,
+    )
+    monkeypatch.setattr(
+        chat_v1,
+        "_try_fire_companion_ws_maintenance_inner_tick",
+        spy_maintenance,
+    )
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws") as websocket:
+            websocket.send_json(
+                {
+                    "type": "user_signed_on",
+                    "agent_id": "agent-companion-inner-tick-stop",
+                }
+            )
+            ack = websocket.receive_json()
+            assert ack["type"] == "user_signed_on_ack"
+            assert ack["ok"] is True
+            time.sleep(0.2)
+            assert ticks["proactive"] + ticks["maintenance"] >= 1
+
+    n_at_close = ticks["proactive"] + ticks["maintenance"]
+    time.sleep(0.35)
+    assert ticks["proactive"] + ticks["maintenance"] == n_at_close
+
+    companion_chat_service.clear_companion_chat_service_caches()
+
+
 def test_chat_websocket_companion_user_signed_on_implicit_greeting_missing_message_id(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
@@ -2240,6 +2308,60 @@ def test_chat_websocket_verify_user_signed_out_not_supported(
         "ok": False,
         "reason": "not_supported",
     }
+
+
+def test_is_ws_receive_text_not_connected_runtime_error() -> None:
+    assert chat_v1._is_ws_receive_text_not_connected_runtime_error(
+        RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
+    )
+    assert not chat_v1._is_ws_receive_text_not_connected_runtime_error(
+        RuntimeError("other")
+    )
+    assert not chat_v1._is_ws_receive_text_not_connected_runtime_error(
+        WebSocketDisconnect()
+    )
+
+
+def test_chat_websocket_verify_receive_text_not_connected_runtime_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+) -> None:
+    user = _make_user(auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    async def boom_receive_text(self):
+        raise RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
+
+    monkeypatch.setattr(WebSocket, "receive_text", boom_receive_text)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws/verify"):
+            pass
+
+
+def test_chat_websocket_recv_not_connected_runtime_after_ping_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
+) -> None:
+    """``recv_task.result()`` Starlette ``RuntimeError`` must not crash the ASGI app."""
+    user = _make_user(user_id="user-ws-nc-runtime", auth_type=AuthType.GOOGLE)
+
+    async def fake_ws_user(websocket, db):
+        return user
+
+    monkeypatch.setattr(chat_v1, "_get_current_user_from_websocket", fake_ws_user)
+
+    async def boom_receive_text(self):
+        raise RuntimeError(chat_v1._WS_RECEIVE_TEXT_NOT_CONNECTED_MSG)
+
+    with FastAPITestClient(chat_business_error_app) as client:
+        with client.websocket_connect("/api/v1/chat/ws?ws_conn_id=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee") as websocket:
+            websocket.send_json({"type": "ping"})
+            assert websocket.receive_json() == {"type": "pong"}
+            monkeypatch.setattr(WebSocket, "receive_text", boom_receive_text)
+            websocket.send_json({"type": "ping"})
 
 
 def test_chat_websocket_session_open_uses_client_ws_conn_id_query(

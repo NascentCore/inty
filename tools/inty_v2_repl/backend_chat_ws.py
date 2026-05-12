@@ -3,6 +3,9 @@
 Wire payloads use types from ``app.schemas.chat`` (completion body) and
 ``app.schemas.chat_websocket`` (WebSocket envelope); downlink JSON parsing helpers live in this
 module, not in ``app/schemas`` (schemas stay type-only).
+
+Transport-only tunables (e.g. ``ws_conn_dropped`` ack wait) use package-level defaults here so the
+REPL does not import server ``config.yaml`` / ``app.core.config``.
 """
 
 from __future__ import annotations
@@ -23,7 +26,6 @@ from zoneinfo import ZoneInfo
 import websockets
 from websockets.exceptions import ConnectionClosed
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
@@ -36,6 +38,9 @@ from app.schemas.chat_websocket import (
 )
 from loguru import logger
 
+# Seconds to wait for ``ws_conn_dropped_ack`` after sending ``ws_conn_dropped`` on reconnect.
+_WS_CONN_DROPPED_ACK_TIMEOUT_SEC: float = 5.0
+
 
 class BackendChatWsError(RuntimeError):
     def __init__(self, code: int, message: str, agent_id: str | None = None):
@@ -46,9 +51,7 @@ class BackendChatWsError(RuntimeError):
 
 
 def default_ws_conn_dropped_ack_timeout_sec() -> float:
-    return float(
-        global_config_loaded_from_config_yaml.inty_v2_repl.ws_conn_dropped_ack_timeout_sec
-    )
+    return float(_WS_CONN_DROPPED_ACK_TIMEOUT_SEC)
 
 
 def _ws_close_reason_text(reason: object | None) -> str:
@@ -306,6 +309,8 @@ class BackendChatWsBridge:
         bearer_token: str,
         on_user_signed_on_sent: Callable[[str, str], None] | None = None,
         on_user_signed_on_ack: Callable[[dict[str, Any]], None] | None = None,
+        on_transport_lost: Callable[[int | None, str], None] | None = None,
+        on_transport_ready: Callable[[bool], None] | None = None,
     ) -> None:
         self._ws_url = ws_url
         self._bearer_token = bearer_token.strip()
@@ -313,6 +318,8 @@ class BackendChatWsBridge:
             raise ValueError("bearer_token is empty")
         self._on_user_signed_on_sent = on_user_signed_on_sent
         self._on_user_signed_on_ack = on_user_signed_on_ack
+        self._on_transport_lost = on_transport_lost
+        self._on_transport_ready = on_transport_ready
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._ws: Any = None
@@ -327,6 +334,7 @@ class BackendChatWsBridge:
         self._send_max_retries = default_send_turn_retries()
         self._online_ev: asyncio.Event | None = None
         self._implicit_greeting_sent: bool = False
+        self._had_transport_drop: bool = False
         self._pending_ws_drop: dict[str, Any] | None = None
         self._pending_ws_conn_dropped_ack_fut: asyncio.Future[dict[str, Any]] | None = (
             None
@@ -451,9 +459,25 @@ class BackendChatWsBridge:
             "ws_close_code": code,
             "ws_close_reason": reason,
         }
+        self._had_transport_drop = True
+        if self._on_transport_lost is not None:
+            reason_note = reason if len(reason) <= 200 else reason[:200] + "…"
+            try:
+                self._on_transport_lost(code, reason_note)
+            except Exception:
+                logger.exception("on_transport_lost callback failed")
 
     async def _send_post_connect_control_frames(self, ws: Any) -> None:
         """After each successful connect: ``client_context``, optional ``ws_conn_dropped``, ``user_signed_on``."""
+        reconnect = self._had_transport_drop
+        if self._on_transport_ready is not None:
+            try:
+                self._on_transport_ready(reconnect)
+            except Exception:
+                logger.exception("on_transport_ready callback failed")
+        if reconnect:
+            self._had_transport_drop = False
+
         aid = _agent_id_from_ws_url(self._ws_url)
         if not aid:
             return

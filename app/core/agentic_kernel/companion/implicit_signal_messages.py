@@ -8,13 +8,14 @@ framing the trigger as user input improves variation while keeping the signal la
 the dialogue before the assistant reply. The Chinese bootstrap line mirrors the old
 WebSocket connect-time interactive kickoff placeholder so USER_INTERACTIVE sessions
 still open naturally when the client triggers implicit greeting via ``user_signed_on`` (+ ``implicit_greeting``).
+
+Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected here;
+``turn_pipeline`` appends factual ``user-time:`` lines to the tail **user** message for
+the LLM when the feature flag is enabled.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
-from app.core.user_time_context_prompt import build_user_time_context_markdown
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 USER_SIGNED_ON_TRIGGER_USER_TEXT = (
@@ -39,18 +40,3 @@ def implicit_user_signed_on_chat_turn(
         bool(implicit_signal_bundle and implicit_signal_bundle.user_signed_on)
         and not inner_tick_turn
     )
-
-
-def implicit_signal_system_messages(
-    bundle: ImplicitSignalBundle | None,
-) -> list[dict[str, Any]]:
-    """Return early-prefix system dicts (client time only). Sign-on trigger is tail user in run_turn."""
-    if bundle is None:
-        return []
-    out: list[dict[str, Any]] = []
-    text = build_user_time_context_markdown(
-        bundle.client_time.model_dump(exclude_none=True) if bundle.client_time else None
-    )
-    if text:
-        out.append({"role": "system", "content": text})
-    return out

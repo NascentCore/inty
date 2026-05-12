@@ -121,6 +121,10 @@ from app.utils.timing import Timer, log_time
 
 router = APIRouter(prefix="/chat", route_class=LoggerRoute)
 
+# Floors ``companion_ws_proactive_heartbeat_poll_seconds`` inside ``companion_ws_inner_tick_worker``.
+# Tests may monkeypatch this module attribute to shorten poll intervals.
+_COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS: float = 5.0
+
 
 class CompanionInferenceUpstreamHTTPException(HTTPException):
     """HTTPException with optional fields merged into ``/chat/ws`` error JSON frames."""
@@ -161,14 +165,32 @@ def _chat_ws_idle_timeout_seconds() -> float:
     )
 
 
+# Starlette ``WebSocket.receive_text`` when ``application_state != CONNECTED`` (race after drop).
+_WS_RECEIVE_TEXT_NOT_CONNECTED_MSG: str = (
+    'WebSocket is not connected. Need to call "accept" first.'
+)
+
+
+def _is_ws_receive_text_not_connected_runtime_error(exc: BaseException) -> bool:
+    return isinstance(exc, RuntimeError) and str(exc) == _WS_RECEIVE_TEXT_NOT_CONNECTED_MSG
+
+
 async def _shutdown_chat_ws_outbound_pump(pump_task: asyncio.Task) -> None:
-    """Join ``chat_ws_outbound_pump``; distinguish normal cancellation from send failures."""
+    """Join ``chat_ws_outbound_pump``; cancel if still running.
+
+    ``WebSocketDisconnect`` after the client has gone is expected during teardown and is logged
+    at debug. Other exceptions are logged at error (distinct from normal ``CancelledError``).
+    """
     if not pump_task.done():
         pump_task.cancel()
     try:
         await pump_task
     except asyncio.CancelledError:
         pass
+    except WebSocketDisconnect:
+        logger.debug(
+            "chat_ws_outbound_pump task ended: client disconnected during pump teardown"
+        )
     except Exception:
         logger.exception(
             "chat_ws_outbound_pump failed (e.g. WebSocket send_json); "
@@ -2526,7 +2548,10 @@ async def chat_completions_websocket(
     async def companion_ws_inner_tick_worker() -> None:
         while not hb_worker_stop.is_set():
             feats = global_config_loaded_from_config_yaml.app.features
-            poll = max(5.0, float(feats.companion_ws_proactive_heartbeat_poll_seconds))
+            poll = max(
+                _COMPANION_WS_INNER_TICK_POLL_FLOOR_SECONDS,
+                float(feats.companion_ws_proactive_heartbeat_poll_seconds),
+            )
             try:
                 await asyncio.wait_for(hb_worker_stop.wait(), timeout=poll)
                 break
@@ -2608,10 +2633,13 @@ async def chat_completions_websocket(
                         "companion tool_bg receive task disconnected while queue event was ready"
                     )
                 except RuntimeError as exc:
-                    logger.debug(
-                        "companion tool_bg receive task ended during queue dispatch: {}",
-                        exc,
-                    )
+                    if _is_ws_receive_text_not_connected_runtime_error(exc):
+                        logger.debug(
+                            "companion tool_bg receive task ended during queue dispatch: {}",
+                            exc,
+                        )
+                    else:
+                        raise
                 try:
                     ev = queue_task.result()
                 except Exception as exc:
@@ -2654,6 +2682,12 @@ async def chat_completions_websocket(
             except asyncio.TimeoutError:
                 await websocket.close()
                 return
+            except WebSocketDisconnect:
+                return
+            except RuntimeError as exc:
+                if _is_ws_receive_text_not_connected_runtime_error(exc):
+                    return
+                raise
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
@@ -2814,6 +2848,12 @@ async def chat_completions_websocket_verify(
             except asyncio.TimeoutError:
                 await websocket.close()
                 return
+            except WebSocketDisconnect:
+                return
+            except RuntimeError as exc:
+                if _is_ws_receive_text_not_connected_runtime_error(exc):
+                    return
+                raise
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:

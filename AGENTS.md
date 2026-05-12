@@ -52,7 +52,7 @@ Inty 代表 Intelligent Entity - 智能存在；
 - Agentic core
   - [agentic_kernel](/app/core/agentic_kernel/): Inty's core agentic harness
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user, and inferred from the user's actual living space.
-  - [techno_core](/techno_core/)：Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
+  - [techno_core](/techno_core/)：collective virtual world of living spheres and shared spaces; Inty **虚拟居留层**的概念归宿（Hyperion 式球层隐喻、`Sphere` 枚举、自主行为表面定义）
 - Applications
   - Backend
     - [ws-data-model](/app/schemas/chat.py): communication protocols
@@ -71,6 +71,7 @@ they are in development mode.
 
 ## Your response style
 
+- For yes/no questions, reply with 1 sentence answer, no elaboration
 - Must use bullet points to organize the content, which are very structured
 - Respond with information from most to least importance
 - Always answer with 1 sentence summary.
@@ -82,7 +83,7 @@ they are in development mode.
 - Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
 - Apply them silently. Do not re-announce learned behavior.
 - If the user corrects your mistake: remember it and record it if necessary.
-- Follow `/.agents/agents_mds/WORK_LOGS.md` to log siganificant work items.
+- Follow `/.agents/guidelines/WORK_LOGS.md` to log siganificant work items.
 
 ### /.agents/guidelines
 

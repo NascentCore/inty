@@ -13,6 +13,8 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.config import global_config_loaded_from_config_yaml as _global_config
+from app.core.user_time_context_prompt import suffix_user_text_with_time_context_lines
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 from .heartbeat import (
@@ -111,6 +113,27 @@ def resolve_turn_runtime_flags(
         route_inner_mode=route_inner_mode,
         implicit_sign_on_turn=implicit_sign_on_turn,
     )
+
+
+def _companion_tail_user_body_for_llm(
+    *,
+    user_text: str,
+    implicit_sign_on_turn: bool,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> str:
+    """Tail user text for the LLM, with optional ``user-time:`` facts from ``client_time``."""
+    base = (
+        USER_SIGNED_ON_TRIGGER_USER_TEXT
+        if implicit_sign_on_turn
+        else user_text
+    )
+    enabled = bool(
+        _global_config.app.features.experimental_enable_chat_with_user_time_context
+    )
+    ctx = None
+    if implicit_signal_bundle and implicit_signal_bundle.client_time:
+        ctx = implicit_signal_bundle.client_time.model_dump(exclude_none=True)
+    return suffix_user_text_with_time_context_lines(base, ctx, enabled=enabled)
 
 
 def load_companion_turn_state(
@@ -220,11 +243,12 @@ def build_companion_turn_prompt_plan(
 
     if tick_proactive:
         messages.append({"role": "system", "content": HEARTBEAT_SYNTHETIC_USER_TEXT})
-    if implicit_sign_on_turn:
-        # Tail user (not system): same copy as trailing system caused repetitive greetings.
-        messages.append({"role": "user", "content": USER_SIGNED_ON_TRIGGER_USER_TEXT})
-    else:
-        messages.append({"role": "user", "content": user_text})
+    tail_user = _companion_tail_user_body_for_llm(
+        user_text=user_text,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+        implicit_signal_bundle=implicit_signal_bundle,
+    )
+    messages.append({"role": "user", "content": tail_user})
 
     return CompanionTurnPromptPlan(
         tools_for_turn=tools_for_turn,

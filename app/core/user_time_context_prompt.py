@@ -1,21 +1,17 @@
-"""Shared markdown for ##User Time Context (classic Agent + companion implicit signals)."""
+"""User local time context for LLM requests.
+
+Classic Agent and the companion kernel append a short factual tail to the **last user**
+message (see ``suffix_user_text_with_time_context_lines``) when
+``experimental_enable_chat_with_user_time_context`` is enabled, instead of injecting a
+long system block. ``format_utc_offset_minutes`` formats ``utc_offset_minutes`` for the
+optional ``user-time-utc-offset:`` line.
+"""
 
 from __future__ import annotations
 
 from typing import Any, Mapping
 
 MINUTES_PER_HOUR = 60
-
-USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE = "##User Time Context"
-USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE = [
-    "- This time reflects the user's local time, not the assistant's.",
-    "- Use it only as context for the user's situation and daily rhythm.",
-    "- You may softly infer typical human activities from the local hour (for example "
-    "morning routines or breakfast, midday work or lunch, evening wind-down or dinner, "
-    "late night rest) as loose priors, not facts about this user.",
-    "- Treat these as gentle scene context; avoid lecturing or assuming their schedule.",
-    "- Do not claim to need sleep or be offline.",
-]
 
 
 def format_utc_offset_minutes(offset_minutes: int) -> str:
@@ -25,29 +21,38 @@ def format_utc_offset_minutes(offset_minutes: int) -> str:
     return f"UTC{sign}{hours:02d}:{minutes:02d}"
 
 
-def build_user_time_context_markdown(
+def suffix_user_text_with_time_context_lines(
+    user_text: str,
     user_time_context: Mapping[str, Any] | None,
-) -> str | None:
-    """Same contract as legacy ``Agent._build_user_time_context_prompt`` (TypedDict-shaped mapping)."""
-    if not user_time_context:
-        return None
+    *,
+    enabled: bool,
+) -> str:
+    """Append ``user-time:`` / ``user-time-zone:`` / optional ``user-time-utc-offset:`` after ``user_text``.
 
-    lines = [USER_TIME_CONTEXT_SYSTEM_PROMPT_TITLE]
+    When ``enabled`` is false, or ``user_time_context`` is empty, or no field yields a
+    non-empty line, returns ``user_text`` unchanged. Lines with missing or blank values
+    are omitted entirely (no empty key lines). A blank line separates the body from the
+    suffix block; suffix lines use single ``\\n`` between them.
+    """
+    if not enabled or not user_time_context:
+        return user_text
 
+    meta_lines: list[str] = []
     local_time = user_time_context.get("local_time")
-    if local_time:
-        lines.append(f"- User local time: {local_time}")
+    if isinstance(local_time, str) and local_time.strip():
+        meta_lines.append(f"user-time: {local_time.strip()}")
 
     tz = user_time_context.get("timezone")
-    if tz:
-        lines.append(f"- User timezone: {tz}")
+    if isinstance(tz, str) and tz.strip():
+        meta_lines.append(f"user-time-zone: {tz.strip()}")
 
     utc_offset_minutes = user_time_context.get("utc_offset_minutes")
     if isinstance(utc_offset_minutes, int):
-        lines.append(f"- UTC offset: {format_utc_offset_minutes(utc_offset_minutes)}")
+        meta_lines.append(
+            f"user-time-utc-offset: {format_utc_offset_minutes(utc_offset_minutes)}"
+        )
 
-    if len(lines) == 1:
-        return None
+    if not meta_lines:
+        return user_text
 
-    lines.extend(USER_TIME_CONTEXT_SYSTEM_PROMPT_GUIDANCE)
-    return "\n".join(lines)
+    return f"{user_text}\n\n" + "\n".join(meta_lines)
