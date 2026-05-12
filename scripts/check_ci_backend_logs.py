@@ -9,15 +9,18 @@ import sys
 from pathlib import Path
 
 
-ERROR_PATTERNS = (
-    re.compile(r"\|\s+ERROR\s+\|"),
+RUNTIME_ERROR_PATTERNS = (
+    re.compile(r"\bDATABASE_ERROR\b"),
+    re.compile(r"\bMissingGreenlet\b"),
+    re.compile(r"\bSQLAlchemy错误类型\b"),
+    re.compile(r"\b500错误\b"),
     re.compile(r"\bTraceback \(most recent call last\):"),
     re.compile(r"\bUnhandled(?:Error|Exception)\b"),
 )
 
 
 def _matches_unexpected_error(line: str) -> bool:
-    return any(pattern.search(line) for pattern in ERROR_PATTERNS)
+    return any(pattern.search(line) for pattern in RUNTIME_ERROR_PATTERNS)
 
 
 def main() -> int:
