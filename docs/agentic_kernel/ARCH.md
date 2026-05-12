@@ -1,13 +1,6 @@
 # iMate / Agentic Companion: 当前架构
 
-本文面向维护 iMate Android、REPL 调试工具和后端 companion kernel 的工程师；产品级入口见 [`/docs/imate/ARCH.md`](/docs/imate/ARCH.md)。
-
-- 实现链条: [`chat.py`](/app/api/v1/endpoints/chat.py) `_agent_chat_completions_impl` · [`companion_chat_service`](/app/services/companion_chat_service.py) · [`turn.run_turn`](/app/core/agentic_kernel/companion/turn.py) · 帧与契约 [`app/api/AGENTS.md`](/app/api/AGENTS.md) · 包内细节 [`companion/AGENTS.md`](/app/core/agentic_kernel/companion/AGENTS.md)
-- 分层记忆说明: [`MEMORY_PIPELINE.md`](/docs/agentic_kernel/MEMORY_PIPELINE.md)
-- MemoryStore 与向量 LTM: [`MEMORY_STORE.md`](/docs/agentic_kernel/MEMORY_STORE.md)
-- 会话智能 × 实时性（对照网格）: [`conversation_intelligence_realtime_grid.md`](/docs/agentic_kernel/conversation_intelligence_realtime_grid.md)
-- 架构演进点子池: [`IDEAS.md`](/docs/agentic_kernel/IDEAS.md)
-- `/api/v1/chat/ws` 传输与帧约定 (English): 下文 [**WebSocket Protocol**](#websocket-protocol) 小节.
+This describes the logical architecture of the code under this dir.
 
 ## 一句话总结
 
