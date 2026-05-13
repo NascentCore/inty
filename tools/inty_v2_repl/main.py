@@ -37,11 +37,7 @@ from .backend_chat_ws import (
     default_api_base_url,
     http_base_to_ws_chat_url,
 )
-from .proto_log import (
-    configure_proto_log,
-    repl_wall_ts_str,
-    resolve_proto_log_file,
-)
+from .proto_log import configure_proto_log, repl_wall_ts_str
 from .repl_dotenv import load_prototype_dotenv
 from .repl_message_io import format_ws_error_banner, pop_downlink_item
 
@@ -49,10 +45,6 @@ load_prototype_dotenv()
 
 _repl_langsmith_client: Any | None = None
 _repl_langsmith_client_import_failed = False
-
-
-def _default_workspace() -> Path:
-    return Path(__file__).resolve().parent / "workspace"
 
 
 def _repl_langsmith_url_stitched(run_uuid: str) -> str:
@@ -262,19 +254,9 @@ def _print_assistant_reply(
     print(out)
 
 
-def _init_proto_logging(
-    workspace: Path,
-    log_file: Path | None,
-    no_log_file: bool,
-) -> None:
-    resolved = resolve_proto_log_file(
-        workspace, explicit=log_file, no_log_file=no_log_file
-    )
-    configure_proto_log(resolved)
-    logger.info(
-        "inty_v2 proto logging file={}",
-        str(resolved) if resolved is not None else "(stderr only)",
-    )
+def _init_proto_logging() -> None:
+    configure_proto_log()
+    logger.info("inty_v2 proto logging (stderr)")
 
 
 def _format_cli_exc(exc: BaseException) -> str:
@@ -622,12 +604,9 @@ def _repl_interactive_backend_ws_loop(
 
 
 def _repl_run_backend_ws_branch(
-    ws: Path,
     *,
     agent_id: str | None,
     api_base_url: str | None,
-    log_file: Path | None,
-    no_log_file: bool,
 ) -> None:
     agent_resolved = _resolve_chat_agent_id_cli(agent_id)
     base = (api_base_url or default_api_base_url()).strip()
@@ -643,7 +622,7 @@ def _repl_run_backend_ws_branch(
         agent_resolved,
         repl_ws_conn_id,
     )
-    _init_proto_logging(ws, log_file, no_log_file)
+    _init_proto_logging()
     repl_notice_q: queue.Queue[str] = queue.Queue()
 
     def _user_signed_on_notice(aid: str, message_id: str) -> None:
@@ -692,7 +671,7 @@ def _repl_run_backend_ws_branch(
 
 
 _REPL_APP_HELP = (
-    "Inty /api/v1/chat/ws terminal client; --workspace is for local logs only.\n\n"
+    "Inty /api/v1/chat/ws terminal client.\n\n"
     "Each assistant downlink prints a metadata section (one line): wall clock, source label, "
     "elapsed ms, correlation key=value tokens from meta_data, optional LangSmith UI URLs, "
     "and optional tool_background_started=true. Additional lines after the assistant body "
@@ -707,24 +686,6 @@ app = App(
 
 @app.command
 def repl(
-    workspace: Annotated[
-        Path | None,
-        Parameter(
-            name="--workspace",
-            help="日志等本地输出目录；默认包内 workspace/",
-        ),
-    ] = None,
-    log_file: Annotated[
-        Path | None,
-        Parameter(
-            name="--log-file",
-            help="loguru 文件日志；默认 <workspace>/inty_v2.log",
-        ),
-    ] = None,
-    no_log_file: Annotated[
-        bool,
-        Parameter(name="--no-log-file", help="不写 inty_v2.log，仅 stderr"),
-    ] = False,
     agent_id: Annotated[
         str | None,
         Parameter(
@@ -741,13 +702,9 @@ def repl(
     ] = None,
 ) -> None:
     """连接 Inty /api/v1/chat/ws，交互输入；对话与 bootstrap 由服务端处理。"""
-    ws = workspace or _default_workspace()
     _repl_run_backend_ws_branch(
-        ws,
         agent_id=agent_id,
         api_base_url=api_base_url,
-        log_file=log_file,
-        no_log_file=no_log_file,
     )
 
 
