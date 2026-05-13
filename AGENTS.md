@@ -71,12 +71,13 @@ such experience is between human users and AI, but they have real-world patterns
     - [iMate android app](/imate_android_app/)
     - [iMate iOS app](/imate_ios_app/)
 - Repo agentic harness
-  - [.agents](/.agents/) general coding agents instructions & harness contextual information.
+  - [.agents](/.agents/) coding agents instructions & harness contextual information.
   - [.cursor](/.cursor/) Cursor-specific harness
-- Miscs: read AGENTS.md or README.md under the dirs for information.
+- Docs for your human parnters
+  - Markdown files spreaded across the repo not under `/.agents/`
 
 IMPORTANT: feel free to break backward compatibility when changing companion_harness & repl,
-they are in development mode.
+they are under adtive development.
 
 ## Your response style
 
@@ -100,14 +101,6 @@ they are in development mode.
 - Log important works to [work_logs](/.agents/work_logs/)
   - Large changes usually should be recorded
 
-### /.agents/guidelines
-
-| Topic | Path |
-|-------|------|
-| Agent conduct, output, code, Python docstrings | [agent-conduct-and-code.md](/.agents/guidelines/agent-conduct-and-code.md) |
-| Cursor Cloud VM: services, tests, emulator, gotchas | [cursor-cloud-environment.md](/.agents/guidelines/cursor-cloud-environment.md) |
-| Cloud Agent git and PR contract | [CLOUD_AGENTS.md](/.agents/guidelines/CLOUD_AGENTS.md) |
-
 ## Engineering guidelines
 
 ### Writing code
@@ -126,6 +119,8 @@ they are in development mode.
 - Idempotence is required for code paths with side-effects
 
 ### 工程文档层次结构
+
+When asked to update docs:
 
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
