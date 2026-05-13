@@ -2,7 +2,7 @@
 
 - **调度**：依据 transcript 里用户消息间隔估计对话节奏，再结合配置（基准安静时长、两次心跳最短间隔、最少 transcript 行数等）计算 ``next_heartbeat_wait_seconds``；不满足前置条件时等价于「暂不开口」。
 - **文案常量**：为主动心跳回合提供 system 侧约束与 user 占位（满足多轮 chat 形态）；占位正文的主路径在 turn 管线里按时间与 transcript 生成，本模块内的字面常量仅作回退。
-- **与回合执行的关系**：真正触发 LLM 时使用内层 tick、``InnerTickMode.PROACTIVE_CHAT``；transcript 对用户占位行打 ``heartbeat`` 标记，供本模块识别「上一次心跳」与真实用户消息的先后关系。具体注入顺序见 companion turn 管线实现。
+- **与回合执行的关系**：真正触发 LLM 时使用内层 tick、``InnerTickMode.PROACTIVE_CHAT``；transcript 对用户占位行打 ``heartbeat`` 标记，供 ``min_gap_sec``（锚上一次心跳 user）与占位文案（如 ``build_proactive_heartbeat_transcript_user_marker``）区分合成 user 与真人 user。具体注入顺序见 companion turn 管线实现。
 """
 
 from __future__ import annotations
@@ -157,21 +157,6 @@ def _last_heartbeat_user_ts(msgs: list[ChatMessage]) -> datetime | None:
     return None
 
 
-def _has_real_user_after_last_heartbeat(msgs: list[ChatMessage]) -> bool:
-    hb_idx: int | None = None
-    for i in range(len(msgs) - 1, -1, -1):
-        m = msgs[i]
-        if m.role == "user" and m.heartbeat is True:
-            hb_idx = i
-            break
-    if hb_idx is None:
-        return True
-    for m in msgs[hb_idx + 1 :]:
-        if m.role == "user" and m.heartbeat is not True:
-            return True
-    return False
-
-
 def next_heartbeat_wait_seconds(
     store: MemoryStore,
     config: HeartbeatConfig,
@@ -194,9 +179,6 @@ def next_heartbeat_wait_seconds(
 
     last_asst = _last_assistant_ts(msgs)
     if last_asst is None:
-        return _NEVER
-
-    if not _has_real_user_after_last_heartbeat(msgs):
         return _NEVER
 
     t = now if now is not None else datetime.now(timezone.utc)
