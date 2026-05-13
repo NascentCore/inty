@@ -10,7 +10,7 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
 
 from loguru import logger
 
@@ -69,8 +69,9 @@ LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
 LOGGING_MESSAGE_FORMAT = "{message}"
 
 
-@dataclass
-class LoggingConfig:
+class LoggingConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     level: str = "INFO"
     # 默认格式，不使用颜色；{file.path} 为完整路径，便于终端/IDE 点击跳转
     format: str = (
@@ -79,10 +80,12 @@ class LoggingConfig:
     # 是否使用颜色
     colorize: bool = False
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def apply_colorized_format(self) -> "LoggingConfig":
         if self.colorize:
             # 区分四块：时间=绿，级别=按级别着色，位置=品红(含完整路径)，正文=白
             self.format = f"<green>{LOGGING_TIME_FORMAT}</green> | <level>{LOGGING_LEVEL_FORMAT}</level> | <magenta>{LOGGING_FILE_FORMAT}</magenta> - <white>{LOGGING_MESSAGE_FORMAT}</white>"
+        return self
 
 
 @dataclass
@@ -687,7 +690,7 @@ def load_config(path: str) -> Config:
         database=DatabaseSettings(**data.get("database", {})),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
         verification=VerificationConfig(**data.get("verification", {})),
-        logging=LoggingConfig(**data.get("logging", {})),
+        logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig(**data.get("gcs", {})),

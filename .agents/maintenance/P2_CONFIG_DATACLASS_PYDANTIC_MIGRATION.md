@@ -58,7 +58,7 @@ flowchart TB
 
 | task_id | class | depends_on | load_config 触达 YAML 键 | 备注 |
 |--------|-------|------------|---------------------------|------|
-| CFG-PYD-01 | `LoggingConfig` | — | `logging` | `__post_init__` 按 `colorize` 改 `format` → `model_validator(after)` |
+| CFG-PYD-01 | `LoggingConfig` | — | `logging` | 已完成：`__post_init__` 按 `colorize` 改 `format` → `model_validator(after)` |
 | CFG-PYD-02 | `SecurityConfig` | — | `security` | 纯字段 |
 | CFG-PYD-03 | `DatabaseSettings` | — | `database` | 保留 `@property`：`url` / `async_url` / `async_replica_url` |
 | CFG-PYD-04 | `GoogleOAuthConfig` | — | `google_oauth` | 纯字段 |
