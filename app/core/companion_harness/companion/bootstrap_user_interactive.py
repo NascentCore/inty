@@ -132,7 +132,6 @@ def tool_companion_update_prompt_slice(
     slice_name: str,
     content: str,
 ) -> str:
-    from .image_gate import register_profile_write
     from .memory_store_document_mapping import parse_memory_store_relative_path
 
     sid = parse_persistable_prompt_slice_id(slice_name)
@@ -153,14 +152,7 @@ def tool_companion_update_prompt_slice(
             "you may still update IDENTITY / USER / MEMORY via companion_update_prompt_slice "
             "or memory_store_write_document (where permitted)."
         )
-    prev = st.read_document_if_exists(rel_posix)
     st.write_document(rel_posix, content)
-    register_profile_write(
-        st,
-        rel_posix,
-        changed=(prev != content),
-        new_content=content,
-    )
     logger.info(
         "companion_update_prompt_slice slice={} rel={} chars={}",
         sid.value,

@@ -32,12 +32,9 @@ from .fal_z_image_tool import (
     run_modify_image_z_image_turbo,
 )
 from .image_gate import (
-    check_image_tool_allowed,
     current_persona_revision_id,
     find_latest_asset_by_local_relative_path,
     list_image_asset_records,
-    mark_image_tool_completed,
-    register_profile_write,
 )
 from .bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
@@ -225,12 +222,6 @@ def tool_user_profile_record(store: MemoryStore, items: list[dict[str, Any]]) ->
         return "ERROR: no valid items (need label and value for each entry)"
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
-    register_profile_write(
-        store,
-        rel,
-        changed=(merged != prev),
-        new_content=merged,
-    )
     return f"OK appended {len(bullets)} line(s) to {_USER_MD_REL}"
 
 
@@ -335,14 +326,11 @@ def tool_memory_store_write_document(
             "ERROR: SOUL.md is immutable after interactive bootstrap completes; "
             "you may still update IDENTITY.md, USER.md, MEMORY.md, and other allowed paths."
         )
-    prev_body = st.read_document_if_exists(rel)
     if rel in ("transcript.jsonl", "transcript_inner_tick.jsonl"):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
             return v_err
     st.write_document(rel, content)
-    changed = prev_body != content
-    register_profile_write(store, rel, changed=changed, new_content=content)
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 
@@ -1213,9 +1201,6 @@ async def _dispatch(
             return "ERROR: max_bullets must be a positive integer or omitted"
         return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
     if name == "generate_image":
-        gate_err = check_image_tool_allowed(store, tool_name="generate_image")
-        if gate_err is not None:
-            return gate_err
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
@@ -1259,13 +1244,8 @@ async def _dispatch(
             store.scope.registry_key(),
             not out.startswith("ERROR:"),
         )
-        if not out.startswith("ERROR:"):
-            mark_image_tool_completed(store, tool_name="generate_image")
         return out
     if name == "modify_image":
-        gate_err = check_image_tool_allowed(store, tool_name="modify_image")
-        if gate_err is not None:
-            return gate_err
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):
             return "ERROR: prompt must be a string"
@@ -1337,8 +1317,6 @@ async def _dispatch(
             store.scope.registry_key(),
             not out.startswith("ERROR:"),
         )
-        if not out.startswith("ERROR:"):
-            mark_image_tool_completed(store, tool_name="modify_image")
         return out
     if name == "companion_update_prompt_slice":
         raw_slice = arguments.get("slice")
