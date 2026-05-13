@@ -405,6 +405,13 @@ def build_system_messages(
     out.append(_system_message("## IDENTITY\n\n" + bundle.identity.strip()))
     out.append(_system_message("## SOUL\n\n" + bundle.soul.strip()))
     out.append(_system_message(experience_profile_system_clause(context.context_mode)))
+    if bundle.techno_core_md.strip():
+        out.append(
+            _system_message(
+                "## TECHNO CORE（Inty 的虚拟居留层）\n\n"
+                + bundle.techno_core_md.strip()
+            )
+        )
     if bundle.living_sphere_md.strip():
         out.append(
             _system_message(
