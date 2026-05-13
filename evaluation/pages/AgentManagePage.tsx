@@ -467,7 +467,8 @@ export const AgentManagePage: React.FC = () => {
       setDeepLinkedAgentId(getDeepLinkedAgentIdFromHash(window.location.hash));
     };
     window.addEventListener("hashchange", syncDeepLinkedAgentId);
-    return () => window.removeEventListener("hashchange", syncDeepLinkedAgentId);
+    return () =>
+      window.removeEventListener("hashchange", syncDeepLinkedAgentId);
   }, []);
 
   useEffect(() => {

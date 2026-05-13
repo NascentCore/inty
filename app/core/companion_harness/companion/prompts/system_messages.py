@@ -27,7 +27,9 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from ..bootstrap_user_interactive import (
     build_interactive_bootstrap_system_message_parts,
 )
-from app.core.companion_harness.memory.memory_store_scope import get_imate_axiom_system_text
+from app.core.companion_harness.memory.memory_store_scope import (
+    get_imate_axiom_system_text,
+)
 from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_EPISODIC,
     MEMORY_SYSTEM_HEADING_GIST,

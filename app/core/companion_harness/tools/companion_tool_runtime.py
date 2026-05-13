@@ -32,11 +32,18 @@ from app.core.companion_harness.companion.bootstrap_user_interactive import (
     tool_companion_set_experience_profile,
     tool_companion_update_prompt_slice,
 )
-from app.core.companion_harness.companion.message_format import openai_assistant_message_dict
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
+)
 from app.core.companion_harness.companion.models import ChatMessage, load_context_meta
 from app.core.companion_harness.companion.schedule_queue import add_schedule_task
-from app.core.companion_harness.memory.memory_store import MemoryStore, normalize_memory_store_relative_path
-from app.core.companion_harness.memory.memory_store_document_mapping import parse_memory_store_relative_path
+from app.core.companion_harness.memory.memory_store import (
+    MemoryStore,
+    normalize_memory_store_relative_path,
+)
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    parse_memory_store_relative_path,
+)
 
 from .fal_z_image_tool import (
     MAX_NUM_IMAGES_PER_CALL,
