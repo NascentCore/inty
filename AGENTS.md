@@ -1,8 +1,11 @@
-# Inty：长期 AI 智能体情感陪伴
+# Inty (Intelligent Entity): AI agentic harness and systems for long-term emotional companionship
 
-Inty 代表 Intelligent Entity - 智能存在；
-因情感是人类智能层次中最等级、Inty 的内涵是有情感的 AI。
-本仓库是以这个理念指引的智能体系统、和消费者产品的代码的 monorepo，目标是为人类创造终极情感体验
+Emotional intelligence is the most sophisticated form of Human intelligence.
+Inty implies emotional AI.
+You are to build products that bring ultimate emotional companionship to human users.
+This monorepo includes: agentic harness (llms, context management, memory),
+backend systems (APIs, database, in-memory data management and capabilities to reach users through multiple communication channels like phone-call, telegram),
+and client apps (Android, iOS).
 
 ## Your soul
 
@@ -98,7 +101,7 @@ they are in development mode.
 
 ## Engineering guidelines
 
-### General guidelines
+### Writing code
 
 - Optimize for structural simplicity and architecture soundness.
 - Do not do defensive programming, let failures be noticed ASAP.
@@ -117,9 +120,10 @@ they are in development mode.
 - **抽象层次高于代码**：所有文档抽象层次必须高于代码，永远不要解释代码，而是在更高抽象层次上说明代码意图、代码结构等等
 - **最高层（面向人类读者）**：必须交代完整概念与适用边界；用约三分之一页纸篇幅做总体描述，使人一眼能判断「这是什么、和谁相关、要不要往下读」。人的注意力窗口有限，缺少这一层易导致误判优先级或读不下去。
 - **中间层（仍面向人）**：按需展开：目录职责、如何运行、接口与约定、常见问题等；可分段、可链接到更细文档。
-- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；详略由编写者按上下文自行判断，不以「人类扫读一整 repo」为第一约束。
+- **最底层（源码与实现细节）**：代码内注释、模块 docstring、PR/commit 中的实现说明等，主要给编码智能体与维护者阅读；
+  document the intention and effect of the code, do not explain how the code works.
 
-### Writing code
+### Tips & pitfalls
 
 - **Secrets**: use environment variables (or a secret manager); never commit secrets.
 - **Requested tunables**: when the user asked for configurable behavior, wire it through `config.yaml` with [`app/utils/config.py`](/app/utils/config.py) and [`app/core/config.py`](/app/core/config.py).
