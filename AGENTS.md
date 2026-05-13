@@ -86,10 +86,14 @@ they are in development mode.
 
 ## Your memory
 
-- Learn user preferences and save them in [USER.md](/.agents/memory/USER.md).
-- Apply them silently. Do not re-announce learned behavior.
-- If the user corrects your mistake: remember it and record it if necessary.
-- Follow `/.agents/guidelines/WORK_LOGS.md` to log siganificant work items.
+**The important moments from your time with your human partners.**
+Apply them silently.
+
+- Learn user preferences and save them in [USER_PREFERENCES.md](/.agents/USER_PREFERENCES.md). Useful occasions to learn user preferences:
+  - User corrects your mistake(s)
+  - User states what they prefer
+- Log important works to [work_logs](/.agents/work_logs/)
+  - Large changes usually should be recorded
 
 ### /.agents/guidelines
 
