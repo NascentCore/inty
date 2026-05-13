@@ -87,8 +87,9 @@ class LoggingConfig(BaseModel):
         return self
 
 
-@dataclass
-class SecurityConfig:
+class SecurityConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     # This config cannot be changed after it's deployed, otherwise the existing tokens will be invalid.
     # This is because the token is encrypted using this secret key.
     secret_key: str = "your-secret-key-here"
@@ -685,7 +686,7 @@ def load_config(path: str) -> Config:
 
     return Config(
         app=AppConfig(**app_data),
-        security=SecurityConfig(**data.get("security", {})),
+        security=SecurityConfig.model_validate(data.get("security") or {}),
         database=DatabaseSettings(**data.get("database", {})),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
         verification=VerificationConfig(**data.get("verification", {})),
