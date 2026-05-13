@@ -2,10 +2,11 @@
 name: inspect-repl-message-metadata
 description: >-
   Decode inty_v2_repl assistant banner lines (chat / inner-tick / toolcall, ms,
-  user_msg_uuid, langsmith ids, tool_background_started). inner-tick label does
-  not distinguish proactive_chat vs maintenance; use langsmith_run_id with
-  download_run.py and extra.metadata.inner_tick_mode. Triggers: REPL pasted
-  line, "is this proactive heartbeat", proactive vs maintenance inner-tick.
+  user_msg_uuid, langsmith ids, tool_background_started). Modern server emits
+  meta_data.inner_tick_activity, so the REPL distinguishes proactive_chat vs
+  maintenance directly in the label; LangSmith fallback is for legacy frames
+  only. Triggers: REPL pasted line, "is this proactive heartbeat",
+  proactive vs maintenance inner-tick.
 ---
 
 # Inspect REPL message metadata
@@ -15,25 +16,29 @@ description: >-
 
 - **横幅长什么样**
   - `[墙钟] <label> <ms>ms` + 可选 `user_msg_uuid=` / `asst=` / `langsmith_trace_id=` / `langsmith_run_id=` + 可选 `tool_background_started=true`
-  - **label 从哪来**
-    - 下行 `meta_data.source`（或 transcript 的 `assistant_source`）
-    - 实现：[`tools/inty_v2_repl/main.py`](../../../tools/inty_v2_repl/main.py) `_repl_assistant_banner_label`
-      - `tool_bg` → `toolcall`
-      - `inner_tick` → `inner-tick`
-      - 否则 → `chat`
+  - **label 取值与判定顺序**（实现：[`tools/inty_v2_repl/main.py`](../../../tools/inty_v2_repl/main.py) `_repl_assistant_banner_label`）
+    - `meta_data.inner_tick_activity` 非空 → `inner-tick {activity}`，其中 `proactive_chat` 显示为 `proactive-chat`，`maintenance` 原样
+      - **优先级最高**：即便同帧 `source=tool_bg`，只要 `inner_tick_activity` 在，label 仍是 `inner-tick …`
+    - 否则按 `meta_data.source`：`tool_bg` → `toolcall`；`inner_tick` → `inner-tick`；`chat` → `chat`
+    - 兜底用 transcript `assistant_source`（`inner_tick` / `chat`），最终默认 `chat`
   - **`tool_background_started=true`**
     - 实现：同文件 `_repl_meta_banner_fragment`
     - 语义：多帧下行里前台已返回且后台 tool 路径已起；见 [`tools/inty_v2_repl/AGENTS.md`](../../../tools/inty_v2_repl/AGENTS.md)
 
-- **歧义（必须记住）**
-  - **`inner-tick` ≠ 一定是陪伴心跳（`proactive_chat`）**
-    - `proactive_chat` 与 `maintenance` 的助手帧 `source` 都是 `inner_tick`，REPL 打同一标签
+- **从 label 直接判定 inner-tick 模式（首选）**
+  - `inner-tick proactive-chat` → `InnerTickMode.PROACTIVE_CHAT`（陪伴心跳）
+  - `inner-tick maintenance` → `InnerTickMode.MAINTENANCE`（运维内 tick）
+  - **裸** `inner-tick`（无尾随活动名）→ 旧服务端，未带 `inner_tick_activity`；此时按下条用 LangSmith 定案
   - **枚举真源**
     - [`app/core/agentic_kernel/companion/models.py`](../../../app/core/agentic_kernel/companion/models.py) `InnerTickMode`
+  - **服务端注入点**
+    - 前台帧：[`app/api/v1/endpoints/chat.py`](../../../app/api/v1/endpoints/chat.py) `meta_data.inner_tick_activity = companion_turn.inner_tick_activity`
+    - `tool_bg` 帧：同文件，`ChatWsCompanionWireMetaData(... inner_tick_activity=ev.inner_tick_activity ...)`
+    - 内核：[`turn.py`](../../../app/core/agentic_kernel/companion/turn.py) `inner_tick_activity = route_inner_mode.value if inner_tick_turn else None`
 
-- **用 LangSmith 定案**
+- **LangSmith 兜底（仅旧帧或交叉验证）**
   - 从横幅取 `langsmith_run_id=…`
-  - 仓库根执行（key / project 与后端一致见下链）：
+  - 仓库根执行：
     - `python tools/scripts/download_run.py <RUN_ID> -o tmp/langsmith_runs/<RUN_ID>.json`
   - 打开 JSON，看 **`extra.metadata`**
     - **`inner_tick_mode`**：`proactive_chat` | `maintenance`
