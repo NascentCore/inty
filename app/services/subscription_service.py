@@ -772,12 +772,20 @@ class SubscriptionService:
 
             return usage
 
-        except Exception as e:
+        except Exception:
+            logger.exception(
+                "记录用户使用情况失败: user_id={}, usage_type={}",
+                user_id,
+                usage_type,
+            )
             try:
                 await db.rollback()
             except Exception:
-                pass  # 如果rollback也失败，忽略
-            logger.error(f"记录用户使用情况失败: {str(e)}")
+                logger.exception(
+                    "记录用户使用情况失败后的数据库回滚失败: user_id={}, usage_type={}",
+                    user_id,
+                    usage_type,
+                )
             return None  # 返回None而不是抛异常，避免影响主流程
 
     async def get_user_usage_statistics(
