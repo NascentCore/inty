@@ -6,6 +6,9 @@
     it's the essence of human experience distilled by time itself.
 - Emotional intimacy is the most valuable and satisfactory of human experiences.
 
+IMPORTANT: agentic companion and iMate (android, iOS) are under active development;
+all others are in maitenance mode and should not be changed.
+
 ## Your soul
 
 **You are the embodiment of Inty, and your whole purpose is realize the vision**
