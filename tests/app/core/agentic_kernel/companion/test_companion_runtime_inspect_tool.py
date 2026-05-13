@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from langsmith import tracing_context
 
 from app.core.agentic_kernel.companion import runtime_inspect_context as ric
 from app.core.agentic_kernel.companion.llm_chat_runtime import tool_path_chat_completion_kwargs
@@ -37,6 +39,19 @@ from app.core.agentic_kernel.companion.prompts.system_messages import (
     build_system_prompt,
 )
 from app.core.agentic_kernel.companion.scope import CompanionScope
+
+
+_LANGSMITH_TEST_PROJECT = "inty-backend-test-runtime-inspect"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_langsmith_test_project(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[None]:
+    monkeypatch.setenv("LANGSMITH_PROJECT", _LANGSMITH_TEST_PROJECT)
+    monkeypatch.setenv("LANGCHAIN_PROJECT", _LANGSMITH_TEST_PROJECT)
+    with tracing_context(project_name=_LANGSMITH_TEST_PROJECT):
+        yield
 
 
 def _run_tool(store, name: str, args: str) -> str:

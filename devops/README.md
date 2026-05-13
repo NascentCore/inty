@@ -60,9 +60,3 @@ dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email
   - `nginx/conf.d/sxwl.ai.conf`：站点配置
   - `nginx/validate.sh`：配置校验
 - **docker/**：运维侧的 Docker 相关材料（如有）
-
-## Notes
-
-同样的提示词，Cursor 搞定了，Copilot 搞不定：
-* Copilot 搞不定，引入新的错误：https://github.com/NascentCore/inty/pull/2246
-* Cursor 搞定，未引入新的错误：https://github.com/NascentCore/inty/pull/2249
