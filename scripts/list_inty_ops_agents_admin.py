@@ -118,13 +118,11 @@ def run_list(
 
 def main(argv: list[str] | None = None) -> int:
     default_api = (
-        (os.environ.get("INTY_API_BASE_URL") or "").strip()
-        or "http://127.0.0.1:8001"
-    )
+        os.environ.get("INTY_API_BASE_URL") or ""
+    ).strip() or "http://127.0.0.1:8001"
     default_token = (
-        (os.environ.get("INTY_OPS_BEARER_TOKEN_FILE") or "").strip()
-        or ".inty_ops_bearer_token"
-    )
+        os.environ.get("INTY_OPS_BEARER_TOKEN_FILE") or ""
+    ).strip() or ".inty_ops_bearer_token"
 
     p = argparse.ArgumentParser(
         description=(

@@ -7,7 +7,6 @@ import argparse
 import asyncio
 import json
 import os
-import shutil
 import sys
 import tempfile
 import time
@@ -45,6 +44,8 @@ def _maybe_load_config_yaml(path: Path | None) -> dict[str, str]:
 from app.core.agentic_kernel.companion.manager import CompanionConfig, CompanionManager
 from app.core.agentic_kernel.companion.llm_client import CompanionLLMConfig
 from app.core.agentic_kernel.companion.memory_pipeline import MemoryPipelineConfig
+from app.core.agentic_kernel.companion.memory_registry import shutdown_memory_store
+from app.core.agentic_kernel.companion.scope import CompanionScope
 
 from experimental.harness_seeding_demo.scorer.rubrics import (
     DEFAULT_RUBRIC_THRESHOLDS,
@@ -82,7 +83,6 @@ def _parse_args() -> argparse.Namespace:
     )
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--output-dir", type=Path, default=None)
-    p.add_argument("--workspaces-base", type=Path, default=None)
     p.add_argument(
         "--config-yaml",
         type=Path,
@@ -159,19 +159,12 @@ async def _run(args: argparse.Namespace) -> dict:
         out_dir = out_dir.resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    base = args.workspaces_base
-    if base is None:
-        base = out_dir / "_ws_base"
-    base.mkdir(parents=True, exist_ok=True)
-
     user_id = f"harness_user_{run_id}"
     companion_id = "demo_companion"
     chat_id = "demo_chat"
-
-    ws_path = base / user_id / companion_id / chat_id
-    if ws_path.exists():
-        shutil.rmtree(ws_path)
-    seed_memory_store_from_directory(args.seed_dir.resolve(), ws_path)
+    scope = CompanionScope(user_id, companion_id, chat_id)
+    shutdown_memory_store(scope)
+    seed_memory_store_from_directory(args.seed_dir.resolve(), scope)
 
     mem_cfg = MemoryPipelineConfig(
         day_summary_disabled=True,
@@ -182,7 +175,6 @@ async def _run(args: argparse.Namespace) -> dict:
     )
 
     cfg = CompanionConfig(
-        memory_store_scope_base_dir=str(base.resolve()),
         llm=llm_cfg,
         memory=mem_cfg,
         memory_pg_dsn="",

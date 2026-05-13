@@ -127,7 +127,7 @@ def _companion_turn_langsmith_root_descriptor(
         mode = inner_tick_mode or InnerTickMode.MAINTENANCE
         lane = "inner_tick"
         extra_in["inner_tick_mode"] = mode.value
-        name = f"agentic_companion_inner_tick user={uid} agent={cid}"
+        name = f"agentic_companion_inner_tick {mode.value} user={uid} agent={cid}"
         tags = ["agentic_companion", "inner_tick"]
         return name, tags, lane, extra_in
     if implicit_user_signed_on:

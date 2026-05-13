@@ -2,7 +2,7 @@
 """List LangSmith runs in a UTC window and find companion turns matching user_msg_uuid.
 
 Used when debugging ``/api/v1/chat/ws`` + ``tools.inty_v2_repl`` (see
-``.cursor/skills/investigate-inty-backend/SKILL.md``). Project name and API key
+``.cursor/skills/inty-backend-inspect/SKILL.md``). Project name and API key
 resolution mirror ``app/core/config.py`` LangSmith env behavior and
 ``scripts/download_run.py``.
 """
@@ -152,7 +152,9 @@ def main() -> int:
 
     for r in matches:
         print("---")
-        print("id", r.id, "name", r.name, "status", r.status, "start_time", r.start_time)
+        print(
+            "id", r.id, "name", r.name, "status", r.status, "start_time", r.start_time
+        )
         inp = r.inputs or {}
         if isinstance(inp, dict):
             print("inputs.user_msg_uuid", inp.get("user_msg_uuid"))

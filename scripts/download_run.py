@@ -369,9 +369,7 @@ def main() -> int:
         }
     else:
         try:
-            run = client.read_run(
-                args.run_id, load_child_runs=args.load_child_runs
-            )
+            run = client.read_run(args.run_id, load_child_runs=args.load_child_runs)
         except Exception as exc:
             sys.stderr.write(f"LangSmith read_run failed for {args.run_id!r}: {exc}\n")
             return 1

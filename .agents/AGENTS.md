@@ -1,3 +1,4 @@
 # Contexts and instructions for coding agents
 
-- [MEMORY](/.agents/MEMORY.md) records important events to enhance agents understanding of the user.
+- [user preferences](/.agents/USER_PREFERENCES.md) records important & general user preferences, like certain mistakes user corrected you.
+  These are used to correct your behaviors.

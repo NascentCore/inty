@@ -22,7 +22,8 @@ from .prompt_slices import (
     parse_persistable_prompt_slice_id,
     persistable_slice_names_csv,
 )
-from .memory_store_scope import load_template_seed_text, resolve_under_scope_root
+from .memory_store_scope import load_template_seed_text
+from .memory_store import MemoryStore, normalize_memory_store_relative_path
 
 _PKG_DIR = Path(__file__).resolve().parent
 _BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
@@ -127,26 +128,23 @@ def build_interactive_bootstrap_system_append(
 
 
 def tool_companion_update_prompt_slice(
-    root: Path,
+    store: MemoryStore,
     slice_name: str,
     content: str,
 ) -> str:
     from .image_gate import register_profile_write
-    from .memory_registry import get_memory_store
     from .memory_store_document_mapping import parse_memory_store_relative_path
 
     sid = parse_persistable_prompt_slice_id(slice_name)
     if sid is None:
         return f"ERROR: unknown slice {slice_name!r}; use one of: {persistable_slice_names_csv()}"
     rel = PROMPT_SLICE_TO_REL[sid]
-    root_r = root.resolve()
-    p = resolve_under_scope_root(root_r, rel)
-    rel_posix = p.relative_to(root_r).as_posix()
+    rel_posix = normalize_memory_store_relative_path(rel)
     try:
         parse_memory_store_relative_path(rel_posix)
     except ValueError as exc:
         return f"ERROR: {exc}"
-    st = get_memory_store(root_r)
+    st = store
     if sid == PromptSliceId.SOUL and soul_prompt_is_locked_after_interactive_bootstrap(
         store=st
     ):
@@ -158,7 +156,7 @@ def tool_companion_update_prompt_slice(
     prev = st.read_document_if_exists(rel_posix)
     st.write_document(rel_posix, content)
     register_profile_write(
-        root_r,
+        st,
         rel_posix,
         changed=(prev != content),
         new_content=content,
@@ -173,16 +171,11 @@ def tool_companion_update_prompt_slice(
 
 
 def tool_companion_bootstrap_user_interactive_complete(
-    root: Path,
+    store: MemoryStore,
     note: str | None = None,
 ) -> str:
-    from .memory_registry import get_memory_store
-
-    root_r = root.resolve()
-    rel = (
-        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
-    )
-    st = get_memory_store(root_r)
+    rel = "context.json"
+    st = store
     raw_body = st.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
         return "ERROR: missing context.json"
@@ -217,7 +210,10 @@ def tool_companion_bootstrap_user_interactive_complete(
         ]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel, out)
-    logger.info("companion_bootstrap_user_interactive_complete ws={}", root_r.name)
+    logger.info(
+        "companion_bootstrap_user_interactive_complete scope={}",
+        st.scope.registry_key(),
+    )
     return (
         "OK interactive bootstrap marked complete; SOUL.md is now locked (no tool or background "
         "SOUL rewrites). IDENTITY / USER / MEMORY may still be updated via companion_update_prompt_slice "
@@ -226,14 +222,12 @@ def tool_companion_bootstrap_user_interactive_complete(
 
 
 def tool_companion_set_experience_profile(
-    root: Path,
+    store: MemoryStore,
     context_mode: str,
     *,
     user_confirmed: bool,
     note: str | None = None,
 ) -> str:
-    from .memory_registry import get_memory_store
-
     if user_confirmed is not True:
         return (
             "ERROR: user_confirmed must be true only after the user explicitly agrees "
@@ -249,11 +243,8 @@ def tool_companion_set_experience_profile(
             "bootstrap phase (not user-selectable via companion_set_experience_profile)"
         )
 
-    root_r = root.resolve()
-    rel_ctx = (
-        resolve_under_scope_root(root_r, "context.json").relative_to(root_r).as_posix()
-    )
-    st = get_memory_store(root_r)
+    rel_ctx = "context.json"
+    st = store
     raw_body = st.read_document_if_exists(rel_ctx)
     if raw_body is None or not str(raw_body).strip():
         return "ERROR: missing context.json"
@@ -270,8 +261,8 @@ def tool_companion_set_experience_profile(
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     st.write_document(rel_ctx, out)
     logger.info(
-        "companion_set_experience_profile ws={} {} -> {}",
-        root_r.name,
+        "companion_set_experience_profile scope={} {} -> {}",
+        st.scope.registry_key(),
         previous,
         normalized,
     )

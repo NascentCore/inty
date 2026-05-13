@@ -11,7 +11,7 @@ from .heartbeat import (
     HEARTBEAT_SYNTHETIC_USER_TEXT,
     PROACTIVE_HEARTBEAT_TRANSCRIPT_USER_MARKER,
 )
-from .memory_registry import get_memory_store
+from .memory_store import MemoryStore
 from .message_format import TRANSCRIPT_MSG_UUID_KEY
 from .models import (
     ChatMessage,
@@ -26,7 +26,7 @@ from .utc import utc_iso_ts
 
 def build_repl_turn_base_messages(
     *,
-    workspace_root: Path,
+    memory_store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
     transcript: list[ChatMessage],
@@ -44,9 +44,7 @@ def build_repl_turn_base_messages(
         and not tick_proactive
         and not (effective_ai_private or "").strip()
     ):
-        effective_ai_private = get_ai_private_jsonl_text_for_prompt(
-            workspace_root.resolve()
-        )
+        effective_ai_private = get_ai_private_jsonl_text_for_prompt(memory_store)
     system_messages = build_system_messages(
         bundle,
         context,
@@ -85,7 +83,7 @@ def build_repl_turn_base_messages(
 
 
 def persist_repl_turn_transcript_rows(
-    workspace_root: Path,
+    memory_store: MemoryStore,
     *,
     user_text: str,
     assistant_text: str,
@@ -107,7 +105,6 @@ def persist_repl_turn_transcript_rows(
     Full importance
     contract: ``significance_perception`` module docstring.
     """
-    root = workspace_root.resolve()
     rel_tr = transcript_relative_path_for_turn_persistence(
         inner_tick_turn=inner_tick_turn,
         inner_tick_mode=(
@@ -116,7 +113,7 @@ def persist_repl_turn_transcript_rows(
             else InnerTickMode.MAINTENANCE
         ),
     )
-    store = get_memory_store(root)
+    store = memory_store
     user_row: dict[str, Any] = {
         "role": "user",
         "content": user_text,

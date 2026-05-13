@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from pathlib import Path
 from typing import Optional
 
 from loguru import logger
 from sqlalchemy import select
 
 from app import models, schemas
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
 from app.db.session import AsyncSessionLocal
 from app.services import agent_service
 
@@ -31,9 +31,9 @@ def _tool_background_db_loop() -> asyncio.AbstractEventLoop | None:
     return getattr(_tls, "persist_bridge_loop", None)
 
 
-def agent_id_from_companion_scope_root(root: Path) -> str:
-    """Synthetic scope root is ``.../<user_id>/<agent_id>/<chat_id>``; agent id is parent of chat folder."""
-    return root.resolve().parent.name
+def agent_id_from_companion_memory_store(store: MemoryStore) -> str:
+    """Agent id is the companion id in ``CompanionScope``."""
+    return store.scope.companion_id
 
 
 async def _persist_agent_status_line_body(
@@ -101,9 +101,9 @@ def _status_line_tool_result_quoted_fragment(text: str) -> str:
     return escaped
 
 
-async def tool_update_agent_status_line(root: Path, status_line: str) -> str:
+async def tool_update_agent_status_line(store: MemoryStore, status_line: str) -> str:
     """Companion tool: set short chat-header status line for this agent."""
-    agent_id = agent_id_from_companion_scope_root(root)
+    agent_id = agent_id_from_companion_memory_store(store)
     await persist_agent_status_line(agent_id, status_line)
     normalized = (status_line or "").strip()
     if not normalized:

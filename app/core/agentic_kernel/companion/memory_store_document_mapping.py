@@ -22,6 +22,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     SOUL = "soul"
     USER = "user"
     MEMORY = "memory"
+    LIVING_SPHERE = "living_sphere"
     HEARTBEAT = "heartbeat"
     TOOLS = "tools"
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
@@ -52,6 +53,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     "SOUL.md": (CompanionMemoryDocumentKind.SOUL, None),
     "USER.md": (CompanionMemoryDocumentKind.USER, None),
     "MEMORY.md": (CompanionMemoryDocumentKind.MEMORY, None),
+    "LIVING_SPHERE.md": (CompanionMemoryDocumentKind.LIVING_SPHERE, None),
     "HEARTBEAT.md": (CompanionMemoryDocumentKind.HEARTBEAT, None),
     "TOOLS.md": (CompanionMemoryDocumentKind.TOOLS, None),
     "CHAT_LOGS.md": (CompanionMemoryDocumentKind.CHAT_LOGS_MD, None),

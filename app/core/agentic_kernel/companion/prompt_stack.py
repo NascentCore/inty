@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from app.schemas.implicit_signals import ImplicitSignalBundle
@@ -22,7 +21,6 @@ from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .prompts.system_messages import build_system_messages
 from .tools import build_companion_tools, build_openai_repl_tools_inner_tick
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
-from .memory_store_scope import MemoryStoreScopePaths
 
 
 def replace_leading_system_messages_inplace(
@@ -37,7 +35,7 @@ def replace_leading_system_messages_inplace(
 
 def companion_turn_tools_and_system_messages(
     *,
-    scope_root: Path,
+    store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
@@ -71,7 +69,7 @@ def companion_turn_tools_and_system_messages(
     tick_proactive = inner_tick_turn and inner_tick_mode == InnerTickMode.PROACTIVE_CHAT
     ai_private_text = ""
     if inner_tick_turn and not tick_proactive:
-        ai_private_text = get_ai_private_jsonl_text_for_prompt(scope_root.resolve())
+        ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     route_inner_mode = inner_tick_mode if inner_tick_turn else InnerTickMode.MAINTENANCE
     tools_for_turn: list[dict[str, Any]] = (
         []
@@ -150,7 +148,6 @@ def companion_turn_tools_and_system_messages(
 
 def refresh_companion_turn_prompt_stack(
     *,
-    scope_root: Path,
     store: MemoryStore,
     memory_bootstrap_type: str,
     inner_tick_turn: bool,
@@ -162,16 +159,14 @@ def refresh_companion_turn_prompt_stack(
     """
     Re-read context.json and prompt slices, replace leading system messages, return tools schema.
     """
-    root = scope_root.resolve()
-    paths = MemoryStoreScopePaths(root=root)
-    context = load_context_meta(paths.context_json, store=store)
-    bundle = load_prompt_bundle(paths, store, meta=context)
+    context = load_context_meta(store=store)
+    bundle = load_prompt_bundle(store, meta=context)
     implicit_user_signed_on_turn = implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=implicit_signal_bundle,
         inner_tick_turn=inner_tick_turn,
     )
     tools_for_turn, refreshed, _route_mode = companion_turn_tools_and_system_messages(
-        scope_root=scope_root,
+        store=store,
         bundle=bundle,
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,

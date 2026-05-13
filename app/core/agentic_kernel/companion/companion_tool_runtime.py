@@ -39,8 +39,6 @@ from .image_gate import (
     mark_image_tool_completed,
     register_profile_write,
 )
-from .memory_registry import get_memory_store
-from .memory_store_scope import resolve_under_scope_root
 from .bootstrap_user_interactive import (
     PROMPT_SLICE_TO_REL,
     soul_prompt_is_locked_after_interactive_bootstrap,
@@ -50,6 +48,7 @@ from .bootstrap_user_interactive import (
 )
 from .message_format import openai_assistant_message_dict
 from .memory_store_document_mapping import parse_memory_store_relative_path
+from .memory_store import MemoryStore, normalize_memory_store_relative_path
 from .models import ChatMessage, load_context_meta
 from .google_web_search import run_google_web_search
 from .read_web_page import run_read_web_page
@@ -91,8 +90,8 @@ REPL_WRITABLE_RELATIVE_PATHS: frozenset[str] = frozenset(
 )
 
 
-def _latest_generated_image_http_url_from_index(root: Path) -> str | None:
-    for row in reversed(list_image_asset_records(root)):
+def _latest_generated_image_http_url_from_index(store: MemoryStore) -> str | None:
+    for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()
         if u.startswith("http://") or u.startswith("https://"):
             return u
@@ -116,8 +115,14 @@ def _list_dir_prefix_for_store_query(rel_dir: str) -> str:
     return s
 
 
-def _list_dir_extra_names_from_store(root: Path, rel_dir: str) -> set[str]:
-    store = get_memory_store(root)
+def _tool_rel_posix_from_arg(relative_path: str) -> str:
+    s = (relative_path or "").strip().replace("\\", "/")
+    if s in (".", ""):
+        return ""
+    return normalize_memory_store_relative_path(s)
+
+
+def _list_dir_extra_names_from_store(store: MemoryStore, rel_dir: str) -> set[str]:
     paths = store.iter_stored_relative_paths()
     prefix = _list_dir_prefix_for_store_query(rel_dir)
     pfx = f"{prefix}/" if prefix else ""
@@ -197,14 +202,12 @@ def append_user_profile_facts_to_user_md(text: str, new_bullets: list[str]) -> s
     return "\n".join(lines) + "\n"
 
 
-def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
+def tool_user_profile_record(store: MemoryStore, items: list[dict[str, Any]]) -> str:
     """
     将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
     items：每项含 label、value（均为非空短文本）。
     """
-    p = resolve_under_scope_root(root, _USER_MD_REL)
-    rel = p.relative_to(root.resolve()).as_posix()
-    store = get_memory_store(root)
+    rel = _USER_MD_REL
     prev = store.read_document_if_exists(rel)
     if prev is None:
         return f"ERROR: missing {_USER_MD_REL!r}"
@@ -223,7 +226,7 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
     merged = append_user_profile_facts_to_user_md(prev, bullets)
     store.write_document(rel, merged)
     register_profile_write(
-        root,
+        store,
         rel,
         changed=(merged != prev),
         new_content=merged,
@@ -232,18 +235,16 @@ def tool_user_profile_record(root: Path, items: list[dict[str, Any]]) -> str:
 
 
 def tool_memory_store_list_paths(
-    root: Path,
+    store: MemoryStore,
     relative_path: str,
     *,
     repository_only_store_text: bool = False,
 ) -> str:
     """列出目录下的直接子项（文件与目录名）；目录名以 / 结尾；仅来自 MemoryStore。"""
     _ = repository_only_store_text
-    root = root.resolve()
-    d = resolve_under_scope_root(root, relative_path)
-    rel_dir_raw = d.relative_to(root).as_posix()
+    rel_dir_raw = _tool_rel_posix_from_arg(relative_path)
     list_prefix = _list_dir_prefix_for_store_query(rel_dir_raw)
-    lines = _list_dir_extra_names_from_store(root, list_prefix)
+    lines = _list_dir_extra_names_from_store(store, list_prefix)
     ordered = sorted(lines, key=lambda s: s.lower())
     return "\n".join(ordered) if ordered else "(empty)"
 
@@ -270,16 +271,15 @@ def _parse_optional_max_chars(raw: Any) -> int | None:
 
 
 def tool_memory_store_read_document(
-    root: Path,
+    store: MemoryStore,
     relative_path: str,
     max_chars: int | None = None,
     *,
     repository_only_store_text: bool = False,
 ) -> str:
     _ = repository_only_store_text
-    p = resolve_under_scope_root(root, relative_path)
-    rel = p.relative_to(root.resolve()).as_posix()
-    st = get_memory_store(root)
+    rel = _tool_rel_posix_from_arg(relative_path)
+    st = store
     if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: path is not a persisted companion document: {relative_path!r}"
     body = st.read_document_if_exists(rel)
@@ -319,16 +319,15 @@ def _transcript_jsonl_validate_for_tool_write(content: str) -> str | None:
 
 
 def tool_memory_store_write_document(
-    root: Path,
+    store: MemoryStore,
     relative_path: str,
     content: str,
     *,
     repository_only_store_text: bool = False,
 ) -> str:
     _ = repository_only_store_text
-    p = resolve_under_scope_root(root, relative_path)
-    rel = p.relative_to(root.resolve()).as_posix()
-    st = get_memory_store(root)
+    rel = _tool_rel_posix_from_arg(relative_path)
+    st = store
     if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
     if rel == "SOUL.md" and soul_prompt_is_locked_after_interactive_bootstrap(store=st):
@@ -343,18 +342,18 @@ def tool_memory_store_write_document(
             return v_err
     st.write_document(rel, content)
     changed = prev_body != content
-    register_profile_write(root, rel, changed=changed, new_content=content)
+    register_profile_write(store, rel, changed=changed, new_content=content)
     return f"OK wrote {len(content)} chars to {relative_path}"
 
 
-def tool_memory_store_mkdir(root: Path, relative_path: str) -> str:
-    _ = root, relative_path
+def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
+    _ = store, relative_path
     return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
 
 
-def tool_schedule_task(root: Path, exec_time_utc: str, task_text: str) -> str:
+def tool_schedule_task(store: MemoryStore, exec_time_utc: str, task_text: str) -> str:
     task_id = add_schedule_task(
-        root,
+        store,
         exec_time_utc=exec_time_utc,
         task_text=task_text,
     )
@@ -1090,11 +1089,13 @@ def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
 
 
 def _repl_write_allowed(
-    root: Path, relative_path: str, write_allowlist: frozenset[str]
+    store: MemoryStore, relative_path: str, write_allowlist: frozenset[str]
 ) -> str | None:
     """若不允许写入则返回错误信息字符串，否则 None。"""
-    p = resolve_under_scope_root(root, relative_path)
-    rel_posix = p.relative_to(root.resolve()).as_posix()
+    try:
+        rel_posix = _tool_rel_posix_from_arg(relative_path)
+    except ValueError as exc:
+        return f"ERROR: {exc}"
     if rel_posix not in write_allowlist:
         return (
             "ERROR: REPL memory_store_write_document only allows: "
@@ -1105,7 +1106,7 @@ def _repl_write_allowed(
 
 
 async def _dispatch(
-    root: Path,
+    store: MemoryStore,
     name: str,
     arguments: dict[str, Any],
     *,
@@ -1117,7 +1118,7 @@ async def _dispatch(
         return f"ERROR: unknown tool {name!r}"
 
     memory_store_dispatch_result = dispatch_memory_store_tool(
-        root=root,
+        store=store,
         name=name,
         arguments=arguments,
         write_allowlist=write_allowlist,
@@ -1135,7 +1136,7 @@ async def _dispatch(
         raw_sl = arguments.get("status_line")
         if not isinstance(raw_sl, str):
             return "ERROR: status_line must be a string"
-        return await tool_update_agent_status_line(root, raw_sl)
+        return await tool_update_agent_status_line(store, raw_sl)
     if name == "schedule_task":
         raw_exec_time = arguments.get("exec_time_utc")
         raw_task_text = arguments.get("task_text")
@@ -1145,7 +1146,7 @@ async def _dispatch(
             return "ERROR: task_text must be a string"
         try:
             return tool_schedule_task(
-                root,
+                store,
                 exec_time_utc=raw_exec_time,
                 task_text=raw_task_text,
             )
@@ -1160,7 +1161,7 @@ async def _dispatch(
             return "ERROR: reason must be a string"
         return await tool_phone_call_user(root, raw_phone, raw_reason)
     if name == "companion_runtime_inspect":
-        return tool_companion_runtime_inspect(root, dict(arguments or {}))
+        return tool_companion_runtime_inspect(store, dict(arguments or {}))
     if name == "companion_set_experience_profile":
         raw_ctx = arguments.get("context_mode")
         if not isinstance(raw_ctx, str):
@@ -1172,7 +1173,7 @@ async def _dispatch(
         if raw_note is not None and not isinstance(raw_note, str):
             return "ERROR: note must be a string or omitted"
         return tool_companion_set_experience_profile(
-            root,
+            store,
             raw_ctx,
             user_confirmed=raw_uc,
             note=raw_note,
@@ -1210,9 +1211,9 @@ async def _dispatch(
             mb_opt = int(mb_raw)
         else:
             return "ERROR: max_bullets must be a positive integer or omitted"
-        return await run_read_web_page(root, url=raw_u, max_bullets=mb_opt)
+        return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
     if name == "generate_image":
-        gate_err = check_image_tool_allowed(root, tool_name="generate_image")
+        gate_err = check_image_tool_allowed(store, tool_name="generate_image")
         if gate_err is not None:
             return gate_err
         prompt = arguments.get("prompt")
@@ -1245,24 +1246,24 @@ async def _dispatch(
 
         t_img = time.perf_counter()
         out = await run_generate_image_z_image_turbo(
-            root,
+            store,
             prompt=prompt,
             image_size=image_size_s,
             num_inference_steps=n_steps,
             num_images=n_img,
-            persona_revision_id=current_persona_revision_id(root),
+            persona_revision_id=current_persona_revision_id(store),
         )
         logger.info(
-            "tool generate_image wall_ms={:.0f} ws={} ok={}",
+            "tool generate_image wall_ms={:.0f} scope={} ok={}",
             (time.perf_counter() - t_img) * 1000.0,
-            root.name,
+            store.scope.registry_key(),
             not out.startswith("ERROR:"),
         )
         if not out.startswith("ERROR:"):
-            mark_image_tool_completed(root, tool_name="generate_image")
+            mark_image_tool_completed(store, tool_name="generate_image")
         return out
     if name == "modify_image":
-        gate_err = check_image_tool_allowed(root, tool_name="modify_image")
+        gate_err = check_image_tool_allowed(store, tool_name="modify_image")
         if gate_err is not None:
             return gate_err
         prompt = arguments.get("prompt")
@@ -1283,14 +1284,13 @@ async def _dispatch(
         src_path: Path | None = None
         if path_s:
             try:
-                src_path = resolve_under_scope_root(root, path_s)
+                path_s = normalize_memory_store_relative_path(path_s)
             except ValueError as exc:
                 return f"ERROR: {exc}"
-            asset = find_latest_asset_by_local_relative_path(root, path_s)
+            asset = find_latest_asset_by_local_relative_path(store, path_s)
             if asset is not None:
                 u = str(asset.get("gcs_http_url") or "").strip()
                 if u.startswith("http://") or u.startswith("https://"):
-                    src_path = None
                     url_s = u
                 else:
                     return f"ERROR: source image in index has no http(s) URL for {path_s!r}"
@@ -1298,7 +1298,7 @@ async def _dispatch(
                 return f"ERROR: source image not in index: {path_s!r}"
         src_url_out: str | None = url_s if url_s else None
         if src_path is None and src_url_out is None:
-            src_url_out = _latest_generated_image_http_url_from_index(root)
+            src_url_out = _latest_generated_image_http_url_from_index(store)
             if src_url_out is None:
                 return (
                     "ERROR: modify_image requires source_image_relative_path or source_image_url; "
@@ -1322,23 +1322,23 @@ async def _dispatch(
 
         t_img = time.perf_counter()
         out = await run_modify_image_z_image_turbo(
-            root,
+            store,
             prompt=prompt,
             source_path=src_path,
             source_image_url=src_url_out,
             image_size=image_size_s,
             num_inference_steps=n_steps,
             strength=strength,
-            persona_revision_id=current_persona_revision_id(root),
+            persona_revision_id=current_persona_revision_id(store),
         )
         logger.info(
-            "tool modify_image wall_ms={:.0f} ws={} ok={}",
+            "tool modify_image wall_ms={:.0f} scope={} ok={}",
             (time.perf_counter() - t_img) * 1000.0,
-            root.name,
+            store.scope.registry_key(),
             not out.startswith("ERROR:"),
         )
         if not out.startswith("ERROR:"):
-            mark_image_tool_completed(root, tool_name="modify_image")
+            mark_image_tool_completed(store, tool_name="modify_image")
         return out
     if name == "companion_update_prompt_slice":
         raw_slice = arguments.get("slice")
@@ -1347,17 +1347,17 @@ async def _dispatch(
             return "ERROR: slice must be a string"
         if not isinstance(raw_content, str):
             return "ERROR: content must be a string"
-        return tool_companion_update_prompt_slice(root, raw_slice, raw_content)
+        return tool_companion_update_prompt_slice(store, raw_slice, raw_content)
     if name == "companion_bootstrap_user_interactive_complete":
         raw_note = arguments.get("note")
         if raw_note is not None and not isinstance(raw_note, str):
             return "ERROR: note must be a string or omitted"
-        return tool_companion_bootstrap_user_interactive_complete(root, raw_note)
+        return tool_companion_bootstrap_user_interactive_complete(store, raw_note)
     return f"ERROR: unknown tool {name!r}"
 
 
 async def execute_tool_call(
-    root: Path,
+    store: MemoryStore,
     name: str,
     arguments_json: str,
     *,
@@ -1379,7 +1379,7 @@ async def execute_tool_call(
         return err
     try:
         out = await _dispatch(
-            root,
+            store,
             name,
             parsed,
             write_allowlist=write_allowlist,
@@ -1397,7 +1397,7 @@ async def execute_tool_call(
 
 
 async def _execute_tool_call_blocking_impl(
-    root: Path,
+    store: MemoryStore,
     name: str,
     arguments_json: str,
     *,
@@ -1407,7 +1407,7 @@ async def _execute_tool_call_blocking_impl(
     """`asyncio.run` 结束前释放 fal 全局 client，避免连续多次 blocking 调用踩 closed loop。"""
     try:
         return await execute_tool_call(
-            root,
+            store,
             name,
             arguments_json,
             write_allowlist=write_allowlist,
@@ -1418,7 +1418,7 @@ async def _execute_tool_call_blocking_impl(
 
 
 def execute_tool_call_blocking(
-    root: Path,
+    store: MemoryStore,
     name: str,
     arguments_json: str,
     *,
@@ -1430,7 +1430,7 @@ def execute_tool_call_blocking(
     def _run_new_loop() -> str:
         return asyncio.run(
             _execute_tool_call_blocking_impl(
-                root,
+                store,
                 name,
                 arguments_json,
                 write_allowlist=write_allowlist,
@@ -1449,12 +1449,12 @@ def execute_tool_call_blocking(
         return ex.submit(_run_new_loop).result(timeout=1200)
 
 
-def tool_executor_for_root(root: Path) -> Callable[[str, str], str]:
+def tool_executor_for_store(store: MemoryStore) -> Callable[[str, str], str]:
     """返回 (name, arguments_json) -> result_str，供循环内调用。"""
 
     def run(name: str, arguments_json: str) -> str:
         return execute_tool_call_blocking(
-            root, name, arguments_json, write_allowlist=None
+            store, name, arguments_json, write_allowlist=None
         )
 
     return run

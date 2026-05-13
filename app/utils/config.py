@@ -10,7 +10,7 @@ from typing import Any, List, Optional
 
 import yaml
 from loguru import logger
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
 
 from loguru import logger
 
@@ -69,8 +69,9 @@ LOGGING_FILE_FORMAT = "{file.path}:{line} {function}"
 LOGGING_MESSAGE_FORMAT = "{message}"
 
 
-@dataclass
-class LoggingConfig:
+class LoggingConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     level: str = "INFO"
     # 默认格式，不使用颜色；{file.path} 为完整路径，便于终端/IDE 点击跳转
     format: str = (
@@ -79,10 +80,12 @@ class LoggingConfig:
     # 是否使用颜色
     colorize: bool = False
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def apply_colorized_format(self) -> "LoggingConfig":
         if self.colorize:
             # 区分四块：时间=绿，级别=按级别着色，位置=品红(含完整路径)，正文=白
             self.format = f"<green>{LOGGING_TIME_FORMAT}</green> | <level>{LOGGING_LEVEL_FORMAT}</level> | <magenta>{LOGGING_FILE_FORMAT}</magenta> - <white>{LOGGING_MESSAGE_FORMAT}</white>"
+        return self
 
 
 @dataclass
@@ -159,18 +162,6 @@ class CompanionMemoryBootstrapType(StrEnum):
     USER_INTERACTIVE = "USER_INTERACTIVE"
 
 
-class InnerTickMechanism(StrEnum):
-    """Maintenance inner-tick + tools scheduling (app.features.inner_tick_mechanism).
-
-    ``duplex_async`` matches production: foreground dual-LLM envelope (no tools) then
-    ``tool_background`` with the full tools list. ``maintenance_tool_solo`` skips only
-    that foreground completion for ``InnerTickMode.MAINTENANCE``; the tool thread is unchanged.
-    """
-
-    DUPLEX_ASYNC = "duplex_async"
-    MAINTENANCE_TOOL_SOLO = "maintenance_tool_solo"
-
-
 @dataclass
 class FeaturesConfig:
     experimental_enable_chat_with_user_time_context: bool = True
@@ -206,10 +197,6 @@ class FeaturesConfig:
     companion_ws_maintenance_inner_tick_enabled: bool = True
     # Minimum seconds between successful maintenance inner-tick fires on a WebSocket connection.
     companion_ws_maintenance_inner_tick_min_gap_seconds: float = 120.0
-    # ``duplex_async`` (default): foreground envelope LLM then async tool_background.
-    # ``maintenance_tool_solo``: skip foreground envelope for maintenance inner tick only;
-    # tool_background and full ``tools[]`` list unchanged.
-    inner_tick_mechanism: str = InnerTickMechanism.DUPLEX_ASYNC.value
 
     def __post_init__(self) -> None:
         raw = (self.companion_memory_bootstrap_type or "").strip().upper()
@@ -220,14 +207,6 @@ class FeaturesConfig:
                 f"{sorted(allowed)}, got {self.companion_memory_bootstrap_type!r}"
             )
         self.companion_memory_bootstrap_type = raw
-        it_raw = (self.inner_tick_mechanism or "").strip().lower()
-        it_allowed = {m.value for m in InnerTickMechanism}
-        if it_raw not in it_allowed:
-            raise ValueError(
-                "app.features.inner_tick_mechanism must be one of "
-                f"{sorted(it_allowed)}, got {self.inner_tick_mechanism!r}"
-            )
-        self.inner_tick_mechanism = it_raw
         self.companion_default_context_mode = normalize_experience_profile_id(
             self.companion_default_context_mode
         )
@@ -736,7 +715,7 @@ def load_config(path: str) -> Config:
         database=DatabaseSettings(**data.get("database", {})),
         google_oauth=GoogleOAuthConfig(**data.get("google_oauth", {})),
         verification=VerificationConfig(**data.get("verification", {})),
-        logging=LoggingConfig(**data.get("logging", {})),
+        logging=LoggingConfig.model_validate(data.get("logging") or {}),
         embedding=EmbeddingConfig(**data.get("embedding", {})),
         agent=AgentConfig(**data.get("agent", {})),
         gcs=GCSConfig(**data.get("gcs", {})),

@@ -30,8 +30,10 @@ def test_transcript_rows_to_openai_dialogue_includes_system() -> None:
 
 
 def test_compaction_state_roundtrip_via_memory_store(tmp_path: Path) -> None:
+    from app.core.agentic_kernel.companion.scope import CompanionScope
+
     store = MemoryStore(
-        workspace_root=tmp_path,
+        scope=CompanionScope("tc", "a", tmp_path.name),
         repository=None,
     )
     rel = ".companion_context_compaction_state.json"

@@ -14,6 +14,15 @@ from app.core.agentic_kernel.companion.image_gate import (
     generated_image_meta_from_index_slice,
     list_image_asset_records,
 )
+from app.core.agentic_kernel.companion.memory_store import MemoryStore
+from app.core.agentic_kernel.companion.scope import CompanionScope
+
+
+def _store(tmp: Path) -> MemoryStore:
+    return MemoryStore(
+        scope=CompanionScope("img-meta", "a", str(tmp.resolve())),
+        repository=None,
+    )
 
 
 def test_generated_image_meta_from_slice_prefers_gs_uri(
@@ -26,10 +35,11 @@ def test_generated_image_meta_from_slice_prefers_gs_uri(
             gcs=SimpleNamespace(use_fake_gcs=False, fake_gcs_base_dir=""),
         ),
     )
-    root = tmp_path / "ws"
-    root.mkdir()
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    store = _store(ws)
     append_image_asset_record(
-        root,
+        store,
         {
             "asset_id": "a1",
             "gcs_uri": "gs://bucket/old/path.jpg",
@@ -38,9 +48,9 @@ def test_generated_image_meta_from_slice_prefers_gs_uri(
             "height": 20,
         },
     )
-    baseline = len(list_image_asset_records(root))
+    baseline = len(list_image_asset_records(store))
     append_image_asset_record(
-        root,
+        store,
         {
             "asset_id": "a2",
             "gcs_uri": "gs://bucket/new/path.png",
@@ -49,7 +59,7 @@ def test_generated_image_meta_from_slice_prefers_gs_uri(
             "height": 480,
         },
     )
-    meta = generated_image_meta_from_index_slice(root, baseline)
+    meta = generated_image_meta_from_index_slice(store, baseline)
     assert meta is not None
     assert meta["image_url"] == "gs://bucket/new/path.png"
     assert meta["width"] == 640
@@ -57,17 +67,18 @@ def test_generated_image_meta_from_slice_prefers_gs_uri(
 
 
 def test_generated_image_meta_omits_when_no_gs_uri(tmp_path: Path) -> None:
-    root = tmp_path / "ws2"
-    root.mkdir()
+    ws = tmp_path / "ws2"
+    ws.mkdir()
+    store = _store(ws)
     append_image_asset_record(
-        root,
+        store,
         {
             "asset_id": "x",
             "gcs_http_url": None,
             "gcs_uri": None,
         },
     )
-    assert generated_image_meta_from_index_slice(root, 0) is None
+    assert generated_image_meta_from_index_slice(store, 0) is None
 
 
 def test_generated_image_meta_accepts_https_when_no_gs_uri() -> None:
@@ -89,9 +100,9 @@ def test_generated_image_meta_accepts_https_when_no_gs_uri() -> None:
 def test_generated_image_meta_maps_fake_file_http_url(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    store = tmp_path / "fake_store"
-    store.mkdir()
-    obj_path = store / "mybucket" / "gen" / "out.png"
+    store_dir = tmp_path / "fake_store"
+    store_dir.mkdir()
+    obj_path = store_dir / "mybucket" / "gen" / "out.png"
     obj_path.parent.mkdir(parents=True)
     obj_path.write_bytes(b"\x89PNG")
     file_uri = obj_path.resolve().as_uri()
@@ -101,7 +112,7 @@ def test_generated_image_meta_maps_fake_file_http_url(
         SimpleNamespace(
             gcs=SimpleNamespace(
                 use_fake_gcs=True,
-                fake_gcs_base_dir=str(store.resolve()),
+                fake_gcs_base_dir=str(store_dir.resolve()),
             )
         ),
     )
