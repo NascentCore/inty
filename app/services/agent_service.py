@@ -1417,6 +1417,9 @@ async def update_agent(
         previous_visibility = db_agent.visibility
         # 检查是否需要重新生成开场白语音
         update_data = agent_in.model_dump(exclude_unset=True)
+        reload_log_reason = "update_agent fields=" + ",".join(
+            sorted(update_data.keys())
+        )
         energy_points_delta = update_data.pop("energy_points", None)
         if energy_points_delta is not None and energy_points_delta <= 0:
             raise HTTPException(
@@ -1533,7 +1536,7 @@ async def update_agent(
             }
 
             reload_success = await agent_manager.reload_agent(
-                updated_agent.id, agent_data
+                updated_agent.id, agent_data, reason=reload_log_reason
             )
             if reload_success:
                 logger.debug(f"Agent {updated_agent.id} 缓存重载成功")

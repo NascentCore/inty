@@ -2360,17 +2360,21 @@ class AgentManager:
                     return True
         return False
 
-    async def reload_agent(self, agent_id: str, agent_data: dict) -> bool:
+    async def reload_agent(
+        self, agent_id: str, agent_data: dict, reason: Optional[str] = None
+    ) -> bool:
         """
         重新加载指定Agent实例，强制刷新配置
 
         Args:
             agent_id: Agent ID
             agent_data: 新的Agent配置数据
+            reason: 调用方提供的简短原因（如触发的 API 与变更字段），写入日志便于排查
 
         Returns:
             重载是否成功
         """
+        reason_part = f" reason={reason}" if reason else " reason=unspecified"
         agent_lock = self._get_agent_lock(agent_id)
         with agent_lock:
             with self._write_lock:
@@ -2388,11 +2392,11 @@ class AgentManager:
                 try:
                     agent = build_agent_from_data(agent_id, agent_data)
                     self.agents[agent_id] = agent
-                    logger.info(f"Agent重新加载成功: {agent_id}")
+                    logger.info(f"Agent重新加载成功: {agent_id}{reason_part}")
                     return True
 
                 except Exception as e:
-                    logger.error(f"重新加载Agent失败 {agent_id}: {str(e)}")
+                    logger.error(f"重新加载Agent失败 {agent_id}{reason_part}: {str(e)}")
                     return False
 
     def stop(self):
