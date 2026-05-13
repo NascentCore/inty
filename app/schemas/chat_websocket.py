@@ -3,7 +3,8 @@
 This package defines Pydantic models for WebSocket text frames (JSON objects) exchanged
 between clients and the Inty chat backend. It is the authoritative spec for client
 implementations; user-visible ``message`` strings on error paths remain English per
-``app/AGENTS.md``.
+``app/AGENTS.md``. Companion chat ``meta_data`` blobs (user + assistant + ``tool_bg``)
+are centralized in :class:`ChatWsCompanionWireMetaData`.
 
 Direction tags in model docstrings:
 
@@ -22,7 +23,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.schemas.chat import ChatCompletionRequest, UserTimeContext
 
@@ -160,6 +161,73 @@ class ChatWsWsConnDroppedAckFrame(BaseModel):
     type: Literal["ws_conn_dropped_ack"] = "ws_conn_dropped_ack"
     ok: bool
     reason: Optional[str] = None
+
+
+class ChatWsCompanionWireMetaData(BaseModel):
+    """Single schema for ``meta_data`` on companion ``/api/v1/chat/ws`` chat_history rows and downlink bodies.
+
+    **Client → server** (persisted on user rows): optimistic ``localId`` via :attr:`local_id`.
+    **Server → client** (assistant ``choices[].message`` and ``tool_bg`` payloads): correlation,
+    modality, inner-tick, LangSmith, tool-background flags, etc. The same type is used for any
+    chat WebSocket user row that only carries ``localId`` (e.g. subscription-limit path). Keys not
+    listed remain valid via ``extra="allow"`` (legacy DB rows, analytics-only keys, future product fields).
+    """
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    local_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("localId", "local_id"),
+        serialization_alias="localId",
+        description="Client optimistic id; stored under ``localId`` on wire / DB JSON.",
+    )
+    inner_tick: Optional[bool] = None
+    heartbeat: Optional[bool] = None
+    companion_proactive_heartbeat: Optional[bool] = None
+    companion_maintenance_inner_tick: Optional[bool] = None
+
+    source: Optional[str] = None
+    inner_tick_activity: Optional[str] = None
+    reply_modality: Optional[str] = None
+    is_voice: Optional[bool] = None
+    voice_message_script: Optional[str] = None
+    trace_id: Optional[str] = None
+    user_msg_uuid: Optional[str] = None
+    assistant_msg_uuid: Optional[str] = None
+    reply_to_user_msg_uuid: Optional[str] = None
+    langsmith_trace_id: Optional[str] = None
+    langsmith_run_id: Optional[str] = None
+    significance_perception: Optional[dict[str, Any]] = None
+    tool_background_started: Optional[bool] = None
+    context_mode: Optional[str] = None
+    tool_bg_output_to_user: Optional[bool] = None
+    tool_bg_generation_deliver: Optional[bool] = None
+    generated_image: Optional[dict[str, Any]] = None
+    tool_bg_local_image_paths: Optional[list[str]] = None
+
+    message_type: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("messageType", "message_type"),
+        serialization_alias="messageType",
+    )
+    agent_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("agentId", "agent_id"),
+        serialization_alias="agentId",
+    )
+    phone_call: Optional[dict[str, Any]] = None
+    premium_only: Optional[bool] = None
+
+    audio_duration: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("audioDuration", "audio_duration"),
+        serialization_alias="audioDuration",
+    )
+
+
+def dump_chat_ws_companion_wire_meta(meta: ChatWsCompanionWireMetaData) -> dict[str, Any]:
+    """Serialize companion WebSocket ``meta_data`` for ORM / ``send_json`` (omit nulls, camelCase aliases)."""
+    return meta.model_dump(exclude_none=True, by_alias=True)
 
 
 class ChatWebSocketRequest(BaseModel):

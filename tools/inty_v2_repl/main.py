@@ -110,11 +110,26 @@ def _repl_banner_suffix_ids(
     return out
 
 
+def _repl_inner_tick_activity_display(activity: str) -> str:
+    """WS ``meta_data.inner_tick_activity`` uses enum values; REPL shows proactive-chat hyphenated."""
+    s = (activity or "").strip()
+    if s == "proactive_chat":
+        return "proactive-chat"
+    return s
+
+
 def _repl_assistant_banner_label(
     ids: Mapping[str, str] | None,
     *,
     meta_data: Mapping[str, Any] | None = None,
 ) -> str:
+    act_raw = None
+    if meta_data:
+        raw = meta_data.get("inner_tick_activity")
+        if raw:
+            act_raw = str(raw).strip()
+    if act_raw:
+        return f"inner-tick {_repl_inner_tick_activity_display(act_raw)}"
     src = None
     if meta_data:
         src = meta_data.get("source")

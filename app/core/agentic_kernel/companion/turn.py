@@ -796,5 +796,6 @@ async def run_turn(
         langsmith_run_id=langsmith_llm_run_acc,
         tool_background_started=tool_background_started,
         assistant_source="inner_tick" if inner_tick_turn else "chat",
+        inner_tick_activity=route_inner_mode.value if inner_tick_turn else "",
         turn_start_context_mode=context.context_mode,
     )
