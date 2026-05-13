@@ -790,6 +790,7 @@ async def run_turn(
         voice_message_script=voice_message_script,
         significance_perception=significance_meta,
         user_msg_uuid=user_msg_uuid,
+        assistant_msg_uuid=assistant_msg_uuid,
         trace_id=trace_id,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,

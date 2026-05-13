@@ -90,7 +90,12 @@ def _repl_banner_suffix_ids(
             if v:
                 out[k] = str(v)
     if meta_data:
-        for k in ("user_msg_uuid", "langsmith_trace_id", "langsmith_run_id"):
+        for k in (
+            "user_msg_uuid",
+            "assistant_msg_uuid",
+            "langsmith_trace_id",
+            "langsmith_run_id",
+        ):
             raw = meta_data.get(k)
             if raw and k not in out:
                 s = str(raw).strip()
